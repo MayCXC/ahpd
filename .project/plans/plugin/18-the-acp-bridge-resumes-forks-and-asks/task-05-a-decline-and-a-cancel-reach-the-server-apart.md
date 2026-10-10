@@ -1,6 +1,6 @@
 ---
 title: A decline and a cancel reach the server apart
-status: todo
+status: implemented
 depends: [task-03-a-servers-question-is-asked-in-the-chat.md]
 layer: "sdk, agent-acp"
 refs:
@@ -39,3 +39,8 @@ Other backends see no change.
 - `pnpm typecheck` and `pnpm boundary` green; `pnpm exec vitest run packages/agent-acp packages/sdk` green.
 
 ## Resume
+
+- Built 2026-10-10 by dsh; the turn stopped on a provider error after this task, and the rest was finished in the same worktree.
+- The host passes `response` only when it is `accept`, `decline` or `cancel`; any other value is left out, and the backend reads `accepted` alone.
+- The decline case was already in `packages/agent-acp/test/agent-acp-ports.test.ts` from task 03; this task added the cancel case beside it.
+- No other backend changed, because the parameter is optional.

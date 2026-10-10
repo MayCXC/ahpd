@@ -549,8 +549,16 @@ export interface Session {
    * False when the request is not one this session is waiting on. True is
    * what the host says the `chat/inputCompleted` back to every client of the
    * chat on, so a backend does not emit that action itself.
+   *
+   * `response` is the kind the client sent, where it sent one, and it is here
+   * because a decline and a cancel are two different things to tell a server:
+   * one is somebody saying no, the other that nobody was asked. Only the
+   * backend knows which of the two its agent can be told, so the host passes
+   * the kind on rather than reducing it to `accepted` on the way. A backend
+   * that reads the two-way answer alone leaves it out, and the host leaves it
+   * out for a client that sent no kind at all.
    */
-  answer(requestId: string, accepted: boolean, answers: Bag): boolean;
+  answer(requestId: string, accepted: boolean, answers: Bag, response?: 'accept' | 'decline' | 'cancel'): boolean;
   /**
    * One question of an open request, as somebody types the answer.
    *

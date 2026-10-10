@@ -121,10 +121,10 @@ it('says a conversation can be taken back when the server advertised loadSession
   expect(session.resumable?.()).toBe(true);
 });
 
-it('says it cannot when the server never advertised loadSession', async () => {
+it('says it cannot when the server advertised neither loadSession nor a resume', async () => {
   // The id is still there - this bridge can name what it is running - so the
   // answer comes from the handshake rather than from whether there is a name.
-  const agent = backend(['--no-load']);
+  const agent = backend(['--no-load', '--no-resume']);
   const session = agent.create(opening('fixed'));
   started.push(session);
 

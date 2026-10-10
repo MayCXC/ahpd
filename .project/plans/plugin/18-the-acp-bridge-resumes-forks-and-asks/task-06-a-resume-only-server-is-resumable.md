@@ -1,6 +1,6 @@
 ---
 title: A server that only resumes is resumable, and an unknown field is asked as text
-status: todo
+status: implemented
 depends: [task-01-a-resume-does-not-replay.md, task-03-a-servers-question-is-asked-in-the-chat.md]
 layer: "agent-acp"
 refs:
@@ -37,3 +37,8 @@ A form field of a type ACP does not name is asked as a text question, and a test
 - `pnpm typecheck` and `pnpm boundary` green; `pnpm exec vitest run packages/agent-acp` green.
 
 ## Resume
+
+- Built 2026-10-10. dsh wrote the code, the fixture and the new tests, then stopped on a provider error before it changed the last test.
+- The resume-only server is the fixture's existing `--no-load` flag, so no new flag was needed.
+- The unknown field is the fixture's `elicitunknown` script, and its test is in `packages/agent-acp/test/agent-acp-ports.test.ts`.
+- `packages/agent-acp/test/agent-acp.test.ts` held a case that read `--no-load` as "cannot be resumed". It now runs `--no-load --no-resume`, which is the server that cannot.

@@ -163,12 +163,15 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     agentId: () => ctx.acpSessionId,
     /*
      * Read from the handshake rather than from whether the id is set: this
-     * bridge can name the conversation it is running, and a server that never
-     * advertised `loadSession` is one that would start a new one rather than
-     * reopen that. False until the server has spoken, which is also the honest
-     * answer - before that, nothing here has a conversation to be moved.
+     * bridge can name the conversation it is running, and a server that
+     * advertised neither a load nor a resume is one that would start a new
+     * conversation rather than reopen that. Either one counts, because both
+     * hand the conversation back - a resume is simply the one that hands it
+     * back without replaying it, which is what `open` chooses it for. False
+     * until the server has spoken, which is also the honest answer - before
+     * that, nothing here has a conversation to be moved.
      */
-    resumable: () => ctx.loads,
+    resumable: () => ctx.loads || ctx.resumes,
     customizations: () => [...seeds, ...ctx.commands],
     allTurns: () => turns,
     /*

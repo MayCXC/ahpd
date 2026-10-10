@@ -528,6 +528,71 @@ it('answers a declined form with a decline, and carries no content', async () =>
     .toContain('elicit=decline|branch=-|force=-|retries=-|mode=-|tags=-');
 });
 
+it('answers a cancelled form with a cancel, which a decline is not', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitform please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  /*
+   * A client that stopped the question rather than refusing it.
+   *
+   * The two arrive at the host as the same `accepted: false` and are two
+   * different things to tell the server: a decline is somebody saying no, and
+   * a cancel is nobody having been asked. So the kind is what decides what the
+   * server is handed, and the answers left in the form go nowhere.
+   */
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-elicit:elicitation',
+        response: 'cancel',
+        answers: { branch: { state: 'submitted', value: { kind: 'text', value: 'never mind' } } },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri))
+    .toContain('elicit=cancel|branch=-|force=-|retries=-|mode=-|tags=-');
+});
+
+it('asks a field of a type it has no control for as a text question', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitunknown please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  const request = asked(p, chatUri);
+  expect(request?.id).toBe('call-unknown:elicitation');
+  // One question per field, the named one and the unnamed one alike: a form
+  // drawn with a field missing is one nobody can fill in, so the shape this
+  // bridge has no control of its own for is asked as a line to write.
+  expect((request?.questions as { id?: string; kind?: string }[] | undefined)
+    ?.map((one) => [one.id, one.kind]))
+    .toEqual([['branch', 'text'], ['settings', 'text']]);
+
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-unknown:elicitation',
+        response: 'accept',
+        answers: {
+          branch: { state: 'submitted', value: { kind: 'text', value: 'feature/two' } },
+          // What a person types for a shape the form has no control of: the
+          // text itself, which is what the server is handed back for it.
+          settings: { state: 'submitted', value: { kind: 'text', value: '{"theme":"dark"}' } },
+        },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri)).toContain('elicit=accept|branch=feature/two|settings={"theme":"dark"}');
+});
+
 it('carries a page rather than a form, and the server\'s own completion ends it', async () => {
   const { client, peer: p, uri, chatUri } = await talking();
   begin(client, chatUri, 't1', 'eliciturl please');

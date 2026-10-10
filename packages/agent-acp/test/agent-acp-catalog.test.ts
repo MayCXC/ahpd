@@ -992,6 +992,35 @@ it('takes a session back on a server that cannot load one at all', async () => {
   expect(asked.some((one) => one.method === 'session/new')).toBe(false);
 });
 
+it('is resumable on a server whose only way to continue a conversation is a resume', async () => {
+  // `--no-load` is a server that never advertised `loadSession`, so a resume is
+  // the whole of what it can be handed a conversation by.
+  const { agent, log } = backend(['--no-load']);
+  const { session, watch } = start(agent, 'resume-only');
+  await runTurn(session, watch, 't1', 'hi');
+
+  // Answered from the handshake, so it exists only once the server has spoken:
+  // either call hands the conversation back, and which one this server takes it
+  // by is what `open` reads the capability for.
+  expect(session.agentId()).toBeDefined();
+  expect(session.resumable?.()).toBe(true);
+
+  // A reopen after a death is that same conversation taken back rather than
+  // loaded, which is the only way this server can be given one at all.
+  await runTurn(session, watch, 't2', 'die now');
+  const named = session.agentId();
+  await runTurn(session, watch, 't3', 'hi again');
+
+  expect(session.agentId()).toBe(named);
+  // Read again from the handshake the reopened server completed, and the same
+  // answer: the conversation can still be handed back.
+  expect(session.resumable?.()).toBe(true);
+  const asked = requests(log);
+  expect(asked.filter((one) => one.method === 'session/resume')).toHaveLength(1);
+  expect(asked.some((one) => one.method === 'session/load')).toBe(false);
+  expect(asked.filter((one) => one.method === 'session/new')).toHaveLength(1);
+});
+
 it('holds a load\'s replay out of the turn that asked for it', async () => {
   const { agent } = backend(['--replay']);
   const { session, watch } = start(agent, 'replayed', { resume: 'acp-session-replayed' });
