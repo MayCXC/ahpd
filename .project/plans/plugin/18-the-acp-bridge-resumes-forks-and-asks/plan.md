@@ -1,7 +1,7 @@
 ---
 title: The ACP bridge resumes, forks and asks
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-03
@@ -96,8 +96,8 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 | [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | done | 01, and host 19 task 01 |
 | [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | done | - |
 | [04 - Docs](task-04-docs.md) | done | 01, 02, 03 |
-| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | implemented | 03 |
-| [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | implemented | 01, 03 |
+| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | done | 03 |
+| [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | done | 01, 03 |
 
 ## Risks and tradeoffs
 
@@ -106,10 +106,10 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 ## Resume state
 
-- **Done so far:** tasks 01-04 are done: built 2026-10-10, reviewed the same day and merged in `cc15895`.
+- **Done so far:** all six tasks are done. Tasks 01-04 merged in `cc15895`, and tasks 05 and 06 merged after them.
   The review found that a reopen after a fork resumed the original conversation; the fix is in `7dc2a70`, with a test.
   The resume choice and the fork are in `packages/agent-acp/src/session/opening.ts`; the question handlers are in `packages/agent-acp/src/session/handlers.ts`.
-- **Next action:** review tasks 05 and 06, implemented 2026-10-10. Then set them done and close the plan.
+- **Next action:** none. The plan is built; see [implemented.md](implemented.md).
 - **Where the cases went:** tasks 01 and 02 in `packages/agent-acp/test/agent-acp-catalog.test.ts` and task 03 in `packages/agent-acp/test/agent-acp-ports.test.ts`.
 - **Watch out for:** the host hands `Start.seed` on every resume path, so the fallback is not needed.
   Task 05 is the one SDK change; the other backends ignore the new parameter.
@@ -117,10 +117,10 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 ## Final verification checklist
 
-- [ ] Against a scripted ACP server that advertises `session.resume`, a resumed session with known turns sends `session/resume` and no replay arrives.
-- [ ] After that resume, the session's transcript holds the seeded turns and the new ones.
-- [ ] Against one that does not, `session/load` is sent as today.
-- [ ] A fork of the last turn creates a new ACP session; a fork of an earlier turn is not offered.
-- [ ] Against a server that does not advertise `session.fork`, the agent still declares `chats.fork` and no turn has a fork point.
-- [ ] An `elicitation/create` with a form appears as an input request, and the answer reaches the server.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/PLUGINS.md`, `plans/index.md` updated.
+- [x] Against a scripted ACP server that advertises `session.resume`, a resumed session with known turns sends `session/resume` and no replay arrives.
+- [x] After that resume, the session's transcript holds the seeded turns and the new ones.
+- [x] Against one that does not, `session/load` is sent as today.
+- [x] A fork of the last turn creates a new ACP session; a fork of an earlier turn is not offered.
+- [x] Against a server that does not advertise `session.fork`, the agent still declares `chats.fork` and no turn has a fork point.
+- [x] An `elicitation/create` with a form appears as an input request, and the answer reaches the server.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/PLUGINS.md`, `plans/index.md` updated.

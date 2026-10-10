@@ -1,6 +1,6 @@
 ---
 title: A decline and a cancel reach the server apart
-status: implemented
+status: done
 depends: [task-03-a-servers-question-is-asked-in-the-chat.md]
 layer: "sdk, agent-acp"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: A server that only resumes is resumable, and an unknown field is asked as text
-status: implemented
+status: done
 depends: [task-01-a-resume-does-not-replay.md, task-03-a-servers-question-is-asked-in-the-chat.md]
 layer: "agent-acp"
 refs:
