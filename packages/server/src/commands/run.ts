@@ -70,9 +70,12 @@ import type { Options } from './options.js';
  * its own from. `resource` is the public identifier a deployment behind a proxy
  * names, so its hostname is one of them too, alone, at the bound port, and with
  * the port the resource names when it names one - decision
- * `the-http-api-checks-origin-and-host-and-takes-only-json`.
+ * `the-http-api-checks-origin-and-host-and-takes-only-json`. Each of `extra`,
+ * the origins a deployment named, adds exactly its origin and its host, which
+ * are what a browser that reached it there sends - decision
+ * `a-deployment-names-extra-origins-apart-from-resource`.
  */
-export function apiOrigins(host: string, resource: string | undefined, port: number): ApiOrigins {
+export function apiOrigins(host: string, resource: string | undefined, port: number, extra: readonly string[] = []): ApiOrigins {
   const names = ['127.0.0.1', 'localhost', '[::1]'];
   if (host !== '0.0.0.0' && host !== '::') names.push(urlHost(host));
   const authorities = names.map((one) => `${one}:${port}`);
@@ -80,6 +83,11 @@ export function apiOrigins(host: string, resource: string | undefined, port: num
   if (resource !== undefined) {
     const at = new URL(resource);
     authorities.push(at.hostname, `${at.hostname}:${port}`, ...(at.port === '' ? [] : [at.host]));
+    origins.push(at.origin);
+  }
+  for (const one of extra) {
+    const at = new URL(one);
+    authorities.push(at.host);
     origins.push(at.origin);
   }
   return { authorities, origins };
@@ -387,7 +395,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     ...(token === undefined ? {} : { token }),
     ...(users === undefined ? {} : { users }),
     program: { name: 'ahpd', version: version(), description: 'An Agent Host Protocol server, with a Claude backend' },
-    origins: () => apiOrigins(apiHost, options.resource, apiBoundPort),
+    origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
   });
   /*
    * The host's own tools as an MCP server, one endpoint per session.
@@ -419,7 +427,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     policiesCheck: options.policiesCheck,
     usage: () => metered,
     hostName: hostname(),
-    origins: () => apiOrigins(apiHost, options.resource, apiBoundPort),
+    origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
     otherwise: api,
     onProblem: stamp,
   });
@@ -795,7 +803,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   pluginRequests = pluginRoutes({
     routes: () => registered,
-    authorities: () => [...apiOrigins(apiHost, options.resource, boundPort).authorities, ...announcedNames(said)],
+    authorities: () => [...apiOrigins(apiHost, options.resource, boundPort, options.origins).authorities, ...announcedNames(said)],
     onProblem: stamp,
     otherwise: below,
   });

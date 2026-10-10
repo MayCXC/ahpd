@@ -61,6 +61,7 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | --- | --- | --- | --- |
 | `port` | integer | `9187`; `0` picks a free one | The port the host listens on |
 | `host` | address | `127.0.0.1` | The address it binds. `0.0.0.0` accepts from other machines, and then a token is required |
+| `origins` | list of origins, such as `http://203.0.113.5:9187` | none | Extra origins a browser may reach this host by. A host bound to `0.0.0.0` answers only to its loopback names, so a page served on its public address needs that address here |
 | `paths` | list of directories | the directory the daemon was started in | The directories this host catalogues |
 | `worktreesRoot` | directory | `<repo>.worktrees` beside each repository | Where session worktrees are kept |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |

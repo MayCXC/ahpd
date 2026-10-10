@@ -55,6 +55,8 @@ export interface Options {
   users?: string;
   /** The identifier this host advertises for its own sign-in. */
   resource?: string;
+  /** The origins this host also answers to, beside its own names. */
+  origins?: string[];
   /** An authorization server whose tokens this host also accepts. */
   issuer?: string;
   /** Whether a person's connection token authorizes them as well as admits them. */
@@ -441,6 +443,12 @@ export const serverFields = {
     description: 'The https identifier this host advertises for its own sign-in. Default: derived from --host and --port.',
     cli: { value: 'URL' },
   },
+  origins: {
+    type: 'array',
+    items: { type: 'string' },
+    description: 'An origin this host also answers to, such as http://203.0.113.5:9187. Repeatable.',
+    cli: { flag: '--origin', value: 'URL' },
+  },
   issuer: {
     type: 'string',
     description: 'An authorization server whose tokens are also accepted: github, or an OpenID Connect issuer.',
@@ -806,6 +814,29 @@ const httpOf = (value: Config['http'], source: string): HttpSetting | undefined 
 };
 
 /**
+ * One `origins` entry as the origin it names, or the start stops.
+ *
+ * An origin is a scheme, a host and a port and nothing else, because that is
+ * exactly what a browser sends: a path or a query is a mistake that would
+ * otherwise be dropped in silence, leaving the page refused with no reason.
+ * `source` is the file that set it, and absent when `--origin` did.
+ */
+const originOf = (entry: string, source: string | undefined): string => {
+  const said = source === undefined ? `--origin ${entry}` : `${source} has origins entry ${JSON.stringify(entry)}`;
+  let url: URL;
+  try {
+    url = new URL(entry);
+  }
+  catch {
+    return stop(`${said}, which is not an origin: an origin is a scheme, a host and a port, such as http://203.0.113.5:9187.`);
+  }
+  if ((url.protocol !== 'http:' && url.protocol !== 'https:') || url.origin !== entry.replace(/\/$/, '')) {
+    return stop(`${said}, which is not an origin: an origin is http or https, a host and a port, such as http://203.0.113.5:9187.`);
+  }
+  return url.origin;
+};
+
+/**
  * The canonical input and the configuration files, as the options a run takes.
  *
  * The merged files are checked first, then the order is what was typed, then
@@ -924,6 +955,7 @@ const noCwd = input['noCwd'] === true;
   const tokenFile = given('connectionTokenFile');
   const users = given('users');
   const resource = given('resource');
+  const origins = (given('origins') ?? []).map((entry) => originOf(entry, input['origins'] === undefined ? source('origins') : undefined));
   const issuer = given('issuer');
   const wire = given('wire');
   const clientToolTimeoutMs = given('clientToolTimeoutMs');
@@ -945,6 +977,7 @@ const noCwd = input['noCwd'] === true;
     ...(configFile === undefined ? {} : { configFile }),
     ...(users === undefined ? {} : { users }),
     ...(resource === undefined ? {} : { resource }),
+    ...(origins.length === 0 ? {} : { origins }),
     ...(issuer === undefined ? {} : { issuer }),
     trustToken: given('trustToken') ?? false,
     advancedTools: given('advancedTools') ?? false,

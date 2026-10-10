@@ -252,6 +252,18 @@ describe('a route with http on', () => {
   }, 40000);
 });
 
+describe('a route on a daemon that names an origin', () => {
+  let one: Daemon;
+
+  beforeAll(async () => { one = await daemon({ plugins: [BACKEND, ROUTE], origins: ['http://203.0.113.5:37537'] }); }, 40000);
+
+  it('answers the host of that origin, with its port and no other', async () => {
+    expect(status(await raw(one.port, 'Host: 203.0.113.5:37537\r\n'))).toBe(200);
+    expect(status(await raw(one.port, 'Host: 203.0.113.5:9999\r\n'))).toBe(403);
+    expect(status(await raw(one.port, 'Host: 203.0.113.5\r\n'))).toBe(403);
+  });
+});
+
 describe('the names an announcement adds', () => {
   it('takes the host and the hostname of every URL a line holds, and nothing a parser refuses', () => {
     const names = announcedNames([

@@ -432,6 +432,16 @@ describe('the names the API answers to', () => {
     expect(names.origins).toContain('https://ahpd.example.com:8443');
   });
 
+  it('answers to each origin a deployment named, exactly as it was named', () => {
+    const names = apiOrigins('0.0.0.0', undefined, 37537, ['http://203.0.113.1:37537', 'https://ahpd.example.com']);
+    expect(names.authorities).toContain('203.0.113.1:37537');
+    expect(names.origins).toContain('http://203.0.113.1:37537');
+    expect(names.authorities).toContain('ahpd.example.com');
+    expect(names.origins).toContain('https://ahpd.example.com');
+    expect(names.authorities).not.toContain('203.0.113.1');
+    expect(names.origins).not.toContain('https://203.0.113.1:37537');
+  });
+
   it('keeps an IPv4 bind as it was written', () => {
     const names = apiOrigins('192.0.2.7', undefined, 9187);
     expect(names.authorities).toContain('192.0.2.7:9187');

@@ -61,9 +61,9 @@ describe('the command registry', () => {
     const options = start?.options ?? [];
     const names = new Set(options.map((option) => option.name));
     expect(DAEMON_FLAGS.filter((name) => !names.has(name))).toEqual([]);
-    // The two repeatable ones collect rather than overwrite.
+    // The repeatable ones collect rather than overwrite.
     const repeatable = new Set(options.filter((option) => option.repeatable === true).map((option) => option.name));
-    expect([...repeatable].sort()).toEqual(['--path', '--plugin', '--plugin-option']);
+    expect([...repeatable].sort()).toEqual(['--origin', '--path', '--plugin', '--plugin-option']);
   });
 
   it('says which grant each command needs', () => {

@@ -1,6 +1,6 @@
 ---
 title: The docs say what `origins` admits
-status: todo
+status: implemented
 depends: [task-02-the-api-answers-to-each-origin.md]
 layer: "docs"
 refs:
@@ -35,3 +35,5 @@ The docs list the key `origins` and the flag `--origin`, and they say when a dep
 - Every link you added resolves.
 
 ## Resume
+
+Built. DAEMON.md, HOST.md and the server README have the key, the flag and the paragraph.

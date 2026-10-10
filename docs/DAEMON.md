@@ -296,6 +296,7 @@ anything has been let go of.
 | `--stdio` | Serve one connection over stdin and stdout instead of binding a port. One line of JSON per frame, no token, and the connection is this host itself. This is how a container runs a host for another host to carry (see [CONTAINERS.md](CONTAINERS.md)) |
 | `--users <file>` | The user directory. See [USERS.md](USERS.md) |
 | `--resource <url>` | The https identifier this host advertises for its own sign-in. Default: derived from `--host` and `--port` |
+| `--origin <url>` | An origin this host also answers to, such as `http://203.0.113.5:9187`. Repeatable |
 | `--issuer <github\|url>` | An authorization server whose tokens are also accepted. See [USERS.md](USERS.md) |
 | `--trust-token` | A person's connection token authorizes them as well as admits them. Off by default |
 | `--advanced-tools` | Offer the tools that declare they need advanced permission, such as the computer's three. Off by default |
@@ -706,8 +707,12 @@ curl -i http://127.0.0.1:9187/api/plugin/install \
 A request is answered only when its `Host` is one of the daemon's own names -
 the loopback names at the port the API is bound to, the address it is bound to
 when that is a specific one (an IPv6 one in brackets), and the host of
-`resource` when a deployment names it, with the port it names if it names one -
-and when its `Origin`, if a browser sends one, is one of them too. A body
+`resource` when a deployment names it, with the port it names if it names one,
+and the host of each entry in `origins` - and when its `Origin`, if a browser
+sends one, is one of them too. A deployment that a browser reaches by another
+address or name puts that origin in `origins` - decision [A deployment names
+the extra origins the daemon answers to in `origins`, apart from
+`resource`](../.project/decisions/a-deployment-names-extra-origins-apart-from-resource.md). A body
 is served only when its `content-type` is `application/json`; anything else is
 answered 415. That keeps a page on another site, or one that rebinds its own
 name to loopback, from driving the API.

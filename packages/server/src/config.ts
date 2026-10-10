@@ -145,6 +145,16 @@ export interface Config {
    */
   resource?: string;
   /**
+   * The origins this host also answers to, each a scheme, a host and a port.
+   *
+   * A host bound to a wildcard answers to no name but the loopback ones, so a
+   * browser that reaches it by a public address or another name is refused.
+   * Each entry here is one the deployment chose: its origin is an `Origin` the
+   * API accepts and its host a `Host` the API and the plugin routes accept -
+   * decision `a-deployment-names-extra-origins-apart-from-resource`.
+   */
+  origins?: string[];
+  /**
    * An authorization server whose tokens this host also accepts.
    *
    * `github`, or an issuer URL this host may reach. Absent, the host is its own

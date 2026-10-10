@@ -1,6 +1,6 @@
 ---
 title: The daemon reads `origins` and `--origin`
-status: todo
+status: implemented
 depends: []
 layer: "server"
 refs:
@@ -43,3 +43,5 @@ An entry that is not an `http:` or `https:` origin stops the start with a messag
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+Built in the worktree `build-agents-0f517bb0`. `originOf` in `options.ts` checks each entry. `server-commands.test.ts` also lists `--origin` as repeatable.

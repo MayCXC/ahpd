@@ -68,9 +68,9 @@ browser -> GET http://203.0.113.1:37537/plugins/ahpd-web/ (Host: 203.0.113.1:375
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The daemon reads `origins` and `--origin`](task-01-the-daemon-reads-origins.md) | todo | - |
-| [02 - The API and the plugin routes answer to each origin](task-02-the-api-answers-to-each-origin.md) | todo | 01 |
-| [03 - The docs say what `origins` admits](task-03-docs.md) | todo | 02 |
+| [01 - The daemon reads `origins` and `--origin`](task-01-the-daemon-reads-origins.md) | implemented | - |
+| [02 - The API and the plugin routes answer to each origin](task-02-the-api-answers-to-each-origin.md) | implemented | 01 |
+| [03 - The docs say what `origins` admits](task-03-docs.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -79,8 +79,8 @@ browser -> GET http://203.0.113.1:37537/plugins/ahpd-web/ (Host: 203.0.113.1:375
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** tasks 01 to 03 are implemented and wait for review.
+- **Next action:** review, then `implemented.md`.
 - **Open questions:** none.
 - **Watch out for:** `apiOrigins` has tests in several files that pass `undefined` for `resource`; keep its existing arguments working, or update every call.
 

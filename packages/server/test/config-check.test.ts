@@ -251,6 +251,25 @@ describe('the schema', () => {
   });
 });
 
+describe('the origins key', () => {
+  it('reads each origin from the file', () => {
+    expect(folded({ origins: ['http://203.0.113.1:37537'] }).origins).toEqual(['http://203.0.113.1:37537']);
+  });
+
+  it('takes --origin over the file', () => {
+    put({ origins: ['http://203.0.113.1:37537'] });
+    expect(optionsFrom({ configFile: config, origins: ['https://ahpd.example.com/'] }).origins).toEqual(['https://ahpd.example.com']);
+  });
+
+  it('refuses an entry that is not an http or https origin, naming it', () => {
+    for (const entry of ['ftp://x', 'http://x/path', 'x:37537', 'nonsense']) {
+      const said = refusal({ origins: [entry] });
+      expect(said).toContain(`${config} has origins entry ${JSON.stringify(entry)}`);
+      expect(said).toContain('which is not an origin');
+    }
+  });
+});
+
 describe('the mcpServers key', () => {
   it('takes both shapes, by the name a person gave them', () => {
     const options = folded({

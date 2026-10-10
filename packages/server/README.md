@@ -125,6 +125,7 @@ Every verb and every flag is one declaration under [`src/commands`](https://gith
 | `--stdio` | Serve one connection over stdin and stdout instead of binding a port. One line of JSON per frame, no token |
 | `--users <file>` | The people who may use this host |
 | `--resource <url>` | The https identifier this host advertises for its own sign-in. Default: derived from `--host` and `--port` |
+| `--origin <url>` | An origin this host also answers to, such as `http://203.0.113.5:9187`. Repeatable |
 | `--issuer <github\|url>` | An authorization server whose tokens are also accepted: `github`, or an OpenID Connect issuer |
 | `--trust-token` | A person's connection token authorizes them as well as admits them |
 | `--advanced-tools` | Offer the tools that declare they need advanced permission, such as the computer's three |

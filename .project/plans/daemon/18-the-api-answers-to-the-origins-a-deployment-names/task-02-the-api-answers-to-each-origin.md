@@ -1,6 +1,6 @@
 ---
 title: The API and the plugin routes answer to each origin
-status: todo
+status: implemented
 depends: [task-01-the-daemon-reads-origins.md]
 layer: "server"
 refs:
@@ -38,3 +38,5 @@ Each configured origin is one the API accepts as `Origin`, and its `host` is one
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+Built. `apiOrigins` takes `extra` as its fourth argument. `plugin-route.test.ts` starts a daemon with one origin and checks the `Host` values.
