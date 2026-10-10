@@ -1,6 +1,6 @@
 ---
 title: A session forks where the server can
-status: todo
+status: implemented
 depends: [task-01-a-resume-does-not-replay.md]
 layer: "agent-acp"
 refs:
@@ -18,10 +18,11 @@ A client is offered a fork of an ACP session's last turn when the server adverti
 
 ## Files
 
-- `UPDATE: packages/agent-acp/src/connection.ts` - `unstable_forkSession` on the connection.
-- `UPDATE: packages/agent-acp/src/session.ts` - `chats.fork: true` on the agent, `forkPoint` for the last turn only and only when the session's server advertised `session.fork`, and the fork in `open` when `Start.forkAt` is set.
+- `UPDATE: packages/agent-acp/src/connection.ts` - `forkSession` on the connection, which is ACP's `session/fork`.
+- `UPDATE: packages/agent-acp/src/agent.ts` - `chats.fork: true`, a static field.
+- `UPDATE: packages/agent-acp/src/session.ts` - `forkPoint` for the last turn only and only when the session's server advertised `session.fork`, and the fork in `session/opening.ts` when `Start.forkAt` is set.
 - `UPDATE: packages/agent-acp/src/session.ts:20-23` - the comment no longer lists a fork as unsupported.
-- `UPDATE: packages/agent-acp/test/agent-acp.test.ts` - the cases below.
+- `UPDATE: packages/agent-acp/test/agent-acp-catalog.test.ts` - the cases below.
 
 ## Steps
 
@@ -34,8 +35,16 @@ A client is offered a fork of an ACP session's last turn when the server adverti
 
 ## Validation
 
-- `packages/agent-acp/test/agent-acp.test.ts`: with `session.fork`, the last turn's fork point is its last entry and an earlier turn has none; forking sends `session/fork` and the new session prompts under the new id; without it, the agent still declares `chats.fork` and no turn has a fork point.
+- `packages/agent-acp/test/agent-acp-catalog.test.ts`: with `session.fork`, the last turn's fork point is its last entry and an earlier turn has none; forking sends `session/fork` and the new session prompts under the new id; without it, the agent still declares `chats.fork` and no turn has a fork point.
 - `pnpm test`, `pnpm typecheck` green.
 
 ## Resume
+
+- **The cases went into `packages/agent-acp/test/agent-acp-catalog.test.ts`, not `test/agent-acp.test.ts`**, for the reason task 01's Resume gives: a fork point and a fork are catalogue state, read from the fixture's request log.
+- Host 19 is built, so its task 01 contract is in force: a fork copies *through* the chosen turn, and `Session.forkPoint(turnId)` answers the backend's own name for the last entry that turn left behind. This bridge has no such name to give, because `session/fork` copies the whole conversation the server holds and `ForkSessionRequest` carries no cut. What it answers with is the host's own turn id, and `open` checks that id against the last turn of the conversation before it forks - an id that is not the end is refused with a sentence rather than served as a copy that still holds the turns after it.
+- The connection member is `forkSession`, named the way `loadSession` and `resumeSession` are, and it sends `methods.agent.session.fork` - the SDK's stable method name for the call; `unstable_forkSession` is a different SDK surface and is not what this package uses.
+- `open` reads the fork **first**: `Start.forkAt` with `Start.resume`, before the resume/load branch. A fork is not a reopen, so it must not be reached by the `reopen` test. It also refuses `forkAt` with no `resume`, since a fork names the conversation it copies.
+- The refusal for a turn that is not the last is on `String(ctx.turns.at(-1)?.id)`, which on the fork path is the last turn of `Start.seed`, since the server replays nothing for a fork either. The new record is seeded from `Start.seed` through the same `hold()` task 01 added.
+- The fork's own answer names a session of its own, so `ctx.acpSessionId` is set to it and the next `session/prompt` goes under that id; the conversation it copied is left where it was, which is what the test reads from the log.
+- `--fork` on the fixture advertises `sessionCapabilities.fork`, which the handshake does **not** advertise by default, so the "cannot fork" half is the default server. `chats.fork` is `true` on both, which is the point of the split: the capability is the agent's and is declared statically, and what a *session* can offer is read from its own server.
 

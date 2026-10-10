@@ -1023,6 +1023,7 @@ port is there - a server is never told a host can do something it cannot.
 | `fs/write_text_file` | The same store's write half | That store can write |
 | `terminal/create`, `terminal/output`, `terminal/wait_for_exit`, `terminal/kill`, `terminal/release` | The host's own shells, opened and listed by the host | The host has a `terminals` port |
 | `session/request_permission` | A `chat/inputNeededSet` confirmation the person answers | Always |
+| `elicitation/create` | A `chat/inputRequested` question the person answers, and `chat/inputCompleted` back | Always |
 
 The shell is the host's and not the bridge's: `terminal/create` arrives with an
 argv and an environment, the host opens the terminal it would have opened for a
@@ -1031,6 +1032,15 @@ client, and the bridge answers with what it printed and what it exited with.
 A permission offers every option the server listed, approvals before refusals, on the call and on its confirmation entry, and the one the person picks is the `optionId` the server receives.
 An answer that picked no option, or one the server did not offer, selects `allow_once` or `reject_once`, and an `always` option is never selected that way because that would change the session's policy from a single answer.
 A server that offers no once option of the answer's kind is answered `cancelled`.
+
+`elicitation/create` is a server asking a person something, and the bridge asks
+it on the chat as a `chat/inputRequested` question. Each field of the form
+becomes one question, and the session raises the `session/inputNeededSet` entry
+a permission raises. The person's answer arrives as `chat/inputCompleted` and
+goes to the server as the elicitation's content, and a decline goes as a
+decline. A page rather than a form carries its `url` on the request and is
+completed by the server's own `elicitation/complete`. A question still standing
+when a turn is stopped is answered `cancel`.
 
 A tool call moves when the agent moves it.
 A call the server is still holding is `pending`, and nothing is said about who approves it until the agent starts it, so a permission that arrives one instruction later is never contradicted.
@@ -1059,6 +1069,19 @@ holding, and a server that cannot reopen one says so rather than answering with 
 empty conversation. Closing a session tells the server to close it where it
 advertised it can be, and signals the whole process group that server leads, so
 nothing it started is left running.
+
+A conversation is reopened with `session/resume` where the server advertises
+`sessionCapabilities.resume` and the host already holds its turns. Everywhere
+else it is reopened with `session/load`, whose replay is the only record for a
+conversation this process never watched. A resume replays nothing, so the turns
+the host handed over seed this bridge's own record of the conversation.
+
+A fork is offered for the last turn of a session, and only where the server
+advertises `sessionCapabilities.fork` - a capability ACP marks unstable, which
+most servers do not offer. `session/fork` copies the whole conversation the
+server holds and takes no cut, so no earlier turn has a fork point. A fork asked
+for at any other turn is refused with a sentence, rather than served as a copy
+that still holds the turns after it.
 
 ## A third worked example: a host-owned URI scheme
 

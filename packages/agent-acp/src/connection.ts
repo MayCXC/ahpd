@@ -18,6 +18,10 @@ import type {
   AuthenticateResponse,
   ClientCapabilities,
   ContentBlock,
+  CreateElicitationRequest,
+  CreateElicitationResponse,
+  ForkSessionRequest,
+  ForkSessionResponse,
   InitializeRequest,
   InitializeResponse,
   ListSessionsRequest,
@@ -28,6 +32,8 @@ import type {
   NewSessionResponse,
   PromptResponse,
   RequestPermissionResponse,
+  ResumeSessionRequest,
+  ResumeSessionResponse,
   SetSessionConfigOptionRequest,
   SetSessionConfigOptionResponse,
   SetSessionModeRequest,
@@ -162,7 +168,7 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
   const handlers = options.handlers;
   const {
     readTextFile, writeTextFile, createTerminal, terminalOutput,
-    waitForTerminalExit, killTerminal, releaseTerminal,
+    waitForTerminalExit, killTerminal, releaseTerminal, elicitation, elicitationComplete,
   } = handlers;
 
   /*
@@ -183,6 +189,9 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
         }
       : {}),
     ...(createTerminal !== undefined ? { terminal: true } : {}),
+    // Both shapes are told, because this bridge draws a form as a question and
+    // a page as a link, which are two different things to answer.
+    ...(elicitation !== undefined ? { elicitation: { form: {}, url: {} } } : {}),
     // A boolean option is set by the same request a select is, and the bridge
     // draws it as a control and sets it, so a server is free to offer one.
     session: { configOptions: { boolean: {} } },
@@ -216,6 +225,19 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
     if (answer === undefined || answer === 'cancelled') return REFUSED;
     return { outcome: { outcome: 'selected', optionId: answer.optionId } };
   });
+  /*
+   * The server's own question, and the server saying its page is done.
+   *
+   * The completion is a notification rather than a response, because a URL
+   * elicitation is answered by whoever opened the page rather than by this
+   * client: the server's own flow ends it, and this is how it says so.
+   */
+  if (elicitation !== undefined) {
+    app.onRequest(methods.client.elicitation.create, (context): Promise<CreateElicitationResponse> => elicitation(context.params));
+  }
+  if (elicitationComplete !== undefined) {
+    app.onNotification(methods.client.elicitation.complete, (context) => elicitationComplete(context.params));
+  }
   if (readTextFile !== undefined) app.onRequest(methods.client.fs.readTextFile, (context) => readTextFile(context.params));
   if (writeTextFile !== undefined) app.onRequest(methods.client.fs.writeTextFile, (context) => writeTextFile(context.params));
   if (createTerminal !== undefined) app.onRequest(methods.client.terminal.create, (context) => createTerminal(context.params));
@@ -311,6 +333,19 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
       heard(() => connection.agent.request(methods.agent.session.new, request)),
     loadSession: (request: LoadSessionRequest): Promise<LoadSessionResponse> =>
       heard(() => connection.agent.request(methods.agent.session.load, request)),
+    resumeSession: (request: ResumeSessionRequest): Promise<ResumeSessionResponse> =>
+      heard(() => connection.agent.request(methods.agent.session.resume, request)),
+    /*
+     * `session/fork`, which the SDK calls unstable.
+     *
+     * Sent through the SDK's own method rather than as a name, because the
+     * request and the answer are typed and a fork's whole point is the id that
+     * comes back. A server that never advertised the capability is never asked
+     * - the session decides - so what is unstable here is only ever reached on
+     * a server that has opted into it.
+     */
+    forkSession: (request: ForkSessionRequest): Promise<ForkSessionResponse> =>
+      heard(() => connection.agent.request(methods.agent.session.fork, request)),
     listSessions: (request: ListSessionsRequest): Promise<ListSessionsResponse> =>
       heard(() => connection.agent.request(methods.agent.session.list, request)),
     setSessionMode: (request: SetSessionModeRequest): Promise<SetSessionModeResponse> =>

@@ -120,13 +120,15 @@ await listen({ port: 9187 }, (peer) => host.accept(peer));
 
 ## What it does
 
-It spawns the command, completes the ACP handshake over its stdio, opens one session, and turns each `session/update` into the `chat/*` action a client already knows. A turn ends as the server's own stop reason says: `chat/turnComplete` for `end_turn`, `chat/turnCancelled` for `cancelled`, and `chat/error` carrying the reason for `max_tokens`, `max_turn_requests` and `refusal`, which are a turn that stopped early rather than an answer. `cancel` reaches the server as its notification, after every permission it was still waiting on has been answered `cancelled`.
+It spawns the command, completes the ACP handshake over its stdio, opens one session, and turns each `session/update` into the `chat/*` action a client already knows. A turn ends as the server's own stop reason says: `chat/turnComplete` for `end_turn`, `chat/turnCancelled` for `cancelled`, and `chat/error` carrying the reason for `max_tokens`, `max_turn_requests` and `refusal`, which are a turn that stopped early rather than an answer. `cancel` reaches the server as its notification, after everything it was still waiting on has been answered: `cancelled` for a permission, and `cancel` for a question, because nobody said no to one that stopped being asked.
 
 The host's own tools, and with them the tools a session's clients provide, are offered to the agent as one HTTP MCP server named `ahp`, where `hostTools` is on, which it is by default. A call the agent makes to a client's tool is reported against the client that provides it and waits for that client's answer, which reaches the agent as the tool result with everything the client sent, images and resources included. A client that arrives after the agent listed its tools is heard of as `toolsChanged` says: under `notify`, the default, the host holds a stream open and sends `notifications/tools/list_changed` down it, and under `list` nothing is sent. Both serve the current list either way, so an agent that ignores the notification and never lists again is one that misses every tool a client announced after it looked.
 
 A session this process never watched is loaded when a client reads it, where the server advertised `loadSession`; the read and the turn after it each load it, and what the server replays becomes the session's earlier turns. A replayed turn the server sent no user message for is kept, with no user text on it.
 
 A `session/request_permission` is a confirmation offering the server's own options, approvals first, and the one the person picks is the `optionId` the server receives. An answer that picked none selects the server's once option of that kind, never an `always`.
+
+An `elicitation/create` is a question, and it is asked on the chat as a `chat/inputRequested` with one question per field of its form, and the `session/inputNeededSet` entry a permission raises. The person's answer arrives as `chat/inputCompleted` and reaches the server as the elicitation's content, and a decline reaches it as a decline. A page rather than a form carries its `url` on the request and is completed by the server saying so with `elicitation/complete`.
 
 ## Documentation
 

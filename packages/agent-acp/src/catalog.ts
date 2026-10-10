@@ -16,7 +16,7 @@
 
 import type { AgentCapabilities, ContentBlock, ListSessionsRequest, SessionInfo, SessionUpdate } from '@agentclientprotocol/sdk';
 import { uriOf } from '@ahpd/sdk';
-import type { Listed } from '@ahpd/sdk';
+import type { Bag, Listed } from '@ahpd/sdk';
 import { connectAcp } from './connection.js';
 import { replayedTurns } from './transcript.js';
 import type { AcpConnection, AcpHandlers, AcpOptions, WatchedSession } from './types.js';
@@ -172,6 +172,8 @@ export function watchSession(fields: {
   title: string;
   /** The updates a load replayed, which are the session's earlier turns. */
   replay?: SessionUpdate[];
+  /** The turns the host already held, for a resume no replay was sent for. */
+  seed?: Bag[];
 }): WatchedSession {
   const at = new Date().toISOString();
   const known = watched.get(keyOf(fields.provider, fields.id));
@@ -181,6 +183,7 @@ export function watchSession(fields: {
     if (fields.title !== '') known.title = fields.title;
     known.modifiedAt = at;
     prepend(known, fields.replay ?? [], at);
+    hold(known, fields.seed ?? []);
     return known;
   }
   const created: WatchedSession = {
@@ -192,10 +195,26 @@ export function watchSession(fields: {
     createdAt: at,
     modifiedAt: at,
     turns: [],
+    held: [],
   };
   watched.set(keyOf(fields.provider, fields.id), created);
   prepend(created, fields.replay ?? [], at);
+  hold(created, fields.seed ?? []);
   return created;
+}
+
+/**
+ * Keep the turns the host already held, when the record has none of its own.
+ *
+ * A resume is answered without a replay, so this is the only record of the
+ * conversation this process will have: what the host held when it asked. A
+ * record that already holds turns, watched or replayed, is left alone - a
+ * `session/load` replay is the server's own account of the same conversation,
+ * and keeping the host's as well would put every turn in twice.
+ */
+function hold(session: WatchedSession, seed: Bag[]): void {
+  if (seed.length === 0 || session.turns.length > 0 || session.held.length > 0) return;
+  session.held = [...seed];
 }
 
 /**

@@ -1,7 +1,7 @@
 ---
 title: The ACP bridge resumes, forks and asks
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-03
@@ -89,10 +89,10 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A resume does not replay what the host holds](task-01-a-resume-does-not-replay.md) | todo | - |
-| [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | todo | 01, and host 19 task 01 |
-| [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | todo | - |
-| [04 - Docs](task-04-docs.md) | todo | 01, 02, 03 |
+| [01 - A resume does not replay what the host holds](task-01-a-resume-does-not-replay.md) | implemented | - |
+| [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | implemented | 01, and host 19 task 01 |
+| [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | implemented | - |
+| [04 - Docs](task-04-docs.md) | implemented | 01, 02, 03 |
 
 ## Risks and tradeoffs
 
@@ -101,9 +101,12 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-resume-does-not-replay.md](task-01-a-resume-does-not-replay.md); task 03 does not depend on it.
-- **Watch out for:** check that the host hands `Start.seed` on a resume before relying on it; if it does not, task 01 keeps `session/load` and says so in its Resume.
+- **Done so far:** all four tasks, implemented 2026-10-10 and not reviewed. The resume choice and the fork are in `packages/agent-acp/src/session/opening.ts`; `held` on the watched record and `turnsOf` are in `catalog.ts` and `transcript.ts`; the new connection calls are in `connection.ts`; `chats.fork` is in `agent.ts`. The question is `askElicitation`, `heardElicitationComplete`, `answerElicitation` and `settleElicitations` in `session/handlers.ts`, held in `ctx.elicitations`, with the form to questions and the answers to content in `mapping.ts`.
+- **Next action:** none; the plan is implemented and waits on Softov. Nothing is set done and the plan is not built.
+- **Where the cases went:** tasks 01 and 02 in `packages/agent-acp/test/agent-acp-catalog.test.ts` and task 03 in `packages/agent-acp/test/agent-acp-ports.test.ts`, not `test/agent-acp.test.ts` as their Files lines said. A fork point and a resume are catalogue state; an answer to a question is a client's action and needs the host, which is what the ports file's real `createHost` is for.
+- **One fork the plan did not decide:** a person's `cancel` and their `decline` reach a backend as the same thing. `packages/sdk/src/host/chatactions.ts` reduces `chat/inputCompleted` to `session.answer(requestId, accepted, answers)`, so the response kind is gone by the time `answer` runs, and this bridge sends a decline for both. The `cancel` a server receives is only the one the bridge raises itself, when a turn is stopped or a session closed - which is what task 03's step 5 asks for and all it can mean. Telling the two apart needs a host change, and none is in this plan.
+- **A second, smaller one:** a form field whose `type` is not one of the shapes ACP names is asked as a text question rather than left out, which is the plain reading of "one question per form field".
+- **Watch out for:** the host **does** hand `Start.seed` on every resume path, so the fallback is not needed; the plan's first risk stands, and `resumable()` is still read from `loadSession` alone, so a server that advertises only `session.resume` is reopenable in practice while the host is never offered the move.
   ACP v2 drops `session/load`, `fs/*` and `terminal/*`; this plan stays on v1, and v2 waits in [deferred.md](deferred.md).
 
 ## Final verification checklist

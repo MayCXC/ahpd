@@ -1,4 +1,4 @@
-import type { PromptCapabilities, SessionModeState, SessionUpdate } from '@agentclientprotocol/sdk';
+import type { CreateElicitationResponse, PromptCapabilities, SessionModeState, SessionUpdate } from '@agentclientprotocol/sdk';
 import type { Bag, BoundTool, Emit, OpenedTerminal, Start } from '@ahpd/sdk';
 import type { AcpConnection, AcpOptions, AcpTurn, ConfirmationOption, PermissionAnswer, WatchedSession, WatchedTurn } from '../types.js';
 import type { ClientCalls } from './clientcalls.js';
@@ -86,6 +86,23 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
    * in the process, so one here could not be picked up again.
    */
   loads: boolean;
+  /**
+   * Whether the server said it can take a conversation back without replaying it.
+   *
+   * The handshake's `sessionCapabilities.resume`. A server with it is asked for
+   * the session rather than handed the whole conversation again, which is what
+   * a client that already holds the turns wants - and the only way to continue
+   * a conversation on a server that has no `loadSession` at all.
+   */
+  resumes: boolean;
+  /**
+   * Whether the server said it can copy a conversation into a new one.
+   *
+   * The handshake's `sessionCapabilities.fork`, which is UNSTABLE in ACP and
+   * absent from most servers. Read per session because it is the server's own
+   * answer, and what decides whether a turn has a fork point at all.
+   */
+  forks: boolean;
   /** What the server said it can take in a prompt, once the handshake has said it. */
   takes: PromptCapabilities | undefined;
   /**
@@ -139,4 +156,16 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
   }>;
   /** The terminals this session opened for the server, by the server's own id. */
   terminals: Map<string, { handle: OpenedTerminal; limit?: number }>;
+  /**
+   * The questions the server is waiting on a person for, by the request id.
+   *
+   * Held the way `permissions` is, and for the same reason: the ACP request is
+   * answered from here. What is a person's here is the form's own fields, so
+   * only the answers they name are handed back as content.
+   */
+  elicitations: Map<string, {
+    /** The fields the server asked for, so an answer carries nothing else. */
+    fields: Set<string>;
+    settle(answer: CreateElicitationResponse): void;
+  }>;
 }

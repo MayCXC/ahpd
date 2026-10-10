@@ -357,12 +357,13 @@ describe('the MCP servers a session is opened with', () => {
     await runTurn(session, watch, 't2', 'hi again');
 
     // A second endpoint is a second process answering with a token of its own,
-    // for a session nothing is listening to. The load is told the same list the
-    // new session was given, because there is only one.
+    // for a session nothing is listening to. What continues the conversation -
+    // the resume, on a server that takes one - is told the same list the new
+    // session was given, because there is only one.
     expect(asked).toBe(1);
     const openedOnNew = requests(log).find((one) => one.method === 'session/new')?.params?.['mcpServers'];
-    const openedOnLoad = requests(log).find((one) => one.method === 'session/load')?.params?.['mcpServers'];
-    expect(openedOnLoad).toEqual(openedOnNew);
+    const openedAgain = requests(log).find((one) => one.method === 'session/resume')?.params?.['mcpServers'];
+    expect(openedAgain).toEqual(openedOnNew);
   });
 
   it('carries the same list on a load, which is the session that continues', async () => {
@@ -921,7 +922,21 @@ it('sets the model through the older call on a server with no options', async ()
     .toMatchObject({ modelId: 'thorough' });
 });
 
-it('loads a session on resume rather than opening a new one', async () => {
+/**
+ * The turns a host holds when it asks for a conversation back.
+ *
+ * The wire turns a chat had, in the shape `Session.allTurns` answers with,
+ * which is what `Start.seed` carries on a resume.
+ */
+const HELD: Bag[] = [{
+  id: 'seed-1',
+  startedAt: '2026-01-01T00:00:00.000Z',
+  message: { text: 'where were we?', origin: { kind: 'user' } },
+  responseParts: [{ kind: 'text', id: 'seed-1-p1', content: 'at the fast one' }],
+  state: 'complete',
+}];
+
+it('loads a resumed session when the host holds none of its turns', async () => {
   const { agent, log } = backend();
   const { session, watch } = start(agent, 'resume', { resume: 'acp-session-resumed' });
   await runTurn(session, watch, 't1', 'hi');
@@ -931,8 +946,49 @@ it('loads a session on resume rather than opening a new one', async () => {
     { id: 'fast', name: 'Fast' },
     { id: 'thorough', name: 'Thorough' },
   ]);
+  // With no seed there is nothing on this side of the wire, so the replay is
+  // the only record of the conversation the session was resumed for.
   const asked = requests(log);
   expect(asked.some((one) => one.method === 'session/load')).toBe(true);
+  expect(asked.some((one) => one.method === 'session/resume')).toBe(false);
+  expect(asked.some((one) => one.method === 'session/new')).toBe(false);
+});
+
+it('takes a resumed session back without the server replaying it', async () => {
+  // `--replay` is what makes this a test: a server that replays would read the
+  // whole conversation back, which is exactly what a host that holds it wants
+  // not to happen.
+  const { agent, log } = backend(['--replay']);
+  const { session, watch } = start(agent, 'taken-back', { resume: 'acp-session-taken-back', seed: HELD });
+  await runTurn(session, watch, 't1', 'hi');
+
+  expect(session.agentId()).toBe('acp-session-taken-back');
+  const asked = requests(log);
+  expect(asked.filter((one) => one.method === 'session/resume')).toHaveLength(1);
+  expect(asked.some((one) => one.method === 'session/load')).toBe(false);
+  expect(asked.some((one) => one.method === 'session/new')).toBe(false);
+  // The turns the host held, and then the one this process watched: a resume
+  // that replayed nothing leaves the record to be seeded from what was sent.
+  expect(session.allTurns().map((one) => (one.message as { text?: string }).text))
+    .toEqual(['where were we?', 'hi']);
+  const turns = await agent.transcript?.('acp-session-taken-back');
+  expect(turns?.map((one) => one.message.text)).toEqual(['where were we?', 'hi']);
+  expect((turns?.[0]?.responseParts as { content?: string }[]).map((part) => part.content))
+    .toEqual(['at the fast one']);
+});
+
+it('takes a session back on a server that cannot load one at all', async () => {
+  const { agent, log } = backend(['--no-load']);
+  const { session, watch } = start(agent, 'no-load', { resume: 'acp-session-no-load', seed: HELD });
+  await runTurn(session, watch, 't1', 'hi');
+
+  // A conversation continued on a server whose only way to continue one is a
+  // resume, which is the case that capability exists for.
+  expect(session.agentId()).toBe('acp-session-no-load');
+  expect(watch.endings()).toEqual(['chat/turnComplete']);
+  const asked = requests(log);
+  expect(asked.filter((one) => one.method === 'session/resume')).toHaveLength(1);
+  expect(asked.some((one) => one.method === 'session/load')).toBe(false);
   expect(asked.some((one) => one.method === 'session/new')).toBe(false);
 });
 
@@ -1027,14 +1083,40 @@ it('continues the same session after the server dies, rather than starting a new
   expect(watch.endings()).toEqual(['chat/error', 'chat/turnComplete']);
   // The same conversation, on whichever server answered the second turn.
   expect(session.agentId()).toBe(named);
+  /*
+   * Taken back rather than replayed: this process watched the whole
+   * conversation, so a load would read back the turns this record already
+   * holds.
+   */
+  const takes = requests(log).filter((one) => one.method === 'session/resume');
+  expect(takes).toHaveLength(1);
+  expect(takes[0]?.params).toMatchObject({ sessionId: named });
+  expect(requests(log).some((one) => one.method === 'session/load')).toBe(false);
+  expect(requests(log).filter((one) => one.method === 'session/new')).toHaveLength(1);
+  // And the record it kept is the conversation, with no turn in it twice.
+  const turns = await agent.transcript?.(String(named));
+  expect(turns?.map((one) => one.message.text)).toEqual(['die now', 'hi again']);
+});
+
+it('loads the conversation again after a death on a server that cannot take one back', async () => {
+  const { agent, log } = backend(['--no-resume']);
+  const { session, watch } = start(agent, 'died-no-resume');
+  await runTurn(session, watch, 't1', 'die now');
+  const named = session.agentId();
+
+  await runTurn(session, watch, 't2', 'hi again');
+  expect(session.agentId()).toBe(named);
+  // No resume to make, so the reopen is the load it always was - and the
+  // record it already held is left alone rather than replayed into.
   const loads = requests(log).filter((one) => one.method === 'session/load');
   expect(loads).toHaveLength(1);
   expect(loads[0]?.params).toMatchObject({ sessionId: named });
+  expect(requests(log).some((one) => one.method === 'session/resume')).toBe(false);
   expect(requests(log).filter((one) => one.method === 'session/new')).toHaveLength(1);
 });
 
-it('fails the turn after a death when the server cannot load a session', async () => {
-  const { agent, log } = backend(['--no-load']);
+it('fails the turn after a death when the server can neither load nor resume a session', async () => {
+  const { agent, log } = backend(['--no-load', '--no-resume']);
   const { session, watch } = start(agent, 'died-no-load');
   await runTurn(session, watch, 't1', 'die now');
 
@@ -1045,7 +1127,102 @@ it('fails the turn after a death when the server cannot load a session', async (
   expect(String((watch.actions.at(-1)?.action as { part?: { error?: { message?: string } } })
     .part?.error?.message)).toContain('cannot load a session');
   expect(requests(log).some((one) => one.method === 'session/load')).toBe(false);
+  expect(requests(log).some((one) => one.method === 'session/resume')).toBe(false);
   expect(requests(log).filter((one) => one.method === 'session/new')).toHaveLength(1);
+});
+
+it('declares that it can fork, and offers no fork point on a server that cannot', async () => {
+  const { agent } = backend();
+  const { session, watch } = start(agent, 'no-fork');
+  await runTurn(session, watch, 't1', 'hi');
+
+  // The capability is a field of the agent, so it is declared before any server
+  // has spoken. What is per session is the fork point, and a server that never
+  // advertised `session.fork` has none to give.
+  expect(agent.chats?.fork).toBe(true);
+  expect(session.forkPoint).toBeDefined();
+  expect(session.forkPoint?.('t1')).toBeUndefined();
+});
+
+it('offers a fork of the last turn only, and copies the conversation into a new session', async () => {
+  const { agent, log } = backend(['--fork']);
+  const { session, watch } = start(agent, 'forked-from');
+  await runTurn(session, watch, 't1', 'first');
+  await runTurn(session, watch, 't2', 'second');
+  const from = String(session.agentId());
+
+  // A fork copies the whole conversation the server holds, so only the turn at
+  // its end can be forked from: an earlier one would have to leave the turns
+  // after it behind, and this server cannot be asked for that.
+  expect(session.forkPoint?.('t1')).toBeUndefined();
+  expect(session.forkPoint?.('t2')).toBe('t2');
+
+  // What the host sends for a fork, built the way `createSession` builds it.
+  const seed = session.allTurns();
+  const point = String(session.forkPoint?.('t2'));
+  const { session: forked, watch: forkedWatch } = start(agent, 'forked', { resume: from, forkAt: point, seed });
+  await runTurn(forked, forkedWatch, 't3', 'third');
+
+  const copies = requests(log).filter((one) => one.method === 'session/fork');
+  expect(copies).toHaveLength(1);
+  expect(copies[0]?.params).toMatchObject({ sessionId: from });
+  // A session of its own rather than the one it was copied from: the prompt
+  // after it arrives under the id the fork answered with, and the original
+  // conversation is left where it was.
+  expect(forked.agentId()).not.toBe(from);
+  expect(requests(log).filter((one) => one.method === 'session/prompt').at(-1)?.params)
+    .toMatchObject({ sessionId: forked.agentId() });
+  expect(requests(log).some((one) => one.method === 'session/resume')).toBe(false);
+  expect(requests(log).some((one) => one.method === 'session/load')).toBe(false);
+  const turns = await agent.transcript?.(String(forked.agentId()));
+  expect(turns?.map((one) => one.message.text)).toEqual(['first', 'second', 'third']);
+});
+
+it('takes a forked session back under its own id after its server died, and forks nothing again', async () => {
+  const { agent, log } = backend(['--fork']);
+  const { session, watch } = start(agent, 'fork-dies-from');
+  await runTurn(session, watch, 't1', 'first');
+  const from = String(session.agentId());
+
+  const { session: forked, watch: forkedWatch } = start(agent, 'fork-dies', {
+    resume: from,
+    forkAt: String(session.forkPoint?.('t1')),
+    seed: session.allTurns(),
+  });
+  await runTurn(forked, forkedWatch, 't2', 'die now');
+  const copy = String(forked.agentId());
+  await runTurn(forked, forkedWatch, 't3', 'again');
+
+  // The fork was the session's first open. The reopen after the death
+  // continues the copy, not the conversation it was copied from.
+  expect(forkedWatch.types().at(-1)).not.toBe('chat/error');
+  expect(requests(log).filter((one) => one.method === 'session/fork')).toHaveLength(1);
+  expect(requests(log).find((one) => one.method === 'session/resume')?.params).toMatchObject({ sessionId: copy });
+  expect(forked.agentId()).toBe(copy);
+  expect(requests(log).filter((one) => one.method === 'session/prompt').at(-1)?.params)
+    .toMatchObject({ sessionId: copy });
+});
+
+it('refuses a fork at a turn the server was never offered one for', async () => {
+  const { agent, log } = backend(['--fork']);
+  const { session, watch } = start(agent, 'forked-earlier-from');
+  await runTurn(session, watch, 't1', 'first');
+  await runTurn(session, watch, 't2', 'second');
+
+  // `t1` is not where the conversation ends, so no control was offered for it
+  // and this is a caller out of step - served rather than refused, it would be
+  // a copy of a conversation that still holds `t2`.
+  const { session: forked, watch: forkedWatch } = start(agent, 'forked-earlier', {
+    resume: String(session.agentId()),
+    forkAt: 't1',
+    seed: session.allTurns(),
+  });
+  await runTurn(forked, forkedWatch, 't3', 'third');
+
+  expect(forkedWatch.types().at(-1)).toBe('chat/error');
+  expect(String((forkedWatch.actions.at(-1)?.action as { part?: { error?: { message?: string } } })
+    .part?.error?.message)).toContain('is not the last turn');
+  expect(requests(log).some((one) => one.method === 'session/fork')).toBe(false);
 });
 
 it('tells a server that advertised session/close to close, and one that did not is not told', async () => {
