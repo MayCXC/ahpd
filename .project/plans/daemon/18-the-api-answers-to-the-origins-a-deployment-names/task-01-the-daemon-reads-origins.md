@@ -1,6 +1,6 @@
 ---
 title: The daemon reads `origins` and `--origin`
-status: implemented
+status: done
 depends: []
 layer: "server"
 refs:

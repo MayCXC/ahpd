@@ -33,7 +33,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [15 - A verb declares only the flags it reads](daemon/15-a-verb-declares-only-its-own-flags/plan.md) | medium | built 2026-10-06 ([implemented.md](daemon/15-a-verb-declares-only-its-own-flags/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | - | - |
 | [16 - A command says what it does to what, and the daemon serves on the cofold that checks it](daemon/16-a-command-says-what-it-does-to-what/plan.md) | high | built 2026-10-06 ([implemented.md](daemon/16-a-command-says-what-it-does-to-what/implemented.md)) | cofold commands/03, commands/04 | ahpd-web resource screens |
 | [17 - A plugin installs at the newest version whose sdk range admits the daemon](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/plan.md) | high | built 2026-10-09 ([implemented.md](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/implemented.md)) | daemon 09 | - |
-| [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | planned 2026-10-10 | daemon 05 | - |
+| [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/18-the-api-answers-to-the-origins-a-deployment-names/implemented.md)) | daemon 05 | - |
 
 Next free number in `daemon`: `19`.
 

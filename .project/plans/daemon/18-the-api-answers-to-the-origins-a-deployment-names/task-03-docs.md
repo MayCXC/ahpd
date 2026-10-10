@@ -1,6 +1,6 @@
 ---
 title: The docs say what `origins` admits
-status: implemented
+status: done
 depends: [task-02-the-api-answers-to-each-origin.md]
 layer: "docs"
 refs:

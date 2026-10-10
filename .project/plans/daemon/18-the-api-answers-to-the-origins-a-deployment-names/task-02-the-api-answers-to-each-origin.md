@@ -1,6 +1,6 @@
 ---
 title: The API and the plugin routes answer to each origin
-status: implemented
+status: done
 depends: [task-01-the-daemon-reads-origins.md]
 layer: "server"
 refs:
