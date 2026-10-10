@@ -1,6 +1,6 @@
 ---
 title: A resume does not replay what the host holds
-status: implemented
+status: done
 depends: []
 layer: "agent-acp"
 refs:

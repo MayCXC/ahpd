@@ -75,7 +75,10 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 | The bridge stays on ACP v1 until a stable v2 SDK is published; v2 is in [deferred.md](deferred.md) | Softov, 2026-09-26 | - |
 | `open` tries fork, then resume, then load, in that order; a reopen after the server died uses `session/resume` when advertised and `session/load` otherwise, and never forks | (defaulted: a fork is asked once, at create; a reopen continues the same ACP session) | 01, 02 |
 | After `session/resume`, the watched record is seeded from `Start.seed`, because no replay arrives to build it | [`code://packages/agent-acp/src/session.ts#L1123-L1136`](../../../../packages/agent-acp/src/session.ts#L1123-L1136) | 01 |
-| No SDK change in this plan; `package.json` already asks `^1.5.0`, and `pnpm install` brings `node_modules` up from 1.4.0 before task 01 | [`code://packages/agent-acp/package.json#L66`](../../../../packages/agent-acp/package.json#L66) | 01 |
+| The ACP SDK is not changed; `package.json` already asks `^1.5.0`, and `pnpm install` brings `node_modules` up from 1.4.0 before task 01 | [`code://packages/agent-acp/package.json#L66`](../../../../packages/agent-acp/package.json#L66) | 01 |
+| `Session.answer` takes an optional response kind, so a decline and a cancel reach the server apart | Softov, 2026-10-10, asked "a person who declines a server's question is reported to the server as cancelling. What should the bridge do?": add a response to answer | 05 |
+| A form field of a type ACP does not name is asked as text, and a test holds it | Softov, 2026-10-10, asked "when the server asks for a form field of a type the bridge does not know, what should happen?": ask as text, add a test | 06 |
+| `resumable()` reads `ctx.loads \|\| ctx.resumes`, as `open()` does | Softov, 2026-10-10, asked "should a server that offers only resumeSession count as resumable?": loads or resumes | 06 |
 
 ## Proposed architecture
 
@@ -89,10 +92,12 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A resume does not replay what the host holds](task-01-a-resume-does-not-replay.md) | implemented | - |
-| [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | implemented | 01, and host 19 task 01 |
-| [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | implemented | - |
-| [04 - Docs](task-04-docs.md) | implemented | 01, 02, 03 |
+| [01 - A resume does not replay what the host holds](task-01-a-resume-does-not-replay.md) | done | - |
+| [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | done | 01, and host 19 task 01 |
+| [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | done | - |
+| [04 - Docs](task-04-docs.md) | done | 01, 02, 03 |
+| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | todo | 03 |
+| [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | todo | 01, 03 |
 
 ## Risks and tradeoffs
 
@@ -101,12 +106,13 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 ## Resume state
 
-- **Done so far:** all four tasks, implemented 2026-10-10 and not reviewed. The resume choice and the fork are in `packages/agent-acp/src/session/opening.ts`; `held` on the watched record and `turnsOf` are in `catalog.ts` and `transcript.ts`; the new connection calls are in `connection.ts`; `chats.fork` is in `agent.ts`. The question is `askElicitation`, `heardElicitationComplete`, `answerElicitation` and `settleElicitations` in `session/handlers.ts`, held in `ctx.elicitations`, with the form to questions and the answers to content in `mapping.ts`.
-- **Next action:** none; the plan is implemented and waits on Softov. Nothing is set done and the plan is not built.
-- **Where the cases went:** tasks 01 and 02 in `packages/agent-acp/test/agent-acp-catalog.test.ts` and task 03 in `packages/agent-acp/test/agent-acp-ports.test.ts`, not `test/agent-acp.test.ts` as their Files lines said. A fork point and a resume are catalogue state; an answer to a question is a client's action and needs the host, which is what the ports file's real `createHost` is for.
-- **One fork the plan did not decide:** a person's `cancel` and their `decline` reach a backend as the same thing. `packages/sdk/src/host/chatactions.ts` reduces `chat/inputCompleted` to `session.answer(requestId, accepted, answers)`, so the response kind is gone by the time `answer` runs, and this bridge sends a decline for both. The `cancel` a server receives is only the one the bridge raises itself, when a turn is stopped or a session closed - which is what task 03's step 5 asks for and all it can mean. Telling the two apart needs a host change, and none is in this plan.
-- **A second, smaller one:** a form field whose `type` is not one of the shapes ACP names is asked as a text question rather than left out, which is the plain reading of "one question per form field".
-- **Watch out for:** the host **does** hand `Start.seed` on every resume path, so the fallback is not needed; the plan's first risk stands, and `resumable()` is still read from `loadSession` alone, so a server that advertises only `session.resume` is reopenable in practice while the host is never offered the move.
+- **Done so far:** tasks 01-04 are done: built 2026-10-10, reviewed the same day and merged in `cc15895`.
+  The review found that a reopen after a fork resumed the original conversation; the fix is in `7dc2a70`, with a test.
+  The resume choice and the fork are in `packages/agent-acp/src/session/opening.ts`; the question handlers are in `packages/agent-acp/src/session/handlers.ts`.
+- **Next action:** build tasks 05 and 06, which carry Softov's three answers of 2026-10-10. Then close the plan.
+- **Where the cases went:** tasks 01 and 02 in `packages/agent-acp/test/agent-acp-catalog.test.ts` and task 03 in `packages/agent-acp/test/agent-acp-ports.test.ts`.
+- **Watch out for:** the host hands `Start.seed` on every resume path, so the fallback is not needed.
+  Task 05 is the one SDK change; the other backends ignore the new parameter.
   ACP v2 drops `session/load`, `fs/*` and `terminal/*`; this plan stays on v1, and v2 waits in [deferred.md](deferred.md).
 
 ## Final verification checklist

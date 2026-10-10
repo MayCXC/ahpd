@@ -1,6 +1,6 @@
 ---
 title: The plugin docs say what the ACP bridge resumes, forks and asks
-status: implemented
+status: done
 depends: [task-01-a-resume-does-not-replay.md, task-02-a-session-forks-where-the-server-can.md, task-03-a-servers-question-is-asked-in-the-chat.md]
 layer: "docs"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: A server's question is asked in the chat
-status: implemented
+status: done
 depends: []
 layer: "agent-acp"
 refs:

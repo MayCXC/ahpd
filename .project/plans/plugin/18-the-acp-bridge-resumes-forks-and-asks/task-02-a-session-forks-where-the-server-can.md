@@ -1,6 +1,6 @@
 ---
 title: A session forks where the server can
-status: implemented
+status: done
 depends: [task-01-a-resume-does-not-replay.md]
 layer: "agent-acp"
 refs:
