@@ -1,6 +1,9 @@
 import { pathToFileURL } from 'node:url';
 import type {
   AvailableCommand,
+  CompleteElicitationNotification,
+  CreateElicitationRequest,
+  CreateElicitationResponse,
   CreateTerminalRequest,
   CreateTerminalResponse,
   KillTerminalRequest,
@@ -19,8 +22,9 @@ import type {
   WriteTextFileRequest,
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
+import { str } from '@ahpd/sdk';
 import type { Bag, OpenedTerminal, Session } from '@ahpd/sdk';
-import { confirmationOptions, mapUpdate } from '../mapping.js';
+import { confirmationOptions, contentOf, mapUpdate, questionsFor } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
 import { bag } from './common.js';
 import type { SessionContext } from './context.js';
@@ -29,6 +33,10 @@ import type { SessionContext } from './context.js';
 export interface Handlers {
   receivedUpdate(sessionId: string, update: SessionUpdate): void;
   askPermission(request: RequestPermissionRequest): Promise<PermissionAnswer>;
+  askElicitation(request: CreateElicitationRequest): Promise<CreateElicitationResponse>;
+  heardElicitationComplete(notification: CompleteElicitationNotification): void;
+  answerElicitation(requestId: string, accepted: boolean, answers: Bag): boolean;
+  settleElicitations(): void;
   readTextFile(request: ReadTextFileRequest): Promise<ReadTextFileResponse>;
   writeTextFile(request: WriteTextFileRequest): Promise<WriteTextFileResponse>;
   openTerminal(request: CreateTerminalRequest): Promise<CreateTerminalResponse>;
@@ -41,7 +49,7 @@ export interface Handlers {
 }
 
 export function createHandlers(ctx: SessionContext): Handlers {
-  const { emit, provider, start, where, doing, touch, seeds, replay, permissions, terminals } = ctx;
+  const { emit, provider, start, where, doing, touch, seeds, replay, permissions, terminals, elicitations } = ctx;
 
   /**
    * One command the server offers, as the customization a client draws.
@@ -386,6 +394,141 @@ export function createHandlers(ctx: SessionContext): Handlers {
     return answered;
   };
 
+  /** How many forms this session has asked for, for the ones with no name of their own. */
+  let elicited = 0;
+
+  /**
+   * The page a URL elicitation asks a person to open, and the id it is known by.
+   *
+   * ACP writes an elicitation as a form or as a page, and only the page carries
+   * an id of its own - the same id the server names in `elicitation/complete`
+   * when its own flow is over, which is why a page is held under it.
+   */
+  const pageOf = (request: CreateElicitationRequest): { id: string; url: string } | undefined => {
+    const held = bag(request);
+    const id = str(held.elicitationId);
+    const url = str(held.url);
+    return request.mode === 'url' && id !== undefined && url !== undefined ? { id, url } : undefined;
+  };
+
+  /**
+   * What one elicitation is called on the chat.
+   *
+   * The server's own id for a page, because that is the name a completion comes
+   * back under. A form carries no id: one asked about a tool call is named for
+   * that call, exactly as the permission for the same call is, and one asked
+   * about nothing in particular is counted.
+   */
+  const nameOf = (request: CreateElicitationRequest, call: string | undefined): string => {
+    const page = pageOf(request);
+    if (page !== undefined) return page.id;
+    return call === undefined ? `elicitation:${++elicited}` : `${call}:elicitation`;
+  };
+
+  /**
+   * A question the server is blocked on, put to the person on the chat.
+   *
+   * The second thing an ACP server can stop on and wait, beside a permission,
+   * and it is asked the same way: the request goes on the chat, the session
+   * says somebody is needed, and the answer comes back through `answer`. What
+   * differs is only what is asked - a form to fill in, or a page to open.
+   *
+   * The ACP request is left open for as long as the question stands, so the
+   * server is blocked on the person rather than on the client.
+   */
+  const askElicitation = (request: CreateElicitationRequest): Promise<CreateElicitationResponse> => {
+    const held = bag(request);
+    const page = pageOf(request);
+    const questions = page === undefined ? questionsFor(held.requestedSchema) : [];
+    const id = nameOf(request, str(held.toolCallId));
+    const message = str(held.message);
+    const asking: Bag = {
+      id,
+      ...(message === undefined ? {} : { message }),
+      ...(page === undefined ? {} : { url: page.url }),
+      ...(questions.length === 0 ? {} : { questions }),
+    };
+    const answered = new Promise<CreateElicitationResponse>((resolve) => {
+      elicitations.set(id, { fields: new Set(questions.map((one) => String(one.id))), settle: resolve });
+    });
+    emit('chat', { type: 'chat/inputRequested', request: asking });
+    // The chat input entry, which is the one kind of input request that names
+    // no turn: a question stands on the chat rather than in the turn that
+    // happened to be running when the server asked it.
+    emit('session', {
+      type: 'session/inputNeededSet',
+      request: { id, chat: start.chatUri, kind: 'chatInput', request: asking },
+    });
+    doing('Waiting on you');
+    touch();
+    return answered;
+  };
+
+  /**
+   * A person's answer to the question the server is waiting on.
+   *
+   * Found by the id the request was raised under rather than assumed to be the
+   * one held, because two questions can be open at once and answering the wrong
+   * one is worse than answering none. What the server is handed is the answer's
+   * own content, keyed by the fields the form asked for, and a form nobody
+   * filled in carries none - which is what an accept of an empty form is.
+   *
+   * False when nothing here is waiting on that id, which the host reads as an
+   * answer to something this session never asked.
+   */
+  const answerElicitation = (requestId: string, accepted: boolean, answers: Bag): boolean => {
+    const open = elicitations.get(requestId);
+    if (open === undefined) return false;
+    elicitations.delete(requestId);
+    emit('session', { type: 'session/inputNeededRemoved', id: requestId });
+    const content = contentOf(answers, open.fields);
+    open.settle(accepted
+      ? { action: 'accept', ...(Object.keys(content).length === 0 ? {} : { content }) }
+      : { action: 'decline' });
+    doing('Thinking');
+    touch();
+    return true;
+  };
+
+  /**
+   * The server saying its own piece is over.
+   *
+   * A page is the one elicitation nobody answers here: the person opens what
+   * the server sent them to, and what happens on it is the server's business.
+   * So the completion is the server's, and it ends the question the same way a
+   * person's answer would have - the chat is told the request was accepted, and
+   * the server is told nothing more, because this is its own word arriving.
+   *
+   * A completion for a request that is not open is nothing to do: either it was
+   * never asked here, or somebody answered it while the person was away.
+   */
+  const heardElicitationComplete = (notification: CompleteElicitationNotification): void => {
+    const id = notification.elicitationId;
+    const open = elicitations.get(id);
+    if (open === undefined) return;
+    elicitations.delete(id);
+    emit('chat', { type: 'chat/inputCompleted', requestId: id, response: 'accept' });
+    emit('session', { type: 'session/inputNeededRemoved', id });
+    open.settle({ action: 'accept' });
+  };
+
+  /**
+   * Every question nobody will answer now, answered `cancel`.
+   *
+   * The protocol asks a client that stops a turn to answer what its server is
+   * still blocked on, and an elicitation is one of those: a server left waiting
+   * on a person who has already said stop is a turn that never ends. `cancel`
+   * rather than a decline, because nobody said no - the question stopped being
+   * asked, and an answer that said no would be one the person never gave.
+   */
+  const settleElicitations = (): void => {
+    for (const [id, open] of elicitations) {
+      emit('session', { type: 'session/inputNeededRemoved', id });
+      open.settle({ action: 'cancel' });
+    }
+    elicitations.clear();
+  };
+
   /**
    * Every permission nobody will answer now, settled `cancelled`.
    *
@@ -467,7 +610,11 @@ export function createHandlers(ctx: SessionContext): Handlers {
     waitForTerminalExit,
     killTerminal,
     releaseTerminal,
+    askElicitation,
+    heardElicitationComplete,
+    answerElicitation,
     settlePermissions,
+    settleElicitations,
     confirm,
   };
 }

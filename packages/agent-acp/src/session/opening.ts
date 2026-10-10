@@ -301,11 +301,20 @@ export function createOpening(ctx: SessionContext): Opening {
    * first is still shaking hands waits on the same server rather than spawning
    * another. A failure clears it, so the next turn tries again.
    *
-   * A resume is a `session/load` rather than a `session/new`, and so is the
-   * reopen after a death, because both are the same conversation: only a server
-   * that advertised `loadSession` can be asked either way. Silently starting a
-   * new conversation instead would be a session that had lost everything it was
-   * resumed or continued for, with nothing on screen saying so.
+   * A fork is asked first and is the one case that copies rather than
+   * continues: the conversation it was given stays where it is and this session
+   * gets one of its own, from a server that advertised `session.fork`.
+   *
+   * A resume and a reopen after a death both continue a conversation rather
+   * than start one, and which call continues it is the server's own answer.
+   * `session/resume` takes it back with nothing replayed, and is chosen when
+   * the server advertised it and the host already holds the conversation -
+   * a resume that replays a conversation the host has is a conversation every
+   * client draws twice. Otherwise `session/load`, whose replay is the only
+   * record of a conversation this process never watched, and which the reopen
+   * after a death goes through when there is nothing better. A server that
+   * advertised neither cannot be continued at all, and says so rather than
+   * silently starting a new conversation with nothing on screen about it.
    */
   const open = (): Promise<{ connection: AcpConnection; sessionId: string }> => {
     if (ctx.opening !== undefined) return ctx.opening;
@@ -339,6 +348,11 @@ export function createOpening(ctx: SessionContext): Opening {
         handlers: {
           update: ctx.receivedUpdate,
           permission: ctx.askPermission,
+          // A question needs nothing but a chat to put it on, so both of these
+          // are always here rather than behind a capability the host might not
+          // have sent.
+          elicitation: ctx.askElicitation,
+          elicitationComplete: ctx.heardElicitationComplete,
           // Each half only where the session has what it needs: an
           // unadvertised capability is a request a conformant server never
           // makes, and one with nothing behind it would throw.
@@ -370,6 +384,8 @@ export function createOpening(ctx: SessionContext): Opening {
       const handshake = await connection.initialize();
       ctx.closes = advertised(handshake.agentCapabilities?.sessionCapabilities?.close);
       ctx.loads = handshake.agentCapabilities?.loadSession === true;
+      ctx.resumes = advertised(handshake.agentCapabilities?.sessionCapabilities?.resume);
+      ctx.forks = advertised(handshake.agentCapabilities?.sessionCapabilities?.fork);
       ctx.takes = handshake.agentCapabilities?.promptCapabilities ?? undefined;
       extras = advertised(handshake.agentCapabilities?.sessionCapabilities?.additionalDirectories);
       signIns = (handshake.authMethods ?? []).map((one) => one.id);
@@ -401,28 +417,87 @@ export function createOpening(ctx: SessionContext): Opening {
         (line) => options.log?.(line),
       );
       /*
-       * The conversation to continue: the one a resume named, or the one this
-       * session already had when its server died. Both go through the same
-       * call, because they are the same thing - a conversation this bridge has
-       * to hand back to a server rather than start again.
+       * The conversation to continue: the one this session already had when
+       * its server died, or else the one a resume named. Both go through the
+       * same call, because they are the same thing - a conversation this
+       * bridge has to hand back to a server rather than start again.
+       *
+       * The session's own id comes first, because after a fork it is the copy
+       * and not the conversation `start.resume` names.
        */
-      const reopen = start.resume ?? ctx.acpSessionId;
-      if (reopen !== undefined) {
-        if (handshake.agentCapabilities?.loadSession !== true) {
-          throw new Error(start.resume === undefined
-            ? `${provider}: the server died and this one cannot load a session, so "${reopen}" cannot be continued`
-            : `${provider}: this ACP server cannot load a session, so "${reopen}" cannot be resumed`);
+      const died = ctx.acpSessionId !== undefined;
+      const reopen = ctx.acpSessionId ?? start.resume;
+      /*
+       * A fork copies the conversation into a new one of its own.
+       *
+       * Asked first, because it is the one case where the session the server
+       * is left with is not the one it was handed: the old conversation stays
+       * where it is and this session gets a copy. What the host named is the
+       * turn to copy through, and this server can only be asked for the whole
+       * of what it holds - so a fork at any turn but the last one behind the
+       * conversation is refused rather than served as a copy of something
+       * else. The control is not offered for such a turn either, which is why
+       * this is a caller out of step rather than a person's mistake.
+       *
+       * Only the first open forks. A reopen after a death continues the copy
+       * the fork made, and never forks again.
+       */
+      if (start.forkAt !== undefined && !died) {
+        if (start.resume === undefined) {
+          throw new Error(`${provider}: a fork names the conversation it copies, and this one named no session`);
         }
-        const loaded = await connection.loadSession({
-          sessionId: reopen,
+        if (!ctx.forks) {
+          throw new Error(`${provider}: this ACP server cannot fork a session, so "${start.resume}" cannot be copied`);
+        }
+        const last = ctx.turns.at(-1);
+        if (String(last?.id ?? '') !== start.forkAt) {
+          throw new Error(`${provider}: "${start.forkAt}" is not the last turn of "${start.resume}", and a fork copies the whole conversation rather than part of it`);
+        }
+        const copied = await connection.forkSession({
+          sessionId: start.resume,
           cwd: where,
           mcpServers: servers,
           ...extra,
         });
+        ctx.acpSessionId = copied.sessionId;
+        ctx.learnModes(copied.modes);
+        ctx.learnOffers(copied.configOptions);
+        ctx.learnModels(copied);
+      }
+      else if (reopen !== undefined) {
+        /*
+         * A resume is taken back rather than replayed only where the host holds
+         * the conversation already.
+         *
+         * `Start.seed` is the turns the host has, and a server that replays the
+         * same ones is a conversation every client draws twice - which is the
+         * whole of what `session/resume` exists for. With no seed there is
+         * nothing on this side of the wire and the replay is the only record,
+         * so the load is what is wanted even where the server offers both.
+         *
+         * A reopen after a death is the other case: the record is this
+         * process's own, so nothing is replayed for it either.
+         */
+        const held = start.seed ?? [];
+        const taking = ctx.resumes && (died || held.length > 0);
+        if (!taking && !ctx.loads) {
+          throw new Error(died
+            ? `${provider}: the server died and this one cannot load a session, so "${reopen}" cannot be continued`
+            : `${provider}: this ACP server cannot load a session, so "${reopen}" cannot be resumed`);
+        }
+        const request = {
+          sessionId: reopen,
+          cwd: where,
+          mcpServers: servers,
+          ...extra,
+        };
+        const taken = taking
+          ? await connection.resumeSession(request)
+          : await connection.loadSession(request);
         ctx.acpSessionId = reopen;
-        ctx.learnModes(loaded.modes);
-        ctx.learnOffers(loaded.configOptions);
-        ctx.learnModels(loaded);
+        ctx.learnModes(taken.modes);
+        ctx.learnOffers(taken.configOptions);
+        ctx.learnModels(taken);
       }
       else {
         const created = await connection.newSession({
@@ -446,6 +521,10 @@ export function createOpening(ctx: SessionContext): Opening {
        * session and what it said is known. The turn already running is attached
        * because `begin` opens it before the server does, and a transcript that
        * dropped the first turn would be a conversation missing its question.
+       *
+       * The host's own turns go with it for the same reason: a resume and a
+       * fork both replay nothing, so without them the record would hold a
+       * conversation that starts at whatever the person says next.
        */
       ctx.record = watchSession({
         provider,
@@ -454,6 +533,7 @@ export function createOpening(ctx: SessionContext): Opening {
         additional: start.additional ?? [],
         title: ctx.title,
         replay,
+        seed: start.seed ?? [],
       });
       /*
        * The record has it now, and this list must not keep it: a server that

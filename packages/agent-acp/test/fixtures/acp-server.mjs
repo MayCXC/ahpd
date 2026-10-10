@@ -25,6 +25,14 @@
  * - text containing `term` opens a terminal, waits for it, reads it, releases it;
  * - text containing `ask` asks for permission on a destructive call and reports
  *   which option came back;
+ * - text containing `elicitform` asks the client for a form on a call it is
+ *   making, with one field of each shape the protocol names, and says what the
+ *   answer carried back as `elicit=<action>|branch=…|force=…|retries=…|mode=…|tags=…`;
+ * - text containing `eliciturl` asks for a page rather than a form, then says
+ *   the page is complete by itself, and reports `elicit=<action>|content=<none|some>`;
+ * - text containing `elicitcancel` asks a form and holds the prompt until
+ *   `session/cancel` ends it, so a turn stopped while a question stands is one a
+ *   test can watch from both sides;
  * - text containing `hold` asks for permission on a call it is still holding,
  *   which is `pending`, and reports which option came back; `ctool=<name>` gives
  *   that call the programmatic name it asks about, as an agent that reached a
@@ -77,15 +85,18 @@
  * - anything else streams two message chunks before ending.
  *
  * The port scripts are real requests *to* the client - `fs/read_text_file`,
- * `fs/write_text_file`, `terminal/*`, `session/request_permission` - awaited
+ * `fs/write_text_file`, `terminal/*`, `session/request_permission`,
+ * `elicitation/create` - awaited
  * on their answers, which is what makes them a test of the client half rather
  * than of this server.
  *
  * Beside the prompt scripts it answers the session lifecycle a catalogue and a
- * config want: `session/list`, `session/load`, `session/set_mode`,
- * `session/set_config_option` and `session/set_model`, with the modes and the
- * config options a real server names on `session/new`: a model, a select and a
- * boolean of its own.
+ * config want: `session/list`, `session/load`, `session/resume`,
+ * `session/set_mode`, `session/set_config_option` and `session/set_model`,
+ * with the modes and the config options a real server names on `session/new`:
+ * a model, a select and a boolean of its own. `session/resume` is the one
+ * lifecycle call that replays nothing, which is the whole difference between
+ * it and `session/load`.
  *
  * `--legacy` makes it a server from before config options: `session/new` names
  * its models in a `models` list beside the session rather than as an option, so
@@ -95,9 +106,12 @@
  * account of the same thing the legacy modes carry: a client sets the mode
  * through `session/set_config_option` rather than `session/set_mode`.
  *
- * Two flags take one capability away: `--no-load` makes the handshake stop
+ * Three flags take one capability away: `--no-load` makes the handshake stop
  * advertising `loadSession`, which is a server that cannot reopen a
- * conversation, and `--no-close` stops it advertising `session/close`.
+ * conversation, `--no-resume` stops it advertising
+ * `sessionCapabilities.resume`, which is a server a conversation cannot be
+ * taken back from without a replay, and `--no-close` stops it advertising
+ * `session/close`.
  *
  * `--no-delete` stops the handshake advertising `sessionCapabilities.delete`,
  * which is a server that keeps every conversation it has been given, and
@@ -119,6 +133,11 @@
  * over HTTP, which is what makes a client leave those out of the list it hands
  * the server on `session/new`.
  *
+ * `--fork` advertises `sessionCapabilities.fork`, which is the capability ACP
+ * marks unstable and most servers do not offer: `session/fork` answers with a
+ * session id of its own and leaves the conversation it copied alone. A server
+ * started without it has no fork to give.
+ *
  * `--signin` makes it a server that has to be signed in first: the handshake
  * offers the `api-key` method and `session/new` answers `auth_required` until
  * `authenticate` has named it.
@@ -135,12 +154,14 @@
  * the way a server reads a conversation back: each turn's `user_message_chunk`
  * and then what the agent said for it.
  *
- * When `ACP_LOG` names a file, every request and notification that arrives is
- * appended to it as one JSON line, so a test can prove what the bridge actually
- * asked for - including the `clientCapabilities` it advertised - rather than
- * inferring it from state the bridge keeps. Each line carries this process's
- * pid, because a catalogue read spawns a server of its own that logs to the
- * same file.
+ * When `ACP_LOG` names a file, every message that arrives is appended to it as
+ * one JSON line, so a test can prove what the bridge actually asked for and
+ * what it answered - including the `clientCapabilities` it advertised - rather
+ * than inferring either from state the bridge keeps. A request or a
+ * notification is logged as its method and its params, and a response as the
+ * id and the result or the error it answers with. Each line carries this
+ * process's pid, because a catalogue read spawns a server of its own that logs
+ * to the same file.
  */
 
 import { spawn } from 'node:child_process';
@@ -587,6 +608,7 @@ const promptScript = async (id, params) => {
   }
   const reaches = [
     'read', 'write', 'term', 'ask', 'hold', 'jump', 'paint', 'away', 'plan', 'name', 'shift', 'reauth', 'mrep=', 'mreq=',
+    'elicitform', 'eliciturl', 'elicitcancel',
   ].some((one) => text.includes(one));
   if (!reaches) for (const update of scriptFor(text)) notify(update);
   if (text.includes('chatter')) {
@@ -836,6 +858,109 @@ const promptScript = async (id, params) => {
     notify({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `perm=${chosen}` } });
   }
 
+  if (text.includes('elicitform')) {
+    /*
+     * A form the server asks a person to fill in, on a call it is making.
+     *
+     * The schema carries one field of each shape the protocol names, so a test
+     * reads what each becomes as a question: a required string under a title
+     * with a sentence about it, a boolean, an integer with bounds, a select over
+     * an untitled enum, and a multi-select over an array's items. The answer
+     * comes back as the content the server was handed, every field said as
+     * itself, so a client that dropped one or renamed one is visible here.
+     */
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-elicit',
+      title: 'Create a branch',
+      name: 'create_branch',
+      status: 'in_progress',
+      rawInput: { branch: 'main' },
+    });
+    const answer = await ask('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-elicit',
+      message: 'Where should the branch go?',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          branch: { type: 'string', title: 'Branch name', description: 'What to call it' },
+          force: { type: 'boolean', description: 'Overwrite one that exists', default: false },
+          retries: { type: 'integer', description: 'How many times to try', minimum: 1, maximum: 5 },
+          mode: { type: 'string', description: 'How careful to be', enum: ['fast', 'careful'] },
+          tags: { type: 'array', description: 'Labels to put on it', items: { type: 'string', enum: ['a', 'b'] } },
+        },
+        required: ['branch'],
+      },
+    });
+    const content = answer?.content ?? {};
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `elicit=${String(answer?.action ?? 'none')}`
+          + `|branch=${String(content.branch ?? '-')}`
+          + `|force=${String(content.force ?? '-')}`
+          + `|retries=${String(content.retries ?? '-')}`
+          + `|mode=${String(content.mode ?? '-')}`
+          + `|tags=${Array.isArray(content.tags) ? content.tags.join('+') : String(content.tags ?? '-')}`,
+      },
+    });
+  }
+
+  if (text.includes('eliciturl')) {
+    /*
+     * A page rather than a form: nobody fills anything in here, so the request
+     * carries a URL and an id of the server's own, and the server says the page
+     * is done by itself.
+     *
+     * The completion goes out while the question stands, which is what the
+     * protocol asks a server to do once its own flow on the page has finished.
+     * What comes back is what the bridge answered the request with: an accept
+     * with no content, because there is nothing a person typed to carry.
+     */
+    const asking = ask('elicitation/create', {
+      mode: 'url',
+      sessionId: session,
+      elicitationId: 'url-1',
+      url: 'https://example.test/authorize',
+      message: 'Sign in to continue',
+    });
+    write({ jsonrpc: '2.0', method: 'elicitation/complete', params: { elicitationId: 'url-1' } });
+    const answer = await asking;
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `elicit=${String(answer?.action ?? 'none')}|content=${answer?.content === undefined ? 'none' : 'some'}`,
+      },
+    });
+  }
+
+  if (text.includes('elicitcancel')) {
+    /*
+     * A question left standing when the turn is stopped.
+     *
+     * The prompt is held the way `wait` holds it, so the `session/cancel` that
+     * follows ends it here; the answer the question itself got is written down
+     * by the client's own log rather than said as an update, because by then
+     * there is no turn left to say anything in.
+     */
+    pending = id;
+    await ask('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      message: 'What should I call it?',
+      requestedSchema: {
+        type: 'object',
+        properties: { title: { type: 'string', title: 'The name' } },
+        required: ['title'],
+      },
+    });
+    return;
+  }
+
   if (text.includes('later')) {
     /*
      * A call announced `pending` with its arguments, and the update that starts
@@ -1008,7 +1133,17 @@ const onLine = (line) => {
     return;
   }
 
-  if (LOG !== undefined) appendFileSync(LOG, `${JSON.stringify({ pid: process.pid, method: message.method, params: message.params })}\n`);
+  /*
+   * Every line, including the answers.
+   *
+   * A response has no method, so its body would be dropped by a log of methods
+   * alone - and what a client answered is exactly what a test of one of these
+   * scripts is reading. The request id comes with it, because that is what says
+   * which of this server's own questions the answer belongs to.
+   */
+  if (LOG !== undefined) appendFileSync(LOG, `${JSON.stringify(message.method === undefined
+    ? { pid: process.pid, id: message.id, result: message.result, error: message.error }
+    : { pid: process.pid, method: message.method, params: message.params })}\n`);
 
   /*
    * The answer to something this server asked, which has an id and no method.
@@ -1037,7 +1172,8 @@ const onLine = (line) => {
             : {}),
           sessionCapabilities: {
             list: {},
-            resume: {},
+            ...(process.argv.includes('--no-resume') ? {} : { resume: {} }),
+            ...(process.argv.includes('--fork') ? { fork: {} } : {}),
             ...(process.argv.includes('--no-close') ? {} : { close: {} }),
             ...(process.argv.includes('--no-delete') ? {} : { delete: {} }),
             ...(process.argv.includes('--extra-dirs') ? { additionalDirectories: {} } : {}),
@@ -1093,6 +1229,41 @@ const onLine = (line) => {
       respond(message.id, process.argv.includes('--legacy')
         ? { modes: modes(), models: listed() }
         : { modes: modes(), configOptions: configOptions() });
+      return;
+    }
+
+    /*
+     * The same conversation taken back, with nothing read out of it.
+     *
+     * The id is the one the request named and the answer carries no
+     * `sessionId`, because a resume continues the session it was given rather
+     * than naming one. A `--replay` server replays nothing here even so: what
+     * distinguishes this call is that the client is the one holding the
+     * conversation.
+     */
+    case 'session/resume': {
+      session = String(message.params?.sessionId ?? nextSession());
+      if (typeof message.params?.cwd === 'string' && message.params.cwd !== '') cwd = message.params.cwd;
+      hostTools = named(message.params?.mcpServers);
+      respond(message.id, process.argv.includes('--legacy')
+        ? { modes: modes(), models: listed() }
+        : { modes: modes(), configOptions: configOptions() });
+      return;
+    }
+
+    /*
+     * A conversation copied into a new one, which is what a fork is.
+     *
+     * The id is this server's own and not the one the request named: the copy
+     * is a session of its own, and the original is left alone - which is how a
+     * test can tell a fork from a resume by the id a later prompt arrives
+     * under. Only a `--fork` server offers the capability at all.
+     */
+    case 'session/fork': {
+      const copied = nextSession();
+      if (typeof message.params?.cwd === 'string' && message.params.cwd !== '') cwd = message.params.cwd;
+      hostTools = named(message.params?.mcpServers);
+      respond(message.id, { sessionId: copied, modes: modes(), configOptions: configOptions() });
       return;
     }
 

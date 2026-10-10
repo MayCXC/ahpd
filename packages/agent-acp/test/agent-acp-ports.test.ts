@@ -200,15 +200,21 @@ it('advertises exactly the ports it was given, and nothing more', async () => {
   expect(capabilitiesOf(both.log)).toEqual({
     fs: { readTextFile: true, writeTextFile: true },
     terminal: true,
+    elicitation: { form: {}, url: {} },
     session: { configOptions: { boolean: {} } },
   });
 
   // A capability advertised without an implementation is a request nobody
-  // answers, so a host with neither port asks a server for neither.
+  // answers, so a host with neither port asks a server for neither. The
+  // question is not a port: it needs a chat and nothing else to be put on, so
+  // it is offered whatever the host gave.
   const neither = await talking({ files: false, shells: false });
   begin(neither.client, neither.chatUri, 't1', 'hello');
   await endedTurn(neither.peer, neither.chatUri, 1);
-  expect(capabilitiesOf(neither.log)).toEqual({ session: { configOptions: { boolean: {} } } });
+  expect(capabilitiesOf(neither.log)).toEqual({
+    elicitation: { form: {}, url: {} },
+    session: { configOptions: { boolean: {} } },
+  });
 });
 
 it('reads and writes a file through the host\'s own store', async () => {
@@ -404,5 +410,175 @@ it('answers the permission a cancel withdrew with `cancelled`, and takes the ent
   expect(withdrawn?.id).toBe(entry?.id);
   expect(types(p, uri).at(-1)).not.toBe('session/inputNeededSet');
   // And the cancel itself reached the server, after the permission was settled.
+  expect(readFileSync(log, 'utf8')).toContain('"method":"session/cancel"');
+});
+
+/** One question the server asked, out of the chat's own actions. */
+const asked = (p: ReturnType<typeof peer>, chatUri: string): Record<string, unknown> | undefined =>
+  actions(p, chatUri).find((e) => e.action.type === 'chat/inputRequested')?.action.request as
+    Record<string, unknown> | undefined;
+
+/** The entry a session raises for that question. */
+const needing = (p: ReturnType<typeof peer>, uri: string): Record<string, unknown> | undefined =>
+  actions(p, uri).find((e) => e.action.type === 'session/inputNeededSet')?.action.request as
+    Record<string, unknown> | undefined;
+
+it('asks a form the server is blocked on, and answers it with what was filled in', async () => {
+  const { client, peer: p, uri, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitform please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  const request = asked(p, chatUri);
+  // Named for the call the question is about, because a form carries no id of
+  // its own: the call's id is the only name there is to hold it under.
+  expect(request?.id).toBe('call-elicit:elicitation');
+  expect(request?.message).toBe('Where should the branch go?');
+  // One question per field, in the order the server wrote them, and named by
+  // the field itself - that name is what the answer comes back under.
+  expect((request?.questions as { id?: string }[] | undefined)?.map((one) => one.id))
+    .toEqual(['branch', 'force', 'retries', 'mode', 'tags']);
+  expect((request?.questions as { kind?: string }[] | undefined)?.map((one) => one.kind))
+    .toEqual(['text', 'boolean', 'integer', 'single-select', 'multi-select']);
+  // The one field the schema requires, with its title and its sentence: a
+  // client draws a question from what is on it and nothing else.
+  expect((request?.questions as unknown[])?.[0]).toEqual({
+    id: 'branch', kind: 'text', title: 'Branch name', message: 'What to call it', required: true,
+  });
+  expect((request?.questions as unknown[])?.[1]).toMatchObject({ kind: 'boolean', defaultValue: false });
+  expect((request?.questions as unknown[])?.[2]).toMatchObject({ kind: 'integer', min: 1, max: 5 });
+  // An untitled enum is its own options, and an array of one is a selection of
+  // many, with the bounds the array set.
+  expect((request?.questions as unknown[])?.[3]).toMatchObject({
+    kind: 'single-select', options: [{ id: 'fast', label: 'fast' }, { id: 'careful', label: 'careful' }],
+  });
+  expect((request?.questions as unknown[])?.[4]).toMatchObject({
+    kind: 'multi-select', options: [{ id: 'a', label: 'a' }, { id: 'b', label: 'b' }],
+  });
+
+  // The session says somebody is needed, as a permission does, and the entry is
+  // the chat input kind: it names the chat rather than a turn.
+  const entry = needing(p, uri);
+  expect(entry).toMatchObject({ id: 'call-elicit:elicitation', kind: 'chatInput' });
+  // The chat it names is this conversation's, under the host's own name for it
+  // rather than the alias this window subscribed with: the entry is what a
+  // client that never subscribed to the chat answers on.
+  expect(String(entry?.chat)).toContain('ahp-chat:');
+  expect((entry?.request as { id?: string } | undefined)?.id).toBe('call-elicit:elicitation');
+
+  // The two frames, as the protocol declares them.
+  const check = checker();
+  const carrying = p.notes.filter((n) => n.method === 'action' && (
+    (n.params as Note).action.type === 'chat/inputRequested'
+    || (n.params as Note).action.type === 'session/inputNeededSet'));
+  expect(carrying).toHaveLength(2);
+  expect(carrying.flatMap((frame) => check.frame(frame)).map((one) => `${one.def} ${one.at} ${one.what}`))
+    .toEqual([]);
+
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-elicit:elicitation',
+        response: 'accept',
+        answers: {
+          branch: { state: 'submitted', value: { kind: 'text', value: 'feature/one' } },
+          force: { state: 'submitted', value: { kind: 'boolean', value: true } },
+          retries: { state: 'submitted', value: { kind: 'number', value: 3 } },
+          mode: { state: 'submitted', value: { kind: 'selected', value: 'careful' } },
+          tags: { state: 'submitted', value: { kind: 'selected-many', value: ['a', 'b'] } },
+        },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  // Every field arrived as the value a person typed or picked, under the name
+  // the form asked it by, and a selection of many as an array of its options.
+  expect(prose(p, chatUri))
+    .toContain('elicit=accept|branch=feature/one|force=true|retries=3|mode=careful|tags=a+b');
+  // And the entry is withdrawn, so nothing is left asking a question the server
+  // has already been answered.
+  expect(actions(p, uri).some((e) => e.action.type === 'session/inputNeededRemoved'
+    && e.action.id === 'call-elicit:elicitation')).toBe(true);
+});
+
+it('answers a declined form with a decline, and carries no content', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitform please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  // Answers are sent with the decline, which is what a client that filled the
+  // form in and then changed its mind would have. None of them is content: a
+  // declined form is one the server is told nothing by.
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-elicit:elicitation',
+        response: 'decline',
+        answers: { branch: { state: 'submitted', value: { kind: 'text', value: 'never mind' } } },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri))
+    .toContain('elicit=decline|branch=-|force=-|retries=-|mode=-|tags=-');
+});
+
+it('carries a page rather than a form, and the server\'s own completion ends it', async () => {
+  const { client, peer: p, uri, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'eliciturl please');
+  await endedTurn(p, chatUri, 1);
+
+  const request = asked(p, chatUri);
+  // The server's own id for the page, which is the name its completion comes
+  // back under, and the URL it wants opened.
+  expect(request?.id).toBe('url-1');
+  expect(request?.url).toBe('https://example.test/authorize');
+  expect(request?.message).toBe('Sign in to continue');
+  // No questions at all: there is nothing here for anybody to fill in.
+  expect(request?.questions).toBeUndefined();
+
+  // An accept with nothing in it, which is what the server's own word is worth:
+  // nobody typed anything, so there is no content to hand back.
+  expect(prose(p, chatUri)).toContain('elicit=accept|content=none');
+  // The chat is told the request is over, so the page is not left standing in
+  // front of a client that would go on offering it.
+  const done = actions(p, chatUri).find((e) => e.action.type === 'chat/inputCompleted')?.action as
+    { requestId?: string; response?: string } | undefined;
+  expect(done?.requestId).toBe('url-1');
+  expect(done?.response).toBe('accept');
+  expect(actions(p, uri).some((e) => e.action.type === 'session/inputNeededRemoved' && e.action.id === 'url-1'))
+    .toBe(true);
+});
+
+it('answers the question a stopped turn left standing with `cancel`', async () => {
+  const { client, peer: p, uri, chatUri, log } = await talking();
+  begin(client, chatUri, 't1', 'elicitcancel please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  // No call is being made, so the form is counted rather than named for one.
+  expect(asked(p, chatUri)?.id).toBe('elicitation:1');
+
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUri, action: { type: 'chat/turnCancelled', turnId: 't1', duration: 0 } },
+  });
+  // The answer the server was handed, out of the fixture's own record of what
+  // arrived: `cancel` and not a decline, because nobody said no - the asking
+  // simply stopped, and a server told a person refused would be told a thing
+  // that never happened.
+  await until(() => readFileSync(log, 'utf8').includes('"action":"cancel"'));
+  expect(readFileSync(log, 'utf8')).toContain('"action":"cancel"');
+  // The entry goes with it, so a client is not left asking a question that can
+  // no longer be answered.
+  expect(actions(p, uri).some((e) => e.action.type === 'session/inputNeededRemoved'
+    && e.action.id === 'elicitation:1')).toBe(true);
+  expect(types(p, uri).at(-1)).not.toBe('session/inputNeededSet');
+  // And the stop reached the server, which is what ends the prompt it was held
+  // on rather than a turn that waits for a person for ever.
   expect(readFileSync(log, 'utf8')).toContain('"method":"session/cancel"');
 });

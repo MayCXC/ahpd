@@ -102,6 +102,17 @@ export function acpAgent(options: AcpOptions): Agent {
     displayName,
     ...(options.variant === true ? { variant: true } : {}),
     ...(options.description !== undefined ? { description: options.description } : {}),
+    /*
+     * A fork is declared here and decided per session.
+     *
+     * `chats.fork` is a field of the agent, set before any server is spawned,
+     * and a fork is only ever offered for a server that advertised
+     * `session.fork` - which is a session's own handshake and nothing this
+     * agent can know. So the capability is declared and each session's
+     * `forkPoint` answers `undefined` until its server has said it can, which
+     * is what the host reads to decide whether a turn has a fork at all.
+     */
+    chats: { fork: true },
     schema,
     defaults,
 

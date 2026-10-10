@@ -15,7 +15,7 @@
  */
 
 import type { ContentBlock, Diff, PermissionOption, PlanEntry, SessionUpdate, ToolCall, ToolCallStatus, ToolCallUpdate } from '@agentclientprotocol/sdk';
-import { bag, callTimes, uriOf, withCallTimes } from '@ahpd/sdk';
+import { bag, callTimes, str, strings, uriOf, withCallTimes } from '@ahpd/sdk';
 import type { Bag } from '@ahpd/sdk';
 import type { AcpCall, AcpTurn, ConfirmationOption } from './types.js';
 
@@ -547,4 +547,143 @@ export function confirmationOptions(options: readonly PermissionOption[]): Confi
     .filter((one) => kinds.includes(one.kind))
     .map((one) => ({ id: one.optionId, label: one.name, kind, group }));
   return [...of('approve', 1, ['allow_once', 'allow_always']), ...of('deny', 2, ['reject_once', 'reject_always'])];
+}
+
+/** A list, whatever was sent, for a field ACP may write as an array or as null. */
+const listed = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+
+/**
+ * A field's choices, in the two shapes ACP writes them.
+ *
+ * A plain `enum` is a list of values with nothing to say about any of them, so
+ * each option is its own value; a `oneOf` is the same list with a title and a
+ * sentence for each, which is what a person picking between two of them needs.
+ * The value is the id in both, because the value is what the server is handed
+ * back and the schema accepts nothing else.
+ *
+ * A field written as an array carries its choices on its `items` rather than on
+ * itself, so both are read here and one function serves a select and a
+ * multi-select alike.
+ */
+const choicesOf = (schema: Bag): Bag[] | undefined => {
+  const carried = schema.type === 'array' ? bag(schema.items) : schema;
+  const values = strings(carried.enum);
+  if (values.length > 0) return values.map((value) => ({ id: value, label: value }));
+  const titled = listed(carried.oneOf).map(bag).filter((one) => typeof one.const === 'string');
+  if (titled.length === 0) return undefined;
+  return titled.map((one) => {
+    const description = str(one.description);
+    return {
+      id: String(one.const),
+      label: str(one.title) ?? String(one.const),
+      ...(description === undefined ? {} : { description }),
+    };
+  });
+};
+
+/** The two ends of a bounded field, under the names a question draws them by. */
+const within = (schema: Bag, low: string, high: string): Bag => ({
+  ...(typeof schema[low] === 'number' ? { min: schema[low] } : {}),
+  ...(typeof schema[high] === 'number' ? { max: schema[high] } : {}),
+});
+
+/** One form field, as the question a person is asked it in. */
+const questionOf = (key: string, schema: Bag, required: boolean): Bag => {
+  const title = str(schema.title);
+  const question: Bag = {
+    id: key,
+    message: str(schema.description) ?? title ?? key,
+    required,
+    ...(title === undefined ? {} : { title }),
+  };
+  const choices = choicesOf(schema);
+  if (choices !== undefined) {
+    // A list is a question answered many times over, and the bounds the array
+    // set are part of what is being asked.
+    return schema.type === 'array'
+      ? { ...question, kind: 'multi-select', options: choices, ...within(schema, 'minItems', 'maxItems') }
+      : { ...question, kind: 'single-select', options: choices };
+  }
+  const kind = str(schema.type);
+  if (kind === 'number' || kind === 'integer') {
+    return {
+      ...question,
+      kind,
+      ...within(schema, 'minimum', 'maximum'),
+      ...(typeof schema.default === 'number' ? { defaultValue: schema.default } : {}),
+    };
+  }
+  if (kind === 'boolean') {
+    return { ...question, kind: 'boolean', ...(typeof schema.default === 'boolean' ? { defaultValue: schema.default } : {}) };
+  }
+  /*
+   * A string, and every type this bridge has no control of its own for: a line
+   * the person writes, carrying the format and the ends the schema named.
+   *
+   * Asked rather than left out, because a form drawn with a field missing is
+   * one nobody can fill in - the answer is what the schema asked for, and the
+   * server is the one that judges it.
+   */
+  return {
+    ...question,
+    kind: 'text',
+    ...within(schema, 'minLength', 'maxLength'),
+    ...(str(schema.format) === undefined ? {} : { format: schema.format }),
+    ...(typeof schema.default === 'string' ? { defaultValue: schema.default } : {}),
+  };
+};
+
+/**
+ * An elicitation's form fields, as the questions a client draws.
+ *
+ * One question per field, in the order the server wrote them, and keyed by the
+ * field's own name: that name is what the answer comes back under and what the
+ * content handed to the server is keyed by, so nothing here renames one. A
+ * field the schema lists in `required` is marked so, and one the server gave no
+ * title or description for is asked under its own name, which is the only word
+ * about it there is.
+ *
+ * The schema arrives as whatever the server wrote, because ACP types a form's
+ * `requestedSchema` only on the arm of the union that has one: a request that
+ * is not a form is read as no schema, and one that is is read as what it says.
+ */
+export function questionsFor(schema: unknown): Bag[] {
+  const held = bag(schema);
+  const required = new Set(strings(held.required));
+  return Object.entries(bag(held.properties))
+    .map(([key, one]) => questionOf(key, bag(one), required.has(key)));
+}
+
+/**
+ * One answer's own value, out of the two levels the protocol keeps it at.
+ *
+ * `ChatInputAnswer` is `{ state, value }` and that value is `{ kind, value }`,
+ * so a selection read at one level arrives as the object around it rather than
+ * as the option's value. An answer that carried its value itself - which is
+ * what a completion may send rather than the shape a draft is synced in - is
+ * read as it is: the value, wherever it sits.
+ */
+const answerOf = (answer: unknown): string | number | boolean | string[] | undefined => {
+  const carried = bag(answer).value ?? answer;
+  const value = bag(carried).value ?? carried;
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') return value;
+  return Array.isArray(value) ? value.map(String) : undefined;
+};
+
+/**
+ * A person's answers, as the content the server is given.
+ *
+ * Keyed by the field its question was drawn for, so an answer to a key nothing
+ * asked about is left out rather than sent under a name the schema does not
+ * have, and a question nobody answered is absent rather than empty: a form with
+ * a field left blank is a form with that field left blank.
+ */
+export function contentOf(answers: Bag, fields: Set<string>): Record<string, string | number | boolean | string[]> {
+  const content: Record<string, string | number | boolean | string[]> = {};
+  for (const [key, answer] of Object.entries(answers)) {
+    if (!fields.has(key)) continue;
+    const value = answerOf(answer);
+    if (value !== undefined) content[key] = value;
+  }
+  return content;
 }

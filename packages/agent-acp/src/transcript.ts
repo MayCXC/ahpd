@@ -13,6 +13,9 @@
  * process watched, so a resumed session opens with the conversation it was
  * resumed for rather than with only what came after.
  *
+ * A resume replays nothing, so the conversation the host held when it asked is
+ * kept on the record as it was given and read ahead of both.
+ *
  * A session this process never watched has no record, and `Agent.transcript`
  * answers `undefined` for it rather than inventing a conversation.
  */
@@ -36,12 +39,17 @@ export type TranscriptTurn = Transcript[number];
 /**
  * One watched session's turns, in the order they ran.
  *
- * Each turn starts with no part, exactly as the live one does, and every
+ * What the host already held comes first, whole: a resume replays nothing, so
+ * those turns were never watched here and there are no updates to rebuild them
+ * from. The rest start with no part, exactly as the live one does, and every
  * watched update is replayed into it. The part list a replay builds is the
  * same list the live turn held, because it is the same function building it.
  */
 export function turnsOf(session: WatchedSession): TranscriptTurn[] {
-  return session.turns.map((watched) => {
+  // The host's own turns, which are the shape a client reads already: a cast
+  // because a `Bag` states nothing and the wire turn is what was put in it.
+  const held = session.held as unknown as TranscriptTurn[];
+  return [...held, ...session.turns.map((watched) => {
     const replay: AcpTurn = {
       turnId: watched.turnId,
       parts: [],
@@ -73,7 +81,7 @@ export function turnsOf(session: WatchedSession): TranscriptTurn[] {
       state: watched.state,
       ...(watched.duration === undefined ? {} : { duration: watched.duration }),
     };
-  });
+  })];
 }
 
 /**

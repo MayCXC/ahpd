@@ -17,10 +17,10 @@
  * - A turn carries both sides: `message.text` is what was said and
  *   `responseParts` is what the agent answered.
  *
- * A member this task cannot honestly support - a fork, a rewind, a live config
- * swap, a permission question - is left out or answered with the empty answer
- * the interface documents. Nothing throws over a capability this bridge does
- * not have yet.
+ * A member this task cannot honestly support - a rewind, a live config swap, a
+ * permission question - is left out or answered with the empty answer the
+ * interface documents. Nothing throws over a capability this bridge does not
+ * have yet.
  */
 
 import { resolve } from 'node:path';
@@ -106,10 +106,11 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     doing: activity.say,
     /*
      * A permission the server is blocked on is the session waiting for
-     * somebody, which is what a client draws the input request from.
+     * somebody, which is what a client draws the input request from, and a
+     * question it asked is the same wait by another name.
      */
     status: (): number => statusOf({
-      waiting: ctx.permissions.size > 0,
+      waiting: ctx.permissions.size > 0 || ctx.elicitations.size > 0,
       active: ctx.active !== undefined,
       failed: ctx.failed !== undefined,
     }),
@@ -126,6 +127,8 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     acpSessionId: undefined,
     closes: false,
     loads: false,
+    resumes: false,
+    forks: false,
     takes: undefined,
     replay: [],
     loading: false,
@@ -140,6 +143,7 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     watchedTurn: undefined,
     permissions: new Map(),
     terminals: new Map(),
+    elicitations: new Map(),
   } as unknown as SessionContext;
 
   const { settings, turns, seeds, replay, queued, permissions, terminals } = ctx;
@@ -167,6 +171,24 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     resumable: () => ctx.loads,
     customizations: () => [...seeds, ...ctx.commands],
     allTurns: () => turns,
+    /*
+     * What a fork copies through, which is the turn's own end.
+     *
+     * `session/fork` copies the whole conversation the server holds and takes
+     * no cut, so there is no entry inside it for this bridge to name. The name
+     * it answers with is the id the host gave the turn, which is what the fork
+     * `open` is handed back and what it checks the conversation against.
+     *
+     * Only the last completed turn answers. A fork of an earlier one would
+     * have to leave the turns after it behind, and this server cannot be asked
+     * for that - so no control is offered for one, rather than one that fails
+     * when somebody uses it.
+     */
+    forkPoint: (turnId) => {
+      if (!ctx.forks) return undefined;
+      const last = turns.at(-1);
+      return last !== undefined && String(last.id ?? '') === turnId ? turnId : undefined;
+    },
     status: () => ctx.status(),
     activity: () => activity.current(),
     title: () => ctx.title,
@@ -238,9 +260,10 @@ export function acpSession(options: AcpOptions, start: Start): Session {
      * stop reason it answers the prompt with is what emits `chat/turnCancelled`
      * exactly once. This must not send one of its own, or a client sees two.
      *
-     * The permissions are answered before it goes, because a server told to stop
-     * while it is blocked on a question of this client's is a server that never
-     * gets past the question.
+     * The permissions and the questions are answered before it goes, because a
+     * server told to stop while it is blocked on one of this client's is a
+     * server that never gets past it. A question is answered `cancel` rather
+     * than declined: nobody said no, the asking simply stopped.
      *
      * And so are the calls out with clients, for the same reason: a client is
      * asked for one, the agent is blocked on the request it made for that call,
@@ -251,6 +274,7 @@ export function acpSession(options: AcpOptions, start: Start): Session {
       if (turn === undefined || String(turn.id) !== turnId) return;
       ctx.cancelRequested = true;
       ctx.settlePermissions();
+      ctx.settleElicitations();
       ctx.calls.release('The turn was stopped');
       ctx.doing('Cancelling');
       const connection = ctx.live;
@@ -298,13 +322,15 @@ export function acpSession(options: AcpOptions, start: Start): Session {
     confirm: ctx.confirm,
 
     /*
-     * ACP asks no questions of its own here.
+     * The server's own question, answered from a client of the chat.
      *
-     * Its only interactive request is `session/request_permission`, which is
-     * the confirmation above; there is no question shape to answer, so an
-     * answer names something this session never asked.
+     * `session/request_permission` is the confirmation above and is answered
+     * through the call's own controls; `elicitation/create` is a form, which is
+     * a question, so it is answered by the request id it was raised under.
+     * False for an id nothing here is waiting on, which is what a host reads as
+     * an answer to a question this session never asked.
      */
-    answer: () => false,
+    answer: ctx.answerElicitation,
 
     setConfig: ctx.setConfig,
 
@@ -325,7 +351,9 @@ export function acpSession(options: AcpOptions, start: Start): Session {
        * A permission is a subprocess blocked on a promise, and a shell the
        * server asked for is a process this host opened: closing the connection
        * without answering either leaves the first hanging and the second
-       * running under nobody.
+       * running under nobody. A question the server asked is the same promise
+       * by another name, and is answered `cancel` for the same reason a stopped
+       * turn's is.
        *
        * A client's call is the third of those. The agent is blocked on the
        * request it made for one, the client is holding an entry that is about to
@@ -333,6 +361,7 @@ export function acpSession(options: AcpOptions, start: Start): Session {
        */
       for (const held of permissions.values()) held.settle('cancelled');
       permissions.clear();
+      ctx.settleElicitations();
       ctx.calls.release('The session was closed');
       for (const held of terminals.values()) held.handle.release();
       terminals.clear();

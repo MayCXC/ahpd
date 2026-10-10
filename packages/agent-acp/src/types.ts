@@ -9,9 +9,14 @@
 import type {
   AuthenticateRequest,
   AuthenticateResponse,
+  CompleteElicitationNotification,
   ContentBlock,
+  CreateElicitationRequest,
+  CreateElicitationResponse,
   CreateTerminalRequest,
   CreateTerminalResponse,
+  ForkSessionRequest,
+  ForkSessionResponse,
   InitializeResponse,
   KillTerminalRequest,
   KillTerminalResponse,
@@ -27,6 +32,8 @@ import type {
   ReleaseTerminalRequest,
   ReleaseTerminalResponse,
   RequestPermissionRequest,
+  ResumeSessionRequest,
+  ResumeSessionResponse,
   SessionUpdate,
   SetSessionConfigOptionRequest,
   SetSessionConfigOptionResponse,
@@ -205,6 +212,22 @@ export interface AcpHandlers {
    * honest answer rather than one that allows silently.
    */
   permission?(request: RequestPermissionRequest): Promise<PermissionAnswer>;
+  /**
+   * A question the server is waiting on a person for.
+   *
+   * The same shape of request as a permission and answered the same way, so
+   * the two capabilities are advertised together and a bridge that can do one
+   * does the other. What it asks is a form to fill in or a URL to open.
+   */
+  elicitation?(request: CreateElicitationRequest): Promise<CreateElicitationResponse>;
+  /**
+   * The server saying a URL elicitation is done.
+   *
+   * A notification rather than a request, and the only thing that closes a URL
+   * one: the person went to the page the server sent them to, and what happens
+   * there is the server's business rather than this bridge's.
+   */
+  elicitationComplete?(notification: CompleteElicitationNotification): void;
 }
 
 /** How a connection spawns a server and where its updates go. */
@@ -237,6 +260,25 @@ export interface AcpConnection {
   newSession(request: NewSessionRequest): Promise<NewSessionResponse>;
   /** Reopen a session the server already has, which replays its history. */
   loadSession(request: LoadSessionRequest): Promise<LoadSessionResponse>;
+  /**
+   * Take a session back without the server replaying it.
+   *
+   * What a client that already holds the conversation asks for: the server
+   * keeps it and answers with what it is set to, and nothing of the earlier
+   * turns comes back over the wire. Only a server whose handshake advertised
+   * `sessionCapabilities.resume` can be asked, and the session decides that.
+   */
+  resumeSession(request: ResumeSessionRequest): Promise<ResumeSessionResponse>;
+  /**
+   * Copy a session into a new one, which the server names.
+   *
+   * UNSTABLE in ACP and offered only where the handshake advertised
+   * `sessionCapabilities.fork`, which is why the session decides whether to
+   * make this call. The request carries no cut: what is copied is the whole
+   * conversation the server holds, so the caller only ever asks for it at a
+   * turn boundary the server also has.
+   */
+  forkSession(request: ForkSessionRequest): Promise<ForkSessionResponse>;
   /** The sessions the server holds, when it advertises a catalogue. */
   listSessions(request: ListSessionsRequest): Promise<ListSessionsResponse>;
   /** Put the session into one of the server's modes. */
@@ -475,4 +517,15 @@ export interface WatchedSession {
   modifiedAt: string;
   /** Every turn this process watched, in the order they ran. */
   turns: WatchedTurn[];
+  /**
+   * The turns the host already held when this session was opened.
+   *
+   * A resume is answered without a replay, so there is nothing for this process
+   * to watch and the conversation it was resumed for would otherwise be missing
+   * from its own transcript. Kept whole and read ahead of `turns`, because what
+   * the host holds is already the shape a client reads. Empty for every session
+   * this process watched from its first turn, and for one whose server replayed
+   * the conversation instead.
+   */
+  held: Bag[];
 }
