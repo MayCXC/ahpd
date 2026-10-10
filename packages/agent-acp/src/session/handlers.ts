@@ -35,7 +35,7 @@ export interface Handlers {
   askPermission(request: RequestPermissionRequest): Promise<PermissionAnswer>;
   askElicitation(request: CreateElicitationRequest): Promise<CreateElicitationResponse>;
   heardElicitationComplete(notification: CompleteElicitationNotification): void;
-  answerElicitation(requestId: string, accepted: boolean, answers: Bag): boolean;
+  answerElicitation(requestId: string, accepted: boolean, answers: Bag, response?: 'accept' | 'decline' | 'cancel'): boolean;
   settleElicitations(): void;
   readTextFile(request: ReadTextFileRequest): Promise<ReadTextFileResponse>;
   writeTextFile(request: WriteTextFileRequest): Promise<WriteTextFileResponse>;
@@ -475,8 +475,19 @@ export function createHandlers(ctx: SessionContext): Handlers {
    *
    * False when nothing here is waiting on that id, which the host reads as an
    * answer to something this session never asked.
+   *
+   * `response` is the kind the client sent, where it sent one: a cancel is
+   * answered `cancel`, and every other refusal is a decline. The two are not
+   * the same thing to say to a server - a decline is somebody saying no, a
+   * cancel is nobody having been asked - and a client that named no kind is
+   * answered by the boolean it did send.
    */
-  const answerElicitation = (requestId: string, accepted: boolean, answers: Bag): boolean => {
+  const answerElicitation = (
+    requestId: string,
+    accepted: boolean,
+    answers: Bag,
+    response?: 'accept' | 'decline' | 'cancel',
+  ): boolean => {
     const open = elicitations.get(requestId);
     if (open === undefined) return false;
     elicitations.delete(requestId);
@@ -484,7 +495,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
     const content = contentOf(answers, open.fields);
     open.settle(accepted
       ? { action: 'accept', ...(Object.keys(content).length === 0 ? {} : { content }) }
-      : { action: 'decline' });
+      : { action: response === 'cancel' ? 'cancel' : 'decline' });
     doing('Thinking');
     touch();
     return true;

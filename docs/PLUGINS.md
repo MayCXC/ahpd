@@ -1074,10 +1074,11 @@ A server that offers no once option of the answer's kind is answered `cancelled`
 it on the chat as a `chat/inputRequested` question. Each field of the form
 becomes one question, and the session raises the `session/inputNeededSet` entry
 a permission raises. The person's answer arrives as `chat/inputCompleted` and
-goes to the server as the elicitation's content, and a decline goes as a
-decline. A page rather than a form carries its `url` on the request and is
-completed by the server's own `elicitation/complete`. A question still standing
-when a turn is stopped is answered `cancel`.
+goes to the server as the elicitation's content, and the kind the client sent
+goes as itself: a decline as a decline, and a cancel as a cancel, which are two
+different things to tell a server. A page rather than a form carries its `url`
+on the request and is completed by the server's own `elicitation/complete`. A
+question still standing when a turn is stopped is answered `cancel`.
 
 A tool call moves when the agent moves it.
 A call the server is still holding is `pending`, and nothing is said about who approves it until the agent starts it, so a permission that arrives one instruction later is never contradicted.

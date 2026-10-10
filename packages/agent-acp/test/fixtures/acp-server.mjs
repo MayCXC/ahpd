@@ -33,6 +33,9 @@
  * - text containing `elicitcancel` asks a form and holds the prompt until
  *   `session/cancel` ends it, so a turn stopped while a question stands is one a
  *   test can watch from both sides;
+ * - text containing `elicitunknown` asks a form with a field whose `type` ACP
+ *   does not name, and says what came back for it, which is the field the
+ *   bridge has no control of its own for;
  * - text containing `hold` asks for permission on a call it is still holding,
  *   which is `pending`, and reports which option came back; `ctool=<name>` gives
  *   that call the programmatic name it asks about, as an agent that reached a
@@ -608,7 +611,7 @@ const promptScript = async (id, params) => {
   }
   const reaches = [
     'read', 'write', 'term', 'ask', 'hold', 'jump', 'paint', 'away', 'plan', 'name', 'shift', 'reauth', 'mrep=', 'mreq=',
-    'elicitform', 'eliciturl', 'elicitcancel',
+    'elicitform', 'eliciturl', 'elicitcancel', 'elicitunknown',
   ].some((one) => text.includes(one));
   if (!reaches) for (const update of scriptFor(text)) notify(update);
   if (text.includes('chatter')) {
@@ -959,6 +962,42 @@ const promptScript = async (id, params) => {
       },
     });
     return;
+  }
+
+  if (text.includes('elicitunknown')) {
+    /*
+     * A form with a field whose `type` ACP does not name.
+     *
+     * A form's `requestedSchema` is JSON as the server wrote it, and this one
+     * asks for a shape the protocol has no control for: a client is meant to
+     * ask it as a line the person writes rather than leave it out, because a
+     * form drawn with a field missing is one nobody can fill in. What comes
+     * back is the field's own value, whatever was typed for it.
+     */
+    const answer = await ask('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-unknown',
+      message: 'How should it be set up?',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          branch: { type: 'string', title: 'Branch name' },
+          settings: { type: 'object', title: 'Settings', description: 'A shape this server keeps for itself' },
+        },
+        required: ['branch'],
+      },
+    });
+    const content = answer?.content ?? {};
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `elicit=${String(answer?.action ?? 'none')}`
+          + `|branch=${String(content.branch ?? '-')}`
+          + `|settings=${String(content.settings ?? '-')}`,
+      },
+    });
   }
 
   if (text.includes('later')) {

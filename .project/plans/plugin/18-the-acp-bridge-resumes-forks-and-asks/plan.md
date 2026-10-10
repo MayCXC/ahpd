@@ -96,8 +96,8 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 | [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | done | 01, and host 19 task 01 |
 | [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | done | - |
 | [04 - Docs](task-04-docs.md) | done | 01, 02, 03 |
-| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | todo | 03 |
-| [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | todo | 01, 03 |
+| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | implemented | 03 |
+| [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | implemented | 01, 03 |
 
 ## Risks and tradeoffs
 
@@ -109,7 +109,7 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 - **Done so far:** tasks 01-04 are done: built 2026-10-10, reviewed the same day and merged in `cc15895`.
   The review found that a reopen after a fork resumed the original conversation; the fix is in `7dc2a70`, with a test.
   The resume choice and the fork are in `packages/agent-acp/src/session/opening.ts`; the question handlers are in `packages/agent-acp/src/session/handlers.ts`.
-- **Next action:** build tasks 05 and 06, which carry Softov's three answers of 2026-10-10. Then close the plan.
+- **Next action:** review tasks 05 and 06, implemented 2026-10-10. Then set them done and close the plan.
 - **Where the cases went:** tasks 01 and 02 in `packages/agent-acp/test/agent-acp-catalog.test.ts` and task 03 in `packages/agent-acp/test/agent-acp-ports.test.ts`.
 - **Watch out for:** the host hands `Start.seed` on every resume path, so the fallback is not needed.
   Task 05 is the one SDK change; the other backends ignore the new parameter.

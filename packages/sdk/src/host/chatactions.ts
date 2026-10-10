@@ -1264,13 +1264,20 @@ export function chatAction(
        * indistinguishable from one answering it. `accepted` is still
        * honoured for anything that sent it before this, but `response`
        * decides when both are there.
+       *
+       * The kind goes on to the backend as well, because a decline and a
+       * cancel are two different things to tell a server and only the
+       * backend knows which of them its agent can be told. Anything that is
+       * neither of the three kinds is left out, and the backend settles on
+       * the two-way answer it was given.
        */
       const response = typeof action.response === 'string' ? action.response : undefined;
       const accepted = response !== undefined ? response === 'accept' : action.accepted !== false;
+      const kind = response === 'accept' || response === 'decline' || response === 'cancel' ? response : undefined;
       const requestId = String(action.requestId ?? action.id ?? '');
       const taken = session.answer(requestId, accepted, (typeof action.answers === 'object' && action.answers !== null
         ? action.answers
-        : {}) as Record<string, unknown>);
+        : {}) as Record<string, unknown>, kind);
       // An answer to a request this chat is not waiting on is a no-op, as the
       // protocol has it: nothing to say back, and nothing refused.
       if (!taken) break;
