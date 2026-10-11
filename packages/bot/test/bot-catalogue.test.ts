@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
+import { memoryRecords } from '../../sdk/src/records.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
@@ -99,7 +100,8 @@ function made(tokens: Record<string, Grant[]>, members: Record<string, string[]>
     path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: join(root, 'config'), log: () => {}, say: () => {},
   };
   const sessions = memorySessions();
-  const { host: plugin, contribution } = pluginHost('bot', context, { sessions: () => sessions });
+  const records = memoryRecords();
+  const { host: plugin, contribution } = pluginHost('bot', context, { sessions: () => sessions, records: () => records });
   apply(plugin, { root: join(root, 'bots') });
   const { users, changed } = directory(tokens, members);
   const { options, problems } = foldHostOptions({
@@ -107,10 +109,11 @@ function made(tokens: Record<string, Grant[]>, members: Record<string, string[]>
     agents: [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }],
     resources: fileResources(),
     sessions,
+    records,
     users,
   }, [contribution]);
   expect(problems).toEqual([]);
-  return { host: createHost(options), changed, users };
+  return { host: createHost(options), changed, users, records };
 }
 
 type Host = ReturnType<typeof createHost>;
@@ -161,6 +164,22 @@ const write = async (reader: Reader, slug: string, body: Bag): Promise<void> => 
   const answer = await call(reader, 'resourceWrite', { uri: `bot://${slug}`, data: JSON.stringify(body) });
   if (!('result' in answer)) throw new Error(`refused: ${answer.code} ${answer.message}`);
 };
+
+it('answers a subscribe that arrives before any bot has been read', async () => {
+  const { host, records } = made({ ana: PERSON }, { ana: ['crew'] });
+  // A bot a daemon starts with: in the collection, and read by nobody yet. A
+  // catalogue answered from a cache that is not loaded would show nothing, and
+  // nothing would ever publish what was there all along.
+  const bots = await records.collection('bots', { body: 'instructions' });
+  await bots.put({
+    id: 'motion', name: 'Motion', labels: [], body: 'robot', color: 'red',
+    workspace: '/tmp/bots/motion', owner: 'user:ana',
+    createdAt: '2026-10-11T00:00:00.000Z', updatedAt: '2026-10-11T00:00:00.000Z',
+  });
+  const ana = await as(host, 'ana');
+
+  expect(await subscribe(ana)).toEqual(['motion']);
+});
 
 it('answers each reader the bots it may read, each as a read of it answers', async () => {
   const { host } = made({ ana: PERSON, bo: PERSON }, { ana: ['crew'], bo: [] });

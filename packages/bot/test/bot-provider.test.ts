@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
+import { memoryRecords } from '../../sdk/src/records.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
@@ -120,7 +121,12 @@ function made(
   // read live off the host rather than held by the plugin, so the two are the
   // same store a running daemon would hand it.
   const sessions = memorySessions();
-  const { host: plugin, contribution } = pluginHost('bot', context, { sessions: () => sessions });
+  // The record store in place of a folder: the plugin keeps its bots in two
+  // collections of this, as a running daemon keeps them in `fileRecords`. Read
+  // live off the host, the way the sessions are, so the plugin and the host
+  // hold the same one.
+  const records = memoryRecords();
+  const { host: plugin, contribution } = pluginHost('bot', context, { sessions: () => sessions, records: () => records });
   apply(plugin, { root: bots });
 
   const base: HostOptions = {
@@ -128,11 +134,12 @@ function made(
     agents: [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }, ...extra],
     resources: fileResources(),
     sessions,
+    records,
     ...(people ? { users: directory(tokens, members) } : {}),
     ...over,
   };
   const { options, problems } = foldHostOptions(base, [contribution]);
-  return { host: createHost(options), bots, root, problems, sessions };
+  return { host: createHost(options), bots, root, problems, sessions, records };
 }
 
 type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
@@ -272,15 +279,22 @@ it('refuses a body or a colour outside the lists', async () => {
 });
 
 it('makes a bot in a hex colour, and reads it back after a restart', async () => {
-  const { host, root } = made({ soft: ['bot:*', 'session:create'] });
+  const { host, records } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
 
   expect(await write(soft, 'bot://motion', { name: 'Motion', color: '#2f6fdf' }, { createOnly: true })).toEqual({ result: {} });
   expect(await record(soft, 'bot://motion')).toMatchObject({ color: '#2f6fdf' });
 
-  // A daemon that starts again reads the file, and a hex colour is a colour there too.
+  // A daemon that starts again reads the collection, and a hex colour is a
+  // colour there too.
   const problems: string[] = [];
-  expect(botStore(join(root, 'config'), (line) => problems.push(line)).get('motion')).toMatchObject({ color: '#2f6fdf' });
+  const held = botStore(
+    await records.collection('bots', { body: 'instructions' }),
+    await records.collection('bots-gone'),
+    (line) => problems.push(line),
+  );
+  await held.ready();
+  expect(held.get('motion')).toMatchObject({ color: '#2f6fdf' });
   expect(problems).toEqual([]);
 });
 

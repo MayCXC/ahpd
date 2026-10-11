@@ -292,6 +292,23 @@ export function botProvider(options: BotOptions): BotProvider {
     }
   };
 
+  /*
+   * A bot changed outside this process - in the file a person edits, or in a
+   * store a plugin replaced - arrives as a change the store did not make. It is
+   * told to the same watchers and the same catalogue as a write through
+   * `bot://`, because to both of them it is the same event: a bot that is not
+   * what it was.
+   */
+  store.onChange((change) => {
+    if (change.type === 'deleted') {
+      told('deleted', change.bot);
+      options.catalogue?.remove(change.bot);
+      return;
+    }
+    told(change.type, change.bot);
+    options.catalogue?.put(change.bot, change.before);
+  });
+
   /** Whose a bot this write makes is, or the refusal it is owed. */
   const ownerFor = (
     asked: Owner | undefined,
@@ -377,6 +394,7 @@ export function botProvider(options: BotOptions): BotProvider {
 
     authorize: async (uri, reader) => {
       if (reader === undefined) return true;
+      await store.ready();
       const held = split(uri);
       if (held === undefined) return false;
       // The root is the listing, which the provider answers for whoever asks
@@ -387,6 +405,7 @@ export function botProvider(options: BotOptions): BotProvider {
     },
 
     list: async (uri, reader) => {
+      await store.ready();
       const held = at(uri);
       if (held.slug !== '' || held.leaf !== '') throw absent(uri);
       const every = store.all();
@@ -397,6 +416,7 @@ export function botProvider(options: BotOptions): BotProvider {
     },
 
     resolve: async (uri) => {
+      await store.ready();
       const held = at(uri);
       if (held.leaf !== '') throw absent(uri);
       if (held.slug === '') {
@@ -420,6 +440,7 @@ export function botProvider(options: BotOptions): BotProvider {
     },
 
     read: async (uri) => {
+      await store.ready();
       const held = at(uri);
       if (held.leaf !== '' || held.slug === '') throw absent(uri);
       const bot = store.get(held.slug);
@@ -443,6 +464,7 @@ export function botProvider(options: BotOptions): BotProvider {
      * that rather than what is in it.
      */
     write: async (uri, content, owner, _client, reader) => {
+      await store.ready();
       const held = at(uri);
       if (held.leaf !== '') {
         throw new RpcError(-32602, `${uri} is not a bot; write to bot://<slug>`);
@@ -506,7 +528,7 @@ export function botProvider(options: BotOptions): BotProvider {
         if (record.computer === undefined) mkdirSync(record.workspace, { recursive: true });
         record.session = await options.sessions.start(sessionFor(record));
       }
-      store.put(record);
+      await store.put(record);
       told(existing === undefined ? 'added' : 'updated', record);
       options.catalogue?.put(record, existing);
     },
@@ -525,6 +547,7 @@ export function botProvider(options: BotOptions): BotProvider {
      * record.
      */
     remove: async (uri, _recursive, owner, reader) => {
+      await store.ready();
       const held = at(uri);
       if (held.leaf !== '' || held.slug === '') {
         throw new RpcError(-32602, `${uri} is not a bot to delete; delete bot://<slug>`);
@@ -532,7 +555,7 @@ export function botProvider(options: BotOptions): BotProvider {
       const bot = store.get(held.slug);
       if (bot === undefined) throw absent(uri);
       if (!mayWrite(bot, owner, reader)) throw notYours(bot);
-      store.remove(held.slug);
+      await store.remove(held.slug);
       told('deleted', bot);
       options.catalogue?.remove(bot);
     },
@@ -546,6 +569,7 @@ export function botProvider(options: BotOptions): BotProvider {
      * watch. A bot has no children, so `recursive` and the globs change nothing.
      */
     watch: async (uri, _options, onChange, reader) => {
+      await store.ready();
       const held = at(uri);
       if (held.leaf !== '') throw absent(uri);
       if (held.slug !== '' && store.get(held.slug) === undefined) throw absent(uri);

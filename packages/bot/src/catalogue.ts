@@ -94,8 +94,20 @@ export function botCatalogue(store: BotStore): Catalogue {
     channel: {
       grant: 'bot:read',
       describe: () => ({ title: 'Bots', description: 'Every bot the reader may read, kept current.' }),
-      authorize: async (uri, reader) => uri === CATALOGUE && store.all().some((one) => mayRead(one, reader)),
-      snapshot: (uri, reader, client) => {
+      /*
+       * Both roads wait for the store, as a read of `bot://` does.
+       *
+       * A subscribe can arrive before anything has read a bot, and the store
+       * loads its cache on the first read rather than while the plugin applies.
+       * A snapshot answered from an empty cache would never be corrected:
+       * nothing publishes a bot that was there all along.
+       */
+      authorize: async (uri, reader) => {
+        await store.ready();
+        return uri === CATALOGUE && store.all().some((one) => mayRead(one, reader));
+      },
+      snapshot: async (uri, reader, client) => {
+        await store.ready();
         if (uri !== CATALOGUE) throw new RpcError(-32001, `No channel at ${uri}; the catalogue is ${CATALOGUE}`);
         const bots = store.all().filter((one) => readable(one, reader));
         sent.set(readerKey(client, reader), new Set(bots.map((one) => one.id)));
