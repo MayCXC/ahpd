@@ -152,14 +152,42 @@ export const lines = (title: string, description: string): Record<string, unknow
 export const EPOCH = '1970-01-01T00:00:00.000Z';
 
 /**
+ * Make or edit one record, with the rules a resource write has.
+ *
+ * The row that is there is read once, and the store is handed it so a scheme
+ * that merges does not have to read it again. `createOnly` refuses an id that
+ * is already there, as the protocol's own word for it does.
+ */
+export const putRecord = async (scheme: string, records: Records, id: string, body: Record<string, unknown>, createOnly = false): Promise<void> => {
+  const was = await records.find(id);
+  if (createOnly && was !== undefined) {
+    throw new RpcError(-32010, `${id} is already a ${scheme}; edit it or choose another id`);
+  }
+  await records.put(id, body, was);
+};
+
+/**
+ * Take one record out, with the rules a resource delete has.
+ *
+ * Refused while something still names it, and absent when nothing is there.
+ * `uri` is what the refusal names.
+ */
+export const removeRecord = async (scheme: string, records: Records, id: string, uri = `${scheme}://${id}`): Promise<void> => {
+  if (!await records.drop(id)) throw absentResource(scheme, uri);
+};
+
+/**
  * One scheme's records, as the resource calls a client already uses.
  *
  * A refusal the directory made is said as the call's own: every rule behind
  * `Records` is the port's, so the sentence a client gets here is the one it
  * would get from the command of the same name - this is another door onto the
  * same directory, not a second set of rules.
+ *
+ * `changed` is called after each write and remove the store took, so a
+ * channel over the same records hears a change made through the scheme.
  */
-export const recordsProvider = (scheme: string, records: Records): RecordsProvider => {
+export const recordsProvider = (scheme: string, records: Records, changed?: () => void): RecordsProvider => {
   const description: SchemeDescription = {
     title: records.title,
     description: records.description,
@@ -219,12 +247,8 @@ export const recordsProvider = (scheme: string, records: Records): RecordsProvid
       const at = splitResource(uri, scheme);
       if (at.id === '') throw new RpcError(INVALID_PARAMS, `${uri} is not a name for a new ${scheme}; write to ${scheme}://<id>`);
       if (at.leaf !== '') throw new RpcError(INVALID_PARAMS, `${uri} is not something to write; a ${scheme} is written whole, at ${scheme}://<id>`);
-      const was = await records.find(at.id);
-      // `createOnly` is the protocol's own word for refusing one that is there.
-      if (content.createOnly === true && was !== undefined) {
-        throw new RpcError(-32010, `${at.id} is already a ${scheme}; edit it or choose another id`);
-      }
-      await records.put(at.id, jsonBody(content, scheme), was);
+      await putRecord(scheme, records, at.id, jsonBody(content, scheme), content.createOnly === true);
+      changed?.();
     },
 
     /**
@@ -238,7 +262,8 @@ export const recordsProvider = (scheme: string, records: Records): RecordsProvid
       const at = splitResource(uri, scheme);
       if (at.id === '') throw new RpcError(INVALID_PARAMS, `${uri} is the ${scheme} directory; remove ${scheme}://<id>`);
       if (at.leaf !== '') throw absentResource(scheme, uri);
-      if (!await records.drop(at.id)) throw absentResource(scheme, uri);
+      await removeRecord(scheme, records, at.id, uri);
+      changed?.();
     },
   };
 };

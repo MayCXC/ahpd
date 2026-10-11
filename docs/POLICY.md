@@ -66,6 +66,24 @@ The choices a form offers are the scheme's manifest rather than this page. `desc
 
 The daemon keeps the rows in `policies.json` beside its configuration.
 
+## The channel and its commands
+
+The rows are also the channel `x-ahpd-policies://`, which holds every row and needs `policy:read`. A subscribe answers `{ records }`, one `{ id, record }` per row, where the record is what a read of `policy://<id>` answers:
+
+```json
+{ "records": [{ "id": "M1", "record": { "id": "M1", "scope": "all", "kind": "model", "effect": "allow", "match": { "model": ["deepseek/*"] } } }] }
+```
+
+`x-ahpd-policies/added` and `x-ahpd-policies/changed` carry `{ id, record }`, and `x-ahpd-policies/removed` carries `{ id }`. A reader without `policy:read` is refused the subscribe, and a subscriber who loses the grant is sent `removed` for every row.
+
+```json
+{ "type": "x-ahpd-policies/added", "id": "M2", "record": { "id": "M2", "scope": "all", "kind": "agent", "effect": "allow", "match": { "agent": ["claude"] } } }
+```
+
+`x-ahpd/policies/put` takes `{ id, record, createOnly? }` and needs `policy:put`; `x-ahpd/policies/remove` takes `{ id }` and needs `policy:delete`. Both check a row the way a write to `policy://<id>` does, with the same refusals, and answer `{}`.
+
+A write through the scheme or a command reaches the channel. **A hand edit to `policies.json` reaches no channel**: the daemon reads the file once at startup, so neither the store nor its subscribers see the edit until the daemon restarts.
+
 ## The switch
 
 ```json
@@ -127,7 +145,7 @@ no policy allows computer kvm-shared
 | --- | --- |
 | The four steps | `decide` in `packages/sdk/src/decide.ts` |
 | The row and the two stores | `packages/sdk/src/policies.ts` |
-| The `policy:` scheme | `packages/sdk/src/policy.ts` |
+| The `policy:` scheme and its channel | `packages/sdk/src/policy.ts` and `packages/sdk/src/recordschannel.ts` |
 | The switch, in the host | `policies` and `policiesCheck` on `HostOptions`, `packages/sdk/src/types/host.ts` |
 | The switch, in the daemon | `PoliciesSetting` in `packages/server/src/config.ts`, and the wiring in `packages/server/src/commands/run.ts` |
 | The proxy's check | `policyFor` in `packages/server/src/proxy/listener.ts` |

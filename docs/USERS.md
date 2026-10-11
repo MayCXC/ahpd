@@ -306,6 +306,49 @@ snapshot the client takes carries no key at all.
 Everything else about that person is read from `user://<id>`, which is the only
 place a record like this is served from.
 
+## People as channels and commands
+
+Each of the four schemes is also a channel that holds every record a reader may
+read, and two commands that change one. The resource schemes stay: a channel is
+how a client keeps a list current without asking again, and a command is the
+same write with typed params.
+
+| Channel | Read grant | Commands | Command grants |
+| --- | --- | --- | --- |
+| `x-ahpd-users://` | `user:read` | `x-ahpd/users/put`, `x-ahpd/users/remove` | `user:put`, `user:delete` |
+| `x-ahpd-teams://` | `team:read` | `x-ahpd/teams/put`, `x-ahpd/teams/remove` | `team:put`, `team:delete` |
+| `x-ahpd-projects://` | `project:read` | `x-ahpd/projects/put`, `x-ahpd/projects/remove` | `project:put`, `project:delete` |
+| `x-ahpd-roles://` | `role:read` | `x-ahpd/roles/put`, `x-ahpd/roles/remove` | `role:put`, `role:delete` |
+
+A subscribe answers `{ records }`, one `{ id, record }` for each record the
+reader may read, and the record is what a `resourceRead` of `<scheme>://<id>`
+answers:
+
+```json
+{ "records": [{ "id": "backend", "record": { "id": "backend", "title": "Back end" } }] }
+```
+
+Three actions follow it, each sent only to the clients it concerns:
+`x-ahpd-teams/added` and `x-ahpd-teams/changed` carry `{ id, record }`, and
+`x-ahpd-teams/removed` carries `{ id }`. A write through the scheme, a command,
+and an edit to the users file on disk each reach a subscriber:
+
+```json
+{ "type": "x-ahpd-teams/added", "id": "web", "record": { "id": "web" } }
+```
+
+The own-record rule holds here too. A person without `user:read` may subscribe
+to `x-ahpd-users://`, and the list holds only their own record; anybody else's
+is never sent to them. A person who loses a read grant is sent `removed` for
+each record they no longer may read. On every other channel a reader without
+the grant is refused the subscribe.
+
+`put` takes `{ id, record, createOnly? }` and `remove` takes `{ id }`. Both go
+through the rules a resource write and a removal go through, with the same
+refusal sentences, and answer `{}`. An id with a `/` or a `?` in it is refused,
+because no address could name it. Each command is listed on the handshake under
+`_meta['ahpd.methods']` with the grant it needs.
+
 ## Policies as resources
 
 What a scheme is, and which operation of it each resource method asks for, is [RESOURCES.md](RESOURCES.md). This is what this scheme carries.

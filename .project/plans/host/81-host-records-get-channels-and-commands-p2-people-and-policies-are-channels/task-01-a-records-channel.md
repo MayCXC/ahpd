@@ -1,6 +1,6 @@
 ---
 title: A records channel keeps a reader's list current
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -43,3 +43,4 @@ The source has only `ids` and `find`, so the computer plugin can use it in p4.
 
 ## Resume
 
+Implemented 2026-10-11. `recordsChannel` is in `packages/sdk/src/recordschannel.ts`, with its cases in `packages/sdk/test/recordschannel.test.ts`. A refresh runs after the one before it, and a refresh that cannot read the store is said through `onProblem` rather than thrown.

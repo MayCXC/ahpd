@@ -20,7 +20,7 @@ import {
   fileSessions,
   fileUsage,
   filePolicies,
-  policyProviders,
+  policyChannels,
   fileUsers,
   gitBranches,
   gitChanges,
@@ -33,9 +33,10 @@ import {
   memorySessions,
   migrateSessions,
   overStdio,
-  peopleProviders,
+  peopleChannels,
   raise,
   scheduledAutomations,
+  servedRecords,
   shellTerminals,
   signInRecord,
   toolServers,
@@ -486,6 +487,26 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * every field, so a daemon with no plugins gets the same host either way, and
    * it is a value the fold never mutates.
    */
+  /*
+   * People, teams, projects, roles and policies, each as an `x-ahpd-<domain>`
+   * channel and `x-ahpd/<domain>/put` and `remove` commands beside its scheme -
+   * decision `host-records-are-typed-channels-beside-their-resource-schemes`.
+   *
+   * A change to the users file refreshes the four people channels and the
+   * policy one, so a reader whose grant went is sent `removed`. The watch is
+   * closed once `stopping` has been raised.
+   */
+  const listProblem = (message: string): void => { process.stdout.write(`${message}\n`); };
+  const policyLists = policyChannels(policies, { onProblem: listProblem });
+  const peopleLists = users === undefined
+    ? undefined
+    : peopleChannels(users, { onChange: () => { void policyLists.refresh(); }, onProblem: listProblem });
+  const lists = servedRecords(
+    'ahpd',
+    [...(peopleLists?.channels ?? []), ...policyLists.channels],
+    { ...peopleLists?.methods, ...policyLists.methods },
+  );
+
   const base: HostOptions = {
     path: options.paths[0] as string,
     /*
@@ -553,9 +574,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * the install that has people and turn it on everywhere else.
      */
     resourceProviders: {
-      ...(users === undefined ? {} : peopleProviders(users)),
-      ...policyProviders(policies),
+      ...peopleLists?.providers,
+      ...policyLists.providers,
     },
+    channels: lists.channels,
+    methods: lists.methods,
     /*
      * The host's own tools, offered to every session's model.
      *
@@ -999,6 +1022,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const way = lifecycle({
     down: async () => {
       await raise(folded.events, { type: 'stopping' }, stamp);
+      peopleLists?.close();
       /*
        * And every connection the plugins opened, after `stopping` and before
        * the listeners go.

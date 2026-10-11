@@ -1,6 +1,6 @@
 ---
 title: The docs describe the people and policy channels and commands
-status: todo
+status: implemented
 depends: [task-03-the-daemon-serves-the-five.md]
 layer: "docs"
 refs:
@@ -30,3 +30,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `USERS.md` has a section "People as channels and commands", and `POLICY.md` has "The channel and its commands". The examples match `records-channels.test.ts`.

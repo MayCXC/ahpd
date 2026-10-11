@@ -16,6 +16,8 @@
 
 import { checkPolicy, EFFECTS, KINDS, LIMIT_POOLS, MATCHES, MEASURES, PERIODS } from './policies.js';
 import { line, lines, recordsProvider, type Records, type RecordsProvider } from './records.js';
+import { recordsDomain, type RecordsChannel } from './recordschannel.js';
+import type { PluginMethod } from './types/plugin.js';
 import type { Policies } from './types/policies.js';
 
 /** The scheme, which is also its grant subject. */
@@ -150,3 +152,33 @@ const records = (store: Policies): Records => ({
  */
 export const policyProviders = (store: Policies): Record<string, PolicyProvider> =>
   Object.fromEntries(SCHEMES.map((what) => [what, recordsProvider(what, records(store))]));
+
+/** The policy scheme as a provider, a channel and commands, over one store. */
+export interface PolicyChannels {
+  /** The `policy:` provider, by scheme, refreshing the channel after a write. */
+  providers: Record<string, PolicyProvider>;
+  /** `x-ahpd-policies`. */
+  channels: RecordsChannel[];
+  /** `x-ahpd/policies/put` and `x-ahpd/policies/remove`, by name. */
+  methods: Record<string, PluginMethod>;
+  /** Refresh the channel. */
+  refresh(): Promise<void>;
+}
+
+/**
+ * The policy scheme as a channel and commands beside its provider - decision
+ * `host-records-are-typed-channels-beside-their-resource-schemes`.
+ *
+ * The channel needs `policy:read`. The store has no watch, so a row edited by
+ * hand in the file reaches the channel at the next change made through the
+ * host.
+ */
+export const policyChannels = (store: Policies, options: { onProblem?: (message: string) => void } = {}): PolicyChannels => {
+  const one = recordsDomain('policies', 'policy', records(store), options);
+  return {
+    providers: { policy: one.provider },
+    channels: [one.channel],
+    methods: one.methods,
+    refresh: one.channel.refresh,
+  };
+};

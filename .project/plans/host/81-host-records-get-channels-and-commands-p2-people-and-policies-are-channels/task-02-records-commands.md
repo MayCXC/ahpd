@@ -1,6 +1,6 @@
 ---
 title: A record is put and removed by command, with the rules a resource write has
-status: todo
+status: implemented
 depends: [task-01-a-records-channel.md]
 layer: "packages/sdk"
 refs:
@@ -37,3 +37,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `putRecord` and `removeRecord` are in `records.ts`, and `recordsMethods` and `recordsDomain` in `recordschannel.ts`. Both commands answer `{}`, as a resource write does, so a caller with `put` and no `read` gets no record back. An id with a `/` or a `?` is refused, and so is a missing `record`. A resource write now parses the body before it checks `createOnly`.

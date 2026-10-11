@@ -1,6 +1,6 @@
 ---
 title: The daemon serves the five channels and their commands
-status: todo
+status: implemented
 depends: [task-02-records-commands.md]
 layer: "packages/sdk, packages/server"
 refs:
@@ -43,3 +43,4 @@ A daemon with a users directory serves the four people channels and their comman
 
 ## Resume
 
+Implemented 2026-10-11. `peopleChannels` and `policyChannels` replace `peopleProviders` and `policyProviders` in `run.ts`, and `servedRecords` wraps the channels and methods by `ahpd`. A change to the users file also refreshes the policy channel, so a person who loses `policy:read` is sent `removed`. The cases are in `packages/server/test/records-channels.test.ts`.

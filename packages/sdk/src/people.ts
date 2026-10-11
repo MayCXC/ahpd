@@ -18,8 +18,10 @@
  */
 
 import { line, lines, recordsProvider, type Records, type RecordsProvider } from './records.js';
+import { recordsDomain, type RecordsChannel } from './recordschannel.js';
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { grantProblem } from './users.js';
+import type { PluginMethod } from './types/plugin.js';
 import type { Grant, Named, Users } from './types/users.js';
 
 /** The four, in the order a client's screen would draw them. */
@@ -238,3 +240,54 @@ const recordsFor = (directory: Users, what: Scheme): Records =>
  */
 export const peopleProviders = (directory: Users): Record<string, PeopleProvider> =>
   Object.fromEntries(SCHEMES.map((what) => [what, recordsProvider(what, recordsFor(directory, what))]));
+
+
+/** Each scheme's channel and command domain, which is the scheme in the plural. */
+const DOMAINS: Record<Scheme, string> = { user: 'users', team: 'teams', project: 'projects', role: 'roles' };
+
+/** The four people schemes as providers, channels and commands, over one directory. */
+export interface PeopleChannels {
+  /** The four providers, by scheme, each refreshing its own channel after a write. */
+  providers: Record<string, PeopleProvider>;
+  /** `x-ahpd-users`, `x-ahpd-teams`, `x-ahpd-projects` and `x-ahpd-roles`. */
+  channels: RecordsChannel[];
+  /** `x-ahpd/<domain>/put` and `x-ahpd/<domain>/remove` for each of the four, by name. */
+  methods: Record<string, PluginMethod>;
+  /** Refresh the four channels. */
+  refresh(): Promise<void>;
+  /** Stop the watch on the directory. */
+  close(): void;
+}
+
+/**
+ * The four people schemes as channels and commands beside their providers -
+ * decision `each-people-scheme-has-its-own-channel`.
+ *
+ * Each channel needs its scheme's read grant. The users channel shows a reader
+ * without `user:read` their own record, as `user://<id>` does. A change to the
+ * directory, by this host or by a person editing the file, refreshes all four
+ * and then calls `onChange`.
+ */
+export const peopleChannels = (
+  directory: Users,
+  options: { onChange?: () => void; onProblem?: (message: string) => void } = {},
+): PeopleChannels => {
+  const domains = SCHEMES.map((what) => [what, recordsDomain(DOMAINS[what], what, recordsFor(directory, what), {
+    ...(what === 'user' ? { mayRead: (id: string, reader: { id: string }) => id === reader.id } : {}),
+    ...(options.onProblem === undefined ? {} : { onProblem: options.onProblem }),
+  })] as const);
+  const refresh = async (): Promise<void> => {
+    await Promise.all(domains.map(([, one]) => one.channel.refresh()));
+  };
+  const watch = directory.watch?.(() => {
+    void refresh();
+    options.onChange?.();
+  });
+  return {
+    providers: Object.fromEntries(domains.map(([what, one]) => [what, one.provider])),
+    channels: domains.map(([, one]) => one.channel),
+    methods: Object.assign({}, ...domains.map(([, one]) => one.methods)) as Record<string, PluginMethod>,
+    refresh,
+    close: () => { watch?.close(); },
+  };
+};
