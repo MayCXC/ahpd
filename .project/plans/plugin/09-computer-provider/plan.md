@@ -13,7 +13,7 @@ decisions:
   - decisions/one-computer-provider-with-runtimes-as-options.md
   - decisions/a-machine-is-made-by-a-host-tool.md
 refs:
-  - code://.project/plans/plugin/08-resource-providers/report.md - the review that found nothing connecting the scheme, the fixture and a running container
+  - git://258e8af - `.project/plans/plugin/08-resource-providers/report.md`, the review that found nothing connecting the scheme, the fixture and a running container; removed after it was applied
   - code://.project/research/host-owned-uri-resources.md - `computer://<id>/status`, `capabilities` and `request_disposable_computer`
   - code://packages/sdk/src/types/resources.ts#L186-L211 - `ResourceProvider`, which this package implements
   - code://packages/sdk/src/types/host.ts#L232-L254 - `HostTool`, `ToolCall` and `effects`
