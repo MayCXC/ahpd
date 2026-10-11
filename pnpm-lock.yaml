@@ -160,6 +160,9 @@ importers:
       '@cofold/terminal':
         specifier: ^0.3.0
         version: 0.3.0
+      '@cofold/yaml':
+        specifier: link:/github/cofold/packages/yaml
+        version: link:../../../../cofold/packages/yaml
       '@microsoft/agent-host-protocol':
         specifier: ^1.0.0
         version: 1.0.0

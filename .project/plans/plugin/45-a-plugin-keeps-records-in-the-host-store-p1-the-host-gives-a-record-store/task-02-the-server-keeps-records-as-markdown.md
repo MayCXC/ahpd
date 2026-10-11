@@ -1,6 +1,6 @@
 ---
 title: The server keeps records as Markdown files
-status: todo
+status: implemented
 depends: [task-01-the-sdk-declares-the-record-store.md]
 layer: "packages/server"
 refs:
@@ -49,3 +49,11 @@ Each record is `<configDir>/<name>/<id>.md`: the fields as YAML frontmatter, and
 - `pnpm exec vitest run packages/server` and `pnpm -s typecheck` pass.
 
 ## Resume
+
+- **Done so far:** all steps. `records.test.ts` has 13 cases, and they pass.
+- **Built as:** `fileRecords(dir, { onProblem })` keeps each collection's records in memory after the first open, and the folder watch keeps them current. `get`, `list` and `find` answer from that copy.
+- **Built as:** the store keeps the last text it wrote or read for each file. An event for that text is not a change.
+- **Built as:** the body ends with one newline in the file, and a read removes it. A record with no body field reads back with an empty body field.
+- **Built as:** `put` refuses a body field that is not text.
+- **Built as:** the sdk index exports `isRecordSlug` and `RECORD_SLUG`, so the server uses the same slug rule.
+- **Built as:** `@cofold/yaml` is a `link:` to the local cofold build until cofold publishes `stringifyYaml`.
