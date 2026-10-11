@@ -86,8 +86,8 @@ The child plans hold the second table for their own tasks.
 
 ## Resume state
 
-- **Done so far:** p1 task 01 is implemented and awaits review.
-- **Next action:** cofold plan commands/05, then p1 tasks 02 and 03.
+- **Done so far:** p1 tasks 01 to 04 are implemented and await review. The server depends on a local `link:` build of `@cofold/yaml` until cofold publishes `stringifyYaml`.
+- **Next action:** review p1, then p2.
 - **Open questions:** none.
 - **Watch out for:** host plan 80 needs p1's Markdown record code in the server.
 

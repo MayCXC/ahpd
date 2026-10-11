@@ -5,7 +5,7 @@ import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { EventName, HostEvent } from '../src/types/events.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext, PluginContext } from '../src/types/plugin.js';
 import type { Peer } from '../src/types/rpc.js';
 
 /*
@@ -44,7 +44,7 @@ function built(subscriptions: Subscription[]) {
   const lines: string[] = [];
   const ctxLines: string[] = [];
   const contributions = subscriptions.map((one) => {
-    const context: PluginContext = {
+    const context: LoaderContext = {
       path: DIR,
       paths: [DIR],
       version: sdkVersion(),

@@ -11,7 +11,7 @@ import type { HostOptions, HostTool } from '../src/types/host.js';
 import type { ResourceProvider, ResourceStore } from '../src/types/resources.js';
 import type { Emit } from '../src/types/session.js';
 import type { TerminalStore } from '../src/types/terminals.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Principal, Users } from '../src/types/users.js';
 
@@ -53,7 +53,7 @@ const settle = async (times = 12): Promise<void> => {
 
 const wait = async (ms: number): Promise<void> => { await new Promise((r) => { setTimeout(r, ms); }); };
 
-const context = (): PluginContext => ({ path: DIR, paths: [DIR], version: sdkVersion(), hostName: 'test', configDir: DIR, log: () => {}, say: () => {} });
+const context = (): LoaderContext => ({ path: DIR, paths: [DIR], version: sdkVersion(), hostName: 'test', configDir: DIR, log: () => {}, say: () => {} });
 
 /** One host, one plugin subscribed to everything, and what it saw. */
 function watched(extra: Partial<HostOptions> = {}, breaks?: EventName) {

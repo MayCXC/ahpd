@@ -4,7 +4,7 @@ import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { EventListener, HostHandlers } from '../src/types/events.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 
 /*
  * The wiring half of events: what `on` records and what the fold does with it.
@@ -15,7 +15,7 @@ import type { PluginContext } from '../src/types/plugin.js';
  * configuration listed them.
  */
 
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: '/tmp/events',
   paths: ['/tmp/events'],
   version: sdkVersion(),
@@ -58,7 +58,7 @@ describe('on', () => {
   });
 
   it('keeps the base\'s own listener and appends the plugin\'s after it', () => {
-    const embedder: EventListener<'log'> = { by: 'embedder', context: context(), handle: () => {} };
+    const embedder: EventListener<'log'> = { by: 'embedder', context: pluginHost('embedder', context()).host, handle: () => {} };
     const alpha = pluginHost('alpha', context());
     alpha.host.on('log', () => {});
     const beta = pluginHost('beta', context());

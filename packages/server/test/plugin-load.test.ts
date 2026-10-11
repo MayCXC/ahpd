@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { loadPlugins, pluginIdOf } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
+import { FRONTMATTER } from './fixtures/plugin-yaml/index.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { PluginHost, PluginSpec } from '../../sdk/src/types/plugin.js';
 
@@ -208,6 +209,18 @@ describe('what a plugin is handed when it is applied', () => {
     expect(problems[0]).toMatch(/read only property|not extensible/);
     // What configuration wrote is where it was.
     expect(spec.options.later).toEqual({ $secret: 'host:orders' });
+  });
+
+  it('is the host\'s YAML functions, which read a frontmatter and write it back the same', async () => {
+    delete (globalThis as Record<string, unknown>).__yamlWritten;
+    const { loaded, problems } = await load(['./fixtures/plugin-yaml/index.ts']);
+
+    expect(problems).toEqual([]);
+    expect(loaded.map((one) => one.name)).toEqual(['yaml']);
+    expect((globalThis as Record<string, unknown>).__yamlWritten).toEqual({
+      fields: { id: 'helper', name: 'Helper: the first', labels: ['a', 'b'], count: 2 },
+      text: FRONTMATTER,
+    });
   });
 });
 

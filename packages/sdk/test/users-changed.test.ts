@@ -8,7 +8,7 @@ import { fileUsers } from '../src/users.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostEvent } from '../src/types/events.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Users } from '../src/types/users.js';
 
 /*
@@ -29,7 +29,7 @@ afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
 const wait = async (ms: number): Promise<void> => { await new Promise((r) => { setTimeout(r, ms); }); };
 
-const context = (): PluginContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
+const context = (): LoaderContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
 
 /** A host over `users`, with one plugin that keeps what it heard. */
 function listening(users: Users, listen = true) {

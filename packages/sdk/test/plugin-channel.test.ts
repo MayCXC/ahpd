@@ -7,7 +7,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { call, directory, hello, RECORD, root, watching } from './users-gate-helpers.js';
 import type { Bag } from './users-gate-helpers.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { ChannelHandle, PluginChannel, PluginContext } from '../src/types/plugin.js';
+import type { ChannelHandle, PluginChannel, LoaderContext } from '../src/types/plugin.js';
 import type { Grant, Principal } from '../src/types/users.js';
 
 /*
@@ -21,7 +21,7 @@ import type { Grant, Principal } from '../src/types/users.js';
 
 const URI = 'x-demo://all';
 
-const context = (): PluginContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
+const context = (): LoaderContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
 
 const settle = async (): Promise<void> => { await new Promise((resolve) => { setTimeout(resolve, 20); }); };
 

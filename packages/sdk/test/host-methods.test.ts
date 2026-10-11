@@ -8,7 +8,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { call, directory, hello, peer, root, signIn } from './users-gate-helpers.js';
 import type { Bag } from './users-gate-helpers.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext, PluginMethod } from '../src/types/plugin.js';
+import type { LoaderContext, PluginMethod } from '../src/types/plugin.js';
 import type { Grant } from '../src/types/users.js';
 
 /*
@@ -20,7 +20,7 @@ import type { Grant } from '../src/types/users.js';
  * asked and who asked it.
  */
 
-const context = (): PluginContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
+const context = (): LoaderContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
 
 /** What `authorize` was asked, by caller id. */
 interface Heard { authorized: string[] }

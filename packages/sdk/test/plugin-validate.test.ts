@@ -5,7 +5,7 @@ import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
 import type { HostOptions, HostTool } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 
 /*
  * The check at the plugin boundary.
@@ -18,7 +18,7 @@ import type { PluginContext } from '../src/types/plugin.js';
  * do not.
  */
 
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: '/tmp/validate',
   paths: ['/tmp/validate'],
   version: sdkVersion(),

@@ -1,6 +1,6 @@
 ---
 title: A plugin gets YAML from the host
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk, packages/server"
 refs:
@@ -32,3 +32,8 @@ refs:
 - `pnpm exec vitest run packages/server packages/sdk` and `pnpm -s typecheck` pass.
 
 ## Resume
+
+- **Done so far:** all steps. `plugin-load.test.ts` has the new case, and `plugin-host.test.ts` has a case for the functions that throw.
+- **Built as:** `pluginHost` takes a `LoaderContext`, which is a `PluginContext` that can omit the two YAML functions. The sdk exports the type.
+- **Built as:** the test contexts that a test gives to `pluginHost` are now typed `LoaderContext`.
+- **Built as:** the daemon's `parseYaml` takes the text only, so a plugin cannot change the host's size and depth limits.

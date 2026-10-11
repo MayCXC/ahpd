@@ -28,8 +28,9 @@ import { createRequire } from 'node:module';
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { foldHostOptions, frozenCopy, grantProblem, isRecord, pluginHost, readSecret, reason, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginSpec, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { satisfies } from './compat.js';
 
 /** One spec, turned into a URL to import. */
@@ -452,6 +453,19 @@ export interface LoadOneOptions {
    * would make a slow plugin decide what this daemon adopts.
    */
   sessions?: () => SessionStore | undefined | Promise<SessionStore | undefined>;
+  /**
+   * Where a plugin's collections are, read when a collection is first used.
+   *
+   * A function that may answer late, for the reason `sessions` may: a plugin
+   * opens a collection while it is applying, before the fold has named the
+   * store, and its first call waits for the fold.
+   */
+  records?: () => RecordStore | undefined | Promise<RecordStore | undefined>;
+  /**
+   * Which plugin opened each collection, by name, shared by every plugin a
+   * loader applies so that no two open the same one.
+   */
+  collections?: Map<string, string>;
 }
 
 /** What one `loadOne` managed: a plugin, or the reasons it is not one. */
@@ -871,6 +885,9 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.hostId === undefined ? {} : { hostId: options.hostId }),
     log: options.log,
     say: options.say ?? (() => {}),
+    // The host's own YAML subset, so a plugin needs no YAML dependency of its own.
+    parseYaml: (text: string) => parseYaml(text),
+    stringifyYaml,
   });
 
   const { host, contribution, seal } = pluginHost(name, context, {
@@ -880,6 +897,8 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     problem: (line) => { told.push(line); },
     ...(grants.length === 0 ? {} : { grants }),
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
+    ...(options.records === undefined ? {} : { records: options.records }),
+    ...(options.collections === undefined ? {} : { collections: options.collections }),
     // As configuration wrote it, which is what a host inside a machine loads.
     spec: said,
   });
@@ -1040,6 +1059,9 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   let owner: string | undefined = options.base.vault === undefined ? undefined : 'the daemon';
   const vaultInForce = (): Vault | undefined => standing ?? options.base.vault;
 
+  // Which plugin opened each collection, one map for every plugin loaded here.
+  const collections = new Map<string, string>();
+
   /*
    * Every entry is imported and named before any applies, a switched-off one
    * too, so that each one's id is known: root config keys an entry by it,
@@ -1099,6 +1121,8 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
       usage: () => reached?.usage,
       vault: vaultInForce,
       sessions: () => hosted.then((host) => host.sessions),
+      records: () => hosted.then((host) => host.records),
+      collections,
     }, named);
     problems.push(...one.problems);
     if (one.loaded !== undefined) {

@@ -71,6 +71,7 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 | A collection's calls wait until the fold names the port | `sessionKept` | 01 |
 | `host.records` with no records port throws | `secret`, which refuses with no vault | 01 |
 | The collection is the folder `<configDir>/<name>/`, so `bots` stays where it is | decision `a-bot-record-stays-in-config` | 02 |
+| The store refuses a collection named after a folder the daemon writes, and `remove` refuses an id that is not a slug | Softov's answer to "How should the record store keep a collection from landing on the daemon's own folders in configDir?": "Refuse reserved names" | 02 |
 | The plugin names the body field when it opens a collection, and a collection with none writes an empty body | decision 4 | 02 |
 | A file whose frontmatter `id` names another id is refused | the file name is the id | 02 |
 | `<id>.json` with no `<id>.md` is converted when the collection opens, and renamed `<id>.json.migrated` | `migrateSessions` | 02 |
@@ -91,9 +92,9 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The sdk declares the record store](task-01-the-sdk-declares-the-record-store.md) | implemented | - |
-| [02 - The server keeps records as Markdown files](task-02-the-server-keeps-records-as-markdown.md) | todo | 01 |
-| [03 - A plugin gets YAML from the host](task-03-a-plugin-gets-yaml-from-the-host.md) | todo | - |
-| [04 - The docs describe the record store](task-04-the-docs-describe-the-record-store.md) | todo | 02, 03 |
+| [02 - The server keeps records as Markdown files](task-02-the-server-keeps-records-as-markdown.md) | implemented | 01 |
+| [03 - A plugin gets YAML from the host](task-03-a-plugin-gets-yaml-from-the-host.md) | implemented | - |
+| [04 - The docs describe the record store](task-04-the-docs-describe-the-record-store.md) | implemented | 02, 03 |
 
 ## Risks and tradeoffs
 
@@ -103,10 +104,10 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 
 ## Resume state
 
-- **Done so far:** task 01 is implemented and awaits review. The sdk declares the record store, `memoryRecords`, `registerRecords` and `host.records`.
-- **Next action:** cofold plan commands/05, then [task-02-the-server-keeps-records-as-markdown.md](task-02-the-server-keeps-records-as-markdown.md) and [task-03-a-plugin-gets-yaml-from-the-host.md](task-03-a-plugin-gets-yaml-from-the-host.md).
-- **Open questions:** no task gives `records` and `collections` to `pluginHost` in `packages/server/src/plugins.ts`. Without them, `host.records` in the daemon has no store, and two plugins can open one name. Does task 02 do this?
-- **Watch out for:** `PORT_KEYS` has a compile-time check against `PortKey`, so both change together.
+- **Done so far:** all four tasks are implemented and await review. The server keeps records as Markdown files, and the loader gives each plugin host the record store and one shared `collections` map. A plugin gets `parseYaml` and `stringifyYaml` on its context.
+- **Next action:** review the four tasks, then the final verification checklist.
+- **Open questions:** none.
+- **Watch out for:** `@cofold/yaml` is a `link:` to the local cofold build. Change it to the published version before a release.
 
 ## Final verification checklist
 

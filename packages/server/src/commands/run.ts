@@ -50,6 +50,7 @@ import { API_PREFIX, apiHandler, listenApi, plainRequests, pluginRoutes, without
 import { servedRegistry, type ServedFacts } from './served.js';
 import { proxyHandler } from '../proxy/listener.js';
 import { loadPlugins } from '../plugins.js';
+import { fileRecords } from '../records.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
@@ -698,6 +699,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // The secrets a plugin's options are resolved against, and what
     // `host.secret` reads. The file above, read on every call.
     vault,
+    /*
+     * Where each plugin keeps its own records: a folder per collection beside
+     * the configuration, a Markdown file per record, read again when a person
+     * edits one. A plugin takes it over with `registerRecords(store, 'replace')`.
+     */
+    records: fileRecords(configDir(), { onProblem: (message) => process.stdout.write(`${message}\n`) }),
     // Whether that is one record per turn or one per report, which `usage.per`
     // in the configuration file chose.
     usagePer: options.usagePer,

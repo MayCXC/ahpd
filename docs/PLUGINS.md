@@ -175,6 +175,7 @@ against its contract before it is recorded.
 | `registerUsage(usage, when?)` | set | where records are kept and what a pool has been charged: `record`, `total`, `pools` and `records`, all four |
 | `registerPolicies(policies, when?)` | set | where policies are kept: `list`, `get`, `put` and `remove`, all four |
 | `registerVault(vault, when?)` | set | where this host's secrets are kept: `get`, `set`, `delete` and `list`, all four |
+| `registerRecords(store, when?)` | set | where every plugin's records are kept: `collection(name, options)` |
 | `registerRoute(handler)` | register, open key | one HTTP route served on this host's own listener, under `/plugins/<name>/` |
 | `registerTriggerType(definition)` | register, open key | one event trigger type an automation may be saved with, listed beside the host's own `session` and `watch` |
 | `registerClose(close)` | register, open key | one function the host runs when it closes, once its sessions have closed and before its stores do |
@@ -555,6 +556,8 @@ nothing behaves exactly as it did before the field existed.
 | `log(line)` | One line to the daemon's log |
 | `say(line)` | One line in what the daemon announces about itself |
 | `problem(line)` | One item of your own you dropped, said before the daemon says it started |
+| `parseYaml(text)` | A YAML text as data, read with the host's own YAML subset |
+| `stringifyYaml(value)` | A value as YAML text that `parseYaml` reads back the same |
 
 `log` is stderr and a person reads it. `say` is stdout, which is what `ahpd status` parses, so it is where a plugin that made the host reachable somewhere new puts that address - a line only the log knows is an address nobody pastes. Say it while `listening` is being handled; the announcement is written once that event has been handled and a line offered after it is dropped.
 
@@ -632,6 +635,44 @@ The scope is checked against the `work` your own call passes, so a plugin is tru
 Nobody but your own plugin ever sees the value: it comes from the vault at the call, it is not written to the configuration, and no answer this host serves carries it. A host built with no vault - a client running the contract in a test - refuses with `<name> cannot be read: this host has no vault`.
 
 `registerVault(vault, 'replace')` takes the port over, for a store of your own: a keychain, a secrets manager, an encrypted file. The host's own is `vault.json` in the config folder, plain JSON at mode 0600, and `ahpd vault set|delete|list` is how a person fills it. A plugin listed first can take it over with `'replace'`; one that does not is refused, and one listed after the plugins that already named a secret never gets to be the vault they resolved against, so list a vault plugin first. Its own options cannot name a secret: a vault that had to read itself to build is a vault nothing can check.
+
+### Keeping records
+
+`host.records(name, options?)` opens one collection of the host's record store, and is where a plugin keeps records of its own instead of writing files. A record is a JSON object whose `id` is a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter. The store knows no plugin's record shape, so check the other fields when you read one.
+
+```ts
+const bots = host.records('bots', { body: 'instructions' });
+
+await bots.put({ id: 'motion', name: 'Motion', owner: 'user:soft', instructions: 'You review pull requests.\n\nSay what would break.' });
+const one = await bots.get('motion');
+const theirs = await bots.find({ owner: 'user:soft' });
+const stop = bots.watch((change) => { host.log(`${change.id} ${change.type}`); });
+```
+
+A collection has `get(id)`, `list()`, `find(match)`, `put(record)`, `remove(id)` and `watch(onChange)`. Each call but `watch` answers a promise, because a store over a database answers later. `find` answers the records whose top-level fields equal each field of `match`. `put` replaces what the id held, and refuses an id that is not a slug. `remove` answers `true` when a record was there. `watch` tells you each change as `{ id, type }`, with `type` one of `added`, `updated` and `deleted`, and answers the function that stops it.
+
+Open a collection in `apply`. Its calls wait until every plugin has applied and the host knows its record store, so a call made early is answered late rather than refused. The name is a slug too, and a name another plugin opened is refused, so two plugins never share one. A host with no record store - a loader in a test that gave none - refuses each call with `records <name> cannot be read: this host has no record store`.
+
+`body` names the field that holds a record's long text. The daemon's own store writes each record as `<configDir>/<name>/<id>.md`: the other fields as YAML frontmatter, and the body field as the Markdown body. It refuses a collection named `sessions`, `usage`, `agentPlugins` or `node_modules`, because the daemon keeps its own files in those folders. The example above writes `bots/motion.md`:
+
+```md
+---
+id: motion
+name: Motion
+owner: user:soft
+---
+You review pull requests.
+
+Say what would break.
+```
+
+A person can edit, add or remove such a file while the daemon runs, and the collection reads it again and tells its watchers. A file that does not read, or whose `id` is not its file name, is reported in the daemon's output, and the collection keeps the record it had. A collection with no `body` writes an empty body, and a record with no body field reads back with an empty one. A `<id>.json` file with no `<id>.md` beside it is converted when the collection opens, and renamed `<id>.json.migrated`.
+
+`registerRecords(store, 'replace')` takes the port over, for a sqlite or a postgresql store, and moves the records of every plugin at once. A store answers `collection(name, options)` with a collection that has the six calls above. `memoryRecords()` from `@ahpd/sdk` is a store that keeps everything in memory, for a test.
+
+### Reading and writing YAML
+
+`host.parseYaml(text)` and `host.stringifyYaml(value)` are the host's own YAML functions, so a plugin that reads a frontmatter or a skill file needs no YAML package of its own and reads a file as the host does. `parseYaml` throws on YAML it does not read. A loader that gives no YAML functions - a loader in a test - gives two that throw `no YAML on this host`.
 
 ### What a policies store has to answer
 

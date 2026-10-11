@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { foldHostOptions, pluginHost } from '../src/plugins.js';
 import { memoryRecords } from '../src/records.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { RecordChange, RecordStore } from '../src/types/records.js';
 
 /*
@@ -10,7 +10,7 @@ import type { RecordChange, RecordStore } from '../src/types/records.js';
  * collection reads and writes through whatever store the fold names.
  */
 
-const context = (logged: string[] = []): PluginContext => ({
+const context = (logged: string[] = []): LoaderContext => ({
   path: '/tmp/plugin-records',
   paths: ['/tmp/plugin-records'],
   version: '0.0.0',
