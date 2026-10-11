@@ -257,9 +257,9 @@ const commitConfirmation = (files: readonly ChangesetFile[], subject: string | u
 const DISCARD: ChangesetOperation = {
   id: 'discard',
   label: 'Discard Changes',
-  description: 'Put this file back the way HEAD has it',
-  scopes: ['resource'],
-  confirmation: 'Discard the changes to this file? This cannot be undone.',
+  description: 'Put this file, or every change, back the way HEAD has it',
+  scopes: ['resource', 'changeset'],
+  confirmation: 'Discard these changes? This cannot be undone.',
   icon: 'discard',
   writes: true,
 };
@@ -268,8 +268,8 @@ const DISCARD: ChangesetOperation = {
 const STAGE: ChangesetOperation = {
   id: 'stage',
   label: 'Stage Changes',
-  description: 'Add this file or folder to what the next commit takes',
-  scopes: ['resource'],
+  description: 'Add this file or folder, or every change, to what the next commit takes',
+  scopes: ['resource', 'changeset'],
   icon: 'add',
   group: 'stage',
 };
@@ -278,8 +278,8 @@ const STAGE: ChangesetOperation = {
 const UNSTAGE: ChangesetOperation = {
   id: 'unstage',
   label: 'Unstage Changes',
-  description: 'Take this file or folder out of what the next commit takes, keeping its changes',
-  scopes: ['resource'],
+  description: 'Take this file or folder, or every change, out of what the next commit takes, keeping its changes',
+  scopes: ['resource', 'changeset'],
   icon: 'remove',
   group: 'stage',
 };
@@ -1374,17 +1374,41 @@ export function gitChanges(): ChangesetSource {
         return { message: at ? `Committed ${at}: ${subject_}${why}` : `Committed: ${subject_}${why}` };
       }
 
-      const path = target?.resource === undefined ? undefined : await pathIn(dir, target.resource);
+      // No target is the whole changeset, which is every change under the directory.
+      const whole = target === undefined;
+      const path = whole ? '.' : await pathIn(dir, target.resource);
       // Refused rather than clamped: a target outside this directory is a
       // client asking to write somewhere this changeset is not about.
       if (path === undefined) throw new Error('That file is not in this directory.');
       const folder = path === '.';
-      const named = folder ? 'the folder' : path;
+      const named = whole ? 'every change' : folder ? 'the folder' : path;
       const at = folder ? dir : join(dir, path);
       // The two undos below act on one file, and a folder is a different act
-      // than either of them means.
-      if (folder && (operationId === 'discard' || operationId === 'revert')) {
+      // than either of them means. The whole changeset is a discard of its own.
+      if (folder && !whole && (operationId === 'discard' || operationId === 'revert')) {
         throw new Error('That operation takes one file, not a folder.');
+      }
+
+      if (operationId === 'discard' && whole) {
+        /*
+         * Every tracked change back to HEAD, then every untracked file removed.
+         *
+         * A repository with no commit has no HEAD to restore from, so there the
+         * index is emptied and every file is then untracked. `restore` fails on
+         * a directory that holds only untracked files, because no path under it
+         * is known to git, and that failure leaves nothing for it to do. `clean`
+         * removes the files of a directory git does not track and then fails to
+         * remove the directory itself, so it is judged by what is left.
+         */
+        const noCommit = await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD']) === undefined;
+        const back = noCommit
+          ? await run(dir, ['rm', '--cached', '-r', '-q', '--', '.'])
+          : await run(dir, ['restore', '--staged', '--worktree', '--source=HEAD', '--', '.']);
+        if (!back.ok && !/did not match/.test(back.err)) throw new Error(`Could not discard: ${back.err || back.out.trim()}`);
+        const cleaned = await run(dir, ['clean', '-f', '--', '.']);
+        const left = cleaned.ok ? '' : await git(dir, ['ls-files', '--others', '--exclude-standard', '--', '.']);
+        if (left !== '') throw new Error(`Could not discard: ${cleaned.err || cleaned.out.trim()}`);
+        return { message: 'Discarded every change' };
       }
 
       if (operationId === 'discard') {

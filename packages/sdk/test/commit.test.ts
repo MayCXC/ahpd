@@ -470,3 +470,88 @@ describe('staging from the changeset', () => {
     expect(porcelain(dir)).toBe('?? first.txt');
   });
 });
+
+describe('the whole changeset as a target', () => {
+  /**
+   * A repository with `top.txt` and `sub/inside.txt` committed, both changed,
+   * `sub/staged.txt` committed and changed and staged, and an untracked file
+   * in `sub/new/` and at the root. The session's folder is `sub/`.
+   */
+  const nested = (): { repo: string; dir: string } => {
+    const repo = repository();
+    mkdirSync(join(repo, 'sub'));
+    writeFileSync(join(repo, 'top.txt'), 'one\n');
+    writeFileSync(join(repo, 'sub', 'inside.txt'), 'one\n');
+    writeFileSync(join(repo, 'sub', 'staged.txt'), 'one\n');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'nested');
+    writeFileSync(join(repo, 'top.txt'), 'two\n');
+    writeFileSync(join(repo, 'sub', 'inside.txt'), 'two\n');
+    writeFileSync(join(repo, 'sub', 'staged.txt'), 'two\n');
+    git(repo, 'add', 'sub/staged.txt');
+    mkdirSync(join(repo, 'sub', 'new'));
+    writeFileSync(join(repo, 'sub', 'new', 'c.txt'), 'one\n');
+    writeFileSync(join(repo, 'root.txt'), 'root\n');
+    return { repo, dir: join(repo, 'sub') };
+  };
+
+  it('offers stage, unstage and discard on one file and on the whole changeset', async () => {
+    const { dir } = nested();
+    const source = gitChanges();
+    await source.refresh?.(dir);
+    const offered = source.operations?.(dir, 'ahp-session:/s', 'uncommitted', {}) ?? [];
+    for (const id of ['stage', 'unstage', 'discard']) {
+      expect(offered.find((one) => one.id === id)?.scopes).toEqual(['resource', 'changeset']);
+    }
+    expect(offered.find((one) => one.id === 'discard')?.confirmation).toBe('Discard these changes? This cannot be undone.');
+  });
+
+  it('stages every change under the folder, untracked included, and nothing outside it', async () => {
+    const { repo, dir } = nested();
+    const said = await operate(dir, 'stage');
+    expect(said?.message).toBe('Staged every change');
+    expect(porcelain(repo)).toBe('M  sub/inside.txt\nA  sub/new/c.txt\nM  sub/staged.txt\n M top.txt\n?? root.txt');
+  });
+
+  it('unstages every change under the folder and leaves the working tree as it was', async () => {
+    const { repo, dir } = nested();
+    git(repo, 'add', 'top.txt');
+    await operate(dir, 'stage');
+    const said = await operate(dir, 'unstage');
+    expect(said?.message).toBe('Unstaged every change');
+    expect(porcelain(repo)).toBe(' M sub/inside.txt\n M sub/staged.txt\nM  top.txt\n?? root.txt\n?? sub/new/');
+    expect(git(repo, 'show', ':sub/inside.txt')).toBe('one');
+    expect(git(repo, 'diff', '--', 'sub/inside.txt')).toContain('+two');
+  });
+
+  it('discards every change under the folder, untracked files too, and nothing outside it', async () => {
+    const { repo, dir } = nested();
+    const said = await operate(dir, 'discard');
+    expect(said?.message).toBe('Discarded every change');
+    expect(porcelain(repo)).toBe(' M top.txt\n?? root.txt');
+    expect(git(repo, 'show', 'HEAD:sub/staged.txt')).toBe('one');
+  });
+
+  it('discards a folder that holds only untracked files', async () => {
+    const { repo } = nested();
+    const said = await operate(join(repo, 'sub', 'new'), 'discard');
+    expect(said?.message).toBe('Discarded every change');
+    expect(porcelain(repo)).not.toContain('sub/new');
+  });
+
+  it('discards every change in a repository with no commit yet', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-commit-'));
+    made.push(dir);
+    execFileSync('git', ['init', '-q', '-b', 'main', dir]);
+    writeFileSync(join(dir, 'first.txt'), 'one\n');
+    writeFileSync(join(dir, 'second.txt'), 'two\n');
+    git(dir, 'add', 'first.txt');
+    await operate(dir, 'discard');
+    expect(porcelain(dir)).toBe('');
+  });
+
+  it('still refuses a folder named as a resource for discard', async () => {
+    const { dir } = nested();
+    await expect(operate(dir, 'discard', `file://${dir}`)).rejects.toThrow('That operation takes one file, not a folder.');
+  });
+});

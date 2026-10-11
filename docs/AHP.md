@@ -694,8 +694,12 @@ file on disk.
 Operations are server-advertised per scope, `disabled` while a turn is running,
 and destructive ones carry the `confirmation` a client MUST show. `commit` takes
 the index when it holds anything and the whole working tree when it holds nothing,
-`discard` acts on a file, `revert` puts a file back to the state the agent found
-it in, and `stage` and `unstage` move a file or a folder in or out of the index.
+`discard` puts a file or the whole changeset back to HEAD, `revert` puts a file
+back to the state the agent found it in, and `stage` and `unstage` move a file, a
+folder or the whole changeset in or out of the index. A call with no `target` is
+the whole changeset: every change under the session's folder, untracked files
+included. `discard` on the whole changeset removes untracked files too, and its
+`confirmation` says it cannot be undone.
 
 `commit` carries a `confirmation` naming the subject line it will use and what it
 will take: the staged files when the index holds any, and every file with the
@@ -715,7 +719,7 @@ the pair lives in `_meta`, which is the bag it leaves for a server's own
 vocabulary.
 
 A person stages and unstages from the session. `stage` and `unstage` take a file
-or a folder, and the session's own folder means everything under it. VS Code
+or a folder, and the session's own folder or no target means everything under it. VS Code
 draws both buttons on every row, a folder is staged from a client that sends one
 such as ahpapp, and `git add` in a terminal or VS Code's Source Control work
 too. A target above the session's folder is refused, for every resource-scoped
