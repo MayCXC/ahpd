@@ -3,7 +3,7 @@ import { deviceStore, pushProvider } from './provider.js';
 import { createSender } from './send.js';
 import type { DeviceStore } from './provider.js';
 import type { PushMessage } from './send.js';
-import type { InputNeededSetEvent, Plugin } from '@ahpd/sdk';
+import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
 
 /**
  * The package as a plugin.
@@ -63,6 +63,12 @@ const AWAITS_PERSON = ['chatInput', 'toolConfirmation', 'toolAuthentication'];
 const wording = (kind: string): string =>
   (kind === 'toolConfirmation' ? 'A session is waiting for your approval' : 'A session is waiting for your answer');
 
+/** What a notification says when a session's own chat finished a turn. */
+const FINISHED = 'A session finished';
+
+/** The prefix of a worker's chat, whose turns are the session's work and not its end. */
+const WORKER_CHAT = 'ahp-chat://subagent/';
+
 /** One device that should hear about a session, and the token to reach it. */
 interface Reachable {
   id: string;
@@ -120,6 +126,29 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
   });
 
+  /** Send `body` to every device in the session, naming the session and why in `data`. */
+  const notify = async (session: string, body: string, kind: string): Promise<void> => {
+    const reachable = audience(session);
+    if (reachable.length === 0) return;
+
+    let token: string | undefined;
+    try {
+      token = await tokenNow();
+    }
+    catch (error) {
+      host.log(`${name}: accessToken could not be read, so nothing was sent: ${reason(error)}`);
+      return;
+    }
+
+    const messages: PushMessage[] = reachable.map((one) => ({
+      to: one.token,
+      title,
+      body,
+      data: { uri: session, kind },
+    }));
+    await sender.send(messages, token);
+  };
+
   host.on('session_start', (event) => {
     if (event.client !== undefined) remember(event.session, event.client);
   });
@@ -139,25 +168,17 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (told.has(pair)) return;
     told.add(pair);
     if (!AWAITS_PERSON.includes(event.kind)) return;
-    const reachable = audience(event.session);
-    if (reachable.length === 0) return;
+    await notify(event.session, wording(event.kind), event.kind);
+  });
 
-    let token: string | undefined;
-    try {
-      token = await tokenNow();
-    }
-    catch (error) {
-      host.log(`${name}: accessToken could not be read, so nothing was sent: ${reason(error)}`);
-      return;
-    }
-
-    const messages: PushMessage[] = reachable.map((one) => ({
-      to: one.token,
-      title,
-      body: wording(event.kind),
-      data: { uri: event.session, kind: event.kind },
-    }));
-    await sender.send(messages, token);
+  /**
+   * A session's own chat finished a turn, so the phones of the clients in it
+   * are told it is done. A worker's chat ends many turns inside one of the
+   * session's, and a turn somebody stopped was stopped by a person who knows.
+   */
+  host.on('turn_end', async (event: TurnEndEvent) => {
+    if (event.status !== 'complete' || event.chat.startsWith(WORKER_CHAT)) return;
+    await notify(event.session, FINISHED, 'turnComplete');
   });
 
   /**

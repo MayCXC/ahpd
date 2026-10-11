@@ -8,7 +8,7 @@
 
 Push notifications for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. A phone registers its Expo push token once, and hears about a session that needs a person while its app is closed.
 
-It is two halves. A `push:` resource provider keeps the registered devices, and the plugin watches the host's own moments and sends to the devices whose client created or opened the session that started waiting.
+It is two halves. A `push:` resource provider keeps the registered devices, and the plugin watches the host's own moments and sends to the devices whose client created or opened the session that started waiting or finished a turn.
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/push`](https://github.com/softov/ahpd/tree/main/packages/push).
 
@@ -71,8 +71,8 @@ A registration is gated like any other write, so it needs `file:write`: a guest 
 | | |
 | --- | --- |
 | Title | The `title` option, or the daemon's name |
-| Body | `A session is waiting for your answer`, or `A session is waiting for your approval` for `toolConfirmation` |
-| Data | `{ uri: <session>, kind }`, which only the app reads |
+| Body | `A session is waiting for your answer`, or `A session is waiting for your approval` for `toolConfirmation`, or `A session finished` when the session's own chat completes a turn |
+| Data | `{ uri: <session>, kind }`, which only the app reads. `kind` is the request's kind, or `turnComplete` |
 
 A notification never repeats what the session is asking. The text passes through Expo's service and sits on a lock screen, and neither is where a prompt belongs; which session it is travels in `data`, which a client opens.
 
@@ -84,6 +84,7 @@ Three more things keep a phone from being woken twice:
 
 - One message per `(session, id)` pair. The protocol's action is an upsert keyed by `id`, so the same entry set again sends nothing; the same `id` from another session is a different pair and sends.
 - A session that stops waiting sends nothing. There is no second notification that clears the first, so the pair is forgotten and a session that asks the same thing again is a new wait.
+- A turn that was stopped sends nothing, and neither does a turn of a worker's chat. A worker finishes its own turns inside one of the session's.
 - Nothing is sent for a request that is not a person being asked. `toolClientExecution` is a client running a call that already cleared its gate, so it is not one.
 
 ## Where devices are kept
