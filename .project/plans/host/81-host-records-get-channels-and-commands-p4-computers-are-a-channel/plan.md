@@ -1,7 +1,7 @@
 ---
 title: Computers are a channel and commands
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -73,9 +73,9 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The computer channel](task-01-the-computer-channel.md) | todo | - |
-| [02 - The computer commands](task-02-the-computer-commands.md) | todo | 01 |
-| [03 - The docs describe the channel and commands](task-03-the-docs.md) | todo | 02 |
+| [01 - The computer channel](task-01-the-computer-channel.md) | implemented | - |
+| [02 - The computer commands](task-02-the-computer-commands.md) | implemented | 01 |
+| [03 - The docs describe the channel and commands](task-03-the-docs.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -84,10 +84,10 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-computer-channel.md](task-01-the-computer-channel.md).
+- **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
+- **Next action:** review the build.
 - **Open questions:** none.
-- **Watch out for:** a create records the caller as the owner; the command passes the caller as the resource write does.
+- **Watch out for:** a create records the caller as the owner; a command from a caller with no principal, such as the root connection, makes a machine with no owner, where a resource write from the root connection on a host with users records `root:<host>`.
 
 ## Final verification checklist
 

@@ -6,7 +6,8 @@ import type { ComputerPort, ContainerPort, MachineNeed, MachineSource, Owner, Pl
 import { resolveNeeds, secretRef, strings } from '@ahpd/sdk';
 import { cliOf, devContainer, hasDefinition, idLabels } from './devcontainer.js';
 import type { CliOptions } from './devcontainer.js';
-import { computerProvider } from './provider.js';
+import { COMPUTERS_SCHEME, computerCatalogue } from './catalogue.js';
+import { computerMethods, computerProvider } from './provider.js';
 import { patternOf } from './reference.js';
 import { madeAgain, namedAgain, revealed, scopedTo, vaultNamed, withDefaults } from './secrets.js';
 import type { VaultRead } from './secrets.js';
@@ -800,8 +801,13 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const metered = listingMeter({ open, close }, host.hostName);
 
+  /** The `x-ahpd-computers://` channel, refreshed after each change this plugin makes to a machine. */
+  const catalogue = computerCatalogue(computerRouter, (line) => { host.log(`${name}: ${line}`); });
+  catalogue.bind(host.registerChannel(COMPUTERS_SCHEME, catalogue.channel));
+
   /**
-   * The runtime, with a stretch around every change of state.
+   * The runtime, with a stretch around every change of state, and the computer
+   * channel refreshed after each.
    *
    * One wrapper rather than one per caller, because a machine can be started,
    * stopped and destroyed by three different things - the `state` leaf a client
@@ -895,19 +901,23 @@ export const apply: Plugin['apply'] = (host, options) => {
         }, noted);
       }
       open(machine.id);
+      void catalogue.refresh();
       return machine;
     },
     start: async (id) => {
       await computerRouter.start(id);
       open(id);
+      void catalogue.refresh();
     },
     restart: async (id) => {
       await close(id, await claimOf(id));
       await computerRouter.restart(id);
       open(id);
+      void catalogue.refresh();
     },
     stop: async (id) => {
       await computerRouter.stop(id);
+      void catalogue.refresh();
       await close(id, await claimOf(id));
     },
     // A command a tool runs is a command in the machine like any other, so it
@@ -922,6 +932,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       // entry for an id nothing holds is a claim on a machine that may be made
       // again.
       forgetOwned(host.configDir, id, noted);
+      void catalogue.refresh();
       await close(id, claimed);
     },
   };
@@ -1159,9 +1170,9 @@ export const apply: Plugin['apply'] = (host, options) => {
         ? `${name}: found the disposable machine ${one.id} left behind; it is held for ${one.session}`
         : `${name}: found the disposable machine ${one.id} left behind; it goes ${delay}ms from now`);
     }
-  }).catch(() => {});
+  }).catch(() => {}).then(() => catalogue.refresh());
 
-  host.registerResourceProvider('computer', computerProvider(made, {
+  const scheme = computerProvider(made, {
     image,
     max,
     label,
@@ -1185,7 +1196,12 @@ export const apply: Plugin['apply'] = (host, options) => {
     needsOf: (provider) => host.machineNeeds(provider),
     ...(needValues === undefined ? {} : { needValues }),
     secret,
-  }));
+    changed: () => { void catalogue.refresh(); },
+  });
+  host.registerResourceProvider('computer', scheme);
+  for (const [command, method] of Object.entries(computerMethods(scheme, catalogue.refresh))) {
+    host.registerMethod(command, method);
+  }
 
   /*
    * What a machine made for a session takes of the repository its folder is

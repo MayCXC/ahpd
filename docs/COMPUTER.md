@@ -541,6 +541,34 @@ Sizes are bytes. `cpu.percent` is percent of one core, so it can exceed 100; `co
 
 `computer://<id>/state` reads `running` or `stopped`. Writing `restarted` is `docker restart`, which also starts a stopped machine. The runtime's finer states (`exited`, `paused`, `created`) are in `status` under `State.Status`.
 
+## The channel and its commands
+
+A client that subscribes to `x-ahpd-computers://` holds every machine with its state. Subscribing needs `computer:read`, and a reader without it is refused. The snapshot lists each machine as `{ id, record }`, where `record` is `{ state, status }`: `state` is what `computer://<id>/state` reads, and `status` is what `computer://<id>/status` reads.
+
+```json
+{ "records": [
+  { "id": "box", "record": { "state": "running", "status": { "Name": "/box", "State": { "Running": true, "Status": "running" }, "...": {} } } }
+] }
+```
+
+Three actions follow the snapshot: `x-ahpd-computers/added` `{ id, record }` for a new machine, `x-ahpd-computers/changed` `{ id, record }` for a machine whose record is different, and `x-ahpd-computers/removed` `{ id }` for a machine that is gone. A stop sends:
+
+```json
+{ "type": "x-ahpd-computers/changed", "id": "box", "record": { "state": "stopped", "status": { "Name": "/box", "State": { "Running": false, "Status": "exited" }, "...": {} } } }
+```
+
+The commands do what a write or a delete on `computer:` does, with the same refusals. Each answers `{}`.
+
+| Command | Params | Grant | Does |
+| --- | --- | --- | --- |
+| `x-ahpd/computers/create` | `{ name, manifest }` | `computer:put` | Makes a machine from `manifest`, the body a write to `computer://<name>` takes. The caller is its owner. |
+| `x-ahpd/computers/start` | `{ name }` | `computer:put` | Writes `running` to its state. |
+| `x-ahpd/computers/stop` | `{ name }` | `computer:put` | Writes `stopped` to its state. |
+| `x-ahpd/computers/restart` | `{ name }` | `computer:put` | Writes `restarted` to its state. |
+| `x-ahpd/computers/remove` | `{ name }` | `computer:delete` | Destroys the machine. |
+
+The channel hears what this daemon does to a machine: a command, a write or a delete on `computer:`, a tool, a session's own machine, and a disposable machine's removal. The runtime sends no events, so a machine that is changed outside the daemon, for example with `docker stop`, reaches no channel until the next refresh.
+
 ## Security
 
 Read this before exposing the plugin to anyone but yourself.

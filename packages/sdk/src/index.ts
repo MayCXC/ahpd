@@ -68,7 +68,7 @@ export { fileUsage, usageMethods, usageProvider } from './usage.js';
 export type { FileUsageOptions, UsageAnswers, UsageNamedGroup, UsagePeriods, UsagePool, UsageProvider, UsageProviderOptions } from './usage.js';
 export { checkPolicy, filePolicies, memoryPolicies } from './policies.js';
 export type { FilePoliciesOptions } from './policies.js';
-export { bag, isRecord, ownerOf, reason, str, strings } from './values.js';
+export { bag, isRecord, ownerOf, ownerOfPrincipal, reason, str, strings } from './values.js';
 export { absentResource, asFile, bodyText, putRecord, removeRecord, splitResource } from './records.js';
 export { secretRef, fromEnvRef, scopeOf, readSecret, readSecrets } from './vault.js';
 export type { SecretScope } from './vault.js';

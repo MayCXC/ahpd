@@ -94,6 +94,15 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
   };
 
   const step = async (): Promise<void> => {
+    const subscribers: ChannelSubscriber[] = handle?.subscribers(uri) ?? [];
+    /*
+     * Nobody holds a record, so nothing is read: the next snapshot seeds what
+     * the refresh after it compares with.
+     */
+    if (subscribers.length === 0) {
+      last.clear();
+      return;
+    }
     const now = await every();
     const changed = new Set<string>();
     const held = new Set<string>();
@@ -105,8 +114,6 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
       last.set(id, text);
     }
     for (const id of [...last.keys()]) if (!held.has(id)) last.delete(id);
-    if (handle === undefined) return;
-    const subscribers: ChannelSubscriber[] = handle.subscribers(uri);
     for (const { client, reader } of subscribers) {
       const mine = new Set(now.filter((one) => readable(one.id, reader)).map((one) => one.id));
       const set = sent.get(client);

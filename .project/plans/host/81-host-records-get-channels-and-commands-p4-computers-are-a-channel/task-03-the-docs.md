@@ -1,6 +1,6 @@
 ---
 title: The docs describe the computer channel and commands
-status: todo
+status: implemented
 depends: [task-02-the-computer-commands.md]
 layer: "docs"
 refs:
@@ -28,3 +28,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `COMPUTER.md` has a section after `## State`, unwrapped like the rest of the file. Its snapshot and its `changed` match the records in `catalogue.test.ts` and `commands.test.ts`.

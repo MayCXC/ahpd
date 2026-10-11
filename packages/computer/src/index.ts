@@ -1,5 +1,6 @@
 export { apply, defaults, name, optionsSchema, title } from './plugin.js';
-export { computerProvider } from './provider.js';
+export { COMPUTERS_SCHEME, computerCatalogue } from './catalogue.js';
+export { computerMethods, computerProvider, stateOf } from './provider.js';
 export type { ComputerProvider, ProviderOptions } from './provider.js';
 export { cliOf, devContainer, DEVCONTAINER_FOLDER, hasDefinition, idLabels, parseUp, runCli } from './devcontainer.js';
 export type { Cli, CliOptions, DevContainerOptions } from './devcontainer.js';

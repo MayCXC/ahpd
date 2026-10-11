@@ -1,6 +1,6 @@
 ---
 title: The computer commands make, change and remove a machine
-status: todo
+status: implemented
 depends: [task-01-the-computer-channel.md]
 layer: "packages/computer"
 refs:
@@ -38,3 +38,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `create`, `setState` and `destroy` are on the provider, and `write` and `remove` call them with every refusal sentence kept. `computerMethods` in `provider.ts` builds the five commands, and the plugin registers each with `host.registerMethod`. A command refuses a `name` that is empty or holds `/` or `?`. `create` passes the reader's owner, `user:<id>`, and nothing for a caller with no principal. `ownerOfPrincipal` is now exported from `@ahpd/sdk`.

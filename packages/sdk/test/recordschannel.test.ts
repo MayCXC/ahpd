@@ -188,11 +188,22 @@ it('says a store it cannot read, and keeps refreshing after', async () => {
     ids: async () => { if (broken) throw new Error('the file is not JSON'); return teams.ids(); },
     find: teams.find,
   }, { grant: 'team:read', onProblem: (line) => { said.push(line); } });
+  list.bind(fakeHandle([{ client: 'ana', reader: person('ana', ['team:read']) }]).handle);
   await list.refresh();
   expect(said).toEqual([`${SCHEME}: the list could not be read: the file is not JSON`]);
   broken = false;
   await list.refresh();
   expect(said).toHaveLength(1);
+});
+
+it('reads nothing while nobody is subscribed', async () => {
+  let asked = 0;
+  const teams = store({ backend: { id: 'backend' } });
+  const list = recordsChannel(SCHEME, { ids: async () => { asked += 1; return teams.ids(); }, find: teams.find }, { grant: 'team:read' });
+  await list.refresh();
+  list.bind(fakeHandle([]).handle);
+  await list.refresh();
+  expect(asked).toBe(0);
 });
 
 /** One method's answer, or the RpcError it threw. */

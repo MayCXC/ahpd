@@ -1,6 +1,6 @@
-import { absentResource, asFile, RpcError, splitResource } from '@ahpd/sdk';
+import { absentResource, asFile, ownerOfPrincipal, RpcError, splitResource } from '@ahpd/sdk';
 import type {
-  Entry, MachineNeed, Metadata, Owner, PluginHost, Read, ResourceProvider, SchemeDescription, SecretRef,
+  Entry, MachineNeed, Metadata, Owner, PluginHost, PluginMethod, Read, ResourceProvider, SchemeDescription, SecretRef,
   SecretWork, Write,
 } from '@ahpd/sdk';
 import { bodyText, MANIFEST_SCHEMA, manifestOf, pickedOf } from './manifest.js';
@@ -81,6 +81,8 @@ export interface ProviderOptions {
    * is refused - decision `a-secret-is-named-in-a-host-team-or-user-scope`.
    */
   secret: PluginHost['secret'];
+  /** Called after each machine this provider makes, puts in a state, or destroys. */
+  changed?: () => void;
 }
 
 /**
@@ -97,6 +99,12 @@ export interface ComputerProvider extends ResourceProvider {
   write(uri: string, content: Write, owner?: Owner): Promise<void>;
   remove(uri: string, recursive?: boolean): Promise<void>;
   describe(): SchemeDescription;
+  /** Make a machine under this name from a manifest body, owned by `owner`. */
+  create(name: string, manifest: Write, owner?: Owner): Promise<void>;
+  /** Put a machine in `running`, `stopped` or `restarted`. */
+  setState(name: string, state: string): Promise<void>;
+  /** Destroy a machine. */
+  destroy(name: string): Promise<void>;
 }
 
 /** A URI, split into the machine it names and the leaf under it. */
@@ -132,6 +140,24 @@ const moment = (created: string | undefined): string => {
   if (created === undefined) return new Date(0).toISOString();
   const when = new Date(created);
   return Number.isNaN(when.getTime()) ? new Date(0).toISOString() : when.toISOString();
+};
+
+/*
+ * What a machine is doing, as the `state` leaf and the computer channel say it.
+ *
+ * Answered in the words the write takes, not the runtime's own.
+ *
+ * `docker`'s own status is a longer vocabulary than the three below, and a
+ * client that read `exited` and wrote it back would be refused its own
+ * reading. The runtime's word is not lost - `status` is its whole record
+ * and `State.Status` is in it - but this leaf is the one a client round-trips,
+ * so it says only what it will accept.
+ */
+export const stateOf = (found: Record<string, unknown>): 'running' | 'stopped' => {
+  const state = (typeof found.State === 'object' && found.State !== null
+    ? found.State
+    : {}) as Record<string, unknown>;
+  return state.Running === true ? 'running' : 'stopped';
 };
 
 export function computerProvider(runtime: ComputerRuntime, options: ProviderOptions): ComputerProvider {
@@ -190,22 +216,6 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
    */
   const STATES = ['running', 'stopped', 'restarted'] as const;
 
-  /*
-   * Answered in the words the write takes, not the runtime's own.
-   *
-   * `docker`'s own status is a longer vocabulary than the three below, and a
-   * client that read `exited` and wrote it back would be refused its own
-   * reading. The runtime's word is not lost - `status` is its whole record
-   * and `State.Status` is in it - but this leaf is the one a client round-trips,
-   * so it says only what it will accept.
-   */
-  const stateOf = (found: Record<string, unknown>): string => {
-    const state = (typeof found.State === 'object' && found.State !== null
-      ? found.State
-      : {}) as Record<string, unknown>;
-    return state.Running === true ? 'running' : 'stopped';
-  };
-
   const statsOf = async (id: string, found: Record<string, unknown>): Promise<string> => {
     const used = await runtime.stats(id);
     if (used === undefined) return JSON.stringify({ running: false }, null, 2);
@@ -251,6 +261,95 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       return options.profiles;
     }
     return { ...options.profiles, [picked]: { ...profile, needs } };
+  };
+
+  /**
+   * A machine is made here, from its manifest, under this name.
+   *
+   * A client that makes one twice gets `-32010`, as one that writes over a
+   * machine does: a machine is not a file and has nothing to splice.
+   *
+   * `owner` is whoever asked, which the machine keeps as a label: its time up
+   * is charged to them, so the record of who made it has to outlive the
+   * request - decision
+   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   */
+  const create = async (name: string, manifest: Write, owner?: Owner): Promise<void> => {
+    const work: SecretWork = owner === undefined ? {} : { owner };
+    /*
+     * The profile this body picked, and so the agents whose needs it is
+     * resolved with: a need none of them declares is not this machine's, and
+     * is never read - from the profile's own `needs` or from the plugin's.
+     */
+    const picked = pickedOf(manifest);
+    const profile = picked === undefined ? undefined : options.profiles?.[picked];
+    const agents = profile?.agents ?? [];
+    const own = await read(profile?.needs, agents, work);
+    // The option's values, and under them any secret an agent names as its
+    // own default, read for this machine's owner the same way.
+    const values = await read(withDefaults(options.needValues, agents, options.needsOf), agents, work);
+    const profiles = profilesFor(picked, profile, own?.values);
+    const spec = manifestOf(name, manifest, {
+      runtime: runtime.kind,
+      ...(options.runtimes === undefined ? {} : { runtimes: options.runtimes }),
+      image: options.image,
+      ...(options.cpus === undefined ? {} : { cpus: options.cpus }),
+      ...(options.memory === undefined ? {} : { memory: options.memory }),
+      ...(options.mounts === undefined ? {} : { mounts: options.mounts }),
+      ...(profiles === undefined ? {} : { profiles }),
+      ...(options.bodyMounts === undefined ? {} : { bodyMounts: options.bodyMounts }),
+      ...(options.images === undefined ? {} : { images: options.images }),
+      ...(options.folderFor === undefined ? {} : { folderFor: options.folderFor }),
+      ...(options.needsOf === undefined ? {} : { needsOf: options.needsOf }),
+      ...(values === undefined ? {} : { needValues: values.values }),
+      // The needs whose winning value the vault gave, which the machine is
+      // never made with.
+      named: vaultNamed(own, values),
+      ...(owner === undefined ? {} : { owner }),
+    });
+    if (await runtime.inspect(name) !== undefined) {
+      throw new RpcError(-32010, `${name} is already a computer; destroy it or choose another name`);
+    }
+    // The count and the create in one turn, so a second write arriving while
+    // this one is making its machine counts the machine being made.
+    await inTurn(runtime, async () => {
+      const full = roomFor(await runtime.list(), options.max);
+      if (full !== undefined) {
+        throw new RpcError(-32602, `This host holds ${options.max} computers already, and ${name} would be one more`);
+      }
+      try {
+        await runtime.run({ ...spec, label: options.label });
+      }
+      catch (error) {
+        throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
+      }
+    });
+    options.changed?.();
+  };
+
+  /** A machine put in one of the three states, as `said` names it. */
+  const setState = async (name: string, said: string): Promise<void> => {
+    if (await runtime.inspect(name) === undefined) throw absentResource('computer', `computer://${name}/state`);
+    const state = said.trim().toLowerCase();
+    if (!STATES.includes(state as typeof STATES[number])) {
+      throw new RpcError(-32602, `A computer's state is one of ${STATES.join(', ')}, and that body says ${state || 'nothing'}`);
+    }
+    if (state === 'running') await runtime.start(name);
+    else if (state === 'stopped') await runtime.stop(name);
+    else await runtime.restart(name);
+    options.changed?.();
+  };
+
+  /** A machine destroyed, by name. */
+  const destroy = async (name: string): Promise<void> => {
+    if (await runtime.inspect(name) === undefined) throw absentResource('computer', `computer://${name}`);
+    try {
+      await runtime.remove(name);
+    }
+    catch (error) {
+      throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
+    }
+    options.changed?.();
   };
 
   return {
@@ -320,17 +419,10 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
     },
 
     /**
-     * A machine is made here.
+     * A machine is made here, or put in a state.
      *
-     * The body is the manifest and the URI is the name, so a client that
-     * writes twice with `createOnly` gets `-32010` and one that writes over a
-     * machine without it is refused the same way: a machine is not a file and
-     * has nothing to splice.
-     *
-     * `owner` is whoever asked, which the machine keeps as a label: its time up
-     * is charged to them, so the record of who made it has to outlive the
-     * request - decision
-     * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+     * The body is the manifest and the URI is the name; a write to
+     * `computer://<name>/state` puts the machine in the state its body names.
      */
     write: async (uri, content, owner) => {
       const held = at(uri);
@@ -341,70 +433,12 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
        * a leaf and not a name for a new machine: without this it would be
        * refused as a bad name, which says nothing about what was asked.
        */
-      if (held.leaf === 'state') {
-        if (await runtime.inspect(held.id) === undefined) throw absentResource('computer', uri);
-        const said = bodyText(content).trim().toLowerCase();
-        if (!STATES.includes(said as typeof STATES[number])) {
-          throw new RpcError(-32602, `A computer's state is one of ${STATES.join(', ')}, and that body says ${said || 'nothing'}`);
-        }
-        if (said === 'running') await runtime.start(held.id);
-        else if (said === 'stopped') await runtime.stop(held.id);
-        else await runtime.restart(held.id);
-        return;
-      }
+      if (held.leaf === 'state') return setState(held.id, bodyText(content));
       if (held.leaf !== '') throw new RpcError(-32602, `${uri} is not something to write; write to computer://<name> or computer://<name>/state`);
       if (held.id === '' || !isDirectory(held)) {
         throw new RpcError(-32602, `${uri} is not a name for a new computer; write to computer://<name>`);
       }
-      const work: SecretWork = owner === undefined ? {} : { owner };
-      /*
-       * The profile this body picked, and so the agents whose needs it is
-       * resolved with: a need none of them declares is not this machine's, and
-       * is never read - from the profile's own `needs` or from the plugin's.
-       */
-      const picked = pickedOf(content);
-      const profile = picked === undefined ? undefined : options.profiles?.[picked];
-      const agents = profile?.agents ?? [];
-      const own = await read(profile?.needs, agents, work);
-      // The option's values, and under them any secret an agent names as its
-      // own default, read for this machine's owner the same way.
-      const values = await read(withDefaults(options.needValues, agents, options.needsOf), agents, work);
-      const profiles = profilesFor(picked, profile, own?.values);
-      const spec = manifestOf(held.id, content, {
-        runtime: runtime.kind,
-        ...(options.runtimes === undefined ? {} : { runtimes: options.runtimes }),
-        image: options.image,
-        ...(options.cpus === undefined ? {} : { cpus: options.cpus }),
-        ...(options.memory === undefined ? {} : { memory: options.memory }),
-        ...(options.mounts === undefined ? {} : { mounts: options.mounts }),
-        ...(profiles === undefined ? {} : { profiles }),
-        ...(options.bodyMounts === undefined ? {} : { bodyMounts: options.bodyMounts }),
-        ...(options.images === undefined ? {} : { images: options.images }),
-        ...(options.folderFor === undefined ? {} : { folderFor: options.folderFor }),
-        ...(options.needsOf === undefined ? {} : { needsOf: options.needsOf }),
-        ...(values === undefined ? {} : { needValues: values.values }),
-        // The needs whose winning value the vault gave, which the machine is
-        // never made with.
-        named: vaultNamed(own, values),
-        ...(owner === undefined ? {} : { owner }),
-      });
-      if (await runtime.inspect(held.id) !== undefined) {
-        throw new RpcError(-32010, `${held.id} is already a computer; destroy it or choose another name`);
-      }
-      // The count and the create in one turn, so a second write arriving while
-      // this one is making its machine counts the machine being made.
-      await inTurn(runtime, async () => {
-        const full = roomFor(await runtime.list(), options.max);
-        if (full !== undefined) {
-          throw new RpcError(-32602, `This host holds ${options.max} computers already, and ${held.id} would be one more`);
-        }
-        try {
-          await runtime.run({ ...spec, label: options.label });
-        }
-        catch (error) {
-          throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
-        }
-      });
+      return create(held.id, content, owner);
     },
 
     /**
@@ -418,13 +452,76 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       if (held.id === '' || !isDirectory(held)) {
         throw new RpcError(-32602, `${uri} is not a computer to destroy; delete computer://<name>`);
       }
-      if (await runtime.inspect(held.id) === undefined) throw absentResource('computer', uri);
-      try {
-        await runtime.remove(held.id);
-      }
-      catch (error) {
-        throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
-      }
+      return destroy(held.id);
     },
+
+    create,
+    setState,
+    destroy,
   };
 }
+
+/** A command's `name`, or a refusal saying what the command needs. */
+const nameParam = (command: string, params: Record<string, unknown>): string => {
+  const name = params.name;
+  // A name a URI could not hold is refused, so a machine made by command is one
+  // `computer://<name>` reads back.
+  if (typeof name !== 'string' || name === '' || /[/?]/.test(name)) {
+    throw new RpcError(-32602, `${command} needs name, the computer's name, with no / or ?`);
+  }
+  return name;
+};
+
+/**
+ * The `x-ahpd/computers/*` commands over this provider, by name.
+ *
+ * - `create` `{ name, manifest }` makes a machine from the manifest a write to `computer://<name>` takes, owned by the caller.
+ * - `start`, `stop` and `restart` `{ name }` put it in `running`, `stopped` or `restarted`.
+ * - `remove` `{ name }` destroys it.
+ *
+ * `remove` needs `computer:delete` and the others `computer:put`, the grants
+ * the resource write and delete need. Each answers `{}`, and `refresh` is
+ * called after each.
+ */
+export const computerMethods = (provider: ComputerProvider, refresh: () => Promise<void>): Record<string, PluginMethod> => {
+  const to = (verb: string, state: string, title: string): PluginMethod => ({
+    grant: 'computer:put',
+    describe: () => ({ title, description: `Puts one computer in ${state}.` }),
+    handle: async (params) => {
+      await provider.setState(nameParam(`x-ahpd/computers/${verb}`, params), state);
+      await refresh();
+      return {};
+    },
+  });
+  return {
+    'x-ahpd/computers/create': {
+      grant: 'computer:put',
+      describe: () => ({ title: 'Create a computer', description: 'Makes one computer from a manifest.' }),
+      handle: async (params, reader) => {
+        const name = nameParam('x-ahpd/computers/create', params);
+        const manifest = params.manifest;
+        // The manifest as the body a resource write carries, so it is refused
+        // with the same sentences.
+        await provider.create(
+          name,
+          { data: manifest === undefined ? '' : JSON.stringify(manifest), encoding: 'utf-8' },
+          reader === undefined ? undefined : ownerOfPrincipal(reader),
+        );
+        await refresh();
+        return {};
+      },
+    },
+    'x-ahpd/computers/start': to('start', 'running', 'Start a computer'),
+    'x-ahpd/computers/stop': to('stop', 'stopped', 'Stop a computer'),
+    'x-ahpd/computers/restart': to('restart', 'restarted', 'Restart a computer'),
+    'x-ahpd/computers/remove': {
+      grant: 'computer:delete',
+      describe: () => ({ title: 'Remove a computer', description: 'Destroys one computer.' }),
+      handle: async (params) => {
+        await provider.destroy(nameParam('x-ahpd/computers/remove', params));
+        await refresh();
+        return {};
+      },
+    },
+  };
+};
