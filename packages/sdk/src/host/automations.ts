@@ -339,7 +339,7 @@ export function createAutomations(ctx: HostContext): Automations {
     return pin !== undefined && pinBusy(pin) ? { session: pin } : undefined;
   };
 
-/**
+  /**
    * The run of this automation that has not settled in the chat it is pinned to.
    *
    * `flying` reads the newest run off the store, which is a run that has not
