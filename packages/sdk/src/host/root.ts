@@ -18,12 +18,13 @@ import type { ResourceProvider } from '../types/resources.js';
  * never asked for - decision
  * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
  */
-const ORDER = ['get', 'list', 'resolve', 'put', 'delete', 'mkdir', 'move', 'copy'] as const;
+const ORDER = ['get', 'list', 'resolve', 'watch', 'put', 'delete', 'mkdir', 'move', 'copy'] as const;
 
 const METHOD_OF: Record<typeof ORDER[number], string> = {
   get: 'read',
   list: 'list',
   resolve: 'resolve',
+  watch: 'watch',
   put: 'write',
   delete: 'remove',
   mkdir: 'mkdir',

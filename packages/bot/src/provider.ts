@@ -9,7 +9,8 @@ import { sessionFor } from './start.js';
 import type { BotRecord } from './record.js';
 import type { BotStore } from './store.js';
 import type {
-  Bag, Entry, Metadata, Owner, Principal, Read, ResourceProvider, SchemeDescription, SessionRequest, Write,
+  Bag, Entry, Metadata, Owner, Principal, Read, ResourceChange, ResourceProvider, SchemeDescription, SessionRequest, Watcher,
+  WatchOptions, Write,
 } from '@ahpd/sdk';
 
 /**
@@ -88,6 +89,7 @@ export interface BotProvider extends ResourceProvider {
   read(uri: string, wanted?: string, reader?: Principal): Promise<Read>;
   write(uri: string, content: Write, owner?: Owner, client?: string, reader?: Principal): Promise<void>;
   remove(uri: string, recursive?: boolean, owner?: Owner, reader?: Principal): Promise<void>;
+  watch(uri: string, options: WatchOptions, onChange: (changes: ResourceChange[]) => void, reader?: Principal): Promise<Watcher>;
   describe(): SchemeDescription;
   authorize(uri: string, reader: Principal | undefined): Promise<boolean>;
 }
@@ -229,6 +231,48 @@ const mayWrite = (bot: BotRecord, writer: Owner | undefined, reader: Principal |
 
 export function botProvider(options: BotOptions): BotProvider {
   const { root, store } = options;
+
+  /** One open watch: the slug it is on, empty for `bot://`, and who opened it. */
+  interface Watching {
+    slug: string;
+    reader: Principal | undefined;
+    onChange: (changes: ResourceChange[]) => void;
+  }
+  const watching = new Set<Watching>();
+
+  /**
+   * Whether this watcher hears about this bot.
+   *
+   * The same answer the reader gets when it asks: a watch on `bot://` hears
+   * what the listing shows it, and a watch on one bot hears what a read of it
+   * would show.
+   */
+  const hears = (one: Watching, bot: BotRecord): boolean => {
+    if (one.slug !== '' && one.slug !== bot.id) return false;
+    if (one.reader === undefined) return true;
+    if (one.slug === '' && one.reader.can('bot:list')) return true;
+    return mayRead(bot, one.reader);
+  };
+
+  /**
+   * Tell each watcher that may read this bot what happened to it.
+   *
+   * A delete is told with the record as it was, so a watcher hears it exactly
+   * when it could read the bot before it went. One watcher's callback that
+   * throws does not stop the others.
+   */
+  const told = (type: ResourceChange['type'], bot: BotRecord): void => {
+    const change: ResourceChange = { uri: `bot://${bot.id}`, type };
+    for (const one of watching) {
+      if (!hears(one, bot)) continue;
+      try {
+        one.onChange([change]);
+      }
+      catch {
+        // A watcher that failed is the host's to drop, not ours to stop telling the rest.
+      }
+    }
+  };
 
   /** Whose a bot this write makes is, or the refusal it is owed. */
   const ownerFor = (
@@ -431,6 +475,7 @@ export function botProvider(options: BotOptions): BotProvider {
         record.session = await options.sessions.start(sessionFor(record));
       }
       store.put(record);
+      told(existing === undefined ? 'added' : 'updated', record);
     },
 
     /**
@@ -455,6 +500,24 @@ export function botProvider(options: BotOptions): BotProvider {
       if (bot === undefined) throw absent(uri);
       if (!mayWrite(bot, owner, reader)) throw notYours(bot);
       store.remove(held.slug);
+      told('deleted', bot);
+    },
+
+    /**
+     * A watch on every bot, `bot://`, or on one, `bot://<slug>`.
+     *
+     * A make is `added`, an edit is `updated` and a delete is `deleted`, each
+     * told to a watcher that may read the bot. The reader is the one that
+     * opened the watch, so a membership changed after that applies at the next
+     * watch. A bot has no children, so `recursive` and the globs change nothing.
+     */
+    watch: async (uri, _options, onChange, reader) => {
+      const held = at(uri);
+      if (held.leaf !== '') throw absent(uri);
+      if (held.slug !== '' && store.get(held.slug) === undefined) throw absent(uri);
+      const one: Watching = { slug: held.slug, reader, onChange };
+      watching.add(one);
+      return { close: () => { watching.delete(one); } };
     },
   };
 }

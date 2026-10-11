@@ -207,11 +207,16 @@ export interface ResourceStore {
    * them, and an empty batch MUST NOT be dispatched. Closing the returned
    * handle is the only way to stop it - there is no dispose command, and
    * `unsubscribe` is what the host turns into this call.
+   *
+   * `reader` is whoever asked for the watch, absent in the two cases it is
+   * absent on `read`. A scheme whose objects only some people may read reports
+   * a change to a watcher who may read that object, and to nobody else.
    */
   watch?(
     uri: string,
     options: WatchOptions,
     onChange: (changes: ResourceChange[]) => void,
+    reader?: Principal,
   ): Promise<Watcher>;
 }
 
@@ -280,7 +285,8 @@ export type ResourceProvider = Pick<ResourceStore, 'watch' | 'write' | 'remove' 
    * through that the grant would have refused - decision
    * `a-scheme-provider-may-authorize-a-read-itself`. Any scheme can open part of
    * itself to a person without a host change; nothing opens a write, which is
-   * why the hook is only asked about reads.
+   * why the hook is only asked about reads: `resourceRead`, `resourceList`,
+   * `createResourceWatch`, and a subscribe to the watch it made.
    */
   authorize?(uri: string, reader: Principal | undefined): Promise<boolean>;
 };

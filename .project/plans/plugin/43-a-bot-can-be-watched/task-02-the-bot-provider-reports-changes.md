@@ -1,6 +1,6 @@
 ---
 title: The bot provider reports a make, an edit and a delete
-status: todo
+status: done
 depends: [task-01-a-provider-watch-knows-its-reader.md]
 layer: "packages/bot"
 refs:

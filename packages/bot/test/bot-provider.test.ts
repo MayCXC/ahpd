@@ -760,3 +760,103 @@ it('answers the writes docs/BOTS.md shows', async () => {
   expect(await write(soft, 'bot://reader', { session: null })).toEqual({ result: {} });
   expect((await record(soft, 'bot://reader'))['session']).toBeUndefined();
 });
+
+/*
+ * A watch on the scheme.
+ *
+ * `createResourceWatch` on `bot://` hears every bot its reader may see being
+ * made, edited and deleted, and a watch on `bot://<slug>` hears that one bot.
+ * What a watcher hears is what a read or a listing would show it.
+ */
+
+/** A client signed in as `token` whose peer keeps every notification it is sent. */
+async function listening(host: ReturnType<typeof createHost>, token: string) {
+  const notes: { method: string; params: unknown }[] = [];
+  const client = host.accept({ ...peer(), notify: (method, params) => { notes.push({ method, params }); } });
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: token, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  });
+  await client.handle({ method: 'authenticate', params: { channel: ROOT, resource: RECORD.resource, token } });
+  /** Open a watch on `uri` and subscribe to it, and answer the channel. */
+  const watch = async (uri: string): Promise<string> => {
+    const { channel } = got(await call(client, 'createResourceWatch', { channel: ROOT, uri })) as { channel: string };
+    got(await call(client, 'subscribe', { channel }));
+    return channel;
+  };
+  /** Every change told on one channel so far, as `<type> <uri>`. */
+  const heard = (channel: string): string[] => notes
+    .filter((n) => n.method === 'action')
+    .map((n) => n.params as { channel: string; action: { type: string; changes?: { items: { uri: string; type: string }[] } } })
+    .filter((n) => n.channel === channel && n.action.type === 'resourceWatch/changed')
+    .flatMap((n) => n.action.changes?.items ?? [])
+    .map((one) => `${one.type} ${one.uri}`);
+  return { client, watch, heard };
+}
+
+it('tells a watch on bot:// about a bot its owner makes, edits and deletes', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await listening(host, 'soft');
+  const channel = await soft.watch('bot://');
+
+  await write(soft.client, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+  await write(soft.client, 'bot://motion', { name: 'Motion two' });
+  expect(await call(soft.client, 'resourceDelete', { uri: 'bot://motion' })).toEqual({ result: {} });
+
+  expect(soft.heard(channel)).toEqual(['added bot://motion', 'updated bot://motion', 'deleted bot://motion']);
+});
+
+it('tells a watch on one bot about that bot and nothing else', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await listening(host, 'soft');
+  await write(soft.client, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+  const channel = await soft.watch('bot://motion');
+
+  await write(soft.client, 'bot://other', { name: 'Other' }, { createOnly: true });
+  await write(soft.client, 'bot://motion', { name: 'Motion two' });
+
+  expect(soft.heard(channel)).toEqual(['updated bot://motion']);
+});
+
+it('refuses a watch on a bot that does not exist, or on a path under one', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await listening(host, 'soft');
+  await write(soft.client, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  expect(await call(soft.client, 'createResourceWatch', { channel: ROOT, uri: 'bot://nobody' })).toMatchObject({ code: expect.any(Number) });
+  expect(await call(soft.client, 'createResourceWatch', { channel: ROOT, uri: 'bot://motion/leaf' })).toMatchObject({ code: expect.any(Number) });
+});
+
+it('tells a watcher only about the bots it may read', async () => {
+  const { host } = made(
+    { soft: ['bot:*', 'session:create'], ana: ['bot:watch'], bea: ['bot:watch'], rob: ['bot:watch', 'bot:list'] },
+    { soft: ['backend'], ana: ['backend'] },
+  );
+  const soft = await listening(host, 'soft');
+  const ana = await listening(host, 'ana');
+  const bea = await listening(host, 'bea');
+  const rob = await listening(host, 'rob');
+  const [own, member, stranger, granted] = [await soft.watch('bot://'), await ana.watch('bot://'), await bea.watch('bot://'), await rob.watch('bot://')];
+
+  await write(soft.client, 'bot://team', { name: 'Team', owner: 'team:backend' }, { createOnly: true });
+  await write(soft.client, 'bot://mine', { name: 'Mine' }, { createOnly: true });
+
+  // The owner hears both, the team member hears the team's bot, a person of
+  // no team hears neither, and whoever may list every bot hears both.
+  expect(soft.heard(own)).toEqual(['added bot://team', 'added bot://mine']);
+  expect(ana.heard(member)).toEqual(['added bot://team']);
+  expect(bea.heard(stranger)).toEqual([]);
+  expect(rob.heard(granted)).toEqual(['added bot://team', 'added bot://mine']);
+});
+
+it('tells a watch nothing once its last subscriber leaves', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await listening(host, 'soft');
+  const channel = await soft.watch('bot://');
+  await write(soft.client, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  got(await call(soft.client, 'unsubscribe', { channel }));
+  await write(soft.client, 'bot://motion', { name: 'Motion two' });
+
+  expect(soft.heard(channel)).toEqual(['added bot://motion']);
+});

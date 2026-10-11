@@ -1,6 +1,6 @@
 ---
 title: The docs describe the bot watch
-status: todo
+status: done
 depends: [task-02-the-bot-provider-reports-changes.md]
 layer: "docs"
 refs:

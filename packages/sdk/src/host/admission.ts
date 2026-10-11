@@ -54,10 +54,29 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
     }
   };
 
+  /**
+   * The root a resource watch channel was opened on, or `undefined` for any
+   * other channel.
+   */
+  const watchedRoot = (channel: string): string | undefined => {
+    const root = ctx.watches.get(channel)?.state.root;
+    return typeof root === 'string' ? root : undefined;
+  };
+
   const capabilityFor = (method: string, params: Record<string, unknown>): Grant[] | undefined => {
     if (method === 'subscribe') {
       const channel = String(params.channel ?? '');
       if (isRootChannel(channel)) return undefined;
+      /*
+       * A watch answers to the scheme it watches, as the
+       * `createResourceWatch` that opened it did: `bot:watch` for a watch on
+       * `bot://`, and `file:watch` for a `file:` root.
+       */
+      const root = watchedRoot(channel);
+      if (root !== undefined) {
+        const scheme = schemeOf(root);
+        return [(scheme === '' || scheme === 'file' ? 'file:watch' : `${scheme}:watch`) as Grant];
+      }
       /*
        * What the channel is spelt as and what it resolves to, both: the
        * snapshot is taken of the resolved channel, so a spelling that
@@ -209,14 +228,25 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
   };
 
   /**
+   * The operation a provider's `authorize` can excuse, by method: a read, a
+   * listing and a watch, which are all reads. Nothing that writes is here.
+   */
+  const EXCUSED: Record<string, string> = {
+    resourceRead: 'get',
+    resourceList: 'list',
+    createResourceWatch: 'watch',
+    subscribe: 'watch',
+  };
+
+  /**
    * Which of what a command needs a scheme's own provider has said is
    * theirs.
    *
    * A scheme may open part of itself to a person without a grant of their
    * own, which is how `usage://user:ana` is read by the person it is about
    * - decision `a-scheme-provider-may-authorize-a-read-itself`. Asked only
-   * about a read or a listing, and only of the scheme the URI is under, so
-   * it can widen what somebody sees and never what they change.
+   * about a read, a listing or a watch, and only of the scheme the URI is
+   * under, so it can widen what somebody sees and never what they change.
    *
    * The excuse is the operation the command is asking for rather than the
    * whole read group, because `denied` compares it against what was asked:
@@ -229,9 +259,15 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
    * for a question nobody is going to answer.
    */
   const excusedBy = (method: string, params: Record<string, unknown>, who: Principal): Set<Grant> | Promise<Set<Grant>> => {
-    if (method !== 'resourceRead' && method !== 'resourceList') return new Set();
-    const operation = method === 'resourceRead' ? 'get' : 'list';
-    const asked = [params.uri, params.source, params.destination]
+    const operation = EXCUSED[method];
+    if (operation === undefined) return new Set();
+    /*
+     * A subscribe to a watch is asked about the root it watches, so a reader
+     * a provider let open the watch may also hear it.
+     */
+    const watched = method === 'subscribe' ? watchedRoot(String(params.channel ?? '')) : undefined;
+    if (method === 'subscribe' && watched === undefined) return new Set();
+    const asked = (watched !== undefined ? [watched] : [params.uri, params.source, params.destination])
       .filter((one): one is string => typeof one === 'string')
       .map((uri) => {
         const scheme = schemeOf(uri);

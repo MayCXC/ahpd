@@ -74,6 +74,7 @@ A bot is addressed by its slug, which is the URI path and the record's own `id`:
 | `resourceResolve bot://<slug>` | Its metadata, with `etag`. |
 | `resourceList bot://` | The bots the reader may see, by slug. |
 | `resourceDelete bot://<slug>` | Deletes one, and leaves a tombstone. |
+| `createResourceWatch bot://` or `bot://<slug>` | Tells the reader when a bot it may read is made, edited or deleted. |
 
 A slug is lowercase letters, digits and dashes, one to forty of them, starting with a letter. Anything else is refused `-32602`: the slug is a folder name and a URI path at once.
 

@@ -117,7 +117,7 @@ const CONFLICT = -32011;
         // client being told about a watch it has forgotten.
         if (!watches.has(channel)) return;
         dispatch(channel, { type: 'resourceWatch/changed', changes: { items: changes } });
-      });
+      }, connection.principal);
       watches.set(channel, {
         watcher,
         owner: connection,

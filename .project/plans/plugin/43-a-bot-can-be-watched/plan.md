@@ -1,7 +1,7 @@
 ---
 title: A bot can be watched
 domain: plugin
-status: planned
+status: built
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -79,9 +79,9 @@ client subscribe ahp-resource-watch:/<id> -> gate (bot:watch, from the watched r
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A provider's watch knows its reader](task-01-a-provider-watch-knows-its-reader.md) | todo | - |
-| [02 - The bot provider reports a make, an edit and a delete](task-02-the-bot-provider-reports-changes.md) | todo | 01 |
-| [03 - The docs describe the bot watch](task-03-the-docs-describe-the-bot-watch.md) | todo | 02 |
+| [01 - A provider's watch knows its reader](task-01-a-provider-watch-knows-its-reader.md) | done | - |
+| [02 - The bot provider reports a make, an edit and a delete](task-02-the-bot-provider-reports-changes.md) | done | 01 |
+| [03 - The docs describe the bot watch](task-03-the-docs-describe-the-bot-watch.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -90,14 +90,14 @@ client subscribe ahp-resource-watch:/<id> -> gate (bot:watch, from the watched r
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-provider-watch-knows-its-reader.md](task-01-a-provider-watch-knows-its-reader.md).
+- **Done so far:** tasks 01-03 are done, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the `file:` store ignores the new reader argument, and its tests must not change.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
-- [ ] `pnpm exec vitest run packages/sdk packages/bot packages/server` passes.
-- [ ] `docs/BOTS.md` and `docs/RESOURCES.md` describe the watch.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- [x] `pnpm exec vitest run packages/sdk packages/bot packages/server` passes.
+- [x] `docs/BOTS.md` and `docs/RESOURCES.md` describe the watch.
+- [x] `plans/index.md` updated.

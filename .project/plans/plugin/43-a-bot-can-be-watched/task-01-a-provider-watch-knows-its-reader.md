@@ -1,6 +1,6 @@
 ---
 title: A provider's watch knows its reader
-status: todo
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

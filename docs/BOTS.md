@@ -70,6 +70,19 @@ A listing shows what a read would allow: a list that showed a bot the reader can
 
 Making a bot also needs the maker's `session:create` where a session has to be started for it, because the session is theirs - [USERS.md](USERS.md#roles).
 
+## A watch
+
+| Command | What it hears |
+| --- | --- |
+| `createResourceWatch bot://` | Every bot the reader may see |
+| `createResourceWatch bot://<slug>` | That one bot |
+
+A make is `added`, an edit is `updated` and a delete is `deleted`, one change per `resourceWatch/changed`.
+
+A watcher hears only the bots it may read, by the table above, and a watch on `bot://` also hears every bot when the reader holds `bot:list`. The reader is the one that opened the watch, so a membership changed after that applies at the next watch.
+
+A watch needs `bot:watch`, or a bot the reader may read: a watch on `bot://` is open to anybody signed in, and a watch on one bot to whoever may read it. A slug that does not exist is refused, as a read of it is.
+
 ## An example
 
 A make from a name alone, which is the whole of what is required:

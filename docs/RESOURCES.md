@@ -102,6 +102,8 @@ A resource method is the one method family whose subject is not fixed: it carrie
 
 Two things a scheme may do on top of that. A provider may answer `authorize(uri, reader)` and let a read through that the grant would have refused - the gate asks the provider before it requires the grant, so any scheme can open part of itself to a person without a host change, and only for a read, because nothing opens a write that way - decision [A scheme provider may let a read through that its grant would refuse](../.project/decisions/a-scheme-provider-may-authorize-a-read-itself.md). And a person reads their own `user://<id>` record with no grant at all, because a client showing somebody their own account has to be able to.
 
+`createResourceWatch` on a provider's scheme asks for `<scheme>:watch`, and so does the `subscribe` to the channel it hands back, which is checked against the watched root. `authorize` may let either through, the same as a read. The provider's `watch` is handed the reader that opened it, so it can tell each watcher only what that reader may see. A scheme whose provider has `watch` lists `watch` among the operations it advertises.
+
 A scheme nobody serves is `-32601` and not a permission answer: the host has nothing for it, which is a different fact from a client being refused - decision [A scheme nobody serves is not a permission error](../.project/decisions/a-scheme-nobody-serves-is-not-a-permission-error.md). A provider that implements less than a full store is held to the same answer for each missing method - decision [A scheme provider implements less than a resource store](../.project/decisions/a-scheme-provider-implements-less-than-a-resource-store.md).
 
 ## See also
