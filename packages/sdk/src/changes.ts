@@ -2,7 +2,7 @@
 
 import { execFile } from 'node:child_process';
 import { watch, type FSWatcher } from 'node:fs';
-import { readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -226,8 +226,8 @@ interface Captured {
 const COMMIT: ChangesetOperation = {
   id: 'commit',
   label: 'Commit',
-  description: 'Commit what is staged, or every change when nothing is',
-  scopes: ['changeset'],
+  description: 'Commit this file, or what is staged, or every change when nothing is',
+  scopes: ['changeset', 'resource'],
   icon: 'git-commit',
   group: 'commit',
   writes: true,
@@ -236,22 +236,23 @@ const COMMIT: ChangesetOperation = {
 /**
  * The question `commit` asks, built from the last look at the directory.
  *
- * Taking the index and taking the whole tree are different acts, so the
- * sentence says which one this would be, names the subject line, and counts
- * what it would take. A session nobody has named is named by the fallback the
- * commit would use, so the sentence does not promise a title that will not be
- * there.
+ * One sentence serves a file and the whole changeset, so it names the subject
+ * line first and then says what the whole changeset would take: the index when
+ * it holds anything, and every file when it holds nothing. A session nobody
+ * has named is named by the fallback the commit would use, so the sentence
+ * does not promise a title that will not be there.
  */
 const commitConfirmation = (files: readonly ChangesetFile[], subject: string | undefined): string => {
   const named = (subject ?? '').trim();
   const name = named === '' ? 'Changes from an agent session' : named;
+  const asked = `Commit as '${name}'?`;
   const staged = files.filter((one) => one._meta?.['ahpd.staged'] === true).length;
   if (staged > 0) {
-    return `Commit ${staged} staged ${staged === 1 ? 'file' : 'files'} as '${name}'?`;
+    return `${asked} The whole changeset takes ${staged} staged ${staged === 1 ? 'file' : 'files'}.`;
   }
   const untracked = files.filter((one) => one._meta?.['ahpd.staged'] !== true && one.edit.before === undefined).length;
   const counted = `${files.length} ${files.length === 1 ? 'file' : 'files'}`;
-  return `Commit ${counted}${untracked > 0 ? `, ${untracked} untracked` : ''}, as '${name}'?`;
+  return `${asked} The whole changeset takes ${counted}${untracked > 0 ? `, ${untracked} untracked` : ''}.`;
 };
 
 const DISCARD: ChangesetOperation = {
@@ -1337,6 +1338,22 @@ export function gitChanges(): ChangesetSource {
       }
       if (operationId === 'commit') {
         /*
+         * The paths a commit on one file takes: the file, and the path a renamed
+         * file came from, so git records one rename rather than an add and a
+         * delete. None is the whole changeset.
+         */
+        let only: string[] | undefined;
+        if (target !== undefined) {
+          const path = await pathIn(dir, target.resource);
+          if (path === undefined) throw new Error('That file is not in this directory.');
+          if (path === '.') throw new Error('That operation takes one file, not a folder.');
+          const row = (await look(dir))?.files.find((one) => one.id === uriOf(`${dir}/${path}`));
+          const from = row?.edit.before?.uri;
+          only = from !== undefined && from !== row?.id
+            ? [relative(dir, fileURLToPath(from)), path]
+            : [path];
+        }
+        /*
          * The message, under this host's own key.
          *
          * The protocol has no field for it, so it travels in `_meta` - the bag
@@ -1360,11 +1377,30 @@ export function gitChanges(): ChangesetSource {
          * looking at is the only thing that says what a commit should take,
          * untracked files included.
          */
-        if (!await indexHolds(dir)) {
+        if (only !== undefined) {
+          /*
+           * One file, as the working tree has it, and nothing else the index holds.
+           *
+           * `--only` commits the named paths and leaves the rest of the index
+           * staged. It does not know an untracked file, so the paths that are on
+           * disk are added first; a path that is gone is not, because `add`
+           * refuses a path it finds nowhere, and `--only` records it as deleted.
+           */
+          const present: string[] = [];
+          for (const path of only) {
+            if (await lstat(join(dir, path)).then(() => true, () => false)) present.push(path);
+          }
+          if (present.length > 0) {
+            const added = await run(dir, ['add', '--', ...present]);
+            if (!added.ok) throw new Error(`Could not stage: ${added.err}`);
+          }
+        } else if (!await indexHolds(dir)) {
           const added = await run(dir, ['add', '-A']);
           if (!added.ok) throw new Error(`Could not stage: ${added.err}`);
         }
-        const done = await run(dir, ['commit', '-m', message]);
+        const done = await run(dir, only === undefined
+          ? ['commit', '-m', message]
+          : ['commit', '--only', '-m', message, '--', ...only]);
         if (!done.ok) throw new Error(`Could not commit: ${done.err || done.out.trim()}`);
         const at = (await git(dir, ['rev-parse', '--short', 'HEAD']))?.trim();
         // The subject line, because the rest of the message is a body a row

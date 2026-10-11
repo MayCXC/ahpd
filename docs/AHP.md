@@ -693,17 +693,21 @@ file on disk.
 
 Operations are server-advertised per scope, `disabled` while a turn is running,
 and destructive ones carry the `confirmation` a client MUST show. `commit` takes
-the index when it holds anything and the whole working tree when it holds nothing,
-`discard` puts a file or the whole changeset back to HEAD, `revert` puts a file
+one file, or on the whole changeset the index when it holds anything and the whole
+working tree when it holds nothing, `discard` puts a file or the whole changeset back to HEAD, `revert` puts a file
 back to the state the agent found it in, and `stage` and `unstage` move a file, a
 folder or the whole changeset in or out of the index. A call with no `target` is
 the whole changeset: every change under the session's folder, untracked files
 included. `discard` on the whole changeset removes untracked files too, and its
 `confirmation` says it cannot be undone.
 
-`commit` carries a `confirmation` naming the subject line it will use and what it
-will take: the staged files when the index holds any, and every file with the
-untracked ones counted when it holds none. The operation is re-declared when the
+`commit` carries a `confirmation` naming the subject line it will use and what the
+whole changeset would take: the staged files when the index holds any, and every
+file with the untracked ones counted when it holds none. One sentence serves both
+targets, so it reads "Commit as 'X'? The whole changeset takes 3 staged files."
+`commit` on one file commits that file as the working tree has it, staged or not,
+untracked or deleted, and leaves everything else the index holds staged. On a
+renamed row it commits both paths, so git records one rename. The operation is re-declared when the
 changeset or the session title moves, so the sentence stays true, and the
 invocation decides again from the index at the moment it runs.
 

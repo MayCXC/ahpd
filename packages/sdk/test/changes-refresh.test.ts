@@ -180,7 +180,7 @@ it('re-reads a changeset when git is changed outside the host', async () => {
     .filter((one) => one.type === 'changeset/contentChanged' || one.type === 'changeset/operationsChanged')
     .at(-1)?.operations as { id: string; confirmation?: string }[] | undefined;
   await waitFor(() => carried()?.find((one) => one.id === 'commit')?.confirmation
-    === "Commit 1 staged file as 'Echo session'?");
+    === "Commit as 'Echo session'? The whole changeset takes 1 staged file.");
 });
 
 /** The actions that carry files, which a recomputation must not send. */
