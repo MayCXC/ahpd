@@ -1,7 +1,7 @@
 ---
 title: A reserved name is refused for a scheme and a harness
 domain: plugin
-status: planned
+status: built
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -70,9 +70,9 @@ client subscribe <provider>:/<id> -> schemeOf -> spaceOf / channelKind -> sessio
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - One reserved list refuses a scheme and a harness](task-01-one-reserved-list.md) | todo | - |
-| [02 - A harness and a scheme cannot share a name](task-02-a-harness-and-a-scheme-cannot-share-a-name.md) | todo | 01 |
-| [03 - The docs list the reserved names](task-03-the-docs-list-the-reserved-names.md) | todo | 02 |
+| [01 - One reserved list refuses a scheme and a harness](task-01-one-reserved-list.md) | done | - |
+| [02 - A harness and a scheme cannot share a name](task-02-a-harness-and-a-scheme-cannot-share-a-name.md) | done | 01 |
+| [03 - The docs list the reserved names](task-03-the-docs-list-the-reserved-names.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -81,8 +81,8 @@ client subscribe <provider>:/<id> -> schemeOf -> spaceOf / channelKind -> sessio
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-one-reserved-list.md](task-01-one-reserved-list.md).
+- **Done so far:** all three tasks ([implemented.md](implemented.md)).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** plan [44](../44-a-plugin-serves-a-channel/plan.md) gives `x-` schemes to a plugin channel. This check refuses `x-` to a harness and a resource scheme only.
 

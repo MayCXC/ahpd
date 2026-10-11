@@ -1,6 +1,6 @@
 ---
 title: The docs list the reserved names
-status: todo
+status: done
 depends: [task-02-a-harness-and-a-scheme-cannot-share-a-name.md]
 layer: "docs"
 refs:

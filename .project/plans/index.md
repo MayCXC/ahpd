@@ -275,7 +275,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [39 - Each optionsSchema declares every field the code reads](plugin/39-each-options-schema-declares-every-field-the-code-reads/plan.md) | medium | built 2026-10-09 ([implemented.md](plugin/39-each-options-schema-declares-every-field-the-code-reads/implemented.md)); 23710ef | documentation 04 | - |
 | [40 - ahpd runs on the current cofold release, and keeps no copy of what cofold now ships](plugin/40-ahpd-runs-on-the-current-cofold/plan.md) | high | built 2026-10-09 ([implemented.md](plugin/40-ahpd-runs-on-the-current-cofold/implemented.md)) | plugin 35 | - |
 | [41 - A bot's colour is a name or a hex colour](plugin/41-a-bot-colour-is-a-name-or-a-hex/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/41-a-bot-colour-is-a-name-or-a-hex/implemented.md)) | plugin 37 | ahpapp bots on the host |
-| [42 - A reserved name is refused for a scheme and a harness](plugin/42-a-reserved-name-is-refused/plan.md) | high | planned 2026-10-10 | - | plugin 43, plugin 44 |
+| [42 - A reserved name is refused for a scheme and a harness](plugin/42-a-reserved-name-is-refused/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/42-a-reserved-name-is-refused/implemented.md)) | - | plugin 43, plugin 44 |
 | [43 - A bot can be watched](plugin/43-a-bot-can-be-watched/plan.md) | high | planned 2026-10-10 | plugin 42 | - |
 | [44 - A plugin serves a channel, and bots have a catalogue](plugin/44-a-plugin-serves-a-channel/plan.md) | high | planned 2026-10-10 | plugin 42 | ahpapp and ahpc bot catalogue |
 | [45 - A bot record is a Markdown file, and the daemon reloads one a person edits](plugin/45-a-bot-record-is-a-markdown-file/plan.md) | medium | planned 2026-10-10 | plugin 43, host 80 | bot templates idea |

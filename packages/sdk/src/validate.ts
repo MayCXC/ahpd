@@ -20,6 +20,7 @@
 import type { StartSession } from './types/automations.js';
 import type { PortKey } from './types/plugin.js';
 import type { Owner } from './types/usage.js';
+import { SUBJECTS } from './users.js';
 
 /**
  * The one message shape every check reports through.
@@ -212,6 +213,36 @@ export const checkScheme = (scheme: unknown, by: string): string => {
     throw new Error(miss(by, 'registerResourceProvider', 'scheme', 'a URI scheme like computer'));
   }
   return scheme;
+};
+
+/** Prefixes no plugin scheme or harness may start with, and why. */
+const RESERVED_PREFIXES: readonly (readonly [string, string])[] = [
+  ['ahp-', 'ahp- names the protocol\'s own channels'],
+  ['ahpd-', 'ahpd- names this host\'s own channels'],
+  ['x-', 'x- names a protocol extension'],
+];
+
+/** Names a URI or a grant already means on this host. */
+const RESERVED_NAMES = new Map<string, string>([
+  ...SUBJECTS.map((subject): [string, string] => [subject, `${subject} is a subject the host grants`]),
+  ...['http', 'https', 'ws', 'wss', 'data', 'mailto'].map((scheme): [string, string] => [scheme, `${scheme} is a scheme a client opens itself`]),
+  ['file', 'file is the host\'s own store'],
+  ['automations', 'automations is the host\'s own channel'],
+]);
+
+/**
+ * Why a resource scheme or an agent harness may not take this name, or
+ * `undefined` when it may.
+ *
+ * A harness names its session channels, `<provider>:/<id>`, and a scheme names
+ * its URIs, so both share one space with the host's own channels and grants.
+ * A plugin given one of these would be answered by something else, or would
+ * answer for it. Compared in lowercase, because a URI scheme is.
+ */
+export const reservedName = (name: string): string | undefined => {
+  const lower = name.toLowerCase();
+  for (const [prefix, why] of RESERVED_PREFIXES) if (lower.startsWith(prefix)) return why;
+  return RESERVED_NAMES.get(lower);
 };
 
 /** Check one `registerResourceProvider` value against `ResourceProvider`. */

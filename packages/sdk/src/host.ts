@@ -79,6 +79,7 @@ import { createSessionMethods } from './host/sessionmethods.js';
 import { createAutomationMethods } from './host/automations.js';
 import { createVscodeMethods } from './host/vscodemethods.js';
 import { createActions } from './host/actions.js';
+import { reservedName } from './validate.js';
 import type { ConnectionContext, HostContext } from './host/context.js';
 export { GATE, refusalReason } from './host/gate.js';
 
@@ -159,6 +160,8 @@ export function createHost(options: HostOptions): Host {
    */
   const agents = new Map<string, Agent>();
   for (const agent of options.agents) {
+    const reserved = reservedName(agent.provider);
+    if (reserved !== undefined) throw new Error(`An agent may not call itself ${agent.provider}: ${reserved}`);
     if (agents.has(agent.provider)) {
       throw new Error(`Two agents both call themselves ${agent.provider}`);
     }

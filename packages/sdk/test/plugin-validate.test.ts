@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { createHost } from '../src/host.js';
 import { foldHostOptions, pluginHost } from '../src/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -196,8 +197,54 @@ describe('pluginHost', () => {
     const { host } = pluginHost('alpha', context());
     expect(() => host.registerResourceProvider('9bad', provider as never)).toThrow(/URI scheme/);
     expect(() => host.registerResourceProvider('', provider as never)).toThrow(/URI scheme/);
-    expect(() => host.registerResourceProvider('file', provider as never)).toThrow(/its own/);
-    expect(() => host.registerResourceProvider('ahp-root', provider as never)).toThrow(/its own/);
+    expect(() => host.registerResourceProvider('file', provider as never)).toThrow(/has not reserved; file is the host's own store/);
+    expect(() => host.registerResourceProvider('ahp-root', provider as never)).toThrow(/has not reserved; ahp-/);
+  });
+
+  it('refuses a reserved name as a scheme, in any case', () => {
+    const { host } = pluginHost('alpha', context());
+    for (const scheme of ['ahp-root', 'ahpd-bots', 'x-thing', 'session', 'automations', 'HTTPS', 'User']) {
+      expect(() => host.registerResourceProvider(scheme, provider as never), scheme).toThrow(/alpha.*registerResourceProvider.*has not reserved/);
+    }
+  });
+
+  it('refuses a reserved name as a harness', () => {
+    const { host } = pluginHost('alpha', context());
+    for (const name of ['ahp-chat', 'ahp-session', 'ahpd-bot', 'file', 'automations', 'user', 'X-Agent']) {
+      expect(() => host.registerAgent(agent(name)), name).toThrow(/alpha.*registerAgent.*has not reserved/);
+    }
+  });
+
+  it('loads the first-party harnesses and schemes', () => {
+    const { host } = pluginHost('alpha', context());
+    for (const name of ['claude', 'pi', 'acp', 'cofold']) expect(() => host.registerAgent(agent(name)), name).not.toThrow();
+    for (const scheme of ['bot', 'computer', 'push']) expect(() => host.registerResourceProvider(scheme, provider as never), scheme).not.toThrow();
+  });
+
+  it('refuses a daemon agent with a reserved name when the host is built', () => {
+    const named = { ...echo({ path: '/tmp/validate' }), provider: 'ahp-root' };
+    expect(() => createHost({ path: '/tmp/validate', agents: [named] })).toThrow(/may not call itself ahp-root: ahp- names/);
+  });
+
+  it('drops a harness and a scheme that share a name, whichever comes first', () => {
+    const schemes = pluginHost('bots', context());
+    schemes.host.registerResourceProvider('bot', provider as never);
+    const agents = pluginHost('agents', context());
+    agents.host.registerAgent(agent('Bot'));
+    agents.host.registerAgent(agent('kept'));
+
+    const first = foldHostOptions(base(), [schemes.contribution, agents.contribution]);
+    expect(first.problems).toEqual([expect.stringMatching(/^plugin agents registers agent Bot, which plugin bots already registered as a scheme$/u)]);
+    expect(first.options.agents?.map((one) => one.provider)).toContain('kept');
+    expect(first.options.agents?.map((one) => one.provider)).not.toContain('Bot');
+
+    const later = pluginHost('claude', context());
+    later.host.registerAgent(agent('claude'));
+    const scheme = pluginHost('late', context());
+    scheme.host.registerResourceProvider('claude', provider as never);
+    const second = foldHostOptions(base(), [later.contribution, scheme.contribution]);
+    expect(second.problems).toEqual([expect.stringMatching(/^plugin late registers scheme claude, which plugin claude already registered as an agent$/u)]);
+    expect(second.options.resourceProviders?.['claude']).toBeUndefined();
   });
 
   it('refuses one plugin registering one scheme twice, and leaves two plugins to the fold', () => {

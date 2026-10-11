@@ -27,7 +27,7 @@ import { createPair } from './pair.js';
 import type { Pair } from './pair.js';
 import { reason } from './values.js';
 import { readSecret } from './vault.js';
-import { checkAgent, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss } from './validate.js';
+import { checkAgent, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -100,19 +100,6 @@ void everyPortIsListed;
 
 /** What every agent `provider` collision problem starts with. */
 export const AGENT_CLASH = 'agent provider clash:';
-
-/**
- * Whether a scheme is the host's own rather than a plugin's to take.
- *
- * `file` is the store in `HostOptions.resources`, and every `ahp-` scheme is a
- * channel the protocol or this host already names. A plugin that registered
- * one would be answered before it, or would shadow a channel, so it is refused
- * where it is registered rather than quietly losing.
- */
-export const reservedScheme = (scheme: string): boolean => {
-  const lower = scheme.toLowerCase();
-  return lower === 'file' || lower.startsWith('ahp-');
-};
 
 /**
  * The trigger type names the host answers for itself.
@@ -318,6 +305,13 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
 
   const providers = new Map<string, string>();
   for (const agent of base.agents) providers.set(agent.provider, 'the daemon');
+  /*
+   * The same harnesses in lowercase, because a harness names its session
+   * channels and a channel scheme is compared in lowercase. A scheme and a
+   * harness cannot share a name: one would answer for the other's URIs.
+   */
+  const harnesses = new Map<string, string>();
+  for (const agent of base.agents) harnesses.set(agent.provider.toLowerCase(), 'the daemon');
   const added: Agent[] = [];
   /*
    * The plugin each added agent came from, by provider - decision
@@ -333,12 +327,17 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    */
   type Schemes = NonNullable<HostOptions['resourceProviders']>;
   const schemes = new Map<string, string>();
-  for (const scheme of Object.keys(base.resourceProviders ?? {})) schemes.set(scheme, 'the daemon');
+  for (const scheme of Object.keys(base.resourceProviders ?? {})) schemes.set(scheme.toLowerCase(), 'the daemon');
   const resourceProviders: Schemes = { ...base.resourceProviders };
 
   for (const contribution of contributions) {
     for (const agent of contribution.agents) {
       const held = providers.get(agent.provider);
+      const scheme = schemes.get(agent.provider.toLowerCase());
+      if (held === undefined && scheme !== undefined) {
+        problems.push(`plugin ${contribution.by} registers agent ${agent.provider}, which ${scheme === 'the daemon' ? 'the daemon' : `plugin ${scheme}`} already registered as a scheme`);
+        continue;
+      }
       /*
        * The first registration keeps the id, and the second one is dropped.
        *
@@ -353,6 +352,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
         continue;
       }
       providers.set(agent.provider, contribution.by);
+      harnesses.set(agent.provider.toLowerCase(), contribution.by);
       added.push(keptAgent(agent));
       plugins[agent.provider] = contribution.spec ?? contribution.by;
     }
@@ -372,12 +372,17 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
     }
 
     for (const [scheme, provider] of Object.entries(contribution.providers)) {
-      const held = schemes.get(scheme);
+      const held = schemes.get(scheme.toLowerCase());
+      const harness = harnesses.get(scheme.toLowerCase());
+      if (held === undefined && harness !== undefined) {
+        problems.push(`plugin ${contribution.by} registers scheme ${scheme}, which ${harness === 'the daemon' ? 'the daemon' : `plugin ${harness}`} already registered as an agent`);
+        continue;
+      }
       if (held !== undefined) {
         problems.push(`plugin ${contribution.by} registers scheme ${scheme}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered`);
         continue;
       }
-      schemes.set(scheme, contribution.by);
+      schemes.set(scheme.toLowerCase(), contribution.by);
       resourceProviders[scheme] = provider as Schemes[string];
     }
   }
@@ -881,6 +886,8 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
     registerAgent(agent) {
       open();
       checkAgent(agent, by);
+      const reserved = reservedName(agent.provider);
+      if (reserved !== undefined) throw new Error(miss(by, 'registerAgent', agent.provider, `a name the host has not reserved; ${reserved}`));
       if (providers.has(agent.provider)) {
         throw new Error(miss(by, 'registerAgent', agent.provider, 'a provider no other agent in this plugin uses'));
       }
@@ -918,9 +925,8 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
     registerResourceProvider(scheme, provider) {
       open();
       const named = checkScheme(scheme, by);
-      if (reservedScheme(named)) {
-        throw new Error(miss(by, 'registerResourceProvider', named, 'a scheme the host does not already own; file and ahp- are its own'));
-      }
+      const reserved = reservedName(named);
+      if (reserved !== undefined) throw new Error(miss(by, 'registerResourceProvider', named, `a name the host has not reserved; ${reserved}`));
       checkResourceProvider(named, provider, by);
       if (contribution.providers[named] !== undefined) {
         throw new Error(miss(by, 'registerResourceProvider', named, 'a scheme no other provider in this plugin uses'));

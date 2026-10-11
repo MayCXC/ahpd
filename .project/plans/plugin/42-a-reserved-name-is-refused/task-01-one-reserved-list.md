@@ -1,6 +1,6 @@
 ---
 title: One reserved list refuses a scheme and a harness
-status: todo
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

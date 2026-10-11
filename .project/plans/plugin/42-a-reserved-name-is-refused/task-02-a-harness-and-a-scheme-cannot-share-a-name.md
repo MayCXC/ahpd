@@ -1,6 +1,6 @@
 ---
 title: A harness and a scheme cannot share a name
-status: todo
+status: done
 depends: [task-01-one-reserved-list.md]
 layer: "packages/sdk"
 refs:

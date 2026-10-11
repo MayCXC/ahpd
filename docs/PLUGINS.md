@@ -359,8 +359,8 @@ fails its own `apply` rather than the daemon.
 
 `registerResourceProvider` is the one **keyed** registration: the scheme is a
 name the plugin invents, so two plugins can serve two schemes and neither has to
-take `resources` over. `file` and anything on `ahp-` are the host's own and are
-refused, and so is a scheme another plugin already registered.
+take `resources` over. A [reserved name](#reserved-names) is refused, and so is
+a scheme another plugin already registered.
 
 A provider may also say what its scheme is for, with an optional `describe()`.
 That is what a client draws a screen from before it has a URI to ask, and the
@@ -402,6 +402,26 @@ host.registerResourceProvider('computer', {
   read: async (uri) => ({ data: await machineStatus(uri), encoding: 'utf-8' }),
 });
 ```
+
+### Reserved names
+
+A harness names its session channels, `claude:/<id>`, and a scheme names its
+URIs, `bot://<slug>`. Both share one space with the host's own channels and
+grants, so some names are refused to both:
+
+- Anything that starts with `ahp-`, `ahpd-` or `x-`. The protocol names its
+  channels with `ahp-`, this host names its own with `ahpd-`, and `x-` is the
+  protocol's prefix for an extension.
+- `file` and `automations`, the host's own store and channel.
+- Every subject a grant names: `session`, `chat`, `user`, `team`, `role`,
+  `config` and the rest of the `ahpd.grants` list.
+- `http`, `https`, `ws`, `wss`, `data` and `mailto`, which a client opens itself.
+
+Names are compared in lowercase. `registerAgent` and `registerResourceProvider`
+throw for a reserved name, which fails the plugin with one problem line. A
+harness and a scheme cannot share a name either: the later one is dropped with a
+problem line, whichever kind it is. An agent the daemon is built with is checked
+too, and a reserved one stops the host from starting.
 
 ### What a tool says about itself
 
