@@ -4,7 +4,7 @@ import { idOf, Status } from '../catalog.js';
 import { disableConditionsProblem } from '../automations.js';
 import { localPath } from '../fileuri.js';
 import { reason } from '../values.js';
-import { computerNeeds, dispatchNeeds, ACTION_HOMES, ACTION_NEEDS, HOME_WORDS, PER_CONNECTION } from './gate.js';
+import { computerNeeds, dispatchNeeds, ACTION_HOMES, ACTION_NEEDS, HOME_WORDS, ownIn, PER_CONNECTION } from './gate.js';
 import { chatUriFor, isRootChannel, MARKS, ROOT, spaceOf, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { chatAction, sessionFlag } from './chatactions.js';
 import { HOSTS_OWN } from './common.js';
@@ -110,7 +110,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
      * below act on the action, and read a session's id out of whatever
      * channel it came on.
      */
-    const family = ACTION_HOMES[type.slice(0, type.indexOf('/'))];
+    const family = ownIn(ACTION_HOMES, type.slice(0, type.indexOf('/')));
     if (family !== undefined) {
       const wrong = [asked, channel].find((one) => homeOf(one) !== family.home);
       if (wrong !== undefined) {
@@ -131,7 +131,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
        * all, which no operation can say on its own.
        */
       const onRoot = isRootChannel(asked) || isRootChannel(channel);
-      const all = [...new Set([onRoot ? undefined : ACTION_NEEDS[type], dispatchNeeds(asked, channelKind(asked), action), dispatchNeeds(channel, channelKind(channel), action), computerNeeds(action)])]
+      const all = [...new Set([onRoot ? undefined : ownIn(ACTION_NEEDS, type), dispatchNeeds(asked, channelKind(asked), action), dispatchNeeds(channel, channelKind(channel), action), computerNeeds(action)])]
         .filter((one): one is Grant => one !== undefined);
       const needed = all.find((one) => connection.principal !== undefined && !connection.principal.can(one)) ?? all[0];
       const needs = needed === undefined ? '' : ` needs ${needed}`;
@@ -178,7 +178,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
       dispatch(channel, action, origin);
       return;
     }
-    if (dispatchable[type] === false) {
+    if (ownIn(dispatchable, type) === false) {
       no(`${type} is this host's to say, not a client's`);
       return;
     }
@@ -193,7 +193,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
      * not in that map either. Refused rather than served to anybody
      * because the gate above has nothing to ask about it.
      */
-    if (dispatchable[type] === true && ACTION_NEEDS[type] === undefined) {
+    if (ownIn(dispatchable, type) === true && ownIn(ACTION_NEEDS, type) === undefined) {
       no(`${type} is not one this host serves`);
       return;
     }
