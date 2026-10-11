@@ -22,7 +22,7 @@ export interface Handshake {
 export function createHandshake(ctx: HostContext, conn: ConnectionContext): Handshake {
   const { connection } = conn;
   const {
-    advertised, advertisedGrants, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
+    advertised, advertisedChannels, advertisedGrants, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
     holders, known, leaves, loginId, log, LOGS, METRICS, metaMoved, metadataFor, meantBy, openedBy,
     options, ownId, ownerFor, principals, refreshPullRequests, replayable, seenBy, sessions,
     snapshotOf, spellingOf, TRACES,
@@ -277,6 +277,9 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
           // What this host serves beside `file:`, so a client can draw a
           // screen for a scheme before it has a URI to ask.
           ...(advertisedSchemes() === undefined ? {} : { 'ahpd.resourceProviders': advertisedSchemes() }),
+          // The channels plugins serve, so a client can offer one before it
+          // has a URI to subscribe to.
+          ...(advertisedChannels() === undefined ? {} : { 'ahpd.channels': advertisedChannels() }),
           // Every subject a grant may name, and what it may be granted, so a
           // client can draw the operation list for a role it is about to ask
           // somebody to confirm. Always here: it says what a role could hold,
@@ -420,6 +423,7 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
             const alias = resumed.get(held.channel);
             if (held.serverSeq <= since || alias === undefined) return [];
             const envelope = seenBy(connection, held);
+            if (envelope === undefined) return [];
             // A session's actions under the name this connection uses for
             // it, as they went out live; any other channel, the
             // automations catalogue among them, under the held name.

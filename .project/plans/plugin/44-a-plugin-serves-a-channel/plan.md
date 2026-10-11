@@ -1,7 +1,7 @@
 ---
 title: A plugin serves a channel, and bots have a catalogue
 domain: plugin
-status: planned
+status: built
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -88,12 +88,12 @@ client unsubscribe or disconnect -> channel.left(client)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host says when memberships change](task-01-the-host-says-when-memberships-change.md) | todo | - |
-| [02 - A plugin registers a channel](task-02-a-plugin-registers-a-channel.md) | todo | - |
-| [03 - A plugin publishes to some subscribers](task-03-a-plugin-publishes-to-some-subscribers.md) | todo | 02 |
-| [04 - The host advertises a plugin channel](task-04-the-host-advertises-a-plugin-channel.md) | todo | 02 |
-| [05 - The bot plugin serves its catalogue](task-05-the-bot-plugin-serves-its-catalogue.md) | todo | 01, 03 |
-| [06 - The docs describe a plugin channel and the catalogue](task-06-the-docs-describe-a-plugin-channel.md) | todo | 04, 05 |
+| [01 - The host says when memberships change](task-01-the-host-says-when-memberships-change.md) | done | - |
+| [02 - A plugin registers a channel](task-02-a-plugin-registers-a-channel.md) | done | - |
+| [03 - A plugin publishes to some subscribers](task-03-a-plugin-publishes-to-some-subscribers.md) | done | 02 |
+| [04 - The host advertises a plugin channel](task-04-the-host-advertises-a-plugin-channel.md) | done | 02 |
+| [05 - The bot plugin serves its catalogue](task-05-the-bot-plugin-serves-its-catalogue.md) | done | 01, 03 |
+| [06 - The docs describe a plugin channel and the catalogue](task-06-the-docs-describe-a-plugin-channel.md) | done | 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -103,15 +103,15 @@ client unsubscribe or disconnect -> channel.left(client)
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-host-says-when-memberships-change.md](task-01-the-host-says-when-memberships-change.md).
+- **Done so far:** tasks 01 to 06 are done. [implemented.md](implemented.md) lists what was built and the departures.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** an `x-` URI must not reach the session routes, and a test must prove it.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
-- [ ] `pnpm exec vitest run packages/sdk packages/bot packages/server` passes.
-- [ ] A test subscribes two readers to `x-ahpd-bots://` and proves each sees only its own bots, after a replay too.
-- [ ] A test changes a membership and proves the subscriber gets `added` and `removed`.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- [x] `pnpm exec vitest run packages/sdk packages/bot packages/server` passes.
+- [x] A test subscribes two readers to `x-ahpd-bots://` and proves each sees only its own bots, after a replay too.
+- [x] A test changes a membership and proves the subscriber gets `added` and `removed`.
+- [x] `plans/index.md` updated.

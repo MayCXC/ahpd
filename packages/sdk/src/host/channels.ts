@@ -1,5 +1,6 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { idOf } from '../catalog.js';
+import type { ServedChannel } from '../types/plugin.js';
 
 export const ROOT = 'ahp-root://';
 /**
@@ -20,21 +21,28 @@ export const MARKS = '/annotations';
 export const schemeOf = (uri: string): string => (/^([a-zA-Z][\w+.-]*):/.exec(uri)?.[1] ?? '').toLowerCase();
 
 /** The kinds of name this host keeps a space of schemes for. */
-export type Space = 'session' | 'chat' | 'terminal' | 'own';
+export type Space = 'session' | 'chat' | 'terminal' | 'own' | 'plugin';
 /**
  * The space a name falls in by its scheme alone, whatever this host holds:
  * `ahp-session:` is a session's, `ahp-chat:` a chat's, `ahp-terminal:` a
- * terminal's, and `file:` and every other `ahp-` scheme - the root, the
- * logs, resource watches, the automations - this host's own. Any other
- * scheme says nothing, and the name is whatever `claims` holds it as.
+ * terminal's, `file:` and every other `ahp-` scheme - the root, the
+ * logs, resource watches, the automations - this host's own, and every `x-`
+ * scheme a plugin channel's, served or not - decision
+ * `a-plugin-channel-is-an-x-scheme`. Any other scheme says nothing, and the
+ * name is whatever `claims` holds it as.
  */
 export const spaceOf = (uri: string): Space | undefined => {
   const scheme = schemeOf(uri);
   if (scheme === 'ahp-session') return 'session';
   if (scheme === 'ahp-chat') return 'chat';
   if (scheme === 'ahp-terminal') return 'terminal';
+  if (scheme.startsWith('x-')) return 'plugin';
   return scheme === 'file' || scheme.startsWith('ahp-') ? 'own' : undefined;
 };
+
+/** The plugin channel that serves a URI, or nothing when no plugin serves its scheme. */
+export const servedIn = (channels: Readonly<Record<string, ServedChannel>> | undefined, uri: string): ServedChannel | undefined =>
+  (spaceOf(uri) === 'plugin' ? channels?.[schemeOf(uri)] : undefined);
 
 /** A session's own channel under a name: the name, less `/annotations` or `/changeset/<scope>`. */
 export const baseOf = (uri: string): string => {

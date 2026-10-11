@@ -1,6 +1,6 @@
 ---
 title: The host says when memberships change
-status: todo
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

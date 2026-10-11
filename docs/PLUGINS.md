@@ -160,6 +160,7 @@ against its contract before it is recorded.
 | `registerSessionConfig(key, schema, completions?)` | register, open key | One setting a client draws on every session, merged into the backend's own schema. With a third argument, the key becomes a picker every client can draw |
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
 | `registerResourceProvider(scheme, provider)` | register, open key | One host-owned URI scheme, routed beside the `file:` store |
+| `registerChannel(scheme, channel)` | register, open key | One channel a client subscribes to, under an `x-` scheme; answers a handle to publish on |
 | `registerTerminals(store)` | set | `create` |
 | `registerChanges(source)` | set | `scopes`, `state`, `summary`, and the optional operations |
 | `registerDirectories(facts)` | set | `meta`, and the optional `refresh` |
@@ -423,6 +424,60 @@ harness and a scheme cannot share a name either: the later one is dropped with a
 problem line, whichever kind it is. An agent the daemon is built with is checked
 too, and a reserved one stops the host from starting.
 
+### A channel of your own
+
+A plugin may serve a channel: state a client subscribes to and the plugin
+changes, as the host serves `ahp-automations://`. Its scheme starts with `x-`,
+the protocol's extension prefix, which is why `registerChannel` takes the one
+prefix the other registrations refuse - decision
+`a-plugin-channel-is-an-x-scheme`.
+
+```ts
+const handle = host.registerChannel('x-notes', {
+  grant: 'notes:read',
+  snapshot: (uri, reader, client) => ({ notes: notesFor(reader) }),
+  authorize: async (uri, reader) => ownsANote(reader),
+  left: (client) => { forget(client); },
+  describe: () => ({ title: 'Notes', description: 'The notes a reader may read.' }),
+});
+
+handle.publish('x-notes://', { type: 'x-notes/added', note }, {
+  visible: (reader) => mayRead(note, reader),
+});
+```
+
+- `grant` is what a subscribe needs. `authorize(uri, reader)` is optional, and
+  is asked only of a reader the grant refused, so it can let somebody in.
+- `snapshot(uri, reader, client)` is the state a subscribe answers. The reader
+  is absent on a host with no users directory and on the root connection.
+- `left(client)` is optional, and is called once a client watches no URI on the
+  scheme on any connection: after its last unsubscribe, or when it disconnects.
+- `describe()` is optional, and names the channel in `_meta['ahpd.channels']`
+  on `initialize` and on the root state, as an entry `{ scheme, title,
+  description?, grant }`. The title is the scheme when there is no `describe`.
+
+A client may subscribe and may not dispatch: an action a client sends to the
+channel is refused, because the state is the plugin's.
+
+`handle.publish(uri, action, options?)` sends one action on a URI of the
+scheme, and its type starts with `<scheme>/`. It throws before the host is
+built. Two options narrow who gets it - decision
+`a-plugin-channel-filters-each-action-per-subscriber`:
+
+- `visible(reader, client)` is asked for each subscriber at the send, and again
+  when the action is replayed to a client that reconnects. A subscriber it
+  refuses, or that it throws for, is not sent the action.
+- `to` names the one client id that gets it.
+
+A subscriber that is not sent an action sees a gap in `serverSeq`. That is
+allowed, because the sequence is the host's and not the channel's.
+`handle.subscribers(uri)` answers who watches a URI now, as `{ client, reader }`
+once per client id.
+
+Two plugins cannot serve one scheme: the later one is dropped with a problem
+line. `@ahpd/bot` serves `x-ahpd-bots://` this way, and [BOTS.md](BOTS.md)
+says what it sends.
+
 ### What a tool says about itself
 
 A `HostTool` may carry `effects`: `reads`, `writes`, `network` and
@@ -604,6 +659,7 @@ does not stop the next handler or the action it observed.
 | `authenticated` | `client`, `resource` |
 | `automation_fire` | `automation`, `run` |
 | `resource_write` | `uri` |
+| `users_changed` | nothing |
 | `terminal_open` | `terminal`, `cwd` |
 | `listening` | `runtime`, `host`, `port`, `guarded` |
 | `stopping` | nothing |
@@ -635,6 +691,12 @@ dedupes by `id` rather than counting.
 
 `@ahpd/push` is one such consumer: it reads `input_needed_set` to tell a phone
 that a session needs a person, and `input_needed_removed` to forget the wait.
+
+`users_changed` says the users file changed: a person edited it, or the host
+wrote it. It carries nothing, so a handler reads the principals it holds again;
+their memberships and grants are read from the file at each question. The host
+watches the file only while a plugin listens, and a save that touches it twice
+in a moment is one event.
 
 ## The manifest
 

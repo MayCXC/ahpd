@@ -357,6 +357,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       for (const held of replayable) {
         if (held.channel === meant && held.serverSeq > at) {
           const envelope = seenBy(connection, held);
+          if (envelope === undefined) continue;
           connection.peer.notify('action', meant === channel
             ? envelope
             : { ...envelope, channel });

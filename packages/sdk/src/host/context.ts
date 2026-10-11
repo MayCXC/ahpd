@@ -1,5 +1,6 @@
 import type { Agent } from '../types/agent.js';
 import type { Connection, HostOptions, HostTool, ResourceProvider } from '../types/host.js';
+import type { PublishOptions } from '../types/plugin.js';
 import type { Peer } from '../types/rpc.js';
 import type { Session } from '../types/session.js';
 import type { Bag } from '../types/common.js';
@@ -81,7 +82,7 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    */
   known: Set<string>;
   /** The last `REPLAY` action envelopes, oldest first. */
-  replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined }[];
+  replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined; audience?: PublishOptions }[];
   /** Live sessions, by their own uri. */
   sessions: Map<string, Held>;
   /** Every chat of a live session, by its own URI. */
@@ -137,16 +138,17 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   /** Say one thing on one channel, to every connection watching it. */
   broadcast: (channel: string, method: string, params: unknown, per?: (connection: Connection) => unknown) => void;
   /**
-   * An action envelope as one connection may read it.
+   * An action envelope as one connection may read it, or nothing when its
+   * audience leaves this connection out.
    *
    * The one place an envelope is rewritten for a connection, which is why the
    * live broadcast and both replay paths call it: a rewrite anywhere else
    * would be a second opinion about the same delivery.
    */
-  seenBy: <E extends { channel: string; action: Record<string, unknown>; origin?: Origin | undefined }>(
+  seenBy: <E extends { channel: string; action: Record<string, unknown>; origin?: Origin | undefined; audience?: PublishOptions }>(
     connection: Connection,
     envelope: E,
-  ) => E;
+  ) => E | undefined;
   /** A person left a channel no connection of theirs is watching. */
   leaves: (asked: string, clientId: string) => void;
   /** The sequence number every snapshot and action is taken at. */

@@ -22,6 +22,7 @@ import type { Host, HostOptions, HostTool } from './host.js';
 import type { MachineNeed } from './machine.js';
 import type { ResourceProvider } from './resources.js';
 import type { Owner, UsageEntry } from './usage.js';
+import type { Grant, Principal } from './users.js';
 import type { SecretWork } from './vault.js';
 
 /**
@@ -170,6 +171,96 @@ export interface PluginPeer {
   onMessage(handle: (message: Record<string, unknown>) => void): void;
   /** Close the connection, rejecting every question still unanswered. */
   close(): void;
+}
+
+/**
+ * A channel a plugin serves, under an `x-` scheme of its own.
+ *
+ * A client subscribes to any URI on the scheme and is answered with
+ * `snapshot`; what changes after that is sent with `ChannelHandle.publish`. A
+ * client may not dispatch to it: the plugin is the only writer - decision
+ * `a-plugin-channel-is-an-x-scheme`.
+ */
+export interface PluginChannel {
+  /** What a reader needs to subscribe, unless `authorize` lets them in. */
+  grant: Grant;
+  /**
+   * What the channel holds for this reader, as the subscribe's `state`.
+   *
+   * `reader` is nobody on a host with no users directory. `client` is the id
+   * the connection gave at `initialize` or `reconnect`, which a later
+   * `publish` may name with `to`.
+   */
+  snapshot(uri: string, reader: Principal | undefined, client: string): unknown;
+  /**
+   * Whether a reader without `grant` may subscribe to this URI all the same.
+   *
+   * Asked only of a subscriber the grant refuses, so it widens who may read
+   * and never narrows it.
+   */
+  authorize?(uri: string, reader: Principal): Promise<boolean>;
+  /** A client stopped watching every URI on the scheme: it unsubscribed or disconnected. */
+  left?(client: string): void;
+  /** What a client shows for the channel, read when the host advertises it. */
+  describe?(): { title: string; description?: string };
+}
+
+/**
+ * Who of a channel's subscribers is sent one action.
+ *
+ * Kept with the action, so the same test decides at the send and at each
+ * replay - decision `a-plugin-channel-filters-each-action-per-subscriber`.
+ */
+export interface PublishOptions {
+  /**
+   * Whether this subscriber sees the action, asked at each send and each
+   * replay with the subscriber's current principal and client id.
+   */
+  visible?(reader: Principal | undefined, client: string): boolean;
+  /** The one client id the action goes to. Absent, it goes to every subscriber `visible` lets see it. */
+  to?: string;
+}
+
+/** One subscriber of a plugin channel, as `ChannelHandle.subscribers` answers it. */
+export interface ChannelSubscriber {
+  /** The id the client gave at `initialize` or `reconnect`. */
+  client: string;
+  /** Who the connection is now, or nobody on a host with no users directory. */
+  reader: Principal | undefined;
+}
+
+/** What `registerChannel` answers: the plugin's way to send on its channel. */
+export interface ChannelHandle {
+  /**
+   * Send one action on a URI of the channel.
+   *
+   * The action's `type` starts with the scheme and a `/`, such as
+   * `x-ahpd-bots/added`. Refused until a host is built over the plugin.
+   */
+  publish(uri: string, action: { type: string } & Record<string, unknown>, options?: PublishOptions): void;
+  /** Each client subscribed to the URI now, once each. Empty until a host is built over the plugin. */
+  subscribers(uri: string): ChannelSubscriber[];
+}
+
+/**
+ * One plugin channel, and where its sends reach the host.
+ *
+ * Built by the plugin host and carried through the fold rather than copied,
+ * for the same reason `PluginStarts` is: the handle a plugin holds is a closure
+ * over this object, and the host sets `publish` and `subscribers` on it once
+ * it exists.
+ */
+export interface ServedChannel {
+  /** The plugin that registered it. */
+  by: string;
+  /** The scheme, in lowercase, without `:`. */
+  scheme: string;
+  /** What the plugin registered. */
+  channel: PluginChannel;
+  /** Where a publish goes, set by the host once it exists. */
+  publish?: (uri: string, action: Record<string, unknown>, options: PublishOptions) => void;
+  /** Who is subscribed, set by the host once it exists. */
+  subscribers?: (uri: string) => ChannelSubscriber[];
 }
 
 /**
@@ -530,6 +621,14 @@ export interface PluginHost extends PluginContext {
    * `ResourceProvider`'s business.
    */
   registerResourceProvider(scheme: string, provider: ResourceProvider): void;
+  /**
+   * Serve every URI on one `x-` scheme as a channel a client subscribes to.
+   *
+   * The scheme is kept without `:`, so `x-ahpd-bots` serves
+   * `x-ahpd-bots://`. A scheme without `x-`, or one another plugin took, is
+   * refused. The handle is how the plugin sends on it.
+   */
+  registerChannel(scheme: string, channel: PluginChannel): ChannelHandle;
   /** Set `HostOptions.terminals`, or take the daemon's over with `'replace'`. */
   registerTerminals(store: PortOf<'terminals'>, when?: 'replace'): void;
   /** Set `HostOptions.changes`, or take the daemon's over with `'replace'`. */
@@ -739,6 +838,13 @@ export interface Contribution {
    * conflict rule is the fold's and not `setPort`'s.
    */
   providers: Record<string, unknown>;
+  /**
+   * The channels this plugin serves, keyed by scheme in lowercase.
+   *
+   * The entries are the objects the handles close over, so the fold carries
+   * them into `HostOptions.channels` as they are.
+   */
+  channels: Record<string, ServedChannel>;
   /**
    * The listeners this plugin attached, by event.
    *

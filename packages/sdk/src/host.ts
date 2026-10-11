@@ -41,10 +41,11 @@ import type { Bag } from './types/common.js';
 import type { Session, SubagentChat, SubagentRequest } from './types/session.js';
 import type { Peer } from './types/rpc.js';
 import type { Owner } from './types/usage.js';
+import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
 import { ownerOfPrincipal } from './values.js';
 import { reason } from './host/common.js';
 import {
-  ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, baseOf, URI_KEYS, named,
+  ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, baseOf, URI_KEYS, named,
   chatUriFor, subagentChatUri, WORKER_ACTIONS, toolCallOfSubagentChat, isAutomations,
 } from './host/channels.js';
 import type { Space } from './host/channels.js';
@@ -372,7 +373,7 @@ export function createHost(options: HostOptions): Host {
    */
   const REPLAY = 1000;
   /** The last `REPLAY` action envelopes, oldest first. */
-  const replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined }[] = [];
+  const replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined; audience?: PublishOptions }[] = [];
   /** Everything watching a channel, which is not everything connected. */
 
   /**
@@ -494,6 +495,8 @@ export function createHost(options: HostOptions): Host {
       const aliased = alias !== undefined && connection.watching.has(alias);
       if (!connection.watching.has(channel) && !aliased) continue;
       const said = per === undefined ? params : per(connection);
+      // Nothing for this connection: a plugin's action it may not see.
+      if (said === undefined) continue;
       if (connection.watching.has(channel)) connection.peer.notify(method, said);
       // And under the older spelling, for a client still watching by that one.
       if (aliased) connection.peer.notify(method, { ...(said as Record<string, unknown>), channel: alias });
@@ -516,14 +519,36 @@ export function createHost(options: HostOptions): Host {
    * URIs in that name, the same as its snapshot. Every other envelope is
    * delivered as it is.
    *
+   * A plugin's action carries its `audience`, and is nothing for a
+   * connection the audience leaves out: one `to` does not name, or one
+   * `visible` refuses with this connection's principal as it is now - decision
+   * `a-plugin-channel-filters-each-action-per-subscriber`. The audience never
+   * goes out on the wire.
+   *
    * This is the one place an envelope is rewritten for a connection, which is
    * why the live broadcast and both replay paths call it: a rewrite anywhere
    * else would be a second opinion about the same delivery.
    */
-  const seenBy = <E extends { channel: string; action: Record<string, unknown>; origin?: Origin | undefined }>(
+  const seenBy = <E extends { channel: string; action: Record<string, unknown>; origin?: Origin | undefined; audience?: PublishOptions }>(
     connection: Connection,
-    envelope: E,
-  ): E => {
+    given: E,
+  ): E | undefined => {
+    let envelope = given;
+    if ('audience' in given) {
+      const { audience, ...rest } = given;
+      if (audience?.to !== undefined && audience.to !== connection.clientId) return undefined;
+      if (audience?.visible !== undefined) {
+        try {
+          if (!audience.visible(connection.principal, connection.clientId)) return undefined;
+        }
+        catch (error) {
+          // A test that throws shows the action to nobody, as one that refused.
+          log(`${given.channel}: a visible test threw: ${reason(error)}`);
+          return undefined;
+        }
+      }
+      envelope = rest as E;
+    }
     const { action } = envelope;
     if (!isRootChannel(envelope.channel)) {
       const spelling = spellingOf(connection, envelope.channel);
@@ -589,9 +614,9 @@ export function createHost(options: HostOptions): Host {
    * client knows it missed nothing - so the counter has to advance with state,
    * never with messages.
    */
-  const emit = (channel: string, action: Record<string, unknown>, origin: Origin | undefined): void => {
+  const emit = (channel: string, action: Record<string, unknown>, origin: Origin | undefined, audience?: PublishOptions): void => {
     ctx.serverSeq += 1;
-    const envelope = { channel, action, serverSeq: ctx.serverSeq, origin };
+    const envelope = { channel, action, serverSeq: ctx.serverSeq, origin, ...(audience === undefined ? {} : { audience }) };
     // Kept whether or not anyone was listening: a client that dropped is by
     // definition not listening, and it is the one that will ask for these.
     //
@@ -655,6 +680,22 @@ export function createHost(options: HostOptions): Host {
     ...(Array.isArray(reported) ? reported : []),
     ...ctx.clientPluginsOf(channel),
   ];
+  /**
+   * Tell a plugin channel a client stopped watching it.
+   *
+   * Once the client watches no URI on the scheme on any connection, so a
+   * client with two windows open on it has not left while one stays. A
+   * `left` that throws is logged against its plugin.
+   */
+  const leftChannel = (client: string, channel: string): void => {
+    const served = servedIn(options.channels, channel);
+    if (served?.channel.left === undefined) return;
+    for (const one of connections) {
+      if (one.clientId === client && [...one.watching].some((uri) => servedIn(options.channels, uri) === served)) return;
+    }
+    try { served.channel.left(client); }
+    catch (error) { log(`plugin ${served.by}: left on ${served.scheme} failed: ${reason(error)}`); }
+  };
   /**
    * A client's action, refused in that client's hearing.
    *
@@ -923,7 +964,7 @@ export function createHost(options: HostOptions): Host {
     isolating, mergedConfig, propertyOf, sessionSchema, runningSchema, seeded,
     contributedDefaults, storedConfig,
     rootConfig, descriptors, daemonSchema, daemonProperties, daemonKey,
-    advertisedSchemes, rootState,
+    advertisedSchemes, advertisedChannels, rootState,
     statusOf, startedBy, chatSummary, subagentSummary, restoredSubagentSummary,
     activityOf, sessionAdded, summaryMoved, activeSessionsMoved, learnModels,
     listing, waitingFor, readStored,
@@ -987,6 +1028,36 @@ export function createHost(options: HostOptions): Host {
   setTimeout(() => { void readStored(); }, 0);
 
   options.automations?.onDue?.(due);
+
+  /*
+   * Each plugin channel's way to send and to see who is watching, set on the
+   * entry its handle closes over.
+   *
+   * A publish is emitted rather than dispatched: it is the plugin's own
+   * state, so it is no delta to merge and carries no client's origin, even
+   * when the plugin publishes from inside a client's command.
+   */
+  for (const served of Object.values(options.channels ?? {})) {
+    served.publish = (uri, action, audience) => {
+      emit(uri, structuredClone(action), undefined, audience.visible === undefined && audience.to === undefined ? undefined : audience);
+    };
+    served.subscribers = (uri) => {
+      const seen = new Map<string, ChannelSubscriber>();
+      for (const connection of connections) {
+        if (!connection.watching.has(uri) || seen.has(connection.clientId)) continue;
+        seen.set(connection.clientId, { client: connection.clientId, reader: connection.principal });
+      }
+      return [...seen.values()];
+    };
+  }
+
+  /*
+   * The users directory, watched only while a plugin listens for its change:
+   * a host nobody asks keeps no watch on the folder open.
+   */
+  const usersWatch = (options.events?.users_changed?.length ?? 0) > 0
+    ? options.users?.watch?.(() => { void fire({ type: 'users_changed' }); })
+    : undefined;
 
   return {
     clients,
@@ -1067,6 +1138,7 @@ export function createHost(options: HostOptions): Host {
         for (const { by, close } of options.closers ?? []) {
           await step(`the plugin ${by}`, close);
         }
+        await step('the users watch', () => usersWatch?.close());
         /*
          * And what reads what sessions do, before the stores it reads.
          *
@@ -1221,6 +1293,7 @@ export function createHost(options: HostOptions): Host {
           // And unsubscribing from a session is one of the three ways the
           // protocol says a client stops being active in it.
           leaves(channel, connection.clientId || 'anonymous');
+          leftChannel(connection.clientId, channel);
         },
         /**
          * What the client says happened.
@@ -1387,6 +1460,9 @@ export function createHost(options: HostOptions): Host {
            * has not gone anywhere, and the wait is called off.
            */
           for (const channel of was) waitsOut(channel, connection.clientId || 'anonymous');
+          // A plugin channel forgets the client at once: a client that comes
+          // back is asked for its snapshot again.
+          for (const channel of was) leftChannel(connection.clientId, channel);
           log(`${connection.clientId || 'a client'} went away`);
         },
       };

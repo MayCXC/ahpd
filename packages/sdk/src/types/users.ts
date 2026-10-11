@@ -341,4 +341,12 @@ export interface Users {
   remove(id: string): Promise<boolean>;
   /** A fresh secret for one person, answered once and stored only as its hash. */
   mint(id: string): Promise<string>;
+  /**
+   * Call `onChange` each time the directory changes: a person edits the file,
+   * or this directory writes it.
+   *
+   * Optional, because a directory that is not a file may have no way to know.
+   * Several changes close together are one call. `close` stops the calls.
+   */
+  watch?(onChange: () => void): { close(): void };
 }

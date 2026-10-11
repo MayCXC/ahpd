@@ -41,6 +41,7 @@ export type EventName =
   | 'authenticated'
   | 'automation_fire'
   | 'resource_write'
+  | 'users_changed'
   | 'terminal_open'
   | 'listening'
   | 'stopping'
@@ -228,6 +229,18 @@ export interface ResourceWriteEvent {
   uri: string;
 }
 
+/**
+ * The users directory changed: a person edited its file, or this host wrote it.
+ *
+ * Carries nothing, because a principal is read again from the directory on
+ * each access and the listener reads what it needs. A plugin that answers per
+ * person, such as a channel that filters what each subscriber sees, reads its
+ * subscribers again and sends the difference.
+ */
+export interface UsersChangedEvent {
+  type: 'users_changed';
+}
+
 /** A terminal this host opened. */
 export interface TerminalOpenEvent {
   type: 'terminal_open';
@@ -296,6 +309,7 @@ export type HostEvent =
   | AuthenticatedEvent
   | AutomationFireEvent
   | ResourceWriteEvent
+  | UsersChangedEvent
   | TerminalOpenEvent
   | ListeningEvent
   | StoppingEvent

@@ -190,6 +190,8 @@ export function createRouting(ctx: HostContext): Routing {
    * is also what the client is told.
    */
   const meantBy = (channel: string): string => {
+    // A plugin channel is its own name, whatever it ends in.
+    if (spaceOf(channel) === 'plugin') return channel;
     // A name claimed as a terminal or a watch is that thing's own name.
     const held = claims.get(channel)?.kind;
     if (held === 'terminal' || held === 'watch') return channel;
@@ -391,7 +393,7 @@ export function createRouting(ctx: HostContext): Routing {
     const held = claims.get(channel) ?? claims.get(baseOf(channel));
     if (held !== undefined) return held.kind === 'terminal' ? 'terminal' : held.kind === 'watch' ? 'other' : 'session';
     const space = spaceHere(channel);
-    return space === 'terminal' ? 'terminal' : space === 'own' ? 'other' : 'session';
+    return space === 'terminal' ? 'terminal' : space === 'own' || space === 'plugin' ? 'other' : 'session';
   };
   /** Whether `channelKind` reads a channel as a session's. */
   const sessionChannel = (channel: string): boolean => channelKind(channel) === 'session';
@@ -453,7 +455,7 @@ export function createRouting(ctx: HostContext): Routing {
     const space = spaceHere(name);
     const fits = space === undefined || space === kind || (kind === 'watch' && schemeOf(name) === 'ahp-resource-watch');
     if (!fits)
-      throw new RpcError(-32003, `${name} is a name this host keeps for ${space === 'own' ? 'its own channels' : `${space}s`}`);
+      throw new RpcError(-32003, `${name} is a name this host keeps for ${space === 'own' ? 'its own channels' : space === 'plugin' ? 'plugin channels' : `${space}s`}`);
     for (const one of new Set([name, baseOf(name)])) {
       const held = claims.get(one);
       if (held !== undefined) throw new RpcError(-32003, `${name} is already a ${held.kind} here`);

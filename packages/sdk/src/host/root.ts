@@ -54,6 +54,7 @@ export interface Root {
   daemonKey(key: string): boolean;
   declaresConfigKey(key: string): boolean;
   advertisedSchemes(): Record<string, unknown> | undefined;
+  advertisedChannels(): { scheme: string; title: string; description?: string; grant: string }[] | undefined;
   advertisedGrants(): Record<string, unknown>;
   rootState(mine?: Record<string, unknown>, connection?: Connection): Promise<Bag>;
 }
@@ -312,6 +313,27 @@ export function createRoot(ctx: HostContext): Root {
   };
 
   /**
+   * The channels plugins serve, one entry each: the scheme, what a client
+   * shows for it, and the grant a subscribe needs.
+   *
+   * The title is the scheme where the channel does not describe itself.
+   * Absent when no plugin serves one, as `ahpd.resourceProviders` is.
+   */
+  const advertisedChannels = (): { scheme: string; title: string; description?: string; grant: string }[] | undefined => {
+    const served = Object.values(options.channels ?? {});
+    if (served.length === 0) return undefined;
+    return served.map(({ scheme, channel }) => {
+      const said = typeof channel.describe === 'function' ? channel.describe() : undefined;
+      return {
+        scheme,
+        title: said?.title ?? scheme,
+        ...(said?.description === undefined ? {} : { description: said.description }),
+        grant: channel.grant,
+      };
+    });
+  };
+
+  /**
    * One entry per registered scheme the table does not hold, shaped like a
    * built-in one.
    *
@@ -387,8 +409,10 @@ export function createRoot(ctx: HostContext): Root {
       ? {}
       : await options.rootConfig.values();
     const schemes = advertisedSchemes();
+    const channels = advertisedChannels();
     const meta = {
       ...(schemes === undefined ? {} : { 'ahpd.resourceProviders': schemes }),
+      ...(channels === undefined ? {} : { 'ahpd.channels': channels }),
       'ahpd.grants': advertisedGrants(),
       ...(ctx.restartNeeded ? { 'ahpd.restartNeeded': true } : {}),
       /*
@@ -450,6 +474,6 @@ export function createRoot(ctx: HostContext): Root {
 
   return {
     rootConfig, descriptors, daemonSchema, daemonProperties,
-    daemonKey, declaresConfigKey, advertisedSchemes, advertisedGrants, rootState,
+    daemonKey, declaresConfigKey, advertisedSchemes, advertisedChannels, advertisedGrants, rootState,
   };
 }

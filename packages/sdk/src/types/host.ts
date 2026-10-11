@@ -11,7 +11,7 @@ import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
-import type { PluginConnects, PluginStarts, PluginTriggers } from './plugin.js';
+import type { PluginConnects, PluginStarts, PluginTriggers, ServedChannel } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -128,6 +128,14 @@ export interface HostOptions {
    * `fileResources()` says about a foreign scheme.
    */
   resourceProviders?: Record<string, ResourceProvider>;
+  /**
+   * The channels plugins serve, by `x-` scheme in lowercase.
+   *
+   * The fold fills this from `registerChannel`. A subscribe to a URI on one of
+   * these schemes is answered by its channel, and the host sets each entry's
+   * `publish` and `subscribers` when it is created.
+   */
+  channels?: Record<string, ServedChannel>;
   /**
    * How to open a shell.
    *

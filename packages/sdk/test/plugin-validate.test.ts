@@ -193,6 +193,22 @@ describe('pluginHost', () => {
     expect(() => host.registerResourceProvider('notes', { read: () => {}, describe: 'Notes' } as never)).toThrow(/describe/);
   });
 
+  it('accepts a complete channel, and refuses an empty one or a grant that is not one', () => {
+    const { host, contribution } = pluginHost('alpha', context());
+    const channel = { grant: 'bot:read', snapshot: () => ({}), authorize: async () => true, left: () => {}, describe: () => ({ title: 'Bots' }) };
+    expect(() => host.registerChannel('x-bots', channel as never)).not.toThrow();
+    expect(() => host.registerChannel('x-notes', {} as never)).toThrow(/alpha.*registerChannel.*grant/);
+    expect(() => host.registerChannel('x-notes', { grant: 'nothing', snapshot: () => ({}) } as never)).toThrow(/grant like bot:read/);
+    expect(() => host.registerChannel('x-notes', { grant: 'bot:read' } as never)).toThrow(/snapshot/);
+    // The optional members may be left out, and are functions when they are there.
+    expect(() => host.registerChannel('x-notes', { grant: 'bot:read', snapshot: () => ({}), left: 'no' } as never)).toThrow(/left/);
+    expect(() => host.registerChannel('x-notes', { grant: 'bot:read', snapshot: () => ({}), describe: 'Notes' } as never)).toThrow(/describe/);
+    expect(() => host.registerChannel('9bad', channel as never)).toThrow(/alpha.*registerChannel.*URI scheme/);
+    const { options, problems } = foldHostOptions(base(), [contribution]);
+    expect(problems).toEqual([]);
+    expect(options.channels?.['x-bots']?.channel).toBe(channel);
+  });
+
   it('refuses a scheme that is not one, and the schemes the host already owns', () => {
     const { host } = pluginHost('alpha', context());
     expect(() => host.registerResourceProvider('9bad', provider as never)).toThrow(/URI scheme/);

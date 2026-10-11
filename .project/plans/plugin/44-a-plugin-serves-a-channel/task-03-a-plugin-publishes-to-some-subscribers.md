@@ -1,6 +1,6 @@
 ---
 title: A plugin publishes to some subscribers
-status: todo
+status: done
 depends: [task-02-a-plugin-registers-a-channel.md]
 layer: "packages/sdk"
 refs:

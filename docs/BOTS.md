@@ -83,6 +83,26 @@ A watcher hears only the bots it may read, by the table above, and a watch on `b
 
 A watch needs `bot:watch`, or a bot the reader may read: a watch on `bot://` is open to anybody signed in, and a watch on one bot to whoever may read it. A slug that does not exist is refused, as a read of it is.
 
+## The catalogue
+
+A client that subscribes to `x-ahpd-bots://` gets every bot it may read in one snapshot, then an action for each change. It reads the bots without one `resourceRead` per bot, and it hears changes that other clients make.
+
+The snapshot state is `{ bots: BotRecord[] }`. Each record is the same JSON object that `resourceRead bot://<slug>` returns. Three actions follow it:
+
+| Action | When the client gets it |
+| --- | --- |
+| `{ type: 'x-ahpd-bots/added', bot: BotRecord }` | A bot was made that it may read, or a bot it did not have became readable |
+| `{ type: 'x-ahpd-bots/changed', bot: BotRecord }` | A bot it has was edited, and it may still read it |
+| `{ type: 'x-ahpd-bots/removed', id: string }` | A bot it has was deleted, or it may no longer read it. `id` is the slug |
+
+When an edit changes whether a client may read the bot, that client gets `added` or `removed`, never `changed`. When the users file changes, each subscriber gets `added` and `removed` for the bots its memberships gave or took away. Only that subscriber gets them.
+
+Each client gets only the actions about bots it may read, so it sees gaps in `serverSeq` on this channel. A client cannot dispatch an action to the channel.
+
+A subscribe needs `bot:read`. Without it, a reader who may read at least one bot is let in, and sees the bots it may read. `bot:get` reads every bot, so a holder of `bot:read` sees them all.
+
+The channel is in `_meta['ahpd.channels']` on `initialize` and on the root state, as `{ scheme: 'x-ahpd-bots', title: 'Bots', description, grant: 'bot:read' }`. [PLUGINS.md](PLUGINS.md#a-channel-of-your-own) describes a plugin channel.
+
 ## An example
 
 A make from a name alone, which is the whole of what is required:

@@ -1,6 +1,6 @@
 ---
 title: The docs describe a plugin channel and the catalogue
-status: todo
+status: done
 depends: [task-04-the-host-advertises-a-plugin-channel.md, task-05-the-bot-plugin-serves-its-catalogue.md]
 layer: "docs"
 refs:

@@ -95,6 +95,10 @@ A bot is drawn in one of fifteen bodies and in one of eleven colours or a hex co
 
 A listing shows what a read would allow: a list that showed a bot the reader cannot open would be a list of names they cannot use. Making a bot also needs the maker's `session:create` where a session is started for it, because that session is theirs.
 
+### The catalogue
+
+A subscribe to `x-ahpd-bots://` answers `{ bots }`, the bots the reader may read, then `x-ahpd-bots/added`, `x-ahpd-bots/changed` and `x-ahpd-bots/removed` as they change - [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/BOTS.md#the-catalogue).
+
 ### The workspace
 
 A bot works in a folder of its own, `<root>/<slug>` unless the body named one, and a named one has to be under `root`. No two bots share a folder, and an edit never moves one: two bots in one tree would be two sessions working over each other. The folder is made when the bot is made, before its session starts, since that is where the session works.

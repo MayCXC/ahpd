@@ -5,7 +5,7 @@ import { disableConditionsProblem } from '../automations.js';
 import { localPath } from '../fileuri.js';
 import { reason } from '../values.js';
 import { computerNeeds, dispatchNeeds, ACTION_HOMES, ACTION_NEEDS, HOME_WORDS, PER_CONNECTION } from './gate.js';
-import { chatUriFor, isRootChannel, MARKS, ROOT, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
+import { chatUriFor, isRootChannel, MARKS, ROOT, spaceOf, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { chatAction, sessionFlag } from './chatactions.js';
 import { HOSTS_OWN } from './common.js';
 import { claimOf } from './terminals.js';
@@ -78,6 +78,15 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
     const type = String(action.type ?? '');
     /** Refuse this dispatch, in the words of whatever would not have it. */
     const no = (reason: string): void => refuse(connection.peer, channel, action, origin, reason);
+    /*
+     * A plugin channel has one writer, its plugin, so a client's action on
+     * one is refused before anything reads it - and on an `x-` scheme no
+     * plugin serves, before it can be read for a session.
+     */
+    if (spaceOf(asked) === 'plugin' || spaceOf(channel) === 'plugin') {
+      no(`${type || 'An action'} is ${asked}'s plugin's to say, not a client's`);
+      return;
+    }
     /*
      * The gate, for the half that arrives as a notification.
      *

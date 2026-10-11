@@ -1,6 +1,6 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { computerSource } from '../computers.js';
-import { isRootChannel, schemeOf } from './channels.js';
+import { isRootChannel, schemeOf, servedIn } from './channels.js';
 import { NEEDS, UNGATED, channelRead, refusalReason } from './gate.js';
 import type { Grant, Principal } from '../types/users.js';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -12,6 +12,8 @@ export interface Admission {
 
 export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admission {
   const { connection } = conn;
+  /** The plugin channel serving a URI, if any. */
+  const servedAt = (channel: string) => servedIn(ctx.options.channels, channel);
 
   /**
    * What a command needs, or nothing when it needs nothing.
@@ -63,6 +65,10 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
     return typeof root === 'string' ? root : undefined;
   };
 
+  /** What reading a channel needs, with a plugin channel's own grant where one serves it. */
+  const readOf = (channel: string): Grant =>
+    channelRead(channel, ctx.channelKind(channel), servedAt(channel)?.channel.grant);
+
   const capabilityFor = (method: string, params: Record<string, unknown>): Grant[] | undefined => {
     if (method === 'subscribe') {
       const channel = String(params.channel ?? '');
@@ -82,8 +88,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
        * snapshot is taken of the resolved channel, so a spelling that
        * reads as something else cannot reach a session.
        */
-      return [...new Set([channelRead(channel, ctx.channelKind(channel)),
-        channelRead(ctx.meantBy(channel), ctx.channelKind(ctx.meantBy(channel)))])];
+      return [...new Set([readOf(channel), readOf(ctx.meantBy(channel))])];
     }
     /*
      * Completions in a session are the session's commands, so they need
@@ -91,9 +96,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
      */
     if (method === 'completions' && typeof params.channel === 'string' && params.channel !== '') {
       const channel = params.channel;
-      return [...new Set<Grant>(['file:list',
-        channelRead(channel, ctx.channelKind(channel)),
-        channelRead(ctx.meantBy(channel), ctx.channelKind(ctx.meantBy(channel)))])];
+      return [...new Set<Grant>(['file:list', readOf(channel), readOf(ctx.meantBy(channel))])];
     }
     /*
      * A chat forked from another is not one started: it copies a transcript
@@ -259,6 +262,21 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
    * for a question nobody is going to answer.
    */
   const excusedBy = (method: string, params: Record<string, unknown>, who: Principal): Set<Grant> | Promise<Set<Grant>> => {
+    /*
+     * A plugin channel may let in a reader its grant refuses, the way a
+     * scheme opens part of itself. Asked only when the grant is missing, so a
+     * reader who holds it subscribes without the plugin being asked.
+     */
+    if (method === 'subscribe') {
+      const channel = String(params.channel ?? '');
+      const served = servedAt(channel);
+      if (served !== undefined) {
+        const authorize = served.channel.authorize;
+        if (authorize === undefined || who.can(served.channel.grant)) return new Set();
+        return authorize.call(served.channel, channel, who)
+          .then((admitted) => (admitted === true ? new Set<Grant>([served.channel.grant]) : new Set<Grant>()));
+      }
+    }
     const operation = EXCUSED[method];
     if (operation === undefined) return new Set();
     /*

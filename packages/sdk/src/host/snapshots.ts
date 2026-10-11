@@ -3,7 +3,7 @@ import { tail } from '../paging.js';
 import { RpcError } from '../rpc.js';
 import { uriOf } from '../fileuri.js';
 import { runState } from './automations.js';
-import { ROOT, isRootChannel, AUTOMATIONS, MARKS, chatUriFor, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
+import { ROOT, isRootChannel, AUTOMATIONS, MARKS, chatUriFor, servedIn, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
 import { need } from './common.js';
 import type { Bag } from '../types/common.js';
 import type { Connection } from '../types/host.js';
@@ -72,6 +72,22 @@ export function createSnapshots(ctx: HostContext): Snapshots {
   const snapshotOf = async (channel: string, mine: Record<string, unknown> = {}, connection?: Connection): Promise<Record<string, unknown>> => {
     if (isRootChannel(channel)) {
       return value({ resource: ROOT, state: await rootState(mine, connection), fromSeq: ctx.serverSeq });
+    }
+    /*
+     * A plugin channel, answered by its plugin and by nothing else here: an
+     * `x-` URI no plugin serves is refused rather than read for a session.
+     *
+     * `fromSeq` is read before the plugin is asked. A publish made while it
+     * answers is then replayed after the snapshot rather than lost, and a
+     * catalogue keyed by id takes the same record twice without harm.
+     */
+    if (spaceOf(channel) === 'plugin') {
+      const served = servedIn(options.channels, channel);
+      if (served === undefined) throw new RpcError(-32001, `No channel at ${channel}`);
+      ctx.flushDeltas();
+      const fromSeq = ctx.serverSeq;
+      const state = await served.channel.snapshot(channel, connection?.principal, connection?.clientId ?? '');
+      return structuredClone({ resource: channel, state, fromSeq });
     }
     const terminal = terminals.get(channel);
     if (terminal)

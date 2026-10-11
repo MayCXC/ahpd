@@ -1,6 +1,6 @@
 ---
 title: The host advertises a plugin channel
-status: todo
+status: done
 depends: [task-02-a-plugin-registers-a-channel.md]
 layer: "packages/sdk"
 refs:

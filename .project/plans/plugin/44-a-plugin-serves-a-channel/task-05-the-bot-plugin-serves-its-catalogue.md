@@ -1,6 +1,6 @@
 ---
 title: The bot plugin serves its catalogue
-status: todo
+status: done
 depends: [task-01-the-host-says-when-memberships-change.md, task-03-a-plugin-publishes-to-some-subscribers.md]
 layer: "packages/bot"
 refs:

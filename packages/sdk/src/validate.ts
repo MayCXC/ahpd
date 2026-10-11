@@ -20,7 +20,7 @@
 import type { StartSession } from './types/automations.js';
 import type { PortKey } from './types/plugin.js';
 import type { Owner } from './types/usage.js';
-import { SUBJECTS } from './users.js';
+import { SUBJECTS, isGrant } from './users.js';
 
 /**
  * The one message shape every check reports through.
@@ -208,9 +208,9 @@ const PROVIDER_OPTIONAL: Record<string, Kind> = {
  * it is checked because the scheme is the key a URI is routed by: a registered
  * scheme no URI can name is a provider nothing can reach.
  */
-export const checkScheme = (scheme: unknown, by: string): string => {
+export const checkScheme = (scheme: unknown, by: string, method = 'registerResourceProvider'): string => {
   if (typeof scheme !== 'string' || !/^[a-zA-Z][\w+.-]*$/.test(scheme)) {
-    throw new Error(miss(by, 'registerResourceProvider', 'scheme', 'a URI scheme like computer'));
+    throw new Error(miss(by, method, 'scheme', 'a URI scheme like computer'));
   }
   return scheme;
 };
@@ -254,6 +254,31 @@ export const checkResourceProvider = (scheme: string, value: unknown, by: string
   for (const [member, expected] of Object.entries(PROVIDER_OPTIONAL)) {
     if (object[member] === undefined) continue;
     if (!right(object[member], expected)) throw new Error(miss(by, 'registerResourceProvider', member, expected));
+  }
+};
+
+/*
+ * The optional members of `PluginChannel`, by kind. `grant` and `snapshot` are
+ * the required ones and are checked on their own.
+ */
+const CHANNEL_OPTIONAL: Record<string, Kind> = {
+  authorize: 'function',
+  left: 'function',
+  describe: 'function',
+};
+
+/** Check one `registerChannel` value against `PluginChannel`. */
+export const checkChannel = (scheme: string, value: unknown, by: string): void => {
+  const object = asObject(value, by, 'registerChannel', scheme);
+  if (typeof object.grant !== 'string' || !isGrant(object.grant)) {
+    throw new Error(miss(by, 'registerChannel', 'grant', 'a grant like bot:read'));
+  }
+  if (typeof object.snapshot !== 'function') {
+    throw new Error(miss(by, 'registerChannel', 'snapshot', 'a function'));
+  }
+  for (const [member, expected] of Object.entries(CHANNEL_OPTIONAL)) {
+    if (object[member] === undefined) continue;
+    if (!right(object[member], expected)) throw new Error(miss(by, 'registerChannel', member, expected));
   }
 };
 

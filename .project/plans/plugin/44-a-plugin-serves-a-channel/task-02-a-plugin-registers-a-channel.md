@@ -1,6 +1,6 @@
 ---
 title: A plugin registers a channel
-status: todo
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

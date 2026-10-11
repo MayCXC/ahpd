@@ -15,7 +15,7 @@ import type { Agent } from './types/agent.js';
 import type { SessionConfigAnswerer } from './types/completions.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from './types/events.js';
 import type { HostOptions, HostTool } from './types/host.js';
-import type { Contribution, PluginConnects, PluginContext, PluginHost, PluginStarts, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
+import type { ChannelHandle, Contribution, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
 import type { SessionStore } from './types/sessions.js';
 import type { Usage } from './types/usage.js';
 import type { Grant, Principal } from './types/users.js';
@@ -27,7 +27,7 @@ import { createPair } from './pair.js';
 import type { Pair } from './pair.js';
 import { reason } from './values.js';
 import { readSecret } from './vault.js';
-import { checkAgent, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
+import { checkAgent, checkChannel, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -329,6 +329,11 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   const schemes = new Map<string, string>();
   for (const scheme of Object.keys(base.resourceProviders ?? {})) schemes.set(scheme.toLowerCase(), 'the daemon');
   const resourceProviders: Schemes = { ...base.resourceProviders };
+  /*
+   * The plugin channels, by scheme. Seeded from the base, as the resource
+   * schemes are, so a plugin is told when the host already serves one.
+   */
+  const channels: Record<string, ServedChannel> = { ...base.channels };
 
   for (const contribution of contributions) {
     for (const agent of contribution.agents) {
@@ -384,6 +389,15 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
       }
       schemes.set(scheme.toLowerCase(), contribution.by);
       resourceProviders[scheme] = provider as Schemes[string];
+    }
+
+    for (const [scheme, served] of Object.entries(contribution.channels)) {
+      const held = channels[scheme];
+      if (held !== undefined) {
+        problems.push(`plugin ${contribution.by} registers channel ${scheme}, which plugin ${held.by} already registered`);
+        continue;
+      }
+      channels[scheme] = served;
     }
   }
 
@@ -480,6 +494,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   if (Object.keys(sessionCompletions).length > 0) options.sessionConfigCompletions = sessionCompletions;
 
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
+  if (Object.keys(channels).length > 0) options.channels = channels;
 
   /*
    * The routes, by plugin name.
@@ -737,6 +752,7 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
     sessionCompletions: {},
     ports: {},
     providers: {},
+    channels: {},
     events: events as unknown as HostHandlers,
     closers: [],
     triggers,
@@ -932,6 +948,38 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
         throw new Error(miss(by, 'registerResourceProvider', named, 'a scheme no other provider in this plugin uses'));
       }
       contribution.providers[named] = provider;
+    },
+    /*
+     * The handle is a closure over the entry the fold carries, so a publish
+     * reaches whatever host sets `publish` on it, and a publish made before
+     * any host did is told rather than dropped.
+     */
+    registerChannel(scheme, channel): ChannelHandle {
+      open();
+      const named = checkScheme(scheme, by, 'registerChannel').toLowerCase();
+      if (!named.startsWith('x-')) {
+        throw new Error(miss(by, 'registerChannel', named, 'a scheme that starts with x-, the protocol\'s extension prefix'));
+      }
+      checkChannel(named, channel, by);
+      if (contribution.channels[named] !== undefined) {
+        throw new Error(miss(by, 'registerChannel', named, 'a scheme no other channel in this plugin uses'));
+      }
+      const served: ServedChannel = { by, scheme: named, channel };
+      contribution.channels[named] = served;
+      return {
+        publish: (uri, action, options = {}) => {
+          if (typeof action?.type !== 'string' || !action.type.startsWith(`${named}/`)) {
+            throw new Error(miss(by, 'publish', 'the action type', `a type that starts with ${named}/`));
+          }
+          if (schemeOf(uri) !== named) throw new Error(miss(by, 'publish', uri, `a URI on ${named}:`));
+          const publish = served.publish;
+          if (publish === undefined) {
+            throw new Error(miss(by, 'publish', 'the action', 'sent once a host is built over this plugin'));
+          }
+          publish(uri, action, options);
+        },
+        subscribers: (uri) => served.subscribers?.(uri) ?? [],
+      };
     },
     registerTerminals: (store, when) => { setPort('terminals', 'registerTerminals', store, when); },
     registerChanges: (source, when) => { setPort('changes', 'registerChanges', source, when); },

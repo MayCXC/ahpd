@@ -6,6 +6,7 @@ import {
   BOT_BODIES, BOT_COLORS, checkRecord, isSlug,
 } from './record.js';
 import { sessionFor } from './start.js';
+import type { BotCatalogue } from './catalogue.js';
 import type { BotRecord } from './record.js';
 import type { BotStore } from './store.js';
 import type {
@@ -74,6 +75,8 @@ export interface BotOptions {
    * calls itself, so that is whose bot it is.
    */
   hostName: string;
+  /** The `x-ahpd-bots://` catalogue, told each make, edit and delete. */
+  catalogue?: BotCatalogue;
 }
 
 /**
@@ -187,7 +190,7 @@ const MANIFEST = {
  * project it belongs to, or they hold the grant that reads every bot - which is
  * what makes a scheme the host's rather than each maker's.
  */
-const mayRead = (bot: BotRecord, reader: Principal): boolean => {
+export const mayRead = (bot: BotRecord, reader: Principal): boolean => {
   if (reader.can('bot:get')) return true;
   if (bot.owner === `user:${reader.id}`) return true;
   const memberships = reader.memberships ?? [];
@@ -476,6 +479,7 @@ export function botProvider(options: BotOptions): BotProvider {
       }
       store.put(record);
       told(existing === undefined ? 'added' : 'updated', record);
+      options.catalogue?.put(record, existing);
     },
 
     /**
@@ -501,6 +505,7 @@ export function botProvider(options: BotOptions): BotProvider {
       if (!mayWrite(bot, owner, reader)) throw notYours(bot);
       store.remove(held.slug);
       told('deleted', bot);
+      options.catalogue?.remove(bot);
     },
 
     /**

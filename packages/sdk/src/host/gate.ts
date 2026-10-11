@@ -245,11 +245,15 @@ export const UNGATED = new Set([
  * `<provider>:/<id>`, a terminal VS Code names `agenthost-terminal:/<id>`.
  * `channelKind` in `createHost` is what answers that.
  *
- * What is left - a `file:` URI, a resource watch, one another client relays -
- * is `file:watch`, the operation `createResourceWatch` requires to hand a watch
- * over.
+ * A plugin channel needs the grant its plugin registered, `served`, which the
+ * caller reads off `HostOptions.channels`.
+ *
+ * What is left - a `file:` URI, a resource watch, one another client relays,
+ * an `x-` scheme no plugin serves - is `file:watch`, the operation
+ * `createResourceWatch` requires to hand a watch over.
  */
-export const channelRead = (channel: string, kind: ChannelKind): Grant => {
+export const channelRead = (channel: string, kind: ChannelKind, served?: Grant): Grant => {
+  if (served !== undefined) return served;
   if (channel.startsWith('ahp-automation')) return 'automation:list';
   const space = spaceOf(channel);
   if (space === 'chat') return 'chat:turns';

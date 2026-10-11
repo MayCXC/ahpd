@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { readFileSync, watch as watchPath } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import { readJson, writeJsonAtomic } from './jsonfile.js';
 import { same } from './listen.js';
 import { issuerFrom } from './issuers.js';
@@ -703,6 +704,16 @@ export function fileUsers(options: FileUserOptions): Users {
     return { ...signInRecord(String(base.resource), ...issuers), ...rest };
   };
 
+  /**
+   * One call to `onChange` for each open `watch`, held back until the changes
+   * stop for `SETTLE` milliseconds.
+   *
+   * A write is a temporary file and a rename, and an editor saves in steps of
+   * its own, so one change is several file events.
+   */
+  const SETTLE = 100;
+  const pokes = new Set<() => void>();
+
   /** Replace the file, atomically, refusing to clobber one that will not parse. */
   const write = (file: UserFile): void => {
     if (read().broken) throw new Error(`${options.path} is not a user file; fix it before changing who is in it`);
@@ -716,6 +727,9 @@ export function fileUsers(options: FileUserOptions): Users {
       ...(file.projects === undefined ? {} : { projects: file.projects }),
       users: file.users ?? [],
     });
+    // A watcher may miss its own folder's events, or have none at all, so
+    // a write this directory made is a change it says itself.
+    for (const poke of pokes) poke();
   };
 
   /** What a set of role names holds, saying so once per name that answered nothing. */
@@ -1111,6 +1125,41 @@ export function fileUsers(options: FileUserOptions): Users {
       held.token = hashOf(secret);
       write({ ...file, users });
       return secret;
+    },
+
+    /*
+     * The folder rather than the file: a write replaces the file by a rename,
+     * and a watch on the file itself follows the old one away.
+     */
+    watch: (onChange) => {
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const poke = (): void => {
+        if (timer !== undefined) clearTimeout(timer);
+        timer = setTimeout(() => { timer = undefined; onChange(); }, SETTLE);
+      };
+      const name = basename(options.path);
+      let watcher: ReturnType<typeof watchPath> | undefined;
+      try {
+        watcher = watchPath(dirname(options.path), (_event, changed) => {
+          if (changed === null || String(changed) === name) poke();
+        });
+        watcher.on('error', (error) => { once(`users file watch stopped: ${error.message}`); });
+        // The host's listener is what keeps a daemon running, not this.
+        watcher.unref?.();
+      }
+      catch (error) {
+        // A folder that cannot be watched still hears this directory's own writes.
+        once(`users file cannot be watched: ${(error as Error).message}`);
+      }
+      pokes.add(poke);
+      return {
+        close: () => {
+          pokes.delete(poke);
+          if (timer !== undefined) clearTimeout(timer);
+          timer = undefined;
+          watcher?.close();
+        },
+      };
     },
   };
 }
