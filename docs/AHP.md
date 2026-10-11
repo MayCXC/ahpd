@@ -707,7 +707,10 @@ A row of an `uncommitted` changeset carries `_meta['ahpd.staged']` and
 `_meta['ahpd.unstaged']`, read from `git status --porcelain`'s two letters, so a
 client can tell what the index already holds from what the working tree does. A
 file can be both (`MM`): a change staged and then changed again. A staged rename
-or copy is one row, under its new name. The protocol declares no staging field;
+or copy is one row, under its new name. A rename's `before` is the path it came
+from, read from HEAD at that path, and its `after` is the new path, so a client
+sees two URIs and shows a rename. A copy's source is still there, so a copy keeps
+the new path on both sides. The protocol declares no staging field;
 the pair lives in `_meta`, which is the bag it leaves for a server's own
 vocabulary.
 

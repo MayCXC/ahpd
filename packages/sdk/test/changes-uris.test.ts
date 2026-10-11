@@ -152,6 +152,54 @@ describe('ahp-git:, a modified file as HEAD has it', () => {
   });
 });
 
+describe('a rename, as two URIs', () => {
+  /** The rows of the working tree at `dir`, read fresh. */
+  const rows = async (dir: string) => {
+    const source = gitChanges();
+    await source.refresh?.(dir);
+    return { source, files: (await source.state?.(dir, 'ahp-session:/s', 'uncommitted'))?.files ?? [] };
+  };
+
+  /** The repository with its edits put back, so a rename is the only change. */
+  const clean = (): string => {
+    const dir = repository();
+    git(dir, 'checkout', '-q', '--', '.');
+    return dir;
+  };
+
+  it('has the old path before and the new path after, and reads the old path from HEAD', async () => {
+    const dir = clean();
+    git(dir, 'mv', 'docs/AHP.md', 'docs/moved.md');
+    const { source, files } = await rows(dir);
+    expect(files).toHaveLength(1);
+    const row = files[0];
+    expect(row?.id).toBe(`file://${dir}/docs/moved.md`);
+    expect(row?.edit.before?.uri).toBe(`file://${dir}/docs/AHP.md`);
+    expect(row?.edit.after?.uri).toBe(`file://${dir}/docs/moved.md`);
+    expect(await text(source, row?.edit.before?.content?.uri as string)).toBe('committed ahp\n');
+  });
+
+  it('names the old path inside a session folder below the repository root', async () => {
+    const dir = clean();
+    git(dir, 'mv', 'docs/AHP.md', 'docs/moved.md');
+    const { source, files } = await rows(join(dir, 'docs'));
+    expect(files.map((one) => [one.edit.before?.uri, one.edit.after?.uri])).toEqual([
+      [`file://${dir}/docs/AHP.md`, `file://${dir}/docs/moved.md`],
+    ]);
+    expect(await text(source, files[0]?.edit.before?.content?.uri as string)).toBe('committed ahp\n');
+  });
+
+  it('shows a file renamed in from outside the folder as a new file', async () => {
+    const dir = clean();
+    mkdirSync(join(dir, 'sub'));
+    git(dir, 'mv', 'docs/AHP.md', 'sub/AHP.md');
+    const { files } = await rows(join(dir, 'sub'));
+    expect(files.map((one) => one.id)).toEqual([`file://${dir}/sub/AHP.md`]);
+    expect(files[0]?.edit.before).toBeUndefined();
+    expect(files[0]?.edit.diff).toEqual({ added: 1, removed: 0 });
+  });
+});
+
 /**
  * A source holding one turn's captured sides for `file`, and the URIs minted for them.
  *

@@ -640,12 +640,19 @@ export function gitChanges(): ChangesetSource {
       // a second NUL record after its own, holding the path the file came from,
       // and it is consumed here or it is read as a row of its own with a status
       // made of that path's first two letters.
-      if (/[RC]/.test(code)) at += 1;
+      const source = /[RC]/.test(code) ? records[++at] : undefined;
       // A change elsewhere in the repository is not this directory's.
       if (!fromRoot.startsWith(prefix)) continue;
       const path = fromRoot.slice(prefix.length);
+      // The path a renamed file came from, inside this directory. A copy's
+      // source is still there, so a copy keeps its own path on both sides.
+      const moved = code.includes('R') && source !== undefined && source.startsWith(prefix)
+        ? source.slice(prefix.length)
+        : undefined;
+      // A rename from outside this directory is, from inside it, a new file.
+      const outside = code.includes('R') && moved === undefined;
       const gone = code.includes('D');
-      const fresh = code.includes('A') || code.includes('?');
+      const fresh = code.includes('A') || code.includes('?') || outside;
       // `?` is git's untracked mark, and an untracked file is in neither the
       // index nor HEAD: it is a working-tree change and never a staged one.
       const staged = (code[0] ?? ' ') !== ' ' && (code[0] ?? ' ') !== '?';
@@ -653,7 +660,7 @@ export function gitChanges(): ChangesetSource {
       const uri = uriOf(`${dir}/${path}`);
       // An untracked file is in no diff against HEAD, so git reports nothing
       // for it. Every line of it is an addition, which is what it is.
-      const count = counts.get(fromRoot) ?? (fresh
+      const count = (outside ? undefined : counts.get(fromRoot)) ?? (fresh
         ? { added: await lines(`${dir}/${path}`), removed: 0 }
         : { added: 0, removed: 0 });
 
@@ -662,8 +669,11 @@ export function gitChanges(): ChangesetSource {
         edit: {
           // Absent `before` is a creation and absent `after` a deletion. The
           // protocol says both by leaving a side out rather than by a word.
+          // A rename's `before` is the path it came from, as HEAD has it.
           ...(fresh ? {} : {
-            before: { uri, content: { uri: beforeUri(dir, path) } },
+            before: moved === undefined
+              ? { uri, content: { uri: beforeUri(dir, path) } }
+              : { uri: uriOf(`${dir}/${moved}`), content: { uri: beforeUri(dir, moved) } },
           }),
           ...(gone ? {} : {
             after: { uri, content: { uri } },
