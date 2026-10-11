@@ -179,6 +179,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
 
     models: () => ctx.offered,
     agentId: () => ctx.agentId,
+    busy: () => ctx.working() || ctx.stopped.sessionCrons.length > 0,
     forkPoint: (turnId) => ctx.ends.get(turnId),
     endPoint: (turnId) => ctx.ends.get(turnId),
 

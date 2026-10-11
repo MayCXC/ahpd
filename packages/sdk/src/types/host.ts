@@ -429,6 +429,27 @@ export interface HostOptions {
    */
   deltaWindowMs?: number;
   /**
+   * How long a live session stays quiet before its agent is let go, in
+   * minutes.
+   *
+   * A sleeping session keeps its row, its chats, its terminals, its rule state
+   * and its automations, and wakes when something needs it. A session with work
+   * in hand, or one a client is subscribed to, does not sleep. Unset is 30;
+   * zero never sleeps a session for being quiet.
+   */
+  sleepAfterMinutes?: number;
+  /**
+   * How many sessions are loaded at most.
+   *
+   * Over this, the least recently used quiet session sleeps first, checked on
+   * each turn start. Unset is 10; zero is no limit.
+   */
+  sessionResidencyLimit?: number;
+  /** The clock sleep and wakes read. A test supplies its own so a timeout can be reached without waiting for it. */
+  now?(): Date;
+  /** How a timer is armed for sleep and wakes. Handed in for the same reason the clock is. */
+  timer?(fire: () => void, ms: number): { cancel(): void };
+  /**
    * The daemon's own settings, as the keys root config carries beside the host's.
    *
    * The host has no business in a daemon's `config.json`: it does not read it,
@@ -711,6 +732,17 @@ export interface ToolCall {
    * the host then continues the conversation there with a notice turn.
    */
   setWorkspace(directory: string, isolation: boolean): void;
+  /**
+   * Wake the calling chat once `delaySeconds` have passed, with a turn that
+   * carries `prompt`.
+   *
+   * One per chat: a new one replaces the one held. Kept on the chat's record,
+   * so it survives the session sleeping and the daemon restarting. Answers
+   * when it falls due.
+   */
+  scheduleWake(delaySeconds: number, prompt: string): Date;
+  /** Cancel the calling chat's wake. Answers whether it held one. */
+  cancelWake(): boolean;
   /**
    * What the calling session recorded as worth coming back to.
    *

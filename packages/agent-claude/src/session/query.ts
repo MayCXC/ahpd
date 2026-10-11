@@ -1,7 +1,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { idOf } from '@ahpd/sdk';
 import type { Bag } from '@ahpd/sdk';
-import type { SDKUserMessage, SettingSource } from '@anthropic-ai/claude-agent-sdk';
+import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/claude-agent-sdk';
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
 import { ownEnvOf, queryOptionsOf } from '../options.js';
@@ -40,6 +40,13 @@ export interface Query {
   switchAgent: (uri: string | undefined) => string | undefined;
   /** Read one CLI's frames until it ends. */
   consume: () => Promise<void>;
+  /**
+   * What the CLI said it still has in hand at the end of its last turn: its
+   * background work and its session timers, from the `Stop` hook.
+   */
+  stopped: { backgroundTasks: Bag[]; sessionCrons: Bag[] };
+  /** The `Stop` hook that keeps `stopped`. */
+  keepStopped: HookCallback;
 }
 
 export function createQuery(ctx: SessionContext): Query {
@@ -48,6 +55,14 @@ export function createQuery(ctx: SessionContext): Query {
    * laid over their `env`, so a preset never replaces a signed-in token.
    */
   const fromPreset = queryOptionsOf(ctx.values);
+
+  const stopped: Query['stopped'] = { backgroundTasks: [], sessionCrons: [] };
+  const keepStopped: HookCallback = async (input) => {
+    if (input.hook_event_name !== 'Stop') return {};
+    stopped.backgroundTasks = list(input.background_tasks).map(bag);
+    stopped.sessionCrons = list(input.session_crons).map(bag);
+    return {};
+  };
 
   /**
    * The plugin servers the host said a client switched off, by name.
@@ -245,8 +260,12 @@ export function createQuery(ctx: SessionContext): Query {
        * exactly as `take` leaves it off.
        */
       ...(ctx.chosen && ctx.chosen !== 'default' ? { model: ctx.chosen } : {}),
-      // Before every shell command, while a client has a script in force.
-      hooks: { PreToolUse: [{ matcher: 'Bash', hooks: [ctx.sourceFirst] }] },
+      // Before every shell command, while a client has a script in force; and
+      // at the end of each turn, what the CLI still has in hand.
+      hooks: {
+        PreToolUse: [{ matcher: 'Bash', hooks: [ctx.sourceFirst] }],
+        Stop: [{ hooks: [keepStopped] }],
+      },
       /*
        * The lists, at the moment the query is built.
        *
@@ -700,5 +719,5 @@ export function createQuery(ctx: SessionContext): Query {
     ctx.gone ??= 'The agent stopped';
     ctx.touch();
   };
-  return { waiting, startQuery, ends, take, switchAgent, consume };
+  return { waiting, startQuery, ends, take, switchAgent, consume, stopped, keepStopped };
 }

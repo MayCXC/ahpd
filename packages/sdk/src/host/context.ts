@@ -30,6 +30,8 @@ import type { Tooling } from './tooling.js';
 import type { Terminals } from './terminals.js';
 import type { Automations } from './automations.js';
 import type { SessionEvents } from './sessionevents.js';
+import type { Sleep } from './sleep.js';
+import type { Wakes } from './wakes.js';
 
 /**
  * Everything an area of the host reaches for, in one object.
@@ -40,7 +42,7 @@ import type { SessionEvents } from './sessionevents.js';
  * used rather than copied onto the factory's own scope at construction - so
  * the order the areas are built in never matters and nothing is frozen.
  */
-export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Facts, Telemetry, Auth, Owners, Machines, SessionConfig, Root, Catalogue, History, Snapshots, Spawn, Lifecycle, Tooling, Terminals, Automations {
+export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Facts, Telemetry, Auth, Owners, Machines, SessionConfig, Root, Catalogue, History, Snapshots, Spawn, Lifecycle, Tooling, Terminals, Automations, Sleep, Wakes {
   /** The options `createHost` was given. */
   options: HostOptions;
   /** The directory this host serves. */

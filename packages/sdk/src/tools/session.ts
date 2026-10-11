@@ -649,3 +649,40 @@ export const sessionTools = (): HostTool[] => [
     },
   },
 ];
+
+/**
+ * A wake the agent asks for in its own chat: a turn begun later with a prompt.
+ *
+ * This host's own rather than the reference host's, so it is not among the
+ * nine above.
+ */
+/** The shortest wait `schedule_wakeup` takes, in seconds. */
+const WAKE_MIN_SECONDS = 60;
+/** The longest wait `schedule_wakeup` takes, in seconds: 30 days. */
+const WAKE_MAX_SECONDS = 2_592_000;
+
+export const wakeupTool = (): HostTool => ({
+  definition: {
+    name: 'schedule_wakeup',
+    title: 'Schedule Wakeup',
+    description: 'Begin a new turn in this chat after a delay, with the given prompt. Use this to come back to work that is waiting on something, such as a build or a review. The chat holds one wakeup: a new call replaces the one held, and `stop: true` cancels it. The wakeup is kept by the host, so it survives this session going to sleep and the daemon restarting, and the session is woken for it when it is due. The delay is 60 seconds to 30 days; a wait under 60 seconds belongs inside the turn, not in a wakeup.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        delaySeconds: { type: 'number', minimum: WAKE_MIN_SECONDS, maximum: WAKE_MAX_SECONDS, description: 'Seconds from now until the wakeup begins its turn, 60 to 2592000 (30 days).' },
+        prompt: { type: 'string', description: 'The message the new turn begins with. Say what to check or continue, since the turn starts from this text.' },
+        stop: { type: 'boolean', description: 'When true, cancel the wakeup this chat holds and schedule nothing. `delaySeconds` and `prompt` are not needed.' },
+      },
+    },
+    annotations: { title: 'Schedule Wakeup', readOnlyHint: false, destructiveHint: false },
+  },
+  run: (input, at) => {
+    const tool = 'schedule_wakeup';
+    if (flag(input.stop, 'stop', tool) === true) return at.cancelWake() ? 'Wakeup cancelled.' : 'No wakeup was scheduled.';
+    const delay = input.delaySeconds;
+    if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < WAKE_MIN_SECONDS || delay > WAKE_MAX_SECONDS)
+      throw new Error(`Invalid ${tool} input: delaySeconds must be a number of seconds from ${String(WAKE_MIN_SECONDS)} to ${String(WAKE_MAX_SECONDS)} (30 days). A wait under ${String(WAKE_MIN_SECONDS)} seconds belongs inside the turn.`);
+    const due = at.scheduleWake(delay, required(input.prompt, 'prompt', tool));
+    return `Wakeup scheduled for ${due.toISOString()}.`;
+  },
+});

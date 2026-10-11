@@ -27,6 +27,8 @@ const sdk = vi.hoisted(() => {
   const fresh = (): Feed => ({ held: [], wake: undefined });
   const state = {
     canUseTool: undefined as undefined | ((name: string, input: Bag, about?: Bag) => Promise<unknown>),
+    /** The hooks the last query was built with. */
+    hooks: undefined as undefined | Record<string, { matcher?: string; hooks: ((input: Bag, id: unknown, about: Bag) => Promise<unknown>)[] }[]>,
     /** The feed the next query reads, and the one `push` writes to. */
     feed: fresh(),
     /** Start a new feed for the next session. */
@@ -51,6 +53,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   createSdkMcpServer: (given: Record<string, unknown>) => ({ type: 'sdk', name: given.name, tools: given.tools }),
   query: ({ options }: { options: Record<string, unknown> }) => {
     sdk.canUseTool = options.canUseTool as typeof sdk.canUseTool;
+    sdk.hooks = options.hooks as typeof sdk.hooks;
     const feed = sdk.feed;
     return {
       async *[Symbol.asyncIterator]() {
@@ -346,4 +349,46 @@ it('says nothing more when the session is closed', async () => {
   await session.close();
   await settle();
   expect(told(main)).toHaveLength(1);
+});
+
+/*
+ * What keeps the session awake: a background task the level names, and a
+ * timer of the CLI's own that the `Stop` hook lists.
+ */
+
+/** Run the `Stop` hooks the query was built with, as the CLI does at the end of a turn. */
+const stop = async (input: Bag): Promise<void> => {
+  for (const one of sdk.hooks?.Stop ?? []) {
+    for (const hook of one.hooks) await hook({ hook_event_name: 'Stop', stop_hook_active: false, ...input }, undefined, { signal: new AbortController().signal });
+  }
+};
+
+it('is busy while a background task runs, and not after it ends', async () => {
+  const { session } = await open();
+  expect(session.busy?.()).toBe(false);
+
+  sdk.push(...shellFrames('t-sleep', 'sleep 100'));
+  sdk.push(level({ task_id: 't-sleep', task_type: 'local_bash', description: 'sleep 100' }));
+  await settle();
+  expect(session.busy?.()).toBe(true);
+
+  sdk.push(level());
+  await settle();
+  expect(session.busy?.()).toBe(false);
+});
+
+it('is busy while the Stop hook lists a session cron', async () => {
+  const { session } = await open();
+  await stop({ background_tasks: [], session_crons: [{ id: 'c1', cron: '*/5 * * * *', prompt: 'check the build' }] });
+  expect(session.busy?.()).toBe(true);
+
+  // A later turn's end with the timer spent.
+  await stop({ background_tasks: [], session_crons: [] });
+  expect(session.busy?.()).toBe(false);
+});
+
+it('keeps the hooks the session already had', async () => {
+  await open();
+  expect(sdk.hooks?.PreToolUse).toEqual([{ matcher: 'Bash', hooks: [expect.any(Function)] }]);
+  expect(sdk.hooks?.Stop).toEqual([{ hooks: [expect.any(Function)] }]);
 });

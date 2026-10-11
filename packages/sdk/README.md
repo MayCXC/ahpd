@@ -101,6 +101,9 @@ const host = createHost({
 | `advancedTools` | `false` | Whether the tools that declare `advancedPermission` are offered |
 | `clientToolTimeoutMs` | `600000` | How long a tool call a client runs may wait before the host calls it failed, in milliseconds. `0` is no limit |
 | `deltaWindowMs` | `75` | How long a streamed delta waits for the next one before it is sent, in milliseconds. `0` sends every delta as it arrives |
+| `sleepAfterMinutes` | `30` | Minutes a session with nothing in hand stays loaded before its agent is let go. It wakes when something needs it. `0` never lets it go for quiet |
+| `sessionResidencyLimit` | `10` | How many sessions are loaded at most. Over it, the least recently used quiet session is let go first. `0` sets no limit |
+| `now`, `timer` | the system clock, `setTimeout` | The clock and the timer that sleep and agent wakeups read, which a test replaces |
 | `rootConfig` | none | The daemon's own settings, shown in root config beside the host's keys, with writes handed back |
 | `diagnostics` | none | What the host answers when a window asks for its version, logs, network or shutdown. See [What the window asks](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#what-the-window-asks-a-host-about-itself) |
 | `onEvent` | none | Called with one line per notable event, for a log |
@@ -132,6 +135,8 @@ export function parrot(): Agent {
 ```
 
 `provider` is the id a client names in `createSession`, unique among one host's agents. `schema()` says what a session can be configured with and `defaults()` says where those keys start; both can be empty. `create()` returns the session, which holds the session and chat state and calls `start.emit('chat', ...)` as things happen.
+
+A session the host can let go while it is quiet has two optional members to say when it must not be. `resumable()` answers `false` when a closed session cannot be resumed, and such a session never sleeps. `busy()` answers `true` while the backend has work in hand the host cannot see, such as a background task or a timer the agent set itself, and the session stays loaded until it answers `false` again. Leave both out for a backend that resumes from a transcript and does nothing between turns.
 
 Pass it to the host like any other backend: `createHost({ path, agents: [parrot()] })`. It registers the same way as [`@ahpd/agent-claude`](https://www.npmjs.com/package/@ahpd/agent-claude), and the two can run side by side.
 

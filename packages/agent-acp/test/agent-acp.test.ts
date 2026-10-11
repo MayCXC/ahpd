@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../../sdk/src/tools/clientcalls.js';
-import type { Agent, Session, Start } from '@ahpd/sdk';
+import type { Agent, Session, Start, StartTerminals } from '@ahpd/sdk';
 import { createHost } from '../../sdk/src/host.js';
 import { acpAgent } from '../src/index.js';
 
@@ -132,4 +132,39 @@ it('says it cannot when the server advertised neither loadSession nor a resume',
 
   expect(session.agentId()).toBeDefined();
   expect(session.resumable?.()).toBe(false);
+});
+
+it('is busy while an acp terminal runs', async () => {
+  // A shell the test ends by hand, so the turn is caught while the server waits on it.
+  let exit: (() => void) | undefined;
+  const opened: string[] = [];
+  const terminals: StartTerminals = {
+    open: () => {
+      const uri = `ahp-terminal:/t${String(opened.length)}`;
+      opened.push(uri);
+      const done = new Promise<{ exitCode?: number }>((resolve) => { exit = () => { resolve({ exitCode: 0 }); }; });
+      return {
+        uri,
+        output: () => ({ output: 'hello from the shell\n', exitCode: 0 }),
+        waitForExit: () => done,
+        write: () => {},
+        resize: () => {},
+        kill: () => {},
+        release: () => {},
+      };
+    },
+  };
+  const session = backend([]).create({ ...opening('busy'), workingDirectory: scratch(), terminals });
+  started.push(session);
+  await session.setConfig?.('permissionMode', 'code');
+  expect(session.busy?.()).toBe(false);
+
+  session.begin('t1', 'term');
+  for (let i = 0; i < 400 && opened.length === 0; i++) await new Promise((r) => { setTimeout(r, 5); });
+  expect(opened).toHaveLength(1);
+  expect(session.busy?.()).toBe(true);
+
+  exit?.();
+  for (let i = 0; i < 400 && session.busy?.() === true; i++) await new Promise((r) => { setTimeout(r, 5); });
+  expect(session.busy?.()).toBe(false);
 });

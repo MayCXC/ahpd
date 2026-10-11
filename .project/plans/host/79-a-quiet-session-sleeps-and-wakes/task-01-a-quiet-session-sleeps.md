@@ -1,6 +1,6 @@
 ---
 title: A quiet session sleeps
-status: todo
+status: implemented
 depends: []
 layer: "sdk host, server"
 refs:

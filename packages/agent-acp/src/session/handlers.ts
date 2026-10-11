@@ -229,15 +229,18 @@ export function createHandlers(ctx: SessionContext): Handlers {
       ...(request.args !== undefined && request.args.length > 0 ? { args: request.args } : {}),
       ...(env === undefined ? {} : { env }),
     });
-    terminals.set(handle.uri, {
+    const held: { handle: OpenedTerminal; limit?: number; exited?: boolean } = {
       handle,
       ...(typeof request.outputByteLimit === 'number' ? { limit: request.outputByteLimit } : {}),
-    });
+    };
+    terminals.set(handle.uri, held);
+    const gone = (): void => { held.exited = true; };
+    void handle.waitForExit().then(gone, gone);
     return { terminalId: handle.uri };
   };
 
   /** One by its own id, or a refusal the server reads as a failed request. */
-  const terminalOf = (id: string): { handle: OpenedTerminal; limit?: number } => {
+  const terminalOf = (id: string): { handle: OpenedTerminal; limit?: number; exited?: boolean } => {
     const held = terminals.get(id);
     if (held === undefined) throw new Error(`${provider}: no terminal ${id}`);
     return held;

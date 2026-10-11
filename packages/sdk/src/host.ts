@@ -71,6 +71,8 @@ import { createTerminalMethods, createTerminals } from './host/terminals.js';
 import { createAutomations } from './host/automations.js';
 import { createHistory } from './host/history.js';
 import { createSnapshots } from './host/snapshots.js';
+import { createSleep } from './host/sleep.js';
+import { createWakes } from './host/wakes.js';
 import { createTelemetry } from './host/telemetry.js';
 import { createAuth } from './host/auth.js';
 import { createAdmission } from './host/admission.js';
@@ -669,6 +671,7 @@ export function createHost(options: HostOptions): Host {
       const halves = laid(channel, action.customizations);
       if (halves.length > 0) action.customizations = halves;
     }
+    ctx.stirred(channel, action);
     if (deltas.push(channel, action, origin)) return;
     emit(channel, action, origin);
   };
@@ -914,6 +917,8 @@ export function createHost(options: HostOptions): Host {
   Object.assign(ctx, createAutomations(ctx));
   Object.assign(ctx, createHistory(ctx));
   Object.assign(ctx, createSnapshots(ctx));
+  Object.assign(ctx, createSleep(ctx));
+  Object.assign(ctx, createWakes(ctx));
   /*
    * The state a subscriber reads, with the client plugins laid into it.
    *
@@ -1027,6 +1032,9 @@ export function createHost(options: HostOptions): Host {
   // Once `createHost` has returned, so neither it nor a first request waits on it.
   setTimeout(() => { void readStored(); }, 0);
 
+  ctx.startSleep();
+  ctx.startWakes();
+
   options.automations?.onDue?.(due);
 
   /*
@@ -1086,6 +1094,8 @@ export function createHost(options: HostOptions): Host {
         // A delta still waiting on the timer would otherwise be broadcast by a
         // timer that outlives the host it belongs to.
         deltas.stop();
+        ctx.stopSleep();
+        ctx.stopWakes();
         ctx.closed = true;
         /*
          * And no wait outlives the host it was begun in. What a client that
@@ -1107,6 +1117,9 @@ export function createHost(options: HostOptions): Host {
         // A run already past its guard ends here, refused at `spawn` or started
         // and so among the sessions; its outcome is the run's to report.
         for (const run of starting) going.push(run.then(() => undefined, () => undefined));
+        // And the agents of sessions put to sleep, whose closes are still going,
+        // and the resumes still going, which start no agent once the host is closed.
+        going.push(step('the sleeping sessions', () => ctx.slept()));
         for (const [uri, terminal] of terminals) {
           going.push(step(uri, async () => {
             terminal.close();

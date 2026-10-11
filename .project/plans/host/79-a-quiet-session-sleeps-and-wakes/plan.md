@@ -1,7 +1,7 @@
 ---
 title: A quiet session sleeps, and wakes when something needs it
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -89,24 +89,25 @@ No decision files yet.
 | A chat holds one host wake at a time; a new one replaces it, and `stop: true` cancels it | (defaulted: the shape of claude's `ScheduleWakeup`) | 04 |
 | A host wake is stored in the chat's catalogue record, so it survives sleep and a daemon restart | (defaulted: the wake must outlive the process that asked for it) | 04 |
 | A host wake does not keep a session awake | (defaulted: the host holds the time, so the session can sleep until it fires) | 04 |
+| `schedule_wakeup` takes a delay from 60 seconds to 30 days, and refuses a value outside the range before it stores anything | Softov, 2026-10-11, to "What limits should the delay have?": "60 s to 30 days" | 04 |
 
 ## Proposed architecture
 
 - **State flow** - `Held` gains `quietSince`, set at spawn and on every action the session emits or receives. A sleeping session is a catalogue row that is not in `sessions`, the same as a session after a daemon restart.
 - **Data flow** - `wake(uri, chat?)` is the one way a session that is not live comes back. It is lifted from the `chat/turnStarted` path and called by every waker.
 - **Event flow** - a sleep and a wake each move `root/activeSessionsChanged`. Rule state, measured windows and automation runs are not touched by a sleep.
-- **Layer responsibilities** - sdk host: the sweep, `sleep`, `wake`, the wake clock and the `schedule_wakeup` tool · sdk types: `Session.busy?()` · agent-claude: `busy()` from background tasks and CLI timers · agent-acp: `busy()` from its terminals · server: the `sleepAfterMinutes` and `sessionResidencyLimit` options.
+- **Layer responsibilities** - The sdk host has the sweep, `sleep`, `wake`, the wake clock and the `schedule_wakeup` tool. The sdk types have `Session.busy?()`. agent-claude reads `busy()` from background tasks and CLI timers. agent-acp reads `busy()` from its terminals. The server has the `sleepAfterMinutes` and `sessionResidencyLimit` options.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts), [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts)
 
 ## Tasks
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | todo | - |
-| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | todo | 01 |
-| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | todo | 01 |
-| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | todo | 02 |
-| [05 - Docs](task-05-docs.md) | todo | 02, 03, 04 |
+| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | implemented | - |
+| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | implemented | 01 |
+| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | implemented | 01 |
+| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | implemented | 02 |
+| [05 - Docs](task-05-docs.md) | implemented | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -115,12 +116,14 @@ No decision files yet.
 - A claude session has two wake tools, the CLI's `ScheduleWakeup` and the host's `schedule_wakeup`. The host tool's description says that it survives sleep and a restart, and a CLI timer keeps the session awake, so both work.
 - A CLI timer is read from the `Stop` hook at the end of a turn. A timer that fires and is spent clears at the next `Stop`, so a session can stay awake one turn longer than it needs to.
 - pi and cofold run in the daemon. Their sleep frees memory only, and their children, such as a bash tool's shell, are not waited on, as in daemon/13.
+- A child's `childFinished` wakes a sleeping parent even when no automation rule reads the event. Then the parent resumes for nothing and sleeps again at the next timeout.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-quiet-session-sleeps.md](task-01-a-quiet-session-sleeps.md).
-- **Open questions:** none.
+- **Done so far:** tasks 01-05 implemented on `build/host-79`, and the findings of two reviews fixed, awaiting review. The gates pass.
+- **Not fixed:** `send_message` still begins its turn directly, not through `beginOrRun`. This was so before this plan.
+- **Next action:** review the build. Then run the Final verification checks that need a person. These are a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
+- **Open questions:** see the build report.
 - **Watch out for:** `teardown` and `Host.close` call `chat.close()` with no argument, which disposes a nested session's inner transcript; sleep passes `false`, as `restart` does. `pinnedChat`, `beginIn` and `childFinished` read `sessions` and must read the catalogue for a sleeping session. A turn that a wake begins is an ordinary turn, so it moves `quietSince` and the session stays awake for the next timeout.
 
 ## Final verification checklist
