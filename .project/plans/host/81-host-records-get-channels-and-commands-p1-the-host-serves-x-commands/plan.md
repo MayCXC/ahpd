@@ -56,6 +56,7 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 | A served method is `{ grant, authorize?, handle, describe? }` | (defaulted: mirrors `PluginChannel`) | 01 |
 | An entry in `_meta['ahpd.methods']` is `{ method, title, description?, grant }` | (defaulted: mirrors an `ahpd.channels` entry) | 02 |
 | A command before `initialize` is `-32601`, as every other command is | [code://packages/sdk/src/host.ts#L1348-L1356](../../../../packages/sdk/src/host.ts#L1348-L1356) | 02 |
+| A method named like an Object built-in answers -32601 | Softov, 2026-10-11, to "Fix it now?": "Fix in host 81" | 02 |
 
 ## Proposed architecture
 

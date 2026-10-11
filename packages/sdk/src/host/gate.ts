@@ -6,6 +6,10 @@ import type { ChannelKind } from './channels.js';
 
 export const GREETINGS = new Set(['initialize', 'reconnect', 'ping']);
 
+/** One entry of a table by method name, reading only the table's own keys, so `constructor` names no method. */
+export const ownIn = <T>(table: Readonly<Record<string, T>>, name: string): T | undefined =>
+  (Object.hasOwn(table, name) ? table[name] : undefined);
+
 /**
  * What each command needs, by subject and operation.
  *

@@ -75,6 +75,21 @@ it('answers -32601 before initialize, and for a method nobody serves', async () 
     .toMatchObject({ code: -32601, message: 'This host does not serve x-test/other yet' });
 });
 
+it('answers -32601 for a method named like an Object built-in, signed in or not', async () => {
+  const BUILT_INS = ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf'];
+  const { made } = served();
+  const ana = await client(made, 'ana');
+  for (const method of BUILT_INS) {
+    expect(await call(ana.one, method, {})).toMatchObject({ code: -32601, message: `This host does not serve ${method} yet` });
+  }
+  const users = directory({ ana: ['demo:call' as Grant] });
+  const gated = served({}, { users });
+  const signed = await client(gated.made, 'ana', 'ana');
+  for (const method of BUILT_INS) {
+    expect(await call(signed.one, method, {})).toMatchObject({ code: -32601, message: `This host does not serve ${method} yet` });
+  }
+});
+
 it('needs the method grant, unless authorize lets the caller in', async () => {
   const users = directory({ ana: ['demo:call' as Grant], bo: [], cy: [] });
   const { heard, made } = served({

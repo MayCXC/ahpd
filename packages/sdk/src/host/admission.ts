@@ -1,7 +1,7 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { computerSource } from '../computers.js';
 import { isRootChannel, methodIn, schemeOf, servedIn } from './channels.js';
-import { NEEDS, UNGATED, channelRead, refusalReason } from './gate.js';
+import { NEEDS, UNGATED, channelRead, ownIn, refusalReason } from './gate.js';
 import type { Grant, Principal } from '../types/users.js';
 import type { ConnectionContext, HostContext } from './context.js';
 
@@ -172,7 +172,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
      */
     const command = commandOf(method);
     if (command !== undefined) return [command.method.grant];
-    const plain = NEEDS[method];
+    const plain = ownIn(NEEDS, method);
     if (plain === undefined) {
       /*
        * A method in `UNGATED` needs nothing, and one in neither table is a
@@ -297,7 +297,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
           .then((admitted) => (admitted === true ? new Set<Grant>([served.channel.grant]) : new Set<Grant>()));
       }
     }
-    const operation = EXCUSED[method];
+    const operation = ownIn(EXCUSED, method);
     if (operation === undefined) return new Set();
     /*
      * A subscribe to a watch is asked about the root it watches, so a reader

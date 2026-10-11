@@ -52,7 +52,7 @@ import type { Space } from './host/channels.js';
 import { DELTA_WINDOW_MS, merger } from './host/deltas.js';
 import { Claiming } from './host/state.js';
 import type { Claimed, Held, Learned, LiveSubagent, NameKind, Origin } from './host/state.js';
-import { GREETINGS, UNGATED, PER_CONNECTION, seesConfig, DECLARED, REVERSE } from './host/gate.js';
+import { GREETINGS, UNGATED, PER_CONNECTION, seesConfig, DECLARED, REVERSE, ownIn } from './host/gate.js';
 import type { Home } from './host/gate.js';
 import { createChatRecord } from './host/chatrecord.js';
 import { createRouting } from './host/routing.js';
@@ -1330,7 +1330,7 @@ export function createHost(options: HostOptions): Host {
          */
         methods: Object.keys(handlers),
         async handle(request) {
-          const notify = notifications[request.method];
+          const notify = ownIn(notifications, request.method);
           if (notify) {
             // Dropped rather than refused: a notification carries no id, so
             // there is nowhere to say no, and a client that has not
@@ -1346,7 +1346,7 @@ export function createHost(options: HostOptions): Host {
            * one passes the same handshake check and the same gate below.
            */
           const served = methodIn(options.methods, request.method);
-          const handler = handlers[request.method] ?? (served === undefined
+          const handler = ownIn(handlers, request.method) ?? (served === undefined
             ? undefined
             : async (params: Record<string, unknown> | undefined) => served.method.handle(params ?? {}, connection.principal, connection.clientId, ownerFor(connection)));
           if (!handler) {
@@ -1411,7 +1411,7 @@ export function createHost(options: HostOptions): Host {
            * `channel` has named nothing wrong, and this host has always taken
            * those - refusing them now would be a rule applied backwards.
            */
-          const fixed = DECLARED[request.method];
+          const fixed = ownIn(DECLARED, request.method);
           const named = (request.params as { channel?: unknown } | undefined)?.channel;
           // The catalogue and the root under any of their spellings are still themselves.
           if (fixed !== undefined && typeof named === 'string' && named !== '' && named !== fixed
