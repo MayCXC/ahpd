@@ -23,7 +23,7 @@ The bot manifest's `owner` property names this host's own owner as a `const`.
 ## Steps
 
 1. In `ownerFor`, return `asked` when `reader.can('*:*')` and `asked` is `user:`, `team:`, `project:` or `root:<hostName>`.
-2. Refuse with `-32009` an asked `root:` owner that is not `root:<hostName>`, for every writer except the root connection.
+2. Record `root:<hostName>` for any asked `root:` owner, and compare two `root:` owners as equal in `mayLink`.
 3. Keep every other rule in `ownerFor` as it is.
 4. Move `MANIFEST` into a function of `hostName`, and call it from the scheme description.
 5. Give the `owner` property an `anyOf` of a string and `{ const: "root:<hostName>", title: "This host" }`.
@@ -35,11 +35,17 @@ The bot manifest's `owner` property names this host's own owner as a `const`.
 - `packages/bot/test/bot-provider.test.ts`: an admin makes a bot for `user:ana`, and `ana` reads it.
 - Same file: an admin makes a bot for a team they do not belong to.
 - Same file: an admin makes a bot for `root:<hostName>`, and a person without `bot:get` does not see it.
-- Same file: the host refuses an admin who names `root:other`, with `-32009`.
+- Same file: an admin who names `root:old-name` gets a bot owned by `root:<hostName>`.
+- Same file: a host bot links to a session owned by `root:old-name`.
+- Same file: the host refuses `root:<hostName>` to a person without `*:*`, with `-32009`.
 - Same file: the host still refuses a person without `*:*` who names `user:ana`, with `-32009`.
 - Same file: the manifest's `owner` names `root:<hostName>` as a `const`.
 - Run `pnpm vitest run packages/bot` and `pnpm typecheck`; both pass.
 
 ## Resume
 
-Built as written: `ownerFor` lets a `*:*` reader name any owner and refuses a `root:` other than `root:<hostName>` to everyone but the root connection, and the manifest gives `root:<hostName>` as a `const`. A bot made for another person starts its session as that person, so the host refuses the make `-32009` until that person has signed in once.
+`ownerFor` lets a `*:*` reader name any owner.
+It records any `root:` owner as `root:<hostName>`, and `mayLink` treats two `root:` owners as one.
+The manifest gives `root:<hostName>` as a `const`.
+A bot for another person starts its session as that person.
+The host refuses that make with `-32009` until the person signs in once.

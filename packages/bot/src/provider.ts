@@ -41,8 +41,11 @@ import type {
  * Who a bot may belong to is asked on the write road, with the same rule the
  * read road uses: a `team:` or `project:` named as the owner has to be one the
  * writer belongs to, so a bot is never made for a team its maker is outside of.
- * A holder of `*:*` may name any owner, this host's own `root:<hostName>`
- * among them, and no writer but the root connection names another host's.
+ * A holder of `*:*` may name any owner, the host among them.
+ *
+ * Any `root:` owner is this host. The name after it is the machine's hostname
+ * when the record was written, and a renamed machine is the same host, so a
+ * bot or a session that names an older one is still the host's.
  */
 
 /**
@@ -211,6 +214,10 @@ export const mayRead = (bot: BotRecord, reader: Principal): boolean => {
   return false;
 };
 
+/** Whether two owners are the same: equal, or both the host under any name. */
+const sameOwner = (one: Owner, other: Owner): boolean =>
+  one === other || (one.startsWith('root:') && other.startsWith('root:'));
+
 /**
  * Whether this writer may change or delete this bot.
  *
@@ -296,23 +303,19 @@ export function botProvider(options: BotOptions): BotProvider {
     reader: Principal | undefined,
     existing?: BotRecord,
   ): Owner => {
-    if (asked === undefined) return existing?.owner ?? writer ?? `root:${options.hostName}`;
-    if (writer === undefined || writer.startsWith('root:') || asked === writer) return asked;
-    /*
-     * A `root:` owner is this host's own, and no other.
-     *
-     * The root connection may name any owner because it is the host's key, and
-     * a host with no users directory because there is nobody to check. Every
-     * other writer, an admin among them, is refused a `root:` that is not
-     * `root:<hostName>`: one host keeps one key.
-     */
     const self: Owner = `root:${options.hostName}`;
-    if (asked.startsWith('root:') && asked !== self) {
-      throw new RpcError(-32009, `${asked} is not this host; its own owner is ${self}`);
-    }
-    // A holder of `*:*` administers the host, the same test `mayWrite` asks,
-    // and may make a bot for anybody: any person, team, project, or this host.
-    if (reader !== undefined && reader.can('*:*')) return asked;
+    if (asked === undefined) return existing?.owner ?? writer ?? self;
+    /*
+     * The host, named by whoever may name it, is written under today's name.
+     *
+     * Any `root:` is this host, so the name a body gives after it is not kept:
+     * a record names the host the way the host calls itself now. The root
+     * connection and a host with no users directory may name any owner, and a
+     * holder of `*:*` administers the host, the same test `mayWrite` asks.
+     */
+    const admin = writer === undefined || writer.startsWith('root:') || (reader !== undefined && reader.can('*:*'));
+    if (admin && asked.startsWith('root:')) return self;
+    if (admin || asked === writer) return asked;
     /*
      * A team or a project named as the owner has to be the writer's own.
      *
@@ -348,7 +351,7 @@ export function botProvider(options: BotOptions): BotProvider {
   const mayLink = async (session: string, whose: Owner): Promise<void> => {
     const held = await options.sessions.owner(session);
     if (held === undefined) throw new RpcError(-32602, `${session} is not a session this host has`);
-    if (held !== whose) throw new RpcError(-32009, `${session} is not a session of ${whose}`);
+    if (!sameOwner(held, whose)) throw new RpcError(-32009, `${session} is not a session of ${whose}`);
   };
 
   /** The folder a bot works in, or the refusal a folder another bot has is owed. */

@@ -9,6 +9,7 @@ requires:
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
 decisions:
   - decisions/the-bot-manifest-names-the-host-owner.md
+  - decisions/any-root-owner-is-this-host.md
 refs:
   - "[code://packages/bot/src/provider.ts#L281-L307](../../../../packages/bot/src/provider.ts#L281-L307) - `ownerFor`, which refuses another person's `user:` to everyone except root"
   - "[code://packages/bot/src/provider.ts#L224-L233](../../../../packages/bot/src/provider.ts#L224-L233) - `mayWrite`, which already reads `*:*` as the admin test"
@@ -48,13 +49,13 @@ resourceWrite bot://<slug> createOnly -> botProvider.write -> ownerFor -> record
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [The bot manifest names the host's own owner, so a client never builds it](../../../decisions/the-bot-manifest-names-the-host-owner.md) | (defaulted: a client draws only what the host sends) |
+| 2 | [Any root owner is this host, whatever name follows it](../../../decisions/any-root-owner-is-this-host.md) | Softov, 2026-10-11, "Any root:* is this host" |
 
 | What | Source | Task |
 | --- | --- | --- |
 | An admin, a holder of `*:*`, may name any owner on a make: `user:`, `team:`, `project:` or the host's `root:<hostName>` | Softov, 2026-10-11, "so a admin can create a bot for a user" | 01 |
 | The admin test is the `*:*` grant, the same as `mayWrite`, not a role name | Softov, 2026-10-11, "*:* better" | 01 |
 | A host bot is seen by admins only, through `bot:get`, as today | Softov, 2026-10-11, "admins only" | - |
-| Another owner named as `root:` is refused; only this host's own name is valid | (defaulted: one host, one key) | 01 |
 | An owner still cannot change on an edit | [code://packages/bot/test/bot-provider.test.ts#L333-L336](../../../../packages/bot/test/bot-provider.test.ts#L333-L336) | - |
 
 ## Proposed architecture

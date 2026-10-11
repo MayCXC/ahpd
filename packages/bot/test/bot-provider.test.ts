@@ -526,13 +526,33 @@ it('lets an admin make a bot for this host, which a person without bot:get does 
   expect(await listing(ana, 'bot://')).toEqual([]);
 });
 
-it('refuses an admin who names another host as the owner', async () => {
+it('writes any root: an admin names as the host under its name today', async () => {
   const { host } = made({ soft: ['*:*'] });
   const soft = await as(host, 'soft');
 
-  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:other' }, { createOnly: true }))
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:old-name' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(soft, 'bot://motion'))['owner']).toBe('root:test');
+});
+
+it('refuses the host as the owner to a writer without *:*', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:test' }, { createOnly: true }))
     .toMatchObject({ code: -32009 });
   expect(await listing(soft, 'bot://')).toEqual([]);
+});
+
+it('links a host bot to a session the host opened under an older name', async () => {
+  const { host, sessions } = made({ soft: ['*:*'] });
+  // The machine was renamed since: the session still names the host as it was called then.
+  sessions.setOwner('one', 'root:old-name');
+  const soft = await as(host, 'soft');
+
+  const answer = await write(soft, 'bot://keeper', { name: 'Keeper', owner: 'root:test', session: 'claude:/one' }, { createOnly: true });
+  expect(answer).toEqual({ result: {} });
+  expect((await record(soft, 'bot://keeper'))['session']).toBe('claude:/one');
 });
 
 it('still refuses a bot for another person to a writer without *:*', async () => {
