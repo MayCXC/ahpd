@@ -22,6 +22,9 @@ export interface FileRecordsOptions {
 /** The line that opens and closes the frontmatter. */
 const FENCE = '---';
 
+/** The folders in the config directory that the daemon writes itself, which no collection may take. */
+export const RESERVED_COLLECTIONS: ReadonlySet<string> = new Set(['agentPlugins', 'node_modules', 'sessions', 'usage']);
+
 /** How long a file's watch events are gathered before the file is read, in milliseconds. */
 const WINDOW = 50;
 
@@ -250,6 +253,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
         told({ id: record.id, type });
       },
       remove: async (id) => {
+        if (typeof id !== 'string' || !isRecordSlug(id)) throw new Error(`records ${name}: ${String(id)} is not a record id: ${RECORD_SLUG}`);
         rmSync(fileOf(id), { force: true });
         const had = held.delete(id);
         known.delete(id);
@@ -267,6 +271,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
   return {
     collection: async (name, wanted = {}) => {
       if (typeof name !== 'string' || !isRecordSlug(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_SLUG}`);
+      if (RESERVED_COLLECTIONS.has(name)) throw new Error(`${name} is not a collection name: the daemon keeps its own files in that folder`);
       let one = opened.get(name);
       if (one === undefined) {
         one = open(name, wanted);

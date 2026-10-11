@@ -99,6 +99,23 @@ describe('fileRecords', () => {
     await expect(store().collection('../up')).rejects.toThrow('not a collection name');
   });
 
+  it('refuses a collection named after a folder the daemon keeps its own files in', async () => {
+    mkdirSync(join(dir, 'sessions'));
+    writeFileSync(join(dir, 'sessions', 'abc.json'), JSON.stringify({ id: 'abc' }));
+
+    await expect(store().collection('sessions')).rejects.toThrow('the daemon keeps its own files');
+    await expect(store().collection('usage')).rejects.toThrow('the daemon keeps its own files');
+    expect(existsSync(join(dir, 'sessions', 'abc.json'))).toBe(true);
+  });
+
+  it('refuses to remove a record whose id is not a slug', async () => {
+    const bots = await store().collection('bots');
+    writeFileSync(join(dir, 'outside.md'), 'kept\n');
+
+    await expect(bots.remove('../outside')).rejects.toThrow('not a record id');
+    expect(existsSync(join(dir, 'outside.md'))).toBe(true);
+  });
+
   it('removes a record and its file', async () => {
     const bots = await store().collection('bots');
     await bots.put({ id: 'one' });

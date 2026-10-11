@@ -71,6 +71,7 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 | A collection's calls wait until the fold names the port | `sessionKept` | 01 |
 | `host.records` with no records port throws | `secret`, which refuses with no vault | 01 |
 | The collection is the folder `<configDir>/<name>/`, so `bots` stays where it is | decision `a-bot-record-stays-in-config` | 02 |
+| The store refuses a collection named after a folder the daemon writes, and `remove` refuses an id that is not a slug | Softov's answer to "How should the record store keep a collection from landing on the daemon's own folders in configDir?": "Refuse reserved names" | 02 |
 | The plugin names the body field when it opens a collection, and a collection with none writes an empty body | decision 4 | 02 |
 | A file whose frontmatter `id` names another id is refused | the file name is the id | 02 |
 | `<id>.json` with no `<id>.md` is converted when the collection opens, and renamed `<id>.json.migrated` | `migrateSessions` | 02 |
