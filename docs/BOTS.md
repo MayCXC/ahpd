@@ -21,7 +21,7 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 | `workspace` | The folder it works in, under `root`. Its own, and never moved |
 | `computer` | The machine it runs in, where it names one |
 | `session` | The session it is linked to |
-| `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a body naming anybody else is refused `-32009`, and an edit may not move it |
+| `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a holder of `*:*` may name any owner, this host's own `root:<host>` among them. A body naming anybody else is refused `-32009`, and an edit may not move it. Any `root:` is this host, whatever name follows it: one a make names is written under the host's name today, and a renamed machine keeps its bots. The manifest gives this host's own owner as a `const` in `owner`, so a client sends it as given |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
 A body that names a key a bot does not have is refused `-32602`, and so is a `body` outside the list below or a `color` that is neither a name below nor `#rrggbb`.
@@ -63,7 +63,7 @@ An edit that sets `session` to `null` takes the link away. An edit that says not
 | `bot:get` | Read any bot |
 | `bot:list` | List every bot |
 | `bot:put` | Make a bot in the scheme, edit their own |
-| `*:*` | Any of it, on any bot |
+| `*:*` | Any of it, on any bot, and make a bot for any owner |
 | A root connection | Any of it, on any bot |
 
 A listing shows what a read would allow: a list that showed a bot the reader cannot open would be a list of names they cannot use.

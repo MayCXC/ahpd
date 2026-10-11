@@ -41,6 +41,11 @@ import type {
  * Who a bot may belong to is asked on the write road, with the same rule the
  * read road uses: a `team:` or `project:` named as the owner has to be one the
  * writer belongs to, so a bot is never made for a team its maker is outside of.
+ * A holder of `*:*` may name any owner, the host among them.
+ *
+ * Any `root:` owner is this host. The name after it is the machine's hostname
+ * when the record was written, and a renamed machine is the same host, so a
+ * bot or a session that names an older one is still the host's.
  */
 
 /**
@@ -157,8 +162,14 @@ const parsed = (uri: string, content: Write): unknown => {
   }
 };
 
-/** The body a write to the scheme's root makes one from. */
-const MANIFEST = {
+/**
+ * The body a write to the scheme's root makes one from.
+ *
+ * Built from the host's name, because the `owner` property names this host's
+ * own owner as a `const`: a client is told `user:<id>` for a person, never the
+ * host's key, so it sends the one it is handed here.
+ */
+const manifest = (hostName: string) => ({
   type: 'object',
   required: ['name'],
   properties: {
@@ -178,10 +189,14 @@ const MANIFEST = {
     workspace: { type: 'string', description: 'The folder it works in, under the plugin root. Its own, and never moved.' },
     computer: { type: 'string', description: 'The machine it runs in.' },
     session: { type: 'string', description: 'The session it is linked to, one this host has for its owner.' },
-    owner: { type: 'string', description: "Whose it is, as user:<id>, team:<team> or project:<team>:<project>. The maker where a body names none, and a team or project has to be one the maker belongs to." },
+    owner: {
+      type: 'string',
+      anyOf: [{ type: 'string' }, { const: `root:${hostName}`, title: 'This host' }],
+      description: "Whose it is, as user:<id>, team:<team> or project:<team>:<project>. The maker where a body names none, and a team or project has to be one the maker belongs to. An admin may name any owner, this host among them.",
+    },
   },
   additionalProperties: false,
-} as const;
+} as const);
 
 /**
  * Whether this reader may see this bot.
@@ -198,6 +213,10 @@ export const mayRead = (bot: BotRecord, reader: Principal): boolean => {
   if (bot.owner.startsWith('project:')) return covers(memberships, bot.owner.slice('project:'.length));
   return false;
 };
+
+/** Whether two owners are the same: equal, or both the host under any name. */
+const sameOwner = (one: Owner, other: Owner): boolean =>
+  one === other || (one.startsWith('root:') && other.startsWith('root:'));
 
 /**
  * Whether this writer may change or delete this bot.
@@ -284,8 +303,19 @@ export function botProvider(options: BotOptions): BotProvider {
     reader: Principal | undefined,
     existing?: BotRecord,
   ): Owner => {
-    if (asked === undefined) return existing?.owner ?? writer ?? `root:${options.hostName}`;
-    if (writer === undefined || writer.startsWith('root:') || asked === writer) return asked;
+    const self: Owner = `root:${options.hostName}`;
+    if (asked === undefined) return existing?.owner ?? writer ?? self;
+    /*
+     * The host, named by whoever may name it, is written under today's name.
+     *
+     * Any `root:` is this host, so the name a body gives after it is not kept:
+     * a record names the host the way the host calls itself now. The root
+     * connection and a host with no users directory may name any owner, and a
+     * holder of `*:*` administers the host, the same test `mayWrite` asks.
+     */
+    const admin = writer === undefined || writer.startsWith('root:') || (reader !== undefined && reader.can('*:*'));
+    if (admin && asked.startsWith('root:')) return self;
+    if (admin || asked === writer) return asked;
     /*
      * A team or a project named as the owner has to be the writer's own.
      *
@@ -296,8 +326,8 @@ export function botProvider(options: BotOptions): BotProvider {
      * there is no record to check a membership against, the second because it
      * is the host's own key.
      *
-     * What is left is somebody else's `user:`, which is not this writer's to
-     * make whatever they hold.
+     * What is left is somebody else's `user:`, or this host's `root:`, which
+     * is not this writer's to make short of `*:*`.
      */
     const named = asked.startsWith('team:') || asked.startsWith('project:')
       ? asked.slice(asked.indexOf(':') + 1)
@@ -321,7 +351,7 @@ export function botProvider(options: BotOptions): BotProvider {
   const mayLink = async (session: string, whose: Owner): Promise<void> => {
     const held = await options.sessions.owner(session);
     if (held === undefined) throw new RpcError(-32602, `${session} is not a session this host has`);
-    if (held !== whose) throw new RpcError(-32009, `${session} is not a session of ${whose}`);
+    if (!sameOwner(held, whose)) throw new RpcError(-32009, `${session} is not a session of ${whose}`);
   };
 
   /** The folder a bot works in, or the refusal a folder another bot has is owed. */
@@ -343,7 +373,7 @@ export function botProvider(options: BotOptions): BotProvider {
     describe: (): SchemeDescription => ({
       title: 'Bot',
       description: 'A bot a person keeps on this host, with a workspace of its own.',
-      manifest: MANIFEST,
+      manifest: manifest(options.hostName),
     }),
 
     authorize: async (uri, reader) => {

@@ -485,6 +485,103 @@ it('refuses a bot for a project the writer is not in', async () => {
 });
 
 /*
+ * Who an admin may make a bot for.
+ *
+ * A holder of `*:*` administers the host, so the membership rule is not theirs
+ * to meet: they may name any person, any team or project, and this host's own
+ * owner. A `root:` that is not this host's is nobody's to name but the root
+ * connection's.
+ */
+it('lets an admin make a bot for another person, who then reads it', async () => {
+  const { host } = made({ soft: ['*:*'], ana: ['bot:write', 'session:create'] });
+  // The bot's session is started as ana, and the host starts one for a person
+  // only once they have signed in.
+  const ana = await as(host, 'ana');
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'user:ana' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(ana, 'bot://motion'))['owner']).toBe('user:ana');
+});
+
+it('lets an admin make a bot for a team they are not in', async () => {
+  const { host } = made({ soft: ['*:*'] }, { soft: ['frontend'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'team:backend' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(soft, 'bot://motion'))['owner']).toBe('team:backend');
+});
+
+it('lets an admin make a bot for this host, which a person without bot:get does not see', async () => {
+  const { host } = made({ soft: ['*:*'], ana: ['bot:write', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://keeper', { name: 'Keeper', owner: 'root:test' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(soft, 'bot://keeper'))['owner']).toBe('root:test');
+
+  const ana = await as(host, 'ana');
+  expect(await call(ana, 'resourceRead', { uri: 'bot://keeper' })).toMatchObject({ code: -32009 });
+  expect(await listing(ana, 'bot://')).toEqual([]);
+});
+
+it('writes any root: an admin names as the host under its name today', async () => {
+  const { host } = made({ soft: ['*:*'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:old-name' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect((await record(soft, 'bot://motion'))['owner']).toBe('root:test');
+});
+
+it('refuses the host as the owner to a writer without *:*', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:test' }, { createOnly: true }))
+    .toMatchObject({ code: -32009 });
+  expect(await listing(soft, 'bot://')).toEqual([]);
+});
+
+it('links a host bot to a session the host opened under an older name', async () => {
+  const { host, sessions } = made({ soft: ['*:*'] });
+  // The machine was renamed since: the session still names the host as it was called then.
+  sessions.setOwner('one', 'root:old-name');
+  const soft = await as(host, 'soft');
+
+  const answer = await write(soft, 'bot://keeper', { name: 'Keeper', owner: 'root:test', session: 'claude:/one' }, { createOnly: true });
+  expect(answer).toEqual({ result: {} });
+  expect((await record(soft, 'bot://keeper'))['session']).toBe('claude:/one');
+});
+
+it('still refuses a bot for another person to a writer without *:*', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'user:ana' }, { createOnly: true }))
+    .toMatchObject({ code: -32009 });
+  expect(await listing(soft, 'bot://')).toEqual([]);
+});
+
+it('names this host\'s own owner in the manifest', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
+  const client = host.accept(peer());
+  const ready = await client.handle({
+    method: 'initialize',
+    params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  }) as { _meta?: Record<string, Record<string, unknown>> };
+
+  // A client is never told the host's key, so the manifest is where it reads
+  // the owner a host bot is made with.
+  const entry = ready._meta?.['ahpd.resourceProviders']?.['bot'] as Bag | undefined;
+  const properties = ((entry?.['manifest'] as Bag)?.['properties'] ?? {}) as Bag;
+  expect(properties['owner']).toMatchObject({
+    anyOf: [{ type: 'string' }, { const: 'root:test', title: 'This host' }],
+  });
+});
+
+/*
  * Who may change a bot that is already there.
  *
  * Making one is any holder of the grant a write asks for. Changing one is the
