@@ -159,3 +159,32 @@ it('refuses remove without computer:delete, and every command and the channel wi
   expect(await ana.call('resourceRead', { channel: ROOT, uri: 'computer://box/state' })).toMatchObject({ result: { data: 'stopped\n' } });
   expect(cy.heard()).toEqual([]);
 }, 30000);
+
+it('makes a machine for the root connection owned as a resource write from it is', async () => {
+  const { host } = await served();
+  const client = host.accept({
+    send: () => {}, request: async () => ({}), answered: () => {}, close: () => {}, notify: () => {},
+  }, undefined, true);
+  await client.handle({ method: 'initialize', params: { clientId: 'door', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+  const call = async (method: string, params: Bag) => client.handle({ method, params }).then((result) => ({ result: result as Bag }), (error) => error as Bag);
+  expect(await call('x-ahpd/computers/create', { name: 'bycommand', manifest: {} })).toEqual({ result: {} });
+  expect(await call('resourceWrite', { channel: ROOT, uri: 'computer://bywrite', data: '{}' })).toMatchObject({ result: {} });
+  const owner = async (name: string) => (JSON.parse((await call('resourceRead', { channel: ROOT, uri: `computer://${name}/status` })).result.data as string) as Bag).Config.Labels['ahpd.owner'];
+  const written = await owner('bywrite');
+  expect(written).toMatch(/^root:/);
+  expect(await owner('bycommand')).toBe(written);
+}, 30000);
+
+it('sends removed to a subscriber who loses computer:read when the users file changes', async () => {
+  const { host, users } = await served();
+  const ana = await as(host, users, 'ana');
+  const bo = await as(host, users, 'bo');
+  await ana.call('x-ahpd/computers/create', { name: 'box', manifest: {} });
+  expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ result: { snapshot: { state: { records: [{ id: 'box' }] } } } });
+
+  writeFileSync(join(home, 'users.json'), JSON.stringify({
+    roles: { keeper: ['computer:read', 'computer:put', 'computer:delete'] },
+    users: [{ id: 'ana', roles: ['keeper'] }, { id: 'bo', roles: [] }],
+  }));
+  await expect.poll(() => bo.heard(), { timeout: 5000 }).toEqual(['removed box']);
+}, 30000);

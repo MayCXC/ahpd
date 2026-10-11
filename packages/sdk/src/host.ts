@@ -1042,10 +1042,12 @@ export function createHost(options: HostOptions): Host {
       emit(uri, structuredClone(action), undefined, audience.visible === undefined && audience.to === undefined ? undefined : audience);
     };
     served.subscribers = (uri) => {
+      // One entry per client id and person: people sharing a client id are each listed.
       const seen = new Map<string, ChannelSubscriber>();
       for (const connection of connections) {
-        if (!connection.watching.has(uri) || seen.has(connection.clientId)) continue;
-        seen.set(connection.clientId, { client: connection.clientId, reader: connection.principal });
+        if (!connection.watching.has(uri)) continue;
+        const key = JSON.stringify([connection.clientId, connection.principal === undefined ? '' : ownerOfPrincipal(connection.principal)]);
+        if (!seen.has(key)) seen.set(key, { client: connection.clientId, reader: connection.principal });
       }
       return [...seen.values()];
     };
@@ -1346,7 +1348,7 @@ export function createHost(options: HostOptions): Host {
           const served = methodIn(options.methods, request.method);
           const handler = handlers[request.method] ?? (served === undefined
             ? undefined
-            : async (params: Record<string, unknown> | undefined) => served.method.handle(params ?? {}, connection.principal, connection.clientId));
+            : async (params: Record<string, unknown> | undefined) => served.method.handle(params ?? {}, connection.principal, connection.clientId, ownerFor(connection)));
           if (!handler) {
             // Said, not silently accepted. A host that answers an empty
             // success to a method it does not have leaves the client waiting

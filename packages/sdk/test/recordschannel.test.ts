@@ -206,6 +206,109 @@ it('reads nothing while nobody is subscribed', async () => {
   expect(asked).toBe(0);
 });
 
+it('runs at most one refresh and keeps one waiting, which every call made meanwhile shares', async () => {
+  let asked = 0;
+  let open: () => void = () => {};
+  let gate: Promise<void> | undefined;
+  const teams = store({ backend: { id: 'backend' } });
+  const ids = async () => {
+    asked += 1;
+    if (gate !== undefined) await gate;
+    return teams.ids();
+  };
+  const list = recordsChannel(SCHEME, { ids, find: teams.find }, { grant: 'team:read' });
+  const ana = person('ana', ['team:read']);
+  const { handle, of } = fakeHandle([{ client: 'ana', reader: ana }]);
+  list.bind(handle);
+  await list.channel.snapshot(URI, ana, 'ana');
+  asked = 0;
+
+  gate = new Promise((done) => { open = done; });
+  const running = list.refresh();
+  await Promise.resolve();
+  // Three calls while one runs share the one that waits.
+  const waiting = [list.refresh(), list.refresh(), list.refresh()];
+  teams.rows.web = { id: 'web' };
+  gate = undefined;
+  open();
+  await Promise.all([running, ...waiting]);
+  expect(asked).toBe(2);
+  expect(of('ana')).toEqual(['added web']);
+});
+
+it('answers a refresh called after a change only once a read after that change is sent', async () => {
+  const teams = store({});
+  const list = recordsChannel(SCHEME, teams, { grant: 'team:read' });
+  const ana = person('ana', ['team:read']);
+  const { handle, of } = fakeHandle([{ client: 'ana', reader: ana }]);
+  list.bind(handle);
+  await list.channel.snapshot(URI, ana, 'ana');
+  const first = list.refresh();
+  teams.rows.web = { id: 'web' };
+  await list.refresh();
+  expect(of('ana')).toEqual(['added web']);
+  await first;
+});
+
+it('keeps every reader in step with the store a snapshot read', async () => {
+  const teams = store({ backend: { id: 'backend', title: 'Back' } });
+  const list = recordsChannel(SCHEME, teams, { grant: 'team:read' });
+  const ana = person('ana', ['team:read']);
+  const bo = person('bo', ['team:read']);
+  const subscribers: ChannelSubscriber[] = [{ client: 'ana', reader: ana }];
+  const { handle, of } = fakeHandle(subscribers);
+  list.bind(handle);
+  await list.channel.snapshot(URI, ana, 'ana');
+
+  // The store changes, and Bo subscribes before any refresh reads it.
+  teams.rows.backend = { id: 'backend', title: 'Back end' };
+  teams.rows.web = { id: 'web' };
+  subscribers.push({ client: 'bo', reader: bo });
+  expect(await list.channel.snapshot(URI, bo, 'bo')).toMatchObject({ records: [{ id: 'backend', record: { title: 'Back end' } }, { id: 'web' }] });
+  // Ana is sent what that read found, and Bo nothing his snapshot has.
+  expect(of('ana')).toEqual(['changed backend', 'added web']);
+  expect(of('bo')).toEqual([]);
+
+  await list.refresh();
+  expect(of('ana')).toEqual(['changed backend', 'added web']);
+  expect(of('bo')).toEqual([]);
+});
+
+it('keeps two people on one client id apart, and tests the person at each send', async () => {
+  const teams = store({ backend: { id: 'backend' }, web: { id: 'web' } });
+  const list = recordsChannel(SCHEME, teams, { grant: 'team:read', mayRead: (id, reader) => id === reader.id });
+  const ana = person('ana', ['team:read']);
+  const web = person('web', []);
+  const sent: { action: Record<string, unknown>; options: PublishOptions }[] = [];
+  list.bind({
+    publish: (_uri, action, options = {}) => { sent.push({ action, options }); },
+    subscribers: () => [{ client: 'shared', reader: web }, { client: 'shared', reader: ana }],
+  });
+  await list.channel.snapshot(URI, web, 'shared');
+  await list.channel.snapshot(URI, ana, 'shared');
+  teams.rows.ops = { id: 'ops' };
+  delete teams.rows.web;
+  await list.refresh();
+  // Web lost his own record; Ana gained ops and lost web.
+  expect(sent.map((one) => `${String(one.action.type).slice(SCHEME.length + 1)} ${String(one.action.id)}`))
+    .toEqual(['removed web', 'added ops', 'removed web']);
+  for (const one of sent) expect(one.options.to).toBe('shared');
+  const [toWeb, toAna] = [sent[0]!.options, sent[1]!.options];
+  expect(toWeb.visible?.(web, 'shared')).toBe(true);
+  expect(toWeb.visible?.(ana, 'shared')).toBe(false);
+  expect(toAna.visible?.(ana, 'shared')).toBe(true);
+  expect(toAna.visible?.(web, 'shared')).toBe(false);
+  // A person who has lost the grant since is not sent a record at replay.
+  ana.grants = [];
+  expect(toAna.visible?.(ana, 'shared')).toBe(false);
+
+  // Left forgets both people on the client id.
+  list.channel.left?.('shared');
+  teams.rows.dev = { id: 'dev' };
+  await list.refresh();
+  expect(sent).toHaveLength(3);
+});
+
 /** One method's answer, or the RpcError it threw. */
 const answer = async (method: { handle: (params: Record<string, unknown>, reader: Principal | undefined, client: string) => unknown }, params: Record<string, unknown>) => {
   try {

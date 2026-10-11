@@ -1,4 +1,4 @@
-import { absentResource, asFile, ownerOfPrincipal, RpcError, splitResource } from '@ahpd/sdk';
+import { absentResource, asFile, RpcError, splitResource } from '@ahpd/sdk';
 import type {
   Entry, MachineNeed, Metadata, Owner, PluginHost, PluginMethod, Read, ResourceProvider, SchemeDescription, SecretRef,
   SecretWork, Write,
@@ -81,8 +81,6 @@ export interface ProviderOptions {
    * is refused - decision `a-secret-is-named-in-a-host-team-or-user-scope`.
    */
   secret: PluginHost['secret'];
-  /** Called after each machine this provider makes, puts in a state, or destroys. */
-  changed?: () => void;
 }
 
 /**
@@ -324,7 +322,6 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
         throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
       }
     });
-    options.changed?.();
   };
 
   /** A machine put in one of the three states, as `said` names it. */
@@ -337,7 +334,6 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
     if (state === 'running') await runtime.start(name);
     else if (state === 'stopped') await runtime.stop(name);
     else await runtime.restart(name);
-    options.changed?.();
   };
 
   /** A machine destroyed, by name. */
@@ -349,7 +345,6 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
     catch (error) {
       throw new RpcError(-32603, error instanceof Error ? error.message : String(error));
     }
-    options.changed?.();
   };
 
   return {
@@ -480,8 +475,8 @@ const nameParam = (command: string, params: Record<string, unknown>): string => 
  * - `remove` `{ name }` destroys it.
  *
  * `remove` needs `computer:delete` and the others `computer:put`, the grants
- * the resource write and delete need. Each answers `{}`, and `refresh` is
- * called after each.
+ * the resource write and delete need. Each answers `{}` once `refresh` has
+ * sent the change.
  */
 export const computerMethods = (provider: ComputerProvider, refresh: () => Promise<void>): Record<string, PluginMethod> => {
   const to = (verb: string, state: string, title: string): PluginMethod => ({
@@ -497,7 +492,7 @@ export const computerMethods = (provider: ComputerProvider, refresh: () => Promi
     'x-ahpd/computers/create': {
       grant: 'computer:put',
       describe: () => ({ title: 'Create a computer', description: 'Makes one computer from a manifest.' }),
-      handle: async (params, reader) => {
+      handle: async (params, _reader, _client, owner) => {
         const name = nameParam('x-ahpd/computers/create', params);
         const manifest = params.manifest;
         // The manifest as the body a resource write carries, so it is refused
@@ -505,7 +500,7 @@ export const computerMethods = (provider: ComputerProvider, refresh: () => Promi
         await provider.create(
           name,
           { data: manifest === undefined ? '' : JSON.stringify(manifest), encoding: 'utf-8' },
-          reader === undefined ? undefined : ownerOfPrincipal(reader),
+          owner,
         );
         await refresh();
         return {};

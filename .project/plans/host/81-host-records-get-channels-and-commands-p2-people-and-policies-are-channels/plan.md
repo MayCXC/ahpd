@@ -91,13 +91,13 @@ users file changes -> Users.watch -> refresh the four people channels
 ## Resume state
 
 - **Done so far:** tasks 01, 02, 03 and 04 implemented 2026-10-11, awaiting review.
-- **Next action:** review the build; then p4 can start.
+- **Next action:** review the build, and the review fixes of 2026-10-11. p4 is built.
 - **Open questions:** none.
-- **Watch out for:** the daemon opens its own `Users.watch` for the channels and closes it at `stopping`. A change to the users file refreshes the policy channel as well as the four people channels.
+- **Watch out for:** the daemon opens its own `Users.watch` for the channels and closes it at `stopping`. A change to the users file refreshes the policy channel as well as the four people channels. A channel keeps its state per client id and person, and each send carries `to` and a `visible` test, because several people can share one client id.
 
 ## Final verification checklist
 
-- [ ] A client subscribes to each of the five, puts a record, and gets `added`.
-- [ ] A resource write to `team://x` reaches a subscriber of `x-ahpd-teams://`.
-- [ ] `pnpm exec vitest run packages/sdk packages/server` passes.
-- [ ] `plans/index.md` updated.
+- [x] A client subscribes to each of the five, puts a record, and gets `added`.
+- [x] A resource write to `team://x` reaches a subscriber of `x-ahpd-teams://`.
+- [x] `pnpm exec vitest run packages/sdk packages/server` passes.
+- [x] `plans/index.md` updated.

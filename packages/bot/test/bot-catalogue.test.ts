@@ -235,6 +235,29 @@ it('sends the bots a membership change gives and takes, to that reader alone', a
   expect(ana.heard()).toEqual([]);
 });
 
+it('sends a membership change only to the person it concerns on a shared client id', async () => {
+  const members: Record<string, string[]> = { ana: ['crew'], bo: [] };
+  const { host, changed } = made({ ana: PERSON, bo: PERSON }, members);
+  const ana = await as(host, 'ana', 'anonymous');
+  const bo = await as(host, 'bo', 'anonymous');
+  await write(ana, 'crews', { name: 'Crews', owner: 'team:crew' });
+  await write(bo, 'his', { name: 'His' });
+  await write(ana, 'hers', { name: 'Hers' });
+  expect(await subscribe(bo)).toEqual(['his']);
+  expect(await subscribe(ana)).toEqual(['crews', 'hers']);
+
+  // Ana leaves the team: only she is sent the removal, and Bo's set stays his.
+  members.ana = [];
+  changed();
+  await new Promise((resolve) => { setTimeout(resolve, 20); });
+  members.bo = ['crew'];
+  changed();
+  await new Promise((resolve) => { setTimeout(resolve, 20); });
+
+  expect(ana.heard()).toEqual(['removed crews']);
+  expect(bo.heard()).toEqual(['added crews']);
+});
+
 it('replays to a reader only what it may read', async () => {
   const { host, users } = made({ ana: PERSON, bo: PERSON }, { ana: [], bo: [] });
   const ana = await as(host, 'ana');

@@ -804,6 +804,8 @@ export const apply: Plugin['apply'] = (host, options) => {
   /** The `x-ahpd-computers://` channel, refreshed after each change this plugin makes to a machine. */
   const catalogue = computerCatalogue(computerRouter, (line) => { host.log(`${name}: ${line}`); });
   catalogue.bind(host.registerChannel(COMPUTERS_SCHEME, catalogue.channel));
+  // A reader whose grants changed is sent what they gained and lost.
+  host.on('users_changed', () => { void catalogue.refresh(); });
 
   /**
    * The runtime, with a stretch around every change of state, and the computer
@@ -1196,7 +1198,6 @@ export const apply: Plugin['apply'] = (host, options) => {
     needsOf: (provider) => host.machineNeeds(provider),
     ...(needValues === undefined ? {} : { needValues }),
     secret,
-    changed: () => { void catalogue.refresh(); },
   });
   host.registerResourceProvider('computer', scheme);
   for (const [command, method] of Object.entries(computerMethods(scheme, catalogue.refresh))) {

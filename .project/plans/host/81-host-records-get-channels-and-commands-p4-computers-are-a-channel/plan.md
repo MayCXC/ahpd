@@ -87,10 +87,10 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 - **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
 - **Next action:** review the build.
 - **Open questions:** none.
-- **Watch out for:** a create records the caller as the owner; a command from a caller with no principal, such as the root connection, makes a machine with no owner, where a resource write from the root connection on a host with users records `root:<host>`.
+- **Watch out for:** a create records the owner the host passes to the command, the same owner a resource write records: `root:<host>` from the root connection. The computers channel refreshes when the users file changes, so a reader who loses `computer:read` is sent `removed`.
 
 ## Final verification checklist
 
-- [ ] A client subscribes, creates a machine, stops it and removes it, and gets `added`, `changed` and `removed`.
-- [ ] `pnpm exec vitest run packages/computer` passes.
-- [ ] `plans/index.md` updated.
+- [x] A client subscribes, creates a machine, stops it and removes it, and gets `added`, `changed` and `removed`.
+- [x] `pnpm exec vitest run packages/computer` passes.
+- [x] `plans/index.md` updated.

@@ -61,15 +61,15 @@ const served = () => {
 
 type Host = ReturnType<typeof createHost>;
 
-/** A client signed in as `id`, whose channel actions are kept. */
-const as = async (host: Host, users: Users, id: string) => {
+/** A client signed in as `id`, on client id `clientId`, whose channel actions are kept. */
+const as = async (host: Host, users: Users, id: string, clientId = id) => {
   const token = await users.mint(id);
   const seen: { method: string; params: Bag }[] = [];
   const client = host.accept({
     send: () => {}, request: async () => ({}), answered: () => {}, close: () => {},
     notify: (method, params) => { seen.push({ method, params: params as Bag }); },
   });
-  await client.handle({ method: 'initialize', params: { clientId: id, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+  await client.handle({ method: 'initialize', params: { clientId, protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await client.handle({ method: 'authenticate', params: { channel: ROOT, resource: users.resource.resource, token } });
   const call = async (method: string, params: Bag) => client.handle({ method, params }).then(
     (result) => ({ result: result as Bag }),
@@ -79,7 +79,7 @@ const as = async (host: Host, users: Users, id: string) => {
   const heard = (channel: string) => seen
     .filter((one) => one.method === 'action' && one.params.channel === channel)
     .map((one) => `${String(one.params.action.type).split('/').pop()} ${String(one.params.action.id)}`);
-  return { call, heard };
+  return { call, heard, close: () => { client.close(); } };
 };
 
 /** The ids a subscribe answered. */
@@ -99,6 +99,86 @@ it('shows a person without user:read only their own record on the users channel'
   await wait(400);
   expect(ana.heard('x-ahpd-users://')).toContain('added dee');
   expect(bo.heard('x-ahpd-users://')).toEqual([]);
+  await close();
+});
+
+/*
+ * Two people on one client id, as a relay that passes no id of its own gives
+ * them: each is sent only what they may read, and each keeps their own state,
+ * whichever subscribed first.
+ */
+for (const order of [['ana', 'bo'], ['bo', 'ana']] as const) {
+  it(`keeps the users channel apart for two people on one client id, ${order.join(' first, then ')}`, async () => {
+    const { host, users, close } = served();
+    const people = { ana: await as(host, users, 'ana', 'anonymous'), bo: await as(host, users, 'bo', 'anonymous') };
+    const answers: Record<string, string[]> = {};
+    for (const one of order) answers[one] = ids(await people[one].call('subscribe', { channel: 'x-ahpd-users://' }));
+    expect(answers).toEqual({ ana: ['ana', 'bo', 'cy'], bo: ['bo'] });
+
+    await users.add('dee', []);
+    await wait(400);
+    expect(people.ana.heard('x-ahpd-users://')).toEqual(['added dee']);
+    expect(people.bo.heard('x-ahpd-users://')).toEqual([]);
+
+    // A second change is diffed against each person's own state.
+    await users.add('eve', []);
+    await wait(400);
+    expect(people.ana.heard('x-ahpd-users://')).toEqual(['added dee', 'added eve']);
+    expect(people.bo.heard('x-ahpd-users://')).toEqual([]);
+    await close();
+  });
+
+  it(`keeps the teams channel apart for two people on one client id, ${order.join(' first, then ')}`, async () => {
+    writeFileSync(usersFile, JSON.stringify({
+      roles: { clerk: ['user:read', 'team:read', 'team:put', 'policy:read'] },
+      teams: [{ id: 'backend' }],
+      users: [{ id: 'ana', roles: ['clerk'] }, { id: 'bo', roles: ['clerk'] }],
+    }));
+    const { host, users, close } = served();
+    const people = { ana: await as(host, users, 'ana', 'anonymous'), bo: await as(host, users, 'bo', 'anonymous') };
+    for (const one of order) expect(ids(await people[one].call('subscribe', { channel: 'x-ahpd-teams://' }))).toEqual(['backend']);
+    await wait(50);
+
+    // Bo loses team:read; only he is sent the removal, and Ana's state stays whole.
+    writeFileSync(usersFile, JSON.stringify({
+      roles: { clerk: ['user:read', 'team:read', 'team:put', 'policy:read'] },
+      teams: [{ id: 'backend' }],
+      users: [{ id: 'ana', roles: ['clerk'] }, { id: 'bo', roles: [] }],
+    }));
+    await wait(400);
+    expect(people.bo.heard('x-ahpd-teams://')).toEqual(['removed backend']);
+    expect(people.ana.heard('x-ahpd-teams://')).toEqual([]);
+
+    expect(await people.ana.call('x-ahpd/teams/put', { id: 'web', record: {} })).toEqual({ result: {} });
+    await wait(100);
+    expect(people.ana.heard('x-ahpd-teams://')).toEqual(['added web']);
+    expect(people.bo.heard('x-ahpd-teams://')).toEqual(['removed backend']);
+    await close();
+  });
+}
+
+it('replays to a person on a shared client id nothing sent to another person on it', async () => {
+  const { host, users, close } = served();
+  const ana = await as(host, users, 'ana', 'anonymous');
+  const bo = await as(host, users, 'bo', 'anonymous');
+  await ana.call('subscribe', { channel: 'x-ahpd-users://' });
+  const answer = await bo.call('subscribe', { channel: 'x-ahpd-users://' });
+  const from = answer.result.snapshot.fromSeq as number;
+  bo.close();
+
+  // Sent to Ana, on the client id Bo comes back on.
+  await users.add('dee', []);
+  await wait(400);
+  expect(ana.heard('x-ahpd-users://')).toEqual(['added dee']);
+
+  const person = await users.verify(await users.mint('bo'));
+  const back = host.accept({ send: () => {}, notify: () => {}, request: async () => ({}), answered: () => {}, close: () => {} }, person);
+  const replay = await back.handle({
+    method: 'reconnect',
+    params: { clientId: 'anonymous', lastSeenServerSeq: from, subscriptions: ['x-ahpd-users://'] },
+  }) as Bag;
+  expect(replay.type).toBe('replay');
+  expect((replay.actions as Bag[]).filter((one) => one.channel === 'x-ahpd-users://')).toEqual([]);
   await close();
 });
 

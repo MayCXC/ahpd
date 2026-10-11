@@ -12,14 +12,16 @@
  * - `<scheme>/removed` `{ id }` - a record this client has, gone from the store or no longer readable.
  *
  * The store stays the record of truth. The channel keeps the last record it
- * sent for each id and the ids it sent to each client, and `refresh` reads the
- * store and sends each client what it gained, changed and lost, with `to`.
+ * sent for each id and the ids it sent to each reader, a client id and the
+ * person on it, and `refresh` reads the store and sends each reader what it
+ * gained, changed and lost, with `to` and `visible`.
  */
 
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { putRecord, recordsProvider, removeRecord, type Records, type RecordsProvider } from './records.js';
 import type { ChannelHandle, ChannelSubscriber, PluginChannel, PluginMethod, PublishOptions, ServedChannel, ServedMethod } from './types/plugin.js';
 import type { Grant, Principal } from './types/users.js';
+import { ownerOfPrincipal } from './values.js';
 
 /** What a records channel reads: every id, and one record by id. */
 export interface RecordsSource {
@@ -61,13 +63,15 @@ export interface RecordsChannel {
 
 export function recordsChannel(scheme: string, source: RecordsSource, options: RecordsChannelOptions): RecordsChannel {
   const uri = `${scheme}://`;
-  /** The ids sent to each client, by client id. */
+  /** The ids sent to each reader, by `readerKey`. */
   const sent = new Map<string, Set<string>>();
   /** The JSON of the last record sent for each id. */
   const last = new Map<string, string>();
   let handle: ChannelHandle | undefined;
-  /** The refresh running now, which the next one waits for. */
-  let running: Promise<void> = Promise.resolve();
+  /** The last read of the store queued, which the next one waits for. */
+  let tail: Promise<void> = Promise.resolve();
+  /** The refresh queued and not yet started, which a further call shares. */
+  let pending: Promise<void> | undefined;
 
   /**
    * Whether this reader sees this record.
@@ -88,9 +92,59 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
     return entries;
   };
 
-  const send = (client: string, action: { type: string } & Record<string, unknown>): void => {
-    const options: PublishOptions = { to: client };
-    handle?.publish(uri, action, options);
+  /** Run one read of the store after every one queued before it. */
+  const exclusive = <T>(work: () => Promise<T>): Promise<T> => {
+    const done = tail.then(work);
+    tail = done.then(() => undefined, () => undefined);
+    return done;
+  };
+
+  /**
+   * Send one action to one reader on one client.
+   *
+   * `to` names the client, and `visible` names the reader: two people on one
+   * client id each hold their own state, and an action is seen only by a
+   * connection that is that person now and may still read the record.
+   */
+  const send = (client: string, reader: Principal | undefined, action: { type: string; id: string } & Record<string, unknown>): void => {
+    const key = readerKey(client, reader);
+    const removal = action.type === `${scheme}/removed`;
+    const audience: PublishOptions = {
+      to: client,
+      visible: (principal, seen) => readerKey(seen, principal) === key && (removal || readable(action.id, principal)),
+    };
+    handle?.publish(uri, action, audience);
+  };
+
+  /** Update `last` from `now`, and send each subscriber but `skip` what it gained, changed and lost. */
+  const apply = (subscribers: ChannelSubscriber[], now: RecordEntry[], skip?: string): void => {
+    const changed = new Set<string>();
+    const held = new Set<string>();
+    for (const { id, record } of now) {
+      held.add(id);
+      const text = JSON.stringify(record);
+      const was = last.get(id);
+      if (was !== undefined && was !== text) changed.add(id);
+      last.set(id, text);
+    }
+    for (const id of [...last.keys()]) if (!held.has(id)) last.delete(id);
+    for (const { client, reader } of subscribers) {
+      const key = readerKey(client, reader);
+      if (key === skip) continue;
+      const mine = new Set(now.filter((one) => readable(one.id, reader)).map((one) => one.id));
+      const set = sent.get(key);
+      sent.set(key, mine);
+      // A reader with no set has nothing to diff against, and starts from here.
+      if (set === undefined) continue;
+      for (const { id, record } of now) {
+        if (!mine.has(id)) continue;
+        if (!set.has(id)) send(client, reader, { type: `${scheme}/added`, id, record });
+        else if (changed.has(id)) send(client, reader, { type: `${scheme}/changed`, id, record });
+      }
+      for (const id of set) {
+        if (!mine.has(id)) send(client, reader, { type: `${scheme}/removed`, id });
+      }
+    }
   };
 
   const step = async (): Promise<void> => {
@@ -103,32 +157,11 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
       last.clear();
       return;
     }
-    const now = await every();
-    const changed = new Set<string>();
-    const held = new Set<string>();
-    for (const { id, record } of now) {
-      held.add(id);
-      const text = JSON.stringify(record);
-      const was = last.get(id);
-      if (was !== undefined && was !== text) changed.add(id);
-      last.set(id, text);
-    }
-    for (const id of [...last.keys()]) if (!held.has(id)) last.delete(id);
-    for (const { client, reader } of subscribers) {
-      const mine = new Set(now.filter((one) => readable(one.id, reader)).map((one) => one.id));
-      const set = sent.get(client);
-      sent.set(client, mine);
-      // A client with no set has nothing to diff against, and starts from here.
-      if (set === undefined) continue;
-      for (const { id, record } of now) {
-        if (!mine.has(id)) continue;
-        if (!set.has(id)) send(client, { type: `${scheme}/added`, id, record });
-        else if (changed.has(id)) send(client, { type: `${scheme}/changed`, id, record });
-      }
-      for (const id of set) {
-        if (!mine.has(id)) send(client, { type: `${scheme}/removed`, id });
-      }
-    }
+    apply(subscribers, await every());
+  };
+
+  const problem = (error: unknown): void => {
+    options.onProblem?.(`${scheme}: the list could not be read: ${error instanceof Error ? error.message : String(error)}`);
   };
 
   return {
@@ -142,23 +175,51 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
       },
       snapshot: async (asked, reader, client) => {
         if (asked !== uri) throw new RpcError(-32001, `No channel at ${asked}; the list is ${uri}`);
-        const records = (await every()).filter((one) => readable(one.id, reader));
-        sent.set(client, new Set(records.map((one) => one.id)));
-        // A record no refresh has seen yet is the one a later refresh compares with.
-        for (const { id, record } of records) if (!last.has(id)) last.set(id, JSON.stringify(record));
-        return { records };
+        const key = readerKey(client, reader);
+        /*
+         * The snapshot is a refresh's read: every other reader is sent what
+         * this read changed, so `last` and each reader's ids agree with it.
+         */
+        return exclusive(async () => {
+          const now = await every();
+          apply(handle?.subscribers(uri) ?? [], now, key);
+          const records = now.filter((one) => readable(one.id, reader));
+          sent.set(key, new Set(records.map((one) => one.id)));
+          return { records };
+        });
       },
-      left: (client) => { sent.delete(client); },
+      left: (client) => {
+        for (const key of [...sent.keys()]) if (clientOfKey(key) === client) sent.delete(key);
+      },
     },
     bind: (given) => { handle = given; },
+    /*
+     * A call made while a refresh waits shares it, so at most one runs and one
+     * waits; the one waiting reads the store after every call it answers.
+     */
     refresh: () => {
-      running = running.then(step).catch((error: unknown) => {
-        options.onProblem?.(`${scheme}: the list could not be read: ${error instanceof Error ? error.message : String(error)}`);
-      });
-      return running;
+      if (pending !== undefined) return pending;
+      const queued = exclusive(async () => {
+        pending = undefined;
+        await step();
+      }).catch(problem);
+      pending = queued;
+      return queued;
     },
   };
 }
+
+/**
+ * Whose state one reader's ids are: the client id, and the person the
+ * connection is now.
+ *
+ * Several people may share a client id, and each holds their own state.
+ */
+const readerKey = (client: string, reader: Principal | undefined): string =>
+  JSON.stringify([client, reader === undefined ? '' : ownerOfPrincipal(reader)]);
+
+/** The client id a `readerKey` was made from. */
+const clientOfKey = (key: string): string => (JSON.parse(key) as [string, string])[0];
 
 /** A string param that names one record, or a refusal saying what the command needs. */
 const idParam = (command: string, scheme: string, params: Record<string, unknown>): string => {

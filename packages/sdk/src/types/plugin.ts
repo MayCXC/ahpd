@@ -238,7 +238,11 @@ export interface ChannelHandle {
    * `x-ahpd-bots/added`. Refused until a host is built over the plugin.
    */
   publish(uri: string, action: { type: string } & Record<string, unknown>, options?: PublishOptions): void;
-  /** Each client subscribed to the URI now, once each. Empty until a host is built over the plugin. */
+  /**
+   * Each client subscribed to the URI now, once for each person on it: two
+   * people who share a client id are two entries. Empty until a host is built
+   * over the plugin.
+   */
   subscribers(uri: string): ChannelSubscriber[];
 }
 
@@ -286,9 +290,12 @@ export interface PluginMethod {
    *
    * `params` are the request's own. `reader` is nobody on a host with no users
    * directory. `client` is the id the connection gave at `initialize` or
-   * `reconnect`. An `RpcError` thrown here is what the caller is told.
+   * `reconnect`. `owner` is whose work the request is, as a resource write
+   * records it: `user:<id>` or `plugin:<name>` for a signed-in caller,
+   * `root:<host>` for the root connection, and nobody on a host with no users
+   * directory. An `RpcError` thrown here is what the caller is told.
    */
-  handle(params: Record<string, unknown>, reader: Principal | undefined, client: string): unknown;
+  handle(params: Record<string, unknown>, reader: Principal | undefined, client: string, owner?: Owner): unknown;
   /** What a client shows for the command, read when the host advertises it. */
   describe?(): { title: string; description?: string };
 }

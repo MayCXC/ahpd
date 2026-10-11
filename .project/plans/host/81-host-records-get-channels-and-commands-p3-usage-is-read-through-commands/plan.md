@@ -85,6 +85,6 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 
 ## Final verification checklist
 
-- [ ] Each command answers the value its read answers, for the same reader.
-- [ ] `pnpm exec vitest run packages/sdk packages/server` passes.
-- [ ] `plans/index.md` updated.
+- [x] Each command answers the value its read answers, for the same reader.
+- [x] `pnpm exec vitest run packages/sdk packages/server` passes.
+- [x] `plans/index.md` updated.

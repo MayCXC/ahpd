@@ -88,7 +88,6 @@ it('sends changed with the new state after a write to computer://box/state', asy
   const catalogue = computerCatalogue(runtime);
   const provider = computerProvider(runtime, {
     image: 'debian:bookworm-slim', max: 2, label: 'ahpd.computer=1', secret: unread,
-    changed: () => { void catalogue.refresh(); },
   });
   const { made, heard } = handle([{ client: 'ana', reader: undefined }]);
   catalogue.bind(made);

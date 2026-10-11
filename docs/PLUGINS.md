@@ -473,7 +473,8 @@ built. Two options narrow who gets it - decision
 A subscriber that is not sent an action sees a gap in `serverSeq`. That is
 allowed, because the sequence is the host's and not the channel's.
 `handle.subscribers(uri)` answers who watches a URI now, as `{ client, reader }`
-once per client id.
+once per client id and person: people who share a client id are each listed,
+and a send meant for one of them carries `to` and a `visible` test both.
 
 Two plugins cannot serve one scheme: the later one is dropped with a problem
 line. `@ahpd/bot` serves `x-ahpd-bots://` this way, and [BOTS.md](BOTS.md)
@@ -492,17 +493,20 @@ and a plugin names its own after itself, such as `x-notes/put` - decision
 host.registerMethod('x-notes/put', {
   grant: 'notes:put',
   authorize: async (params, reader) => ownsNote(reader, params.id),
-  handle: async (params, reader, client) => putNote(params, reader),
+  handle: async (params, reader, client, owner) => putNote(params, owner),
   describe: () => ({ title: 'Put a note', description: 'Saves one note.' }),
 });
 ```
 
 - `grant` is what a call needs. `authorize(params, reader)` is optional, and is
   asked only of a caller the grant refused, so it can let somebody in.
-- `handle(params, reader, client)` answers one request, and what it returns is
-  the result. The params are the request's own. The reader is absent on a host
-  with no users directory and on the root connection. An `RpcError` it throws
-  is what the caller is told.
+- `handle(params, reader, client, owner)` answers one request, and what it
+  returns is the result. The params are the request's own. The reader is absent
+  on a host with no users directory and on the root connection. The owner is
+  whose work the request is, as a resource write records it: `user:<id>` or
+  `plugin:<name>` for a signed-in caller, `root:<host>` for the root
+  connection, and absent on a host with no users directory. An `RpcError` it
+  throws is what the caller is told.
 - `describe()` is optional, and names the command in `_meta['ahpd.methods']`
   on `initialize` and on the root state, as an entry `{ method, title,
   description?, grant }`. The title is the name when there is no `describe`.
