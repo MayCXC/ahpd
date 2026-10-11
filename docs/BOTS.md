@@ -26,6 +26,41 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 
 A body that names a key a bot does not have is refused `-32602`, and so is a `body` outside the list below or a `color` that is neither a name below nor `#rrggbb`.
 
+## The file
+
+Each bot is one file a person can edit: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter between two `---` lines and `instructions` as the Markdown below them. The file name is the `id`, and a file whose frontmatter names another one is reported and left out.
+
+```md
+---
+id: motion
+name: Motion
+labels:
+  - review
+  - ci
+description: Reads pull requests and says what would break.
+body: robot
+color: teal
+harness: claude
+model: claude-sonnet-5
+workspace: /srv/bots/motion
+owner: user:soft
+createdAt: 2026-10-11T09:00:00.000Z
+updatedAt: 2026-10-11T09:00:00.000Z
+---
+You review pull requests. Say what would break, in one paragraph.
+```
+
+A record an older daemon left as `<slug>.json` is converted when the daemon starts: the Markdown file is written beside it, and the `.json` file is renamed `<slug>.json.migrated`, which is what says it has been read. Both files stay where they are, and only the Markdown one is read from then on.
+
+A file a person edits is read while the daemon runs, and the change reaches watchers and the catalogue as any other edit does. Two fields an edit by hand may not change:
+
+| Field | What happens |
+| --- | --- |
+| `owner` | The bot keeps the owner it had, and the change is reported |
+| `workspace` | The bot keeps its folder, and the change is reported |
+
+A file that is not a bot record - a field of the wrong type, or a colour that is neither one of the eleven nor `#rrggbb` - is reported in the same way, and the bot reads as it did before the edit.
+
 ## The slug
 
 A bot's address is `bot://<slug>`, and the slug is the URI path, the record's `id` and the name of its folder - one thing written once. It is lowercase letters, digits and dashes, one to forty of them, starting with a letter; anything else is refused `-32602`, because the slug is a folder name and a URI path at once.
@@ -146,7 +181,7 @@ An edit that links a session the owner already has, and one that takes a link aw
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
 ```
 
-The records are kept beside the daemon's own configuration, in `<configDir>/bots/`, and the tombstones in `<configDir>/bots-gone/`.
+The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. A plugin that takes the record store over keeps them wherever that store keeps them.
 
 ## See also
 

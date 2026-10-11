@@ -287,7 +287,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [44 - A plugin serves a channel, and bots have a catalogue](plugin/44-a-plugin-serves-a-channel/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/44-a-plugin-serves-a-channel/implemented.md)) | plugin 42 | ahpapp and ahpc bot catalogue |
 | [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | active 2026-10-11; p1 built, p2 planned | plugin 43, cofold commands/05 | bot templates idea |
 | [45 p1 - The host gives each plugin a record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md)) | cofold commands/05 | 45 p2, host 80 |
-| [45 p2 - The bot keeps its records in the record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | medium | planned | 45 p1 | - |
+| [45 p2 - The bot keeps its records in the record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | medium | active | 45 p1 | - |
 | [46 - An admin makes a bot for any owner, and the manifest names the host owner](plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) | high | built 2026-10-11 ([implemented.md](plugin/46-an-admin-makes-a-bot-for-any-owner/implemented.md)) | plugin 37 | ahpapp bot owner picker |
 
 Next free number in `plugin`: `47`.

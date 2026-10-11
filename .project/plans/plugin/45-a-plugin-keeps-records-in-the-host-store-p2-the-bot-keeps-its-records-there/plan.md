@@ -1,7 +1,7 @@
 ---
 title: The bot keeps its records in the record store
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -24,7 +24,7 @@ refs:
 The bot plugin keeps its bots in the `bots` collection, with `instructions` as the body.
 It keeps each deleted slug in the `bots-gone` collection.
 A bot edited by hand reaches watchers and the catalogue as any other change.
-The bot plugin has no file code left.
+The bot plugin has no record file code left: it keeps `mkdirSync` for a bot's workspace folder, which is not a record.
 
 ## Reconnaissance
 
@@ -60,6 +60,7 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 | `BotStore` keeps a cache, so `all`, `get` and `gone` stay synchronous | the provider reads ten times and writes twice | 01 |
 | The cache loads on the first provider call, after the fold | p1, a collection waits for the fold | 01 |
 | A tombstone is a record `{ id, deletedAt }` in `bots-gone` | the tombstone is a record too | 01 |
+| The bot plugin keeps `mkdirSync(record.workspace)`, which makes a bot's workspace folder and not a record, so "no file code left" means no *record* file code | Softov, 2026-10-11, to "Who creates a bot's workspace folder once the bot store has no file code?" | 01 |
 | A hand edit that changes `owner` or `workspace` is refused, and the store keeps the old record | an edit through the scheme may not change either | 02 |
 | A hand edit that fails `kept` is reported, and the store keeps the old record | decision 3 | 02 |
 
@@ -75,9 +76,9 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The bot store is a collection](task-01-the-bot-store-is-a-collection.md) | todo | - |
-| [02 - A bot edited by hand reaches the provider](task-02-a-hand-edit-reaches-the-provider.md) | todo | 01 |
-| [03 - The docs describe the bot file](task-03-the-docs-describe-the-bot-file.md) | todo | 02 |
+| [01 - The bot store is a collection](task-01-the-bot-store-is-a-collection.md) | implemented | - |
+| [02 - A bot edited by hand reaches the provider](task-02-a-hand-edit-reaches-the-provider.md) | implemented | 01 |
+| [03 - The docs describe the bot file](task-03-the-docs-describe-the-bot-file.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -87,15 +88,15 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** the p1 plan, then [task-01-the-bot-store-is-a-collection.md](task-01-the-bot-store-is-a-collection.md).
+- **Done so far:** p1 is built. All three tasks are implemented, with no commit made: this preset allows no `git add` or `git commit`. The work waits in the worktree for a later commit. Each task file's Resume lists the files that task changed, so it splits into a commit per task. Task 01 puts `botStore` over the `bots` and `bots-gone` collections, with a cache that `ready()` loads once. Every loaded record passes `kept`, and a delete leaves a tombstone. The provider awaits `ready()` before each call, and awaits `put` and `remove`. The catalogue awaits `ready()` in `authorize` and `snapshot`. Task 02 watches `bots`, so a change the store did not make reaches the cache, the watchers and the catalogue. Task 03 writes the file, the conversion and the rules for a hand edit into `docs/BOTS.md` and the package page. `pnpm -s typecheck` and `pnpm -s boundary` pass, and `pnpm exec vitest run packages/bot` passes 78 tests in 5 files.
+- **Next action:** the *Final verification checklist* below. It is the plan's own, and it wants a run of its own before the plan closes with `implemented.md`.
 - **Open questions:** none.
-- **Watch out for:** `gone` and `get` are read in one check at `provider.ts:376-378`, so both must come from the same cache.
+- **Watch out for:** `gone` and `get` are read in one check at `provider.ts:376-378`, so both must come from the same cache. And the checklist's copy of `~/.config/ahpd/bots` is the one item no test covers.
 
 ## Final verification checklist
 
 - [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
 - [ ] `pnpm exec vitest run packages/bot` passes.
-- [ ] `rg -n "node:fs" packages/bot/src` finds nothing.
+- [ ] `rg -n "node:fs" packages/bot/src/store.ts` finds nothing. The only `node:fs` left in `packages/bot/src` is `mkdirSync` in `provider.ts`, which makes a bot's workspace folder, which *Decisions locked in* keeps.
 - [ ] A copy of `~/.config/ahpd/bots` converts, and each bot reads the same before and after.
 - [ ] `plans/index.md` updated.

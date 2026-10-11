@@ -30,7 +30,9 @@ In the configuration file, with every option set:
 | --- | --- | --- |
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
 
-The records themselves are kept beside the daemon's own configuration, in `<configDir>/bots/`, and the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported at startup and skipped, and every other bot is kept.
+A bot is a record of the host's record store, so the daemon keeps each one as a file beside its own configuration: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter and `instructions` as the Markdown body, with the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported and skipped, and every other bot is kept.
+
+The record store is a port, so a plugin that takes it over with `registerRecords(store, 'replace')` - a sqlite or a postgresql store - keeps the bots there instead of in files, and nothing in this plugin changes. [`docs/BOTS.md`](https://github.com/softov/ahpd/blob/main/docs/BOTS.md#the-file) shows one bot file and what a hand edit may change.
 
 ## Commands
 
