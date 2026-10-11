@@ -41,6 +41,8 @@ import type {
  * Who a bot may belong to is asked on the write road, with the same rule the
  * read road uses: a `team:` or `project:` named as the owner has to be one the
  * writer belongs to, so a bot is never made for a team its maker is outside of.
+ * A holder of `*:*` may name any owner, this host's own `root:<hostName>`
+ * among them, and no writer but the root connection names another host's.
  */
 
 /**
@@ -157,8 +159,14 @@ const parsed = (uri: string, content: Write): unknown => {
   }
 };
 
-/** The body a write to the scheme's root makes one from. */
-const MANIFEST = {
+/**
+ * The body a write to the scheme's root makes one from.
+ *
+ * Built from the host's name, because the `owner` property names this host's
+ * own owner as a `const`: a client is told `user:<id>` for a person, never the
+ * host's key, so it sends the one it is handed here.
+ */
+const manifest = (hostName: string) => ({
   type: 'object',
   required: ['name'],
   properties: {
@@ -178,10 +186,14 @@ const MANIFEST = {
     workspace: { type: 'string', description: 'The folder it works in, under the plugin root. Its own, and never moved.' },
     computer: { type: 'string', description: 'The machine it runs in.' },
     session: { type: 'string', description: 'The session it is linked to, one this host has for its owner.' },
-    owner: { type: 'string', description: "Whose it is, as user:<id>, team:<team> or project:<team>:<project>. The maker where a body names none, and a team or project has to be one the maker belongs to." },
+    owner: {
+      type: 'string',
+      anyOf: [{ type: 'string' }, { const: `root:${hostName}`, title: 'This host' }],
+      description: "Whose it is, as user:<id>, team:<team> or project:<team>:<project>. The maker where a body names none, and a team or project has to be one the maker belongs to. An admin may name any owner, this host among them.",
+    },
   },
   additionalProperties: false,
-} as const;
+} as const);
 
 /**
  * Whether this reader may see this bot.
@@ -287,6 +299,21 @@ export function botProvider(options: BotOptions): BotProvider {
     if (asked === undefined) return existing?.owner ?? writer ?? `root:${options.hostName}`;
     if (writer === undefined || writer.startsWith('root:') || asked === writer) return asked;
     /*
+     * A `root:` owner is this host's own, and no other.
+     *
+     * The root connection may name any owner because it is the host's key, and
+     * a host with no users directory because there is nobody to check. Every
+     * other writer, an admin among them, is refused a `root:` that is not
+     * `root:<hostName>`: one host keeps one key.
+     */
+    const self: Owner = `root:${options.hostName}`;
+    if (asked.startsWith('root:') && asked !== self) {
+      throw new RpcError(-32009, `${asked} is not this host; its own owner is ${self}`);
+    }
+    // A holder of `*:*` administers the host, the same test `mayWrite` asks,
+    // and may make a bot for anybody: any person, team, project, or this host.
+    if (reader !== undefined && reader.can('*:*')) return asked;
+    /*
      * A team or a project named as the owner has to be the writer's own.
      *
      * The rule is the read road's own, `covers`, so a bot a write may make is
@@ -296,8 +323,8 @@ export function botProvider(options: BotOptions): BotProvider {
      * there is no record to check a membership against, the second because it
      * is the host's own key.
      *
-     * What is left is somebody else's `user:`, which is not this writer's to
-     * make whatever they hold.
+     * What is left is somebody else's `user:`, or this host's `root:`, which
+     * is not this writer's to make short of `*:*`.
      */
     const named = asked.startsWith('team:') || asked.startsWith('project:')
       ? asked.slice(asked.indexOf(':') + 1)
@@ -343,7 +370,7 @@ export function botProvider(options: BotOptions): BotProvider {
     describe: (): SchemeDescription => ({
       title: 'Bot',
       description: 'A bot a person keeps on this host, with a workspace of its own.',
-      manifest: MANIFEST,
+      manifest: manifest(options.hostName),
     }),
 
     authorize: async (uri, reader) => {
