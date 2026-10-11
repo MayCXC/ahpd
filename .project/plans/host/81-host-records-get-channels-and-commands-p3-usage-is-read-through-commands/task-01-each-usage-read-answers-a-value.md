@@ -1,6 +1,6 @@
 ---
 title: Each usage read answers a value, and the scheme gives it as text
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

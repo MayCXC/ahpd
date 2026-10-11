@@ -1,6 +1,6 @@
 ---
 title: The docs describe the record store
-status: implemented
+status: done
 depends: [task-02-the-server-keeps-records-as-markdown.md, task-03-a-plugin-gets-yaml-from-the-host.md]
 layer: "docs"
 refs:

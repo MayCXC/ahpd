@@ -1,6 +1,6 @@
 ---
 title: The docs describe the computer channel and commands
-status: implemented
+status: done
 depends: [task-02-the-computer-commands.md]
 layer: "docs"
 refs:

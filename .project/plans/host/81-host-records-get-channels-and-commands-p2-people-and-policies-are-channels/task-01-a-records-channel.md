@@ -1,6 +1,6 @@
 ---
 title: A records channel keeps a reader's list current
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

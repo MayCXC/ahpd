@@ -1,6 +1,6 @@
 ---
 title: A plugin gets YAML from the host
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk, packages/server"
 refs:

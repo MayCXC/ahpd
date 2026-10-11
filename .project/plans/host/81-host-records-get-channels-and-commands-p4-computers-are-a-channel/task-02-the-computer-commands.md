@@ -1,6 +1,6 @@
 ---
 title: The computer commands make, change and remove a machine
-status: implemented
+status: done
 depends: [task-01-the-computer-channel.md]
 layer: "packages/computer"
 refs:

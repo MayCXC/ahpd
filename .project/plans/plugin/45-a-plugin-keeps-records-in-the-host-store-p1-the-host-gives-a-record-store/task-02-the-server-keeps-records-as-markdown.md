@@ -1,6 +1,6 @@
 ---
 title: The server keeps records as Markdown files
-status: implemented
+status: done
 depends: [task-01-the-sdk-declares-the-record-store.md]
 layer: "packages/server"
 refs:

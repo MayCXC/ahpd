@@ -1,6 +1,6 @@
 ---
 title: The computer channel holds every machine and its state
-status: implemented
+status: done
 depends: []
 layer: "packages/computer"
 refs:

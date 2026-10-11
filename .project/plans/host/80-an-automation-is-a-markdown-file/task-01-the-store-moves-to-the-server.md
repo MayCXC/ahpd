@@ -1,6 +1,6 @@
 ---
 title: The store moves to the server
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk, packages/server"
 refs:

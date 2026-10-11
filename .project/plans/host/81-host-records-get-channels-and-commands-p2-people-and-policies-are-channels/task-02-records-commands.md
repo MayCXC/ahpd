@@ -1,6 +1,6 @@
 ---
 title: A record is put and removed by command, with the rules a resource write has
-status: implemented
+status: done
 depends: [task-01-a-records-channel.md]
 layer: "packages/sdk"
 refs:

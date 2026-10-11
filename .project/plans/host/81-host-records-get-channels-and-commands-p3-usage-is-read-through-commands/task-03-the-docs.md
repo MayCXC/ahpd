@@ -1,6 +1,6 @@
 ---
 title: The docs describe the usage commands
-status: implemented
+status: done
 depends: [task-02-the-usage-commands.md]
 layer: "docs"
 refs:

@@ -1,7 +1,7 @@
 ---
 title: The host serves x- commands, and a plugin registers one
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -70,9 +70,9 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A plugin registers a method](task-01-a-plugin-registers-a-method.md) | implemented | - |
-| [02 - The host answers a served method](task-02-the-host-answers-a-served-method.md) | implemented | 01 |
-| [03 - The docs describe a command of your own](task-03-the-docs-describe-a-command.md) | implemented | 02 |
+| [01 - A plugin registers a method](task-01-a-plugin-registers-a-method.md) | done | - |
+| [02 - The host answers a served method](task-02-the-host-answers-a-served-method.md) | done | 01 |
+| [03 - The docs describe a command of your own](task-03-the-docs-describe-a-command.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -80,8 +80,8 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 ## Resume state
 
-- **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
-- **Next action:** review the build; then p2 and p3 can start.
+- **Done so far:** tasks 01, 02 and 03 are done, built and reviewed on 2026-10-11. [implemented.md](implemented.md) lists what was built and the departures.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a test checks that `GATE` classifies every handler key.
   A served method has its own grant and is not a key there.

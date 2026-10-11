@@ -1,7 +1,7 @@
 ---
 title: Computers are a channel and commands
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -73,9 +73,9 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The computer channel](task-01-the-computer-channel.md) | implemented | - |
-| [02 - The computer commands](task-02-the-computer-commands.md) | implemented | 01 |
-| [03 - The docs describe the channel and commands](task-03-the-docs.md) | implemented | 02 |
+| [01 - The computer channel](task-01-the-computer-channel.md) | done | - |
+| [02 - The computer commands](task-02-the-computer-commands.md) | done | 01 |
+| [03 - The docs describe the channel and commands](task-03-the-docs.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -84,8 +84,8 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 
 ## Resume state
 
-- **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
-- **Next action:** review the build.
+- **Done so far:** tasks 01, 02 and 03 are done, built and reviewed on 2026-10-11. [implemented.md](implemented.md) lists what was built and the departures.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a create records the owner the host passes to the command, the same owner a resource write records: `root:<host>` from the root connection. The computers channel refreshes when the users file changes, so a reader who loses `computer:read` is sent `removed`.
 

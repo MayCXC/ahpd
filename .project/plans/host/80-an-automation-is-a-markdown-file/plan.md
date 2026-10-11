@@ -83,7 +83,7 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The store moves to the server](task-01-the-store-moves-to-the-server.md) | implemented | - |
+| [01 - The store moves to the server](task-01-the-store-moves-to-the-server.md) | done | - |
 | [02 - The store keeps each automation as a Markdown file](task-02-the-store-keeps-markdown-files.md) | todo | 01 |
 | [03 - automations.json is converted at start](task-03-the-old-file-is-converted.md) | todo | 02 |
 | [04 - The store reloads a file a person edits](task-04-the-store-reloads-an-edit.md) | todo | 02 |
@@ -97,8 +97,8 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 
 ## Resume state
 
-- **Done so far:** task 01 implemented 2026-10-11, awaiting review.
-- **Next action:** review task 01. Then [task-02-the-store-keeps-markdown-files.md](task-02-the-store-keeps-markdown-files.md), after plugin plan 45 p1 gives `recordFile`.
+- **Done so far:** task 01 is done; it was reviewed on 2026-10-11.
+- **Next action:** [task-02-the-store-keeps-markdown-files.md](task-02-the-store-keeps-markdown-files.md), after plugin plan 45 p1 gives `recordFile`.
 - **Open questions:** none.
 - **Watch out for:** task 02 needs `recordFile` from plugin plan 45 p1 task 02. Task 01 added `disableConditionsOf`, `parseCron`, `nextOccurrence`, `Cron` and `AutomationEntry` to the sdk exports, because the moved store imports them from `@ahpd/sdk`.
 

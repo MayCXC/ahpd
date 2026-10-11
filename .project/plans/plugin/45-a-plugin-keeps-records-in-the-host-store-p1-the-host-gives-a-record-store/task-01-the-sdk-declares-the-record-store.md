@@ -1,6 +1,6 @@
 ---
 title: The sdk declares the record store
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

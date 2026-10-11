@@ -1,7 +1,7 @@
 ---
 title: The host gives each plugin a record store
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -91,10 +91,10 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The sdk declares the record store](task-01-the-sdk-declares-the-record-store.md) | implemented | - |
-| [02 - The server keeps records as Markdown files](task-02-the-server-keeps-records-as-markdown.md) | implemented | 01 |
-| [03 - A plugin gets YAML from the host](task-03-a-plugin-gets-yaml-from-the-host.md) | implemented | - |
-| [04 - The docs describe the record store](task-04-the-docs-describe-the-record-store.md) | implemented | 02, 03 |
+| [01 - The sdk declares the record store](task-01-the-sdk-declares-the-record-store.md) | done | - |
+| [02 - The server keeps records as Markdown files](task-02-the-server-keeps-records-as-markdown.md) | done | 01 |
+| [03 - A plugin gets YAML from the host](task-03-a-plugin-gets-yaml-from-the-host.md) | done | - |
+| [04 - The docs describe the record store](task-04-the-docs-describe-the-record-store.md) | done | 02, 03 |
 
 ## Risks and tradeoffs
 
@@ -104,14 +104,14 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 
 ## Resume state
 
-- **Done so far:** all four tasks are implemented and await review. The server keeps records as Markdown files, and the loader gives each plugin host the record store and one shared `collections` map. A plugin gets `parseYaml` and `stringifyYaml` on its context.
-- **Next action:** review the four tasks, then the final verification checklist.
+- **Done so far:** all four tasks are done, built and reviewed on 2026-10-11. [implemented.md](implemented.md) lists what was built and the departures.
+- **Next action:** none; p2 starts from here.
 - **Open questions:** none.
-- **Watch out for:** `@cofold/yaml` is a `link:` to the local cofold build. Change it to the published version before a release.
+- **Watch out for:** the server depends on `@cofold/yaml` `^0.3.0` from npm since 0fcd7ad.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
-- [ ] `pnpm exec vitest run packages/sdk packages/server` passes.
-- [ ] A test plugin replaces the record store with `memoryRecords`, and a second plugin's collection uses it.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- [x] `pnpm exec vitest run packages/sdk packages/server` passes.
+- [x] A test plugin replaces the record store with `memoryRecords`, and a second plugin's collection uses it.
+- [x] `plans/index.md` updated.

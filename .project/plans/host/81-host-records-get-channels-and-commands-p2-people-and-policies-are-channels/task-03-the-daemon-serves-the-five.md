@@ -1,6 +1,6 @@
 ---
 title: The daemon serves the five channels and their commands
-status: implemented
+status: done
 depends: [task-02-records-commands.md]
 layer: "packages/sdk, packages/server"
 refs:

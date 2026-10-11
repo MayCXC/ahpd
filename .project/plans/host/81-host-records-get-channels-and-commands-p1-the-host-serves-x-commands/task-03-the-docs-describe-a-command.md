@@ -1,6 +1,6 @@
 ---
 title: The docs describe a command of your own
-status: implemented
+status: done
 depends: [task-02-the-host-answers-a-served-method.md]
 layer: "docs"
 refs:

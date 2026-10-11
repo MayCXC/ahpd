@@ -75,7 +75,7 @@ The child plans hold the second table for their own tasks.
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | active | cofold commands/05 |
+| [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | built | cofold commands/05 |
 | [p2 - The bot keeps its records in the record store](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | planned | p1 |
 
 ## Risks and tradeoffs
@@ -86,8 +86,8 @@ The child plans hold the second table for their own tasks.
 
 ## Resume state
 
-- **Done so far:** p1 tasks 01 to 04 are implemented and await review. The server depends on a local `link:` build of `@cofold/yaml` until cofold publishes `stringifyYaml`.
-- **Next action:** review p1, then p2.
+- **Done so far:** p1 is built and reviewed on 2026-10-11; see its [implemented.md](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md). The server depends on `@cofold/yaml` `^0.3.0` from npm.
+- **Next action:** p2.
 - **Open questions:** none.
 - **Watch out for:** host plan 80 needs p1's Markdown record code in the server.
 

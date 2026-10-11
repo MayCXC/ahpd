@@ -1,6 +1,6 @@
 ---
 title: A plugin registers a method, and the daemon passes its own
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

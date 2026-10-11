@@ -1,6 +1,6 @@
 ---
 title: The host answers a served method, gates it and advertises it
-status: implemented
+status: done
 depends: [task-01-a-plugin-registers-a-method.md]
 layer: "packages/sdk host"
 refs:

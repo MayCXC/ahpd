@@ -1,6 +1,6 @@
 ---
 title: The docs describe the people and policy channels and commands
-status: implemented
+status: done
 depends: [task-03-the-daemon-serves-the-five.md]
 layer: "docs"
 refs:

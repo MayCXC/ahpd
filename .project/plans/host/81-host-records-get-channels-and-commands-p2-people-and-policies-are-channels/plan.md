@@ -1,7 +1,7 @@
 ---
 title: People and policies are channels and commands
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -77,10 +77,10 @@ users file changes -> Users.watch -> refresh the four people channels
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A records channel keeps a reader's list current](task-01-a-records-channel.md) | implemented | - |
-| [02 - A record is put and removed by command](task-02-records-commands.md) | implemented | 01 |
-| [03 - The daemon serves the five channels and their commands](task-03-the-daemon-serves-the-five.md) | implemented | 02 |
-| [04 - The docs describe the channels and commands](task-04-the-docs.md) | implemented | 03 |
+| [01 - A records channel keeps a reader's list current](task-01-a-records-channel.md) | done | - |
+| [02 - A record is put and removed by command](task-02-records-commands.md) | done | 01 |
+| [03 - The daemon serves the five channels and their commands](task-03-the-daemon-serves-the-five.md) | done | 02 |
+| [04 - The docs describe the channels and commands](task-04-the-docs.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -90,8 +90,9 @@ users file changes -> Users.watch -> refresh the four people channels
 
 ## Resume state
 
-- **Done so far:** tasks 01, 02, 03 and 04 implemented 2026-10-11, awaiting review.
-- **Next action:** review the build, and the review fixes of 2026-10-11. p4 is built.
+- **Done so far:** tasks 01 to 04 are done, built and reviewed on 2026-10-11.
+  [implemented.md](implemented.md) lists what was built and the departures, and [deferred.md](deferred.md) lists what waits.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the daemon opens its own `Users.watch` for the channels and closes it at `stopping`. A change to the users file refreshes the policy channel as well as the four people channels. A channel keeps its state per client id and person, and each send carries `to` and a `visible` test, because several people can share one client id.
 

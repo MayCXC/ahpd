@@ -1,6 +1,6 @@
 ---
 title: The usage commands answer what the usage reads answer
-status: implemented
+status: done
 depends: [task-01-each-usage-read-answers-a-value.md]
 layer: "packages/sdk, packages/server"
 refs:

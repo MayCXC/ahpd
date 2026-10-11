@@ -1,7 +1,7 @@
 ---
 title: Users, teams, projects, roles, policies, computers and usage get typed channels and commands
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -76,10 +76,10 @@ client x-ahpd/usage/totals -> host -> served method -> usage authorize -> Usage.
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host serves x- commands, and a plugin registers one](../81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md) | planned | - |
-| [p2 - People and policies are channels and commands](../81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md) | planned | p1 |
-| [p3 - Usage is read through commands](../81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | planned | p1 |
-| [p4 - Computers are a channel and commands](../81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | planned | p1, p2 |
+| [p1 - The host serves x- commands, and a plugin registers one](../81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md) | built | - |
+| [p2 - People and policies are channels and commands](../81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md) | built | p1 |
+| [p3 - Usage is read through commands](../81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | built | p1 |
+| [p4 - Computers are a channel and commands](../81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | built | p1, p2 |
 
 The ahpapp half is ahpapp's own plan, and it starts when p2 is built.
 
@@ -91,13 +91,13 @@ The ahpapp half is ahpapp's own plan, and it starts when p2 is built.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** p1.
+- **Done so far:** p1, p2, p3 and p4 are built and reviewed on 2026-10-11. [implemented.md](implemented.md) links each child, and [deferred.md](deferred.md) lists what waits.
+- **Next action:** none in ahpd; the ahpapp half is ahpapp's own plan.
 - **Open questions:** none.
 - **Watch out for:** p2 and p4 copy the bot catalogue's per-client sets; a shared helper comes only if p4 needs the same code.
 
 ## Final verification checklist
 
-- [ ] Every child plan is built.
+- [x] Every child plan is built.
 - [ ] ahpapp reads people, policies, computers and usage through the new paths.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.
