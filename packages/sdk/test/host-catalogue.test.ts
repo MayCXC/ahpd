@@ -873,6 +873,31 @@ describe('a summary that did not change', () => {
     expect(rowsMoved(p, 'claude:/old')).toHaveLength(read + 1);
   });
 
+  it('sends zero counts for a listed row once its folder has no changes', async () => {
+    sdk.sessions.push({ sessionId: 'old', summary: 'Older', lastModified: 1, cwd: '/github/elsewhere' });
+    const counted_ = counted();
+    let files = 4;
+    counted_.source.summary = () => ({ files });
+    const host = createHost({
+      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), changes: counted_.source,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+    await settle(12);
+    expect(rowsMoved(p, 'claude:/old').at(-1)).toMatchObject({ changes: { files: 4 } });
+
+    // Everything committed: the folder has no changes, and the partial has to
+    // say so, because a partial without `changes` keeps the client's old counts.
+    await client.handle({ method: 'subscribe', params: { channel: 'claude:/old/changeset/uncommitted' } });
+    await settle(12);
+    files = 0;
+    counted_.watching[0]?.();
+    await settle(12);
+    expect(rowsMoved(p, 'claude:/old').at(-1)?.changes).toEqual({ files: 0, additions: 0, deletions: 0 });
+  });
+
   it('sends the first move of a session re-created under the same URI', async () => {
     /*
      * The clock held still, because what this is about is a row that comes

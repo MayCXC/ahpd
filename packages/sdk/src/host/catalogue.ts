@@ -411,6 +411,8 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     ctx.dispatch(ROOT, { type: 'root/activeSessionsChanged', activeSessions: sessions.size });
   };
 
+  /** The diff stat of a folder with nothing changed. */
+  const NO_CHANGES = { files: 0, additions: 0, deletions: 0 };
   /** The diff stat a catalogue row carries, which a session's own state does not. */
   const changesOf = (uri: string): Bag => {
     const dir = ctx.dirOf(uri);
@@ -515,7 +517,13 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    */
   const summaryMoved = (uri: string): void => {
     const summary = summaryOf(uri);
-    let changes: Bag = { status: statusOf(uri), ...changesOf(uri) };
+    /*
+     * Zero counts when the folder has none, rather than no key: a partial
+     * without `changes` is a row whose counts did not move, and a client then
+     * keeps the last counts it drew after everything was committed.
+     */
+    const counts = { changes: NO_CHANGES, ...changesOf(uri) };
+    let changes: Bag = { status: statusOf(uri), ...counts };
     if (summary !== undefined) {
       const { resource: _resource, provider: _provider, createdAt: _createdAt, ...mutable } = summary;
       /*
@@ -531,7 +539,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
        * because a row that never goes quiet is worse than a field that is
        * off-schema by one value.
        */
-      changes = { ...mutable, activity: mutable.activity ?? null };
+      changes = { ...mutable, ...counts, activity: mutable.activity ?? null };
     }
     sayMoved(uri, changes);
   };
