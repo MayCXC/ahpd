@@ -1,6 +1,6 @@
 ---
 title: The proxy and the capture check are ahpc's
-status: todo
+status: dropped
 depends: []
 layer: "docs"
 refs:

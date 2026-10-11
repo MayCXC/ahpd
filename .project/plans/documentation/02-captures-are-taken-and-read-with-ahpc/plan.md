@@ -1,7 +1,7 @@
 ---
 title: Captures are taken and read with ahpc, and ahpd keeps no proxy or capture check
 domain: documentation
-status: planned
+status: dropped
 priority: medium
 created: 2026-10-04
 revalidated: 2026-10-04
@@ -18,7 +18,7 @@ refs:
   - "[code://docs/AHP.md#L871](../../../../docs/AHP.md#L871) - `pnpm wire` and `scripts/tee.mjs`"
   - "[code://docs/DAEMON.md#L279](../../../../docs/DAEMON.md#L279) - `--wire`, which ends with `pnpm wire -- <file>`"
   - "[code://README.md#L443](../../../../README.md#L443) - `pnpm wire` over the fixture"
-  - "file:///github/ahpc/.project/decisions/the-recording-proxy-is-ahpcs.md - the decision, Softov's answer"
+  - "file:///github/ahpc/.project/decisions/ahpds-capture-scripts-stay-in-ahpd.md - the decision that keeps the scripts in ahpd"
   - "file:///github/ahpc/.project/plans/cli/02-the-wire-is-proxied-and-analysed/plan.md - `ahpc wire proxy`, `check`, `stats`, `channel`, `diff`"
 ---
 
@@ -49,7 +49,7 @@ ahpd's docs send a person to `ahpc wire proxy` to record a client and to `ahpc w
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The proxy and the capture check are ahpc's](task-01-the-proxy-and-check-are-ahpcs.md) | todo | - |
+| [01 - The proxy and the capture check are ahpc's](task-01-the-proxy-and-check-are-ahpcs.md) | dropped | - |
 
 ## Risks and tradeoffs
 
@@ -57,7 +57,7 @@ ahpd's docs send a person to `ahpc wire proxy` to record a client and to `ahpc w
 
 ## Resume state
 
-- **Next:** waits for host/43 p1 and ahpc cli/02.
+- **Next:** nothing; the plan is dropped and waits in [deferred.md](deferred.md).
 
 ## Final verification checklist
 
