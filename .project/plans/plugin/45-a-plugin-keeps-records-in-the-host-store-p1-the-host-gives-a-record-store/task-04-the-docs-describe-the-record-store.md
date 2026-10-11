@@ -1,6 +1,6 @@
 ---
 title: The docs describe the record store
-status: todo
+status: implemented
 depends: [task-02-the-server-keeps-records-as-markdown.md, task-03-a-plugin-gets-yaml-from-the-host.md]
 layer: "docs"
 refs:
@@ -31,3 +31,7 @@ refs:
 - Each code sample matches the types in `packages/sdk/src/types/records.ts`.
 
 ## Resume
+
+- **Done so far:** all steps. `docs/PLUGINS.md` has the sections "Keeping records" and "Reading and writing YAML", and `docs/DAEMON.md` has "Plugin records".
+- **Built as:** the new paragraphs in `docs/PLUGINS.md` are not hard-wrapped, the same as the sections near them.
+- **Built as:** the two tables in `docs/PLUGINS.md` have rows for `registerRecords`, `parseYaml` and `stringifyYaml`.

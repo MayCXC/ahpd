@@ -582,6 +582,14 @@ Claude's own `fromEnv` is untouched: a backend that reads its key from the envir
 
 Nothing here answers a value. `ahpd vault list` and `GET /api/vault/list` say a name and whether it is set, and list a name the configuration references and the vault does not hold as not set, with the path that named it, so a plugin waiting for a secret says so rather than staying silent.
 
+## Plugin records
+
+A plugin keeps its own records in the host's record store, and the daemon's store keeps them beside the configuration: one folder per collection, `<configDir>/<collection>/`, and one file per record, `<id>.md`. The fields are YAML frontmatter and the record's long text is the Markdown body, so a person reads, edits, copies and removes a record as one file. Each file is written whole at mode 0600, and each folder is made at 0700 when a plugin first opens it.
+
+The daemon watches each open folder. A file a person edits, adds or removes while it runs is read again, and the plugin that keeps the collection is told. A file that does not read, or whose frontmatter `id` is not its file name, is one line in the daemon's output, and the record from before stays. A `<id>.json` with no `<id>.md` beside it is converted when its collection opens and renamed `<id>.json.migrated`, which is what says it has been read.
+
+A plugin that registers a record store with `'replace'` keeps every plugin's records there instead, and none of these folders is written. See [PLUGINS.md](PLUGINS.md#keeping-records).
+
 ## Who may connect
 
 The connection token, the three flags that set it, and how a client presents it are [AUTHENTICATION.md](AUTHENTICATION.md#the-door).
