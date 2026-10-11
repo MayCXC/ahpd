@@ -84,7 +84,7 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The store moves to the server](task-01-the-store-moves-to-the-server.md) | done | - |
-| [02 - The store keeps each automation as a Markdown file](task-02-the-store-keeps-markdown-files.md) | todo | 01 |
+| [02 - The store keeps each automation as a Markdown file](task-02-the-store-keeps-markdown-files.md) | implemented | 01 |
 | [03 - automations.json is converted at start](task-03-the-old-file-is-converted.md) | todo | 02 |
 | [04 - The store reloads a file a person edits](task-04-the-store-reloads-an-edit.md) | todo | 02 |
 | [05 - The docs describe the automation file](task-05-the-docs-describe-the-file.md) | todo | 04 |
@@ -97,10 +97,10 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 
 ## Resume state
 
-- **Done so far:** task 01 is done; it was reviewed on 2026-10-11.
-- **Next action:** [task-02-the-store-keeps-markdown-files.md](task-02-the-store-keeps-markdown-files.md), after plugin plan 45 p1 gives `recordFile`.
-- **Open questions:** none.
-- **Watch out for:** task 02 needs `recordFile` from plugin plan 45 p1 task 02. Task 01 added `disableConditionsOf`, `parseCron`, `nextOccurrence`, `Cron` and `AutomationEntry` to the sdk exports, because the moved store imports them from `@ahpd/sdk`.
+- **Done so far:** tasks 01 and 02 are implemented; task 02 was built on 2026-10-11 on `build/agents/483c1aa6`.
+- **Next action:** [task-03-the-old-file-is-converted.md](task-03-the-old-file-is-converted.md), then [task-04-the-store-reloads-an-edit.md](task-04-the-store-reloads-an-edit.md) and [task-05-the-docs-describe-the-file.md](task-05-the-docs-describe-the-file.md). Task 04 adds the watch this store's `known` map was written for.
+- **Open questions:** `git add` is denied in this session's don't-ask mode, so a file this repository does not track cannot be staged, and task 02's new `packages/server/test/automation-files.test.ts` is not in its commit. Should the allow list gain `Bash(git add *)`, so the file goes in with `git add` and `git commit --amend --no-edit`, or should the new cases live in an existing test file instead? Tasks 03 and 04 create no further files, and task 05 only edits `docs/`.
+- **Watch out for:** the store is now `{ dir, state }` and no caller passes a single file. `wholeFiles` in `run.ts` names `automationStatePath()` rather than `automationsPath()`, so an old `automations.json` and its scratch are not swept. `recordFile` takes a top-level body field name, which is why the file carries a flat `message.text` key rather than a nested one.
 
 ## Final verification checklist
 

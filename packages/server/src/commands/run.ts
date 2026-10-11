@@ -45,7 +45,7 @@ import {
 import { DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
 import { here } from '../ask.js';
 import { offerConfigure, askToServe } from './configure.js';
-import { agentPluginsDir, automationsPath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
+import { agentPluginsDir, automationsDir, automationStatePath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
 import { API_PREFIX, apiHandler, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
 import { proxyHandler } from '../proxy/listener.js';
@@ -162,7 +162,7 @@ export function daemonSessions(told: (message: string) => void): SessionStore {
 export const wholeFiles = (users?: string): string[] => [
   ...(users === undefined ? [] : [users]),
   policiesPath(),
-  automationsPath(),
+  automationStatePath(),
   join(configDir(), 'computers.json'),
   vaultPath(),
 ];
@@ -380,7 +380,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       port: boundPort,
       paths: options.paths,
       startedAt,
-      automations: memory ? 'in memory, schedules do not fire' : `in ${automationsPath()}, schedules fire`,
+      automations: memory ? 'in memory, schedules do not fire' : `in ${automationsDir()}, schedules fire`,
     }),
     turning: () => turning(),
     usage: () => metered,
@@ -682,8 +682,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       ? memoryAutomations()
       : scheduledAutomations({
         // Beside the configuration, which is this daemon's decision to make and
-        // not the store's - see `ScheduledOptions.file`.
-        file: automationsPath(),
+        // not the store's - see `ScheduledOptions.dir` and `.state`.
+        dir: automationsDir(),
+        state: automationStatePath(),
         onProblem: (message) => process.stdout.write(`${message}\n`),
       }),
     /*
@@ -974,7 +975,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     + `pid ${String(process.pid)}\n`
     // Its own line rather than the end of the one above, which `daemon.ts`
     // reads the session directories off with a regular expression.
-    + `automations ${memory ? 'in memory, schedules do not fire' : `in ${automationsPath()}, schedules fire`}\n`
+    + `automations ${memory ? 'in memory, schedules do not fire' : `in ${automationsDir()}, schedules fire`}\n`
     // Its own line for the same reason: a client that only needs the names reads
     // one line, and `daemon.ts` keeps matching the two above unchanged.
     + `plugins ${loaded.length === 0 ? 'none' : loaded.map((one) => one.name).join(', ')}\n`

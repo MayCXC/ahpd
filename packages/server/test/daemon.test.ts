@@ -14,7 +14,7 @@ import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { announcementOf, claim, forget, logSince, readyUrl, recordOf, running, start, statusLine, stop } from '../src/daemon.js';
-import { automationsPath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
+import { automationStatePath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
 import type { Running } from '../src/daemon.js';
 
 const REPO = join(import.meta.dirname, '../../..');
@@ -482,7 +482,7 @@ describe('the temp files beside what the daemon writes whole', () => {
 
   it('clears the scratch of a writer that is gone, beside every file the daemon writes whole', async () => {
     const users = join(home, 'users.json');
-    const whole = [policiesPath(), automationsPath(), join(home, 'ahpd', 'computers.json'), vaultPath()];
+    const whole = [policiesPath(), automationStatePath(), join(home, 'ahpd', 'computers.json'), vaultPath()];
     const gone = [...whole, users].map((path) => `${path}.${String(NEVER)}.tmp`);
     // A pid alive for the whole case is a writer still in the middle of its own.
     const live = `${policiesPath()}.${String(process.ppid)}.tmp`;

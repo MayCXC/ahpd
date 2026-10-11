@@ -390,12 +390,30 @@ const code = (error: unknown): string | undefined =>
 export const daemonLog = (): string => join(configDir(), 'daemon.log');
 
 /**
- * Where automations are kept.
+ * Where automations are kept: one `<id>.md` per automation.
  *
  * Beside the configuration and not inside it: `config.json` is a file a person
- * edits and this one is written by the daemon every time somebody adds an
+ * edits and a file here is written whenever somebody adds or changes an
  * automation, and a tool that rewrites a hand-edited file loses the comments
  * and the ordering somebody put there.
+ */
+export const automationsDir = (): string => join(configDir(), 'automations');
+
+/**
+ * Where the run state of every automation is kept.
+ *
+ * The one file a run writes, kept apart from the automations themselves: what
+ * changes on every occurrence - how many runs an allowance has paid for, and
+ * when the next one is - must not be in the file a person edits.
+ */
+export const automationStatePath = (): string => join(configDir(), 'automations-state.json');
+
+/**
+ * The one file an earlier daemon kept every automation in.
+ *
+ * Nothing writes it any more. Named here rather than beside the conversion
+ * that reads it, because that has to say where it looked whether or not there
+ * was anything there.
  */
 export const automationsPath = (): string => join(configDir(), 'automations.json');
 
