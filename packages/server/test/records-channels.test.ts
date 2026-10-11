@@ -235,7 +235,7 @@ it('serves the teams channel and the policy commands from the daemon', async () 
 
   const ready = answer(1)?.result as Bag;
   const methods = ready._meta?.['ahpd.methods'] as Bag[] | undefined;
-  expect(methods?.map((one) => one.method)).toEqual(expect.arrayContaining(['x-ahpd/teams/put', 'x-ahpd/policies/remove']));
+  expect(methods?.map((one) => one.method)).toEqual(expect.arrayContaining(['x-ahpd/teams/put', 'x-ahpd/policies/remove', 'x-ahpd/usage/totals', 'x-ahpd/usage/pools']));
 
   expect((answer(2)?.result?.snapshot.state.records as Bag[]).map((one) => one.id)).toEqual(['backend']);
   expect(answer(3)?.error).toBeUndefined();

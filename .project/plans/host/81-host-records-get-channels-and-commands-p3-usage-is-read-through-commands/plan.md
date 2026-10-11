@@ -1,7 +1,7 @@
 ---
 title: Usage is read through commands
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -68,9 +68,9 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Each usage read answers a value](task-01-each-usage-read-answers-a-value.md) | todo | - |
-| [02 - The usage commands](task-02-the-usage-commands.md) | todo | 01 |
-| [03 - The docs describe the usage commands](task-03-the-docs.md) | todo | 02 |
+| [01 - Each usage read answers a value](task-01-each-usage-read-answers-a-value.md) | implemented | - |
+| [02 - The usage commands](task-02-the-usage-commands.md) | implemented | 01 |
+| [03 - The docs describe the usage commands](task-03-the-docs.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -78,10 +78,10 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-each-usage-read-answers-a-value.md](task-01-each-usage-read-answers-a-value.md).
+- **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
+- **Next action:** review the build.
 - **Open questions:** none.
-- **Watch out for:** `resolve` measures the text of an answer; keep it on the same function.
+- **Watch out for:** `resolve` still measures the text `body` and `groupsBody` give, and both now call the same answers the commands call.
 
 ## Final verification checklist
 

@@ -40,6 +40,7 @@ import {
   shellTerminals,
   signInRecord,
   toolServers,
+  usageMethods,
   usageProvider,
 } from '@ahpd/sdk';
 import { DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
@@ -746,15 +747,18 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * A person reads their own pools without `usage:read`, which is the provider's
    * own `authorize` rather than a rule in the host.
    */
-  base.resourceProviders = {
-    ...base.resourceProviders,
-    usage: usageProvider({
-      usage: store,
-      ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
-      // The titles a pool is named with, read from the same directory the gate asks.
-      ...(users === undefined ? {} : { titles: users }),
-      onProblem: (message) => process.stdout.write(`${message}\n`),
-    }),
+  const usageScheme = usageProvider({
+    usage: store,
+    ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+    // The titles a pool is named with, read from the same directory the gate asks.
+    ...(users === undefined ? {} : { titles: users }),
+    onProblem: (message) => process.stdout.write(`${message}\n`),
+  });
+  base.resourceProviders = { ...base.resourceProviders, usage: usageScheme };
+  // The usage commands, which answer what the scheme's reads answer, as values.
+  base.methods = {
+    ...base.methods,
+    ...Object.fromEntries(Object.entries(usageMethods(usageScheme)).map(([name, method]) => [name, { by: 'ahpd', name, method }])),
   };
 
   /*

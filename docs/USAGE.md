@@ -81,6 +81,30 @@ A record counts once in a group, however many pools it is charged to, where a po
 
 The three periods are ranges in the configured zone rather than in UTC, so a week starts on the deployment's Monday 00:00 and not the evening before - see the `timezone` key below. `until` is always now, so the day behind the current hour is a partly covered one and is counted whole. The records a period's total summed are the records that period's `records` leaf lists, because both compare the range at the day.
 
+## Reading usage by command
+
+Each read above is also an `x-` command a client sends on its connection, which answers the same value as JSON rather than as text in a `data` string - decision [Host records get typed channels and commands beside their resource schemes](../.project/decisions/host-records-are-typed-channels-beside-their-resource-schemes.md). The `usage:` scheme stays, and both answer from the same functions. Usage has no channel: nothing is sent when a record is written.
+
+| Command | Params | Answers what this read answers |
+| --- | --- | --- |
+| `x-ahpd/usage/pools` | none | `usage://`, as `[{ pool, kind, name }]` |
+| `x-ahpd/usage/totals` | `pool` | `usage://<pool>`, as `{ pool, kind, name, day, week, month }` |
+| `x-ahpd/usage/range` | `pool`, `from?`, `until?` | `usage://<pool>/range` |
+| `x-ahpd/usage/records` | `pool`, `from?`, `until?` | `usage://<pool>/records` |
+| `x-ahpd/usage/groups` | `by?`, `from?`, `until?` | `usage://groups` |
+
+`pool` is the pool key as written, `user:ana`, not encoded. `from` and `until` are strings with the defaults and the refusals of [a range](#a-range). `by` is a list, `["user", "team"]`, rather than a comma-separated string, and a key that is not one of the three is refused with the sentence the read gives. A param of the wrong type is `-32602`.
+
+```json
+{ "id": 7, "method": "x-ahpd/usage/groups", "params": { "by": ["user"] } }
+```
+
+```json
+{ "id": 7, "result": [{ "keys": { "user": "user:ana" }, "names": { "user": "ana" }, "total": { "calls": 2, "providerUsd": 4, "usd": 4 } }] }
+```
+
+Each command needs `usage:read`, and lets in a reader without it by the rules under [Grants](#grants): `pools` and `groups` let in every signed-in reader and answer only what that reader may read, and `totals`, `range` and `records` let a reader in for a pool they may read. Another person's pool is `-32009`, `<id> may not usage:read here`, as the read is. The five are listed on the handshake under `_meta['ahpd.methods']`.
+
 ## Configuration keys
 
 Both keys are in the daemon's configuration file, under `usage`. Neither has a flag, because both are properties of a deployment rather than of one run.

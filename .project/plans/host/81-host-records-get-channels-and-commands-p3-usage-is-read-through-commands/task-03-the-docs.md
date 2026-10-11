@@ -1,6 +1,6 @@
 ---
 title: The docs describe the usage commands
-status: todo
+status: implemented
 depends: [task-02-the-usage-commands.md]
 layer: "docs"
 refs:
@@ -27,3 +27,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `USAGE.md` has a section "Reading usage by command". The example matches `usage-methods.test.ts`.

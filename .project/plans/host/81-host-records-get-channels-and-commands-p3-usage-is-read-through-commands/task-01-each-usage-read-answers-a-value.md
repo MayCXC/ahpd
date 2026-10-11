@@ -1,6 +1,6 @@
 ---
 title: Each usage read answers a value, and the scheme gives it as text
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -31,3 +31,4 @@ The usage provider builds each answer as a value from typed arguments, and `read
 
 ## Resume
 
+Implemented 2026-10-11. `usageProvider` returns `answers`: `periods`, `range`, `records` and `groups`, with `pools` and `readable` beside them for task 02. `bounds` and `keysFrom` hold the refusal sentences `rangeOf` and `keysAsked` had. `body` and `groupsBody` give the answers as the same JSON text, and every test in `usage.test.ts` and `usage-scheme.test.ts` passes unchanged.

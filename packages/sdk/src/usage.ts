@@ -14,7 +14,8 @@ import { absentResource, asFile, EPOCH, splitResource, type At as Split } from '
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { mayRead, membership } from './scopes.js';
 import type { Entry, Metadata, Read, ResourceProvider, SchemeDescription } from './types/resources.js';
-import type { Named, Principal } from './types/users.js';
+import type { PluginMethod } from './types/plugin.js';
+import type { Grant, Named, Principal } from './types/users.js';
 import type { Cost, Usage, UsageEntry, UsageGroup, UsageKey, UsageTotal } from './types/usage.js';
 
 /** An hour, which is what computer time is reported in. */
@@ -430,6 +431,52 @@ export interface UsageProvider extends ResourceProvider {
   read(uri: string, wanted?: string, reader?: Principal): Promise<Read>;
   describe(): SchemeDescription;
   authorize(uri: string, reader: Principal | undefined): Promise<boolean>;
+  /** Each read's answer as a value, which `read` gives as JSON text. */
+  answers: UsageAnswers;
+}
+
+/** A pool, by its key, kind and the name a person reads it by. */
+export interface UsagePool {
+  pool: string;
+  kind: string;
+  name: string;
+}
+
+/** A pool's day, week and month, as `usage://<pool>` answers them. */
+export interface UsagePeriods extends UsagePool {
+  day: UsageTotal;
+  week: UsageTotal;
+  month: UsageTotal;
+}
+
+/** One row of `usage://groups`: the pool of each key, its name, and what it was charged. */
+export interface UsageNamedGroup {
+  keys: UsageGroup['keys'];
+  names: Partial<Record<UsageKey, string>>;
+  total: UsageTotal;
+}
+
+/**
+ * The answers behind the `usage:` reads, each from typed arguments.
+ *
+ * `from` and `until` are a date, as 2026-10-01, or an ISO 8601 instant; absent,
+ * they are the first day of the month in the provider's zone, and now. None of
+ * these asks whether a reader may read a pool, except `pools` and `groups`,
+ * which count only what the reader may read; `readable` is that question.
+ */
+export interface UsageAnswers {
+  /** The pools something was charged to that this reader may read. */
+  pools(reader: Principal | undefined): Promise<UsagePool[]>;
+  /** Whether this reader may read this pool. */
+  readable(reader: Principal | undefined, pool: string): boolean;
+  /** A pool's day, week and month, as `usage://<pool>`. */
+  periods(pool: string): Promise<UsagePeriods>;
+  /** A pool's total over a range, as `usage://<pool>/range`. */
+  range(pool: string, from?: string, until?: string): Promise<UsageTotal>;
+  /** The records charged to a pool over a range, as `usage://<pool>/records`. */
+  records(pool: string, from?: string, until?: string): Promise<UsageEntry[]>;
+  /** The records this reader may read, summed by these keys, as `usage://groups`. */
+  groups(by: readonly string[], from: string | undefined, until: string | undefined, reader: Principal | undefined): Promise<UsageNamedGroup[]>;
 }
 
 /** What the provider was built around. */
@@ -655,29 +702,27 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
   };
 
   /**
-   * The range a query asks for, on the defaults `records` has always had: the
-   * first day of the month in `zone`, and now.
+   * The range asked for, on the defaults `records` has always had: the first
+   * day of the month in `zone`, and now.
    *
    * A bound that is not a date is refused rather than read as no bound, which
    * would answer every record or none.
    */
-  const rangeOf = (asked: URLSearchParams, now: Date): [string, string] => {
+  const bounds = (from: string | undefined, until: string | undefined, now: Date): [string, string] => {
     const local = shown(zone, now);
     const month = `${String(local.getUTCFullYear())}-${String(local.getUTCMonth() + 1).padStart(2, '0')}`;
-    const bound = (which: 'from' | 'until', fallback: string): string => {
-      const value = asked.get(which);
-      if (value === null) return fallback;
+    const bound = (which: 'from' | 'until', value: string | undefined, fallback: string): string => {
+      if (value === undefined) return fallback;
       if (!DAY.test(value) || Number.isNaN(Date.parse(value))) {
         throw new RpcError(INVALID_PARAMS, `${which} must be a date, as 2026-10-01, or an ISO 8601 instant: ${value}`);
       }
       return value;
     };
-    return [bound('from', `${month}-01`), bound('until', now.toISOString())];
+    return [bound('from', from, `${month}-01`), bound('until', until, now.toISOString())];
   };
 
   /** The keys a grouped read sums by, refused when one is not a key. */
-  const keysAsked = (asked: URLSearchParams): UsageKey[] => {
-    const written = (asked.get('by') ?? '').split(',').map((one) => one.trim()).filter((one) => one !== '');
+  const keysFrom = (written: readonly string[]): UsageKey[] => {
     const keys: UsageKey[] = [];
     for (const one of written) {
       const key = KEYS.find((known) => known === one);
@@ -687,21 +732,29 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
     return keys;
   };
 
-  /** The bytes behind `usage://groups`: one row per set of key values, each named. */
-  const groupsBody = async (held: At, reader: Principal | undefined): Promise<string> => {
-    const by = keysAsked(held.asked);
-    const [from, until] = rangeOf(held.asked, new Date());
-    const rows = await store.groups(by, from, until, keeper(reader));
+  /** The keys a query's `by` names, comma-separated. */
+  const keysAsked = (asked: URLSearchParams): UsageKey[] =>
+    keysFrom((asked.get('by') ?? '').split(',').map((one) => one.trim()).filter((one) => one !== ''));
+
+  /** One row per set of key values, each named. */
+  const groups = async (written: readonly string[], from: string | undefined, until: string | undefined, reader: Principal | undefined): Promise<UsageNamedGroup[]> => {
+    const by = keysFrom(written);
+    const range = bounds(from, until, new Date());
+    const rows = await store.groups(by, ...range, keeper(reader));
     const titles = await titled();
-    return JSON.stringify(rows.map((row) => {
+    return rows.map((row) => {
       const names: Partial<Record<UsageKey, string>> = {};
       for (const key of by) {
         const pool = row.keys[key];
         if (pool !== undefined) names[key] = named(pool, titles).name;
       }
       return { keys: row.keys, names, total: row.total };
-    }), null, 2);
+    });
   };
+
+  /** The bytes behind `usage://groups`. */
+  const groupsBody = async (held: At, reader: Principal | undefined): Promise<string> =>
+    JSON.stringify(await groups(keysAsked(held.asked), held.asked.get('from') ?? undefined, held.asked.get('until') ?? undefined, reader), null, 2);
 
   /**
    * The three periods, as the range each covers in `zone`.
@@ -715,38 +768,60 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
     return { day: span(local), week: span(mondayOf(local)), month: span(firstOf(local)) };
   };
 
+  /** A pool's day, week and month. */
+  const periods = async (pool: string): Promise<UsagePeriods> => {
+    const spans = spansOf(new Date());
+    return {
+      pool,
+      ...named(pool, await titled()),
+      day: await store.total(pool, ...spans.day),
+      week: await store.total(pool, ...spans.week),
+      month: await store.total(pool, ...spans.month),
+    };
+  };
+
+  /** A pool's total over a range. */
+  const range = async (pool: string, from?: string, until?: string): Promise<UsageTotal> =>
+    store.total(pool, ...bounds(from, until, new Date()));
+
+  /**
+   * The records charged to a pool over a range.
+   *
+   * The same default the store would have applied, in the zone the periods are
+   * cut in rather than in UTC: a client listing this month's records gets the
+   * ones behind this month's total.
+   */
+  const records = async (pool: string, from?: string, until?: string): Promise<UsageEntry[]> =>
+    store.records(pool, ...bounds(from, until, new Date()));
+
+  const answers: UsageAnswers = {
+    pools: async (reader) => {
+      const titles = await titled();
+      return (await visible(reader)).map((pool) => ({ pool, ...named(pool, titles) }));
+    },
+    readable: (reader, pool) => !refused(reader, pool),
+    periods,
+    range,
+    records,
+    groups,
+  };
+
   /** The bytes behind one URI, which `read` hands over and `resolve` measures. */
   const body = async (held: At): Promise<string> => {
-    const now = new Date();
-    if (held.leaf === '') {
-      const spans = spansOf(now);
-      return JSON.stringify({
-        pool: held.pool,
-        ...named(held.pool, await titled()),
-        day: await store.total(held.pool, ...spans.day),
-        week: await store.total(held.pool, ...spans.week),
-        month: await store.total(held.pool, ...spans.month),
-      }, null, 2);
-    }
-    if (held.leaf === 'records') {
-      /*
-       * The same default the store would have applied, in the zone the periods
-       * are cut in rather than in UTC: a client listing this month's records
-       * gets the ones behind this month's total.
-       */
-      return JSON.stringify(await store.records(held.pool, ...rangeOf(held.asked, now)), null, 2);
-    }
-    if (held.leaf === 'range') {
-      return JSON.stringify(await store.total(held.pool, ...rangeOf(held.asked, now)), null, 2);
-    }
+    const from = held.asked.get('from') ?? undefined;
+    const until = held.asked.get('until') ?? undefined;
+    if (held.leaf === '') return JSON.stringify(await periods(held.pool), null, 2);
+    if (held.leaf === 'records') return JSON.stringify(await records(held.pool, from, until), null, 2);
+    if (held.leaf === 'range') return JSON.stringify(await range(held.pool, from, until), null, 2);
     if (held.leaf === 'day' || held.leaf === 'week' || held.leaf === 'month') {
-      const [from, until] = spansOf(now)[held.leaf];
-      return JSON.stringify(await store.total(held.pool, from, until), null, 2);
+      const [start, end] = spansOf(new Date())[held.leaf];
+      return JSON.stringify(await store.total(held.pool, start, end), null, 2);
     }
     throw absentResource('usage', `usage://${encodeURIComponent(held.pool)}/${held.leaf}`);
   };
 
   return {
+    answers,
     describe: (): SchemeDescription => ({
       title: 'Usage',
       description: 'What this host has been charged, per pool.',
@@ -817,3 +892,84 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
     },
   };
 }
+
+/** A string param, absent as undefined, or a refusal naming the command and the param. */
+const textParam = (command: string, params: Record<string, unknown>, name: string): string | undefined => {
+  const value = params[name];
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string') throw new RpcError(INVALID_PARAMS, `${command} takes ${name} as a string`);
+  return value;
+};
+
+/** The pool a command names, or a refusal saying it needs one. */
+const poolParam = (command: string, params: Record<string, unknown>): string => {
+  const pool = textParam(command, params, 'pool');
+  if (pool === undefined || pool === '') throw new RpcError(INVALID_PARAMS, `${command} needs pool, a pool key such as user:ana`);
+  return pool;
+};
+
+/**
+ * The five usage commands, by name, each answering what its `usage:` read
+ * answers, as a value.
+ *
+ * | Command | Params | Answers, as |
+ * | --- | --- | --- |
+ * | `x-ahpd/usage/pools` | - | the listing of `usage://`, as `[{ pool, kind, name }]` |
+ * | `x-ahpd/usage/totals` | `pool` | `usage://<pool>` |
+ * | `x-ahpd/usage/range` | `pool`, `from?`, `until?` | `usage://<pool>/range` |
+ * | `x-ahpd/usage/records` | `pool`, `from?`, `until?` | `usage://<pool>/records` |
+ * | `x-ahpd/usage/groups` | `by?`, `from?`, `until?` | `usage://groups` |
+ *
+ * Each needs `usage:read`, and lets in a reader without it by the scheme's own
+ * rules: `pools` and `groups` answer only what the reader may read, and the
+ * other three answer a pool the reader may read.
+ */
+export const usageMethods = (provider: UsageProvider): Record<string, PluginMethod> => {
+  const answers = provider.answers;
+  const GRANT: Grant = 'usage:read';
+
+  /** A command over one pool, which a reader may send for a pool they may read. */
+  const onePool = (command: string, title: string, description: string, answer: (pool: string, params: Record<string, unknown>) => Promise<unknown>): PluginMethod => ({
+    grant: GRANT,
+    describe: () => ({ title, description }),
+    authorize: async (params, reader) => {
+      const pool = params.pool;
+      return typeof pool === 'string' && pool !== '' && answers.readable(reader, pool);
+    },
+    handle: async (params, reader) => {
+      const pool = poolParam(command, params);
+      if (!answers.readable(reader, pool)) throw new RpcError(-32009, refusalReason((reader as Principal).id, GRANT));
+      return answer(pool, params);
+    },
+  });
+
+  const totals = 'x-ahpd/usage/totals';
+  const range = 'x-ahpd/usage/range';
+  const records = 'x-ahpd/usage/records';
+  const groups = 'x-ahpd/usage/groups';
+  return {
+    'x-ahpd/usage/pools': {
+      grant: GRANT,
+      describe: () => ({ title: 'Usage pools', description: 'The pools something was charged to that you may read.' }),
+      authorize: async () => true,
+      handle: async (_params, reader) => answers.pools(reader),
+    },
+    [totals]: onePool(totals, 'Usage totals', 'A pool\'s day, week and month.', async (pool) => answers.periods(pool)),
+    [range]: onePool(range, 'Usage over a range', 'A pool\'s total between from and until.', async (pool, params) =>
+      answers.range(pool, textParam(range, params, 'from'), textParam(range, params, 'until'))),
+    [records]: onePool(records, 'Usage records', 'The records charged to a pool between from and until.', async (pool, params) =>
+      answers.records(pool, textParam(records, params, 'from'), textParam(records, params, 'until'))),
+    [groups]: {
+      grant: GRANT,
+      describe: () => ({ title: 'Usage by group', description: 'The records you may read, summed by user, team and project.' }),
+      authorize: async () => true,
+      handle: async (params, reader) => {
+        const by = params.by;
+        if (by !== undefined && (!Array.isArray(by) || by.some((one) => typeof one !== 'string'))) {
+          throw new RpcError(INVALID_PARAMS, `${groups} takes by as a list of user, team and project`);
+        }
+        return answers.groups((by ?? []) as string[], textParam(groups, params, 'from'), textParam(groups, params, 'until'), reader);
+      },
+    },
+  };
+};
