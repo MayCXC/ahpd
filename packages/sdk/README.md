@@ -52,7 +52,7 @@ import {
   gitBranches,
   gitWorktrees,
   hostTools,
-  scheduledAutomations,
+  memoryAutomations,
 } from '@ahpd/sdk';
 
 const host = createHost({
@@ -64,7 +64,7 @@ const host = createHost({
   directories: gitBranches(),
   worktrees: gitWorktrees(),
   tools: hostTools(),
-  automations: scheduledAutomations({ file: './automations.json' }),
+  automations: memoryAutomations(),
 });
 ```
 
@@ -83,7 +83,7 @@ const host = createHost({
 | `worktreesRoot` | beside the repository | An absolute folder every session tree goes under, as `<root>/<repo>/<name>`. Left out, a tree sits at `<repo>.worktrees` beside its repository, which is where VS Code's host looks for it |
 | `github` | none | What GitHub knows about a session's branch, such as its pull request. Use `githubPullRequests()`. See [github](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#github) |
 | `users` | none | The people who may use this host. Left out, the connection token is the whole of who may connect. Use `fileUsers({ file })` |
-| `automations` | none | Triggered agents. Use `memoryAutomations()`, or `scheduledAutomations({ file })` for cron. See [automations](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#automations) |
+| `automations` | none | Triggered agents. Use `memoryAutomations()`. The clock store for cron is the daemon's, in `@ahpd/server`. See [automations](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#automations) |
 | `unownedAutomations` | `every` | What an automation that names no owner sees: `every` or `none` |
 | `sessions` | `memorySessions()` | Where the flags and configuration the host adds to a session are kept. A daemon wants `fileSessions({ dir })`, which outlives a restart |
 | `computers` | none | How a backend runs its process inside a named machine. The plugin that owns the `computer:` scheme contributes it |
@@ -159,7 +159,7 @@ All types are exported. Nothing under `types/` imports a runtime value, so you c
 | [src/changes.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/changes.ts) | The `changes` port: a changeset from git |
 | [src/repo/git.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/repo/git.ts) | The `directories` port: which branch a directory is on |
 | [src/automations.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/automations.ts) | The `automations` port, without a clock |
-| [src/scheduled.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/scheduled.ts) | The `automations` port, with a clock |
+| [src/cron.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/cron.ts) | Five-field cron expressions and their next occurrence |
 | [src/tools/session.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/tools/session.ts) | The tools a session's agent is given |
 | [src/users.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/users.ts) | The user directory, roles and grants |
 | [src/catalog.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/catalog.ts) | Session names and status bits |

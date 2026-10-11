@@ -1,7 +1,6 @@
 import { expect, it } from 'vitest';
 import type { AutomationTriggerDefinition, ConfigPropertySchema } from '@microsoft/agent-host-protocol';
 import { memoryAutomations } from '../src/automations.js';
-import { scheduledAutomations } from '../src/scheduled.js';
 import { presetById } from '../src/triggerpresets.js';
 import type { Bag } from '../src/types/common.js';
 
@@ -92,11 +91,6 @@ it('lists the session and watch trigger types with their events', () => {
   expect(numbers.toolCalls?.default).toBe(3);
   expect(Object.keys(fields(numbers.filter)))
     .toEqual(['sessions', 'providers', 'owners', 'projects', 'folders', 'automated']);
-});
-
-it('answers the same types from the store the daemon is built over', () => {
-  const types = scheduledAutomations({ file: '/tmp/ahpd-none.json' }).triggers({});
-  expect(types.map((one) => one.type)).toEqual(['session', 'watch']);
 });
 
 it('builds each preset into a rule with its default numbers', () => {

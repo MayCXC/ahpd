@@ -61,7 +61,9 @@ export { githubPullRequests } from './repo/github.js';
 export { partsOf, SNAPSHOT_TAG } from './attachments.js';
 export type { Part, PartOptions, PartSource } from './attachments.js';
 export { memoryAutomations } from './automations.js';
-export { scheduledAutomations } from './scheduled.js';
+export { disableConditionsOf } from './automations.js';
+export { nextOccurrence, parseCron } from './cron.js';
+export type { Cron } from './cron.js';
 export { fileSessions, memorySessions, migrateSessions } from './sessions.js';
 export type { FileSessionOptions } from './sessions.js';
 export { fileUsage, usageMethods, usageProvider } from './usage.js';
@@ -88,7 +90,6 @@ export { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, oidcIssuer } from '.
 export type { Fetcher, GitHubIssuerOptions, IssuerKind, OidcIssuerOptions } from './issuers.js';
 export type { Issuer, IssuerAnswer } from './types/users.js';
 export type { NestedRecord, SessionStore, StoredChat } from './types/sessions.js';
-export type { ScheduledOptions } from './scheduled.js';
 export { uriFor, idFor, idOf, Status, statusOf, activityOf, titleFrom } from './catalog.js';
 export type { Activity, StatusBits } from './catalog.js';
 export { tail, older, PAGE } from './paging.js';

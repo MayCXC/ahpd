@@ -45,7 +45,7 @@ runs without a network.
 ## A complete host
 
 ```ts
-import { createHost, listen, fileResources, shellTerminals, gitChanges, gitBranches, scheduledAutomations } from '@ahpd/sdk';
+import { createHost, listen, fileResources, shellTerminals, gitChanges, gitBranches, memoryAutomations } from '@ahpd/sdk';
 import { claude } from '@ahpd/agent-claude';
 
 const path = process.cwd();
@@ -57,7 +57,7 @@ const host = createHost({
   terminals: shellTerminals(),
   changes: gitChanges(),
   directories: gitBranches(),
-  automations: scheduledAutomations({ file: 'automations.json' }),
+  automations: memoryAutomations(),
   onEvent: (line) => process.stdout.write(`${line}\n`),
 });
 
@@ -78,7 +78,7 @@ would fail part-way through instead.
 | `directories` | facts about a served directory - the branch it is on | sessions carry their project and nothing more | `gitBranches()` |
 | `github` | what GitHub knows about that branch - its pull request and the state of it | no row carries `_meta.github`, and no backend advertises a GitHub resource | `githubPullRequests()` |
 | `users` | who may sign in, and what a role may do | no sign-in resource is advertised, every gate the host has stays inert, and no `_meta['ahpd.owner']` on a row and no `_meta['ahpd.sender']` on a turn is sent | `fileUsers({ path })` |
-| `automations` | agents on a trigger | no `ahp-automations://` channel is advertised | `scheduledAutomations({ file })`, or `memoryAutomations()` without the clock |
+| `automations` | agents on a trigger | no `ahp-automations://` channel is advertised | `memoryAutomations()`, without a clock; the clock store is the daemon's |
 
 ### `resources`
 
@@ -167,11 +167,13 @@ pull request rather than failing, and an answer that fails keeps what was held.
 
 ### `automations`
 
-`memoryAutomations()` holds definitions and runs them when asked.
-`scheduledAutomations({ file })` is the same store with a clock: a five-field cron in a
-named time zone, definitions in `automations.json`, and one catch-up run for
-what was missed while the host was down. A store with no clock says so by
-leaving `nextRunAt` off.
+`memoryAutomations()` holds definitions and runs them when asked. It has no
+clock, and it says so by leaving `nextRunAt` off. The clock store is the
+daemon's, in `@ahpd/server`, and that package exports no library: a five-field
+cron in a named time zone, definitions in `automations.json`, and one catch-up
+run for what was missed while the host was down. A program that wants a clock
+writes its own `AutomationStore` over `memoryAutomations()`, with
+`parseCron` and `nextOccurrence` from this package.
 A run reads `running` while any session it started is executing or waiting on a
 person, and the host says the execution ended through `settle`: a store that
 implements it records the terminal `completed`, `failed` or `cancelled` and
@@ -272,7 +274,7 @@ import {
   fileResources, shellTerminals,          // the resources and terminals ports
   gitChanges, gitBranches, gitWorktrees,  // the git-backed ports
   githubPullRequests,                     // the pull request beside a branch
-  memoryAutomations, scheduledAutomations,// automations, without a clock and with
+  memoryAutomations,                      // automations, without a clock
   hostTools,                              // the tools this package contributes
   uriFor, idFor, idOf, Status,            // how a session is named, and its status bits
   tail, older, PAGE,                      // paging a long list of turns

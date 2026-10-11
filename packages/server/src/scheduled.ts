@@ -1,12 +1,16 @@
 /** Automations that fire on their own: a clock, and a file they survive in. */
 
-import { disableConditionsOf, memoryAutomations } from './automations.js';
-import { readJson, writeJsonAtomic } from './jsonfile.js';
-import { nextOccurrence, parseCron, type Cron } from './cron.js';
-import type { Automation, AutomationEntry, AutomationStore } from './types/automations.js';
-import type { CapturedPlugin } from './types/clientplugins.js';
-import type { Bag } from './types/common.js';
-import { bag, ownerOf } from './values.js';
+import {
+  bag,
+  disableConditionsOf,
+  memoryAutomations,
+  nextOccurrence,
+  ownerOf,
+  parseCron,
+  readJson,
+  writeJsonAtomic,
+} from '@ahpd/sdk';
+import type { Automation, AutomationEntry, AutomationStore, Bag, CapturedPlugin, Cron } from '@ahpd/sdk';
 
 /** How this store is built, and what a test replaces. */
 export interface ScheduledOptions {
@@ -14,9 +18,7 @@ export interface ScheduledOptions {
    * Where definitions are kept.
    *
    * Named by the caller rather than defaulted to somewhere under a home
-   * directory: this is a library, and a library that decides on its own where
-   * to write in somebody's home is one that has made a decision for the
-   * program using it. The daemon passes the file beside its configuration.
+   * directory. The daemon passes the file beside its configuration.
    */
   file: string;
   /** The clock. A test supplies its own so a schedule can be reached without waiting for it. */

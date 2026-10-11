@@ -2,13 +2,10 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, existsSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, describe } from 'vitest';
-import { createHost } from '../src/host.js';
+import { createHost, fileSessions } from '@ahpd/sdk';
+import type { AutomationStore, Bag, CapturedPlugin, Peer } from '@ahpd/sdk';
 import { echo } from '../../../examples/echo/agent.js';
 import { scheduledAutomations } from '../src/scheduled.js';
-import type { Peer } from '../src/types/rpc.js';
-import type { AutomationStore } from '../src/types/automations.js';
-import type { CapturedPlugin } from '../src/types/clientplugins.js';
-import type { Bag } from '../src/types/common.js';
 
 /*
  * The half `memoryAutomations` deliberately does not have: a clock, and a file
@@ -473,6 +470,11 @@ describe('what it advertises', () => {
     expect(store.triggers({}).map((one) => one.type)).toEqual(['session', 'watch']);
   });
 
+  it('answers the same types from the store the daemon is built over', () => {
+    const types = scheduledAutomations({ file: '/tmp/ahpd-none.json' }).triggers({});
+    expect(types.map((one) => one.type)).toEqual(['session', 'watch']);
+  });
+
   it('writes the file where it was told, and nowhere else', () => {
     const clock = clockwork();
     store = scheduledAutomations({ file, now: clock.now, timer: clock.timer });
@@ -539,5 +541,82 @@ describe('a schedule that reaches the host', () => {
      */
     const started = found.items[0] as { origin?: { kind: string; automation: string } };
     expect(started.origin).toMatchObject({ kind: 'automation', automation: ONE });
+  });
+});
+
+/*
+ * A store closed while its process stays up.
+ *
+ * What a restarting daemon does before its successor starts: the clock stops,
+ * nothing fires, and the file holds what it held at the close, so two
+ * processes never write the same file.
+ */
+describe('closed', () => {
+  const peer = (): Peer => ({
+    name: 'client', send: () => {}, notify: () => {}, request: async () => ({}), answered: () => {}, close: () => {},
+  }) as unknown as Peer;
+
+  it('fires nothing and writes nothing once its clock is let go of', () => {
+    const clock = clockwork();
+    const one = scheduledAutomations({ file, now: clock.now, timer: clock.timer });
+    const due: string[] = [];
+    one.onDue?.(({ automation }) => { due.push(automation); });
+    one.create(ONE, nightly());
+    const fire = clock.armed?.fire;
+    expect(fire).toBeDefined();
+    const before = readFileSync(file, 'utf8');
+
+    one.close?.();
+    expect(clock.armed).toBeUndefined();
+    fire?.();
+    one.create('ahp-automation:/two', nightly());
+    expect(due).toEqual([]);
+    expect(clock.armed).toBeUndefined();
+    expect(readFileSync(file, 'utf8')).toBe(before);
+  });
+
+  it('ends every session, stops the clock and closes the stores, once', async () => {
+    const closed: string[] = [];
+    const base = echo({ path: dir, pace: 0 });
+    const agent: typeof base = {
+      ...base,
+      create: (start) => {
+        const session = base.create(start);
+        return { ...session, close: () => { closed.push(start.uri); session.close(); } };
+      },
+    };
+    const sessionsDir = join(dir, 'sessions');
+    const clock = clockwork();
+    const automations = scheduledAutomations({ file, now: clock.now, timer: clock.timer });
+    automations.create(ONE, nightly());
+    const host = createHost({ path: dir, agents: [agent], sessions: fileSessions({ dir: sessionsDir }), automations });
+    const client = host.accept(peer());
+    await client.handle({ method: 'initialize', params: { clientId: 'c', protocolVersions: ['0.9.0'] } });
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/one', provider: 'echo' } });
+    const fire = clock.armed?.fire;
+    const written = existsSync(file) ? readFileSync(file, 'utf8') : '';
+
+    const once = host.close();
+    expect(host.close()).toBe(once);
+    await once;
+    const read = (): string | null => {
+      const session = join(sessionsDir, 'one.json');
+      return existsSync(session) ? readFileSync(session, 'utf8') : null;
+    };
+    const sessionsAfter = read();
+    expect(closed).toEqual(['echo:/one']);
+    expect(clock.armed).toBeUndefined();
+
+    // A schedule that comes round after the close starts nothing and writes nothing.
+    fire?.();
+    await new Promise((done) => { setTimeout(done, 10); });
+    expect(host.turning()).toEqual([]);
+    expect(closed).toEqual(['echo:/one']);
+    expect(existsSync(file) ? readFileSync(file, 'utf8') : '').toBe(written);
+    // A change the host would store, made after the close, reaches no file.
+    await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } }).catch(() => undefined);
+    await new Promise((done) => { setTimeout(done, 10); });
+    expect(read()).toBe(sessionsAfter);
+    client.close();
   });
 });
