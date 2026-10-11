@@ -13,7 +13,7 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 | `labels` | Words a client groups bots by. Two bots may share one |
 | `description` | One line about it, for a list of bots |
 | `body` | Which body it is drawn with, from the fifteen below |
-| `color` | Which colour it is drawn in, from the eleven below |
+| `color` | Which colour it is drawn in: one of the eleven below, or a hex colour `#rrggbb` |
 | `instructions` | What it was asked to be, in its own words. The session's first turn |
 | `harness` | The backend a session of it runs on, where a bot chooses one |
 | `model` | The model it asks for |
@@ -24,7 +24,7 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 | `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a body naming anybody else is refused `-32009`, and an edit may not move it |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
-A body that names a key a bot does not have is refused `-32602`, and so is a `body` or a `color` outside the two lists below.
+A body that names a key a bot does not have is refused `-32602`, and so is a `body` outside the list below or a `color` that is neither a name below nor `#rrggbb`.
 
 ## The slug
 
@@ -38,7 +38,7 @@ A bot works in a folder of its own, `<root>/<slug>` unless the body named one, w
 
 ## Bodies and colours
 
-The bodies are `robot`, `humanoid`, `alien`, `gumbo`, `circle`, `semicircle`, `smash`, `square`, `triangle`, `pentagon`, `hexagon`, `drop`, `bean`, `cloud` and `ghost`. The colours are `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`, `brown`, `grey` and `black`.
+The bodies are `robot`, `humanoid`, `alien`, `gumbo`, `circle`, `semicircle`, `smash`, `square`, `triangle`, `pentagon`, `hexagon`, `drop`, `bean`, `cloud` and `ghost`. The colours are `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`, `brown`, `grey` and `black`. A colour may also be a hex colour, `#rrggbb`, which the host keeps in lowercase; `#fff` and `2f6fdf` are refused.
 
 A make that names neither gets a body at random and the first colour.
 

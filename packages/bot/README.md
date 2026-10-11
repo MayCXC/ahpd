@@ -79,7 +79,7 @@ A slug is lowercase letters, digits and dashes, one to forty of them, starting w
 
 A body may carry `name`, `labels`, `description`, `body`, `color`, `instructions`, `harness`, `model`, `preset`, `workspace`, `computer` and `session`. `id`, `createdAt` and `updatedAt` are read but never obeyed - what they name is the host's, and a write that names another `id` is refused rather than followed. `owner` may be named by a make, as the maker or a team or project the maker belongs to; a write naming anybody else is refused `-32009`, and an edit may not move it.
 
-A bot is drawn in one of fifteen bodies and one of eleven colours. A make that names neither gets a body at random and the first colour.
+A bot is drawn in one of fifteen bodies and in one of eleven colours or a hex colour, `#rrggbb`. A make that names neither gets a body at random and the first colour.
 
 ### Who may see what
 

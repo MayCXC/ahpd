@@ -161,7 +161,11 @@ const MANIFEST = {
     labels: { type: 'array', items: { type: 'string' }, description: 'Words a client groups bots by.' },
     description: { type: 'string', description: 'One line about it, for a list of bots.' },
     body: { type: 'string', enum: [...BOT_BODIES], description: 'Which body it is drawn with.' },
-    color: { type: 'string', enum: [...BOT_COLORS], description: 'Which colour it is drawn in.' },
+    color: {
+      type: 'string',
+      anyOf: [{ enum: [...BOT_COLORS] }, { pattern: '^#[0-9a-fA-F]{6}$' }],
+      description: 'Which colour it is drawn in: a name, or `#rrggbb`.',
+    },
     instructions: { type: 'string', description: 'What it was asked to be, in its own words.' },
     harness: { type: 'string', description: 'The backend a session of it runs on.' },
     model: { type: 'string', description: 'The model it asks for.' },

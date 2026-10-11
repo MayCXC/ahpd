@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { BOT_BODIES, BOT_COLORS, isSlug } from './record.js';
+import { BOT_BODIES, isBotColor, isSlug } from './record.js';
 import type { BotRecord } from './record.js';
 
 /**
@@ -56,7 +56,7 @@ const kept = (slug: string, said: unknown): BotRecord | undefined => {
   if (typeof one['workspace'] !== 'string' || typeof one['owner'] !== 'string') return undefined;
   if (typeof one['createdAt'] !== 'string' || typeof one['updatedAt'] !== 'string') return undefined;
   if (!(BOT_BODIES as readonly string[]).includes(String(one['body']))) return undefined;
-  if (!(BOT_COLORS as readonly string[]).includes(String(one['color']))) return undefined;
+  if (!isBotColor(one['color'])) return undefined;
   if (!Array.isArray(one['labels']) || one['labels'].some((label) => typeof label !== 'string')) return undefined;
   return said as BotRecord;
 };

@@ -11,6 +11,7 @@ import { holds } from '../../sdk/src/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { apply } from '../src/plugin.js';
 import { BOT_BODIES, BOT_COLORS } from '../src/record.js';
+import { botStore } from '../src/store.js';
 import type { Agent, Start } from '../../sdk/src/types/agent.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
@@ -254,6 +255,8 @@ it('offers in the make form every field a write takes, the session among them', 
     'name', 'labels', 'description', 'body', 'color', 'instructions', 'harness', 'model', 'preset',
     'workspace', 'computer', 'session', 'owner',
   ]));
+  // A colour is a name or a hex, and the manifest says both.
+  expect(properties['color']).toMatchObject({ anyOf: [{ enum: [...BOT_COLORS] }, { pattern: '^#[0-9a-fA-F]{6}$' }] });
 });
 
 it('refuses a body or a colour outside the lists', async () => {
@@ -266,6 +269,19 @@ it('refuses a body or a colour outside the lists', async () => {
     .toMatchObject({ code: -32602 });
   // And neither of them was made, which is the half a refusal has to mean.
   expect(await call(soft, 'resourceRead', { uri: 'bot://motion' })).toMatchObject({ code: -32008 });
+});
+
+it('makes a bot in a hex colour, and reads it back after a restart', async () => {
+  const { host, root } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', color: '#2f6fdf' }, { createOnly: true })).toEqual({ result: {} });
+  expect(await record(soft, 'bot://motion')).toMatchObject({ color: '#2f6fdf' });
+
+  // A daemon that starts again reads the file, and a hex colour is a colour there too.
+  const problems: string[] = [];
+  expect(botStore(join(root, 'config'), (line) => problems.push(line)).get('motion')).toMatchObject({ color: '#2f6fdf' });
+  expect(problems).toEqual([]);
 });
 
 it('gives a bot its own folder, and refuses one another bot has', async () => {

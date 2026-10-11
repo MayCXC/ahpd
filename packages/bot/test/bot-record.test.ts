@@ -85,6 +85,13 @@ it('refuses a body or a colour outside the lists', () => {
     .toMatchObject({ body: 'ghost', color: 'black', labels: ['mascot'] });
 });
 
+it('takes a hex colour, kept in lowercase, and refuses any other form', () => {
+  expect(checkRecord('motion', { name: 'Motion', color: '#2F6FDF' })).toMatchObject({ color: '#2f6fdf' });
+  expect(() => checkRecord('motion', { name: 'Motion', color: '#fff' })).toThrow(/#fff/);
+  expect(() => checkRecord('motion', { name: 'Motion', color: '2f6fdf' })).toThrow(/2f6fdf/);
+  expect(() => checkRecord('motion', { name: 'Motion', color: '#2f6fdg' })).toThrow(/#2f6fdg/);
+});
+
 it('refuses a body that names another bot', () => {
   expect(() => checkRecord('motion', { name: 'Motion', id: 'other' })).toThrow(/other/);
   // The same id is what a client that read the bot and wrote it back sends.

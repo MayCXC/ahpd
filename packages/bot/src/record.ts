@@ -39,14 +39,15 @@ export const BOT_BODIES = [
   'hexagon', 'drop', 'bean', 'cloud', 'ghost',
 ] as const;
 
-/** The colour a bot is drawn in, from the palette a client offers. */
+/** The colour names a bot may be drawn in. A bot's colour is one of these or a hex colour, `#rrggbb`. */
 export const BOT_COLORS = [
   'red', 'orange', 'yellow', 'green', 'teal', 'blue',
   'purple', 'pink', 'brown', 'grey', 'black',
 ] as const;
 
 export type BotBody = (typeof BOT_BODIES)[number];
-export type BotColor = (typeof BOT_COLORS)[number];
+/** One of `BOT_COLORS`, or a hex colour kept as `#rrggbb` in lowercase. */
+export type BotColor = (typeof BOT_COLORS)[number] | `#${string}`;
 
 /** One bot, as it is kept and as a read answers it. */
 export interface BotRecord {
@@ -156,6 +157,16 @@ const among = <T extends string>(said: unknown, list: readonly T[], missing: str
   return said as T;
 };
 
+/** Whether a value is a colour a stored bot may have: one of the names, or `#rrggbb` in lowercase. */
+export const isBotColor = (said: unknown): said is BotColor =>
+  (BOT_COLORS as readonly unknown[]).includes(said) || (typeof said === 'string' && /^#[0-9a-f]{6}$/.test(said));
+
+/** One of the colour names, a hex colour in lowercase, or the make's own default. */
+const colour = (said: unknown, fallback: BotColor): BotColor => {
+  if (typeof said === 'string' && /^#[0-9a-fA-F]{6}$/.test(said)) return said.toLowerCase() as BotColor;
+  return among(said, BOT_COLORS, 'a colour a bot is drawn in', fallback as (typeof BOT_COLORS)[number]);
+};
+
 /**
  * The session a body links a bot to, or the link a body takes away.
  *
@@ -217,7 +228,7 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
     name,
     labels: words(body['labels'], existing?.labels ?? []),
     body: among(body['body'], BOT_BODIES, 'a body a bot is drawn with', existing?.body ?? drawn()),
-    color: among(body['color'], BOT_COLORS, 'a colour a bot is drawn in', existing?.color ?? BOT_COLORS[0]),
+    color: colour(body['color'], existing?.color ?? BOT_COLORS[0]),
     owner: said_ as Owner | undefined,
     workspace,
     description: line('description', body['description']) ?? existing?.description,
