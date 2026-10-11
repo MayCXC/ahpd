@@ -2,8 +2,8 @@
  * `ahpd plugin`: what a run would load, and installing one.
  *
  * The listing reads the same flags a run does, through the same declaration, so
- * `--plugin` and `--no-plugins` mean here what they mean there, and nothing
- * below imports a plugin or builds a host. Installing, updating and removing
+ * `--plugin` and `--no-plugins` mean here what they mean there. A plugin is
+ * imported only to read its id, and nothing below applies one or builds a host. Installing, updating and removing
  * are about the machine rather than a run, so they take only their own flags.
  */
 
@@ -13,13 +13,13 @@ import { scopeOf, secretRef } from '@ahpd/sdk';
 import { configDir, configPath } from '../config.js';
 import { running } from '../daemon.js';
 import {
-  NpmFailure, installPlugins, oneAtATime, pluginEntry, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, updatePlugins,
+  NpmFailure, installPlugins, oneAtATime, pluginEntry, removePlugins, run as runProgram, setPluginEnabled, setPluginOption, specsIn, updatePlugins,
 } from '../install.js';
 import type { Moved } from '../install.js';
-import { describePlugin, optionsSchemaOf, pluginLine } from '../plugins.js';
+import { describePlugin, nameOf, optionsSchemaOf, pluginIdOf, pluginIdsOf, pluginLine } from '../plugins.js';
 import { version } from '../version.js';
 import { keyed, maskOption, schemasFor, withoutSpecSecrets, withoutUserinfoIn } from './config.js';
-import { optionsFrom, pluginWriteFields, flagFields, serverFields, servedPluginWriteFields, splitPluginOption, stop, typedValue } from './options.js';
+import { namedOptionsFrom, pluginWriteFields, flagFields, serverFields, servedPluginWriteFields, splitPluginOption, stop, typedValue } from './options.js';
 import type { ServedFacts } from './served.js';
 
 /** What a change to the plugins says, since only a restart loads it. */
@@ -45,14 +45,14 @@ const overridden = (plugin: string, key: string): string =>
  * one that sets a path under the key leaves the rest of what the file set in
  * place.
  */
-const recordedOverride = (argv: readonly string[], plugin: string, key: string): boolean => {
+const recordedOverride = (argv: readonly string[], plugin: readonly string[], key: string): boolean => {
   for (let index = 0; index < argv.length; index += 1) {
     const word = argv[index] as string;
     const typed = word === '--plugin-option' ? argv[index + 1]
       : word.startsWith('--plugin-option=') ? word.slice('--plugin-option='.length)
       : undefined;
     if (typed === undefined) continue;
-    const split = splitPluginOption(typed, [plugin]);
+    const split = splitPluginOption(typed, plugin);
     if (split !== undefined && split.path.length === 1 && split.path[0] === key) return true;
   }
   return false;
@@ -62,7 +62,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
   const list = registry.action({
     id: 'plugin.list',
     summary: 'What the configuration names, and what a run would load',
-    description: 'Resolves every spec and reads its manifest, without importing any of it.',
+    description: 'Resolves every spec, reads its manifest, and imports it to read its id, without applying any of it.',
     surfaces: { cli: { pattern: ['plugin', 'list'] }, http: { method: 'GET', path: '/plugin/list' } },
     // No key: this is the listing, and each row carries the `spec` the other
     // verbs here take a name from.
@@ -73,7 +73,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     ...(served === undefined ? { input: flagFields } : {}),
     run: async (context) => {
       const options = served === undefined
-        ? optionsFrom(context.input as Readonly<Record<string, unknown>>)
+        ? await namedOptionsFrom(context.input as Readonly<Record<string, unknown>>)
         : served.options;
       if (options.noPlugins) return output([], 'plugins: --no-plugins, so nothing is listed\n');
       if (options.plugins.length === 0) return output([], 'plugins: none named\n');
@@ -81,6 +81,8 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       // the plugin's schema marks `writeOnly` is answered as `<set>` and every
       // string that may quote a spec URL has that URL's userinfo replaced; the
       // terminal's listing is the owner reading their own configuration.
+      // A daemon named its plugins as it loaded them; the terminal names them here.
+      if (served === undefined) await pluginIdsOf(options.plugins, { configDir: configDir(), cwd: process.cwd() });
       const keys = keyed(options.plugins);
       const schemas = served === undefined ? undefined : await schemasFor(options.plugins);
       const rows = [];
@@ -230,7 +232,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
    */
   const configFields = {
     ...(served === undefined ? { configFile: serverFields.configFile } : {}),
-    name: { type: 'string', description: 'The plugin, as plugins names it.' },
+    name: { type: 'string', description: 'The plugin, by its id or as plugins names it.' },
   } as const;
   const keyField = { type: 'string', description: 'One option.' } as const;
   const configure = (doing: 'show' | 'set' | 'unset') => (context: CommandContext): Promise<Output> => oneAtATime(async () => {
@@ -244,14 +246,16 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       if (payload) context.error(line);
       else context.write(`${line}\n`);
     };
+    if (served === undefined) await pluginIdsOf(specsIn(file), { configDir: configDir(), cwd: process.cwd() });
     const entry = pluginEntry(file, name);
     if (entry === undefined) stop(`${name} is not in plugins in ${file}.`);
+    const id = pluginIdOf(entry);
 
     /*
      * The plugin's schema, from the module a load would import. Needed to
      * check a value, and served to know which values are write-only; a module
      * that cannot be imported is `undefined` with the reason beside it. A
-     * plugin switched off is never imported, since importing runs its code.
+     * plugin switched off is not checked, since it is not loaded.
      */
     const disabled = typeof entry !== 'string' && entry.enabled === false;
     const schemaNeeded = !disabled && (served !== undefined || typed !== undefined);
@@ -305,7 +309,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
           // schema: what it will resolve to is the plugin's business, read
           // through `host.secret` once it loads.
           const ref = secretRef(value);
-          if (ref === undefined) check(value, known[option] as JsonSchema, `plugins.${name}.options.${option}`);
+          if (ref === undefined) check(value, known[option] as JsonSchema, `plugins.${id}.options.${option}`);
           else scopeOf(ref);
         }
         catch (error) {
@@ -324,7 +328,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
      */
     const record = running();
     const restart = served !== undefined || record !== undefined;
-    const override = record?.argv !== undefined && recordedOverride(record.argv, name, option);
+    const override = record?.argv !== undefined && recordedOverride(record.argv, [nameOf(entry), id], option);
     if (override) say(overridden(name, option));
     if (restart) say(RESTART);
     return output({
@@ -403,7 +407,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     resource: { kind: 'plugin', key: 'name' },
     input: {
       ...(served === undefined ? { configFile: serverFields.configFile } : {}),
-      name: { type: 'string', description: 'The plugin, as plugins names it.' },
+      name: { type: 'string', description: 'The plugin, by its id or as plugins names it.' },
     },
     scopes: ['config:write'],
     // Turning a plugin on runs its code in this process, as an install does.
@@ -412,6 +416,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       const name = context.optional<string>('name');
       if (name === undefined) stop(`Say which plugin: ahpd plugin ${sub} <name>.`);
       const file = fileOf(context.optional<string>('configFile'));
+      if (served === undefined) await pluginIdsOf(specsIn(file), { configDir: configDir(), cwd: process.cwd() });
       const payload = context.globals['json'] === true || context.globals['quiet'] === true;
       const say = (line: string): void => {
         if (payload) context.error(line);

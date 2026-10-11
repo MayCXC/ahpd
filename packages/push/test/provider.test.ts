@@ -153,7 +153,7 @@ it('loads as a plugin, advertises push, and serves a registration through the ho
     base: base(where), configDir: where, cwd: REPO, log: () => {},
   });
   expect(problems).toEqual([]);
-  expect(loaded.map((one) => one.name)).toEqual(['ahpd-push']);
+  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/push']);
 
   const host = createHost(options);
   try {

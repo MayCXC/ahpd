@@ -24,7 +24,7 @@ import { isAbsolute, join } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
-import { hasScheme, nameOf } from './plugins.js';
+import { hasScheme, isNamed, nameOf, pluginIdOf } from './plugins.js';
 import { satisfies } from './compat.js';
 import { askRegistry, newer, parse } from './update.js';
 import type { Fetch } from './update.js';
@@ -259,21 +259,27 @@ export const oneAtATime = <T>(work: () => Promise<T>): Promise<T> => {
   return turn;
 };
 
-/** Every name `plugins` already holds, whether an entry is a string or an object. */
+/** Every name `plugins` already holds, as a spec and as an id, whether an entry is a string or an object. */
 const namedIn = (list: unknown): Set<string> => {
   if (!Array.isArray(list)) return new Set();
   const names = new Set<string>();
   for (const entry of list) {
     const spec = asSpec(entry);
-    if (spec !== undefined) names.add(nameOf(spec));
+    if (spec !== undefined) names.add(nameOf(spec)).add(pluginIdOf(spec));
   }
   return names;
+};
+
+/** Every spec `plugins` holds in the file, for `pluginIdsOf` to name. */
+export const specsIn = (path: string): PluginSpec[] => {
+  const list = readEntry(path).plugins;
+  return Array.isArray(list) ? list.map(asSpec).filter((one): one is PluginSpec => one !== undefined) : [];
 };
 
 /**
  * Add each name that is not already in `plugins`, and say which were added.
  *
- * Matched by `nameOf`, so naming a package that is configured as an object
+ * Matched by spec and by id, so naming a package that is configured as an object
  * with options does not replace the options with a bare string. Nothing is
  * written when nothing was added, so a second install of the same package
  * leaves the file's own formatting alone.
@@ -310,8 +316,8 @@ export const disableNames = (path: string, names: readonly string[]): string[] =
   const list = held.plugins.filter((entry) => {
     const spec = asSpec(entry);
     if (spec === undefined) return true;
-    const name = nameOf(spec);
-    if (!wanted.has(name)) return true;
+    const name = [...wanted].find((one) => isNamed(spec, one));
+    if (name === undefined) return true;
     dropped.push(name);
     return false;
   });
@@ -321,13 +327,13 @@ export const disableNames = (path: string, names: readonly string[]): string[] =
   return dropped;
 };
 
-/** The entry `plugins` holds under that name, string or object, or nothing. */
+/** The entry `plugins` holds under that id or spec, string or object, or nothing. */
 export const pluginEntry = (path: string, name: string): PluginSpec | undefined => {
   const list = readEntry(path).plugins;
   if (!Array.isArray(list)) return undefined;
   for (const entry of list) {
     const spec = asSpec(entry);
-    if (spec !== undefined && nameOf(spec) === name) return spec;
+    if (spec !== undefined && isNamed(spec, name)) return spec;
   }
   return undefined;
 };
@@ -347,7 +353,7 @@ const editEntry = (
   const list = Array.isArray(held.plugins) ? [...held.plugins] : [];
   const at = list.findIndex((entry) => {
     const spec = asSpec(entry);
-    return spec !== undefined && nameOf(spec) === name;
+    return spec !== undefined && isNamed(spec, name);
   });
   if (at === -1) throw new Error(`${name} is not in plugins in ${path}.`);
   const spec = asSpec(list[at]) as PluginSpec;

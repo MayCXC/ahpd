@@ -87,6 +87,20 @@ describe('plugin config at the terminal', () => {
     expect(all.output?.plain).toBe(`${SECRET}\n  apiKey: "k-1"\n  region: "eu"\n`);
   });
 
+  it('finds the entry by the plugin id and by the spec as written', async () => {
+    put({ plugins: [{ name: SECRET, options: { region: 'eu' } }] });
+    const byId = await run('plugin.config', { name: 'secret' });
+    const bySpec = await run('plugin.config', { name: SECRET });
+    expect(byId.output?.data).toEqual({ name: 'secret', options: { region: 'eu' } });
+    expect(bySpec.output?.data).toEqual({ name: SECRET, options: { region: 'eu' } });
+  });
+
+  it('turns the entry off by the plugin id', async () => {
+    put({ plugins: [SECRET] });
+    await run('plugin.disable', { name: 'secret' });
+    expect(read().plugins).toEqual([{ name: SECRET, enabled: false }]);
+  });
+
   it('says so when an entry sets nothing', async () => {
     put({ plugins: [SECRET] });
     const all = await run('plugin.config', { name: SECRET });
@@ -104,7 +118,7 @@ describe('plugin config at the terminal', () => {
   it('refuses a value the plugin\'s schema refuses, naming the option, and writes nothing', async () => {
     put({ plugins: [SECRET] });
     await expect(run('plugin.config.set', { name: SECRET, key: 'retries', value: '-1' }))
-      .rejects.toThrow(`plugins.${SECRET}.options.retries must be an integer >= 0`);
+      .rejects.toThrow('plugins.secret.options.retries must be an integer >= 0');
     expect(read().plugins).toEqual([SECRET]);
   });
 
@@ -399,7 +413,7 @@ describe('plugin config, served', () => {
     put({ plugins: [SECRET] });
     const refused = await post('/plugin/config/set', { name: SECRET, key: 'retries', value: 'many' });
     expect(refused.status).toBe(400);
-    expect((await refused.json() as { message: string }).message).toContain(`plugins.${SECRET}.options.retries`);
+    expect((await refused.json() as { message: string }).message).toContain('plugins.secret.options.retries');
   });
 
   it('turns a plugin off and on', async () => {
@@ -494,18 +508,12 @@ describe('the same mask in the other served answers', () => {
 });
 
 describe('a plugin switched off', () => {
-  it('is never imported to show, set or unset its options, at the terminal or served, and is once it is on', async () => {
+  it('is never imported served, and at the terminal only to read its id, its values written unchecked', async () => {
     const marker = join(home, 'imported');
     const had = process.env['AHPD_MARKER'];
     process.env['AHPD_MARKER'] = marker;
     try {
       put({ plugins: [{ name: MARKER, options: { level: 1 }, enabled: false }] });
-      const set = await run('plugin.config.set', { name: MARKER, key: 'level', value: 'not a number' });
-      expect(set.said).toContain(`${MARKER} is switched off, so level is written unchecked; it is checked when the plugin is enabled and loads.`);
-      expect(read().plugins).toEqual([{ name: MARKER, options: { level: 'not a number' }, enabled: false }]);
-      await run('plugin.config', { name: MARKER });
-      await run('plugin.config.unset', { name: MARKER, key: 'level' });
-
       const facts: ServedFacts = {
         options: {} as Options,
         configFile: config,
@@ -527,11 +535,15 @@ describe('a plugin switched off', () => {
       expect((await post('/plugin/config/set', { name: MARKER, key: 'level', value: '2' })).status).toBe(200);
       // Nothing says which of its options is a credential, so a served answer shows none.
       expect(await (await post('/plugin/config', { name: MARKER })).json()).toEqual({ name: MARKER, options: { level: '<set>' } });
+      // A daemon names its plugins when it starts, so a served verb imports nothing.
       expect(existsSync(marker)).toBe(false);
 
-      // The control: switched on, the same set imports it to check the value.
-      put({ plugins: [MARKER] });
-      await run('plugin.config.set', { name: MARKER, key: 'level', value: '3' });
+      const set = await run('plugin.config.set', { name: MARKER, key: 'level', value: 'not a number' });
+      expect(set.said).toContain(`${MARKER} is switched off, so level is written unchecked; it is checked when the plugin is enabled and loads.`);
+      expect(read().plugins).toEqual([{ name: MARKER, options: { level: 'not a number' }, enabled: false }]);
+      await run('plugin.config', { name: MARKER });
+      await run('plugin.config.unset', { name: MARKER, key: 'level' });
+      // The terminal imports it to read its id, and applies nothing.
       expect(existsSync(marker)).toBe(true);
     }
     finally {

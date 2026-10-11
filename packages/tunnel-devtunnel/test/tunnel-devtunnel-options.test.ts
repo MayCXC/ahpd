@@ -16,7 +16,7 @@ import { optionsSchema } from '../src/plugin.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/tunnel-devtunnel/src/index.ts';
-const NAME = 'ahpd-tunnel-devtunnel';
+const NAME = '@ahpd/tunnel-devtunnel';
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = {};

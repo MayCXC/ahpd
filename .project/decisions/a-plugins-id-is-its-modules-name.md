@@ -13,7 +13,7 @@ refs:
 Root config, `ahpd plugin` and `--plugin-option` name a plugin by its spec, so a plugin loaded from a path shows as `plugins../packages/agent-claude/src/index.ts`.
 Moving the file, or changing a path to the npm package, gives the plugin a new key.
 The loader already gives each plugin a name, and the SDK documents `Plugin.name` as the plugin's id.
-For three packages that name differs from the package name: `@ahpd/bot` exports `ahpd-bot`, `@ahpd/push` exports `ahpd-push`, and `@ahpd/tunnel-devtunnel` exports `ahpd-tunnel-devtunnel`.
+When this was decided, four packages exported a name that differed from the package name: `@ahpd/computer`, `@ahpd/bot`, `@ahpd/push` and `@ahpd/tunnel-devtunnel`. Each now exports its package name.
 
 ## Decision
 

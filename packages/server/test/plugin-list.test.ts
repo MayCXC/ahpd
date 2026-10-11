@@ -32,7 +32,7 @@ describe('describePlugin', () => {
     expect(row.state).toBe('ready');
     // The key is the spec as written, which is what `plugin enable` takes; what
     // the module calls itself is the row's `module`.
-    expect(row.name).toBe('./fixtures/plugin-hello');
+    expect(row.name).toBe('plugin-hello');
     expect(row.module).toBe('plugin-hello');
     expect(row.title).toBe('Hello');
     expect(row.path).toBe(join(fixtures, 'plugin-hello', 'index.ts'));
@@ -52,7 +52,7 @@ describe('describePlugin', () => {
     const row = await listing(join(loose, 'loose.js'));
 
     expect(row.state).toBe('ready');
-    expect(row.name).toBe(join(loose, 'loose.js'));
+    expect(row.name).toBe('loose');
     expect(row.module).toBe('loose');
     expect(row.title).toBeUndefined();
     expect(pluginLine(row)).toContain('(loose)');

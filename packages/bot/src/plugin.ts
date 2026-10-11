@@ -13,7 +13,7 @@ import type { Plugin } from '@ahpd/sdk';
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
-export const name = 'ahpd-bot';
+export const name = '@ahpd/bot';
 
 /** What a listing prints. */
 export const title = 'Bot';

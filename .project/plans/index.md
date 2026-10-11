@@ -34,7 +34,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [16 - A command says what it does to what, and the daemon serves on the cofold that checks it](daemon/16-a-command-says-what-it-does-to-what/plan.md) | high | built 2026-10-06 ([implemented.md](daemon/16-a-command-says-what-it-does-to-what/implemented.md)) | cofold commands/03, commands/04 | ahpd-web resource screens |
 | [17 - A plugin installs at the newest version whose sdk range admits the daemon](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/plan.md) | high | built 2026-10-09 ([implemented.md](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/implemented.md)) | daemon 09 | - |
 | [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/18-the-api-answers-to-the-origins-a-deployment-names/implemented.md)) | daemon 05 | - |
-| [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | planned | daemon 11 | - |
+| [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); awaiting review | daemon 11 | - |
 
 Next free number in `daemon`: `20`.
 

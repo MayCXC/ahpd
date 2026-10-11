@@ -1,6 +1,6 @@
 ---
 title: The plugin verbs and the listing take the id
-status: todo
+status: implemented
 depends: [task-01-the-loader-gives-every-plugin-its-id.md]
 layer: "server"
 refs:

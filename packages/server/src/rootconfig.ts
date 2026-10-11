@@ -20,7 +20,7 @@ import { asSpec, configPath } from './config.js';
 import { SET, keyed, maskValue } from './commands/config.js';
 import { checkConfig, configSchema, mcpServerSchema, mcpServers, serverFields, type ConfigKey, type Options } from './commands/options.js';
 import { oneAtATime, readEntry, writeEntry } from './install.js';
-import { nameOf, optionsSchemaLoaded } from './plugins.js';
+import { optionsSchemaLoaded } from './plugins.js';
 
 /**
  * The keys a client may edit.
@@ -240,16 +240,22 @@ export function daemonRootConfig(
     return value;
   };
 
-  /** Every `plugins` entry the file holds, with the key it is carried under. */
-  const entries = (held: Record<string, unknown>): { key: string; name: string; spec: PluginSpec }[] => {
+  /**
+   * Every `plugins` entry the file holds, with the key it is carried under, its
+   * plugin's id, and where it is in the file's list, entries `asSpec` refuses
+   * included.
+   */
+  const entries = (held: Record<string, unknown>): { key: string; name: string; spec: PluginSpec; at: number }[] => {
     if (!Array.isArray(held.plugins)) return [];
-    const specs = held.plugins.map(asSpec).filter((one): one is PluginSpec => one !== undefined);
-    return keyed(specs).map(({ key, spec }) => ({ key, name: nameOf(spec), spec }));
+    const specs = held.plugins.map((one, at) => ({ spec: asSpec(one), at }))
+      .filter((one): one is { spec: PluginSpec; at: number } => one.spec !== undefined);
+    return keyed(specs.map(({ spec }) => spec)).map(({ key, spec }, index) =>
+      ({ key, name: key.slice('plugins.'.length), spec, at: (specs[index] as { at: number }).at }));
   };
   /** One plugin key, as a schema and a value. */
   const pluginKey = (name: string, spec: PluginSpec) => {
     const off = typeof spec !== 'string' && spec.enabled === false;
-    // A plugin switched off was never imported, so nothing marks a credential
+    // A plugin switched off was never loaded, so nothing marks a credential
     // in it and every value it holds answers `<set>`, the same as one whose
     // module does not import at all.
     const schema = off ? undefined : optionsSchemaLoaded(name);
@@ -262,7 +268,7 @@ export function daemonRootConfig(
         properties: {
           enabled: { type: 'boolean', title: 'Enabled', description: `Load ${name} at the next start.` },
           // No schema for a plugin that did not load: its own is in a module
-          // that was never imported, and a form that guessed one would refuse
+          // that was never loaded, and a form that guessed one would refuse
           // values the plugin would have taken. An object with nothing in it
           // is a shape a client can draw, and no promise about its keys.
           options: schema ?? { type: 'object', title: 'Options' },
@@ -343,9 +349,9 @@ export function daemonRootConfig(
         // there is no key of this one that applies while the daemon runs.
         restartNeeded = true;
         const list = Array.isArray(held.plugins) ? [...held.plugins] : [];
-        const at = entries(held).findIndex((one) => one.key === key);
-        if (at === -1) throw new Error(`${key} is not in plugins in ${file}.`);
-        const spec = asSpec(list[at]) as PluginSpec;
+        const found = entries(held).find((one) => one.key === key);
+        if (found === undefined) throw new Error(`${key} is not in plugins in ${file}.`);
+        const { at, spec, name } = found;
         // A string entry is a name and nothing else, so it becomes an object
         // entry here for the first time it says anything else.
         const entry: Record<string, unknown> = typeof spec === 'string'
@@ -356,7 +362,7 @@ export function daemonRootConfig(
         // that is asking for no change: the name stays a name, as
         // `plugin enable` leaves it.
         if (typeof spec === 'string' && asked.enabled !== false && asked.options === undefined) continue;
-        const known = optionsSchemaLoaded(nameOf(spec))?.['properties'];
+        const known = optionsSchemaLoaded(name)?.['properties'];
         const given = (askedOf(asked.options) ?? {}) as Record<string, unknown>;
         for (const [option, one] of Object.entries(given)) {
           // A null takes the option back, as it does everywhere else here, and

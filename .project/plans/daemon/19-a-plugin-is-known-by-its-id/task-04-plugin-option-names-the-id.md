@@ -1,6 +1,6 @@
 ---
 title: `--plugin-option` names the id
-status: todo
+status: implemented
 depends: [task-01-the-loader-gives-every-plugin-its-id.md]
 layer: "server"
 refs:

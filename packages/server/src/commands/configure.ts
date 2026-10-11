@@ -27,7 +27,7 @@ import type { Command, Registry } from '@cofold/commands';
 import { ask, answering, confirm, here, type Term } from '../ask.js';
 import { asSpec, configDir, configPath } from '../config.js';
 import { installPlugins, readEntry, run as runProgram, writeEntry, type Runner } from '../install.js';
-import { nameOf } from '../plugins.js';
+import { isNamed, nameOf, pluginIdOf } from '../plugins.js';
 import type { Fetch } from '../update.js';
 import { version } from '../version.js';
 import { serverFields, stop, type Options } from './options.js';
@@ -79,13 +79,13 @@ export interface Configured {
   paths: string[];
 }
 
-/** Every name `plugins` already holds, whether an entry is a string or an object. */
+/** Every name `plugins` already holds, as a spec and as an id, whether an entry is a string or an object. */
 const named = (held: Record<string, unknown>): Set<string> => {
   const names = new Set<string>();
   if (!Array.isArray(held.plugins)) return names;
   for (const entry of held.plugins) {
     const spec = asSpec(entry);
-    if (spec !== undefined) names.add(nameOf(spec));
+    if (spec !== undefined) names.add(nameOf(spec)).add(pluginIdOf(spec));
   }
   return names;
 };
@@ -111,7 +111,7 @@ const heldToken = (path: string): string | undefined => {
  */
 const switched = (list: unknown[], name: string, enabled: boolean): unknown[] => list.map((entry) => {
   const spec = asSpec(entry);
-  if (spec === undefined || nameOf(spec) !== name) return entry;
+  if (spec === undefined || !isNamed(spec, name)) return entry;
   if (enabled && typeof spec === 'string') return entry;
   const at = typeof spec === 'string' ? { name: spec } : { ...entry as Record<string, unknown>, name: spec.name };
   return { ...at, enabled };

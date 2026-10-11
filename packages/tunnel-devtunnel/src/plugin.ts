@@ -25,7 +25,7 @@ import { forward } from './forward.js';
 import type { Forward } from './forward.js';
 
 /** The plugin's id, unique among the plugins a daemon loads. */
-export const name = 'ahpd-tunnel-devtunnel';
+export const name = '@ahpd/tunnel-devtunnel';
 
 /** What a listing prints. */
 export const title = 'Dev Tunnel';

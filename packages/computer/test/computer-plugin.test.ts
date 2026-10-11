@@ -7,7 +7,7 @@ import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { gitWorktrees } from '../../sdk/src/repo/worktrees.js';
-import { describePlugin, loadPlugins } from '../../server/src/plugins.js';
+import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
 import type { HostOptions, HostTool, ToolCall } from '../../sdk/src/types/host.js';
@@ -83,7 +83,7 @@ it('serves computer: through the host and offers the three tools', async () => {
   });
 
   expect(problems).toEqual([]);
-  expect(loaded.map((one) => one.name)).toEqual(['ahpd-computer']);
+  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/computer']);
   expect(Object.keys(options.resourceProviders ?? {})).toEqual(['computer']);
   const tools = options.tools ?? [];
   expect(tools.map((one) => one.definition.name)).toEqual([
@@ -341,19 +341,19 @@ it('reports a runtime it does not have at load, rather than failing later', asyn
   expect(problems[0]).toContain('runtime must be one of docker');
 });
 
-it('lists its manifest and title without importing the entry', async () => {
+it('lists its manifest, its title, and the id its entry exports', async () => {
   /*
    * A manifest in its own directory rather than this package's: `describePlugin`
    * resolves `ahpd.entry`, which names the `dist` build, and `pnpm test` runs
-   * before `pnpm build`. The entry here throws if it is ever imported, which is
-   * what a listing must not do.
+   * before `pnpm build`. A listing imports the entry to read its id, and
+   * applies nothing.
    */
   const real = JSON.parse(readFileSync(join(REPO, 'packages/computer/package.json'), 'utf8')) as {
     ahpd: Record<string, unknown>;
   };
   const dir = mkdtempSync(join(tmpdir(), 'ahpd-computer-listing-'));
   loose = dir;
-  writeFileSync(join(dir, 'entry.js'), 'throw new Error("a listing imported the entry");\n');
+  writeFileSync(join(dir, 'entry.js'), 'export const name = "computer";\nexport const apply = () => { throw new Error("a listing applied the plugin"); };\n');
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: '@ahpd/computer',
     private: true,
@@ -362,10 +362,12 @@ it('lists its manifest and title without importing the entry', async () => {
     ahpd: { ...real.ahpd, entry: './entry.js' },
   }));
 
+  // The list verb names every spec first, as this does.
+  await pluginIdsOf([dir], { configDir: stateDir(), cwd: REPO });
   const row = await describePlugin(dir, { configDir: stateDir(), cwd: REPO });
   expect(row.state).toBe('ready');
-  // The key is the directory as written; the package's own name is `module`.
-  expect(row.name).toBe(dir);
+  // The key is the id the entry exports; the package's own name is `module`.
+  expect(row.name).toBe('computer');
   expect(row.module).toBe('@ahpd/computer');
   expect(row.title).toBe('Computer');
 });

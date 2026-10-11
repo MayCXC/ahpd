@@ -173,7 +173,7 @@ ahpd config                 say where the configuration is, and what it says
 ahpd configure              ask at the terminal for each setting a first install
                             needs, and write them
 ahpd plugin list            what the configuration names, and what a run would
-                            load, without loading any of it
+                            load, without applying any of it
 ahpd plugin install <name>  install a plugin into the configuration directory
                             and name it there. --no-enable installs without
                             naming it, --config-file edits another file
@@ -308,7 +308,7 @@ anything has been let go of.
 | `--wire <file>` | Append every frame, both directions, to this file as JSON lines, one message per line with an `_ahpLog` beside it - the shape VS Code's agent host writes its traffic log in, so a capture opens in whatever reads that. A line over 1 MiB is written again with its strings cut and `_ahpLog.truncated` set; a file over 75 MiB rolls to `<file>.1` and five files are kept. The capture holds every token a client sent in `authenticate`, so each of its files is `0600`. `pnpm wire -- <file>` checks it against the schema |
 | `--plugin <spec>` | A plugin to load: a package, a path, or an object. Repeatable, applied in order. See below |
 | `--no-plugins` | Load none, whatever the configuration file says |
-| `--plugin-option <plugin>.<key>[.<key>...]=<value>` | Set one option of a loaded plugin for this run, as deep in its options as the key path goes. Repeatable. See below |
+| `--plugin-option <id>.<key>[.<key>...]=<value>` | Set one option of a loaded plugin for this run, as deep in its options as the key path goes. Repeatable. See below |
 | `--update-check`, `--no-update-check` | Ask npm, in the background, whether a newer version exists. On by default; `--no-update-check`, `NO_UPDATE_NOTIFIER`, `CI` and `"updateCheck": false` turn it off. See below |
 | `--version`, `-v` | What version this is |
 | `--help`, `-h` | |
@@ -447,8 +447,8 @@ the start is two plugins claiming the same agent `provider`, because a host
 built over that answers a turn with the wrong backend.
 
 `ahpd plugin config <name>` reads a plugin's options in `config.json`, `ahpd plugin config <name> <key> <value>` writes one and `ahpd plugin config unset` takes one away, and `ahpd plugin enable` and `ahpd plugin disable` set its `enabled`.
-The plugin is named as `plugins` names it, and one the file does not name is refused.
-One module is named once. A name written twice is reported and the second entry is skipped, since a plugin's options are what make its variants and root config keys one entry under `plugins.<name>`.
+The plugin is named by its [id](PLUGINS.md#the-id), or as `plugins` names it, and one the file does not name is refused.
+One module is named once. Two entries with one id are reported and the second is skipped, since a plugin's options are what make its variants and root config keys one entry under `plugins.<id>`.
 
 ```bash
 ahpd plugin config @ahpd/agent-claude                       # every option it sets
@@ -463,7 +463,7 @@ A number that would not read back as typed, such as a long id or `1.0`, stays te
 Inside an object or array a number must read back exactly as typed too, and since it cannot become text there, a value such as `{"id":12345678901234567890}`, `{"a":1.0}` or `{"x":1e400}` is refused; quote that number as a JSON string.
 It is checked against the plugin's `optionsSchema` by importing the plugin as a start would, and a value the schema refuses is not written.
 A plugin that cannot be imported is written anyway, and its options are checked at the next start.
-A plugin switched off with `enabled: false` is never imported, here or over the API: a value set for it is written unchecked and checked when it is enabled and loads, and one read over the API answers `<set>` for each of its values.
+A plugin switched off with `enabled: false` is never applied, here or over the API: a value set for it is written unchecked and checked when it is enabled and loads, and one read over the API answers `<set>` for each of its values.
 An `unset` of an option the entry does not set leaves the file as it is and says so.
 Nothing a running daemon loaded changes until it is restarted, and each of these says so when a daemon is running.
 When the running daemon's recorded line sets that same option with `--plugin-option`, the line names the flag too: a restart starts that line again, so the flag wins over the file.
@@ -477,7 +477,7 @@ ahpd --plugin-option @ahpd/agent-claude.presets.x.model=haiku
 ```
 
 It is repeated for each option, and its value is read the same way as `plugin config`'s.
-The plugin is the longest name this run loads that the text ahead of the `=` starts with, so a scoped name or a path is found by asking the list rather than by counting dots, and everything after it is a key path, set as deep into the plugin's options as it goes: `presets.x.model` changes that one preset's model and leaves the others, where `presets` alone would replace all of them.
+The plugin is the longest id or spec this run loads that the text ahead of the `=` starts with, so a scoped name is found by asking the list rather than by counting dots, and everything after it is a key path, set as deep into the plugin's options as it goes: `presets.x.model` changes that one preset's model and leaves the others, where `presets` alone would replace all of them.
 A key on the way down that the options do not have is made, the way `mkdir -p` makes the directories on its way, so one run can add a preset the file has never heard of; one that is there and is not an object is refused, naming it, because setting into it would drop what it holds.
 It must name a plugin this run loads, the file's or a typed `--plugin`, and not one switched off with `enabled: false`, and the option is checked when the plugin loads, so a value the schema refuses skips that plugin with the option named in the log.
 A plain value is written down twice over: it lands in the shell's history, and a flag's lands again in the daemon record's `argv`, which `ahpd restart` starts from. A credential is given as a `$secret` reference instead, and the value stays in the [vault](#the-vault):
@@ -489,11 +489,7 @@ ahpd plugin config @ahpd/plugin-orders apiKey '{"$secret":"host:stripe"}'
 
 The first leaves only the reference in the record a restart reads, and the second only the reference in `config.json`; neither holds the credential itself.
 
-`ahpd plugin list` prints one line per spec - its state, where it resolves, and
-the name and title its manifest declares - without importing any of it. The
-states are `ready`, `incompatible`, `unconfigured`, `disabled`, `missing` and
-`error`, and a plugin that would throw on load still lists as `ready`, which is
-the reason the `ahpd` key lives in `package.json` at all.
+`ahpd plugin list` prints one line per spec: its state, its id, where it resolves, and the name and title its manifest declares. It imports each module to read its id and applies none of them. The states are `ready`, `incompatible`, `unconfigured`, `disabled`, `missing` and `error`, and a plugin whose `apply` would throw still lists as `ready`.
 
 Writing one is [PLUGINS.md](PLUGINS.md).
 

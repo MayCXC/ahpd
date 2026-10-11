@@ -167,7 +167,7 @@ it('loads the package from its source file and serves a turn through the stub mo
   expect(opened.snapshot.state.turns[0]?.responseParts[0]?.content).toBe('answered by the plugin');
 });
 
-it('lists a manifest, and its title, without importing the entry', async () => {
+it('lists a manifest, and its title, with the package name as its id', async () => {
   /*
    * A manifest in its own directory rather than this package's: the loader
    * resolves a directory through `ahpd.entry`, `exports["."]` or `main`, and
@@ -190,8 +190,8 @@ it('lists a manifest, and its title, without importing the entry', async () => {
   const row = await describePlugin(dir, { configDir: REPO, cwd: REPO });
 
   expect(row.state).toBe('ready');
-  // The key is the spec as written; the package's own name is `module`.
-  expect(row.name).toBe(dir);
+  // The entry exports no name, so the key is the package's own name.
+  expect(row.name).toBe('@ahpd/agent-cofold');
   expect(row.module).toBe('@ahpd/agent-cofold');
   expect(row.title).toBe('Cofold');
   expect(row.path).toBe(join(dir, 'entry.js'));
@@ -208,7 +208,7 @@ it('contributes one backend, and refuses a second spec of the same name', async 
   // A plugin is loaded once and its options are what make its variants, which
   // this package takes in a later plan. Until then a second spec of one name is
   // refused.
-  expect(problems).toEqual([`plugin ${SOURCE} is named 2 times; write it once and use its options for variants`]);
+  expect(problems).toEqual([`plugin @ahpd/agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
   expect(loaded).toHaveLength(1);
   expect(loaded.map((one) => one.name)).toEqual(['@ahpd/agent-cofold']);
 

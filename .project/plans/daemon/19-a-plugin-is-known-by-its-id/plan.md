@@ -1,7 +1,7 @@
 ---
 title: A plugin is known by its id, not by the spec that loads it
 domain: daemon
-status: planned
+status: built
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -63,9 +63,12 @@ ahpd plugin config|enable|disable <spec> -> pluginEntry(file, spec)
 | What | Source | Task |
 | --- | --- | --- |
 | A config entry has no `id` field of its own, and a module still loads once | Softov, 2026-10-10, asked "Should a config entry be able to set its own id, so one module can load twice?": "Not now (Recommended)"; [decision a-plugin-loads-once-and-each-preset-is-a-variant](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) stays | - |
-| Two entries with the same id are refused at start, and the refusal names both specs | (defaulted: the check for a repeated spec today, applied to the id) | 01 |
+| Two entries with the same id are reported as a problem that names both specs, and the first entry loads | (defaulted: the check for a repeated spec today, applied to the id) | 01 |
 | Nothing is migrated: `config.json` keeps its entries by spec, and a key is built when it is read | (defaulted: no file stores a `plugins.<spec>` key) | 02 |
 | A verb and `--plugin-option` find a plugin by its id first, then by its spec as written | (defaulted: a recorded `--plugin-option` line in `daemon.json` names the spec) | 03, 04 |
+| `ahpd plugin list` imports each module to read its id, and calls no `apply` | Softov, 2026-10-10, asked whether the listing shows the configuration or the running process: "importo to read the id" | 03 |
+| `--plugin-option` is matched in `optionsFrom`, after a first pass imports the specs for their ids | (defaulted: a typo stays refused before the start, and the recorded line keeps its form) | 04 |
+| `@ahpd/computer`, `@ahpd/bot`, `@ahpd/push` and `@ahpd/tunnel-devtunnel` export their package name as `name` | Softov, 2026-10-10, asked whether the four should export their package name before 0.11.0: "Use package names (Recommended)" | 01 |
 | A write to root config changes the entry the key names, not the entry at the same index in the filtered list | [`code://packages/server/src/rootconfig.ts#L346-L348`](../../../../packages/server/src/rootconfig.ts#L346-L348) | 02 |
 
 ## Proposed architecture
@@ -80,30 +83,31 @@ ahpd plugin config|enable|disable <spec> -> pluginEntry(file, spec)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The loader gives every plugin its id, enabled or not](task-01-the-loader-gives-every-plugin-its-id.md) | todo | - |
-| [02 - Root config keys each plugin by its id](task-02-root-config-keys-each-plugin-by-its-id.md) | todo | 01 |
-| [03 - The plugin verbs and the listing take the id](task-03-the-plugin-verbs-take-the-id.md) | todo | 01 |
-| [04 - `--plugin-option` names the id](task-04-plugin-option-names-the-id.md) | todo | 01 |
-| [05 - The docs say a plugin is known by its id](task-05-docs.md) | todo | 02, 03, 04 |
+| [01 - The loader gives every plugin its id, enabled or not](task-01-the-loader-gives-every-plugin-its-id.md) | implemented | - |
+| [02 - Root config keys each plugin by its id](task-02-root-config-keys-each-plugin-by-its-id.md) | implemented | 01 |
+| [03 - The plugin verbs and the listing take the id](task-03-the-plugin-verbs-take-the-id.md) | implemented | 01 |
+| [04 - `--plugin-option` names the id](task-04-plugin-option-names-the-id.md) | implemented | 01 |
+| [05 - The docs say a plugin is known by its id](task-05-docs.md) | implemented | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
 - A disabled plugin's module is imported, so its top-level code runs - installing a plugin is already the trust decision.
-- `--plugin-option` is matched later, by the loader - a typo now stops the start there, not in `optionsFrom`.
+- A start with `--plugin-option` imports every named module twice over one URL, so the module cache runs its top-level code once.
+- A served verb uses the ids from the start; a plugin installed while the daemon runs has its provisional id until the next start.
 - Tests assert on `plugins.<path>` keys in many files - each one changes to the id.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** every task, 01 to 05, implemented and awaiting review.
+- **Next action:** review; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** `packages/computer/src/devcontainer.ts` has its own `nameOf` for the specs it hands a nested host; leave it on the spec. `plugin-secret-ref.test.ts` and `plugin-connect.test.ts` already use the loader's name in their labels.
 
 ## Final verification checklist
 
 - [ ] Root config shows `plugins.@ahpd/agent-claude` for `./packages/agent-claude/src/index.ts`, and the same key for `@ahpd/agent-claude`.
-- [ ] A disabled `./packages/bot/src/index.ts` shows as `plugins.ahpd-bot`.
-- [ ] A path and the npm package of one plugin, both in `plugins`, stop the start with a message that names both.
-- [ ] `ahpd plugin config ahpd-bot` and `ahpd plugin config ./packages/bot/src/index.ts` find the same entry.
+- [ ] A disabled `./packages/bot/src/index.ts` shows as `plugins.@ahpd/bot`.
+- [ ] A path and the npm package of one plugin, both in `plugins`, give one problem that names both, and the first loads.
+- [ ] `ahpd plugin config @ahpd/bot` and `ahpd plugin config ./packages/bot/src/index.ts` find the same entry.
 - [ ] `--plugin-option @ahpd/agent-claude.x=1` sets the option on the path entry.
 - [ ] `plans/index.md` updated, and the idea file deleted.

@@ -55,7 +55,7 @@ import { pty } from '../pty.js';
 import { filesOf, lineFor, writerFor } from '../wire.js';
 import { MAX_AGE_MS, checkingUpdates, readUpdate, refreshUpdate, registry as npmRegistry, stale, updateLine } from '../update.js';
 import { manifest, version } from '../version.js';
-import { conflict, optionsFrom, secret, flagFields, stop } from './options.js';
+import { conflict, namedOptionsFrom, secret, flagFields, stop } from './options.js';
 import { FORCED_SIGNAL, RESTART_SIGNAL, answerRestartSignal, checkedRestart, lifecycle, successorTakes } from './restart.js';
 import type { Options } from './options.js';
 
@@ -1088,7 +1088,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
 export async function optionsOfLine(argv: readonly string[], strict = false): Promise<Options> {
   const run = declareRun(createRegistry());
   const tokens = tokenize(optionTable(optionsOf(run), true), argv, { permissive: !strict });
-  return optionsFrom(await canonicalFromCli(run, { slots: {}, options: tokens.options }));
+  return namedOptionsFrom(await canonicalFromCli(run, { slots: {}, options: tokens.options }));
 }
 
 /**
@@ -1113,7 +1113,7 @@ export const declareRun = (registry: Registry<object>): Command => registry.acti
     // it wrote is the one this run starts from.
     const say = (line: string): void => { process.stderr.write(`${line}\n`); };
     await offerConfigure({ configFile, term: here, say });
-    const options = optionsFrom(input);
+    const options = await namedOptionsFrom(input);
     // After the options, which is what says whether this folder is served, and
     // before the host is built, so a folder answered for is one this run serves.
     await askToServe(options, configFile, here, say);

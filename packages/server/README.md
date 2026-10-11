@@ -137,7 +137,7 @@ Every verb and every flag is one declaration under [`src/commands`](https://gith
 | `--wire <file>` | Append every frame, both directions, to this file as JSON lines |
 | `--plugin <spec>` | A plugin to load: a package, a path, or an object. Repeatable, and replaces the config file's list |
 | `--no-plugins` | Load none, whatever the configuration file says |
-| `--plugin-option <plugin>.<key>[.<key>...]=<value>` | Set one option of a loaded plugin for this run, as deep in its options as the key path goes. Repeatable |
+| `--plugin-option <id>.<key>[.<key>...]=<value>` | Set one option of a loaded plugin for this run, as deep in its options as the key path goes. Repeatable |
 | `--update-check`, `--no-update-check` | Ask npm, in the background, whether a newer version exists. On by default |
 | `--json` | Print the value the prose is rendered from, as JSON on stdout. Every command takes it |
 | `--quiet`, `-q` | Print only the identifiers or values an answer names |

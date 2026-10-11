@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { daemonRootConfig } from '../src/rootconfig.js';
-import { loadPlugins, optionsSchemaLoaded } from '../src/plugins.js';
+import { loadPlugins, optionsSchemaLoaded, pluginIdOf } from '../src/plugins.js';
 import { optionsFrom } from '../src/commands/options.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { PluginSpec } from '@ahpd/sdk';
@@ -114,7 +114,7 @@ describe('the schema a client reads', () => {
 
   it('names a property by its key, and takes an unnamed level from the schema above it', async () => {
     const root = await withPlugins([{ name: SECRET, options: { region: 'eu' } }]);
-    const options = keySchema(root, `plugins.${SECRET}`)['options'] as { title?: string; properties: Record<string, Record<string, unknown>> };
+    const options = keySchema(root, `plugins.${pluginIdOf(SECRET)}`)['options'] as { title?: string; properties: Record<string, Record<string, unknown>> };
     expect(options.title).toBe('Options');
     expect(options.properties['apiKey']).toMatchObject({ type: 'string', title: 'Api Key' });
     expect(options.properties['region']).toMatchObject({ type: 'string', title: 'Region' });
@@ -122,13 +122,13 @@ describe('the schema a client reads', () => {
 
   it('folds a lone bound into the description, and drops the keyword', async () => {
     const root = await withPlugins([{ name: SECRET, options: { region: 'eu' } }]);
-    const options = keySchema(root, `plugins.${SECRET}`)['options'] as { properties: Record<string, Record<string, unknown>> };
+    const options = keySchema(root, `plugins.${pluginIdOf(SECRET)}`)['options'] as { properties: Record<string, Record<string, unknown>> };
     expect(options.properties['retries']).toEqual({ type: 'number', title: 'Retries', description: 'At least 0.' });
   });
 
   it('keeps the item bounds of an array and drops them from a string', async () => {
     const root = await withPlugins([{ name: BOUNDED, options: {} }]);
-    const options = keySchema(root, `plugins.${BOUNDED}`)['options'] as { properties: Record<string, Record<string, unknown>> };
+    const options = keySchema(root, `plugins.${pluginIdOf(BOUNDED)}`)['options'] as { properties: Record<string, Record<string, unknown>> };
     expect(options.properties['paths']).toMatchObject({ type: 'array', title: 'Paths', minItems: 1, maxItems: 4 });
     expect(options.properties['label']).toEqual({ type: 'string', title: 'Label' });
   });
@@ -203,7 +203,7 @@ describe('a key a start flag overrode', () => {
 describe('each configured plugin as a key', () => {
   it('carries the schema of a plugin that loaded', async () => {
     const root = await withPlugins([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
-    const key = `plugins.${SCHEMA}`;
+    const key = `plugins.${pluginIdOf(SCHEMA)}`;
     expect(keySchema(root, key)['enabled']).toMatchObject({ type: 'boolean' });
     expect(keySchema(root, key)['options']).toMatchObject({
       type: 'object',
@@ -217,7 +217,7 @@ describe('each configured plugin as a key', () => {
     // Never imported, so nothing is known of which of its options are credentials.
     const unchecked = './fixtures/plugin-unchecked/index.ts';
     const root = await withPlugins([{ name: unchecked, enabled: false, options: { anything: 1 } }]);
-    const key = `plugins.${unchecked}`;
+    const key = `plugins.${pluginIdOf(unchecked)}`;
     expect((await root.values())[key]).toEqual({ enabled: false, options: { anything: '<set>' } });
     // Nothing is known of its options, so the schema says only that they are
     // an object, which is a shape a client can draw and no promise about keys.
@@ -226,27 +226,39 @@ describe('each configured plugin as a key', () => {
 
   it('writes enabled and options into the entry, and says a restart is needed', async () => {
     const root = await withPlugins([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
-    const answer = await root.write({ [`plugins.${SCHEMA}`]: { options: { command: 'walk', greeting: 'hi' } } });
+    const answer = await root.write({ [`plugins.${pluginIdOf(SCHEMA)}`]: { options: { command: 'walk', greeting: 'hi' } } });
     expect(answer).toEqual({ restartNeeded: true });
     expect(held().plugins).toEqual([{ name: SCHEMA, options: { command: 'walk', greeting: 'hi' } }]);
   });
 
+  it('is keyed by the plugin id, not by the path that loads it', async () => {
+    const root = await withPlugins([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
+    expect(Object.keys(await root.values())).toEqual(['plugins.schema']);
+  });
+
+  it('edits the entry its key names when an entry before it is not a plugin', async () => {
+    const root = await withPlugins([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
+    put({ plugins: [42, { name: SCHEMA, options: { command: 'run', greeting: 'hi' } }] });
+    await expect(root.write({ [`plugins.${pluginIdOf(SCHEMA)}`]: { options: { command: 'walk' } } })).rejects.toThrow();
+    expect(held().plugins).toEqual([42, { name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
+  });
+
   it('turns a string entry into an object one when it is switched off', async () => {
     const root = await withPlugins([SCHEMA], [{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
-    await root.write({ [`plugins.${SCHEMA}`]: { enabled: false } });
+    await root.write({ [`plugins.${pluginIdOf(SCHEMA)}`]: { enabled: false } });
     expect(held().plugins).toEqual([{ name: SCHEMA, enabled: false }]);
   });
 
   it('leaves a string entry alone when it is switched on, which it already was', async () => {
     const root = await withPlugins([SCHEMA], [{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
-    await root.write({ [`plugins.${SCHEMA}`]: { enabled: true } });
+    await root.write({ [`plugins.${pluginIdOf(SCHEMA)}`]: { enabled: true } });
     expect(held().plugins).toEqual([SCHEMA]);
   });
 
   it('refuses a value the schema refuses, naming the option, and leaves the file', async () => {
     const root = await withPlugins([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
-    await expect(root.write({ [`plugins.${SCHEMA}`]: { options: { command: 'run', greeting: 'hi', retries: -1 } } }))
-      .rejects.toThrow(`plugins.${SCHEMA}.options.retries must be an integer >= 0`);
+    await expect(root.write({ [`plugins.${pluginIdOf(SCHEMA)}`]: { options: { command: 'run', greeting: 'hi', retries: -1 } } }))
+      .rejects.toThrow(`plugins.${pluginIdOf(SCHEMA)}.options.retries must be an integer >= 0`);
     expect(held().plugins).toEqual([{ name: SCHEMA, options: { command: 'run', greeting: 'hi' } }]);
   });
 
@@ -255,13 +267,13 @@ describe('each configured plugin as a key', () => {
     // rather than to the option's schema: what it resolves to is read when the
     // plugin loads, and not here.
     const root = await withPlugins([{ name: SECRET, options: { region: 'eu' } }]);
-    await root.write({ [`plugins.${SECRET}`]: { options: { apiKey: { $secret: 'host:orders' } } } });
+    await root.write({ [`plugins.${pluginIdOf(SECRET)}`]: { options: { apiKey: { $secret: 'host:orders' } } } });
     expect(held().plugins).toEqual([{ name: SECRET, options: { region: 'eu', apiKey: { $secret: 'host:orders' } } }]);
     // And it answers as written, so a client editing the entry can see the name
     // it is pointing at rather than a mask.
-    expect((await root.values())[`plugins.${SECRET}`]).toMatchObject({ options: { apiKey: { $secret: 'host:orders' } } });
+    expect((await root.values())[`plugins.${pluginIdOf(SECRET)}`]).toMatchObject({ options: { apiKey: { $secret: 'host:orders' } } });
 
-    await expect(root.write({ [`plugins.${SECRET}`]: { options: { apiKey: { $secret: 'x' } } } }))
+    await expect(root.write({ [`plugins.${pluginIdOf(SECRET)}`]: { options: { apiKey: { $secret: 'x' } } } }))
       .rejects.toThrow('x is not a secret name');
     expect(held().plugins).toEqual([{ name: SECRET, options: { region: 'eu', apiKey: { $secret: 'host:orders' } } }]);
   });
@@ -274,7 +286,7 @@ describe('each configured plugin as a key', () => {
 
   it('takes one option back and leaves the rest of the entry as it was', async () => {
     const root = await withPlugins([{ name: SECRET, options: { apiKey: 'k-1', region: 'eu' } }]);
-    await root.write({ [`plugins.${SECRET}`]: { options: { region: null } } });
+    await root.write({ [`plugins.${pluginIdOf(SECRET)}`]: { options: { region: null } } });
     expect(held().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-1' } }]);
   });
 });
@@ -374,7 +386,7 @@ describe('the mcpServers key', () => {
 describe('a credential in a plugin key', () => {
   it('is answered as set, and any other option as the file holds it', async () => {
     const root = await withPlugins([{ name: SECRET, options: { apiKey: 'k-1', region: 'eu' } }]);
-    expect((await root.values())[`plugins.${SECRET}`]).toEqual({
+    expect((await root.values())[`plugins.${pluginIdOf(SECRET)}`]).toEqual({
       enabled: true,
       options: { apiKey: '<set>', region: 'eu' },
     });
@@ -382,14 +394,14 @@ describe('a credential in a plugin key', () => {
 
   it('is left as it is when a client sends the key back', async () => {
     const root = await withPlugins([{ name: SECRET, options: { apiKey: 'k-1', region: 'eu' } }]);
-    const answer = await root.write({ [`plugins.${SECRET}`]: { options: { apiKey: '<set>', region: 'eu' } } });
+    const answer = await root.write({ [`plugins.${pluginIdOf(SECRET)}`]: { options: { apiKey: '<set>', region: 'eu' } } });
     expect(answer).toEqual({ restartNeeded: true });
     expect(held().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-1', region: 'eu' } }]);
   });
 
   it('is replaced when the client sends another value for it', async () => {
     const root = await withPlugins([{ name: SECRET, options: { apiKey: 'k-1' } }]);
-    await root.write({ [`plugins.${SECRET}`]: { options: { apiKey: 'k-2' } } });
+    await root.write({ [`plugins.${pluginIdOf(SECRET)}`]: { options: { apiKey: 'k-2' } } });
     expect(held().plugins).toEqual([{ name: SECRET, options: { apiKey: 'k-2' } }]);
   });
 
@@ -411,11 +423,11 @@ describe('a credential in a plugin key', () => {
     // What a client is served walks the host's copy, which still marks it: the
     // write reached a schema nobody answers from.
     const root = daemonRootConfig(optionsFrom({ configFile: config }));
-    expect((await root.values())[`plugins.${AFTER}`]).toMatchObject({ options: { apiKey: '<set>', region: 'eu' } });
+    expect((await root.values())[`plugins.${pluginIdOf(AFTER)}`]).toMatchObject({ options: { apiKey: '<set>', region: 'eu' } });
 
     // And the copy is the host's own, frozen: the same write made to it is
     // refused where it is made rather than quietly dropped.
-    const kept = optionsSchemaLoaded(AFTER) as { properties: Record<string, Record<string, unknown>> };
+    const kept = optionsSchemaLoaded(pluginIdOf(AFTER)) as { properties: Record<string, Record<string, unknown>> };
     expect(kept).not.toBe(own);
     expect(Object.isFrozen(kept.properties['apiKey'])).toBe(true);
     expect(() => { delete kept.properties['apiKey']?.['writeOnly']; }).toThrow(TypeError);
@@ -426,7 +438,7 @@ describe('a credential in a plugin key', () => {
       name: COFOLD,
       options: { tools: { web: { search: { brave: { apiKey: 'bs-1' }, duckduckgo: true } } } },
     }], undefined, repo);
-    expect((await root.values())[`plugins.${COFOLD}`]).toMatchObject({
+    expect((await root.values())[`plugins.${pluginIdOf(COFOLD)}`]).toMatchObject({
       options: { tools: { web: { search: { brave: { apiKey: '<set>' }, duckduckgo: true } } } },
     });
   });
@@ -436,7 +448,7 @@ describe('a credential in a plugin key', () => {
       name: CLAUDE,
       options: { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1', ANTHROPIC_AUTH_TOKEN: 'at-1' }, sandbox: 'on' } } },
     }], undefined, repo);
-    const answered = (await root.values())[`plugins.${CLAUDE}`] as { options: { presets: Record<string, unknown> } };
+    const answered = (await root.values())[`plugins.${pluginIdOf(CLAUDE)}`] as { options: { presets: Record<string, unknown> } };
     expect(answered.options.presets['default']).toEqual({
       env: { ANTHROPIC_API_KEY: '<set>', ANTHROPIC_AUTH_TOKEN: '<set>' },
       sandbox: 'on',
@@ -446,7 +458,7 @@ describe('a credential in a plugin key', () => {
   it('is left as it is when a client sends a whole preset back', async () => {
     const options = { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1' }, sandbox: 'on' } } };
     const root = await withPlugins([{ name: CLAUDE, options }], undefined, repo);
-    const answer = await root.write({ [`plugins.${CLAUDE}`]: { options: { presets: { default: { env: { ANTHROPIC_API_KEY: '<set>' }, sandbox: 'off' } } } } });
+    const answer = await root.write({ [`plugins.${pluginIdOf(CLAUDE)}`]: { options: { presets: { default: { env: { ANTHROPIC_API_KEY: '<set>' }, sandbox: 'off' } } } } });
     expect(answer).toEqual({ restartNeeded: true });
     expect(held().plugins).toEqual([{ name: CLAUDE, options: { presets: { default: { env: { ANTHROPIC_API_KEY: 'sk-1' }, sandbox: 'off' } } } }]);
   });
@@ -456,19 +468,19 @@ describe('one Claude entry', () => {
   it('is keyed by its name, with its own options under it', async () => {
     const root = await withPlugins([{ name: CLAUDE, options: { presets: { work: { thinking: 'disabled' } } } }], undefined, repo);
     const values = await root.values() as Record<string, { options: Record<string, unknown> }>;
-    expect(Object.keys(values)).toEqual([`plugins.${CLAUDE}`]);
-    expect(values[`plugins.${CLAUDE}`]?.options).toEqual({ presets: { work: { thinking: 'disabled' } } });
+    expect(Object.keys(values)).toEqual(['plugins.@ahpd/agent-claude']);
+    expect(values[`plugins.${pluginIdOf(CLAUDE)}`]?.options).toEqual({ presets: { work: { thinking: 'disabled' } } });
   });
 
   it('is a write that edits its own entry', async () => {
     const root = await withPlugins([{ name: CLAUDE, options: { presets: { work: { thinking: 'disabled' } } } }], undefined, repo);
-    await root.write({ [`plugins.${CLAUDE}`]: { options: { presets: { work: { thinking: 'adaptive' } } } } });
+    await root.write({ [`plugins.${pluginIdOf(CLAUDE)}`]: { options: { presets: { work: { thinking: 'adaptive' } } } } });
     expect(held().plugins).toEqual([{ name: CLAUDE, options: { presets: { work: { thinking: 'adaptive' } } } }]);
   });
 
   it('is refused by key when no entry holds that one', async () => {
     const root = await withPlugins([{ name: CLAUDE, options: {} }], undefined, repo);
-    await expect(root.write({ [`plugins.${CLAUDE}#gemini`]: { enabled: false } }))
-      .rejects.toThrow(`plugins.${CLAUDE}#gemini is not in plugins`);
+    await expect(root.write({ [`plugins.${pluginIdOf(CLAUDE)}#gemini`]: { enabled: false } }))
+      .rejects.toThrow(`plugins.${pluginIdOf(CLAUDE)}#gemini is not in plugins`);
   });
 });

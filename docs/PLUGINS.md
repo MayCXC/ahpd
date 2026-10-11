@@ -21,7 +21,7 @@ is [packages/server/src/plugins.ts](../packages/server/src/plugins.ts).
 A plugin is a module with named exports, in the same idiom as an `Agent`:
 
 ```ts
-export const name = '@acme/agent-mine';       // required by convention, the identity
+export const name = '@acme/agent-mine';       // optional, the plugin's id
 export const title = 'Mine';                  // optional, what a listing prints
 export const defaults = { model: 'fast' };    // optional, under the configuration's values
 export const optionsSchema = { /* ... */ };   // optional, a JSON Schema the options are checked against
@@ -35,6 +35,16 @@ function`, because which export is the plugin cannot be guessed at.
 
 `apply` may be async. It runs once, before the host exists, in the daemon's own
 process.
+
+### The id
+
+A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written.
+
+```json
+{ "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
+```
+
+When `./plugins/mine` exports `name = '@acme/agent-mine'`, its root config key is `plugins.@acme/agent-mine` and `ahpd plugin config @acme/agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on. Why the id is the module's own name is decision [A plugin's id is the name its module exports](../.project/decisions/a-plugins-id-is-its-modules-name.md).
 
 ### Declaring the options
 
@@ -626,7 +636,7 @@ else. There is no `manifest.json`.
 | --- | --- |
 | `ahpd.entry` | What to import, when `exports` is not enough to say. It wins over `exports`, `main` and `index.js` for resolution, and a mismatch with what the package resolves to is reported |
 | `ahpd.title` | What `ahpd plugin list` prints, unless the module exports its own `title` |
-| `ahpd.options` | A required option the configuration must set before the plugin is `ready`. `true` or `{ "required": true }` means required. It is only reported by `ahpd plugin list`, which imports nothing; a load holds the options to the module's `optionsSchema` instead |
+| `ahpd.options` | A required option the configuration must set before the plugin is `ready`. `true` or `{ "required": true }` means required. It is only reported by `ahpd plugin list`, which reads it from the manifest and calls no `apply`; a load holds the options to the module's `optionsSchema` instead |
 | `peerDependencies["@ahpd/sdk"]` | The compatibility range, checked **before** the module is imported. It states the oldest `@ahpd/sdk` the plugin needs |
 
 Compatibility supports `*`, an exact version, `^`, `~`, `>=`, `<=`, `>`, `<`,
@@ -706,13 +716,12 @@ here the way the connection token is the port's.
   **refuses the start**. A host built over a collision would answer a turn with
   the wrong backend, and the message names both plugins.
 
-`ahpd plugin list` says what the configuration names and what a run would load,
-without importing anything:
+`ahpd plugin list` says what the configuration names and what a run would load, without applying anything. It imports each module to read its id, and prints the spec beside the id when the two differ:
 
 ```
 $ ahpd plugin list
 ready @acme/agent-mine -> /home/you/.config/ahpd/node_modules/@acme/agent-mine/dist/index.js (@acme/agent-mine, Mine)
-ready ./my-plugin -> /work/my-plugin/index.ts (my-plugin)
+ready my-plugin (./my-plugin) -> /work/my-plugin/index.ts (my-plugin)
 missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone and /home/you/.config/ahpd/gone.
 ```
 
@@ -725,8 +734,7 @@ missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone
 | `missing` | The spec does not resolve |
 | `error` | The manifest does not parse or does not hold |
 
-A plugin that would throw on load still lists as `ready`, which is the whole
-reason the `ahpd` key exists: a listing must not run third-party code.
+A plugin whose `apply` would throw still lists as `ready`, because a listing never calls `apply`. A module that throws on import lists under the id its manifest gives, and the rest of its row comes from the manifest, which is why the `ahpd` key exists.
 
 ## A worked example: `@ahpd/agent-cofold`
 
@@ -1233,9 +1241,7 @@ node packages/server/dist/main.js --port 0 --plugin ./packages/server/test/fixtu
 ```
 
 Load a package by its directory, not by its `src/index.ts`: the manifest names
-the build, and a source file lists as `ready` without being imported, but a
-load of it fails because its own `./agent.js` imports do not exist beside the
-`.ts` sources. `pnpm build` is what makes the directory loadable, and
+the build, and a source file lists as `ready`, because a listing that cannot import it takes the manifest's id, but a load of it fails because its own `./agent.js` imports do not exist beside the `.ts` sources. `pnpm build` is what makes the directory loadable, and
 `ahpd plugin list --plugin ./packages/agent-cofold` is how to check it without
 starting a daemon.
 

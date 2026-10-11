@@ -48,7 +48,7 @@ it('lists the fixture from its manifest as ready, without importing it', async (
   expect(row.state).toBe('ready');
   // The row is keyed by the spec as written, and says what the package calls
   // itself in `module`.
-  expect(row.name).toBe(SPEC);
+  expect(row.name).toBe('plugin-uri-resources');
   expect(row.module).toBe('plugin-uri-resources');
   expect(row.title).toBe('Machine status plugin');
 });

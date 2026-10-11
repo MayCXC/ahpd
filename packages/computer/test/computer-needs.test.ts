@@ -1457,7 +1457,7 @@ it('leaves out a profile part the versions file does not name, and keeps the res
   const state = join(temp(), 'docker.json');
   const { options, lines } = await loadParts(state, { parts: ['codex', 'nonesuch'] }, [CODEXER]);
   expect(lines.filter((one) => one.includes('nonesuch'))).toEqual([
-    'ahpd-computer: profiles.box.parts names nonesuch, which the versions file does not, so its machines are made without it',
+    '@ahpd/computer: profiles.box.parts names nonesuch, which the versions file does not, so its machines are made without it',
   ]);
   await providerOf(options).write('computer://box', { data: JSON.stringify({ profile: 'box' }), encoding: 'utf-8' });
   const held = JSON.parse(readFileSync(state, 'utf8')) as Held;

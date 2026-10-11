@@ -363,7 +363,7 @@ it('refuses a path that is no session\'s attachments, before a copy and before a
   await port.takeOut?.('box', [attachments, join(attachments, 'one', '..'), outside]);
 
   expect(commands(dockerState)).toEqual([]);
-  const refused = lines.filter((one) => one.startsWith('ahpd-computer: '));
+  const refused = lines.filter((one) => one.startsWith('@ahpd/computer: '));
   expect(refused).toHaveLength(5);
   for (const line of refused) expect(line).toContain("it is not a session's attachments path");
 });

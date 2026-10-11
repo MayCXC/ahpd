@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
-import { describePlugin, loadPlugins } from '../../server/src/plugins.js';
+import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { anyone, signIn } from './people.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
@@ -167,16 +167,16 @@ it('loads the package from its source file and serves a turn through the server 
   expect(opened.snapshot.state.turns[0]?.responseParts[0]?.content).toBe('hello there');
 });
 
-it('lists a manifest, and its title, without importing the entry', async () => {
+it('lists a manifest, its title, and the id its entry exports', async () => {
   /*
    * A manifest in its own directory rather than this package's: the loader
    * resolves a directory through `ahpd.entry`, and that names the `dist`
-   * build, which is gitignored and so absent in a fresh checkout. The entry
-   * here throws if it is ever imported, which is what a listing must not do.
+   * build, which is gitignored and so absent in a fresh checkout. A listing
+   * imports the entry to read its id, and applies nothing.
    */
   const dir = mkdtempSync(join(tmpdir(), 'ahpd-acp-listing-'));
   loose = dir;
-  writeFileSync(join(dir, 'entry.js'), 'throw new Error("a listing imported the entry");\n');
+  writeFileSync(join(dir, 'entry.js'), 'export const name = "agent-acp";\nexport const apply = () => { throw new Error("a listing applied the plugin"); };\n');
   writeFileSync(join(dir, 'package.json'), JSON.stringify({
     name: '@ahpd/agent-acp',
     private: true,
@@ -185,11 +185,13 @@ it('lists a manifest, and its title, without importing the entry', async () => {
     ahpd: { entry: './entry.js', title: 'ACP' },
   }));
 
+  // The list verb names every spec first, as this does.
+  await pluginIdsOf([dir], { configDir: REPO, cwd: REPO });
   const row = await describePlugin(dir, { configDir: REPO, cwd: REPO });
 
   expect(row.state).toBe('ready');
-  // The key is the spec as written; the package's own name is `module`.
-  expect(row.name).toBe(dir);
+  // The key is the id the entry exports; the package's own name is `module`.
+  expect(row.name).toBe('agent-acp');
   expect(row.module).toBe('@ahpd/agent-acp');
   expect(row.title).toBe('ACP');
   expect(row.path).toBe(join(dir, 'entry.js'));

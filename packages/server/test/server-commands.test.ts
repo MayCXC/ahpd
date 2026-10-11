@@ -21,7 +21,7 @@ import { fileUsage, fileUsers } from '@ahpd/sdk';
 import { fileVault } from '../src/vault.js';
 import type { Named, Users } from '@ahpd/sdk';
 import type { Options } from '../src/commands/options.js';
-import { optionsFrom } from '../src/commands/options.js';
+import { namedOptionsFrom, optionsFrom } from '../src/commands/options.js';
 import { cliRegistry } from '../src/commands/registry.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { checkScopes } from '../src/commands/scopes.js';
@@ -29,6 +29,7 @@ import { servedRegistry } from '../src/commands/served.js';
 import type { ServedFacts } from '../src/commands/served.js';
 import { declareUser } from '../src/commands/user.js';
 import { apiHandler } from '../src/http.js';
+import { pluginIdsOf } from '../src/plugins.js';
 
 const registry = cliRegistry();
 
@@ -330,6 +331,15 @@ describe('--plugin-option', () => {
   it('sets an option on a plugin named by a typed --plugin', () => {
     writeFileSync(config, JSON.stringify({ plugins: ['a'] }));
     expect(plugins({ plugins: ['b'], pluginOptions: ['b.k=true'] })).toEqual([{ name: 'b', options: { k: true } }]);
+  });
+
+  it('names a plugin by the id its module exports, once it is imported to read it', async () => {
+    const hello = join(import.meta.dirname, 'fixtures', 'plugin-hello');
+    writeFileSync(config, JSON.stringify({ plugins: [hello] }));
+    // The manifest says plugin-hello and the module says hello: only an import knows.
+    expect((await namedOptionsFrom({ configFile: config, pluginOptions: ['hello.k=1'] })).plugins)
+      .toEqual([{ name: hello, options: { k: 1 } }]);
+    expect(plugins({ pluginOptions: [`${hello}.k=2`] })).toEqual([{ name: hello, options: { k: 2 } }]);
   });
 
   it('refuses a plugin this run does not load, naming it', () => {
@@ -859,15 +869,15 @@ describe('a list answers the key its item commands take', () => {
     }
   }, 30000);
 
-  it('carries the name `plugin enable` finds the entry by, which is not the module\'s own', async () => {
+  it('carries the id `plugin enable` finds the entry by, which is not the spec as written', async () => {
     const facts = await daemon();
+    // What a daemon does as it starts: name every plugin it is configured with.
+    await pluginIdsOf(specs, { configDir: fixtures, cwd: fixtures });
     const rows = await rowsOf(facts, 'plugin.list');
-    // The name is the spec as written, whichever kind it is.
-    expect(rows.map((row) => row['name'])).toEqual(specs);
-    // And the command finds the entry by it, rather than by the package name a
-    // resolved path declares: the row about the path says `plugin-hello` is what
-    // the module calls itself, and the path is what the command takes.
-    expect(rows[0]?.['module']).toBe('plugin-hello');
+    // The id: what the module exports; for a spec that does not resolve, the spec.
+    expect(rows.map((row) => row['name'])).toEqual(['hello', specs[1], specs[2]]);
+    expect(rows[0]?.['spec']).toBe(specs[0]);
+    // And the command finds the entry by it.
     for (const row of rows) {
       const served = registry.find('plugin.enable');
       expect(served).toBeDefined();

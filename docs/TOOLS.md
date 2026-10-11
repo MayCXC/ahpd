@@ -126,7 +126,7 @@ There is no `ahpd tools`: the set is the host's own, and a deployment changes it
 | --- | --- |
 | `setTools(tools)` | Replace the host's contributed set whole, for a host built from the SDK. Dispatches `session/serverToolsChanged` with the new definitions |
 | `registerTool(tool)` | A plugin appending one, before or after the host is running |
-| `plugins.<name>` and `plugins.<name>.hostTools` | `ahpd plugin list` says what would load; the option says whether that plugin's sessions take the host's own tools |
+| `plugins.<id>` and `plugins.<id>.hostTools` | `ahpd plugin list` says what would load; the option says whether that plugin's sessions take the host's own tools |
 | a client becoming active | Its announced tools join the list, and one that stops being active takes its own away |
 
 ## Grants

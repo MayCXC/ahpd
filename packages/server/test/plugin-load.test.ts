@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { loadPlugins } from '../src/plugins.js';
+import { loadPlugins, pluginIdOf } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { PluginHost, PluginSpec } from '../../sdk/src/types/plugin.js';
@@ -107,7 +107,7 @@ describe('one plugin named twice', () => {
     ]);
 
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('is named 2 times; write it once and use its options for variants');
+    expect(problems[0]).toBe('plugin hello is named 2 times, by ./fixtures/plugin-hello and ./fixtures/plugin-hello; write it once and use its options for variants');
     expect(loaded).toHaveLength(1);
     expect(options.agents.map((one) => one.provider)).toEqual(['echo', 'hello']);
   });
@@ -120,7 +120,14 @@ describe('one plugin named twice', () => {
     ]);
 
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('is named 2 times; write it once and use its options for variants');
+    expect(problems[0]).toBe('plugin hello is named 2 times, by ./fixtures/plugin-hello and ./fixtures/plugin-hello; write it once and use its options for variants');
+  });
+
+  it('refuses two specs that load the same plugin, and names both', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-hello', './fixtures/plugin-hello/index.ts']);
+
+    expect(problems).toEqual(['plugin hello is named 2 times, by ./fixtures/plugin-hello and ./fixtures/plugin-hello/index.ts; write it once and use its options for variants']);
+    expect(loaded).toHaveLength(1);
   });
 
   it('loads the one entry that is not a repeat', async () => {
@@ -247,5 +254,28 @@ describe('a plugin file with no plugin manifest of its own', () => {
     finally {
       rmSync(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('a plugin id', () => {
+  it('is the name the module exports, read from a switched-off entry without applying it', async () => {
+    const { loaded, options, problems } = await load([{ name: './fixtures/plugin-hello', enabled: false }]);
+
+    expect(problems).toEqual([]);
+    expect(loaded).toEqual([]);
+    expect(options.agents.map((one) => one.provider)).toEqual(['echo']);
+    expect(pluginIdOf('./fixtures/plugin-hello')).toBe('hello');
+  });
+
+  it('is the manifest name for a switched-off entry whose import fails', async () => {
+    const { problems } = await load([{ name: './fixtures/plugin-explodes', enabled: false }]);
+
+    expect(problems).toEqual([]);
+    expect(pluginIdOf('./fixtures/plugin-explodes')).toBe('plugin-explodes');
+  });
+
+  it('is the manifest name for a spec nothing has imported', () => {
+    expect(pluginIdOf('./fixtures/plugin-alike/', { configDir: fixtures, cwd: here })).toBe('plugin-alike');
+    expect(pluginIdOf('./fixtures/plugin-alike/')).toBe('./fixtures/plugin-alike/');
   });
 });

@@ -15,7 +15,7 @@ import { start } from '../daemon.js';
 import { checkingUpdates, updateLine } from '../update.js';
 import { manifest } from '../version.js';
 import { askToServe, offerConfigure } from './configure.js';
-import { optionsFrom, programGlobals, secret, flagFields, stop, conflict } from './options.js';
+import { namedOptionsFrom, programGlobals, secret, flagFields, stop, conflict } from './options.js';
 
 /** The options that belong to the process typing the line, never to the child. */
 const PARENT_OPTIONS = new Set(
@@ -94,7 +94,7 @@ export const declareStart = (registry: Registry<object>): Command => registry.ac
      */
     const say = (line: string): void => { process.stderr.write(`${line}\n`); };
     await offerConfigure({ configFile, term: here, say });
-    const options = optionsFrom(input);
+    const options = await namedOptionsFrom(input);
     /*
      * And before the child is spawned, for the same reason. A folder answered
      * for is written to the file the child reads and is added here, so both this

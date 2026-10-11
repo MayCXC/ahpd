@@ -20,7 +20,8 @@ import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type Op
 import { isRecord, secretRef } from '@ahpd/sdk';
 import type { McpServer, PluginSpec } from '@ahpd/sdk';
 import type { Config, HttpSetting } from '../config.js';
-import { asSpec, configPath, loadConfig } from '../config.js';
+import { asSpec, configDir, configPath, loadConfig } from '../config.js';
+import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
 import { proxyConfiguration, proxyProblems, proxySchema, type ProxyConfiguration } from '../proxy/providers.js';
 
 /** What this daemon was told, after argv and the configuration file were folded. */
@@ -837,6 +838,21 @@ const originOf = (entry: string, source: string | undefined): string => {
 };
 
 /**
+ * `optionsFrom`, after the plugins it names are imported to read their ids, so
+ * that `--plugin-option` can name a plugin by the name its module exports.
+ *
+ * Nothing is imported when no `--plugin-option` is given. Decision
+ * `a-plugins-id-is-its-modules-name`.
+ */
+export async function namedOptionsFrom(input: Readonly<Record<string, unknown>>): Promise<Options> {
+  const typed = input['pluginOptions'] as string[] | undefined;
+  if (typed !== undefined && typed.length > 0) {
+    await pluginIdsOf(optionsFrom({ ...input, pluginOptions: [] }).plugins, { configDir: configDir(), cwd: process.cwd() });
+  }
+  return optionsFrom(input);
+}
+
+/**
  * The canonical input and the configuration files, as the options a run takes.
  *
  * The merged files are checked first, then the order is what was typed, then
@@ -890,15 +906,18 @@ const noCwd = input['noCwd'] === true;
   /*
    * `--plugin-option`, over the options of the plugin it names: each one is
    * split by `pluginOptionIn` into the plugin and the key path, which is set as
-   * deep into that entry's options as it goes. The plugin must be one this run
-   * loads, enabled, because an option for a plugin that is not loaded is a
-   * setting nobody would see take effect.
+   * deep into that entry's options as it goes. The plugin is named by its id or
+   * by its spec as written, and must be one this run loads, enabled, because an
+   * option for a plugin that is not loaded is a setting nobody would see take
+   * effect.
    */
-  // An entry switched off is one this run does not load.
-  const loadedName = (spec: PluginSpec): string | undefined =>
-    typeof spec === 'string' ? spec : spec.enabled === false ? undefined : spec.name;
-  const loadedNames = plugins.map(loadedName).filter((name): name is string => name !== undefined);
-  for (const typedOption of (input['pluginOptions'] as string[] | undefined) ?? []) {
+  const typedOptions = (input['pluginOptions'] as string[] | undefined) ?? [];
+  const where = { configDir: configDir(), cwd: process.cwd() };
+  // An entry switched off is one this run does not load, so it has no names.
+  const loadedNames = (spec: PluginSpec): string[] =>
+    typeof spec !== 'string' && spec.enabled === false ? [] : [nameOf(spec), pluginIdOf(spec, where)];
+  const names = typedOptions.length === 0 ? [] : plugins.flatMap(loadedNames);
+  for (const typedOption of typedOptions) {
     const equals = typedOption.indexOf('=');
     const head = equals === -1 ? '' : typedOption.slice(0, equals);
     /*
@@ -908,7 +927,7 @@ const noCwd = input['noCwd'] === true;
      * and a refusal is printed on a terminal and written to a log.
      */
     const spelled = pathOf(typedOption);
-    const named = pluginOptionIn(head, loadedNames);
+    const named = pluginOptionIn(head, names);
     if (named === undefined) {
       // Nothing this run loads is named here, so the first dot says which name was meant.
       const dot = head.indexOf('.');
@@ -918,7 +937,7 @@ const noCwd = input['noCwd'] === true;
     const { plugin, path } = named;
     if (path.some((key) => key === '')) stop(`--plugin-option takes <plugin>.<key>=<value>, not ${spelled}.`);
     const value = typedValue(typedOption.slice(equals + 1));
-    const at = plugins.findIndex((spec) => loadedName(spec) === plugin);
+    const at = plugins.findIndex((spec) => loadedNames(spec).includes(plugin));
     const spec = plugins[at] as PluginSpec;
     plugins[at] = typeof spec === 'string'
       ? { name: spec, options: setAt(undefined, path, value, spelled) }

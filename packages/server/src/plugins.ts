@@ -6,7 +6,8 @@
  * directory. This file is the half of the plugin mechanism that touches the
  * machine - the filesystem, the module resolver and `import()` - and it is
  * split so that resolving stops short of running anything: a listing can ask
- * what a spec means without importing it, and a load and a listing agree.
+ * what a spec means before it imports the module for its id, and a load and a
+ * listing agree.
  *
  * A bare name is resolved through the configuration directory's own
  * `node_modules`, which is what makes `npm i` there the install rather than a
@@ -58,6 +59,40 @@ export interface Resolved {
 
 /** What a spec is called, whether it was written as a string or an object. */
 export const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? spec : spec.name);
+
+/**
+ * Each plugin's id, by its spec as written: the name its module exports, then
+ * its manifest's, then its file's, then the spec. Filled by `loadPlugins` and
+ * `pluginIdsOf`, which import a module to read it. Decision
+ * `a-plugins-id-is-its-modules-name`.
+ */
+const ids = new Map<string, string>();
+
+/**
+ * The id of the plugin a spec loads: the one this process read, or, for a spec
+ * no import has named, its manifest's name, its file's name or the spec.
+ */
+export const pluginIdOf = (spec: PluginSpec, where?: { configDir: string; cwd: string }): string =>
+  ids.get(nameOf(spec)) ?? (where === undefined ? nameOf(spec) : unimportedId(spec, where));
+
+/** Whether a name a person typed names this spec: its id, or the spec as written. */
+export const isNamed = (spec: PluginSpec, name: string): boolean => nameOf(spec) === name || pluginIdOf(spec) === name;
+
+/** A spec's id read without an import, from what resolving it and its manifest say. */
+const unimportedId = (spec: PluginSpec, where: { configDir: string; cwd: string }): string => {
+  try {
+    const found = locate(resolvePlugin(spec, where), sdkVersion());
+    return 'refused' in found ? nameOf(spec) : provisionalOf(spec, found);
+  }
+  catch {
+    // A spec that does not resolve is called what it was written as.
+    return nameOf(spec);
+  }
+};
+
+/** What a located plugin is called until its module says. */
+const provisionalOf = (spec: PluginSpec, found: Located): string =>
+  found.manifest?.name ?? (found.manifest === undefined && found.target !== undefined ? fileNameOf(found.target) : nameOf(spec));
 
 /** Whether the spec carries a scheme of its own, which this daemon does not second-guess. */
 export const hasScheme = (spec: string): boolean => /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(spec);
@@ -642,6 +677,63 @@ const resolveSecrets = async (
   return { forApply, forCheck, named };
 };
 
+/** A plugin imported and named, or the one problem that kept it from being imported. */
+export type Named = { refused: string } | {
+  found: Located;
+  /** The id: the module's `name` export, or what it was called before the import. */
+  id: string;
+  /** What it was called before the import. */
+  provisional: string;
+  /** The module, when it imported. */
+  module?: unknown;
+  /** Why the import failed, when it did. */
+  failed?: string;
+  /** How long the import took, in milliseconds. */
+  took: number;
+};
+
+/**
+ * Import one plugin and read its id, without calling `apply`.
+ *
+ * The manifest is read and the range checked first, as for a load, so a
+ * plugin this SDK refuses is never imported.
+ */
+export async function namePlugin(resolved: Resolved, version: string): Promise<Named> {
+  const found = locate(resolved, version);
+  if ('refused' in found) return found;
+  const provisional = provisionalOf(resolved.spec, found);
+  const started = Date.now();
+  try {
+    const module: unknown = await import(found.url);
+    const declared = typeof module === 'object' && module !== null ? (module as Record<string, unknown>).name : undefined;
+    const id = typeof declared === 'string' && declared.trim() !== '' ? declared : provisional;
+    return { found, id, provisional, module, took: Date.now() - started };
+  }
+  catch (error) {
+    return { found, id: provisional, provisional, failed: reason(error), took: Date.now() - started };
+  }
+}
+
+/**
+ * Import and name every spec, enabled or not, and remember each id for
+ * `pluginIdOf`. For a command that runs without a daemon: a daemon names its
+ * plugins as it loads them.
+ */
+export async function pluginIdsOf(specs: readonly PluginSpec[], where: { configDir: string; cwd: string }): Promise<void> {
+  for (const spec of specs) {
+    let resolved: Resolved;
+    try {
+      resolved = resolvePlugin(spec, where);
+    }
+    catch {
+      // A spec that does not resolve keeps the name it was written as.
+      continue;
+    }
+    const named = await namePlugin(resolved, sdkVersion());
+    if (!('refused' in named)) ids.set(nameOf(spec), named.id);
+  }
+}
+
 /**
  * Resolve, validate, import and apply one plugin.
  *
@@ -652,27 +744,24 @@ const resolveSecrets = async (
  * caught and turned into a problem line, because a plugin that throws must cost
  * a line in the log rather than the daemon.
  */
-export async function loadOne(resolved: Resolved, options: LoadOneOptions): Promise<OneResult> {
+export async function loadOne(resolved: Resolved, options: LoadOneOptions, imported?: Named): Promise<OneResult> {
   const spec = resolved.spec;
   const said = nameOf(spec);
-  const found = locate(resolved, options.version);
-  if ('refused' in found) return { problems: [found.refused] };
-  const { manifest, target, url } = found;
-  const problems = [...found.problems];
+  const ready = imported ?? await namePlugin(resolved, options.version);
+  if ('refused' in ready) return { problems: [ready.refused] };
+  const { manifest, target, url } = ready.found;
+  const problems = [...ready.found.problems];
 
-  const provisional = manifest?.name ?? (manifest === undefined && target !== undefined ? fileNameOf(target) : said);
+  const provisional = ready.provisional;
   options.log(`plugin ${provisional} loading`);
-  // When the start line was logged, which every later line measures from.
-  const started = Date.now();
+  // When the start line was logged, less the import already behind it.
+  const started = Date.now() - ready.took;
   // How long since the start line, as the ` in <n> ms` a later line carries.
   const took = (): string => ` in ${Date.now() - started} ms`;
-  let module: unknown;
-  try {
-    module = await import(url);
+  if (ready.failed !== undefined) {
+    return { problems: [...problems, `plugin ${provisional} could not be imported from ${target ?? url}${took()}: ${ready.failed}`] };
   }
-  catch (error) {
-    return { problems: [...problems, `plugin ${provisional} could not be imported from ${target ?? url}${took()}: ${reason(error)}`] };
-  }
+  const module = ready.module;
 
   const wrong = checkShape(module, target ?? url);
   if (wrong !== undefined) return { problems: [...problems, wrong] };
@@ -681,7 +770,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions): Prom
   const apply = held.apply as Plugin['apply'];
   // The module wins for shape and its `name` wins for the listing; the
   // manifest is the fallback, and the spec is the last resort.
-  const name = typeof held.name === 'string' && held.name.trim() !== '' ? held.name : provisional;
+  const name = ready.id;
   const title = typeof held.title === 'string' ? held.title : manifest?.title;
   const defaults = typeof held.defaults === 'object' && held.defaults !== null && !Array.isArray(held.defaults)
     ? held.defaults as Record<string, unknown>
@@ -839,15 +928,14 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions): Prom
  *
  * The only other copy of one is inside a module that has just been imported, and
  * importing it again to ask would run a plugin's code a second time. Keyed by
- * the name `plugins` holds it under, which is the name the key a client edits is
- * spelled with. A plugin that did not load has no entry here, which is what
+ * the plugin's id, which is the name the key a client edits is spelled with. A plugin that did not load has no entry here, which is what
  * leaves its options free rather than wrongly bounded.
  */
 const schemas = new Map<string, Record<string, unknown>>();
 
 /**
- * The options schema of a plugin this daemon loaded, under the name `plugins`
- * holds it as, or `undefined` for one that did not load.
+ * The options schema of a plugin this daemon loaded, by its id, or `undefined`
+ * for one that did not load.
  */
 export const optionsSchemaLoaded = (name: string): Record<string, unknown> | undefined => schemas.get(name);
 
@@ -953,30 +1041,48 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   const vaultInForce = (): Vault | undefined => standing ?? options.base.vault;
 
   /*
-   * A name that repeats is one module configured twice, which decision
-   * `a-plugin-loads-once-and-each-preset-is-a-variant` refuses: a plugin is
-   * loaded once and its options are what make its variants, so the second and
-   * later entries of a name are problems naming it. A switched-off entry still
-   * counts, since root config would key it the same.
+   * Every entry is imported and named before any applies, a switched-off one
+   * too, so that each one's id is known: root config keys an entry by it,
+   * enabled or not.
    */
-  const repeats = new Map<string, number>();
-  for (const spec of specs) repeats.set(nameOf(spec), (repeats.get(nameOf(spec)) ?? 0) + 1);
-  const taken = new Set<string>();
-
+  const where = { configDir: options.configDir, cwd: options.cwd };
+  const entries: { spec: PluginSpec; id: string; resolved?: Resolved; named?: Named; unresolved?: string }[] = [];
   for (const spec of specs) {
-    const named = nameOf(spec);
-    if (taken.has(named)) {
-      problems.push(`plugin ${named} is named ${String(repeats.get(named))} times; write it once and use its options for variants`);
-      continue;
-    }
-    taken.add(named);
-    if (typeof spec !== 'string' && spec.enabled === false) continue;
     let resolved: Resolved;
     try {
-      resolved = resolvePlugin(spec, { configDir: options.configDir, cwd: options.cwd });
+      resolved = resolvePlugin(spec, where);
     }
     catch (error) {
-      problems.push(reason(error));
+      entries.push({ spec, id: nameOf(spec), unresolved: reason(error) });
+      continue;
+    }
+    const named = await namePlugin(resolved, version);
+    const id = 'refused' in named ? nameOf(spec) : named.id;
+    ids.set(nameOf(spec), id);
+    entries.push({ spec, id, resolved, named });
+  }
+
+  /*
+   * An id that repeats is one plugin configured twice, which decision
+   * `a-plugin-loads-once-and-each-preset-is-a-variant` refuses: a plugin is
+   * loaded once and its options are what make its variants, so the second and
+   * later entries of an id are problems naming it. A switched-off entry still
+   * counts, since root config would key it the same.
+   */
+  const specsOf = new Map<string, string[]>();
+  for (const { spec, id } of entries) specsOf.set(id, [...(specsOf.get(id) ?? []), nameOf(spec)]);
+  const taken = new Set<string>();
+
+  for (const { spec, id, resolved, named, unresolved } of entries) {
+    if (taken.has(id)) {
+      const all = specsOf.get(id) ?? [];
+      problems.push(`plugin ${id} is named ${String(all.length)} times, by ${all.join(' and ')}; write it once and use its options for variants`);
+      continue;
+    }
+    taken.add(id);
+    if (typeof spec !== 'string' && spec.enabled === false) continue;
+    if (resolved === undefined || named === undefined) {
+      problems.push(unresolved ?? `plugin ${id} did not resolve`);
       continue;
     }
     const one = await loadOne(resolved, {
@@ -993,14 +1099,14 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
       usage: () => reached?.usage,
       vault: vaultInForce,
       sessions: () => hosted.then((host) => host.sessions),
-    });
+    }, named);
     problems.push(...one.problems);
     if (one.loaded !== undefined) {
       loaded.push(one.loaded);
       // A copy: the schema answers for a key a client edits, so it is the
       // host's to hold and not one a plugin may reach back into.
       if (one.loaded.plugin.optionsSchema !== undefined) {
-        schemas.set(nameOf(spec), frozenCopy(one.loaded.plugin.optionsSchema));
+        schemas.set(id, frozenCopy(one.loaded.plugin.optionsSchema));
       }
     }
     if (one.contribution !== undefined) {
@@ -1038,10 +1144,9 @@ export interface PluginRow {
   /** What was named, as it was named. */
   spec: PluginSpec;
   /**
-   * The name the configuration holds this entry under, which is what every
-   * other `plugin` verb takes: a client reads a row and passes this back. It is
-   * `spec` read as a name, so a path, a URL and a package name each answer the
-   * one the entry is keyed by.
+   * The plugin's id, which is what every other `plugin` verb takes and what
+   * root config keys the entry by: a client reads a row and passes this back.
+   * Decision `a-plugins-id-is-its-modules-name`.
    */
   name: string;
   /** Which of the six states this spec is in. */
@@ -1049,9 +1154,8 @@ export interface PluginRow {
   /**
    * The name the module or the manifest declares itself by.
    *
-   * Not the same as `name` whenever the entry is named by something other than
-   * its package: a path, a git URL or an object spec's own name. Absent for a
-   * spec that did not resolve, so nothing said what it is.
+   * Not the same as `name` when the module exports a name its manifest does
+   * not say. Absent for a spec that did not resolve, so nothing said what it is.
    */
   module?: string;
   /** The URL a load would import, when a spec resolved. */
@@ -1072,18 +1176,18 @@ const required = (value: unknown): boolean =>
  * Describe one spec without running anything.
  *
  * Resolve, then read the manifest from the resolved path, and nothing else: no
- * `import`, no `apply`. That is the whole reason the `ahpd` key exists - a
- * listing of installed plugins must not run third-party code - and it is why a
- * plugin that would throw on import still lists.
+ * `import`, no `apply`. The id is the one `pluginIdOf` holds, which a caller
+ * fills with `pluginIdsOf` first; a plugin that would throw on import still
+ * lists, by its manifest's name.
  */
 export async function describePlugin(
   spec: PluginSpec,
   options: { configDir: string; cwd: string },
   version: string = sdkVersion(),
 ): Promise<PluginRow> {
-  // The key the entry is held under, which this row answers whichever state it
-  // is in, because a state is a thing to read about a name and not a name.
-  const name = nameOf(spec);
+  // The id the entry is keyed by, which this row answers whichever state it is
+  // in, because a state is a thing to read about a name and not a name.
+  const name = pluginIdOf(spec, options);
   if (typeof spec !== 'string' && spec.enabled === false) return { spec, name, state: 'disabled' };
 
   let resolved: Resolved;
@@ -1144,8 +1248,9 @@ export async function describePlugin(
  */
 export const pluginLine = (row: PluginRow): string => {
   const where = row.path ?? row.url ?? '-';
-  // What the module says it is, which is not the key the line already prints as
-  // the spec: `name` is that key, so the label reads `module`.
+  // The id, and the spec beside it when the two differ.
+  const said = nameOf(row.spec) === row.name ? row.name : `${row.name} (${nameOf(row.spec)})`;
+  // What the manifest says it is, which the label reads as `module`.
   const label = row.module !== undefined || row.title !== undefined
     ? `(${[row.module ?? '?', ...(row.title === undefined ? [] : [row.title])].join(', ')})`
     : row.state === 'disabled' ? '(turned off)'
@@ -1153,5 +1258,5 @@ export const pluginLine = (row: PluginRow): string => {
         : row.state === 'error' ? '(bad manifest)'
           : '(no manifest)';
   const why = row.problem === undefined ? '' : `: ${row.problem}`;
-  return `${row.state} ${nameOf(row.spec)} -> ${where} ${label}${why}`;
+  return `${row.state} ${said} -> ${where} ${label}${why}`;
 };

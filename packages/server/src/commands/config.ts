@@ -12,7 +12,7 @@ import type { Command, Registry } from '@cofold/commands';
 import type { PluginSpec } from '@ahpd/sdk';
 import { secretRef } from '@ahpd/sdk';
 import { configDir, configPath, loadConfig, type Config } from '../config.js';
-import { nameOf, optionsSchemaOf, schemaOf } from '../plugins.js';
+import { optionsSchemaOf, pluginIdOf, schemaOf } from '../plugins.js';
 import { flagFields } from './options.js';
 import type { ServedFacts } from './served.js';
 
@@ -73,7 +73,7 @@ const walk = (schema: Record<string, unknown>, value: unknown): unknown => {
  * what of its options is a secret.
  *
  * `schema` is `undefined` for a plugin whose schema was never read, one that
- * could not be imported or is switched off and so was never imported: nothing
+ * could not be imported or is switched off and so was never loaded: nothing
  * marks a value, so every one answers `<set>` - decision
  * `root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value`.
  *
@@ -97,12 +97,13 @@ export const maskOption = (schema: Record<string, unknown> | undefined, option: 
 /**
  * The key each entry of `plugins` is carried under in root config.
  *
- * `plugins.<name>`, always: a plugin is loaded once and its options make its
- * variants, so there is one entry per name to key - decision
- * `a-plugin-loads-once-and-each-preset-is-a-variant`.
+ * `plugins.<id>`, always: a plugin is loaded once and its options make its
+ * variants, so there is one entry per id to key - decisions
+ * `a-plugin-loads-once-and-each-preset-is-a-variant` and
+ * `a-plugins-id-is-its-modules-name`.
  */
 export const keyed = (specs: readonly PluginSpec[]): { key: string; spec: PluginSpec }[] =>
-  specs.map((spec) => ({ key: `plugins.${nameOf(spec)}`, spec }));
+  specs.map((spec) => ({ key: `plugins.${pluginIdOf(spec, { configDir: configDir(), cwd: process.cwd() })}`, spec }));
 
 /**
  * The options schema to mask each of these plugin keys with.
