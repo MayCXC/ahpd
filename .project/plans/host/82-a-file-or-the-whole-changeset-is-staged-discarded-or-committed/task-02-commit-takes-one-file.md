@@ -1,6 +1,6 @@
 ---
 title: Commit takes one file
-status: todo
+status: implemented
 depends: [03]
 layer: sdk
 refs:
@@ -40,3 +40,14 @@ On one file it commits that path only, and other staged files stay staged.
 - A renamed file commits as one rename.
 - The whole-changeset commit works as before.
 - The gates pass.
+
+## Resume
+
+- **Implemented** 2026-10-11 on `build/host82`, commit `4c4f5b8`.
+- `packages/sdk/src/changes.ts:226-256` gives `COMMIT` the scopes `['changeset', 'resource']`. The confirmation is "Commit as 'X'? The whole changeset takes 3 staged files." or "Commit as 'X'? The whole changeset takes 4 files, 1 untracked."
+- `packages/sdk/src/changes.ts:1339-1355` reads a resource target before the message is written. It refuses a path outside the directory and the folder itself, as discard does. On a renamed row it takes the old path from the row's `before` URI, so both paths go to git.
+- `packages/sdk/src/changes.ts:1380-1403` runs `git add -- <paths>` for the paths that are on disk, then `git commit --only -m <message> -- <paths>`. The answer is the short sha and the subject, as for the whole changeset.
+- **Departure 1.** `git add` is run only on paths that exist on disk. `add` refuses a path that is in neither the working tree nor the index. A staged deletion and the old path of a staged rename are such paths. `commit --only` records a missing path as deleted.
+- **Departure 2.** The confirmation text changed in `commit.test.ts` and in `changes-refresh.test.ts:183`, which waited on the old sentence.
+- `packages/sdk/test/commit.test.ts:559` adds 8 tests. They cover the scopes, an unstaged file with another file left staged, a staged file and an untracked file. They also cover the two kinds of deletion, the two kinds of rename, and the two refusals. The file has 45 tests.
+- Gates: `pnpm build`, `pnpm typecheck` and `pnpm boundary` pass. The sdk suite passes 2760 tests in 141 files, and the server suite passes 901 tests in 46 files.

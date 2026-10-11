@@ -1,7 +1,7 @@
 ---
 title: A file or the whole changeset is staged, unstaged, discarded or committed
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -61,9 +61,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Stage, unstage and discard take the whole changeset](task-01-stage-unstage-and-discard-take-the-whole-changeset.md) | todo | - |
-| [02 - Commit takes one file](task-02-commit-takes-one-file.md) | todo | 03 |
-| [03 - A rename names the path it came from](task-03-a-rename-names-the-path-it-came-from.md) | todo | - |
+| [01 - Stage, unstage and discard take the whole changeset](task-01-stage-unstage-and-discard-take-the-whole-changeset.md) | implemented | - |
+| [02 - Commit takes one file](task-02-commit-takes-one-file.md) | implemented | 03 |
+| [03 - A rename names the path it came from](task-03-a-rename-names-the-path-it-came-from.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -73,14 +73,14 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** Softov reviews the plan.
+- **Done so far:** tasks 01, 02 and 03 are implemented on `build/host82`. See [implemented.md](implemented.md).
+- **Next action:** Softov reviews the build.
 - **Open questions:** none.
 
 ## Final verification checklist
 
-- [ ] `pnpm build`, `pnpm typecheck` and `pnpm boundary` pass.
-- [ ] `commit.test.ts` covers each operation on one file and on the whole changeset, over a real repository.
-- [ ] A rename test shows the old path in `before` and the new one in `after`.
-- [ ] `docs/AHP.md` says what each operation takes.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm build`, `pnpm typecheck` and `pnpm boundary` pass.
+- [x] `commit.test.ts` covers each operation on one file and on the whole changeset, over a real repository.
+- [x] A rename test shows the old path in `before` and the new one in `after`.
+- [x] `docs/AHP.md` says what each operation takes.
+- [x] `plans/index.md` updated.
