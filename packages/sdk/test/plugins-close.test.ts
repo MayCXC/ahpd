@@ -12,11 +12,11 @@ import { expect, it } from 'vitest';
 import { foldHostOptions, pluginHost } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 
 const base = (): HostOptions => ({ path: '/tmp/plugins-close', agents: [echo({ path: '/tmp/plugins-close' })] });
 
-const context: PluginContext = {
+const context: LoaderContext = {
   path: '/tmp/plugins-close',
   paths: ['/tmp/plugins-close'],
   version: '0.0.0',

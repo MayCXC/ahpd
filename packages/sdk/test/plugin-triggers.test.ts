@@ -7,7 +7,7 @@ import {
 import { sdkVersion } from '../src/version.js';
 import type { Bag } from '../src/types/common.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext, TriggerTypeDefinition } from '../src/types/plugin.js';
+import type { LoaderContext, TriggerTypeDefinition } from '../src/types/plugin.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
@@ -52,7 +52,7 @@ const BATTEN: Bag = {
   }],
 };
 
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: DIR, paths: [DIR], version: sdkVersion(), hostName: 'test', configDir: DIR, log: () => {}, say: () => {},
 });
 

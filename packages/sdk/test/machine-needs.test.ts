@@ -7,7 +7,7 @@ import { pluginHost } from '../src/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import type { Agent } from '../src/types/agent.js';
 import type { MachineNeed } from '../src/types/machine.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 
 /*
  * An agent's needs, filled from what a host knows.
@@ -22,7 +22,7 @@ import type { PluginContext } from '../src/types/plugin.js';
 
 const temp = (): string => mkdtempSync(join(tmpdir(), 'ahpd-needs-'));
 
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: temp(), paths: [temp()], version: sdkVersion(), hostName: 'test', configDir: '/tmp/needs', log: () => {}, say: () => {},
 });
 

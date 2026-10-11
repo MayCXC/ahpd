@@ -12,7 +12,7 @@ import type { ClientCalls } from '../src/tools/clientcalls.js';
 import type { Bag } from '../src/types/common.js';
 import type { HostEvent } from '../src/types/events.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Session } from '../src/types/session.js';
 import type { SessionAction, SessionInputRequest, SessionState } from '@microsoft/agent-host-protocol';
 import {
@@ -1610,7 +1610,7 @@ describe('a client\'s call, held by the backend', () => {
     session: Session;
   }
 
-  const context = (): PluginContext => ({
+  const context = (): LoaderContext => ({
     path: DIR, paths: [DIR], version: sdkVersion(), hostName: 'test', configDir: DIR, log: () => {}, say: () => {},
   });
 

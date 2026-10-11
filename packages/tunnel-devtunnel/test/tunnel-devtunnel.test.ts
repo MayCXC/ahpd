@@ -9,7 +9,7 @@ import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
 import { afterEach, expect, it } from 'vitest';
 import { pluginHost, raise } from '../../sdk/src/plugins.js';
-import type { PluginContext } from '../../sdk/src/types/plugin.js';
+import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import {
   deriveConnectionToken, displayLabel, nameLabel, LAUNCHER_LABEL, PROTOCOL_LABEL, TUNNEL_PORT,
 } from '../src/discovery.js';
@@ -44,7 +44,7 @@ const runner = (answers: Record<string, Result | Result[]>): Runner & { calls: s
   return one;
 };
 
-const context = (over: Partial<PluginContext> = {}): PluginContext => ({
+const context = (over: Partial<LoaderContext> = {}): LoaderContext => ({
   path: '/work', paths: ['/work'], version: '0.6.3', hostName: 'test', configDir: '/work', log: () => {}, say: () => {}, ...over,
 });
 

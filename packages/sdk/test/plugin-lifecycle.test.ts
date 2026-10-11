@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { pluginHost, raise } from '../src/plugins.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 
 /*
  * The two moments around the daemon's socket, and the line a plugin may add to
@@ -13,7 +13,7 @@ import type { PluginContext } from '../src/types/plugin.js';
  * `log` - because only one of the two is parsed by `ahpd status`.
  */
 
-const context = (over: Partial<PluginContext> = {}): PluginContext => ({
+const context = (over: Partial<LoaderContext> = {}): LoaderContext => ({
   path: '/work',
   paths: ['/work'],
   version: '0.6.3',

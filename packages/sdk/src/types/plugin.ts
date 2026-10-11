@@ -493,7 +493,26 @@ export interface PluginContext {
    * `listening` has been handled - and ignored after it.
    */
   say(line: string): void;
+  /**
+   * A YAML text as data, with the subset the host reads its own files with.
+   *
+   * The host's, so a plugin that reads a frontmatter or a skill file needs no
+   * YAML dependency of its own - decision `a-plugin-gets-yaml-from-the-host`.
+   * Throws with the line that is wrong.
+   */
+  parseYaml(text: string): unknown;
+  /** A value as YAML text that `parseYaml` reads back as the same value. */
+  stringifyYaml(value: unknown): string;
 }
+
+/**
+ * What a loader hands `pluginHost`: a `PluginContext` that may leave out the
+ * YAML functions.
+ *
+ * The daemon gives them, and a loader in a test may not; the host then gives
+ * the plugin two that throw.
+ */
+export type LoaderContext = Omit<PluginContext, 'parseYaml' | 'stringifyYaml'> & Partial<Pick<PluginContext, 'parseYaml' | 'stringifyYaml'>>;
 
 /**
  * The contribution surface, which is `HostOptions` named back.

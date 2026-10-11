@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fromEnvRef, readSecret, readSecrets, scopeOf, secretRef } from '../src/vault.js';
 import { pluginHost } from '../src/plugins.js';
 import { sdkVersion } from '../src/version.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Vault } from '../src/types/vault.js';
 
 /*
@@ -106,7 +106,7 @@ describe('readSecret', () => {
   });
 });
 
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: '/tmp/vault', paths: ['/tmp/vault'], version: sdkVersion(), hostName: 'test', configDir: '/tmp/vault', log: () => {}, say: () => {},
 });
 

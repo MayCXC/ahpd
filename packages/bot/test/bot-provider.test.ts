@@ -15,7 +15,7 @@ import { botStore } from '../src/store.js';
 import type { Agent, Start } from '../../sdk/src/types/agent.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
-import type { PluginContext } from '../../sdk/src/types/plugin.js';
+import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { Chosen, MessageFrom, Session } from '../../sdk/src/types/session.js';
 import type { Grant, Principal, Users } from '../../sdk/src/types/users.js';
@@ -107,7 +107,7 @@ function made(
   loose.push(root);
   /** Where a bot's own folder goes, which is the plugin's `root` option. */
   const bots = join(root, 'bots');
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: root,
     paths: [root],
     version: sdkVersion(),

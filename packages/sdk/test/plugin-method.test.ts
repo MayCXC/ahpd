@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { foldHostOptions, pluginHost } from '../src/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { root } from './users-gate-helpers.js';
-import type { PluginContext, PluginMethod, ServedMethod } from '../src/types/plugin.js';
+import type { LoaderContext, PluginMethod, ServedMethod } from '../src/types/plugin.js';
 
 /*
  * A plugin registers an `x-` command, and the fold carries it into
@@ -10,7 +10,7 @@ import type { PluginContext, PluginMethod, ServedMethod } from '../src/types/plu
  * `a-plugin-serves-an-x-command`.
  */
 
-const context = (): PluginContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
+const context = (): LoaderContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });
 
 const echo: PluginMethod = { grant: 'demo:read', handle: (params) => params };
 

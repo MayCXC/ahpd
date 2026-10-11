@@ -11,7 +11,7 @@ import {
   directory, hello, peer, signIn,
 } from './users-gate-helpers.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { PluginContext } from '../src/types/plugin.js';
+import type { LoaderContext } from '../src/types/plugin.js';
 import type { Grant } from '../src/types/users.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -32,7 +32,7 @@ beforeEach(resetSdk);
 const DIR = '/home/softov';
 
 /** The context every plugin in this repository is handed, without a daemon. */
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: DIR, paths: [DIR], version: sdkVersion(), hostName: 'test', configDir: DIR, log: () => {}, say: () => {},
 });
 

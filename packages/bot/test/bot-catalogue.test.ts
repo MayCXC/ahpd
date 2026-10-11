@@ -10,7 +10,7 @@ import { sdkVersion } from '../../sdk/src/version.js';
 import { holds } from '../../sdk/src/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { apply } from '../src/plugin.js';
-import type { PluginContext } from '../../sdk/src/types/plugin.js';
+import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { Grant, Principal, Users } from '../../sdk/src/types/users.js';
 
@@ -95,7 +95,7 @@ const directory = (tokens: Record<string, Grant[]>, members: Record<string, stri
 function made(tokens: Record<string, Grant[]>, members: Record<string, string[]> = {}) {
   const root = mkdtempSync(join(tmpdir(), 'ahpd-bot-catalogue-'));
   loose.push(root);
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: join(root, 'config'), log: () => {}, say: () => {},
   };
   const sessions = memorySessions();

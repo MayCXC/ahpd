@@ -18,7 +18,7 @@ import type { Agent, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { HostHandlers } from '../src/types/events.js';
 import type { HostOptions, HostTool } from '../src/types/host.js';
-import type { PluginContext, TriggerTypeDefinition } from '../src/types/plugin.js';
+import type { LoaderContext, TriggerTypeDefinition } from '../src/types/plugin.js';
 import type { Request, Peer } from '../src/types/rpc.js';
 import type { ResourceProvider } from '../src/types/resources.js';
 import type { Principal, Users } from '../src/types/users.js';
@@ -484,7 +484,7 @@ it('refuses a tool that writes to a turn it was handed', async () => {
  */
 
 /** The context a loader builds for a plugin, as much of it as these cases need. */
-const context = (): PluginContext => ({
+const context = (): LoaderContext => ({
   path: DIR,
   paths: [DIR],
   version: sdkVersion(),
@@ -701,12 +701,12 @@ it('hands every listener one frozen copy of an event, so none writes for the nex
     listening: [
       {
         by: 'first',
-        context: context(),
+        context: pluginHost('first', context()).host,
         handle: (one) => { seen.push(one); bag(one).port = 1; },
       },
       {
         by: 'second',
-        context: context(),
+        context: pluginHost('second', context()).host,
         handle: (one) => { seen.push(one); ports.push(one.port); },
       },
     ],

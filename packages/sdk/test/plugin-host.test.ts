@@ -7,7 +7,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { usageProvider } from '../src/usage.js';
 import type { Agent } from '../src/types/agent.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { Contribution, PluginContext } from '../src/types/plugin.js';
+import type { Contribution, LoaderContext } from '../src/types/plugin.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Usage } from '../src/types/usage.js';
 
@@ -43,7 +43,7 @@ it('answers whether it keeps a session, from the store and by the id in the URI'
   const store = memorySessions();
   store.setConfig('one', { computer: 'computer://box' });
   store.setProvider('one', 'echo');
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: '/tmp/plugin-host',
     paths: ['/tmp/plugin-host'],
     version: '0.0.0',
@@ -65,10 +65,30 @@ it('answers whether it keeps a session, from the store and by the id in the URI'
   expect(await pluginHost('fixture', context).host.sessionKept('echo:/one')).toBe(false);
 });
 
+it('gives a plugin YAML functions that throw where the loader gave none', () => {
+  const context: LoaderContext = {
+    path: '/tmp/plugin-host',
+    paths: ['/tmp/plugin-host'],
+    version: '0.0.0',
+    hostName: 'host',
+    configDir: '/tmp/plugin-host',
+    log: () => {},
+    say: () => {},
+  };
+  const { host } = pluginHost('fixture', context);
+
+  expect(() => host.parseYaml('id: one\n')).toThrow('no YAML on this host');
+  expect(() => host.stringifyYaml({ id: 'one' })).toThrow('no YAML on this host');
+  // A loader that gives them hands them on.
+  const given = pluginHost('fixture', { ...context, parseYaml: () => 'parsed', stringifyYaml: () => 'written' }).host;
+  expect(given.parseYaml('')).toBe('parsed');
+  expect(given.stringifyYaml(null)).toBe('written');
+});
+
 it('answers whose a session is, from the store and by the id in the URI', async () => {
   const store = memorySessions();
   store.setOwner('one', 'user:soft');
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: '/tmp/plugin-host',
     paths: ['/tmp/plugin-host'],
     version: '0.0.0',
@@ -88,7 +108,7 @@ it('answers whose a session is, from the store and by the id in the URI', async 
 });
 
 it('records the plugin that registered each agent, by the spec it was named with', async () => {
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: '/tmp/plugin-host',
     paths: ['/tmp/plugin-host'],
     version: '0.0.0',
@@ -126,7 +146,7 @@ it('waits for the store rather than answering before the fold has named it', asy
   const store = memorySessions();
   store.setConfig('one', { computer: 'computer://box' });
   store.setProvider('one', 'echo');
-  const context: PluginContext = {
+  const context: LoaderContext = {
     path: '/tmp/plugin-host',
     paths: ['/tmp/plugin-host'],
     version: '0.0.0',
@@ -637,7 +657,7 @@ it('drops a clashing agent alone, and says which plugin lost the id', () => {
  * that leaves nothing says, and whether the line is logged as well as said.
  */
 
-const LOOPING_CONTEXT: PluginContext = {
+const LOOPING_CONTEXT: LoaderContext = {
   path: '/tmp/plugin-host',
   paths: ['/tmp/plugin-host'],
   version: '0.0.0',

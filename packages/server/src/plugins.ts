@@ -28,6 +28,7 @@ import { createRequire } from 'node:module';
 import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { foldHostOptions, frozenCopy, grantProblem, isRecord, pluginHost, readSecret, reason, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
 import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { satisfies } from './compat.js';
@@ -884,6 +885,9 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.hostId === undefined ? {} : { hostId: options.hostId }),
     log: options.log,
     say: options.say ?? (() => {}),
+    // The host's own YAML subset, so a plugin needs no YAML dependency of its own.
+    parseYaml: (text: string) => parseYaml(text),
+    stringifyYaml,
   });
 
   const { host, contribution, seal } = pluginHost(name, context, {

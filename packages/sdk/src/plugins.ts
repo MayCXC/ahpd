@@ -15,7 +15,7 @@ import type { Agent } from './types/agent.js';
 import type { SessionConfigAnswerer } from './types/completions.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from './types/events.js';
 import type { HostOptions, HostTool } from './types/host.js';
-import type { ChannelHandle, Contribution, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, ServedMethod, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, ServedMethod, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from './types/records.js';
 import type { SessionStore } from './types/sessions.js';
 import type { Usage } from './types/usage.js';
@@ -642,6 +642,11 @@ export interface HostRecording {
   seal(): void;
 }
 
+/** What a plugin calls for YAML on a host whose loader gave none. */
+const noYaml = (): never => {
+  throw new Error('no YAML on this host');
+};
+
 /** What a plugin host is given besides its context. */
 export interface HostRecordingOptions {
   /**
@@ -737,7 +742,14 @@ export interface HostRecordingOptions {
  * so a plugin can say which of its own items it dropped without that costing
  * the plugin anything else it registered.
  */
-export function pluginHost(by: string, context: PluginContext, options: HostRecordingOptions = {}): HostRecording {
+export function pluginHost(by: string, given: LoaderContext, options: HostRecordingOptions = {}): HostRecording {
+  /*
+   * The context as the plugin sees it. A loader that gives no YAML functions
+   * gives two that throw, so a plugin that reads YAML on that host is told why.
+   */
+  const context: PluginContext = given.parseYaml !== undefined && given.stringifyYaml !== undefined
+    ? given as PluginContext
+    : { ...given, parseYaml: given.parseYaml ?? noYaml, stringifyYaml: given.stringifyYaml ?? noYaml };
   /*
    * The listeners, keyed by event. Held as a loose record and narrowed to
    * `HostHandlers` through the contribution, because the mapped type gives
