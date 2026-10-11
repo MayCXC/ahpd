@@ -96,7 +96,7 @@ No decision files yet.
 - **State flow** - `Held` gains `quietSince`, set at spawn and on every action the session emits or receives. A sleeping session is a catalogue row that is not in `sessions`, the same as a session after a daemon restart.
 - **Data flow** - `wake(uri, chat?)` is the one way a session that is not live comes back. It is lifted from the `chat/turnStarted` path and called by every waker.
 - **Event flow** - a sleep and a wake each move `root/activeSessionsChanged`. Rule state, measured windows and automation runs are not touched by a sleep.
-- **Layer responsibilities** - sdk host: the sweep, `sleep`, `wake`, the wake clock and the `schedule_wakeup` tool · sdk types: `Session.busy?()` · agent-claude: `busy()` from background tasks and CLI timers · agent-acp: `busy()` from its terminals · server: the `sleepAfterMinutes` and `sessionResidencyLimit` options.
+- **Layer responsibilities** - The sdk host has the sweep, `sleep`, `wake`, the wake clock and the `schedule_wakeup` tool. The sdk types have `Session.busy?()`. agent-claude reads `busy()` from background tasks and CLI timers. agent-acp reads `busy()` from its terminals. The server has the `sleepAfterMinutes` and `sessionResidencyLimit` options.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts), [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts)
 
 ## Tasks
@@ -116,12 +116,13 @@ No decision files yet.
 - A claude session has two wake tools, the CLI's `ScheduleWakeup` and the host's `schedule_wakeup`. The host tool's description says that it survives sleep and a restart, and a CLI timer keeps the session awake, so both work.
 - A CLI timer is read from the `Stop` hook at the end of a turn. A timer that fires and is spent clears at the next `Stop`, so a session can stay awake one turn longer than it needs to.
 - pi and cofold run in the daemon. Their sleep frees memory only, and their children, such as a bash tool's shell, are not waited on, as in daemon/13.
-- A child's `childFinished` wakes a sleeping parent even when no automation rule reads the event, so a parent can be resumed for nothing and sleep again at the next timeout.
+- A child's `childFinished` wakes a sleeping parent even when no automation rule reads the event. Then the parent resumes for nothing and sleeps again at the next timeout.
 
 ## Resume state
 
-- **Done so far:** tasks 01-05 implemented on `build/host-79`, and the review findings fixed, awaiting review. The gates pass.
-- **Next action:** review the build, then run the Final verification checks that need a person: a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
+- **Done so far:** tasks 01-05 implemented on `build/host-79`, and the findings of two reviews fixed, awaiting review. The gates pass.
+- **Not fixed:** `send_message` still begins its turn directly, not through `beginOrRun`. This was so before this plan.
+- **Next action:** review the build. Then run the Final verification checks that need a person. These are a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
 - **Open questions:** see the build report.
 - **Watch out for:** `teardown` and `Host.close` call `chat.close()` with no argument, which disposes a nested session's inner transcript; sleep passes `false`, as `restart` does. `pinnedChat`, `beginIn` and `childFinished` read `sessions` and must read the catalogue for a sleeping session. A turn that a wake begins is an ordinary turn, so it moves `quietSince` and the session stays awake for the next timeout.
 

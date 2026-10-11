@@ -304,14 +304,19 @@ export function createAutomations(ctx: HostContext): Automations {
     return { run: resource, session: typeof newest.primarySession === 'string' ? newest.primarySession : undefined };
   };
 
+  /** Pinned chats a run has passed the busy check for and is still waking, so a second run finds them busy. */
+  const claimed = new Set<string>();
+
   /**
-   * Whether a chat has a turn running in it, or is waiting on a person.
+   * Whether a chat has a turn running in it, is waiting on a person, or is
+   * claimed by a run that is waking it.
    *
-   * Read off the chat's own status rather than off anything this file holds,
-   * because a turn in a chat is a turn whoever started it - and a person typing
-   * in the chat an automation runs in is the case this is here for.
+   * Otherwise read off the chat's own status rather than off anything this
+   * file holds, because a turn in a chat is a turn whoever started it - and a
+   * person typing in the chat an automation runs in is the case this is here
+   * for.
    */
-  const pinBusy = (pin: string): boolean => (statusOf(pin) & (Status.InProgress | Status.InputNeeded)) !== 0;
+  const pinBusy = (pin: string): boolean => claimed.has(pin) || (statusOf(pin) & (Status.InProgress | Status.InputNeeded)) !== 0;
 
   /**
    * The chat a pinned automation runs in, where it has one and this host still
@@ -334,7 +339,7 @@ export function createAutomations(ctx: HostContext): Automations {
     return pin !== undefined && pinBusy(pin) ? { session: pin } : undefined;
   };
 
-  /**
+/**
    * The run of this automation that has not settled in the chat it is pinned to.
    *
    * `flying` reads the newest run off the store, which is a run that has not
@@ -774,6 +779,7 @@ export function createAutomations(ctx: HostContext): Automations {
        * turn has begun. A resume that fails fails the run.
        */
       const release = ctx.hold(pin);
+      claimed.add(pin);
       try {
         if (!sessions.has(pin)) await ctx.wake(pin);
         /*
@@ -788,6 +794,7 @@ export function createAutomations(ctx: HostContext): Automations {
         fireRun(wanted);
         beginIn(pin, wanted);
       } finally {
+        claimed.delete(pin);
         release();
       }
       return pin;

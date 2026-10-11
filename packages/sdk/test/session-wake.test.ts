@@ -71,11 +71,13 @@ interface Counts {
   slowTranscript?: { after: number; until: Promise<void> };
   /** The host tools of the latest start of each chat, by chat URI. */
   tools?: Map<string, BoundTool[]>;
+  /** The echo backend's pace, in milliseconds a reply takes. */
+  pace?: number;
 }
 
 /** The echo backend, counting the sessions it starts and resumes. */
 const counted = (dir: string, counts: Counts): Agent => {
-  const base = echo({ path: dir, pace: 0 });
+  const base = echo({ path: dir, pace: counts.pace ?? 0 });
   return {
     ...base,
     transcript: async (id: string) => {
@@ -299,6 +301,58 @@ it('does not sleep a session while it is waking', async () => {
   expect((await textsOf('ahp-chat:/second')).at(-1)).toBe('second hi');
   expect(counts.closes).toBe(closes);
   expect(await active()).toBe(1);
+});
+
+it('refuses a second Run of a pinned automation while the first wakes the session', async () => {
+  const counts: Counts = { starts: [], closes: 0, pace: 30 };
+  const store = memoryAutomations();
+  const { client, open, sleep, textsOf, dir } = await serving(counts, store);
+  const one = await open('one');
+  await sleep(one);
+  store.create('ahp-automation:/check', pinnedTo(dir, one.resource));
+  const run = (id: string): Promise<unknown> =>
+    client.handle({ method: 'runAutomation', params: { channel: 'ahp-automations://', automation: 'ahp-automation:/check', requestId: id } });
+
+  // Both pressed in one tick: the second fails as it does on a live session.
+  await Promise.all([run('r1'), run('r2')]);
+  const runs = (): Bag[] => (store.get('ahp-automation:/check')?.runs ?? []) as unknown as Bag[];
+  await until(() => runs().length === 2 && runs().every((one) => (one.lifecycle as Bag).status !== 'running'), 'both runs settling');
+  const ends = runs().map((one) => [(one.lifecycle as Bag).status, ((one.lifecycle as Bag).error as Bag | undefined)?.message]);
+  expect(ends).toContainEqual(['completed', undefined]);
+  expect(ends).toContainEqual(['failed', 'The chat this automation runs in is already running a turn']);
+  expect((await textsOf(one.chat)).filter((text) => text === 'check in')).toHaveLength(1);
+  expect(counts.starts).toEqual([undefined, 'one']);
+});
+
+it('starts no agent for a resume still going when the host closes', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const { host, client, open, sleep, prompt, read, textsOf } = await serving(counts);
+  const one = await open('one');
+  const lead = String((await read(one.resource)).defaultChat);
+  await client.handle({ method: 'createChat', params: { channel: one.resource, chat: 'ahp-chat:/second' } });
+  await prompt('ahp-chat:/second', 'second hi');
+  await until(async () => (await textsOf('ahp-chat:/second')).length === 1, 'the second chat\'s turn');
+  await client.handle({ method: 'unsubscribe', params: { channel: 'ahp-chat:/second' } });
+  await client.handle({ method: 'unsubscribe', params: { channel: one.resource } });
+  await client.handle({ method: 'unsubscribe', params: { channel: lead } });
+  await sleep(one);
+
+  // The resume stops at the second chat's transcript, with the lead started.
+  const starts = counts.starts.length;
+  let read_!: () => void;
+  counts.slowTranscript = { after: starts, until: new Promise<void>((done) => { read_ = done; }) };
+  void prompt(lead, 'after sleep');
+  await until(() => counts.starts.length > starts, 'the lead chat\'s resume');
+
+  let closed = false;
+  const closing = host.close().then(() => { closed = true; });
+  await settle();
+  expect(closed).toBe(false);
+  read_();
+  await closing;
+  // The lead it had started is closed with the host, and the second chat never starts.
+  expect(counts.starts).toHaveLength(starts + 1);
+  expect(counts.closes).toBeGreaterThan(0);
 });
 
 it('refuses another owner\'s pinned automation without waking the session', async () => {

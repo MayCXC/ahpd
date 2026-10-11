@@ -1,6 +1,7 @@
 import { idOf, Status } from '../catalog.js';
 import { localPath } from '../fileuri.js';
 import { chatIdFor, chatUriFor } from './channels.js';
+import { CLOSING } from './common.js';
 import type { Bag } from '../types/common.js';
 import type { Connection } from '../types/host.js';
 import type { Session } from '../types/session.js';
@@ -32,7 +33,7 @@ export interface Sleep {
    * from before its wake until the turn it woke the session for has begun.
    */
   hold(uri: string): () => void;
-  /** Settles once every sleep begun has closed its agents. */
+  /** Settles once every sleep begun has closed its agents and every resume begun has ended. */
   slept(): Promise<void>;
   /** Sleep what is due: quiet past the timeout, archived, or over the count limit. */
   sweep(): void;
@@ -272,6 +273,8 @@ export function createSleep(ctx: HostContext): Sleep {
     // session's own chat, which is a first chat closed under `hidden`.
     const other = lead === undefined || lead.uri === chatUriFor(named) ? undefined : lead;
     const back = other === undefined ? undefined : await owner.transcript?.(other.backendId);
+    // A host that closed while this resume read its record starts no agent.
+    if (ctx.closed) throw new Error(CLOSING);
     const session = spawn(
       owner,
       named,
@@ -292,6 +295,7 @@ export function createSleep(ctx: HostContext): Sleep {
     for (const one of recorded) {
       if (one.default === true) continue;
       const own = await owner.transcript?.(one.backendId);
+      if (ctx.closed) throw new Error(CLOSING);
       spawn(
         owner,
         named,
@@ -324,6 +328,7 @@ export function createSleep(ctx: HostContext): Sleep {
     const live = sessions.get(uri);
     const lead = live === undefined ? undefined : picked(uri, chat);
     if (lead !== undefined) return Promise.resolve({ uri, chat: lead });
+    if (ctx.closed) return Promise.reject(new Error(CLOSING));
     const id = idOf(uri);
     const already = waking.get(id);
     if (already !== undefined) {
@@ -350,7 +355,8 @@ export function createSleep(ctx: HostContext): Sleep {
   };
 
   const slept = async (): Promise<void> => {
-    await Promise.all([...closing.values()]);
+    const settled = (going: Promise<unknown>): Promise<void> => going.then(() => undefined, () => undefined);
+    await Promise.all([...closing.values(), ...[...waking.values()].map(settled)]);
   };
 
   return { quiet, sleep, wake, hold, slept, sweep, stirred, startSleep, stopSleep };
