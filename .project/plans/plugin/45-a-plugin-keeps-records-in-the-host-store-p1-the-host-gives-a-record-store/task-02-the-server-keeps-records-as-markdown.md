@@ -20,6 +20,7 @@ Each record is `<configDir>/<name>/<id>.md`: the fields as YAML frontmatter, and
 - `UPDATE: packages/server/package.json` - depend on `@cofold/yaml`.
 - `CREATE: packages/server/src/records.ts` - `fileRecords`, and `recordFile` and `readRecordFile` for one file.
 - `UPDATE: packages/server/src/commands/run.ts:654` - give `fileRecords(configDir())` as the `records` port.
+- `UPDATE: packages/server/src/plugins.ts:876` - give each plugin host the `records` port and one shared `collections` map.
 - `CREATE: packages/server/test/records.test.ts` - cases for the file shape, the conversion and the watch.
 
 ## Steps
@@ -34,6 +35,8 @@ Each record is `<configDir>/<name>/<id>.md`: the fields as YAML frontmatter, and
 8. Tell each watcher `added`, `updated` or `deleted` with the id, for each `put`, `remove` and hand edit.
 9. Report a file that does not parse, and do not tell watchers about it.
 10. Give `fileRecords` as the daemon's `records` port.
+11. Pass `records` to `pluginHost`, read from the host when a collection is first used.
+12. Make one `collections` map in the loader, and pass it to every plugin host.
 
 ## Validation
 
@@ -42,6 +45,7 @@ Each record is `<configDir>/<name>/<id>.md`: the fields as YAML frontmatter, and
 - A `<id>.json` converts once, and the `.json.migrated` file stays.
 - A hand edit of `<id>.md` reaches a watcher as `updated`, and the store's own `put` reaches it once.
 - The store reports a file with a broken frontmatter, and `get` still answers the record from before.
+- A plugin that the daemon loads opens a collection, and the loader refuses the same name to a second plugin.
 - `pnpm exec vitest run packages/server` and `pnpm -s typecheck` pass.
 
 ## Resume
