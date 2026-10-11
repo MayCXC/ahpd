@@ -27,4 +27,4 @@ The default template ships with the bot plugin, and a bot can name its own.
 
 ## Before it is planned
 
-The bot file comes first: [plugin 45](../plans/plugin/45-a-bot-record-is-a-markdown-file/plan.md).
+The bot file comes first: [plugin 45](../plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md).

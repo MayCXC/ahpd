@@ -2,7 +2,7 @@
 title: automations.json is converted at start
 status: todo
 depends: [task-02-the-store-keeps-markdown-files.md]
-layer: "packages/sdk"
+layer: "packages/server"
 refs:
   - "[code://packages/sdk/src/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions.ts#L712-L740) - `migrateSessions`, the pattern"
 ---
@@ -13,9 +13,9 @@ A daemon that starts with `automations.json` has one `.md` file per automation a
 
 ## Files
 
-- `UPDATE: packages/sdk/src/scheduled.ts` - `migrateAutomations`.
+- `UPDATE: packages/server/src/scheduled.ts` - `migrateAutomations`.
 - `UPDATE: packages/server/src/commands/run.ts` - call it before the store opens, as `migrateSessions` is called.
-- `UPDATE: packages/sdk/test/automation-files.test.ts` - cases for the conversion.
+- `UPDATE: packages/server/test/automation-files.test.ts` - cases for the conversion.
 
 ## Steps
 
@@ -29,6 +29,6 @@ A daemon that starts with `automations.json` has one `.md` file per automation a
 
 - A copy of a `version: 1` file with three automations converts to three `.md` files and one state file.
 - `runCount` and `nextRunAt` survive the conversion.
-- `pnpm exec vitest run packages/sdk` passes.
+- `pnpm exec vitest run packages/server` passes.
 
 ## Resume

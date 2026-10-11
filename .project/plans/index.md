@@ -165,7 +165,7 @@ Reference: [00-host.md](host/00-host.md)
 | [77 - A client plugin lists its parts, and a part can be switched off](host/77-a-client-plugin-lists-its-parts/plan.md) | medium | built 2026-10-09 ([implemented.md](host/77-a-client-plugin-lists-its-parts/implemented.md)) | host/49 | - |
 | [78 - Completions offer each slash command once](host/78-completions-offer-each-command-once/plan.md) | medium | built 2026-10-09 ([implemented.md](host/78-completions-offer-each-command-once/implemented.md)) | - | - |
 | [79 - A quiet session sleeps, and wakes when something needs it](host/79-a-quiet-session-sleeps-and-wakes/plan.md) | high | planned 2026-10-10 | host/71 | 21 idle claude processes, out of swap |
-| [80 - An automation is a Markdown file, and the daemon reloads one a person edits](host/80-an-automation-is-a-markdown-file/plan.md) | medium | planned 2026-10-10 | cofold commands/05 | - |
+| [80 - The automation store moves to the server, and an automation is a Markdown file](host/80-an-automation-is-a-markdown-file/plan.md) | medium | planned 2026-10-11 | plugin 45-p1 | - |
 
 Next free number in `host`: `81`.
 
@@ -278,7 +278,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [42 - A reserved name is refused for a scheme and a harness](plugin/42-a-reserved-name-is-refused/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/42-a-reserved-name-is-refused/implemented.md)) | - | plugin 43, plugin 44 |
 | [43 - A bot can be watched](plugin/43-a-bot-can-be-watched/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/43-a-bot-can-be-watched/implemented.md)) | plugin 42 | - |
 | [44 - A plugin serves a channel, and bots have a catalogue](plugin/44-a-plugin-serves-a-channel/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/44-a-plugin-serves-a-channel/implemented.md)) | plugin 42 | ahpapp and ahpc bot catalogue |
-| [45 - A bot record is a Markdown file, and the daemon reloads one a person edits](plugin/45-a-bot-record-is-a-markdown-file/plan.md) | medium | planned 2026-10-10 | plugin 43, host 80 | bot templates idea |
+| [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | planned 2026-10-11 | plugin 43, cofold commands/05 | bot templates idea |
 
 Next free number in `plugin`: `46`.
 

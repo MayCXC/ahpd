@@ -2,9 +2,9 @@
 title: The store reloads a file a person edits
 status: todo
 depends: [task-02-the-store-keeps-markdown-files.md]
-layer: "packages/sdk"
+layer: "packages/server"
 refs:
-  - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts) - `scheduledAutomations`, which arms the clock and tells the catalogue"
+  - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts) - `scheduledAutomations`, which arms the clock and tells the catalogue, in the server after task 01"
   - "[code://packages/sdk/src/resources.ts#L503](../../../../packages/sdk/src/resources.ts#L503) - the file store's `watch`"
 ---
 
@@ -15,8 +15,8 @@ The clock and every subscriber of `ahp-automations://` follow the change.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/scheduled.ts` - a folder watch, and a reload of one file.
-- `UPDATE: packages/sdk/test/automation-files.test.ts` - cases for a hand edit.
+- `UPDATE: packages/server/src/scheduled.ts` - a folder watch, and a reload of one file.
+- `UPDATE: packages/server/test/automation-files.test.ts` - cases for a hand edit.
 
 ## Steps
 
@@ -34,6 +34,6 @@ The clock and every subscriber of `ahp-automations://` follow the change.
 - A file copied into the folder lists as a new automation.
 - A removed file removes the automation from the catalogue.
 - Make sure the store reports a file with broken frontmatter, and keeps the old definition.
-- `pnpm exec vitest run packages/sdk` passes.
+- `pnpm exec vitest run packages/server` passes.
 
 ## Resume

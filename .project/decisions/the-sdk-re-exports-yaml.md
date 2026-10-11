@@ -1,7 +1,8 @@
 ---
 title: The sdk depends on @cofold/yaml and re-exports it
-status: accepted
+status: superseded
 date: 2026-10-11
+superseded-by: decisions/yaml-lives-in-server.md
 refs:
   - "[code://packages/sdk/package.json](../../packages/sdk/package.json) - the sdk's dependencies, the protocol package only before this"
   - "[code://packages/sdk/src/index.ts](../../packages/sdk/src/index.ts) - what the sdk exports"
