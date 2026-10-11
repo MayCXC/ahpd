@@ -2,9 +2,10 @@
  * A sleeping session wakes when something needs it.
  *
  * `wake` is the one way a session that is not live comes back, resumed in
- * place with its earlier conversation. A prompt, a pinned automation and a
- * child's `childFinished` each call it, and wakers that arrive together share
- * one resume.
+ * place with its earlier conversation. A prompt or any other client action, a
+ * `send_message`, a pinned automation and a child's `childFinished` each call
+ * it, and wakers that arrive together share one resume. A session does not
+ * sleep while it is waking, or before the turn it was woken for has begun.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -14,8 +15,9 @@ import { afterEach, expect, it } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
 import { createHost } from '../src/host.js';
 import { memorySessions } from '../src/sessions.js';
+import { hostTools } from '../src/tools/index.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { Agent, Start } from '../src/types/agent.js';
+import type { Agent, BoundTool, Start } from '../src/types/agent.js';
 import type { AutomationStore } from '../src/types/automations.js';
 import type { Bag } from '../src/types/common.js';
 import type { Session } from '../src/types/session.js';
@@ -65,6 +67,10 @@ interface Counts {
   closes: number;
   /** Whether a resume throws, as a backend that cannot load the conversation does. */
   failResume?: boolean;
+  /** Transcript reads that wait, once the backend has started more than `after` sessions, and what they wait on. */
+  slowTranscript?: { after: number; until: Promise<void> };
+  /** The host tools of the latest start of each chat, by chat URI. */
+  tools?: Map<string, BoundTool[]>;
 }
 
 /** The echo backend, counting the sessions it starts and resumes. */
@@ -72,9 +78,14 @@ const counted = (dir: string, counts: Counts): Agent => {
   const base = echo({ path: dir, pace: 0 });
   return {
     ...base,
+    transcript: async (id: string) => {
+      if (counts.slowTranscript !== undefined && counts.starts.length > counts.slowTranscript.after) await counts.slowTranscript.until;
+      return await base.transcript?.(id);
+    },
     create: (start: Start): Session => {
       if (start.resume !== undefined && counts.failResume === true) throw new Error('The conversation could not be loaded');
       counts.starts.push(start.resume);
+      counts.tools?.set(start.chatUri, start.tools ?? []);
       const session = base.create(start);
       return {
         ...session,
@@ -112,6 +123,7 @@ async function serving(counts: Counts, automations?: AutomationStore) {
     path: dir,
     agents: [counted(dir, counts)],
     sessions: kept,
+    tools: hostTools(),
     now: time.now,
     timer: time.timer,
     ...(automations === undefined ? {} : { automations }),
@@ -156,7 +168,9 @@ async function serving(counts: Counts, automations?: AutomationStore) {
     await until(() => counts.closes > before, 'the sleep');
   };
 
-  return { host, client, peer: p, kept, open, sleep, prompt, read, active, turnsOf, dir };
+  const textsOf = async (chat: string): Promise<string[]> => (await turnsOf(chat)).map((turn) => String((turn.message as Bag).text));
+
+  return { host, client, peer: p, kept, time, open, sleep, prompt, read, active, turnsOf, textsOf, dir };
 }
 
 /** One automation that runs pinned to `session`. */
@@ -251,4 +265,90 @@ it('fails the action with the resume error when a session cannot resume', async 
   counts.failResume = false;
   await prompt(one.chat, 'once more');
   await until(async () => await active() === 1, 'the later wake');
+});
+
+it('does not sleep a session while it is waking', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const { client, time, open, sleep, prompt, read, active, textsOf } = await serving(counts);
+  const one = await open('one');
+  const lead = String((await read(one.resource)).defaultChat);
+  await client.handle({ method: 'createChat', params: { channel: one.resource, chat: 'ahp-chat:/second' } });
+  await prompt('ahp-chat:/second', 'second hi');
+  await until(async () => (await textsOf('ahp-chat:/second')).length === 1, 'the second chat\'s turn');
+  await client.handle({ method: 'unsubscribe', params: { channel: 'ahp-chat:/second' } });
+  await client.handle({ method: 'unsubscribe', params: { channel: one.resource } });
+  await client.handle({ method: 'unsubscribe', params: { channel: lead } });
+  await sleep(one);
+  const closes = counts.closes;
+
+  // The resume stops at the second chat's transcript, with the lead started.
+  const starts = counts.starts.length;
+  let read_!: () => void;
+  counts.slowTranscript = { after: starts, until: new Promise<void>((done) => { read_ = done; }) };
+  void prompt(lead, 'after sleep');
+  await until(() => counts.starts.length > starts, 'the lead chat\'s resume');
+
+  time.pass(31);
+  await settle();
+  expect(counts.closes).toBe(closes);
+
+  read_();
+  delete counts.slowTranscript;
+  // On the chat it was sent to, in the session that stayed awake.
+  await until(async () => (await textsOf(lead)).at(-1) === 'after sleep', 'the woken turn');
+  expect((await textsOf('ahp-chat:/second')).at(-1)).toBe('second hi');
+  expect(counts.closes).toBe(closes);
+  expect(await active()).toBe(1);
+});
+
+it('refuses another owner\'s pinned automation without waking the session', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const store = memoryAutomations();
+  const { client, kept, open, sleep, active, dir } = await serving(counts, store);
+  const one = await open('one');
+  kept.setOwner?.('one', 'user:alice');
+  await sleep(one);
+  store.create('ahp-automation:/other', pinnedTo(dir, one.resource), 'user:mallory');
+
+  await client.handle({ method: 'runAutomation', params: { channel: 'ahp-automations://', automation: 'ahp-automation:/other', requestId: 'r' } })
+    .catch(() => undefined);
+  await settle(20);
+  expect(counts.starts).toEqual([undefined]);
+  expect(await active()).toBe(0);
+});
+
+it('wakes a sleeping session for a send_message from another', async () => {
+  const counts: Counts = { starts: [], closes: 0, tools: new Map() };
+  const { open, sleep, read, active, textsOf } = await serving(counts);
+  const a = await open('a');
+  const b = await open('b');
+  await sleep(b);
+  expect(await active()).toBe(1);
+
+  const own = String((await read(a.resource)).defaultChat);
+  const send = counts.tools?.get(own)?.find((tool) => tool.definition.name === 'send_message');
+  if (send?.run === undefined) throw new Error('a was handed no send_message');
+  await send.run({ session: b.resource, message: 'ping' });
+  await until(async () => (await textsOf(b.chat)).length === 2, 'the sent turn');
+  expect(await textsOf(b.chat)).toEqual(['hello b', 'ping']);
+  expect(counts.starts).toEqual([undefined, undefined, 'b']);
+  expect(await active()).toBe(2);
+});
+
+it('wakes a sleeping session to rename it', async () => {
+  const counts: Counts = { starts: [], closes: 0 };
+  const { client, kept, open, sleep, read, active, peer: p } = await serving(counts);
+  const one = await open('one');
+  await sleep(one);
+  // Opened again, as a client opening a sleeping row does: reading it wakes nothing.
+  await read(one.resource);
+  expect(await active()).toBe(0);
+
+  await client.handle({ method: 'dispatchAction', params: { channel: one.resource, clientSeq: 50, action: { type: 'session/titleChanged', title: 'renamed' } } });
+  await until(async () => await active() === 1, 'the wake');
+  await settle();
+  expect(p.notes.filter((note) => note.rejectionReason !== undefined)).toEqual([]);
+  expect(counts.starts).toEqual([undefined, 'one']);
+  expect(p.notes.some((note) => note.channel === one.resource && (note.action as Bag | undefined)?.type === 'session/titleChanged')).toBe(true);
+  expect(kept.chatTitle('one', String((await read(one.resource)).defaultChat))).toBe('renamed');
 });

@@ -67,6 +67,8 @@ interface Knobs {
   state?: (state: Bag) => Bag;
   /** A `SessionStatus` to answer in place of the backend's own. */
   status?: number;
+  /** What a `close` waits on before it finishes, as an agent slow to exit. */
+  exiting?: Promise<void>;
 }
 
 /** The echo backend, with the knobs a case turns. */
@@ -81,7 +83,9 @@ const wrapped = (dir: string, knobs: Knobs): Agent => {
         close: (removing?: boolean) => {
           knobs.closes.push(removing);
           knobs.closed?.push(session.agentId() ?? '');
-          return session.close(removing);
+          const exiting = knobs.exiting;
+          if (exiting === undefined) return session.close(removing);
+          return exiting.then(() => session.close(removing));
         },
         resumable: () => knobs.resumable ?? true,
         busy: () => knobs.busy ?? false,
@@ -375,4 +379,24 @@ it('never sleeps with sleepAfterMinutes 0 and sessionResidencyLimit 0', async ()
   await settle();
   expect(await active()).toBe(2);
   expect(knobs.closes).toEqual([]);
+});
+
+it('waits on host close for a sleep whose agent is still closing', async () => {
+  const knobs: Knobs = { closes: [] };
+  const { host, time, open } = await serving(knobs);
+  const one = await open('one');
+  await one.leave();
+  let exited!: () => void;
+  knobs.exiting = new Promise<void>((done) => { exited = done; });
+
+  time.pass(31);
+  await until(() => knobs.closes.length > 0);
+  let closed = false;
+  void host.close().then(() => { closed = true; });
+  await settle();
+  expect(closed).toBe(false);
+
+  exited();
+  await until(() => closed);
+  expect(closed).toBe(true);
 });

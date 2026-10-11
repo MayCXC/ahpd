@@ -1115,6 +1115,8 @@ export function createHost(options: HostOptions): Host {
         // A run already past its guard ends here, refused at `spawn` or started
         // and so among the sessions; its outcome is the run's to report.
         for (const run of starting) going.push(run.then(() => undefined, () => undefined));
+        // And the agents of sessions put to sleep, whose closes are still going.
+        going.push(step('the sleeping sessions', () => ctx.slept()));
         for (const [uri, terminal] of terminals) {
           going.push(step(uri, async () => {
             terminal.close();

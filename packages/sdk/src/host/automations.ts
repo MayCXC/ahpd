@@ -711,11 +711,10 @@ export function createAutomations(ctx: HostContext): Automations {
     const automation = wanted.origin?.automation;
     const wake = automation === undefined ? undefined : wakeOf(bag(options.automations?.get(automation)?.definition));
     const pin = wake?.session === 'pinned' ? wake.pinnedSession : undefined;
-    // A pinned session that sleeps is woken in place, and a resume that fails
-    // fails the run.
-    if (pin !== undefined && !sessions.has(pin) && ctx.owners.has(pin)) await ctx.wake(pin);
-    const holding = pin === undefined ? undefined : sessions.get(pin);
-    if (automation !== undefined && pin !== undefined && holding !== undefined) {
+    // Live, or asleep in the catalogue: a sleeping one is woken in place once
+    // every check below has let the run through.
+    const reachable = pin !== undefined && (sessions.has(pin) || ctx.owners.has(pin));
+    if (automation !== undefined && pin !== undefined && reachable) {
       /*
        * A chat somebody else has is not a chat this run may work in.
        *
@@ -746,7 +745,16 @@ export function createAutomations(ctx: HostContext): Automations {
       if (person !== undefined && owner?.startsWith('user:') === true && !person.can('session:read')) {
         throw new RpcError(-32009, refusalReason(person.id, 'session:read'), {});
       }
-      const notAdmitted = await admitted(person, charged.get(pin)?.scope, holding.config, holding.agent.provider, pin, owner);
+      /*
+       * A sleeping session is asked about with what it comes back with: the
+       * config the store keeps and the charge it was settled with.
+       */
+      const live = sessions.get(pin);
+      const agent = live?.agent ?? ctx.owners.get(pin);
+      if (agent === undefined) throw new RpcError(-32009, `No backend owns ${pin}`);
+      const config = live?.config ?? ctx.storedConfig(agent, idOf(pin));
+      const scope = charged.has(pin) ? charged.get(pin)?.scope : kept.scope(idOf(pin)) ?? undefined;
+      const notAdmitted = await admitted(person, scope, config, agent.provider, pin, owner);
       if (notAdmitted !== undefined) throw new RpcError(-32009, notAdmitted);
       /*
        * And the chat has to be free.
@@ -762,16 +770,26 @@ export function createAutomations(ctx: HostContext): Automations {
         throw new RpcError(-32009, 'The chat this automation runs in is already running a turn');
       }
       /*
-       * The newest run owns it from here.
-       *
-       * The session is the same one every time, and what is settled when its
-       * turn ends is the run whose turn that was - so the origin moves with the
-       * run, and the one that made the session is remembered by the session
-       * itself rather than by this map.
+       * Woken only now, for a run that will go ahead, and held awake until its
+       * turn has begun. A resume that fails fails the run.
        */
-      origins.set(pin, { kind: 'automation', automation, run: String(bag(wanted.origin)['run'] ?? '') });
-      fireRun(wanted);
-      beginIn(pin, wanted);
+      const release = ctx.hold(pin);
+      try {
+        if (!sessions.has(pin)) await ctx.wake(pin);
+        /*
+         * The newest run owns it from here.
+         *
+         * The session is the same one every time, and what is settled when its
+         * turn ends is the run whose turn that was - so the origin moves with
+         * the run, and the one that made the session is remembered by the
+         * session itself rather than by this map.
+         */
+        origins.set(pin, { kind: 'automation', automation, run: String(bag(wanted.origin)['run'] ?? '') });
+        fireRun(wanted);
+        beginIn(pin, wanted);
+      } finally {
+        release();
+      }
       return pin;
     }
     const uri = await beginSession(wanted);

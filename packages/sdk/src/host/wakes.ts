@@ -1,5 +1,5 @@
 import { idOf } from '../catalog.js';
-import type { Bag } from '../types/common.js';
+import type { MessageFrom } from '../types/session.js';
 import type { StoredChat } from '../types/sessions.js';
 import type { HostContext } from './context.js';
 
@@ -9,7 +9,8 @@ import type { HostContext } from './context.js';
  * A wake is held on its chat's record in the store, so it survives the session
  * sleeping and the daemon restarting. One timer is armed for the earliest. A
  * wake that fell due while the daemon was down fires once, when the clock
- * starts.
+ * starts. A wake whose turn could not begin stays on the record, and fires
+ * again when the clock next starts.
  */
 export interface Wakes {
   /**
@@ -27,7 +28,7 @@ export interface Wakes {
 const MAX_DELAY = 2_147_483_647;
 
 export function createWakes(ctx: HostContext): Wakes {
-  const { options, kept, byChat, log } = ctx;
+  const { options, kept, byChat, sessions, owners, log } = ctx;
   const now = (): number => (options.now?.() ?? new Date()).getTime();
   const arm = options.timer ?? ((fire, ms): { cancel(): void } => {
     const handle = setTimeout(fire, ms);
@@ -70,19 +71,35 @@ export function createWakes(ctx: HostContext): Wakes {
     timer = arm(() => { timer = undefined; fire(); }, Math.min(Math.max(0, first - now()), MAX_DELAY));
   };
 
+  /** The wake one chat's record holds. */
+  const stored = (id: string, chat: string): StoredChat['wake'] =>
+    kept.chats(id).find((one) => one.uri === chat && one.closed !== true)?.wake;
+
   /**
-   * One due wake: cleared from the record, the session woken, and a turn begun
-   * with its prompt. Queued behind a turn that is running.
+   * One due wake: the session woken, and a turn begun with its prompt through
+   * the host's own turn gate, queued behind a turn that is running. Cleared from
+   * the record once the turn has begun; a refusal or a failed resume throws and
+   * leaves it there.
    */
-  const begin = async (id: string, chat: string, prompt: string): Promise<void> => {
-    const live = byChat.get(chat)?.uri;
-    const woken = await ctx.wake(live ?? ctx.nameOf(id), chat);
-    const state = woken.chat.chatState() as { activeTurn?: unknown; queuedMessages?: unknown; steeringMessage?: unknown };
-    const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
-      || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
-    const from: Bag = { origin: { kind: 'agent' }, _meta: { 'vscode.chat.delegation': { sourceSession: woken.uri, sourceChat: chat } } };
-    if (busy) woken.chat.queue(crypto.randomUUID(), prompt, undefined, from);
-    else woken.chat.begin(crypto.randomUUID(), prompt, undefined, from);
+  const begin = async (id: string, chat: string, wake: NonNullable<StoredChat['wake']>): Promise<void> => {
+    const name = byChat.get(chat)?.uri ?? ctx.nameOf(id);
+    const release = ctx.hold(name);
+    try {
+      const woken = await ctx.wake(name, chat);
+      const state = woken.chat.chatState() as { activeTurn?: unknown; queuedMessages?: unknown; steeringMessage?: unknown };
+      const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
+        || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
+      const from: MessageFrom = { origin: { kind: 'agent' }, _meta: { 'vscode.chat.delegation': { sourceSession: woken.uri, sourceChat: chat } } };
+      const provider = sessions.get(woken.uri)?.agent.provider ?? owners.get(woken.uri)?.provider ?? '';
+      const turnId = crypto.randomUUID();
+      const refused = await ctx.beginOrRun(woken.chat, provider, turnId, wake.prompt, undefined, from, undefined, busy ? turnId : undefined);
+      if (refused !== undefined) throw new Error(refused);
+      // The wake it fired, and not one set again since.
+      const still = stored(id, chat);
+      if (still?.at === wake.at && still.prompt === wake.prompt) record(id, chat, undefined);
+    } finally {
+      release();
+    }
   };
 
   /** Begin every wake that is due, then arm for the next. */
@@ -94,10 +111,10 @@ export function createWakes(ctx: HostContext): Wakes {
       pending.delete(chat);
       // The record is what holds the wake: one that is gone with its chat or
       // its session fires nothing.
-      const wake = record(held.id, chat, undefined);
+      const wake = stored(held.id, chat);
       if (wake === undefined) continue;
-      begin(held.id, chat, wake.prompt).catch((error: unknown) => {
-        log(`wake of ${chat} failed: ${error instanceof Error ? error.message : String(error)}`);
+      begin(held.id, chat, wake).catch((error: unknown) => {
+        log(`wake of ${chat} failed, kept for the next start: ${error instanceof Error ? error.message : String(error)}`);
       });
     }
     rearm();

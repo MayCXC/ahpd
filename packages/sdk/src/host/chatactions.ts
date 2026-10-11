@@ -68,7 +68,7 @@ export function chatAction(
     described, dispatch, drafts, fire, first, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
     messageFrom, modelIn, names, ownerFor, owners, past, pluginsMoved, principalFor, propertyOf, putIn, renameChat,
     restart, restartChat, restarting, rootConfig, served, sessionFor, sessionMachines, sessions, spawn, starting,
-    statusOf, subagents, summaryMoved, value, waitingFor, wake,
+    statusOf, subagents, summaryMoved, value, waitingFor, wake, hold,
   } = ctx;
 
   /** The message an action carries, which its text and its attachments ride on. */
@@ -300,10 +300,13 @@ export function chatAction(
     // The session the chat belongs to, which is not the chat's own name:
     // a chat URI carries its session rather than being derived from it.
     const uri = sessionFor(channel);
+    // Held awake from the wake until the turn has begun or been refused.
+    const release = hold(uri);
     void (async () => {
       let woken: { uri: string; chat: Session };
       try { woken = await wake(uri, channel, connection); }
       catch (error) {
+        release();
         refuse(connection.peer, channel, action, origin, error instanceof Error ? error.message : String(error));
         return;
       }
@@ -323,7 +326,14 @@ export function chatAction(
         turn: String(action.turnId ?? ''),
         text: String(message.text ?? ''),
       });
-      const refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message));
+      let refused: string | undefined;
+      try {
+        refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message));
+      } catch (error) {
+        refused = error instanceof Error ? error.message : String(error);
+      } finally {
+        release();
+      }
       if (refused !== undefined) refuse(connection.peer, channel, action, origin, refused);
     })();
     return;
@@ -364,12 +374,40 @@ export function chatAction(
     })();
     return;
   }
-  if (!session) {
-    // With its keys, because the useful half of this line is what was
-    // in the action nobody read - a type alone says only that a client
-    // wanted something.
+  // With its keys, because the useful half of this line is what was in the
+  // action nobody read - a type alone says only that a client wanted
+  // something.
+  const nothing = (): void => {
     const carried = Object.keys(action).filter((key) => key !== 'type');
     no(`${type} names nothing here${carried.length > 0 ? ` (${carried.join(', ')})` : ''}`);
+  };
+  /*
+   * Any other action on a session asleep in the catalogue.
+   *
+   * Woken for it, and the action applied again to the session that is live,
+   * the same way an action waits for a session being started again. A config
+   * change and a draft are kept above without a wake. The wait is returned, so
+   * this connection's later dispatches go behind it.
+   */
+  if (!session && !worker && !sessions.has(sessionFor(channel)) && owners.has(sessionFor(channel))) {
+    const uri = sessionFor(channel);
+    const release = hold(uri);
+    return conn.bounded(wake(uri, channel, connection), `${channel} waking`).then(
+      () => {
+        if (!connections.has(connection)) return;
+        if (!byChat.has(channel) && !sessions.has(channel)) {
+          nothing();
+          return;
+        }
+        return conn.applyNow(params, origin);
+      },
+      (error: unknown) => {
+        refuse(connection.peer, channel, action, origin, error instanceof Error ? error.message : String(error));
+      },
+    ).finally(release);
+  }
+  if (!session) {
+    nothing();
     return;
   }
   /*

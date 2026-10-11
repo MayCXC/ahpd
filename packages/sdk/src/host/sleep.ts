@@ -27,6 +27,13 @@ export interface Sleep {
    * the connection that asked, when a client did.
    */
   wake(uri: string, chat?: string, sender?: Connection): Promise<{ uri: string; chat: Session }>;
+  /**
+   * Keep a session from sleeping until the answer is called. A waker holds it
+   * from before its wake until the turn it woke the session for has begun.
+   */
+  hold(uri: string): () => void;
+  /** Settles once every sleep begun has closed its agents. */
+  slept(): Promise<void>;
   /** Sleep what is due: quiet past the timeout, archived, or over the count limit. */
   sweep(): void;
   /** One action on a channel, which moves its session's quiet time. */
@@ -74,6 +81,8 @@ export function createSleep(ctx: HostContext): Sleep {
   const closing = new Map<string, Promise<void>>();
   /** Resumes in flight, by session id, so two wakers share one. */
   const waking = new Map<string, Promise<{ uri: string; chat: Session }>>();
+  /** Holds taken on sessions by wakers, by session id, as a count. */
+  const holds = new Map<string, number>();
 
   /** Whether a chat waits on a person: a tool confirmation or an input request. */
   const waitingOnPerson = (chat: Session): boolean => {
@@ -104,7 +113,8 @@ export function createSleep(ctx: HostContext): Sleep {
 
   const quiet = (uri: string): boolean => {
     const held = sessions.get(uri);
-    if (held === undefined || restarting.has(uri) || closing.has(idOf(uri))) return false;
+    const id = idOf(uri);
+    if (held === undefined || restarting.has(uri) || closing.has(id) || waking.has(id) || holds.has(id)) return false;
     for (const [chatUri, chat] of held.chats) {
       if (running(chatUri) || queued(chat) || waitingOnPerson(chat)) return false;
       if (chat.resumable?.() === false || chat.busy?.() === true) return false;
@@ -326,5 +336,22 @@ export function createSleep(ctx: HostContext): Sleep {
     return resumed;
   };
 
-  return { quiet, sleep, wake, sweep, stirred, startSleep, stopSleep };
+  const hold = (uri: string): (() => void) => {
+    const id = idOf(uri);
+    holds.set(id, (holds.get(id) ?? 0) + 1);
+    let released = false;
+    return () => {
+      if (released) return;
+      released = true;
+      const left = (holds.get(id) ?? 1) - 1;
+      if (left > 0) holds.set(id, left);
+      else holds.delete(id);
+    };
+  };
+
+  const slept = async (): Promise<void> => {
+    await Promise.all([...closing.values()]);
+  };
+
+  return { quiet, sleep, wake, hold, slept, sweep, stirred, startSleep, stopSleep };
 }

@@ -3,6 +3,8 @@
  *
  * The wake is kept on the chat's record, so it fires whether the session is
  * live, asleep, or held by a host started again after the one that took it.
+ * Its turn goes through the host's own turn gate, and a wake whose turn could
+ * not begin stays on the record for the next start.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -59,6 +61,8 @@ interface Counts {
   closes: number;
   /** The host tools of the latest start of each chat, by chat URI. */
   tools: Map<string, BoundTool[]>;
+  /** Whether a resume throws, as a backend that cannot load the conversation does. */
+  failResume?: boolean;
 }
 
 /** The echo backend, counting starts and closes, and keeping the tools it was handed. */
@@ -67,6 +71,7 @@ const counted = (dir: string, counts: Counts): Agent => {
   return {
     ...base,
     create: (start: Start): Session => {
+      if (start.resume !== undefined && counts.failResume === true) throw new Error('The conversation could not be loaded');
       counts.starts.push(start.resume);
       counts.tools.set(start.chatUri, start.tools ?? []);
       const session = base.create(start);
@@ -284,4 +289,58 @@ it('lets a session with a pending host wake sleep', async () => {
   expect(await active()).toBe(0);
   // Still held, for the clock to fire.
   expect(stored(one.id, one.chat)?.prompt).toBe('check the build');
+});
+
+it('refuses a delay under 60 seconds or over 30 days, and stores nothing', async () => {
+  const w = world();
+  const { open, wakeup, stored } = await serving(w);
+  const one = await open('one');
+
+  for (const delaySeconds of [0, 59, 2_592_001, 1e13]) {
+    await expect(wakeup(one.chat, { delaySeconds, prompt: 'later' })).rejects.toThrow(/from 60 to 2592000/);
+    expect(stored(one.id, one.chat)).toBeUndefined();
+  }
+  expect(await wakeup(one.chat, { delaySeconds: 60, prompt: 'soon' })).toBe('Wakeup scheduled for 2026-10-10T12:01:00.000Z.');
+  expect(await wakeup(one.chat, { delaySeconds: 2_592_000, prompt: 'late' })).toBe('Wakeup scheduled for 2026-11-09T12:00:00.000Z.');
+});
+
+it('begins no wake turn while the host refuses turns, and keeps it for the next start', async () => {
+  const w = world();
+  const first = await serving(w);
+  const one = await first.open('one');
+  await first.wakeup(one.chat, { delaySeconds: 60, prompt: 'check the build' });
+  first.host.refuseTurns('host is stopping');
+
+  w.time.pass(2);
+  await settle(20);
+  expect(await first.textsOf(one.chat)).toEqual(['hello one']);
+  expect(first.stored(one.id, one.chat)?.prompt).toBe('check the build');
+  await first.host.close();
+
+  const second = await serving(w);
+  await until(async () => (await second.textsOf(one.chat)).length === 2, 'the woken turn');
+  expect(await second.textsOf(one.chat)).toEqual(['hello one', 'check the build']);
+  expect(second.stored(one.id, one.chat)).toBeUndefined();
+});
+
+it('keeps a wake whose session cannot resume, for the next start', async () => {
+  const w = world();
+  const first = await serving(w);
+  const one = await first.open('one');
+  await first.wakeup(one.chat, { delaySeconds: 3600, prompt: 'check the build' });
+  await first.sleep(one);
+  expect(await first.active()).toBe(0);
+  w.counts.failResume = true;
+
+  w.time.pass(30);
+  await settle(20);
+  expect(await first.active()).toBe(0);
+  expect(first.stored(one.id, one.chat)?.prompt).toBe('check the build');
+  await first.host.close();
+
+  w.counts.failResume = false;
+  const second = await serving(w);
+  await until(async () => (await second.textsOf(one.chat)).length === 2, 'the woken turn');
+  expect(await second.textsOf(one.chat)).toEqual(['hello one', 'check the build']);
+  expect(second.stored(one.id, one.chat)).toBeUndefined();
 });

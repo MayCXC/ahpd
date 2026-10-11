@@ -89,6 +89,7 @@ No decision files yet.
 | A chat holds one host wake at a time; a new one replaces it, and `stop: true` cancels it | (defaulted: the shape of claude's `ScheduleWakeup`) | 04 |
 | A host wake is stored in the chat's catalogue record, so it survives sleep and a daemon restart | (defaulted: the wake must outlive the process that asked for it) | 04 |
 | A host wake does not keep a session awake | (defaulted: the host holds the time, so the session can sleep until it fires) | 04 |
+| `schedule_wakeup` takes a delay from 60 seconds to 30 days, and refuses a value outside the range before it stores anything | Softov, 2026-10-11, to "What limits should the delay have?": "60 s to 30 days" | 04 |
 
 ## Proposed architecture
 
@@ -115,10 +116,11 @@ No decision files yet.
 - A claude session has two wake tools, the CLI's `ScheduleWakeup` and the host's `schedule_wakeup`. The host tool's description says that it survives sleep and a restart, and a CLI timer keeps the session awake, so both work.
 - A CLI timer is read from the `Stop` hook at the end of a turn. A timer that fires and is spent clears at the next `Stop`, so a session can stay awake one turn longer than it needs to.
 - pi and cofold run in the daemon. Their sleep frees memory only, and their children, such as a bash tool's shell, are not waited on, as in daemon/13.
+- A child's `childFinished` wakes a sleeping parent even when no automation rule reads the event, so a parent can be resumed for nothing and sleep again at the next timeout.
 
 ## Resume state
 
-- **Done so far:** tasks 01-05 implemented on `build/host-79`, awaiting review. The gates pass.
+- **Done so far:** tasks 01-05 implemented on `build/host-79`, and the review findings fixed, awaiting review. The gates pass.
 - **Next action:** review the build, then run the Final verification checks that need a person: a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
 - **Open questions:** see the build report.
 - **Watch out for:** `teardown` and `Host.close` call `chat.close()` with no argument, which disposes a nested session's inner transcript; sleep passes `false`, as `restart` does. `pinnedChat`, `beginIn` and `childFinished` read `sessions` and must read the catalogue for a sleeping session. A turn that a wake begins is an ordinary turn, so it moves `quietSince` and the session stays awake for the next timeout.

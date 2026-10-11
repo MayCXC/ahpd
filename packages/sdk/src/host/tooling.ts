@@ -751,18 +751,27 @@ export function createTooling(ctx: HostContext): Tooling {
       });
     },
     send: async (session, chatId, text, from) => {
-      const held = sessions.get(heldAs(session));
-      const found = held === undefined ? undefined : chatMeant(held, chatId);
-      if (found === undefined) throw new Error(`${session} is not a session this host is running`);
-      const state = found.chat.chatState() as { activeTurn?: unknown; queuedMessages?: unknown; steeringMessage?: unknown };
-      const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
-        || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
-      if (busy) {
-        found.chat.queue(crypto.randomUUID(), text, undefined, from);
-        return 'queued';
+      const at = heldAs(session);
+      // A session asleep in the catalogue is woken for the message, and held
+      // awake until it has begun.
+      const release = ctx.hold(at);
+      try {
+        if (!sessions.has(at) && ctx.owners.has(at)) await ctx.wake(at);
+        const held = sessions.get(at);
+        const found = held === undefined ? undefined : chatMeant(held, chatId);
+        if (found === undefined) throw new Error(`${session} is not a session this host is running`);
+        const state = found.chat.chatState() as { activeTurn?: unknown; queuedMessages?: unknown; steeringMessage?: unknown };
+        const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
+          || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
+        if (busy) {
+          found.chat.queue(crypto.randomUUID(), text, undefined, from);
+          return 'queued';
+        }
+        found.chat.begin(crypto.randomUUID(), text, undefined, from);
+        return 'sent';
+      } finally {
+        release();
       }
-      found.chat.begin(crypto.randomUUID(), text, undefined, from);
-      return 'sent';
     },
     create: async (asked) => {
       const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? first.provider;
