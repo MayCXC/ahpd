@@ -62,7 +62,7 @@ describe('a plugin that declares a range', () => {
 
     expect(loaded).toEqual([]);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('^0.11.0');
+    expect(problems[0]).toContain('^0.12.0');
     expect(problems[0]).toContain(sdkVersion());
     expect((globalThis as Record<string, unknown>).__pluginIncompatibleImported).toBeUndefined();
   });
@@ -115,8 +115,8 @@ describe('a plugin that names the oldest sdk it needs', () => {
    * plugin context (0.10), and the tunnel reads nothing newer than 0.8.
    */
   it.each([
-    ['agent-acp', '>=0.10'], ['agent-claude', '>=0.10'], ['agent-cofold', '>=0.10'], ['agent-pi', '>=0.10'],
-    ['computer', '>=0.10'], ['tunnel-devtunnel', '>=0.8'],
+    ['agent-acp', '>=0.10 <1'], ['agent-claude', '>=0.10 <1'], ['agent-cofold', '>=0.10 <1'], ['agent-pi', '>=0.10 <1'],
+    ['computer', '>=0.10 <1'], ['tunnel-devtunnel', '>=0.8 <1'],
   ])(
     'declares @ahpd/%s as taking any sdk from %s on',
     (name, floor) => {

@@ -1,6 +1,6 @@
 {
   "name": "@ahpd/push",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "description": "Expo push notifications for the ahpd daemon: a push: resource provider a device registers with, and the sender that tells it when a session needs a person",
   "keywords": [
@@ -55,7 +55,7 @@
     "test": "cd ../.. && vitest run packages/push/test"
   },
   "peerDependencies": {
-    "@ahpd/sdk": ">=0.10"
+    "@ahpd/sdk": ">=0.10 <1"
   },
   "devDependencies": {
     "@ahpd/sdk": "workspace:*"

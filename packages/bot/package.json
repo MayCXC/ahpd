@@ -1,6 +1,6 @@
 {
   "name": "@ahpd/bot",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "type": "module",
   "description": "Bots for the ahpd daemon: a bot: resource provider, where a bot is a record with a workspace and a session",
   "keywords": [
@@ -53,7 +53,7 @@
     "test": "cd ../.. && vitest run packages/bot/test"
   },
   "peerDependencies": {
-    "@ahpd/sdk": ">=0.10"
+    "@ahpd/sdk": ">=0.10 <1"
   },
   "devDependencies": {
     "@ahpd/sdk": "workspace:*"

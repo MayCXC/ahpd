@@ -17,7 +17,7 @@ on:
 # What the staging, rehearsal and approval steps name. The pack step packs
 # every workspace package; this list is what is published.
 env:
-  PUBLISHED: sdk agent-claude agent-cofold agent-acp agent-pi computer tunnel-devtunnel server
+  PUBLISHED: sdk agent-claude agent-cofold agent-acp agent-pi bot computer push tunnel-devtunnel server
 
 jobs:
   release:
@@ -51,7 +51,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      # The tag is a claim about what is in the manifests, and these eight
+      # The tag is a claim about what is in the manifests, and these
       # versions move together. A tag that disagrees with any of them publishes
       # a version nobody asked for, so it is checked before anything is built.
       - name: The tag says what every package says
