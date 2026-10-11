@@ -843,6 +843,12 @@ export function createTooling(ctx: HostContext): Tooling {
         ...(sender === undefined ? {} : { sender }),
       });
     },
+    scheduleWake: (delaySeconds, prompt) => {
+      const at = (options.now?.() ?? new Date()).getTime() + delaySeconds * 1000;
+      ctx.setWake(uri, chatUri, { at, prompt });
+      return new Date(at);
+    },
+    cancelWake: () => ctx.setWake(uri, chatUri, undefined),
     artifacts: () => [...(kept.artifacts(idOf(uri)) ?? [])],
     setArtifacts: (list) => { setArtifacts(uri, list); },
     terminals: () => [...terminals.values()].map((held) => ({

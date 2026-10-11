@@ -172,6 +172,8 @@ export function acpSession(options: AcpOptions, start: Start): Session {
      * that, nothing here has a conversation to be moved.
      */
     resumable: () => ctx.loads || ctx.resumes,
+    // A terminal the server opened whose process still runs is work the host cannot see.
+    busy: () => [...terminals.values()].some((one) => one.exited !== true),
     customizations: () => [...seeds, ...ctx.commands],
     allTurns: () => turns,
     /*

@@ -154,8 +154,11 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
     offered: ConfirmationOption[];
     settle(answer: PermissionAnswer): void;
   }>;
-  /** The terminals this session opened for the server, by the server's own id. */
-  terminals: Map<string, { handle: OpenedTerminal; limit?: number }>;
+  /**
+   * The terminals this session opened for the server, by the server's own id,
+   * and whether each one's process has exited.
+   */
+  terminals: Map<string, { handle: OpenedTerminal; limit?: number; exited?: boolean }>;
   /**
    * The questions the server is waiting on a person for, by the request id.
    *

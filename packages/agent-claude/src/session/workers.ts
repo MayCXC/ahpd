@@ -81,6 +81,8 @@ export interface Workers {
   noteTask: (message: Bag) => void;
   /** Take one live level as the whole set of tasks running now. */
   noteLive: (message: Bag) => void;
+  /** Whether a background task is running now. */
+  working: () => boolean;
   /** Forget one task the harness said has ended. */
   dropTask: (taskId: string) => void;
   /** What one chat is running, or nothing while it is running nothing. */
@@ -652,7 +654,7 @@ export function createWorkers(ctx: SessionContext): Workers {
     parts, calling, mainScope, scopes, spawning, background, tasks, byAgent, ended,
     taskInfo, live, told,
     scopeFor, releaseHeld, recordSpawn, scopeOfCall, emitOn, settleOpen, endWorker,
-    workerBlock, noteTask, noteLive, dropTask, backgroundWork,
+    workerBlock, noteTask, noteLive, dropTask, backgroundWork, working: () => live.size > 0,
     methods: { stopWorker },
   };
 }

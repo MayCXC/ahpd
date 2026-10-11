@@ -25,6 +25,13 @@ export interface History {
   past(id: string): Promise<Bag[] | undefined>;
   /** A session deleted here, out of the rows this host is holding, by id. */
   drop(resource: string): void;
+  /**
+   * A session this host stopped running, held as a row from here.
+   *
+   * Its turns are read again when it is next opened, since the backend has
+   * written more of them than any held answer carries.
+   */
+  keepRow(row: Summary): void;
 }
 
 export function createHistory(ctx: HostContext): History {
@@ -376,8 +383,18 @@ export function createHistory(ctx: HostContext): History {
     finally { reading.delete(id); }
   };
 
+  const keepRow = (row: Summary): void => {
+    const id = idFor(row.resource);
+    history.delete(id);
+    subHistory.delete(id);
+    // Before the first listing there is nothing held to add it to: that
+    // listing reads the backend, which lists it.
+    if (passes === 0) return;
+    rows = [...rows.filter((one) => idFor(one.resource) !== id), row];
+  };
+
   return {
     history, subHistory, titles, restoredSubagents, restoredParentChat, linkedTurns, refresh, held, past,
-    drop,
+    drop, keepRow,
   };
 }

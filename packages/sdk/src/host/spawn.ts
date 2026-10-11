@@ -935,7 +935,14 @@ export function createSpawn(ctx: HostContext): Spawn {
       // started. A second chat in a session that already exists takes the
       // session's own, because `sessions.get` answered above.
       createdAt: births.get(uri) ?? new Date().toISOString(),
+      quietSince: 0,
+      turnedAt: 0,
     };
+    // Loaded now, which is activity: a session resumed a moment ago is not one
+    // that has been quiet since before it slept.
+    const loadedAt = (options.now?.() ?? new Date()).getTime();
+    held.quietSince = loadedAt;
+    if (held.turnedAt === 0) held.turnedAt = loadedAt;
     // Said back to the catalogue, so a row listed after this agrees with the
     // session channel about when it began.
     births.set(uri, held.createdAt);

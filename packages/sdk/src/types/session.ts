@@ -308,6 +308,15 @@ export interface Session {
   resumable?(): boolean;
 
   /**
+   * Whether the backend has work in hand the host cannot see.
+   *
+   * A background task, or a timer the agent set itself, which would be lost
+   * if the host let the agent go while the session is quiet. Absent means it
+   * has none, and a session that answers true does not sleep.
+   */
+  busy?(): boolean;
+
+  /**
    * The backend's own name for the last entry a turn left behind, if it has
    * one.
    *

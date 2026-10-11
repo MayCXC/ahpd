@@ -209,6 +209,17 @@ export interface Config {
    * delta as it arrives.
    */
   deltaWindowMs?: number;
+  /**
+   * Minutes a session with nothing in hand stays loaded before its agent is
+   * let go. It stays in the catalogue and wakes when something needs it.
+   * Unset is 30; zero never lets a session go for quiet.
+   */
+  sleepAfterMinutes?: number;
+  /**
+   * How many sessions are loaded at most. Over it, the least recently used
+   * quiet session is let go first. Unset is 10; zero sets no limit.
+   */
+  sessionResidencyLimit?: number;
   /** A file every frame is appended to, both directions, as JSON lines. */
   wire?: string;
   /**

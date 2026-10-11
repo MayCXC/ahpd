@@ -70,6 +70,10 @@ export interface Options {
   clientToolTimeoutMs?: number;
   /** How long a streamed delta waits in the host before it is sent, absent when the deployment said nothing. */
   deltaWindowMs?: number;
+  /** Minutes of quiet before a session's agent is let go, absent when the deployment said nothing. */
+  sleepAfterMinutes?: number;
+  /** How many sessions are loaded at most, absent when the deployment said nothing. */
+  sessionResidencyLimit?: number;
   /** Where automations are kept, and whether a clock fires them. */
   automations: 'file' | 'memory';
   /** What an automation that names no owner wakes on. */
@@ -481,6 +485,18 @@ export const serverFields = {
     maximum: 1000,
     description: 'How long a streamed delta waits for the next one before it is sent. Default 75; 0 sends every delta as it arrives.',
     cli: { value: 'MS' },
+  },
+  sleepAfterMinutes: {
+    type: 'integer',
+    minimum: 0,
+    description: 'Minutes a session with nothing in hand stays loaded before its agent is let go. It wakes when something needs it. Default 30; 0 never lets it go for quiet.',
+    cli: { value: 'MINUTES' },
+  },
+  sessionResidencyLimit: {
+    type: 'integer',
+    minimum: 0,
+    description: 'How many sessions are loaded at most. Over it, the least recently used quiet session is let go. Default 10; 0 sets no limit.',
+    cli: { value: 'COUNT' },
   },
   automations: {
     type: 'string',
@@ -979,6 +995,8 @@ const noCwd = input['noCwd'] === true;
   const wire = given('wire');
   const clientToolTimeoutMs = given('clientToolTimeoutMs');
   const deltaWindowMs = given('deltaWindowMs');
+  const sleepAfterMinutes = given('sleepAfterMinutes');
+  const sessionResidencyLimit = given('sessionResidencyLimit');
   const usageZone = given('usage')?.timezone;
   const http = httpOf(file.http, source('http'));
   const proxy = proxyConfiguration(given('proxy'));
@@ -1003,6 +1021,8 @@ const noCwd = input['noCwd'] === true;
     closedChats: given('closedChats') ?? 'hidden',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),
+    ...(sleepAfterMinutes === undefined ? {} : { sleepAfterMinutes }),
+    ...(sessionResidencyLimit === undefined ? {} : { sessionResidencyLimit }),
     automations: given('automations') ?? 'file',
     unownedAutomations: given('unownedAutomations') ?? 'every',
     sessions: given('sessions') ?? 'file',

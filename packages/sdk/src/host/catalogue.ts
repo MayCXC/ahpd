@@ -27,6 +27,8 @@ export interface Catalogue {
   statusOf(uri: string): number;
   startedBy(session: string, chat?: string): Bag;
   chatSummary(session: string, uri: string, chat: Session): Bag;
+  /** Whether a chat, or a worker inside one of its calls, has a turn in progress. */
+  running(uri: string): boolean;
   /** Whether a chat may be moved: not the default, resumable, and running nothing. */
   movable(uri: string): boolean;
   /** Say that a chat's answer moved, when it did, on the chat and on its session. */
@@ -1049,7 +1051,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
   };
 
   return {
-    statusOf, startedBy, chatSummary, movable, movableMoved, chatsReordered, subagentSummary, restoredSubagentSummary,
+    statusOf, startedBy, chatSummary, movable, running, movableMoved, chatsReordered, subagentSummary, restoredSubagentSummary,
     chatCatalogOf,
     activityOf, sessionAdded, summaryMoved, forgetSent, activeSessionsMoved, learnModels,
     listing, adopt, rowAdded, liveRows, allRows, rowsMoved, waitingFor, readStored,

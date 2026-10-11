@@ -70,6 +70,12 @@ export interface StoredChat {
    * session. The record is what carries the claim across a restart.
    */
   closed?: boolean;
+  /**
+   * The wake the agent asked this host for with `schedule_wakeup`: when it is
+   * due, in milliseconds, and the prompt the turn it begins carries. One per
+   * chat.
+   */
+  wake?: { at: number; prompt: string };
 }
 
 /**

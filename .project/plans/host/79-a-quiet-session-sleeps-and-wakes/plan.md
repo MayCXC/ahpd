@@ -1,7 +1,7 @@
 ---
 title: A quiet session sleeps, and wakes when something needs it
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -102,11 +102,11 @@ No decision files yet.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | todo | - |
-| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | todo | 01 |
-| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | todo | 01 |
-| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | todo | 02 |
-| [05 - Docs](task-05-docs.md) | todo | 02, 03, 04 |
+| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | implemented | - |
+| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | implemented | 01 |
+| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | implemented | 01 |
+| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | implemented | 02 |
+| [05 - Docs](task-05-docs.md) | implemented | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -118,9 +118,9 @@ No decision files yet.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-quiet-session-sleeps.md](task-01-a-quiet-session-sleeps.md).
-- **Open questions:** none.
+- **Done so far:** tasks 01-05 implemented on `build/host-79`, awaiting review. The gates pass.
+- **Next action:** review the build, then run the Final verification checks that need a person: a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
+- **Open questions:** see the build report.
 - **Watch out for:** `teardown` and `Host.close` call `chat.close()` with no argument, which disposes a nested session's inner transcript; sleep passes `false`, as `restart` does. `pinnedChat`, `beginIn` and `childFinished` read `sessions` and must read the catalogue for a sleeping session. A turn that a wake begins is an ordinary turn, so it moves `quietSince` and the session stays awake for the next timeout.
 
 ## Final verification checklist

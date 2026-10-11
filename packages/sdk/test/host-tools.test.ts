@@ -49,7 +49,7 @@ describe('tools the host contributes', () => {
       'list_sessions', 'get_current_session', 'set_workspace', 'create_session', 'create_chat',
       'rename_chat', 'send_message', 'get_session_context', 'delete_session',
       'add_artifact_or_reference', 'remove_artifact_or_reference', 'list_artifacts_and_references',
-      'ahp_resource', 'ahp_terminals',
+      'ahp_resource', 'ahp_terminals', 'schedule_wakeup',
     ]);
 
     // A host given none contributes none, and the field is absent rather than

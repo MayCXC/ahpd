@@ -1,6 +1,6 @@
 ---
 title: A sleeping session wakes when something needs it
-status: todo
+status: implemented
 depends: [task-01-a-quiet-session-sleeps.md]
 layer: "sdk host"
 refs:

@@ -617,6 +617,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * own 75 milliseconds is the same answer and one place should hold it.
      */
     ...(options.deltaWindowMs === undefined ? {} : { deltaWindowMs: options.deltaWindowMs }),
+    ...(options.sleepAfterMinutes === undefined ? {} : { sleepAfterMinutes: options.sleepAfterMinutes }),
+    ...(options.sessionResidencyLimit === undefined ? {} : { sessionResidencyLimit: options.sessionResidencyLimit }),
     /*
      * The daemon's own settings, as the keys root config carries.
      *

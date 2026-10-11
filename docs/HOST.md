@@ -66,6 +66,8 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | `worktreesRoot` | directory | `<repo>.worktrees` beside each repository | Where session worktrees are kept |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |
 | `deltaWindowMs` | integer, `0` to `1000` | `75` | How long a turn's streamed text is gathered before it is sent. `0` sends every delta as it arrives |
+| `sleepAfterMinutes` | integer, minutes | `30`; `0` never | How long a session with nothing in hand stays loaded before its agent is let go. It wakes when something needs it - [SESSIONS.md](SESSIONS.md#sleep-and-wake) |
+| `sessionResidencyLimit` | integer | `10`; `0` sets no limit | How many sessions are loaded at most. Over it, the least recently used quiet session is let go first |
 | `advancedTools` | boolean | `false` | Offer the tools that declare `advancedPermission` to every session's model |
 | `closedChats` | `hidden` or `delete` | `hidden` | What closing one chat of a session does to that chat's conversation in the backend: `hidden` keeps it, `delete` removes it |
 | `updateCheck` | boolean | `true` | Ask npm, in the background, whether a newer version exists |

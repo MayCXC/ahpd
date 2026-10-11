@@ -54,6 +54,7 @@ function area(over: { kept?: SessionStore; child?: boolean } = {}) {
     sessions,
     origins,
     kept,
+    owners: new Map(),
     nameOf: (id: string) => `echo:/${id}`,
     leadOf: (held: { chats: Map<string, unknown>; defaultChat: string }) => held.chats.get(held.defaultChat),
     log: () => {},

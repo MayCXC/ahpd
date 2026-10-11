@@ -78,7 +78,10 @@ const inputOf = (toolInput: unknown): string => {
 const aboutCall = (chat: string, toolCallId: string): string => `${chat}\u0000${toolCallId}`;
 
 export function createSessionEvents(ctx: HostContext): SessionEvents {
-  const { byChat, subagents, sessions, kept, nameOf, leadOf, origins, log } = ctx;
+  const { byChat, subagents, sessions, kept, leadOf, origins } = ctx;
+  // Read when called: the areas that add them to `ctx` are built after this one.
+  const nameOf = (id: string): string => ctx.nameOf(id);
+  const log = (line: string): void => { ctx.log(line); };
   /** Who reads the stream. The wake rules, once they are wired. */
   const readers = new Set<(event: SessionEvent) => void>();
   /** Who reads a turn starting, which is the wake rules too. */
@@ -151,6 +154,22 @@ export function createSessionEvents(ctx: HostContext): SessionEvents {
   const read = (kind: SessionEventKind, session: string, more: More = {}): void => {
     const event: SessionEvent = { kind, ...about(session), at: new Date().toISOString(), ...more };
     offer(readers, event, kind);
+  };
+
+  /**
+   * A child's `childFinished`, said on its parent: at once for a live parent,
+   * and after a wake for one asleep in the catalogue.
+   */
+  const toParent = (at: string, child: string): void => {
+    if (sessions.has(at)) {
+      read('childFinished', at, { child, ...stateOf(at) });
+      return;
+    }
+    if (!ctx.owners.has(at)) return;
+    void ctx.wake(at).then(
+      () => { read('childFinished', at, { child, ...stateOf(at) }); },
+      (error: unknown) => { log(`childFinished for ${at} was dropped: ${error instanceof Error ? error.message : String(error)}`); },
+    );
   };
 
   return {
@@ -287,9 +306,7 @@ export function createSessionEvents(ctx: HostContext): SessionEvents {
              */
             const parent = kept.parent?.(idOf(session));
             const at = parent === undefined ? undefined : nameOf(parent);
-            if (at !== undefined && sessions.has(at)) {
-              read('childFinished', at, { child: session, ...stateOf(at) });
-            }
+            if (at !== undefined) toParent(at, session);
           }
           return;
         }
@@ -305,9 +322,7 @@ export function createSessionEvents(ctx: HostContext): SessionEvents {
     ended(uri) {
       const parent = kept.parent?.(idOf(uri));
       if (parent === undefined) return;
-      const at = nameOf(parent);
-      if (!sessions.has(at)) return;
-      read('childFinished', at, { child: uri, ...stateOf(at) });
+      toParent(nameOf(parent), uri);
     },
     /*
      * A chat this stream was following is gone.

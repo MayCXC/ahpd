@@ -5,6 +5,7 @@ import { chatIdFor, chatUriFor, isRootChannel, MARKS, ROOT, toolCallOfSubagentCh
 import { HOSTS_OWN } from './common.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
+import type { Session } from '../types/session.js';
 import type { ClientCallAnswer } from '../tools/clientcalls.js';
 import type { Origin } from './state.js';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -39,6 +40,7 @@ export function sessionFlag(
   // each client keeping its own.
   ctx.dispatch(uri, action);
   ctx.summaryMoved(uri);
+  if (bit === Status.IsArchived && on) queueMicrotask(() => { void ctx.sleep(uri).catch(() => undefined); });
   return true;
 }
 
@@ -62,12 +64,11 @@ export function chatAction(
   const { connection } = conn;
   const { refuse } = ctx;
   const {
-    admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, connections,
-    contributedDefaults, decided, described, dispatch, drafts, fire, first, keepProvider, kept,
-    known, leadOf, lifeOf, lives, log, messageAttachments, messageFrom, modelIn, nameOf, names,
-    ownerFor, owners, past, pluginsMoved, principalFor, propertyOf, putIn, recordedChats, renameChat, restart,
-    restartChat, restarting, rootConfig, served, sessionFor, sessionMachines, sessions, spawn, starting, statusOf,
-    storedConfig, subagents, summaryMoved, value, waitingFor, wheres,
+    admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, connections, contributedDefaults, decided,
+    described, dispatch, drafts, fire, first, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
+    messageFrom, modelIn, names, ownerFor, owners, past, pluginsMoved, principalFor, propertyOf, putIn, renameChat,
+    restart, restartChat, restarting, rootConfig, served, sessionFor, sessionMachines, sessions, spawn, starting,
+    statusOf, subagents, summaryMoved, value, waitingFor, wake,
   } = ctx;
 
   /** The message an action carries, which its text and its attachments ride on. */
@@ -299,141 +300,19 @@ export function chatAction(
     // The session the chat belongs to, which is not the chat's own name:
     // a chat URI carries its session rather than being derived from it.
     const uri = sessionFor(channel);
-    const id = idOf(uri);
     void (async () => {
-      /*
-       * The agent this session was recorded for, before a transcript is
-       * read or a record rewritten: a host that is not serving it says
-       * so by name, and the session keeps its own provider until it is
-       * loaded again rather than becoming a conversation on this one.
-       */
-      const missing = waitingFor(id);
-      if (missing !== undefined) {
-        refuse(connection.peer, channel, action, origin, `${missing} is not loaded on this host`);
+      let woken: { uri: string; chat: Session };
+      try { woken = await wake(uri, channel, connection); }
+      catch (error) {
+        refuse(connection.peer, channel, action, origin, error instanceof Error ? error.message : String(error));
         return;
       }
-      const seed = await past(id);
-      if (!seed) {
-        refuse(connection.peer, channel, action, origin, `${channel} is not a session this host knows`);
-        return;
-      }
-      /*
-       * Named again, because `past` is what learned whose session this
-       * is - and what this host will call it.
-       *
-       * A client may say the first thing about a row before anything has
-       * listed a catalogue, and until something has, there is no name to
-       * look an owner up under. Asking with the name computed beforehand
-       * found nothing and refused a session that was right there.
-       */
-      const named = nameOf(id);
-      const owner = owners.get(named);
-      if (!owner) {
-        refuse(connection.peer, channel, action, origin, `No backend owns ${channel}`);
-        return;
-      }
-      // Back where it ran. A session continued in another directory is
-      // a conversation whose second half cannot see the files its
-      // first half was about.
-      const first = wheres.get(named)?.[0];
-      const ran = first === undefined ? undefined : localPath(first);
-      /*
-       * What the work is charged to: the one this session was settled
-       * with, or the one this turn's sender resolves to.
-       *
-       * A session's charge was decided by whoever created it, possibly
-       * before this process started, and it is read back rather than
-       * decided again - which would answer for whoever is asking now,
-       * or refuse the first turn of a session that was perfectly well
-       * charged, because this daemon was started by somebody who is not
-       * the person who created it. A session the store holds no charge
-       * for is the one case where nobody decided it: one begun before
-       * this host charged anything is settled now, from the principal
-       * the turn arrived on, exactly as a new session is.
-       */
-      const was = kept.scope(id);
-      const restored = storedConfig(owner, id);
-      if (was === null) charged.set(named, undefined);
-      else if (was !== undefined) charged.set(named, { scope: was });
-      else charge(named, connection.principal, typeof restored.scope === 'string' ? restored.scope : undefined);
-      /*
-       * The chats the store recorded for it, which is which chat it comes back
-       * as and which others it comes back with.
-       *
-       * None for a session inside a machine, as its default chat is not
-       * resumed here: what the store has of it is the inner host's, and the
-       * first turn reaches the machine through the session's own start.
-       */
-      const recorded = kept.nested?.(id) === undefined ? recordedChats(id) : [];
-      const lead = recorded.find((one) => one.default === true);
-      /*
-       * The chat the session starts again as.
-       *
-       * A session's first chat can be gone: one closed under `closedChats:
-       * 'hidden'` keeps its conversation in the backend and its row in the
-       * record, marked closed, while another chat became the session's default.
-       * The store says which, and the session starts as that one - under its
-       * own URI and its own backend id, with the turns of its own conversation
-       * read back. Resuming the closed conversation instead would read turns
-       * nobody is looking at, and leave the chat the client is about to send
-       * to with no process behind it.
-       *
-       * The session's own chat where the store records no default: a row listed
-       * from the backend's disk, which has one by construction, and a session
-       * whose chats are nothing but the one that is the session. That chat's
-       * turns are the session's, and the store's own seed is what a backend
-       * that cannot resume is given.
-       */
-      const other = lead === undefined || lead.uri === chatUriFor(named) ? undefined : lead;
-      const back = other === undefined ? undefined : await owner.transcript?.(other.backendId);
-      const session = spawn(
-        owner,
-        named,
-        lead?.uri ?? chatUriFor(named),
-        other?.backendId ?? chatIdFor(named, chatUriFor(named)),
-        restored,
-        other === undefined
-          ? { resume: lead?.backendId ?? id, seed }
-          : { resume: other.backendId, seed: (back ?? []) as unknown as Bag[] },
-        ran,
-        undefined,
-        undefined,
-        connection,
-      );
-      keepProvider(named, owner, session);
-      /*
-       * And every other chat the store recorded for it, each a conversation of
-       * its own.
-       *
-       * The client sent its turn to one of them, and a session resumed with
-       * only its first chat would have nowhere to put it. Each is started the
-       * way a chat restarted on its own is: under its own URI, resumed as its
-       * own conversation, with the turns the backend kept read back for a
-       * backend that cannot resume.
-       */
-      for (const chat of recorded) {
-        if (chat.default === true) continue;
-        const own = await owner.transcript?.(chat.backendId);
-        spawn(
-          owner,
-          named,
-          chat.uri,
-          chat.backendId,
-          restored,
-          { resume: chat.backendId, seed: (own ?? []) as unknown as Bag[] },
-          ran,
-          undefined,
-          undefined,
-          connection,
-        );
-      }
+      const named = woken.uri;
+      const provider = sessions.get(named)?.agent.provider ?? owners.get(named)?.provider ?? '';
       // The chat the turn was sent to, which is the one it is answered on: a
       // client talking to a session's second chat is not talking to its first.
-      const talking = byChat.get(channel)?.chat ?? session;
+      const talking = woken.chat;
       const answerOn = byChat.has(channel) ? channel : chatUriFor(named);
-      log(`resumed ${named}`);
-      dispatch(named, { type: 'session/ready' });
-      summaryMoved(named);
       const message = (typeof action.message === 'object' && action.message !== null
         ? action.message
         : {}) as Record<string, unknown>;
@@ -444,7 +323,7 @@ export function chatAction(
         turn: String(action.turnId ?? ''),
         text: String(message.text ?? ''),
       });
-      const refused = await beginOrRun(talking, owner.provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message));
+      const refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message));
       if (refused !== undefined) refuse(connection.peer, channel, action, origin, refused);
     })();
     return;

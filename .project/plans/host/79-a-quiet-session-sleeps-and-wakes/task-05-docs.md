@@ -1,6 +1,6 @@
 ---
 title: Docs
-status: todo
+status: implemented
 depends: [task-02-a-sleeping-session-wakes.md, task-03-a-backend-says-what-keeps-it-awake.md, task-04-an-agent-schedules-its-own-wake.md]
 layer: "docs"
 refs:

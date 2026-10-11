@@ -315,16 +315,17 @@ export function createAutomations(ctx: HostContext): Automations {
 
   /**
    * The chat a pinned automation runs in, where it has one and this host still
-   * has it.
+   * has it, live or asleep in the catalogue.
    *
-   * A chat that is gone - a daemon restarted, or a session somebody disposed of
-   * - is a run that makes itself another rather than a run that fails, which is
-   * the same answer the pin already gives when there is nothing to add a turn to.
+   * A chat that is gone - a session somebody disposed of, or one no listing
+   * has reached - is a run that makes itself another rather than a run that
+   * fails, which is the same answer the pin already gives when there is nothing
+   * to add a turn to.
    */
   const pinnedChat = (automation: string): string | undefined => {
     const wake = wakeFor(automation);
     const pin = wake.session === 'pinned' ? wake.pinnedSession : undefined;
-    return pin !== undefined && sessions.has(pin) ? pin : undefined;
+    return pin !== undefined && (sessions.has(pin) || ctx.owners.has(pin)) ? pin : undefined;
   };
 
   /** The chat a pinned automation runs in, where a turn is running in it. */
@@ -710,6 +711,9 @@ export function createAutomations(ctx: HostContext): Automations {
     const automation = wanted.origin?.automation;
     const wake = automation === undefined ? undefined : wakeOf(bag(options.automations?.get(automation)?.definition));
     const pin = wake?.session === 'pinned' ? wake.pinnedSession : undefined;
+    // A pinned session that sleeps is woken in place, and a resume that fails
+    // fails the run.
+    if (pin !== undefined && !sessions.has(pin) && ctx.owners.has(pin)) await ctx.wake(pin);
     const holding = pin === undefined ? undefined : sessions.get(pin);
     if (automation !== undefined && pin !== undefined && holding !== undefined) {
       /*

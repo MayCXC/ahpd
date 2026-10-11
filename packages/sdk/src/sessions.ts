@@ -236,6 +236,14 @@ const nestedOf = (value: unknown): NestedRecord | undefined => {
   };
 };
 
+/** A chat's wake as the file wrote it, or nothing where it is not one. */
+const wakeOf = (value: unknown): { wake: { at: number; prompt: string } } | undefined => {
+  if (typeof value !== 'object' || value === null) return undefined;
+  const held = value as { at?: unknown; prompt?: unknown };
+  if (typeof held.at !== 'number' || !Number.isFinite(held.at) || typeof held.prompt !== 'string') return undefined;
+  return { wake: { at: held.at, prompt: held.prompt } };
+};
+
 /**
  * A session's chats as the file wrote them, or nothing where the field is not
  * a list of chats at all.
@@ -263,6 +271,7 @@ const chatsOf = (value: unknown): StoredChat[] | undefined => {
         : {}),
       ...(held.default === true ? { default: true } : {}),
       ...(held.closed === true ? { closed: true } : {}),
+      ...(wakeOf(held.wake) ?? {}),
     }];
   });
 };

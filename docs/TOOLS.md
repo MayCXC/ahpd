@@ -16,7 +16,7 @@ Terms, one line each:
 
 ## The four sources
 
-**This host's own**, from `hostTools()`: the reference host's nine session tools, its three artifact tools, and this host's own two. They are the protocol's `serverTools`, reported on `SessionState.serverTools`, offered to every backend that can take tools, and replaced whole - which is what `session/serverToolsChanged` means.
+**This host's own**, from `hostTools()`: the reference host's nine session tools, its three artifact tools, and this host's own three. They are the protocol's `serverTools`, reported on `SessionState.serverTools`, offered to every backend that can take tools, and replaced whole - which is what `session/serverToolsChanged` means.
 
 **A plugin's**, through `host.registerTool(tool)`, which appends one to the same set. The computer plugin contributes three this way - [PLUGINS.md](PLUGINS.md#what-you-can-register).
 
@@ -44,7 +44,9 @@ The nine session tools are the reference host's, by name and by schema, so a ski
 
 The three artifact tools write the session's `_meta['agentHost/sessionArtifacts']` through the session store: `add_artifact_or_reference`, `remove_artifact_or_reference` and `list_artifacts_and_references`. An artifact is a deliverable - an issue or a pull request being created or fixed, a result somebody will reopen - and a reference is an existing thing somebody will want to look at. Adding one promotes a matching reference and keeps its id, so a reference that turns out to be a deliverable does not become a second entry.
 
-This host's own two are read-only, and answer what an agent cannot reach for itself. `ahp_resource` reads a resource by URI, including one a connected client publishes ([RESOURCES.md](RESOURCES.md)), and `ahp_terminals` lists the terminals this host has open, as `uri`, `title`, `cwd` and `running` on a line each - the list a person can see, which is not the same as a shell run from a tool.
+This host's own three come after them. Two are read-only, and answer what an agent cannot reach for itself. `ahp_resource` reads a resource by URI, including one a connected client publishes ([RESOURCES.md](RESOURCES.md)), and `ahp_terminals` lists the terminals this host has open, as `uri`, `title`, `cwd` and `running` on a line each - the list a person can see, which is not the same as a shell run from a tool.
+
+The third, `schedule_wakeup`, begins a new turn in the calling chat later. It takes `delaySeconds`, the seconds from now until the turn, and `prompt`, the text the turn begins with, and answers when the wakeup is due. A chat holds one wakeup: a new call replaces it, and `stop: true` cancels it. The host keeps it on the chat's record in the session store, so it survives the session going to sleep and the daemon restarting. When it is due, the host wakes the session if it sleeps and begins the turn, or queues the prompt behind a turn that is running. A wakeup that fell due while the daemon was down begins once, when the daemon starts. A pending wakeup does not keep the session awake - [SESSIONS.md](SESSIONS.md#sleep-and-wake).
 
 ## A client's tools
 

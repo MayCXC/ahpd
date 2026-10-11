@@ -123,6 +123,7 @@ export function createChatRecord(ctx: HostContext): ChatRecord {
       ...(title === undefined ? {} : { title }),
       ...(origin === undefined ? {} : { origin }),
       ...(isDefault || was?.default === true ? { default: true } : {}),
+      ...(was?.wake === undefined ? {} : { wake: was.wake }),
     };
     // A copy of every entry, because the store's own objects are what a read
     // answers and one of them is about to move.
