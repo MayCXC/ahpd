@@ -22,7 +22,7 @@ export interface Handshake {
 export function createHandshake(ctx: HostContext, conn: ConnectionContext): Handshake {
   const { connection } = conn;
   const {
-    advertised, advertisedChannels, advertisedGrants, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
+    advertised, advertisedChannels, advertisedGrants, advertisedMethods, advertisedSchemes, agents, answeredAs, browsable, channelAwaiting, dir, fire, flushDeltas,
     holders, known, leaves, loginId, log, LOGS, METRICS, metaMoved, metadataFor, meantBy, openedBy,
     options, ownId, ownerFor, principals, refreshPullRequests, replayable, seenBy, sessions,
     snapshotOf, spellingOf, TRACES,
@@ -280,6 +280,9 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
           // The channels plugins serve, so a client can offer one before it
           // has a URI to subscribe to.
           ...(advertisedChannels() === undefined ? {} : { 'ahpd.channels': advertisedChannels() }),
+          // The `x-` commands the daemon and plugins serve, so a client
+          // can offer one before it sends it.
+          ...(advertisedMethods() === undefined ? {} : { 'ahpd.methods': advertisedMethods() }),
           // Every subject a grant may name, and what it may be granted, so a
           // client can draw the operation list for a role it is about to ask
           // somebody to confirm. Always here: it says what a role could hold,

@@ -167,7 +167,7 @@ Reference: [00-host.md](host/00-host.md)
 | [79 - A quiet session sleeps, and wakes when something needs it](host/79-a-quiet-session-sleeps-and-wakes/plan.md) | high | planned 2026-10-10 | host/71 | 21 idle claude processes, out of swap |
 | [80 - The automation store moves to the server, and an automation is a Markdown file](host/80-an-automation-is-a-markdown-file/plan.md) | medium | planned 2026-10-11 | plugin 45-p1 | - |
 | [81 - Users, teams, projects, roles, policies, computers and usage get typed channels and commands](host/81-host-records-get-channels-and-commands/plan.md) | high | planned 2026-10-11 | plugin 44 | ahpapp typed records |
-| [81 p1 - The host serves x- commands, and a plugin registers one](host/81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md) | high | planned 2026-10-11 | plugin 44 | 81 p2, p3, p4 |
+| [81 p1 - The host serves x- commands, and a plugin registers one](host/81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md) | high | active 2026-10-11; tasks 01-03 implemented, awaiting review | plugin 44 | 81 p2, p3, p4 |
 | [81 p2 - People and policies are channels and commands](host/81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md) | high | planned 2026-10-11 | 81 p1 | 81 p4 |
 | [81 p3 - Usage is read through commands](host/81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | high | planned 2026-10-11 | 81 p1 | - |
 | [81 p4 - Computers are a channel and commands](host/81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | high | planned 2026-10-11 | 81 p1, 81 p2 | - |

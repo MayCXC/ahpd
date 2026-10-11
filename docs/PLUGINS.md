@@ -161,6 +161,7 @@ against its contract before it is recorded.
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
 | `registerResourceProvider(scheme, provider)` | register, open key | One host-owned URI scheme, routed beside the `file:` store |
 | `registerChannel(scheme, channel)` | register, open key | One channel a client subscribes to, under an `x-` scheme; answers a handle to publish on |
+| `registerMethod(name, method)` | register, open key | One command a client sends by name, under an `x-` name |
 | `registerTerminals(store)` | set | `create` |
 | `registerChanges(source)` | set | `scopes`, `state`, `summary`, and the optional operations |
 | `registerDirectories(facts)` | set | `meta`, and the optional `refresh` |
@@ -478,6 +479,39 @@ Two plugins cannot serve one scheme: the later one is dropped with a problem
 line. `@ahpd/bot` serves `x-ahpd-bots://` this way, and [BOTS.md](BOTS.md)
 says what it sends.
 
+### A command of your own
+
+A plugin may serve a command: a request a client sends by name, which the
+plugin answers. Its name starts with `x-`, the protocol's extension prefix, as
+a channel's scheme does - decision `a-plugin-serves-an-x-command`. This host
+names its own commands `x-ahpd/<domain>/<verb>`, such as `x-ahpd/usage/totals`,
+and a plugin names its own after itself, such as `x-notes/put` - decision
+`an-x-command-is-named-by-domain-and-verb`.
+
+```ts
+host.registerMethod('x-notes/put', {
+  grant: 'notes:put',
+  authorize: async (params, reader) => ownsNote(reader, params.id),
+  handle: async (params, reader, client) => putNote(params, reader),
+  describe: () => ({ title: 'Put a note', description: 'Saves one note.' }),
+});
+```
+
+- `grant` is what a call needs. `authorize(params, reader)` is optional, and is
+  asked only of a caller the grant refused, so it can let somebody in.
+- `handle(params, reader, client)` answers one request, and what it returns is
+  the result. The params are the request's own. The reader is absent on a host
+  with no users directory and on the root connection. An `RpcError` it throws
+  is what the caller is told.
+- `describe()` is optional, and names the command in `_meta['ahpd.methods']`
+  on `initialize` and on the root state, as an entry `{ method, title,
+  description?, grant }`. The title is the name when there is no `describe`.
+
+A command is answered only after `initialize`, as every other command is. A
+host with no users directory lets every caller in. The daemon passes its own
+commands in `HostOptions.methods`, and a plugin cannot take a name the daemon
+or another plugin serves: the later one is dropped with a problem line.
+
 ### What a tool says about itself
 
 A `HostTool` may carry `effects`: `reads`, `writes`, `network` and
@@ -615,8 +649,8 @@ So you do not go looking for a method that should not exist:
 - **UI** is not, because a client owns its screen and the host serves it
   resources.
 
-Customizations, MCP servers, a configuration key and host methods are named in
-the domain reference and not built yet; the whole list is in
+Customizations, MCP servers and a configuration key are named in the domain
+reference and not built yet; the whole list is in
 [deferred.md](../.project/plans/plugin/01-plugins-load-from-configuration/deferred.md).
 
 ## Events

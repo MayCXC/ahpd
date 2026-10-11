@@ -55,6 +55,7 @@ export interface Root {
   declaresConfigKey(key: string): boolean;
   advertisedSchemes(): Record<string, unknown> | undefined;
   advertisedChannels(): { scheme: string; title: string; description?: string; grant: string }[] | undefined;
+  advertisedMethods(): { method: string; title: string; description?: string; grant: string }[] | undefined;
   advertisedGrants(): Record<string, unknown>;
   rootState(mine?: Record<string, unknown>, connection?: Connection): Promise<Bag>;
 }
@@ -334,6 +335,27 @@ export function createRoot(ctx: HostContext): Root {
   };
 
   /**
+   * The `x-` commands the daemon and plugins serve, one entry each: the name,
+   * what a client shows for it, and the grant a call needs.
+   *
+   * The title is the name where the command does not describe itself. Absent
+   * when nobody serves one, as `ahpd.channels` is.
+   */
+  const advertisedMethods = (): { method: string; title: string; description?: string; grant: string }[] | undefined => {
+    const served = Object.values(options.methods ?? {});
+    if (served.length === 0) return undefined;
+    return served.map(({ name, method }) => {
+      const said = typeof method.describe === 'function' ? method.describe() : undefined;
+      return {
+        method: name,
+        title: said?.title ?? name,
+        ...(said?.description === undefined ? {} : { description: said.description }),
+        grant: method.grant,
+      };
+    });
+  };
+
+  /**
    * One entry per registered scheme the table does not hold, shaped like a
    * built-in one.
    *
@@ -410,9 +432,11 @@ export function createRoot(ctx: HostContext): Root {
       : await options.rootConfig.values();
     const schemes = advertisedSchemes();
     const channels = advertisedChannels();
+    const methods = advertisedMethods();
     const meta = {
       ...(schemes === undefined ? {} : { 'ahpd.resourceProviders': schemes }),
       ...(channels === undefined ? {} : { 'ahpd.channels': channels }),
+      ...(methods === undefined ? {} : { 'ahpd.methods': methods }),
       'ahpd.grants': advertisedGrants(),
       ...(ctx.restartNeeded ? { 'ahpd.restartNeeded': true } : {}),
       /*
@@ -474,6 +498,6 @@ export function createRoot(ctx: HostContext): Root {
 
   return {
     rootConfig, descriptors, daemonSchema, daemonProperties,
-    daemonKey, declaresConfigKey, advertisedSchemes, advertisedChannels, advertisedGrants, rootState,
+    daemonKey, declaresConfigKey, advertisedSchemes, advertisedChannels, advertisedMethods, advertisedGrants, rootState,
   };
 }

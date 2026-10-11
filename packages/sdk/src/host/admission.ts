@@ -1,6 +1,6 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { computerSource } from '../computers.js';
-import { isRootChannel, schemeOf, servedIn } from './channels.js';
+import { isRootChannel, methodIn, schemeOf, servedIn } from './channels.js';
 import { NEEDS, UNGATED, channelRead, refusalReason } from './gate.js';
 import type { Grant, Principal } from '../types/users.js';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -14,6 +14,8 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
   const { connection } = conn;
   /** The plugin channel serving a URI, if any. */
   const servedAt = (channel: string) => servedIn(ctx.options.channels, channel);
+  /** The served `x-` command a request names, if any. */
+  const commandOf = (method: string) => methodIn(ctx.options.methods, method);
 
   /**
    * What a command needs, or nothing when it needs nothing.
@@ -164,6 +166,12 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
      */
     if (method === 'vscode/devContainers/stop') return ['container:stop', 'computer:write'];
     if (method === 'vscode/devContainers/remove') return ['container:remove', 'computer:write'];
+    /*
+     * An `x-` command the daemon or a plugin serves needs the grant it was
+     * registered with - decision `a-plugin-serves-an-x-command`.
+     */
+    const command = commandOf(method);
+    if (command !== undefined) return [command.method.grant];
     const plain = NEEDS[method];
     if (plain === undefined) {
       /*
@@ -262,6 +270,18 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
    * for a question nobody is going to answer.
    */
   const excusedBy = (method: string, params: Record<string, unknown>, who: Principal): Set<Grant> | Promise<Set<Grant>> => {
+    /*
+     * A served command may let in a caller its grant refuses, the way a
+     * scheme opens part of itself. Asked only when the grant is missing, with
+     * the request's own params.
+     */
+    const command = commandOf(method);
+    if (command !== undefined) {
+      const authorize = command.method.authorize;
+      if (authorize === undefined || who.can(command.method.grant)) return new Set();
+      return authorize.call(command.method, params, who)
+        .then((admitted) => (admitted === true ? new Set<Grant>([command.method.grant]) : new Set<Grant>()));
+    }
     /*
      * A plugin channel may let in a reader its grant refuses, the way a
      * scheme opens part of itself. Asked only when the grant is missing, so a

@@ -1,7 +1,7 @@
 ---
 title: The host serves x- commands, and a plugin registers one
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -69,9 +69,9 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A plugin registers a method](task-01-a-plugin-registers-a-method.md) | todo | - |
-| [02 - The host answers a served method](task-02-the-host-answers-a-served-method.md) | todo | 01 |
-| [03 - The docs describe a command of your own](task-03-the-docs-describe-a-command.md) | todo | 02 |
+| [01 - A plugin registers a method](task-01-a-plugin-registers-a-method.md) | implemented | - |
+| [02 - The host answers a served method](task-02-the-host-answers-a-served-method.md) | implemented | 01 |
+| [03 - The docs describe a command of your own](task-03-the-docs-describe-a-command.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -79,14 +79,14 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-plugin-registers-a-method.md](task-01-a-plugin-registers-a-method.md).
+- **Done so far:** tasks 01, 02 and 03 implemented 2026-10-11, awaiting review.
+- **Next action:** review the build; then p2 and p3 can start.
 - **Open questions:** none.
 - **Watch out for:** a test checks that `GATE` classifies every handler key.
   A served method has its own grant and is not a key there.
 
 ## Final verification checklist
 
-- [ ] A test plugin serves `x-test/echo`, and a client calls it with and without the grant.
-- [ ] `pnpm exec vitest run packages/sdk` passes.
-- [ ] `plans/index.md` updated.
+- [x] A test plugin serves `x-test/echo`, and a client calls it with and without the grant.
+- [x] `pnpm exec vitest run packages/sdk` passes.
+- [x] `plans/index.md` updated.

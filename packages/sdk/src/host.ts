@@ -45,7 +45,7 @@ import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
 import { ownerOfPrincipal } from './values.js';
 import { reason } from './host/common.js';
 import {
-  ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, baseOf, URI_KEYS, named,
+  ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, methodIn, baseOf, URI_KEYS, named,
   chatUriFor, subagentChatUri, WORKER_ACTIONS, toolCallOfSubagentChat, isAutomations,
 } from './host/channels.js';
 import type { Space } from './host/channels.js';
@@ -964,7 +964,7 @@ export function createHost(options: HostOptions): Host {
     isolating, mergedConfig, propertyOf, sessionSchema, runningSchema, seeded,
     contributedDefaults, storedConfig,
     rootConfig, descriptors, daemonSchema, daemonProperties, daemonKey,
-    advertisedSchemes, advertisedChannels, rootState,
+    advertisedSchemes, advertisedChannels, advertisedMethods, rootState,
     statusOf, startedBy, chatSummary, subagentSummary, restoredSubagentSummary,
     activityOf, sessionAdded, summaryMoved, activeSessionsMoved, learnModels,
     listing, waitingFor, readStored,
@@ -1338,7 +1338,15 @@ export function createHost(options: HostOptions): Host {
             notify(request.params);
             return undefined;
           }
-          const handler = handlers[request.method];
+          /*
+           * A protocol handler first, and then an `x-` command the daemon or a
+           * plugin serves - decision `a-plugin-serves-an-x-command`. A served
+           * one passes the same handshake check and the same gate below.
+           */
+          const served = methodIn(options.methods, request.method);
+          const handler = handlers[request.method] ?? (served === undefined
+            ? undefined
+            : async (params: Record<string, unknown> | undefined) => served.method.handle(params ?? {}, connection.principal, connection.clientId));
           if (!handler) {
             // Said, not silently accepted. A host that answers an empty
             // success to a method it does not have leaves the client waiting

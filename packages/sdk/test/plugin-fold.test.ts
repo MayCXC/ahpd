@@ -46,6 +46,7 @@ const contribution = (
     ports?: Partial<Record<PortKey, PortContribution>>;
     providers?: Record<string, unknown>;
     channels?: Contribution['channels'];
+    methods?: Contribution['methods'];
     sessionConfig?: Record<string, Record<string, unknown>>;
     sessionCompletions?: Contribution['sessionCompletions'];
     routes?: Route;
@@ -60,6 +61,7 @@ const contribution = (
   ports: parts.ports ?? {},
   providers: parts.providers ?? {},
   channels: parts.channels ?? {},
+  methods: parts.methods ?? {},
   events: {},
   triggers: { by, types: {} },
   starts: { by },

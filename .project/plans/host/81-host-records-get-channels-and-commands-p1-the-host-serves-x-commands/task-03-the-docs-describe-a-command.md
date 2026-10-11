@@ -1,6 +1,6 @@
 ---
 title: The docs describe a command of your own
-status: todo
+status: implemented
 depends: [task-02-the-host-answers-a-served-method.md]
 layer: "docs"
 refs:
@@ -32,3 +32,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `PLUGINS.md` has the section, a `registerMethod` row in "What you can register", and no longer lists host methods as not built. `00-plugin.md` row 48 is built and links to this plan, and its known gaps no longer list host methods.

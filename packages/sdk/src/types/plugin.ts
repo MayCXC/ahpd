@@ -264,6 +264,46 @@ export interface ServedChannel {
 }
 
 /**
+ * A command a plugin or the daemon serves, under an `x-` name of its own.
+ *
+ * A client sends it as any other request, and what `handle` answers is the
+ * result - decision `a-plugin-serves-an-x-command`. This host names its own
+ * `x-ahpd/<domain>/<verb>` - decision `an-x-command-is-named-by-domain-and-verb`.
+ */
+export interface PluginMethod {
+  /** What a caller needs to send the command, unless `authorize` lets them in. */
+  grant: Grant;
+  /**
+   * Whether a caller without `grant` may send the command with these params
+   * all the same.
+   *
+   * Asked only of a caller the grant refuses, so it widens who may call and
+   * never narrows it.
+   */
+  authorize?(params: Record<string, unknown>, reader: Principal): Promise<boolean>;
+  /**
+   * The answer to one request, as its `result`.
+   *
+   * `params` are the request's own. `reader` is nobody on a host with no users
+   * directory. `client` is the id the connection gave at `initialize` or
+   * `reconnect`. An `RpcError` thrown here is what the caller is told.
+   */
+  handle(params: Record<string, unknown>, reader: Principal | undefined, client: string): unknown;
+  /** What a client shows for the command, read when the host advertises it. */
+  describe?(): { title: string; description?: string };
+}
+
+/** One served command, and who serves it. */
+export interface ServedMethod {
+  /** The plugin that registered it, or the daemon's own name for its own. */
+  by: string;
+  /** The command's name, such as `x-ahpd/usage/totals`. */
+  name: string;
+  /** What was registered. */
+  method: PluginMethod;
+}
+
+/**
  * One plugin's connections to its own host, and where they come from.
  *
  * Built by the plugin host and carried through the fold rather than copied, for
@@ -458,7 +498,7 @@ export interface PluginContext {
  *
  * Not here yet, and named in the domain reference so an author is not left
  * looking for a method that should not exist: `registerCustomization`,
- * `registerMcpServer`, `registerConfig` and `registerMethod`.
+ * `registerMcpServer` and `registerConfig`.
  */
 export interface PluginHost extends PluginContext {
   /**
@@ -629,6 +669,14 @@ export interface PluginHost extends PluginContext {
    * refused. The handle is how the plugin sends on it.
    */
   registerChannel(scheme: string, channel: PluginChannel): ChannelHandle;
+  /**
+   * Serve one command a client sends by name - decision
+   * `a-plugin-serves-an-x-command`.
+   *
+   * The name starts with `x-`, such as `x-demo/echo`. A name without it, or
+   * one the daemon or another plugin serves, is refused.
+   */
+  registerMethod(name: string, method: PluginMethod): void;
   /** Set `HostOptions.terminals`, or take the daemon's over with `'replace'`. */
   registerTerminals(store: PortOf<'terminals'>, when?: 'replace'): void;
   /** Set `HostOptions.changes`, or take the daemon's over with `'replace'`. */
@@ -845,6 +893,8 @@ export interface Contribution {
    * them into `HostOptions.channels` as they are.
    */
   channels: Record<string, ServedChannel>;
+  /** The commands this plugin serves, keyed by name. */
+  methods: Record<string, ServedMethod>;
   /**
    * The listeners this plugin attached, by event.
    *

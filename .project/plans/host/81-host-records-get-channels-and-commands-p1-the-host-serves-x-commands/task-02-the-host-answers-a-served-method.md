@@ -1,6 +1,6 @@
 ---
 title: The host answers a served method, gates it and advertises it
-status: todo
+status: implemented
 depends: [task-01-a-plugin-registers-a-method.md]
 layer: "packages/sdk host"
 refs:
@@ -43,3 +43,4 @@ A request whose method a served method holds reaches its `handle` after the gran
 
 ## Resume
 
+Implemented 2026-10-11. `methodIn` in `host/channels.ts` finds a served method by name. `host.ts` uses it as the handler when no protocol handler holds the name, so a served method passes the same handshake check and gate. `admission.ts` asks for the method's grant and its `authorize`. `root.ts` builds `advertisedMethods`, which the handshake and the root state send as `ahpd.methods`.

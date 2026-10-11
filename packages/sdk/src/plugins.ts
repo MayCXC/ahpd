@@ -15,7 +15,7 @@ import type { Agent } from './types/agent.js';
 import type { SessionConfigAnswerer } from './types/completions.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from './types/events.js';
 import type { HostOptions, HostTool } from './types/host.js';
-import type { ChannelHandle, Contribution, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
+import type { ChannelHandle, Contribution, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, ServedMethod, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
 import type { SessionStore } from './types/sessions.js';
 import type { Usage } from './types/usage.js';
 import type { Grant, Principal } from './types/users.js';
@@ -27,7 +27,7 @@ import { createPair } from './pair.js';
 import type { Pair } from './pair.js';
 import { reason } from './values.js';
 import { readSecret } from './vault.js';
-import { checkAgent, checkChannel, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
+import { checkAgent, checkChannel, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -334,6 +334,13 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    * schemes are, so a plugin is told when the host already serves one.
    */
   const channels: Record<string, ServedChannel> = { ...base.channels };
+  /*
+   * The served commands, by name, and who holds each. Seeded from the base, so
+   * a plugin is told when the daemon already serves one.
+   */
+  const methods: Record<string, ServedMethod> = { ...base.methods };
+  const commands = new Map<string, string>();
+  for (const name of Object.keys(base.methods ?? {})) commands.set(name, 'the daemon');
 
   for (const contribution of contributions) {
     for (const agent of contribution.agents) {
@@ -398,6 +405,16 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
         continue;
       }
       channels[scheme] = served;
+    }
+
+    for (const [name, served] of Object.entries(contribution.methods)) {
+      const held = commands.get(name);
+      if (held !== undefined) {
+        problems.push(`plugin ${contribution.by} registers method ${name}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already serves`);
+        continue;
+      }
+      commands.set(name, contribution.by);
+      methods[name] = served;
     }
   }
 
@@ -495,6 +512,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
 
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
   if (Object.keys(channels).length > 0) options.channels = channels;
+  if (Object.keys(methods).length > 0) options.methods = methods;
 
   /*
    * The routes, by plugin name.
@@ -753,6 +771,7 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
     ports: {},
     providers: {},
     channels: {},
+    methods: {},
     events: events as unknown as HostHandlers,
     closers: [],
     triggers,
@@ -980,6 +999,14 @@ export function pluginHost(by: string, context: PluginContext, options: HostReco
         },
         subscribers: (uri) => served.subscribers?.(uri) ?? [],
       };
+    },
+    registerMethod(name, method) {
+      open();
+      const named = checkMethod(name, method, by);
+      if (contribution.methods[named] !== undefined) {
+        throw new Error(miss(by, 'registerMethod', named, 'a name no other method in this plugin uses'));
+      }
+      contribution.methods[named] = { by, name: named, method };
     },
     registerTerminals: (store, when) => { setPort('terminals', 'registerTerminals', store, when); },
     registerChanges: (source, when) => { setPort('changes', 'registerChanges', source, when); },

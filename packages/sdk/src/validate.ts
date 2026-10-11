@@ -282,6 +282,34 @@ export const checkChannel = (scheme: string, value: unknown, by: string): void =
   }
 };
 
+/*
+ * The optional members of `PluginMethod`, by kind. `grant` and `handle` are
+ * the required ones and are checked on their own.
+ */
+const METHOD_OPTIONAL: Record<string, Kind> = {
+  authorize: 'function',
+  describe: 'function',
+};
+
+/** Check one `registerMethod` name and value against `PluginMethod`. */
+export const checkMethod = (name: unknown, value: unknown, by: string): string => {
+  if (typeof name !== 'string' || !/^x-\S+$/.test(name)) {
+    throw new Error(miss(by, 'registerMethod', 'the name', 'a command name that starts with x-, the protocol\'s extension prefix'));
+  }
+  const object = asObject(value, by, 'registerMethod', name);
+  if (typeof object.grant !== 'string' || !isGrant(object.grant)) {
+    throw new Error(miss(by, 'registerMethod', 'grant', 'a grant like bot:read'));
+  }
+  if (typeof object.handle !== 'function') {
+    throw new Error(miss(by, 'registerMethod', 'handle', 'a function'));
+  }
+  for (const [member, expected] of Object.entries(METHOD_OPTIONAL)) {
+    if (object[member] === undefined) continue;
+    if (!right(object[member], expected)) throw new Error(miss(by, 'registerMethod', member, expected));
+  }
+  return name;
+};
+
 /**
  * An owner, as the four kinds the usage rules spell.
  *

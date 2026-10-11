@@ -1,6 +1,6 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { idOf } from '../catalog.js';
-import type { ServedChannel } from '../types/plugin.js';
+import type { ServedChannel, ServedMethod } from '../types/plugin.js';
 
 export const ROOT = 'ahp-root://';
 /**
@@ -43,6 +43,10 @@ export const spaceOf = (uri: string): Space | undefined => {
 /** The plugin channel that serves a URI, or nothing when no plugin serves its scheme. */
 export const servedIn = (channels: Readonly<Record<string, ServedChannel>> | undefined, uri: string): ServedChannel | undefined =>
   (spaceOf(uri) === 'plugin' ? channels?.[schemeOf(uri)] : undefined);
+
+/** The served `x-` command a request names, or nothing when nobody serves it. */
+export const methodIn = (methods: Readonly<Record<string, ServedMethod>> | undefined, name: string): ServedMethod | undefined =>
+  (methods !== undefined && name.startsWith('x-') && Object.hasOwn(methods, name) ? methods[name] : undefined);
 
 /** A session's own channel under a name: the name, less `/annotations` or `/changeset/<scope>`. */
 export const baseOf = (uri: string): string => {

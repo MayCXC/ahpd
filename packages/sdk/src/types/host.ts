@@ -11,7 +11,7 @@ import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
-import type { PluginConnects, PluginStarts, PluginTriggers, ServedChannel } from './plugin.js';
+import type { PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -136,6 +136,14 @@ export interface HostOptions {
    * `publish` and `subscribers` when it is created.
    */
   channels?: Record<string, ServedChannel>;
+  /**
+   * The `x-` commands the daemon and plugins serve, by name.
+   *
+   * The daemon passes its own here, and the fold adds each plugin's from
+   * `registerMethod`. A request no protocol handler holds is answered by the
+   * one its name keys, after the gate asks for its grant.
+   */
+  methods?: Record<string, ServedMethod>;
   /**
    * How to open a shell.
    *

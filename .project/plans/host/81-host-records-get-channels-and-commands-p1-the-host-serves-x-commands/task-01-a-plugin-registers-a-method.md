@@ -1,6 +1,6 @@
 ---
 title: A plugin registers a method, and the daemon passes its own
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -42,3 +42,4 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-11. `PluginMethod`, `ServedMethod`, `registerMethod`, `HostOptions.methods`, `checkMethod` and the fold are built. The registration cases are in `packages/sdk/test/plugin-method.test.ts`, because `plugins.test.ts` does not exist; the `checkMethod` cases are in `plugin-validate.test.ts`, beside `checkChannel`'s. The test helpers in `plugin-fold.test.ts` and `plugin-host.test.ts` got `methods: {}`.

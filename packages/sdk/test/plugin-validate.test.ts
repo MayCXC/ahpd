@@ -209,6 +209,22 @@ describe('pluginHost', () => {
     expect(options.channels?.['x-bots']?.channel).toBe(channel);
   });
 
+  it('accepts a complete method, and refuses an empty one or a grant that is not one', () => {
+    const { host, contribution } = pluginHost('alpha', context());
+    const method = { grant: 'bot:read', handle: () => ({}), authorize: async () => true, describe: () => ({ title: 'Echo' }) };
+    expect(() => host.registerMethod('x-alpha/echo', method as never)).not.toThrow();
+    expect(() => host.registerMethod('x-alpha/notes', {} as never)).toThrow(/alpha.*registerMethod.*grant/);
+    expect(() => host.registerMethod('x-alpha/notes', { grant: 'nothing', handle: () => ({}) } as never)).toThrow(/grant like bot:read/);
+    expect(() => host.registerMethod('x-alpha/notes', { grant: 'bot:read' } as never)).toThrow(/handle/);
+    // The optional members may be left out, and are functions when they are there.
+    expect(() => host.registerMethod('x-alpha/notes', { grant: 'bot:read', handle: () => ({}), authorize: 'no' } as never)).toThrow(/authorize/);
+    expect(() => host.registerMethod('x-alpha/notes', { grant: 'bot:read', handle: () => ({}), describe: 'Notes' } as never)).toThrow(/describe/);
+    expect(() => host.registerMethod(7 as never, method as never)).toThrow(/alpha.*registerMethod.*starts with x-/);
+    const { options, problems } = foldHostOptions(base(), [contribution]);
+    expect(problems).toEqual([]);
+    expect(options.methods?.['x-alpha/echo']?.method).toBe(method);
+  });
+
   it('refuses a scheme that is not one, and the schemes the host already owns', () => {
     const { host } = pluginHost('alpha', context());
     expect(() => host.registerResourceProvider('9bad', provider as never)).toThrow(/URI scheme/);
