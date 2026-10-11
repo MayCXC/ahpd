@@ -3,7 +3,7 @@ import { resolve, sep } from 'node:path';
 import { RpcError } from '@ahpd/sdk';
 import { covers } from '@ahpd/sdk';
 import {
-  BOT_BODIES, BOT_COLORS, checkRecord, isSlug,
+  BOT_BODIES, BOT_COLORS, checkRecord, isSlug, sameOwner,
 } from './record.js';
 import { sessionFor } from './start.js';
 import type { BotCatalogue } from './catalogue.js';
@@ -214,10 +214,6 @@ export const mayRead = (bot: BotRecord, reader: Principal): boolean => {
   return false;
 };
 
-/** Whether two owners are the same: equal, or both the host under any name. */
-const sameOwner = (one: Owner, other: Owner): boolean =>
-  one === other || (one.startsWith('root:') && other.startsWith('root:'));
-
 /**
  * Whether this writer may change or delete this bot.
  *
@@ -305,6 +301,9 @@ export function botProvider(options: BotOptions): BotProvider {
   ): Owner => {
     const self: Owner = `root:${options.hostName}`;
     if (asked === undefined) return existing?.owner ?? writer ?? self;
+    // An edit keeps the owner on record: `checkRecord` has refused any other,
+    // and a host owner under an older name stays as it was written.
+    if (existing !== undefined) return existing.owner;
     /*
      * The host, named by whoever may name it, is written under today's name.
      *

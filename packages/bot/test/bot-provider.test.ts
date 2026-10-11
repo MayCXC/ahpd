@@ -535,6 +535,19 @@ it('writes any root: an admin names as the host under its name today', async () 
   expect((await record(soft, 'bot://motion'))['owner']).toBe('root:test');
 });
 
+it('takes an edit that names the host under another name, and keeps the owner on record', async () => {
+  const { host } = made({ soft: ['*:*'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', owner: 'root:test' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  // The machine was renamed since: a client sends the name the manifest gives it now.
+  expect(await write(soft, 'bot://motion', { name: 'Moved', owner: 'root:new-name' })).toEqual({ result: {} });
+  const bot = await record(soft, 'bot://motion');
+  expect(bot['name']).toBe('Moved');
+  expect(bot['owner']).toBe('root:test');
+});
+
 it('refuses the host as the owner to a writer without *:*', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');

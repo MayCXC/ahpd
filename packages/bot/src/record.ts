@@ -122,6 +122,10 @@ const FIELDS = [
 /** An owner, as the four kinds the usage rules spell. */
 const OWNER = /^(?:user|team|project|root):.+$/;
 
+/** Whether two owners are the same: equal, or both the host under any name. */
+export const sameOwner = (one: Owner, other: Owner): boolean =>
+  one === other || (one.startsWith('root:') && other.startsWith('root:'));
+
 /**
  * Whether this is a slug a bot may have.
  *
@@ -215,7 +219,7 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
   if (said_ !== undefined && !OWNER.test(said_)) {
     throw new RpcError(INVALID_PARAMS, `${said_} is not an owner; write user:, team:, project: or root:`);
   }
-  if (said_ !== undefined && existing !== undefined && said_ !== existing.owner) {
+  if (said_ !== undefined && existing !== undefined && !sameOwner(said_ as Owner, existing.owner)) {
     throw new RpcError(INVALID_PARAMS, `${said_} is not whose this bot is; it is ${existing.owner}`);
   }
 

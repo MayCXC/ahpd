@@ -1,7 +1,7 @@
 ---
 title: An admin makes a bot for any owner, and the manifest names the host owner
 domain: plugin
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -68,7 +68,7 @@ resourceWrite bot://<slug> createOnly -> botProvider.write -> ownerFor -> record
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An admin names any owner](task-01-an-admin-names-any-owner.md) | implemented | - |
+| [01 - An admin names any owner](task-01-an-admin-names-any-owner.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -77,13 +77,13 @@ resourceWrite bot://<slug> createOnly -> botProvider.write -> ownerFor -> record
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-an-admin-names-any-owner.md](task-01-an-admin-names-any-owner.md).
+- **Done so far:** the plan is built and reviewed; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** `mayWrite` and `ownerFor` both run on a make; keep the reader absent case open as it is.
 
 ## Final verification checklist
 
-- [ ] `pnpm vitest run packages/bot` passes.
-- [ ] `pnpm typecheck` passes.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm vitest run packages/bot` passes.
+- [x] `pnpm typecheck` passes.
+- [x] `plans/index.md` updated.

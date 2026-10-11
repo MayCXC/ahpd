@@ -1,6 +1,6 @@
 ---
 title: An admin names any owner, and the manifest gives the host owner
-status: implemented
+status: done
 depends: []
 layer: "bot"
 refs:
@@ -49,3 +49,4 @@ It records any `root:` owner as `root:<hostName>`, and `mayLink` treats two `roo
 The manifest gives `root:<hostName>` as a `const`.
 A bot for another person starts its session as that person.
 The host refuses that make with `-32009` until the person signs in once.
+Review fix: an edit keeps the owner on record, and `checkRecord` takes any `root:` owner for a host bot.
