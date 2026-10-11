@@ -49,3 +49,4 @@ export type {
   PolicyValueType,
 } from './policies.js';
 export type { SecretRef, SecretWork, Vault } from './vault.js';
+export type { CollectionOptions, RecordChange, RecordCollection, RecordStore, StoredRecord } from './records.js';

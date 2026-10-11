@@ -13,9 +13,13 @@
  * `computer` and `usage` take, because both read a URI, refuse one that names
  * nothing and answer a read with JSON. Neither is a directory of records, so
  * each keeps its own leaves and asks for these parts rather than the provider.
+ *
+ * `memoryRecords` is the other kind of record here: a `RecordStore`, the host
+ * port a plugin keeps its own collections in, held in memory.
  */
 
 import { INVALID_PARAMS, RpcError } from './rpc.js';
+import type { RecordChange, RecordCollection, RecordStore, StoredRecord } from './types/records.js';
 import type { Entry, Metadata, Read, ResourceProvider, SchemeDescription, Write } from './types/resources.js';
 
 /**
@@ -264,6 +268,75 @@ export const recordsProvider = (scheme: string, records: Records, changed?: () =
       if (at.leaf !== '') throw absentResource(scheme, uri);
       await removeRecord(scheme, records, at.id, uri);
       changed?.();
+    },
+  };
+};
+
+/** What a collection name and a record id are, as a refusal says it. */
+export const RECORD_SLUG = 'lowercase letters, digits and dashes, one to forty of them, starting with a letter';
+
+/**
+ * Whether this is a collection name or a record id.
+ *
+ * The same rule a bot's slug has, because a name is a folder and an id is a
+ * file name in the daemon's own store.
+ */
+export const isRecordSlug = (slug: string): boolean => /^[a-z][a-z0-9-]{0,39}$/.test(slug);
+
+/**
+ * A record store that keeps every collection in memory, for the life of the
+ * process.
+ *
+ * What a test and a host with no folder want. Each record is kept and answered
+ * as a copy, so a caller that changes a record it holds changes nothing here.
+ */
+export const memoryRecords = (): RecordStore => {
+  const collections = new Map<string, { held: Map<string, StoredRecord>; watchers: Set<(change: RecordChange) => void> }>();
+
+  return {
+    collection: async (name) => {
+      if (typeof name !== 'string' || !isRecordSlug(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_SLUG}`);
+      let one = collections.get(name);
+      if (one === undefined) {
+        one = { held: new Map(), watchers: new Set() };
+        collections.set(name, one);
+      }
+      const { held, watchers } = one;
+      const told = (change: RecordChange): void => {
+        for (const watcher of [...watchers]) watcher(change);
+      };
+      const collection: RecordCollection = {
+        get: async (id) => {
+          const record = held.get(id);
+          return record === undefined ? undefined : structuredClone(record);
+        },
+        list: async () => [...held.values()].map((record) => structuredClone(record)),
+        find: async (match) => [...held.values()]
+          .filter((record) => Object.entries(match).every(([field, value]) => record[field] === value))
+          .map((record) => structuredClone(record)),
+        put: async (record) => {
+          if (typeof record !== 'object' || record === null || Array.isArray(record)) {
+            throw new Error(`records ${name}: a record is a JSON object`);
+          }
+          if (typeof record.id !== 'string' || !isRecordSlug(record.id)) {
+            throw new Error(`records ${name}: ${String(record.id)} is not a record id: ${RECORD_SLUG}`);
+          }
+          const type = held.has(record.id) ? 'updated' : 'added';
+          held.set(record.id, structuredClone(record));
+          told({ id: record.id, type });
+        },
+        remove: async (id) => {
+          if (!held.delete(id)) return false;
+          told({ id, type: 'deleted' });
+          return true;
+        },
+        watch: (onChange) => {
+          const watcher = (change: RecordChange): void => { onChange(change); };
+          watchers.add(watcher);
+          return () => { watchers.delete(watcher); };
+        },
+      };
+      return collection;
     },
   };
 };

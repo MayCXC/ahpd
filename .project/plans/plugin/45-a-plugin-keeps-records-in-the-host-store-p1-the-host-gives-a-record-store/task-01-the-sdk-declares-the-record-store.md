@@ -1,6 +1,6 @@
 ---
 title: The sdk declares the record store
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -16,7 +16,7 @@ refs:
 ## Files
 
 - `CREATE: packages/sdk/src/types/records.ts` - `RecordStore`, `RecordCollection`, `RecordChange` and `CollectionOptions`.
-- `CREATE: packages/sdk/src/records.ts` - `memoryRecords()`.
+- `UPDATE: packages/sdk/src/records.ts` - `memoryRecords()`, and the slug rule for a name and an id.
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.records`.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerRecords` and `records` on `PluginHost`.
 - `UPDATE: packages/sdk/src/plugins.ts:86-89` - `records` in `PORT_KEYS`, `registerRecords`, and `records` resolved at call time.
@@ -47,3 +47,11 @@ refs:
 - `pnpm exec vitest run packages/sdk` and `pnpm -s typecheck` pass.
 
 ## Resume
+
+- **Done so far:** all steps. `plugin-records.test.ts` has 9 cases, and they pass.
+- **Built as:** `memoryRecords` is in the `records.ts` file that was there before. The file also holds the resource scheme records.
+- **Built as:** the record type is `StoredRecord`, `{ id: string }` with other fields of any JSON value.
+- **Built as:** `RecordStore.collection` answers a promise, so a store can make its folder before the first call.
+- **Built as:** a slug is `^[a-z][a-z0-9-]{0,39}$`, the same rule as a bot slug.
+- **Built as:** `HostRecordingOptions.records` gives the store at call time, and `HostRecordingOptions.collections` is the map of names that each plugin opened. A loader shares one map between all plugins.
+- **Built as:** `watch` answers a function and not a promise. Thus a `watch` on a host with no records port writes one line to the plugin log.

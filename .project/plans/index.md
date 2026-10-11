@@ -283,7 +283,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [42 - A reserved name is refused for a scheme and a harness](plugin/42-a-reserved-name-is-refused/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/42-a-reserved-name-is-refused/implemented.md)) | - | plugin 43, plugin 44 |
 | [43 - A bot can be watched](plugin/43-a-bot-can-be-watched/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/43-a-bot-can-be-watched/implemented.md)) | plugin 42 | - |
 | [44 - A plugin serves a channel, and bots have a catalogue](plugin/44-a-plugin-serves-a-channel/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/44-a-plugin-serves-a-channel/implemented.md)) | plugin 42 | ahpapp and ahpc bot catalogue |
-| [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | planned 2026-10-11 | plugin 43, cofold commands/05 | bot templates idea |
+| [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | active 2026-10-11; p1 task 01 implemented, awaiting review; p1 tasks 02-03 wait on cofold commands/05 | plugin 43, cofold commands/05 | bot templates idea |
 | [46 - An admin makes a bot for any owner, and the manifest names the host owner](plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) | high | active 2026-10-11; task 01 implemented, awaiting review | plugin 37 | ahpapp bot owner picker |
 
 Next free number in `plugin`: `47`.
