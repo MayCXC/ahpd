@@ -947,8 +947,12 @@ it('gives a vault-filled key only to the agent whose need declared it', async ()
   const again = await loaded();
   expect((await given(again, 'claude-openrouter')).env.ANTHROPIC_API_KEY).toBeUndefined();
   expect((await given(again, 'pi')).env.ANTHROPIC_API_KEY).toBe('pi-anthropic');
-
-});
+  /*
+   * Above the default, as `computer-uptime` does for the same reason: two
+   * loads and four machine reads, each a spawn of the scripted Docker, take
+   * about seven seconds on a loaded machine.
+   */
+}, 20_000);
 
 it('gives computer_exec the calling session agent\'s vault-filled keys, and every one to a call with no agent', async () => {
   const state = join(temp(), 'docker.json');

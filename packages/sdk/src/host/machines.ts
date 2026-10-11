@@ -141,7 +141,21 @@ export function createMachines(ctx: HostContext): Machines {
    * answer that asked for them, and a folder removed while one is in flight is
    * a removal of a folder something is still writing into.
    */
-  const inFlight = new Set<Promise<void>>();
+  const inFlight = new Set<Promise<unknown>>();
+
+  /** Whether the host has started to close, after which a turn asks a machine for nothing new. */
+  let closing = false;
+
+  /** A call a turn waits on, kept in `inFlight` until it answers. */
+  const waited = async <T>(work: Promise<T>): Promise<T> => {
+    inFlight.add(work);
+    try {
+      return await work;
+    }
+    finally {
+      inFlight.delete(work);
+    }
+  };
 
   /**
    * A call this host made to the port, kept until it answers.
@@ -232,6 +246,7 @@ export function createMachines(ctx: HostContext): Machines {
    * its promise settles, so nothing here throws.
    */
   const settled = async (): Promise<void> => {
+    closing = true;
     while (inFlight.size > 0) await Promise.all([...inFlight]);
   };
 
@@ -272,7 +287,7 @@ export function createMachines(ctx: HostContext): Machines {
   const bringBackOf = async (uri: string): Promise<BroughtBack | undefined> => {
     const named = ctx.heldAs(uri);
     const id = enteredIn.get(named);
-    return id === undefined ? undefined : await askedOf(id, named);
+    return id === undefined || closing ? undefined : await waited(askedOf(id, named));
   };
 
   /**
@@ -291,17 +306,23 @@ export function createMachines(ctx: HostContext): Machines {
    * a line in the log rather than a turn that does not start. What a machine
    * that could not be moved costs is one turn on a branch that is behind - the
    * same as before this existed - and refusing the turn would cost the work.
+   *
+   * Kept in `inFlight` while it runs, as an enter or a leave is, so a close
+   * waits for a machine that is still being read. A host that is closing
+   * starts no new one.
    */
   const followOf = async (uri: string): Promise<void> => {
     const named = ctx.heldAs(uri);
     const id = enteredIn.get(named);
-    if (id === undefined) return;
-    try {
-      await options.computers?.follow?.(id);
-    }
-    catch (error) {
-      ctx.log(`computers: setting ${id} to the host's branch for ${named} failed: ${error instanceof Error ? error.message : String(error)}`);
-    }
+    if (id === undefined || closing) return;
+    await waited((async () => {
+      try {
+        await options.computers?.follow?.(id);
+      }
+      catch (error) {
+        ctx.log(`computers: setting ${id} to the host's branch for ${named} failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    })());
   };
 
   /**
