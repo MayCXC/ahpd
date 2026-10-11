@@ -22,8 +22,13 @@ export interface FileRecordsOptions {
 /** The line that opens and closes the frontmatter. */
 const FENCE = '---';
 
-/** The folders in the config directory that the daemon writes itself, which no collection may take. */
-export const RESERVED_COLLECTIONS: ReadonlySet<string> = new Set(['agentPlugins', 'node_modules', 'sessions', 'usage']);
+/**
+ * The folders in the config directory that the daemon writes itself, which no collection may take.
+ *
+ * `bots` is not one of them: that folder is the bot plugin's, and the plugin
+ * opens it through this store.
+ */
+export const RESERVED_COLLECTIONS: ReadonlySet<string> = new Set(['agentPlugins', 'automations', 'node_modules', 'sessions', 'usage']);
 
 /** How long a file's watch events are gathered before the file is read, in milliseconds. */
 const WINDOW = 50;

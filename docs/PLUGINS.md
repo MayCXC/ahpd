@@ -653,7 +653,7 @@ A collection has `get(id)`, `list()`, `find(match)`, `put(record)`, `remove(id)`
 
 Open a collection in `apply`. Its calls wait until every plugin has applied and the host knows its record store, so a call made early is answered late rather than refused. The name is a slug too, and a name another plugin opened is refused, so two plugins never share one. A host with no record store - a loader in a test that gave none - refuses each call with `records <name> cannot be read: this host has no record store`.
 
-`body` names the field that holds a record's long text. The daemon's own store writes each record as `<configDir>/<name>/<id>.md`: the other fields as YAML frontmatter, and the body field as the Markdown body. It refuses a collection named `sessions`, `usage`, `agentPlugins` or `node_modules`, because the daemon keeps its own files in those folders. The example above writes `bots/motion.md`:
+`body` names the field that holds a record's long text. The daemon's own store writes each record as `<configDir>/<name>/<id>.md`: the other fields as YAML frontmatter, and the body field as the Markdown body. It refuses a collection named `sessions`, `usage`, `automations`, `agentPlugins` or `node_modules`, because the daemon keeps its own files in those folders - `bots` is not one of them, being the bot plugin's own collection. The example above writes `bots/motion.md`:
 
 ```md
 ---

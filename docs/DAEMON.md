@@ -315,9 +315,11 @@ anything has been let go of.
 
 ### `--automations`, and what memory costs
 
-`file` is the default: definitions are written to `automations.json` beside the
-configuration, come back on a restart, and a clock fires the ones with a
-schedule. It is the mode a daemon wants, because being running at nine in the
+`file` is the default: every definition is one Markdown file under
+`automations/` beside the configuration, they come back on a restart, and a
+clock fires the ones with a schedule. See
+[AUTOMATIONS.md](AUTOMATIONS.md#where-an-automation-is-kept) for what a file
+holds. It is the mode a daemon wants, because being running at nine in the
 morning is the only way a schedule fires with nobody connected.
 
 `memory` holds definitions for as long as the process does and fires nothing.

@@ -105,7 +105,15 @@ describe('fileRecords', () => {
 
     await expect(store().collection('sessions')).rejects.toThrow('the daemon keeps its own files');
     await expect(store().collection('usage')).rejects.toThrow('the daemon keeps its own files');
+    // The automations folder is one of them since an automation is a file
+    // there, so a collection of that name would be the daemon's own automations
+    // read and written by a plugin.
+    await expect(store().collection('automations')).rejects.toThrow('the daemon keeps its own files');
     expect(existsSync(join(dir, 'sessions', 'abc.json'))).toBe(true);
+
+    // `bots` is not reserved: that folder is the bot plugin's, and the plugin
+    // opens it through this store.
+    await expect(store().collection('bots')).resolves.toBeDefined();
   });
 
   it('refuses to remove a record whose id is not a slug', async () => {

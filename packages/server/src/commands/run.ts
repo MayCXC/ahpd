@@ -12,7 +12,7 @@ import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { canonicalFromCli, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import type { HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   clientPluginsIn,
   createHost,
@@ -45,7 +45,7 @@ import {
 import { DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
 import { here } from '../ask.js';
 import { offerConfigure, askToServe } from './configure.js';
-import { agentPluginsDir, automationsDir, automationStatePath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
+import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
 import { API_PREFIX, apiHandler, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
 import { proxyHandler } from '../proxy/listener.js';
@@ -54,7 +54,7 @@ import { fileRecords } from '../records.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
-import { scheduledAutomations } from '../scheduled.js';
+import { migrateAutomations, scheduledAutomations } from '../scheduled.js';
 import { filesOf, lineFor, writerFor } from '../wire.js';
 import { MAX_AGE_MS, checkingUpdates, readUpdate, refreshUpdate, registry as npmRegistry, stale, updateLine } from '../update.js';
 import { manifest, version } from '../version.js';
@@ -146,6 +146,21 @@ const oneLine = (problem: string): string => problem.replace(/\s*[\r\n]+\s*/gu, 
 export function daemonSessions(told: (message: string) => void): SessionStore {
   migrateSessions({ dir: sessionsDir(), file: sessionsPath(), onProblem: told });
   return fileSessions({ dir: sessionsDir(), onProblem: told });
+}
+
+/**
+ * The automations this daemon keeps, over whatever an earlier one left.
+ *
+ * `automations.json` is split into a file per automation once, before the store
+ * opens, so a daemon that carried every automation it ever saw does not go on
+ * carrying the one file that held them - and so a person editing an automation
+ * has a file to edit rather than a row in a document. The split is this
+ * daemon's business because where its files live is, and the store this version
+ * opens only knows the folder and the state file.
+ */
+export function daemonAutomations(told: (message: string) => void): AutomationStore {
+  migrateAutomations({ file: automationsPath(), dir: automationsDir(), state: automationStatePath(), onProblem: told });
+  return scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), onProblem: told });
 }
 
 /**
@@ -680,13 +695,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     automations: memory
       ? memoryAutomations()
-      : scheduledAutomations({
-        // Beside the configuration, which is this daemon's decision to make and
-        // not the store's - see `ScheduledOptions.dir` and `.state`.
-        dir: automationsDir(),
-        state: automationStatePath(),
-        onProblem: (message) => process.stdout.write(`${message}\n`),
-      }),
+      : daemonAutomations((message) => process.stdout.write(`${message}\n`)),
     /*
      * What an automation that names no owner wakes on, which is a decision
      * about this deployment rather than about the automation: the key reads

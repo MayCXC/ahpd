@@ -188,10 +188,40 @@ An automation that names no owner is the host's own work and has nobody to be. S
 
 | Key | Values | Default | What changes |
 | --- | --- | --- | --- |
-| `automations` | `file` or `memory` | `file` | `file` writes the definitions to `automations.json` beside the configuration and fires their schedules, which is the mode a daemon wants: being running at nine in the morning is the only way a schedule fires with nobody connected. `memory` holds them until the process ends and fires nothing - a client may still write, patch, list and run one, and what it will not get is a `nextRunAt` |
+| `automations` | `file` or `memory` | `file` | `file` keeps each definition as a file of its own, [under `automations/` beside the configuration](#where-an-automation-is-kept), and fires their schedules, which is the mode a daemon wants: being running at nine in the morning is the only way a schedule fires with nobody connected. `memory` holds them until the process ends and fires nothing - a client may still write, patch, list and run one, and what it will not get is a `nextRunAt` |
 | `unownedAutomations` | `every` or `none` | `every` | What an automation that names no owner wakes on |
 
 Run history is in memory either way, in both modes: a run names the sessions it started, and those are this daemon's. Both stores are the same `AutomationStore`, so the host is not told which it was given.
+
+## Where an automation is kept
+
+With `automations: "file"`, the default, an automation is one Markdown file in `<configDir>/automations`, named after the id it has on the catalogue: `ahp-automation:/nightly-review` is `nightly-review.md`. It is the same shape as a record a plugin keeps, held the same way - YAML frontmatter and a Markdown body, written whole at mode 0600 in a folder made at 0700 - and the body is the message a run is given, which is the long text and so the part a person came to the file to read:
+
+```markdown
+---
+title: Nightly review
+enabled: true
+session:
+  provider: claude
+triggers:
+  - id: t1
+    kind: schedule
+    title: Every morning at nine
+    schedule:
+      expression: 0 9 * * *
+      timeZone: Europe/Berlin
+---
+
+Review what changed in the repository today and open a pull request for anything that needs one.
+```
+
+The file name is the id, not a field in the frontmatter, and the id is lowercase letters, digits and dashes, one to sixty-four of them, starting with a letter or a digit - a rule of its own rather than a bot's slug, because a client may name an automation with a UUID - so an id that could not name a file is refused where the automation is written rather than kept somewhere unexpected. A copy under a new name is a new automation: `cp nightly-review.md monday-review.md` installs a second one, which this host picks up at once, with a run history that starts empty.
+
+What a run changes is not in the file. The count against an `afterRuns` allowance, the occurrence it is waiting for, and when it last moved are in `<configDir>/automations-state.json`, so a run never rewrites a file somebody is editing. The file holds what a person wrote: the definition, the owner, and when the automation was made.
+
+A daemon that is running reads a file the moment it changes - added, edited or removed - and follows it at once: the schedule is armed again, the state file is written, and every client subscribed to `ahp-automations://` is told, exactly as if the change had come over the protocol. A file this host will not run, because its frontmatter cannot be read or its definition is one the host refuses, is reported to the log and skipped, with the definition the daemon already had left in place.
+
+A daemon started over the `automations.json` an earlier version wrote converts it once: one file per automation, the run state into the state file, and the original left beside it as `automations.json.migrated`. A folder that already holds an automation is left as it is, file and all.
 
 ## Commands
 

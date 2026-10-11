@@ -7,19 +7,18 @@
  * `an-automation-run-state-is-kept-apart`.
  */
 
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, watch as watchPath, writeFileSync } from 'node:fs';
+import type { FSWatcher } from 'node:fs';
 import { join } from 'node:path';
 import {
   bag,
   disableConditionsOf,
-  isRecordSlug,
   memoryAutomations,
   nextOccurrence,
   ownerOf,
   parseCron,
   readJson,
   reason,
-  RECORD_SLUG,
   writeJsonAtomic,
 } from '@ahpd/sdk';
 import type {
@@ -119,6 +118,9 @@ const BODY = 'message.text';
 /** `setTimeout` will not wait longer than this, so a longer wait is done in instalments. */
 const MAX_DELAY = 2_147_483_647;
 
+/** How long a file's watch events are gathered before it is read, in milliseconds. */
+const WINDOW = 50;
+
 /** One schedule an automation carries, ready to be asked when it next fires. */
 interface Schedule {
   triggerId: string;
@@ -127,6 +129,98 @@ interface Schedule {
   /** Whether a missed occurrence is caught up. `runOnce` is the protocol's default. */
   catchUp: boolean;
 }
+
+/*
+ * The two files, and the handful of answers about them that both the store and
+ * the conversion of an older daemon's file need.
+ *
+ * Kept out here rather than inside `scheduledAutomations` because the
+ * conversion writes files the store then reads, and a conversion that built
+ * them its own way would be a second answer to what an automation's file is.
+ */
+
+/**
+ * What an automation's id may be, told to whoever writes one that is not.
+ *
+ * A rule of its own rather than the record store's slug: that one starts with a
+ * letter, and one client names an automation with a UUID, which starts with a
+ * digit. Nothing else is asked of it here, because the id is only a file name.
+ */
+const AUTOMATION_ID = 'lowercase letters, digits and dashes, one to sixty-four of them, starting with a letter or a digit';
+
+/** Whether this is an automation's id: a file name nothing can climb out of. */
+const isAutomationId = (id: string): boolean => /^[a-z0-9][a-z0-9-]{0,63}$/.test(id);
+
+/** The id a resource names, or nothing when it is not one this store can keep as a file. */
+const idOf = (resource: string): string | undefined => {
+  const id = resource.startsWith(PREFIX) ? resource.slice(PREFIX.length) : undefined;
+  return id !== undefined && isAutomationId(id) ? id : undefined;
+};
+
+/** The file one automation is kept in. */
+const fileIn = (dir: string, id: string): string => join(dir, `${id}.md`);
+
+/** The text of a file, or nothing when it is not there. */
+const textAt = (file: string): string | undefined => {
+  try {
+    return readFileSync(file, 'utf8');
+  }
+  catch {
+    return undefined;
+  }
+};
+
+/** One file written whole at mode `0600`: a temporary beside it, then renamed over it. */
+const wrote = (file: string, text: string): void => {
+  const temporary = `${file}.${String(process.pid)}.tmp`;
+  // Removed first, because `mode` applies only when a file is created.
+  rmSync(temporary, { force: true });
+  writeFileSync(temporary, text, { mode: 0o600 });
+  renameSync(temporary, file);
+};
+
+/** The ids of the `.md` files in a folder, which are the automations it holds. */
+const idsIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true })
+  .filter((one) => one.isFile() && one.name.endsWith('.md'))
+  .map((one) => one.name.slice(0, -'.md'.length))
+  .filter((id) => isAutomationId(id));
+
+/**
+ * One automation as the text of its file.
+ *
+ * The definition, whose work it is and when it was made go in the YAML
+ * frontmatter; the message the automation sends is the body below it, which is
+ * the one long text a person writes. Whatever else the message carried - an
+ * origin, an attachment - stays in the frontmatter, so nothing a client wrote
+ * is lost by the file.
+ */
+const textOf = (held: Held): string => {
+  /*
+   * The one field `StoredRecord` insists on is the one this file writes as its
+   * name instead: an automation's id is the file it is in, so a copy under a
+   * new name is a new automation rather than a second copy of one.
+   *
+   * A key held as `undefined` is one the file stopped naming - see `reread` -
+   * and is left out rather than written as an empty line the person who
+   * deleted it would find again.
+   */
+  const fields = {} as StoredRecord;
+  for (const [key, value] of Object.entries(held.definition)) {
+    if (value !== undefined) (fields as Record<string, unknown>)[key] = value;
+  }
+  const message = bag(fields.message);
+  const text = typeof message.text === 'string' ? message.text : '';
+  const rest = { ...message };
+  delete rest.text;
+  // Left off rather than written empty: a message that is only its text is the
+  // body below, and `message: {}` says nothing a reader came for.
+  if (Object.keys(rest).length === 0) delete fields.message;
+  else fields.message = rest;
+  fields[BODY] = text;
+  if (held.owner !== undefined) fields.owner = held.owner;
+  fields.createdAt = held.createdAt;
+  return recordFile(fields, BODY);
+};
 
 /**
  * A host that fires its own automations.
@@ -187,74 +281,15 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
   /** Closed: the clock is let go of, and nothing is fired or written again. */
   let closed = false;
 
-  /** The id a resource names, or nothing when it is not one this store can keep as a file. */
-  const idOf = (resource: string): string | undefined => {
-    const id = resource.startsWith(PREFIX) ? resource.slice(PREFIX.length) : undefined;
-    return id !== undefined && isRecordSlug(id) ? id : undefined;
-  };
-
   /** The id a resource names, refused: what a client naming one is told. */
   const idFor = (resource: string): string => {
     const id = idOf(resource);
     if (id !== undefined) return id;
-    throw new Error(`${resource || 'That'} is not an automation this host can keep: its id after ${PREFIX} is ${RECORD_SLUG}`);
+    throw new Error(`${resource || 'That'} is not an automation this host can keep: its id after ${PREFIX} is ${AUTOMATION_ID}`);
   };
 
   /** The file one automation is kept in. */
-  const fileOf = (id: string): string => join(dir, `${id}.md`);
-
-  /** The text of a file, or nothing when it is not there. */
-  const textAt = (file: string): string | undefined => {
-    try {
-      return readFileSync(file, 'utf8');
-    }
-    catch {
-      return undefined;
-    }
-  };
-
-  /** One file written whole at mode `0600`: a temporary beside it, then renamed over it. */
-  const wrote = (file: string, text: string): void => {
-    const temporary = `${file}.${String(process.pid)}.tmp`;
-    // Removed first, because `mode` applies only when a file is created.
-    rmSync(temporary, { force: true });
-    writeFileSync(temporary, text, { mode: 0o600 });
-    renameSync(temporary, file);
-  };
-
-  /** The ids of the `.md` files in the folder, which are the automations it holds. */
-  const idsIn = (): string[] => readdirSync(dir, { withFileTypes: true })
-    .filter((one) => one.isFile() && one.name.endsWith('.md'))
-    .map((one) => one.name.slice(0, -'.md'.length))
-    .filter((id) => isRecordSlug(id));
-
-  /**
-   * One automation as the text of its file.
-   *
-   * The definition, whose work it is and when it was made go in the YAML
-   * frontmatter; the message the automation sends is the body below it, which
-   * is the one long text a person writes. Whatever else the message carried -
-   * an origin, an attachment - stays in the frontmatter, so nothing a client
-   * wrote is lost by the file.
-   */
-  const textOf = (held: Held): string => {
-    // The one field `StoredRecord` insists on is the one this file writes as
-    // its name instead: an automation's id is the file it is in, so a copy
-    // under a new name is a new automation rather than a second copy of one.
-    const fields = { ...held.definition } as StoredRecord;
-    const message = bag(fields.message);
-    const text = typeof message.text === 'string' ? message.text : '';
-    const rest = { ...message };
-    delete rest.text;
-    // Left off rather than written empty: a message that is only its text is
-    // the body below, and `message: {}` says nothing a reader came for.
-    if (Object.keys(rest).length === 0) delete fields.message;
-    else fields.message = rest;
-    fields[BODY] = text;
-    if (held.owner !== undefined) fields.owner = held.owner;
-    fields.createdAt = held.createdAt;
-    return recordFile(fields, BODY);
-  };
+  const fileOf = (id: string): string => fileIn(dir, id);
 
   /** One file read as an automation, or nothing when it is reported instead. */
   const heldIn = (id: string, text: string): Held | undefined => {
@@ -566,7 +601,7 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
     if (!existsSync(dir)) return back;
     let ids: string[];
     try {
-      ids = idsIn();
+      ids = idsIn(dir);
     }
     catch (error) {
       told(`Could not read ${dir}: ${reason(error)}`);
@@ -637,6 +672,114 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
     for (const listener of changed) listener(event);
   });
 
+  /**
+   * One file read again, once the events of one save have settled.
+   *
+   * A file that is gone takes its automation with it, a file holding what this
+   * store wrote last is no change, and a file the host refuses is reported with
+   * the definition this store already had left where it was.
+   *
+   * Everything it changes goes through the inner store, which is what announces
+   * the change: the clock is armed again and every listener hears about it on
+   * the same path a client's own write takes.
+   */
+  const reread = (id: string): void => {
+    const resource = `${PREFIX}${id}`;
+    const file = fileOf(id);
+    const text = textAt(file);
+    if (text === undefined) {
+      known.delete(id);
+      inner.remove(resource);
+      return;
+    }
+    // What this store last wrote or read. An event for a file holding it is an
+    // event this store caused, and reading it again would be reading back what
+    // it just wrote.
+    if (known.get(id) === text) return;
+    known.set(id, text);
+    const held = heldIn(id, text);
+    if (held === undefined) return;
+    const before = inner.get(resource);
+    /*
+     * When the file says it was made, and now for when it last moved: the same
+     * pair a client's write leaves.
+     *
+     * Set before the change rather than after it, because the change writes the
+     * file - and a write that happened first would carry the timestamp this
+     * store would have invented for an automation it had never seen, rather
+     * than the one the file a person wrote actually holds.
+     */
+    const stamp = stamps.get(resource);
+    stamps.set(resource, { createdAt: held.createdAt, modifiedAt: now().toISOString() });
+    try {
+      if (before === undefined) {
+        inner.create(resource, held.definition, ownerOf(held.owner));
+      }
+      else {
+        /*
+         * The file's definition exactly, rather than a patch of it.
+         *
+         * `update` leaves an absent key alone, which is what a client's patch
+         * means - and not what a file means: a person who deletes a line is
+         * saying the automation no longer has that field, so a key the old
+         * definition had and the file no longer names is cleared with it.
+         */
+        const changes: Bag = {};
+        for (const key of new Set([...Object.keys(before.definition), ...Object.keys(held.definition)])) {
+          changes[key] = held.definition[key];
+        }
+        inner.update(resource, changes);
+      }
+    }
+    catch (error) {
+      // A definition a person may write and this host will not run. Reported and
+      // skipped, with the definition the store already had left in place - and
+      // the stamp with it, since an automation that did not move did not move.
+      if (stamp === undefined) stamps.delete(resource);
+      else stamps.set(resource, stamp);
+      told(`${file} was not loaded: ${reason(error)}`);
+      return;
+    }
+  };
+
+  /*
+   * The folder, watched so an edit made while this daemon runs is one it acts
+   * on at once.
+   *
+   * One file read again after its events settle rather than on each of them: a
+   * save is several events - a temporary written, a rename - and reading
+   * between them is reading a file nobody has finished writing.
+   *
+   * The folder is made first, because a daemon that has never been given an
+   * automation still has to notice the first one somebody drops in.
+   */
+  const pending = new Map<string, ReturnType<typeof setTimeout>>();
+  let watching: FSWatcher | undefined;
+  try {
+    mkdirSync(dir, { recursive: true, mode: 0o700 });
+    watching = watchPath(dir, (_event, changed) => {
+      // A temporary file, another name, or no name at all is not an automation.
+      if (changed === null || changed === undefined) return;
+      const named = String(changed);
+      if (!named.endsWith('.md')) return;
+      const id = named.slice(0, -'.md'.length);
+      if (!isAutomationId(id)) return;
+      clearTimeout(pending.get(id));
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reread(id);
+      }, WINDOW);
+      // A watch should not be what keeps a daemon up.
+      timer.unref();
+      pending.set(id, timer);
+    });
+    watching.on('error', (error) => { told(`${dir} is no longer watched: ${reason(error)}`); });
+    watching.unref();
+  }
+  catch (error) {
+    told(`${dir} cannot be watched, so an edit there is read at the next start: ${reason(error)}`);
+  }
+
   return {
     ...inner,
     list: () => inner.list().map(dressed),
@@ -700,6 +843,123 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
       catchUp(wasWaiting);
     },
 
-    close: () => { closed = true; disarm(); },
+    close: () => {
+      closed = true;
+      disarm();
+      watching?.close();
+      watching = undefined;
+      for (const timer of pending.values()) clearTimeout(timer);
+      pending.clear();
+    },
   };
+}
+
+/** How the one file an earlier daemon kept every automation in is converted. */
+export interface AutomationMigrationOptions {
+  /** The one file a daemon before this layout left behind, `<configDir>/automations.json`. */
+  file: string;
+  /** The folder the conversion writes one `<id>.md` per automation into. */
+  dir: string;
+  /** The one file the run state of all of them goes in. */
+  state: string;
+  /** Somewhere to say that it could not be read or written. */
+  onProblem?(message: string): void;
+}
+
+/** What the one file held, before an automation was a Markdown file. */
+interface Whole {
+  version: 1;
+  automations: {
+    resource: string;
+    definition: Bag;
+    owner?: string;
+    runCount?: number;
+    customizations?: CapturedPlugin[];
+    createdAt: string;
+    modifiedAt: string;
+    nextRunAt?: string;
+  }[];
+}
+
+/**
+ * Split a file of automations written as one file into a file per automation,
+ * once.
+ *
+ * A daemon that carried every automation it ever saw has them all in one file,
+ * and the store this version opens reads a folder. So the rows become that
+ * folder's files, the run state of all of them becomes the state file, and the
+ * old file is renamed out of the way - which is what says it has been read: a
+ * daemon that finds the folder already holding an automation leaves both alone,
+ * and so does one that finds no file.
+ *
+ * Every row's definition, owner and run state are carried as they were
+ * written. A config a later version would refuse is a person's setting, and is
+ * read back as the store reads any other stored value.
+ *
+ * A file this version cannot read is left exactly as it is and named in a
+ * warning: it is the only copy of what somebody scheduled, and guessing at it
+ * is worse than leaving it for a daemon that can read it.
+ */
+export function migrateAutomations(options: AutomationMigrationOptions): void {
+  const said = (message: string): void => { options.onProblem?.(message); };
+  // An automation already in the folder means the split has happened, whatever
+  // became of the file. The folder itself may be there and empty - a daemon
+  // that started, wrote nothing and stopped leaves one - so it is the files
+  // that answer this rather than the folder.
+  try {
+    if (idsIn(options.dir).length > 0) return;
+  }
+  catch {
+    // No folder at all, which is a daemon that has never kept an automation.
+  }
+  const read = readJson(options.file);
+  // Not there, which is what a first run looks like.
+  if (!read.ok && read.kind === 'missing') return;
+  if (!read.ok) {
+    said(`Could not read ${options.file}: ${reason(read.error)}`);
+    return;
+  }
+  const whole = read.value as Partial<Whole>;
+  if (whole.version !== 1 || !Array.isArray(whole.automations)) {
+    said(`${options.file} is not an automation store this version can read, and was left alone`);
+    return;
+  }
+  const rows: StateRow[] = [];
+  try {
+    mkdirSync(options.dir, { recursive: true, mode: 0o700 });
+    for (const row of whole.automations) {
+      const id = typeof row?.resource === 'string' ? idOf(row.resource) : undefined;
+      // A row nothing could name a file after is left behind with a word about
+      // it: the file is the automation here, so one whose resource is not an id
+      // is one this version has nowhere to keep.
+      if (id === undefined) {
+        said(`${options.file}: ${String(row?.resource ?? 'a row')} is not an automation this version can keep, and was left behind`);
+        continue;
+      }
+      const definition = bag(row.definition);
+      const owner = typeof row.owner === 'string' ? row.owner : undefined;
+      const createdAt = typeof row.createdAt === 'string' ? row.createdAt : new Date().toISOString();
+      wrote(fileIn(options.dir, id), textOf({
+        definition,
+        ...(owner === undefined ? {} : { owner }),
+        createdAt,
+      }));
+      rows.push({
+        resource: row.resource,
+        // Absent while the row named no allowance, as the store writes it: a
+        // count for an automation that has none is a number nothing reads.
+        ...(typeof row.runCount === 'number' ? { runCount: row.runCount } : {}),
+        ...(Array.isArray(row.customizations) ? { customizations: row.customizations } : {}),
+        modifiedAt: typeof row.modifiedAt === 'string' ? row.modifiedAt : createdAt,
+        ...(typeof row.nextRunAt === 'string' ? { nextRunAt: row.nextRunAt } : {}),
+      });
+    }
+    writeJsonAtomic(options.state, { version: 1, automations: rows });
+    // Renamed rather than deleted, and only once every row is a file: a daemon
+    // that is killed halfway has to find something to start from again.
+    renameSync(options.file, `${options.file}.migrated`);
+  }
+  catch (error) {
+    said(`Could not convert ${options.file}: ${reason(error)}`);
+  }
 }

@@ -170,10 +170,11 @@ pull request rather than failing, and an answer that fails keeps what was held.
 `memoryAutomations()` holds definitions and runs them when asked. It has no
 clock, and it says so by leaving `nextRunAt` off. The clock store is the
 daemon's, in `@ahpd/server`, and that package exports no library: a five-field
-cron in a named time zone, definitions in `automations.json`, and one catch-up
-run for what was missed while the host was down. A program that wants a clock
-writes its own `AutomationStore` over `memoryAutomations()`, with
-`parseCron` and `nextOccurrence` from this package.
+cron in a named time zone, one Markdown file per definition under
+`<configDir>/automations`, and one catch-up run for what was missed while the
+host was down. A program that wants a clock writes its own `AutomationStore`
+over `memoryAutomations()`, with `parseCron` and `nextOccurrence` from this
+package.
 A run reads `running` while any session it started is executing or waiting on a
 person, and the host says the execution ended through `settle`: a store that
 implements it records the terminal `completed`, `failed` or `cancelled` and
