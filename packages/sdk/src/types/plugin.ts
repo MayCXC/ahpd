@@ -20,6 +20,7 @@ import type { SessionConfigAnswerer } from './completions.js';
 import type { EventHandler, EventName, HostHandlers } from './events.js';
 import type { Host, HostOptions, HostTool } from './host.js';
 import type { MachineNeed } from './machine.js';
+import type { CollectionOptions, RecordCollection } from './records.js';
 import type { ResourceProvider } from './resources.js';
 import type { Owner, UsageEntry } from './usage.js';
 import type { Grant, Principal } from './users.js';
@@ -363,7 +364,8 @@ export type PortKey =
   | 'containers'
   | 'usage'
   | 'policies'
-  | 'vault';
+  | 'vault'
+  | 'records';
 
 /**
  * What one port key holds.
@@ -596,6 +598,17 @@ export interface PluginHost extends PluginContext {
    */
   sessionOwner(uri: string): Promise<Owner | undefined>;
   /**
+   * One collection of this plugin's records, in the host's `records` port.
+   *
+   * The name is a slug, and a name that another plugin opened is refused, so
+   * two plugins never share one collection. Each call on the collection waits
+   * until the fold names the port, so a plugin opens one while `apply` runs and
+   * a plugin that registers a store may load after this one. A host with no
+   * `records` port refuses each call - decision
+   * `a-plugin-keeps-records-in-the-host-store`.
+   */
+  records(name: string, options?: CollectionOptions): RecordCollection;
+  /**
    * Start a session for somebody, and answer its URI.
    *
    * A plugin that needs a session of its own - a bot, a machine that has to be
@@ -740,6 +753,13 @@ export interface PluginHost extends PluginContext {
    * vault is a plain file beside the configuration.
    */
   registerVault(vault: PortOf<'vault'>, when?: 'replace'): void;
+  /**
+   * Set `HostOptions.records`, or take the daemon's over with `'replace'`.
+   *
+   * The store every plugin's collections are in, so a plugin over sqlite or a
+   * database several daemons share moves every plugin's records with one call.
+   */
+  registerRecords(store: PortOf<'records'>, when?: 'replace'): void;
   /**
    * Serve one HTTP route, on this host's own listener, under this plugin's name.
    *

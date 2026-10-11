@@ -18,6 +18,7 @@ import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
 import type { Policies } from './policies.js';
+import type { RecordStore } from './records.js';
 import type { Vault } from './vault.js';
 import type { Peer, Request } from './rpc.js';
 import type { Summary } from './catalog.js';
@@ -291,6 +292,14 @@ export interface HostOptions {
    * one plain JSON file in the configuration directory.
    */
   vault?: Vault;
+  /**
+   * Where each plugin keeps its own records, as named collections.
+   *
+   * Left out, a plugin that opens a collection is told the host has no record
+   * store on its first call. `memoryRecords()` ships with this package -
+   * decision `a-plugin-keeps-records-in-the-host-store`.
+   */
+  records?: RecordStore;
   /**
    * Whether what the policies say is enforced.
    *

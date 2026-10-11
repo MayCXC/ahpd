@@ -1,7 +1,7 @@
 ---
 title: A plugin keeps its records in the host's record store, and the bot keeps its records there
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-10
 revalidated: 2026-10-11
@@ -75,7 +75,7 @@ The child plans hold the second table for their own tasks.
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | planned | cofold commands/05 |
+| [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | active | cofold commands/05 |
 | [p2 - The bot keeps its records in the record store](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | planned | p1 |
 
 ## Risks and tradeoffs
@@ -86,8 +86,8 @@ The child plans hold the second table for their own tasks.
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** cofold plan commands/05, then the p1 plan.
+- **Done so far:** p1 task 01 is implemented and awaits review.
+- **Next action:** cofold plan commands/05, then p1 tasks 02 and 03.
 - **Open questions:** none.
 - **Watch out for:** host plan 80 needs p1's Markdown record code in the server.
 
