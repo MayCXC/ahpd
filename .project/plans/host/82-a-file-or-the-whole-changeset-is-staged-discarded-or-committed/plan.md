@@ -46,6 +46,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Stage, unstage and discard also take the whole changeset; the client sends one call with no target | Softov, 2026-10-11, asked "For stage, unstage and discard, how should All files work?", answered "host takes the whole set" | 01 |
 | Commit also takes one file, and commits that path only; other staged files stay staged | Softov, 2026-10-11, asked "For commit, how should This file work?", answered "host commits one file" | 02 |
 | Revert keeps one file only | (defaulted: Softov named commit, discard, stage and unstage) | - |
+| Discard on the whole changeset is refused in a repository with no commit, because there it would delete every file | Softov, 2026-10-11, asked "In a repository with no commit yet, Discard, All files deletes every non-ignored file in the folder. What should ahpd do there?", answered "Refuse it" | 01 |
 | A rename's `before` URI is the path it came from, and its content is read from HEAD at that path | (defaulted: the protocol shows a rename as two URIs, and the client derives its letter from that) | 03 |
 | No new `_meta` key for the git letter; the client derives it from `before`, `after` and `ahpd.staged` | (defaulted: the protocol and the current `_meta` carry everything but the rename) | 03 |
 | The discard confirmation names no file: "Discard these changes? This cannot be undone." | (defaulted: one confirmation serves both targets) | 01 |

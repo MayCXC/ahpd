@@ -1429,17 +1429,18 @@ export function gitChanges(): ChangesetSource {
         /*
          * Every tracked change back to HEAD, then every untracked file removed.
          *
-         * A repository with no commit has no HEAD to restore from, so there the
-         * index is emptied and every file is then untracked. `restore` fails on
-         * a directory that holds only untracked files, because no path under it
-         * is known to git, and that failure leaves nothing for it to do. `clean`
-         * removes the files of a directory git does not track and then fails to
-         * remove the directory itself, so it is judged by what is left.
+         * A repository with no commit is refused: there every file is new, and
+         * putting the tree back to nothing would delete all of it. `restore`
+         * fails on a directory that holds only untracked files, because no path
+         * under it is known to git, and that failure leaves nothing for it to
+         * do. `clean` removes the files of a directory git does not track and
+         * then fails to remove the directory itself, so it is judged by what is
+         * left.
          */
-        const noCommit = await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD']) === undefined;
-        const back = noCommit
-          ? await run(dir, ['rm', '--cached', '-r', '-q', '--', '.'])
-          : await run(dir, ['restore', '--staged', '--worktree', '--source=HEAD', '--', '.']);
+        if (await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD']) === undefined) {
+          throw new Error('Nothing to discard to: this repository has no commit yet.');
+        }
+        const back = await run(dir, ['restore', '--staged', '--worktree', '--source=HEAD', '--', '.']);
         if (!back.ok && !/did not match/.test(back.err)) throw new Error(`Could not discard: ${back.err || back.out.trim()}`);
         const cleaned = await run(dir, ['clean', '-f', '--', '.']);
         const left = cleaned.ok ? '' : await git(dir, ['ls-files', '--others', '--exclude-standard', '--', '.']);

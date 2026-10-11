@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -539,15 +539,16 @@ describe('the whole changeset as a target', () => {
     expect(porcelain(repo)).not.toContain('sub/new');
   });
 
-  it('discards every change in a repository with no commit yet', async () => {
+  it('refuses to discard every change in a repository with no commit yet', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'ahpd-commit-'));
     made.push(dir);
     execFileSync('git', ['init', '-q', '-b', 'main', dir]);
     writeFileSync(join(dir, 'first.txt'), 'one\n');
     writeFileSync(join(dir, 'second.txt'), 'two\n');
     git(dir, 'add', 'first.txt');
-    await operate(dir, 'discard');
-    expect(porcelain(dir)).toBe('');
+    await expect(operate(dir, 'discard')).rejects.toThrow('Nothing to discard to: this repository has no commit yet.');
+    expect(existsSync(join(dir, 'first.txt'))).toBe(true);
+    expect(existsSync(join(dir, 'second.txt'))).toBe(true);
   });
 
   it('still refuses a folder named as a resource for discard', async () => {

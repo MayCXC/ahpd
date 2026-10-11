@@ -699,7 +699,8 @@ back to the state the agent found it in, and `stage` and `unstage` move a file, 
 folder or the whole changeset in or out of the index. A call with no `target` is
 the whole changeset: every change under the session's folder, untracked files
 included. `discard` on the whole changeset removes untracked files too, and its
-`confirmation` says it cannot be undone.
+`confirmation` says it cannot be undone. In a repository with no commit it is
+refused, because there every file is new and it would delete all of them.
 
 `commit` carries a `confirmation` naming the subject line it will use and what the
 whole changeset would take: the staged files when the index holds any, and every

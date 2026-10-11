@@ -15,7 +15,7 @@ A renamed file's row has the old path in `before` and the new path in `after`.
 ## What was built
 
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `look()` keeps the old path of an `R` record and uses it for `before`. A rename from outside the directory is a new file.
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `DISCARD`, `STAGE` and `UNSTAGE` take the changeset scope. With no target, `invoke` acts on `.`. Discard runs `restore` and then `clean` on the whole directory.
+- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `DISCARD`, `STAGE` and `UNSTAGE` take the changeset scope. With no target, `invoke` acts on `.`. Discard runs `restore` and then `clean` on the whole directory. In a repository with no commit, discard on the whole changeset is refused.
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `COMMIT` takes the resource scope. One file is committed with `git commit --only`, and a renamed row passes both paths. The confirmation names the message first and then what the whole changeset takes.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - each operation on the whole changeset, and commit on one file over each kind of change.
 - [`code://packages/sdk/test/changes-uris.test.ts`](../../../../packages/sdk/test/changes-uris.test.ts) - a rename's two URIs, from the repository root and from a subfolder.
