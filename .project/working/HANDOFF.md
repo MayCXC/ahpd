@@ -4,27 +4,37 @@ title: "Handoff: where ahpd stands, and what is pending"
 
 # Handoff: where `ahpd` stands, and what is pending
 
-Current progress and pending items only, as of 2026-10-10.
+Current progress and pending items only, as of 2026-10-11.
 [plans/index.md](../plans/index.md) is the backlog and each plan's Resume state is its detail; what merged is in `git log`.
 
 ## Main
 
-- `main` is at `5f4c87a`, one commit ahead of `origin/main` (this handoff). `d1d950b` is pushed and CI is green (run 38066810517, 3m29s).
-- The version is still 0.10.0, with 115 commits since the `v0.10.0` tag. The bump and the tag are Softov's.
-- The review of 2026-10-10 found four release blockers:
+- `main` is at `9c5e31d` and pushed. CI is green on it (run 38132745654, 3m24s).
+- The version is still 0.10.0, with 152 commits since the `v0.10.0` tag. The bump and the tag are Softov's.
+- The review of 2026-10-10 found four release blockers, and all four are still open:
   - `bot` and `push` are not in `PUBLISHED` in `release.yml`.
   - The plugins' `sdk` peer range is `>=0.10`.
   - `packages/push` has no LICENSE.
   - The decision `the-whole-workspace-is-published` still says eight packages.
 - CI runs `test:unit` in the `check` job and `test:processes` in the `processes` job. If `processes` nears its 300 s limit, the next file to move out is `computer-git-fetch`.
 
+## Push
+
+- `9c5e31d` sends `A session finished` when a session's own chat completes a turn, with `data.kind` `turnComplete`. A cancelled turn and a subagent chat send nothing. See [`packages/push/README.md`](../../packages/push/README.md).
+- No plan records it yet. [plugin/33](../plans/plugin/33-a-phone-hears-a-session-needs-a-person/plan.md) is `built` and covers only the wait. Offer Softov a task or a plan.
+- The daemon needs a restart in Softov's terminal to load it.
+
 ## Build worktrees
+
+Every build branch is merged into `main` and has no commit of its own left. Remove each worktree and its branch, and keep the sessions.
 
 | Worktree | Branch head | State |
 |---|---|---|
-| `build-agents-f8d0dae8` | `cfb1224` | [plugin/18](../plans/plugin/18-the-acp-bridge-resumes-forks-and-asks/plan.md) tasks 01-04 implemented, reviewed 2026-10-10. The fork reopen bug is fixed there, uncommitted, with a test. Three forks wait for Softov: cancel and decline are the same to a backend, an unknown form field is asked as text, `resumable()` reads only `loadSession`. Before the commit, revert the regenerated `wire.jsonl`; expect a rebase conflict with `ab763e4`. |
-
-The `build-agents-428b7b46` and `build-agents-cofold-uptake` worktrees and their branches are removed.
+| `build-agents-0f517bb0` | `8d7f781` | [daemon/18](../plans/daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md), `built`. Clean. |
+| `build-agents-3526294c` | `e01e889` | [plugin/18](../plans/plugin/18-the-acp-bridge-resumes-forks-and-asks/plan.md) tasks 05-06, `built`. Clean. |
+| `build-agents-485f9aa5` | `b49d247` | container/05 p10 plan and the host/79 merge. Clean. |
+| `build-agents-f8d0dae8` | `7dc2a70` | plugin/18 tasks 01-04. Clean. |
+| `daemon-19` | `9d64f99` | [daemon/19](../plans/daemon/19-a-plugin-is-known-by-its-id/plan.md), `built`. Only a regenerated `wire.jsonl` is changed: discard it. |
 
 ## Plans to close
 
@@ -46,13 +56,13 @@ The `build-agents-428b7b46` and `build-agents-cofold-uptake` worktrees and their
 
 ## Next builds
 
-- [host/79](../plans/host/79-a-quiet-session-sleeps-and-wakes/plan.md): planned, builds once Softov says so.
+- [host/79](../plans/host/79-a-quiet-session-sleeps-and-wakes/plan.md) and [plugin/46](../plans/plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) are merged and `active`: review them, then close them.
 - container/05 p9 tasks 02, 03 and 05; task 07 waits on 06.
-- plugin/19 after plugin/18; container/05 p8, p10, p11, p12; host/33 task files; documentation/02 waits on ahpc cli/02.
+- plugin/19, now that plugin/18 is built; container/05 p8, p10, p11, p12; host/33 task files; documentation/02 waits on ahpc cli/02.
 - To offer: a VS Code parity host plan (`runCancellation`, `runHistoryLimit`, `customizations`, `_meta.hostBuild`, `vscode.agentHost.resources`, `agentCustomizationSettings`, `remoteSessions`, `completionTriggerCharacters`).
 
 ## Open with Softov
 
-- About 21 idle claude processes (about 4.5 GB) wait for an ahpd restart, until host/79 lands.
+- host/79 is merged, so the next ahpd restart puts idle sessions to sleep. Until then, the idle claude processes stay.
 - The dev container stop problem, VS Code "No models available", the stale `wire.jsonl` fixture, the unset `ANTHROPIC_API_KEY`, the papo flaky-test offer, the ahpc cancel bug.
 - Open problems are in [problems/](../problems/).
