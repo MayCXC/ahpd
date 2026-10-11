@@ -23,7 +23,7 @@ import type { Chosen, MessageFrom, Session } from '../src/types/session.js';
  * not do it says by leaving `nextRunAt` off rather than by refusing the
  * definition - a client reads that as "this host will not fire that".
  *
- * The other half is `scheduledAutomations`, and it has its own file.
+ * The other half is the daemon's clock store, in `@ahpd/server`.
  */
 
 const DIR = '/tmp/autos';

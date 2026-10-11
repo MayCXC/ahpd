@@ -35,7 +35,6 @@ import {
   overStdio,
   peopleChannels,
   raise,
-  scheduledAutomations,
   servedRecords,
   shellTerminals,
   signInRecord,
@@ -54,6 +53,7 @@ import { loadPlugins } from '../plugins.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
+import { scheduledAutomations } from '../scheduled.js';
 import { filesOf, lineFor, writerFor } from '../wire.js';
 import { MAX_AGE_MS, checkingUpdates, readUpdate, refreshUpdate, registry as npmRegistry, stale, updateLine } from '../update.js';
 import { manifest, version } from '../version.js';

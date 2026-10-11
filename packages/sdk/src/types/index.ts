@@ -41,7 +41,7 @@ export type { SessionConfigAnswerer, SessionConfigAsk } from './completions.js';
 export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTerminal, OpenedTerminal, StartTerminals } from './terminals.js';
 export type { GitDir, Worktree, Worktrees } from './worktrees.js';
 export type { NewPullRequest, PullRequest, PullRequests } from './github.js';
-export type { Automation, AutomationRun, AutomationStore, RunEnding, StartSession } from './automations.js';
+export type { Automation, AutomationEntry, AutomationRun, AutomationStore, RunEnding, StartSession } from './automations.js';
 export type { Grant, Named, Principal, Role, UserFile, UserRecord, Users, Verb } from './users.js';
 export type { ComputerTime, Cost, ModelCall, ModelUse, Owner, Usage, UsageBase, UsageEntry, UsageGroup, UsageKey, UsageTotal } from './usage.js';
 export type {

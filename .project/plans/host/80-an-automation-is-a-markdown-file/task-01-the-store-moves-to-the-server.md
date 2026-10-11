@@ -1,6 +1,6 @@
 ---
 title: The store moves to the server
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk, packages/server"
 refs:
@@ -42,3 +42,5 @@ The sdk exports `memoryAutomations` and the port, and no clock store.
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+Implemented 2026-10-11. `scheduledAutomations` and `ScheduledOptions` are in `packages/server/src/scheduled.ts`, and `run.ts` imports the store from `../scheduled.js`. The store imports from `@ahpd/sdk`, so the sdk now also exports `disableConditionsOf`, `parseCron`, `nextOccurrence`, and the types `Cron` and `AutomationEntry`. The two clock cases of `host-close.test.ts` and the clock case of `trigger-types.test.ts` are now in `packages/server/test/scheduled.test.ts`, so the number of cases is the same. `docs/LIBRARY.md`, `README.md` and `packages/sdk/README.md` show `memoryAutomations`, and they say that the clock store is the daemon's.

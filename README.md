@@ -496,7 +496,7 @@ import {
   gitBranches,
   gitChanges,
   githubPullRequests,
-  scheduledAutomations,
+  memoryAutomations,
   hostTools
 } from '@ahpd/sdk';
 
@@ -513,7 +513,7 @@ const host = createHost({
   changes: gitChanges(),
   directories: gitBranches(),
   github: githubPullRequests(),
-  automations: scheduledAutomations({ file: 'automations.json' }),
+  automations: memoryAutomations(),
   tools: hostTools(),
   onEvent: (line) => {
     process.stdout.write(`${line}\n`);
