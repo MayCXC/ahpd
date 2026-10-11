@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -202,7 +202,7 @@ describe('the commit the changeset offers', () => {
     writeFileSync(join(dir, 'a.txt'), 'a2\n');
     writeFileSync(join(dir, 'b.txt'), 'b2\n');
     git(dir, 'add', 'a.txt');
-    expect(await offered(dir, 'Fix the build')).toBe("Commit 1 staged file as 'Fix the build'?");
+    expect(await offered(dir, 'Fix the build')).toBe("Commit as 'Fix the build'? The whole changeset takes 1 staged file.");
   });
 
   it('counts every file and the untracked ones when nothing is staged', async () => {
@@ -214,7 +214,7 @@ describe('the commit the changeset offers', () => {
     writeFileSync(join(dir, 'a.txt'), 'a2\n');
     writeFileSync(join(dir, 'b.txt'), 'b2\n');
     writeFileSync(join(dir, 'c.txt'), 'c\n');
-    expect(await offered(dir, 'Fix the build')).toBe("Commit 3 files, 1 untracked, as 'Fix the build'?");
+    expect(await offered(dir, 'Fix the build')).toBe("Commit as 'Fix the build'? The whole changeset takes 3 files, 1 untracked.");
   });
 });
 
@@ -431,7 +431,7 @@ describe('staging from the changeset', () => {
     await operate(dir, 'stage', `file://${dir}/a.txt`);
     expect(porcelain(dir)).toBe('M  a.txt\n M b.txt\n?? new/');
     const commit = (await offered(dir, 'Fix the build')).find((one) => one.id === 'commit');
-    expect(commit?.confirmation).toBe("Commit 1 staged file as 'Fix the build'?");
+    expect(commit?.confirmation).toBe("Commit as 'Fix the build'? The whole changeset takes 1 staged file.");
 
     await operate(dir, 'stage', `file://${dir}/new/`);
     expect(porcelain(dir)).toBe('M  a.txt\n M b.txt\nA  new/c.txt');
@@ -468,5 +468,189 @@ describe('staging from the changeset', () => {
     git(dir, 'add', 'first.txt');
     await operate(dir, 'unstage', `file://${dir}/first.txt`);
     expect(porcelain(dir)).toBe('?? first.txt');
+  });
+});
+
+describe('the whole changeset as a target', () => {
+  /**
+   * A repository with `top.txt` and `sub/inside.txt` committed, both changed,
+   * `sub/staged.txt` committed and changed and staged, and an untracked file
+   * in `sub/new/` and at the root. The session's folder is `sub/`.
+   */
+  const nested = (): { repo: string; dir: string } => {
+    const repo = repository();
+    mkdirSync(join(repo, 'sub'));
+    writeFileSync(join(repo, 'top.txt'), 'one\n');
+    writeFileSync(join(repo, 'sub', 'inside.txt'), 'one\n');
+    writeFileSync(join(repo, 'sub', 'staged.txt'), 'one\n');
+    git(repo, 'add', '-A');
+    git(repo, 'commit', '-q', '-m', 'nested');
+    writeFileSync(join(repo, 'top.txt'), 'two\n');
+    writeFileSync(join(repo, 'sub', 'inside.txt'), 'two\n');
+    writeFileSync(join(repo, 'sub', 'staged.txt'), 'two\n');
+    git(repo, 'add', 'sub/staged.txt');
+    mkdirSync(join(repo, 'sub', 'new'));
+    writeFileSync(join(repo, 'sub', 'new', 'c.txt'), 'one\n');
+    writeFileSync(join(repo, 'root.txt'), 'root\n');
+    return { repo, dir: join(repo, 'sub') };
+  };
+
+  it('offers stage, unstage and discard on one file and on the whole changeset', async () => {
+    const { dir } = nested();
+    const source = gitChanges();
+    await source.refresh?.(dir);
+    const offered = source.operations?.(dir, 'ahp-session:/s', 'uncommitted', {}) ?? [];
+    for (const id of ['stage', 'unstage', 'discard']) {
+      expect(offered.find((one) => one.id === id)?.scopes).toEqual(['resource', 'changeset']);
+    }
+    expect(offered.find((one) => one.id === 'discard')?.confirmation).toBe('Discard these changes? This cannot be undone.');
+  });
+
+  it('stages every change under the folder, untracked included, and nothing outside it', async () => {
+    const { repo, dir } = nested();
+    const said = await operate(dir, 'stage');
+    expect(said?.message).toBe('Staged every change');
+    expect(porcelain(repo)).toBe('M  sub/inside.txt\nA  sub/new/c.txt\nM  sub/staged.txt\n M top.txt\n?? root.txt');
+  });
+
+  it('unstages every change under the folder and leaves the working tree as it was', async () => {
+    const { repo, dir } = nested();
+    git(repo, 'add', 'top.txt');
+    await operate(dir, 'stage');
+    const said = await operate(dir, 'unstage');
+    expect(said?.message).toBe('Unstaged every change');
+    expect(porcelain(repo)).toBe(' M sub/inside.txt\n M sub/staged.txt\nM  top.txt\n?? root.txt\n?? sub/new/');
+    expect(git(repo, 'show', ':sub/inside.txt')).toBe('one');
+    expect(git(repo, 'diff', '--', 'sub/inside.txt')).toContain('+two');
+  });
+
+  it('discards every change under the folder, untracked files too, and nothing outside it', async () => {
+    const { repo, dir } = nested();
+    const said = await operate(dir, 'discard');
+    expect(said?.message).toBe('Discarded every change');
+    expect(porcelain(repo)).toBe(' M top.txt\n?? root.txt');
+    expect(git(repo, 'show', 'HEAD:sub/staged.txt')).toBe('one');
+  });
+
+  it('discards a folder that holds only untracked files', async () => {
+    const { repo } = nested();
+    const said = await operate(join(repo, 'sub', 'new'), 'discard');
+    expect(said?.message).toBe('Discarded every change');
+    expect(porcelain(repo)).not.toContain('sub/new');
+  });
+
+  it('refuses to discard every change in a repository with no commit yet', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-commit-'));
+    made.push(dir);
+    execFileSync('git', ['init', '-q', '-b', 'main', dir]);
+    writeFileSync(join(dir, 'first.txt'), 'one\n');
+    writeFileSync(join(dir, 'second.txt'), 'two\n');
+    git(dir, 'add', 'first.txt');
+    await expect(operate(dir, 'discard')).rejects.toThrow('Nothing to discard to: this repository has no commit yet.');
+    expect(existsSync(join(dir, 'first.txt'))).toBe(true);
+    expect(existsSync(join(dir, 'second.txt'))).toBe(true);
+  });
+
+  it('still refuses a folder named as a resource for discard', async () => {
+    const { dir } = nested();
+    await expect(operate(dir, 'discard', `file://${dir}`)).rejects.toThrow('That operation takes one file, not a folder.');
+  });
+});
+
+describe('committing one file', () => {
+  /** A commit of the file at `resource` alone, under `message`. */
+  const commitOne = (dir: string, resource: string, message: string) => {
+    const source = gitChanges();
+    if (source.invoke === undefined) throw new Error('gitChanges() no longer runs operations');
+    return source.invoke({
+      dir,
+      session: 'ahp-session:/s',
+      scope: 'uncommitted',
+      operationId: 'commit',
+      target: { kind: 'resource', resource },
+      meta: { 'ahpd.commit': { message } },
+    });
+  };
+
+  /** A tree with `a.txt` changed and unstaged, `b.txt` changed and staged, and `c.txt` changed and unstaged. */
+  const three = (): string => {
+    const dir = repository();
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) writeFileSync(join(dir, name), 'one\n');
+    git(dir, 'add', '-A');
+    git(dir, 'commit', '-q', '-m', 'three');
+    for (const name of ['a.txt', 'b.txt', 'c.txt']) writeFileSync(join(dir, name), 'two\n');
+    git(dir, 'add', 'b.txt');
+    return dir;
+  };
+
+  /** The paths the last commit touched, with git's status letter for each. */
+  const touched = (dir: string): string => git(dir, 'show', '--name-status', '-M', '--format=', 'HEAD');
+
+  it('offers commit on one file and on the whole changeset', async () => {
+    const dir = three();
+    const source = gitChanges();
+    await source.refresh?.(dir);
+    const commit = source.operations?.(dir, 'ahp-session:/s', 'uncommitted', {})?.find((one) => one.id === 'commit');
+    expect(commit?.scopes).toEqual(['changeset', 'resource']);
+  });
+
+  it('commits the working tree of an unstaged file, and leaves the staged one staged', async () => {
+    const dir = three();
+    const said = await commitOne(dir, `file://${dir}/a.txt`, 'Only a');
+    expect(touched(dir)).toBe('M\ta.txt');
+    expect(git(dir, 'show', 'HEAD:a.txt')).toBe('two');
+    expect(porcelain(dir)).toBe('M  b.txt\n M c.txt');
+    expect(said?.message).toBe(`Committed ${git(dir, 'rev-parse', '--short', 'HEAD')}: Only a`);
+  });
+
+  it('commits a staged file and only that file', async () => {
+    const dir = three();
+    git(dir, 'add', 'c.txt');
+    await commitOne(dir, `file://${dir}/b.txt`, 'Only b');
+    expect(touched(dir)).toBe('M\tb.txt');
+    expect(porcelain(dir)).toBe(' M a.txt\nM  c.txt');
+  });
+
+  it('commits an untracked file as a new file', async () => {
+    const dir = three();
+    writeFileSync(join(dir, 'fresh.txt'), 'new\n');
+    await commitOne(dir, `file://${dir}/fresh.txt`, 'Fresh');
+    expect(touched(dir)).toBe('A\tfresh.txt');
+    expect(porcelain(dir)).toBe(' M a.txt\nM  b.txt\n M c.txt');
+  });
+
+  it('commits a deleted file as a deletion, staged or not', async () => {
+    const dir = three();
+    rmSync(join(dir, 'a.txt'));
+    await commitOne(dir, `file://${dir}/a.txt`, 'Drop a');
+    expect(touched(dir)).toBe('D\ta.txt');
+    git(dir, 'rm', '-q', '-f', 'c.txt');
+    await commitOne(dir, `file://${dir}/c.txt`, 'Drop c');
+    expect(touched(dir)).toBe('D\tc.txt');
+    expect(porcelain(dir)).toBe('M  b.txt');
+  });
+
+  it('commits a staged rename as one rename', async () => {
+    const dir = three();
+    git(dir, 'mv', 'tracked.txt', 'moved.txt');
+    await commitOne(dir, `file://${dir}/moved.txt`, 'Move');
+    expect(touched(dir)).toBe('R100\ttracked.txt\tmoved.txt');
+    expect(porcelain(dir)).toBe(' M a.txt\nM  b.txt\n M c.txt');
+  });
+
+  it('commits a working-tree rename as one rename', async () => {
+    const dir = three();
+    renameSync(join(dir, 'tracked.txt'), join(dir, 'moved.txt'));
+    git(dir, 'add', '-N', 'moved.txt');
+    await commitOne(dir, `file://${dir}/moved.txt`, 'Move');
+    expect(touched(dir)).toBe('R100\ttracked.txt\tmoved.txt');
+    expect(porcelain(dir)).toBe(' M a.txt\nM  b.txt\n M c.txt');
+  });
+
+  it('refuses the folder itself and a file outside it', async () => {
+    const dir = three();
+    await expect(commitOne(dir, `file://${dir}`, 'All')).rejects.toThrow('That operation takes one file, not a folder.');
+    await expect(commitOne(join(dir, 'sub'), `file://${dir}/a.txt`, 'Out')).rejects.toThrow('That file is not in this directory.');
+    expect(git(dir, 'log', '-1', '--format=%s')).toBe('three');
   });
 });

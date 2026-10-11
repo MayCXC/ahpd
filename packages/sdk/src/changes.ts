@@ -2,7 +2,7 @@
 
 import { execFile } from 'node:child_process';
 import { watch, type FSWatcher } from 'node:fs';
-import { readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import { lstat, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
@@ -226,8 +226,8 @@ interface Captured {
 const COMMIT: ChangesetOperation = {
   id: 'commit',
   label: 'Commit',
-  description: 'Commit what is staged, or every change when nothing is',
-  scopes: ['changeset'],
+  description: 'Commit this file, or what is staged, or every change when nothing is',
+  scopes: ['changeset', 'resource'],
   icon: 'git-commit',
   group: 'commit',
   writes: true,
@@ -236,30 +236,31 @@ const COMMIT: ChangesetOperation = {
 /**
  * The question `commit` asks, built from the last look at the directory.
  *
- * Taking the index and taking the whole tree are different acts, so the
- * sentence says which one this would be, names the subject line, and counts
- * what it would take. A session nobody has named is named by the fallback the
- * commit would use, so the sentence does not promise a title that will not be
- * there.
+ * One sentence serves a file and the whole changeset, so it names the subject
+ * line first and then says what the whole changeset would take: the index when
+ * it holds anything, and every file when it holds nothing. A session nobody
+ * has named is named by the fallback the commit would use, so the sentence
+ * does not promise a title that will not be there.
  */
 const commitConfirmation = (files: readonly ChangesetFile[], subject: string | undefined): string => {
   const named = (subject ?? '').trim();
   const name = named === '' ? 'Changes from an agent session' : named;
+  const asked = `Commit as '${name}'?`;
   const staged = files.filter((one) => one._meta?.['ahpd.staged'] === true).length;
   if (staged > 0) {
-    return `Commit ${staged} staged ${staged === 1 ? 'file' : 'files'} as '${name}'?`;
+    return `${asked} The whole changeset takes ${staged} staged ${staged === 1 ? 'file' : 'files'}.`;
   }
   const untracked = files.filter((one) => one._meta?.['ahpd.staged'] !== true && one.edit.before === undefined).length;
   const counted = `${files.length} ${files.length === 1 ? 'file' : 'files'}`;
-  return `Commit ${counted}${untracked > 0 ? `, ${untracked} untracked` : ''}, as '${name}'?`;
+  return `${asked} The whole changeset takes ${counted}${untracked > 0 ? `, ${untracked} untracked` : ''}.`;
 };
 
 const DISCARD: ChangesetOperation = {
   id: 'discard',
   label: 'Discard Changes',
-  description: 'Put this file back the way HEAD has it',
-  scopes: ['resource'],
-  confirmation: 'Discard the changes to this file? This cannot be undone.',
+  description: 'Put this file, or every change, back the way HEAD has it',
+  scopes: ['resource', 'changeset'],
+  confirmation: 'Discard these changes? This cannot be undone.',
   icon: 'discard',
   writes: true,
 };
@@ -268,8 +269,8 @@ const DISCARD: ChangesetOperation = {
 const STAGE: ChangesetOperation = {
   id: 'stage',
   label: 'Stage Changes',
-  description: 'Add this file or folder to what the next commit takes',
-  scopes: ['resource'],
+  description: 'Add this file or folder, or every change, to what the next commit takes',
+  scopes: ['resource', 'changeset'],
   icon: 'add',
   group: 'stage',
 };
@@ -278,8 +279,8 @@ const STAGE: ChangesetOperation = {
 const UNSTAGE: ChangesetOperation = {
   id: 'unstage',
   label: 'Unstage Changes',
-  description: 'Take this file or folder out of what the next commit takes, keeping its changes',
-  scopes: ['resource'],
+  description: 'Take this file or folder, or every change, out of what the next commit takes, keeping its changes',
+  scopes: ['resource', 'changeset'],
   icon: 'remove',
   group: 'stage',
 };
@@ -640,12 +641,19 @@ export function gitChanges(): ChangesetSource {
       // a second NUL record after its own, holding the path the file came from,
       // and it is consumed here or it is read as a row of its own with a status
       // made of that path's first two letters.
-      if (/[RC]/.test(code)) at += 1;
+      const source = /[RC]/.test(code) ? records[++at] : undefined;
       // A change elsewhere in the repository is not this directory's.
       if (!fromRoot.startsWith(prefix)) continue;
       const path = fromRoot.slice(prefix.length);
+      // The path a renamed file came from, inside this directory. A copy's
+      // source is still there, so a copy keeps its own path on both sides.
+      const moved = code.includes('R') && source !== undefined && source.startsWith(prefix)
+        ? source.slice(prefix.length)
+        : undefined;
+      // A rename from outside this directory is, from inside it, a new file.
+      const outside = code.includes('R') && moved === undefined;
       const gone = code.includes('D');
-      const fresh = code.includes('A') || code.includes('?');
+      const fresh = code.includes('A') || code.includes('?') || outside;
       // `?` is git's untracked mark, and an untracked file is in neither the
       // index nor HEAD: it is a working-tree change and never a staged one.
       const staged = (code[0] ?? ' ') !== ' ' && (code[0] ?? ' ') !== '?';
@@ -653,7 +661,7 @@ export function gitChanges(): ChangesetSource {
       const uri = uriOf(`${dir}/${path}`);
       // An untracked file is in no diff against HEAD, so git reports nothing
       // for it. Every line of it is an addition, which is what it is.
-      const count = counts.get(fromRoot) ?? (fresh
+      const count = (outside ? undefined : counts.get(fromRoot)) ?? (fresh
         ? { added: await lines(`${dir}/${path}`), removed: 0 }
         : { added: 0, removed: 0 });
 
@@ -662,8 +670,11 @@ export function gitChanges(): ChangesetSource {
         edit: {
           // Absent `before` is a creation and absent `after` a deletion. The
           // protocol says both by leaving a side out rather than by a word.
+          // A rename's `before` is the path it came from, as HEAD has it.
           ...(fresh ? {} : {
-            before: { uri, content: { uri: beforeUri(dir, path) } },
+            before: moved === undefined
+              ? { uri, content: { uri: beforeUri(dir, path) } }
+              : { uri: uriOf(`${dir}/${moved}`), content: { uri: beforeUri(dir, moved) } },
           }),
           ...(gone ? {} : {
             after: { uri, content: { uri } },
@@ -1327,6 +1338,22 @@ export function gitChanges(): ChangesetSource {
       }
       if (operationId === 'commit') {
         /*
+         * The paths a commit on one file takes: the file, and the path a renamed
+         * file came from, so git records one rename rather than an add and a
+         * delete. None is the whole changeset.
+         */
+        let only: string[] | undefined;
+        if (target !== undefined) {
+          const path = await pathIn(dir, target.resource);
+          if (path === undefined) throw new Error('That file is not in this directory.');
+          if (path === '.') throw new Error('That operation takes one file, not a folder.');
+          const row = (await look(dir))?.files.find((one) => one.id === uriOf(`${dir}/${path}`));
+          const from = row?.edit.before?.uri;
+          only = from !== undefined && from !== row?.id
+            ? [relative(dir, fileURLToPath(from)), path]
+            : [path];
+        }
+        /*
          * The message, under this host's own key.
          *
          * The protocol has no field for it, so it travels in `_meta` - the bag
@@ -1350,11 +1377,30 @@ export function gitChanges(): ChangesetSource {
          * looking at is the only thing that says what a commit should take,
          * untracked files included.
          */
-        if (!await indexHolds(dir)) {
+        if (only !== undefined) {
+          /*
+           * One file, as the working tree has it, and nothing else the index holds.
+           *
+           * `--only` commits the named paths and leaves the rest of the index
+           * staged. It does not know an untracked file, so the paths that are on
+           * disk are added first; a path that is gone is not, because `add`
+           * refuses a path it finds nowhere, and `--only` records it as deleted.
+           */
+          const present: string[] = [];
+          for (const path of only) {
+            if (await lstat(join(dir, path)).then(() => true, () => false)) present.push(path);
+          }
+          if (present.length > 0) {
+            const added = await run(dir, ['add', '--', ...present]);
+            if (!added.ok) throw new Error(`Could not stage: ${added.err}`);
+          }
+        } else if (!await indexHolds(dir)) {
           const added = await run(dir, ['add', '-A']);
           if (!added.ok) throw new Error(`Could not stage: ${added.err}`);
         }
-        const done = await run(dir, ['commit', '-m', message]);
+        const done = await run(dir, only === undefined
+          ? ['commit', '-m', message]
+          : ['commit', '--only', '-m', message, '--', ...only]);
         if (!done.ok) throw new Error(`Could not commit: ${done.err || done.out.trim()}`);
         const at = (await git(dir, ['rev-parse', '--short', 'HEAD']))?.trim();
         // The subject line, because the rest of the message is a body a row
@@ -1364,17 +1410,42 @@ export function gitChanges(): ChangesetSource {
         return { message: at ? `Committed ${at}: ${subject_}${why}` : `Committed: ${subject_}${why}` };
       }
 
-      const path = target?.resource === undefined ? undefined : await pathIn(dir, target.resource);
+      // No target is the whole changeset, which is every change under the directory.
+      const whole = target === undefined;
+      const path = whole ? '.' : await pathIn(dir, target.resource);
       // Refused rather than clamped: a target outside this directory is a
       // client asking to write somewhere this changeset is not about.
       if (path === undefined) throw new Error('That file is not in this directory.');
       const folder = path === '.';
-      const named = folder ? 'the folder' : path;
+      const named = whole ? 'every change' : folder ? 'the folder' : path;
       const at = folder ? dir : join(dir, path);
       // The two undos below act on one file, and a folder is a different act
-      // than either of them means.
-      if (folder && (operationId === 'discard' || operationId === 'revert')) {
+      // than either of them means. The whole changeset is a discard of its own.
+      if (folder && !whole && (operationId === 'discard' || operationId === 'revert')) {
         throw new Error('That operation takes one file, not a folder.');
+      }
+
+      if (operationId === 'discard' && whole) {
+        /*
+         * Every tracked change back to HEAD, then every untracked file removed.
+         *
+         * A repository with no commit is refused: there every file is new, and
+         * putting the tree back to nothing would delete all of it. `restore`
+         * fails on a directory that holds only untracked files, because no path
+         * under it is known to git, and that failure leaves nothing for it to
+         * do. `clean` removes the files of a directory git does not track and
+         * then fails to remove the directory itself, so it is judged by what is
+         * left.
+         */
+        if (await git(dir, ['rev-parse', '--verify', '--quiet', 'HEAD']) === undefined) {
+          throw new Error('Nothing to discard to: this repository has no commit yet.');
+        }
+        const back = await run(dir, ['restore', '--staged', '--worktree', '--source=HEAD', '--', '.']);
+        if (!back.ok && !/did not match/.test(back.err)) throw new Error(`Could not discard: ${back.err || back.out.trim()}`);
+        const cleaned = await run(dir, ['clean', '-f', '--', '.']);
+        const left = cleaned.ok ? '' : await git(dir, ['ls-files', '--others', '--exclude-standard', '--', '.']);
+        if (left !== '') throw new Error(`Could not discard: ${cleaned.err || cleaned.out.trim()}`);
+        return { message: 'Discarded every change' };
       }
 
       if (operationId === 'discard') {

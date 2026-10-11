@@ -1,6 +1,6 @@
 ---
 title: A rename names the path it came from
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -33,3 +33,13 @@ A client then shows it as a rename, as the protocol defines one.
 - The `before` content is `a.ts` at HEAD.
 - Stage, unstage and discard on the row act on the new path, as before.
 - The gates pass.
+
+## Resume
+
+- **Implemented** 2026-10-11 on `build/host82`, commit `2628d43`.
+- `packages/sdk/src/changes.ts:644-655` reads the record after an `R` or `C` record as the old path. For `R` with the old path inside the directory, `moved` is that path.
+- `packages/sdk/src/changes.ts:673-677` sets `before.uri` to the old path and `before.content.uri` to `beforeUri(dir, moved)`. The row's `id` and `after` stay at the new path. A copy keeps `before` as it was.
+- **Departure 1.** A rename from outside the directory is a new file. Its line count is the file's lines, not the rename's numstat, which is 0 for a pure rename.
+- `packages/sdk/test/changes-uris.test.ts:155` adds 3 tests. They cover a staged rename with `before` read from HEAD, the same rename from a subfolder, and a rename from outside the folder. The file has 25 tests.
+- Stage, unstage and discard act on the row's `id`, which is still the new path. No test was added for that, because the code path did not change.
+- Gates: `pnpm build`, `pnpm typecheck` and `pnpm boundary` pass.

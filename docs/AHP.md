@@ -693,13 +693,22 @@ file on disk.
 
 Operations are server-advertised per scope, `disabled` while a turn is running,
 and destructive ones carry the `confirmation` a client MUST show. `commit` takes
-the index when it holds anything and the whole working tree when it holds nothing,
-`discard` acts on a file, `revert` puts a file back to the state the agent found
-it in, and `stage` and `unstage` move a file or a folder in or out of the index.
+one file, or on the whole changeset the index when it holds anything and the whole
+working tree when it holds nothing, `discard` puts a file or the whole changeset back to HEAD, `revert` puts a file
+back to the state the agent found it in, and `stage` and `unstage` move a file, a
+folder or the whole changeset in or out of the index. A call with no `target` is
+the whole changeset: every change under the session's folder, untracked files
+included. `discard` on the whole changeset removes untracked files too, and its
+`confirmation` says it cannot be undone. In a repository with no commit it is
+refused, because there every file is new and it would delete all of them.
 
-`commit` carries a `confirmation` naming the subject line it will use and what it
-will take: the staged files when the index holds any, and every file with the
-untracked ones counted when it holds none. The operation is re-declared when the
+`commit` carries a `confirmation` naming the subject line it will use and what the
+whole changeset would take: the staged files when the index holds any, and every
+file with the untracked ones counted when it holds none. One sentence serves both
+targets, so it reads "Commit as 'X'? The whole changeset takes 3 staged files."
+`commit` on one file commits that file as the working tree has it, staged or not,
+untracked or deleted, and leaves everything else the index holds staged. On a
+renamed row it commits both paths, so git records one rename. The operation is re-declared when the
 changeset or the session title moves, so the sentence stays true, and the
 invocation decides again from the index at the moment it runs.
 
@@ -707,12 +716,15 @@ A row of an `uncommitted` changeset carries `_meta['ahpd.staged']` and
 `_meta['ahpd.unstaged']`, read from `git status --porcelain`'s two letters, so a
 client can tell what the index already holds from what the working tree does. A
 file can be both (`MM`): a change staged and then changed again. A staged rename
-or copy is one row, under its new name. The protocol declares no staging field;
+or copy is one row, under its new name. A rename's `before` is the path it came
+from, read from HEAD at that path, and its `after` is the new path, so a client
+sees two URIs and shows a rename. A copy's source is still there, so a copy keeps
+the new path on both sides. The protocol declares no staging field;
 the pair lives in `_meta`, which is the bag it leaves for a server's own
 vocabulary.
 
 A person stages and unstages from the session. `stage` and `unstage` take a file
-or a folder, and the session's own folder means everything under it. VS Code
+or a folder, and the session's own folder or no target means everything under it. VS Code
 draws both buttons on every row, a folder is staged from a client that sends one
 such as ahpapp, and `git add` in a terminal or VS Code's Source Control work
 too. A target above the session's folder is refused, for every resource-scoped

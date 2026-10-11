@@ -172,7 +172,7 @@ Reference: [00-host.md](host/00-host.md)
 | [81 p2 - People and policies are channels and commands](host/81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/implemented.md)); policy watch in [deferred.md](host/81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/deferred.md) | 81 p1 | 81 p4 |
 | [81 p3 - Usage is read through commands](host/81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/implemented.md)) | 81 p1 | - |
 | [81 p4 - Computers are a channel and commands](host/81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-host-records-get-channels-and-commands-p4-computers-are-a-channel/implemented.md)) | 81 p1, 81 p2 | - |
-| [82 - A file or the whole changeset is staged, unstaged, discarded or committed](host/82-a-file-or-the-whole-changeset-is-staged-discarded-or-committed/plan.md) | medium | planned 2026-10-11 | - | ahpc screen/11 |
+| [82 - A file or the whole changeset is staged, unstaged, discarded or committed](host/82-a-file-or-the-whole-changeset-is-staged-discarded-or-committed/plan.md) | medium | built 2026-10-11 ([implemented.md](host/82-a-file-or-the-whole-changeset-is-staged-discarded-or-committed/implemented.md)) | - | ahpc screen/11 |
 
 Next free number in `host`: `83`.
 
