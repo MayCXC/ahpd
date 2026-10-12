@@ -47,7 +47,7 @@ import { controlIn, controlServer } from '../control.js';
 import type { ControlServer } from '../control.js';
 import { here } from '../ask.js';
 import { offerConfigure, askToServe } from './configure.js';
-import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
+import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, customizationStatePath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
 import { API_PREFIX, apiHandler, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
 import { proxyHandler } from '../proxy/listener.js';
@@ -57,6 +57,7 @@ import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
 import { migrateAutomations, scheduledAutomations } from '../scheduled.js';
+import { fileEnablement } from '../enablement.js';
 import { filesOf, lineFor, writerFor } from '../wire.js';
 import { MAX_AGE_MS, checkingUpdates, readUpdate, refreshUpdate, registry as npmRegistry, stale, updateLine } from '../update.js';
 import { manifest, version } from '../version.js';
@@ -180,6 +181,7 @@ export const wholeFiles = (users?: string): string[] => [
   ...(users === undefined ? [] : [users]),
   policiesPath(),
   automationStatePath(),
+  customizationStatePath(),
   join(configDir(), 'computers.json'),
   vaultPath(),
 ];
@@ -706,6 +708,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     automations: memory
       ? memoryAutomations()
       : daemonAutomations((message) => process.stdout.write(`${message}\n`)),
+    /*
+     * Whether a customization is on, for every session or for one folder.
+     *
+     * Kept between restarts for the same reason the sessions are: a daemon is
+     * restarted for an upgrade, and a plugin somebody switched off for every
+     * session would come back on for everybody with nothing said about it.
+     */
+    enablement: fileEnablement({
+      file: customizationStatePath(),
+      onProblem: (message) => process.stdout.write(`${message}\n`),
+    }),
     /*
      * What an automation that names no owner wakes on, which is a decision
      * about this deployment rather than about the automation: the key reads

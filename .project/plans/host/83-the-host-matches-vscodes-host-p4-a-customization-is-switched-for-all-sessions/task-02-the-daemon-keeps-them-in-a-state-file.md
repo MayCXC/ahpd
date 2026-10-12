@@ -1,6 +1,6 @@
 ---
 title: The daemon keeps the decisions in a state file
-status: todo
+status: implemented
 depends: [task-01-a-store-keeps-the-decisions.md]
 layer: "packages/server"
 refs:
@@ -39,3 +39,22 @@ The daemon keeps global and folder decisions in `<configDir>/customizations-stat
 - `pnpm -s typecheck` and `pnpm exec vitest run packages/server` pass.
 
 ## Resume
+
+- **State:** implemented. All 7 steps are in, and the three validation points pass.
+- **What exists now:** `customizationStatePath()` answers `<configDir>/customizations-state.json`.
+  `fileEnablement({ file, onProblem })` is an `EnablementStore` over that file: it composes `memoryEnablement`, reads the file once at start, and writes it whole after every change.
+  The file is `{ version: 1, global, folders }`, and a file this version does not understand is left alone with a word about it.
+  `run.ts` names the path in `wholeFiles` and passes the store to the host as `enablement`.
+- **Departure from the Steps:** a file whose `version` is not 1 is left alone rather than read as far as it goes.
+  Guessing at what somebody's decisions were is worse than starting over, and the file is not overwritten until the next change.
+- **Validation:** `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass, with 5 new tests in `packages/server/test/enablement.test.ts`.
+  They cover a restart reading an earlier decision, the whole file being written, and a folder decision equal to the inherited one being left out.
+  They also cover a corrupt file starting empty, a wrong version being left alone, and a missing file saying nothing.
+- **Watch out for:** the run of the sdk and server suites rewrote `packages/sdk/test/fixtures/wire.jsonl` (33 lines, the endpoint line and the `ahpd.` `_meta` lines).
+  Those lines carry this machine's home directory.
+  That rewrite is not part of this task, and every restore command is denied in this preset, so the file waits for Softov: `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Files changed by this task:**
+  - `packages/server/src/config.ts`
+  - `packages/server/src/enablement.ts` (created)
+  - `packages/server/src/commands/run.ts` (the `customizationStatePath` import, the `wholeFiles` line and the `enablement` host option)
+  - `packages/server/test/enablement.test.ts` (created)

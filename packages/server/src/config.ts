@@ -409,6 +409,17 @@ export const automationsDir = (): string => join(configDir(), 'automations');
 export const automationStatePath = (): string => join(configDir(), 'automations-state.json');
 
 /**
+ * Where the on/off decisions about customizations are kept.
+ *
+ * Beside the automations and the sessions for the same reason as those: one
+ * small file beside a hand-edited `config.json`, written whenever somebody
+ * switches a plugin off for every session or for a folder. It is the two
+ * decisions that outlive a session, and not the session's own, which is that
+ * session's business.
+ */
+export const customizationStatePath = (): string => join(configDir(), 'customizations-state.json');
+
+/**
  * The one file an earlier daemon kept every automation in.
  *
  * Nothing writes it any more. Named here rather than beside the conversion
