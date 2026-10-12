@@ -1,6 +1,6 @@
 ---
 title: The host sends its build and keeps its session URIs
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -15,9 +15,12 @@ Root `_meta.hostBuild` is `{ version }`, and initialize `_meta['vscode.ahpSessio
 
 ## Files
 
-- `UPDATE: packages/sdk/src/host/root.ts:436-495` - add `hostBuild`.
-- `UPDATE: packages/sdk/src/host/handshake.ts:267-297` - add `vscode.ahpSessionUris`.
+- `UPDATE: packages/sdk/src/host/root.ts` - `hostBuild` in the root `_meta`.
+- `UPDATE: packages/sdk/src/host/handshake.ts` - `vscode.ahpSessionUris` in the initialize `_meta`.
 - `UPDATE: packages/sdk/test/host-handshake.test.ts` - both keys are present.
+- `UPDATE: packages/sdk/test/wire.test.ts` - the census knows `hostBuild` at `state/_meta`.
+- `UPDATE: packages/sdk/test/root-config.test.ts` - the `apart` helper drops `hostBuild` too.
+- `UPDATE: packages/sdk/test/users-gate-commands.test.ts` - the `rootMeta` helper drops `hostBuild` too.
 
 ## Steps
 
@@ -33,3 +36,20 @@ Root `_meta.hostBuild` is `{ version }`, and initialize `_meta['vscode.ahpSessio
 - `pnpm exec vitest run packages/sdk` passes.
 
 ## Resume
+
+Both keys are in, each with a comment naming decision `ahpd-says-it-is-a-native-host`. Step 5 asked for one commit holding both keys; this preset neither adds nor commits, so the two files below are the one change for whoever commits them.
+
+The wire capture's census had to learn `hostBuild`: it is VS Code's name and not the protocol's, so it is neither prefixed nor declared, and the recording is where that shows.
+
+Files changed:
+
+- `packages/sdk/src/host/root.ts`
+- `packages/sdk/src/host/handshake.ts`
+- `packages/sdk/test/host-handshake.test.ts`
+- `packages/sdk/test/wire.test.ts`
+- `packages/sdk/test/root-config.test.ts`
+- `packages/sdk/test/users-gate-commands.test.ts`
+
+Also touched by the run of `pnpm exec vitest run packages/sdk`, which rewrites its own capture: `packages/sdk/test/fixtures/wire.jsonl`. The restore command is denied in this preset, so Softov reverts it if the recording is not wanted.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk --maxWorkers=2 --testTimeout=10000` pass; a plain run flakes on `nested-start` under load.

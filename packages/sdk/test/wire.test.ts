@@ -249,6 +249,10 @@ const REFERENCE: { key: string; at: string; from: string }[] = [
   // drops it without a word, and `description` is the menu's second column.
   { key: 'command', at: 'attachment/_meta', from: 'docs/AHP.md' },
   { key: 'description', at: 'attachment/_meta', from: 'docs/AHP.md' },
+  // The version the reference client writes in its Output channel, and the key
+  // it reads to decide this host is a native one - its own name, un-prefixed,
+  // and not the protocol's - decision `ahpd-says-it-is-a-native-host`.
+  { key: 'hostBuild', at: 'state/_meta', from: 'VS Code `readHostBuildInfo`' },
 ];
 
 /** A key at a place, as the census reports it. */

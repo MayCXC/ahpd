@@ -1,4 +1,5 @@
 import { negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
+import { RUN_HISTORY_LIMIT } from '../automations.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { uriOf } from '../fileuri.js';
 import { BANG } from './common.js';
@@ -209,10 +210,11 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
         snapshots,
         defaultDirectory: uriOf(dir),
         // What the client should ask about rather than send. A slash is a
-        // skill or a prompt the host contributed; an at-sign is a file.
-        // Without this the client has no reason to believe either means
+        // skill or a prompt the host contributed; an at-sign and a hash are
+        // both a file, which is how VS Code's own host answers the two.
+        // Without this the client has no reason to believe any of them means
         // anything here, and types them into the chat as text.
-        completionTriggerCharacters: ['/', '@'],
+        completionTriggerCharacters: ['/', '@', '#'],
         // What this host emits, so a client knows there is a log to watch.
         // A template, because the variable is the severity a subscriber
         // wants rather than something the host fills in.
@@ -232,10 +234,18 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
          * `create` because every store writes one. `schedules` with no
          * `minIntervalMinutes` because the cron grammar is the protocol's
          * own and this host restricts nothing beyond its one-minute
-         * resolution. `runCancellation` is absent because it is not served
-         * - a run here is a session, and disposing it is how it stops - and
-         * `runHistoryLimit` because retention is the store's, which is what
-         * an absent one means.
+         * resolution.
+         *
+         * `runCancellation` is served, so a client offers Stop on a run that
+         * is `pending` or `running`. What it stops is the turn in each of the
+         * run's sessions through the same call a stop in a chat makes, and
+         * the session is kept - a run ends, and a session somebody may open
+         * is not a thing a stop takes away.
+         *
+         * `runHistoryLimit` is how many runs an automation keeps, and the
+         * store keeps exactly it: the newest ended runs up to the number, and
+         * every run that has not ended, which is what a client reads a history
+         * against when it decides to ask for an older page.
          *
          * `customizations` says a template may name client plugins and this
          * host will copy them, which needs the port that copies a client's
@@ -244,7 +254,13 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
          * told otherwise would be a client writing one that never runs.
          */
         ...(options.automations
-          ? { automations: { create: {}, schedules: {}, ...(options.clientPlugins ? { customizations: {} } : {}) } }
+          ? {
+            automations: {
+              create: {}, schedules: {}, runCancellation: {},
+              runHistoryLimit: RUN_HISTORY_LIMIT,
+              ...(options.clientPlugins ? { customizations: {} } : {}),
+            },
+          }
           : {}),
         /*
          * `!` at the start of a message means "run this", not "answer this".
@@ -268,6 +284,17 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
           'vscode.removeSessionArtifact': true,
           'vscode.detachedWorktrees': true,
           'vscode.getAgentHostSessionStateFile.chat': true,
+          /*
+           * This host's session URIs are the AHP ones, and not the legacy
+           * `provider:/id` spelling.
+           *
+           * VS Code keeps the legacy form for a host it decided is native, and
+           * a native host is one whose root `_meta` carries `hostBuild`. This
+           * host sends that key for the version line in the Output channel, so
+           * this is what keeps every session URI it hands out. The two are one
+           * change - decision `ahpd-says-it-is-a-native-host`.
+           */
+          'vscode.ahpSessionUris': true,
           // The dev container surface. A client reads this before it
           // offers the flow, so it is true only where a container can
           // actually be made: a host with the launcher loaded and no
