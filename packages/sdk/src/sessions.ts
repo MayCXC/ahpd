@@ -3,8 +3,9 @@
 import { existsSync, readdirSync, renameSync, rmSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { readJson, writeJsonAtomic } from './jsonfile.js';
+import { asCreatedBy, asOrigin } from './remotesession.js';
 import type { Scope } from './scopes.js';
-import type { NestedRecord, PullRequestBaseline, SessionStore, StoredChat } from './types/sessions.js';
+import type { CreatedBy, NestedRecord, PullRequestBaseline, RemoteOrigin, SessionStore, StoredChat } from './types/sessions.js';
 import type { Owner } from './types/usage.js';
 import { ownerOf } from './values.js';
 
@@ -82,6 +83,10 @@ export function memorySessions(): SessionStore & Held {
     setParent: (id, value) => { patch(id, { parent: value }); },
     nested: (id) => rows.get(id)?.nested,
     setNested: (id, value) => { patch(id, { nested: value }); },
+    remoteOrigin: (id) => rows.get(id)?.remoteOrigin,
+    setRemoteOrigin: (id, value) => { patch(id, { remoteOrigin: value }); },
+    createdBy: (id) => rows.get(id)?.createdBy,
+    setCreatedBy: (id, value) => { patch(id, { createdBy: value }); },
     nestedSessions: () => [...rows.entries()]
       .flatMap(([id, held]) => held.nested === undefined ? [] : [[id, held.nested] as [string, NestedRecord]]),
     artifacts: (id) => rows.get(id)?.artifacts,
@@ -187,6 +192,8 @@ export function memorySessions(): SessionStore & Held {
         ...(held.parent === undefined ? {} : { parent: held.parent }),
         ...(held.nested === undefined ? {} : { nested: held.nested }),
         ...(held.chats === undefined ? {} : { chats: held.chats }),
+        ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
+        ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
       };
     },
     forget: (id) => { rows.delete(id); },
@@ -302,6 +309,8 @@ interface Row {
   parent?: string | undefined;
   nested?: NestedRecord | undefined;
   chats?: StoredChat[] | undefined;
+  remoteOrigin?: RemoteOrigin | undefined;
+  createdBy?: CreatedBy | undefined;
 }
 
 /** Whether a row says nothing at all, and so is not one to keep. */
@@ -310,7 +319,8 @@ const empty = (row: Row): boolean =>
   && row.owner === undefined && row.senders === undefined && row.provider === undefined
   && row.artifacts === undefined && row.pullRequests === undefined && row.chatTitles === undefined
   && row.chatFlags === undefined
-  && row.parent === undefined && row.nested === undefined && row.chats === undefined;
+  && row.parent === undefined && row.nested === undefined && row.chats === undefined
+  && row.remoteOrigin === undefined && row.createdBy === undefined;
 
 /**
  * What is persisted for one session: a `Row` as the file holds it.
@@ -339,6 +349,10 @@ interface Saved {
   nested?: NestedRecord;
   /** The chats of one session, in the order they were opened. */
   chats?: StoredChat[];
+  /** Where this session was sent from, as the window that sent it named it. */
+  remoteOrigin?: RemoteOrigin;
+  /** The session that made this one, as a window recorded it. */
+  createdBy?: CreatedBy;
 }
 
 /**
@@ -472,6 +486,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.parent === undefined ? {} : { parent: held.parent }),
       ...(held.nested === undefined ? {} : { nested: held.nested }),
       ...(held.chats === undefined ? {} : { chats: held.chats }),
+      ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
+      ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
     };
   };
 
@@ -609,6 +625,14 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       // one this store answers for a session it knows nothing about.
       const chats = chatsOf(row.chats);
       if (chats !== undefined) inner.setChats(row.id, chats);
+      // Where a window sent this session from, read back through the same
+      // reader that accepted it: a name the window could no longer have sent,
+      // or a depth that is not one, is ignored rather than guessed at - as
+      // every other field here is.
+      const origin = asOrigin(row.remoteOrigin);
+      if (origin !== undefined) inner.setRemoteOrigin?.(row.id, origin);
+      const createdBy = asCreatedBy(row.createdBy);
+      if (createdBy !== undefined) inner.setCreatedBy?.(row.id, createdBy);
     }
   };
 
@@ -632,6 +656,10 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     nested: (id) => inner.nested(id),
     setNested: (id, value) => { touched(id, () => { inner.setNested(id, value); }); },
     nestedSessions: () => inner.nestedSessions(),
+    remoteOrigin: (id) => inner.remoteOrigin?.(id),
+    setRemoteOrigin: (id, value) => { touched(id, () => { inner.setRemoteOrigin?.(id, value); }); },
+    createdBy: (id) => inner.createdBy?.(id),
+    setCreatedBy: (id, value) => { touched(id, () => { inner.setCreatedBy?.(id, value); }); },
     artifacts: (id) => inner.artifacts(id),
     setArtifacts: (id, values) => { touched(id, () => { inner.setArtifacts(id, values); }); },
     pullRequests: (id) => inner.pullRequests(id),

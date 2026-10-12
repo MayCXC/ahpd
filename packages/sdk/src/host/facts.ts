@@ -1,6 +1,7 @@
 import { ARTIFACTS_META, artifactsIn, isGitHubLink, recordArtifact } from '../tools/artifacts.js';
 import { idOf } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
+import { CREATED_BY_META, REMOTE_ORIGIN_META, SPAWN_DEPTH_META, depthOf } from '../remotesession.js';
 import type { Bag } from '../types/common.js';
 import type { HostContext } from './context.js';
 
@@ -175,6 +176,21 @@ export function createFacts(ctx: HostContext): Facts {
      */
     const owner = kept.owner(idOf(uri));
     /*
+     * Where a window sent this session from, and what it was made by.
+     *
+     * The window's own keys, written where the window reads them: the origin
+     * it sent, the depth that came with it and the session that made this one.
+     * The origin is a fact about the session and not about its directory, so
+     * it is here rather than in `metaOf` - a session sent here may be in no
+     * directory at all, and the window that sent it still reads its summary.
+     *
+     * The depth is the deeper of what this host holds and what the origin
+     * says, which is the window's own arithmetic: a session sent on from here
+     * is that much further from the one that began the work.
+     */
+    const origin = kept.remoteOrigin?.(idOf(uri));
+    const made = kept.createdBy?.(idOf(uri));
+    /*
      * The map has two producers and both have to be in it.
      *
      * The backend adds its own keys beside the protocol's fields - the model a
@@ -189,8 +205,14 @@ export function createFacts(ctx: HostContext): Facts {
      * know it.
      */
     const byAgent = agentMeta(uri);
+    const sent = {
+      ...(origin === undefined
+        ? {}
+        : { [REMOTE_ORIGIN_META]: { session: origin.session, chat: origin.chat, depth: origin.depth }, [SPAWN_DEPTH_META]: depthOf(byAgent, origin) }),
+      ...(made === undefined ? {} : { [CREATED_BY_META]: made }),
+    };
     if (dir === undefined) {
-      const meta = { ...byAgent, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
+      const meta = { ...byAgent, ...sent, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
       return Object.keys(meta).length === 0 ? {} : { _meta: meta };
     }
     /*
@@ -206,7 +228,7 @@ export function createFacts(ctx: HostContext): Facts {
     // Anything past the path is the host's to be told, not this file's to go
     // and find - `git` is a binary, and a host may be given none.
     const told = metaOf(uri);
-    const meta = { ...byAgent, ...told, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
+    const meta = { ...byAgent, ...told, ...sent, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
     return {
       project,
       ...(Object.keys(meta).length === 0 ? {} : { _meta: meta }),

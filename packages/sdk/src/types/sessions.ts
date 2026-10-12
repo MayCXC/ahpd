@@ -34,6 +34,37 @@ export interface PullRequestBaseline {
 }
 
 /**
+ * Where a session was sent from, as the window that sent it named it.
+ *
+ * `session` is the chat session the work was delegated from and `chat` the
+ * exact chat inside it, both spelled the way the window spells a chat session.
+ * `depth` is how far the work had already been delegated when it arrived,
+ * which is what a later send on from here counts from.
+ *
+ * Kept because two readers need it after the window that sent it has gone: the
+ * agent's turn is told where to report back to, and the window reads the origin
+ * off the session's summary.
+ */
+export interface RemoteOrigin {
+  session: string;
+  chat: string;
+  depth: number;
+}
+
+/**
+ * The session this one was made by, as the window recorded it.
+ *
+ * The id of the session, and optionally the chat and the turn inside it the
+ * ask came from. Looser than an origin: this is a reference and not an
+ * address, and nothing is reported back to it.
+ */
+export interface CreatedBy {
+  session: string;
+  chat?: string;
+  turnId?: string;
+}
+
+/**
  * One chat of a session, as the store keeps it.
  *
  * A session is a container and a chat is a conversation in it, and what makes
@@ -199,6 +230,29 @@ export interface SessionStore {
   setNested?(id: string, value: NestedRecord | undefined): void;
   /** Every nested session recorded, by id. */
   nestedSessions?(): [string, NestedRecord][];
+  /**
+   * Where this session was sent from, or nothing for a session this host
+   * began itself.
+   *
+   * Kept with the rest of a session's record rather than in memory, because a
+   * session sent from another window outlives the process that took it and
+   * the window reads the origin back off its summary.
+   *
+   * Optional: a store without it takes every session as one of its own.
+   */
+  remoteOrigin?(id: string): RemoteOrigin | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setRemoteOrigin?(id: string, value: RemoteOrigin | undefined): void;
+  /**
+   * The session this one was made by, as a window recorded it, or nothing.
+   *
+   * Beside the origin rather than part of it: a session is made by another
+   * session whether or not it was sent from another window, and the window
+   * reads the two under two keys.
+   */
+  createdBy?(id: string): CreatedBy | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setCreatedBy?(id: string, value: CreatedBy | undefined): void;
   /**
    * What the agent recorded as worth coming back to, or nothing where it
    * recorded nothing.

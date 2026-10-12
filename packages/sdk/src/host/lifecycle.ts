@@ -6,6 +6,7 @@ import { idOf, uriFor } from '../catalog.js';
 import { join } from 'node:path';
 import { worktreeFor, worktreesOf } from '../repo/worktrees.js';
 import { ROOT, chatIdFor, chatUriFor, named } from './channels.js';
+import { readCreatedBy, readOrigin } from '../remotesession.js';
 import { BANG, HOSTS_OWN } from './common.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
@@ -789,6 +790,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
           'vscode.chat.workspaceContinuation': true,
         },
       },
+      undefined,
+      ctx.turnInstructions(uri),
     );
   };
 
@@ -1004,8 +1007,16 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       if (sender !== undefined) sentBy.set(queuedAs ?? turnId, sender);
       const command = text.startsWith(BANG) ? text.slice(BANG.length).trim() : '';
       if (command === '' || !options.terminals) {
-        if (queuedAs === undefined) session.begin(turnId, text, model, from, attachments);
-        else session.queue(queuedAs, text, model, from, attachments);
+        /*
+         * With what this turn is told, decided by the backend when it begins.
+         *
+         * The one place a message becomes a turn, whoever sent it and whichever
+         * way it arrived - so this is where every turn of a session is given
+         * the same thing, and the only thing that decides it is what the
+         * session holds at the moment the turn starts.
+         */
+        if (queuedAs === undefined) session.begin(turnId, text, model, from, attachments, ctx.turnInstructions(session.uri));
+        else session.queue(queuedAs, text, model, from, attachments, ctx.turnInstructions(session.uri));
         return undefined;
       }
       if (!session.ran) return `${provider} cannot run a command in a turn; use a terminal instead`;
@@ -1208,6 +1219,24 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       kept.setOwner(idOf(uri), by.owner);
       if (by.principal !== undefined) principals.set(by.owner, by.principal);
     }
+    /*
+     * Where a window sent this session from, and what made it.
+     *
+     * Read off the config the session was asked for with, and written down
+     * beside it for the reason an owner is: the window that sent it reads both
+     * back off the session's summary, and one that was sent here outlives the
+     * process that took it. A malformed origin is none at all - the reader
+     * refuses what the window's host refuses - so a session is never held with
+     * half an origin.
+     *
+     * Written only where the config carried one, because a session opened
+     * again - a row read off disk, a directory added - is the same session and
+     * not one this host has just been told about.
+     */
+    const sentFrom = readOrigin(config);
+    if (sentFrom !== undefined) kept.setRemoteOrigin?.(idOf(uri), sentFrom);
+    const madeBy = readCreatedBy(config);
+    if (madeBy !== undefined) kept.setCreatedBy?.(idOf(uri), madeBy);
     try {
       const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), config, undefined, where, credentials, additional, by?.sender);
       // Named before it is announced, when the maker had a name for it: a
