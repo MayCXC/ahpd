@@ -1,6 +1,6 @@
 ---
 title: A store keeps the global and folder decisions
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

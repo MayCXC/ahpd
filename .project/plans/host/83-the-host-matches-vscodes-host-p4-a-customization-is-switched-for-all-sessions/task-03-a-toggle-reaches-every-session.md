@@ -1,6 +1,6 @@
 ---
 title: A toggle records each scope and reaches every session
-status: implemented
+status: done
 depends: [task-01-a-store-keeps-the-decisions.md]
 layer: "packages/sdk"
 refs:

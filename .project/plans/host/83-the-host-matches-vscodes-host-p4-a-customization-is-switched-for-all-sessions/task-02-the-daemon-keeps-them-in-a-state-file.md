@@ -1,6 +1,6 @@
 ---
 title: The daemon keeps the decisions in a state file
-status: implemented
+status: done
 depends: [task-01-a-store-keeps-the-decisions.md]
 layer: "packages/server"
 refs:

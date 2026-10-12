@@ -177,7 +177,7 @@ Reference: [00-host.md](host/00-host.md)
 | [83 p1 - The host describes itself as VS Code's host does](host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md) | high | planned 2026-10-11 | 83 | 83 p3, 83 p5 |
 | [83 p2 - A run is stopped, and runs are capped](host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | high | planned 2026-10-11 | 83, host 80 | - |
 | [83 p3 - A remote session is taken and keeps its origin](host/83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | high | planned 2026-10-11 | 83 p1 | - |
-| [83 p4 - A customization is switched for all sessions or a folder](host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | medium | planned 2026-10-11 | 83 | - |
+| [83 p4 - A customization is switched for all sessions or a folder](host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | medium | built 2026-10-11; the VS Code check by hand remains | 83 | - |
 | [83 p5 - A chat is attached to a message](host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | low | draft 2026-10-11; built after p1 to p3 | 83 p1 to p3 | - |
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-the-environment-of-agent-shells/plan.md) | medium | planned 2026-10-11 | - | ACP, cofold and pi shells |
 
