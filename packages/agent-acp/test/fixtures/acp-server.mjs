@@ -33,6 +33,12 @@
  * - text containing `elicitcancel` asks a form and holds the prompt until
  *   `session/cancel` ends it, so a turn stopped while a question stands is one a
  *   test can watch from both sides;
+ * - text containing `elicitwithdraw` asks a form and takes it back with
+ *   `$/cancel_request` once the question has been drawn, `elicitaborted` takes
+ *   it back in the same breath so the request is over before it is handled, and
+ *   both hold the prompt as `elicitcancel` does; `elicitwdafter` withdraws the
+ *   same request only once it has been answered, which is a server giving up on
+ *   a question that is already over;
  * - text containing `elicitunknown` asks a form with a field whose `type` ACP
  *   does not name, and says what came back for it, which is the field the
  *   bridge has no control of its own for;
@@ -373,13 +379,36 @@ const waiting = new Map();
 let asked = 0;
 
 /** Ask the client something, and await what it answered. */
-const ask = (method, params) =>
-  new Promise((resolve, reject) => {
-    asked += 1;
-    const id = `s${asked}`;
+const ask = (method, params) => askNamed(method, params).answered;
+
+/**
+ * The same, with the id this server's own request was given.
+ *
+ * A script that has to name its request again - to withdraw it with
+ * `$/cancel_request`, which is addressed by that id - cannot read it off the
+ * promise `ask` hands back, so the pair is returned rather than the answer
+ * alone.
+ */
+const askNamed = (method, params) => {
+  asked += 1;
+  const id = `s${asked}`;
+  const answered = new Promise((resolve, reject) => {
     waiting.set(id, { resolve, reject });
-    write({ jsonrpc: '2.0', id, method, params });
   });
+  write({ jsonrpc: '2.0', id, method, params });
+  return { id, answered };
+};
+
+/**
+ * Withdraw a question this server asked.
+ *
+ * The protocol's own way of saying an outgoing request no longer wants an
+ * answer, addressed by the id of that request: the client's handler for it is
+ * aborted, and the response that comes back is the request being given up on.
+ */
+const withdraw = (requestId) => {
+  write({ jsonrpc: '2.0', method: '$/cancel_request', params: { requestId } });
+};
 
 /** The prompt's text, out of the content blocks the client sent. */
 const textOf = (params) => {
@@ -962,6 +991,93 @@ const promptScript = async (id, params) => {
       },
     });
     return;
+  }
+
+  if (text.includes('elicitwithdraw')) {
+    /*
+     * A question this server asks and then takes back.
+     *
+     * The withdrawal goes out a turn of the event loop later, which is what a
+     * server whose own deadline passes while the person is reading does: the
+     * question has been drawn on the client by the time it is given up on, so
+     * the handler is holding it when the abort arrives. The prompt is held the
+     * way `elicitcancel` holds it, because the answer comes over a later line
+     * and there is no turn left to say anything in.
+     */
+    pending = id;
+    const question = askNamed('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-withdrawn',
+      message: 'What should I call it?',
+      requestedSchema: {
+        type: 'object',
+        properties: { title: { type: 'string', title: 'The name' } },
+        required: ['title'],
+      },
+    });
+    setTimeout(() => { withdraw(question.id); }, 0);
+    await question.answered;
+    return;
+  }
+
+  if (text.includes('elicitaborted')) {
+    /*
+     * A withdrawal that beats the question to the client.
+     *
+     * Both frames go out in one turn, so the request is already given up on by
+     * the time its handler runs: the client was never asked anything, so there
+     * is nothing for it to draw - and nothing it could take away afterwards,
+     * because the abort that would do it has already gone by. The prompt is
+     * held the way `elicitwithdraw` holds it.
+     */
+    pending = id;
+    const question = askNamed('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-aborted',
+      message: 'What should I call it?',
+      requestedSchema: {
+        type: 'object',
+        properties: { title: { type: 'string', title: 'The name' } },
+        required: ['title'],
+      },
+    });
+    withdraw(question.id);
+    await question.answered;
+    return;
+  }
+
+  if (text.includes('elicitwdafter')) {
+    /*
+     * A question answered, and the same request given up on afterwards.
+     *
+     * A real server whose own deadline passes does not always know the answer
+     * is already on its way, so this is the withdrawal arriving for a question
+     * that is over: nothing may move here, because everything it would move
+     * has already been moved once. What came back is said as an update, so a
+     * test can read that the person's own answer is what the server was given.
+     */
+    const question = askNamed('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-wd-after',
+      message: 'What should I call it?',
+      requestedSchema: {
+        type: 'object',
+        properties: { title: { type: 'string', title: 'The name' } },
+        required: ['title'],
+      },
+    });
+    const answer = await question.answered;
+    withdraw(question.id);
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `elicit=${String(answer?.action ?? 'none')}|title=${String(answer?.content?.title ?? '-')}`,
+      },
+    });
   }
 
   if (text.includes('elicitunknown')) {

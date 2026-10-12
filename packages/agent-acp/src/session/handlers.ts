@@ -33,7 +33,7 @@ import type { SessionContext } from './context.js';
 export interface Handlers {
   receivedUpdate(sessionId: string, update: SessionUpdate): void;
   askPermission(request: RequestPermissionRequest): Promise<PermissionAnswer>;
-  askElicitation(request: CreateElicitationRequest): Promise<CreateElicitationResponse>;
+  askElicitation(request: CreateElicitationRequest, signal?: AbortSignal): Promise<CreateElicitationResponse>;
   heardElicitationComplete(notification: CompleteElicitationNotification): void;
   answerElicitation(requestId: string, accepted: boolean, answers: Bag, response?: 'accept' | 'decline' | 'cancel'): boolean;
   settleElicitations(): void;
@@ -438,8 +438,20 @@ export function createHandlers(ctx: SessionContext): Handlers {
    *
    * The ACP request is left open for as long as the question stands, so the
    * server is blocked on the person rather than on the client.
+   *
+   * `signal` is the request's own, and a server that withdraws the question
+   * aborts it. A question nobody is being asked any more is taken off the chat
+   * and answered `cancel`, which is the same ending a stop gives it: the
+   * asking stopped, so the server is told a cancel rather than left holding an
+   * answer that is never coming. A signal that arrived already aborted is a
+   * question asked after the answer stopped mattering, and it is settled
+   * without ever being put on the chat.
    */
-  const askElicitation = (request: CreateElicitationRequest): Promise<CreateElicitationResponse> => {
+  const askElicitation = (
+    request: CreateElicitationRequest,
+    signal?: AbortSignal,
+  ): Promise<CreateElicitationResponse> => {
+    if (signal?.aborted === true) return Promise.resolve({ action: 'cancel' });
     const held = bag(request);
     const page = pageOf(request);
     const questions = page === undefined ? questionsFor(held.requestedSchema) : [];
@@ -462,6 +474,26 @@ export function createHandlers(ctx: SessionContext): Handlers {
       type: 'session/inputNeededSet',
       request: { id, chat: start.chatUri, kind: 'chatInput', request: asking },
     });
+    /*
+     * The question the server takes back, off the chat.
+     *
+     * Nothing happens if the question is no longer open: a person's answer, a
+     * stop, or the server's own completion has already ended it, and a second
+     * ending would be a second settle of a promise already settled. The entry
+     * goes the way an answer takes it, and the chat is told the request is over
+     * the way a completion tells it, because no client is going to send that
+     * `chat/inputCompleted` for a question it was never asked to answer.
+     */
+    signal?.addEventListener('abort', () => {
+      const open = elicitations.get(id);
+      if (open === undefined) return;
+      elicitations.delete(id);
+      emit('session', { type: 'session/inputNeededRemoved', id });
+      emit('chat', { type: 'chat/inputCompleted', requestId: id, response: 'cancel' });
+      open.settle({ action: 'cancel' });
+      doing('Thinking');
+      touch();
+    }, { once: true });
     doing('Waiting on you');
     touch();
     return answered;
@@ -534,10 +566,16 @@ export function createHandlers(ctx: SessionContext): Handlers {
    * on a person who has already said stop is a turn that never ends. `cancel`
    * rather than a decline, because nobody said no - the question stopped being
    * asked, and an answer that said no would be one the person never gave.
+   *
+   * The chat is told as well, for the same reason a withdrawal tells it: this
+   * is an ending nobody sent a `chat/inputCompleted` for, and a client left
+   * drawing the question would go on offering an answer no server is waiting
+   * on.
    */
   const settleElicitations = (): void => {
     for (const [id, open] of elicitations) {
       emit('session', { type: 'session/inputNeededRemoved', id });
+      emit('chat', { type: 'chat/inputCompleted', requestId: id, response: 'cancel' });
       open.settle({ action: 'cancel' });
     }
     elicitations.clear();

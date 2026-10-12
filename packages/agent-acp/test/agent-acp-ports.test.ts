@@ -620,6 +620,105 @@ it('carries a page rather than a form, and the server\'s own completion ends it'
     .toBe(true);
 });
 
+it('takes a question the server withdrew off the chat, and completes the request', async () => {
+  const { client, peer: p, uri, chatUri, log } = await talking();
+  begin(client, chatUri, 't1', 'elicitwithdraw please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  expect(asked(p, chatUri)?.id).toBe('call-withdrawn:elicitation');
+  /*
+   * The server's `$/cancel_request` reaches the bridge as the request's own
+   * signal being aborted, and the question is answered from there: `cancel`,
+   * which is the action the protocol has for a request given up on, and what
+   * the server is handed rather than a question left blocking it for ever.
+   */
+  await until(() => readFileSync(log, 'utf8').includes('"action":"cancel"'));
+  expect(readFileSync(log, 'utf8')).toContain('"action":"cancel"');
+  // The chat is told the request is over, because nobody was going to answer
+  // it and a client left drawing it would go on offering an answer.
+  const done = actions(p, chatUri).find((e) => e.action.type === 'chat/inputCompleted')?.action as
+    { requestId?: string; response?: string } | undefined;
+  expect(done?.requestId).toBe('call-withdrawn:elicitation');
+  expect(done?.response).toBe('cancel');
+  // And the entry goes with it, so the session is not left saying somebody is
+  // needed for a question that has stopped being asked.
+  expect(actions(p, uri).some((e) => e.action.type === 'session/inputNeededRemoved'
+    && e.action.id === 'call-withdrawn:elicitation')).toBe(true);
+  expect(types(p, uri).at(-1)).not.toBe('session/inputNeededSet');
+
+  // The turn is stopped, because the fixture holds its prompt until a cancel
+  // ends it, the way a server whose question was taken back is still working.
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUri, action: { type: 'chat/turnCancelled', turnId: 't1', duration: 0 } },
+  });
+  await until(() => readFileSync(log, 'utf8').includes('"method":"session/cancel"'));
+});
+
+it('answers a withdrawal that beats the question, and draws nothing', async () => {
+  const { client, peer: p, uri, chatUri, log } = await talking();
+  begin(client, chatUri, 't1', 'elicitaborted please');
+
+  /*
+   * The withdrawal leaves with the question, so the request is already given up
+   * on before its handler runs. The answer is still the protocol's own cancel,
+   * because a server that has stopped waiting on an answer must not be left
+   * waiting on one anyway.
+   */
+  await until(() => existsSync(log) && readFileSync(log, 'utf8').includes('"action":"cancel"'));
+  expect(readFileSync(log, 'utf8')).toContain('"action":"cancel"');
+
+  /*
+   * And nothing was drawn, which is the half a live abort could not do: an
+   * entry put on the chat for a question that was over on arrival would never
+   * come off it, because the abort that takes the entry away is the one that
+   * has already gone by.
+   */
+  expect(types(p, chatUri)).not.toContain('chat/inputRequested');
+  expect(types(p, uri)).not.toContain('session/inputNeededSet');
+  expect(actions(p, chatUri).some((e) => e.action.type === 'chat/inputCompleted')).toBe(false);
+
+  // The turn is stopped, because the fixture holds its prompt until a cancel
+  // ends it, the way a server whose question was taken back is still working.
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUri, action: { type: 'chat/turnCancelled', turnId: 't1', duration: 0 } },
+  });
+  await until(() => readFileSync(log, 'utf8').includes('"method":"session/cancel"'));
+});
+
+it('moves nothing for a withdrawal that arrives after the question was answered', async () => {
+  const { client, peer: p, uri, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitwdafter please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-wd-after:elicitation',
+        response: 'accept',
+        answers: { title: { state: 'submitted', value: { kind: 'text', value: 'release/one' } } },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  // The person's own answer is what the server was given, which is what the
+  // withdrawal that follows is too late for.
+  expect(prose(p, chatUri)).toContain('elicit=accept|title=release/one');
+  /*
+   * One completion and one removal, both of them the answer's: the echoed
+   * `chat/inputCompleted` on the chat and the entry the answer took with it.
+   * A second of either would be the withdrawal being treated as an ending for
+   * a question nobody is holding, and the server told twice about one request.
+   */
+  expect(actions(p, chatUri).filter((e) => e.action.type === 'chat/inputCompleted')).toHaveLength(1);
+  expect(actions(p, uri).filter((e) => e.action.type === 'session/inputNeededRemoved'
+    && e.action.id === 'call-wd-after:elicitation')).toHaveLength(1);
+});
+
 it('answers the question a stopped turn left standing with `cancel`', async () => {
   const { client, peer: p, uri, chatUri, log } = await talking();
   begin(client, chatUri, 't1', 'elicitcancel please');
@@ -643,6 +742,13 @@ it('answers the question a stopped turn left standing with `cancel`', async () =
   expect(actions(p, uri).some((e) => e.action.type === 'session/inputNeededRemoved'
     && e.action.id === 'elicitation:1')).toBe(true);
   expect(types(p, uri).at(-1)).not.toBe('session/inputNeededSet');
+  // And the chat is told the request is over, which nothing else would say: the
+  // stop is the ending, so no client sent the `chat/inputCompleted` for it and
+  // the question would otherwise stand on every screen with no answer coming.
+  const done = actions(p, chatUri).find((e) => e.action.type === 'chat/inputCompleted')?.action as
+    { requestId?: string; response?: string } | undefined;
+  expect(done?.requestId).toBe('elicitation:1');
+  expect(done?.response).toBe('cancel');
   // And the stop reached the server, which is what ends the prompt it was held
   // on rather than a turn that waits for a person for ever.
   expect(readFileSync(log, 'utf8')).toContain('"method":"session/cancel"');

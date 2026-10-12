@@ -218,8 +218,12 @@ export interface AcpHandlers {
    * The same shape of request as a permission and answered the same way, so
    * the two capabilities are advertised together and a bridge that can do one
    * does the other. What it asks is a form to fill in or a URL to open.
+   *
+   * `signal` is the request's own, which the protocol aborts on a
+   * `$/cancel_request` naming it: the server has withdrawn the question, and
+   * what it is answered is the cancel the protocol asks for.
    */
-  elicitation?(request: CreateElicitationRequest): Promise<CreateElicitationResponse>;
+  elicitation?(request: CreateElicitationRequest, signal?: AbortSignal): Promise<CreateElicitationResponse>;
   /**
    * The server saying a URL elicitation is done.
    *

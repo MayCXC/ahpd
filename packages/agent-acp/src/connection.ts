@@ -231,9 +231,14 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
    * The completion is a notification rather than a response, because a URL
    * elicitation is answered by whoever opened the page rather than by this
    * client: the server's own flow ends it, and this is how it says so.
+   *
+   * The request's own signal goes with the question, because a server that no
+   * longer wants an answer says so with `$/cancel_request` and the SDK has
+   * already read it: the signal is aborted, and the handler is what takes the
+   * question off the chat before the server's own waiting ends.
    */
   if (elicitation !== undefined) {
-    app.onRequest(methods.client.elicitation.create, (context): Promise<CreateElicitationResponse> => elicitation(context.params));
+    app.onRequest(methods.client.elicitation.create, (context): Promise<CreateElicitationResponse> => elicitation(context.params, context.signal));
   }
   if (elicitationComplete !== undefined) {
     app.onNotification(methods.client.elicitation.complete, (context) => elicitationComplete(context.params));
