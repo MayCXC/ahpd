@@ -5,6 +5,7 @@ import { frozenCopy } from '../frozen.js';
 import { readJsonObject } from '../jsonfile.js';
 import { partsOf } from '../pluginparts.js';
 import { bodyText } from '../records.js';
+import { SEND_REMOTE_MESSAGE } from '../remotesession.js';
 import { bag, reason, str } from '../values.js';
 import { enablementKeyOf } from '../enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
@@ -13,7 +14,7 @@ import type { Bag } from '../types/common.js';
 import type { ClientPlugins, SyncedPlugin } from '../types/clientplugins.js';
 import type { HostTool, ToolCall, TitleStrategy } from '../types/host.js';
 import type { BoundTool, McpServer } from '../types/agent.js';
-import type { Session } from '../types/session.js';
+import type { Session, TurnOptions } from '../types/session.js';
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { ToolsEndpoint } from '../tools/server.js';
 import type { Held } from './state.js';
@@ -22,6 +23,22 @@ import type { HostContext } from './context.js';
 
 /** What a host says about a client's plugin when it has nowhere to keep one. */
 const KEEPS_NONE = 'this host keeps no client plugins';
+
+/**
+ * What an agent working a session another window delegated here is told.
+ *
+ * The window's own text, word for word, from its `remoteSessionOrigin`
+ * contribution: every delegated task's result, blocker or question goes back
+ * to the chat the work came from, through the tool that same contribution
+ * names. The tool's name is the one spelling this file changes, so the text
+ * and the rule below cannot come apart.
+ */
+const REMOTE_SESSION_ORIGIN_INSTRUCTION = `<remote_session_origin>
+For each delegated task from the origin, including follow-ups, send results, blockers, or questions to the exact originating chat using ${SEND_REMOTE_MESSAGE} with session "origin" before ending your turn, unless explicitly told not to report back. Final answers are not forwarded.
+Load ${SEND_REMOTE_MESSAGE} with tool search if needed.
+Only claim delivery after "sent" or "queued"; report failures here. Do not retry uncertain delivery.
+Do not acknowledge messages with no new task or question. Continue independent work or end your turn; do not sleep or poll for replies.
+</remote_session_origin>`;
 
 /**
  * What a toggle on a client plugin landed on.
@@ -228,6 +245,13 @@ export interface Tooling {
   boundTools(uri: string, chatUri: string, provider?: string): BoundTool[];
   /** What the host's tools want the model told, in the order the tools are offered. */
   instructions(uri: string): string[];
+  /**
+   * What one turn of a session is given, for the backend to read when it begins.
+   *
+   * Empty for every session this host began itself, and for one another window
+   * sent here whose clients offer nothing to report back with.
+   */
+  turnInstructions(uri: string): TurnOptions;
 }
 
 export function createTooling(ctx: HostContext): Tooling {
@@ -1069,10 +1093,10 @@ export function createTooling(ctx: HostContext): Tooling {
         const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
           || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
         if (busy) {
-          found.chat.queue(crypto.randomUUID(), text, undefined, from);
+          found.chat.queue(crypto.randomUUID(), text, undefined, from, undefined, turnInstructions(at));
           return 'queued';
         }
-        found.chat.begin(crypto.randomUUID(), text, undefined, from);
+        found.chat.begin(crypto.randomUUID(), text, undefined, from, undefined, turnInstructions(at));
         return 'sent';
       } finally {
         release();
@@ -1107,7 +1131,10 @@ export function createTooling(ctx: HostContext): Tooling {
       kept.setParent?.(idOf(made), idOf(uri));
       const lead = byChat.get(chatUriFor(made));
       if (lead === undefined) throw new Error(`${made} did not start`);
-      lead.chat.begin(crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from);
+      lead.chat.begin(
+        crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
+        undefined, turnInstructions(made),
+      );
       return { session: made, chat: chatUriFor(made) };
     },
     createChat: async (session, asked) => {
@@ -1121,7 +1148,10 @@ export function createTooling(ctx: HostContext): Tooling {
       dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });
       // And the row: a client listing sessions reads a session's chats there.
       summaryMoved(at);
-      chat.begin(crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from);
+      chat.begin(
+        crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
+        undefined, turnInstructions(at),
+      );
       return { chat: chatUri };
     },
     rename: (session, chat, title) => { renameChat(heldAs(session), chat, title); },
@@ -1325,10 +1355,38 @@ export function createTooling(ctx: HostContext): Tooling {
       }];
     }),
   ];
+  /**
+   * Whether a client in this session offers the tool the origin instruction names.
+   *
+   * The instruction tells the agent to report back with `send_remote_message`,
+   * and a client is what runs that tool - so a session whose clients offer
+   * none is one where the model would be told to call something it has not
+   * got. Asked of what was announced rather than of what is offered, because
+   * the announcement is the same list whichever way the host names it back.
+   */
+  const offersSendRemoteMessage = (uri: string): boolean => activeClientsOf(uri).some((client) =>
+    (Array.isArray(client.tools) ? client.tools : []).some((tool) => bag(tool).name === SEND_REMOTE_MESSAGE));
+
   /** What the host's tools want the model told, in the order the tools are offered. */
   const instructions = (uri: string): string[] => ctx.contributing.flatMap((one) => {
     if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
     return one.instruction === undefined ? [] : [one.instruction];
+  });
+
+  /**
+   * What a turn of a session another window delegated here is told.
+   *
+   * Report back to the chat the work came from, given only where such a
+   * session has a client that can report - the window's own rule over the
+   * origin it wrote and the tool it names. Handed to the backend as the words
+   * to read when the turn begins rather than as the words themselves, because
+   * this is the instruction that cannot be settled once: a client that joins,
+   * or leaves, reaches the next turn and not the one already running.
+   */
+  const turnInstructions = (uri: string): TurnOptions => ({
+    instructions: () => (kept.remoteOrigin?.(idOf(uri)) === undefined || !offersSendRemoteMessage(uri)
+      ? []
+      : [REMOTE_SESSION_ORIGIN_INSTRUCTION]),
   });
 
   return {
@@ -1336,7 +1394,7 @@ export function createTooling(ctx: HostContext): Tooling {
     clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold,
     retool, pluginsSettled, chatMeant, renameChat, toolContext,
     pluginsFor, pluginsMoved, mcpFor, deniedMcpServers,
-    toolsServersGone, boundTools, instructions,
+    toolsServersGone, boundTools, instructions, turnInstructions,
     moving, served,
   };
 }
