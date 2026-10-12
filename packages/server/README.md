@@ -44,7 +44,7 @@ Needs Node 22 or later. Also runs on Bun and Deno.
 ```
 ahpd [options]              run it here, in this terminal
 ahpd start [options]        run it in the background
-ahpd stop                   stop the background one
+ahpd stop                   stop the background one, and wait for it to exit
 ahpd restart                stop it and start it again with the same line; --force restarts while a turn runs
 ahpd status                 say whether one is running, and where
 ahpd config                 say where the configuration is, and what it says

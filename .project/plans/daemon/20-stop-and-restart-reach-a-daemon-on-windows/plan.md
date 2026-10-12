@@ -1,7 +1,7 @@
 ---
 title: "`ahpd stop` and `ahpd restart` reach a daemon on Windows"
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -87,11 +87,11 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The record names a control pipe and key](task-01-the-record-names-a-control-pipe-and-key.md) | todo | - |
-| [02 - The daemon answers a request on its pipe](task-02-the-daemon-answers-a-request-on-its-pipe.md) | todo | 01 |
-| [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | todo | 02 |
-| [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | todo | 03 |
-| [05 - The docs describe stop and restart on Windows](task-05-docs.md) | todo | 04 |
+| [01 - The record names a control pipe and key](task-01-the-record-names-a-control-pipe-and-key.md) | implemented | - |
+| [02 - The daemon answers a request on its pipe](task-02-the-daemon-answers-a-request-on-its-pipe.md) | implemented | 01 |
+| [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | implemented | 02 |
+| [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | implemented | 03 |
+| [05 - The docs describe stop and restart on Windows](task-05-docs.md) | implemented | 04 |
 
 ## Risks and tradeoffs
 
@@ -101,15 +101,19 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-record-names-a-control-pipe-and-key.md](task-01-the-record-names-a-control-pipe-and-key.md).
+- **Done so far:** task 01: `Running` carries `control?: { pipe, key }`, `controlFor(platform, pipe?)` makes it on win32, and `start` hands it to the child in `AHPD_CONTROL` and records it.
+  Task 02: `controlServer(control, handlers, log)` in `packages/server/src/control.ts` answers one JSON line per connection, and `runForeground` starts it from `AHPD_CONTROL` and closes it in the way down.
+  Task 03: `deliver(record, signal, platform)` sends the request on win32 and the signal elsewhere, `stop` awaits it, and `realTerminal.signal` calls it.
+  Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
+  Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
+- **Next action:** none. Every task is implemented and awaits review, and the two Windows checks in the final list are left by hand.
 - **Open questions:** none.
 - **Watch out for:** never write the key or `connectUrl` to a log line or to stdout; `ahpd status --json` must not print `control`.
 
 ## Final verification checklist
 
-- [ ] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass, and the signal messages are unchanged.
+- [x] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass, and the signal messages are unchanged.
 - [ ] On Windows: `ahpd start --connection-token-file <f>`, open a session, start a turn, `ahpd stop`; the log shows `stopping`, `daemon.json` is gone, and `ahpd status --json` prints `{"running":false}`.
 - [ ] On Windows: `ahpd restart` refuses while a turn runs, `ahpd restart --force` restarts, and the successor comes up from the recorded line.
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass.
+- [x] `plans/index.md` updated.

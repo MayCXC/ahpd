@@ -165,7 +165,8 @@ to that refusal rather than block on a prompt nobody can see.
 ```
 ahpd [options]              run it here, in this terminal
 ahpd start [options]        run it in the background and let go of it
-ahpd stop                   stop the one running in the background
+ahpd stop                   stop the one running in the background, and wait
+                            for it to exit
 ahpd restart                stop it and start it again with the same line;
                             --force restarts while a turn is running
 ahpd status                 say whether one is, and where
@@ -243,6 +244,16 @@ One restart runs at a time, and a second is refused while it does; `ahpd stop` d
 A successor writes the record only while it is still the old daemon's or no live daemon's, and a daemon, or `ahpd stop`, forgets the record only when it names the daemon it is about.
 A daemon run in the foreground does not listen for either signal, so either one ends it, as a hang-up does; restart it where it runs.
 A daemon started by an older ahpd did not record its arguments, so `ahpd stop` and `ahpd start` are the way to restart it once.
+
+On Windows there is no signal to send: `SIGHUP` and `SIGUSR2` are not available there, and `SIGTERM` is a hard kill that runs no `stopping` handler.
+A daemon started there takes a stop and a restart on a named pipe instead, and its record names that pipe and a key.
+The terminal writes one line of JSON, the key and the signal.
+The daemon compares the key in constant time, and runs the handler that signal names.
+A request with a wrong key, or one naming a signal this daemon does not take, runs nothing and is logged without the key.
+The record is 0600, as the connect URL's token is, and no command prints the pipe or the key.
+
+`ahpd stop` waits for the process to exit, for up to 30 seconds, and then kills it and says so.
+`Stopped` is printed only for a daemon that is gone, and one held in a plugin's `stopping` handler ends as `Killed` instead.
 
 From another machine it is `ahpd --remote <url> restart`, or `POST /api/restart` with `{ "force": true }` to force it; the daemon answers the refusal or that it is restarting.
 The terminal only signals and a remote restart only asks the API, and neither falls back to the other.
