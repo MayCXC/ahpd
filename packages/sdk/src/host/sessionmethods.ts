@@ -435,8 +435,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      * Completions for the text a person is composing.
      *
      * Answers `/` with the commands available to the session, or the
-     * harness-wide list when it has none yet. `@` means a file and is not
-     * served, so it returns nothing.
+     * harness-wide list when it has none yet. `@` and `#` both mean a file,
+     * and both are answered with the same items.
      */
     completions: async (params) => {
       if (String(params.kind ?? '') !== 'userMessage')
@@ -447,17 +447,29 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         : text.length;
       const before = text.slice(0, offset);
       /*
-       * An at-sign at the start of a word, and a path since.
+       * An at-sign or a hash at the start of a word, and a path since.
        *
        * Answered before the slash, because the two cannot both match and
        * a file is the more specific question. What follows may contain
        * slashes - `@src/ho` is a path being typed, not a command - so the
        * pattern stops at whitespace rather than at a separator.
+       *
+       * The hash is VS Code's other spelling of "a file here", which its own
+       * host answers from the same provider and with the same items as the
+       * at-sign - so this answers both with one body, and the only thing the
+       * trigger changes is the character put back in front of the path.
        */
-      const asked = /(?:^|\s)@(\S*)$/.exec(before);
+      const asked = /(?:^|\s)([@#])(\S*)$/.exec(before);
       if (asked) {
-        const typed_ = asked[1] ?? '';
+        const trigger = asked[1] ?? '@';
+        const typed_ = asked[2] ?? '';
         const from = offset - typed_.length - 1;
+        /*
+         * `#chat:` is somebody reaching for a chat, which this host does not
+         * complete yet - a file whose name begins with it is not what the
+         * character means, and guessing one would answer the wrong question.
+         */
+        if (trigger === '#' && typed_.toLowerCase().startsWith('chat:')) return { items: [] };
         const asking = meantBy(String(params.channel ?? ''));
         const chat_ = byChat.get(asking)?.chat
           ?? (sessions.get(asking) ? leadOf(sessions.get(asking) as Held) : undefined);
@@ -470,7 +482,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         const paths = await options.resources.complete(typed_, base);
         return {
           items: paths.map((path) => ({
-            insertText: `@${path}`,
+            insertText: `${trigger}${path}`,
             rangeStart: from,
             rangeEnd: offset,
             attachment: {
@@ -811,16 +823,8 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         // how every session worked before there was anything to push.
         // Handed over, since `openSession` refuses a name this still holds.
         release();
-        // Whose this is: this connection's person, kept beside the session
-        // so a scope change before the first turn is resolved against who
-        // owns the work rather than against whoever sent it.
-        openSession(uri, provider, backendsOwn(config), running, undefined, conn.tokensFor(provider), peers, undefined,
-          { ...forWhom(ownerFor(connection), connection.principal), sender: connection });
-        if (!claims.has(given)) claims.set(given, { kind: 'session', of: uri });
-        // Complete, which the protocol spells as `progress === total`.
-        along(2, 'Ready');
         /*
-         * The creator claiming its place in the session it just made.
+         * The creator claiming its place in the session it is making.
          *
          * The protocol's own words: "equivalent to dispatching a
          * `session/activeClientSet` immediately after creation". Answered
@@ -828,6 +832,13 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
          * trip the field exists to save, and because a client that has to
          * announce itself afterwards owns a session that is briefly empty
          * of it.
+         *
+         * In before the backend is started, and not after: the tools a chat
+         * is handed and what the model is told beside them are both read
+         * once, when that chat starts, and a client announcing itself in the
+         * same breath as the session has to be there for either to reach it.
+         * The announcement is dispatched after, because a session nobody can
+         * subscribe to yet has nobody to tell.
          *
          * The `clientId` is this connection's, not the one in the payload.
          * The protocol says the two MUST match, and forcing it is what the
@@ -837,16 +848,35 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         const claimed = typeof params.activeClient === 'object' && params.activeClient !== null
           ? params.activeClient as Bag
           : undefined;
-        if (claimed !== undefined) {
-          const clientId = connection.clientId || 'anonymous';
-          const activeClient: Bag = {
-            ...claimed,
-            clientId,
-            tools: Array.isArray(claimed.tools) ? claimed.tools : [],
-          };
-          const here = presence.get(idOf(uri)) ?? new Map<string, Bag>();
+        const clientId = connection.clientId || 'anonymous';
+        const activeClient: Bag | undefined = claimed === undefined
+          ? undefined
+          : { ...claimed, clientId, tools: Array.isArray(claimed.tools) ? claimed.tools : [] };
+        let here: Map<string, Bag> | undefined;
+        if (activeClient !== undefined) {
+          here = presence.get(idOf(uri)) ?? new Map<string, Bag>();
           presence.set(idOf(uri), here);
           here.set(clientId, activeClient);
+        }
+        // Whose this is: this connection's person, kept beside the session
+        // so a scope change before the first turn is resolved against who
+        // owns the work rather than against whoever sent it.
+        try {
+          openSession(uri, provider, backendsOwn(config), running, undefined, conn.tokensFor(provider), peers, undefined,
+            { ...forWhom(ownerFor(connection), connection.principal), sender: connection });
+        }
+        catch (error) {
+          // Nothing came of it, so nothing is in it: the presence written
+          // above is this request's, and a client left in a session that was
+          // never opened is one for a row that is not there.
+          here?.delete(clientId);
+          if (here?.size === 0) presence.delete(idOf(uri));
+          throw error;
+        }
+        if (!claims.has(given)) claims.set(given, { kind: 'session', of: uri });
+        // Complete, which the protocol spells as `progress === total`.
+        along(2, 'Ready');
+        if (activeClient !== undefined) {
           dispatch(uri, { type: 'session/activeClientSet', activeClient });
           retool(uri);
         }

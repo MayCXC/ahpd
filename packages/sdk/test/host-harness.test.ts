@@ -338,8 +338,9 @@ describe('what the harness offers', () => {
     const client = open();
     const result = await client.handle(hello(['0.9.0'])) as { completionTriggerCharacters: string[] };
     // Without this the client has no reason to believe a slash means anything
-    // here, and types it into the chat as text.
-    expect(result.completionTriggerCharacters).toEqual(['/', '@']);
+    // here, and types it into the chat as text. The hash is the same statement
+    // about the other spelling of a file, which VS Code's own host also takes.
+    expect(result.completionTriggerCharacters).toEqual(['/', '@', '#']);
   });
 
   it('hands a brand-new session what the host already knows', async () => {

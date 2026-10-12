@@ -1,6 +1,6 @@
 ---
 title: A hash sign completes a file
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -15,9 +15,10 @@ The host sends `/`, `@` and `#` as trigger characters, and the completions comma
 
 ## Files
 
-- `UPDATE: packages/sdk/src/host/handshake.ts:210-218` - add `#`.
-- `UPDATE: packages/sdk/src/host/sessionmethods.ts:441` - answer `#` with files.
-- `UPDATE: packages/sdk/test/host-harness.test.ts` - a `#` query answers files.
+- `UPDATE: packages/sdk/src/host/handshake.ts` - `#` beside `/` and `@`.
+- `UPDATE: packages/sdk/src/host/sessionmethods.ts` - the completions command answers `#`.
+- `UPDATE: packages/sdk/test/host-harness.test.ts` - the trigger-character list.
+- `UPDATE: packages/sdk/test/host-files.test.ts` - a `#` query answers the files `@` answers.
 
 ## Steps
 
@@ -33,3 +34,18 @@ The host sends `/`, `@` and `#` as trigger characters, and the completions comma
 - `pnpm exec vitest run packages/sdk` passes.
 
 ## Resume
+
+One body answers both characters now, and the trigger is the only thing it changes: the insert text keeps whichever character was typed, and the range covers it. `#chat:` returns no items.
+
+The completion cases went to `host-files.test.ts` rather than `host-harness.test.ts`, beside the at-sign ones and with the repository as the directory to enumerate; the trigger-character case is the one that stayed in the harness file.
+
+Files changed:
+
+- `packages/sdk/src/host/handshake.ts`
+- `packages/sdk/src/host/sessionmethods.ts`
+- `packages/sdk/test/host-harness.test.ts`
+- `packages/sdk/test/host-files.test.ts`
+
+Also touched by the run of `pnpm exec vitest run packages/sdk`, which rewrites its own capture: `packages/sdk/test/fixtures/wire.jsonl` (the initialize frame now carries `#`). The restore command is denied in this preset, so Softov reverts it if the recording is not wanted.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk --maxWorkers=2 --testTimeout=10000` pass; a plain run flakes on `nested-start` under load.

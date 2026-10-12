@@ -327,6 +327,59 @@ describe('completing an at-sign', () => {
   });
 });
 
+describe('completing a hash sign', () => {
+  /*
+   * The same files as the at-sign, under the other trigger.
+   *
+   * VS Code's window offers `#` for a file exactly as it offers `@`, and its
+   * own host reads the two in one provider and answers them with one list. So
+   * what is checked here is that this host does the same, and that the only
+   * difference between the two answers is the character put back in front of
+   * the path - which is what decides whether the client keeps the token.
+   */
+  it('offers the files an at-sign offers, with the hash kept', async () => {
+    const host = createHost({ path: REPO, agents: [claude({ paths: [REPO] })], ...machine() });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/live', provider: 'claude' } });
+    const asked = { channel: 'ahp-chat:/live', kind: 'userMessage' };
+    const typed = 'look at #packages/sdk/src/ho';
+    const hashes = await client.handle({
+      method: 'completions',
+      params: { ...asked, text: typed, offset: typed.length },
+    }) as { items: { insertText: string; rangeStart: number; rangeEnd: number; attachment: Record<string, unknown> }[] };
+    const ats = await client.handle({
+      method: 'completions',
+      params: { ...asked, text: typed.replace('#', '@'), offset: typed.length },
+    }) as typeof hashes;
+
+    // The same files, in the same order, with nothing else about them moved.
+    expect(hashes.items.map((i) => i.insertText)).toEqual(ats.items.map((i) => i.insertText.replace(/^@/, '#')));
+    // The whole `#…` is replaced, so completing does not leave two hashes.
+    expect(hashes.items[0]?.rangeStart).toBe(8);
+    expect(hashes.items[0]?.rangeEnd).toBe(typed.length);
+    const file = hashes.items.find((i) => i.insertText === '#packages/sdk/src/host.ts');
+    expect(file?.attachment).toMatchObject({
+      type: 'resource',
+      uri: `file://${REPO}/packages/sdk/src/host.ts`,
+      label: 'packages/sdk/src/host.ts',
+    });
+  });
+
+  it('answers nothing for `#chat:`, which is a chat and not a file', async () => {
+    const host = createHost({ path: REPO, agents: [claude({ paths: [REPO] })], ...machine() });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    const found = await client.handle({
+      method: 'completions',
+      params: { channel: 'ahp-root://', kind: 'userMessage', text: 'tell #chat:', offset: 11 },
+    }) as { items: unknown[] };
+    // Nothing rather than a file whose name happens to begin with `chat:`:
+    // a client handed one would attach the wrong thing and never know.
+    expect(found.items).toEqual([]);
+  });
+});
+
 describe('more than one directory', () => {
   it('advertises that it can, and which slot is fixed', async () => {
     const client = open();
