@@ -44,7 +44,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
    * read that took one would say so only by being wrong.
    */
   const {
-    agents, changed, channelKind, daemonKey, decided, declaresConfigKey,
+    agents, cancelRun, changed, channelKind, daemonKey, decided, declaresConfigKey,
     dir, dirOf, dispatch, first, homeOf, kept, learned, log, marks, marksOf, meantBy, names, options,
     ownerFor, owners, past, permitted, presence, relayed, restart, retool,
     rootConfig, served, sessionFor, sessions, starting, summaryMoved, terminals, toolDefinitions,
@@ -610,8 +610,19 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
       return;
     }
 
+    /*
+     * Stop a run.
+     *
+     * The action carries nothing and names its run by the channel it arrives
+     * on, which is the protocol's own shape: `AutomationRunCancelRequestedAction`
+     * has a type and no field at all. What comes back where it did not stop is
+     * the sentence the store or the state of the run gives, refused in the
+     * hearing of the client that asked - the same answer every other refused
+     * dispatch gets, because this one has no result to carry it.
+     */
     if (type === 'automationRun/cancelRequested') {
-      no('A run here is a session, and disposing it is how it stops');
+      const refused = cancelRun(channel);
+      if (refused !== undefined) no(refused);
       return;
     }
 

@@ -31,6 +31,9 @@ const OVERLAPS = ['queue', 'steer', 'parallel', 'skip'];
 /** The kinds that end a session's turn, which is when its chat is free again. */
 const ENDING = new Set<SessionEventKind>(['turnCompleted', 'turnFailed', 'turnCancelled']);
 
+/** The lifecycles a run has already ended in, which a cancel may not move. */
+const OVER = new Set(['completed', 'failed', 'cancelled']);
+
 /**
  * Who a run's own plugins are announced as.
  *
@@ -157,6 +160,8 @@ export interface Automations {
   linked: Map<string, string[]>;
   /** Move the run a session belongs to, when that session stops working. */
   settleRun(uri: string, ending: RunEnding): void;
+  /** Stop the run a client named: nothing where it stopped, or why it did not. */
+  cancelRun(run: string): string | undefined;
   /** A session this host was running is gone: nothing about it is measured any more. */
   gone(session: string): void;
   /** Stop watching what sessions do. Called as the host closes, before its stores. */
@@ -184,6 +189,7 @@ export function createAutomations(ctx: HostContext): Automations {
     options, sessions, byChat, senders, charged, first, origins, kept,
     dispatch, log, fire, statusOf, principalFor, admitted, placedIn,
     isolated, settle, openSession, backendsOwn, modelIn, unheld, forWhom, leadOf,
+    turnInstructions,
   } = ctx;
 
   /** The sessions each run was last announced as having, by run URI. */
@@ -213,20 +219,29 @@ export function createAutomations(ctx: HostContext): Automations {
   const wakes = new Map<string, number[]>();
 
   /**
+   * Whether any of a run's sessions is still working.
+   *
+   * The protocol says a run stays `running` while any linked session executes
+   * or awaits a person, so this is the question both the settling of a run and
+   * the stopping of one are asked against. `except` leaves one session out,
+   * which is the one whose own ending is being read.
+   */
+  const stillGoing = (run: AutomationRun, except?: string): boolean =>
+    run.sessions.some((one) => one !== except && sessions.has(one)
+      && (statusOf(one) & (Status.InProgress | Status.InputNeeded)) !== 0);
+
+  /**
    * Move the run a session belongs to, when that session stops working.
    *
-   * Only when nothing else of the run is still busy: the protocol says a run
-   * stays `running` while any linked session executes or awaits a person, so
-   * one session finishing is not the run finishing.
+   * Only when nothing else of the run is still busy: one session finishing is
+   * not the run finishing.
    */
   const settleRun = (uri: string, ending: RunEnding): void => {
     const from = origins.get(uri);
     if (from === undefined) return;
     const run = options.automations?.runOf?.(from.run);
     if (run === undefined) return;
-    const busy = run.sessions.some((one) => one !== uri && sessions.has(one)
-      && (statusOf(one) & (Status.InProgress | Status.InputNeeded)) !== 0);
-    if (busy) return;
+    if (stillGoing(run, uri)) return;
     options.automations?.settle?.(from.run, ending);
     /*
      * And the run that has been waiting behind this one starts, a turn later.
@@ -237,6 +252,54 @@ export function createAutomations(ctx: HostContext): Automations {
      * that to be over.
      */
     setTimeout(() => { release(from.automation); }, 0);
+  };
+
+  /**
+   * One session of a run stopped, the way a person pressing Stop in a chat
+   * stops one.
+   *
+   * A run is sessions and what runs in a session is a turn, so the call is the
+   * one `chat/turnCancelled` makes: the chat is asked to cancel the turn it is
+   * running, and the backend's own ending is what the run reads. A session that
+   * is not live here has no turn to cancel, which is the same answer as one
+   * between turns.
+   */
+  const stopTurn = (session: string): void => {
+    const chat = byChat.get(chatUriFor(session))?.chat;
+    if (chat === undefined) return;
+    const active = (chat.chatState() as { activeTurn?: { id?: unknown } }).activeTurn;
+    if (typeof active?.id === 'string') chat.cancel(active.id);
+  };
+
+  /**
+   * Stop a run, and answer why it did not stop where it did not.
+   *
+   * The action is a request with no room for an answer, so the reason travels
+   * back to the one client that asked as a `rejectionReason` rather than as a
+   * result - which is why this hands one out instead of refusing.
+   *
+   * A run that has no session running a turn is settled here and now. That is
+   * a run whose session is between turns, one asleep in the catalogue, and one
+   * whose session is still being made: none of the three will ever emit an
+   * ending, and a cancel that waited for one would wait for ever. The
+   * reference host does the same with the last of them, which it answers by
+   * writing the run's own end rather than by asking a session for it.
+   *
+   * The wake this automation is holding behind the run goes with it. That wake
+   * was waiting for the slot this run had, and a person pressing Stop is
+   * stopping the work rather than asking for the next piece of it: left where
+   * it is, the run's own ending would release it a turn later and the stop
+   * would have started the automation's next run.
+   */
+  const cancelRun = (run: string): string | undefined => {
+    const store = options.automations;
+    const found = store?.runOf?.(run);
+    if (found === undefined) return `Automation run not found: ${run}`;
+    if (OVER.has(String(found.lifecycle.status))) return `Automation run is already terminal: ${run}`;
+    waiting.delete(found.automation);
+    for (const session of found.sessions) stopTurn(session);
+    if (!stillGoing(found)) store?.settle?.(run, { status: 'cancelled' });
+    return undefined;
   };
 
   /**
@@ -561,7 +624,8 @@ export function createAutomations(ctx: HostContext): Automations {
     if (wanted.text.trim() === '') return;
     const turnId = crypto.randomUUID();
     if (wanted.owner !== undefined) senders.set(turnId, wanted.owner);
-    byChat.get(chatUriFor(session))?.chat.begin(turnId, wanted.text, modelIn(wanted.model), { origin: { kind: 'automation' } });
+    byChat.get(chatUriFor(session))?.chat
+      .begin(turnId, wanted.text, modelIn(wanted.model), { origin: { kind: 'automation' } }, undefined, turnInstructions(session));
   };
 
   /**
@@ -1183,7 +1247,9 @@ export function createAutomations(ctx: HostContext): Automations {
     request(automation, origin, undefined, `${automation} was due`, false);
   };
 
-  return { linked, settleRun, gone, stop, changed, beginAutomation, startForAutomation, startForPlugin, due };
+  return {
+    linked, settleRun, cancelRun, gone, stop, changed, beginAutomation, startForAutomation, startForPlugin, due,
+  };
 }
 
 /**

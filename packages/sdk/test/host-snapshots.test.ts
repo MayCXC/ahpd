@@ -407,13 +407,15 @@ describe('the fields a client reads by name', () => {
       automations: memoryAutomations(),
     });
     const with_ = await host.accept(peer()).handle(hello(['0.9.0'])) as {
-      automations?: { create?: unknown; schedules?: unknown; runCancellation?: unknown };
+      automations?: { create?: unknown; schedules?: unknown; runCancellation?: unknown; runHistoryLimit?: unknown };
     };
     expect(with_.automations?.create).toEqual({});
     expect(with_.automations?.schedules).toEqual({});
-    // Not advertised, because it is not served: a run here is a session, and
-    // disposing it is how it stops.
-    expect(with_.automations).not.toHaveProperty('runCancellation');
+    // Served, so a client offers Stop on a run that is `pending` or `running`:
+    // the host cancels the turn in each of the run's sessions and keeps them.
+    expect(with_.automations?.runCancellation).toEqual({});
+    // The number is VS Code's, and the store keeps exactly it.
+    expect(with_.automations?.runHistoryLimit).toBe(50);
   });
 
   it('echoes the clientSeq the dispatch carried, and nothing on its own actions', async () => {

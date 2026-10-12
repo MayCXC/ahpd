@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { memoryAutomations } from '../src/automations.js';
+import { memoryAutomations, RUN_HISTORY_LIMIT } from '../src/automations.js';
 import { memorySessions } from '../src/sessions.js';
 import { clientPluginsIn } from '../src/clientplugins.js';
 import { idOf } from '../src/catalog.js';
@@ -412,7 +412,9 @@ describe('a template that names client plugins', () => {
       method: 'initialize',
       params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: [] },
     }) as { automations?: Record<string, unknown> };
-    expect(answer.automations).toEqual({ create: {}, schedules: {} });
+    expect(answer.automations).toEqual({
+      create: {}, schedules: {}, runCancellation: {}, runHistoryLimit: RUN_HISTORY_LIMIT,
+    });
     expect('customizations' in (answer.automations ?? {})).toBe(false);
   });
 });
@@ -743,7 +745,9 @@ describe('a host that keeps client plugins', () => {
       method: 'initialize',
       params: { clientId: 'b', protocolVersions: ['0.9.0'], initialSubscriptions: [] },
     }) as { automations?: Record<string, unknown> };
-    expect(answer.automations).toEqual({ create: {}, schedules: {}, customizations: {} });
+    expect(answer.automations).toEqual({
+      create: {}, schedules: {}, runCancellation: {}, runHistoryLimit: RUN_HISTORY_LIMIT, customizations: {},
+    });
   });
 });
 
@@ -1057,6 +1061,75 @@ it('settles a run cancelled when its session is disposed mid-turn', async () => 
   expect(after.lifecycle.completedAt).toBeTypeOf('string');
 });
 
+it('stops a running run, and keeps the session it was running in', async () => {
+  // A paced backend keeps the turn open, which is the state a stop is for.
+  const { client, peer: p } = await connected(true, 20);
+  await client.handle({ method: 'subscribe', params: { channel: AUTOMATIONS } });
+  await write(client, {
+    ...DEFINITION,
+    message: { text: 'a message with enough words that the turn is still being streamed' },
+  });
+  const run = await client.handle({
+    method: 'runAutomation', params: { channel: AUTOMATIONS, automation: ONE, requestId: 'req-1' },
+  }) as { resource: string };
+
+  const before = await runState(client, run.resource);
+  expect(before.lifecycle.status).toBe('running');
+  const session = String(before.sessions[0] ?? '');
+
+  // The action carries nothing, because it names its run by the channel it
+  // arrives on - which is the protocol's own shape for this one.
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: run.resource, action: { type: 'automationRun/cancelRequested' } },
+  });
+  await until(async () => (await runState(client, run.resource)).lifecycle.status === 'cancelled');
+
+  const after = await runState(client, run.resource);
+  expect(after.lifecycle.status).toBe('cancelled');
+  expect(after.lifecycle.completedAt).toBeTypeOf('string');
+  // The session is still there and still openable: what a stop ends is the
+  // turn, and a session somebody may read is not what a stop takes away.
+  expect(after.sessions).toEqual(before.sessions);
+  expect(after.primarySession).toBe(before.primarySession);
+
+  // And the turn is really over in the session, rather than only in the run.
+  const chat = await client.handle({
+    method: 'subscribe', params: { channel: `ahp-chat:/${idOf(session)}` },
+  }) as { snapshot: { state: { activeTurn?: unknown; turns?: { state?: string }[] } } };
+  expect(chat.snapshot.state.activeTurn).toBeUndefined();
+  expect(chat.snapshot.state.turns?.at(-1)?.state).toBe('cancelled');
+
+  // Nothing was refused: the stop was taken.
+  expect(refusals(p, run.resource)).toEqual([]);
+});
+
+it('refuses a run that has ended, and one the host does not hold', async () => {
+  const { client, peer: p } = await connected();
+  await client.handle({ method: 'subscribe', params: { channel: AUTOMATIONS } });
+  await write(client, DEFINITION);
+  const run = await client.handle({
+    method: 'runAutomation', params: { channel: AUTOMATIONS, automation: ONE, requestId: 'req-1' },
+  }) as { resource: string };
+  await until(async () => (await runState(client, run.resource)).lifecycle.status === 'completed');
+
+  const stop = (channel: string) => client.handle({
+    method: 'dispatchAction',
+    params: { channel, action: { type: 'automationRun/cancelRequested' } },
+  });
+
+  await stop(run.resource);
+  // The sentence VS Code's own host gives, so a client that branches on the
+  // reason reads the same whichever host it is talking to.
+  expect(refusals(p, run.resource)).toEqual([`Automation run is already terminal: ${run.resource}`]);
+  // And a stop does not reopen a run to cancel it.
+  expect((await runState(client, run.resource)).lifecycle.status).toBe('completed');
+
+  const missing = 'ahp-automation-run:/never';
+  await stop(missing);
+  expect(refusals(p, missing)).toEqual([`Automation run not found: ${missing}`]);
+});
+
 it('settles a run by hand, and never reopens one that ended', async () => {
   const store = memoryAutomations();
   store.create('ahp-automation:/one', {});
@@ -1092,6 +1165,70 @@ it('settles a run by hand, and never reopens one that ended', async () => {
   expect(store.settle?.(third?.resource ?? '', { status: 'cancelled' })).toBe(true);
   expect(third?.lifecycle.status).toBe('cancelled');
   expect('startedAt' in (third?.lifecycle ?? {})).toBe(false);
+});
+
+/*
+ * What an automation keeps.
+ *
+ * A run is the record of something that happened, and a store that kept every
+ * one of them would grow with the clock. The number is the host's promise -
+ * `runHistoryLimit` on the capability - so the store keeps exactly it, and the
+ * runs that fall out are the oldest ones that have ended.
+ */
+
+/** Every run an automation still holds, newest first, paged as a client reads them. */
+const kept = (store: AutomationStore): string[] => {
+  const page = (): string[] => (store.get(ONE)?.runs ?? []).map((one) => String(one.resource));
+  let runs = page();
+  for (let i = 0; i < 20; i++) {
+    const cursor = store.get(ONE)?.runsNextCursor;
+    if (cursor === undefined) break;
+    store.runs(ONE, cursor);
+    runs = page();
+  }
+  return runs;
+};
+
+/** Run one automation over `times`, and end every run it made. */
+const endedRuns = async (store: AutomationStore, times: number): Promise<string[]> => {
+  const start = async (): Promise<string> => 'ahp-session:/made';
+  const made: string[] = [];
+  for (let i = 0; i < times; i++) {
+    const run = await store.run(ONE, { kind: 'manual' }, start);
+    if (run === undefined) throw new Error('the run was refused');
+    store.settle?.(run.resource, { status: 'completed' });
+    made.push(run.resource);
+  }
+  return made;
+};
+
+it('keeps the newest ended runs, and only that many of them', async () => {
+  const store = memoryAutomations();
+  store.create(ONE, {});
+  const made = await endedRuns(store, RUN_HISTORY_LIMIT + 5);
+
+  // The number twice, because it is a promise to a client rather than an
+  // implementation detail: a store that kept another number would be
+  // advertising one thing and keeping another.
+  expect(RUN_HISTORY_LIMIT).toBe(50);
+  // Newest first, so what is kept is the newest of them and not the oldest.
+  expect(kept(store)).toEqual(made.slice(5).reverse());
+  // And what fell out is gone rather than only out of the list: nothing here
+  // answers about a run no client can read.
+  expect(store.runOf(made[0] ?? '')).toBeUndefined();
+});
+
+it('never drops a run that has not ended', async () => {
+  const store = memoryAutomations();
+  store.create(ONE, {});
+  const going = await store.run(ONE, { kind: 'manual' }, async () => 'ahp-session:/made');
+  const made = await endedRuns(store, RUN_HISTORY_LIMIT + 5);
+
+  // The window counts ended runs, and this one is not one of them: it is the
+  // only record of work that is still in flight, and the oldest thing here.
+  expect(kept(store)).toHaveLength(RUN_HISTORY_LIMIT + 1);
+  expect(kept(store).at(-1)).toBe(going?.resource);
+  expect(kept(store)).not.toContain(String(made[4]));
 });
 
 /** The catalogue's one entry, as a client reads it. */

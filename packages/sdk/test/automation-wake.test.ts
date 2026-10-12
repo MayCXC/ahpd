@@ -487,6 +487,37 @@ it('queues one run and folds the rest while one runs', async () => {
     .not.toBe(bag(runsOf(store)[1])['primarySession']);
 });
 
+it('stops a run, and the wake waiting behind it goes with it', async () => {
+  const store = memoryAutomations();
+  const { client, chatUri, cli } = await live({ automations: store });
+  store.create(AUTOMATION, waking({}));
+
+  await fails(client, chatUri, 't1', cli);
+  await until(() => runCount(store) === 1, 'the first run');
+  // A second event while the first run goes is a wake held behind it, and not
+  // a run: this is the state a stop has to reach, because the wake is not in
+  // any list a client could name.
+  await fails(client, chatUri, 't2', cli);
+  await settle(8);
+  expect(runCount(store)).toBe(1);
+
+  const run = String(newest(store)['resource']);
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: run, action: { type: 'automationRun/cancelRequested' } },
+  });
+  await until(() => String(bag(newest(store)['lifecycle'])['status']) === 'cancelled', 'the run to be stopped');
+  // The run was stopped in its session's turn rather than only in the store.
+  expect(newest(store)['primarySession']).toMatch(/^claude:\//);
+
+  // And the wake goes with it. A stop is stopping the work, and an automation
+  // that starts its next run the moment it was stopped is the opposite of what
+  // the person pressing Stop asked for.
+  await settle(20);
+  expect(runCount(store)).toBe(1);
+  expect(String(bag(newest(store)['lifecycle'])['status'])).toBe('cancelled');
+});
+
 it('steers the running turn, and queues when nothing runs', async () => {
   const store = memoryAutomations();
   const { client, chatUri, cli } = await live({ automations: store });
