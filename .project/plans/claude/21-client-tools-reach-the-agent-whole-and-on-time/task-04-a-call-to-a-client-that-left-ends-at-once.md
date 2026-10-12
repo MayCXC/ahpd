@@ -1,6 +1,6 @@
 ---
 title: A call to a client that left ends at once
-status: todo
+status: done
 depends: []
 layer: "packages/agent-claude"
 refs:
@@ -39,3 +39,14 @@ It does not wait until the turn is stopped.
 - `pnpm exec vitest run packages/sdk packages/agent-claude` passes.
 
 ## Resume
+
+A handler the CLI started waits for the frame that reports its call, in one of two joins: by the call's own id, in `asked`, or by the tool's name and the input, in `unclaimed` and `expecting`. Neither join says anything about who provides the tool, so a client that leaves left a handler parked on a call that would never open. `refuseJoins` is the one place that ends every join for one tool name, and `openCall`'s early return now uses it, so a frame that names a tool nothing offers answers the handler instead of leaving it; `clientGone` walks the tools whose names start with `mcp__ahp__<clientId>__` and refuses each, and then calls the holder's own `clientGone` so the calls already open end the way they did.
+
+The steps did not say so, but the by-id join needed one more thing: `asked` was keyed by the CLI's call id alone, so a client leaving could not tell which tool a parked handler was waiting for. The wait now carries its tool name, `untilOpen` takes it, and `refuseJoins` and `clientGone` read it - which is what makes the first Validation case pass rather than only the second. The refusal is the holder's own sentence ("The client `<id>` that was running the tool is no longer here"), so both halves of one call read the same.
+
+The cases are in `packages/agent-claude/test/agent-claude-client-gone.test.ts`, not `packages/sdk/test/host-tools.test.ts` as the Files list said, for the same reason as task 02: the joins live in this backend's `clienttools.ts`, and `packages/sdk` neither holds nor imports it. The cases build the small part of a session's context and drive the handler the SDK server was built with, which is the one thing that runs a call.
+
+Files this task changed:
+
+- `packages/agent-claude/src/session/clienttools.ts` - `refuseJoins` ends the by-id joins too, `asked` carries the tool with each wait, `openCall` refuses the joins of a tool nothing offers, and `clientGone` is added to `methods`.
+- `packages/agent-claude/test/agent-claude-client-gone.test.ts` - new: by id, by name and input, a tool no longer on offer, and another client's joins.

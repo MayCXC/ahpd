@@ -1,7 +1,7 @@
 ---
 title: A client's tools reach the agent whole and on time
 domain: claude
-status: planned
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -10,7 +10,7 @@ refs:
   - "[code://packages/agent-claude/src/session/clienttools.ts#L435-L446](../../../../packages/agent-claude/src/session/clienttools.ts#L435-L446) - `setTools`, which keeps the new list before the SDK has taken it"
   - "[code://packages/agent-claude/src/session/clienttools.ts#L337-L346](../../../../packages/agent-claude/src/session/clienttools.ts#L337-L346) - `openCall`, which drops a call whose tool is no longer on offer"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L817-L852](../../../../packages/sdk/src/host/sessionmethods.ts#L817-L852) - the creator's presence, recorded after `openSession`"
-  - "[code://docs/AHP.md#L443-L451](../../../../docs/AHP.md#L443-L451) - the input request table, which names two kinds of four"
+  - "[code://docs/AHP.md#L443-L452](../../../../docs/AHP.md#L443-L452) - the input request table, which names two kinds of four"
   - npm://zod@^4.4.3 - `z.fromJSONSchema` reads a JSON Schema into zod
 ---
 
@@ -61,11 +61,11 @@ session/create with activeClient -> openSession -> boundTools -> setTools -> set
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A nested schema reaches the model](task-01-a-nested-schema-reaches-the-model.md) | todo | - |
-| [02 - A tool list the SDK refused is sent again](task-02-a-refused-tool-list-is-sent-again.md) | todo | - |
-| [03 - The creator's tools are there on the first turn](task-03-the-creators-tools-are-there-on-the-first-turn.md) | todo | - |
-| [04 - A call to a client that left ends at once](task-04-a-call-to-a-client-that-left-ends-at-once.md) | todo | - |
-| [05 - The docs name every kind of input request](task-05-the-docs-name-every-kind-of-input-request.md) | todo | - |
+| [01 - A nested schema reaches the model](task-01-a-nested-schema-reaches-the-model.md) | done | - |
+| [02 - A tool list the SDK refused is sent again](task-02-a-refused-tool-list-is-sent-again.md) | done | - |
+| [03 - The creator's tools are there on the first turn](task-03-the-creators-tools-are-there-on-the-first-turn.md) | done | - |
+| [04 - A call to a client that left ends at once](task-04-a-call-to-a-client-that-left-ends-at-once.md) | done | - |
+| [05 - The docs name every kind of input request](task-05-the-docs-name-every-kind-of-input-request.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -74,13 +74,13 @@ session/create with activeClient -> openSession -> boundTools -> setTools -> set
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-nested-schema-reaches-the-model.md](task-01-a-nested-schema-reaches-the-model.md).
+- **Done so far:** built 2026-10-11; see [implemented.md](implemented.md).
+- **Next action:** the check by hand in VS Code.
 - **Open questions:** none.
-- **Watch out for:** the five tasks are independent, and tasks 01, 02 and 04 all change `clienttools.ts`.
+- **Watch out for:** nothing.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/agent-claude` pass.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/agent-claude` pass.
 - [ ] A VS Code tool with a nested object argument runs from a Claude session on the first turn.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

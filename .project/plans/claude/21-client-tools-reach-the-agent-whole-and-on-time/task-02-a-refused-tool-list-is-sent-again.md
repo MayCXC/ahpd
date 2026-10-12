@@ -1,6 +1,6 @@
 ---
 title: A tool list the SDK refused is sent again
-status: todo
+status: done
 depends: []
 layer: "packages/agent-claude"
 refs:
@@ -31,3 +31,12 @@ A list that the SDK refused counts as a change when it comes again, so it is sen
 - `pnpm exec vitest run packages/sdk packages/agent-claude` passes.
 
 ## Resume
+
+`setTools` builds the next `ahp` server in a copy of `ctx.declared`, sends the copy, and moves `ctx.offering` and `ctx.declared` only once `setMcpServers` has answered. A rejection returns false and leaves both as they were, so the same list coming again is still a change.
+
+The cases are in `packages/agent-claude/test/agent-claude-contributed-tools.test.ts`, not `packages/sdk/test/host-tools.test.ts` as the Files list said. What is under test is this backend's `setTools` and its `ctx.declared`, and `packages/sdk` neither holds nor imports `clienttools.ts` - a file there could only reach the method through a whole host, which buys the retry no test can drive. So the cases build the small part of a session's context `setTools` reads and drive the one method.
+
+Files this task changed:
+
+- `packages/agent-claude/src/session/clienttools.ts` - `setTools` keeps the list only after the SDK takes it.
+- `packages/agent-claude/test/agent-claude-contributed-tools.test.ts` - new: the retry, the no-resend and the whole-set cases.

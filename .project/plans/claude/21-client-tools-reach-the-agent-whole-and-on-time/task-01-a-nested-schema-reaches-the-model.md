@@ -1,6 +1,6 @@
 ---
 title: A nested schema reaches the model
-status: todo
+status: done
 depends: []
 layer: "packages/agent-claude"
 refs:
@@ -39,3 +39,17 @@ A schema that zod cannot read reaches the model as a string, as all of them do n
 - `pnpm exec vitest run packages/agent-claude` passes.
 
 ## Resume
+
+`shaped()` reads the whole property with `z.fromJSONSchema`, so a nested object, an array of objects and an enum reach the model as the client wrote them.
+
+Step 1 does not arise: `fromJSONSchema` first appears in zod 4.2.0, and the declared floor is already `^4.4.3`. No `package.json` change, so that File line stays as it is.
+
+Step 3 is a guard: zod 4.5.4 keeps the `description` through the read, so `.describe()` is applied only when the reader dropped the words. The fallback of step 4 catches the refusals, which are an unresolved `$ref` and a `type` the reader does not know.
+
+The test reads the zod the SDK server lists for the tool and the JSON Schema zod writes back out of it, which is what the model is offered. The property the cases leave optional carries an `anyOf` wrapper on the server, so the case unwraps it before it reads the shape under it.
+
+Files this task changed:
+
+- `packages/agent-claude/src/session/clienttools.ts` - `shaped()` reads through `z.fromJSONSchema`, keeps a dropped description and falls back to `z.string()`.
+- `packages/agent-claude/package.json` - not changed: the `^4.4.3` floor already has `fromJSONSchema`.
+- `packages/agent-claude/test/agent-claude-contributed-schema.test.ts` - new: the four cases.

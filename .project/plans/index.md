@@ -211,7 +211,7 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [18 - session.ts is split into one file per area, and session.ts only composes them](claude/18-session-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](claude/18-session-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [19 - An AskUserQuestion shows each question's header, and an answer shows on every client at once with its typed text reaching the tool](claude/19-a-question-shows-its-headers-and-its-answer-at-once/plan.md) | high | built | claude 11 | - |
 | [20 - A Claude turn reads its message's attachments, queued and steered ones included](claude/20-a-claude-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](claude/20-a-claude-turn-reads-its-attachments/implemented.md), [deferred.md](claude/20-a-claude-turn-reads-its-attachments/deferred.md)) | host 68 | ahpapp `chat/03` for Claude sessions |
-| [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-the-agent-whole-and-on-time/plan.md) | high | planned 2026-10-11 | - | - |
+| [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-the-agent-whole-and-on-time/plan.md) | high | built 2026-10-11 ([implemented.md](claude/21-client-tools-reach-the-agent-whole-and-on-time/implemented.md)); the VS Code check by hand remains | - | - |
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | planned 2026-10-11 | - | - |
 
 Next free number in `claude`: `23`.
