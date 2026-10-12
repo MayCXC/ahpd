@@ -176,7 +176,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
 
   const update = registry.action({
     id: 'plugin.update',
-    summary: 'Move every installed plugin, or the ones named, to the version that fits this daemon',
+    summary: 'Move the plugins named, or every installed one with all, to the version that fits this daemon',
     description: 'Every registry package in the configuration directory to the newest of its own versions whose @ahpd/sdk range admits this daemon, in one npm call, or one call per package with --force; a package with no such version stops the update before npm runs, or with --force is named and left as it is; a package from a path, link, git or URL is left as installed.',
     surfaces: { cli: { pattern: ['plugin', 'update', ':name...'] }, http: { method: 'POST', path: '/plugin/update' } },
     // What moves is the installed package the name points at, not a row.
