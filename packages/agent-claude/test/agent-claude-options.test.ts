@@ -258,3 +258,69 @@ it('names the conversation after the chat, and after the session when the chat n
 it('sends no sessionId when the conversation is resumed by name', () => {
   expect(startedWith({ uri: `ahp-session:/${SESSION}`, chatId: CHAT, resume: SESSION })).not.toHaveProperty('sessionId');
 });
+
+/*
+ * What the operator's environment becomes in front of a Bash command.
+ *
+ * `Start.shellEnv` is the daemon's, resolved before the session is built, and
+ * the `PreToolUse` hook the CLI runs on every Bash call is the one place a
+ * session's shells can be given it. A session with nothing to say about the
+ * environment must leave a command exactly as the client wrote it - an
+ * `updatedInput` that only repeated the command would be a rewrite of every
+ * Bash call for nothing.
+ */
+
+/** One hook input, as the CLI sends it. */
+interface HookInput { hook_event_name: string; tool_input: Record<string, unknown> }
+
+/** The callback the CLI runs before a Bash command, in a session built with `start`. */
+const bashHook = (start: Record<string, unknown>): ((input: HookInput) => Promise<unknown>) => {
+  cli.options = [];
+  createSession({
+    uri: 'ahp-session:/shellenv',
+    chatUri: 'ahp-chat:/shellenv',
+    cwd: mkdtempSync(join(tmpdir(), 'ahpd-shellenv-')),
+    emit: () => {},
+    ...start,
+  });
+  const built = cli.options.at(0) as { hooks?: { PreToolUse?: { hooks?: unknown[] }[] } } | undefined;
+  const hook = built?.hooks?.PreToolUse?.at(0)?.hooks?.at(0);
+  if (typeof hook !== 'function') throw new Error('no Bash hook was registered');
+  return hook as (input: HookInput) => Promise<unknown>;
+};
+
+/** The command the hook puts in place of `command`, or nothing when it puts none. */
+const commandedWith = async (start: Record<string, unknown>, command: string): Promise<unknown> => {
+  const answer = await bashHook(start)({ hook_event_name: 'PreToolUse', tool_input: { command } }) as
+    { hookSpecificOutput?: { updatedInput?: { command?: unknown } } } | undefined;
+  return answer?.hookSpecificOutput?.updatedInput?.command;
+};
+
+it('puts the operator\'s environment in front of a Bash command', async () => {
+  const sent = await commandedWith({ shellEnv: { XDG_CONFIG_HOME: '/home/me/.config' } }, 'echo $XDG_CONFIG_HOME');
+  expect(sent).toBe("export XDG_CONFIG_HOME='/home/me/.config'\necho $XDG_CONFIG_HOME");
+});
+
+it('unsets a variable the operator removed', async () => {
+  expect(await commandedWith({ shellEnv: { PORT: null } }, 'echo $PORT')).toBe('unset PORT\necho $PORT');
+});
+
+it('quotes a value that has a quote in it', async () => {
+  expect(await commandedWith({ shellEnv: { SAY: "it's" } }, 'echo "$SAY"')).toBe("export SAY='it'\\''s'\necho \"$SAY\"");
+});
+
+it('leaves a command alone when the operator named no environment and no script is in force', async () => {
+  expect(await commandedWith({}, 'echo hi')).toBeUndefined();
+  expect(await commandedWith({ shellEnv: {} }, 'echo hi')).toBeUndefined();
+});
+
+it('puts the operator\'s lines before the session\'s own init script', async () => {
+  const sent = await commandedWith(
+    { shellEnv: { SAY: 'b' }, settings: { shellInitScripts: [{ shell: 'bash', script: 'echo init' }] } },
+    'echo hi',
+  );
+  const lines = String(sent).split('\n');
+  expect(lines[0]).toBe("export SAY='b'");
+  expect(lines[1]).toMatch(/ahpd-shell-init-[^']*\.sh/u);
+  expect(lines.at(-1)).toBe('echo hi');
+});

@@ -2,7 +2,8 @@ import { rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { HookCallback, PermissionMode } from '@anthropic-ai/claude-agent-sdk';
-import type { Session } from '@ahpd/sdk';
+import { isShellName } from '@ahpd/sdk';
+import type { Session, ShellEnv } from '@ahpd/sdk';
 import { bag, str } from './common.js';
 import type { SessionContext } from './context.js';
 
@@ -54,6 +55,33 @@ const shellInitScripts = (value: unknown): ShellInitScript[] | undefined => {
  * hidden, since a profile that fails is something the model should hear.
  */
 const sourcing = (path: string): string => `{ . '${path.replaceAll("'", "'\\''")}'; } 2>/dev/null || printf 'shell init script exited %s\\n' "$?"`;
+
+/**
+ * One word, quoted for a POSIX shell, by the rule `terminals.ts` uses.
+ *
+ * Single quotes make everything literal except the quote itself, which is
+ * written by closing, escaping and reopening: `it's` becomes `'it'\''s'`.
+ */
+const quoted = (word: string): string => `'${word.replaceAll("'", "'\\''")}'`;
+
+/**
+ * The operator's environment, as the lines that give a shell it.
+ *
+ * One `export` for each name the operator set the value of and one `unset` for
+ * each name they removed. A name that is not a shell variable name is left
+ * out: `export 2FA=on` is a syntax error, and a session whose every command
+ * failed to parse would be worse than one variable a deployment cannot set
+ * this way. The daemon refuses such a name in its config as well; this is what
+ * keeps a session built by hand from writing the line.
+ */
+const shellEnvLines = (shellEnv?: ShellEnv): string => {
+  const lines: string[] = [];
+  for (const [name, value] of Object.entries(shellEnv ?? {})) {
+    if (!isShellName(name)) continue;
+    lines.push(value === null ? `unset ${name}` : `export ${name}=${quoted(value)}`);
+  }
+  return lines.join('\n');
+};
 
 /**
  * A permission mode a client asked for in somebody else's vocabulary.
@@ -119,7 +147,7 @@ export interface Config {
   initScript: string;
   /** Take a `shellInitScripts` value, or say why it is not one. */
   setShellInit: (value: unknown) => true | string;
-  /** The `PreToolUse` hook that sources that script in front of a command. */
+  /** The `PreToolUse` hook that puts the operator's environment and that script in front of a command. */
   sourceFirst: HookCallback;
   methods: {
     setConfig: (key: string, value: unknown) => true | string | Promise<true | string>;
@@ -138,9 +166,24 @@ export function createConfig(ctx: SessionContext): Config {
    * rewritten on each change, because the hook is built once with the query
    * and reads the file by name. The bash entry only: the CLI's shell tool is
    * bash on every platform it runs on.
+   *
+   * The operator's `shellEnv` goes through the same hook and ahead of the
+   * script, because a Bash command is the one place this session reaches a
+   * shell at all - the CLI starts no other.
    */
   const initScript = join(tmpdir(), `ahpd-shell-init-${crypto.randomUUID()}.sh`);
   let sourced = false;
+  /*
+   * The operator's environment, as the lines that go in front of every
+   * command.
+   *
+   * Built once, when the session starts: the map is the operator's and cannot
+   * move under a running session, the way the session's own `shellInitScripts`
+   * can. The operator's lines come before a client's script, so a script can
+   * still change what the operator set - which is what `shellInitScripts` is
+   * for.
+   */
+  const environment = shellEnvLines(ctx.options.shellEnv);
   const setShellInit = (value: unknown): true | string => {
     const list = shellInitScripts(value);
     if (list === undefined) return 'shellInitScripts takes a list of { shell, script }';
@@ -157,11 +200,15 @@ export function createConfig(ctx: SessionContext): Config {
     return true;
   };
   const sourceFirst: HookCallback = async (input) => {
-    if (!sourced || input.hook_event_name !== 'PreToolUse') return {};
+    if (input.hook_event_name !== 'PreToolUse') return {};
     const given = bag(input.tool_input);
     const command = str(given.command);
     if (command === undefined) return {};
-    return { hookSpecificOutput: { hookEventName: 'PreToolUse', updatedInput: { ...given, command: `${sourcing(initScript)}\n${command}` } } };
+    // The operator's lines, then the client's script, then the command.
+    const before = [environment, sourced ? sourcing(initScript) : ''].filter((one) => one !== '').join('\n');
+    // Nothing to put in front of it: the command goes as the client wrote it.
+    if (before === '') return {};
+    return { hookSpecificOutput: { hookEventName: 'PreToolUse', updatedInput: { ...given, command: `${before}\n${command}` } } };
   };
 
   const methods: Config['methods'] = {

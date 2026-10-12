@@ -614,6 +614,9 @@ export function claude(options: ClaudeOptions): Agent {
       // How long a client has to answer a call of its tool, resolved by the
       // host so every backend waits for the same time.
       clientToolTimeoutMs: start.clientToolTimeoutMs,
+      // The operator's environment for this session's shells, carried as the
+      // host resolved it, so the Bash hook writes the lines once.
+      ...(start.shellEnv === undefined ? {} : { shellEnv: start.shellEnv }),
       ...(start.seedCustomizations ? { seedCustomizations: start.seedCustomizations } : {}),
       ...(start.seedModels ? { seedModels: start.seedModels } : {}),
       ...(start.resume !== undefined ? { resume: start.resume } : {}),

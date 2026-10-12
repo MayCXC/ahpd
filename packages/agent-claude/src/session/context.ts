@@ -1,5 +1,5 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Activity, Bag, BoundTool, Session, SessionOptions, SubagentChat, SubagentRequest } from '@ahpd/sdk';
+import type { Activity, Bag, BoundTool, Session, SessionOptions, ShellEnv, SubagentChat, SubagentRequest } from '@ahpd/sdk';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
@@ -36,6 +36,15 @@ export interface ClaudeSessionOptions extends SessionOptions {
    * built by hand, and then the holder's own default applies.
    */
   clientToolTimeoutMs?: number;
+  /**
+   * The environment the operator names for the shells this session runs.
+   *
+   * Carried from `Start.shellEnv`, and written into the same hook the session's
+   * own `shellInitScripts` go through: an `export` line for each name the
+   * operator set and an `unset` for each one they removed. Absent when the
+   * operator named none, and then the hook says nothing about the environment.
+   */
+  shellEnv?: ShellEnv;
   /** Start the CLI somewhere other than this host. */
   spawn?: (asked: Asked) => Spawned;
   /** Where the CLI is wherever `spawn` starts it. */
