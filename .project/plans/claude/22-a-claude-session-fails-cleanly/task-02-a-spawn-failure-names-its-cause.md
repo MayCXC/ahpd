@@ -1,6 +1,6 @@
 ---
 title: A spawn failure names its cause, not a path
-status: todo
+status: done
 depends: []
 layer: "packages/agent-claude"
 refs:
@@ -38,3 +38,18 @@ The message names no path on the host.
 - `pnpm exec vitest run packages/agent-claude` passes.
 
 ## Resume
+
+Implemented 2026-10-11. `failureOf` is new: it reads `errorClass` and `code` off the error, which the SDK hangs on by name rather than declaring in its types, and answers "Claude Code process could not start" - with the errno in brackets when there is one - for the three classes the SDK files a CLI that never came up under. Every other error keeps the message it came with. The `consume` catch sets `ctx.failed` from it, so every road out of that catch says the same one line: `ctx.gone`, the failing turn's `chat/error` part, and the refusal a turn typed afterwards takes.
+
+`spawn.ts` needed more than passing the error over. The SDK decides what kind of failure it has from the `syscall` the error carries: an error the runtime raised (`spawn /missing/claude`, with `ENOENT`) is a failure to start, and one that arrives bare is a process error, whose message the SDK keeps whole - and on this road that message is a socket path, a registry or an image name. So the rejection of the port names the syscall as a spawn when the error does not already carry one, and leaves `code` alone, which is what puts the failure on the same road as a missing binary and keeps the errno that sentence is allowed to show. Checked against the real SDK: a hook that spawns a missing binary arrives as `executable_launch_failed` with `code: ENOENT`, and a port that rejects arrives as `process_error` with no `code` at all until the syscall is named.
+
+The review narrowed this to a port that rejects. A machine that is not there keeps its own sentence, "There is no computer called `<id>`", because it holds no path.
+
+Files changed, uncommitted:
+
+- `CREATE: packages/agent-claude/src/session/failure.ts` - `failureOf`, the one line a person reads for an error from the SDK.
+- `UPDATE: packages/agent-claude/src/session/query.ts` - the `consume` catch sets `ctx.failed` from `failureOf`.
+- `UPDATE: packages/agent-claude/src/spawn.ts` - a port that rejects gets the syscall named, and keeps its `code`.
+- `CREATE: packages/agent-claude/test/agent-claude-spawn-failure.test.ts` - three cases through the real SDK, and two on `failureOf` itself.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/agent-claude` pass - 28 files, 275 cases. `packages/computer/test/computer-spawn.test.ts`, which imports `spawn.ts`, passes with `--maxWorkers=2 --testTimeout=10000`; at the default 5 seconds its last case times out on a loaded box, which is the flake it already had.

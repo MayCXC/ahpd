@@ -1,7 +1,7 @@
 ---
 title: A Claude session fails cleanly
 domain: claude
-status: planned
+status: built
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -60,9 +60,9 @@ canUseTool -> a confirmation in ctx.pending -> an answer, or a stop -> the entry
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A cancelled call closes its confirmation](task-01-a-cancelled-call-closes-its-confirmation.md) | todo | - |
-| [02 - A spawn failure names its cause, not a path](task-02-a-spawn-failure-names-its-cause.md) | todo | - |
-| [03 - The CLI's handshake has a bound](task-03-the-handshake-has-a-bound.md) | todo | 02 |
+| [01 - A cancelled call closes its confirmation](task-01-a-cancelled-call-closes-its-confirmation.md) | done | - |
+| [02 - A spawn failure names its cause, not a path](task-02-a-spawn-failure-names-its-cause.md) | done | - |
+| [03 - The CLI's handshake has a bound](task-03-the-handshake-has-a-bound.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -71,13 +71,13 @@ canUseTool -> a confirmation in ctx.pending -> an answer, or a stop -> the entry
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-cancelled-call-closes-its-confirmation.md](task-01-a-cancelled-call-closes-its-confirmation.md).
+- **Done so far:** built 2026-10-11; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** tasks 02 and 03 both change the `consume` catch, so task 03 waits for 02.
+- **Watch out for:** nothing.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/agent-claude` pass.
-- [ ] A session whose CLI path names no file fails its turn with the short message.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/agent-claude` pass - 29 files, 279 cases.
+- [x] A session whose CLI path names no file fails its turn with the short message - `agent-claude-spawn-failure.test.ts`.
+- [x] `plans/index.md` updated.

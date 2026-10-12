@@ -1,6 +1,6 @@
 ---
 title: A cancelled call closes its confirmation
-status: todo
+status: done
 depends: []
 layer: "packages/agent-claude"
 refs:
@@ -39,3 +39,14 @@ An entry is settled once, whether the abort, an answer, a stop, a subagent end o
 - `pnpm exec vitest run packages/agent-claude` passes.
 
 ## Resume
+
+Implemented 2026-10-11, in `canUseTool`. The signal is read off the third argument the SDK already hands this callback, which is the same bag `toolUseID`, `agentID`, `title` and `suggestions` are read from, so nothing new is passed in. A signal already aborted answers a deny before the allow and deny lists are even consulted, and before anything is held.
+
+The one door is `done`, the settle every path already went through. It is what is stored in `pending`, so an answer, a stop, a subagent end and a close all reach it and the abort listener goes with whichever of them arrived first - the listener would otherwise fire on a later abort and settle a question that is no longer anybody's. `cancelled` is the abort's own handler: it finds the entry by id, does nothing when it is gone, and otherwise deletes it, withdraws it with `ctx.inputNeededRemoved`, and settles it with a deny whose message is the new `CANCELLED` constant, `Cancelled`. Both branches that raise an entry - the `AskUserQuestion` one and the tool-confirmation one - now store `done` rather than the raw promise resolver.
+
+Files changed, uncommitted:
+
+- `UPDATE: packages/agent-claude/src/session/asking.ts` - the `CANCELLED` constant, the abort check on the already-aborted signal, and `done` and `cancelled` inside the promise.
+- `UPDATE: packages/agent-claude/test/agent-claude-tool-input.test.ts` - four cases under `a call the SDK cancels`: the confirmation, the question, the answer before the abort, and the signal aborted before the call.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/agent-claude` pass - 27 files, 270 cases.

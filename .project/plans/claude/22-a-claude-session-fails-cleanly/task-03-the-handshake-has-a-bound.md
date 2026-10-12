@@ -1,6 +1,6 @@
 ---
 title: The CLI's handshake has a bound
-status: todo
+status: done
 depends: [task-02-a-spawn-failure-names-its-cause.md]
 layer: "packages/agent-claude"
 refs:
@@ -44,3 +44,24 @@ The active turn fails with a message that says so, and the query is closed.
 - `pnpm exec vitest run packages/agent-claude` passes.
 
 ## Resume
+
+Implemented 2026-10-11. `bounded` is put on every query `startQuery` builds, which is the one place a session starts one from: the creation in `session.ts` and the rebuild in `switchAgent` both go through it, so the timer cannot be forgotten on one of the two roads. It starts a timer of `handshakeTimeoutMs` and clears it when `initializationResult` settles, whichever way it settles.
+
+When the timer is the one that fires, the query has to still be the one this session is reading - `ctx.handle !== handle` and nothing happens. Otherwise the session fails on the road a CLI that died takes, which is now one function, `died`, shared with the `consume` catch: the reason becomes `ctx.failed` and `ctx.gone`, the turn in flight is recorded as one that failed with an error part carrying it, and the query is closed so that a CLI answering an hour later is not a process nobody is reading.
+
+The catch gained one thing beside the call: it returns at once when `ctx.gone` is already set. Without that the close above lands back in it - the SDK raises its own words for a socket that went away - and would replace the one sentence a person can act on with them.
+
+A session given no `handshakeTimeoutMs` runs on the backend's own 120000. The option comes from the plugin and is one per variant: `plugin.ts` declares it, `claude()` hands it to the session beside `clientToolTimeoutMs`, and a preset holds none.
+
+The message spells the bound in seconds out of the milliseconds it was given, so the backend's own reads "within 120 seconds" and a test's short bound reads "within 0.025 seconds".
+
+Files changed, uncommitted:
+
+- `UPDATE: packages/agent-claude/src/session/query.ts` - `HANDSHAKE_MS`, `died`, `bounded`, the bound on `startQuery`, and the catch's use of both.
+- `UPDATE: packages/agent-claude/src/plugin.ts` - the `handshakeTimeoutMs` option, and into what every variant of one load shares.
+- `UPDATE: packages/agent-claude/src/claude.ts` - `ClaudeOptions.handshakeTimeoutMs`, and the session option passed at the `createSession` call. The interface field is not in this task's Files list; without it `plugin.ts` cannot read the value its schema declares.
+- `UPDATE: packages/agent-claude/src/session/context.ts` - `handshakeTimeoutMs` in the session options, beside `clientToolTimeoutMs`.
+- `UPDATE: packages/agent-claude/README.md` - the options table row and a sentence in the paragraph under it. Also not in the Files list: `agent-claude-options.test.ts` holds the schema to that table, so a declared option the README does not list fails the suite.
+- `CREATE: packages/agent-claude/test/agent-claude-handshake.test.ts` - four cases: a handshake that never answers, one that answers in time, a query replaced before its bound, and the plugin option reaching the session.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/agent-claude` pass - 29 files, 279 cases. `packages/computer/test/computer-spawn.test.ts`, which runs real sessions through this backend, passes with `--maxWorkers=2 --testTimeout=10000`.
