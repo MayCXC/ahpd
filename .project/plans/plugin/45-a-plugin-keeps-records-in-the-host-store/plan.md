@@ -1,7 +1,7 @@
 ---
 title: A plugin keeps its records in the host's record store, and the bot keeps its records there
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-10
 revalidated: 2026-10-11
@@ -76,7 +76,7 @@ The child plans hold the second table for their own tasks.
 | Child plan | Status | Depends on |
 | --- | --- | --- |
 | [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | built | cofold commands/05 |
-| [p2 - The bot keeps its records in the record store](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | planned | p1 |
+| [p2 - The bot keeps its records in the record store](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 
@@ -87,12 +87,12 @@ The child plans hold the second table for their own tasks.
 ## Resume state
 
 - **Done so far:** p1 is built and reviewed on 2026-10-11; see its [implemented.md](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md). The server depends on `@cofold/yaml` `^0.3.0` from npm.
-- **Next action:** p2.
+- **Next action:** Softov reviews p2.
 - **Open questions:** none.
 - **Watch out for:** host plan 80 needs p1's Markdown record code in the server.
 
 ## Final verification checklist
 
-- [ ] Both child plans are built.
-- [ ] A copy of `~/.config/ahpd/bots` converts, and each bot reads the same before and after.
-- [ ] `plans/index.md` updated.
+- [x] Both child plans are built.
+- [x] A copy of `~/.config/ahpd/bots` converts, and each bot reads the same before and after.
+- [x] `plans/index.md` updated.

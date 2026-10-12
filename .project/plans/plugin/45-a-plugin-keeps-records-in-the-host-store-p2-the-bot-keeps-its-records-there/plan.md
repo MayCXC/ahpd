@@ -1,7 +1,7 @@
 ---
 title: The bot keeps its records in the record store
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -88,15 +88,15 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 
 ## Resume state
 
-- **Done so far:** p1 is built. All three tasks are implemented, with no commit made: this preset allows no `git add` or `git commit`. The work waits in the worktree for a later commit. Each task file's Resume lists the files that task changed, so it splits into a commit per task. Task 01 puts `botStore` over the `bots` and `bots-gone` collections, with a cache that `ready()` loads once. Every loaded record passes `kept`, and a delete leaves a tombstone. The provider awaits `ready()` before each call, and awaits `put` and `remove`. The catalogue awaits `ready()` in `authorize` and `snapshot`. Task 02 watches `bots`, so a change the store did not make reaches the cache, the watchers and the catalogue. Task 03 writes the file, the conversion and the rules for a hand edit into `docs/BOTS.md` and the package page. `pnpm -s typecheck` and `pnpm -s boundary` pass, and `pnpm exec vitest run packages/bot` passes 78 tests in 5 files.
-- **Next action:** the *Final verification checklist* below. It is the plan's own, and it wants a run of its own before the plan closes with `implemented.md`.
+- **Done so far:** all three tasks are implemented, committed as `6d951a8` and `cd1fbb9`, and released in 0.11.0. See [implemented.md](implemented.md).
+- **Next action:** Softov reviews the tasks; then each task is `done`.
 - **Open questions:** none.
 - **Watch out for:** `gone` and `get` are read in one check at `provider.ts:376-378`, so both must come from the same cache. And the checklist's copy of `~/.config/ahpd/bots` is the one item no test covers.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
-- [ ] `pnpm exec vitest run packages/bot` passes.
-- [ ] `rg -n "node:fs" packages/bot/src/store.ts` finds nothing. The only `node:fs` left in `packages/bot/src` is `mkdirSync` in `provider.ts`, which makes a bot's workspace folder, which *Decisions locked in* keeps.
-- [ ] A copy of `~/.config/ahpd/bots` converts, and each bot reads the same before and after.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- [x] `pnpm exec vitest run packages/bot` passes.
+- [x] `rg -n "node:fs" packages/bot/src/store.ts` finds nothing. The only `node:fs` left in `packages/bot/src` is `mkdirSync` in `provider.ts`, which makes a bot's workspace folder, which *Decisions locked in* keeps.
+- [x] A copy of `~/.config/ahpd/bots` converts, and each bot reads the same before and after.
+- [x] `plans/index.md` updated.

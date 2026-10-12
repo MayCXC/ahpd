@@ -1,7 +1,7 @@
 ---
 title: The automation store moves to the server, and an automation is a Markdown file
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-10
 revalidated: 2026-10-11
@@ -100,10 +100,9 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 
 ## Resume state
 
-- **Done so far:** all six tasks are implemented, on 2026-10-11 on `build/agents/483c1aa6`. Nothing is committed: the work is in the worktree, and each task's Resume lists the files it changed.
-- **Next action:** none. Every task is implemented, the checklist below is run, and what is left is the review.
-- **Open questions:** none. The id rule one is answered: an automation has an id rule of its own, `^[a-z0-9][a-z0-9-]{0,63}$`, so a UUID a client writes is a file name like any other, and `automations` is a reserved collection so a plugin cannot open the daemon's automation folder (`bots` stays open, being the bot plugin's own). Task 06 is where both landed.
-- **Commits:** this preset is not for committing, so nothing is committed from here on: each task's work is left in the worktree and its Resume lists the files it changed, for the review to commit per task. Task 02 was committed as `fdc8b99` before that was known - `git reset --soft HEAD~1` takes it back into the worktree, and tasks 03 to 06 are not in it.
+- **Done so far:** all six tasks are implemented, committed as `1b2b493` and `4e3756e`, and released in 0.11.0. See [implemented.md](implemented.md).
+- **Next action:** Softov reviews tasks 02 to 06; then each task is `done`.
+- **Open questions:** none.
 - **Watch out for:** the store is now `{ dir, state }` and no caller passes a single file. `wholeFiles` in `run.ts` names `automationStatePath()` rather than `automationsPath()`, so an old `automations.json` and its scratch are not swept. `recordFile` takes a top-level body field name, which is why the file carries a flat `message.text` key rather than a nested one. The folder is watched, so a test that leaves a store open across a temporary folder sees events from the store's own writes; the `known` map is what tells them apart. A definition read from a file is applied as a whole definition rather than as a patch, and the stamp is set before the change so the file keeps the `createdAt` it was written with. The automation folder is `<configDir>/automations`, the same shape as a plugin's record collection, so `RESERVED_COLLECTIONS` names `automations` and a plugin cannot open it - while `bots` stays open, because the bot plugin opens that collection through the same store, which is why a bot's id is still a record slug and an automation's is not. An automation's id is a file name and nothing more, so the rule is `^[a-z0-9][a-z0-9-]{0,63}$` rather than the record store's slug.
 
 ## Final verification checklist
