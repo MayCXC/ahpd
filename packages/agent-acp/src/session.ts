@@ -254,7 +254,9 @@ export function acpSession(options: AcpOptions, start: Start): Session {
       queuedMessages: queued.map((held) => ({ id: held.id, message: held.message })),
     }),
 
-    begin: ctx.begin,
+    // The host's five, and not its sixth: the queue's own sixth is the queued
+    // message's id, and the host's is the turn's options.
+    begin: (turnId, text, model, from, attachments) => ctx.begin(turnId, text, model, from, attachments),
 
     ran: ctx.ran,
 
