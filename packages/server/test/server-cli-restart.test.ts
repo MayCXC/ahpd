@@ -199,9 +199,15 @@ describe('start, stop and status', () => {
       await new Promise((wait) => setTimeout(wait, 25));
     }
     expect(readFileSync(log, 'utf8')).toContain('restart: stopping (SIGHUP)');
-    const stopped = await cli(['stop']);
+    // The stop waits for the daemon to go, and this daemon is held inside the
+    // `stopping` handler: the release is written from under it, so the stop
+    // lands while the handler runs and then waits the handler out.
+    const stopping = cli(['stop']);
+    setTimeout(() => { writeFileSync(release, ''); }, 3000);
+    const stopped = await stopping;
     expect(stopped.code).toBe(0);
-    writeFileSync(release, '');
+    // It went, so the stop waited rather than killing at the limit.
+    expect(stopped.stdout).toContain('Stopped');
 
     const restarted = await restarting;
     expect(restarted.code).toBe(1);
