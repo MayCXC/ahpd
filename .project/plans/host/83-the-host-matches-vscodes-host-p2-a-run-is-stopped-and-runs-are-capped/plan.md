@@ -1,7 +1,7 @@
 ---
 title: A run is stopped, and runs are capped
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -57,8 +57,8 @@ automationRun/cancelRequested -> gate automation:cancel -> cancel each run sessi
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A run is stopped](task-01-a-run-is-stopped.md) | todo | - |
-| [02 - Each automation keeps its 50 newest runs](task-02-runs-are-capped.md) | todo | - |
+| [01 - A run is stopped](task-01-a-run-is-stopped.md) | done | - |
+| [02 - Each automation keeps its 50 newest runs](task-02-runs-are-capped.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -66,13 +66,13 @@ automationRun/cancelRequested -> gate automation:cancel -> cancel each run sessi
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** start from main after host 80 merges, then [task-01-a-run-is-stopped.md](task-01-a-run-is-stopped.md).
+- **Done so far:** every task is done, and the plan is built. See [implemented.md](implemented.md).
+- **Next action:** Softov's check by hand: stop in VS Code's window ends a running automation as cancelled.
 - **Open questions:** none.
-- **Watch out for:** host 80 moves the store to `packages/server`; read where it is before task 02.
+- **Watch out for:** the store is still `packages/sdk/src/automations.ts`; host 80 has not moved it. Three capability cases in the tests now carry `runHistoryLimit` beside `runCancellation`, and a later task that adds a capability moves them again.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass.
 - [ ] Stop in VS Code's window ends a running automation as cancelled.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

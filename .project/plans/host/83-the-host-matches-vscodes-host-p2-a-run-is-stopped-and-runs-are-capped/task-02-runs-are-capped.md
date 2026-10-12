@@ -1,6 +1,6 @@
 ---
 title: Each automation keeps its 50 newest runs
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk, packages/server"
 refs:

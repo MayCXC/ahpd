@@ -1,7 +1,7 @@
 ---
 title: The host describes itself as VS Code's host does
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -63,9 +63,9 @@ initialize -> completionTriggerCharacters ['/', '@', '#'] -> VS Code asks comple
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The root state says what machine the host runs on](task-01-the-root-state-says-what-machine.md) | todo | - |
-| [02 - The host sends its build and keeps its session URIs](task-02-the-host-sends-its-build.md) | todo | - |
-| [03 - A hash sign completes a file](task-03-a-hash-sign-completes-a-file.md) | todo | - |
+| [01 - The root state says what machine the host runs on](task-01-the-root-state-says-what-machine.md) | done | - |
+| [02 - The host sends its build and keeps its session URIs](task-02-the-host-sends-its-build.md) | done | - |
+| [03 - A hash sign completes a file](task-03-a-hash-sign-completes-a-file.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -73,13 +73,13 @@ initialize -> completionTriggerCharacters ['/', '@', '#'] -> VS Code asks comple
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-root-state-says-what-machine.md](task-01-the-root-state-says-what-machine.md).
+- **Done so far:** every task is done, and the plan is built. See [implemented.md](implemented.md).
+- **Next action:** Softov's check by hand: vS Code's window shows the host version in its Output channel.
 - **Open questions:** none.
 - **Watch out for:** a key in root `_meta` must also be in the handshake test that reads root state.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk` pass.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk` pass.
 - [ ] VS Code's window shows the host version in its Output channel.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

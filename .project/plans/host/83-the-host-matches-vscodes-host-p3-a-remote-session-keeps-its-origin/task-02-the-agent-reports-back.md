@@ -1,6 +1,6 @@
 ---
 title: The agent is told to report back to the origin
-status: implemented
+status: done
 depends: [task-01-the-host-takes-a-remote-session.md]
 layer: "packages/sdk"
 refs:

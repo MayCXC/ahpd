@@ -1,6 +1,6 @@
 ---
 title: The root state says what machine the host runs on
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

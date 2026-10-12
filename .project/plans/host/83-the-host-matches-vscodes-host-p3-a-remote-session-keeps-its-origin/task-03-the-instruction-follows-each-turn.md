@@ -1,6 +1,6 @@
 ---
 title: The origin instruction is given on each turn
-status: implemented
+status: done
 depends: [task-02-the-agent-reports-back.md]
 layer: "packages/sdk, packages/agent-claude"
 refs:

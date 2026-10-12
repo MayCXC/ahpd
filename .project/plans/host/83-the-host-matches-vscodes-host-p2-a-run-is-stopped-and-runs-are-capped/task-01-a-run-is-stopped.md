@@ -1,6 +1,6 @@
 ---
 title: A run is stopped
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: The host takes a remote session and keeps its origin
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:

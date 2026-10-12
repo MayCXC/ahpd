@@ -22,10 +22,10 @@ The working-directory actions date from 0.7/0.8 and are handled here (`host.ts`)
 
 The four tools (`list_agent_hosts`, `create_remote_session`, `get_remote_session`, `send_remote_message`) are client tools of the Agents window (`src/vs/sessions/contrib/remoteSessions/`, upstream `3bc56b58fe7`); `SESSIONS.md` says hosts do not discover or authenticate to one another. A host is picked as a target by its root `_meta`.
 
-- [ ] **Root `_meta['vscode.remoteSessions']: true`.** Without it the window refuses the host. `common/meta/vscode/agentRemoteSessionMeta.ts`. `host.ts` `rootState`.
-- [ ] **Root `_meta['vscode.agentHost.resources']` `{ platform, architecture, cpuCount, memoryBytes }`**, which `create_remote_session` filters on. `common/meta/vscode/agentHostResources.ts`. `host.ts` `rootState`.
-- [ ] **Keep `_meta['vscode.remoteSession.origin']` `{ session, chat, depth }` from `createSession`**, persisted and put back on the summary; its `depth` counts toward the spawn depth. `host.ts`, the session store, host/33 task 02.
-- [ ] **The `<remote_session_origin>` instruction when an active client offers `send_remote_message`.** `node/chatContributions/remoteSessionOrigin/remoteSessionOriginContribution.ts`. The turn instructions in `host.ts`.
+- [x] **Root `_meta['vscode.remoteSessions']: true`.** Without it the window refuses the host. `common/meta/vscode/agentRemoteSessionMeta.ts`. `host.ts` `rootState`.
+- [x] **Root `_meta['vscode.agentHost.resources']` `{ platform, architecture, cpuCount, memoryBytes }`**, which `create_remote_session` filters on. `common/meta/vscode/agentHostResources.ts`. `host.ts` `rootState`.
+- [x] **Keep `_meta['vscode.remoteSession.origin']` `{ session, chat, depth }` from `createSession`**, persisted and put back on the summary; its `depth` counts toward the spawn depth. `host.ts`, the session store, host/33 task 02.
+- [x] **The `<remote_session_origin>` instruction when an active client offers `send_remote_message`.** `node/chatContributions/remoteSessionOrigin/remoteSessionOriginContribution.ts`. The turn instructions in `host.ts`.
 
 container/05 p10 (a hub that relays a node's sessions) is host to host; VS Code made the window the hub, which its open question should cite.
 
