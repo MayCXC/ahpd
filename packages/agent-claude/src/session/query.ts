@@ -372,9 +372,9 @@ export function createQuery(ctx: SessionContext): Query {
        * exactly as `take` leaves it off.
        */
       ...(ctx.chosen && ctx.chosen !== 'default' ? { model: ctx.chosen } : {}),
-      // Before every shell command, while a client has a script in force; on
-      // every prompt, what the host asked said on that turn; and at the end of
-      // each turn, what the CLI still has in hand.
+      // Before every shell command, the operator's environment and any client
+      // script in force; on every prompt, what the host asked said on that
+      // turn; and at the end of each turn, what the CLI still has in hand.
       hooks: {
         PreToolUse: [{ matcher: 'Bash', hooks: [ctx.sourceFirst] }],
         UserPromptSubmit: [{ hooks: [giveHostInstructions] }],
