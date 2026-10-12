@@ -949,6 +949,13 @@ export function createSpawn(ctx: HostContext): Spawn {
     held.chats.set(chatUri, session);
     sessions.set(uri, held);
     /*
+     * What this session's backends were told is let go of, because the one
+     * starting now has been told nothing: it is a backend that found its own
+     * customizations and is running them. This is every road to a running
+     * backend, so it is the one place a chat starting again is noticed.
+     */
+    ctx.forgetTold(uri);
+    /*
      * Written down, in the one place every road to a running backend goes
      * through.
      *

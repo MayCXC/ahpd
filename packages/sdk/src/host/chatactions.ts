@@ -1072,18 +1072,105 @@ export function chatAction(
     /**
      * Turn a skill or an MCP server on or off.
      *
-     * `enablement` carries a decision per scope - global, workspace,
-     * session - and this host has one scope, so the session's is the
-     * one that matters and anything else is a decision about machines
-     * it does not own.
+     * `enablement` carries the client's whole answer, one entry per scope -
+     * global, workspace, session - and a scope it leaves out is one it holds
+     * no decision about any more: the array is a replacement, never a patch.
+     *
+     * The decision for every session and the decision for one folder outlive
+     * the session they were made in, so they go to the store, and every other
+     * session the change reaches is switched and told. The session's own
+     * decision is this host's, and stays where this host keeps it.
      */
     case 'session/customizationToggled': {
       const id = String(action.id ?? '');
       const enablement = Array.isArray(action.enablement) ? action.enablement.map((entry) => (
         typeof entry === 'object' && entry !== null ? entry as Record<string, unknown> : {}
       )) : [];
-      const wanted = enablement.find((entry) => entry.kind === 'session') ?? enablement[0];
-      const enabled = wanted?.enabled !== false;
+      const store = ctx.options.enablement;
+      const under = ctx.customizationUnder(session.uri, id);
+      const key = under?.key;
+      /** What the client decided at one scope, or nothing where it decided nothing there. */
+      const decided = (kind: string): boolean | undefined => {
+        const one = enablement.find((entry) => entry.kind === kind);
+        return one === undefined ? undefined : one.enabled !== false;
+      };
+      /** Whether a customization is on for one session: its own decision, then the store's. */
+      const onFor = (uri: string, own: boolean | undefined): boolean => {
+        if (store === undefined || key === undefined) return own ?? true;
+        const dir = ctx.folderOf(uri);
+        return own ?? (dir === undefined ? undefined : store.folder(dir, key)) ?? store.global(key) ?? true;
+      };
+      /*
+       * Whether this sender may keep a decision for every session or a folder.
+       *
+       * Those decisions switch other people's sessions, so on a host with
+       * people they need what changing the host for everybody needs. A sender
+       * without it switches this session alone, as a host with no store does.
+       */
+      const keeps = store !== undefined && (ctx.options.users === undefined || connection.root === true
+        || connection.principal?.can('config:change') === true);
+      const lasting = keeps && key !== undefined;
+      /*
+       * The decision this session made for itself, which is the whole of what
+       * cannot be kept: the most specific entry the client sent stands for it,
+       * because there is nowhere else for a decision about a folder or about
+       * every session to go.
+       */
+      const asked = decided('session') ?? (lasting ? undefined : enablement[0]?.enabled !== false);
+      if (store !== undefined && lasting) {
+        /*
+         * The folder a folder decision is about: the one the entry names,
+         * which is the folder the asking window has open, or this session's
+         * own where the entry names none. A session that works nowhere has no
+         * folder decision, which is a workspace-less session in VS Code.
+         */
+        const named = enablement.find((entry) => entry.kind === 'workspace')?.uri;
+        const folder = typeof named === 'string' && named !== '' ? named : ctx.folderOf(session.uri);
+        const wasGlobal = store.global(key);
+        const wasFolder = folder === undefined ? undefined : store.folder(folder, key);
+        /** What each session answers now, which is what says whether one moved. */
+        const was = new Map([...sessions.keys()].flatMap((uri) => {
+          const at = ctx.customizationUnder(uri, id);
+          return at === undefined ? [] : [[uri, onFor(uri, at.own)] as const];
+        }));
+        /*
+         * The decision for every session goes in first, so a folder decision
+         * is compared against the one it now inherits rather than the old one.
+         */
+        store.setGlobal(key, decided('global'));
+        if (folder !== undefined) store.setFolder(folder, key, decided('workspace'));
+        /*
+         * Every open session the change reaches: every one for a decision
+         * about all of them, and the sessions in the folder for one about a
+         * folder. Each is switched where its answer moved and told in any
+         * case, because what it inherits moved even where the answer it holds
+         * for itself did not. The session that asked is below, with the
+         * switch the client turned.
+         */
+        const everywhere = wasGlobal !== store.global(key);
+        const here = wasFolder !== (folder === undefined ? undefined : store.folder(folder, key));
+        for (const [uri, before] of was) {
+          if (uri === session.uri || (!everywhere && !(here && ctx.folderOf(uri) === folder))) continue;
+          const at = ctx.customizationUnder(uri, id);
+          if (at === undefined) continue;
+          const held = sessions.get(uri);
+          const lead = held === undefined ? undefined : leadOf(held);
+          const answer = onFor(uri, at.own);
+          if (at.of === 'backend') {
+            if (answer !== before) void lead?.setCustomizationEnabled(id, answer);
+          }
+          else {
+            /*
+             * The session's own decision stands where it is - only the store's
+             * moved - so this switches it and says so, which is what makes a
+             * customization switched off in one session switched off in the
+             * session beside it.
+             */
+            ctx.toggleClientPlugin(uri, id, at.own === undefined ? [] : [{ kind: 'session', enabled: at.own }]);
+          }
+          dispatch(uri, { type: 'session/customizationsChanged', customizations: lead === undefined ? [] : lead.customizations() });
+        }
+      }
       /*
        * A plugin a client handed this session is this host's to switch, and so
        * is a server of one.
@@ -1095,7 +1182,8 @@ export function chatAction(
        * put it. A server of a plugin is the agent's as well, and the same id
        * names it there, so that half is asked of the backend too.
        */
-      const toggled = ctx.toggleClientPlugin(session.uri, id, enablement);
+      const toggled = ctx.toggleClientPlugin(session.uri, id,
+        store === undefined || lasting ? enablement : [{ kind: 'session', enabled: asked }]);
       if (toggled !== undefined) {
         /*
          * The backend is offered the switch and its answer is dropped.
@@ -1106,10 +1194,10 @@ export function chatAction(
          * moved it, over a change that does take effect.
          */
         if (toggled.server !== undefined)
-          void session.setCustomizationEnabled(id, enabled);
+          void session.setCustomizationEnabled(id, onFor(session.uri, asked));
         break;
       }
-      void session.setCustomizationEnabled(id, enabled).then((took) => {
+      void session.setCustomizationEnabled(id, onFor(session.uri, asked)).then((took) => {
         if (took)
           return;
         // Said, not swallowed. The customization list is what a client

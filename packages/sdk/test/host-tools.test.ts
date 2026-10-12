@@ -1,9 +1,12 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionReducer } from '@microsoft/agent-host-protocol';
 import { clientPluginsIn } from '../src/clientplugins.js';
+import { enablementKeyOf, memoryEnablement } from '../src/enablement.js';
+import type { EnablementStore } from '../src/enablement.js';
+import { uriOf } from '../src/fileuri.js';
 import { createClientCalls, DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../src/tools/clientcalls.js';
 import { foldHostOptions, pluginHost } from '../src/plugins.js';
 import { sdkVersion } from '../src/version.js';
@@ -15,6 +18,8 @@ import type { HostOptions } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { Session } from '../src/types/session.js';
 import type { SessionAction, SessionInputRequest, SessionState } from '@microsoft/agent-host-protocol';
+import type { Grant, Principal, Users } from '../src/types/users.js';
+import { ROOT } from '../src/host.js';
 import {
   resetSdk, actions, claude, createHost, echo, emit, hello, hostTools,
   machine, peer, sdk, serving, sessionQueries, settle, running,
@@ -1930,5 +1935,452 @@ describe('a client\'s call, held by the backend', () => {
     // Ten minutes when nobody said, which is the same answer an absent option
     // gives the holder; a zero that means no limit at all; and a number through.
     expect(seen).toEqual([DEFAULT_CLIENT_TOOL_TIMEOUT_MS, 0, 1500]);
+  });
+});
+
+describe('a customization switched for every session or a folder', () => {
+  const PLUGIN = 'virtual://plugin/one';
+  /** The plugin's own tree, with one server, in the format this host reads. */
+  const TREE: Record<string, string> = {
+    [`${PLUGIN}/.claude-plugin/plugin.json`]: '{"name":"one"}',
+    [`${PLUGIN}/.mcp.json`]: JSON.stringify({ mcpServers: { two: { type: 'stdio', command: 'bin/two' } } }),
+  };
+
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  /** Settle until something is true, giving it real time to happen. */
+  const until = async (ready: () => boolean, ms = 2000): Promise<void> => {
+    const end = Date.now() + ms;
+    while (!ready() && Date.now() < end) await new Promise((r) => { setTimeout(r, 5); });
+  };
+
+  /**
+   * A client whose plugin is a tree held in memory.
+   *
+   * The two `resource*` methods a copy is made of, answered from a map: that is
+   * the whole of what a client has to do for a plugin of its own to reach a
+   * session here.
+   */
+  const pluginPeer = (tree: Record<string, string>): ReturnType<typeof peer> => {
+    const entriesOf = (uri: string): { name: string; type: string }[] => {
+      const prefix = uri.endsWith('/') ? uri : `${uri}/`;
+      const found: { name: string; type: string }[] = [];
+      for (const path of Object.keys(tree)) {
+        if (!path.startsWith(prefix)) continue;
+        const rest = path.slice(prefix.length);
+        const slash = rest.indexOf('/');
+        const name = slash === -1 ? rest : rest.slice(0, slash);
+        if (!found.some((one) => one.name === name)) found.push({ name, type: slash === -1 ? 'file' : 'directory' });
+      }
+      return found;
+    };
+    return {
+      ...peer(),
+      request: async (method: string, params: unknown) => {
+        const uri = String((params as { uri?: unknown }).uri ?? '');
+        if (method === 'resourceList') return { entries: entriesOf(uri) };
+        if (method === 'resourceRead') {
+          const data = tree[uri];
+          if (data === undefined) throw new Error(`${uri} is not there`);
+          return { data, encoding: 'utf-8' };
+        }
+        return {};
+      },
+    };
+  };
+
+  /**
+   * Two sessions in one host, each with a client holding the same plugin, and
+   * the decisions they share.
+   *
+   * The store is handed in rather than held inside, because what a decision
+   * outlives is a question about the store: a test reads it back to check that
+   * a scope was written where it belongs.
+   */
+  async function twoSessions(
+    folders: [string | undefined, string | undefined] = [undefined, undefined],
+    people?: { users: Users; tokens: [string, string] },
+  ) {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-'));
+    dirs.push(dir);
+    const decisions = memoryEnablement();
+    const seen: Start[] = [];
+    const base = echo({ path: dir, pace: 0 });
+    const agent: Agent = {
+      ...base,
+      create: (start: Start) => { seen.push(start); return base.create(start); },
+    };
+    let host: ReturnType<typeof createHost>;
+    host = createHost({
+      path: dir,
+      agents: [agent],
+      ...machine(),
+      enablement: decisions,
+      clientPlugins: clientPluginsIn(join(dir, 'copies'), () => host.clients),
+      ...(people === undefined ? {} : { users: people.users }),
+    });
+
+    /** Sign a client in as one of the people, where the host has any. */
+    const signedIn = async (client: ReturnType<typeof host.accept>, token: string | undefined): Promise<void> => {
+      if (people === undefined || token === undefined) return;
+      await client.handle({ method: 'authenticate', params: { channel: ROOT, resource: people.users.resource.resource, token } });
+    };
+
+    /** One session, its chat, the client watching it and the client holding its plugin. */
+    const opened = async (name: string, folder: string | undefined, clientId: string, token?: string) => {
+      const uri = `ahp-session:/${name}`;
+      const watching = peer();
+      const watch = host.accept(watching);
+      await watch.handle(hello(['0.9.0'], token === undefined ? {} : { clientId: `watching-${name}` }));
+      await signedIn(watch, token);
+      await watch.handle({ method: 'createSession', params: {
+        channel: uri,
+        provider: 'echo',
+        ...(folder === undefined ? {} : { workingDirectories: [folder] }),
+      } });
+      const answer = await watch.handle({ method: 'subscribe', params: { channel: uri } }) as {
+        snapshot: { state: { defaultChat: string } };
+      };
+      const chat = answer.snapshot.state.defaultChat;
+      await watch.handle({ method: 'subscribe', params: { channel: chat } });
+      const holder = host.accept(pluginPeer(TREE));
+      await holder.handle(hello(['0.9.0'], { clientId }));
+      await signedIn(holder, token);
+      await holder.handle({ method: 'subscribe', params: { channel: uri } });
+      return {
+        name,
+        uri,
+        chat,
+        /**
+         * The plugin announced, which is the copy the session then has.
+         *
+         * A revision of its own, because two clients holding one plugin are
+         * two copies of it: the plugin is the same and so is the decision
+         * about it, which is what these cases are about.
+         */
+        announce: (nonce: string) => holder.handle({ method: 'dispatchAction', params: {
+          channel: uri,
+          action: {
+            type: 'session/activeClientSet',
+            activeClient: { customizations: [{ type: 'plugin', uri: PLUGIN, nonce }], tools: [] },
+          },
+        } }),
+        /** Whether the plugin has been reported on this session, and settled. */
+        loaded: (): boolean => actions(watching, uri)
+          .filter((one) => one.action.type === 'session/customizationsChanged')
+          .some((one) => ((one.action.customizations as Record<string, unknown>[]) ?? [])
+            .some((custom) => custom.uri === PLUGIN && (custom.load as { kind: string }).kind === 'loaded')),
+        /** The decision the client makes, scopes and all, as the protocol carries it. */
+        decide: (enablement: Record<string, unknown>[]) => holder.handle({ method: 'dispatchAction', params: {
+          channel: uri,
+          action: {
+            type: 'session/customizationToggled',
+            id: String(actions(watching, uri)
+              .filter((one) => one.action.type === 'session/customizationUpdated')
+              .map((one) => one.action.customization as Record<string, unknown>)
+              .findLast((custom) => custom.uri === PLUGIN)?.id ?? ''),
+            enablement,
+          },
+        } }),
+        /** A turn, which is the moment a chat is handed the set its session has. */
+        turn: (turnId: string) => watch.handle({ method: 'dispatchAction', params: {
+          channel: chat,
+          action: { type: 'chat/turnStarted', turnId, message: { text: 'hi' } },
+        } }),
+      };
+    };
+
+    return {
+      decisions,
+      /** The plugin directories one session's chat was last started with. */
+      handed: (name: string): unknown => seen.filter((one) => one.uri.endsWith(`/${name}`)).at(-1)?.plugins,
+      first: await opened('one', folders[0], 'one', people?.tokens[0]),
+      second: await opened('two', folders[1], 'two', people?.tokens[1]),
+    };
+  }
+
+  it('switches it off in the session beside it when it is switched off for all of them', async () => {
+    const { decisions, handed, first, second } = await twoSessions();
+    await first.announce('n1');
+    await second.announce('n2');
+    await until(() => first.loaded() && second.loaded());
+    await first.turn('t1');
+    await second.turn('t1');
+    await settle();
+
+    // Both sessions have the plugin, so both are handed its copy.
+    expect(handed(first.name)).toHaveLength(1);
+    expect(handed(second.name)).toHaveLength(1);
+
+    // Off for every session, said in the first one. The decision outlives the
+    // session it was made in, so it is the store's from here.
+    await first.decide([{ kind: 'global', enabled: false }]);
+    await settle();
+    expect(decisions.global(PLUGIN)).toBe(false);
+
+    await first.turn('t2');
+    await second.turn('t2');
+    await settle();
+    expect(handed(first.name)).toBeUndefined();
+    // The session that made no decision of its own is switched all the same.
+    expect(handed(second.name)).toBeUndefined();
+  });
+
+  it('switches only the session of a person who may not change the host for everybody', async () => {
+    const person = (id: string, can: (grant: Grant) => boolean): Principal => ({ id, roles: ['r'], can });
+    const people: Record<string, Principal> = {
+      bea: person('bea', (grant) => grant !== 'config:change'),
+      ana: person('ana', () => true),
+    };
+    const users = {
+      resource: { resource: 'ahpd://users', resource_name: 'ahpd users', authorization_servers: ['https://example.test'], required: false },
+      verify: async (token: string) => people[token],
+    } as unknown as Users;
+    const { decisions, handed, first, second } = await twoSessions([undefined, undefined], { users, tokens: ['bea', 'ana'] });
+    await first.announce('n1');
+    await second.announce('n2');
+    await until(() => first.loaded() && second.loaded());
+
+    // Off for every session, said by somebody who may only configure their own.
+    await first.decide([{ kind: 'global', enabled: false }]);
+    await settle();
+    expect(decisions.global(PLUGIN)).toBeUndefined();
+
+    await first.turn('t1');
+    await second.turn('t1');
+    await settle();
+    // Her own session is switched, as a host with no store would switch it.
+    expect(handed(first.name)).toBeUndefined();
+    // Somebody else's is not.
+    expect(handed(second.name)).toHaveLength(1);
+  });
+
+  it('switches it off in the folder it was switched off in, and not beside it', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-folders-'));
+    dirs.push(dir);
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    mkdirSync(here);
+    mkdirSync(there);
+    const { decisions, handed, first, second } = await twoSessions([uriOf(here), uriOf(there)]);
+    await first.announce('n1');
+    await second.announce('n2');
+    await until(() => first.loaded() && second.loaded());
+    await first.turn('t1');
+    await second.turn('t1');
+    await settle();
+
+    await first.decide([{ kind: 'workspace', uri: uriOf(here), enabled: false }]);
+    await settle();
+    // Written at the folder the entry names, which is the one the session works in.
+    expect(decisions.folder(uriOf(here), PLUGIN)).toBe(false);
+    expect(decisions.folder(uriOf(there), PLUGIN)).toBeUndefined();
+
+    await first.turn('t2');
+    await second.turn('t2');
+    await settle();
+    expect(handed(first.name)).toBeUndefined();
+    expect(handed(second.name)).toHaveLength(1);
+  });
+
+  it('clears the decision for every session when the client stops sending it', async () => {
+    const { decisions, first } = await twoSessions();
+    await first.announce('n1');
+    await until(() => first.loaded());
+
+    await first.decide([{ kind: 'global', enabled: false }]);
+    await settle();
+    expect(decisions.global(PLUGIN)).toBe(false);
+
+    // The array is a replacement, never a patch: the decision for every session
+    // is one the client holds no longer, and only the session's own is left.
+    await first.decide([{ kind: 'session', enabled: false }]);
+    await settle();
+    expect(decisions.held()).toEqual({ global: {}, folders: {} });
+
+    await first.turn('t1');
+    await settle();
+    expect(decisions.global(PLUGIN)).toBeUndefined();
+  });
+
+  /** One MCP server this backend found for itself, and the key a decision about it is kept under. */
+  const SERVER = { type: 'mcpServer', id: 'mcp:gmail', name: 'gmail', uri: 'gmail' };
+  const SERVER_KEY = enablementKeyOf({ type: 'mcpServer', id: 'mcp:gmail', uri: 'gmail', name: 'gmail' }) ?? '';
+
+  /**
+   * Sessions in a host whose backend reports a server of its own.
+   *
+   * No client hands this session anything, which is the half these cases are
+   * about: a customization the backend found for itself is what a decision
+   * about every session or about a folder reaches with nothing to copy.
+   *
+   * The store is handed in rather than held, because the decision that matters
+   * is one made before the session exists - the store being the only thing an
+   * earlier run leaves behind.
+   */
+  async function backendSessions(decisions: EnablementStore) {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-backend-'));
+    dirs.push(dir);
+    const base = echo({ path: dir, pace: 0 });
+    const agent: Agent = {
+      ...base,
+      // What the backend offers before any session exists, which is where a
+      // session's own customizations come from.
+      probe: async () => ({ models: [], commands: [], customizations: [SERVER] }),
+    };
+    const host = createHost({ path: dir, agents: [agent], ...machine(), enablement: decisions });
+
+    /** One session, and what it says about itself the moment it is subscribed to. */
+    const open = async (name: string, folder?: string) => {
+      const uri = `ahp-session:/${name}`;
+      const client = host.accept(peer());
+      await client.handle(hello(['0.9.0']));
+      await client.handle({ method: 'createSession', params: {
+        channel: uri,
+        provider: 'echo',
+        ...(folder === undefined ? {} : { workingDirectories: [folder] }),
+      } });
+      const answer = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+        snapshot: { state: { customizations?: Record<string, unknown>[] } };
+      };
+      return {
+        uri,
+        client,
+        /** What this session reports, which is what a client draws its switches from. */
+        reported: (): Record<string, unknown>[] => answer.snapshot.state.customizations ?? [],
+        /** The one server, as this session reports it. */
+        server: (): Record<string, unknown> | undefined => (answer.snapshot.state.customizations ?? [])
+          .find((one) => one.id === SERVER.id),
+      };
+    };
+    return { host, open };
+  }
+
+  it('starts a session made after the decision with the customization off', async () => {
+    const decisions = memoryEnablement();
+    decisions.setGlobal(SERVER_KEY, false);
+    const { open } = await backendSessions(decisions);
+    const later = await open('one');
+
+    // Read from the store when the session is read, so a session nobody has
+    // told anything reports the decision all the same.
+    expect(later.server()?.enablement).toEqual([{ kind: 'global', enabled: false }]);
+  });
+
+  it('says nothing about it when the store holds no decision', async () => {
+    const { open } = await backendSessions(memoryEnablement());
+    const made = await open('one');
+
+    // Nothing decided anywhere is an absent field, not an empty list: a
+    // customization with no entries is one every reader takes as on.
+    expect(made.server()?.enablement).toBeUndefined();
+  });
+
+  it('reports a folder decision under the folder the session works in', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-where-'));
+    dirs.push(dir);
+    const here = join(dir, 'here');
+    const there = join(dir, 'there');
+    mkdirSync(here);
+    mkdirSync(there);
+    const decisions = memoryEnablement();
+    decisions.setFolder(uriOf(here), SERVER_KEY, false);
+    const { open } = await backendSessions(decisions);
+    const inside = await open('one', uriOf(here));
+    const beside = await open('two', uriOf(there));
+
+    // The folder entry names the folder the session works in, which is the one
+    // the decision was made in and the one a client compares.
+    expect(inside.server()?.enablement).toEqual([{ kind: 'workspace', uri: uriOf(here), enabled: false }]);
+    // A session in another folder inherits nothing, so nothing is said.
+    expect(beside.server()?.enablement).toBeUndefined();
+  });
+
+  it('keeps the decision when the host is built again over the same store', async () => {
+    const decisions = memoryEnablement();
+    const before = await backendSessions(decisions);
+    const made = await before.open('one');
+    await made.client.handle({ method: 'dispatchAction', params: {
+      channel: made.uri,
+      action: {
+        type: 'session/customizationToggled',
+        id: SERVER.id,
+        enablement: [{ kind: 'global', enabled: false }],
+      },
+    } });
+    await settle();
+    // The backend found this server for itself, so the decision goes where an
+    // earlier run can read it and nowhere else.
+    expect(decisions.global(SERVER_KEY)).toBe(false);
+
+    // A host that has just started, over what the earlier one left behind.
+    const after = await backendSessions(decisions);
+    const later = await after.open('one');
+    expect(later.server()?.enablement).toEqual([{ kind: 'global', enabled: false }]);
+  });
+
+  /**
+   * A host whose backend reports what it found for itself, when it is asked to.
+   *
+   * The report is the moment a backend says what it has, which is the only
+   * moment this host can say back which of them are off. A customization the
+   * backend found on its own is one this host never handed over, and it has
+   * nowhere to keep it out of the set the backend started with.
+   */
+  async function reporting(decisions: EnablementStore) {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-report-'));
+    dirs.push(dir);
+    const base = echo({ path: dir, pace: 0 });
+    const told: [string, boolean][] = [];
+    let report: () => void = () => {};
+    const agent: Agent = {
+      ...base,
+      create: (start: Start) => {
+        const session = base.create(start);
+        // The report a backend makes about itself, and the switch it is told
+        // back, recorded rather than performed: echo has no runtime switch.
+        report = () => start.emit('session', { type: 'session/customizationsChanged', customizations: [SERVER] });
+        return {
+          ...session,
+          setCustomizationEnabled: async (id: string, on: boolean) => { told.push([id, on]); return false; },
+        };
+      },
+    };
+    const host = createHost({ path: dir, agents: [agent], ...machine(), enablement: decisions });
+
+    const open = async (name: string): Promise<string> => {
+      const uri = `ahp-session:/${name}`;
+      const client = host.accept(peer());
+      await client.handle(hello(['0.9.0']));
+      await client.handle({ method: 'createSession', params: { channel: uri, provider: 'echo' } });
+      await client.handle({ method: 'subscribe', params: { channel: uri } });
+      return uri;
+    };
+    return { told, report: () => report(), open };
+  }
+
+  it('tells the backend which of its own customizations are off, and says it once', async () => {
+    const decisions = memoryEnablement();
+    decisions.setGlobal(SERVER_KEY, false);
+    const { told, report, open } = await reporting(decisions);
+    await open('one');
+    await settle();
+
+    // Nothing yet: a backend is told where it says what it has, and this one
+    // has said nothing.
+    expect(told).toEqual([]);
+
+    report();
+    await settle();
+    expect(told).toEqual([[SERVER.id, false]]);
+
+    // Said once, because a backend that answers a switch by reporting again
+    // would otherwise be told, and report, without end.
+    report();
+    await settle();
+    expect(told).toEqual([[SERVER.id, false]]);
   });
 });

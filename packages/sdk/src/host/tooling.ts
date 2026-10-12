@@ -6,6 +6,7 @@ import { readJsonObject } from '../jsonfile.js';
 import { partsOf } from '../pluginparts.js';
 import { bodyText } from '../records.js';
 import { bag, reason, str } from '../values.js';
+import { enablementKeyOf } from '../enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
 import { need } from './common.js';
 import type { Bag } from '../types/common.js';
@@ -36,6 +37,26 @@ export interface Toggled {
 }
 
 /**
+ * What a session carries under the id a toggle names.
+ *
+ * `key` is where the customization's global and folder decisions are kept.
+ * `of` picks the half the id named, which is what says whether the backend is
+ * asked as well: `plugin` is a directory this host copied for a client, and no
+ * backend has heard of it; `server` is a server of one, and the agent names it
+ * the same way; `backend` is a customization the backend reported itself.
+ *
+ * `own` is the decision this session made for itself, which is the most
+ * specific one there is and the one a decision about a folder or about every
+ * session cannot move. A backend's own decision for a session is the backend's
+ * to keep, so a customization it reported has none here.
+ */
+export interface Carried {
+  readonly key: string;
+  readonly of: 'plugin' | 'server' | 'backend';
+  readonly own?: boolean;
+}
+
+/**
  * One plugin a client handed a session.
  *
  * The announcement is kept exactly as it arrived: what a plugin is called,
@@ -52,7 +73,15 @@ interface HeldPlugin {
   path?: string;
   /** What the copy holds, read when it landed: the parts a client reads under this plugin. */
   parts?: Bag[] | undefined;
-  /** What a toggle decided for this session, over whatever the client published. */
+  /**
+   * The session's own decision about this plugin, and nothing else.
+   *
+   * A decision about a folder or about every session is not this session's,
+   * and is not kept here: it is in the store, which is the one place it
+   * outlives the session in and the only place a later toggle can move it.
+   * What stands here is the one decision the session holds for itself, and it
+   * is written only when it differs from what the session would inherit.
+   */
   decision?: Bag[];
 }
 
@@ -84,10 +113,57 @@ export interface Tooling {
   /**
    * Turn a client plugin, or one of its servers, on or off in a session.
    *
+   * The decisions given are the whole of what this host then holds for the
+   * session: a scope the array leaves out is cleared, so a caller that means to
+   * keep a decision has to send it. What a client published stays where it is,
+   * under the host's own answer.
+   *
    * Answers nothing when the id named neither, which is what tells the caller
    * the switch is the backend's to throw rather than this host's.
    */
   toggleClientPlugin(uri: string, id: string, enablement: Bag[]): Toggled | undefined;
+  /**
+   * What a session carries under the id a toggle names.
+   *
+   * Answered for a plugin this host holds for the session and for one of its
+   * servers, and for anything the backend reported - which is where most ids
+   * come from in the first place. Nothing where the session carries no such id,
+   * and nothing for a customization VS Code's host keeps no decision for: a
+   * skill, a command, an agent and a rule are told by the plugin or the
+   * directory they arrived in.
+   */
+  customizationUnder(uri: string, id: string): Carried | undefined;
+  /**
+   * The folder a session's decisions for a customization are kept under.
+   *
+   * Its first working directory as a `file://` URI, which is what a scope
+   * outside the session names: the same folder in two sessions is one decision,
+   * and a window that keeps a folder open reads it back under the same spelling.
+   * Nothing for a session that works nowhere, which has no folder scope at all.
+   */
+  folderOf(uri: string): string | undefined;
+  /**
+   * One customization as a session reads it, with its decisions on it.
+   *
+   * A customization the backend reported comes with the entries this host's
+   * store holds for the session's folder and for every session, which is the
+   * half that outlives the session: what a backend loaded and what a client
+   * decided are the backend's and the client's to say, and the scopes outside
+   * one session are this host's.
+   */
+  withEntries(uri: string, one: Bag): Bag;
+  /**
+   * Tell a session's backend which of the customizations it reports are off.
+   *
+   * Said once for each time a chat starts, so a backend that found a
+   * customization for itself stops running it: what this host keeps out of the
+   * set a backend starts with, it cannot keep out of what the backend found on
+   * its own. Called where a backend says what it has, which is the first
+   * moment either of them knows.
+   */
+  tellOff(uri: string, reported: Bag[]): void;
+  /** Forget what a session's backends were told, called where a chat starts. */
+  forgetTold(uri: string): void;
   /**
    * Tell a session's chats what they may offer, after the clients moved.
    *
@@ -161,6 +237,12 @@ export function createTooling(ctx: HostContext): Tooling {
     chatSummary, keepTitle, summaryMoved, operationsMoved, dispatch, log, fire,
     isolated, settle, openSession, backendsOwn, removeSession, spawn,
   } = ctx;
+  /**
+   * Where a decision that outlives one session is kept, or nothing for a host
+   * that keeps none: one embedded in a single session has nowhere to put a
+   * decision about every session, and is left with the session's own.
+   */
+  const store = options.enablement;
 
   /**
    * The tools a session is offered, with the permission applied once.
@@ -274,20 +356,168 @@ export function createTooling(ctx: HostContext): Tooling {
       && (one.kind === 'global' || one.kind === 'session' || (one.kind === 'workspace' && typeof one.uri === 'string')));
 
   /**
-   * What a plugin carries as its decisions, most specific first.
+   * The key one held customization's global and folder decisions are kept under.
    *
-   * The session's own decision comes first because a toggle is about this
-   * session, and the client's published ones after it in the order it gave
-   * them - which is the order the protocol asks for, Session before Global.
+   * A plugin is keyed by the URI it was announced at and a server of one by
+   * that plugin with the server's name after it, which is the key VS Code's
+   * host derives - so a decision made there and one made here name the same
+   * customization. Nothing for anything else, which is what leaves a skill, an
+   * agent and a rule without a switch of their own.
    */
-  const decisionsOf = (one: HeldPlugin): Bag[] => [...(one.decision ?? []), ...enablementOf(one.announced.enablement)];
+  const keyOf = (one: HeldPlugin, at: number): string | undefined => {
+    const source = str(one.announced.uri) ?? '';
+    if (at === -1) return enablementKeyOf({ type: 'plugin', uri: source });
+    return enablementKeyOf({ type: 'mcpServer', name: str(bag((one.parts ?? [])[at]).name) ?? '' }, source);
+  };
+
+  /**
+   * The first folder a session works in, which is the folder its decisions are
+   * kept under.
+   *
+   * Reached through `heldAs`, because a session's customizations are read under
+   * its chats as well as under the session itself and a chat channel names no
+   * folder of its own.
+   *
+   * The lead chat's answer first, because a chat knows its own folders, and the
+   * session's own when there is no lead chat to ask - which is the whole of a
+   * restart: a chat is torn down and built again, and the plugins a session's
+   * clients hold are read in exactly that moment, when the backend is handed
+   * the set it starts with.
+   */
+  const folderOf = (uri: string): string | undefined => {
+    const held = sessions.get(heldAs(uri));
+    if (held === undefined) return undefined;
+    const lead = leadOf(held)?.workingDirectories()[0];
+    if (lead !== undefined) return lead;
+    return held.workingDirectory === undefined ? undefined : uriOf(held.workingDirectory);
+  };
+
+  /**
+   * The decisions one customization carries in one session, most specific first.
+   *
+   * The session's own decision comes first because it is about this session,
+   * then what the store holds for the session's folder, and the one for every
+   * session last - which is the order the protocol asks for, Session before
+   * Workspace before Global, and the first entry is the one that decides.
+   *
+   * The store's answer replaces the entries carried for the scope it decides,
+   * because the store is the half that outlives a session; a scope it holds
+   * nothing for stays as it arrived. That is what leaves a client's global
+   * entry standing where the store has none, which is how a client-bundled
+   * plugin carries the default it came with.
+   */
+  const entriesFor = (uri: string, key: string | undefined, carried: Bag[], own: boolean | undefined): Bag[] => {
+    const out: Bag[] = own === undefined ? [] : [{ kind: 'session', enabled: own }];
+    const rest = carried.filter((entry) => str(entry.kind) !== 'session');
+    if (store === undefined || key === undefined) {
+      out.push(...rest);
+      return out;
+    }
+    const dir = folderOf(uri);
+    const inFolder = dir === undefined ? undefined : store.folder(dir, key);
+    if (dir !== undefined && inFolder !== undefined) out.push({ kind: 'workspace', uri: dir, enabled: inFolder });
+    else out.push(...rest.filter((entry) => str(entry.kind) === 'workspace'));
+    const everywhere = store.global(key);
+    if (everywhere !== undefined) out.push({ kind: 'global', enabled: everywhere });
+    else out.push(...rest.filter((entry) => str(entry.kind) === 'global'));
+    return out;
+  };
+
+  /**
+   * One customization as a client reads it, with this host's entries on it.
+   *
+   * A backend reports what it loaded and this host is what decides the scopes
+   * outside a session, so the folder and global entries a client reads are the
+   * store's. Recursive, because a customization's children are keyed under the
+   * one that declared them and a child carries decisions of its own.
+   *
+   * A customization this host keeps no decision for - a skill, a command, an
+   * agent and a rule - is answered as it arrived, which is the same shape a
+   * host with no store gives everything.
+   */
+  const withEntries = (uri: string, one: Bag, owner?: string): Bag => {
+    const carried = enablementOf(one.enablement);
+    const key = enablementKeyOf(one, owner);
+    const entries = key === undefined ? undefined : entriesFor(uri, key, carried, ownIn(carried));
+    const children = Array.isArray(one.children)
+      ? one.children.map((child) => withEntries(uri, bag(child), str(one.uri)))
+      : undefined;
+    return {
+      ...one,
+      ...(entries === undefined || entries.length === 0 ? {} : { enablement: entries }),
+      ...(children === undefined ? {} : { children }),
+    };
+  };
+
+  /**
+   * The customizations one chat's backend has already been told about.
+   *
+   * A backend is told a switch once for each time it starts: the same answer
+   * said again on every report is a round-trip that changes nothing, and a
+   * backend that answers a switch by reporting its customizations again would
+   * be told, and report, without end. `forgetTold` is called where a chat is
+   * started, so the backend that takes its place is told afresh.
+   */
+  const told = new Map<string, Set<string>>();
+
+  /**
+   * Tell a chat's backend which of the customizations it reports are off.
+   *
+   * A backend that found a customization for itself - one of the CLI's own
+   * plugins, a server from its own configuration - is running it, and this
+   * host has nowhere to keep it out of the set the backend starts with. The
+   * switch is how it is told, and it is told once per start: what the store
+   * says now, on the report that says what the backend has.
+   *
+   * Only the store's own decision counts here. A customization a client
+   * switched off is the session's own, which the backend published and keeps;
+   * saying it back would be this host answering itself.
+   */
+  const tellOff = (uri: string, reported: Bag[]): void => {
+    if (store === undefined) return;
+    const session = heldAs(uri);
+    const held = sessions.get(session);
+    const lead = held === undefined ? undefined : leadOf(held);
+    if (lead === undefined) return;
+    const said = told.get(session) ?? new Set<string>();
+    told.set(session, said);
+    /** Say every customization in a reported list, and in what each of them holds. */
+    const walk = (list: Bag[], owner?: string): void => {
+      for (const one of list.map(bag)) {
+        const id = str(one.id) ?? '';
+        const key = enablementKeyOf(one, owner);
+        const off = key !== undefined && entriesFor(uri, key, [], undefined)[0]?.enabled === false;
+        if (id !== '' && off && !said.has(id)) {
+          said.add(id);
+          void lead.setCustomizationEnabled(id, false).catch(() => {});
+        }
+        // The owner of a child is the customization that declared it, written
+        // the same way here as where a toggle looks an id up.
+        walk(Array.isArray(one.children) ? one.children.map(bag) : [], str(one.uri));
+      }
+    };
+    walk(reported);
+  };
+
+  /** Forget what a session's backends were told, called where a chat starts. */
+  const forgetTold = (uri: string): void => { told.delete(heldAs(uri)); };
+
+  /** What a plugin carries as its decisions for a session, most specific first. */
+  const decisionsOf = (uri: string, one: HeldPlugin): Bag[] =>
+    entriesFor(uri, keyOf(one, -1), enablementOf(one.announced.enablement), ownIn(one.decision));
+
+  /** The same for one of a plugin's servers, which a client may also have decided about. */
+  const partDecisions = (uri: string, one: HeldPlugin, at: number): Bag[] => {
+    const carried = enablementOf(bag((one.parts ?? [])[at]).enablement);
+    return entriesFor(uri, keyOf(one, at), carried, ownIn(carried));
+  };
 
   /** Whether a plugin is on: the most specific decision wins, and no decision at all is on. */
-  const enabledOf = (one: HeldPlugin): boolean => decisionsOf(one)[0]?.enabled !== false;
+  const enabledOf = (uri: string, one: HeldPlugin): boolean => decisionsOf(uri, one)[0]?.enabled !== false;
 
-  /** Whether a part is switched off: the most specific decision wins, and no decision at all is on. */
-  const off = (part: Bag): boolean =>
-    (Array.isArray(part.enablement) ? part.enablement as Bag[] : [])[0]?.enabled === false;
+  /** Whether a server of one is switched off: the most specific decision wins, and none is on. */
+  const partOff = (uri: string, one: HeldPlugin, at: number): boolean =>
+    partDecisions(uri, one, at)[0]?.enabled === false;
 
   /** The id a plugin is published under: the client's own, or one this host makes from what names it. */
   const idOfPlugin = (clientId: string, one: HeldPlugin): string => {
@@ -300,6 +530,15 @@ export function createTooling(ctx: HostContext): Tooling {
     const kind = str(one.kind);
     return kind === 'session' ? 0 : kind === 'workspace' ? 1 : 2;
   };
+
+  /** The decision a session made for itself, which is the one entry at its own scope. */
+  const ownIn = (decisions: Bag[] | undefined): boolean | undefined => {
+    const one = (decisions ?? []).map(bag).find((entry) => str(entry.kind) === 'session');
+    return one === undefined ? undefined : one.enabled !== false;
+  };
+
+  /** Most specific first, which is the order every reader of a decision list takes. */
+  const byScope = (decisions: Bag[]): Bag[] => [...decisions].sort((a, b) => specificityOf(a) - specificityOf(b));
 
   /**
    * The parts of a copy that has just landed, with a client's decisions on them.
@@ -339,10 +578,14 @@ export function createTooling(ctx: HostContext): Tooling {
    * `nonce` is the revision it published rather than anything a session has,
    * and `childEnablement` is a decision this host applies to what the plugin
    * contributes rather than a customization of its own.
+   *
+   * The decisions come from the session the entry is for, because where a
+   * customization is switched off is a question about one session: the same
+   * plugin in two folders is off in one of them.
    */
-  const entryOf = (clientId: string, one: HeldPlugin): Bag => {
+  const entryOf = (session: string, clientId: string, one: HeldPlugin): Bag => {
     const uri = str(one.announced.uri) ?? '';
-    const decisions = decisionsOf(one);
+    const decisions = decisionsOf(session, one);
     const version = str(one.announced.version);
     return {
       type: 'plugin',
@@ -366,7 +609,28 @@ export function createTooling(ctx: HostContext): Tooling {
     // Frozen copies, for the same reason a tool definition is one: these leave
     // the host, and a reader that wrote to one would be writing the session's
     // own answer.
-    return [...held].flatMap(([clientId, list]) => list.map((one) => frozenCopy(entryOf(clientId, one))));
+    return [...held].flatMap(([clientId, list]) => list.map((one) => frozenCopy(entryOf(uri, clientId, one))));
+  };
+
+  /**
+   * What a session's clients hold under one id: the plugin, or one of its servers.
+   *
+   * By whatever names it - the id it is published under, the id the client
+   * minted, or the URI it was announced at - and `at` is the index of the part
+   * the id named, or `-1` for the plugin itself.
+   */
+  const heldBy = (uri: string, id: string): { clientId: string; one: HeldPlugin; at: number } | undefined => {
+    if (id === '') return undefined;
+    for (const [clientId, list] of plugins.get(idOf(uri)) ?? []) {
+      for (const one of list) {
+        if (id === idOfPlugin(clientId, one) || id === str(one.announced.id) || id === str(one.announced.uri)) {
+          return { clientId, one, at: -1 };
+        }
+        const at = (one.parts ?? []).findIndex((part) => part.type === 'mcpServer' && str(part.id) === id);
+        if (at !== -1) return { clientId, one, at };
+      }
+    }
+    return undefined;
   };
 
   /**
@@ -383,42 +647,81 @@ export function createTooling(ctx: HostContext): Tooling {
    * and a hook load with the plugin they arrived in, and the protocol lets no
    * enablement hang on one. An id naming one of those is left to the backend,
    * which refuses it out loud.
+   *
+   * What the caller gives replaces what this host held, so a decision about a
+   * folder or about every session is written at the scope it was made at and
+   * never as this session's own - which is what keeps it a decision the next
+   * change to the store can still move.
    */
   const toggleClientPlugin = (uri: string, id: string, enablement: Bag[]): Toggled | undefined => {
-    const held = plugins.get(idOf(uri));
-    if (held === undefined || id === '') return undefined;
-    const decisions = enablementOf(enablement);
-    const wanted = decisions.find((entry) => entry.kind === 'session') ?? decisions[0];
-    const on = wanted?.enabled !== false;
-    for (const [clientId, list] of held) {
-      for (const one of list) {
-        // By whatever names it: the id it is published under, the id the
-        // client minted, or the URI it was announced at.
-        const named = id === idOfPlugin(clientId, one) || id === str(one.announced.id) || id === str(one.announced.uri);
-        if (named) {
-          one.decision = [{ kind: 'session', enabled: on }];
-          dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(clientId, one) });
-          return {};
-        }
-        const parts = one.parts ?? [];
-        const at = parts.findIndex((part) => part.type === 'mcpServer' && str(part.id) === id);
-        if (at === -1) continue;
-        const part = bag(parts[at]);
-        /*
-         * A new part in a new list: what a client was already sent is the
-         * list as it was, and the decision is the change it is being told
-         * about rather than a rewrite of an older message.
-         */
-        const was = (Array.isArray(part.enablement) ? part.enablement as Bag[] : [])
-          .filter((entry) => entry.kind !== 'session');
-        one.parts = parts.map((other, position) => (position === at
-          ? { ...other, enablement: [{ kind: 'session', enabled: on }, ...was] }
-          : other));
-        dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(clientId, one) });
-        return { server: str(part.name) ?? '' };
-      }
+    const found = heldBy(uri, id);
+    if (found === undefined) return undefined;
+    const { clientId, one, at } = found;
+    const decisions = byScope(enablementOf(enablement));
+    /*
+     * A decision equal to what this session would inherit is not kept, as the
+     * store keeps none either: it would shadow the next decision and hold the
+     * session still when the scope it was inheriting from moved. A host with
+     * no store has nothing to inherit from, so what the caller sent stands -
+     * without a store the array is the whole of this session's answer.
+     */
+    const inherited = store === undefined ? undefined : entriesFor(uri, keyOf(one, at), [], undefined)[0]?.enabled !== false;
+    const said = ownIn(decisions) ?? (store === undefined ? decisions[0]?.enabled !== false : undefined);
+    const own = said === undefined || said === inherited ? undefined : said;
+    const asked: Bag[] = own === undefined ? [] : [{ kind: 'session', enabled: own }];
+    let part: Bag | undefined;
+    if (at === -1) {
+      one.decision = asked;
     }
-    return undefined;
+    else {
+      part = bag((one.parts ?? [])[at]);
+      /*
+       * The client's own decisions for this server, read again from what it
+       * announced rather than from the list as it stands: what this host wrote
+       * here on an earlier switch is not the client's to carry forward.
+       */
+      const fromClient = enablementOf(bag(one.announced.childEnablement)[str(part.name) ?? ''])
+        .filter((entry) => str(entry.kind) !== 'session');
+      one.parts = (one.parts ?? []).map((other, position) => (position === at
+        ? { ...other, enablement: byScope([...asked, ...fromClient]) }
+        : other));
+    }
+    dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(uri, clientId, one) });
+    return part === undefined ? {} : { server: str(part.name) ?? '' };
+  };
+
+  /**
+   * What a session carries under one id, as a toggle names it.
+   *
+   * The host's half first, because a plugin a client handed the session is
+   * where a toggle usually lands, and the backend's after it - which is where
+   * the ids of everything a backend reports come from. A child of a reported
+   * customization is looked for under the one it was declared in, so a server
+   * of a plugin the backend knows is keyed by that plugin.
+   */
+  const customizationUnder = (uri: string, id: string): Carried | undefined => {
+    const found = heldBy(uri, id);
+    if (found !== undefined) {
+      const { one, at } = found;
+      const key = keyOf(one, at);
+      if (key === undefined) return undefined;
+      const own = at === -1 ? ownIn(one.decision) : ownIn(bag((one.parts ?? [])[at]).enablement as Bag[] | undefined);
+      return { key, of: at === -1 ? 'plugin' : 'server', ...(own === undefined ? {} : { own }) };
+    }
+    /** The reported customization with this id, looked for under the one that declared it. */
+    const reported = (list: Bag[], owner?: string): Carried | undefined => {
+      for (const one of list.map(bag)) {
+        if (str(one.id) === id) {
+          const key = enablementKeyOf(one, owner);
+          return key === undefined ? undefined : { key, of: 'backend' };
+        }
+        const children = Array.isArray(one.children) ? one.children.map(bag) : [];
+        const below = reported(children, str(one.uri));
+        if (below !== undefined) return below;
+      }
+      return undefined;
+    };
+    return reported(reportedBy(uri));
   };
 
   /**
@@ -504,7 +807,7 @@ export function createTooling(ctx: HostContext): Tooling {
       }
     } else {
       for (const [clientId, list] of added) {
-        for (const one of list) dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(clientId, one) });
+        for (const one of list) dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(uri, clientId, one) });
       }
       for (const [clientId, list] of added) {
         const answers = await copyOf(port, clientId, list);
@@ -521,7 +824,7 @@ export function createTooling(ctx: HostContext): Tooling {
         });
       }
     }
-    for (const { clientId, one } of settled) dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(clientId, one) });
+    for (const { clientId, one } of settled) dispatch(uri, { type: 'session/customizationUpdated', customization: entryOf(uri, clientId, one) });
     // One list for the whole batch, after every copy it contains has settled:
     // the actions above carry the one plugin that changed, and this carries the
     // session's customizations as they now are.
@@ -537,7 +840,7 @@ export function createTooling(ctx: HostContext): Tooling {
    */
   const heldCopies = (uri: string): HeldPlugin[] => [...(plugins.get(idOf(uri))?.values() ?? [])]
     .flat()
-    .filter((one) => one.path !== undefined && one.load.kind === 'loaded' && enabledOf(one));
+    .filter((one) => one.path !== undefined && one.load.kind === 'loaded' && enabledOf(uri, one));
 
   /** The directories those copies are in. */
   const pluginCopies = (uri: string): string[] => heldCopies(uri).map((one) => one.path as string);
@@ -556,7 +859,9 @@ export function createTooling(ctx: HostContext): Tooling {
    * told not to run it however else it might hear of one.
    */
   const deniedMcpServers = (uri: string): string[] => heldCopies(uri).flatMap((one) =>
-    (one.parts ?? []).filter((part) => part.type === 'mcpServer' && off(part)).map((part) => str(part.name) ?? ''));
+    (one.parts ?? []).flatMap((part, at) => (part.type === 'mcpServer' && partOff(uri, one, at)
+      ? [str(part.name) ?? '']
+      : [])));
 
   /**
    * What each chat's agent was started with, by the chat's URI.
@@ -946,8 +1251,7 @@ export function createTooling(ctx: HostContext): Tooling {
   const mcpFor = (uri: string): Record<string, McpServer> => frozenCopy(heldCopies(uri)
     .reduce<Record<string, McpServer>>((all, one) => {
       const held = new Set((one.parts ?? [])
-        .filter((part) => part.type === 'mcpServer' && off(part))
-        .map((part) => str(part.name) ?? ''));
+        .flatMap((part, at) => (part.type === 'mcpServer' && partOff(uri, one, at) ? [str(part.name) ?? ''] : [])));
       for (const [name, server] of Object.entries(serversOf(one.path as string))) {
         if (!held.has(name)) all[name] = server;
       }
@@ -1029,7 +1333,8 @@ export function createTooling(ctx: HostContext): Tooling {
 
   return {
     permitted, strategyOf, shapedDefinition, toolDefinitions,
-    clientTools, clientPluginsOf, toggleClientPlugin, retool, pluginsSettled, chatMeant, renameChat, toolContext,
+    clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold,
+    retool, pluginsSettled, chatMeant, renameChat, toolContext,
     pluginsFor, pluginsMoved, mcpFor, deniedMcpServers,
     toolsServersGone, boundTools, instructions,
     moving, served,
