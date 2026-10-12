@@ -1,6 +1,6 @@
 ---
 title: The record names a control pipe and key
-status: todo
+status: implemented
 depends: []
 layer: "packages/server"
 refs:
@@ -35,3 +35,18 @@ On win32, `start` makes a random pipe name and key for each child, gives them to
 - `pnpm -s typecheck` and `pnpm exec vitest run packages/server/test/daemon.test.ts` pass.
 
 ## Resume
+
+- **Status:** implemented, and not committed. The files this task changed are `packages/server/src/daemon.ts` and `packages/server/test/daemon.test.ts`.
+- **Done:** `Control` is `{ pipe, key }`, and `Running` carries it as `control?`, absent on a platform whose signals reach a daemon.
+  `CONTROL_ENV` is `AHPD_CONTROL`, beside `DETACHED_ENV`.
+  `controlFor(platform, pipe?)` answers a pipe and a key on win32, and nothing elsewhere.
+  The pipe is `\\.\pipe\ahpd-` and 16 random bytes as hex, and the key is 32 random bytes as hex.
+  The second argument lets a test give a unix socket path in place of the pipe name.
+  `start` makes the control, hands it to the child in `AHPD_CONTROL`, and passes it to `recordOf`.
+  `recordOf` writes it as `control`, and writes no field when it is given none.
+  No line a verb prints comes from it: the key stays in the 0600 record.
+- **Verified:** `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass, 925 cases in 47 files.
+  Six cases are new: three for `controlFor`, two for `control` in `recordOf`, and one for a start with no control here.
+- **Left by hand:** the Windows half, that `AHPD_CONTROL` reaches the child there and the record holds `control`.
+  This machine is Linux, so `controlFor('win32')` is driven from a case instead.
+- **Next action:** task 02, the control server in the daemon.

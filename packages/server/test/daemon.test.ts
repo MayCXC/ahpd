@@ -13,9 +13,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announcementOf, claim, forget, logSince, readyUrl, recordOf, running, start, statusLine, stop } from '../src/daemon.js';
+import { announcementOf, claim, controlFor, deliver, forget, logSince, readyUrl, recordOf, running, start, statusLine, stop } from '../src/daemon.js';
 import { automationStatePath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
-import type { Running } from '../src/daemon.js';
+import type { Control, Running } from '../src/daemon.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const MAIN = 'packages/server/src/main.ts';
@@ -133,6 +133,48 @@ describe('recordOf', () => {
     ]);
     expect(recordOf(ANNOUNCED, 42, 'abc').skipped).toBeUndefined();
   });
+
+  it('carries the control it is given, and no field when it is given none', () => {
+    const control: Control = { pipe: '\\\\.\\pipe\\ahpd-abc', key: 'def' };
+    expect(recordOf(ANNOUNCED, 42, 'abc', undefined, control).control).toEqual(control);
+    expect(recordOf(ANNOUNCED, 42, 'abc').control).toBeUndefined();
+  });
+
+  it('keeps the key out of every field a verb prints', () => {
+    const control = controlFor('win32') as Control;
+    const record = recordOf(ANNOUNCED, 42, 'abc', undefined, control);
+    // What `ahpd start` and `ahpd status` render from, and the one line status
+    // builds. The key belongs in the 0600 record and on no line.
+    const printed = [record.url, record.connectUrl, statusLine(record), ...record.paths, record.automations as string];
+    for (const said of printed) expect(said).not.toContain(control.key);
+    expect(JSON.stringify({ url: record.url, paths: record.paths })).not.toContain(control.key);
+  });
+});
+
+describe('controlFor', () => {
+  it('makes a named pipe and a key on win32, and nothing elsewhere', () => {
+    expect(controlFor('linux')).toBeUndefined();
+    expect(controlFor('darwin')).toBeUndefined();
+    const control = controlFor('win32') as Control;
+    // A random name under the pipe namespace, and a key of 32 bytes as hex.
+    expect(control.pipe).toMatch(/^\\\\\.\\pipe\\ahpd-[0-9a-f]{32}$/u);
+    expect(control.key).toMatch(/^[0-9a-f]{64}$/u);
+  });
+
+  it('makes a new pipe and a new key each time, so no other process can take one', () => {
+    const one = controlFor('win32') as Control;
+    const two = controlFor('win32') as Control;
+    expect(one.pipe).not.toBe(two.pipe);
+    expect(one.key).not.toBe(two.key);
+  });
+
+  it('takes the pipe name it is given, which is how a case here holds the other end', () => {
+    // The control path is `node:net` on both platforms, so a Linux case drives
+    // it over a unix socket path rather than a named pipe.
+    const control = controlFor('win32', '/tmp/ahpd-control.sock') as Control;
+    expect(control.pipe).toBe('/tmp/ahpd-control.sock');
+    expect(control.key).toMatch(/^[0-9a-f]{64}$/u);
+  });
 });
 
 describe('the record on disk', () => {
@@ -209,7 +251,7 @@ describe('the record on disk', () => {
     expect(onDisk()).toBe(process.ppid);
   });
 
-  it('leaves a record a successor claimed while a stop was signalling the daemon it read', () => {
+  it('leaves a record a successor claimed while a stop was signalling the daemon it read', async () => {
     const sleeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
     const pid = sleeper.pid as number;
     put(naming(pid));
@@ -220,7 +262,7 @@ describe('the record on disk', () => {
       return kill(target, signal);
     });
     try {
-      expect(stop()?.pid).toBe(pid);
+      expect((await stop())?.record.pid).toBe(pid);
       expect(onDisk()).toBe(process.ppid);
     }
     finally {
@@ -231,6 +273,117 @@ describe('the record on disk', () => {
 
   /** A pid no process can have: above 2^22, the highest `pid_max` Linux allows. */
   const NEVER = 2 ** 22 + 1;
+
+  /*
+   * A child that holds: a process the stop request does not end.
+   *
+   * It says when its handler is on, because a signal that arrives while node is
+   * still starting is one no handler is on for, and would end it like any other.
+   */
+  const stuck = async (): Promise<{ pid: number; held: ReturnType<typeof spawn> }> => {
+    const held = spawn(
+      process.execPath,
+      ['-e', "process.on('SIGTERM', () => {}); process.stdout.write('holding\\n'); setInterval(() => {}, 1000)"],
+      { stdio: ['ignore', 'pipe', 'ignore'] },
+    );
+    await new Promise<void>((done) => { held.stdout?.once('data', () => { done(); }); });
+    return { pid: held.pid as number, held };
+  };
+
+  it('waits for the process to go, and forgets the record after it is gone', async () => {
+    const sleeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
+    const pid = sleeper.pid as number;
+    put(naming(pid));
+    /** What the record was, each time the process was looked at. */
+    const seen: (number | undefined)[] = [];
+    try {
+      const answer = await stop({
+        signal: (record) => deliver(record, 'SIGTERM'),
+        kill: () => { throw new Error('a process that goes is not killed'); },
+        alive: (one) => {
+          try { process.kill(one, 0); seen.push(onDisk()); return true; }
+          catch { seen.push(onDisk()); return false; }
+        },
+        wait: () => new Promise((done) => { setTimeout(done, 10); }),
+        waitMs: 10_000,
+        now: () => Date.now(),
+      });
+      // It went, so no kill: and its record was on disk at every look while it was there.
+      expect(answer).toEqual({ record: expect.objectContaining({ pid }), killed: false });
+      expect(seen.length).toBeGreaterThan(1);
+      expect(seen.slice(0, -1).every((held) => held === pid)).toBe(true);
+      expect(onDisk()).toBeUndefined();
+    }
+    finally { sleeper.kill('SIGKILL'); }
+  }, 15000);
+
+  it('kills a process that never answered the request, and forgets its record', async () => {
+    const { pid, held } = await stuck();
+    put(naming(pid));
+    try {
+      // The real process table and a real SIGKILL, with a limit a case outlasts:
+      // the request is a signal this child ignores.
+      const answer = await stop({
+        signal: (record) => deliver(record, 'SIGTERM'),
+        kill: (one) => { process.kill(one, 'SIGKILL'); },
+        alive: (one) => {
+          try { process.kill(one, 0); return true; }
+          catch { return false; }
+        },
+        wait: () => new Promise((done) => { setTimeout(done, 10); }),
+        waitMs: 300,
+        now: () => Date.now(),
+      });
+      expect(answer).toEqual({ record: expect.objectContaining({ pid }), killed: true });
+      expect(onDisk()).toBeUndefined();
+    }
+    finally { held.kill('SIGKILL'); }
+  }, 15000);
+
+  it('kills without waiting past the limit, which the clock and not the process ends', async () => {
+    // This process, so the record is one `running` reads: the steps below touch
+    // no process at all, and the clock is what ends the wait.
+    put(naming(process.pid));
+    let killed = false;
+    const answer = await stop({
+      signal: () => Promise.resolve(),
+      kill: (one) => { expect(one).toBe(process.pid); killed = true; },
+      // The process is there until the kill, and gone after it.
+      alive: () => !killed,
+      wait: () => { throw new Error('the wait went past the limit'); },
+      waitMs: 0,
+      now: () => 0,
+    });
+    expect(answer).toEqual({ record: expect.objectContaining({ pid: process.pid }), killed: true });
+    expect(onDisk()).toBeUndefined();
+  });
+
+  it('does not wait for a process that went between the read and the request', async () => {
+    put(naming(process.pid));
+    const answer = await stop({
+      signal: () => Promise.reject(Object.assign(new Error('no such process'), { code: 'ESRCH' })),
+      kill: () => { throw new Error('nothing is left to kill'); },
+      alive: () => false,
+      wait: () => { throw new Error('nothing is left to wait for'); },
+      waitMs: 10_000,
+      now: () => 0,
+    });
+    expect(answer).toEqual({ record: expect.objectContaining({ pid: process.pid }), killed: false });
+    expect(onDisk()).toBeUndefined();
+  });
+
+  it('keeps the record of a process still there when its pipe did not answer', async () => {
+    put(naming(process.pid));
+    await expect(stop({
+      signal: () => Promise.reject(Object.assign(new Error('connect ENOENT'), { code: 'ESRCH' })),
+      kill: () => { throw new Error('a stop that was never asked kills nothing'); },
+      alive: () => true,
+      wait: () => { throw new Error('a stop that was never asked waits for nothing'); },
+      waitMs: 10_000,
+      now: () => 0,
+    })).rejects.toThrow('did not answer the stop request');
+    expect(onDisk()).toBe(process.pid);
+  });
 
   it('clears the temp file a writer that is gone left, and keeps a live writer\'s and another user\'s', () => {
     const left = join(home, 'ahpd', `daemon.json.${String(NEVER)}.tmp`);
@@ -274,7 +427,7 @@ describe('the record on disk', () => {
       // The new log holds this start and no byte of the last one.
       expect(logSince(0)).toBe(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\npid ${String(record.pid)}\n`);
     }
-    finally { stop(); }
+    finally { await stop(); }
   }, 15000);
 
   it('appends to a log under the limit, and leaves no .1', async () => {
@@ -284,7 +437,7 @@ describe('the record on disk', () => {
       expect(existsSync(logAt('daemon.log.1'))).toBe(false);
       expect(readFileSync(logAt('daemon.log'), 'utf8')).toBe(`a line from the last daemon\nahpd on ws://127.0.0.1:1 (node), sessions in /x\npid ${String(record.pid)}\n`);
     }
-    finally { stop(); }
+    finally { await stop(); }
   }, 15000);
 
   it('replaces the .1 that a previous rotation left', async () => {
@@ -294,7 +447,23 @@ describe('the record on disk', () => {
     try {
       expect(statSync(logAt('daemon.log.1')).size).toBe(6 * 1024 * 1024);
     }
-    finally { stop(); }
+    finally { await stop(); }
+  }, 15000);
+
+  /*
+   * On this platform the signals reach a daemon, so nothing names a pipe: the
+   * record has no `control`, and the child is handed no `AHPD_CONTROL` to read.
+   * The Windows half of this is checked by hand, on a machine that has win32.
+   */
+  it('records no control where the signals reach the daemon, and tells the child nothing', async () => {
+    const child = join(home, 'announce-env.mjs');
+    writeFileSync(child, "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\ncontrol ${process.env.AHPD_CONTROL ?? 'none'}\\n`); setInterval(() => {}, 1000);\n");
+    const record = await start([], child);
+    try {
+      expect(record.control).toBeUndefined();
+      expect(readFileSync(logAt('daemon.log'), 'utf8')).toContain('control none');
+    }
+    finally { await stop(); }
   }, 15000);
 
   it('stops the child it started when its record cannot be written', async () => {
