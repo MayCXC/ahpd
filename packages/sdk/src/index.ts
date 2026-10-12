@@ -62,6 +62,8 @@ export { partsOf, SNAPSHOT_TAG } from './attachments.js';
 export type { Part, PartOptions, PartSource } from './attachments.js';
 export { memoryAutomations } from './automations.js';
 export { disableConditionsOf } from './automations.js';
+export { enablementKeyOf, memoryEnablement } from './enablement.js';
+export type { EnablementStore, HeldDecisions, HeldEnablementStore } from './enablement.js';
 export { nextOccurrence, parseCron } from './cron.js';
 export type { Cron } from './cron.js';
 export { fileSessions, memorySessions, migrateSessions } from './sessions.js';

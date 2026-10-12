@@ -11,6 +11,7 @@ import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
+import type { EnablementStore } from '../enablement.js';
 import type { PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
@@ -222,6 +223,18 @@ export interface HostOptions {
    * definitions, runs them when asked, and holds no clock.
    */
   automations?: AutomationStore;
+  /**
+   * Whether a customization is on, for every session or for one folder.
+   *
+   * Left out, only the session's own decision is kept, so a plugin a client
+   * switches off for all sessions or in one folder comes back on at the next
+   * session there - which is what every host had before this option and is
+   * still the right answer for one embedded in a single session.
+   * `memoryEnablement()` is the one that ships with this package: it holds the
+   * decisions for the life of the process, and the daemon keeps the same
+   * store over a file.
+   */
+  enablement?: EnablementStore;
   /**
    * What an automation that names no owner sees, `every` by default.
    *

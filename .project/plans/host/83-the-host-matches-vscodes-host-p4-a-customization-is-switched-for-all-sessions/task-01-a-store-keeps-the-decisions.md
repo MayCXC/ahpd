@@ -1,6 +1,6 @@
 ---
 title: A store keeps the global and folder decisions
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -43,3 +43,20 @@ The store keeps a global decision and a decision for each folder, keyed as VS Co
 - `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk` pass.
 
 ## Resume
+
+- **State:** implemented. All 11 steps are in, and the four validation points pass.
+- **What exists now:** `packages/sdk/src/enablement.ts` holds `enablementKeyOf`, `EnablementStore`, `HeldDecisions`, `memoryEnablement()` and the 512-decision cap.
+  The `enablement` host option is declared in `types/host.ts`, and `index.ts` exports the function and the three types.
+- **Departure from the Steps:** `enablementKeyOf(customization, ofPlugin?)` takes a second, optional argument.
+  A server of a plugin is keyed as `<plugin source>#mcp=<name>`, so the key function has to be told which plugin owns the server.
+  The one-argument call the Steps show stays valid, and the server of a plugin a caller does not name falls back to `mcpServers#<name>`.
+- **Departure from the Steps:** the module also exports `held()`, with `HeldDecisions` and `HeldEnablementStore`.
+  Task 02's file store composes `memoryEnablement` rather than copying its rules, so it needs to read every decision the store holds.
+  Nothing else uses it, and it is what keeps one answer to what a decision is.
+- **Validation:** `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk` pass, with 5 new tests in `enablement.test.ts`.
+  They cover the key forms, inheritance, no keep-if-equal, the cap and its order of eviction.
+- **Files changed by this task:**
+  - `packages/sdk/src/enablement.ts` (created)
+  - `packages/sdk/src/types/host.ts`
+  - `packages/sdk/src/index.ts`
+  - `packages/sdk/test/enablement.test.ts` (created)
