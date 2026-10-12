@@ -157,6 +157,16 @@ export interface SessionContext extends Omit<Config, 'methods'>, Omit<ClientTool
    */
   steering: Bag | undefined;
   /**
+   * What the host asked said to the model, and the turn it asked it for.
+   *
+   * Read when the turn begins, and read back by the `UserPromptSubmit` hook
+   * the whole time that turn runs - which is the only moment the CLI takes
+   * context that is not the person's words. Kept against the turn and not on
+   * the session, because that is the whole of its lifetime: a turn that ends
+   * has taken its instruction with it, and no road that ends one has to say so.
+   */
+  hostInstructions: { turn: Bag; said: string[] } | undefined;
+  /**
    * The agent the running query was built with, and the CLI answering it.
    *
    * `running` is what a message's pick is compared against: it is what the CLI

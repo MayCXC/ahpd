@@ -47,6 +47,8 @@ export interface Query {
   stopped: { backgroundTasks: Bag[]; sessionCrons: Bag[] };
   /** The `Stop` hook that keeps `stopped`. */
   keepStopped: HookCallback;
+  /** The `UserPromptSubmit` hook that gives the turn now running what the host asked said. */
+  giveHostInstructions: HookCallback;
 }
 
 export function createQuery(ctx: SessionContext): Query {
@@ -62,6 +64,32 @@ export function createQuery(ctx: SessionContext): Query {
     stopped.backgroundTasks = list(input.background_tasks).map(bag);
     stopped.sessionCrons = list(input.session_crons).map(bag);
     return {};
+  };
+
+  /**
+   * What the host has to say to the model, on the turn that is running.
+   *
+   * The CLI's own door for context the person did not type: a
+   * `UserPromptSubmit` hook returns `additionalContext`, and the harness puts
+   * it into the prompt without it appearing as part of the message. Registered
+   * once with the query and asked on every prompt, which is what makes it a
+   * turn's own: the words are read off the turn now running, so a turn that
+   * ended has already taken its instruction with it.
+   *
+   * Nothing when the host said nothing, which is every turn of a session it
+   * began itself - and the key is left off rather than sent empty, because
+   * empty context is a heading with nothing under it.
+   */
+  const giveHostInstructions: HookCallback = async (input) => {
+    if (input.hook_event_name !== 'UserPromptSubmit') return {};
+    const held = ctx.hostInstructions;
+    if (held === undefined || held.turn !== ctx.active || held.said.length === 0) return {};
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'UserPromptSubmit' as const,
+        additionalContext: held.said.join('\n\n'),
+      },
+    };
   };
 
   /**
@@ -260,10 +288,12 @@ export function createQuery(ctx: SessionContext): Query {
        * exactly as `take` leaves it off.
        */
       ...(ctx.chosen && ctx.chosen !== 'default' ? { model: ctx.chosen } : {}),
-      // Before every shell command, while a client has a script in force; and
-      // at the end of each turn, what the CLI still has in hand.
+      // Before every shell command, while a client has a script in force; on
+      // every prompt, what the host asked said on that turn; and at the end of
+      // each turn, what the CLI still has in hand.
       hooks: {
         PreToolUse: [{ matcher: 'Bash', hooks: [ctx.sourceFirst] }],
+        UserPromptSubmit: [{ hooks: [giveHostInstructions] }],
         Stop: [{ hooks: [keepStopped] }],
       },
       /*
@@ -719,5 +749,5 @@ export function createQuery(ctx: SessionContext): Query {
     ctx.gone ??= 'The agent stopped';
     ctx.touch();
   };
-  return { waiting, startQuery, ends, take, switchAgent, consume, stopped, keepStopped };
+  return { waiting, startQuery, ends, take, switchAgent, consume, stopped, keepStopped, giveHostInstructions };
 }

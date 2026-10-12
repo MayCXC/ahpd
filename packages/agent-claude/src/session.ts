@@ -64,6 +64,7 @@ export function createSession(options: ClaudeSessionOptions): Session {
     closed: false,
     peers: [...(options.additional ?? [])] as string[],
     steering: undefined as Bag | undefined,
+    hostInstructions: undefined as { turn: Bag; said: string[] } | undefined,
     running: undefined as string | undefined,
     agentId: options.resume as string | undefined,
     handshake: undefined as Bag | undefined,

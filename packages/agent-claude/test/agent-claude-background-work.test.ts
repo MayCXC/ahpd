@@ -390,5 +390,58 @@ it('is busy while the Stop hook lists a session cron', async () => {
 it('keeps the hooks the session already had', async () => {
   await open();
   expect(sdk.hooks?.PreToolUse).toEqual([{ matcher: 'Bash', hooks: [expect.any(Function)] }]);
+  expect(sdk.hooks?.UserPromptSubmit).toEqual([{ hooks: [expect.any(Function)] }]);
   expect(sdk.hooks?.Stop).toEqual([{ hooks: [expect.any(Function)] }]);
+});
+
+/** Run the `UserPromptSubmit` hooks the query was built with, as the CLI does when a prompt arrives. */
+const submitted = async (): Promise<unknown[]> => {
+  const answers: unknown[] = [];
+  for (const one of sdk.hooks?.UserPromptSubmit ?? []) {
+    for (const hook of one.hooks) {
+      answers.push(await hook(
+        { hook_event_name: 'UserPromptSubmit', prompt: 'do the thing' },
+        undefined,
+        { signal: new AbortController().signal },
+      ));
+    }
+  }
+  return answers;
+};
+
+/*
+ * What the host asked said on a turn, which is context the person did not type.
+ *
+ * The CLI takes it from the `UserPromptSubmit` hook, so what the model is given
+ * is this hook's answer - and the turn that is running is the only turn that
+ * has one. It is read when the turn begins, which is what makes the host's
+ * function, rather than a list captured earlier, what the hook answers from.
+ */
+it('gives a turn the instructions the host asked for, and nothing once it ends', async () => {
+  const { session } = await open();
+  const words = ['<remote_session_origin>', 'report back', '</remote_session_origin>'];
+  // Registered from the start and nothing to give: no turn has begun.
+  expect(await submitted()).toEqual([{}]);
+
+  // A turn the host said nothing about, which is every ordinary one.
+  session.begin('t-plain', 'hello');
+  await settle();
+  expect(await submitted()).toEqual([{}]);
+  await session.cancel('t-plain');
+  await settle();
+
+  let asked = 0;
+  session.begin('t-told', 'and this', undefined, undefined, undefined, {
+    instructions: () => { asked += 1; return words; },
+  });
+  await settle();
+  expect(asked).toBe(1);
+  expect(await submitted()).toEqual([{
+    hookSpecificOutput: { hookEventName: 'UserPromptSubmit', additionalContext: words.join('\n\n') },
+  }]);
+
+  // Taken with the turn that ended, rather than left for the next prompt.
+  await session.cancel('t-told');
+  await settle();
+  expect(await submitted()).toEqual([{}]);
 });

@@ -1,6 +1,6 @@
 import type { ActiveTurn, ToolCallCompletedState, ToolCallRunningState, ToolResultTerminalContent, ToolResultTextContent } from '@microsoft/agent-host-protocol';
 import { titleFrom } from '@ahpd/sdk';
-import type { Bag, Chosen, MessageAttachment, MessageFrom, OnWire, Ran, WireTurn } from '@ahpd/sdk';
+import type { Bag, Chosen, MessageAttachment, MessageFrom, OnWire, Ran, TurnOptions, WireTurn } from '@ahpd/sdk';
 import { blocksFor } from './attachments.js';
 import { bag, list, str } from './common.js';
 import { EFFORTS } from './config.js';
@@ -13,11 +13,11 @@ export interface Turns {
   /** Start the head of the queue, once there is nothing running. */
   startNext: () => void;
   methods: {
-    begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[]) => void;
+    begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions) => void;
     setTitle: (title: string) => void;
     ran: (turnId: string, command: string, run: (toolCallId: string) => Promise<Ran>, queuedAs?: string) => void;
     steer: (id: string, text: string, attachments?: MessageAttachment[]) => boolean;
-    queue: (id: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[]) => void;
+    queue: (id: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions) => void;
     setDraft: (draft: Bag | undefined) => void;
     unqueue: (id: string) => void;
     reorder: (order: string[]) => void;
@@ -120,6 +120,7 @@ export function createTurns(ctx: SessionContext): Turns {
     queuedMessageId?: string,
     from?: MessageFrom,
     attachments?: MessageAttachment[],
+    options?: TurnOptions,
   ): Promise<void> => {
     /*
      * A session whose CLI has exited answers at once, and says why.
@@ -203,6 +204,14 @@ export function createTurns(ctx: SessionContext): Turns {
       responseParts: [],
       usage: undefined,
     } satisfies WireTurn<ActiveTurn> as Bag;
+    /*
+     * What the host has to say on this turn, asked now that the turn exists.
+     *
+     * Asked here rather than held from the message that arrived, because a
+     * message that waited its turn is told what is true when its turn comes:
+     * the client that can report back may have joined, or left, in between.
+     */
+    ctx.hostInstructions = { turn: ctx.active, said: options?.instructions?.() ?? [] };
     ctx.startedAt = Date.now();
     ctx.failed = undefined;
     ctx.newTurn();
@@ -284,7 +293,8 @@ export function createTurns(ctx: SessionContext): Turns {
     // What the message was holding while it waited, which is what it is still.
     const kept = message.attachments;
     const attachments = Array.isArray(kept) ? kept as MessageAttachment[] : undefined;
-    void beginTurn(crypto.randomUUID(), str(message.text) ?? '', model, str(next.id), from, attachments);
+    void beginTurn(crypto.randomUUID(), str(message.text) ?? '', model, str(next.id), from, attachments,
+      next.options as TurnOptions | undefined);
   };
 
   /**
@@ -412,7 +422,9 @@ export function createTurns(ctx: SessionContext): Turns {
      * naming a model the CLI will not take fails with its reason instead of
      * being labelled with it and answered by another one.
      */
-    begin: (turnId, text, model, from, attachments) => { void beginTurn(turnId, text, model, undefined, from, attachments); },
+    begin: (turnId, text, model, from, attachments, options) => {
+      void beginTurn(turnId, text, model, undefined, from, attachments, options);
+    },
     setTitle: (said) => { if (said !== '') ctx.title = said; },
 
     /**
@@ -488,9 +500,12 @@ export function createTurns(ctx: SessionContext): Turns {
      * immediately started, which is a queue entry a client sees appear and
      * leave rather than one that was never there.
      */
-    queue: (id, text, model, from, attachments) => {
+    queue: (id, text, model, from, attachments, options) => {
       const entry: Bag = {
         id,
+        // Held with the message and read when its turn comes, which is what
+        // makes a turn's instruction follow the turn rather than the arrival.
+        ...(options !== undefined ? { options } : {}),
         message: {
           text,
           origin: from?.origin ?? { kind: 'user' },

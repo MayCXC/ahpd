@@ -267,6 +267,24 @@ export interface MessageFrom {
   agent?: { uri: string };
 }
 
+/**
+ * What a turn is given beside its message, decided when the turn begins.
+ *
+ * `instructions` is the host's own word to the model on this turn and no
+ * other: context the person did not type and the transcript does not show.
+ * A session another window delegated work to is told to report back to the
+ * chat the work came from, and a client in it is what can do the reporting.
+ *
+ * A function rather than the words themselves, because when they are read is
+ * part of what they say. A message that waits its turn was sent in earlier,
+ * and a client that joined, or left, in between is what this is for - so the
+ * backend asks at the moment the turn begins, not at the moment it arrived.
+ */
+export interface TurnOptions {
+  /** What the host wants said on this turn. Empty is a host with nothing to say. */
+  instructions?: () => string[];
+}
+
 /** A live session. */
 export interface Session {
   /** The session channel URI. */
@@ -444,8 +462,11 @@ export interface Session {
    * so a backend that can see an image sees the image and one that cannot is
    * the only thing that has to say so. Absent for a message that carried none,
    * which is every message this host writes itself.
+   *
+   * `options` is what the turn is given beside the message, read here because
+   * this is where the turn begins.
    */
-  begin(turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[]): void;
+  begin(turnId: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions): void;
   /**
    * Run the latest turn again, without adding a message.
    *
@@ -480,8 +501,12 @@ export interface Session {
    * `attachments` are the message's own, as `begin` takes them, and are held
    * with it: a picture pasted into a message that waits its turn is still a
    * picture when the turn comes.
+   *
+   * `options` is what the turn is given beside the message, held with it and
+   * read when the turn comes - which is later than this call, so the words
+   * are the ones true then rather than the ones true now.
    */
-  queue(id: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[]): void;
+  queue(id: string, text: string, model?: Chosen, from?: MessageFrom, attachments?: MessageAttachment[], options?: TurnOptions): void;
   /** Take one back, while it is still waiting. */
   unqueue(id: string): void;
   /**
