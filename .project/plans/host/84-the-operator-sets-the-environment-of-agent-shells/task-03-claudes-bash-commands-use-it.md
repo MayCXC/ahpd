@@ -1,6 +1,6 @@
 ---
 title: Claude's Bash commands use it
-status: implemented
+status: done
 depends: [task-02-the-daemon-reads-shellenv.md]
 layer: "packages/agent-claude"
 refs:

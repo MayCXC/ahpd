@@ -1,7 +1,7 @@
 ---
 title: The operator sets the environment of agent shells
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -59,9 +59,9 @@ config.json shellEnv -> HostOptions -> Start -> Claude's sourceFirst -> every Ba
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - One function gives an agent shell its environment](task-01-one-function-gives-a-shell-its-environment.md) | todo | - |
-| [02 - The daemon reads shellEnv, and its terminals use it](task-02-the-daemon-reads-shellenv.md) | todo | 01 |
-| [03 - Claude's Bash commands use it](task-03-claudes-bash-commands-use-it.md) | todo | 02 |
+| [01 - One function gives an agent shell its environment](task-01-one-function-gives-a-shell-its-environment.md) | done | - |
+| [02 - The daemon reads shellEnv, and its terminals use it](task-02-the-daemon-reads-shellenv.md) | done | 01 |
+| [03 - Claude's Bash commands use it](task-03-claudes-bash-commands-use-it.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -70,13 +70,12 @@ config.json shellEnv -> HostOptions -> Start -> Claude's sourceFirst -> every Ba
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-one-function-gives-a-shell-its-environment.md](task-01-one-function-gives-a-shell-its-environment.md).
+- **Done so far:** every task is done, and the plan is built. See [implemented.md](implemented.md).
+- **Next action:** Softov's check by hand: a daemon with a `shellEnv` opens a terminal that prints the value.
 - **Open questions:** none.
-- **Watch out for:** `run.ts` also changes in daemon/20 and host/83 p4, so merge it by hand.
 
 ## Final verification checklist
 
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server packages/agent-claude` pass.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server packages/agent-claude` pass.
 - [ ] A daemon with `"shellEnv": { "XDG_CONFIG_HOME": "/home/me/.config" }` opens a terminal where `echo $XDG_CONFIG_HOME` prints that path.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

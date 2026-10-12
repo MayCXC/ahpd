@@ -1,6 +1,6 @@
 ---
 title: The daemon reads shellEnv, and its terminals use it
-status: implemented
+status: done
 depends: [task-01-one-function-gives-a-shell-its-environment.md]
 layer: "packages/server"
 refs:

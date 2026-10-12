@@ -1,6 +1,6 @@
 ---
 title: One function gives an agent shell its environment
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk"
 refs:
