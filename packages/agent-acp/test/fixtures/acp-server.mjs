@@ -174,7 +174,7 @@
  */
 
 import { spawn } from 'node:child_process';
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
 /** The file every request is recorded in, when a test named one. */
@@ -997,10 +997,12 @@ const promptScript = async (id, params) => {
     /*
      * A question this server asks and then takes back.
      *
-     * The withdrawal goes out a turn of the event loop later, which is what a
-     * server whose own deadline passes while the person is reading does: the
-     * question has been drawn on the client by the time it is given up on, so
-     * the handler is holding it when the abort arrives. The prompt is held the
+     * The withdrawal goes out once the test has seen the question drawn, which
+     * is what a server whose own deadline passes while the person is reading
+     * does: the handler is holding it when the abort arrives. The test says so
+     * by writing `<ACP_LOG>.go`, because a fixed delay loses to a slow bridge
+     * under load and turns this into the withdrawal that beats the question.
+     * The prompt is held the
      * way `elicitcancel` holds it, because the answer comes over a later line
      * and there is no turn left to say anything in.
      */
@@ -1016,7 +1018,11 @@ const promptScript = async (id, params) => {
         required: ['title'],
       },
     });
-    setTimeout(() => { withdraw(question.id); }, 0);
+    const drawn = setInterval(() => {
+      if (LOG === undefined || !existsSync(`${LOG}.go`)) return;
+      clearInterval(drawn);
+      withdraw(question.id);
+    }, 5);
     await question.answered;
     return;
   }

@@ -626,6 +626,8 @@ it('takes a question the server withdrew off the chat, and completes the request
   await until(() => types(p, chatUri).includes('chat/inputRequested'));
 
   expect(asked(p, chatUri)?.id).toBe('call-withdrawn:elicitation');
+  // The question is on the chat, so the server may take it back now.
+  writeFileSync(`${log}.go`, '');
   /*
    * The server's `$/cancel_request` reaches the bridge as the request's own
    * signal being aborted, and the question is answered from there: `cancel`,
