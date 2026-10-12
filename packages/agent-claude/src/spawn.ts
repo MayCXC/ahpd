@@ -158,7 +158,26 @@ export const spawnInside = (
         stdio: ['pipe', 'pipe', 'inherit'],
       }));
     },
-    (error: unknown) => held.settle(error instanceof Error ? error : new Error(String(error))),
+    (error: unknown) => {
+      /*
+       * The port's failure, said the way the SDK says one it saw for itself.
+       *
+       * The SDK tells a spawn failure from a process error by the `syscall`
+       * the error carries, and only an error the runtime raised has one. A
+       * port that rejects arrives bare, and the SDK keeps a process error's
+       * message whole - for this road a socket path, a registry or an image
+       * name. Naming the syscall as a spawn puts it on the road a missing
+       * binary takes, where the session answers with one short sentence.
+       * `code` is left alone, because that sentence keeps the errno.
+       *
+       * A machine that is not there is not named: its sentence is ours, holds
+       * no path, and is the one thing a person needs to know.
+       */
+      const failed = error instanceof Error ? error : new Error(String(error));
+      const named = failed as { syscall?: string };
+      if (named.syscall?.startsWith('spawn') !== true) named.syscall = 'spawn';
+      held.settle(failed);
+    },
   );
   return held;
 };
