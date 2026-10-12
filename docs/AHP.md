@@ -442,14 +442,16 @@ it could not run.
 
 `session/inputNeeded` is a **list**, and `session/inputNeededSet` carries
 `request` and adds *or updates* the entry with that id; `inputNeededRemoved`
-carries the `id`. Two kinds are served:
+carries the `id`. Four kinds are served, one per `SessionInputRequestKind`:
 
 | kind | what it is | answered by |
 | --- | --- | --- |
-| `toolConfirmation` | a tool call waiting to be allowed | `chat/toolCallConfirmed`, keyed by `toolCall.toolCallId` |
-| `chatInput` | a question the agent asked | `chat/inputCompleted`, keyed by `request.id`, with `response: 'accept' \| 'decline' \| 'cancel'` |
+| `toolConfirmation` | a tool call waiting to be allowed, raised where a backend stops a call to ask a person (`canUseTool`) | `chat/toolCallConfirmed`, keyed by `toolCall.toolCallId` |
+| `chatInput` | a question the agent asked, raised where a backend puts an elicitation to a person | `chat/inputCompleted`, keyed by `request.id`, with `response: 'accept' \| 'decline' \| 'cancel'` |
+| `toolClientExecution` | a running call to a tool an active client provides, raised by the client call holder as the frame reports it | `chat/toolCallComplete`, keyed by `toolCall.toolCallId`, from the client the call was reported against |
+| `toolAuthentication` | a call blocked mid-run on an MCP server's sign-in, raised where that server's state turns `authRequired` | the `authenticate` command, not a `chat/*` action: the host carries on with `chat/toolCallAuthResolved` and lifts the entry with `session/inputNeededRemoved` |
 
-Both are held in a map keyed by id, never in one slot: the CLI calls
+All four are held in a map keyed by id, never in one slot: the CLI calls
 `canUseTool` per tool call, and an agent that fires two in parallel asks twice
 before either is answered.
 
