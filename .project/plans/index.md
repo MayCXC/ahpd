@@ -179,8 +179,9 @@ Reference: [00-host.md](host/00-host.md)
 | [83 p3 - A remote session is taken and keeps its origin](host/83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | high | planned 2026-10-11 | 83 p1 | - |
 | [83 p4 - A customization is switched for all sessions or a folder](host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | medium | planned 2026-10-11 | 83 | - |
 | [83 p5 - A chat is attached to a message](host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | low | draft 2026-10-11; built after p1 to p3 | 83 p1 to p3 | - |
+| [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-the-environment-of-agent-shells/plan.md) | medium | planned 2026-10-11 | - | ACP, cofold and pi shells |
 
-Next free number in `host`: `83`.
+Next free number in `host`: `85`.
 
 ## claude
 
@@ -210,8 +211,10 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [18 - session.ts is split into one file per area, and session.ts only composes them](claude/18-session-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](claude/18-session-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [19 - An AskUserQuestion shows each question's header, and an answer shows on every client at once with its typed text reaching the tool](claude/19-a-question-shows-its-headers-and-its-answer-at-once/plan.md) | high | built | claude 11 | - |
 | [20 - A Claude turn reads its message's attachments, queued and steered ones included](claude/20-a-claude-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](claude/20-a-claude-turn-reads-its-attachments/implemented.md), [deferred.md](claude/20-a-claude-turn-reads-its-attachments/deferred.md)) | host 68 | ahpapp `chat/03` for Claude sessions |
+| [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-the-agent-whole-and-on-time/plan.md) | high | planned 2026-10-11 | - | - |
+| [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | planned 2026-10-11 | - | - |
 
-Next free number in `claude`: `21`.
+Next free number in `claude`: `23`.
 
 ## documentation
 
@@ -372,8 +375,9 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [12 - The bridge is on the current SDK entry, and lists sessions properly](acp/12-the-bridge-is-on-the-current-sdk/plan.md) | low | built 2026-10-02 ([implemented.md](acp/12-the-bridge-is-on-the-current-sdk/implemented.md)) | acp 01 | - |
 | [13 - session.ts is split into one file per area](acp/13-session-is-split-by-area/plan.md) | high | built 2026-10-07 ([implemented.md](acp/13-session-is-split-by-area/implemented.md)) | host 52 | - |
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
+| [15 - An ACP question is cancelled and answered in full](acp/15-an-acp-question-is-cancelled-and-answered-in-full/plan.md) | medium | planned 2026-10-11 | - | - |
 
-Next free number in `acp`: `15`.
+Next free number in `acp`: `16`.
 
 ## usage
 
