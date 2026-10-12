@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROTOCOL_VERSION } from '@microsoft/agent-host-protocol';
+import { sdkVersion } from '../src/version.js';
 import {
   resetSdk, actions, hello, open, peer, sdk, serving, sessionQueries,
   settle, running,
@@ -46,6 +47,46 @@ describe('the handshake', () => {
     expect(result.snapshots).toHaveLength(1);
     expect(result.snapshots[0]?.resource).toBe('ahp-root://');
     expect(result.snapshots[0]?.state.agents).toHaveLength(1);
+  });
+
+  it('says what machine it runs on, so a window can pick it as a target', async () => {
+    const result = await open().handle(
+      hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }),
+    ) as { snapshots: { state: { _meta?: Record<string, unknown> } }[] };
+    // The key and the shape are VS Code's own: it drops from its list of
+    // delegation targets every host whose resources it cannot read.
+    const resources = result.snapshots[0]?.state._meta?.['vscode.agentHost.resources'] as Record<string, unknown>;
+    expect(resources.platform).toBe(
+      process.platform === 'darwin' ? 'macos' : process.platform === 'win32' ? 'windows' : 'linux',
+    );
+    expect(resources.architecture).toBe(process.arch);
+    // Both are read as capacities, so zero and a negative are as unreadable
+    // as an absent key - which is why they are only ever sent above zero.
+    expect(resources.cpuCount).toBeGreaterThan(0);
+    expect(resources.memoryBytes).toBeGreaterThan(0);
+    // And that a session another window sends here is taken: the window
+    // offers a host as a place to delegate to only where it says both this
+    // and its resources.
+    expect(result.snapshots[0]?.state._meta?.['vscode.remoteSessions']).toBe(true);
+  });
+
+  it('sends its build, and says its session URIs are its own', async () => {
+    const client = open();
+    const result = await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] })) as {
+      snapshots: { state: { _meta?: Record<string, unknown> } }[];
+      _meta: Record<string, unknown>;
+    };
+    // The version, which the window writes in its Output channel.
+    expect((result.snapshots[0]?.state._meta?.hostBuild as { version?: string })?.version).toBe(sdkVersion());
+    /*
+     * And the pair that keeps every session URI this host hands out.
+     *
+     * `hostBuild` is what makes VS Code treat this host as one of its own,
+     * and a native host gets the legacy `provider:/id` spelling for a session
+     * unless `initialize` says otherwise - so these two are one statement and
+     * are checked as one.
+     */
+    expect(result._meta['vscode.ahpSessionUris']).toBe(true);
   });
 
   it('still connects when a channel it was asked for is gone', async () => {

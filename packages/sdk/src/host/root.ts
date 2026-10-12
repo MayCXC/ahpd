@@ -1,5 +1,8 @@
+import { availableParallelism, totalmem } from 'node:os';
 import { seesConfig, PER_CONNECTION } from './gate.js';
 import { OPERATIONS, operationsOf } from '../users.js';
+import { REMOTE_SESSIONS_META } from '../remotesession.js';
+import { sdkVersion } from '../version.js';
 import { vscodeRootProperties } from '../vscoderootconfig.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
@@ -45,6 +48,49 @@ const schemeOperations = (provider: ResourceProvider): string[] => {
   return ORDER.filter((one) => typeof held[METHOD_OF[one]] === 'function');
 };
 
+/*
+ * The machine this host runs on, measured once.
+ *
+ * VS Code filters the hosts it may delegate a session to by these numbers, so
+ * a host that sends none is a host its window never offers. The key, the shape
+ * and the three platform names are VS Code's own; its two rules are kept with
+ * them. A system whose platform it has no name for is left out rather than
+ * guessed at, and the same goes for a count - a value a client cannot read as
+ * a capacity is worse than an absent one.
+ */
+const hostResources = (): Bag => {
+  const platform = process.platform === 'win32' ? 'windows'
+    : process.platform === 'darwin' ? 'macos'
+      : process.platform === 'linux' ? 'linux' : undefined;
+  const architecture = process.arch.trim().length > 0 ? process.arch : undefined;
+  const cpuCount = capacity(availableParallelism);
+  const total = capacity(totalmem);
+  const constrained = capacity(() => process.constrainedMemory());
+  /*
+   * The smaller of the two, because both are ceilings.
+   *
+   * The machine has so much and the process may use no more than the other
+   * says, so what is available to this host is whichever is reached first.
+   */
+  const memoryBytes = total === undefined ? constrained
+    : constrained === undefined ? total : Math.min(total, constrained);
+  return {
+    ...(platform === undefined ? {} : { platform }),
+    ...(architecture === undefined ? {} : { architecture }),
+    ...(cpuCount === undefined ? {} : { cpuCount }),
+    ...(memoryBytes === undefined ? {} : { memoryBytes }),
+  };
+};
+
+/** One reading, kept only where it comes back as a positive whole number. */
+const capacity = (measure: () => number | undefined): number | undefined => {
+  try {
+    const value = measure();
+    return typeof value === 'number' && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+  }
+  catch { return undefined; }
+};
+
 /** What the root channel advertises, and the config a client pushes to it. */
 export interface Root {
   rootConfig: Record<string, unknown>;
@@ -62,6 +108,13 @@ export interface Root {
 
 export function createRoot(ctx: HostContext): Root {
   const { options, agents, sessions, terminals } = ctx;
+  // Measured here rather than per root state: the machine does not change
+  // while this process runs, and a client that re-read it would be reading
+  // four syscalls for one answer.
+  const resources = hostResources();
+  // Read once for the same reason, and out of the manifest rather than from a
+  // literal here, which is what `version.ts` is for.
+  const build = sdkVersion();
 
   /**
    * Every backend, as the root channel advertises them.
@@ -434,6 +487,39 @@ export function createRoot(ctx: HostContext): Root {
     const channels = advertisedChannels();
     const methods = advertisedMethods();
     const meta = {
+      /*
+       * The machine, for a window choosing which host to delegate to.
+       *
+       * Left out, rather than sent empty, where nothing could be measured: a
+       * client reading `{}` has a host it knows nothing about, and an absent
+       * key is the same statement with nothing invented.
+       */
+      ...(Object.keys(resources).length === 0 ? {} : { 'vscode.agentHost.resources': resources }),
+      /*
+       * And that this host takes a session another window sends it.
+       *
+       * The window offers a host as a place to delegate a session to only
+       * where it says both this and its resources, so a host that kept an
+       * origin without saying it would be sent nothing. It goes with the code
+       * that keeps the origin and not before it: a window told this of a host
+       * that dropped the origin would send a session whose agent never
+       * reports back.
+       */
+      [REMOTE_SESSIONS_META]: true,
+      /*
+       * The build, which is also what says this host is a native one.
+       *
+       * VS Code writes this version in its Output channel, and reads the same
+       * key to decide that this host is one of its own - for which it expects
+       * the legacy `provider:/id` session URIs unless the handshake says
+       * otherwise. So this key and `vscode.ahpSessionUris` on `initialize` are
+       * one change and never two - decision `ahpd-says-it-is-a-native-host`.
+       *
+       * Left out where `version.ts` found no manifest: a host telling a client
+       * it is version `unknown` is a host that has claimed to be native on the
+       * strength of a number it does not have.
+       */
+      ...(build === 'unknown' ? {} : { hostBuild: { version: build } }),
       ...(schemes === undefined ? {} : { 'ahpd.resourceProviders': schemes }),
       ...(channels === undefined ? {} : { 'ahpd.channels': channels }),
       ...(methods === undefined ? {} : { 'ahpd.methods': methods }),

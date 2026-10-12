@@ -1,6 +1,6 @@
 ---
 title: The root state says what machine the host runs on
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk"
 refs:
@@ -14,8 +14,10 @@ Root `_meta['vscode.agentHost.resources']` holds `platform`, `architecture`, `cp
 
 ## Files
 
-- `UPDATE: packages/sdk/src/host/root.ts:436-495` - add the key to the root `_meta`.
+- `UPDATE: packages/sdk/src/host/root.ts` - `hostResources` and `capacity`, and the key in the root `_meta`.
 - `UPDATE: packages/sdk/test/host-handshake.test.ts` - the root state holds the key with positive integers.
+- `UPDATE: packages/sdk/test/root-config.test.ts` - the `apart` helper drops the key with `ahpd.grants`.
+- `UPDATE: packages/sdk/test/users-gate-commands.test.ts` - the `rootMeta` helper drops the key with `ahpd.grants`.
 
 ## Steps
 
@@ -33,3 +35,16 @@ Root `_meta['vscode.agentHost.resources']` holds `platform`, `architecture`, `cp
 - `pnpm exec vitest run packages/sdk` passes.
 
 ## Resume
+
+`hostResources` measures once, in `createRoot`, and the root `_meta` carries the key only when something was measured. Two test helpers that compare a connection's own `_meta` now drop the key beside `ahpd.grants`, because it says the same thing to every connection.
+
+Files changed:
+
+- `packages/sdk/src/host/root.ts`
+- `packages/sdk/test/host-handshake.test.ts`
+- `packages/sdk/test/root-config.test.ts`
+- `packages/sdk/test/users-gate-commands.test.ts`
+
+Also touched by the run of `pnpm exec vitest run packages/sdk`, which rewrites its own capture: `packages/sdk/test/fixtures/wire.jsonl`. The restore command is denied in this preset, so Softov reverts it if the recording is not wanted.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk --maxWorkers=2 --testTimeout=10000` pass; a plain run flakes on `nested-start` and `host-catalogue-held` under load.

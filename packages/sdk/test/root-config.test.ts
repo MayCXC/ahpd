@@ -684,10 +684,14 @@ it('answers restartNeeded in the _meta of every root state, and only once asked'
   const member = await signedIn('member', 'member');
   // The principal is the only thing about the host's own state in there yet:
   // nobody has asked for a restart, and the notice is the whole of what this is
-  // about. `ahpd.grants` is beside it and says the same thing to everybody, so
-  // it is left out of what these three compare.
+  // about. What the host says about itself to everybody - `ahpd.grants`, the
+  // machine's resources, whether it takes a remote session and the build
+  // beside them - is left out of what these three compare.
   const apart = (meta: unknown): Record<string, unknown> => {
-    const { 'ahpd.grants': _grants, ...rest } = (meta ?? {}) as Record<string, unknown>;
+    const {
+      'ahpd.grants': _grants, 'vscode.agentHost.resources': _machine, 'vscode.remoteSessions': _remote,
+      hostBuild: _build, ...rest
+    } = (meta ?? {}) as Record<string, unknown>;
     return rest;
   };
   expect(apart((await rootOf(admin.client))._meta)).toEqual({ 'ahpd.principal': 'user:ana' });
