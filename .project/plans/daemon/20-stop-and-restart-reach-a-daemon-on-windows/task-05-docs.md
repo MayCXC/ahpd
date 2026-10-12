@@ -1,6 +1,6 @@
 ---
 title: The docs describe stop and restart on Windows
-status: implemented
+status: done
 depends: [task-04-stop-waits-for-the-daemon-to-exit.md]
 layer: "docs"
 refs:

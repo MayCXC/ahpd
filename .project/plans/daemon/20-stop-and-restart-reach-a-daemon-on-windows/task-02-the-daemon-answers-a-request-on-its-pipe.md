@@ -1,6 +1,6 @@
 ---
 title: The daemon answers a request on its pipe
-status: implemented
+status: done
 depends: [task-01-the-record-names-a-control-pipe-and-key.md]
 layer: "packages/server"
 refs:

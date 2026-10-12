@@ -1,7 +1,7 @@
 ---
 title: "`ahpd stop` and `ahpd restart` reach a daemon on Windows"
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -87,11 +87,11 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The record names a control pipe and key](task-01-the-record-names-a-control-pipe-and-key.md) | implemented | - |
-| [02 - The daemon answers a request on its pipe](task-02-the-daemon-answers-a-request-on-its-pipe.md) | implemented | 01 |
-| [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | implemented | 02 |
-| [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | implemented | 03 |
-| [05 - The docs describe stop and restart on Windows](task-05-docs.md) | implemented | 04 |
+| [01 - The record names a control pipe and key](task-01-the-record-names-a-control-pipe-and-key.md) | done | - |
+| [02 - The daemon answers a request on its pipe](task-02-the-daemon-answers-a-request-on-its-pipe.md) | done | 01 |
+| [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | done | 02 |
+| [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | done | 03 |
+| [05 - The docs describe stop and restart on Windows](task-05-docs.md) | done | 04 |
 
 ## Risks and tradeoffs
 
@@ -106,7 +106,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 03: `deliver(record, signal, platform)` sends the request on win32 and the signal elsewhere, `stop` awaits it, and `realTerminal.signal` calls it.
   Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
   Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
-- **Next action:** none. Every task is implemented and awaits review, and the two Windows checks in the final list are left by hand.
+- **Next action:** the two Windows checks in the final list, by hand. The plan is built and reviewed; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** never write the key or `connectUrl` to a log line or to stdout; `ahpd status --json` must not print `control`.
 

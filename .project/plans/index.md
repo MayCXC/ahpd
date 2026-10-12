@@ -35,7 +35,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [17 - A plugin installs at the newest version whose sdk range admits the daemon](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/plan.md) | high | built 2026-10-09 ([implemented.md](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/implemented.md)) | daemon 09 | - |
 | [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/18-the-api-answers-to-the-origins-a-deployment-names/implemented.md)) | daemon 05 | - |
 | [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); awaiting review | daemon 11 | - |
-| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-11; tasks 01-05 implemented, awaiting review and the checks by hand | daemon 13 | - |
+| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-11; the Windows checks by hand remain | daemon 13 | - |
 
 Next free number in `daemon`: `20`.
 

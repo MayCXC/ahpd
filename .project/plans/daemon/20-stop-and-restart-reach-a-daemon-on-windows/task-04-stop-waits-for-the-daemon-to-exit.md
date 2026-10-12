@@ -1,6 +1,6 @@
 ---
 title: Stop waits for the daemon to exit
-status: implemented
+status: done
 depends: [task-03-stop-and-restart-send-through-the-pipe.md]
 layer: "packages/server"
 refs:

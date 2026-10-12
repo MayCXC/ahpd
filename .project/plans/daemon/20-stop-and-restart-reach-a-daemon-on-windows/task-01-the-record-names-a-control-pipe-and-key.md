@@ -1,6 +1,6 @@
 ---
 title: The record names a control pipe and key
-status: implemented
+status: done
 depends: []
 layer: "packages/server"
 refs:

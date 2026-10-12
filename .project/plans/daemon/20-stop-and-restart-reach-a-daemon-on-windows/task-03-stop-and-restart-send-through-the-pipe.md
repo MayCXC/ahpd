@@ -1,6 +1,6 @@
 ---
 title: Stop and restart send through the pipe on Windows
-status: implemented
+status: done
 depends: [task-02-the-daemon-answers-a-request-on-its-pipe.md]
 layer: "packages/server"
 refs:
