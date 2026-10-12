@@ -70,22 +70,20 @@ VS Code window -> initialize and root state _meta -> it offers stop, delegation,
 | [p1 - The host describes itself as VS Code's host does](../83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md) | planned | - |
 | [p2 - A run is stopped, and runs are capped](../83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | planned | host 80 |
 | [p3 - A remote session is taken and keeps its origin](../83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | planned | p1 |
-| [p4 - A customization is switched for all sessions or a folder](../83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | draft | - |
+| [p4 - A customization is switched for all sessions or a folder](../83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | planned | - |
 | [p5 - A chat is attached to a message](../83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | draft | p1 |
 
 ## Risks and tradeoffs
 
 - FreeBSD has no `platform` value VS Code allows - ahpd leaves `platform` out there, and a request that names a platform skips a FreeBSD host.
 - ahpd cannot send a session to another host by itself - the window finds hosts and signs in to them, and hosts do not.
-- p4 and p5 have open forks - each stays `draft` until Softov answers them.
+- p5 has no tasks yet - it stays `draft` until p1 to p3 are built.
 
 ## Resume state
 
 - **Done so far:** nothing.
-- **Next action:** p1, then p2 once host 80 is merged.
-- **Open questions:**
-  1. p4: where the global and folder decisions are kept, and whether a global decision applies to every provider.
-  2. p5: whether `#chat:` is built now.
+- **Next action:** p1 and p2, then p3; p4 can start at any time; p5 waits for p1 to p3.
+- **Open questions:** none.
 - **Watch out for:** p2 changes the automation store that host 80 moves to `packages/server`; start p2 from main after host 80 merges.
 
 ## Final verification checklist

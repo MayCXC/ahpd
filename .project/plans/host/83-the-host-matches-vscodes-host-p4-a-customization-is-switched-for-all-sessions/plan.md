@@ -1,7 +1,7 @@
 ---
 title: A customization is switched for all sessions or a folder
 domain: host
-status: draft
+status: planned
 priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -29,16 +29,33 @@ A customization switched off for every session, or for one folder, stays off in 
 | What | Source | Task |
 | --- | --- | --- |
 | The scopes and their order are VS Code's: the first entry decides, global then folder then session | `customizationEnablement.ts` | - |
+| Global and folder decisions are kept in a state file of their own, as `automations-state.json` is | Softov, 2026-10-11, to "Where should the daemon keep the global and folder on/off decisions for customizations?" - "Own state file" | - |
+| A global decision applies to every provider, keyed by the plugin or MCP server as VS Code's host keys it | Softov, 2026-10-11, to "When a customization is switched off for all sessions, which providers does that cover?" - "Every provider" | - |
 
 ## Tasks
 
-None yet; the plan waits on the open questions.
+| Task | Status | Depends on |
+| --- | --- | --- |
+| [01 - A store keeps the global and folder decisions](task-01-a-store-keeps-the-decisions.md) | todo | - |
+| [02 - The daemon keeps the decisions in a state file](task-02-the-daemon-keeps-them-in-a-state-file.md) | todo | 01 |
+| [03 - A toggle records each scope and reaches every session](task-03-a-toggle-reaches-every-session.md) | todo | 01 |
+| [04 - A new session starts with the global and folder decisions](task-04-a-new-session-starts-with-the-decisions.md) | todo | 01, 03 |
+
+## Proposed architecture
+
+- **Data flow** - a toggle writes the store, and each customization a session reports reads its entries from the store.
+- **Layer responsibilities** - `packages/sdk`: the key, the store interface, the toggle and the entries · `packages/server`: the state file.
+- **Source-of-truth files** - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts)
 
 ## Resume state
 
 - **Done so far:** nothing.
-- **Next action:** ask Softov the open questions, then write the tasks.
-- **Open questions:**
-  1. Where are global and folder decisions kept: the daemon config file or a state file of their own? - proposed: a state file, as `automations-state.json` is.
-  2. Does a global decision apply to every provider, or to the provider it was made in? - proposed: as VS Code's host does.
+- **Next action:** [task-01-a-store-keeps-the-decisions.md](task-01-a-store-keeps-the-decisions.md).
+- **Open questions:** none.
 - **Watch out for:** the host reports the whole enablement array on each customization, not only the scope that changed.
+
+## Final verification checklist
+
+- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass.
+- [ ] VS Code's window keeps a plugin off for all sessions after a daemon restart.
+- [ ] `plans/index.md` updated.

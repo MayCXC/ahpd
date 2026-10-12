@@ -22,14 +22,19 @@ refs:
 
 - The host has no `chat` attachment, and no way to put another chat's transcript in a prompt.
 
+## Decisions locked in
+
+| What | Source | Task |
+| --- | --- | --- |
+| `#chat:` is built after p1 to p3 | Softov, 2026-10-11, to "When should #chat: be built?" - "After p1 to p3" | - |
+
 ## Tasks
 
-None yet; the plan waits on the open question.
+None yet; the tasks are written after p1 to p3 are built.
 
 ## Resume state
 
 - **Done so far:** nothing.
-- **Next action:** ask Softov the open question.
-- **Open questions:**
-  1. Is `#chat:` built now, or after the release? - proposed: after p1 to p3.
+- **Next action:** write the tasks once p1 to p3 are built.
+- **Open questions:** none.
 - **Watch out for:** a chat in another session may be one the sender cannot read; the gate must check it.

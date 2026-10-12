@@ -30,8 +30,6 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`.
 
 ## Open questions for Softov
 
-- [host/83 p4](../plans/host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md): where a global or folder customization switch is kept, and whether it applies to every provider.
-- [host/83 p5](../plans/host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md): whether `#chat:` is built now.
 - An upstream Pass 6: VS Code has 268 agentHost commits since Pass 5 (`7516b04bc94`).
 - Push sends `A session finished` when a turn completes, and no plan records it. Offer a task or a plan.
 
@@ -43,6 +41,7 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`.
 ## Next builds
 
 - [host/83 p1](../plans/host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md), then p3; [host/83 p2](../plans/host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) can start now that host/80 is merged.
+- [host/83 p4](../plans/host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md): planned, four tasks. p5 waits for p1 to p3.
 - container/05 p9 tasks 02, 03 and 05; task 07 waits on 06.
 - [daemon/20](../plans/daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md): stop and restart on Windows.
 
