@@ -42,7 +42,9 @@ import {
   usageMethods,
   usageProvider,
 } from '@ahpd/sdk';
-import { DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
+import { CONTROL_ENV, DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
+import { controlIn, controlServer } from '../control.js';
+import type { ControlServer } from '../control.js';
 import { here } from '../ask.js';
 import { offerConfigure, askToServe } from './configure.js';
 import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
@@ -198,6 +200,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const detached = process.env[DETACHED_ENV] === '1';
   delete process.env[DETACHED_ENV];
+  /*
+   * Where this daemon takes a stop and a restart, on Windows, made by the
+   * `start` that spawned it. Taken out of the environment at once like the flag
+   * above, so a shell a session runs inherits neither - and so the key is held
+   * by this process alone.
+   */
+  const control = controlIn(process.env[CONTROL_ENV]);
+  delete process.env[CONTROL_ENV];
 
   /*
    * Whether a clock is running, decided once and then said out loud.
@@ -1042,6 +1052,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * hangs here is a daemon that will not stop, which is the same deliberate cost
    * awaiting has everywhere else.
    */
+  /**
+   * The pipe this daemon answers a stop and a restart on, once it has one.
+   *
+   * Declared here rather than beside the code that makes it, because the way
+   * down closes it and the way down is built first: a stop that arrives between
+   * the two takes it down with everything else.
+   */
+  let controlListener: ControlServer | undefined;
   const way = lifecycle({
     down: async () => {
       await raise(folded.events, { type: 'stopping' }, stamp);
@@ -1057,6 +1075,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
        * will ever mention again.
        */
       for (const one of folded.pluginConnects ?? []) one.close();
+      // The control before the listeners, so a stop that arrives as the daemon
+      // goes down reaches no handler and is answered by the record alone.
+      await controlListener?.close();
       // The API first, and awaited, so a request in flight is not left holding
       // a listener the daemon is no longer behind, and a successor does not
       // find its port still bound.
@@ -1117,8 +1138,22 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
         self: process.pid, recorded: running, turning: () => host.turning(), log: stamp, restart,
       });
     };
-    process.on(RESTART_SIGNAL, answer(false));
-    process.on(FORCED_SIGNAL, answer(true));
+    const onRestart = answer(false);
+    const onForced = answer(true);
+    process.on(RESTART_SIGNAL, onRestart);
+    process.on(FORCED_SIGNAL, onForced);
+    /*
+     * And on Windows, the same three handlers over the control pipe, because
+     * the signals above cannot be sent there: `SIGTERM` is a hard kill, and the
+     * other two do not exist. A request names the signal it stands for, so what
+     * runs is what the signal would have run.
+     *
+     * `process.on` stays on every platform. On Linux and macOS the terminal
+     * still sends the signals, and the record holds no pipe there.
+     */
+    if (control !== undefined) {
+      controlListener = controlServer(control, { SIGTERM: way.shutdown, SIGHUP: onRestart, SIGUSR2: onForced }, stamp);
+    }
   }
 }
 

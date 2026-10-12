@@ -1,6 +1,6 @@
 ---
 title: The daemon answers a request on its pipe
-status: todo
+status: implemented
 depends: [task-01-the-record-names-a-control-pipe-and-key.md]
 layer: "packages/server"
 refs:
@@ -43,3 +43,20 @@ A detached daemon with `AHPD_CONTROL` listens on its pipe, and runs the handler 
 - `pnpm -s typecheck` and `pnpm exec vitest run packages/server` pass.
 
 ## Resume
+
+- **Status:** implemented, and not committed. The files this task changed are `packages/server/src/control.ts` (new), `packages/server/src/commands/run.ts` and `packages/server/test/control.test.ts` (new).
+- **Done:** `controlIn(said)` reads the `AHPD_CONTROL` a `start` wrote, and answers nothing for a value that is not one.
+  `controlServer(control, handlers, log)` listens on `control.pipe`, reads one line of JSON per connection, and closes the connection after it.
+  It compares the key with `timingSafeEqual`, and answers a key of another length without a compare.
+  A refusal is logged as `control: refused a request with a wrong key`, and `log` never holds the key.
+  A request naming a signal this daemon does not take is logged on one line, with the name collapsed to one line.
+  It hands back `listening` and `close()`, so a case and the way down each have their seam.
+  `runForeground` reads and deletes `AHPD_CONTROL` beside `AHPD_DETACHED`.
+  It starts the server in a detached daemon that has a control, and closes it in the way down before the listeners.
+  `SIGTERM` is `way.shutdown`, `SIGHUP` is `answer(false)` and `SIGUSR2` is `answer(true)`: the handlers `process.on` binds, which stay on every platform.
+- **Verified:** `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass, 935 cases in 48 files.
+  Ten cases are new in `control.test.ts`, each over a unix socket path, since a machine here is Linux and the path is a parameter.
+  The wrong-key case was seen to fail with the compare removed and pass with it back.
+  `server-restart.test.ts` and `server-cli-restart.test.ts` pass unchanged.
+- **Left by hand:** the Windows half, that the path is a named pipe there and that `runForeground` reads it from a real `start`.
+- **Next action:** task 03, `deliver` in `daemon.ts` and `realTerminal.signal`.
