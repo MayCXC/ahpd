@@ -24,7 +24,7 @@ import {
 import type { InPlace, LifecycleSteps } from '../src/commands/restart.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
-import type { Running } from '../src/daemon.js';
+import type { ControlledSignal, Running } from '../src/daemon.js';
 import { apiHandler } from '../src/http.js';
 
 const AUTHORITY = '127.0.0.1:9350';
@@ -474,7 +474,7 @@ describe('restartAtTerminal', () => {
     const clock = { at: 0 };
     const steps = {
       running: () => state.record,
-      signal: (pid: number, signal: string) => { state.signals.push(`${String(pid)} ${signal}`); then(signal, state); },
+      signal: (one: Running, signal: ControlledSignal) => { state.signals.push(`${String(one.pid)} ${signal}`); then(signal, state); },
       alive: () => (alive === undefined ? state.alive : alive(state)),
       mark: () => state.log.length,
       read: (from: number) => state.log.slice(from),

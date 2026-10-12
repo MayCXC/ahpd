@@ -16,8 +16,8 @@ import { statSync } from 'node:fs';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
 import { daemonLog } from '../config.js';
-import { READY_TIMEOUT_MS, logSince, running } from '../daemon.js';
-import type { Running } from '../daemon.js';
+import { READY_TIMEOUT_MS, deliver, logSince, running } from '../daemon.js';
+import type { ControlledSignal, Running } from '../daemon.js';
 import { conflict } from './options.js';
 import type { ServedFacts } from './served.js';
 
@@ -384,7 +384,8 @@ export async function answerRestartSignal(forced: boolean, facts: SignalFacts): 
 /** What the terminal's restart is done with, so it can be driven without a process. */
 export interface AtTerminal {
   running(): Running | undefined;
-  signal(pid: number, signal: string): void;
+  /** Send that signal to the daemon the record names, as a signal or a request. */
+  signal(record: Running, signal: ControlledSignal): void | Promise<void>;
   /** Whether that process is still there. */
   alive(pid: number): boolean;
   /** Where the log ends now. */
@@ -402,7 +403,9 @@ export interface AtTerminal {
 /** The terminal's restart against the real record, log and process table. */
 const realTerminal = (): AtTerminal => ({
   running,
-  signal: (pid, signal) => { process.kill(pid, signal); },
+  // The signal on Linux and macOS, and the record's own pipe on Windows, which
+  // `deliver` decides: the terminal does not know which it is sending.
+  signal: (record, signal) => deliver(record, signal),
   alive: (pid) => {
     try { process.kill(pid, 0); return true; }
     catch { return false; }
@@ -444,7 +447,7 @@ export async function restartAtTerminal(force: boolean, steps: AtTerminal): Prom
   const refusal = refusedTo(signal);
   const from = steps.mark();
   try {
-    steps.signal(record.pid, signal);
+    await steps.signal(record, signal);
   }
   catch (error) {
     conflict(unsignalled(record.pid, error));
