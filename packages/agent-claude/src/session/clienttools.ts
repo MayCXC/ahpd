@@ -3,7 +3,7 @@ import type { StringOrMarkdown } from '@microsoft/agent-host-protocol';
 import { z } from 'zod';
 import { createClientCalls, toMcpContent } from '@ahpd/sdk';
 import type { Bag, BoundTool, ClientCallAnswer, ClientCalls } from '@ahpd/sdk';
-import { bag, str } from './common.js';
+import { str } from './common.js';
 import type { SessionContext } from './context.js';
 
 /**
@@ -11,17 +11,20 @@ import type { SessionContext } from './context.js';
  *
  * `createSdkMcpServer` takes a zod raw shape and turns it back into JSON
  * Schema for the model, so a definition written as JSON Schema - which is
- * what the protocol declares - has to make the round trip. Only the shapes a
- * tool argument is: everything else is a string, which is what an unschema'd
- * argument would have been anyway.
+ * what the protocol declares - has to make the round trip. `fromJSONSchema`
+ * reads that whole schema, so a nested object, an array of objects and an
+ * enum reach the model as the client wrote them rather than as a string. A
+ * property the reader refuses becomes a string, which is what every argument
+ * used to be. A description the reader drops is put back, because the model
+ * reads it.
  */
 const shaped = (property: object): z.ZodTypeAny => {
-  const kind = str((property as Bag).type);
-  const of = (property as Bag).items;
-  if (kind === 'number' || kind === 'integer') return z.number();
-  if (kind === 'boolean') return z.boolean();
-  if (kind === 'array') return z.array(of === undefined ? z.string() : shaped(bag(of)));
-  return z.string();
+  let read: z.ZodTypeAny;
+  try { read = z.fromJSONSchema(property as never); }
+  catch { return z.string(); }
+  const said = str((property as Bag).description);
+  if (said !== undefined && read.description === undefined) return read.describe(said);
+  return read;
 };
 
 /**
@@ -246,7 +249,7 @@ export function createClientTools(ctx: SessionContext): ClientTools {
    * so an aborted call of a long session does not pile up for ever.
    */
   const framed = new Set<string>();
-  const asked = new Map<string, ((joined: Joined) => void)[]>();
+  const asked = new Map<string, { tool: string; go: (joined: Joined) => void }[]>();
   const KEEP_FRAMED = 64;
 
   /*
@@ -267,17 +270,23 @@ export function createClientTools(ctx: SessionContext): ClientTools {
     const waiting = asked.get(id) ?? [];
     asked.delete(id);
     if (waiting.length > 0) {
-      for (const go of waiting) go({ id });
+      for (const one of waiting) one.go({ id });
       return;
     }
     framed.add(id);
     if (framed.size > KEEP_FRAMED) framed.delete(framed.values().next().value as string);
   };
 
-  /** Wait for the frame to report the call this handler was handed the id of. */
-  const untilOpen = (id: string): Promise<Joined> => {
+  /**
+   * Wait for the frame to report the call this handler was handed the id of.
+   *
+   * The tool the call is for is kept with the wait, because the call's id says
+   * nothing about it: a client that goes has to be able to end the wait, and it
+   * knows its own tools by name and not the ids the CLI gave their calls.
+   */
+  const untilOpen = (id: string, toolName: string): Promise<Joined> => {
     if (framed.delete(id)) return Promise.resolve({ id });
-    return new Promise((resolve) => { asked.set(id, [...(asked.get(id) ?? []), resolve]); });
+    return new Promise((resolve) => { asked.set(id, [...(asked.get(id) ?? []), { tool: toolName, go: resolve }]); });
   };
 
   /** A call the frame has reported, for a handler that has come for it by name. */
@@ -310,7 +319,7 @@ export function createClientTools(ctx: SessionContext): ClientTools {
    * handler that joins later by name and input must not be handed this one.
    */
   const withdraw = (id: string, why: string, toolName: string): void => {
-    for (const go of asked.get(id) ?? []) go({ refused: why });
+    for (const one of asked.get(id) ?? []) one.go({ refused: why });
     asked.delete(id);
     framed.delete(id);
     const open = unclaimed.get(toolName);
@@ -325,7 +334,7 @@ export function createClientTools(ctx: SessionContext): ClientTools {
 
   /** Every wait there is, ended at once: a turn that was stopped, or a chat that closed. */
   const refuseAll = (why: string): void => {
-    for (const waiting of asked.values()) for (const go of waiting) go({ refused: why });
+    for (const waiting of asked.values()) for (const one of waiting) one.go({ refused: why });
     for (const waiting of expecting.values()) for (const go of waiting) go({ refused: why });
     asked.clear();
     expecting.clear();
@@ -334,9 +343,41 @@ export function createClientTools(ctx: SessionContext): ClientTools {
     noEntry.clear();
   };
 
+  /**
+   * Every wait for one tool, ended at once, because nothing will open it now.
+   *
+   * The tool is no longer on offer - its client left, or the frame for a call
+   * of it names one nothing offers - so a handler parked on a call that will
+   * never open is answered with the reason rather than left until the turn is
+   * stopped. Both joins go: a handler waiting on the call's id, and one that
+   * joined by the tool's name and has not been handed a call yet.
+   */
+  const refuseJoins = (toolName: string, why: string): void => {
+    for (const [id, waiting] of asked) {
+      const here = waiting.filter((one) => one.tool === toolName);
+      if (here.length === 0) continue;
+      for (const one of here) one.go({ refused: why });
+      const rest = waiting.filter((one) => one.tool !== toolName);
+      if (rest.length === 0) asked.delete(id);
+      else asked.set(id, rest);
+    }
+    unclaimed.delete(toolName);
+    for (const go of expecting.get(toolName) ?? []) go({ refused: why });
+    expecting.delete(toolName);
+  };
+
   const openCall = (toolName: string, turnId: string, id: string, line: StringOrMarkdown, input: string | undefined): void => {
     const tool = clientToolOf(toolName);
-    if (tool === undefined) return;
+    if (tool === undefined) {
+      // Nothing offers this tool, so nothing will open this call: a handler
+      // already waiting on it, by id or by name, is told that rather than left
+      // until the turn is stopped.
+      const none = `Nothing here offers ${toolName}.`;
+      for (const one of asked.get(id) ?? []) one.go({ refused: none });
+      asked.delete(id);
+      refuseJoins(toolName, none);
+      return;
+    }
     // A call a person is deciding about, or has refused, is not one any client
     // runs: no entry, and nothing for a handler to wait for.
     if (noEntry.has(id)) return;
@@ -398,7 +439,7 @@ export function createClientTools(ctx: SessionContext): ClientTools {
     if (named !== undefined) {
       // The call this handler is for, by the CLI's own name for it - so it
       // waits for that call to be opened and never for somebody else's.
-      joined = await untilOpen(named);
+      joined = await untilOpen(named, called(tool.definition.name));
     }
     else {
       /*
@@ -431,16 +472,24 @@ export function createClientTools(ctx: SessionContext): ClientTools {
      * away. Called when a client announces what it provides or stops being
      * active, which is the only thing that moves this list after a session is
      * built.
+     *
+     * The next declaration is built on the side and kept only once the SDK has
+     * taken it: a `setMcpServers` that refuses - a session whose CLI has gone,
+     * or one that says no to this set - leaves the session offering what it
+     * offered before, so the same list coming again is a change to send again
+     * rather than one already sent.
      */
     setTools: async (next) => {
       const before = ctx.offering.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
       const after = next.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
       if (before === after) return true;
-      ctx.offering = [...next];
-      if (ctx.offering.length > 0) ctx.declared.ahp = contributed(ctx.offering, ranByClient) as Bag;
-      else delete ctx.declared.ahp;
-      try { await ctx.handle.setMcpServers(ctx.declared as never); }
+      const declared: Record<string, Bag> = { ...ctx.declared };
+      if (next.length > 0) declared.ahp = contributed(next, ranByClient) as Bag;
+      else delete declared.ahp;
+      try { await ctx.handle.setMcpServers(declared as never); }
       catch { return false; }
+      ctx.offering = [...next];
+      ctx.declared = declared;
       return true;
     },
 
@@ -455,6 +504,32 @@ export function createClientTools(ctx: SessionContext): ClientTools {
      * same path every other tool call takes.
      */
     ...calls.methods,
+
+    /**
+     * A client left the session, with the tools it was offering.
+     *
+     * The holder's own `clientGone` ends the calls already open, which is what
+     * a call the model made and the client was running gets. What it does not
+     * reach is the half a handler is stuck on: a call the CLI has not reported
+     * yet, so a handler is still waiting in the joins for a client that is no
+     * longer there to answer. Those are ended here, with the sentence the
+     * holder uses for the same news, so both halves of one call read the same.
+     *
+     * Every tool whose name is this client's, by the prefix the model is
+     * offered under. The tools may already be gone from `offering` - the host
+     * takes them out in the same breath - so the joins are asked, not the list.
+     */
+    clientGone: (clientId) => {
+      const why = `The client ${clientId} that was running the tool is no longer here`;
+      // Every tool a handler is waiting on: by name in `expecting` and
+      // `unclaimed`, and by call id in `asked`, which carries the tool with the
+      // wait so a client that leaves can be told which of its tools those are.
+      const waited = [...expecting.keys(), ...unclaimed.keys(), ...[...asked.values()].flat().map((one) => one.tool)];
+      for (const toolName of new Set(waited)) {
+        if (toolName.startsWith(called(`${clientId}__`))) refuseJoins(toolName, why);
+      }
+      calls.methods.clientGone(clientId);
+    },
   };
 
   return { clientToolOf, openCall, holdCall, allowCall, refuseCall, releaseCalls, ranByClient, calls, methods };
