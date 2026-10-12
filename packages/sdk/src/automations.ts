@@ -371,6 +371,28 @@ export const disableConditionsOf = (value: unknown): DisableConditions => {
 const ended = (lifecycle: Bag): boolean =>
   lifecycle.status === 'completed' || lifecycle.status === 'failed' || lifecycle.status === 'cancelled';
 
+/**
+ * How many runs that have ended one automation keeps.
+ *
+ * The number is the host's answer to `runHistoryLimit`, and it is VS Code's
+ * own: a window of this many ended runs, with every run that has not ended kept
+ * whatever the window says. A run is the record of something that happened, and
+ * a store that kept every one of them would grow with the clock rather than
+ * with what anybody reads.
+ */
+export const RUN_HISTORY_LIMIT = 50;
+
+/** The runs of one automation to keep, given all of them, newest first. */
+const windowed = (runs: AutomationRun[]): AutomationRun[] => {
+  let seen = 0;
+  return runs.filter((one) => {
+    if (!ended(one.lifecycle)) return true;
+    seen += 1;
+    return seen <= RUN_HISTORY_LIMIT;
+  });
+};
+
+
 export function memoryAutomations(): AutomationStore {
   const held = new Map<string, Automation>();
   /** Runs by automation, newest first. */
@@ -409,6 +431,31 @@ export function memoryAutomations(): AutomationStore {
   /** How many runs of one automation a client has been shown, newest first. */
   const shown = (resource: string): number =>
     Math.min(loaded.get(resource) ?? PAGE, (history.get(resource) ?? []).length);
+
+  /**
+   * Hold one automation's runs to what this host promises a client.
+   *
+   * Applied where the history moves rather than where it is read, because a
+   * store that trimmed on the way out would still be keeping what it no longer
+   * serves. A run counts against the window from the moment it has ended, so a
+   * run that is over is trimmed on the spot and one that is `pending` or
+   * `running` is not: it is the only record of work in flight.
+   *
+   * The runs that fall out lose their channel with them. A run is something a
+   * client may read by name, and the map is what answers about one, so a run
+   * left in it would be a run this store still knew while no automation listed
+   * it. VS Code's host gives the same answer for a run its store no longer
+   * holds, and it is the reason the window exists at all.
+   */
+  const trim = (resource: string): void => {
+    const all = history.get(resource);
+    if (all === undefined) return;
+    const keeping = windowed(all);
+    if (keeping.length === all.length) return;
+    history.set(resource, keeping);
+    const named = new Set(keeping.map((one) => one.resource));
+    for (const one of all) if (!named.has(one.resource)) byRun.delete(one.resource);
+  };
 
   /** Rebuild the entry a client reads, so `runs` and `operations` are never stale. */
   const entry = (automation: Automation): AutomationEntry => {
@@ -607,6 +654,7 @@ export function memoryAutomations(): AutomationStore {
       const past = history.get(resource) ?? [];
       // Newest first, which is the order a client shows them in.
       history.set(resource, [run, ...past]);
+      trim(resource);
       /*
        * Counted before the session is asked for, because an admitted run is
        * what an allowance pays for: one that fails or is cancelled later was
@@ -672,6 +720,10 @@ export function memoryAutomations(): AutomationStore {
           completedAt: now(),
           error: { message: error instanceof Error ? error.message : String(error) },
         };
+        // End here rather than never starting, so this run counts against the
+        // window the moment it is over - which a run that is still `pending`
+        // does not, because nothing has happened to it yet.
+        trim(resource);
       }
       said({ automation: resource, run: run.resource });
       return run;
@@ -703,6 +755,10 @@ export function memoryAutomations(): AutomationStore {
           ? { error: ending.error ?? { message: 'The run failed' } }
           : {}),
       };
+      // The run counts against the window from here, so the window is applied
+      // again: a run that was `pending` when it was recorded was kept whatever
+      // the window said, and this is the moment that stops being true of it.
+      trim(run.automation);
       said({ automation: run.automation, run: run.resource });
       return true;
     },
