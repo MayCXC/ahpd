@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { localPath, uriOf } from './fileuri.js';
+import { shellEnvOf, type ShellEnv } from './shellenv.js';
 import type { Pty, SpawnPty, Terminal, TerminalOptions, TerminalStore } from './types/terminals.js';
 
 /**
@@ -40,7 +41,7 @@ const quoted = (word: string): string => `'${word.replaceAll("'", "'\\''")}'`;
  */
 const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
 
-export function createTerminal(options: TerminalOptions, pty?: SpawnPty): Terminal {
+export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEnv?: ShellEnv): Terminal {
   const { uri, cwd, emit } = options;
   const shell = shellOf(options.shell);
   let title = options.name ?? shell.slice(shell.lastIndexOf('/') + 1);
@@ -93,8 +94,10 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty): Termin
     : options.args === undefined
       ? ['-c', options.command]
       : ['-c', [options.command, ...options.args].map(quoted).join(' ')];
-  const environment = {
-    ...process.env,
+  const environment: Record<string, string | undefined> = {
+    // The operator's map over the daemon's own environment, which is what
+    // makes a service unit with a private `XDG_CONFIG_HOME` reach its shells.
+    ...shellEnvOf(process.env, shellEnv),
     // Asked for last, because the caller's variables sit over the host's and
     // these three over the caller's: a terminal's own size and kind are not
     // something a command may disagree with.
@@ -104,6 +107,15 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty): Termin
     COLUMNS: String(cols),
     LINES: String(rows),
   };
+  /*
+   * A name a caller spelled with nothing is a name they want gone.
+   *
+   * `spawn` would otherwise pass the name on with the text `undefined` in it,
+   * which is a value nobody asked for and one a command would read as set.
+   */
+  for (const [name, value] of Object.entries(environment)) {
+    if (value === undefined) delete environment[name];
+  }
 
   /** Where the shell says it is, once it has said. */
   let where = cwd;
@@ -395,7 +407,12 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty): Termin
  * import { spawn } from 'node-pty';
  * createHost({ path, agents, terminals: shellTerminals({ pty: spawn }) });
  * ```
+ *
+ * `shellEnv` is the environment the operator names for every shell this store
+ * opens: each name in it is set, and a name set to `null` is removed from what
+ * the daemon itself runs with. A caller asking for one terminal still wins
+ * over it, because a terminal somebody opened is theirs.
  */
-export const shellTerminals = (options: { pty?: SpawnPty } = {}): TerminalStore => ({
-  create: (asked) => createTerminal(asked, options.pty),
+export const shellTerminals = (options: { pty?: SpawnPty; shellEnv?: ShellEnv } = {}): TerminalStore => ({
+  create: (asked) => createTerminal(asked, options.pty, options.shellEnv),
 });

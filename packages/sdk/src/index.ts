@@ -43,6 +43,8 @@ export { fileResources } from './resources.js';
 export { localPath, uriOf } from './fileuri.js';
 export { clientPluginsIn } from './clientplugins.js';
 export { shellTerminals } from './terminals.js';
+export { isShellName, shellEnvOf } from './shellenv.js';
+export type { ShellEnv } from './shellenv.js';
 export { hostTools } from './tools/index.js';
 export { toolServers, TOOLS_PREFIX } from './tools/server.js';
 export type { RunClientTool, ToolsChanged, ToolsEndpoint, ToolsServerOptions, ToolsServers } from './tools/server.js';
