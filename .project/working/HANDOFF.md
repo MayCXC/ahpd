@@ -16,17 +16,22 @@ Current progress and pending items only, as of 2026-10-11.
 
 ## Build worktrees
 
-None. Every build branch is merged and removed. The build sessions are kept.
+- `build-agents-43e9af27`: host/83 p1, then p2, then p3.
+- `build-agents-28f4e28f`: host/83 p4.
+- `build-agents-e8df3a4a`: daemon/20.
+
+Each one leaves its work uncommitted. It is reviewed and committed after it is built.
 
 ## Awaiting Softov's review
 
-When a plan is reviewed, each of its `implemented` tasks becomes `done`.
+When a plan is reviewed, each of its `implemented` tasks becomes `done`. Each review file says what to read, what to check and what to reply.
 
-- [plugin/45 p2](../plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md): bots are Markdown files.
-- [host/80](../plans/host/80-an-automation-is-a-markdown-file/plan.md): automations are Markdown files.
-- [daemon/19](../plans/daemon/19-a-plugin-is-known-by-its-id/plan.md): a plugin is known by its id.
-- [host/79](../plans/host/79-a-quiet-session-sleeps-and-wakes/plan.md): a quiet session sleeps and wakes. It also has checks by hand.
-- [host/46 task 01](../plans/host/46-built-in-surfaces-are-advertised-for-role-control/plan.md) and [host/52 task 05](../plans/host/52-deleting-a-session-deletes-the-backends-copy/plan.md).
+- [plugin-45-p2-review.md](../review/plugin-45-p2-review.md): bots are Markdown files.
+- [host-80-review.md](../review/host-80-review.md): automations are Markdown files.
+- [daemon-19-review.md](../review/daemon-19-review.md): a plugin is known by its id.
+- [host-79-review.md](../review/host-79-review.md): a quiet session sleeps and wakes, with checks by hand.
+- [host-46-t01-review.md](../review/host-46-t01-review.md): operations and their groups.
+- [host-52-t05-review.md](../review/host-52-t05-review.md): who may delete a session.
 
 ## Open questions for Softov
 
@@ -40,10 +45,8 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`.
 
 ## Next builds
 
-- [host/83 p1](../plans/host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md), then p3; [host/83 p2](../plans/host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) can start now that host/80 is merged.
-- [host/83 p4](../plans/host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md): planned, four tasks. p5 waits for p1 to p3.
 - container/05 p9 tasks 02, 03 and 05; task 07 waits on 06.
-- [daemon/20](../plans/daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md): stop and restart on Windows.
+- host/83 p5, after p1 to p3 are built.
 
 ## Reviews
 
