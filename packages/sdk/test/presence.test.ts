@@ -31,10 +31,12 @@ const host = () => createHost({ path: DIR, agents: [echo({ path: DIR, pace: 0 })
  * that is gone still owed it. A fake that keeps both is what says whether a
  * client is still in the session as far as anything but the bookkeeping goes.
  */
-const watched = (pace = 0) => {
-  const base = echo({ path: DIR, pace });
+const watched = (pace = 0, backend?: Agent) => {
+  const base = backend ?? echo({ path: DIR, pace });
   /** One entry per chat started, which is a spawn or a restart of one. */
   const spawned: string[] = [];
+  /** The tool names each chat was handed as it started, the list it is born with. */
+  const born: string[][] = [];
   /** The tool names each chat was handed, in the order it was handed them. */
   const offered: string[][] = [];
   /** The clients each chat was told have gone. */
@@ -44,6 +46,10 @@ const watched = (pace = 0) => {
     create: (start) => {
       spawned.push(start.chatUri);
       const chat = base.create(start);
+      // What the backend is handed at creation: a tool the creator brought has
+      // to be here for it to reach the first turn. Recorded only once the
+      // backend has actually started, so a create it refused is not one here.
+      born.push((start.tools ?? []).map((one) => one.definition.name));
       return {
         ...chat,
         // A backend that can be told, so the list is a real one rather than
@@ -53,7 +59,7 @@ const watched = (pace = 0) => {
       };
     },
   };
-  return { agent, spawned, offered, gone };
+  return { agent, spawned, born, offered, gone };
 };
 
 // The cases that hold a clock put it back, so no test runs on another's time.
@@ -452,4 +458,44 @@ it('leaves a session nobody claimed empty', async () => {
   await a.client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo' } });
   // Subscribing is not being *active* in it: the protocol has a client say so.
   expect(await clientsIn(a.client, URI)).toEqual([]);
+});
+
+it('offers a tool the creator brought on the session\'s first turn', async () => {
+  const { agent, born } = watched();
+  const held = createHost({ path: DIR, agents: [agent] });
+  const a = await joins(held, 'creator');
+  await a.client.handle({
+    method: 'createSession',
+    params: { channel: URI, provider: 'echo', activeClient: { tools: [{ name: 'openFile' }] } },
+  });
+  // Recorded before the backend is started, so the very first list it is
+  // handed already holds the tool - not one a `retool` adds one turn later.
+  expect(born[0]).toEqual(['creator__openFile']);
+});
+
+it('takes the creator back out when the session never opens', async () => {
+  // A backend that refuses once, then starts: the first create has no session
+  // for the presence it wrote to belong to, and the second is the same client
+  // making a session that does open.
+  let refuse = true;
+  const base = echo({ path: DIR, pace: 0 });
+  const agent: Agent = {
+    ...base,
+    create: (start) => { if (refuse) throw new Error('this backend will not start'); return base.create(start); },
+  };
+  const { agent: watchedOne, born } = watched(0, agent);
+  const held = createHost({ path: DIR, agents: [watchedOne] });
+  const a = await joins(held, 'creator');
+  const activeClient = { tools: [{ name: 'openFile' }] };
+
+  await expect(a.client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', activeClient } }))
+    .rejects.toThrow(/will not start/);
+  // Nothing came of it, so nothing is in it.
+  expect(born).toEqual([]);
+
+  refuse = false;
+  await a.client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', activeClient } });
+  // A client the failed create left behind would make this second announcement
+  // read as one already made, and the tool would never be handed to the chat.
+  expect(born).toEqual([['creator__openFile']]);
 });
