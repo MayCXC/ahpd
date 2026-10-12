@@ -37,6 +37,17 @@ interface PendingInput {
  */
 const DECLINED = 'The person declined this action';
 
+/**
+ * What the model is told about a call the SDK itself cancelled.
+ *
+ * The SDK aborts a `canUseTool` call through its own signal when the turn it
+ * belongs to is interrupted or the CLI goes away, and nothing on this side was
+ * listening: the confirmation stayed on every client's screen until the turn
+ * happened to end. This is the answer that closes it, and it says what
+ * happened rather than who did it - nobody declined anything.
+ */
+const CANCELLED = 'Cancelled';
+
 /** Where a kept permission lands, as a person reads it. */
 const KEPT_IN: Record<string, string> = {
   session: ' for the rest of the session',
@@ -182,6 +193,17 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     if (already === 'deny') return { behavior: 'deny', message: `${toolName} is denied for this session` };
     const about = bag(asked);
     /*
+     * The SDK's own abort for this call, which is the one thing that says the
+     * question has stopped mattering: the turn was interrupted, or the CLI
+     * that asked is gone.
+     *
+     * A signal already aborted is answered before anything is held, because a
+     * question raised now is one nobody could ever answer - the entry would go
+     * on the chat and stay there until the turn ended.
+     */
+    const signal = about.signal as AbortSignal | undefined;
+    if (signal?.aborted === true) return { behavior: 'deny', message: CANCELLED };
+    /*
      * The agent's own id for this call.
      *
      * Not one of this host's making. The assistant message opens the call
@@ -212,6 +234,35 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     const edits: Bag | undefined = shown === undefined ? undefined : { items: [shown] };
     if (edits !== undefined) previews.add(id);
     return await new Promise((settle) => {
+      /*
+       * Settled once, by whoever gets here first.
+       *
+       * An abort, an answer, a stop, a subagent ending and a close all end the
+       * same wait, and all of them come through `settle`. `done` is that one
+       * door, so the abort listener goes with whichever of them it was - a
+       * listener left behind would fire on a later abort and settle a question
+       * that is no longer anybody's.
+       */
+      const done = (result: unknown): void => {
+        signal?.removeEventListener('abort', cancelled);
+        settle(result);
+      };
+      /*
+       * The SDK saying the call is over, which no client is told any other way.
+       *
+       * The entry comes off the chat as an answer takes it off, because the
+       * question and its answer are one thing: a client left drawing a
+       * confirmation the SDK has abandoned is offering a decision that changes
+       * nothing.
+       */
+      const cancelled = (): void => {
+        const held = pending.get(id);
+        if (held === undefined) return;
+        pending.delete(id);
+        ctx.inputNeededRemoved(id);
+        held.settle({ behavior: 'deny', message: CANCELLED });
+      };
+      signal?.addEventListener('abort', cancelled);
       /*
        * The conversation the tool is running in.
        *
@@ -250,7 +301,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
         const { request, asked } = questionRequest(raw, id);
         // `chat` is required on every input request and was never sent.
         const entry: Bag = { id, chat: where, kind: 'chatInput', request };
-        pending.set(id, { id, entry, questions: list(raw.questions), asked, answers: new Map(), settle });
+        pending.set(id, { id, entry, questions: list(raw.questions), asked, answers: new Map(), settle: done });
         ctx.emitOn(scope, { type: 'chat/inputRequested', request });
         ctx.inputNeededSet(entry);
         ctx.touch();
@@ -342,7 +393,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
         asked: new Map(),
         answers: new Map(),
         ...(options !== undefined ? { options, suggestions } : {}),
-        settle: (result) => settle(result.behavior === 'allow'
+        settle: (result) => done(result.behavior === 'allow'
           ? { behavior: 'allow', updatedInput: raw, ...(result.updatedPermissions === undefined ? {} : { updatedPermissions: result.updatedPermissions }) }
           : result),
       });

@@ -745,3 +745,74 @@ it('records the joined answer as what the tool ran with', async () => {
     updatedInput: { questions: asked.questions, answers: { 'Which colour?': 'Blue, teal', 'Which sizes?': ['S', 'L'] } },
   });
 });
+
+/*
+ * A call the SDK cancels.
+ *
+ * `canUseTool` is handed the SDK's own signal for the call, which aborts when
+ * the call stops mattering: the turn it belongs to was interrupted, or the CLI
+ * that asked is gone. A confirmation or a question left standing by that is one
+ * nobody can answer, so it comes off the chat and the tool is told the call was
+ * cancelled. Whichever of the abort and an answer gets there first settles it,
+ * and only once.
+ */
+
+/** One call put to a session with the SDK's own signal, and the way to abort it. */
+async function abortable(toolName: string, input: Bag, id: string): Promise<{
+  sent: Bag[]; session: Session; abort: () => void; decision: Promise<unknown>;
+}> {
+  const held = new AbortController();
+  let decision: Promise<unknown> | undefined;
+  const { sent, session } = await live([], () => {
+    decision = sdk.canUseTool?.(toolName, input, { toolUseID: id, signal: held.signal });
+  });
+  await settle();
+  return { sent, session, abort: () => { held.abort(); }, decision: decision as Promise<unknown> };
+}
+
+/** The input-needed entries a session raised, and the ones it withdrew. */
+const entriesOf = (sent: Bag[], type: string, id: string): Bag[] =>
+  sent.filter((one) => one.type === type && (one.id === id || (one.request as Bag | undefined)?.id === id));
+
+it('closes a confirmation the SDK cancels, and answers the tool with a deny', async () => {
+  const { sent, abort, decision } = await abortable('Bash', { command: 'rm -rf /tmp/scratch' }, 'toolu_cancelled');
+  expect(entriesOf(sent, 'session/inputNeededSet', 'toolu_cancelled')).toHaveLength(1);
+
+  abort();
+  expect(await decision).toEqual({ behavior: 'deny', message: 'Cancelled' });
+  // And the entry goes with the answer, so no client is left drawing a question
+  // that changes nothing.
+  expect(entriesOf(sent, 'session/inputNeededRemoved', 'toolu_cancelled')).toHaveLength(1);
+});
+
+it('closes a question the SDK cancels', async () => {
+  const { sent, abort, decision } = await abortable('AskUserQuestion', asked, 'toolu_ask_cancelled');
+  expect(entriesOf(sent, 'session/inputNeededSet', 'toolu_ask_cancelled')).toHaveLength(1);
+
+  abort();
+  expect(await decision).toEqual({ behavior: 'deny', message: 'Cancelled' });
+  expect(entriesOf(sent, 'session/inputNeededRemoved', 'toolu_ask_cancelled')).toHaveLength(1);
+});
+
+it('removes an entry once when an answer came before the abort', async () => {
+  const { sent, session, abort } = await abortable('Bash', { command: 'ls' }, 'toolu_both');
+  session.confirm('toolu_both', true);
+  await settle();
+  abort();
+  await settle();
+  // The abort reaches a question the answer already took away, and adding
+  // nothing is the whole of what it does.
+  expect(entriesOf(sent, 'session/inputNeededRemoved', 'toolu_both')).toHaveLength(1);
+});
+
+it('puts nothing on the chat for a call whose signal is already aborted', async () => {
+  const held = new AbortController();
+  held.abort();
+  let decision: Promise<unknown> | undefined;
+  const { sent } = await live([], () => {
+    decision = sdk.canUseTool?.('Bash', { command: 'ls' }, { toolUseID: 'toolu_gone', signal: held.signal });
+  });
+  expect(await decision).toEqual({ behavior: 'deny', message: 'Cancelled' });
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet' || one.type === 'chat/toolCallStart'))
+    .toEqual([]);
+});
