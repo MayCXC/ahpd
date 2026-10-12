@@ -45,6 +45,14 @@ export interface ClaudeSessionOptions extends SessionOptions {
    * operator named none, and then the hook says nothing about the environment.
    */
   shellEnv?: ShellEnv;
+  /**
+   * How long the CLI has to answer its handshake before it is a CLI that died.
+   *
+   * Absent is the bound this backend ships with, which is the ordinary
+   * install: a deployment whose machines are slower raises it through the
+   * plugin's own option rather than by building a session by hand.
+   */
+  handshakeTimeoutMs?: number;
   /** Start the CLI somewhere other than this host. */
   spawn?: (asked: Asked) => Spawned;
   /** Where the CLI is wherever `spawn` starts it. */

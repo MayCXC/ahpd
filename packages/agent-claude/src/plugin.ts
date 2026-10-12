@@ -55,6 +55,11 @@ export const optionsSchema = {
       description: "The configuration directory the CLI reads inside a machine. /ahpd/<variant> by default, /ahpd/claude for the built-in; false leaves the image's own.",
     },
     workerStop: { type: 'string', enum: ['worker', 'session'], description: "What a stop given in a subagent's chat stops. worker by default." },
+    handshakeTimeoutMs: {
+      type: 'integer',
+      minimum: 1,
+      description: 'How long the CLI has to answer its handshake before its session treats it as a CLI that died. Default 120000, and a slower machine raises it.',
+    },
     presets: {
       type: 'object',
       description: 'The variants this package registers an agent for, by the id clients name. The built-in claude is here unless it is false, and each key registers an agent of its own with its own name, models and options.',
@@ -178,6 +183,7 @@ const optionsOf = async (host: PluginHost, values: Record<string, unknown>): Pro
     ...(said.computerCli === undefined ? {} : { computerCli: said.computerCli }),
     ...(said.computerCliFallback === undefined ? {} : { computerCliFallback: said.computerCliFallback }),
     ...(said.workerStop === undefined ? {} : { workerStop: said.workerStop }),
+    ...(said.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: said.handshakeTimeoutMs }),
   };
   return variants.map(({ id, name, models, keepCliModels, ...preset }) => ({
     ...shared,

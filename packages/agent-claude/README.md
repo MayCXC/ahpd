@@ -40,9 +40,10 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `computerCliFallback` | `refuse` | With `computerCli: "part"`, what a machine gets when the `claude` part cannot be built |
 | `computerConfigDir` | `/ahpd/<variant>`, or `/ahpd/claude` for the built-in | The configuration directory the CLI reads *inside a machine*; `false` leaves the image's own |
 | `workerStop` | `worker` | What a stop given in a subagent's chat stops |
+| `handshakeTimeoutMs` | `120000` | How long the CLI has to answer its handshake before its session treats it as a CLI that died |
 | `presets` | the built-in `claude` | The variants this package registers an agent for, by the id clients name |
 
-`computerCli` is `part`, the `claude` part this host builds at its pinned version, or `host`, which mounts this host's own installed CLI. `computerCliFallback` is `refuse`, which refuses a Claude session in a machine and names the part, or `host`, which mounts this host's own CLI instead and logs that it did. `workerStop` is `worker`, which stops that subagent and lets the turn that started it go on, or `session`, which cancels that turn instead.
+`computerCli` is `part`, the `claude` part this host builds at its pinned version, or `host`, which mounts this host's own installed CLI. `computerCliFallback` is `refuse`, which refuses a Claude session in a machine and names the part, or `host`, which mounts this host's own CLI instead and logs that it did. `workerStop` is `worker`, which stops that subagent and lets the turn that started it go on, or `session`, which cancels that turn instead. `handshakeTimeoutMs` is how long a CLI has to take the control request that says it is up: a cold start with several MCP servers is slow, and a machine slower than that is what the option is for. A CLI that misses the bound is treated as one that died, so the turn fails with that reason and the query is closed.
 
 ### `presets.<id>`
 

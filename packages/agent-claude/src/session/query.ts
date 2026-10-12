@@ -4,6 +4,7 @@ import type { Bag } from '@ahpd/sdk';
 import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/claude-agent-sdk';
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
+import { failureOf } from './failure.js';
 import { ownEnvOf, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
 
@@ -20,6 +21,15 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * loads all three, and there is no other way to say "the person's alone".
  */
 const ALL_SOURCES: SettingSource[] = ['user', 'project', 'local'];
+
+/**
+ * How long the CLI has to answer its handshake before it is a CLI that died.
+ *
+ * A cold start with several MCP servers is slow, which is the whole reason the
+ * bound is this generous; a deployment whose machines are slower still raises
+ * it with the plugin's own option.
+ */
+const HANDSHAKE_MS = 120000;
 
 /** What this area offers the rest of the session. */
 export interface Query {
@@ -154,6 +164,77 @@ export function createQuery(ctx: SessionContext): Query {
   // ------------------------------------------------------------------ the run
 
   /**
+   * Fail the turn now running, and this session with it, for the reason given.
+   *
+   * The road a CLI that died takes, and the road the bound below takes when one
+   * never answers: a turn in flight is recorded as one that failed, with the
+   * reason as its error part, and the session is marked gone for the turns that
+   * follow.
+   */
+  const died = (why: string): void => {
+    ctx.failed = why;
+    /*
+     * The CLI is gone, and it is not coming back on this session.
+     *
+     * Remembered separately from `failed`, which is about the last *turn*
+     * and is cleared by the next `begin`. This is about the session: the
+     * query is built once, at creation, so a CLI that dies before any turn
+     * exists leaves nothing for the branch below to report and a `begin`
+     * afterwards would start a turn nothing is left to answer. That is a
+     * session that says it is thinking for as long as anyone watches it.
+     */
+    ctx.gone = why;
+    const turn = ctx.active;
+    if (turn) {
+      turn.state = 'error';
+      turn.duration = Date.now() - ctx.startedAt;
+      ctx.settleOpen(turn);
+      const part = ctx.addFailure(turn, why);
+      ctx.turns.push(turn);
+      ctx.active = undefined;
+      ctx.emit('chat', { type: 'chat/error', turnId: turn.id, duration: turn.duration, part });
+    }
+    ctx.doing(undefined);
+    ctx.touch();
+  };
+
+  /**
+   * A CLI that has not answered its handshake is a CLI that died.
+   *
+   * `initializationResult` is the one call that says the process is up and
+   * talking: it is answered when the CLI takes the control request the SDK
+   * sends at startup, and rejected when there is nothing there to take it. A
+   * CLI that is there and silent - a machine whose `docker exec` never returns,
+   * a wrapper waiting on something that will not come - leaves the query alive
+   * and every turn after it unanswered, which is a session drawn as thinking
+   * for as long as anyone watches. The bound is what turns that into the
+   * ending a dead CLI gets.
+   *
+   * The timer is cleared by whichever answer comes, and a query this host has
+   * since put away fails nothing: it is not the CLI this session is reading.
+   *
+   * The query comes back out, so `startQuery` reads as what it always was: the
+   * bound is put on the way through and not built into anything.
+   */
+  const bounded = (handle: ReturnType<typeof query>): ReturnType<typeof query> => {
+    const within = ctx.options.handshakeTimeoutMs ?? HANDSHAKE_MS;
+    const timer = setTimeout(() => {
+      if (ctx.handle !== handle) return;
+      died(`Claude Code did not answer within ${within / 1000} seconds`);
+      /*
+       * Closed rather than left running: a CLI that answers ten minutes later
+       * would be a process nobody is reading, for a session that has already
+       * failed, and the turn it was going to answer is over.
+       */
+      try { handle.close(); }
+      catch { /* Closing something already closing is the same ending. */ }
+    }, within);
+    const answered = (): void => { clearTimeout(timer); };
+    void handle.initializationResult().then(answered, answered);
+    return handle;
+  };
+
+  /**
    * A query for this session, on the agent named, carrying the conversation
    * this session already has.
    *
@@ -166,8 +247,11 @@ export function createQuery(ctx: SessionContext): Query {
    * `first` is how this conversation is picked up, which is a fact about the
    * query that opened it. A rebuild asks again for nothing: it resumes the id
    * the CLI gave this session, which is the whole of what carries it over.
+   *
+   * Every query built here goes out with the bound on its handshake, which is
+   * this one place rather than the two a session starts one from.
    */
-  const startQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => query({
+  const startQuery = (agent: string | undefined, first: boolean): ReturnType<typeof query> => bounded(query({
     prompt: input(),
     options: {
       cwd: ctx.options.cwd,
@@ -372,7 +456,7 @@ export function createQuery(ctx: SessionContext): Query {
       ...(agent === undefined ? {} : { agent }),
       canUseTool: ctx.canUseTool,
     },
-  } as Parameters<typeof query>[0]);
+  } as Parameters<typeof query>[0]));
 
   /**
    * The turns whose own transcript id has been said, by this host's turn id.
@@ -718,30 +802,25 @@ export function createQuery(ctx: SessionContext): Query {
       // A query this host put away is not a CLI that died: the one that
       // replaced it is already running the same conversation.
       if (ctx.handle !== mine) return;
-      ctx.failed = error instanceof Error ? error.message : String(error);
       /*
-       * The CLI is gone, and it is not coming back on this session.
+       * A session already gone keeps the reason it went.
        *
-       * Remembered separately from `failed`, which is about the last *turn*
-       * and is cleared by the next `begin`. This is about the session: the
-       * query is built once, at creation, so a CLI that dies before any turn
-       * exists leaves nothing for the branch below to report and a `begin`
-       * afterwards would start a turn nothing is left to answer. That is a
-       * session that says it is thinking for as long as anyone watches it.
+       * The bound above closes a CLI that never answered, and what a close
+       * raises afterwards is the close rather than the reason - which would
+       * land here and replace the one sentence a person can act on with the
+       * SDK's own words for a socket that went away.
        */
-      ctx.gone = ctx.failed;
-      const turn = ctx.active;
-      if (turn) {
-        turn.state = 'error';
-        turn.duration = Date.now() - ctx.startedAt;
-        ctx.settleOpen(turn);
-        const part = ctx.addFailure(turn, ctx.failed);
-        ctx.turns.push(turn);
-        ctx.active = undefined;
-        ctx.emit('chat', { type: 'chat/error', turnId: turn.id, duration: turn.duration, part });
-      }
-      ctx.doing(undefined);
-      ctx.touch();
+      if (ctx.gone !== undefined) return;
+      /*
+       * What the CLI never starting reads as, rather than what the SDK says
+       * about this host.
+       *
+       * A spawn failure arrives with the SDK's own words for it - the bundled
+       * binary's path, the libc it wanted, the errno - and none of that is
+       * something a person can act on. `failureOf` answers the short message
+       * for those and leaves every other error's message alone.
+       */
+      died(failureOf(error));
     }
     // A loop that ended without throwing has ended all the same: the CLI
     // exited and said nothing, and a later turn has as little to answer it.

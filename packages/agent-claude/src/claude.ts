@@ -125,6 +125,14 @@ export interface ClaudeOptions {
    */
   workerStop?: 'worker' | 'session';
   /**
+   * How long the CLI has to answer its handshake before it is a CLI that died.
+   *
+   * A cold start with several MCP servers is slow, and this is the option that
+   * lets a deployment with a slower machine say so. Without it, the bound the
+   * backend ships with applies to every session of every variant.
+   */
+  handshakeTimeoutMs?: number;
+  /**
    * The declared options this variant runs its sessions on.
    *
    * One variant, not a map of them: the plugin resolves its presets and calls
@@ -617,6 +625,9 @@ export function claude(options: ClaudeOptions): Agent {
       // The operator's environment for this session's shells, carried as the
       // host resolved it, so the Bash hook writes the lines once.
       ...(start.shellEnv === undefined ? {} : { shellEnv: start.shellEnv }),
+      // How long the CLI has to answer its handshake, which this variant's own
+      // option decides and which the backend's default answers without one.
+      ...(options.handshakeTimeoutMs === undefined ? {} : { handshakeTimeoutMs: options.handshakeTimeoutMs }),
       ...(start.seedCustomizations ? { seedCustomizations: start.seedCustomizations } : {}),
       ...(start.seedModels ? { seedModels: start.seedModels } : {}),
       ...(start.resume !== undefined ? { resume: start.resume } : {}),
