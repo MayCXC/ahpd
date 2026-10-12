@@ -6,7 +6,7 @@ import { isIPv6 } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { resolveConfig, type ResolvedConfig } from '@cofold/config';
-import { issuerKind, reason, type McpServer, type PluginSpec } from '@ahpd/sdk';
+import { isShellName, issuerKind, reason, type McpServer, type PluginSpec, type ShellEnv } from '@ahpd/sdk';
 import type { ProxySetting } from './proxy/providers.js';
 
 /**
@@ -201,6 +201,17 @@ export interface Config {
    */
   clientToolTimeoutMs?: number;
   /**
+   * The environment every shell this host starts is given, by variable name.
+   *
+   * A string is what the variable is set to; `null` removes it. A deployment
+   * that runs its daemon with an environment of its own - a service unit with
+   * a private `XDG_CONFIG_HOME` - has no other way to say which of it reaches
+   * an agent's shells. It has no flag, because a map is not one, and it is not
+   * root config, because a client holding `config:change` may send root config
+   * and this is the operator's decision for the whole daemon.
+   */
+  shellEnv?: ShellEnv;
+  /**
    * How long a streamed delta waits for the next one before it is sent.
    *
    * Milliseconds, a whole number from 0 to 1000. Within the window the deltas
@@ -271,6 +282,37 @@ export interface Config {
    */
   updateCheck?: boolean;
 }
+
+/**
+ * What is wrong with a `shellEnv` value, one line each, or nothing.
+ *
+ * The key is a map of variable name to a value, and the JSON Schema this
+ * daemon checks its file against has no way of saying that an object is a map
+ * - so each name and each value is held on its own here, and a bad one is
+ * named rather than the whole key being refused as an object.
+ *
+ * A name a POSIX shell cannot export is refused rather than dropped: the
+ * backend that writes the lines would leave it out in silence, and a name this
+ * daemon cannot read is a mistake in the file rather than a request. A value
+ * that is neither text nor `null` is refused for the same reason - a number is
+ * not a value a shell reads, and `null` is how the file says remove it.
+ */
+export const shellEnvProblems = (held: unknown): string[] => {
+  if (held === undefined) return [];
+  // Not a map at all is the schema's to refuse, with the key's own name.
+  if (typeof held !== 'object' || held === null || Array.isArray(held)) return [];
+  const problems: string[] = [];
+  for (const [name, value] of Object.entries(held)) {
+    if (!isShellName(name)) {
+      problems.push(`shellEnv.${name} is not a shell variable name`);
+      continue;
+    }
+    if (value !== null && typeof value !== 'string') {
+      problems.push(`shellEnv.${name} must be text or null`);
+    }
+  }
+  return problems;
+};
 
 /**
  * Where this tool's files live.

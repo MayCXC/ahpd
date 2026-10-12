@@ -25,6 +25,7 @@ import type { Peer, Request } from './rpc.js';
 import type { Summary } from './catalog.js';
 import type { Bag } from './common.js';
 import type { SessionConfigAnswerer } from './completions.js';
+import type { ShellEnv } from '../shellenv.js';
 
 /**
  * What a host can say about a directory beyond its path.
@@ -427,6 +428,21 @@ export interface HostOptions {
    * holds the call.
    */
   clientToolTimeoutMs?: number;
+  /**
+   * The environment the operator names for the shells this host starts.
+   *
+   * A daemon that runs with an environment of its own - a service unit with a
+   * private `XDG_CONFIG_HOME` - has no other way to say which of it an agent's
+   * shells should have, and the operator is the one who knows. Each name is
+   * set to its value, and a name set to `null` is removed from what the daemon
+   * itself runs with.
+   *
+   * Handed to each backend on `Start`, because only a backend knows what it
+   * does with a shell, and given to the terminal store, so every terminal this
+   * host opens starts from it. A client that needs a variable in one session
+   * uses `shellInitScripts` instead, which is that session's own.
+   */
+  shellEnv?: ShellEnv;
   /**
    * How long a turn asked for a commit message or a pull request's words is
    * waited for, in milliseconds.

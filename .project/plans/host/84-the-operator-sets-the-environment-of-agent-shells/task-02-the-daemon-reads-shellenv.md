@@ -1,6 +1,6 @@
 ---
 title: The daemon reads shellEnv, and its terminals use it
-status: todo
+status: implemented
 depends: [task-01-one-function-gives-a-shell-its-environment.md]
 layer: "packages/server"
 refs:
@@ -18,7 +18,8 @@ It gives the map to its terminals, and to each backend on `Start`.
 
 ## Files
 
-- `UPDATE: packages/server/src/config.ts:196-202` - the key `shellEnv`, and its check.
+- `UPDATE: packages/server/src/config.ts:196-202` - the key `shellEnv`, and its check, `shellEnvProblems`.
+- `UPDATE: packages/server/src/commands/options.ts` - the `shellEnv` field with no flag, the `Options` field, and the fold.
 - `UPDATE: packages/server/src/commands/run.ts:556` - pass `shellEnv` to `shellTerminals`.
 - `UPDATE: packages/server/src/commands/run.ts:652` - pass `shellEnv` to the host.
 - `UPDATE: packages/sdk/src/types/host.ts:416` - `shellEnv` in the host options.
@@ -44,3 +45,19 @@ It gives the map to its terminals, and to each backend on `Start`.
 - `pnpm exec vitest run packages/server packages/sdk` passes.
 
 ## Resume
+
+Implemented. `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass, all 193 files.
+
+Files changed:
+- `packages/server/src/config.ts` - `Config.shellEnv`, and `shellEnvProblems`, which names each bad name and each bad value.
+- `packages/server/src/commands/options.ts` - the `shellEnv` field as `{ type: 'object' }` with no flag (`FILE_ONLY`), `Options.shellEnv`, the fold, and the refusal in `checkConfig`.
+- `packages/server/src/commands/run.ts` - `shellEnv` into `shellTerminals` and into the host options.
+- `packages/sdk/src/types/host.ts` - `HostOptions.shellEnv`.
+- `packages/sdk/src/types/agent.ts` - `Start.shellEnv`, absent when the operator named none.
+- `packages/sdk/src/host/spawn.ts` - `shellEnv` onto `Start`, as a frozen copy.
+- `docs/HOST.md` - the row and the paragraph, with the `XDG_CONFIG_HOME` example and the `shellInitScripts` sentence.
+- `packages/server/test/config-check.test.ts` - the six cases.
+
+Two things went past the Files section: `commands/options.ts`, which is where the key, its missing flag and the fold live, and which the list did not name; and the one-line refusal in `checkConfig`, beside the `proxy` one, because `shellEnvProblems` alone answers a list rather than stopping the start.
+The check is in `config.ts` rather than in the schema, as `mcpServers` is: the JSON Schema this daemon checks against cannot say that an object is a map.
+The suite rewrote `packages/sdk/test/fixtures/wire.jsonl` (the endpoint line and the `ahpd.` `_meta` lines); the write was denied here, so Softov reverts it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

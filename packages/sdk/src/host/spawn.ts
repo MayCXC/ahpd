@@ -587,6 +587,16 @@ export function createSpawn(ctx: HostContext): Spawn {
       // Resolved here rather than left for the backend to default, so what a
       // call waits is one number the host decided and a deployment set once.
       clientToolTimeoutMs: options.clientToolTimeoutMs ?? DEFAULT_CLIENT_TOOL_TIMEOUT_MS,
+      /*
+       * The operator's environment for the shells this session runs.
+       *
+       * Handed on unchanged, because only a backend knows what it does with a
+       * shell - the Claude backend puts an `export` line in front of every Bash
+       * command. Absent rather than an empty map, because a backend that reads
+       * it has no way to tell a host that configured none from a host that
+       * never heard of the key, and the answer to either is the same.
+       */
+      ...(options.shellEnv === undefined ? {} : { shellEnv: frozenCopy(options.shellEnv) }),
       ...(credentials && Object.keys(credentials).length > 0 ? { credentials } : {}),
       ...(workingDirectory !== undefined ? { workingDirectory } : {}),
       ...(additional !== undefined && additional.length > 0 ? { additional: frozenCopy(additional) } : {}),

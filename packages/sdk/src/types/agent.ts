@@ -12,6 +12,7 @@ import type { StartTerminals } from './terminals.js';
 import type { RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { ComputerPort } from './computers.js';
 import type { MachineNeed } from './machine.js';
+import type { ShellEnv } from '../shellenv.js';
 
 /**
  * An MCP server the host offers its agents, reached over stdio.
@@ -285,6 +286,20 @@ export interface Start {
    * wait than cut a slow client off asks for.
    */
   clientToolTimeoutMs: number;
+  /**
+   * The environment the operator names for the shells this session runs.
+   *
+   * A host setting rather than a session one, handed on because only a backend
+   * knows what it does with a shell: the Claude backend puts the lines in
+   * front of every Bash command, so a deployment with a private
+   * `XDG_CONFIG_HOME` reaches an agent's own shell. Each name is set to its
+   * value, and a name set to `null` is removed.
+   *
+   * Absent when the operator named none, which is a session whose shells run
+   * with the environment of the process that started them. A client that needs
+   * a variable in one session sets `shellInitScripts`, the session's own.
+   */
+  shellEnv?: ShellEnv;
   /**
    * How to run a process in a machine, when the host holds a computer plugin.
    *

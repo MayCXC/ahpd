@@ -321,6 +321,40 @@ describe('the mcpServers key', () => {
   });
 });
 
+describe('the shellEnv key', () => {
+  it('reads the map onto the options, as the operator wrote it', () => {
+    const options = folded({ shellEnv: { XDG_CONFIG_HOME: '/home/me/.config', HOME: null } });
+    expect(options.warnings).toEqual([]);
+    // A null is kept as the file wrote it: it is how the file says remove
+    // this variable, and reading it as absent would say nothing at all.
+    expect(options.shellEnv).toEqual({ XDG_CONFIG_HOME: '/home/me/.config', HOME: null });
+  });
+
+  it('has no flag, because a map is not one', () => {
+    expect(Object.keys(flagFields)).not.toContain('shellEnv');
+    expect(Object.keys(serverFields)).toContain('shellEnv');
+  });
+
+  it('is absent when the file names none', () => {
+    expect(folded({}).shellEnv).toBeUndefined();
+  });
+
+  it('refuses a value that is neither text nor null, naming the key', () => {
+    expect(refusal({ shellEnv: { PORT: 5 } })).toBe(`${config}: shellEnv.PORT must be text or null`);
+    expect(refusal({ shellEnv: { PORT: ['5'] } })).toBe(`${config}: shellEnv.PORT must be text or null`);
+  });
+
+  it('refuses a name a shell cannot export, naming it', () => {
+    expect(refusal({ shellEnv: { '2FA': 'on' } })).toBe(`${config}: shellEnv.2FA is not a shell variable name`);
+    expect(refusal({ shellEnv: { 'A-B': 'on' } })).toBe(`${config}: shellEnv.A-B is not a shell variable name`);
+  });
+
+  it('refuses a shellEnv that is not a map at all', () => {
+    expect(refusal({ shellEnv: 'on' })).toBe(`${config}: shellEnv must be an object`);
+    expect(refusal({ shellEnv: ['HOME'] })).toBe(`${config}: shellEnv must be an object`);
+  });
+});
+
 describe('the proxy key', () => {
   it('is there without any configuration, as the three built-in providers', () => {
     expect(folded({}).proxy.providers).toEqual({

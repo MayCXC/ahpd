@@ -18,9 +18,9 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
-import type { McpServer, PluginSpec } from '@ahpd/sdk';
+import type { McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
 import type { Config, HttpSetting } from '../config.js';
-import { asSpec, configDir, configPath, loadConfig } from '../config.js';
+import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
 import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
 import { proxyConfiguration, proxyProblems, proxySchema, type ProxyConfiguration } from '../proxy/providers.js';
 
@@ -68,6 +68,8 @@ export interface Options {
   closedChats: 'hidden' | 'delete';
   /** How long a call a client runs may wait, absent when the deployment said nothing. */
   clientToolTimeoutMs?: number;
+  /** The environment every shell this host starts is given, absent when the deployment named none. */
+  shellEnv?: ShellEnv;
   /** How long a streamed delta waits in the host before it is sent, absent when the deployment said nothing. */
   deltaWindowMs?: number;
   /** Minutes of quiet before a session's agent is let go, absent when the deployment said nothing. */
@@ -479,6 +481,11 @@ export const serverFields = {
     description: 'How long a call a client runs may wait. Default ten minutes; 0 waits for ever.',
     cli: { value: 'MS' },
   },
+  shellEnv: {
+    type: 'object',
+    title: 'Shell environment',
+    description: 'The environment every shell this host starts is given: a variable name set to its value, or to null to remove it, such as {"XDG_CONFIG_HOME": "/home/me/.config"}. Set in the configuration file only.',
+  },
   deltaWindowMs: {
     type: 'integer',
     minimum: 0,
@@ -581,7 +588,7 @@ export const serverFields = {
 } satisfies Record<string, Field>;
 
 /** The fields only the configuration file sets, which have no flag. */
-const FILE_ONLY = ['http', 'usage', 'proxy', 'policies', 'mcpServers'] as const;
+const FILE_ONLY = ['http', 'usage', 'proxy', 'policies', 'mcpServers', 'shellEnv'] as const;
 
 /** The flags that mean something only when typed, which the file does not set. */
 const TYPED_ONLY = ['stdio', 'configFile', 'noPlugins', 'noCwd', 'pluginOptions'] as const;
@@ -795,7 +802,9 @@ export const servedPluginWriteFields = {
  * `proxy` is checked further than the schema reaches, because whether a model
  * name's provider exists is only known once the file's providers are over the
  * built-ins. That is a bad value rather than an unknown key, so it stops the
- * start the same way one does.
+ * start the same way one does. `shellEnv` is checked the same way for the same
+ * reason: its names and values are held on their own, because the schema
+ * cannot say that an object is a map.
  */
 export function checkConfig(file: object, source: (key: string) => string): string[] {
   const warnings: string[] = [];
@@ -813,6 +822,8 @@ export function checkConfig(file: object, source: (key: string) => string): stri
   }
   const problems = proxyProblems((file as Config).proxy);
   if (problems.length > 0) stop(problems.map((one) => `${source('proxy')}: ${one}`).join('\n'));
+  const shellEnvBad = shellEnvProblems((file as Config).shellEnv);
+  if (shellEnvBad.length > 0) stop(shellEnvBad.map((one) => `${source('shellEnv')}: ${one}`).join('\n'));
   return warnings;
 }
 
@@ -994,6 +1005,7 @@ const noCwd = input['noCwd'] === true;
   const issuer = given('issuer');
   const wire = given('wire');
   const clientToolTimeoutMs = given('clientToolTimeoutMs');
+  const shellEnv = given('shellEnv');
   const deltaWindowMs = given('deltaWindowMs');
   const sleepAfterMinutes = given('sleepAfterMinutes');
   const sessionResidencyLimit = given('sessionResidencyLimit');
@@ -1020,6 +1032,7 @@ const noCwd = input['noCwd'] === true;
     advancedTools: given('advancedTools') ?? false,
     closedChats: given('closedChats') ?? 'hidden',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
+    ...(shellEnv === undefined ? {} : { shellEnv }),
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),
     ...(sleepAfterMinutes === undefined ? {} : { sleepAfterMinutes }),
     ...(sessionResidencyLimit === undefined ? {} : { sessionResidencyLimit }),

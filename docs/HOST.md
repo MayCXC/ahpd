@@ -65,6 +65,7 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | `paths` | list of directories | the directory the daemon was started in | The directories this host catalogues |
 | `worktreesRoot` | directory | `<repo>.worktrees` beside each repository | Where session worktrees are kept |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |
+| `shellEnv` | an object of variable name to text or `null` | none | The environment every shell this host starts is given. A client that needs a variable in one session sets `shellInitScripts` instead |
 | `deltaWindowMs` | integer, `0` to `1000` | `75` | How long a turn's streamed text is gathered before it is sent. `0` sends every delta as it arrives |
 | `sleepAfterMinutes` | integer, minutes | `30`; `0` never | How long a session with nothing in hand stays loaded before its agent is let go. It wakes when something needs it - [SESSIONS.md](SESSIONS.md#sleep-and-wake) |
 | `sessionResidencyLimit` | integer | `10`; `0` sets no limit | How many sessions are loaded at most. Over it, the least recently used quiet session is let go first |
@@ -87,6 +88,8 @@ Seven keys are about who may connect rather than about how the host behaves - `c
 Each key that needs more than a line:
 
 `paths` is the list of directories this host catalogues, and the **first** is where a session goes when a client names none. A relative one is taken from the directory of the file that set it, not from where the daemon was started. `--no-cwd` serves only what is named and asks about no other folder; it is refused when the list would be empty. `worktreesRoot` keeps every session worktree under `<dir>/<repo>/<name>` instead of the reference host's `<repo>.worktrees` beside each repository, and is made absolute against the working directory because it is a base other paths are joined to - decision [Worktrees can live under one root, as an option beside the reference's default](../.project/decisions/worktrees-can-live-under-one-root.md).
+
+`shellEnv` is the environment every shell this host starts is given, as a map of variable name to value. A daemon that runs as a service unit has an environment of its own, and this is how the operator says which of it an agent's shells get: `{"shellEnv": {"XDG_CONFIG_HOME": "/home/me/.config"}}` opens every terminal and runs every Bash command with that directory. A name set to `null` is removed from what the daemon itself runs with, which is the other half - a shell that inherits a variable the operator does not want it to have. It reaches the host terminals and the Claude backend's Bash commands, and the other backends come later. A wrong value is `...: shellEnv.PORT must be text or null`, and a name a shell cannot export is `...: shellEnv.2FA is not a shell variable name`. A client that needs a variable in one session sends `shellInitScripts`, which is that session's own.
 
 `deltaWindowMs` is how long the host gathers the streamed text of one part before sending it, in milliseconds: within that window a turn's deltas are merged into one action, so a client draws the same text from fewer envelopes. A wrong value is `...: deltaWindowMs must be an integer between 0 and 1000`.
 

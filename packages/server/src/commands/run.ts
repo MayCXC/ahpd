@@ -565,7 +565,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * `-32601` when asked for one.
      */
     resources: fileResources(),
-    terminals: shellTerminals(await pty()),
+    /*
+     * The shells this host opens, with the operator's environment when there
+     * is one. A daemon run as a service has an environment of its own, and
+     * `shellEnv` is how the operator says which of it an agent's shells get.
+     */
+    terminals: shellTerminals({
+      ...(await pty()),
+      ...(options.shellEnv === undefined ? {} : { shellEnv: options.shellEnv }),
+    }),
     directories: gitBranches(),
     changes: gitChanges(),
     worktrees: gitWorktrees(),
@@ -662,6 +670,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * is the same answer and one place should hold it.
      */
     ...(options.clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs: options.clientToolTimeoutMs }),
+    /*
+     * The environment the operator names for the shells this host starts.
+     *
+     * Left off rather than defaulted, because there is no default: a daemon
+     * that names none gives its shells the environment it runs with, which is
+     * the same answer as an empty map. The host hands it to each backend on
+     * `Start`, so an agent's own shell gets it too.
+     */
+    ...(options.shellEnv === undefined ? {} : { shellEnv: options.shellEnv }),
     /*
      * How long the host gathers a streamed delta before it sends it.
      *
