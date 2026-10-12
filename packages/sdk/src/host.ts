@@ -42,7 +42,7 @@ import type { Session, SubagentChat, SubagentRequest } from './types/session.js'
 import type { Peer } from './types/rpc.js';
 import type { Owner } from './types/usage.js';
 import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
-import { ownerOfPrincipal } from './values.js';
+import { bag, ownerOfPrincipal } from './values.js';
 import { reason } from './host/common.js';
 import {
   ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, methodIn, baseOf, URI_KEYS, named,
@@ -668,7 +668,15 @@ export function createHost(options: HostOptions): Host {
      * id is in both halves and the order is the only thing that could differ.
      */
     if (action.type === 'session/customizationsChanged') {
-      const halves = laid(channel, action.customizations);
+      const reported = Array.isArray(action.customizations) ? action.customizations : [];
+      /*
+       * The backend is told which of them are off first, on the whole of what
+       * it reported and before the client's half is laid on: what a client
+       * handed this session is not the backend's to switch, and an id in that
+       * half would be asked of a backend that has never heard of it.
+       */
+      ctx.tellOff(channel, reported);
+      const halves = laid(channel, reported);
       if (halves.length > 0) action.customizations = halves;
     }
     ctx.stirred(channel, action);
@@ -678,9 +686,13 @@ export function createHost(options: HostOptions): Host {
   /**
    * A session's customizations as a client reads them: a backend's, then its
    * clients', with nothing said about a session that has no client plugins.
+   *
+   * The backend's half goes through `withEntries`, because the entries a
+   * decision about every session or about a folder is read from are this
+   * host's, and a customization the backend reported carries none of them.
    */
   const laid = (channel: string, reported: unknown): Bag[] => [
-    ...(Array.isArray(reported) ? reported : []),
+    ...(Array.isArray(reported) ? reported : []).map((one) => ctx.withEntries(channel, bag(one))),
     ...ctx.clientPluginsOf(channel),
   ];
   /**
@@ -920,11 +932,13 @@ export function createHost(options: HostOptions): Host {
   Object.assign(ctx, createSleep(ctx));
   Object.assign(ctx, createWakes(ctx));
   /*
-   * The state a subscriber reads, with the client plugins laid into it.
+   * The state a subscriber reads, with the entries and the client plugins on it.
    *
    * The outgoing half of the rule `dispatch` carries: a session is what its
    * backend reports and what its clients handed it, and a client that
-   * subscribed reads the whole of it. Wrapped here rather than in the
+   * subscribed reads the whole of it - with the same entries on the backend's
+   * half, because a client that reads back what it was told about a session
+   * has to read the decision the same way. Wrapped here rather than in the
    * snapshot's own file because the entries are this host's, and this is
    * where a host has both the snapshot and the tooling that holds them.
    */
@@ -942,16 +956,16 @@ export function createHost(options: HostOptions): Host {
      */
     if (connection !== undefined) waitingOver(channel, connection.clientId || 'anonymous');
     const answer = await backendSnapshot(channel, mine, connection);
-    const handed = ctx.clientPluginsOf(channel);
-    if (handed.length === 0) return answer;
     const state = answer.state as Bag;
-    return {
-      ...answer,
-      state: {
-        ...state,
-        customizations: [...(Array.isArray(state.customizations) ? state.customizations : []), ...handed],
-      },
-    };
+    const reported = Array.isArray(state.customizations) ? state.customizations : [];
+    const customizations = [
+      ...reported.map((one) => ctx.withEntries(channel, bag(one))),
+      ...ctx.clientPluginsOf(channel),
+    ];
+    // Nothing reported and nothing handed over, which is what leaves a state
+    // with no `customizations` key as it was.
+    if (customizations.length === 0) return answer;
+    return { ...answer, state: { ...state, customizations } };
   };
   const {
     spaceHere, heldAs, nameOf, ownName, sessionOfChat, sessionFor, chatOf, meantBy,
