@@ -375,7 +375,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [12 - The bridge is on the current SDK entry, and lists sessions properly](acp/12-the-bridge-is-on-the-current-sdk/plan.md) | low | built 2026-10-02 ([implemented.md](acp/12-the-bridge-is-on-the-current-sdk/implemented.md)) | acp 01 | - |
 | [13 - session.ts is split into one file per area](acp/13-session-is-split-by-area/plan.md) | high | built 2026-10-07 ([implemented.md](acp/13-session-is-split-by-area/implemented.md)) | host 52 | - |
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
-| [15 - An ACP question is cancelled and answered in full](acp/15-an-acp-question-is-cancelled-and-answered-in-full/plan.md) | medium | active 2026-10-11; task 01 done, task 02 todo | - | - |
+| [15 - An ACP question is cancelled and answered in full](acp/15-an-acp-question-is-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-an-acp-question-is-cancelled-and-answered-in-full/implemented.md)) | - | - |
 
 Next free number in `acp`: `16`.
 

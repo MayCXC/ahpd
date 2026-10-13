@@ -1,6 +1,6 @@
 ---
 title: A question can take a typed answer
-status: todo
+status: done
 depends: []
 layer: "packages/agent-acp"
 refs:
@@ -17,7 +17,11 @@ The typed words reach the server in the field Codex reads them from.
 ## Files
 
 - `UPDATE: packages/agent-acp/src/mapping.ts:591-634` - read the flag on a select question, and leave out the note field that belongs to it.
+- `UPDATE: packages/agent-acp/src/mapping.ts:650` - `typedOf(schema)`, which answers each flagged question's note field and whether it has the `None of the above` option.
 - `UPDATE: packages/agent-acp/src/mapping.ts:668-690` - `contentOf` puts a typed answer in the note field, or in the question's own field when there is no note field.
+- `UPDATE: packages/agent-acp/src/session/context.ts:169-173` - the elicitation entry gains `typed`, the answer of `typedOf`, beside `fields`.
+- `UPDATE: packages/agent-acp/src/session/handlers.ts:467` - `askElicitation` stores `typedOf(held.requestedSchema)` on the entry.
+- `UPDATE: packages/agent-acp/src/session/handlers.ts:530` - `answerElicitation` gives `open.typed` to `contentOf`.
 - `UPDATE: packages/agent-acp/test/fixtures/acp-server.mjs` - an `elicitother` script with the adapter's note field.
 - `UPDATE: packages/agent-acp/test/agent-acp-ports.test.ts` - the cases below.
 
@@ -32,6 +36,7 @@ The typed words reach the server in the field Codex reads them from.
 7. Set the question's own field to `None of the above` when the person picked nothing and that option exists.
 8. Put the typed words in the question's own field when no note field belongs to it.
 9. Leave every other question and answer as it is.
+10. Read the note field and the `None of the above` option from `typed` on the elicitation entry.
 
 ## Validation
 
@@ -44,6 +49,8 @@ The typed words reach the server in the field Codex reads them from.
 - `pnpm -s schema` and then `pnpm exec vitest run packages/agent-acp` pass.
 
 ## Resume
+
+Amended 2026-10-13: the first build stopped because the Files list did not name the elicitation entry. The entry now carries `typed`, in Step 10.
 
 Implemented 2026-10-11, in `mapping.ts` and the fixture.
 
@@ -73,3 +80,57 @@ The review held this task back from main: a typed answer is offered but not sent
 
 Softov answered on 2026-10-12: the typed answer goes in the note field.
 The note field is not drawn as a question of its own. codex-acp 2.2.2 was checked against the same code. For a client that does not send `_meta.jetbrains.air`, it builds the same schema and reads the same answer as 1.13.1. It names the note field `<id>_note<n>` when `<id>_note` is taken, so the note field is found by `questionId`. A JetBrains Air client gets no `None of the above` option and may send typed words in `content[<id>]`; this bridge does not announce itself as that client.
+
+Built 2026-10-13, steps 1 to 10, with the fixture and the cases.
+
+`questionOf` takes the `freeform` read from `git://1248cb6b` as it is.
+A field marked `isOther` gets `allowFreeformInput: true` in the choices branch, on the single-select and the multi-select alike.
+A field without the mark gets nothing.
+
+A new `notesOf` reads the note field of each flagged question out of the form's properties, keyed by the question's own field name.
+It matches on `_meta.codex.role` equal to `user_note` and on the `_meta.codex.questionId` on it, never on a name ending `_note`.
+So `mode_note2` is `mode`'s note field like any other.
+A `user_note` naming a question the server did not flag stays a question of its own.
+`questionsFor` leaves the note fields out of the drawn questions, which is step 4.
+The answer path already drops a key no question was drawn for, so drawing one would ask the person the same thing twice.
+
+`typedOf(schema)` answers, per flagged question, its note field and whether it has the `None of the above` option.
+`offersNone` reuses `choicesOf`, so it sees the option through the `oneOf` the adapter appends it to.
+The elicitation entry in `context.ts` gained `typed` beside `fields`, `askElicitation` stores `typedOf(held.requestedSchema)`, and `answerElicitation` hands `open.typed` to `contentOf`.
+Step 10 is that field, because a drawn question is a closed object under the strict schema and cannot carry the note field's name.
+The answer holds the person's own words, not where they were typed.
+
+`contentOf` takes a third parameter and reads a flagged answer's `freeformValues` through a new `wordsOf`.
+That reads the level `answerOf` reads the value at, and falls back to the answer itself.
+The words go in the note field where the question has one, and in the question's own field where it has none.
+The question's own field holds the pick, or `None of the above` when nothing was picked and the adapter wrote that option.
+Everything else is answered exactly as before, which is step 9.
+
+Two details are this build's own choice, and the plan does not name either.
+Several typed words are joined with a newline into the note field, which is one string property.
+The fixture sends one word, so no case exercises it.
+And a pick that is an empty array counts as nothing picked, which is what a multi-select typed into and never picked sends.
+
+The fixture gained one script, `elicitother`: `branch` plain, `mode` flagged with `mode_note2` beside it, and `size` flagged with no note field at all.
+The numbered name is the point of `mode`'s note field, because it is the one a name-matcher misses.
+Three cases read it: the questions and the flag, an answer with a pick and words, and an answer with words and no pick.
+
+Files changed, uncommitted:
+
+- `UPDATE: packages/agent-acp/src/mapping.ts` - the `freeform` read in `questionOf`, `NONE`, `notesOf`, `offersNone`, the note fields left out of `questionsFor`, `TypedAnswer`, `typedOf`, `wordsOf`, and `contentOf`'s third parameter.
+- `UPDATE: packages/agent-acp/src/session/context.ts` - `typed` on the elicitation entry.
+- `UPDATE: packages/agent-acp/src/session/handlers.ts` - `typedOf` stored on the entry, and given to `contentOf`.
+- `UPDATE: packages/agent-acp/test/fixtures/acp-server.mjs` - the `elicitother` script and its header bullet.
+- `UPDATE: packages/agent-acp/test/agent-acp-ports.test.ts` - `asks a question the server marked for an answer of one's own as one that takes a typed answer`, `sends the words a person typed to the note field, and the pick to the question`, and `answers a question typed into and never picked with the option the adapter offered for it`.
+
+`pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
+`pnpm exec vitest run packages/sdk packages/server packages/agent-claude packages/agent-acp` passes 4308 of 4308 in 240 files, run with `--maxWorkers=2 --testTimeout=10000`.
+A first run at full parallelism failed one case in `packages/sdk/test/nested-proxy.test.ts`.
+It passes alone and passes in the lighter run, so it is a load flake rather than this change.
+`packages/sdk/test/nested-start.test.ts` passed in both runs.
+`packages/sdk/test/fixtures/wire.jsonl` was rewritten by the suite and is left as it is, for Softov to restore.
+
+The open question above is closed: the plan's 2026-10-12 row and step 10 decide where a typed answer goes and which file carries it.
+
+Reviewed 2026-10-13. The review found one fault: a flagged question with no pick and no typed words was answered `None of the above`. Now `None of the above` stands for a pick only beside typed words, and a blank question stays absent. The case `leaves out a question open to a typed answer that nobody picked or typed into` holds it. Gates after the fix: typecheck, boundary and schema pass, and vitest passes 4309 of 4309 in 240 files.
+Done 2026-10-13 in git://1de1381a.
