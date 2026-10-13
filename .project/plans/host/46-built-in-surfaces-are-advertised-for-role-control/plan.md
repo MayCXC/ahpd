@@ -1,7 +1,7 @@
 ---
 title: The host's own surfaces are advertised with their operations, and a role grants an operation
 domain: host
-status: built
+status: active
 priority: medium
 created: 2026-10-03
 revalidated: 2026-10-04
@@ -71,7 +71,7 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 | What | Source | Task |
 | --- | --- | --- |
 | Each built-in subject is advertised with its operations; a role grants `subject:operation`; `read` and `write` stay as groups so existing roles keep working | Softov, 2026-10-03, asked "how are the built-in AHP surfaces (sessions, chats, terminals, automations, files, config) advertised for role control?": "Per-operation grants" | 01, 02, 03 |
-| `chat` is a subject of its own, and `session:read`/`session:write` cover `chat:read`/`chat:write` | (defaulted: Softov's question names chats beside sessions, and the cover keeps every role that wrote `session:write` able to send turns) | 01 |
+| `chat` is a subject of its own, and `session:read`/`session:write` cover `chat:read`/`chat:write` | (defaulted: Softov's question names chats beside sessions, and the cover keeps every role that wrote `session:write` able to send turns) |; Softov, 2026-10-13, to "Should `session:write` count as holding `chat:write` too?" - "Yes, it covers it" | 01, 05 |
 | Every gated method and every client-dispatchable action needs one operation, from the table in task 02 | the request, 2026-10-03 | 02 |
 | The subjects, operations and groups are one table in `users.ts`, which the gate, the grant check and the advertisement all read | (defaulted: three readers of one fact) | 01 |
 | The advertisement is `_meta['ahpd.grants']` on `initialize` and on root state, one entry per built-in subject `{ title, description, operations, groups: { read, write } }`, built by one function beside `advertisedSchemes` | (defaulted: the mirror of `ahpd.resourceProviders`, in the same two places, built the same way) | 03 |
@@ -98,10 +98,11 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Operations and their groups are one table, and a grant names either](task-01-operations-and-groups-are-one-table.md) | implemented | - |
+| [01 - Operations and their groups are one table, and a grant names either](task-01-operations-and-groups-are-one-table.md) | done | - |
 | [02 - Every gated method and client action needs one operation](task-02-every-method-and-action-needs-one-operation.md) | done | 01 |
 | [03 - The host advertises its subjects in `ahpd.grants`](task-03-the-host-advertises-its-subjects.md) | done | 01 |
 | [04 - Roles and the docs speak in operations](task-04-roles-and-docs-speak-in-operations.md) | done | 02, 03 |
+| [05 - session:write holds chat:write](task-05-session-write-holds-chat-write.md) | todo | 01 |
 
 ## Risks and tradeoffs
 
@@ -113,7 +114,7 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 ## Resume state
 
 - **Done so far:** built 2026-10-04 in `6795e9b`; see [implemented.md](implemented.md).
-- **Next action:** Softov decides task 01: `groupOf('chat', 'write')` gives a chat group no cover through the session group, so a `session:write` holder may not grant `chat:write`. Tasks 02-04 were reviewed against main on 2026-10-10 and are `done`.
+- **Next action:** build task 05. Task 01 passed its four checks on 2026-10-13 and is `done`.
 - **Open questions:** none; Softov's answers of 2026-10-04 are in the table above.
 - **Watch out for:** ahpapp must read `put` where it read `write` in `ahpd.resourceProviders` before the client-visible rename is relied on.
 

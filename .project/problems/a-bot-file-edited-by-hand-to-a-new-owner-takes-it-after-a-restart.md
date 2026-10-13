@@ -33,7 +33,7 @@ none.
 
 ## Fix
 
-- Log a plugin's `problem` line at once, after `apply` too.
+- The log line is [daemon/22](../plans/daemon/22-a-plugins-late-problem-is-logged/plan.md).
 - For the restart, keep the true owner where a file edit does not reach, such as the host's records.
 - Or accept the file as the truth after a restart, and log the change. Softov chooses between the two.
 - Set `updatedAt` from the file's change time when a hand edit is taken.

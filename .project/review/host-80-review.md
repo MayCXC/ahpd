@@ -11,7 +11,7 @@ I ran the three checks on a second daemon on 2026-10-13. One passes, one fails b
 ## Results
 
 1. **Pass.** I changed the message in an automation's `.md` file. The next run sent the new text, with no restart.
-2. **Fail.** A copy of an automation shows as a second automation, but it never fires while the original is on. Two automations with the same schedule run only the first. The cause is in the scheduler and is older than host/80, see [the problem](../problems/a-second-automation-due-at-the-same-minute-never-fires.md).
+2. **Fail.** A copy of an automation shows as a second automation, but it never fires while the original is on. Two automations with the same schedule run only the first. The cause is in the scheduler and is older than host/80, see [host/86](../plans/host/86-every-automation-due-at-once-fires/plan.md).
 3. **Pass over the protocol.** `createAutomation` with a UUID id keeps the id, and a file with that name appears. I did not use the ahpc form.
 
 ## Also found in ahpc 0.8.0
@@ -27,4 +27,4 @@ I ran the three checks on a second daemon on 2026-10-13. One passes, one fails b
 ## Reply
 
 - Write "pass" or what you saw for the ahpc form.
-- Tell me if host/80 closes now, with the scheduler bug as its own plan. That is my recommendation, because the bug is not in the file store.
+- Tell me if host/80 closes now. The scheduler bug is host/86, because it is not in the file store.

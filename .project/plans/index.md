@@ -37,8 +37,9 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); checked 2026-10-13 | daemon 11 | - |
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-11; the Windows checks by hand remain | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | planned 2026-10-13; 1 task | daemon 20 | - |
+| [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | planned 2026-10-13; 1 task | - | - |
 
-Next free number in `daemon`: `22`.
+Next free number in `daemon`: `23`.
 
 ## host
 
@@ -81,7 +82,7 @@ Reference: [00-host.md](host/00-host.md)
 | [30 - A session is listed under its provider's name, whatever a client created it as, so VS Code opens it](host/30-a-session-is-listed-under-its-providers-name/plan.md) | high | built 2026-10-09 ([implemented.md](host/30-a-session-is-listed-under-its-providers-name/implemented.md)) | - | - |
 | [31 - A session's config outlives a restart, and a stored value the schema no longer offers falls back to the default](host/31-a-sessions-config-outlives-a-restart/plan.md) | high | built 2026-10-07 ([implemented.md](host/31-a-sessions-config-outlives-a-restart/implemented.md)); tasks 01, 02 reviewed 2026-10-06 | - | claude 10 |
 | [32 - The session store is a file per session, and it forgets what no longer exists](host/32-the-session-store-is-a-file-per-session/plan.md) | medium | built 2026-10-02 ([implemented.md](host/32-the-session-store-is-a-file-per-session/implemented.md)) | host 31 | - |
-| [33 - A session tool acts as the person it works for, within VS Code's limits, and can be switched off](host/33-a-session-tool-acts-as-the-person-it-works-for/plan.md) | high | active 2026-10-13; tasks 01-02 done; task 03 failed live, two problems | host 30 | - |
+| [33 - A session tool acts as the person it works for, within VS Code's limits, and can be switched off](host/33-a-session-tool-acts-as-the-person-it-works-for/plan.md) | high | active 2026-10-13; tasks 01-02 done; task 04 todo, fixes what task 03 missed | host 30 | - |
 
 | [34 - A session and an automation say who owns them, and a turn says who sent it](host/34-work-says-who-owns-it/plan.md) | high | built 2026-10-02 ([implemented.md](host/34-work-says-who-owns-it/implemented.md)) | - | usage meters; shares the turn sender with host 33 |
 
@@ -103,7 +104,7 @@ Reference: [00-host.md](host/00-host.md)
 | [44 p2 - An automation disables itself as its definition says, and a kind given twice is refused](host/44-ahpd-speaks-ahp-1-0-0-p2-an-automation-disables-itself/plan.md) | medium | built 2026-10-09 ([implemented.md](host/44-ahpd-speaks-ahp-1-0-0-p2-an-automation-disables-itself/implemented.md)) | host 44 p1 | - |
 | [44 p3 - A session's row lists its chats with their status, and a chat is read or archived on its own](host/44-ahpd-speaks-ahp-1-0-0-p3-a-sessions-row-lists-its-chats/plan.md) | high | built 2026-10-09 ([implemented.md](host/44-ahpd-speaks-ahp-1-0-0-p3-a-sessions-row-lists-its-chats/implemented.md)) | host 44 p1 | - |
 | [45 - The root config declares every value it holds, as VS Code's agent host declares it](host/45-root-config-declares-every-value-it-holds/plan.md) | medium | built 2026-10-09 ([implemented.md](host/45-root-config-declares-every-value-it-holds/implemented.md)) | host 44 p1, host 43 p1, host 43 p3 | - |
-| [46 - The host's own surfaces are advertised with their operations, and a role grants an operation](host/46-built-in-surfaces-are-advertised-for-role-control/plan.md) | medium | built 2026-10-04 ([implemented.md](host/46-built-in-surfaces-are-advertised-for-role-control/implemented.md)); tasks 02-04 done, reviewed 2026-10-10; task 01 waits on Softov | host 44 p1 | ahpapp people/01's role editor |
+| [46 - The host's own surfaces are advertised with their operations, and a role grants an operation](host/46-built-in-surfaces-are-advertised-for-role-control/plan.md) | medium | built 2026-10-04 ([implemented.md](host/46-built-in-surfaces-are-advertised-for-role-control/implemented.md)); tasks 01-04 done; task 05 todo, `session:write` holds `chat:write` | host 44 p1 | ahpapp people/01's role editor |
 | [47 - ahpd serves what AHP 1.0.0 added](host/47-ahpd-serves-what-ahp-1-0-0-added/plan.md) | medium | built 2026-10-09 ([implemented.md](host/47-ahpd-serves-what-ahp-1-0-0-added/implemented.md)) | host 44 p1 | - |
 | [47 p1 - A chat is reordered in its session, or moved to another session of the same agent and machine](host/47-ahpd-serves-what-ahp-1-0-0-added-p1-moving-a-chat/plan.md) | medium | built 2026-10-09 ([implemented.md](host/47-ahpd-serves-what-ahp-1-0-0-added-p1-moving-a-chat/implemented.md)); task 01 dropped, 02-04 done; cross-agent and cross-machine moves deferred | host 47, host 44 p1, host 50 | - |
 | [47 p2 - A chat lists the shells and subagents running in its background](host/47-ahpd-serves-what-ahp-1-0-0-added-p2-a-chat-lists-its-background-work/plan.md) | medium | built 2026-10-09 ([implemented.md](host/47-ahpd-serves-what-ahp-1-0-0-added-p2-a-chat-lists-its-background-work/implemented.md)) | host 47, host 44 p1 | - |
@@ -182,8 +183,9 @@ Reference: [00-host.md](host/00-host.md)
 | [83 p5 - A chat is attached to a message](host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | low | built 2026-10-13 ([implemented.md](host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/implemented.md)); checked live | 83 p1 to p3 | - |
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-the-environment-of-agent-shells/plan.md) | medium | built 2026-10-11 ([implemented.md](host/84-the-operator-sets-the-environment-of-agent-shells/implemented.md)); the check by hand remains; ACP, cofold and pi deferred | - | ACP, cofold and pi shells |
 | [85 - A watched changeset gets its files when a turn ends](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/plan.md) | high | built 2026-10-13 ([implemented.md](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/implemented.md)); a session in a machine is not checked | - | - |
+| [86 - Every automation due at once fires](host/86-every-automation-due-at-once-fires/plan.md) | high | planned 2026-10-13; 1 task | - | - |
 
-Next free number in `host`: `86`.
+Next free number in `host`: `87`.
 
 ## claude
 

@@ -28,7 +28,6 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`. Each re
 
 - [plugin-45-p2-review.md](../review/plugin-45-p2-review.md): bots are Markdown files.
 - [host-80-review.md](../review/host-80-review.md): automations are Markdown files.
-- [host-46-t01-review.md](../review/host-46-t01-review.md): operations and their groups.
 
 ## Open questions for Softov
 
