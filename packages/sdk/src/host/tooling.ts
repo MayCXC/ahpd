@@ -24,7 +24,57 @@ import type { Held } from './state.js';
 import type { Move } from './lifecycle.js';
 import type { HostContext } from './context.js';
 
-/** What a host says about a client's plugin when it has nowhere to keep one. */
+/**
+ * How deep a chain of sessions made from inside sessions may go.
+ *
+ * VS Code's `maxSessionSpawnDepth`, from `serverSessionTools.ts`: a session a
+ * person started is depth 0, one the `create` tool made inside a depth-N
+ * session is N+1, and a session at this depth may not make another. What is
+ * bounded is the chain - A makes B makes C - and how many are made across it
+ * is the count below.
+ */
+const MAX_SPAWN_DEPTH = 3;
+
+/** VS Code's `maxCreatedSessions`: how many sessions one tree may make. */
+const MAX_CREATED_SESSIONS = 50;
+
+/** VS Code's `maxCreatedChats`: how many chats one tree may make, by either tool. */
+const MAX_CREATED_CHATS = 50;
+
+/** VS Code's `maxSentMessages`: how many messages one tree may send. */
+const MAX_SENT_MESSAGES = 100;
+
+/**
+ * What one session tree may make, and what it is told when it has.
+ *
+ * VS Code's three counters and its refusal words, from `sessionServerTools.ts`
+ * - `createdSessionCount`, `createdChatCount` and `sentMessageCount`, refused
+ * as "Refusing to create/send more than N ... from server tools in this
+ * process." One process is what VS Code bounds; here it is one session tree,
+ * so the sentence says the tree, which is what is true of it - the plan's own
+ * answer to what the counts are kept per.
+ */
+const TREE_LIMITS = {
+  sessions: {
+    max: MAX_CREATED_SESSIONS,
+    words: `Refusing to create more than ${MAX_CREATED_SESSIONS} sessions from server tools in this session tree.`,
+  },
+  chats: {
+    max: MAX_CREATED_CHATS,
+    words: `Refusing to create more than ${MAX_CREATED_CHATS} chats from server tools in this session tree.`,
+  },
+  messages: {
+    max: MAX_SENT_MESSAGES,
+    words: `Refusing to send more than ${MAX_SENT_MESSAGES} messages from server tools in this session tree.`,
+  },
+} as const;
+
+/** Which of the three a tree is being asked about. */
+type Made = keyof typeof TREE_LIMITS;
+
+/**
+ * What a host says about a client's plugin when it has nowhere to keep one.
+ */
 const KEEPS_NONE = 'this host keeps no client plugins';
 
 /**
@@ -892,6 +942,45 @@ export function createTooling(ctx: HostContext): Tooling {
       : [])));
 
   /**
+   * What each session tree has made, by the id of the session at its top.
+   *
+   * VS Code keeps its three counters in the tool group, which one process
+   * shares between every session and every person on it. Kept per tree here:
+   * one tree is a session somebody started and everything the `create` tool
+   * grew from it, so a runaway agent exhausts its own budget and not the
+   * host's, and a second tree is made from nothing.
+   *
+   * In memory, as VS Code's are. A restart is a new process with new counters,
+   * which is a bound on a runaway and not a quota: an install that wants a
+   * tree to make fifty more sessions restarts.
+   */
+  const counted = new Map<string, Record<Made, number>>();
+  const NOTHING_COUNTED: Record<Made, number> = { sessions: 0, chats: 0, messages: 0 };
+
+  /**
+   * The session at the top of one session's tree, which is the id its counts
+   * are kept under.
+   *
+   * A store that keeps no parent links holds no tree, and every session in it
+   * is a root of its own - which is what the store that does keep them answers
+   * for a session nothing started.
+   */
+  const treeOf = (id: string): string => kept.rootOf?.(id) ?? id;
+
+  const countsIn = (tree: string): Record<Made, number> => counted.get(tree) ?? NOTHING_COUNTED;
+
+  /** Refuse one more of something a tree has no room for, in the host's words. */
+  const room = (tree: string, what: Made): void => {
+    const limit = TREE_LIMITS[what];
+    if (countsIn(tree)[what] >= limit.max) throw new Error(limit.words);
+  };
+
+  /** One more, counted once the thing it counts has actually been made. */
+  const countUp = (tree: string, what: Made): void => {
+    counted.set(tree, { ...countsIn(tree), [what]: countsIn(tree)[what] + 1 });
+  };
+
+  /**
    * What each chat's agent was started with, by the chat's URI.
    *
    * A backend takes its plugins when its CLI starts and offers no way to add
@@ -1203,6 +1292,17 @@ export function createTooling(ctx: HostContext): Tooling {
     },
     send: async (session, chatId, text, from) => {
       const at = heldAs(session);
+      /*
+       * The tree the call is made from, which is the one it is counted against.
+       *
+       * The session the message goes to is not asked. A tool is counted where
+       * it runs: the session that asked for the message is the one whose budget
+       * an agent is spending, and charging the target instead would let one
+       * runaway send a hundred messages into each of any number of sessions
+       * without ever meeting a limit.
+       */
+      const tree = treeOf(idOf(uri));
+      room(tree, 'messages');
       // A session asleep in the catalogue is woken for the message, and held
       // awake until it has begun.
       const release = ctx.hold(at);
@@ -1218,17 +1318,35 @@ export function createTooling(ctx: HostContext): Tooling {
           const waiting = crypto.randomUUID();
           remember(chatUri, waiting);
           found.chat.queue(waiting, text, undefined, from, undefined, turnInstructions(at));
+          countUp(tree, 'messages');
           return 'queued';
         }
         const started = crypto.randomUUID();
         remember(chatUri, started);
         found.chat.begin(started, text, undefined, from, undefined, turnInstructions(at));
+        countUp(tree, 'messages');
         return 'sent';
       } finally {
         release();
       }
     },
     create: async (asked) => {
+      /*
+       * The chain this session is part of, and the tree it grows.
+       *
+       * The session made here is a child of the calling one, so it is the
+       * calling session that is asked both questions: how deep it already sits
+       * in its chain, and how much its tree has made.
+       */
+      const tree = treeOf(idOf(uri));
+      room(tree, 'sessions');
+      const depth = kept.depthOf?.(idOf(uri)) ?? 0;
+      if (depth >= MAX_SPAWN_DEPTH) {
+        throw new Error(
+          `Refusing to create a session: recursion limit reached (max spawn depth ${MAX_SPAWN_DEPTH}).`
+          + ` This session was itself created ${depth} level(s) deep.`,
+        );
+      }
       const provider = asked.provider ?? sessions.get(uri)?.agent.provider ?? first.provider;
       // Held under its provider's name, as a client's `createSession` is.
       const made = `${provider}:/${crypto.randomUUID()}`;
@@ -1263,12 +1381,24 @@ export function createTooling(ctx: HostContext): Tooling {
         firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
         undefined, turnInstructions(made),
       );
+      countUp(tree, 'sessions');
       return { session: made, chat: chatUriFor(made) };
     },
     createChat: async (session, asked) => {
       const at = heldAs(session);
       const held = sessions.get(at);
       if (!held) throw new Error(`${session} is not a session this host is running`);
+      /*
+       * The tree the call is made from, which is the one it is counted against.
+       *
+       * A chat has no tree of its own, and the session named need not be the
+       * one this tool was called from. A tool is counted where it runs, so a
+       * chat added to another session still spends the calling session's
+       * budget - the same answer `send` gives, and for the same reason: the
+       * session an agent is running in is the one whose spending is bounded.
+       */
+      const tree = treeOf(idOf(uri));
+      room(tree, 'chats');
       const chatUri = `ahp-chat:/${crypto.randomUUID()}`;
       const chat = spawn(held.agent, at, chatUri, chatIdFor(at, chatUri), backendsOwn(held.config), undefined, held.workingDirectory, undefined, held.additional);
       log(`opened ${chatUri} in ${at}`);
@@ -1282,6 +1412,7 @@ export function createTooling(ctx: HostContext): Tooling {
         firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
         undefined, turnInstructions(at),
       );
+      countUp(tree, 'chats');
       return { chat: chatUri };
     },
     rename: (session, chat, title) => { renameChat(heldAs(session), chat, title); },

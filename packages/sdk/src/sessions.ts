@@ -21,6 +21,8 @@ interface Held {
   sendersOf(id: string): Record<string, Owner> | undefined;
   parent(id: string): string | undefined;
   setParent(id: string, value: string | undefined): void;
+  rootOf(id: string): string;
+  depthOf(id: string): number;
   nested(id: string): NestedRecord | undefined;
   setNested(id: string, value: NestedRecord | undefined): void;
   nestedSessions(): [string, NestedRecord][];
@@ -59,6 +61,32 @@ export function memorySessions(): SessionStore & Held {
     else rows.set(id, held);
   };
 
+  /**
+   * The top of a session's tree and how far under it the session sits.
+   *
+   * Walked up the parent links, which is all a tree is here: the `create` tool
+   * writes the session it made a child of, and nothing else writes one. A
+   * session nothing started is its own root at depth 0.
+   *
+   * The walk carries what it has seen, because a file edited by hand can hold
+   * a loop - a session whose parent is its own descendant - and a walk that
+   * trusted the links would never end. A loop stops at the link it would
+   * repeat and calls that session the root, which is the answer that keeps the
+   * question answerable rather than the answer that is true of a tree.
+   */
+  const treeOf = (id: string): { root: string; depth: number } => {
+    const seen = new Set<string>([id]);
+    let at = id;
+    let depth = 0;
+    for (;;) {
+      const up = rows.get(at)?.parent;
+      if (up === undefined || up === '' || seen.has(up)) return { root: at, depth };
+      seen.add(up);
+      at = up;
+      depth += 1;
+    }
+  };
+
   return {
     flags: (id) => rows.get(id)?.flags ?? 0,
     setFlags: (id, value) => { patch(id, { flags: value === 0 ? undefined : value }); },
@@ -81,6 +109,8 @@ export function memorySessions(): SessionStore & Held {
     setProvider: (id, value) => { patch(id, { provider: value }); },
     parent: (id) => rows.get(id)?.parent,
     setParent: (id, value) => { patch(id, { parent: value }); },
+    rootOf: (id) => treeOf(id).root,
+    depthOf: (id) => treeOf(id).depth,
     nested: (id) => rows.get(id)?.nested,
     setNested: (id, value) => { patch(id, { nested: value }); },
     remoteOrigin: (id) => rows.get(id)?.remoteOrigin,
@@ -657,6 +687,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setProvider: (id, value) => { touched(id, () => { inner.setProvider(id, value); }); },
     parent: (id) => inner.parent(id),
     setParent: (id, value) => { touched(id, () => { inner.setParent(id, value); }); },
+    rootOf: (id) => inner.rootOf(id),
+    depthOf: (id) => inner.depthOf(id),
     nested: (id) => inner.nested(id),
     setNested: (id, value) => { touched(id, () => { inner.setNested(id, value); }); },
     nestedSessions: () => inner.nestedSessions(),

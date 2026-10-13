@@ -530,3 +530,198 @@ describe('what a session tool asks of the turn it runs in', () => {
     expect(rows.sessions.map((one) => one.session)).toContain(solo.held);
   });
 });
+
+/*
+ * The bounds VS Code's own tool group puts on spawning and messaging.
+ *
+ * Four numbers, kept as the reference host keeps them: a chain of sessions
+ * stops three deep, one tree may make fifty sessions and fifty chats, and its
+ * tools may send a hundred messages. What differs is only whose budget a count
+ * spends. VS Code keeps its three counters in one process, shared by every
+ * session and every person on it; here they are kept per session tree, so a
+ * runaway agent exhausts its own tree and not the host, and a second tree
+ * starts from nothing.
+ *
+ * There is no users directory below, so no grant is asked and none of this is
+ * about a person: these cases are the limits on their own.
+ */
+describe("VS Code's limits on spawning and messaging", () => {
+  type Answer = { content: { text: string }[]; isError?: boolean };
+  type Tool = { name: string; handler: (input: unknown) => Promise<Answer> };
+  type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
+
+  /** One session's tools, as the model of the session at `index` reaches them. */
+  const toolsOf = (index: number): Record<string, Tool> => {
+    const servers = sessionQueries().at(index)?.options.mcpServers as Record<string, { tools: Tool[] }> | undefined;
+    return Object.fromEntries((servers?.ahp?.tools ?? []).map((one) => [one.name, one]));
+  };
+  const call = async (name: string, input: unknown, index: number): Promise<Answer> => {
+    const tool = toolsOf(index)[name];
+    if (!tool) throw new Error(`no ${name}`);
+    return tool.handler(input);
+  };
+  // A refusal is a tool result too: the backend hands the model the message as
+  // text, marked as an error, which is how a model hears what it got wrong.
+  const said = (one: Answer): string => one.content[0]?.text ?? '';
+
+  /** A host with nobody to ask, and a client on it. */
+  const top = async (): Promise<Client> => {
+    const host = createHost({
+      path: root, agents: [claude({ paths: [root] })], ...machine(), tools: hostTools(),
+      sleepAfterMinutes: 0,
+    });
+    const client = host.accept(peer());
+    await hello(client);
+    return client;
+  };
+
+  /**
+   * A session on this host, and the tools its own model reaches.
+   *
+   * `at` is the CLI that session was handed, which is how a case says whose
+   * tools are making a call: one CLI per session started, in the order they
+   * were started, so the newest is `sessionQueries().length - 1`.
+   */
+  const started = async (client: Client, name: string): Promise<{ held: string; at: number }> => {
+    await client.handle({ method: 'createSession', params: { channel: `ahp-session:/${name}`, provider: 'claude' } });
+    await settle(8);
+    return { held: `claude:/${name}`, at: sessionQueries().length - 1 };
+  };
+
+  /** One session's tools make another, whose own tools are then the newest. */
+  const spawn = async (at: number, title: string): Promise<Answer> => {
+    const answer = await call('create_session', {
+      relationship: 'independent', workspace: root, title, prompt: 'work', worktree: false,
+    }, at);
+    await settle(8);
+    return answer;
+  };
+
+  /** One session's tools send a message to another, which is where a send goes. */
+  const telling = (at: number, to: string, message: string): Promise<Answer> =>
+    call('send_message', { session: to, message }, at);
+
+  it("stops a chain of sessions at spawn depth 3, in the reference host's words", async () => {
+    const client = await top();
+    const first = await started(client, 'first');
+    /*
+     * Three links down. The session asked is the one whose tools make the call,
+     * so each step moves to the newest CLI: `first` at depth 0 makes `second`
+     * at 1, that one makes `third` at 2, and `fourth` at 3 is the last one
+     * allowed - a session three deep may not make another.
+     */
+    let at = first.at;
+    for (const title of ['second', 'third', 'fourth']) {
+      expect(said(await spawn(at, title)), title).toMatch(/^New session created \(/);
+      at = sessionQueries().length - 1;
+    }
+
+    const refused = await spawn(at, 'fifth');
+    expect(said(refused)).toBe(
+      'Refusing to create a session: recursion limit reached (max spawn depth 3).'
+      + ' This session was itself created 3 level(s) deep.',
+    );
+    expect(refused.isError).toBe(true);
+  });
+
+  it('refuses the 51st session in one tree, and still makes one in a second', async () => {
+    const client = await top();
+    const first = await started(client, 'first');
+    for (let i = 0; i < 50; i++) {
+      expect(said(await spawn(first.at, `made ${i}`)), `made ${i}`).toMatch(/^New session created \(/);
+    }
+
+    const refused = await spawn(first.at, 'one more');
+    expect(said(refused)).toBe('Refusing to create more than 50 sessions from server tools in this session tree.');
+    expect(refused.isError).toBe(true);
+
+    // A second tree is a session nothing started, and its budget is its own.
+    // That is the whole of what keeping the counts per tree buys: one session's
+    // runaway agent does not spend what another session may make.
+    const elsewhere = await started(client, 'elsewhere');
+    expect(said(await spawn(elsewhere.at, 'its own child'))).toMatch(/^New session created \(/);
+  });
+
+  it('refuses the 51st chat in one tree, by either tool that makes one', async () => {
+    const client = await top();
+    const first = await started(client, 'first');
+    for (let i = 0; i < 50; i++) {
+      expect(said(await call('create_chat', { prompt: `word ${i}` }, first.at)), `word ${i}`).toMatch(/^Chat created \(/);
+    }
+
+    const refused = await call('create_chat', { prompt: 'one more' }, first.at);
+    expect(said(refused)).toBe('Refusing to create more than 50 chats from server tools in this session tree.');
+    expect(refused.isError).toBe(true);
+
+    // `create_session` with `currentSession` makes a chat too, and spends the
+    // same budget. The reference host counts them as one, and so does this.
+    expect(said(await call('create_session', { relationship: 'currentSession', title: 'x', prompt: 'y' }, first.at)))
+      .toBe('Refusing to create more than 50 chats from server tools in this session tree.');
+  });
+
+  it('refuses the 101st message sent through the tools', async () => {
+    const client = await top();
+    const from = await started(client, 'from');
+    const to = await started(client, 'to');
+    // The first message starts a turn in the target session and the rest are
+    // queued behind it, which is one of the two ways a send is answered: both
+    // are messages the host took, and both count.
+    for (let i = 0; i < 100; i++) {
+      expect(said(await telling(from.at, to.held, `word ${i}`)), `word ${i}`).toMatch(/^Message (sent|queued) \(/);
+    }
+
+    const refused = await telling(from.at, to.held, 'one more');
+    expect(said(refused)).toBe('Refusing to send more than 100 messages from server tools in this session tree.');
+    expect(refused.isError).toBe(true);
+  });
+
+  it('does not count a send that failed', async () => {
+    const client = await top();
+    const from = await started(client, 'from');
+    const to = await started(client, 'to');
+    /*
+     * A link naming a chat the target session does not run. The message gets
+     * past the input and reaches the host, which is where the count would have
+     * been taken - and a refusal is not a message sent, so the sender's tree
+     * keeps its whole budget. Counted before the send instead, that tree would
+     * refuse the hundredth message below.
+     */
+    const missed = await telling(from.at, openLink(to.held, 'claude', 'nope'), 'nowhere');
+    expect(missed.isError).toBe(true);
+    expect(said(missed)).toContain('is not a session this host is running');
+
+    for (let i = 0; i < 100; i++) {
+      expect(said(await telling(from.at, to.held, `word ${i}`)), `word ${i}`).toMatch(/^Message (sent|queued) \(/);
+    }
+    expect(said(await telling(from.at, to.held, 'one more')))
+      .toBe('Refusing to send more than 100 messages from server tools in this session tree.');
+  });
+
+  it('counts messages sent to any session against the sender, not the target', async () => {
+    const client = await top();
+    const from = await started(client, 'from');
+    const one = await started(client, 'one');
+    const two = await started(client, 'two');
+    /*
+     * Two sessions in trees of their own, neither of them the sender's. Counted
+     * where the message lands, each would hold its own budget of a hundred, and
+     * an agent could send a hundred into every session it can name and never
+     * meet a limit. The count is taken against the session the call is made
+     * from, so the hundred is the sender's however many sessions it spends them
+     * in - and it is that session's tree the refusal names.
+     */
+    for (let i = 0; i < 50; i++) {
+      expect(said(await telling(from.at, one.held, `to one, ${i}`)), `to one, ${i}`)
+        .toMatch(/^Message (sent|queued) \(/);
+      expect(said(await telling(from.at, two.held, `to two, ${i}`)), `to two, ${i}`)
+        .toMatch(/^Message (sent|queued) \(/);
+    }
+
+    const refused = await telling(from.at, two.held, 'one more');
+    expect(said(refused)).toBe('Refusing to send more than 100 messages from server tools in this session tree.');
+    expect(refused.isError).toBe(true);
+    // And the sessions it was writing into are untouched by the refusal: what
+    // ran out is the sender's budget, not theirs.
+    expect(said(await telling(two.at, from.held, 'and back again'))).toMatch(/^Message (sent|queued) \(/);
+  });
+});

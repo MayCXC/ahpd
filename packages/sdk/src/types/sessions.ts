@@ -225,6 +225,22 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setParent?(id: string, value: string | undefined): void;
   /**
+   * The session at the top of this one's tree, read from the parent links.
+   *
+   * A session nothing started is its own root, and a chain of sessions each
+   * made inside the last ends at the one the first was made in. Optional, as
+   * `parent` is: a store that keeps no links holds no tree, and every session
+   * in it is a root of its own.
+   */
+  rootOf?(id: string): string;
+  /**
+   * How far under that root this session sits, in links, read the same way.
+   *
+   * Nothing started it and this is `0`, and a session the `create` tool made
+   * inside another is one more than that one. Optional, as `rootOf` is.
+   */
+  depthOf?(id: string): number;
+  /**
    * What this host knows of a session that runs in a host inside a machine,
    * or nothing for any other session.
    *

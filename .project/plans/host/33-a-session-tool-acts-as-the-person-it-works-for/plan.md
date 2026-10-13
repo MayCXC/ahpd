@@ -72,7 +72,7 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A session tool acts as the person it works for](task-01-a-session-tool-acts-as-the-person-it-works-for.md) | implemented | - |
-| [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | todo | - |
+| [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | implemented | - |
 | [03 - The session tools can be switched off](task-03-the-session-tools-can-be-switched-off.md) | todo | - |
 
 ## Risks and tradeoffs
