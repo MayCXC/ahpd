@@ -4,23 +4,26 @@ domain: host
 status: planned
 priority: high
 created: 2026-09-30
-revalidated: 2026-10-04
+revalidated: 2026-10-13
 requires:
   - plans/host/30-a-session-is-listed-under-its-providers-name/plan.md
 refs:
   - "[code://packages/sdk/src/tools/session.ts](../../../../packages/sdk/src/tools/session.ts) - the nine session tools, VS Code's by name and schema; `delete_session` refuses only the current session"
-  - "[code://packages/sdk/src/tools/index.ts#L24-L27](../../../../packages/sdk/src/tools/index.ts#L24-L27) - `hostTools`, the session and artifact tools every session is offered"
-  - "[code://packages/sdk/src/host/tooling.ts#L229](../../../../packages/sdk/src/host/tooling.ts#L229) - `toolContext`, what a tool may see and do: it carries no person"
-  - "[code://packages/sdk/src/types/host.ts#L374-L380](../../../../packages/sdk/src/types/host.ts#L374-L380) - `ToolCall`"
-  - "[code://packages/sdk/src/users.ts#L22-L31](../../../../packages/sdk/src/users.ts#L22-L31) - the built-in roles; sessions are reached by role, and none is any one person's"
-  - "[code://packages/server/src/commands/run.ts#L285](../../../../packages/server/src/commands/run.ts#L285) - the daemon passes `hostTools()` to every session"
+  - "[code://packages/sdk/src/tools/index.ts#L24-L56](../../../../packages/sdk/src/tools/index.ts#L24-L56) - `hostTools`, the session and artifact tools every session is offered"
+  - "[code://packages/sdk/src/host/tooling.ts#L1048](../../../../packages/sdk/src/host/tooling.ts#L1048) - `toolContext`, what a tool may see and do: it carries no person"
+  - "[code://packages/sdk/src/types/host.ts#L701-L805](../../../../packages/sdk/src/types/host.ts#L701-L805) - `ToolCall`"
+  - "[code://packages/sdk/src/users.ts#L25-L36](../../../../packages/sdk/src/users.ts#L25-L36) - the built-in roles; sessions are reached by role, and none is any one person's"
+  - "[code://packages/server/src/commands/run.ts#L626](../../../../packages/server/src/commands/run.ts#L626) - the daemon passes `hostTools()` to every session"
   - "git://ac05bdfe1e1 - VS Code `src/vs/platform/agentHost/node/shared/sessionServerTools.ts`: `maxSessionSpawnDepth` 3, `maxCreatedSessions` 50, `maxCreatedChats` 50, `maxSentMessages` 100, and their refusal words"
 ---
 
 ## Goal
 
-A session's agent reaches other sessions through the session tools only as far as the person it works for may, it cannot spawn or message without the bounds VS Code sets, and an install that does not want agents driving sessions can turn the tools off.
-Today every session on a daemon gets all nine tools, and under a users directory an agent in one person's session can list, read, message or delete any session on the host, whatever that person's grants.
+A session's agent reaches other sessions through the session tools only as far as the person it works for may.
+It cannot spawn or message past the bounds VS Code sets.
+An install that does not want agents to drive sessions can turn the tools off.
+Today every session on a daemon gets all nine tools.
+Under a users directory, an agent in one person's session can list, read, message or delete any session on the host, whatever that person's grants.
 
 ## Reconnaissance
 
@@ -53,12 +56,14 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 | An install can turn the session tools off: a daemon option `sessionTools`, `true` by default, `false` for none, or a list of providers whose sessions get them | same answer: "A switch to turn them off"; then asked "What should the switch that turns session tools off look like?": "Option: on, off, or providers" | 03 |
 | VS Code's counts are kept per session tree, from the session the first spawn came from | Softov, 2026-10-12, to "What should the counts be kept per?" - "Per session tree" | 02 |
 | A tool call carries the grants of the person who sent the turn it runs in; a turn an automation started carries the automation's creator; under a users directory, a turn with no person gets no session tool that writes | Softov, 2026-09-30, asked "No session has an owner, so whose grants should a session tool call carry?": "Who sent the turn" | 01 |
+| A refusal for a count uses VS Code's words with "in this process" changed to "in this session tree", so it says what is true; the depth refusal is VS Code's as it is | Softov, 2026-10-13, to "What should a refusal say?" - "Same words, 'in this session tree'" | 02 |
+| A turn a session tool or a wake started carries the person of the turn that called the tool or set the wake, so a child acts as the same person and never as more | Softov, 2026-10-13, to "Whose grants should such a turn carry?" - "The turn that started it" | 01 |
 | No confirmation is forced host-side: whether a session tool asks is the backend's permission mode, so a person who lets an agent work can let it `send_message` without being asked each time | same answer, on host-side confirmation "whatever the permissions": "not ideal for a get to working agent. if desired by the user... so whatever the permissions ask was not accepted as written" | - |
 
 ## Proposed architecture
 
 - **Data flow** - `toolContext` gains the person a call works for; each session tool asks it before acting, and the listing filters by it.
-- **State flow** - spawn depth is per session, from the session that created it; the counts for task 02 are kept per session tree, from its first session.
+- **State flow** - spawn depth is per session, from the session that created it. The counts for task 02 are kept per session tree, from its first session.
 - **Layer responsibilities** - `packages/sdk`: the person, the grants, the limits; `packages/server`: the option for task 03.
 - **Source-of-truth files** - [`code://packages/sdk/src/tools/session.ts`](../../../../packages/sdk/src/tools/session.ts)
 
@@ -66,11 +71,9 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| 01 - A session tool acts as the person it works for | todo | - |
-| 02 - VS Code's limits on spawning and messaging | todo | - |
-| 03 - The session tools can be switched off | todo | - |
-
-The task files are not written yet.
+| [01 - A session tool acts as the person it works for](task-01-a-session-tool-acts-as-the-person-it-works-for.md) | todo | - |
+| [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | todo | - |
+| [03 - The session tools can be switched off](task-03-the-session-tools-can-be-switched-off.md) | todo | - |
 
 ## Risks and tradeoffs
 
@@ -79,7 +82,7 @@ The task files are not written yet.
 
 ## Resume state
 
-- **Done so far:** planned 2026-09-30, draft.
-- **Next action:** write the three task files, then build.
+- **Done so far:** planned 2026-09-30; task files written 2026-10-13.
+- **Next action:** build the three tasks; they touch `tooling.ts` and `session.ts` in common, so build them one after another.
 - **Open questions:** none.
 - **Watch out for:** the artifact tools and `ahp_terminals` are not session tools; this plan leaves them as they are.
