@@ -3,6 +3,8 @@ title: An initiator starts a session from outside, and a thread keeps talking to
 created: 2026-10-02
 ---
 
+The webhook slice is planned in [plugin 48](../plans/plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md); issue and chat initiators stay here.
+
 Softov, 2026-10-02: "A plugin trigger manager webhook to start a session or a automation or since api is already present. just a new endpoint but consider future cases where it could be another port to be public accessible." And of chat threads and issue triggers: "So the channels is the same. a initiator."
 
 An initiator is anything outside the host that starts a session or an automation and then keeps a conversation with it: a webhook call, an issue event, a chat message.

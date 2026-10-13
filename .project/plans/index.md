@@ -294,12 +294,16 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [42 - A reserved name is refused for a scheme and a harness](plugin/42-a-reserved-name-is-refused/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/42-a-reserved-name-is-refused/implemented.md)) | - | plugin 43, plugin 44 |
 | [43 - A bot can be watched](plugin/43-a-bot-can-be-watched/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/43-a-bot-can-be-watched/implemented.md)) | plugin 42 | - |
 | [44 - A plugin serves a channel, and bots have a catalogue](plugin/44-a-plugin-serves-a-channel/plan.md) | high | built 2026-10-10 ([implemented.md](plugin/44-a-plugin-serves-a-channel/implemented.md)) | plugin 42 | ahpapp and ahpc bot catalogue |
-| [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | built 2026-10-11; p1 and p2 built, p2 awaiting review | plugin 43, cofold commands/05 | bot templates idea |
+| [45 - A plugin keeps its records in the host's record store, and the bot keeps its records there](plugin/45-a-plugin-keeps-records-in-the-host-store/plan.md) | medium | built 2026-10-11; p1 and p2 built, p2 awaiting review | plugin 43, cofold commands/05 | plugin 49 |
 | [45 p1 - The host gives each plugin a record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md)) | cofold commands/05 | 45 p2, host 80 |
 | [45 p2 - The bot keeps its records in the record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/implemented.md)); released in 0.11.0; awaiting review | 45 p1 | - |
 | [46 - An admin makes a bot for any owner, and the manifest names the host owner](plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) | high | built 2026-10-11 ([implemented.md](plugin/46-an-admin-makes-a-bot-for-any-owner/implemented.md)) | plugin 37 | ahpapp bot owner picker |
+| [47 - A bot runs in a machine](plugin/47-a-bot-runs-in-a-machine/plan.md) | high | draft 2026-10-13; tasks not written | plugin 37 | container/05 p8 question |
+| [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 21, 37, 45 p1 | issue and chat initiators |
+| [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 45 p2 | - |
+| [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
 
-Next free number in `plugin`: `47`.
+Next free number in `plugin`: `51`.
 
 ## container
 

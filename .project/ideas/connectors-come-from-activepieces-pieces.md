@@ -3,6 +3,8 @@ title: A connector plugin runs Activepieces pieces, so Instagram and the rest ar
 created: 2026-10-06
 ---
 
+A secret-text piece is planned in [plugin 50](../plans/plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md); OAuth, Instagram and triggers stay here.
+
 Softov, 2026-10-06: "a plugin connector-activepieces", "no docker", with connections grouped "so I can enable like 2 instagram accounts for one agent. or 2 instagram account one for each agent".
 A hosted service such as Composio holds the person's tokens in its own cloud, so it is not a choice here.
 `@ahpd/connector-activepieces` would load Activepieces pieces from npm and run their actions as host tools, in the daemon, with no Activepieces server.
