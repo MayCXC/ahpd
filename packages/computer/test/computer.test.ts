@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { computerProvider } from '../src/provider.js';
 import { computerTools } from '../src/tools.js';
-import type { ComputerRuntime } from '../src/runtime.js';
+import type { ComputerRuntime, MachineSpec } from '../src/runtime.js';
 import type { ToolCall } from '../../sdk/src/types/host.js';
 import type { PluginHost } from '../../sdk/src/types/plugin.js';
 import type { Write } from '../../sdk/src/types/resources.js';
@@ -48,6 +48,14 @@ const tempRoot = (): string => {
 const fake = () => {
   const held = new Map<string, Record<string, unknown>>();
   const calls: string[] = [];
+  /*
+   * What each machine was asked for, beside the line a call is recorded as.
+   *
+   * A field the runtime turns into a flag - a limit, a profile's OCI runtime -
+   * is read here rather than as the flag: writing the flag is the docker
+   * runtime's, where a command is actually spawned.
+   */
+  const specs: MachineSpec[] = [];
   const runtime: ComputerRuntime = {
     kind: 'docker',
     // Machines on this host's own Docker, and nothing here asks how a program
@@ -61,6 +69,7 @@ const fake = () => {
     inspect: async (id) => held.get(id),
     run: async (spec) => {
       calls.push(`run ${spec.name} ${spec.image} ${spec.cpus ?? '-'} ${spec.memory ?? '-'} ${spec.label}${spec.mounts === undefined ? '' : ` v=${spec.mounts.join(',')}`}${spec.workdir === undefined ? '' : ` w=${spec.workdir}`}`);
+      specs.push(spec);
       held.set(spec.name, { name: spec.name, image: spec.image, Created: new Date(0).toISOString() });
       return { id: spec.name, image: spec.image ?? '', status: 'running', created: '' };
     },
@@ -99,7 +108,7 @@ const fake = () => {
     hasImage: async () => true,
     buildImage: async (tag) => { calls.push(`build ${tag}`); },
   };
-  return { runtime, held, calls };
+  return { runtime, held, calls, specs };
 };
 
 // No need value written here names a secret, so nothing is ever read.
@@ -367,6 +376,59 @@ it('refuses a body that is not a manifest, field by field', async () => {
   expect(await bad(made({ mounts: ['/work'] }))).toMatchObject({ code: -32602 });
   expect(await bad(made({ workdir: 'work' }))).toMatchObject({ code: -32602 });
   expect(await bad(made({ mounts: [7] }))).toMatchObject({ code: -32602 });
+});
+
+/*
+ * Plan plugin/19 task 01: a profile names the OCI runtime Docker starts its
+ * machines under, `runsc` for gVisor - decision
+ * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+ *
+ * The profile's alone, because the boundary a machine is given is the
+ * operator's to choose: a body that names one is refused rather than obeyed,
+ * and so is a dev container machine from a profile that names one, which the
+ * Dev Container CLI makes rather than `docker run`. What reaches the runtime
+ * is the field itself; the `--runtime=<value>` argument it becomes is written
+ * by the docker runtime and asserted where a command is spawned.
+ */
+it('takes the OCI runtime from the profile alone', async () => {
+  const { runtime, specs } = fake();
+  const provider = computerProvider(runtime, {
+    ...options,
+    max: 3,
+    profiles: {
+      sandbox: { image: 'node:22', ociRuntime: 'runsc' },
+      plain: { image: 'node:22' },
+      guarded: { ociRuntime: 'runsc' },
+    },
+  });
+
+  await provider.write('computer://sandbox', made({ profile: 'sandbox' }));
+  expect(specs[0]?.ociRuntime).toBe('runsc');
+  // And nothing else about the machine changed.
+  expect(specs[0]?.image).toBe('node:22');
+
+  // A profile that names none makes the machine it always made.
+  await provider.write('computer://plain', made({ profile: 'plain' }));
+  expect(specs[1]).not.toHaveProperty('ociRuntime');
+
+  // A body may not name one: a client holding `computer:write` cannot ask for
+  // a machine less isolated than the profile it may pick from.
+  const refused = await provider.write('computer://mine', made({ ociRuntime: 'runsc' }))
+    .catch((error: unknown) => error);
+  expect(refused).toMatchObject({ code: -32602 });
+  expect((refused as Error).message).toMatch(/takes the OCI runtime from its profiles.*sandbox/);
+
+  // Nor may a dev container machine take one, whichever profile made it: the
+  // CLI makes that machine, so there is no flag here to add.
+  const folder = temp('dev');
+  writeFileSync(join(folder, '.devcontainer.json'), '{}\n');
+  const dev = await provider.write('computer://devbox', made({ profile: 'guarded', devcontainer: folder }))
+    .catch((error: unknown) => error);
+  expect(dev).toMatchObject({ code: -32602 });
+  expect((dev as Error).message).toMatch(/dev container machine is made by the Dev Container CLI/);
+
+  // And neither refusal made a machine.
+  expect(specs).toHaveLength(2);
 });
 
 it('refuses a create onto a name already taken, and past the maximum', async () => {

@@ -306,6 +306,18 @@ export interface MachineSpec {
   cpus?: string;
   memory?: string;
   /**
+   * The OCI runtime Docker starts this machine's container under, `runsc` for
+   * gVisor; absent starts it under Docker's own default.
+   *
+   * What a profile's `ociRuntime` comes to, and the profile's alone: the
+   * boundary a machine is given is the operator's to choose - decision
+   * `gvisor-is-a-docker-profile-option-not-a-runtime`. Written as one argument,
+   * `--runtime=<value>`, and passed as given, so a Docker that has no such
+   * runtime refuses the machine with its own message. Nothing reads it on the
+   * dev container route, which the CLI makes rather than `docker run`.
+   */
+  ociRuntime?: string;
+  /**
    * Host paths made visible in the machine, as `source:target` or
    * `source:target:ro`.
    *
@@ -3268,6 +3280,13 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       if (spec.project !== undefined) flags.push('--label', `${MACHINE_PROJECT}=${spec.project}`);
       if (spec.cpus !== undefined) flags.push('--cpus', spec.cpus);
       if (spec.memory !== undefined) flags.push('--memory', spec.memory);
+      /*
+       * The OCI runtime the container is started under, one argument so the
+       * value cannot be read as a flag of its own and passed as given: a
+       * Docker that has no such runtime refuses the machine itself - decision
+       * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+       */
+      if (spec.ociRuntime !== undefined) flags.push(`--runtime=${spec.ociRuntime}`);
       /*
        * One `-v` per entry, however many said the same one.
        *

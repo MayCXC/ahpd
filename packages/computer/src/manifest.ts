@@ -42,6 +42,17 @@ export interface Profile {
   image?: string;
   cpus?: string;
   memory?: string;
+  /**
+   * The OCI runtime Docker starts a machine from this profile under, `runsc`
+   * for gVisor; absent runs it under Docker's own default.
+   *
+   * The boundary a machine is given rather than what makes it, which is why it
+   * is an option of a profile and not a runtime value - decision
+   * `gvisor-is-a-docker-profile-option-not-a-runtime`. Written as one `docker
+   * run` argument, `--runtime=<value>`, and passed as given: a Docker that has
+   * no such runtime refuses the create with its own message.
+   */
+  ociRuntime?: string;
   mounts?: string[];
   workdir?: string;
   /**
@@ -899,6 +910,34 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     }
   }
 
+  /*
+   * The OCI runtime Docker starts this machine's container under, from the
+   * profile alone.
+   *
+   * A body that names one is refused rather than dropped, as its mounts are:
+   * the boundary a machine is given is the operator's to choose, so a client
+   * holding `computer:write` cannot ask for a machine less isolated than the
+   * profile it picked - decision
+   * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+   */
+  const askedRuntime = said(held, 'ociRuntime');
+  if (askedRuntime !== undefined) {
+    const names = Object.keys(known);
+    throw new RpcError(-32602, names.length === 0
+      ? 'This host takes the OCI runtime from its configuration, and that body names its own'
+      : `This host takes the OCI runtime from its profiles, and that body names its own; its profiles are ${names.join(', ')}`);
+  }
+  const ociRuntime = profile.ociRuntime;
+  /*
+   * And a dev container machine takes none, whichever profile it came from:
+   * the Dev Container CLI makes that machine rather than `docker run`, so
+   * there is no flag here to add and a profile naming one would otherwise be
+   * ignored in silence.
+   */
+  if (ociRuntime !== undefined && devcontainer !== undefined) {
+    throw new RpcError(-32602, `profile ${picked ?? ''} names an OCI runtime, and a dev container machine is made by the Dev Container CLI rather than by docker run`);
+  }
+
   const cpus = said(held, 'cpus') ?? profile.cpus ?? defaults.cpus;
   if (cpus !== undefined && !CPUS.test(cpus)) {
     throw new RpcError(-32602, `cpus is a number, and ${cpus} is not one`);
@@ -1127,6 +1166,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     ...(image === undefined ? {} : { image }),
     ...(cpus === undefined ? {} : { cpus }),
     ...(memory === undefined ? {} : { memory }),
+    ...(ociRuntime === undefined ? {} : { ociRuntime }),
     ...(mounts.length === 0 ? {} : { mounts }),
     ...(Object.keys(env).length === 0 ? {} : { env }),
     ...(named.length === 0 ? {} : { named }),

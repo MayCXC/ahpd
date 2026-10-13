@@ -110,6 +110,7 @@ export const optionsSchema = {
           image: { description: "The image its machines are made from, a string. The plugin's image when absent." },
           cpus: { description: "A CPU limit for its machines, a string. The plugin's cpus when absent." },
           memory: { description: "A memory limit for its machines, a string. The plugin's memory when absent." },
+          ociRuntime: { description: "The OCI runtime Docker starts its machines under, a string. runsc is gVisor. Docker's own default when absent." },
           workdir: { description: "Where commands start, a string. folder, or the image's own, when absent." },
           mounts: { description: "Mounts added after the plugin's own, a list of strings." },
           agents: { description: 'The agents its machines are prepared for, a list of provider ids. A session of another agent is refused.' },
@@ -225,6 +226,9 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       ...(text('image') === undefined ? {} : { image: text('image') as string }),
       ...(text('cpus') === undefined ? {} : { cpus: text('cpus') as string }),
       ...(text('memory') === undefined ? {} : { memory: text('memory') as string }),
+      // The OCI runtime Docker starts its machines under, `runsc` for gVisor:
+      // how a container's kernel is isolated, which is the profile's to say.
+      ...(text('ociRuntime') === undefined ? {} : { ociRuntime: text('ociRuntime') as string }),
       ...(text('workdir') === undefined ? {} : { workdir: text('workdir') as string }),
       ...(words(said.mounts) === undefined ? {} : { mounts: words(said.mounts) as string[] }),
       // The agents a profile prepares for, and any value it gives their needs.

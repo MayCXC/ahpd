@@ -27,6 +27,7 @@ const EVERY_FIELD: Record<string, unknown> = {
   image: 'debian:bookworm-slim',
   cpus: '2',
   memory: '4g',
+  ociRuntime: 'runsc',
   workdir: '/work',
   mounts: ['/srv:/srv:ro'],
   agents: ['claude'],

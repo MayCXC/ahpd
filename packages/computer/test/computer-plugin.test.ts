@@ -923,3 +923,46 @@ it('starts, stops and restarts a machine by writing what it should be', async ()
   // A machine that is not there is not a thing to start.
   await expect(put('computer://gone/state', 'running')).rejects.toThrow();
 });
+
+/*
+ * Plan plugin/19 task 01: the OCI runtime a profile names reaches `docker run`
+ * as one argument, `--runtime=<value>` - decision
+ * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+ *
+ * Written before the image, as a machine's other flags are, and one argument
+ * rather than two so the value cannot be read as a flag of its own. A profile
+ * that names none adds nothing, so every machine an operator already makes is
+ * started exactly as it was.
+ */
+it('starts a machine under the OCI runtime its profile names', async () => {
+  loose = mkdtempSync(join(tmpdir(), 'ahpd-computer-ociruntime-'));
+  const state = join(loose, 'docker.json');
+  const { options } = await load({
+    command: process.execPath,
+    args: [FIXTURE],
+    env: { DOCKER_FAKE_STATE: state },
+    sessionSetting: false,
+    profiles: {
+      sandbox: { image: 'node:22', ociRuntime: 'runsc' },
+      plain: { image: 'node:22' },
+    },
+  });
+  const provider = options.resourceProviders?.computer as {
+    write(uri: string, content: { data: string; encoding: string }): Promise<void>;
+  };
+  const put = (uri: string, body: Record<string, unknown>): Promise<void> =>
+    provider.write(uri, { data: JSON.stringify(body), encoding: 'utf-8' });
+  // The last machine `docker run` was asked for, as the fixture recorded it.
+  const made = (): string[] => (JSON.parse(readFileSync(state, 'utf-8')) as { calls: string[][] })
+    .calls.filter((one) => one[0] === 'run').at(-1) ?? [];
+
+  await put('computer://sandbox', { profile: 'sandbox' });
+  const sandboxed = made();
+  expect(sandboxed).toContain('--runtime=runsc');
+  // One argument, before the image.
+  expect(sandboxed.indexOf('--runtime=runsc')).toBeLessThan(sandboxed.indexOf('node:22'));
+
+  // A profile that names none carries none.
+  await put('computer://plain', { profile: 'plain' });
+  expect(made().some((one) => one.startsWith('--runtime'))).toBe(false);
+});
