@@ -7,10 +7,13 @@ import { partsOf } from '../pluginparts.js';
 import { bodyText } from '../records.js';
 import { SEND_REMOTE_MESSAGE } from '../remotesession.js';
 import { bag, reason, str } from '../values.js';
+import { groupOf } from '../users.js';
 import { enablementKeyOf } from '../enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
 import { need } from './common.js';
+import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
+import type { Grant, Principal } from '../types/users.js';
 import type { ClientPlugins, SyncedPlugin } from '../types/clientplugins.js';
 import type { HostTool, ToolCall, TitleStrategy } from '../types/host.js';
 import type { BoundTool, McpServer } from '../types/agent.js';
@@ -258,6 +261,7 @@ export function createTooling(ctx: HostContext): Tooling {
   const {
     options, sessions, byChat, first, kept, terminals, learned, rootConfig, sentBy, about,
     activeClientsOf, leadOf, heldAs, ownerOf, allRows, setArtifacts, forWhom,
+    principalFor, senderOf, senders,
     chatSummary, keepTitle, summaryMoved, operationsMoved, dispatch, log, fire,
     isolated, settle, openSession, backendsOwn, removeSession, spawn,
   } = ctx;
@@ -1045,12 +1049,130 @@ export function createTooling(ctx: HostContext): Tooling {
     return typeof active?.id === 'string' ? active.id : undefined;
   };
 
+  /**
+   * Whether a grant is one of the read half of whatever it names.
+   *
+   * `read` and `write` are the groups and never operations - decision
+   * `a-grant-names-an-operation-and-read-and-write-are-its-groups` - so a
+   * grant is read as its group when it names the group itself, and as the
+   * group of the operation when it names one.
+   */
+  const reads = (grant: Grant): boolean => {
+    const at = grant.indexOf(':');
+    if (at < 0) return false;
+    const operation = grant.slice(at + 1);
+    return operation === 'read' || groupOf(grant.slice(0, at), operation) === 'read';
+  };
+
+  /**
+   * Whose grants a call in one chat runs with: a person, nobody, or nobody to
+   * ask.
+   *
+   * The person is the turn's rather than the session's, because two people can
+   * be talking in one session and only the turn says which of them it was.
+   *
+   * `undefined` is "asked of nobody", and only two things answer that: a host
+   * with no users directory, which has nobody to ask and answers as it answered
+   * before there was anybody; and a turn this host's own root connection sent,
+   * which is refused nothing here, as `admit` refuses the same connection
+   * nothing on the wire.
+   *
+   * `'nobody'` is a call with no person behind it - one in a turn this host
+   * began for itself, one a rule nobody owns started, one sent by somebody this
+   * process has not met since it started, and one reached with no turn running
+   * at all. That last is not a call no backend makes: a window outlives the
+   * turn it sent and can still reach a tool after that turn has ended, and a
+   * turn is the only thing that carries a person, so none is carried to it.
+   * What such a call holds is decided by the caller: it reads, and it writes
+   * nothing.
+   */
+  const personOf = (chatUri: string): Principal | 'nobody' | undefined => {
+    if (options.users === undefined) return undefined;
+    const turn = activeTurnOf(chatUri);
+    if (turn === undefined) return 'nobody';
+    const owner = senderOf(turn);
+    if (owner === undefined) return 'nobody';
+    // A wake a root turn set keeps the owner and not the connection, so the
+    // name is what says the host asked for this.
+    if (owner.startsWith('root:') || sentBy.get(turn)?.root === true) return undefined;
+    return principalFor(owner) ?? 'nobody';
+  };
+
+  /**
+   * Whether the call in one chat may do `grant` here.
+   *
+   * A call nobody is behind holds the read half and nothing else: an agent in a
+   * turn a host began for itself, one a rule nobody owns started, and one
+   * reached with no turn running at all still read the sessions and write none
+   * of them. A person this process has not met is answered the same way,
+   * because what they hold is not something this host can say - and a grant it
+   * cannot answer for is not one it hands out.
+   */
+  const mayDo = (chatUri: string, grant: Grant): boolean => {
+    const person = personOf(chatUri);
+    if (person === undefined) return true;
+    return person === 'nobody' ? reads(grant) : person.can(grant);
+  };
+
+  /**
+   * How a call that may not do `grant` is refused.
+   *
+   * The host's own words - `refusalReason`, the same sentence a client is told
+   * on the wire - said about the person the turn belongs to, and about the turn
+   * itself where nobody is behind the call, since there is no id to name.
+   */
+  const refusalOf = (chatUri: string, grant: Grant): string => {
+    const person = personOf(chatUri);
+    return person === undefined || person === 'nobody'
+      ? `this turn may not ${grant} here`
+      : refusalReason(person.id, grant);
+  };
+
+  /**
+   * The turn a tool is about to begin, written down as the calling turn's.
+   *
+   * A tool that begins a turn in another chat begins it for whoever sent the
+   * turn it is running in: the person who asked for the work is the person it
+   * is done for, and the turns of the session it makes ask that person's
+   * grants. The connection rides along where there is one, because a window is
+   * what can be asked something back and a person is not.
+   *
+   * Written before the turn begins and under the id it will carry, because the
+   * backend is free to run the whole turn before the call that started it
+   * returns - and a tool inside that turn would find nobody had sent it. A
+   * queued message is moved across to the turn it becomes by the same hand
+   * that moves every queued message's sender.
+   */
+  const remember = (chatUri: string, turnId: string): void => {
+    const turn = activeTurnOf(chatUri);
+    if (turn === undefined) return;
+    const owner = senderOf(turn);
+    if (owner !== undefined) senders.set(turnId, owner);
+    const sender = sentBy.get(turn);
+    if (sender !== undefined) sentBy.set(turnId, sender);
+  };
+
   const toolContext = (uri: string, chatUri: string, provider?: string): ToolCall => ({
     session: uri,
     chat: chatUri,
     ...providerOf(uri, provider),
     turn: () => activeTurnOf(chatUri),
-    sessions: () => allRows(),
+    may: (grant) => mayDo(chatUri, grant),
+    refusal: (grant) => refusalOf(chatUri, grant),
+    /*
+     * The catalogue, cut down to what this call's person may read.
+     *
+     * A listing is the one answer a tool gives about sessions it is not in, so
+     * it is the one place a session's own person is not enough: `list_sessions`
+     * answers the rows of whoever asked, and every other tool asks `may` about
+     * the grant it needs and is given the answer about one session rather than
+     * a list of them. Nothing is cut on a host with no users directory, nor for
+     * a call nobody is behind, which reads as it did.
+     */
+    sessions: async () => {
+      const rows = await allRows();
+      return mayDo(chatUri, 'session:read') ? rows : [];
+    },
     chats: (session) => {
       const held = sessions.get(heldAs(session));
       if (!held) return [];
@@ -1093,10 +1215,14 @@ export function createTooling(ctx: HostContext): Tooling {
         const busy = state.activeTurn !== undefined || state.steeringMessage !== undefined
           || (Array.isArray(state.queuedMessages) && state.queuedMessages.length > 0);
         if (busy) {
-          found.chat.queue(crypto.randomUUID(), text, undefined, from, undefined, turnInstructions(at));
+          const waiting = crypto.randomUUID();
+          remember(chatUri, waiting);
+          found.chat.queue(waiting, text, undefined, from, undefined, turnInstructions(at));
           return 'queued';
         }
-        found.chat.begin(crypto.randomUUID(), text, undefined, from, undefined, turnInstructions(at));
+        const started = crypto.randomUUID();
+        remember(chatUri, started);
+        found.chat.begin(started, text, undefined, from, undefined, turnInstructions(at));
         return 'sent';
       } finally {
         release();
@@ -1131,8 +1257,10 @@ export function createTooling(ctx: HostContext): Tooling {
       kept.setParent?.(idOf(made), idOf(uri));
       const lead = byChat.get(chatUriFor(made));
       if (lead === undefined) throw new Error(`${made} did not start`);
+      const firstTurn = crypto.randomUUID();
+      remember(chatUri, firstTurn);
       lead.chat.begin(
-        crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
+        firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
         undefined, turnInstructions(made),
       );
       return { session: made, chat: chatUriFor(made) };
@@ -1148,25 +1276,41 @@ export function createTooling(ctx: HostContext): Tooling {
       dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });
       // And the row: a client listing sessions reads a session's chats there.
       summaryMoved(at);
+      const firstTurn = crypto.randomUUID();
+      remember(chatUri, firstTurn);
       chat.begin(
-        crypto.randomUUID(), asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
+        firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
         undefined, turnInstructions(at),
       );
       return { chat: chatUri };
     },
     rename: (session, chat, title) => { renameChat(heldAs(session), chat, title); },
     /*
-     * A session deleted from inside another one, by whoever owns this session.
+     * A session deleted from inside another one, by whoever is asking.
      *
-     * The tool acts for the session it is running in, so that session's owner
-     * is the person asking - not the model, and not the connection that started
+     * The tool acts for a person and not for the model: the turn's own sender,
+     * which is who asked for this work, and never the connection that started
      * whichever session the name names. A session with no owner on this host
      * has no person behind it either, which is the same "nobody to name" the
      * owner's own reference has and the same answer: nobody is refused. An
      * owner whose principal this process has not met yet goes as the owner.
      */
     remove: async (session) => {
-      const by = forWhom(kept.owner(idOf(uri)));
+      /*
+       * Who is asking: the turn's person where a turn is running, and the
+       * session's own owner where none is.
+       *
+       * The turn says which of the people talking in one session asked, which
+       * is what makes a colleague's delete of somebody else's session the same
+       * refusal whichever session they asked from. With no turn behind the call
+       * the owner's own reference decides, as it did before a turn carried
+       * anybody - which a host with a users directory reaches only where the
+       * call was let through at all, since `session:write` is asked before this
+       * and a call nobody is behind does not hold it.
+       */
+      const turn = activeTurnOf(chatUri);
+      const asking = turn === undefined ? undefined : senderOf(turn);
+      const by = asking === undefined ? forWhom(kept.owner(idOf(uri))) : forWhom(asking);
       await removeSession(heldAs(session), by?.principal ?? by?.owner);
     },
     setWorkspace: (directory, isolation) => {
@@ -1189,7 +1333,19 @@ export function createTooling(ctx: HostContext): Tooling {
     },
     scheduleWake: (delaySeconds, prompt) => {
       const at = (options.now?.() ?? new Date()).getTime() + delaySeconds * 1000;
-      ctx.setWake(uri, chatUri, { at, prompt });
+      /*
+       * The person the wake will act as, kept with it.
+       *
+       * The turn this is set in is over long before the wake fires, and what
+       * it carries cannot be looked up afterwards: the connection and the
+       * sender are let go of when a turn ends. So the owner is written on the
+       * record, where it outlives the session sleeping and the daemon
+       * restarting, and the turn the wake begins carries it - a wake nobody
+       * set starts a turn with nobody behind it, and that turn writes nothing.
+       */
+      const turn = activeTurnOf(chatUri);
+      const sender = turn === undefined ? undefined : senderOf(turn);
+      ctx.setWake(uri, chatUri, { at, prompt, ...(sender === undefined ? {} : { sender }) });
       return new Date(at);
     },
     cancelWake: () => ctx.setWake(uri, chatUri, undefined),

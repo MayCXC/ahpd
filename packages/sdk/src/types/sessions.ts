@@ -105,8 +105,16 @@ export interface StoredChat {
    * The wake the agent asked this host for with `schedule_wakeup`: when it is
    * due, in milliseconds, and the prompt the turn it begins carries. One per
    * chat.
+   *
+   * `sender` is the person the turn the wake begins acts as, which is the
+   * person the turn that set the wake was sent by. Kept here rather than asked
+   * for when it fires, because the turn that set it is long over by then and
+   * its sender is let go of when it ends - and the wake outlives the session
+   * sleeping and the daemon restarting, which is what a record is for. Absent
+   * where nobody set it, and the turn it starts then carries nobody: under a
+   * users directory that turn may read and may not write.
    */
-  wake?: { at: number; prompt: string };
+  wake?: { at: number; prompt: string; sender?: Owner };
 }
 
 /**

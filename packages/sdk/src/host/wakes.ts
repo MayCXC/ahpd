@@ -17,7 +17,7 @@ export interface Wakes {
    * Set one chat's wake, replacing the one it held, or cancel it with
    * `undefined`. Answers whether the chat held a wake before.
    */
-  setWake(session: string, chat: string, wake: { at: number; prompt: string } | undefined): boolean;
+  setWake(session: string, chat: string, wake: StoredChat['wake']): boolean;
   /** Load the stored wakes, fire the ones already due, and arm the clock. */
   startWakes(): void;
   /** Stop the clock, for a host that is closing. */
@@ -28,7 +28,7 @@ export interface Wakes {
 const MAX_DELAY = 2_147_483_647;
 
 export function createWakes(ctx: HostContext): Wakes {
-  const { options, kept, byChat, sessions, owners, log } = ctx;
+  const { options, kept, byChat, sessions, owners, senders, log } = ctx;
   const now = (): number => (options.now?.() ?? new Date()).getTime();
   const arm = options.timer ?? ((fire, ms): { cancel(): void } => {
     const handle = setTimeout(fire, ms);
@@ -92,8 +92,27 @@ export function createWakes(ctx: HostContext): Wakes {
       const from: MessageFrom = { origin: { kind: 'agent' }, _meta: { 'vscode.chat.delegation': { sourceSession: woken.uri, sourceChat: chat } } };
       const provider = sessions.get(woken.uri)?.agent.provider ?? owners.get(woken.uri)?.provider ?? '';
       const turnId = crypto.randomUUID();
+      /*
+       * Whose turn this is, written down before it begins.
+       *
+       * The person who set the wake asked for this work, and the turn it
+       * begins is theirs: the turn carries them so its tools ask their grants,
+       * and a person who has since lost one is refused by that turn rather
+       * than by the one that set the wake. Written here rather than handed to
+       * `beginOrRun` because a wake keeps an owner and not a window - the
+       * connection that set it was let go of when its turn ended.
+       *
+       * Before the turn begins, because a backend is free to run it whole
+       * before `beginOrRun` returns, and a tool inside it would then find
+       * nobody had sent it.
+       */
+      const acting = wake.sender;
+      if (acting !== undefined) senders.set(turnId, acting);
       const refused = await ctx.beginOrRun(woken.chat, provider, turnId, wake.prompt, undefined, from, undefined, busy ? turnId : undefined);
-      if (refused !== undefined) throw new Error(refused);
+      if (refused !== undefined) {
+        if (acting !== undefined) senders.delete(turnId);
+        throw new Error(refused);
+      }
       // The wake it fired, and not one set again since.
       const still = stored(id, chat);
       if (still?.at === wake.at && still.prompt === wake.prompt) record(id, chat, undefined);
@@ -120,7 +139,7 @@ export function createWakes(ctx: HostContext): Wakes {
     rearm();
   };
 
-  const setWake = (session: string, chat: string, wake: { at: number; prompt: string } | undefined): boolean => {
+  const setWake = (session: string, chat: string, wake: StoredChat['wake']): boolean => {
     const id = idOf(session);
     if (wake !== undefined && kept.chats(id).every((one) => one.uri !== chat || one.closed === true)) {
       throw new Error(`${chat} is not a chat this host keeps a record of`);

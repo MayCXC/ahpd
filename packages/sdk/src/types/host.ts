@@ -5,7 +5,7 @@ import type { Agent, McpServer, ToolEffects } from './agent.js';
 import type { ToolsServers } from '../tools/server.js';
 import type { HostHandlers } from './events.js';
 import type { ResourceProvider, ResourceStore } from './resources.js';
-import type { Principal, Users } from './users.js';
+import type { Grant, Principal, Users } from './users.js';
 import type { TerminalStore } from './terminals.js';
 import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
@@ -708,11 +708,42 @@ export interface ToolCall {
   /** The turn the call is running in, when the chat has one running. */
   turn(): string | undefined;
   /**
+   * Whether this call may do that here.
+   *
+   * Always true on a host with no users directory, where there is nobody to
+   * ask and the tools act as they always did, and for a turn this host's own
+   * root connection sent - which `admit` refuses nothing either. Under a users
+   * directory it is the answer of the person who sent the turn the call runs
+   * in.
+   *
+   * A call nobody is behind holds the read half and nothing else, so an agent
+   * in a turn a host began for itself, one a rule nobody owns started, and one
+   * reached with no turn running at all still read the sessions and may not
+   * write one. That last is why no turn is not a hole: a window outlives the
+   * turn it sent and can reach a tool after that turn ended, and a turn is the
+   * only thing that carries a person.
+   */
+  may(grant: Grant): boolean;
+  /**
+   * The words a call that may not `grant` is refused with.
+   *
+   * The host's own refusal - `refusalReason`, the sentence a client is told on
+   * the wire - said about the person the turn belongs to, and about the turn
+   * itself where nobody is behind the call, since there is no id to name there.
+   * Asked only where `may` answered false, which under a users directory is the
+   * whole of a tool's refusal: a host with no users directory refuses nothing
+   * and so never says this.
+   */
+  refusal(grant: Grant): string;
+  /**
    * Every session this host knows, running or on disk, the calling one included.
    *
    * The catalogue's own rows, as `listSessions` answers them, so a tool says
    * about a session exactly what a client sees of it: status bits, activity,
    * directories, project, changes, and the `git` and `github` facts in `_meta`.
+   *
+   * Under a users directory only the rows the turn's person may read: the
+   * listing a tool answers is the listing its own session's person is shown.
    */
   sessions(): Promise<Summary[]>;
   /** The chats of a running session, the default first. Empty for one that is not running. */

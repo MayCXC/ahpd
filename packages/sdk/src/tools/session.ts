@@ -5,6 +5,7 @@ import { flag, optional, required, when } from '../toolinput.js';
 import type { HostTool, ToolCall } from '../types/host.js';
 import type { Summary } from '../types/catalog.js';
 import type { Bag } from '../types/common.js';
+import type { Grant } from '../types/users.js';
 
 /**
  * The tools an agent gets for the host it runs in, under VS Code's names.
@@ -265,6 +266,21 @@ const known = async (at: ToolCall, asked: string, tool: string): Promise<{ sessi
   return found;
 };
 
+/**
+ * Refuse a call the turn's person may not make here, in the host's own words.
+ *
+ * `ToolCall.refusal` is what a client is told on the wire when it is missing a
+ * grant - `refusalReason`, or the turn itself where nobody sent it - and a tool
+ * is refused the same way in the same sentence rather than in one of its own:
+ * a model that read "may not session:write here" is being told the same thing
+ * a window is, and one wording cannot drift from the other. A host with no
+ * users directory refuses nothing and this passes everything, which is what the
+ * tools did before there was anybody to ask.
+ */
+const allowed = (at: ToolCall, grant: Grant): void => {
+  if (!at.may(grant)) throw new Error(at.refusal(grant));
+};
+
 /** A model by id or by name, and the provider it belongs to. */
 const modelMeant = (at: ToolCall, asked: string | undefined, tool: string, provider?: string): { id: string; provider: string } | undefined => {
   if (asked === undefined) return undefined;
@@ -362,6 +378,11 @@ export const sessionTools = (): HostTool[] => [
       },
       annotations: { title: 'List Sessions', readOnlyHint: true, openWorldHint: false },
     },
+    /*
+     * No grant is asked for here, and none is needed: the catalogue a tool
+     * reads is already cut down to what this turn's person may read, so the
+     * answer is the person's own listing whatever they hold.
+     */
     run: async (input, at) => JSON.stringify({ sessions: filterSessions(await at.sessions(), input).map(serializeSession) }),
   },
   {
@@ -373,6 +394,7 @@ export const sessionTools = (): HostTool[] => [
       annotations: { title: 'Get Current Session', readOnlyHint: true, openWorldHint: false },
     },
     run: async (_input, at) => {
+      allowed(at, 'session:read');
       const row = await self(at);
       return JSON.stringify({
         session: at.session,
@@ -398,6 +420,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: (input, at) => {
       const tool = 'set_workspace';
+      allowed(at, 'session:write');
       if (at.turn() === undefined) throw new Error(`${tool} must run from an active chat turn.`);
       const folder = pathOf(required(input.workspaceFolder, 'workspaceFolder', tool));
       if (folder === undefined)
@@ -438,6 +461,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: async (input, at) => {
       const tool = 'create_session';
+      allowed(at, 'session:write');
       const relationship = required(input.relationship, 'relationship', tool);
       if (relationship !== 'currentSession' && relationship !== 'independent')
         throw new Error(`Invalid ${tool} input: relationship must be "currentSession" or "independent".`);
@@ -492,6 +516,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: async (input, at) => {
       const tool = 'create_chat';
+      allowed(at, 'session:write');
       const asked = optional(input.session, 'session', tool);
       const target = asked === undefined ? (await self(at)) : (await known(at, asked, tool)).session;
       const session = target?.resource ?? at.session;
@@ -546,6 +571,7 @@ export const sessionTools = (): HostTool[] => [
     deferLoading: true,
     run: async (input, at) => {
       const tool = 'rename_chat';
+      allowed(at, 'session:write');
       const title = titled(input.title, tool);
       const asked = optional(input.chat, 'chat', tool) ?? optional(input.session, 'session', tool);
       let session = at.session;
@@ -579,6 +605,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: async (input, at) => {
       const tool = 'send_message';
+      allowed(at, 'session:write');
       const message = required(input.message, 'message', tool);
       const found = await known(at, required(input.session, 'session', tool), tool);
       const chats = at.chats(found.session.resource);
@@ -607,6 +634,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: async (input, at) => {
       const tool = 'get_session_context';
+      allowed(at, 'session:read');
       const found = await known(at, required(input.session, 'session', tool), tool);
       const detail = optional(input.detail, 'detail', tool) ?? 'summary';
       if (!(detail in CAPS)) throw new Error(`Invalid ${tool} input: detail must be "summary", "digest" or "full".`);
@@ -641,6 +669,7 @@ export const sessionTools = (): HostTool[] => [
     },
     run: async (input, at) => {
       const tool = 'delete_session';
+      allowed(at, 'session:write');
       const found = await known(at, required(input.session, 'session', tool), tool);
       if (found.session.resource === at.session)
         throw new Error(`Invalid ${tool} input: refusing to delete the current session.`);
@@ -678,6 +707,12 @@ export const wakeupTool = (): HostTool => ({
   },
   run: (input, at) => {
     const tool = 'schedule_wakeup';
+    /*
+     * No grant is asked for, because this acts on the calling chat alone: a
+     * wake is this conversation's own next turn, and a person who may talk in
+     * a chat may arrange to talk in it later. The turn it begins is theirs,
+     * which is what the record it is written on carries.
+     */
     if (flag(input.stop, 'stop', tool) === true) return at.cancelWake() ? 'Wakeup cancelled.' : 'No wakeup was scheduled.';
     const delay = input.delaySeconds;
     if (typeof delay !== 'number' || !Number.isFinite(delay) || delay < WAKE_MIN_SECONDS || delay > WAKE_MAX_SECONDS)

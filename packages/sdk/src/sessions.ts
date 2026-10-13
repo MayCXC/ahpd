@@ -244,11 +244,15 @@ const nestedOf = (value: unknown): NestedRecord | undefined => {
 };
 
 /** A chat's wake as the file wrote it, or nothing where it is not one. */
-const wakeOf = (value: unknown): { wake: { at: number; prompt: string } } | undefined => {
+const wakeOf = (value: unknown): { wake: NonNullable<StoredChat['wake']> } | undefined => {
   if (typeof value !== 'object' || value === null) return undefined;
-  const held = value as { at?: unknown; prompt?: unknown };
+  const held = value as { at?: unknown; prompt?: unknown; sender?: unknown };
   if (typeof held.at !== 'number' || !Number.isFinite(held.at) || typeof held.prompt !== 'string') return undefined;
-  return { wake: { at: held.at, prompt: held.prompt } };
+  // The person is carried only where the file wrote one: a wake from before
+  // there was a person to write keeps none, which is the same nobody a wake
+  // the agent asked for outside a turn has.
+  const sender = ownerOf(held.sender);
+  return { wake: { at: held.at, prompt: held.prompt, ...(sender === undefined ? {} : { sender }) } };
 };
 
 /**

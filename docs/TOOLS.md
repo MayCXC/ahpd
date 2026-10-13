@@ -40,7 +40,7 @@ The nine session tools are the reference host's, by name and by schema, so a ski
 | `set_workspace` | Move the session to another directory, acted on when the turn ends rather than mid-turn |
 | `delete_session` | Delete a session this host runs, refused for the one it was called from |
 
-`set_workspace` is the one that cannot act when it is called: the agent is restarted in the new directory, and a restart mid-turn is a turn that never finishes, so the request waits for the turn to end. `delete_session` acts as the owner of the session it was called from, not as the model and not as whichever connection started the session it names.
+`set_workspace` is the one that cannot act when it is called: the agent is restarted in the new directory, and a restart mid-turn is a turn that never finishes, so the request waits for the turn to end. `delete_session` acts as the person whose turn it was called in, and as the owner of the session it was called from where no turn is running: it is never the model, and never whichever connection started the session it names.
 
 The three artifact tools write the session's `_meta['agentHost/sessionArtifacts']` through the session store: `add_artifact_or_reference`, `remove_artifact_or_reference` and `list_artifacts_and_references`. An artifact is a deliverable - an issue or a pull request being created or fixed, a result somebody will reopen - and a reference is an existing thing somebody will want to look at. Adding one promotes a matching reference and keeps its id, so a reference that turns out to be a deliverable does not become a second entry.
 
@@ -133,7 +133,24 @@ There is no `ahpd tools`: the set is the host's own, and a deployment changes it
 
 ## Grants
 
-What the host's own tools do is not gated by a grant, because a tool is reached from a turn and not from a socket: `send_message` from inside a session is the same operation `chat/turnStarted` is, arrived at from the model instead of the network, and what confines it is the session's own owner plus whatever a backend's policy asks on `effects`. Nothing is reachable from a tool that is not reachable from a client.
+A session tool is reached from a turn and not from a socket, and the turn says whose it is: under a users directory each one asks the grants of the person who sent that turn. A refusal is the host's own words, the sentence a client is told on the wire, naming that person: `reader may not session:write here`. Where nobody is behind the call there is no id to name, and the refusal is about the turn instead: `this turn may not session:write here`. `send_message` from inside a session is the same operation `chat/turnStarted` is, arrived at from the model instead of the network, so a person who may not send a turn may not send one this way either - and nothing is reachable from a tool that is not reachable from a client. A host with no users directory has nobody to ask, and its tools act as they always did.
+
+| Tool | Grant |
+| --- | --- |
+| `list_sessions` | None, because the listing is already cut to that person: `session:read` is what decides whether it answers the catalogue or nothing |
+| `get_current_session` | `session:read` |
+| `get_session_context` | `session:read` |
+| `set_workspace` | `session:write` |
+| `create_session` | `session:write` |
+| `create_chat` | `session:write` |
+| `rename_chat` | `session:write` |
+| `send_message` | `session:write` |
+| `delete_session` | `session:write`, and then the owner's own say: only the session's owner, or a person holding `session:*`, may delete one |
+| `schedule_wakeup` | None, because it acts on the calling chat alone |
+| `add_artifact_or_reference`, `remove_artifact_or_reference`, `list_artifacts_and_references` | None: they write the calling session's own record |
+| `ahp_resource`, `ahp_terminals` | None: they answer what the calling session may already reach |
+
+A call nobody is behind holds the read half alone: a turn this host began for itself, a turn a rule nobody owns started, a turn whose sender has not signed in since this process started, whose grants the host cannot name, and a call reached with no turn running at all, which is a window outliving the turn it sent. Each reads the sessions and is refused every write with `this turn may not session:write here`. A turn a session tool or a wake begins carries the person of the turn that began it, so a session opened by `create_session` acts as the person who asked for it and never as more.
 
 A client's tool is reported and answered over the wire like any other call.
 
@@ -143,7 +160,7 @@ A client's tool is reported and answered over the wire like any other call.
 | Confirm one, or answer a question a turn is waiting on | `chat:answer` |
 | Read a chat's turns | `chat:turns` |
 
-`member` holds `session:write`, which covers every chat operation in the write group, so it may answer a tool call without a `chat:` grant of its own - [SESSIONS.md](SESSIONS.md#grants).
+`member` holds `session:read` and `session:write`, so the session tools answer it, and it may answer a tool call without a `chat:` grant of its own, since `session:write` covers every chat operation in the write group - [SESSIONS.md](SESSIONS.md#grants). `guest` holds `session:read` and nothing else a session tool asks for, so it reads what is there and writes none of it; and because a chat's write group is its session's, a guest can never send a turn for a tool to run in.
 
 ## See also
 

@@ -36,6 +36,10 @@ const holding = (id: string, grants: readonly string[]): Principal => ({
     // `session:dispose` is one operation of the `session:write` group, which is
     // how an ordinary member reaches the command at all.
     || (grant === 'session:dispose' && grants.includes('session:write'))
+    // And a chat's group is its session's, which is how the same member says a
+    // turn - the one thing a case that wants a tool to carry a person has to be
+    // able to do.
+    || (grant.startsWith('chat:') && grants.includes('session:write'))
     // `session:*` is every operation on sessions, as an administrator's role
     // resolves it.
     || (grants.includes('session:*') && grant.startsWith('session:')),
@@ -89,9 +93,14 @@ const settle = async (times = 30): Promise<void> => {
  *
  * It also keeps the tools its last `create` was handed, because a session's
  * tools are bound per session and that is how a case calls one.
+ *
+ * `pace` is how long the echo backend takes between words. It is zero for every
+ * case that never runs a turn, and a whole number of milliseconds for the ones
+ * that do: a turn is what a tool call carries, and a turn that answered all at
+ * once would be over before the call was made.
  */
-function backend() {
-  const base = echo({ path: DIR, pace: 0 });
+function backend(pace = 0) {
+  const base = echo({ path: DIR, pace });
   const deleted: { id: string; directory: string | undefined }[] = [];
   let offered: BoundTool[] = [];
   const agent: Agent = {
@@ -115,8 +124,8 @@ function backend() {
 type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
 
 /** A host with people in it, and a signed-in client for each token. */
-async function serving(tokens: readonly string[]) {
-  const back = backend();
+async function serving(tokens: readonly string[], pace = 0) {
+  const back = backend(pace);
   const host = createHost({ path: DIR, agents: [back.agent], users: directory(), tools: hostTools() });
   const clients: Record<string, Client> = {};
   for (const token of tokens) clients[token] = await signedIn(host, token);
@@ -139,6 +148,24 @@ async function signedIn(host: ReturnType<typeof createHost>, token?: string): Pr
 
 const open = (client: Client, name: string): Promise<unknown> =>
   client.handle({ method: 'createSession', params: { channel: `ahp-session:/${name}`, provider: 'echo' } });
+
+/**
+ * A client says a turn has begun in one session, which is what a tool carries.
+ *
+ * A session tool acts as the person of the turn it runs in, so a case that
+ * wants a tool to act as somebody has to put that somebody in a turn. The turn
+ * is left running: the backend is paced, and the call is made while its words
+ * are still arriving. The channel is the session's rather than a chat's, which
+ * is how a client says something to a session without having asked for a chat.
+ */
+const saying = (client: Client, name: string, text: string): Promise<unknown> =>
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: `ahp-session:/${name}`,
+      action: { type: 'chat/turnStarted', turnId: crypto.randomUUID(), message: { text } },
+    },
+  });
 
 const dispose = (client: Client, name: string): Promise<unknown> =>
   client.handle({ method: 'disposeSession', params: { channel: `ahp-session:/${name}` } });
@@ -206,13 +233,17 @@ it('refuses nothing on a host with no users directory', async () => {
 });
 
 it('lets the delete_session tool delete a session its own owner made', async () => {
-  const { back, clients } = await serving(['ana']);
+  const { back, clients } = await serving(['ana'], 40);
   // Two of Ana's sessions: one runs the tools, one is the target. The one that
   // runs them starts last, because a backend is handed the tools of the session
   // it is starting and `delete_session` refuses to delete its own.
   await open(clients.ana!, 'doomed');
   await open(clients.ana!, 'runner');
   await settle();
+
+  // The call acts as the person of the turn it runs in, and the session's own
+  // owner is not asked instead: Ana has to be in a turn for her tool to be hers.
+  await saying(clients.ana!, 'runner', 'delete the other one now, please');
 
   const tools = back.tools();
   expect(await tools.delete_session?.run?.({ session: 'echo:/doomed' }))
@@ -222,12 +253,14 @@ it('lets the delete_session tool delete a session its own owner made', async () 
 });
 
 it('refuses the delete_session tool for a session its owner does not own', async () => {
-  const { back, clients } = await serving(['ana', 'bob']);
+  const { back, clients } = await serving(['ana', 'bob'], 40);
   // Ana's session is the target; Bob's is the one whose tools would run the
   // delete, so the tool acts for Bob and the target is not his.
   await open(clients.ana!, 'theirs');
   await open(clients.bob!, 'runner');
   await settle();
+
+  await saying(clients.bob!, 'runner', 'delete the other one now, please');
 
   const tools = back.tools();
   await expect(tools.delete_session?.run?.({ session: 'echo:/theirs' }))
@@ -235,10 +268,15 @@ it('refuses the delete_session tool for a session its owner does not own', async
 
   expect(back.deleted).toEqual([]);
 });
-it('refuses the delete_session tool for an owner this process has not met, on a session that is not theirs', async () => {
+
+it('refuses the delete_session tool with no turn running, whatever the record says', async () => {
   // Bob's session runs, but Bob has not signed in since the daemon started, so
   // this process knows his name as the owner and not what he holds. The store
   // says so: whoever starts `runner`, it is Bob's.
+  //
+  // None of that is reached. A call with no turn behind it is nobody's, and the
+  // record's owner is not asked at all: it reads and it writes nothing, which
+  // is what closes the door a window left open by outliving its turn.
   const store = memorySessions();
   const back = backend();
   const host = createHost({
@@ -256,6 +294,6 @@ it('refuses the delete_session tool for an owner this process has not met, on a 
 
   const tools = back.tools();
   await expect(tools.delete_session?.run?.({ session: 'echo:/theirs' }))
-    .rejects.toMatchObject({ message: "Only the session's owner can delete it." });
+    .rejects.toMatchObject({ message: 'this turn may not session:write here' });
   expect(back.deleted).toEqual([]);
 });
