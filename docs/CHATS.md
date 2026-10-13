@@ -83,7 +83,7 @@ There is no `ahpd chat`. A chat is driven over the protocol, on its own channel.
 | `createChat` | A second conversation in a session, or one forked or copied from an existing turn |
 | `disposeChat` | End one chat. The last one is refused: that is `disposeSession` |
 | `fetchTurns` | Older turns. The answer is empty and the page arrives as `chat/turnsLoaded` on the channel, so every watcher gets it |
-| `completions` | What a `/` offers in this session, and what an `@` path names |
+| `completions` | What a `/` offers in this session, what an `@` path names, and which other chats of it a `#` offers - a `#` on its way to `#chat:` offering the chats and the files both, and every other `#` a file alone |
 
 ## Grants
 

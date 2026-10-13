@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { echo } from '../../../examples/echo/agent.js';
 import { uriOf } from '../src/resources.js';
+import type { Start } from '../src/types/agent.js';
 import type { ComputerPort, MachineSource } from '../src/types/computers.js';
 import type { GitDir, Worktrees } from '../src/types/worktrees.js';
 import {
@@ -366,16 +367,211 @@ describe('completing a hash sign', () => {
     });
   });
 
-  it('answers nothing for `#chat:`, which is a chat and not a file', async () => {
-    const host = createHost({ path: REPO, agents: [claude({ paths: [REPO] })], ...machine() });
+  /*
+   * And `#chat:`, the one hash that is not a file.
+   *
+   * A chat of the session is what a person points a message at, and its title
+   * is what they pick it by - so what is checked here is the list, the filter
+   * and the attachment, and that the chat being typed in is not offered to
+   * itself.
+   */
+  type Item = {
+    insertText: string;
+    rangeStart: number;
+    rangeEnd: number;
+    attachment: { type: string; resource: string; label: string; endTurn?: string };
+  };
+  type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
+
+  /** What one completions call answers for a text, on a channel. */
+  const completing = async (client: Client, channel: string, text: string): Promise<Item[]> =>
+    (await client.handle({
+      method: 'completions',
+      params: { channel, kind: 'userMessage', text, offset: text.length },
+    }) as { items: Item[] }).items;
+
+  /** One turn of a chat, finished, under an id this test names. */
+  const spoken = async (client: Client, chat: string, turnId: string, text: string): Promise<void> => {
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: chat, action: { type: 'chat/turnStarted', turnId, message: { text } } },
+    });
+    await settle();
+    // What the CLI echoes, and then the end of the turn: this is what leaves
+    // the chat a completed turn for an attachment to be pinned to.
+    await emit({ type: 'user', session_id: 'sdk-1', uuid: `prompt-${turnId}`, message: { role: 'user', content: text } });
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+  };
+
+  /**
+   * A host whose every start is kept, so a worker can be opened on one.
+   *
+   * `Start.subagent` is the host's own way of opening a chat a tool started -
+   * the backend calls it while a tool call runs - so a case about workers has
+   * to hold the start the host handed over.
+   */
+  const holding = async () => {
+    const starts: Start[] = [];
+    const backend = claude({ paths: [REPO] });
+    const host = createHost({
+      path: REPO,
+      agents: [{ ...backend, create: (start: Start) => { starts.push(start); return backend.create(start); } }],
+      ...machine(),
+    });
     const client = host.accept(peer());
     await client.handle(hello(['0.9.0']));
+    return { client, starts };
+  };
+
+  /**
+   * A session with three chats, each titled by the message it opened with.
+   *
+   * A pause between the two, so the order they are offered in is the order they
+   * were last spoken to rather than a tie between two timestamps read in the
+   * same millisecond.
+   */
+  const chatty = async () => {
+    const { client } = await holding();
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/chats', provider: 'claude' } });
+    const opened = await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/chats' } }) as {
+      snapshot: { state: { defaultChat: string } };
+    };
+    await client.handle({
+      method: 'createChat',
+      params: { channel: 'ahp-session:/chats', chat: 'ahp-chat:/review', initialMessage: { text: 'Review the diff' } },
+    });
+    await settle();
+    await new Promise((r) => { setTimeout(r, 5); });
+    await client.handle({
+      method: 'createChat',
+      params: { channel: 'ahp-session:/chats', chat: 'ahp-chat:/plan', initialMessage: { text: 'Plan the work' } },
+    });
+    await settle();
+    return { client, handed: opened.snapshot.state.defaultChat };
+  };
+
+  it('offers the files beside the chats while the hash is still becoming one', async () => {
+    const { client } = await chatty();
+    /*
+     * A bare `#` is also the first keystroke of `#chat:`.
+     *
+     * VS Code fans one completions request out to every provider and a client
+     * shows the merged list, so a word that could still become `#chat:` is
+     * answered with the chats and the files both: whoever is about to type
+     * `chat:` was choosing a file a keystroke ago, and the list must not empty
+     * itself out under them. The chats come first, and the whole word is the
+     * range either way.
+     */
+    const both = await completing(client, 'ahp-session:/chats', 'look at #');
+    expect(both[0]?.attachment.type).toBe('chat');
+    expect(both.filter((one) => one.attachment.type === 'chat')).toHaveLength(2);
+    expect(both.filter((one) => one.attachment.type === 'resource').length).toBeGreaterThan(0);
+    expect(both.map((one) => [one.rangeStart, one.rangeEnd])).toEqual(both.map(() => [8, 9]));
+    // `#chat` with no colon is still a word on its way there, so it is still
+    // both lists.
+    const partway = await completing(client, 'ahp-session:/chats', 'look at #chat');
+    expect(partway.filter((one) => one.attachment.type === 'chat')).toHaveLength(2);
+
+    // Said whole, it is a chat and nothing else: a path that happened to begin
+    // with `chat:` is not what the word means, so no file is offered beside it.
+    const arrived = await completing(client, 'ahp-session:/chats', 'look at #chat:');
+    expect(arrived).toHaveLength(2);
+    expect(arrived.every((one) => one.attachment.type === 'chat')).toBe(true);
+  });
+
+  it('offers the session\'s other chats, and not the one being typed in', async () => {
+    const { client, handed } = await chatty();
+    const found = await completing(client, 'ahp-session:/chats', 'tell #chat:');
+
+    // Newest first, and neither the chat the session hands out nor the one the
+    // text is being typed in.
+    expect(found.map((one) => one.attachment.resource)).toEqual(['ahp-chat:/plan', 'ahp-chat:/review']);
+    // The whole `#chat:` token is replaced, so completing leaves no half of it
+    // behind, and the attachment names the chat by the title that was inserted.
+    expect(found[1]).toMatchObject({
+      insertText: '#chat:Review the diff ',
+      rangeStart: 5,
+      rangeEnd: 11,
+      attachment: { type: 'chat', resource: 'ahp-chat:/review', label: 'Review the diff' },
+    });
+
+    // Typed in one of those chats instead, the same list with that one taken
+    // out and the session's own chat added: which one is current is wherever
+    // the person is standing.
+    const other = await completing(client, 'ahp-chat:/review', 'tell #chat:');
+    expect(other.map((one) => one.attachment.resource)).toEqual(['ahp-chat:/plan', handed]);
+  });
+
+  it('offers only the chats whose title holds what was typed', async () => {
+    const { client } = await chatty();
+    const found = await completing(client, 'ahp-session:/chats', 'tell #chat:rev');
+    expect(found.map((one) => one.attachment.label)).toEqual(['Review the diff']);
+    // Case blind, as VS Code's filter is: `rev` finds `Review`.
+    const shouted = await completing(client, 'ahp-session:/chats', 'tell #chat:REV');
+    expect(shouted.map((one) => one.attachment.label)).toEqual(['Review the diff']);
+    // The range covers the filter as well as the prefix, so the word typed is
+    // replaced whole.
+    expect(found[0]).toMatchObject({ rangeStart: 5, rangeEnd: 14 });
+    expect(await completing(client, 'ahp-session:/chats', 'tell #chat:nothing')).toEqual([]);
+  });
+
+  it('does not offer a worker chat a tool started', async () => {
+    const { client, starts } = await holding();
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/chats', provider: 'claude' } });
+    await settle();
+    // A worker, opened by the backend on the start the host handed it, which is
+    // how a chat a tool started comes to exist at all.
+    const worker = starts.at(-1)?.subagent?.('toolu_task', { title: 'Explore', prompt: 'list the files' });
+    await settle();
+    expect(worker).toBeDefined();
+
+    // It is a chat of the session - the catalogue names it, so a client can
+    // open it - and it is still not one to attach: a tool made it, and it is
+    // read-only. The only row that is not the chat the session hands out, since
+    // this session has no other.
+    const session = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/chats' } }) as {
+      snapshot: { state: { defaultChat: string; chats: { resource: string; origin?: { kind?: string } }[] } };
+    }).snapshot.state;
+    const row = session.chats?.find((one) => one.resource !== session.defaultChat);
+    expect(row?.resource).toBeDefined();
+    expect(row?.origin?.kind).toBe('tool');
+
+    // Said for the word its own title is, too: the filter matches a chat nobody
+    // may attach, and the answer is nothing rather than the worker.
+    expect(await completing(client, 'ahp-session:/chats', 'tell #chat:Explore')).toEqual([]);
+  });
+
+  it('pins a chat to the last turn it finished, and offers one that has none', async () => {
+    const { client } = await holding();
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/chats', provider: 'claude' } });
+    await client.handle({ method: 'createChat', params: { channel: 'ahp-session:/chats', chat: 'ahp-chat:/review' } });
+    await settle();
+    await spoken(client, 'ahp-chat:/review', 't1', 'Review the diff');
+    // And a chat that has said nothing yet, which has no turn to pin.
+    await client.handle({ method: 'createChat', params: { channel: 'ahp-session:/chats', chat: 'ahp-chat:/blank' } });
+    await settle();
+
+    const found = await completing(client, 'ahp-session:/chats', 'tell #chat:');
+    expect(found.map((one) => one.attachment.resource)).toEqual(['ahp-chat:/blank', 'ahp-chat:/review']);
+    const review = found.find((one) => one.attachment.resource === 'ahp-chat:/review');
+    expect(review?.attachment).toMatchObject({ type: 'chat', label: 'Review the diff', endTurn: 't1' });
+    // Nothing rather than a key that says nothing: the protocol reads an absent
+    // `endTurn` as a chat whose whole transcript is meant, and a chat with no
+    // completed turn has no id to name.
+    const blank = found.find((one) => one.attachment.resource === 'ahp-chat:/blank');
+    expect(blank?.attachment).toEqual({ type: 'chat', resource: 'ahp-chat:/blank', label: 'New session' });
+  });
+
+  it('answers a chat token with nothing where there is no session', async () => {
+    const { client } = await holding();
     const found = await client.handle({
       method: 'completions',
       params: { channel: 'ahp-root://', kind: 'userMessage', text: 'tell #chat:', offset: 11 },
     }) as { items: unknown[] };
-    // Nothing rather than a file whose name happens to begin with `chat:`:
-    // a client handed one would attach the wrong thing and never know.
+    // Nothing rather than a file whose name happens to begin with `chat:`: a
+    // chat token is a chat asked for, and a channel with no session behind it
+    // has no chats to offer - a path would attach the wrong thing and never say
+    // so.
     expect(found.items).toEqual([]);
   });
 });

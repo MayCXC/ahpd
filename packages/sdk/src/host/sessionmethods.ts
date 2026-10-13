@@ -42,9 +42,10 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     forWhom, heldAs,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
     movable, movableMoved, openSession, openedBy, options, orderChats,
-    ownerFor, past, placedIn, presence, replayable, removeSession, retool, scoping, seeded,
+    ownerFor, past, placedIn, presence, replayable, removeSession, respell, retool, scoping, seeded,
     seenBy, sessionAdded, sessionChannel, sessionFor, sessionOfChat, sessionSchema, sessions, settle,
-    snapshotOf, spawn, subagentSummary, subagents, summaryMoved, unheld, waitingFor, watches, withSender,
+    snapshotOf, spawn, spellingOf, subagentSummary, subagents, summaryMoved, unheld, waitingFor, watches,
+    withSender,
   } = ctx;
 
   /**
@@ -66,6 +67,18 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
    * all, and reaching it is written to the log because the client cannot see it.
    */
   const PAGE_MOST = 1_000;
+
+  /**
+   * The most chats `#chat:` will offer in one answer.
+   *
+   * VS Code's `MAX_RESULTS`, unchanged: a person picking a chat is looking at a
+   * list in a box, and the newest twenty of a session's chats are the ones they
+   * are reaching for.
+   */
+  const CHAT_MOST = 20;
+
+  /** What a `#` says to introduce a chat reference, as VS Code spells it. */
+  const CHAT_PREFIX = 'chat:';
 
   /**
    * A pagination cursor, which is opaque by contract.
@@ -280,6 +293,34 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     return { session: into };
   };
 
+  /**
+   * A title on one line.
+   *
+   * Ported from VS Code's `sanitizeChatTitle`: the inserted `#chat:<title>`
+   * token and the attachment's `label` both stop being one token when a title
+   * carries a newline or a run of spaces, and neither is a difference the person
+   * reading the list can see.
+   */
+  const oneLine = (title: string): string => title.replace(/\s+/g, ' ').trim();
+
+  /**
+   * What a `#` token is asking a chat for, or nothing when it is a file.
+   *
+   * VS Code's `extractChatToken` answers this by walking back from the cursor;
+   * the walk is already done here - the pattern the caller matched found the
+   * token and its range - so what is left of the port is the same three answers
+   * on the text after the `#`: a filter once the word says `chat:`, an empty
+   * filter while the rest of it is still a prefix of `chat:` (`#`, `#ch`,
+   * `#chat`), and nothing at all otherwise, which leaves the word to the file
+   * list rather than answering a file to somebody reaching for a chat.
+   */
+  const chatFilter = (raw: string): string | undefined => {
+    const lower = raw.toLowerCase();
+    if (lower.startsWith(CHAT_PREFIX)) return raw.slice(CHAT_PREFIX.length);
+    if (CHAT_PREFIX.startsWith(lower)) return '';
+    return undefined;
+  };
+
   return {
     /**
      * A snapshot, and everything that happened while it was being taken.
@@ -437,8 +478,11 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      * Completions for the text a person is composing.
      *
      * Answers `/` with the commands available to the session, or the
-     * harness-wide list when it has none yet. `@` and `#` both mean a file,
-     * and both are answered with the same items.
+     * harness-wide list when it has none yet. Answers `#chat:` with the other
+     * chats of the session, and a `#` still on its way there - `#`, `#ch` -
+     * with those chats and then the files, because VS Code asks every provider
+     * at once and a client shows both. `@` and a `#` that cannot become
+     * `#chat:` are a file, and both are answered with the same items.
      */
     completions: async (params) => {
       if (String(params.kind ?? '') !== 'userMessage')
@@ -459,31 +503,32 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * The hash is VS Code's other spelling of "a file here", which its own
        * host answers from the same provider and with the same items as the
        * at-sign - so this answers both with one body, and the only thing the
-       * trigger changes is the character put back in front of the path.
+       * trigger changes is the character put back in front of the path. It is
+       * also how `#chat:` begins, which is not a file at all, so the hash is
+       * read first for that and answered with the session's chats.
        */
       const asked = /(?:^|\s)([@#])(\S*)$/.exec(before);
       if (asked) {
         const trigger = asked[1] ?? '@';
         const typed_ = asked[2] ?? '';
         const from = offset - typed_.length - 1;
-        /*
-         * `#chat:` is somebody reaching for a chat, which this host does not
-         * complete yet - a file whose name begins with it is not what the
-         * character means, and guessing one would answer the wrong question.
-         */
-        if (trigger === '#' && typed_.toLowerCase().startsWith('chat:')) return { items: [] };
         const asking = meantBy(String(params.channel ?? ''));
-        const chat_ = byChat.get(asking)?.chat
-          ?? (sessions.get(asking) ? leadOf(sessions.get(asking) as Held) : undefined);
-        // Relative to the session's own directory, which is what a person
-        // means by a path while talking to an agent working there.
-        const base = localPath(chat_?.workingDirectories()[0] ?? dir);
-        // Nothing rather than an error: this same command serves `/`,
-        // and a host with no filesystem still has commands to offer.
-        if (!options.resources) return { items: [] };
-        const paths = await options.resources.complete(typed_, base);
-        return {
-          items: paths.map((path) => ({
+        const here = byChat.get(asking);
+        const held_ = sessions.get(here?.uri ?? asking);
+        const chat_ = here?.chat ?? (held_ === undefined ? undefined : leadOf(held_));
+        /*
+         * The files the word names, which is what an at-sign and a hash both
+         * ask for - relative to the session's own directory, which is what a
+         * person means by a path while talking to an agent working there.
+         *
+         * Nothing rather than an error when there is no filesystem: this same
+         * command serves `/`, and a host with none still has commands to offer.
+         */
+        const files = async () => {
+          if (!options.resources) return [];
+          const base = localPath(chat_?.workingDirectories()[0] ?? dir);
+          const paths = await options.resources.complete(typed_, base);
+          return paths.map((path) => ({
             insertText: `${trigger}${path}`,
             rangeStart: from,
             rangeEnd: offset,
@@ -495,8 +540,107 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
               uri: uriOf(`${base}/${path}`.replace(/\/{2,}/g, '/')),
               label: path,
             },
-          })),
+          }));
         };
+        /*
+         * A hash reaching for a chat rather than a file.
+         *
+         * Answered with the chats of the session the channel names, or with
+         * none when the channel names no session. `chatFilter` above decides
+         * whether the word is a chat at all, and a hash that cannot become
+         * `#chat:` - `#src/` - is a file like any other.
+         */
+        const wanted = trigger === '#' ? chatFilter(typed_) : undefined;
+        /*
+         * Whether the word is still on its way to `chat:`, and so asks for a
+         * chat and a file at once.
+         *
+         * VS Code fans one completions request out to every provider and a
+         * client shows the items merged, so `#`, `#ch` and `#chat` are answered
+         * with the chats and the files both. Whoever is about to type `chat:`
+         * was choosing a file a keystroke ago, and the list must not empty
+         * itself out under them. Only a word that already says `chat:` is
+         * answered with chats alone - and a path that happens to begin with
+         * `chat:` is not what such a word means.
+         */
+        const partial = wanted !== undefined && !typed_.toLowerCase().startsWith(CHAT_PREFIX);
+        if (wanted !== undefined) {
+          if (held_ === undefined) return { items: partial ? await files() : [] };
+          /*
+           * Which chat is the one being typed in, so it is not offered to
+           * itself. A session channel is answered as the chat that session
+           * hands a client naming none, so the two spellings a client sends are
+           * one exclusion - which is what VS Code's `_canonicalChatId` does by
+           * folding them onto one value.
+           */
+          const current = here === undefined ? held_.defaultChat : asking;
+          /*
+           * The name this connection knows the session by, which is not always
+           * the one this host holds it under.
+           *
+           * A chat a client opened is its own name and comes back unchanged,
+           * but the session's default chat is derived from the session URI -
+           * and a client was told the one built from the name it created the
+           * session with. A resource naming the host's own spelling is a chat
+           * that client cannot open, so the list goes through the same
+           * respelling every action on this channel does.
+           */
+          const spelling = spellingOf(connection, asking);
+          // Case blind, on the title as it will be written: what a person reads
+          // in the list is what they can match, and an empty filter keeps all.
+          const filter = oneLine(wanted).toLowerCase();
+          const chats = [...held_.chats]
+            .filter(([uri, chat]) => {
+              if (uri === current) return false;
+              /*
+               * A chat a tool started is a worker - read-only, and not a
+               * conversation to attach. This host keeps a worker outside
+               * `held.chats` altogether, since a `LiveSubagent` has no `Session`
+               * of its own, so this cannot fire today. It is kept because the
+               * question is the one VS Code asks: a chat of this session
+               * carrying a tool's origin would be one to leave out.
+               */
+              const made = madeFrom.get(uri);
+              if (made !== undefined && made.kind === 'tool') return false;
+              return filter === '' || oneLine(chat.title()).toLowerCase().includes(filter);
+            })
+            // Newest first, as VS Code sorts them: the chat somebody means is
+            // almost always the one they were last in.
+            .sort(([, a], [, b]) => Date.parse(b.modifiedAt()) - Date.parse(a.modifiedAt()))
+            .slice(0, CHAT_MOST);
+          /*
+           * The chats first and the files after: a `#` still on its way to
+           * `chat:` asks for both, and the chat is the more specific answer.
+           */
+          return {
+            items: [...chats.map(([uri, chat]) => {
+              const title = oneLine(chat.title());
+              /*
+               * The last turn that finished, pinned now rather than when the
+               * message is sent: what gets attached is what the person saw when
+               * they picked the chat, and a turn run in it afterwards must not
+               * extend that. VS Code skips a chat with no completed turn; this
+               * host offers it with no `endTurn`, because the protocol's is
+               * optional and a chat worth pointing at is worth offering before
+               * it has said anything.
+               */
+              const last = chat.allTurns().at(-1) as Bag | undefined;
+              const endTurn = String(last?.id ?? '');
+              return {
+                insertText: `#chat:${title} `,
+                rangeStart: from,
+                rangeEnd: offset,
+                attachment: {
+                  type: 'chat',
+                  resource: spelling === undefined ? uri : respell(uri, spelling.held, spelling.asked),
+                  label: title,
+                  ...(endTurn === '' ? {} : { endTurn }),
+                },
+              };
+            }), ...(partial ? await files() : [])],
+          };
+        }
+        return { items: await files() };
       }
       // A slash at the start of a word, and nothing but word characters
       // since. A slash mid-sentence is a path, not a command.
