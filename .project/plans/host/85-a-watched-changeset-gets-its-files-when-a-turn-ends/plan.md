@@ -1,7 +1,7 @@
 ---
 title: A watched changeset gets its files when a turn ends
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -60,7 +60,7 @@ chat/turnComplete -> spawn.ts refreshFacts -> facts.ts readFacts -> changes.refr
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A turn's end pushes the files of a watched changeset](task-01-a-turns-end-pushes-the-files.md) | implemented | - |
+| [01 - A turn's end pushes the files of a watched changeset](task-01-a-turns-end-pushes-the-files.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -69,13 +69,13 @@ chat/turnComplete -> spawn.ts refreshFacts -> facts.ts readFacts -> changes.refr
 
 ## Resume state
 
-- **Done so far:** [task-01-a-turns-end-pushes-the-files.md](task-01-a-turns-end-pushes-the-files.md) implemented - `readFacts` pushes the files of every watched changeset, with three cases in `changes-refresh.test.ts`. Uncommitted, awaiting review.
-- **Next action:** the check by hand: in ahpw or VS Code, the Changes pane shows a turn's files when the turn ends.
+- **Done so far:** built 2026-10-13, see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** `readFacts` also runs when a session is subscribed (`snapshots.ts`) and for the catalogue (`catalogue.ts`). A push there is right too, because a watched channel holds an old list.
+- **Watch out for:** a session in a machine is not checked, see [implemented.md](implemented.md).
 
 ## Final verification checklist
 
-- [ ] A turn that writes a file ends with the new file on the watched changeset channel.
+- [x] A turn that writes a file ends with the new file on the watched changeset channel.
 - [ ] A session in a machine gets the same push after `bringBackOf`.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

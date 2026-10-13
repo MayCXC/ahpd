@@ -1,6 +1,6 @@
 ---
 title: A turn's end pushes the files of a watched changeset
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
@@ -39,7 +39,7 @@ The end of a turn is the main caller, so a watched Changes pane shows a turn's f
 
 ## Resume
 
-Built. `readFacts` now pushes the files of every watched changeset, so the end of a turn reaches a Changes pane without a refresh by hand.
+Done 2026-10-13, reviewed and checked by hand by Softov, commit `8831b833`. `readFacts` now pushes the files of every watched changeset, so the end of a turn reaches a Changes pane without a refresh by hand.
 
 ### What changed, file by file
 
