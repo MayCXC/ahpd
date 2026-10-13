@@ -137,10 +137,10 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The plugin serves several runtimes, and an id says which](task-01-several-runtimes-on-one-host.md) | done | - |
-| [02 - An ssh machine is listed from the options and answers over ssh](task-02-an-ssh-machine-is-listed-from-the-options.md) | todo | 01, 04 |
-| [03 - A session on an ssh machine runs nested over ssh](task-03-a-session-on-an-ssh-machine-runs-nested.md) | todo | 02, container 04 task 17 |
+| [02 - An ssh machine is listed from the options and answers over ssh](task-02-an-ssh-machine-is-listed-from-the-options.md) | done | 01, 04 |
+| [03 - A session on an ssh machine runs nested over ssh](task-03-a-session-on-an-ssh-machine-runs-nested.md) | done | 02, container 04 task 17 |
 | [04 - The ssh fixture and the tests](task-04-the-ssh-fixture-and-tests.md) | done | 01 |
-| [05 - A restart of this host leaves a nested session to resume](task-05-a-restart-leaves-a-nested-session-to-resume.md) | todo | 03 |
+| [05 - A restart of this host leaves a nested session to resume](task-05-a-restart-leaves-a-nested-session-to-resume.md) | done | 03 |
 | [06 - dev02, set up by hand, runs a session](task-06-dev02-runs-a-session.md) | todo | 04 |
 | [07 - Docs](task-07-docs.md) | todo | 06 |
 
@@ -153,8 +153,8 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 
 ## Resume state
 
-- **Done so far:** tasks 01 and 04, reviewed 2026-10-10; 02, 03, 05 and 07 are todo, and 06 is a run by hand on dev02; container 04 task 17, which 03 needs, is done.
-- **Next action:** [task-02-an-ssh-machine-is-listed-from-the-options.md](task-02-an-ssh-machine-is-listed-from-the-options.md), then 03, then 05, then 06 by hand, then 07.
+- **Done so far:** tasks 01 to 05 are done; 06 is a run by hand on dev02, and 07 waits on it. Four reads of Docker's record wait in [deferred.md](deferred.md).
+- **Next action:** [task-06-dev02-runs-a-session.md](task-06-dev02-runs-a-session.md) by hand, then task 07.
 - **Watch out for:** `ssh:dev02` is not a usable id, because `new URL('computer://ssh:dev02')` reads the colon as a port, so the separator is a dot; a policy matches a runtime with `computer: ["ssh.*"]`; a local docker name that holds a dot is refused at create; p8, p10 and p11 spell their ids through task 01's functions; container/04 tasks 11 (resume by id), 14 (the inner working directory), 15 (close waits for dispose) and 17 (a backend names its plugin) must land first, or a nested session on the box starts in a path the box does not have and never resumes; container/04 task 15 makes close wait for `disposeSession`, which task 05 here must not undo for a session that is ending because this host is stopping; claude/15 loads a plugin once with presets as variants, so the box's ahpd needs the same plugin options to serve a preset.
 
 ## Final verification checklist

@@ -1,6 +1,6 @@
 ---
 title: A session on an ssh machine runs nested over ssh
-status: todo
+status: done
 depends: [task-02-an-ssh-machine-is-listed-from-the-options.md]
 layer: "computer | sdk"
 refs:
@@ -39,3 +39,31 @@ refs:
 - `computer-ssh.test.ts`: an exec tool asked with a vault-named env value on an ssh machine is refused naming the need, and the value is in no argv.
 
 ## Resume
+
+- **Done** 2026-10-12 in git://dfbc5409, after review.
+- `ComputerPort.remote?(id)` is new, and `computersFor` keeps it by spreading the port, so nothing changed there.
+- The plugin answers `remote` as `made.runtimeFor(id)?.remote === true`, so only a runtime that calls itself off this host answers true.
+- `spawn.ts` nests a session when the backend says `runsNested` or the port says `remote(id)`.
+- The port is asked once, at the one place every road to a running backend passes.
+- `noVaultInline(id, named)` refuses a vault-named value for a machine off this host, and it names the variables rather than their values.
+- It is one function called from two roads: the port's `how` in `reach`, and the `exec` a tool runs a command through.
+- The plan says the refusal is one check in `how`.
+- A terminal reaches the box through the plugin's `exec`, which is not `how`, so the same check is called there too.
+- A value the operator wrote in the clear still goes inline, because the check reads the vault-named variables alone.
+- `nestedHost` sends an off-host start through `made.how` directly, and a start on this host through `reach` as before.
+- That off-host road reads no vault and passes no `env`, so a nested session in the box sends no secret, which the plan decided.
+- `ssh.ts` gained nothing: task 02 built `how` and `hostCommand` with the runtime, so this task's `UPDATE` of that file was already done.
+- `computer-ssh.test.ts` gained four cases: the remote string, the nested start, the `remote` answer and the refusal.
+- The first holds `cd <workdir> && env <quoted K=V> <quoted argv>` and holds that this host's path is in no argv.
+- The second holds `ahpd --stdio --plugin @ahpd/agent-cofold` with no env and no working directory.
+- The refusal case runs `computer_exec` on the box, and holds that the sentence names `BOX_TOKEN` and no value appears.
+- `nested-start.test.ts` gained one case: a fake port whose `remote` is true nests a backend that never declared `runsNested`.
+- The port is asked for the plugin that registered the backend, which is `@ahpd/agent-cofold`.
+- `pnpm -s typecheck`, `pnpm -s boundary`, `pnpm -s schema` and the gate suite pass, the last at 268 files and 4740 tests.
+- What is left: nothing of this task's Validation.
+- The Files line ranges moved with tasks 01 and 02: `types/computers.ts:118-143` is now 212-224, and `spawn.ts:332-334` is now 422-436.
+- `plugin.ts:648-662` is now 1379-1411, the two helpers this task added, with `reach` at 1443, `nestedHost` at 1461 and the port at 1566.
+- The end-to-end case task 04 deferred to "once task 03 lands" is in neither this task's Files, Steps nor Validation.
+- It is not built, and task 04 is closed with it waiting, so it belongs to whoever takes that case up.
+- `packages/sdk/test/fixtures/wire.jsonl` is dirty from the gate suite, at the endpoint line and 32 `ahpd.` `_meta` lines.
+- A restore is denied in this permission mode, so Softov restores it.
