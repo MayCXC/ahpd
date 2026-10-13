@@ -581,6 +581,41 @@ const choicesOf = (schema: Bag): Bag[] | undefined => {
   });
 };
 
+/** The option codex-acp adds to a question it marked open to an answer of its own. */
+const NONE = 'None of the above';
+
+/**
+ * The note field of each flagged question, by the question's own field name.
+ *
+ * The adapter takes a typed answer to a question it marked `isOther` in a
+ * second field beside the question's own: one marked `role: 'user_note'` that
+ * carries the id of the question it belongs to. The pair is found by that
+ * `questionId` rather than by the note field's name, because the adapter
+ * numbers the name when a question already has one - so a name ending `_note`
+ * is not what makes a field a note.
+ *
+ * A note field is one only when the question it names is a flagged one. A
+ * `user_note` naming anything else is left where it is, a question of its own.
+ */
+const notesOf = (properties: Bag): Map<string, string> => {
+  const flagged = new Set(Object.entries(properties)
+    .filter(([, one]) => bag(bag(bag(one)._meta).codex).isOther === true)
+    .map(([key]) => key));
+  const notes = new Map<string, string>();
+  for (const [key, one] of Object.entries(properties)) {
+    const codex = bag(bag(bag(one)._meta).codex);
+    if (codex.role !== 'user_note') continue;
+    const question = str(codex.questionId);
+    if (question === undefined || !flagged.has(question) || notes.has(question)) continue;
+    notes.set(question, key);
+  }
+  return notes;
+};
+
+/** Whether a question offers `None of the above`, which is what an unpicked one is answered with. */
+const offersNone = (schema: Bag): boolean =>
+  (choicesOf(schema) ?? []).some((one) => String(one.id) === NONE);
+
 /** The two ends of a bounded field, under the names a question draws them by. */
 const within = (schema: Bag, low: string, high: string): Bag => ({
   ...(typeof schema[low] === 'number' ? { min: schema[low] } : {}),
@@ -598,11 +633,23 @@ const questionOf = (key: string, schema: Bag, required: boolean): Bag => {
   };
   const choices = choicesOf(schema);
   if (choices !== undefined) {
+    /*
+     * A question Codex marked as open to an answer of its own.
+     *
+     * `isOther` is Codex's word for one of a question's answers being
+     * "something else", and its ACP adapter carries it on the field's own
+     * `_meta`, under the vendor prefix a `_meta` is namespaced by. A question
+     * asked that way takes a typed answer beside its options, which is what
+     * `allowFreeformInput` says; one without the flag is a question the server
+     * wrote a closed set of answers for, and a box offered over it would be
+     * this bridge deciding what that server accepts.
+     */
+    const freeform = bag(bag(schema._meta).codex).isOther === true ? { allowFreeformInput: true } : {};
     // A list is a question answered many times over, and the bounds the array
     // set are part of what is being asked.
     return schema.type === 'array'
-      ? { ...question, kind: 'multi-select', options: choices, ...within(schema, 'minItems', 'maxItems') }
-      : { ...question, kind: 'single-select', options: choices };
+      ? { ...question, kind: 'multi-select', options: choices, ...freeform, ...within(schema, 'minItems', 'maxItems') }
+      : { ...question, kind: 'single-select', options: choices, ...freeform };
   }
   const kind = str(schema.type);
   if (kind === 'number' || kind === 'integer') {
@@ -641,7 +688,9 @@ const questionOf = (key: string, schema: Bag, required: boolean): Bag => {
  * content handed to the server is keyed by, so nothing here renames one. A
  * field the schema lists in `required` is marked so, and one the server gave no
  * title or description for is asked under its own name, which is the only word
- * about it there is.
+ * about it there is. The note field a flagged question takes its typed answer
+ * in is the one field left out, because it is not a question but where one is
+ * answered - and drawn, it would ask the person the same thing twice.
  *
  * The schema arrives as whatever the server wrote, because ACP types a form's
  * `requestedSchema` only on the arm of the union that has one: a request that
@@ -650,9 +699,43 @@ const questionOf = (key: string, schema: Bag, required: boolean): Bag => {
 export function questionsFor(schema: unknown): Bag[] {
   const held = bag(schema);
   const required = new Set(strings(held.required));
-  return Object.entries(bag(held.properties))
+  const properties = bag(held.properties);
+  const folded = new Set(notesOf(properties).values());
+  return Object.entries(properties)
+    .filter(([key]) => !folded.has(key))
     .map(([key, one]) => questionOf(key, bag(one), required.has(key)));
 }
+
+/** Where a flagged question's typed answer goes: its note field, and whether it offers `None of the above`. */
+export type TypedAnswer = { note?: string; none: boolean };
+
+/**
+ * Where each question the server marked open to an answer of its own takes one.
+ *
+ * A question with a note field answers in two: the pick in the question's own
+ * field and the typed words in the note. One without a note field has only its
+ * own field, so the words go there. And a question offering `None of the above`
+ * is answered with that option when none of the others was picked, which is how
+ * the adapter reads a question typed into and never picked.
+ *
+ * Keyed by the question's own field, which is the name its answer arrives
+ * under. Read once where the question is asked and held on the entry the answer
+ * comes back through, beside the fields the form asked for: a drawn question is
+ * a closed object the protocol gives no room for this on, and an answer is the
+ * person's own words rather than anything about the field they were typed into.
+ */
+export const typedOf = (schema: unknown): Map<string, TypedAnswer> => {
+  const properties = bag(bag(schema).properties);
+  const notes = notesOf(properties);
+  const typed = new Map<string, TypedAnswer>();
+  for (const [key, one] of Object.entries(properties)) {
+    const held = bag(one);
+    if (bag(bag(held._meta).codex).isOther !== true) continue;
+    const note = notes.get(key);
+    typed.set(key, { ...(note === undefined ? {} : { note }), none: offersNone(held) });
+  }
+  return typed;
+};
 
 /**
  * One answer's own value, out of the two levels the protocol keeps it at.
@@ -671,19 +754,64 @@ const answerOf = (answer: unknown): string | number | boolean | string[] | undef
 };
 
 /**
+ * The words a person typed into a question's own box rather than picked.
+ *
+ * A selection keeps them beside its value, at the level the value is read at:
+ * `{ kind, value, freeformValues }` under the answer's `value`, or as the
+ * answer itself when a completion sent the value on its own. So both are read,
+ * the one a selection is drawn from first.
+ */
+const wordsOf = (answer: unknown): string[] => {
+  const held = bag(answer);
+  const typed = strings(bag(held.value).freeformValues);
+  return typed.length > 0 ? typed : strings(held.freeformValues);
+};
+
+/**
  * A person's answers, as the content the server is given.
  *
  * Keyed by the field its question was drawn for, so an answer to a key nothing
  * asked about is left out rather than sent under a name the schema does not
  * have, and a question nobody answered is absent rather than empty: a form with
  * a field left blank is a form with that field left blank.
+ *
+ * A question the server marked open to an answer of its own is the exception,
+ * and only when words were typed into it, which is what `typed` says about it.
+ * The words go in the question's note field where it has one and in the
+ * question's own field where it has none, which is the field the adapter reads
+ * them back from. What is left of that question is the pick, and a question
+ * picked in none of its options is answered `None of the above` where the
+ * server offered it - a note field carrying the words beside a question
+ * answered with nothing is one the server cannot read at all.
  */
-export function contentOf(answers: Bag, fields: Set<string>): Record<string, string | number | boolean | string[]> {
+export function contentOf(
+  answers: Bag,
+  fields: Set<string>,
+  typed: Map<string, TypedAnswer>,
+): Record<string, string | number | boolean | string[]> {
   const content: Record<string, string | number | boolean | string[]> = {};
   for (const [key, answer] of Object.entries(answers)) {
     if (!fields.has(key)) continue;
     const value = answerOf(answer);
-    if (value !== undefined) content[key] = value;
+    const folded = typed.get(key);
+    if (folded === undefined) {
+      if (value !== undefined) content[key] = value;
+      continue;
+    }
+    const unpicked = value === undefined || value === '' || (Array.isArray(value) && value.length === 0);
+    const words = wordsOf(answer);
+    const said = words.length === 0 ? undefined : words.join('\n');
+    // `None of the above` stands for a pick only beside typed words: a question
+    // left with neither is a question left blank, and stays absent.
+    const pick = unpicked ? (said !== undefined && folded.none ? NONE : undefined) : value;
+    // With no note field to carry them, the words are the answer itself.
+    if (folded.note === undefined) {
+      const answerTo = said ?? pick;
+      if (answerTo !== undefined) content[key] = answerTo;
+      continue;
+    }
+    if (said !== undefined) content[folded.note] = said;
+    if (pick !== undefined) content[key] = pick;
   }
   return content;
 }

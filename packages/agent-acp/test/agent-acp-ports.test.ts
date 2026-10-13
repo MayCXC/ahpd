@@ -558,6 +558,139 @@ it('answers a cancelled form with a cancel, which a decline is not', async () =>
     .toContain('elicit=cancel|branch=-|force=-|retries=-|mode=-|tags=-');
 });
 
+it('asks a question the server marked for an answer of one\'s own as one that takes a typed answer', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitother please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  const request = asked(p, chatUri);
+  expect(request?.id).toBe('call-other:elicitation');
+  /*
+   * The note field is not drawn as a question of its own. It is where the
+   * question it belongs to takes the words a person types, so drawing it would
+   * ask the same thing twice and answer the server under a name it never asked
+   * for. It is found by the `questionId` on it rather than by its own name,
+   * which the adapter numbers when a question already has a note field.
+   */
+  expect((request?.questions as { id?: string }[] | undefined)?.map((one) => one.id))
+    .toEqual(['branch', 'mode', 'size']);
+  // The two the server marked take an answer of one's own; the plain field
+  // beside them does not, since a box offered over a closed set of answers is
+  // this bridge deciding what that server accepts.
+  expect((request?.questions as { allowFreeformInput?: boolean }[] | undefined)
+    ?.map((one) => one.allowFreeformInput))
+    .toEqual([undefined, true, true]);
+  // And the question itself is unchanged but for the box: its own options, with
+  // the one the adapter appends for an answer that is none of them.
+  expect((request?.questions as unknown[])?.[1]).toEqual({
+    id: 'mode',
+    message: 'How careful to be',
+    required: false,
+    kind: 'single-select',
+    options: [
+      { id: 'fast', label: 'Fast' },
+      { id: 'careful', label: 'Careful' },
+      {
+        id: 'None of the above',
+        label: 'None of the above',
+        description: 'Provide a different answer in the note field.',
+      },
+    ],
+    allowFreeformInput: true,
+  });
+});
+
+it('sends the words a person typed to the note field, and the pick to the question', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitother please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-other:elicitation',
+        response: 'accept',
+        answers: {
+          branch: { state: 'submitted', value: { kind: 'text', value: 'release/one' } },
+          // A question picked and typed into both: the pick is the answer, and
+          // the words go where the adapter reads them back from rather than in
+          // the question's own field, which holds an option and nothing else.
+          mode: {
+            state: 'submitted',
+            value: { kind: 'selected', value: 'careful', freeformValues: ['make it slow'] },
+          },
+          size: { state: 'submitted', value: { kind: 'selected', value: 'large' } },
+        },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri))
+    .toContain('elicit=accept|branch=release/one|mode=careful|note=make it slow|size=large');
+});
+
+it('answers a question typed into and never picked with the option the adapter offered for it', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitother please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  /*
+   * What a person typing an answer of their own into a question they picked
+   * none of the options of sends: words and no pick at all.
+   *
+   * The question cannot go unanswered at its own field, so it is answered with
+   * the option the adapter wrote for exactly this. The question with no note
+   * field has nowhere to put the words but itself, which is where a server that
+   * wrote no note field reads its answer from.
+   */
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-other:elicitation',
+        response: 'accept',
+        answers: {
+          mode: { state: 'submitted', value: { kind: 'selected', value: '', freeformValues: ['make it slow'] } },
+          size: { state: 'submitted', value: { kind: 'selected', value: '', freeformValues: ['gigantic'] } },
+        },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri))
+    .toContain('elicit=accept|branch=-|mode=None of the above|note=make it slow|size=gigantic');
+});
+
+it('leaves out a question open to a typed answer that nobody picked or typed into', async () => {
+  const { client, peer: p, chatUri } = await talking();
+  begin(client, chatUri, 't1', 'elicitother please');
+  await until(() => types(p, chatUri).includes('chat/inputRequested'));
+
+  // A blank question is not one answered `None of the above`: that option
+  // stands for a pick only where words were typed beside it.
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/inputCompleted',
+        requestId: 'call-other:elicitation',
+        response: 'accept',
+        answers: {
+          mode: { state: 'submitted', value: { kind: 'selected', value: '' } },
+        },
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri)).toContain('elicit=accept|branch=-|mode=-|note=-|size=-');
+});
+
 it('asks a field of a type it has no control for as a text question', async () => {
   const { client, peer: p, chatUri } = await talking();
   begin(client, chatUri, 't1', 'elicitunknown please');

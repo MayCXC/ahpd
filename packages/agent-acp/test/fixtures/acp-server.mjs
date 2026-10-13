@@ -28,6 +28,10 @@
  * - text containing `elicitform` asks the client for a form on a call it is
  *   making, with one field of each shape the protocol names, and says what the
  *   answer carried back as `elicit=<action>|branch=…|force=…|retries=…|mode=…|tags=…`;
+ * - text containing `elicitother` asks for a form of the questions codex-acp
+ *   marks open to an answer of one's own - one with a note field beside it and
+ *   one without - beside a plain field, and says what the answer carried back
+ *   as `elicit=<action>|branch=…|mode=…|note=…|size=…`;
  * - text containing `eliciturl` asks for a page rather than a form, then says
  *   the page is complete by itself, and reports `elicit=<action>|content=<none|some>`;
  * - text containing `elicitcancel` asks a form and holds the prompt until
@@ -640,7 +644,7 @@ const promptScript = async (id, params) => {
   }
   const reaches = [
     'read', 'write', 'term', 'ask', 'hold', 'jump', 'paint', 'away', 'plan', 'name', 'shift', 'reauth', 'mrep=', 'mreq=',
-    'elicitform', 'eliciturl', 'elicitcancel', 'elicitunknown',
+    'elicitform', 'elicitother', 'eliciturl', 'elicitcancel', 'elicitunknown',
   ].some((one) => text.includes(one));
   if (!reaches) for (const update of scriptFor(text)) notify(update);
   if (text.includes('chatter')) {
@@ -937,6 +941,91 @@ const promptScript = async (id, params) => {
           + `|retries=${String(content.retries ?? '-')}`
           + `|mode=${String(content.mode ?? '-')}`
           + `|tags=${Array.isArray(content.tags) ? content.tags.join('+') : String(content.tags ?? '-')}`,
+      },
+    });
+  }
+
+  if (text.includes('elicitother')) {
+    /*
+     * A question that takes an answer of one's own, as codex-acp writes one.
+     *
+     * The adapter marks such a field `isOther` on its own `_meta`, adds
+     * `None of the above` to its options, and puts a note field beside it for
+     * the words the person types - and it numbers the note field's name when a
+     * question already has one, which is why `mode`'s is `mode_note2` rather
+     * than `mode_note`: a client that matched on the name would draw it as a
+     * question of its own, and one that matched on the `questionId` would not.
+     * `size` is marked and given no note field at all, and `branch` is a plain
+     * field, so a form with one of these in it is otherwise unchanged.
+     *
+     * The answer comes back as the content the server was handed, so a test
+     * reads where a typed answer went rather than taking the bridge's word for
+     * it.
+     */
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-other',
+      title: 'Pick a branch',
+      name: 'pick_branch',
+      status: 'in_progress',
+      rawInput: { branch: 'main' },
+    });
+    const answer = await ask('elicitation/create', {
+      mode: 'form',
+      sessionId: session,
+      toolCallId: 'call-other',
+      message: 'How should the branch be made?',
+      requestedSchema: {
+        type: 'object',
+        properties: {
+          branch: { type: 'string', title: 'Branch name', description: 'What to call it' },
+          mode: {
+            type: 'string',
+            description: 'How careful to be',
+            oneOf: [
+              { const: 'fast', title: 'Fast' },
+              { const: 'careful', title: 'Careful' },
+              {
+                const: 'None of the above',
+                title: 'None of the above',
+                description: 'Provide a different answer in the note field.',
+              },
+            ],
+            _meta: { codex: { isOther: true } },
+          },
+          mode_note2: {
+            type: 'string',
+            title: 'Additional answer or note',
+            _meta: { codex: { questionId: 'mode', role: 'user_note' } },
+          },
+          size: {
+            type: 'string',
+            description: 'How large',
+            oneOf: [
+              { const: 'small', title: 'Small' },
+              { const: 'large', title: 'Large' },
+              {
+                const: 'None of the above',
+                title: 'None of the above',
+                description: 'Provide a different answer in the note field.',
+              },
+            ],
+            _meta: { codex: { isOther: true } },
+          },
+        },
+        required: [],
+      },
+    });
+    const content = answer?.content ?? {};
+    notify({
+      sessionUpdate: 'agent_message_chunk',
+      content: {
+        type: 'text',
+        text: `elicit=${String(answer?.action ?? 'none')}`
+          + `|branch=${String(content.branch ?? '-')}`
+          + `|mode=${String(content.mode ?? '-')}`
+          + `|note=${String(content.mode_note2 ?? '-')}`
+          + `|size=${String(content.size ?? '-')}`,
       },
     });
   }

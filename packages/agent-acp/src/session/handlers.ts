@@ -24,7 +24,7 @@ import type {
 } from '@agentclientprotocol/sdk';
 import { str } from '@ahpd/sdk';
 import type { Bag, OpenedTerminal, Session } from '@ahpd/sdk';
-import { confirmationOptions, contentOf, mapUpdate, questionsFor } from '../mapping.js';
+import { confirmationOptions, contentOf, mapUpdate, questionsFor, typedOf } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
 import { bag } from './common.js';
 import type { SessionContext } from './context.js';
@@ -464,7 +464,11 @@ export function createHandlers(ctx: SessionContext): Handlers {
       ...(questions.length === 0 ? {} : { questions }),
     };
     const answered = new Promise<CreateElicitationResponse>((resolve) => {
-      elicitations.set(id, { fields: new Set(questions.map((one) => String(one.id))), settle: resolve });
+      elicitations.set(id, {
+        fields: new Set(questions.map((one) => String(one.id))),
+        typed: typedOf(held.requestedSchema),
+        settle: resolve,
+      });
     });
     emit('chat', { type: 'chat/inputRequested', request: asking });
     // The chat input entry, which is the one kind of input request that names
@@ -527,7 +531,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
     if (open === undefined) return false;
     elicitations.delete(requestId);
     emit('session', { type: 'session/inputNeededRemoved', id: requestId });
-    const content = contentOf(answers, open.fields);
+    const content = contentOf(answers, open.fields, open.typed);
     open.settle(accepted
       ? { action: 'accept', ...(Object.keys(content).length === 0 ? {} : { content }) }
       : { action: response === 'cancel' ? 'cancel' : 'decline' });

@@ -1,5 +1,6 @@
 import type { CreateElicitationResponse, PromptCapabilities, SessionModeState, SessionUpdate } from '@agentclientprotocol/sdk';
 import type { Bag, BoundTool, Emit, OpenedTerminal, Start } from '@ahpd/sdk';
+import type { TypedAnswer } from '../mapping.js';
 import type { AcpConnection, AcpOptions, AcpTurn, ConfirmationOption, PermissionAnswer, WatchedSession, WatchedTurn } from '../types.js';
 import type { ClientCalls } from './clientcalls.js';
 import type { Config } from './config.js';
@@ -169,6 +170,8 @@ export interface SessionContext extends Config, Handlers, Opening, Queue, Turn, 
   elicitations: Map<string, {
     /** The fields the server asked for, so an answer carries nothing else. */
     fields: Set<string>;
+    /** Where each question open to an answer of its own takes a typed one, and whether it offers `None of the above`. */
+    typed: Map<string, TypedAnswer>;
     settle(answer: CreateElicitationResponse): void;
   }>;
 }
