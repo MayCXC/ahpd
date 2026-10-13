@@ -382,6 +382,88 @@ it('moves the changeset when a tool call completes mid-turn', async () => {
   expect(channelActions(p, URI).some((one) => one.type === 'chat/turnComplete')).toBe(false);
 });
 
+/** An echo backend whose emitter the test holds, so it can end a turn itself. */
+const endable = (dir: string): { held: { emit?: Start['emit'] }; agent: Agent } => {
+  const held: { emit?: Start['emit'] } = {};
+  const base = echo({ path: dir });
+  return {
+    held,
+    agent: {
+      ...base,
+      create: (start: Start) => {
+        held.emit = start.emit;
+        return base.create(start);
+      },
+    },
+  };
+};
+
+/** Every action the peer was sent, whichever channel it was for. */
+const actionsOf = (p: ReturnType<typeof peer>): Record<string, unknown>[] => p.notes
+  .filter((n) => n.method === 'action')
+  .map((n) => (n.params as { action: Record<string, unknown> }).action);
+
+const carriedFiles = (p: ReturnType<typeof peer>, channel: string, name: string): boolean =>
+  channelActions(p, channel).some((one) => JSON.stringify(one.files ?? '').includes(name));
+
+it('pushes the files of a watched changeset when a turn ends', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  // A watch that never fires, so only what the host does can push these.
+  const { calls, source } = counting();
+  const { client, peer: p } = await open(dir, source, agent);
+  await client.handle({ method: 'subscribe', params: { channel: CHANGESET } });
+  await waitFor(() => calls.watches === 1 && calls.finished === calls.refresh);
+
+  // A tool call that wrote nothing: its own mid-turn re-read finds the same
+  // files, so the turn's end is the only thing left that can push these.
+  const before = calls.refresh;
+  held.emit?.('chat', { type: 'chat/toolCallComplete', turnId: 't1', toolCallId: 'c1', result: {} });
+  await waitFor(() => calls.finished >= before + 1);
+
+  writeFileSync(join(dir, 'from-turn.txt'), 'made\n');
+  held.emit?.('chat', { type: 'chat/turnComplete', turnId: 't1', duration: 1 });
+  await waitFor(() => carriedFiles(p, CHANGESET, 'from-turn.txt'));
+});
+
+it('pushes a turn\'s files when no tool call completed in the turn', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  const { calls, source } = counting();
+  const { client, peer: p } = await open(dir, source, agent);
+  await client.handle({ method: 'subscribe', params: { channel: CHANGESET } });
+  await waitFor(() => calls.watches === 1 && calls.finished === calls.refresh);
+
+  writeFileSync(join(dir, 'from-turn.txt'), 'made\n');
+  held.emit?.('chat', { type: 'chat/turnComplete', turnId: 't1', duration: 1 });
+  await waitFor(() => carriedFiles(p, CHANGESET, 'from-turn.txt'));
+  // No tool call ran, so the turn's end is the whole of what pushed these.
+  expect(actionsOf(p).some((one) => one.type === 'chat/toolCallComplete')).toBe(false);
+});
+
+it('runs no changeset read when a turn ends with no watched changeset', async () => {
+  const dir = repository();
+  const { held, agent } = endable(dir);
+  const base = gitChanges();
+  let reads = 0;
+  const changes: ChangesetSource = {
+    ...base,
+    // A re-read that always says the files moved, so a turn's end would push
+    // them if any channel were watching one.
+    refresh: async (at) => { await base.refresh?.(at); return true; },
+    state: async (at, session, scope) => { reads += 1; return await base.state(at, session, scope); },
+  };
+  const { client } = await open(dir, changes, agent);
+  await settle(8);
+  const before = reads;
+
+  writeFileSync(join(dir, 'unwatched.txt'), 'made\n');
+  held.emit?.('chat', { type: 'chat/turnComplete', turnId: 't1', duration: 1 });
+  await settle(20);
+  await new Promise((r) => { setTimeout(r, 200); });
+  expect(reads).toBe(before);
+});
+
 it('runs no git for tool calls or writes when no client watches the directory', async () => {
   const dir = repository();
   const held: { emit?: Start['emit'] } = {};

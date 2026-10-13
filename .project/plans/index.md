@@ -180,8 +180,9 @@ Reference: [00-host.md](host/00-host.md)
 | [83 p4 - A customization is switched for all sessions or a folder](host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | medium | built 2026-10-11 ([implemented.md](host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/implemented.md)); the VS Code check by hand remains | 83 | - |
 | [83 p5 - A chat is attached to a message](host/83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | low | active 2026-10-13; tasks 01-02 implemented, awaiting review | 83 p1 to p3 | - |
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-the-environment-of-agent-shells/plan.md) | medium | built 2026-10-11 ([implemented.md](host/84-the-operator-sets-the-environment-of-agent-shells/implemented.md)); the check by hand remains; ACP, cofold and pi deferred | - | ACP, cofold and pi shells |
+| [85 - A watched changeset gets its files when a turn ends](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/plan.md) | high | active 2026-10-13; task 01 implemented, awaiting review | - | - |
 
-Next free number in `host`: `85`.
+Next free number in `host`: `86`.
 
 ## claude
 

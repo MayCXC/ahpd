@@ -511,17 +511,30 @@ export function createFacts(ctx: HostContext): Facts {
     /*
      * And what it changed.
      *
-     * The catalogue entry rather than the changeset itself: the protocol has
-     * `session/changesetsChanged` carry the *list* a session offers, and a
-     * client that is watching one re-reads it from its own channel. Sending
-     * the files here would be the same answer from two places.
+     * The catalogue entry to the sessions here - the protocol has
+     * `session/changesetsChanged` carry the *list* a session offers - and then
+     * the files to each watched changeset of one, which is the same answer to a
+     * different question: the list says which changesets there are, and a
+     * watching client holds the files of one of them.
      */
-    const files = (options.changes?.refresh?.(dir) ?? Promise.resolve(false)).then((moved) => {
+    const files = (options.changes?.refresh?.(dir) ?? Promise.resolve(false)).then(async (moved) => {
       if (!moved) return false;
       for (const uri of inThere(dir)) {
         // Asked per session, because two of the scopes are the session's own.
         dispatch(uri, { type: 'session/changesetsChanged', changesets: catalogueOf(uri, dir) });
         ctx.summaryMoved(uri);
+      }
+      /*
+       * The files themselves, as `refreshWatched` sends them. A directory
+       * removed while this ran fails the reads that describe it, and the facts
+       * are still the facts, so a failure here is not a failed read - the
+       * answer below is whether the files moved.
+       */
+      try {
+        for (const uri of toldIn(dir)) await contentMoved(uri);
+      }
+      catch {
+        // Swallowed on purpose, for the reason above.
       }
       return true;
     }).catch(() => false);
