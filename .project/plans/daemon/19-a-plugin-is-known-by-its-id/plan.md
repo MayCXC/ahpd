@@ -83,11 +83,11 @@ ahpd plugin config|enable|disable <spec> -> pluginEntry(file, spec)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The loader gives every plugin its id, enabled or not](task-01-the-loader-gives-every-plugin-its-id.md) | implemented | - |
-| [02 - Root config keys each plugin by its id](task-02-root-config-keys-each-plugin-by-its-id.md) | implemented | 01 |
-| [03 - The plugin verbs and the listing take the id](task-03-the-plugin-verbs-take-the-id.md) | implemented | 01 |
-| [04 - `--plugin-option` names the id](task-04-plugin-option-names-the-id.md) | implemented | 01 |
-| [05 - The docs say a plugin is known by its id](task-05-docs.md) | implemented | 02, 03, 04 |
+| [01 - The loader gives every plugin its id, enabled or not](task-01-the-loader-gives-every-plugin-its-id.md) | done | - |
+| [02 - Root config keys each plugin by its id](task-02-root-config-keys-each-plugin-by-its-id.md) | done | 01 |
+| [03 - The plugin verbs and the listing take the id](task-03-the-plugin-verbs-take-the-id.md) | done | 01 |
+| [04 - `--plugin-option` names the id](task-04-plugin-option-names-the-id.md) | done | 01 |
+| [05 - The docs say a plugin is known by its id](task-05-docs.md) | done | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -98,8 +98,8 @@ ahpd plugin config|enable|disable <spec> -> pluginEntry(file, spec)
 
 ## Resume state
 
-- **Done so far:** every task, 01 to 05, implemented and awaiting review.
-- **Next action:** review; see [implemented.md](implemented.md).
+- **Done so far:** every task, 01 to 05, done. The three checks by hand passed on a second daemon 2026-10-13.
+- **Next action:** none. The served path with `--plugin` is [a problem](../../../problems/the-served-plugin-config-does-not-know-a-plugin-by-its-id.md).
 - **Open questions:** none.
 - **Watch out for:** `packages/computer/src/devcontainer.ts` has its own `nameOf` for the specs it hands a nested host; leave it on the spec. `plugin-secret-ref.test.ts` and `plugin-connect.test.ts` already use the loader's name in their labels.
 

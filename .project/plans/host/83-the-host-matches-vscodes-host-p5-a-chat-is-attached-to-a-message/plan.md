@@ -1,7 +1,7 @@
 ---
 title: A chat is attached to a message
 domain: host
-status: planned
+status: built
 priority: low
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -47,12 +47,12 @@ refs:
 
 | Task | Status | Depends |
 | --- | --- | --- |
-| [01 - `#chat:` completes a chat of the session](task-01-chat-completes-a-chat-of-the-session.md) | implemented | - |
-| [02 - A chat attachment gives the agent a pointer and an excerpt](task-02-a-chat-attachment-gives-a-pointer-and-an-excerpt.md) | implemented | 01 |
+| [01 - `#chat:` completes a chat of the session](task-01-chat-completes-a-chat-of-the-session.md) | done | - |
+| [02 - A chat attachment gives the agent a pointer and an excerpt](task-02-a-chat-attachment-gives-a-pointer-and-an-excerpt.md) | done | 01 |
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** build task 01, then task 02.
+- **Done so far:** built in `302a95b0` and `ee1570c4`, and checked on a second daemon 2026-10-13, see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a client may send a chat of another session; task 02 asks the sender's `session:read` on it. The text the model reads is English and is not localized, as in VS Code.

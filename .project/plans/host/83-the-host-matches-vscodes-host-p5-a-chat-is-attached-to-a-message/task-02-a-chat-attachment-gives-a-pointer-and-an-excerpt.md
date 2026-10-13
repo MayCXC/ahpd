@@ -1,6 +1,6 @@
 ---
 title: A chat attachment gives the agent a pointer and an excerpt
-status: implemented
+status: done
 depends:
   - task-01-chat-completes-a-chat-of-the-session.md
 layer: sdk

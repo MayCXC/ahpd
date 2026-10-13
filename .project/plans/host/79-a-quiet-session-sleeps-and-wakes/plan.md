@@ -1,7 +1,7 @@
 ---
 title: A quiet session sleeps, and wakes when something needs it
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
@@ -103,11 +103,11 @@ No decision files yet.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | implemented | - |
-| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | implemented | 01 |
-| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | implemented | 01 |
-| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | implemented | 02 |
-| [05 - Docs](task-05-docs.md) | implemented | 02, 03, 04 |
+| [01 - A quiet session sleeps](task-01-a-quiet-session-sleeps.md) | done | - |
+| [02 - A sleeping session wakes when something needs it](task-02-a-sleeping-session-wakes.md) | done | 01 |
+| [03 - A backend says what keeps it awake](task-03-a-backend-says-what-keeps-it-awake.md) | done | 01 |
+| [04 - An agent schedules its own wake](task-04-an-agent-schedules-its-own-wake.md) | done | 02 |
+| [05 - Docs](task-05-docs.md) | done | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -120,19 +120,18 @@ No decision files yet.
 
 ## Resume state
 
-- **Done so far:** tasks 01-05 implemented on `build/host-79`, and the findings of two reviews fixed, awaiting review. The gates pass.
-- **Not fixed:** `send_message` still begins its turn directly, not through `beginOrRun`. This was so before this plan.
-- **Next action:** review the build. Then run the Final verification checks that need a person. These are a real claude process exit, the count limit and archive with live agents, and a `schedule_wakeup` across a daemon restart.
-- **Open questions:** see the build report.
-- **Watch out for:** `teardown` and `Host.close` call `chat.close()` with no argument, which disposes a nested session's inner transcript; sleep passes `false`, as `restart` does. `pinnedChat`, `beginIn` and `childFinished` read `sessions` and must read the catalogue for a sleeping session. A turn that a wake begins is an ordinary turn, so it moves `quietSince` and the session stays awake for the next timeout.
+- **Done so far:** built, merged in `95e6a02`, and checked on a second daemon 2026-10-13, see [implemented.md](implemented.md).
+- **Next action:** none.
+- **Open questions:** none.
+- **Watch out for:** a sleep closes each chat with `'stopping'`, so a nested session keeps its inner transcript; only a removal passes `'dispose'`.
 
 ## Final verification checklist
 
-- [ ] With `sleepAfterMinutes: 1`, an idle claude session's process exits within two minutes, and a prompt to it answers with the earlier conversation.
+- [x] With `sleepAfterMinutes: 1`, an idle claude session's process exits within two minutes, and a prompt to it answers with the earlier conversation.
 - [ ] A session with a pending approval, a running background task, a CLI timer or a subscribed client is still live after the timeout.
-- [ ] With `sessionResidencyLimit: 2`, a third session that starts a turn makes the least recently used quiet one sleep.
-- [ ] Archiving a session closes its agent at once.
+- [x] With `sessionResidencyLimit: 2`, a third session that starts a turn makes the least recently used quiet one sleep.
+- [x] Archiving a session closes its agent at once.
 - [ ] A pinned automation and a child's `childFinished` each wake a sleeping session in place, and make no new session.
-- [ ] A `schedule_wakeup` survives a daemon restart and begins its turn when due.
-- [ ] `pnpm typecheck`, `pnpm boundary`, `npx vitest run` pass.
-- [ ] `plans/index.md` updated.
+- [x] A `schedule_wakeup` survives a daemon restart and begins its turn when due.
+- [x] `pnpm typecheck`, `pnpm boundary`, `npx vitest run` pass.
+- [x] `plans/index.md` updated.

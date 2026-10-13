@@ -1,6 +1,6 @@
 ---
 title: The loader gives every plugin its id, enabled or not
-status: implemented
+status: done
 depends: []
 layer: "server"
 refs:

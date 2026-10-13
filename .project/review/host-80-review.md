@@ -6,20 +6,25 @@ plans:
 
 # Review automations as Markdown files
 
-Tasks 01 to 06 are merged in `1b2b493` and `4e3756e`, and released in 0.11.0. An automation is now `<configDir>/automations/<id>.md`, with run state in `automations-state.json`. Your three automations converted on 2026-10-11, and they show in the clients.
+I ran the three checks on a second daemon on 2026-10-13. One passes, one fails because of an older bug, and one needs you for the ahpc form.
 
-## Read
+## Results
 
-- `packages/server/src/scheduled.ts`: the store, the folder watch, the conversion and the id rule `^[a-z0-9][a-z0-9-]{0,63}$`.
-- `packages/server/src/records.ts`: `RESERVED_COLLECTIONS` now names `automations`.
-- [implemented.md](../plans/host/80-an-automation-is-a-markdown-file/implemented.md): task 06 was added in review, for the UUID ids ahpc makes.
+1. **Pass.** I changed the message in an automation's `.md` file. The next run sent the new text, with no restart.
+2. **Fail.** A copy of an automation shows as a second automation, but it never fires while the original is on. Two automations with the same schedule run only the first. The cause is in the scheduler and is older than host/80, see [the problem](../problems/a-second-automation-due-at-the-same-minute-never-fires.md).
+3. **Pass over the protocol.** `createAutomation` with a UUID id keeps the id, and a file with that name appears. I did not use the ahpc form.
+
+## Also found in ahpc 0.8.0
+
+- `ahpc automation`, `ahpc logs` and `ahpc auth` are missing from `COMMANDS` in ahpc's `src/flags.ts`, so their flags are read wrong.
+- `ahpc automation show` and `ahpc automation runs` give wrong answers because of this.
 
 ## Check by hand
 
-1. Edit the message of an automation in its `.md` file. The next run sends the new text, with no restart.
-2. Copy an automation file to a new name. A second automation shows, with its own runs.
-3. Make an automation in ahpc. Its UUID id is kept, and a file with that name appears.
+1. In ahpc, make an automation with the form.
+2. Its file appears in `<configDir>/automations/`, named with its UUID.
 
 ## Reply
 
-Write "approved", or the findings. Approval sets tasks 01 to 06 to `done`.
+- Write "pass" or what you saw for the ahpc form.
+- Tell me if host/80 closes now, with the scheduler bug as its own plan. That is my recommendation, because the bug is not in the file store.

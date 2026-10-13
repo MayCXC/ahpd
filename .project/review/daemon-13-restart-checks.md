@@ -1,24 +1,32 @@
 ---
-title: Check ahpd restart by hand
+title: Check the Restart button in ahpapp
 plans:
   - plans/daemon/13-ahpd-restart/plan.md
 ---
 
-# Check `ahpd restart` by hand
+# Check the Restart button in ahpapp
 
-Tasks 01 to 04 are merged. These are the plan's checks by hand. Your daemon runs in the foreground, so use a second daemon on another port.
+I ran the daemon/13 checks on a second daemon on 2026-10-13. Steps 1, 2, 4 and 5 pass. `POST /api/restart` restarts the daemon, but only a person can click the button.
 
-## Steps
+## What passed
 
-1. Run `ahpd start --port 9399 --path /tmp/x`, then `ahpd restart`. A restart acts on the daemon `ahpd start` recorded, not on your foreground one. The new daemon serves `/tmp/x`, and a session you made before the restart resumes.
-2. Start a turn on that daemon. While it runs, `ahpd restart` names the session and does nothing. `ahpd restart --force` restarts.
-3. In ahpapp connected to that daemon, use Restart (`POST /api/restart`). The daemon restarts.
-4. Start with `--plugin-option @ahpd/agent-claude.workerStop=session`, then run `ahpd plugin config @ahpd/agent-claude workerStop turn`. It says the flag overrides the change.
-5. Stop the second daemon.
+- `ahpd start --port N --path <dir>`, then `ahpd restart`: the new daemon serves the same path, and a session made before resumes.
+- During a turn, `ahpd restart` names the busy session and does nothing. `--force` restarts.
+- `--plugin-option @ahpd/agent-claude.workerStop=session`, then `ahpd plugin config @ahpd/agent-claude workerStop worker`: it says the flag overrides the change.
 
-If you prefer, I can run steps 1, 2 and 4 on a second daemon myself. Step 3 needs ahpapp.
+## Fixes to the old steps
+
+- The value in step 4 was `turn`, which is not a `workerStop` value. It is `worker`, and the plugin must be in the config's `plugins`.
+- `POST /api/restart` works only on a daemon with `"http": true`.
+- The HTTP refusal during a turn says `--force`. For the API, it should say `force: true`.
+
+## Check by hand
+
+1. Start a second daemon with `"http": true`: `ahpd start --port 9399 --path /tmp/x`.
+2. Connect ahpapp to `ws://127.0.0.1:9399` and press Restart.
+3. The daemon restarts, and ahpapp connects again.
+4. Run `ahpd stop` for that daemon.
 
 ## Reply
 
-Write "pass" per step, or "run 1, 2 and 4 yourself".
-
+Write "pass" or what you saw. Pass closes daemon/13. Tell me if the refusal text should say `force: true`.

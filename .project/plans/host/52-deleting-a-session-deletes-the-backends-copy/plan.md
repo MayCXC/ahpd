@@ -86,7 +86,7 @@ disposeSession(channel) -> heldAs -> removeSession(uri) [held: teardown] -> agen
 | [02 - Claude deletes its transcript](task-02-claude-deletes-its-transcript.md) | done | 01 |
 | [03 - pi, cofold and ACP delete theirs](task-03-pi-cofold-and-acp-delete-theirs.md) | done | 01 |
 | [04 - The docs say a delete is permanent](task-04-docs.md) | done | 02, 03 |
-| [05 - Only the owner, or a session:* holder, may delete a session](task-05-only-the-owner-may-delete-a-session.md) | implemented | 01 |
+| [05 - Only the owner, or a session:* holder, may delete a session](task-05-only-the-owner-may-delete-a-session.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -96,7 +96,7 @@ disposeSession(channel) -> heldAs -> removeSession(uri) [held: teardown] -> agen
 
 ## Resume state
 
-- **Next action:** task 05 waits on Softov. Tasks 01-04 were reviewed against main on 2026-10-10 and are `done`.
+- **Next action:** none. Task 05 was checked live on a second daemon 2026-10-13, with an admin and a member.
 
 ## Final verification checklist
 

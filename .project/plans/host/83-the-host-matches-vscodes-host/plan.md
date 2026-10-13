@@ -71,18 +71,17 @@ VS Code window -> initialize and root state _meta -> it offers stop, delegation,
 | [p2 - A run is stopped, and runs are capped](../83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | built | host 80 |
 | [p3 - A remote session is taken and keeps its origin](../83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | built | p1 |
 | [p4 - A customization is switched for all sessions or a folder](../83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | built | - |
-| [p5 - A chat is attached to a message](../83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | draft | p1 |
+| [p5 - A chat is attached to a message](../83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 
 - FreeBSD has no `platform` value VS Code allows - ahpd leaves `platform` out there, and a request that names a platform skips a FreeBSD host.
 - ahpd cannot send a session to another host by itself - the window finds hosts and signs in to them, and hosts do not.
-- p5 has no tasks yet - it stays `draft` until p1 to p3 are built.
 
 ## Resume state
 
-- **Done so far:** p1 to p4 are built on 2026-10-11, and each waits on its check by hand.
-- **Next action:** write the tasks of p5.
+- **Done so far:** p1 to p4 are built on 2026-10-11, and each waits on its check by hand. p5 is built and checked 2026-10-13.
+- **Next action:** the checks by hand of p1 to p4.
 - **Open questions:** none.
 - **Watch out for:** p2 changes the automation store that host 80 moves to `packages/server`; start p2 from main after host 80 merges.
 

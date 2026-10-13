@@ -42,4 +42,11 @@ Measured 2026-10-09 on this machine's daemon (port 37537), built with tasks 01-0
 | Open descriptors | about 970 | 71 to 72 |
 
 RSS stayed under 1.5 GB, so no heap snapshot was taken.
-The dev-01 column (steps 1 and 2 of the review file) is still Softov's to measure.
+Measured 2026-10-13 on dev-01 (`ws://203.0.113.1:37537`), read-only, with the two probes as they are:
+
+| Measure | Before (2026-10-04) | After (2026-10-13) |
+| --- | --- | --- |
+| `listSessions` on dev-01 | 48.6 s for 162 sessions | 21 ms for 137 sessions; `initialize` at 75 ms |
+| `root/sessionSummaryChanged` on dev-01 | about 28 a second, with one build | 0 in 70 s, with no turn known to run |
+
+The flood number on dev-01 is not yet taken with one build running, which step 2 asks for.

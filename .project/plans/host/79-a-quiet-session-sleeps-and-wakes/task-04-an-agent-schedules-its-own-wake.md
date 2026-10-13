@@ -1,6 +1,6 @@
 ---
 title: An agent schedules its own wake
-status: implemented
+status: done
 depends: [task-02-a-sleeping-session-wakes.md]
 layer: "sdk host, sdk tools"
 refs:

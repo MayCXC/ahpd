@@ -71,8 +71,8 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A session tool acts as the person it works for](task-01-a-session-tool-acts-as-the-person-it-works-for.md) | implemented | - |
-| [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | implemented | - |
+| [01 - A session tool acts as the person it works for](task-01-a-session-tool-acts-as-the-person-it-works-for.md) | done | - |
+| [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | done | - |
 | [03 - The session tools can be switched off](task-03-the-session-tools-can-be-switched-off.md) | implemented | - |
 
 ## Risks and tradeoffs
@@ -83,6 +83,6 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 ## Resume state
 
 - **Done so far:** planned 2026-09-30; task files written 2026-10-13; all three tasks implemented 2026-10-13, none reviewed or set to done. Softov answered task 03's step 4 fork on 2026-10-13: split the option into two keys. The switch is a boolean and the provider list is an array, so the flag parser and the settings screen take one type each. Both parse from the command line: the switch as `--session-tools` with `--no-session-tools`, and the list as a repeatable `--session-tools-providers`.
-- **Next action:** review task 03, then commit the three together. `packages/sdk/test/fixtures/wire.jsonl` is left as the suite rewrote it.
+- **Next action:** tasks 01 and 02 passed live 2026-10-13 and are `done`. Task 03 failed live twice: [the config file switch](../../../problems/the-session-tools-switch-in-config-json-is-ignored.md) and [a live change in claude](../../../problems/a-live-tool-change-does-not-reach-a-running-claude-session.md).
 - **Open questions:** none.
 - **Watch out for:** the artifact tools and `ahp_terminals` are not session tools; this plan leaves them as they are.

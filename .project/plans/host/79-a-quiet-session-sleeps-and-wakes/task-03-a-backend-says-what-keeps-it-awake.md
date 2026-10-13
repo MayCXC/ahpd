@@ -1,6 +1,6 @@
 ---
 title: A backend says what keeps it awake
-status: implemented
+status: done
 depends: [task-01-a-quiet-session-sleeps.md]
 layer: "agent-claude, agent-acp"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: "`#chat:` completes a chat of the session"
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

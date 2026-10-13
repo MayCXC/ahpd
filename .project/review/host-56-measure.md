@@ -1,28 +1,27 @@
 ---
-title: Measure the catalogue and the daemon's memory
+title: Measure the summary events on dev-01 with a build running
 plans:
   - plans/host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/task-05-measured-before-and-after.md
 ---
 
-# Measure the catalogue and the daemon's memory
+# Measure the summary events on dev-01 with a build running
 
-Tasks 01 to 04 are merged. This measures them against the numbers in the plan's Reconnaissance (2026-10-04).
+Everything else in task 05 is measured. On 2026-10-13 I ran both probes against dev-01:
 
-The probes start no daemon. They connect to a daemon that is already running, and they only read. By default they use the host and token in `~/.config/ahpc/config.json`, which points at dev-01 now. `PROBE_HOST` and `PROBE_TOKEN` point them at another daemon, and your config stays as it is.
+- `listSessions` answered in 21 ms for 137 sessions. Before the change it took 48.6 s.
+- `probe-flood.mjs` saw 0 events in 70 s. That is not a result: the probe counts events while a build runs, and probably nothing ran on dev-01 then.
 
-Run every command in `/github/ahpapp/.scratch/org/`.
+I cannot start a build on dev-01, and an extra read to see what runs there was refused to me. So this one is yours.
 
-## dev-01
+## Steps
 
-dev-01 must run a daemon built with host/56 tasks 01 to 04, with one build running on it.
+1. On dev-01, start one build session, or wait for one that runs.
+2. While it runs, in `/github/ahpapp/.scratch/org/`, run `node probe-flood.mjs`. It takes 70 s.
 
-1. Run `node probe-dev01.mjs`. Note the `listSessions answered ... took N ms` line, with its `items` count.
-2. Run `node probe-flood.mjs`. It takes 70 s. Note the event count, and how many were the same as the one before.
+## What a pass looks like
 
-## Your local daemon
-
-Done on 2026-10-09; the numbers are in task 05's Resume. Memory stayed between 320 and 600 MB, so no heap snapshot is needed.
+Before the change, one build sent about 28 events a second. About 210 of 225 were the same as the one before. A pass is a few events a second at most, and few or none the same as the one before.
 
 ## Reply
 
-Paste the output of steps 1 and 2.
+Paste the output of step 2. Then I fill the dev-01 row in task 05 and close host/56.

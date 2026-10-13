@@ -1,6 +1,6 @@
 ---
 title: The docs say a plugin is known by its id
-status: implemented
+status: done
 depends: [task-02-root-config-keys-each-plugin-by-its-id.md, task-03-the-plugin-verbs-take-the-id.md, task-04-plugin-option-names-the-id.md]
 layer: "docs"
 refs:

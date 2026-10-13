@@ -1,6 +1,6 @@
 ---
 title: Only the owner, or a session:* holder, may delete a session
-status: implemented
+status: done
 depends: [task-01-the-host-deletes-through-the-agent.md]
 layer: "sdk"
 refs:
@@ -41,3 +41,5 @@ This is what task 01 made urgent rather than what it created. Before it, a delet
 ## Resume
 
 - Nothing outstanding. The refusal is `mayDispose` in `host/lifecycle.ts`.
+- Checked live 2026-10-13 on a second daemon.
+- A member's delete of an admin's session is refused with "Only the session's owner can delete it." (-32009), and the session stays. The member deletes their own session, and the admin deletes the member's. The 8 cases in `session-delete-owner.test.ts` pass.

@@ -1,6 +1,6 @@
 ---
 title: A session tool acts as the person it works for
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

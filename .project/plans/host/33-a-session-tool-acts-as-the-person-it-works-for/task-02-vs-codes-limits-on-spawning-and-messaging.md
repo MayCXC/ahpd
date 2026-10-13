@@ -1,6 +1,6 @@
 ---
 title: VS Code's limits on spawning and messaging
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
