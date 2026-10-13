@@ -31,7 +31,8 @@ A model credential never leaves this host.
 A session in a machine off this host reaches its model through this host's proxy, with a token made for that session and dropped with it, so the box holds nothing worth stealing once the session ends.
 A machine off this host is refused while placing it would send a key with it.
 
-This plan does not build the proxy's listener: a proxy listener plan does that, and this plan requires it; that plan does not exist yet.
+This plan does not build the proxy's listener.
+The listener is [proxy/02](../../proxy/02-the-proxy-serves-a-persons-model-calls/plan.md), which is built.
 
 ## Reconnaissance
 
@@ -57,7 +58,6 @@ session disposed -> token dropped
 
 - Nothing mints a credential for one session.
 - Nothing stops a provider key from reaching a machine on another box through an `EnvNeed`, a profile's `needs` or the plugin's `needs` option.
-- The proxy listener plan does not exist yet, and nothing here can be tested end to end until it does.
 - The SDK cannot build an ssh `-R` forward, and `NestedAsked` and `nestedHost` carry no env.
 - A refusal by variable name would refuse the session's own minted token, which goes under a provider key's name.
 
@@ -73,7 +73,7 @@ session disposed -> token dropped
 | --- | --- | --- |
 | A model credential is never sent to another box; a machine off this host reaches its model through this host's proxy with a per-session token | the parent's [deferred.md](../05-an-agent-in-a-machine/deferred.md), "A host proxy for model credentials", which waits for p8 to p10 | 01, 02 |
 | This plan goes before p8, p10, p11 and any p9 use beyond the by-hand test | (defaulted: a key would otherwise leave this host in each of them) | all |
-| The listener is the proxy listener plan's and is not planned here; tasks 01 and 02 are `blocked` until that plan exists | proxy 01's Resume state, "Next action: the proxy listener plan" | 01, 02 |
+| The listener is proxy/02's and is not planned here | proxy 01's Resume state, "Next action: the proxy listener plan" | 01, 02 |
 | The token is minted in the nested start, keyed by session URI, and dropped in `removeSession`, so a create, a resume, a chat restart and an automation each get one | (defaulted: the nested start is the one road every nested session takes) | 01 |
 | The proxy URL is the port's answer, `ComputerPort.proxyUrl?(id)`; `ssh.ts` opens the `-R` with `-o ExitOnForwardFailure=yes` | (defaulted: only the runtime knows how its machine is reached, and a forward that failed must fail the start) | 02 |
 | `nestedHost` takes `env` by name (p1), and `NestedAsked` gains `env` | (defaulted: the token is a credential and stays out of argv) | 02 |
@@ -96,8 +96,8 @@ session disposed -> token dropped
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A session placed off this host has a token of its own](task-01-a-session-has-a-token.md) | blocked | the proxy listener plan |
-| [02 - The inner host gets the proxy and the token instead of a key](task-02-the-inner-host-gets-the-proxy-and-the-token.md) | blocked | 01, the proxy listener plan |
+| [01 - A session placed off this host has a token of its own](task-01-a-session-has-a-token.md) | todo | p9 task 03 |
+| [02 - The inner host gets the proxy and the token instead of a key](task-02-the-inner-host-gets-the-proxy-and-the-token.md) | todo | 01, p9 task 03 |
 | [03 - A machine off this host is refused while a key would travel](task-03-a-key-never-travels.md) | todo | - |
 | [04 - Docs](task-04-docs.md) | todo | 02, 03 |
 
@@ -110,7 +110,7 @@ session disposed -> token dropped
 ## Resume state
 
 - **Done so far:** nothing; drafted 2026-10-02, planned 2026-10-03.
-- **Next action:** [task-03-a-key-never-travels.md](task-03-a-key-never-travels.md), which needs nothing else; tasks 01 and 02 stay `blocked` on [proxy/02](../../proxy/02-the-proxy-serves-a-persons-model-calls/plan.md), the proxy listener plan (planned 2026-10-06). Its task 02 names the hook task 01 fills: `ProxyOptions.whose?(token): SessionCaller | undefined`, `SessionCaller = { session, chat?, turn?, owner?, principal?, scope? }`, asked after the deployment token and before `users.verify`. The proxy URL is the API's address under `/v1`, served only while `http` is on, and the token is accepted as `x-api-key` or `Authorization: Bearer`. Proxy/02 accepts a loopback `Host` at any port, so the `-R` forward is answered, and by default checks and records a session's calls with `source: 'proxy'`, linked by session, chat and turn, unless `proxy.sessionCalls` is `skip`; `whose` should answer the running chat and turn when it knows them.
+- **Next action:** [task-03-a-key-never-travels.md](task-03-a-key-never-travels.md); tasks 01 and 02 need [proxy/02](../../proxy/02-the-proxy-serves-a-persons-model-calls/plan.md), the proxy listener plan, which is built; every task waits on `remote(id)` from p9 task 03. Its task 02 names the hook task 01 fills: `ProxyOptions.whose?(token): SessionCaller | undefined`, `SessionCaller = { session, chat?, turn?, owner?, principal?, scope? }`, asked after the deployment token and before `users.verify`. The proxy URL is the API's address under `/v1`, served only while `http` is on, and the token is accepted as `x-api-key` or `Authorization: Bearer`. Proxy/02 accepts a loopback `Host` at any port, so the `-R` forward is answered, and by default checks and records a session's calls with `source: 'proxy'`, linked by session, chat and turn, unless `proxy.sessionCalls` is `skip`; `whose` should answer the running chat and turn when it knows them.
 - **Open question (ask before task 02):** decision `a-nested-host-is-configured-by-the-machine-profile-only` says the inner host takes nothing from the outer one, and handing it the token and URL per session contradicts it - (a) the outer host may send a per-session env limited to the token and the proxy URL, with a new decision superseding that one, or (b) the token is a profile need with `role: 'key'` that the machine maker fills, and the decision stands?
 - **Open question (ask before task 02):** the `-R` forward needs a port on the remote box - (a) a random port, retried on `ExitOnForwardFailure`, or (b) a remote unix socket forwarded with `-R`, and a loopback relay on the box that turns it into the URL?
 - **Watch out for:** container/04 task 17 and p9 must land first; claude/16 makes a preset's `env` `secretAtUse`, which task 03's per-agent refusal reads; do not plan or build the listener here, it is proxy/02's; nothing under `plans/proxy/` is this plan's to change; p9's by-hand test gives dev02 its own key by hand, which is the operator's choice and not a key this host sent.

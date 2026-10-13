@@ -1,6 +1,6 @@
 ---
 title: A session placed off this host has a token of its own
-status: blocked
+status: todo
 depends: []
 layer: "sdk"
 refs:

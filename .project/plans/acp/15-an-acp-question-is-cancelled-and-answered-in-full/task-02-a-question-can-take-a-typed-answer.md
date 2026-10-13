@@ -1,6 +1,6 @@
 ---
 title: A question can take a typed answer
-status: blocked
+status: todo
 depends: []
 layer: "packages/agent-acp"
 refs:
@@ -12,24 +12,36 @@ refs:
 
 A select question whose field has `_meta.codex.isOther` set to true has `allowFreeformInput: true`.
 A person can then type an answer that is not one of the options.
+The typed words reach the server in the field Codex reads them from.
 
 ## Files
 
-- `UPDATE: packages/agent-acp/src/mapping.ts:591-634` - read the flag on a select question.
+- `UPDATE: packages/agent-acp/src/mapping.ts:591-634` - read the flag on a select question, and leave out the note field that belongs to it.
+- `UPDATE: packages/agent-acp/src/mapping.ts:668-690` - `contentOf` puts a typed answer in the note field, or in the question's own field when there is no note field.
+- `UPDATE: packages/agent-acp/test/fixtures/acp-server.mjs` - an `elicitother` script with the adapter's note field.
 - `UPDATE: packages/agent-acp/test/agent-acp-ports.test.ts` - the cases below.
 
 ## Steps
 
-1. Find where Codex's ACP adapter puts `isOther` in an elicitation schema, and note the source in Resume.
-2. Stop and ask Softov if the adapter does not send it.
-3. Set `allowFreeformInput: true` on a single-select or multi-select question when the field's flag is true.
-4. Leave every other question as it is.
+1. Take the flag read from `git://1248cb6b` on branch `held/acp15-t02`.
+2. Find a note field by `_meta.codex.role` equal to `user_note` and its `_meta.codex.questionId`.
+3. Do not match the note field by the `_note` suffix, because codex-acp 2.2.2 can add a number to it.
+4. Leave out the note field as a question when its `questionId` names a select question with the flag.
+5. Put the typed words of a `freeformValues` answer in that note field.
+6. Set the question's own field to the option the person picked.
+7. Set the question's own field to `None of the above` when the person picked nothing and that option exists.
+8. Put the typed words in the question's own field when no note field belongs to it.
+9. Leave every other question and answer as it is.
 
 ## Validation
 
 - A field with the flag gives a question with `allowFreeformInput: true`.
 - A field without it gives no `allowFreeformInput`.
-- `pnpm exec vitest run packages/agent-acp` passes.
+- The note field of a flagged question is not drawn as a question.
+- A typed answer arrives as `content[<id>_note]`, and `content[<id>]` holds the pick or `None of the above`.
+- A note field with a number after `_note` is found by its `questionId`.
+- A flagged field with no note field gets the typed words as `content[<id>]`.
+- `pnpm -s schema` and then `pnpm exec vitest run packages/agent-acp` pass.
 
 ## Resume
 
@@ -57,4 +69,7 @@ That leaves two things undecided, and neither is in this task's Files or Steps. 
 
 One caveat on the evidence: the `_meta` shape above is read from the installed codex-acp 1.13.1, and the registry's `latest` is 2.2.2, so a person running the published one is running a build whose elicitation code this task did not read. The `_meta.codex.isOther` key and the property-level placement are the plan's own locked decision and are implemented as written; a bump to 2.2.2 should be checked against the same two line ranges.
 
-The review held this task back from main: a typed answer is offered but not sent. The work is on branch `held/acp15-t02`.
+The review held this task back from main: a typed answer is offered but not sent. The work is on branch `held/acp15-t02`; its commit `git://1248cb6b` holds only the `mapping.ts` change, and the fixture and test changes are not on it.
+
+Softov answered on 2026-10-12: the typed answer goes in the note field.
+The note field is not drawn as a question of its own. codex-acp 2.2.2 was checked against the same code. For a client that does not send `_meta.jetbrains.air`, it builds the same schema and reads the same answer as 1.13.1. It names the note field `<id>_note<n>` when `<id>_note` is taken, so the note field is found by `questionId`. A JetBrains Air client gets no `None of the above` option and may send typed words in `content[<id>]`; this bridge does not announce itself as that client.

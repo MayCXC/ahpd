@@ -1,6 +1,6 @@
 ---
 title: The inner host gets the proxy's URL and the token instead of a key
-status: blocked
+status: todo
 depends: [task-01-a-session-has-a-token.md]
 layer: "sdk | computer"
 refs:

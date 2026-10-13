@@ -173,7 +173,7 @@ Reference: [00-host.md](host/00-host.md)
 | [81 p3 - Usage is read through commands](host/81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/implemented.md)) | 81 p1 | - |
 | [81 p4 - Computers are a channel and commands](host/81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-host-records-get-channels-and-commands-p4-computers-are-a-channel/implemented.md)) | 81 p1, 81 p2 | - |
 | [82 - A file or the whole changeset is staged, unstaged, discarded or committed](host/82-a-file-or-the-whole-changeset-is-staged-discarded-or-committed/plan.md) | medium | built 2026-10-11 ([implemented.md](host/82-a-file-or-the-whole-changeset-is-staged-discarded-or-committed/implemented.md)) | - | ahpc screen/11 |
-| [83 - The host offers what VS Code's own host offers](host/83-the-host-matches-vscodes-host/plan.md) | high | planned 2026-10-11; p1 to p4 planned, p5 draft until p1 to p3 are built | - | VS Code window parity |
+| [83 - The host offers what VS Code's own host offers](host/83-the-host-matches-vscodes-host/plan.md) | high | active 2026-10-11; p1 to p4 built, p5 draft | - | VS Code window parity |
 | [83 p1 - The host describes itself as VS Code's host does](host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/implemented.md)); the VS Code check by hand remains | 83 | 83 p3, 83 p5 |
 | [83 p2 - A run is stopped, and runs are capped](host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/implemented.md)); the VS Code check by hand remains | 83, host 80 | - |
 | [83 p3 - A remote session is taken and keeps its origin](host/83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/implemented.md)); the VS Code check by hand remains; ACP, cofold and pi deferred | 83 p1 | - |
@@ -323,7 +323,7 @@ Reference: [00-container.md](container/00-container.md)
 | [05 p9 - An ssh machine runs a nested host](container/05-an-agent-in-a-machine-p9-an-ssh-machine-runs-a-nested-host/plan.md) | medium | active 2026-10-10; tasks 01 and 04 done; 02, 03, 05 todo, 06 by hand, 07 waits on 06 | container 04 (tasks 11, 14, 15, 17) | 05 p10 |
 | [05 p10 - A host joins another, which lists it as a computer and relays its sessions](container/05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | medium | planned 2026-10-03; tasks 01-06 todo | container 05 p9, container 05 p12, daemon 13 | - |
 | [05 p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | medium | planned 2026-10-03; tasks 01-07 todo | container 05 p9, container 05 p12, container 05 p8, container 05 p3, container 05 p5 | - |
-| [05 p12 - A machine off this host reaches its models through this host's proxy](container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | high | planned 2026-10-03; tasks 01, 02 blocked on proxy 02 (planned 2026-10-06, its task 02 names the `whose` hook); 03, 04 todo | container 05 p9, proxy 01, claude 16, proxy 02 | - |
+| [05 p12 - A machine off this host reaches its models through this host's proxy](container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | high | planned 2026-10-03; tasks 01-04 todo; proxy 02 is built; task 03 waits on p9 task 03 | container 05 p9, proxy 01, claude 16, proxy 02 | - |
 
 Next free number in `container`: `06`.
 
@@ -375,7 +375,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [12 - The bridge is on the current SDK entry, and lists sessions properly](acp/12-the-bridge-is-on-the-current-sdk/plan.md) | low | built 2026-10-02 ([implemented.md](acp/12-the-bridge-is-on-the-current-sdk/implemented.md)) | acp 01 | - |
 | [13 - session.ts is split into one file per area](acp/13-session-is-split-by-area/plan.md) | high | built 2026-10-07 ([implemented.md](acp/13-session-is-split-by-area/implemented.md)) | host 52 | - |
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
-| [15 - An ACP question is cancelled and answered in full](acp/15-an-acp-question-is-cancelled-and-answered-in-full/plan.md) | medium | active 2026-10-11; task 01 done, task 02 blocked on the answer path | - | - |
+| [15 - An ACP question is cancelled and answered in full](acp/15-an-acp-question-is-cancelled-and-answered-in-full/plan.md) | medium | active 2026-10-11; task 01 done, task 02 todo | - | - |
 
 Next free number in `acp`: `16`.
 

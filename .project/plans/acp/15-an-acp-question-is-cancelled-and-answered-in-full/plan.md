@@ -46,6 +46,7 @@ elicitation/create -> askElicitation -> chat/inputRequested + session/inputNeede
 | What | Source | Task |
 | --- | --- | --- |
 | Free-form input from `_meta.codex.isOther` is in this plan | Softov, 2026-10-11, to "Should the ACP plan also read Codex's free-form flag?" - "Include it" | 02 |
+| A typed answer goes in the field codex-acp marks `role: 'user_note'` for the question, found by `questionId`; that field is not drawn as a question, and `content[<id>]` holds the pick or `None of the above`; a question with no note field gets the typed words in `content[<id>]` | Softov, 2026-10-12, to "Where does a typed answer to a Codex select question go?" - "Fold into the note" | 02 |
 | A question stays on the chat, not on the turn | [`code://packages/agent-acp/src/session/handlers.ts#L457-L460`](../../../../packages/agent-acp/src/session/handlers.ts#L457-L460) | 01 |
 
 ## Proposed architecture
@@ -59,7 +60,7 @@ elicitation/create -> askElicitation -> chat/inputRequested + session/inputNeede
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A question the server withdraws is removed](task-01-a-withdrawn-question-is-removed.md) | done | - |
-| [02 - A question can take a typed answer](task-02-a-question-can-take-a-typed-answer.md) | blocked | - |
+| [02 - A question can take a typed answer](task-02-a-question-can-take-a-typed-answer.md) | todo | - |
 
 ## Risks and tradeoffs
 
@@ -68,8 +69,8 @@ elicitation/create -> askElicitation -> chat/inputRequested + session/inputNeede
 ## Resume state
 
 - **Done so far:** task 01 is done and on main. The `begin` argument fault that made the suite red is fixed on main in `git://7ed1a7ee`.
-- **Next action:** Softov decides the answer path for task 02.
-- **Open questions:** task 02 offers a typed answer on a choice that Codex marks `isOther`, but `answerOf` drops `freeformValues`. Codex's adapter also reads the typed words from a second field, `<id>_note`, which this bridge shows as a text question of its own. The answer path is not in the task, so the work waits on branch `held/acp15-t02`.
+- **Next action:** build task 02 from `git://1248cb6b` on branch `held/acp15-t02`, with the answer path in its Steps.
+- **Open questions:** none.
 - **Watch out for:** `pnpm exec vitest run packages/agent-acp` needs `pnpm -s schema` first, for the `checker()` cases.
 
 ## Final verification checklist
