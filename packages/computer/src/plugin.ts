@@ -1045,7 +1045,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     // A command a tool runs is a command in the machine like any other, so it
     // is given the machine's vault-named variables too, under its own: the
     // calling session's agent's alone, and every agent's for a caller with none.
-    exec: async (id, command, env, provider) => computerRouter.exec(id, command, { ...await namedFor(id, undefined, provider), ...(env ?? {}) }),
+    exec: async (id, command, env, provider) => {
+      const named = await namedFor(id, undefined, provider);
+      noVaultInline(id, named);
+      return computerRouter.exec(id, command, { ...named, ...(env ?? {}) });
+    },
     remove: async (id) => {
       const claimed = await claimOf(id);
       await computerRouter.remove(id);
@@ -1418,6 +1422,39 @@ export const apply: Plugin['apply'] = (host, options) => {
     };
   };
 
+  /**
+   * Whether one id names a machine off this host.
+   *
+   * The runtime that serves the id answers, and a runtime this host does not
+   * serve answers nothing here: `false` is "this host can reach it", and a
+   * machine of a runtime nobody serves is refused by `how` rather than run
+   * anywhere.
+   */
+  const offHost = (id: string): boolean => made.runtimeFor(id)?.remote === true;
+
+  /**
+   * A value read from the vault, refused for a machine this host reaches over ssh.
+   *
+   * On a machine this host made, a vault-named value is never in the command:
+   * the docker runtime passes it in the program's own environment and a dev
+   * container is given it on each reach, so the machine's record, the CLI's log
+   * and a process list hold the name alone. A command over ssh carries its
+   * variables inside the remote command string, which the box's own `ps`, its
+   * shells and its history all read - so a value from the vault is refused
+   * rather than written there. A variable the operator wrote in the clear is
+   * still written inline, which is what `how` does for a machine on this host.
+   *
+   * One check for both roads, because both write the same variables: the port's
+   * `how`, and the `exec` a tool runs a command through. It is asked before the
+   * merge, so nothing is written and the sentence names the need rather than
+   * what it holds.
+   */
+  const noVaultInline = (id: string, named: Record<string, string>): void => {
+    const variables = Object.keys(named);
+    if (variables.length === 0 || !offHost(id)) return;
+    throw new Error(`${id} is off this host, and ${variables.join(', ')} comes from the vault: a command over ssh carries its variables in the remote command, where the box reads them; give the box a value of its own, or run this command on the host`);
+  };
+
   /*
    * How a backend reaches one of these machines.
    *
@@ -1449,7 +1486,9 @@ export const apply: Plugin['apply'] = (host, options) => {
         ? underBindSaid(id)
         : `computer://${id} was made with the host's git directory writable, and it is another daemon's machine; make a machine of your own for this session or run it on the host`);
     }
-    const values = { ...await namedFor(id, held, asked.provider), ...(asked.env ?? {}) };
+    const named = await namedFor(id, held, asked.provider);
+    noVaultInline(id, named);
+    const values = { ...named, ...(asked.env ?? {}) };
     return made.how(id, { ...asked, env: values });
   };
 
@@ -1470,13 +1509,22 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (held === undefined) return undefined;
     const host = await made.hostCommand(id) ?? hostDefault;
     const [program, ...before] = host;
-    const spawn = await reach(id, {
+    const startWith = {
       command: program ?? hostDefault[0],
       // One `--plugin` per spec, which is how the daemon's own flag repeats.
       args: [...before, '--stdio', ...asked.plugins.flatMap((plugin) => ['--plugin', plugin])],
       ...(asked.cwd === undefined ? {} : { cwd: asked.cwd }),
       ...(asked.provider === undefined ? {} : { provider: asked.provider }),
-    });
+    };
+    /*
+     * A machine off this host is handed nothing of this host's vault: the ahpd
+     * on the box holds what it was given by hand there, and a value read from
+     * the vault would be written into the remote command that starts it -
+     * decision `a-nested-host-is-configured-by-the-machine-profile-only`, which
+     * also keeps a session in such a machine clear of the refusal above, since
+     * it never reaches it.
+     */
+    const spawn = offHost(id) ? await made.how(id, startWith) : await reach(id, startWith);
     if (spawn === undefined) return undefined;
     /*
      * Where the session works inside: the caller's folder read through the
@@ -1559,6 +1607,17 @@ export const apply: Plugin['apply'] = (host, options) => {
 
   host.registerComputers({
     how: reach,
+    /*
+     * Whether the machine is off this host, which its runtime's own answer is.
+     *
+     * The host asks this before it starts any backend, so a session in a box
+     * another host reaches runs nested whatever its backend declared: what
+     * cannot be reached is not the agent's to know - decision
+     * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. The
+     * router answers for the id's prefix, so a machine of a runtime this host
+     * does not serve is the fallback runtime's answer rather than a throw.
+     */
+    remote: offHost,
     nested: nestedHost,
     nestedDelete,
     bringBack,

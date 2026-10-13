@@ -211,6 +211,18 @@ export interface BroughtBack {
 export interface ComputerPort {
   how(id: string, options: SpawnOptions): Promise<Spawn | undefined>;
   /**
+   * Whether a machine is off this host, so that its session runs nested.
+   *
+   * A machine this host did not make - a box it reaches over ssh - cannot be
+   * entered by moving a process into it, and every backend of a session in one
+   * runs nested whatever it declared - decision
+   * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. A
+   * machine on this host is not, which is what a runtime that makes its own
+   * machines answers. Absent, and `false`, are both "not off this host": a
+   * port that keeps no such record runs the session the way it always did.
+   */
+  remote?(id: string): boolean;
+  /**
    * The agents a machine was prepared for, or nothing when it cannot say.
    *
    * The machine's own label, read back: an agent that made the machine records

@@ -419,9 +419,19 @@ export function createSpawn(ctx: HostContext): Spawn {
      * The host inside loads the plugin that registered the agent here, as its
      * spec was recorded, and an agent with no record ends its session saying
      * so - decision `the-host-records-which-plugin-registered-each-agent`.
+     *
+     * A machine off this host is nested whatever the backend declared, because
+     * one that moves its own process into a machine on this host still cannot
+     * reach a box on another - decision
+     * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. The
+     * port is asked once, here, because whether a machine is off this host is
+     * the port's to know and every road to a running backend goes through this
+     * one place.
      */
     const plugin = options.agentPlugins?.[agent.provider];
-    const used = agent.runsNested === true && computerId(config.computer) !== undefined
+    const machine = computerId(config.computer);
+    const offHost = machine !== undefined && options.computers?.remote?.(machine) === true;
+    const used = machine !== undefined && (agent.runsNested === true || offHost)
       ? nestedAgent(agent, { plugins: plugin === undefined ? [] : [plugin], log })
       : agent;
     if (ctx.closed) throw new RpcError(INTERNAL_ERROR, CLOSING);

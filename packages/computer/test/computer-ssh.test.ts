@@ -596,3 +596,106 @@ it('stops checking the boxes when the plugin is closed', async () => {
   await wait(200);
   expect(recorded().length).toBe(before);
 });
+
+/*
+ * A command, a session and a secret: what reaches a box, and what does not.
+ */
+
+it('writes the box own directory and the variables into the remote command, and never this host path', async () => {
+  // A directory that is there, because the scripted ssh runs the remote string
+  // on this host.
+  const work = join(temp(), 'srv-app');
+  mkdirSync(work);
+  const one = boxes({ dev02: { destination: 'dev02', port: '2229', workdir: work } });
+
+  const spawn = await one.how('dev02', {
+    command: 'echo',
+    args: ['hi'],
+    // A path on this host, which is not one on the box: the box's own directory
+    // is what its command starts in.
+    cwd: '/home/me/repo',
+    env: { A: '1', B: 'two words' },
+  });
+
+  // One string is the whole of what the box runs, and the box's address is
+  // everything before it, as ssh spells it.
+  expect(spawn?.args.at(-1)).toBe(`cd '${work}' && env 'A=1' 'B=two words' 'echo' 'hi'`);
+  expect(spawn?.args.slice(1, -1)).toEqual(['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=10', '-p', '2229', 'dev02', '--']);
+  expect(spawn?.args.join(' ')).not.toContain('/home/me/repo');
+
+  // A box with no directory of its own keeps the login directory, and a name
+  // this host does not serve is nothing to run anywhere.
+  const bare = boxes({ web1: { destination: 'web1' } });
+  expect((await bare.how('web1', { command: 'pwd' }))?.args.at(-1)).toBe(`'pwd'`);
+  expect(await one.how('nope', { command: 'pwd' })).toBeUndefined();
+});
+
+/** The variable one of these agents needs, and the secret its value is read from. */
+const BOX_TOKEN = 'BOX_TOKEN';
+const HOST_TOKEN = 'host:box-token';
+const SECRET = 'sekrit-value';
+
+/** An agent that declares one environment need, whose value is the vault's. */
+const vaultedAgent = {
+  provider: 'vaulted',
+  displayName: 'Vaulted backend',
+  schema: () => ({}),
+  defaults: () => ({}),
+  machine: (): Record<string, MachineNeed> => ({ boxToken: { name: BOX_TOKEN, default: { $secret: HOST_TOKEN } } }),
+  create: () => { throw new Error('not started in this test'); },
+} as unknown as Agent;
+
+/** A vault holding `values` and nothing else. */
+const holding = (values: Record<string, string>): Vault => ({
+  get: async (name) => values[name],
+  set: async () => {},
+  delete: async () => false,
+  list: async () => Object.keys(values),
+});
+
+/** A load with one box, and an agent whose need is the vault's. */
+const vaultedLoad = () => load(
+  { machines: { dev02: { destination: 'dev02', agents: ['vaulted'] } } },
+  { agents: [vaultedAgent], vault: holding({ [HOST_TOKEN]: SECRET }) },
+);
+
+it('starts a host in the box with the plugins it was asked for, and nothing of this host vault', async () => {
+  const { options, problems } = await vaultedLoad();
+  expect(problems).toEqual([]);
+
+  const spawn = await options.computers?.nested?.('ssh.dev02', { plugins: ['@ahpd/agent-cofold'] });
+  expect(spawn?.args.at(-1)).toBe(`'ahpd' '--stdio' '--plugin' '@ahpd/agent-cofold'`);
+  // No environment at all: the ahpd on the box holds what it was given by hand
+  // there, and a value from the vault would be written into this very command.
+  expect(spawn?.env).toBeUndefined();
+  expect(spawn?.workingDirectory).toBeUndefined();
+  expect(JSON.stringify(recorded())).not.toContain(SECRET);
+});
+
+it('says which machines are off this host, so a session in one runs nested', async () => {
+  const { options } = await load({ machines: { dev02: { destination: 'dev02' } } });
+
+  // The runtime that serves the id answers: a box is off this host, and a
+  // machine this host makes machines on is not.
+  expect(options.computers?.remote?.('ssh.dev02')).toBe(true);
+  expect(options.computers?.remote?.('box')).toBe(false);
+});
+
+it('refuses a command in the box when a value there is the vault own, and writes none of it', async () => {
+  const { options, problems } = await vaultedLoad();
+  expect(problems).toEqual([]);
+
+  // The one check both roads go through: a command a tool runs, and the
+  // descriptor a terminal or a backend spawning into the machine is given.
+  const tool = (options.tools ?? []).find((one) => one.definition.name === 'computer_exec') as HostTool;
+  await expect(tool.run({ id: 'ssh.dev02', command: 'env' }, { provider: 'vaulted' } as never))
+    .rejects.toThrow(new RegExp(`ssh.dev02 is off this host, and ${BOX_TOKEN} comes from the vault`));
+  await expect(options.computers?.how('ssh.dev02', { command: 'env', provider: 'vaulted' }))
+    .rejects.toThrow(/a command over ssh carries its variables in the remote command/);
+
+  // The sentence names the need and not what it holds, and nothing was written:
+  // every call the box was given is the question whether it is up.
+  expect(recorded().length).toBeGreaterThan(0);
+  expect(recorded().every((one) => one.at(-1) === 'true')).toBe(true);
+  expect(JSON.stringify(recorded())).not.toContain(SECRET);
+});

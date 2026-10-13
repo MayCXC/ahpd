@@ -3,10 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
+import { createHost } from '../src/host.js';
 import { fileResources } from '../src/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
+import type { Agent } from '../src/types/agent.js';
 import type { HostOptions } from '../src/types/host.js';
+import type { Peer } from '../src/types/rpc.js';
 
 /*
  * How the computers port starts a whole host inside a machine.
@@ -15,6 +18,10 @@ import type { HostOptions } from '../src/types/host.js';
  * which profile made it - so a daemon that did not make it still starts the
  * host the profile named. The `docker` is the scripted fixture, so what is
  * under test is the exec line this package builds rather than Docker.
+ *
+ * The last case is the host's own choice rather than the port's: a session in
+ * a machine the port says is off this host runs nested, even for a backend
+ * that never declared it.
  */
 
 const REPO = join(import.meta.dirname, '../../..');
@@ -53,6 +60,26 @@ const load = (options: Record<string, unknown>) => loadPlugins(
 
 const providerOf = (options: HostOptions) => options.resourceProviders?.computer as {
   write(uri: string, content: { data: string; encoding: string }): Promise<void>;
+};
+
+type Bag = Record<string, any>;
+
+/** Wait for something the host does asynchronously, without a fixed sleep. */
+const until = async (check: () => boolean, times = 600): Promise<void> => {
+  for (let i = 0; i < times; i++) {
+    if (check()) return;
+    await new Promise((resolve) => { setTimeout(resolve, 5); });
+  }
+};
+
+/** A peer that keeps what the host told it, for the half that answers with a notification. */
+const watching = (): Peer & { seen: { method: string; params: Bag }[] } => {
+  const seen: { method: string; params: Bag }[] = [];
+  return {
+    seen,
+    send: () => {}, request: async () => ({}), answered: () => {}, close: () => {},
+    notify: (method: string, params: unknown) => { seen.push({ method, params: params as Bag }); },
+  };
 };
 
 /** Every `docker exec` the port answered, as one flat argument list. */
@@ -151,4 +178,52 @@ it('records the profile on the machine, so a later daemon starts the same host',
   const calls = JSON.parse(readFileSync(state, 'utf8')) as { calls: string[][] };
   const run = calls.calls.find((one) => one[0] === 'run') ?? [];
   expect(run).toContain('ahpd.profile=nodejs');
+});
+
+it('nests a session in a machine the port says is off this host', async () => {
+  // The choice itself, at the one place it is made: a backend that never
+  // declared `runsNested` is nested anyway when its machine is one this host
+  // cannot reach, so the backend's own `create` must not run.
+  let started = 0;
+  let asked: { plugins: string[] } | undefined;
+  let release: () => void = () => { /* replaced below */ };
+  const opened = new Promise<void>((resolve) => { release = resolve; });
+  const plain: Agent = {
+    provider: 'plain',
+    displayName: 'Plain backend',
+    schema: () => ({ properties: {} }),
+    defaults: () => ({}),
+    create: () => { started += 1; throw new Error('the backend must not be started on this host'); },
+  };
+  const host = createHost({
+    path: '/tmp/nested-start-off-host',
+    agents: [plain],
+    // The package that registered the backend, which the host inside loads.
+    agentPlugins: { plain: '@ahpd/agent-cofold' },
+    // A port whose start is held open until the client is watching, so the
+    // answer is delivered rather than raced.
+    computers: {
+      how: async () => ({ command: 'true', args: [] }),
+      remote: (id: string) => id === 'box',
+      nested: async (_id, start) => { asked = start; await opened; return undefined; },
+    },
+  });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['0.9.0'] } });
+  await client.handle({
+    method: 'createSession',
+    params: { channel: 'ahp-session:/off-host', provider: 'plain', config: { computer: 'computer://box' } },
+  });
+  // The choice is already made: the backend's own `create` would have thrown.
+  expect(started).toBe(0);
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/off-host' } });
+  release();
+  await until(() => peer.seen.some(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed'));
+
+  // The plugin is the one that registered this backend, which the port is
+  // asked to run the host with.
+  expect(asked?.plugins).toEqual(['@ahpd/agent-cofold']);
+  const said = peer.seen.find(({ method, params }) => method === 'action' && params?.action?.type === 'session/creationFailed');
+  expect(said?.params.action.error.message).toMatch(/There is no computer called computer:\/\/box/);
 });
