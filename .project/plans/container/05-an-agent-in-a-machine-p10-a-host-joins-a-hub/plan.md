@@ -91,6 +91,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | A node is listed as `running` while connected | (defaulted: `isRunning` reads `running` or `Up ` with a trailing space) | 04 |
 | A node starts each session in its own workdir; `node/open` carries no `cwd` | (defaulted: a hub path is not a path on the node, as p9 says for an ssh machine) | 01 |
 | The join path takes a node token alone, not the deployment token | (defaulted: a node token opens only that door, and asking for the deployment token too would hand every node the host's key) | 02, 03 |
+| A daemon option `nodeRestart` picks what a session does when its node's `ahpd join` restarts: `end` (the default) ends it with a sentence and the next turn resumes it by id; `reconnect` reopens it in place through a new data socket | Softov, 2026-10-13, asked "when a node's `ahpd join` restarts, what happens to the session?": "configurable"; then "which is the default?": "Ends, resumes by id". The option's name and that it is the hub's (defaulted: the hub holds the session) | 05 |
 
 ## Proposed architecture
 
@@ -120,7 +121,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 
 - **Done so far:** nothing; planned 2026-10-02.
 - **Next action:** [task-03-a-node-has-a-token.md](task-03-a-node-has-a-token.md), once p9 and p12 are built.
-- **Open question (ask before task 05):** when the node's `ahpd join` restarts, the data socket closes and the session's transport is lost - (a) the session ends with a sentence, resumable by id on the next turn, or (b) the hub reconnects in place through a new data socket and the session carries on?
+- **Open questions:** none; the one asked before task 05 was answered 2026-10-13.
 - **Watch out for:** container/04 tasks 11 and 15 and p9 task 05 change how a nested session closes and resumes; a profile that names a node to make machines on is not planned, see [deferred.md](deferred.md).
 
 ## Final verification checklist

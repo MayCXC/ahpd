@@ -323,7 +323,7 @@ Reference: [00-container.md](container/00-container.md)
 | [05 p9 - An ssh machine runs a nested host](container/05-an-agent-in-a-machine-p9-an-ssh-machine-runs-a-nested-host/plan.md) | medium | active 2026-10-10; tasks 01 to 05 done 2026-10-12; 06 by hand, 07 waits on 06; [deferred.md](container/05-an-agent-in-a-machine-p9-an-ssh-machine-runs-a-nested-host/deferred.md) | container 04 (tasks 11, 14, 15, 17) | 05 p10 |
 | [05 p10 - A host joins another, which lists it as a computer and relays its sessions](container/05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | medium | planned 2026-10-03; tasks 01-06 todo | container 05 p9, container 05 p12, daemon 13 | - |
 | [05 p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | medium | planned 2026-10-03; tasks 01-07 todo | container 05 p9, container 05 p12, container 05 p8, container 05 p3, container 05 p5 | - |
-| [05 p12 - A machine off this host reaches its models through this host's proxy](container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | high | planned 2026-10-03; tasks 01-04 todo; proxy 02 is built; task 03 waits on p9 task 03 | container 05 p9, proxy 01, claude 16, proxy 02 | - |
+| [05 p12 - A machine off this host reaches its models through this host's proxy](container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | high | planned 2026-10-03; tasks 01-04 todo, questions answered 2026-10-13; task 03 is buildable | container 05 p9, proxy 01, claude 16, proxy 02 | - |
 
 Next free number in `container`: `06`.
 

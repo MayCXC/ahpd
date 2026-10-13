@@ -1,6 +1,7 @@
 ---
 title: A nested host is configured by the machine's profile only
-status: accepted
+status: superseded
+superseded-by: decisions/a-nested-host-gets-a-per-session-proxy-token-and-url.md
 date: 2026-09-26
 refs:
   - "[code://packages/computer/src/plugin.ts#L422-L434](../../packages/computer/src/plugin.ts#L422-L434) - `nestedHost`, which starts `<host> --stdio --plugin <each>` with no plugin options"

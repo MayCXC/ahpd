@@ -11,24 +11,32 @@ refs:
 ## Objective
 
 After `ahpd restart` on the hub, a session on a node resumes once the node reconnects.
-When the node's `ahpd join` restarts, the data socket closes and `nested.ts` fails the session on the inner host's exit today; what happens instead waits on the plan's open question, and steps for that case are written once it is answered.
+When the node's `ahpd join` restarts, the hub option `nodeRestart` picks what the session does: `end`, the default, or `reconnect`.
 
 ## Files
 
 - `UPDATE: packages/sdk/src/nodes.ts` - `connect` for a node that is reconnecting waits a bounded time for it.
 - `UPDATE: packages/sdk/src/nested.ts` - a resumed session reopens through `start` with `resume`, by container/04 task 11.
-- `UPDATE: packages/sdk/test/nodes.test.ts`, `packages/server/test/join.test.ts`.
+- `UPDATE: packages/server/src/commands/options.ts` - `nodeRestart: 'end' | 'reconnect'` in `serverFields`, default `end`.
+- `UPDATE: packages/sdk/test/nodes.test.ts` - the hub restart and both `nodeRestart` values.
+- `UPDATE: packages/server/test/join.test.ts` - the node restart through `ahpd join`.
 
 ## Steps
 
-1. The hub's close ends data sockets with p9 task 05's `stopping`, so no inner session is disposed.
-2. The node keeps no session state of its own: the inner host's store under the node's config directory is what is resumed.
-3. A node that does not come back within the bound ends the session with a sentence naming it.
-4. The node-restart case follows the answer to the plan's open question.
+1. Close the hub's data sockets with p9 task 05's `stopping`, so that the close disposes no inner session.
+2. Keep no session state on the node: resume from the inner host's store under the node's config directory.
+3. End a session with a sentence that names the node when the node does not come back within the bound.
+4. Add `nodeRestart` to `serverFields`, with the values `end` and `reconnect` and the default `end`.
+5. With `end`, end the session with a sentence when its node's data socket closes.
+6. With `end`, resume the session by id on its next turn.
+7. With `reconnect`, keep the session and reopen it through the node's new data socket when the node joins again.
 
 ## Validation
 
-- `nodes.test.ts`: a session answers a turn, the hub is closed and a second hub resumes it against the same fake node store; the earlier turn is in the snapshot.
-- A node reconnecting after its control socket dropped is listed again under the same id.
+- `nodes.test.ts`: a session answers a turn, then the hub closes. A second hub resumes it against the same fake node store, with the earlier turn in the snapshot.
+- A node that reconnects after its control socket dropped is in the list again under the same id.
+- `nodes.test.ts`: with `nodeRestart: 'end'`, a node restart ends the session with a sentence.
+- `nodes.test.ts`: with `nodeRestart: 'end'`, the next turn resumes the session with the earlier turn in the snapshot.
+- `nodes.test.ts`: with `nodeRestart: 'reconnect'`, a node restart keeps the session, and its next turn answers through the new data socket.
 
 ## Resume
