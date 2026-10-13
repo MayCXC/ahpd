@@ -175,6 +175,16 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   /** Whether the advanced tools are offered, a daemon key that takes hold while the daemon runs. */
   advancedTools: boolean;
   /**
+   * Whether the session tools are offered at all. A daemon key that takes hold
+   * while the daemon runs.
+   */
+  sessionTools: boolean;
+  /**
+   * The providers whose sessions are offered the session tools, empty for
+   * every provider. A daemon key that takes hold while the daemon runs.
+   */
+  sessionToolsProviders: string[];
+  /**
    * What closing one chat of a session does to its conversation in the backend.
    *
    * `hidden` keeps it and this host's claim on its id, `delete` asks the

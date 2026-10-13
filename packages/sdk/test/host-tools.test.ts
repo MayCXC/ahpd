@@ -465,6 +465,168 @@ describe('tools the host contributes', () => {
   });
 });
 
+/*
+ * Which sessions are offered the session tools.
+ *
+ * The nine that read and move the sessions running beside this one are what a
+ * daemon's `sessionTools` covers - decision
+ * `a-session-tool-acts-as-the-person-it-works-for` - and the switch the person
+ * asked for on top of it. It is two keys, because one key cannot be both a
+ * boolean and a list: `sessionTools` is the on/off, and `sessionToolsProviders`
+ * narrows it to the providers it names. Nothing else this host contributes is
+ * affected, and a case below holds that the artifact tools and
+ * `schedule_wakeup` are offered whatever the two say.
+ */
+describe('the session tools, which an install may switch off', () => {
+  type SessionClient = ReturnType<ReturnType<typeof createHost>['accept']>;
+
+  /** The six the option never covers: this host's own, in the order they are offered. */
+  const HOST_OWN = [
+    'add_artifact_or_reference', 'remove_artifact_or_reference', 'list_artifacts_and_references',
+    'ahp_resource', 'ahp_terminals', 'schedule_wakeup',
+  ];
+
+  /** The tool names one session's state carries, as a client reads them. */
+  const offered = async (client: SessionClient, uri: string): Promise<string[]> => {
+    const { snapshot } = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+      snapshot: { state: { serverTools?: { name: string }[] } };
+    };
+    return snapshot.state.serverTools?.map((one) => one.name) ?? [];
+  };
+
+  /**
+   * The example backend, keeping the `Start` it was handed.
+   *
+   * `Start.tools` is what a backend is given to call, so this is the half that
+   * is not the wire: a tool left out of it is one a model is never offered
+   * rather than one it is refused at call time.
+   */
+  const recording = () => {
+    const base = echo({ path: '/home/softov', pace: 0 });
+    const seen: Start[] = [];
+    const agent: Agent = {
+      ...base,
+      create: (start: Start) => {
+        seen.push(start);
+        return base.create(start);
+      },
+    };
+    return { seen, agent };
+  };
+
+  const boundNames = (seen: Start[], at = 0): string[] =>
+    (seen.at(at)?.tools ?? []).map((one) => one.definition.name);
+
+  it('are all left out when the option is false, and the host\'s own still offered', async () => {
+    const { seen, agent } = recording();
+    const host = createHost({
+      path: '/home/softov', agents: [agent], ...machine(), tools: hostTools(), sessionTools: false,
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    const uri = 'ahp-session:/off';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'echo' } });
+
+    // Neither reported nor bound: what a client draws and what a model is
+    // handed say the same thing.
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+    expect(boundNames(seen)).toEqual(HOST_OWN);
+  });
+
+  it('are offered to the providers a list names and to no others', async () => {
+    const { seen, agent } = recording();
+    const host = createHost({
+      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] }), agent], ...machine(),
+      tools: hostTools(), sessionToolsProviders: ['claude'],
+    });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/mine', provider: 'claude' } });
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/other', provider: 'echo' } });
+
+    expect(await offered(client, 'ahp-session:/mine')).toContain('list_sessions');
+    // The provider it was not named for is offered the host's own and nothing
+    // of the session tools, on the wire and in the binding both.
+    expect(await offered(client, 'ahp-session:/other')).toEqual(HOST_OWN);
+    // Only the echo agent is recorded, so the one `Start` kept is its own: the
+    // session whose provider the list does not name is handed the same six.
+    expect(boundNames(seen)).toEqual(HOST_OWN);
+  });
+
+  it('are rebuilt on a session already running when either daemon key is written', async () => {
+    // A port holding the two keys, so what the daemon holds is what a write left.
+    const held: Record<string, unknown> = {};
+    const rootConfig: NonNullable<HostOptions['rootConfig']> = {
+      schema: () => ({
+        type: 'object',
+        properties: {
+          sessionTools: { type: 'boolean', title: 'Session tools', description: 'Offer the session tools.' },
+          sessionToolsProviders: {
+            type: 'array', items: { type: 'string' },
+            title: 'Session tool providers', description: 'Offer them to these providers alone.',
+          },
+        },
+      }),
+      values: async () => ({ ...held }),
+      write: async (values) => {
+        for (const [key, one] of Object.entries(values)) {
+          if (one === null || one === undefined) delete held[key];
+          else held[key] = one;
+        }
+        return {};
+      },
+    };
+    const host = createHost({
+      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), tools: hostTools(), rootConfig,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: [ROOT] }));
+    const uri = 'ahp-session:/live';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
+    expect(await offered(client, uri)).toContain('list_sessions');
+
+    /** One push, and the sessions told of it, kept apart from the last. */
+    const push = async (config: Record<string, unknown>): Promise<{ name: string }[]> => {
+      p.notes.length = 0;
+      await client.handle({ method: 'dispatchAction', params: { channel: ROOT, action: { type: 'root/configChanged', config } } });
+      await settle();
+      const told = actions(p, uri).filter((one) => one.action.type === 'session/serverToolsChanged');
+      expect(told).toHaveLength(1);
+      return (told[0]?.action.tools ?? []) as { name: string }[];
+    };
+
+    // Off, told whole - the action carries the new set rather than the
+    // difference - and the session's own state follows it.
+    expect((await push({ sessionTools: false })).map((one) => one.name)).toEqual(HOST_OWN);
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+
+    // On again, by taking the key away: a null is how a client says so, and
+    // the daemon then holds no value at all, which is the `true` default.
+    expect((await push({ sessionTools: null })).map((one) => one.name)).toContain('list_sessions');
+    expect(await offered(client, uri)).toContain('list_sessions');
+
+    // The second key narrows rather than switches, and this session runs the
+    // provider it names, so it keeps them.
+    expect((await push({ sessionToolsProviders: ['claude'] })).map((one) => one.name)).toContain('list_sessions');
+    // One it does not name loses them, on the wire and on the session's state.
+    expect((await push({ sessionToolsProviders: ['echo'] })).map((one) => one.name)).toEqual(HOST_OWN);
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+
+    // The switch beats the list: the list names this session's provider and
+    // the session is offered none all the same.
+    expect((await push({ sessionTools: false })).map((one) => one.name)).toEqual(HOST_OWN);
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+
+    // Back to every provider takes both keys cleared, and neither on its own
+    // is the default: the list alone leaves the switch off, and the switch
+    // alone leaves a list that does not name this session's provider.
+    expect((await push({ sessionToolsProviders: null })).map((one) => one.name)).toEqual(HOST_OWN);
+    expect((await push({ sessionTools: null })).map((one) => one.name)).toContain('list_sessions');
+    expect(await offered(client, uri)).toContain('list_sessions');
+  });
+});
+
 describe('the MCP servers a session is offered', () => {
   /**
    * The example backend, keeping every `Start` it was handed.

@@ -184,6 +184,26 @@ export interface Config {
    */
   advancedTools?: boolean;
   /**
+   * Whether the session tools are offered at all.
+   *
+   * `true`, the default, offers them; `false` offers none. The session tools
+   * are the nine that read and move the sessions running beside this one, so an
+   * install that would rather its agents did not reach their neighbours turns
+   * them off with this. Nothing else this host contributes is affected: the
+   * artifact tools, `ahp_resource`, `ahp_terminals` and `schedule_wakeup` are
+   * offered whatever this says.
+   */
+  sessionTools?: boolean;
+  /**
+   * The providers whose sessions are offered the session tools.
+   *
+   * Empty, the default, offers them to every provider's sessions; a list of
+   * provider ids offers them to those providers' sessions alone. It narrows
+   * `sessionTools` rather than replacing it: with `sessionTools` false no
+   * session is offered them whatever this names.
+   */
+  sessionToolsProviders?: string[];
+  /**
    * What closing one chat of a session does to that chat's conversation in the
    * backend.
    *

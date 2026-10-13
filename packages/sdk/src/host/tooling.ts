@@ -6,6 +6,7 @@ import { readJsonObject } from '../jsonfile.js';
 import { partsOf } from '../pluginparts.js';
 import { bodyText } from '../records.js';
 import { SEND_REMOTE_MESSAGE } from '../remotesession.js';
+import { SESSION_TOOL_NAMES } from '../tools/session.js';
 import { bag, reason, str } from '../values.js';
 import { groupOf } from '../users.js';
 import { enablementKeyOf } from '../enablement.js';
@@ -349,6 +350,44 @@ export function createTooling(ctx: HostContext): Tooling {
   ctx.contributed = options.tools ?? [];
   ctx.contributing = permitted(ctx.contributed);
   /**
+   * Whether the session tools are offered at all, and to whom, held here for
+   * the same reason as `advancedTools`: the daemon's two keys are this host's
+   * options as much as the daemon's, and a write of either takes hold while the
+   * daemon runs.
+   */
+  ctx.sessionTools = options.sessionTools ?? true;
+  ctx.sessionToolsProviders = options.sessionToolsProviders ?? [];
+  /**
+   * Whether the session tools are offered to one session.
+   *
+   * `sessionTools` false offers them to no session. `sessionToolsProviders`
+   * empty offers them to every session, and a list to the sessions of the
+   * providers it names alone - so it narrows the switch rather than replacing
+   * it, and a session whose provider is not known here, a row this host is only
+   * browsing, is one a list does not name: what the list names is a provider,
+   * and there is none to match.
+   */
+  const sessionToolsFor = (uri: string, provider?: string): boolean => {
+    if (ctx.sessionTools !== true) return false;
+    if (ctx.sessionToolsProviders.length === 0) return true;
+    const named = providerOf(uri, provider).provider;
+    return named !== undefined && ctx.sessionToolsProviders.includes(named);
+  };
+  /**
+   * The host's tools for one session, less the session tools where its provider
+   * is not offered them.
+   *
+   * Where `permitted` decides once and for every session, this is decided per
+   * session, because a list of providers is: it is applied both to the
+   * definitions that go on the wire and to the tools a backend binds, so a
+   * session offered none is neither told of them nor handed them - decision
+   * `a-tool-says-when-it-needs-advanced-permission`, whose shape this follows.
+   */
+  const contributingTo = (uri: string, provider?: string): HostTool[] =>
+    sessionToolsFor(uri, provider)
+      ? ctx.contributing
+      : ctx.contributing.filter((one) => !SESSION_TOOL_NAMES.includes(one.definition.name));
+  /**
    * The title strategy every session runs under, which is the deferred one.
    *
    * No root config key selects another strategy, as in VS Code's agent host.
@@ -365,8 +404,12 @@ export function createTooling(ctx: HostContext): Tooling {
     if (asked?.offered === false) return undefined;
     return asked?.definition === undefined ? one.definition : { ...one.definition, ...asked.definition };
   };
-  /** The definitions alone for one session, which is the half that goes on the wire. */
-  const toolDefinitions = (uri: string): ToolDefinition[] => ctx.contributing.flatMap((one) => {
+  /**
+   * The definitions alone for one session, which is the half that goes on the
+   * wire - the session tools among them only where this session is offered
+   * them, so what a client reports and what a backend binds say the same thing.
+   */
+  const toolDefinitions = (uri: string): ToolDefinition[] => contributingTo(uri).flatMap((one) => {
     const shaped = shapedDefinition(one, uri);
     return shaped === undefined ? [] : [shaped];
   });
@@ -1603,10 +1646,16 @@ export function createTooling(ctx: HostContext): Tooling {
   const boundTools = (uri: string, chatUri: string, provider?: string): BoundTool[] =>
     ctx.bareSessions.has(uri) ? [] : offeredTools(uri, chatUri, provider);
 
-  /** The tools a session with something to call is handed, in the order it is offered them. */
+  /**
+   * The tools a session with something to call is handed, in the order it is
+   * offered them - less the session tools where this session's provider is not
+   * offered them, which is read off the provider the tools are being bound for
+   * rather than off the held session, because at a session's start there is no
+   * held session to ask yet.
+   */
   const offeredTools = (uri: string, chatUri: string, provider?: string): BoundTool[] => [
     ...clientTools(uri),
-    ...ctx.contributing.flatMap((one): BoundTool[] => {
+    ...contributingTo(uri, provider).flatMap((one): BoundTool[] => {
       const definition = shapedDefinition(one, uri);
       return definition === undefined ? [] : [{
         /*

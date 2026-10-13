@@ -311,6 +311,8 @@ anything has been let go of.
 | `--issuer <github\|url>` | An authorization server whose tokens are also accepted. See [USERS.md](USERS.md) |
 | `--trust-token` | A person's connection token authorizes them as well as admits them. Off by default |
 | `--advanced-tools` | Offer the tools that declare they need advanced permission, such as the computer's three. Off by default |
+| `--session-tools` | Offer the nine session tools. The default; `--no-session-tools` offers them to no session |
+| `--session-tools-providers <id>` | Offer the session tools to the sessions of this provider alone. Repeatable; empty offers them to every provider |
 | `--client-tool-timeout-ms <ms>` | How long a tool call a client runs may wait for that client's answer before it is failed. Default ten minutes; `0` waits for ever |
 | `--config-file <p>` | Read this instead of the file below |
 | `--automations <where>` | `file`, the default, or `memory`. See below |
@@ -535,7 +537,7 @@ Every flag can be a key instead, spelled without the dashes:
 }
 ```
 
-What each key is, with its values, its default and what changes, is [HOST.md](HOST.md#configuration-keys). Seven of them are about who may connect rather than about how the host behaves - the connection token, `users`, `resource`, `issuer` and `trustToken` - and they are [AUTHENTICATION.md](AUTHENTICATION.md#configuration-keys). `proxy` is [PROXY.md](PROXY.md). The keys `http`, `usage`, `policies`, `closedChats`, `mcpServers` and `proxy` have no flag, because each is a property of a deployment rather than of one run.
+What each key is, with its values, its default and what changes, is [HOST.md](HOST.md#configuration-keys). Seven of them are about who may connect rather than about how the host behaves - the connection token, `users`, `resource`, `issuer` and `trustToken` - and they are [AUTHENTICATION.md](AUTHENTICATION.md#configuration-keys). `proxy` is [PROXY.md](PROXY.md). The keys `http`, `usage`, `policies`, `closedChats`, `mcpServers` and `proxy` have no flag, because each is a property of a deployment rather than of one run. The session tools are two keys on the line as in the file: `--session-tools` and `--no-session-tools` for the switch, and `--session-tools-providers claude`, repeatable, for the providers whose sessions get them - an install whose agents should reach the sessions beside them only where the provider is one it names.
 
 A flag beats the file, because a flag is this run and a file is every run until
 somebody edits it. `paths` and `plugins` are the two exceptions worth knowing: a

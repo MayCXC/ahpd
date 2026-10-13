@@ -656,6 +656,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     advancedTools: options.advancedTools,
     /*
+     * Which sessions are offered the session tools.
+     *
+     * The host's own answer, from the file or the line. `sessionTools` is the
+     * on/off - every session unless the operator says otherwise - and
+     * `sessionToolsProviders` narrows it to the providers it names. An install
+     * whose agents should not reach the sessions beside them says so with
+     * either: off entirely, or only for the providers it trusts to.
+     */
+    sessionTools: options.sessionTools,
+    sessionToolsProviders: options.sessionToolsProviders,
+    /*
      * What closing one chat of a session does to its conversation.
      *
      * Defaulted here rather than left off, because the host's own answer is the
@@ -1044,6 +1055,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       ? ''
       : `sign-in ${advertisedResource()}${issuer === undefined ? '' : ` (issuer ${issuer.id})`}\n`)
     + (options.advancedTools ? 'advanced tools: offered to every session\n' : '')
+    // What the session tools are offered to, and nothing where that is every
+    // session: on with no provider list is the default, and a line saying so
+    // is a line about nothing. Off beats a list, so it is said alone.
+    + (options.sessionTools
+      ? (options.sessionToolsProviders.length === 0 ? '' : `session tools: offered to ${options.sessionToolsProviders.join(', ')}\n`)
+      : 'session tools: offered to no session\n')
     + (options.closedChats === 'hidden' ? '' : 'closed chats: their conversations are deleted\n')
     + (options.wire === undefined ? '' : `wire to ${options.wire}\n`)
     // What this daemon started without, one line each, so whoever started it

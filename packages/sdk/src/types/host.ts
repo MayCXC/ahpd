@@ -335,6 +335,34 @@ export interface HostOptions {
    */
   tools?: HostTool[];
   /**
+   * Whether the session tools are offered at all.
+   *
+   * `true`, the default, offers them; `false` offers none. The session tools
+   * are the nine `sessionTools()` contributes - the ones that read and move the
+   * sessions running beside this one - and nothing else the host contributes is
+   * affected: the artifact tools, `ahp_resource`, `ahp_terminals` and
+   * `schedule_wakeup` are offered whatever this says.
+   *
+   * A tool left out is absent from `SessionState.serverTools` and is not bound
+   * for a call, so a model is never offered it rather than being refused at
+   * call time - the same shape as `advancedTools`. A daemon's `sessionTools`
+   * key is this option, and it takes hold while the daemon runs.
+   */
+  sessionTools?: boolean;
+  /**
+   * The providers whose sessions are offered the session tools.
+   *
+   * Empty, the default, is every provider; a list of provider ids is those
+   * providers' sessions alone. It narrows `sessionTools` rather than replacing
+   * it, so with `sessionTools` false no session is offered them whatever this
+   * names - and a session whose provider is not known here, a row this host is
+   * only browsing, is one a list does not name.
+   *
+   * A daemon's `sessionToolsProviders` key is this option, and it takes hold
+   * while the daemon runs.
+   */
+  sessionToolsProviders?: string[];
+  /**
    * The MCP servers every session is offered, by the name a person gave them.
    *
    * The host's own, from whatever configures it: a daemon reads the

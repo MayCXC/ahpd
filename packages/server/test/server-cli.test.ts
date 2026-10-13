@@ -92,7 +92,7 @@ describe('the flags of a run', () => {
       '--connection-token', 'secret1234',
       '--resource', 'https://ahpd.test/',
       '--issuer', 'github',
-      '--trust-token', '--advanced-tools',
+      '--trust-token', '--advanced-tools', '--session-tools', '--session-tools-providers', 'claude',
       '--automations', 'memory', '--sessions', 'memory',
       '--wire', wire,
       '--plugin', BACKEND,
@@ -105,10 +105,36 @@ describe('the flags of a run', () => {
     expect(said.stderr).toContain('plugins echo-plugin');
     expect(said.stderr).toContain('token: from --connection-token');
     expect(said.stderr).toContain('advanced tools: offered to every session');
+    expect(said.stderr).toContain('session tools: offered to claude');
     expect(said.stderr).toContain(`wire to ${wire}`);
     // The capture is opened as the run starts, so a `--wire` that was read is
     // a file that is there.
     expect(readFileSync(wire, 'utf8')).toBe('');
+  }, 20000);
+
+  /*
+   * The session tools are two keys, and the line takes both: the switch as a
+   * flag and `--no-session-tools` for the off, and the providers as a list of
+   * its own. A bare provider word is the assertion - a flag whose value was
+   * read as JSON would refuse `claude` rather than collect it - and the
+   * announcement is where a person reads back what the line decided.
+   */
+  it('takes --session-tools-providers as a repeatable list, and --no-session-tools as the off', async () => {
+    const said = await cli([
+      '--stdio', '--plugin', BACKEND, '--config-file', config, '--no-update-check',
+      '--no-session-tools', '--session-tools-providers', 'claude', '--session-tools-providers', 'echo',
+    ]);
+    expect(said.code).toBe(0);
+    // Off beats the list, and one session tools line is written rather than two.
+    expect(said.stderr).toContain('session tools: offered to no session');
+    expect(said.stderr).not.toContain('session tools: offered to claude');
+
+    const listed = await cli([
+      '--stdio', '--plugin', BACKEND, '--config-file', config, '--no-update-check',
+      '--session-tools-providers', 'claude', '--session-tools-providers', 'echo',
+    ]);
+    expect(listed.code).toBe(0);
+    expect(listed.stderr).toContain('session tools: offered to claude, echo');
   }, 20000);
 
   it('writes nothing to stdout over --stdio but the frames', async () => {

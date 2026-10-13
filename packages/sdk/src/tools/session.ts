@@ -680,6 +680,18 @@ export const sessionTools = (): HostTool[] => [
 ];
 
 /**
+ * The session tools by name, which is what a daemon's `sessionTools` covers.
+ *
+ * Read off `sessionTools()` rather than written out a second time, so the list
+ * cannot drift from the tools themselves: one added there is one the option
+ * switches off, and one taken away leaves the list. Only these nine are the
+ * session tools - the artifact tools, `ahp_resource`, `ahp_terminals` and
+ * `schedule_wakeup` are this host's own and are offered whatever the option
+ * says.
+ */
+export const SESSION_TOOL_NAMES: readonly string[] = sessionTools().map((one) => one.definition.name);
+
+/**
  * A wake the agent asks for in its own chat: a turn begun later with a prompt.
  *
  * This host's own rather than the reference host's, so it is not among the

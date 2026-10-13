@@ -53,7 +53,7 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 | --- | --- | --- |
 | Under a users directory a session tool acts with the grants of the person it works for: reading a session needs `session:read`, creating, messaging, renaming or deleting one needs `session:write`, and `list_sessions` lists only what that person may read | Softov, 2026-09-30, asked which guards to plan for the session tools: "Act as the session's person" | 01 |
 | VS Code's limits: spawn depth 3, 50 created sessions, 50 created chats and 100 sent messages, with its refusal words; the counts are kept per session tree | same answer: "VS Code's limits" | 02 |
-| An install can turn the session tools off: a daemon option `sessionTools`, `true` by default, `false` for none, or a list of providers whose sessions get them | same answer: "A switch to turn them off"; then asked "What should the switch that turns session tools off look like?": "Option: on, off, or providers" | 03 |
+| An install can turn the session tools off with two daemon keys: `sessionTools`, `true` by default or `false` for none, and `sessionToolsProviders`, a list that limits the session tools to the sessions of those providers, empty by default for every provider | same answer: "A switch to turn them off"; then asked "What should the switch that turns session tools off look like?": "Option: on, off, or providers"; then Softov, 2026-10-13, on how a list is set from the flag and the settings screen: "split into 2 keys is better" | 03 |
 | VS Code's counts are kept per session tree, from the session the first spawn came from | Softov, 2026-10-12, to "What should the counts be kept per?" - "Per session tree" | 02 |
 | A tool call carries the grants of the person who sent the turn it runs in; a turn an automation started carries the automation's creator; under a users directory, a turn with no person gets no session tool that writes | Softov, 2026-09-30, asked "No session has an owner, so whose grants should a session tool call carry?": "Who sent the turn" | 01 |
 | A refusal for a count uses VS Code's words with "in this process" changed to "in this session tree", so it says what is true; the depth refusal is VS Code's as it is | Softov, 2026-10-13, to "What should a refusal say?" - "Same words, 'in this session tree'" | 02 |
@@ -73,7 +73,7 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 | --- | --- | --- |
 | [01 - A session tool acts as the person it works for](task-01-a-session-tool-acts-as-the-person-it-works-for.md) | implemented | - |
 | [02 - VS Code's limits on spawning and messaging](task-02-vs-codes-limits-on-spawning-and-messaging.md) | implemented | - |
-| [03 - The session tools can be switched off](task-03-the-session-tools-can-be-switched-off.md) | todo | - |
+| [03 - The session tools can be switched off](task-03-the-session-tools-can-be-switched-off.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -82,7 +82,7 @@ agent calls list_sessions -> host tool run(input, toolContext(uri, chat)) -> eve
 
 ## Resume state
 
-- **Done so far:** planned 2026-09-30; task files written 2026-10-13.
-- **Next action:** build the three tasks; they touch `tooling.ts` and `session.ts` in common, so build them one after another.
+- **Done so far:** planned 2026-09-30; task files written 2026-10-13; all three tasks implemented 2026-10-13, none reviewed or set to done. Softov answered task 03's step 4 fork on 2026-10-13: split the option into two keys. The switch is a boolean and the provider list is an array, so the flag parser and the settings screen take one type each. Both parse from the command line: the switch as `--session-tools` with `--no-session-tools`, and the list as a repeatable `--session-tools-providers`.
+- **Next action:** review task 03, then commit the three together. `packages/sdk/test/fixtures/wire.jsonl` is left as the suite rewrote it.
 - **Open questions:** none.
 - **Watch out for:** the artifact tools and `ahp_terminals` are not session tools; this plan leaves them as they are.

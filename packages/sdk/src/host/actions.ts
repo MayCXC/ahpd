@@ -442,6 +442,32 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
           }
         }
         /*
+         * And which sessions are offered the session tools, which are the same
+         * kind of keys and applied the same way: `toolDefinitions` and the
+         * bound tools are worked out per session from the provider it runs, so
+         * every running session is told and retooled and each is handed its own
+         * answer. Either key moving is enough, because the two decide together.
+         *
+         * Read back from what the daemon now holds rather than off what was
+         * asked, because a pushed `null` takes a key away - and the value a key
+         * taken away holds is its default, every session and every provider
+         * again.
+         */
+        const heldOn = held['sessionTools'];
+        const offering = heldOn === false ? false : true;
+        const named = held['sessionToolsProviders'];
+        const narrowing = Array.isArray(named)
+          ? named.filter((one): one is string => typeof one === 'string')
+          : [];
+        if (offering !== ctx.sessionTools || JSON.stringify(narrowing) !== JSON.stringify(ctx.sessionToolsProviders)) {
+          ctx.sessionTools = offering;
+          ctx.sessionToolsProviders = narrowing;
+          for (const uri of sessions.keys()) {
+            dispatch(uri, { type: 'session/serverToolsChanged', tools: toolDefinitions(uri) });
+            retool(uri);
+          }
+        }
+        /*
          * And what closing a chat does, which is a key of the host's own option
          * too, and one the daemon applies while it runs. Nothing is rebuilt and
          * no session is told: the setting is read where a chat is dropped, so

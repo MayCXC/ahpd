@@ -65,10 +65,10 @@ const keySchema = (root: RootConfigPort, key: string): Record<string, unknown> =
   ((root.schema() as { properties: Record<string, { properties: Record<string, unknown> }> }).properties[key] ?? { properties: {} }).properties;
 
 describe('the daemon keys root config carries', () => {
-  it('are the nine of them, and none of the others', () => {
+  it('are the eleven of them, and none of the others', () => {
     const { schema } = port();
     const properties = (schema() as { properties: Record<string, unknown> }).properties;
-    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'updateCheck', 'advancedTools', 'closedChats', 'wire', 'mcpServers']);
+    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
     for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'trustToken', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
       expect(Object.keys(properties)).not.toContain(key);
     }
@@ -96,6 +96,10 @@ describe('the schema a client reads', () => {
     expect(written['paths']).toMatchObject({ type: 'array', title: 'Folders', items: { type: 'string', title: 'Folder' } });
     expect(written['updateCheck']).toMatchObject({ type: 'boolean', title: 'Update check' });
     expect(written['advancedTools']).toMatchObject({ type: 'boolean', title: 'Advanced tools' });
+    // Two keys, because one key cannot be both a boolean and a list: the
+    // switch is a control, and the providers it narrows to are a list.
+    expect(written['sessionTools']).toMatchObject({ type: 'boolean', title: 'Session tools', default: true });
+    expect(written['sessionToolsProviders']).toMatchObject({ type: 'array', title: 'Session tool providers', default: [], items: { type: 'string', title: 'Provider' } });
     expect(written['closedChats']).toMatchObject({ type: 'string', title: 'Closed Chats', enum: ['hidden', 'delete'] });
     expect(written['wire']).toMatchObject({ type: 'string', title: 'Wire capture' });
     expect(written['mcpServers']).toMatchObject({ type: 'object', title: 'MCP servers' });
@@ -310,8 +314,10 @@ describe('the keys that apply while this daemon runs', () => {
     expect(await port().write({ host: '127.0.0.2' })).toEqual({ restartNeeded: true });
   });
 
-  it('answers no restart for advancedTools and closedChats, which apply here', async () => {
+  it('answers no restart for the tool keys and closedChats, which apply here', async () => {
     expect(await port().write({ advancedTools: true })).toEqual({ restartNeeded: false });
+    expect(await port().write({ sessionTools: false })).toEqual({ restartNeeded: false });
+    expect(await port().write({ sessionToolsProviders: ['claude'] })).toEqual({ restartNeeded: false });
     expect(await port().write({ closedChats: 'delete' })).toEqual({ restartNeeded: false });
   });
 });

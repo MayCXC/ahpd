@@ -64,6 +64,10 @@ export interface Options {
   trustToken: boolean;
   /** Whether a tool that declares `advancedPermission` is offered to sessions. */
   advancedTools: boolean;
+  /** Whether the session tools are offered to any session at all. */
+  sessionTools: boolean;
+  /** The providers whose sessions are offered the session tools. Empty offers them to every provider. */
+  sessionToolsProviders: string[];
   /** What closing one chat of a session does to that chat's conversation in the backend. */
   closedChats: 'hidden' | 'delete';
   /** How long a call a client runs may wait, absent when the deployment said nothing. */
@@ -469,6 +473,21 @@ export const serverFields = {
     type: 'boolean',
     title: 'Advanced tools',
     description: "Offer the tools that declare they need advanced permission, such as the computer's three.",
+  },
+  sessionTools: {
+    type: 'boolean',
+    title: 'Session tools',
+    description: 'Offer the session tools. On by default; --no-session-tools offers none.',
+    default: true,
+    cli: { negatable: true },
+  },
+  sessionToolsProviders: {
+    type: 'array',
+    items: { type: 'string', title: 'Provider' },
+    title: 'Session tool providers',
+    description: 'Offer the session tools only to the sessions of these providers. Empty offers them to every provider.',
+    default: [],
+    cli: { value: 'PROVIDER' },
   },
   closedChats: {
     type: 'string',
@@ -1030,6 +1049,8 @@ const noCwd = input['noCwd'] === true;
     ...(issuer === undefined ? {} : { issuer }),
     trustToken: given('trustToken') ?? false,
     advancedTools: given('advancedTools') ?? false,
+    sessionTools: given('sessionTools') ?? true,
+    sessionToolsProviders: given('sessionToolsProviders') ?? [],
     closedChats: given('closedChats') ?? 'hidden',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),

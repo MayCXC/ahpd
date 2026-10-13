@@ -46,8 +46,8 @@ afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 const DAEMON_FLAGS = [
   '--port', '--host', '--stdio', '--path', '--connection-token',
   '--connection-token-file', '--without-connection-token', '--config-file',
-  '--users', '--resource', '--issuer', '--trust-token', '--advanced-tools',
-  '--automations', '--sessions', '--wire', '--plugin', '--no-plugins',
+  '--users', '--resource', '--issuer', '--trust-token', '--advanced-tools', '--session-tools',
+  '--session-tools-providers', '--automations', '--sessions', '--wire', '--plugin', '--no-plugins',
   '--update-check', '--plugin-option',
 ];
 
@@ -64,7 +64,7 @@ describe('the command registry', () => {
     expect(DAEMON_FLAGS.filter((name) => !names.has(name))).toEqual([]);
     // The repeatable ones collect rather than overwrite.
     const repeatable = new Set(options.filter((option) => option.repeatable === true).map((option) => option.name));
-    expect([...repeatable].sort()).toEqual(['--origin', '--path', '--plugin', '--plugin-option']);
+    expect([...repeatable].sort()).toEqual(['--origin', '--path', '--plugin', '--plugin-option', '--session-tools-providers']);
   });
 
   it('says which grant each command needs', () => {

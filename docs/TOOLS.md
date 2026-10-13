@@ -89,6 +89,18 @@ The three that declare it are the computer's: `request_disposable_computer`, whi
 
 `effects` is a different claim and is not a permission. `reads`, `writes`, `network` and `destructive` say what running the tool does, and a backend's policy reads them to decide what to ask a person about - decision [A host tool says what running it does, so a policy can ask about it](../.project/decisions/host-tool-declares-what-it-does.md). The computer's three declare both: `effects` for the policy, `advancedPermission` for whether the host offers them at all.
 
+## Which sessions are offered the session tools
+
+An install can turn the nine session tools off, as one answer or per provider, with two daemon keys. `sessionTools` is the switch: `true`, the default, offers them; `false` offers them to no session. `sessionToolsProviders` is a list of provider ids and narrows the switch to those providers' sessions; empty, the default, narrows nothing.
+
+They are two keys rather than one because a key carries one type, and one key cannot be both a boolean and a list: `sessionTools` is a control a settings screen draws, and `sessionToolsProviders` is a list it draws. The list narrows rather than replaces, so `false` with a list still offers the tools to nobody.
+
+What it covers is the nine and nothing else. The three artifact tools, `ahp_resource`, `ahp_terminals` and `schedule_wakeup` are this host's own rather than the reference host's session tools, so they are offered whatever the option says - an install can keep a person's artifacts and wakeups without giving its agents the catalogue of the sessions beside them.
+
+A tool left out is absent from `SessionState.serverTools` and is not bound for a call, the same shape as `advancedPermission`: a model is never offered it rather than being refused at call time. The answer is worked out per session, from the provider that session runs, so a list offers the tools to some sessions and not to others. A session whose provider this host is only browsing, with no agent of its own, is one a list does not name.
+
+Both are daemon keys and apply while the daemon runs: a root config push to either rebuilds what every running session is offered and tells each of them. The command line takes both, each spelled as its key: `--session-tools` and `--no-session-tools` for the switch, and `--session-tools-providers claude --session-tools-providers echo` for the list, which is repeatable.
+
 ## The wording a session is given
 
 Four things shape a tool per session, and none of them changes whether a tool that does not ask to be withheld is offered.
@@ -112,13 +124,15 @@ A backend that cannot - an ACP agent, which asks its client for tools - is hande
 | Key | Values | Default | What changes |
 | --- | --- | --- | --- |
 | `advancedTools` | `true` or `false` | `false` | Offer the tools that declare `advancedPermission` to every session's model. Applies live |
+| `sessionTools` | `true` or `false` | `true` | Whether the nine session tools are offered at all. Applies live, and is worked out per session |
+| `sessionToolsProviders` | a list of provider ids | none | Offer the session tools to the sessions of these providers alone. Empty offers them to every provider. Applies live, and is worked out per session |
 | `mcpServers` | an object of server entries | none | The MCP servers every session is offered. Applies live, and is read again for each session opened |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |
 | `artifactToolsCompactPrompts` | `true` or `false` | `false` | Use the short artifact instruction and tool description. Root config, one setting for the host |
 | `deferredTitleGeneration` | `true` or `false` | `false` | Give a session a deferred title strategy, and reshape `rename_chat` with it. Root config |
 | `plugins.<name>.hostTools` | `true` or `false` | `true` | Whether a plugin's sessions are offered this host's own tools as one MCP server |
 
-The first two are the daemon's keys and apply while it runs; a root config push of either needs `config:write`. `clientToolTimeoutMs` is a daemon key and needs `ahpd restart`. The two root config keys are one setting for the whole host rather than a connection's own, so both need `config:write` - decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). Every key with its values and its default is [HOST.md](HOST.md#configuration-keys) and [HOST.md](HOST.md#root-config).
+The first four are the daemon's keys and apply while it runs; a root config push of any needs `config:write`. `clientToolTimeoutMs` is a daemon key and needs `ahpd restart`. The two root config keys are one setting for the whole host rather than a connection's own, so both need `config:write` - decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). Every key with its values and its default is [HOST.md](HOST.md#configuration-keys) and [HOST.md](HOST.md#root-config).
 
 ## Commands
 
