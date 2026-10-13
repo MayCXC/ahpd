@@ -1355,7 +1355,9 @@ export function chatAction(
        * showing somebody the turns they asked to be rid of.
        */
       dispatch(session.chatUri, action);
-      session.close();
+      // A stop, not a removal: a session starts again right below on this
+      // same id, and the backend it resumes is the one just stopped.
+      session.close('stopping');
       // So the next thing the new session says about itself is reported
       // rather than compared against what the old one last said.
       ctx.described.delete(session.chatUri);

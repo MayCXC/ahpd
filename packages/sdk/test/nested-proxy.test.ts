@@ -1,4 +1,4 @@
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
@@ -53,6 +53,18 @@ const watching = (): Peer & { seen: { method: string; params: Bag }[] } => {
     notify: (method: string, params: unknown) => { seen.push({ method, params: params as Bag }); },
   };
 };
+
+/**
+ * The same, and it trusts every folder it is asked about.
+ *
+ * A folder is untrusted until a client says otherwise, and a session that
+ * enters one is asked - so a case that adds a directory needs a window that
+ * answers. This is that window, and nothing else.
+ */
+const trusting = (): Peer & { seen: { method: string; params: Bag }[] } => ({
+  ...watching(),
+  request: async () => ({ trusted: true }),
+});
 
 /**
  * An inner host, as the process the proxy would have spawned.
@@ -540,7 +552,7 @@ it('a restart waits for a host inside that is still starting, and stops it', asy
   });
   const session = agent.create(start(emit));
   let closed = false;
-  const closing = Promise.resolve(session.close(false)).then(() => { closed = true; });
+  const closing = Promise.resolve(session.close('stopping')).then(() => { closed = true; });
 
   // The process was handed over after the close began, and only then stopped:
   // the restart is not over while the host it replaces is still coming up.
@@ -569,7 +581,7 @@ it('a restart goes on when the host inside it stopped will not go', async () => 
   await until(() => inner.messages.some((message) => message.method === 'dispatchAction'));
 
   const waited = await Promise.race([
-    Promise.resolve(session.close(false)).then(() => 'gone'),
+    Promise.resolve(session.close('stopping')).then(() => 'gone'),
     new Promise((resolve) => { setTimeout(() => resolve('still open'), 8_000); }),
   ]);
   expect(waited).toBe('gone');
@@ -884,24 +896,26 @@ it('a renamed default agent is created under the provider the inner host serves'
  * It also keeps a store, which is what a machine holds: subscribing a session
  * writes it there, a listing answers from it, and disposing one takes it out
  * again, so a case can read what the host inside holds after the outer host did
- * something. `keep` puts one there without a host: a machine that came back
- * holding a session the outer host only records is a state a case has to be
- * able to set up, since the road to it in the wild is a dispose that never
- * landed.
+ * something. A stop leaves the session there, since it disposes nothing.
  *
  * `nestedDelete` is the profile's answer, the way the computer plugin reads it
  * from the machine's own profile - absent means the profile says nothing and
  * the default stands.
+ *
+ * `turns` makes the host inside hold its session with one finished turn, which
+ * is what a case about a turn this host reads back needs: the snapshot of a
+ * chat is what the proxy keeps its own copy of the conversation from.
  */
 const scriptedPort = (
   providers: string[],
-  options: { nestedDelete?: 'inside' | 'record' } = {},
+  options: { nestedDelete?: 'inside' | 'record'; turns?: boolean } = {},
 ) => {
   const dir = mkdtempSync(join(tmpdir(), 'ahpd-nested-port-'));
   const file = join(dir, 'created');
   const script = [
     'const providers = JSON.parse(process.argv[1]);',
     'const file = process.argv[2];',
+    'const turns = process.argv[3] === "1";',
     "const fs = require('node:fs');",
     'const newline = String.fromCharCode(10);',
     'const say = (m) => process.stdout.write(JSON.stringify(m) + newline);',
@@ -916,7 +930,7 @@ const scriptedPort = (
     "  else if (m.method === 'subscribe' && m.params.channel === 'ahp-root://') ok({ snapshot: { resource: 'ahp-root://', state: { agents: providers.map((p) => ({ provider: p, displayName: p, description: '', models: [] })), activeSessions: 0 }, fromSeq: 0 } });",
     "  else if (m.method === 'createSession') { fs.appendFileSync(file, m.params.provider + newline); ok({}); }",
     '  else if (m.method === \'listSessions\') ok({ items: held().map((channel) => ({ resource: channel, provider: String(channel).split(":")[0], title: "", status: 0, createdAt: new Date(0).toISOString(), modifiedAt: new Date(0).toISOString(), workingDirectories: [] })) });',
-    "  else if (m.method === 'subscribe') { const channel = m.params.channel; if (!String(channel).startsWith('ahp-')) fs.appendFileSync(store, channel + newline); ok({ snapshot: { resource: channel, state: { turns: [] }, fromSeq: 0 } }); }",
+    "  else if (m.method === 'subscribe') { const channel = m.params.channel; if (!String(channel).startsWith('ahp-')) fs.appendFileSync(store, channel + newline); ok({ snapshot: { resource: channel, state: { turns: turns ? [{ id: 't1', state: 'complete', startedAt: new Date(0).toISOString(), message: { text: 'kept' } }] : [] }, fromSeq: 0 } }); }",
     "  else if (m.method === 'disposeSession') { const gone = m.params.channel; fs.writeFileSync(store, held().filter((one) => one !== gone).map((one) => one + newline).join('')); ok({}); }",
     '  else ok({});',
     '});',
@@ -929,8 +943,6 @@ const scriptedPort = (
     try { return readFileSync(`${file}.store`, 'utf8').split('\n').filter((line) => line !== ''); }
     catch { return []; }
   };
-  /** A session the machine holds without a host running: what a missed dispose leaves behind. */
-  const keep = (channel: string): void => { appendFileSync(`${file}.store`, `${channel}\n`); };
   const asked = (): Bag[] => {
     try { return readFileSync(`${file}.asked`, 'utf8').split('\n').filter((line) => line !== '').map((line) => JSON.parse(line) as Bag); }
     catch { return []; }
@@ -939,7 +951,6 @@ const scriptedPort = (
     read,
     /** What the host inside holds: the sessions subscribed there and not disposed. */
     stored,
-    keep,
     asked,
     dir,
     // The scripted host is stopped behind a session's close and may still be
@@ -947,7 +958,7 @@ const scriptedPort = (
     done: () => { rmSync(dir, { recursive: true, force: true, maxRetries: 20, retryDelay: 50 }); },
     computers: {
       how: async () => ({ command: 'true', args: [] }),
-      nested: async () => ({ command: process.execPath, args: ['-e', script, JSON.stringify(providers), file] }),
+      nested: async () => ({ command: process.execPath, args: ['-e', script, JSON.stringify(providers), file, options.turns === true ? '1' : '0'] }),
       ...(options.nestedDelete === undefined ? {} : { nestedDelete: async () => options.nestedDelete }),
     },
   };
@@ -992,26 +1003,21 @@ const restartable = async (
 const rowsOf = async (client: Awaited<ReturnType<typeof restartable>>['client']): Promise<Bag[]> =>
   ((await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } })) as { items: Bag[] }).items;
 
-/** A nested session made and named on one host, which is then closed as a daemon stops. */
+/**
+ * A nested session made and named on one host, which is then closed as a daemon
+ * stops.
+ *
+ * A stop disposes nothing inside a machine: the transport ends and the store on
+ * the box keeps the session, which is what the next host resumes. What that
+ * leaves is the state deleting a session that is not running is about - the
+ * outer host records the row, and the machine holds the session.
+ */
 const madeAndStopped = async (dir: string, port: ReturnType<typeof scriptedPort>): Promise<void> => {
   const first = await restartable(dir, port.computers);
   await first.client.handle({ method: 'createSession', params: { channel: 'ahp-session:/kept', provider: PROVIDER, config: { computer: 'computer://box' } } });
   await until(() => port.read().length > 0, 1000);
   await first.client.handle({ method: 'dispatchAction', params: { channel: 'ahp-session:/kept', clientSeq: 1, action: { type: 'session/titleChanged', title: 'In the box' } } });
   await first.host.close();
-};
-
-/**
- * The same, with the machine still holding the session.
- *
- * A stop disposes what is inside a machine on its way down, and that dispose is
- * bounded: a machine that is stopping, or a daemon that was killed, does not
- * carry it out. What that leaves is the state deleting a session that is not
- * running is about - the outer host records it, and the machine holds it.
- */
-const madeKeptAndStopped = async (dir: string, port: ReturnType<typeof scriptedPort>): Promise<void> => {
-  await madeAndStopped(dir, port);
-  port.keep(`${PROVIDER}:/kept`);
 };
 
 it('a nested session is listed after the outer host restarts, from the record it kept', async () => {
@@ -1187,6 +1193,148 @@ it('a nested chat started again keeps the transcript inside the machine', async 
   port.done();
 });
 
+it('a nested session whose folders change starts the host inside again, and disposes nothing', async () => {
+  const port = scriptedPort([PROVIDER]);
+  const dir = join(port.dir, 'sessions');
+  /*
+   * A session's own set of folders is its CLI started again, the same restart a
+   * chat's is: the host inside is stopped and another one resumes the session
+   * on the same transcript. Told a removal, the machine disposes the session
+   * and the host that starts behind it opens on nothing.
+   */
+  const real: Agent = { ...backend(), runsNested: true, multipleDirectories: true };
+  const host = createHost({
+    path: REPO_ROOT,
+    agents: [real],
+    agentPlugins: { [PROVIDER]: '@ahpd/agent-cofold' },
+    computers: port.computers,
+    sessions: fileSessions({ dir }),
+  });
+  const peer = trusting();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
+  const uri = 'ahp-session:/wide';
+  await client.handle({ method: 'createSession', params: { channel: uri, provider: PROVIDER, config: { computer: 'computer://box' } } });
+  await client.handle({ method: 'subscribe', params: { channel: uri } });
+  await until(() => port.read().length > 0, 1000);
+  const subscribed = (): number =>
+    port.asked().filter(({ method, channel }) => method === 'subscribe' && channel === `${PROVIDER}:/wide`).length;
+  await until(() => subscribed() >= 1, 1000);
+
+  const elsewhere = mkdtempSync(join(tmpdir(), 'ahpd-nested-wide-'));
+  try {
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: uri, clientSeq: 1, action: { type: 'session/workingDirectorySet', directory: uriOf(elsewhere) } },
+    });
+    // The second subscription to the session, from the host that replaces the
+    // one the restart closed.
+    await until(() => subscribed() >= 2, 1000);
+    expect(subscribed()).toBeGreaterThanOrEqual(2);
+    // The action landed, so this is a session started again rather than a
+    // change this host refused.
+    expect(peer.seen.some(({ params }) => params?.action?.type === 'session/workingDirectorySet')).toBe(true);
+    expect(port.asked().some(({ method }) => method === 'disposeSession')).toBe(false);
+  }
+  finally {
+    rmSync(elsewhere, { recursive: true, force: true });
+  }
+  await host.close();
+  port.done();
+});
+
+it('a truncate of a nested session is refused, and disposes nothing inside the machine', async () => {
+  const port = scriptedPort([PROVIDER], { turns: true });
+  const dir = join(port.dir, 'sessions');
+  /*
+   * The proxy answers no `endPoint`, so this host cannot name the point in the
+   * machine's own conversation to cut back to, and the action is refused. What
+   * it must not do on the way to that answer is close the session as a removal:
+   * the turn it read back is the machine's, and a dispose there takes the whole
+   * conversation with it.
+   */
+  const real: Agent = { ...backend(), runsNested: true };
+  const host = createHost({
+    path: REPO_ROOT,
+    agents: [real],
+    agentPlugins: { [PROVIDER]: '@ahpd/agent-cofold' },
+    computers: port.computers,
+    sessions: fileSessions({ dir }),
+  });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
+  const uri = 'ahp-session:/cut';
+  await client.handle({ method: 'createSession', params: { channel: uri, provider: PROVIDER, config: { computer: 'computer://box' } } });
+  await client.handle({ method: 'subscribe', params: { channel: uri } });
+  await client.handle({ method: 'subscribe', params: { channel: chatUriFor(uri) } });
+  await until(() => port.read().length > 0, 1000);
+  /*
+   * And the turn, which this host reads off the snapshot the machine answers
+   * with. Waiting for it is what makes the refusal below the one this case is
+   * about: a truncate that arrives before the session is up is refused for
+   * having no such turn, which says nothing about what a rewind would do.
+   */
+  const shown = async (): Promise<Bag[]> =>
+    ((await client.handle({ method: 'subscribe', params: { channel: chatUriFor(uri) } })) as {
+      snapshot: { state: { turns: Bag[] } };
+    }).snapshot.state.turns;
+  for (let i = 0; i < 200 && (await shown()).length === 0; i++) await new Promise((resolve) => { setTimeout(resolve, 5); });
+  expect((await shown()).map((turn) => turn.id)).toEqual(['t1']);
+
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUriFor(uri), clientSeq: 1, action: { type: 'chat/truncated', turnId: 't1' } },
+  });
+  const refused = (): Bag | undefined => peer.seen.find(({ method, params }) => method === 'action' && params?.rejectionReason !== undefined)?.params;
+  await until(() => refused() !== undefined, 1000);
+  expect(String(refused()?.rejectionReason)).toMatch(/rewind/);
+  expect(port.asked().some(({ method }) => method === 'disposeSession')).toBe(false);
+  await host.close();
+  port.done();
+});
+
+it('a nested chat a client removes is disposed inside the machine', async () => {
+  const port = scriptedPort([PROVIDER]);
+  const dir = join(port.dir, 'sessions');
+  /*
+   * The other half of the pair: a chat nobody will start again is a chat gone,
+   * so its session inside the machine goes with it. The session's own chat is
+   * the one left, and it is not touched.
+   *
+   * Every chat of a session names the session it is inside as the one to open
+   * in the machine, so this chat's host inside is `cofold:/two-chats`, the
+   * same name the session's own chat opens: that is what the removal names.
+   */
+  const real: Agent = { ...backend(), runsNested: true };
+  const host = createHost({
+    path: REPO_ROOT,
+    agents: [real],
+    agentPlugins: { [PROVIDER]: '@ahpd/agent-cofold' },
+    computers: port.computers,
+    sessions: fileSessions({ dir }),
+  });
+  const peer = watching();
+  const client = host.accept(peer);
+  await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
+  const uri = 'ahp-session:/two-chats';
+  await client.handle({ method: 'createSession', params: { channel: uri, provider: PROVIDER, config: { computer: 'computer://box' } } });
+  const chat = 'ahp-chat:/second';
+  await client.handle({ method: 'createChat', params: { channel: uri, chat } });
+  const disposed = (): string[] =>
+    port.asked().filter(({ method }) => method === 'disposeSession').map(({ channel }) => String(channel));
+  // Both chats, and the second one's session inside the machine made: a chat
+  // removed before its host inside is up has nothing there to dispose, and
+  // this case is about the removal that has something.
+  await until(() => port.read().length >= 2, 1000);
+
+  await client.handle({ method: 'disposeChat', params: { channel: chat } });
+  await until(() => disposed().length > 0, 1000);
+  expect(disposed()).toEqual([`${PROVIDER}:/two-chats`]);
+  await host.close();
+  port.done();
+});
+
 it('a nested session whose machine is gone is listed, and its resume ends with a sentence', async () => {
   const port = scriptedPort([PROVIDER]);
   const dir = join(port.dir, 'sessions');
@@ -1207,7 +1355,7 @@ it('a nested session whose machine is gone is listed, and its resume ends with a
 it('a nested session that is not running is deleted inside its machine', async () => {
   const port = scriptedPort([PROVIDER]);
   const dir = join(port.dir, 'sessions');
-  await madeKeptAndStopped(dir, port);
+  await madeAndStopped(dir, port);
   const second = await restartable(dir, port.computers);
   const [row] = await rowsOf(second.client);
 
@@ -1222,7 +1370,7 @@ it('a nested session that is not running is deleted inside its machine', async (
 it('a nested session whose profile says record is deleted here, and its copy inside stays', async () => {
   const port = scriptedPort([PROVIDER], { nestedDelete: 'record' });
   const dir = join(port.dir, 'sessions');
-  await madeKeptAndStopped(dir, port);
+  await madeAndStopped(dir, port);
   const second = await restartable(dir, port.computers);
   const [row] = await rowsOf(second.client);
 

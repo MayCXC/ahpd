@@ -134,11 +134,15 @@ export function createSleep(ctx: HostContext): Sleep {
      * The row it is listed by from here, as a listing would have found it.
      * Built before the session leaves `sessions`, from the same live answer the
      * catalogue gave while it ran.
+     *
+     * The close below is a stop: a sleeping session is woken by its own id,
+     * and the wake resumes what the backend was holding rather than making a
+     * new one. Disposing here would put the transcript out of its reach.
      */
     const row = liveRows().find((one) => one.resource === uri);
     const stopping: Promise<void>[] = [];
     for (const [chatUri, chat] of held.chats) {
-      stopping.push(Promise.resolve(chat.close(false)).catch(() => {}));
+      stopping.push(Promise.resolve(chat.close('stopping')).catch(() => {}));
       byChat.drop(chatUri);
     }
     const dir = dirOf(uri);

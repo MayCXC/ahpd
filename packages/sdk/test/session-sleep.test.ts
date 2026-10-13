@@ -3,10 +3,10 @@
  *
  * A live session holds its agent between turns. With nothing in hand for
  * `sleepAfterMinutes`, over `sessionResidencyLimit`, or archived, the host lets
- * the agent go with `close(false)` and the session stays in the catalogue, the
- * same as after a daemon restart. What keeps it awake: a running or queued
- * turn, a person being asked something, `resumable()` false, `busy()` true,
- * and a client subscribed to it.
+ * the agent go with `close('stopping')`, and the session stays in the
+ * catalogue, the same as after a daemon restart. What keeps it awake: a
+ * running or queued turn, a person being asked something, `resumable()`
+ * false, `busy()` true, and a client subscribed to it.
  *
  * The clock is the host's `now` and `timer`, so a case moves time and fires
  * the minute sweep by hand.
@@ -57,8 +57,8 @@ const until = async (ready: () => boolean, tries = 200): Promise<void> => {
 
 /** What a case sets on the sessions the backend makes, and reads back from them. */
 interface Knobs {
-  /** Each `close` call, with the argument it was handed. */
-  closes: (boolean | undefined)[];
+  /** Each `close` call, with the reason it was handed. */
+  closes: ('dispose' | 'stopping' | undefined)[];
   /** The id of each session a `close` was called on. */
   closed?: string[];
   resumable?: boolean;
@@ -80,12 +80,12 @@ const wrapped = (dir: string, knobs: Knobs): Agent => {
       const session = base.create(start);
       return {
         ...session,
-        close: (removing?: boolean) => {
-          knobs.closes.push(removing);
+        close: (reason?: 'dispose' | 'stopping') => {
+          knobs.closes.push(reason);
           knobs.closed?.push(session.agentId() ?? '');
           const exiting = knobs.exiting;
-          if (exiting === undefined) return session.close(removing);
-          return exiting.then(() => session.close(removing));
+          if (exiting === undefined) return session.close(reason);
+          return exiting.then(() => session.close(reason));
         },
         resumable: () => knobs.resumable ?? true,
         busy: () => knobs.busy ?? false,
@@ -330,7 +330,7 @@ it('sleeps an archived session at once', async () => {
   expect(await active()).toBe(0);
 });
 
-it('closes each chat with close(false), and keeps its terminals and rule state', async () => {
+it('closes each chat with close(\'stopping\'), and keeps its terminals and rule state', async () => {
   const knobs: Knobs = { closes: [] };
   const shells = shellTerminals();
   const opened: Terminal[] = [];
@@ -348,7 +348,7 @@ it('closes each chat with close(false), and keeps its terminals and rule state',
   time.pass(31);
   await until(() => knobs.closes.length > 0);
   expect(await active()).toBe(0);
-  expect(knobs.closes).toEqual([false]);
+  expect(knobs.closes).toEqual(['stopping']);
   // The shell is the session's still: running, and listed on the root.
   expect(opened[0]?.exitCode()).toBeUndefined();
   const terminals = ((await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } })) as {

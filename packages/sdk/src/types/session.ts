@@ -693,13 +693,17 @@ export interface Session {
   /**
    * End the session and stop its agent.
    *
-   * `removing` says whether the session is being deleted rather than started
-   * again. A backend that keeps its transcript on the far side of a process
-   * - one running nested - disposes the one inside only when it is being
-   * deleted, so a restart resumes the conversation instead of finding it gone.
+   * `reason` says why it ends, and defaults to `dispose`. `dispose` is a
+   * session this host is deleting: a backend that keeps its transcript on the
+   * far side of a process - one running nested - disposes the one inside, so
+   * nothing is left behind.
+   *
+   * `stopping` is a session this host only lets go of, and which another host
+   * or the same one resumes by id. The transport ends and what the far side
+   * holds stays, so the resume finds the conversation rather than a gap.
    *
    * A backend that can tell when its process has gone answers a promise that
    * settles then, and never rejects; `Host.close` waits on it, bounded.
    */
-  close(removing?: boolean): void | Promise<void>;
+  close(reason?: 'dispose' | 'stopping'): void | Promise<void>;
 }

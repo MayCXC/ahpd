@@ -8,8 +8,10 @@ import { uriOf } from '../src/fileuri.js';
 import { createHost } from '../src/host.js';
 import { chatUriFor } from '../src/host/channels.js';
 import { nestedAgent } from '../src/nested.js';
+import { fileSessions } from '../src/sessions.js';
 import type { NestedHost } from '../src/nested.js';
 import type { Agent, Start } from '../src/types/agent.js';
+import type { HostOptions } from '../src/types/host.js';
 import type { Peer } from '../src/types/rpc.js';
 
 /*
@@ -139,14 +141,28 @@ const manyDirectories = (open: () => ChildProcessWithoutNullStreams | Promise<Ch
  *
  * The client is a peer that keeps every notification, so a case reads what the
  * outer host said on each channel and what it refused.
+ *
+ * `store` is where this host keeps what it knows, for a case that starts a
+ * second host on the first one's; without it the daemon holds nothing once it
+ * is closed. `create` false takes the session from that store rather than
+ * making one, which is what a daemon started after a restart does.
+ *
+ * `computers` replaces the port and `agentPlugins` is the plugin this host
+ * records for the agent, for a case whose machine is a host the port starts
+ * rather than one a proxy starts itself.
  */
-const outer = async (agent: Agent) => {
+const outer = async (
+  agent: Agent,
+  options: { store?: string; create?: boolean; computers?: HostOptions['computers']; agentPlugins?: Record<string, string> } = {},
+) => {
   const host = createHost({
     path: REPO,
     agents: [agent],
     // The proxy is started through `NestedOptions.start`, so the port is only
     // what lets a session name a machine.
-    computers: { how: async () => ({ command: 'true', args: [] }) },
+    computers: options.computers ?? { how: async () => ({ command: 'true', args: [] }) },
+    ...(options.agentPlugins === undefined ? {} : { agentPlugins: options.agentPlugins }),
+    ...(options.store === undefined ? {} : { sessions: fileSessions({ dir: options.store }) }),
   });
   const notes: { method: string; params: Bag }[] = [];
   const peer: Peer = {
@@ -163,7 +179,9 @@ const outer = async (agent: Agent) => {
   await client.handle({ method: 'initialize', params: { clientId: 'window', protocolVersions: ['1.0.0'] } });
   const uri = 'ahp-session:/nested-outer';
   const chatUri = chatUriFor(uri);
-  await client.handle({ method: 'createSession', params: { channel: uri, provider: PROVIDER, config: { computer: 'computer://box' } } });
+  if (options.create !== false) {
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: PROVIDER, config: { computer: 'computer://box' } } });
+  }
   await client.handle({ method: 'subscribe', params: { channel: uri } });
   await client.handle({ method: 'subscribe', params: { channel: chatUri } });
   let seq = 0;
@@ -171,6 +189,7 @@ const outer = async (agent: Agent) => {
     host,
     uri,
     chatUri,
+    client,
     notes,
     /** The actions the outer host sent on one channel, refusals included. */
     on: (channel: string): Bag[] => notes.filter(({ method, params }) => method === 'action' && params.channel === channel).map(({ params }) => params),
@@ -346,6 +365,56 @@ it('a resumed session continues the transcript the inner host kept under its id'
   two.close();
 }, 60_000);
 
+it('a daemon that stops leaves the session inside the machine for the next one', async () => {
+  const env = home();
+  const dir = mkdtempSync(join(tmpdir(), 'ahpd-nested-restart-'));
+  made.push(dir);
+  /*
+   * A machine off this host, started by the port rather than by a proxy's own
+   * `start`: the outer host is what decides this session runs nested, and what
+   * it records about it is the record the next daemon reads back. The backend
+   * is the plain shape an agent that cannot move its own process declares,
+   * since the host inside is the one that runs it.
+   */
+  const computers: HostOptions['computers'] = {
+    how: async () => ({ command: 'true', args: [] }),
+    nested: async (_id: string, asked: { plugins: string[] }) => ({
+      command: process.execPath,
+      args: ['--conditions', 'development', '--import', './scripts/dev.mjs', ENTRY, '--stdio', ...asked.plugins.flatMap((one) => ['--plugin', one])],
+      env,
+    }),
+  };
+  const backendless: Agent = {
+    provider: PROVIDER,
+    displayName: PROVIDER,
+    runsNested: true,
+    schema: () => ({ properties: {} }),
+    defaults: () => ({}),
+  } as unknown as Agent;
+  const options = { store: dir, computers, agentPlugins: { [PROVIDER]: FIXTURE } };
+
+  const first = await outer(backendless, options);
+  first.dispatch(first.chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'first words' } });
+  await until(() => first.on(first.chatUri).some(({ action }) => action.type === 'chat/turnComplete'));
+  /*
+   * Down the way a restart takes a daemon: every chat stopped, none of them
+   * disposed. This host's own record of a nested session holds no turns - they
+   * are the machine's - so what the next daemon opens on is whatever the
+   * machine was left holding.
+   */
+  await first.host.close();
+
+  const second = await outer(backendless, { ...options, create: false });
+  // A turn on it, which is the moment the session is resumed inside.
+  second.dispatch(second.chatUri, { type: 'chat/turnStarted', turnId: 't2', message: { text: 'second words' } });
+  await until(() => second.on(second.chatUri).some(({ action }) => action.type === 'chat/turnComplete'));
+  const opened = await second.client.handle({ method: 'subscribe', params: { channel: second.chatUri } }) as {
+    snapshot: { state: { turns: Bag[] } };
+  };
+  expect(opened.snapshot.state.turns.map((turn) => turn.message?.text)).toEqual(['first words', 'second words']);
+  await second.host.close();
+}, 60_000);
+
 it('a resume the inner host has no transcript for makes the session there', async () => {
   const env = home();
   const { emit, of, has } = recorder();
@@ -392,7 +461,7 @@ it('a restart goes on once the process is gone, with its pipes still held open',
   await until(() => inner.exitCode !== null);
 
   const waited = await Promise.race([
-    Promise.resolve(session.close(false)).then(() => 'gone'),
+    Promise.resolve(session.close('stopping')).then(() => 'gone'),
     new Promise((resolve) => { setTimeout(() => resolve('still open'), 6_000); }),
   ]);
   expect(waited).toBe('gone');

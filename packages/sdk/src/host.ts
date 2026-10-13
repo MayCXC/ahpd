@@ -1125,8 +1125,12 @@ export function createHost(options: HostOptions): Host {
           catch (error) { log(`closing ${what} failed: ${reason(error)}`); }
         };
         const going: Promise<void>[] = [];
+        // Stopped rather than disposed: a daemon going down is a host that
+        // comes back, and it resumes these sessions from the store. A backend
+        // running nested in a machine is told to end its transport alone, so
+        // the session inside is still there for the next daemon to resume.
         for (const held of sessions.values()) {
-          for (const [uri, chat] of held.chats) going.push(step(uri, () => chat.close()));
+          for (const [uri, chat] of held.chats) going.push(step(uri, () => chat.close('stopping')));
         }
         // A run already past its guard ends here, refused at `spawn` or started
         // and so among the sessions; its outcome is the run's to report.

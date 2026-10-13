@@ -153,7 +153,9 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
      */
     const was = [...held.chats.keys()];
     kept.moveChat(idOf(found.uri), idOf(into), chatUri, turns);
-    found.chat.close(false);
+    // Stopped rather than disposed: the chat is started again below, in the
+    // session it moved to, and it resumes the conversation it had.
+    found.chat.close('stopping');
     held.chats.delete(chatUri);
     byChat.drop(chatUri);
     claims.set(chatUri, { kind: 'chat', of: into });
@@ -1140,7 +1142,9 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         // with nothing to talk to, which `disposeSession` says properly.
         throw new RpcError(INVALID_PARAMS, `${chatUri} is the only chat in ${found.uri}; dispose the session instead`);
       }
-      found.chat.close();
+      // A client removing a chat is a removal, and one of the two roads that
+      // dispose: the chat is not started again, so nothing of it is kept.
+      found.chat.close('dispose');
       byChat.delete(chatUri);
       drafts.delete(chatUri);
       madeFrom.delete(chatUri);

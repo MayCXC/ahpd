@@ -1088,12 +1088,12 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
      * and its backend and given `DISPOSE_WAIT` to answer, its input is closed,
      * and the process gets `SIGTERM` and then `SIGKILL`.
      *
-     * `removing` says which of the two this close is: a session being deleted
-     * loses the transcript inside, and a session being started again - a
-     * directory added, a folder moved - keeps it, because the inner host
-     * resumes it - decision
-     * `a-nested-session-resumes-its-inner-transcript-by-id`. Only the first
-     * call decides, since it is the one that starts the sequence.
+     * `reason` says which of the two this close is. `dispose` is a session
+     * being deleted, which loses the transcript inside; `stopping` is one
+     * being started again - a directory added, a folder moved, this daemon
+     * going down - which keeps it, because the inner host resumes it -
+     * decision `a-nested-session-resumes-its-inner-transcript-by-id`. Only the
+     * first call decides, since it is the one that starts the sequence.
      *
      * A restart's promise settles when the process has gone, because the
      * caller is about to start another host on this same session and two of
@@ -1104,9 +1104,10 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
      * host is going anyway, and `Host.close` waits on it from the outside,
      * bounded.
      */
-    close: (removing = true): Promise<void> => {
+    close: (reason = 'dispose'): Promise<void> => {
       closing ??= (async () => {
         closed = true;
+        const removing = reason === 'dispose';
         /*
          * A restart that arrives while the host inside is still coming up has
          * no process to stop yet: `host` is set once `startInside` has answered,

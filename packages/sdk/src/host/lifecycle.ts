@@ -143,7 +143,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    */
   const teardown = (held: Held, uri: string): void => {
     for (const [chatUri, chat] of held.chats) {
-      chat.close();
+      // This is a removal, one of the two roads that dispose: a session that
+      // is gone from here is gone inside its machine as well.
+      chat.close('dispose');
       byChat.delete(chatUri);
       drafts.delete(chatUri);
       madeFrom.delete(chatUri);
@@ -575,7 +577,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      */
     const stopping: Promise<void>[] = [];
     for (const [chatUri, chat] of held.chats) {
-      stopping.push(Promise.resolve(chat.close(false)));
+      stopping.push(Promise.resolve(chat.close('stopping')));
       byChat.drop(chatUri);
     }
     /*
@@ -819,7 +821,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * disposes the session inside, and the chat that starts behind it opens
      * on a transcript that is gone.
      */
-    chat.close(false);
+    chat.close('stopping');
     held.chats.delete(chatUri);
     byChat.drop(chatUri);
     spawn(

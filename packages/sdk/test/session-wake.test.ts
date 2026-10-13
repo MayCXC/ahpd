@@ -91,9 +91,9 @@ const counted = (dir: string, counts: Counts): Agent => {
       const session = base.create(start);
       return {
         ...session,
-        close: (removing?: boolean) => {
+        close: (reason?: 'dispose' | 'stopping') => {
           counts.closes += 1;
-          return session.close(removing);
+          return session.close(reason);
         },
       };
     },
