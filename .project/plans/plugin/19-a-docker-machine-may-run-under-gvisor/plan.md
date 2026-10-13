@@ -1,7 +1,7 @@
 ---
 title: A docker machine may run under gVisor
 domain: plugin
-status: planned
+status: built
 priority: low
 created: 2026-09-26
 revalidated: 2026-10-03
@@ -73,8 +73,8 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A profile names the OCI runtime its machines run under](task-01-a-profile-names-the-oci-runtime.md) | todo | - |
-| [02 - Docs](task-02-docs.md) | todo | 01 |
+| [01 - A profile names the OCI runtime its machines run under](task-01-a-profile-names-the-oci-runtime.md) | done | - |
+| [02 - Docs](task-02-docs.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -82,13 +82,13 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-profile-names-the-oci-runtime.md](task-01-a-profile-names-the-oci-runtime.md).
+- **Done so far:** built 2026-10-12; see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** a dev container machine is made by the Dev Container CLI, not by `docker run`; task 01 refuses `ociRuntime` there rather than passing it.
+- **Watch out for:** `packages/computer/src/plugin.ts` is shared with container 05 p9, so this plan's change there stays inside `profilesOf` and the profile schema property.
 
 ## Final verification checklist
 
-- [ ] A profile with `"ociRuntime": "runsc"` makes a machine with `--runtime=runsc`, and one without it makes the same machine as today.
-- [ ] A body naming `ociRuntime` is refused with a sentence, and so is a dev container machine from a profile that names it.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/COMPUTER.md`, `plans/index.md` updated.
+- [x] A profile with `"ociRuntime": "runsc"` makes a machine with `--runtime=runsc`, and one without it makes the same machine as today.
+- [x] A body naming `ociRuntime` is refused with a sentence, and so is a dev container machine from a profile that names it.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/COMPUTER.md`, `plans/index.md` updated.
