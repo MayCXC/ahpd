@@ -141,22 +141,14 @@ const moment = (created: string | undefined): string => {
 };
 
 /*
- * What a machine is doing, as the `state` leaf and the computer channel say it.
+ * The one line the `state` leaf holds, from the runtime's own answer.
  *
- * Answered in the words the write takes, not the runtime's own.
- *
- * `docker`'s own status is a longer vocabulary than the three below, and a
- * client that read `exited` and wrote it back would be refused its own
- * reading. The runtime's word is not lost - `status` is its whole record
- * and `State.Status` is in it - but this leaf is the one a client round-trips,
- * so it says only what it will accept.
+ * The runtime is asked for the word rather than a record read here: this
+ * provider serves one runtime whatever its record looks like, and the words are
+ * the ones a write takes. A runtime that answers nothing about a machine that
+ * is here is answering one that is not running.
  */
-export const stateOf = (found: Record<string, unknown>): 'running' | 'stopped' => {
-  const state = (typeof found.State === 'object' && found.State !== null
-    ? found.State
-    : {}) as Record<string, unknown>;
-  return state.Running === true ? 'running' : 'stopped';
-};
+const stateLine = (said: 'running' | 'stopped' | undefined): string => `${said ?? 'stopped'}\n`;
 
 export function computerProvider(runtime: ComputerRuntime, options: ProviderOptions): ComputerProvider {
   const capabilities = (): string => JSON.stringify({
@@ -386,7 +378,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       if (!leaves().some((one) => one.name === held.leaf)) throw absentResource('computer', uri);
       const body = held.leaf === 'status' ? JSON.stringify(found, null, 2)
         : held.leaf === 'stats' ? await statsOf(held.id, found)
-          : held.leaf === 'state' ? `${stateOf(found)}\n`
+          : held.leaf === 'state' ? stateLine(await runtime.state(held.id))
             : capabilities();
       return {
         uri,
@@ -408,7 +400,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       if (held.leaf === 'capabilities') return asFile(capabilities());
       if (held.leaf === 'stats') return asFile(await statsOf(held.id, found));
       if (held.leaf === 'state') {
-        return { data: `${stateOf(found)}\n`, encoding: 'utf-8', contentType: 'text/plain' };
+        return { data: stateLine(await runtime.state(held.id)), encoding: 'utf-8', contentType: 'text/plain' };
       }
       throw absentResource('computer', uri);
     },

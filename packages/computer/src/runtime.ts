@@ -519,6 +519,19 @@ export interface RuntimeCapabilities {
   resources: string[];
 }
 
+/**
+ * Whose a machine is, and what its work is charged under.
+ *
+ * The same answer whether it was read from a label or from the record beside
+ * the configuration: an owner, and the team and the project within it that a
+ * stretch of up time is charged to.
+ */
+export interface Ownership {
+  owner?: Owner;
+  team?: string;
+  project?: string;
+}
+
 /** A machine maker. */
 export interface ComputerRuntime {
   /** The name `capabilities` reports and the option a host was configured with. */
@@ -535,6 +548,32 @@ export interface ComputerRuntime {
   list(): Promise<Machine[]>;
   /** The runtime's own record of one machine, or nothing when it is not there. */
   inspect(id: string): Promise<Record<string, unknown> | undefined>;
+  /**
+   * What one machine is doing, in the words the `state` leaf reads and writes.
+   *
+   * The runtime's own answer rather than a record read here: a machine this
+   * host made says it from its own record, and a machine off this host from one
+   * reach over the network, and a caller that read either shape would have to
+   * know which runtime it was asking. `undefined` for a machine that is not
+   * there, the same answer `inspect` gives.
+   */
+  state(id: string): Promise<'running' | 'stopped' | undefined>;
+  /**
+   * The agents one machine was prepared for, or nothing when it is not there.
+   *
+   * A machine prepared for nobody answers an empty list, which is not the same
+   * answer: the picker offers it to every agent, and the host lets every agent
+   * in.
+   */
+  agents(id: string): Promise<string[] | undefined>;
+  /**
+   * Whose one machine is and what its work is charged under, or nothing when it
+   * is not there.
+   *
+   * Every field is absent on a machine that carries none of them, which is a
+   * machine made outside ahpd rather than one nobody owns.
+   */
+  owner(id: string): Promise<Ownership | undefined>;
   /**
    * The command that runs a program inside one, or nothing when there is no
    * such machine.
@@ -1003,11 +1042,7 @@ export const ownerSaid = ownerOf;
  * absent on one made outside ahpd at all - which is a machine with no recorded
  * owner rather than one somebody owns.
  */
-export const claimedBy = (labels: Record<string, unknown>): {
-  owner?: Owner;
-  team?: string;
-  project?: string;
-} => {
+export const claimedBy = (labels: Record<string, unknown>): Ownership => {
   const owner = ownerSaid(labels[MACHINE_OWNER]);
   const team = labels[MACHINE_TEAM];
   const project = labels[MACHINE_PROJECT];
@@ -1037,6 +1072,20 @@ const running = (found: Record<string, unknown>): boolean => {
   const state = (typeof found.State === 'object' && found.State !== null ? found.State : {}) as Record<string, unknown>;
   return state.Running === true;
 };
+
+/**
+ * What a machine is doing, as the `state` leaf and the computer channel say it.
+ *
+ * Answered in the words the write takes, not the runtime's own.
+ *
+ * `docker`'s own status is a longer vocabulary than the two below, and a client
+ * that read `exited` and wrote it back would be refused its own reading. The
+ * runtime's word is not lost - `status` is its whole record and `State.Status`
+ * is in it - but this leaf is the one a client round-trips, so it says only
+ * what it will accept.
+ */
+export const stateOf = (found: Record<string, unknown>): 'running' | 'stopped' =>
+  (running(found) ? 'running' : 'stopped');
 
 /**
  * A git command a machine was asked, with a failure of git's own thrown.
@@ -1137,6 +1186,25 @@ export const within = (held: Record<string, unknown>, path: string): string | un
   const rest = path.slice(best.source.length);
   if (rest === '') return best.target;
   return `${best.target.endsWith('/') ? best.target.slice(0, -1) : best.target}${rest}`;
+};
+
+/**
+ * The directory a machine's own commands start in, from its record.
+ *
+ * A machine this host made keeps it in the record's `Config.WorkingDir`, and a
+ * box the operator configured says it as its own `workdir`, since nothing of
+ * Docker's is there to read. One reader for both, so a session inside either
+ * starts where the machine's own operator said - and the two are a fallback
+ * under `within` above, which answers nothing for a box.
+ *
+ * Every other reader of a record is Docker's own: a machine's labels, its
+ * mounts, its profile. This one is not, which is why it is here rather than at
+ * a caller.
+ */
+export const machineDirectory = (found: Record<string, unknown>): string | undefined => {
+  const config = (typeof found.Config === 'object' && found.Config !== null ? found.Config : {}) as Record<string, unknown>;
+  const said = [config.WorkingDir, found.workdir].find((one) => typeof one === 'string' && one !== '');
+  return typeof said === 'string' ? said : undefined;
 };
 
 /**
@@ -2978,6 +3046,30 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     // answers it, so every caller reading a listing back must be able to hand
     // that answer to anything that inspects.
     inspect: look,
+
+    /*
+     * The three facts a caller reads about a machine without wanting its whole
+     * record: what it is doing, which agents it was prepared for, and whose it
+     * is.
+     *
+     * Each is read from the same record `inspect` answers, and each answers
+     * `undefined` for a machine that is not here. They are here as their own
+     * methods so that the readers of those three facts ask a runtime rather
+     * than a shape: the same three are answered by a runtime whose machines
+     * carry no Docker record, where they come from something else.
+     */
+    state: async (id) => {
+      const found = await look(id);
+      return found === undefined ? undefined : stateOf(found);
+    },
+    agents: async (id) => {
+      const found = await look(id);
+      return found === undefined ? undefined : preparedFor(found);
+    },
+    owner: async (id) => {
+      const found = await look(id);
+      return found === undefined ? undefined : claimedOf(found);
+    },
 
     /*
      * How a command reaches one of these machines.

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { computerCatalogue } from '../src/catalogue.js';
 import { computerProvider } from '../src/provider.js';
+import { stateOf } from '../src/runtime.js';
 import { createHost } from '../../sdk/src/host.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
@@ -48,6 +49,11 @@ const fake = () => {
     kind: 'docker',
     list: async () => [...held.keys()].map((id) => ({ id, image: 'debian:bookworm-slim', status: 'Up', created: '' })),
     inspect: async (id: string) => held.get(id),
+    // The map holds Docker's own record, so the state leaf is read from it the
+    // way the runtime reads it rather than kept a second time here.
+    state: async (id: string) => { const one = held.get(id); return one === undefined ? undefined : stateOf(one); },
+    agents: async () => [],
+    owner: async () => ({}),
     run: async (spec: { name: string }) => { put(spec.name, true); return { id: spec.name, image: '', status: 'running', created: '' }; },
     start: async (id: string) => { put(id, true); },
     stop: async (id: string) => { put(id, false); },

@@ -112,8 +112,8 @@ export const routed = (
   /**
    * One runtime's own answer about one id, or nothing when none here serves it.
    *
-   * The shape the three answers that mean "there is no such machine" are given
-   * in: `undefined` is that answer, and a runtime that cannot be reached at all
+   * The shape every answer that means "there is no such machine" is given in:
+   * `undefined` is that answer, and a runtime that cannot be reached at all
    * still throws its own sentence through.
    */
   const about = <T>(
@@ -172,6 +172,9 @@ export const routed = (
     },
 
     inspect: (id) => about(id, (runtime, name) => runtime.inspect(name)),
+    state: (id) => about(id, (runtime, name) => runtime.state(name)),
+    agents: (id) => about(id, (runtime, name) => runtime.agents(name)),
+    owner: (id) => about(id, (runtime, name) => runtime.owner(name)),
     how: (id, asked) => about(id, (runtime, name) => runtime.how(name, asked)),
     hostCommand: (id) => about(id, (runtime, name) => runtime.hostCommand(name)),
     bringBack: (id) => about(id, (runtime, name) => runtime.bringBack(name)),

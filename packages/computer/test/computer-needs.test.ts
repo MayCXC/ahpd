@@ -777,6 +777,53 @@ it('reads a label value holding a tab or a newline as it was written', async () 
   expect((await runtime.list())[0]).toMatchObject({ id: 'wrapped', owner, project: 'ahpd\tdocs\nold' });
 });
 
+it('answers a machine state, its agents and its owner from its own record', async () => {
+  const dir = temp();
+  const state = join(dir, 'docker.json');
+  writeFileSync(state, JSON.stringify({
+    machines: [
+      {
+        name: 'box',
+        image: 'node:22',
+        labels: { 'ahpd.agents': 'claude,cofold', 'ahpd.owner': 'user:ana', 'ahpd.team': 'blue' },
+      },
+      // One that is up but running nothing for anybody, and one that is not up.
+      { name: 'idle', image: 'node:22', labels: {} },
+      { name: 'cold', image: 'node:22', state: 'exited', labels: {} },
+    ],
+    calls: [],
+  }));
+  const runtime = dockerRuntime({
+    command: process.execPath,
+    args: [FIXTURE],
+    env: { DOCKER_FAKE_STATE: state },
+    label: 'ahpd.computer=1',
+  });
+
+  // The state is the runtime's own word for what its record says, and not the
+  // longer status Docker carries: a machine that is up is running, and one that
+  // is not is stopped.
+  expect(await runtime.state('box')).toBe('running');
+  expect(await runtime.state('cold')).toBe('stopped');
+
+  // A machine prepared for nobody answers an empty list, which is not the same
+  // answer as a machine this runtime does not have.
+  expect(await runtime.agents('box')).toEqual(['claude', 'cofold']);
+  expect(await runtime.agents('idle')).toEqual([]);
+
+  // Whose it is, from the labels the create wrote, and nothing for a machine
+  // that carries none of them.
+  expect(await runtime.owner('box')).toEqual({ owner: 'user:ana', team: 'blue' });
+  expect(await runtime.owner('idle')).toEqual({});
+
+  // Every one of the three answers nothing about a machine that is not there,
+  // which is the same answer `inspect` gives.
+  expect(await runtime.state('nope')).toBeUndefined();
+  expect(await runtime.agents('nope')).toBeUndefined();
+  expect(await runtime.owner('nope')).toBeUndefined();
+  expect(await runtime.inspect('nope')).toBeUndefined();
+});
+
 it('answers a machine removed between the listing and its labels with the ones that stayed', async () => {
   const dir = temp();
   const state = join(dir, 'docker.json');

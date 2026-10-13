@@ -1,6 +1,5 @@
 import { recordsChannel } from '@ahpd/sdk';
 import type { RecordsChannel } from '@ahpd/sdk';
-import { stateOf } from './provider.js';
 import type { ComputerRuntime } from './runtime.js';
 
 /**
@@ -25,14 +24,20 @@ export const COMPUTERS_SCHEME = 'x-ahpd-computers';
  * `onProblem` hears a refresh that could not read the runtime.
  */
 export const computerCatalogue = (
-  runtime: Pick<ComputerRuntime, 'list' | 'inspect'>,
+  runtime: Pick<ComputerRuntime, 'list' | 'inspect' | 'state'>,
   onProblem?: (line: string) => void,
 ): RecordsChannel =>
   recordsChannel(COMPUTERS_SCHEME, {
     ids: async () => (await runtime.list()).map((one) => one.id),
     find: async (id) => {
       const status = await runtime.inspect(id);
-      return status === undefined ? undefined : { state: stateOf(status), status };
+      if (status === undefined) return undefined;
+      /*
+       * The state is the runtime's own answer rather than a word read out of
+       * the record beside it: a client round-trips this one, and a runtime
+       * whose machine carries no Docker record answers it too.
+       */
+      return { state: await runtime.state(id) ?? 'stopped', status };
     },
   }, {
     grant: 'computer:read',

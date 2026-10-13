@@ -14,10 +14,12 @@ import type { VaultRead } from './secrets.js';
 import { manifestOf } from './manifest.js';
 import { ensureParts, readParts, refusedWithout } from './parts.js';
 import type { FolderAnswer, Profile } from './manifest.js';
-import { adoptedDevContainer, claimedOf, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, madeUnderBind, partsHeld, preparedFor, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
-import type { ComputerRuntime, DockerOptions, MachineSpec } from './runtime.js';
-import { routed } from './router.js';
+import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, partsHeld, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
+import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './runtime.js';
+import { routed, spellMachineId } from './router.js';
 import type { Routed } from './router.js';
+import { machinesOf, sshRuntime } from './ssh.js';
+import type { SshOptions } from './ssh.js';
 import { claimAdopted, claimOwned, forgetOwned, keepMadeNeeds, keepProbe, madeNeedsOf, ownedOf, probeOf } from './owners.js';
 import { computerTools } from './tools.js';
 import { guardFor, hostUser, runsAsHost } from './gitdir.js';
@@ -84,9 +86,34 @@ const needValues = { type: 'object', additionalProperties: needValue } as const;
 export const optionsSchema = {
   type: 'object',
   properties: {
-    runtime: { type: 'string', enum: ['docker'], description: 'Which runtime to use. docker, the only one.' },
+    runtime: { type: 'string', enum: ['docker', 'ssh'], description: 'Which runtime to use: docker, which makes machines, or ssh, which only lists them.' },
     command: { ...text, description: 'The program to run. docker.' },
     args: { ...list, description: 'Arguments before its own, for a wrapper or a context.' },
+    ssh: {
+      type: 'object',
+      description: 'Boxes this host reaches over ssh. Each is listed rather than made: nothing of this host is on one, so none can be created, started or removed here.',
+      properties: {
+        command: { ...text, description: 'The program that reaches a box. ssh.' },
+        args: { ...list, description: 'Arguments before its own, for a wrapper or a jump host.' },
+        connectTimeout: { type: 'integer', minimum: 1, description: 'Seconds ssh is given to reach a box before it refuses. 10 when absent.' },
+        pollSeconds: { type: 'integer', minimum: 1, description: 'Seconds between checks of each box, so the up time charged for a box ends at a check rather than at the next listing. Only a listing moves the meter when absent.' },
+        machines: {
+          type: 'object',
+          description: 'The boxes, by the name a machine id is spelled with: the entry dev02 is the machine ssh.dev02.',
+          additionalProperties: {
+            type: 'object',
+            properties: {
+              destination: { ...text, description: 'What ssh is given as the host: user@host, or a name from its own config. An entry without one is not a box and is dropped.' },
+              port: { ...text, description: 'The port, when it is not the one ssh would use.' },
+              identity: { ...text, description: 'The private key to reach it with, when ssh would not pick one itself.' },
+              workdir: { ...text, description: "Where a command starts on the box. The login directory when absent, which is also where a path from this host is not." },
+              host: { ...list, description: 'The command that starts a nested host on the box. ["ahpd"] when absent.' },
+              agents: { ...list, description: 'The agents the box is prepared for, as a machine carries them in a label. A session of another agent is refused.' },
+            },
+          },
+        },
+      },
+    },
     env: { type: 'object', additionalProperties: { type: 'string', writeOnly: true }, description: "Environment variables merged over the daemon's. A variable is a credential wherever the image keeps one, so each answers <set>." },
     image: { ...text, description: 'The image a machine is made from when a call names none.' },
     cpus: { ...text, description: 'A CPU limit for every machine this host makes.' },
@@ -284,6 +311,39 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
   return Object.keys(held).length === 0 ? undefined : held;
 };
 
+/**
+ * The boxes an `ssh` option names, or nothing when it names none this host can use.
+ *
+ * The whole option rather than its map, because the other fields are read here
+ * as well and the map is the only part of it that cannot be read twice. The
+ * plugin's rule as everywhere else: a misspelled key costs its own setting
+ * rather than the plugin, so a box written without a destination is not a box,
+ * the rest still load, and the runtime is simply not built when none survives.
+ * A `pollSeconds` that is not a whole number above zero is a setting this host
+ * does not understand, and is left out rather than refused.
+ *
+ * An ssh runtime is not built without a box: `ssh` on its own is a program this
+ * host would run for machines that do not exist, and the plugin's runtimes are
+ * the machines it serves rather than the programs it knows.
+ */
+export const sshOptionsOf = (value: unknown): SshOptions | undefined => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const said = value as Record<string, unknown>;
+  const machines = machinesOf(said.machines);
+  if (machines === undefined) return undefined;
+  const command = typeof said.command === 'string' && said.command.trim() !== '' ? said.command : undefined;
+  const args = words(said.args);
+  const connectTimeout = whole(said.connectTimeout, 0) || undefined;
+  const pollSeconds = whole(said.pollSeconds, 0) || undefined;
+  return {
+    machines,
+    ...(command === undefined ? {} : { command }),
+    ...(args === undefined ? {} : { args }),
+    ...(connectTimeout === undefined ? {} : { connectTimeout }),
+    ...(pollSeconds === undefined ? {} : { pollSeconds }),
+  };
+};
+
 const whole = (value: unknown, fallback: number): number =>
   (typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : fallback);
 
@@ -460,6 +520,15 @@ export const apply: Plugin['apply'] = (host, options) => {
    * which a person may pick is the operator saying so.
    */
   const profiles = profilesOf(options.profiles);
+  /*
+   * The boxes this host reaches over ssh, which are listed rather than made.
+   *
+   * A box is on a machine somebody else set up, so it is an operator's line in
+   * the configuration rather than anything a session or a person may ask this
+   * host for: what it adds is a runtime that answers, and nothing it can be
+   * asked to make - decision `a-machine-runtime-is-named-for-its-maker`.
+   */
+  const ssh = sshOptionsOf(options.ssh);
   /*
    * Each profile's parts, against the versions file: an id the file does not
    * name is left out with a line naming it, and the profile keeps the rest. A
@@ -648,14 +717,31 @@ export const apply: Plugin['apply'] = (host, options) => {
   const dockered = dockerRuntime(dockeredOptions);
 
   /*
+   * The boxes this host reaches over ssh, built beside docker and only where
+   * the operator named one: a runtime with no machine behind it would be a
+   * value that prefixes an id nothing answers to.
+   *
+   * The program's environment is the plugin's own `env`, the same one docker is
+   * run with: both are the environment the program is reached through rather
+   * than anything a machine holds, and an operator who reaches two runtimes
+   * through one proxy or one agent says so once.
+   */
+  const sshed = ssh === undefined ? undefined : sshRuntime({ ...ssh, ...(env === undefined ? {} : { env }) });
+
+  /*
    * The runtimes this host serves, by the value that prefixes a machine's id.
    *
    * One entry today, and this map is where a later runtime is added: the plugin
    * holds one runtime per value, and every road into a machine - the provider,
    * the tools, `reach` - goes through the router, so nothing outside it knows
    * how many there are - decision `a-machine-runtime-is-named-for-its-maker`.
+   * The two differ in what they can be asked, not in how they are reached:
+   * docker makes machines and ssh only lists them.
    */
-  const runtimes: Record<string, ComputerRuntime> = { [dockered.kind]: dockered };
+  const runtimes: Record<string, ComputerRuntime> = {
+    [dockered.kind]: dockered,
+    ...(sshed === undefined ? {} : { [sshed.kind]: sshed }),
+  };
   const computerRouter = routed(runtimes, runtime, { log: noted });
 
   /*
@@ -694,19 +780,19 @@ export const apply: Plugin['apply'] = (host, options) => {
    * only label through the pairs that identify a container, so its creator is
    * in the file beside the configuration - decision
    * `a-dev-container-owner-is-kept-beside-the-config`. One made outside ahpd is
-   * in neither, and is the host's own. `held` is the machine's record when the
-   * caller has already read it.
+   * in neither, and is the host's own.
    */
-  const claimOf = async (id: string, held?: Record<string, unknown>): Promise<Claim> => {
-    // Through the router, so a machine on any runtime this host serves has its
-    // owner read from its own record rather than from Docker's.
-    const found = held ?? await computerRouter.inspect(id);
-    const labels = found === undefined ? {} : claimedOf(found);
-    const said = labels.owner === undefined ? ownedOf(host.configDir, id, noted) : labels;
+  const claimOf = async (id: string): Promise<Claim> => {
+    // The runtime's own answer, so a machine on any runtime this host serves
+    // has its owner read in that runtime's own words rather than out of
+    // Docker's record. A machine whose owner the runtime says nothing about is
+    // read again from this daemon's own file.
+    const said = await computerRouter.owner(id) ?? {};
+    const labels = said.owner === undefined ? ownedOf(host.configDir, id, noted) : said;
     return {
-      owner: said?.owner ?? `root:${host.hostName}`,
-      ...(said?.team === undefined ? {} : { team: said.team }),
-      ...(said?.project === undefined ? {} : { project: said.project }),
+      owner: labels?.owner ?? `root:${host.hostName}`,
+      ...(labels?.team === undefined ? {} : { team: labels.team }),
+      ...(labels?.project === undefined ? {} : { project: labels.project }),
     };
   };
 
@@ -748,11 +834,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     if (held === undefined) return {};
     const key = profileOf(held);
     const profile = key === undefined ? undefined : profiles?.[key];
-    const claimed = await claimOf(id, held);
+    const claimed = await claimOf(id);
     const work: SecretWork = { owner: claimed.owner, ...(claimed.team === undefined ? {} : { team: claimed.team }) };
     const recorded = madeNeedsOf(host.configDir, id, noted);
     const read = recorded === undefined
-      ? await namedAgain(profile?.needs, needValues, preparedFor(held), (provider) => host.machineNeeds(provider), work, secret)
+      ? await namedAgain(profile?.needs, needValues, await made.agents(id) ?? [], (provider) => host.machineNeeds(provider), work, secret)
       : await madeAgain(recorded, work, secret);
     if (read.unread.length === 0) {
       vaulted.set(id, read);
@@ -820,8 +906,38 @@ export const apply: Plugin['apply'] = (host, options) => {
    * writes, the tools a model calls, and the timer that takes a disposable away
    * - and up time is the same however it ended.
    */
+  /*
+   * The rows of a listing, with the up time of the runtimes that only list read
+   * from them.
+   *
+   * A machine on such a runtime is never started or stopped by this host, so the
+   * only moment that says it is up is a listing that found it reachable -
+   * decision `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`,
+   * read the other way round: nobody here made it, so the host pays. Every
+   * listing feeds the book rather than only the one at startup, because a
+   * stretch is what the time between two listings is, and a host whose only
+   * listing is its startup would never write one down.
+   *
+   * Two listings in a row that see a box up are one stretch, and the one that
+   * finds it gone is what closes it: the book ignores a stretch already open
+   * and one that is not there.
+   *
+   * The ids here are the ones a caller was given, because the book is keyed by
+   * them: a box's row from its own runtime carries the box's name alone, and
+   * whoever listed it is the one that spells the runtime into it.
+   */
+  const meterRows = async (found: Machine[]): Promise<Machine[]> => {
+    for (const one of found) {
+      if (makesMachines(computerRouter.runtimeFor(one.id))) continue;
+      if (isRunning(one)) metered.reachable(one.id);
+      else await metered.unreachable(one.id);
+    }
+    return found;
+  };
+
   const made: Routed = {
     ...computerRouter,
+    list: async () => meterRows(await computerRouter.list()),
     run: async (asked: MachineSpec) => {
       /*
        * The parts the machine asks for, built before it is made. One that will
@@ -988,6 +1104,37 @@ export const apply: Plugin['apply'] = (host, options) => {
 
   /** Every removal this plugin started and has not seen settle. */
   const removals = new Set<Promise<unknown>>();
+
+  /**
+   * The timer that checks every box, where the operator asked for one.
+   *
+   * A box is reached only when something reaches it, so a box's up time would
+   * otherwise be the time between the listings a client asked for, and a client
+   * that stops listing would leave a stretch open for as long as the daemon
+   * runs. `ssh.pollSeconds` is how the operator says how often to look instead -
+   * a row of the plugin's `ssh` option, not a decision of its own.
+   *
+   * The plugin owns the timer and not the runtime, because a runtime is never
+   * told that the host is closing: this is the object with the close hook, and
+   * the same one that clears the disposal timers clears this.
+   *
+   * Only the boxes are listed, and not every runtime: a `docker ps` every
+   * interval is work on a daemon that nothing asked for, and a Docker machine's
+   * up time is opened and closed by the start and the stop this host performs.
+   */
+  let polling: ReturnType<typeof setInterval> | undefined;
+  if (sshed !== undefined && ssh?.pollSeconds !== undefined) {
+    const boxes = sshed.kind;
+    polling = setInterval(() => {
+      void sshed.list()
+        .then((found) => meterRows(found.map((one) => ({ ...one, id: spellMachineId(boxes, one.id) }))))
+        .catch((error: unknown) => {
+          noted(`the ssh machines were not checked, so their up time is unchanged: ${error instanceof Error ? error.message : String(error)}`);
+        });
+    }, ssh.pollSeconds * 1000);
+    // A timer nobody is waiting on is not a reason for the process to stay up.
+    (polling as { unref?: () => void }).unref?.();
+  }
 
   /** What each agent this machine is made for declares it needs, by provider. */
   const needsFor = (asked: MachineSource) =>
@@ -1336,9 +1483,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      * machine's mounts, as `-w` is, or the machine's own directory. The inner
      * session is created there, since the host inside knows only its own paths.
      */
-    const config = (typeof held.Config === 'object' && held.Config !== null ? held.Config : {}) as Record<string, unknown>;
-    const workdir = typeof config.WorkingDir === 'string' && config.WorkingDir !== '' ? config.WorkingDir : undefined;
-    const inside = (asked.cwd === undefined ? undefined : within(held, asked.cwd)) ?? workdir;
+    const inside = (asked.cwd === undefined ? undefined : within(held, asked.cwd)) ?? machineDirectory(held);
     return { ...spawn, ...(inside === undefined ? {} : { workingDirectory: inside }) };
   };
 
@@ -1421,17 +1566,14 @@ export const apply: Plugin['apply'] = (host, options) => {
     putIn,
     takeOut,
     /*
-     * The agents one was prepared for, read back from its own label.
+     * The agents one was prepared for, read back from its own runtime.
      *
      * The host checks this before a session enters, so an agent is never run
-     * in a machine that was made for another; the picker reads the same label
+     * in a machine that was made for another; the picker reads the same answer
      * from the listing. Undefined for a machine that is not there, which the
      * `how` above already answers for.
      */
-    agents: async (id) => {
-      const held = await made.inspect(id);
-      return held === undefined ? undefined : preparedFor(held);
-    },
+    agents: async (id) => made.agents(id),
     /*
      * And the parts the asking agent needs that the machine was made without,
      * from its `ahpd.parts` label.
@@ -1491,7 +1633,7 @@ export const apply: Plugin['apply'] = (host, options) => {
          */
         return { session: sessionOf(held) ?? '', mine: false };
       }
-      const said = claimedOf(held);
+      const said = await made.owner(id) ?? {};
       return {
         session: sessionOf(held) ?? '',
         ...(said.owner === undefined ? {} : { owner: said.owner }),
@@ -2039,6 +2181,12 @@ export const apply: Plugin['apply'] = (host, options) => {
     // The scan arms a leftover machine as it finds one, so it has to be over
     // before the timers below are cleared.
     await listing;
+    // The check of the boxes goes with the disposal timers: a daemon on its way
+    // out is not one whose next check is worth waiting for.
+    if (polling !== undefined) {
+      clearInterval(polling);
+      polling = undefined;
+    }
     for (const held of disposables.values()) {
       if (held.timer === undefined) continue;
       clearTimeout(held.timer);

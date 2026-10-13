@@ -12,10 +12,15 @@
  * the one box that is not there: the fixture writes ssh's own sentence to
  * stderr and exits 255, which is what ssh exits with when it cannot connect.
  * Nothing here opens a socket, needs a key or needs `ssh` installed.
+ *
+ * `SSH_FAKE_UNREACHABLE_FILE` is the same list read from a file, again on every
+ * call. A box that goes down between two listings is what an environment cannot
+ * say - it is fixed when the host is loaded - and a file is what a test rewrites
+ * in between.
  */
 
 import { spawn } from 'node:child_process';
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, readFileSync } from 'node:fs';
 
 const log = process.env.SSH_FAKE_LOG;
 if (log === undefined) {
@@ -60,7 +65,17 @@ const read = () => {
 };
 
 const held = read();
-const unreachable = (process.env.SSH_FAKE_UNREACHABLE ?? '').split(',').filter((one) => one !== '');
+/** The list from the environment, then the one from the file it names. */
+const fromFile = () => {
+  const where = process.env.SSH_FAKE_UNREACHABLE_FILE;
+  if (where === undefined || where === '') return '';
+  try { return readFileSync(where, 'utf8'); }
+  catch { return ''; }
+};
+const unreachable = `${process.env.SSH_FAKE_UNREACHABLE ?? ''},${fromFile()}`
+  .split(',')
+  .map((one) => one.trim())
+  .filter((one) => one !== '');
 if (held.destination === undefined || unreachable.includes(held.destination)) {
   const host = held.destination ?? '';
   process.stderr.write(`ssh: connect to host ${host} port ${held.port ?? '22'}: No route to host\n`);

@@ -33,6 +33,9 @@ const faker = (name: string, over: Partial<ComputerRuntime> = {}): ComputerRunti
   remote: name !== BARE,
   list: async () => [],
   inspect: async () => undefined,
+  state: async () => undefined,
+  agents: async () => undefined,
+  owner: async () => undefined,
   how: async () => undefined,
   hostCommand: async () => undefined,
   run: async (spec: MachineSpec) => row(spec.name),
@@ -100,6 +103,36 @@ it('lists every runtime, each set under the ids its own runtime spells', async (
   expect(asked).toEqual([['inspect', 'dev02'], ['start', 'dev02'], ['inspect', 'box']]);
   expect(two.runtimeFor('ssh.dev02')).toBe(spied);
   expect(two.runtimeFor('nowhere.box')).toBeUndefined();
+});
+
+it('routes a machine state, its agents and its owner to the runtime its id names', async () => {
+  const asked: string[] = [];
+  const docker = faker(BARE, {
+    state: async () => 'running',
+    agents: async () => ['claude'],
+    owner: async (id) => { asked.push(id); return { owner: 'user:ana', team: 'blue' }; },
+  });
+  const ssh = faker('ssh', {
+    state: async () => 'stopped',
+    agents: async () => [],
+    owner: async (id) => { asked.push(id); return {}; },
+  });
+  const one = routed({ [BARE]: docker, ssh }, BARE);
+
+  expect(await one.state('box')).toBe('running');
+  expect(await one.agents('box')).toEqual(['claude']);
+  expect(await one.owner('box')).toEqual({ owner: 'user:ana', team: 'blue' });
+  // A box answers all three for itself, and what it is given is the name alone.
+  expect(await one.state('ssh.dev02')).toBe('stopped');
+  expect(await one.agents('ssh.dev02')).toEqual([]);
+  expect(await one.owner('ssh.dev02')).toEqual({});
+  expect(asked).toEqual(['box', 'dev02']);
+
+  // A runtime this host does not serve answers nothing, which is the same
+  // answer as a machine that is not there.
+  expect(await one.state('libvirt.web1')).toBeUndefined();
+  expect(await one.agents('libvirt.web1')).toBeUndefined();
+  expect(await one.owner('libvirt.web1')).toBeUndefined();
 });
 
 it('makes a machine on the runtime it was configured with, and never a dotted name there', async () => {
