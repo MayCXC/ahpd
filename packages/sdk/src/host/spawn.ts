@@ -8,6 +8,7 @@ import { nestedAgent } from '../nested.js';
 import { idOf, uriFor, Status } from '../catalog.js';
 import { meter } from '../meter.js';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../tools/clientcalls.js';
+import { asSentAttachment } from './chatattachment.js';
 import { chatUriFor, subagentChatUri } from './channels.js';
 import { CLOSING } from './common.js';
 import { sameFolder, trusted } from './trust.js';
@@ -15,6 +16,7 @@ import type { Bag } from '../types/common.js';
 import type { Agent } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Session, SubagentChat, SubagentRequest } from '../types/session.js';
+import type { MessageAttachment } from '@microsoft/agent-host-protocol';
 import type { ResourceStore } from '../types/resources.js';
 import type { RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { Move } from './lifecycle.js';
@@ -38,6 +40,8 @@ export interface Spawn {
   stampedCalls(session: string, turns: Bag[]): Bag[];
   /** Every turn marked with which client sent it. */
   withSender(session: string, turns: Bag[]): Bag[];
+  /** A chat's state with the attachments its clients sent back on its messages. */
+  asSentChat(state: Bag): Bag;
   /** Write one action on a worker's chat, and keep the state a subscriber reads. */
   sendSubagent(uri: string, given: Bag): void;
   /** What each worker chat's row last said, so an unchanged one is not re-sent. */
@@ -157,6 +161,79 @@ export function createSpawn(ctx: HostContext): Spawn {
     const session = sessionHolding(chat);
     if (session === undefined) return action;
     return { ...action, _meta: { ...action._meta, subagentChatUri: subagentChatUri(session, action.toolCallId) } };
+  };
+  /**
+   * A message with the attachments the client sent back on it.
+   *
+   * A `chat` attachment is resolved into a pointer before the backend is handed
+   * it - `messageAttachments` - and a backend hands back what it was given: the
+   * turn it started, and the message it is holding for the turn behind it. What
+   * a client would then read is the pointer, with the tail of another chat's
+   * transcript in its `modelRepresentation`, where what the person attached was
+   * a reference to a chat. `asSentAttachment` is what says which attachments
+   * this host made, so the message a client is served is the message that was
+   * sent and the pointer stays in what the model read.
+   *
+   * The two actions a client's message travels on, and only those: every other
+   * action a backend sends is passed through as its own object.
+   */
+  const asSent = (given: Bag): Bag => {
+    if (given.type !== 'chat/turnStarted' && given.type !== 'chat/pendingMessageSet') return given;
+    const message = given.message as Bag | undefined;
+    if (typeof message !== 'object' || message === null) return given;
+    const attachments = sentAttachments(message);
+    return attachments === undefined ? given : { ...given, message: { ...message, attachments } };
+  };
+
+  /** A message's attachments as the client sent them, or nothing where none moved. */
+  const sentAttachments = (message: Bag): MessageAttachment[] | undefined => {
+    const held = message.attachments as MessageAttachment[] | undefined;
+    if (!Array.isArray(held)) return undefined;
+    const attachments = held.map(asSentAttachment);
+    return attachments.some((one, at) => one !== held[at]) ? attachments : undefined;
+  };
+
+  /** A turn, or a held message, with the attachments the client sent on it. */
+  const sentMessage = (given: unknown): unknown => {
+    const one = given as Bag | undefined;
+    if (typeof one !== 'object' || one === null) return given;
+    const message = one.message as Bag | undefined;
+    if (typeof message !== 'object' || message === null) return given;
+    const attachments = sentAttachments(message);
+    return attachments === undefined ? given : { ...one, message: { ...message, attachments } };
+  };
+
+  /**
+   * A chat's state with the attachments its clients sent back on its messages.
+   *
+   * The other road out of the host for the same fact the emitter keeps: the
+   * turn, the message waiting behind one and the steering message are all held
+   * by the backend as it was handed them, so a subscriber would read the
+   * pointer `messageAttachments` made in place of the chat attachment that was
+   * sent. `withSender` is here for the same reason and in the same place - a
+   * backend's state is the agent's answer and not a place this host writes
+   * into, so what moves is copied and what did not is the backend's own object.
+   */
+  const asSentChat = (state: Bag): Bag => {
+    const list = (given: unknown): unknown => {
+      if (!Array.isArray(given)) return given;
+      const held = given as Bag[];
+      const next = held.map(sentMessage) as Bag[];
+      return next.some((one, at) => one !== held[at]) ? next : given;
+    };
+    // Copied once, and only the keys that moved, so a state a client reads says
+    // what the backend's said and no more.
+    let next = state;
+    const moved = (key: string, value: unknown): void => {
+      if (value === state[key]) return;
+      if (next === state) next = { ...state };
+      next[key] = value;
+    };
+    moved('turns', list(state.turns));
+    moved('activeTurn', sentMessage(state.activeTurn));
+    moved('queuedMessages', list(state.queuedMessages));
+    moved('steeringMessage', sentMessage(state.steeringMessage));
+    return next;
   };
   /**
    * A chat's state with the same stamp on every spawning call in its turns,
@@ -691,9 +768,9 @@ export function createSpawn(ctx: HostContext): Spawn {
          */
         if (sender !== undefined && action.type === 'chat/turnStarted') {
           kept.setSender(idOf(uri), turn, sender);
-          dispatch(where, { ...action, _meta: { ...(action._meta as Bag | undefined), 'ahpd.sender': sender } });
+          dispatch(where, asSent({ ...action, _meta: { ...(action._meta as Bag | undefined), 'ahpd.sender': sender } }));
         }
-        else dispatch(where, action);
+        else dispatch(where, asSent(action));
         // A tool call that finished may have written to this session's tree, so
         // the changeset is re-read then rather than waiting for the turn's end.
         if (action.type === 'chat/toolCallComplete') {
@@ -1062,7 +1139,7 @@ export function createSpawn(ctx: HostContext): Spawn {
   };
 
   return {
-    absorb, unstamped, withWorkerUri, stampedCalls, withSender,
+    absorb, unstamped, withWorkerUri, stampedCalls, withSender, asSentChat,
     sendSubagent, describedSub, endedWorkers,
     openSubagent, formerChatUri, titleOf, keepTitle, keepProvider,
     spawn,

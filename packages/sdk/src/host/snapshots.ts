@@ -328,7 +328,10 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       if (typeof state.activeTurn === 'object' && state.activeTurn !== null) {
         state.activeTurn = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, [state.activeTurn as Bag]))[0];
       }
-      return value({ resource: channel, state, fromSeq: ctx.serverSeq });
+      // The attachments the clients sent, back on the messages that carry them:
+      // a `chat` attachment reaches a backend as a pointer, and the reference
+      // it was sent as is what a client reads.
+      return value({ resource: channel, state: ctx.asSentChat(state), fromSeq: ctx.serverSeq });
     }
     /*
      * A session in the catalogue that this host is not running.

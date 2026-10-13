@@ -48,7 +48,7 @@ refs:
 | Task | Status | Depends |
 | --- | --- | --- |
 | [01 - `#chat:` completes a chat of the session](task-01-chat-completes-a-chat-of-the-session.md) | implemented | - |
-| [02 - A chat attachment gives the agent a pointer and an excerpt](task-02-a-chat-attachment-gives-a-pointer-and-an-excerpt.md) | todo | 01 |
+| [02 - A chat attachment gives the agent a pointer and an excerpt](task-02-a-chat-attachment-gives-a-pointer-and-an-excerpt.md) | implemented | 01 |
 
 ## Resume state
 

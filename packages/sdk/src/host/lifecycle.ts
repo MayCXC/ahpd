@@ -6,11 +6,14 @@ import { idOf, uriFor } from '../catalog.js';
 import { join } from 'node:path';
 import { worktreeFor, worktreesOf } from '../repo/worktrees.js';
 import { ROOT, chatIdFor, chatUriFor, named } from './channels.js';
+import { keepChatAttachment, resolveChatAttachment } from './chatattachment.js';
+import { openLink } from '../tools/session.js';
 import { readCreatedBy, readOrigin } from '../remotesession.js';
 import { BANG, HOSTS_OWN } from './common.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
 import type { Session, MessageAttachment, MessageFrom } from '../types/session.js';
+import type { MessageChatAttachment } from '@microsoft/agent-host-protocol';
 import type { Owner } from '../types/usage.js';
 import type { Principal } from '../types/users.js';
 import type { Connection } from '../types/host.js';
@@ -46,6 +49,24 @@ export interface Move {
  * be answered before anything is created.
  */
 export type BeforeWorktree = (repository: string, path: string) => Promise<void>;
+
+/**
+ * What a message's attachments are for the backend, or why there are none.
+ *
+ * Resolving a `chat` attachment reads another chat, and two things there are
+ * the sender's to answer for: a turn that is not a completed one cannot be the
+ * end of a transcript, and a chat of a session the sender may not read is not
+ * one this host reads out for them. Either is a refusal of the message rather
+ * than of the attachment, because a turn whose attachment was dropped is a
+ * turn the person does not know the agent never saw.
+ *
+ * A refusal is answered rather than thrown, which is why this is a shape and
+ * not an exception: this runs on the path that applies an action, and a throw
+ * there escapes with the client's own optimistic turn still standing.
+ */
+export type Attached =
+  | { attachments?: MessageAttachment[] | undefined; refusal?: undefined }
+  | { refusal: string; attachments?: undefined };
 
 /**
  * What happens to a session between being opened and being gone.
@@ -103,8 +124,13 @@ export interface Lifecycle {
   modelIn(value: unknown): { id: string; config?: Record<string, string | number | boolean | null> } | undefined;
   /** Who a message came from, read off the message itself, and what it picked. */
   messageFrom(message: Record<string, unknown>): MessageFrom | undefined;
-  /** What a client attached to its message, read off the message itself. */
-  messageAttachments(message: Record<string, unknown>): MessageAttachment[] | undefined;
+  /**
+   * What a client attached to its message, for the backend to read.
+   *
+   * The sender decides for one thing only - whether a referenced chat is read
+   * out at all - and is absent where nobody sent the message.
+   */
+  messageAttachments(message: Record<string, unknown>, sender?: Connection): Attached;
   /** Start a session. */
   openSession(
     uri: string,
@@ -123,7 +149,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
   const {
     options, sessions, byChat, subagents, owners, kept, decided, offered, worktrees, origins,
     drafts, madeFrom, resumedSessions, githubFacts, principals, presence, marks, lives, beside,
-    dispatch, broadcast, flushDeltas, log, fire, sessionEvents, leadOf,
+    dispatch, broadcast, flushDeltas, log, fire, sessionEvents, leadOf, chatOf,
     dirOf, changesetOf, stopUnwatched, captureBaseline,
     sessionMachines, enteredIn, inMachine, takeOut, placedIn, followOf,
     isolating, charged, senders, sentBy, checked, principalFor, machineFor, ownerFor,
@@ -1168,18 +1194,136 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
   };
 
   /**
-   * What a client attached to its message, read off the message itself.
+   * Whether one attachment is a reference to another chat.
+   *
+   * Read off the wire rather than trusted as a type, the way every other
+   * field of a message is: `attachments` is whatever a client sent, and the
+   * discriminant is the only thing that says what each one is.
+   */
+  const isChat = (one: MessageAttachment): one is MessageChatAttachment => String(one.type) === 'chat';
+
+  /**
+   * Whether the sender may read the session a referenced chat is in.
+   *
+   * Asked only where there is somebody to ask. A host with no user directory
+   * has no principal anywhere and refuses nothing, so every sender reads every
+   * transcript - and so does a socket on the deployment's own token, which is
+   * the host rather than a person on it.
+   *
+   * Otherwise it is the read group of the `session` subject rather than one
+   * session's own, which is as narrow as the question can be made: a read grant
+   * on this host is by subject and not by session, so there is no per-session
+   * answer to look up - the same reading `automations.ts` takes of an owner
+   * with `maySee`.
+   *
+   * Read as a default: where this cannot say yes, the excerpt is left off and
+   * the pointer is all the model gets. A transcript is somebody's conversation
+   * and handing it over is the thing that has to be allowed, so the answer that
+   * is wrong quietly is the permissive one.
+   */
+  const mayRead = (sender: Connection | undefined): boolean => {
+    if (options.users === undefined) return true;
+    if (sender?.root === true) return true;
+    return sender?.principal?.can('session:read') === true;
+  };
+
+  /**
+   * What a client attached to its message, for the backend to read.
    *
    * `Message.attachments` is optional and a client that sent none says nothing,
-   * so an empty list is no list rather than an empty one. The backend is handed
-   * them as they arrived rather than a rendering of them: an agent that can
-   * read an image reads the image, and what it cannot is said in the turn's own
-   * text rather than here, which is the backend's call to make.
+   * so an empty list is no list rather than an empty one. Everything but a
+   * `chat` attachment is handed over as it arrived rather than as a rendering
+   * of it: an agent that can read an image reads the image, and what it cannot
+   * is said in the turn's own text rather than here, which is the backend's
+   * call to make.
+   *
+   * A `chat` attachment is the one this host has work to do for, because
+   * reading another chat is not a backend's to do: it becomes a `simple`
+   * attachment whose `modelRepresentation` names the chat, links to it and
+   * carries the tail of its transcript - `chatattachment.ts`. The message is
+   * never written to, so the turn a client sees still carries the `chat`
+   * attachment it sent, and the next reader of that turn resolves it again from
+   * its own side.
+   *
+   * The chat's own turns are read here, and only here: an attachment inside
+   * those turns is not resolved again, which is what keeps this a bounded read
+   * rather than one that follows references as far as a client cared to write
+   * them.
    */
-  const messageAttachments = (message: Record<string, unknown>): MessageAttachment[] | undefined => {
-    if (!Array.isArray(message.attachments)) return undefined;
+  const messageAttachments = (message: Record<string, unknown>, sender?: Connection): Attached => {
+    if (!Array.isArray(message.attachments)) return {};
     const held = message.attachments.filter((one) => typeof one === 'object' && one !== null) as MessageAttachment[];
-    return held.length === 0 ? undefined : held;
+    if (held.length === 0) return {};
+    // Nothing to resolve: the same list, untouched.
+    if (!held.some(isChat)) return { attachments: held };
+
+    const attachments: MessageAttachment[] = [];
+    for (const one of held) {
+      if (!isChat(one)) {
+        attachments.push(one);
+        continue;
+      }
+      /*
+       * The chat the attachment names, where this host is running it.
+       *
+       * `chatOf` is what every other reader of a chat URI goes through, so a
+       * reference spelt the way this client knows the chat - the default chat's
+       * derived name, a peer chat's own name, the older `ahp-chat:/<id>` - is
+       * the same chat here as everywhere else. A chat this host is not running
+       * has no turns to read and no link to give, and a client can attach one:
+       * the reference outlives the session it names, and a message that arrives
+       * with it is still a message.
+       */
+      const named = chatOf(one.resource);
+      const live = byChat.get(named);
+      const owning = live === undefined ? undefined : sessions.get(live.uri);
+      const link = live === undefined || owning === undefined
+        ? undefined
+        : openLink(live.uri, owning.agent.provider, chatIdFor(live.uri, named));
+
+      if (live === undefined || owning === undefined || !mayRead(sender)) {
+        /*
+         * Nothing to hand over, and the turn still runs.
+         *
+         * The pin goes with the transcript rather than being refused here: a
+         * turn no reader looked at is not one this host can say it found, and
+         * the pointer already says there is nothing up to it. What is left is
+         * the reference itself, so the model knows the person meant a chat even
+         * where nothing of it can be read out.
+         */
+        const { endTurn: _unread, ...withoutPin } = one;
+        attachments.push(keepChatAttachment(resolveChatAttachment(withoutPin, [], link), one));
+        continue;
+      }
+
+      /*
+       * A turn that is still running cannot be the end of a transcript.
+       *
+       * Checked against the chat rather than against what was in it when the
+       * client was told about it: a turn that started after the completion was
+       * offered is exactly the case - the person attaches the chat they are
+       * looking at while it is still answering - and the backend's own state is
+       * what knows.
+       */
+      const active = (live.chat.chatState() as { activeTurn?: { id?: unknown } }).activeTurn;
+      if (one.endTurn !== undefined && typeof active?.id === 'string' && active.id === one.endTurn) {
+        return { refusal: `Chat attachment endTurn must reference a completed turn: ${one.resource}#${one.endTurn}` };
+      }
+
+      /*
+       * And a turn this host cannot find is the same answer for the same
+       * reason: a client pinned a transcript this host does not have, so what
+       * was attached is not what would be read. `resolveChatAttachment` is what
+       * finds it, and says so by throwing.
+       */
+      try {
+        attachments.push(keepChatAttachment(resolveChatAttachment(one, live.chat.allTurns(), link), one));
+      } catch (error) {
+        return { refusal: error instanceof Error ? error.message : String(error) };
+      }
+    }
+
+    return { attachments };
   };
 
   /**

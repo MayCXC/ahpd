@@ -327,12 +327,21 @@ export function chatAction(
         text: String(message.text ?? ''),
       });
       let refused: string | undefined;
-      try {
-        refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message));
-      } catch (error) {
-        refused = error instanceof Error ? error.message : String(error);
-      } finally {
+      // What the attachments became, before anything is started: a chat
+      // attachment whose transcript cannot be handed over refuses the message
+      // rather than reaching the backend as a promise this host cannot keep.
+      const attached = messageAttachments(message, connection);
+      if (attached.refusal !== undefined) {
+        refused = attached.refusal;
         release();
+      } else {
+        try {
+          refused = await beginOrRun(talking, provider, String(action.turnId ?? ''), String(message.text ?? ''), modelIn(message.model), messageFrom(message), connection, undefined, attached.attachments);
+        } catch (error) {
+          refused = error instanceof Error ? error.message : String(error);
+        } finally {
+          release();
+        }
       }
       if (refused !== undefined) refuse(connection.peer, channel, action, origin, refused);
     })();
@@ -449,8 +458,17 @@ export function chatAction(
         live = owner.chats.get(session.chatUri) ?? session;
       }
       const provider = owner?.agent.provider ?? 'This provider';
+      // A chat attachment this host cannot hand over refuses the message the
+      // same way a backend that would not start does, and before anything is
+      // started: a turn whose agent never saw the chat it was pointed at is a
+      // turn the person has to be told about.
+      const attached = messageAttachments(message, connection);
+      if (attached.refusal !== undefined) {
+        refuse(connection.peer, channel, action, origin, attached.refusal);
+        break;
+      }
       beginTurn(
-        beginOrRun(live, provider, turnId, text, modelIn(message.model), messageFrom(message), connection, undefined, messageAttachments(message)),
+        beginOrRun(live, provider, turnId, text, modelIn(message.model), messageFrom(message), connection, undefined, attached.attachments),
         (why) => refuse(connection.peer, channel, action, origin, why),
       );
       break;
@@ -1040,7 +1058,12 @@ export function chatAction(
           no('This backend cannot take a message mid-turn');
           break;
         }
-        if (!session.steer(String(action.id ?? ''), String(message.text ?? ''), messageAttachments(message))) {
+        const steered = messageAttachments(message, connection);
+        if (steered.refusal !== undefined) {
+          refuse(connection.peer, channel, action, origin, steered.refusal);
+          break;
+        }
+        if (!session.steer(String(action.id ?? ''), String(message.text ?? ''), steered.attachments)) {
           no('Nothing is running in this chat to steer');
         }
         break;
@@ -1053,6 +1076,14 @@ export function chatAction(
         ? message.model
         : {}) as Record<string, unknown>;
       const provider = sessions.get(session.uri)?.agent.provider ?? 'This provider';
+      // Read now rather than when the turn comes round: a message waiting
+      // behind another is still a message this host has to be able to answer
+      // for, and the chat it points at may be gone by the time it runs.
+      const queued = messageAttachments(message, connection);
+      if (queued.refusal !== undefined) {
+        refuse(connection.peer, channel, action, origin, queued.refusal);
+        break;
+      }
       beginTurn(
         beginOrRun(
           session,
@@ -1063,7 +1094,7 @@ export function chatAction(
           messageFrom(message),
           connection,
           String(action.id ?? ''),
-          messageAttachments(message),
+          queued.attachments,
         ),
         (why) => refuse(connection.peer, channel, action, origin, why),
       );
