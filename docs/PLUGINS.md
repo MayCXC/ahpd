@@ -644,7 +644,7 @@ Nobody but your own plugin ever sees the value: it comes from the vault at the c
 ### A new chat's preamble
 
 `host.registerChatPreamble(preamble)` gives text to each new chat that a person or a tool opens.
-The host asks the preamble in a client's `createChat`, which makes a plain chat, a fork or a side chat, and in the `createChat` tool.
+The host asks the preamble in a client's `createChat` for a plain chat or a side chat, and in the `createChat` tool. A fork is not asked, because it resumes a conversation that already began with the preamble.
 It does not ask for the first chat of a session, a subagent worker chat or a changeset chat.
 
 ```ts

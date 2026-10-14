@@ -133,15 +133,19 @@ describe('a chat a client opens', () => {
     expect(asked[0]?.chats.map((one) => one.resource)).toEqual([held]);
   });
 
-  it('tells the preamble the origin of a fork and of a side chat', async () => {
+  it('tells the preamble the origin of a side chat', async () => {
     const { lead, held, asked, say, createChat } = await opened([said('You are Motion.')]);
     await say(lead, 'the weather', 't1');
-    await createChat({ chat: 'ahp-chat:/fork', source: { kind: 'fork', chat: lead, turnId: 't1' } });
     await createChat({ chat: 'ahp-chat:/side', source: { kind: 'sideChat', chat: lead, turnId: 't1' } });
-    expect(asked.map((one) => one.origin)).toEqual([
-      { kind: 'fork', chat: held, turnId: 't1' },
-      { kind: 'sideChat', chat: held, turnId: 't1' },
-    ]);
+    expect(asked.map((one) => one.origin)).toEqual([{ kind: 'sideChat', chat: held, turnId: 't1' }]);
+  });
+
+  it('gives a fork no preamble, because its conversation already began with one', async () => {
+    const { lead, asked, started, say, createChat } = await opened([said('You are Motion.')]);
+    await say(lead, 'the weather', 't1');
+    await createChat({ chat: 'ahp-chat:/fork', source: { kind: 'fork', chat: lead, turnId: 't1' } });
+    expect(asked).toEqual([]);
+    expect(started.get('ahp-chat:/fork')?.context).toBeUndefined();
   });
 
   it('gives a side chat the preamble first, then the turn it was made from', async () => {

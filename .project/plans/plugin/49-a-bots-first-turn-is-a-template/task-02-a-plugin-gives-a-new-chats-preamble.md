@@ -127,10 +127,8 @@ Where the build departs from the plan:
 - The changeset case is in `changewords.test.ts`, whose harness opens the changeset side chat. `chat-preamble.test.ts` has the subagent case.
 - `plugin-host.test.ts` gained `preambles: []` in its contributions, because the field is required.
 - `chat-preamble.test.ts` has three extra cases for `registerChatPreamble` itself.
-- A fork also gets the preamble as its `context`, beside the turns it resumes.
+- A fork gets no preamble, because it resumes a conversation that already began with one. Softov chose this after the build.
 
-Open questions:
-
-- A fork resumes the conversation of the chat it came from, which already had the preamble. Should a fork get the preamble again? The build follows the answers table and gives it.
+Open questions: none.
 
 Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 4032 of 4032 tests.

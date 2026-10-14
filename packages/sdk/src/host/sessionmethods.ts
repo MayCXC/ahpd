@@ -1137,9 +1137,10 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        *
        * Asked after every check, so a refused call asks nobody. The session and
        * the name are checked again after, because both can change while the
-       * plugins answer.
+       * plugins answer. A fork is not asked: it resumes a conversation that
+       * already began with the preamble.
        */
-      const preambles = options.chatPreambles ?? [];
+      const preambles = origin?.['kind'] === 'fork' ? [] : options.chatPreambles ?? [];
       if (preambles.length > 0) {
         const preamble = await preambleOf(preambles, {
           session: uri,
