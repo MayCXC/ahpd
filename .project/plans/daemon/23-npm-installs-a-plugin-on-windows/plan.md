@@ -56,7 +56,7 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - npm starts through node on Windows](task-01-npm-starts-through-node-on-windows.md) | todo | - |
+| [01 - npm starts through node on Windows](task-01-npm-starts-through-node-on-windows.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -64,8 +64,8 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-npm-starts-through-node-on-windows.md](task-01-npm-starts-through-node-on-windows.md).
+- **Done so far:** planned 2026-10-13; the one task implemented 2026-10-13, not reviewed and not set to done.
+- **Next action:** the review, then the two checks by hand on Windows: [task-01-npm-starts-through-node-on-windows.md](task-01-npm-starts-through-node-on-windows.md).
 - **Open questions:** none.
 - **Watch out for:** the build runs on Linux, so the Windows path is tested through the pure function only.
 

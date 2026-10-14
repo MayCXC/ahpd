@@ -19,8 +19,8 @@
  */
 
 import { spawn } from 'node:child_process';
-import { mkdirSync } from 'node:fs';
-import { isAbsolute, join } from 'node:path';
+import { existsSync, mkdirSync } from 'node:fs';
+import { isAbsolute, join, win32 } from 'node:path';
 import { readJsonObject, writeJsonAtomic } from '@ahpd/sdk';
 import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
@@ -51,9 +51,60 @@ export interface Ran {
  */
 export type Runner = (program: string, argv: readonly string[]) => Promise<Ran>;
 
+/** How one program is started: what `spawn` is given. */
+export interface Launch {
+  /** The program to start, which is a path rather than a name when npm is the `.js` one. */
+  command: string;
+  /** Its arguments, already quoted when a shell is the one that reads them. */
+  args: string[];
+  /** Whether a shell reads the command line, which `cmd.exe` has to for npm. */
+  shell: boolean;
+}
+
+/**
+ * How a program is started on `platform`.
+ *
+ * Away from Windows this is the program by its name and its arguments as they
+ * are, which is every call this daemon makes on Linux and macOS. On Windows npm
+ * is `npm.cmd`, and Node refuses to spawn a `.cmd` file without a shell - the
+ * fix for CVE-2024-27980 - so `npm.cmd` by its name fails with `ENOENT` just as
+ * `npm` does. npm is started there as this Node itself, with npm's own
+ * `npm-cli.js` as its first argument: no shell to quote for, no `.cmd` for Node
+ * to refuse, and the npm that runs is the one this daemon runs under, at
+ * whatever version and in whatever folder that is.
+ *
+ * The script comes from `npm_execpath` when npm set it and it names
+ * `npm-cli.js`, and from npm's usual place beside `execPath` otherwise. Neither
+ * there is a Node whose npm is somewhere else, such as a version manager's, and
+ * npm is then run through the shell, each argument in double quotes because the
+ * shell is what splits the line.
+ *
+ * `platform` decides, but the paths are read as Windows ones either way: the
+ * branch that reads them is the Windows one, so a case on Linux hands it the
+ * `C:\...` paths a Windows machine would have.
+ */
+export const launch = (
+  program: string,
+  argv: readonly string[],
+  platform: NodeJS.Platform,
+  env: NodeJS.ProcessEnv,
+  execPath: string,
+  exists: (path: string) => boolean,
+): Launch => {
+  if (platform !== 'win32' || program !== 'npm') return { command: program, args: [...argv], shell: false };
+  const named = env.npm_execpath;
+  const beside = win32.join(win32.dirname(execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+  const cli = named !== undefined && win32.basename(named) === 'npm-cli.js' && exists(named)
+    ? named
+    : exists(beside) ? beside : undefined;
+  if (cli === undefined) return { command: program, args: argv.map((one) => `"${one}"`), shell: true };
+  return { command: execPath, args: [cli, ...argv], shell: false };
+};
+
 /** The default runner: the program on PATH, its standard error passed through as it comes. */
 export const run: Runner = (program, argv) => new Promise((done) => {
-  const child = spawn(program, [...argv], { stdio: ['inherit', 2, 'pipe'] });
+  const started = launch(program, argv, process.platform, process.env, process.execPath, existsSync);
+  const child = spawn(started.command, started.args, { stdio: ['inherit', 2, 'pipe'], shell: started.shell });
   let stderr = '';
   let settled = false;
   const finish = (answer: Ran): void => {

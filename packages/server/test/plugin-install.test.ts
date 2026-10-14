@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { fittingVersion, installPlugins, isPackageName, pinned, removePlugins, run as realRun, updatePlugins } from '../src/install.js';
+import { fittingVersion, installPlugins, isPackageName, launch, pinned, removePlugins, run as realRun, updatePlugins } from '../src/install.js';
 import type { Ran, Runner } from '../src/install.js';
 import { registry } from '../src/update.js';
 import type { Fetch } from '../src/update.js';
@@ -111,6 +111,49 @@ const write = (held: unknown): void => {
   writeFileSync(configFile, `${JSON.stringify(held, null, 2)}\n`);
 };
 const read = (): Record<string, unknown> => JSON.parse(readFileSync(configFile, 'utf8')) as Record<string, unknown>;
+
+/*
+ * Starting npm, which is a name on Linux and macOS and a `.cmd` on Windows.
+ *
+ * The cases drive the pure function with the platform, the environment and the
+ * paths a Windows machine would have, because the build runs on Linux and the
+ * spawn itself is the one part of this that a machine here cannot hold.
+ */
+
+it('starts a program by its name with the arguments unchanged, unless it is npm on Windows', () => {
+  // Even with npm's own script in the environment, which npm sets for a script
+  // it runs, `npm` is what is started: on Linux and macOS that name is npm.
+  const env = { npm_execpath: 'C:\\nodejs\\node_modules\\npm\\bin\\npm-cli.js' };
+  expect(launch('npm', ['install', '--prefix', '/tmp/ahpd'], 'linux', env, '/usr/bin/node', () => true))
+    .toEqual({ command: 'npm', args: ['install', '--prefix', '/tmp/ahpd'], shell: false });
+  // Only npm is a `.cmd` there; `git`, `gh` and `ssh` are `.exe` files, and a
+  // shell would only be one more thing between the daemon and the program.
+  expect(launch('git', ['status'], 'win32', env, 'C:\\nodejs\\node.exe', () => false))
+    .toEqual({ command: 'git', args: ['status'], shell: false });
+});
+
+it('starts npm as node with the npm-cli.js npm names, on Windows', () => {
+  const cli = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js';
+  // The script is where npm says it is, so nothing is looked for beside node.
+  expect(launch('npm', ['install', 'left-pad'], 'win32', { npm_execpath: cli }, 'C:\\Program Files\\nodejs\\node.exe', (at) => at === cli))
+    .toEqual({ command: 'C:\\Program Files\\nodejs\\node.exe', args: [cli, 'install', 'left-pad'], shell: false });
+});
+
+it('takes the npm-cli.js beside node when npm named another program, on Windows', () => {
+  // A daemon started by pnpm is told pnpm's own script, which is not npm's.
+  const beside = 'C:\\Program Files\\nodejs\\node_modules\\npm\\bin\\npm-cli.js';
+  const env = { npm_execpath: 'C:\\Users\\softov\\AppData\\Roaming\\npm\\pnpm.cjs' };
+  expect(launch('npm', ['install'], 'win32', env, 'C:\\Program Files\\nodejs\\node.exe', (at) => at === beside))
+    .toEqual({ command: 'C:\\Program Files\\nodejs\\node.exe', args: [beside, 'install'], shell: false });
+});
+
+it('runs npm through the shell, with each argument in double quotes, when no npm-cli.js is there', () => {
+  // A version manager's Node keeps npm in its own folder, so neither path is
+  // there: `npm` goes to the shell, and the shell is what splits the line.
+  const env = { npm_execpath: 'C:\\Users\\softov\\AppData\\Roaming\\npm\\pnpm.cjs' };
+  expect(launch('npm', ['install', '--prefix', 'C:\\Program Files\\ahpd'], 'win32', env, 'C:\\nodejs\\node.exe', () => false))
+    .toEqual({ command: 'npm', args: ['"install"', '"--prefix"', '"C:\\Program Files\\ahpd"'], shell: true });
+});
 
 it('pins the sdk to the daemon\'s version, which is the one name ahpd pins', () => {
   // The daemon owns `@ahpd/sdk` and installs it beside every plugin, whatever
