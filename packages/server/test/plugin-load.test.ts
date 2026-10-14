@@ -242,6 +242,39 @@ describe('a plugin that reaches back in after apply returned', () => {
   });
 });
 
+describe('a problem line a plugin says', () => {
+  const logged = async (specs: PluginSpec[]) => {
+    const lines: string[] = [];
+    const result = await loadPlugins(specs, { base: base(), configDir: fixtures, cwd: here, log: (line) => { lines.push(line); } });
+    return { lines, ...result };
+  };
+
+  it('is carried in the load\'s problems when it is said while applying, and not logged as well', async () => {
+    delete (globalThis as Record<string, unknown>).__pluginLateProblemHost;
+    const { lines, problems, loaded } = await logged(['./fixtures/plugin-late-problem/index.ts']);
+
+    expect(loaded.map((one) => one.name)).toEqual(['late-problem']);
+    expect(problems).toEqual(['late-problem: said while applying']);
+    // The daemon writes the problems of a load itself, so the loader writing
+    // this one too would put the same line in the log twice.
+    expect(lines).not.toContain('late-problem: said while applying');
+  });
+
+  it('goes to the log when it is said after apply returned', async () => {
+    delete (globalThis as Record<string, unknown>).__pluginLateProblemHost;
+    const { lines, problems } = await logged(['./fixtures/plugin-late-problem/index.ts']);
+
+    // The load has answered by now, which is the moment a plugin holding a
+    // watch says a line - the bot store, refusing a record edited by hand.
+    const host = (globalThis as Record<string, unknown>).__pluginLateProblemHost as PluginHost;
+    host.problem('late-problem: said after apply returned');
+
+    expect(lines).toContain('late-problem: said after apply returned');
+    // And it joins no answer, because there is no answer left to join.
+    expect(problems).toEqual(['late-problem: said while applying']);
+  });
+});
+
 describe('a plugin file with no plugin manifest of its own', () => {
   it('is named by its name export, and never by the package it sits in', async () => {
     const said: string[] = [];

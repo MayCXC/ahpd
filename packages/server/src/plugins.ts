@@ -860,8 +860,23 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * person who started the daemon reads it beside the ones the loader found -
    * which is the whole point of `problem`: an item skipped costs the item, and
    * the one running `ahpd start` is the one who has to be told.
+   *
+   * This list is read exactly once, by the answer returned below. A line said
+   * after that is a line nothing would read again - a plugin that kept a watch
+   * saying one when a record it holds is refused - so past `answered` the line
+   * is written to the log instead, at the moment it is said. That is the same
+   * writer the daemon writes the problems of this load to.
    */
   const told: string[] = [];
+
+  /*
+   * Whether this load has answered, which is when `told` stops being read.
+   *
+   * Set just before each of the three returns below, so a line said while the
+   * load is still running - including one said after `apply` returned but
+   * before the answer is built - is still carried in the answer, as today.
+   */
+  let answered = false;
 
   /*
    * What this plugin is told about the host, frozen, and every plugin gets its
@@ -894,7 +909,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.agents === undefined ? {} : { agents: options.agents }),
     ...(options.usage === undefined ? {} : { usage: options.usage }),
     ...(options.vault === undefined ? {} : { vault: options.vault }),
-    problem: (line) => { told.push(line); },
+    problem: (line) => { if (answered) options.log(line); else told.push(line); },
     ...(grants.length === 0 ? {} : { grants }),
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
     ...(options.records === undefined ? {} : { records: options.records }),
@@ -908,6 +923,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   catch (error) {
     // One failure path: whatever the registration check or the plugin itself
     // threw, the whole contribution is discarded and the plugin costs a line.
+    answered = true;
     return { problems: [...problems, ...told, `plugin ${name} failed${took()}: ${reason(error)}`] };
   }
   /*
@@ -923,6 +939,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * to answer: it would be reading the store it is, or the one it took over.
    */
   if (unwrapped.named && contribution.ports.vault !== undefined) {
+    answered = true;
     return { problems: [...problems, ...told, `plugin ${name} skipped: a vault plugin's own options cannot name a secret`] };
   }
 
@@ -938,6 +955,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     plugin,
     ...(title === undefined ? {} : { title }),
   };
+  answered = true;
   return { loaded, contribution, problems: [...problems, ...told] };
 }
 

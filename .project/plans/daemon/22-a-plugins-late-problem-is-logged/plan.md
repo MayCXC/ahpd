@@ -51,7 +51,7 @@ plugin problem(line) -> told.push -> (during apply) load answer -> log | (after 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A late problem line goes to the log](task-01-a-late-problem-line-goes-to-the-log.md) | todo | - |
+| [01 - A late problem line goes to the log](task-01-a-late-problem-line-goes-to-the-log.md) | implemented | - |
 
 ## Risks and tradeoffs
 
