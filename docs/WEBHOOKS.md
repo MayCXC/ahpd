@@ -99,3 +99,46 @@ On a host with a users directory, the plugin acts as `plugin:@ahpd/webhook`, wit
 | `session:write` | Make the thread's chat, and send the turn |
 
 The plugin opens its connection when the daemon listens, and hears each turn's end from the host.
+
+## A call to an automation
+
+A call to an automation endpoint fires the `webhook` trigger type, which the plugin offers. The type has one event, `call`, and its form asks for one `endpoint`. An automation runs on a call when its trigger's `config` names the endpoint the call came to.
+
+```md
+---
+id: deploys
+automation: true
+secret: host:deploys-hook
+---
+```
+
+```markdown
+---
+title: Check a deploy
+enabled: true
+session:
+  provider: claude
+triggers:
+  - id: t1
+    kind: event
+    type: webhook
+    title: A deploy finished
+    events:
+      - id: call
+    config:
+      endpoint: deploys
+---
+
+The deploy of {{event.repo}} at {{event.ref}} finished. Check that the service is up.
+```
+
+The body is a JSON object, and its fields are the data of the fire. The plugin sets `endpoint` in the data to the endpoint id, over any body field of that name, so a caller reaches only the automations of the endpoint it called. Any other field that the trigger's `config` names must also have the same value in the body.
+
+A run's message names a field as `{{event.<field>}}`. A string is filled as it is, any other value as JSON, and a missing field as nothing. See [AUTOMATIONS.md](AUTOMATIONS.md) for the other placeholders.
+
+| Answer | When |
+| --- | --- |
+| 202 | The trigger fired. The body is `{ "endpoint": "<id>" }`, because a fire has no answer |
+| 400 | The body is not JSON, or not a JSON object |
+
+The run's origin keeps the data of the fire, so the body must carry no secret. An automation call needs no grant.

@@ -1,6 +1,6 @@
 ---
 title: A webhook fires an automation, and the run reads the event
-status: todo
+status: implemented
 depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
 layer: "packages/sdk, packages/webhook"
 refs:
@@ -91,3 +91,27 @@ A run's message can name each field as `{{event.<field>}}`, which the wake fille
 
 ## Resume
 
+Built in `packages/sdk/src/wakemessage.ts`, `packages/sdk/src/host/automations.ts` and `packages/webhook/src/automation.ts`, with the trigger type and the automation seam in `plugin.ts`. `automation-wake.test.ts` gained 7 cases, `plugin-triggers.test.ts` gained 3 and changed 1, and `packages/webhook/test/webhook-automation.test.ts` holds 6.
+
+How the parts work:
+
+- `wakeMessage` fills `{{event.<field>}}` from `WakeFacts.data`. A string is filled as it is, any other value as JSON, and a missing field as nothing.
+- A dotted name on anything other than `event` is left as written.
+- `watchFor` keeps the trigger's `config`, and `fired` skips an automation when a `config` value differs from the fire's data under the same key.
+- Values are compared as JSON text, so a nested value matches by content.
+- An empty `config` matches every fire, as a missing one does.
+- `automationTarget` answers 400 for a body that is not a JSON object.
+- Otherwise it fires with the body and `endpoint` set to the endpoint id, and answers 202.
+
+Where the build departs from the plan:
+
+- `TriggerTypeDefinition` is now exported from `@ahpd/sdk`, because the plugin declares its type with it.
+- `route.ts` is not changed. Its seams already had the `automation` target, so `plugin.ts` gives it.
+- The 202 answer carries `{ endpoint }`.
+- `automation-wake.test.ts` has one more case: a dotted name on something other than `event` is left as written.
+
+Open questions for Softov:
+
+- `fired` compares every key of a trigger's `config` with the fire's data. A plugin whose form holds a setting that is not a data field would never run. Should the match cover only the keys that the data holds?
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 3993 of 3993 tests. One earlier run failed `nested-proxy.test.ts` once under load, and it passed on the next run.

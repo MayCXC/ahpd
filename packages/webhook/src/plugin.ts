@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { reason } from '@ahpd/sdk';
+import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
 import { NAME, webhookRoute } from './route.js';
 import type { Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
@@ -13,7 +14,8 @@ import type { BotSeams } from './bot.js';
  * secret, and a call passes only with that secret as its bearer token.
  *
  * A bot endpoint talks to its bot through the plugin's own connection to the
- * host, which is opened once the daemon listens.
+ * host, which is opened once the daemon listens. An automation endpoint fires
+ * the `webhook` trigger type, which the plugin offers.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -129,11 +131,13 @@ export const apply: Plugin['apply'] = (host, options) => {
     return await opened;
   };
 
+  host.registerTriggerType(WEBHOOK_TRIGGER);
   const webhooks = host.records('webhooks');
   host.registerRoute(webhookRoute({
     endpoint: (id) => webhooks.get(id),
     secret: (secret) => host.secret(secret),
     problem: (line) => { host.problem(`${name}: ${line}`); },
     bot: botTarget(botSeams(host, peer, timeout)),
+    automation: automationTarget({ fire: (data) => { host.fireTrigger(WEBHOOK_TRIGGER.type, 'call', data); } }),
   }));
 };

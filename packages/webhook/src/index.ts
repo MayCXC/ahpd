@@ -1,4 +1,6 @@
 export { apply, defaults, name, optionsSchema, title } from './plugin.js';
+export { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
+export type { AutomationSeams } from './automation.js';
 export { botTarget, turnEnds } from './bot.js';
 export type { BotSeams, TurnEnd } from './bot.js';
 export { checkEndpoint, REPLIES } from './record.js';
