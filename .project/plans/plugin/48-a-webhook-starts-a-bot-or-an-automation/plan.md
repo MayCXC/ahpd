@@ -67,6 +67,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 | A synchronous reply waits for the plugin option `syncTimeoutSeconds`, default 60, and an endpoint field of the same name overrides it | Softov, 2026-10-14, asked "How long does a sync reply wait, and where is it set?": "Endpoint field, plugin default 60 s" | 02 |
 | A bot turn that ends in `chat/error` is reported: the host's `turn_end` carries `status: 'error'` and the error's message, a `sync` call answers 200 with them, and a callback posts them | Softov, 2026-10-14, to "A webhook bot turn that ends in an error raises no turn_end. What should happen?" - "Report the failure" | 02 |
 | A call whose chat the host refuses, because the plugin lacks `session:write`, answers 409, and the plugin reports a problem that names `session:write` | Softov, 2026-10-14, to "When the plugin lacks `session:write`, `createChat` throws and the call answers 500. Should that be 409, like a bot the plugin may not read?" - "409, like a bot it cannot read" | 02 |
+| `fired` compares only the `config` keys that the fire's data also holds; a `config` key the data does not hold never blocks a run | Softov, 2026-10-14, to "`fired` compares every key of a trigger's `config` with the fire's data. A plugin whose form holds a setting that is not a data field would never run. Should the match cover only the keys that the data holds?" - "Only keys the data has" | 03 |
 
 ## Proposed architecture
 
@@ -95,7 +96,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 - **Done so far:** the plan, 2026-10-13, and its four tasks with the answers, 2026-10-14. All four tasks are implemented, 2026-10-14, and await review.
 - **Next action:** Softov reviews the four tasks.
-- **Open questions:** Softov answered the three planning questions on 2026-10-14. Tasks 02 and 03 record more in their Resume sections.
+- **Open questions:** none. Softov answered the three planning questions and the build questions of tasks 02 and 03 on 2026-10-14.
 - **Watch out for:**
   - The plugin acts as `plugin:@ahpd/webhook`, and its route is `/plugins/%40ahpd/webhook/<endpoint>`, because a plugin's id is its package name. It needs the grants that the operator gives it to read a bot, create a chat and send a turn.
   - The fire's data is kept on the run's origin, which other readers of the run see. A webhook body must carry no secret.

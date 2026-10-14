@@ -158,6 +158,25 @@ it('does not run a trigger whose config differs from the fire data', async () =>
   expect(bag(bag(runs(store)[0]?.['origin'])['event'])).toMatchObject({ where: 'the hills' });
 });
 
+it('runs a trigger whose config holds a key the fire data does not', async () => {
+  // A form setting that is not a field of the fire, such as a unit, never blocks a run.
+  const { plugin, store, client } = offered([WEATHER], battenWith({ where: 'the coast', units: 'metric' }));
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+  plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
+  await until(() => runs(store).length === 1, 'the run the fire started');
+});
+
+it('does not run a trigger whose config differs on a key the data holds, beside a key it does not', async () => {
+  const { plugin, store, client } = offered([WEATHER], battenWith({ where: 'the hills', units: 'metric' }));
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+  plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
+  plugin.fireTrigger('weather', 'storm', { where: 'the hills' });
+  await until(() => runs(store).length === 1, 'the run the matching fire started');
+  await new Promise((r) => { setTimeout(r, 20); });
+  expect(runs(store)).toHaveLength(1);
+  expect(bag(bag(runs(store)[0]?.['origin'])['event'])).toMatchObject({ where: 'the hills' });
+});
+
 it('runs a trigger with no config on every fire of its type and event', async () => {
   const { plugin, store, client } = offered([WEATHER], { ...BATTEN, _meta: { ahpd: { overlap: 'parallel' } } });
   await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));

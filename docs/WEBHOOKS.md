@@ -146,7 +146,7 @@ triggers:
 The deploy of {{event.repo}} at {{event.ref}} finished. Check that the service is up.
 ```
 
-The body is a JSON object, and its fields are the data of the fire. The plugin sets `endpoint` in the data to the endpoint id, over any body field of that name, so a caller reaches only the automations of the endpoint it called. Any other field that the trigger's `config` names must also have the same value in the body.
+The body is a JSON object, and its fields are the data of the fire. The plugin sets `endpoint` in the data to the endpoint id, over any body field of that name, so a caller reaches only the automations of the endpoint it called. Any other field that the trigger's `config` names must have the same value in the body when the body holds it. A `config` field that the body does not hold does not stop the run.
 
 A run's message names a field as `{{event.<field>}}`. A string is filled as it is, any other value as JSON, and a missing field as nothing. See [AUTOMATIONS.md](AUTOMATIONS.md) for the other placeholders.
 

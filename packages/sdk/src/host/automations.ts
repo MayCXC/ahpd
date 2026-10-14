@@ -114,12 +114,13 @@ const wakeOf = (definition: Bag): AutomationWake => {
 };
 
 /**
- * Whether a fire's data matches a trigger's `config`: every key the config
- * holds has the same value in the data, compared as JSON. An empty config
- * matches every fire.
+ * Whether a fire's data matches a trigger's `config`: every key the config and
+ * the data both hold has the same value in each, compared as JSON. A config key
+ * the data does not hold is a setting of the form, not a field of the fire, and
+ * never blocks a run. An empty config matches every fire.
  */
 const configMatches = (config: Bag, data: Record<string, unknown>): boolean =>
-  Object.entries(config).every(([key, value]) => JSON.stringify(data[key]) === JSON.stringify(value));
+  Object.entries(config).every(([key, value]) => !Object.hasOwn(data, key) || JSON.stringify(data[key]) === JSON.stringify(value));
 
 /** One automation this host is watching for what a session does. */
 interface Waking {
@@ -137,7 +138,7 @@ interface Waking {
   owner?: Owner | undefined;
   /** What it says about a run of its own and about an event arriving during one. */
   wake: AutomationWake;
-  /** The trigger's `config`, which a plugin's fire must match key by key to wake it. */
+  /** The trigger's `config`, which a plugin's fire must match on every key its data holds to wake it. */
   config: Bag;
 }
 
