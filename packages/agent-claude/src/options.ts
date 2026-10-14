@@ -10,8 +10,7 @@
  *
  * One declaration rather than two schemas and two translations, because the
  * same option is offered in a session's config and written in a preset, and
- * those drifted once already - decision
- * `claude-options-are-declared-once-for-sessions-and-presets`.
+ * those drifted once already.
  */
 
 import type { Bag } from '@ahpd/sdk';

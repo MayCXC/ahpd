@@ -2,8 +2,7 @@
  * Which runtime a machine id names, and the runtime that answers for it.
  *
  * One plugin serves every runtime a host was configured with, because a host
- * has one `computers` port - decision
- * `a-machine-runtime-is-named-for-its-maker`. So a machine's id says which
+ * has one `computers` port. So a machine's id says which
  * runtime made it, and this is the only place that spelling is known: nothing
  * else in the package splits an id on a dot.
  *

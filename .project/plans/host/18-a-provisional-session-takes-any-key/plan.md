@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-provisional-session-takes-a-fixed-key-by-restarting.md
-  - decisions/a-fixed-key-is-shown-read-only-once-the-session-runs.md
 refs:
   - "[code://packages/sdk/src/host.ts#L7477-L7560](../../../../packages/sdk/src/host.ts#L7477-L7560) - the live `session/configChanged`: `HOSTS_OWN` keys restart before the first turn, other fixed keys are refused"
   - "[code://packages/sdk/src/host.ts#L3157-L3167](../../../../packages/sdk/src/host.ts#L3157-L3167) - `propertyOf`, which reads only `agent.schema()` and so never sees a contributed key"
@@ -66,8 +64,8 @@ running -> state.config.schema.computer                -> [new] sessionMutable: 
 
 | Decision | Task |
 | --- | --- |
-| [A session that has not started takes a fixed key by restarting](../../../decisions/a-provisional-session-takes-a-fixed-key-by-restarting.md) | 01 |
-| [A fixed key is shown read-only once the session runs](../../../decisions/a-fixed-key-is-shown-read-only-once-the-session-runs.md) | 02 |
+| [A session that has not started takes a fixed key by restarting](../../../../docs/SESSIONS.md) | 01 |
+| A fixed key is shown read-only once the session runs | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

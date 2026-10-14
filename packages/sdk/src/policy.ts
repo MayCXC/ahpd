@@ -2,8 +2,7 @@
  * The `policy:` scheme.
  *
  * One URI is one row and the scheme's root is a directory of them, exactly as
- * `people.ts` serves `user:`, `team:`, `project:` and `role:` - decision
- * `policies-are-a-scheme-clients-edit`. A client edits policies the way it edits
+ * `people.ts` serves `user:`, `team:`, `project:` and `role:`. A client edits policies the way it edits
  * people: it reads the manifest, draws a form, writes a body and reads it back.
  *
  * This is another door onto the `Policies` port, not a second set of rules. A
@@ -166,8 +165,7 @@ export interface PolicyChannels {
 }
 
 /**
- * The policy scheme as a channel and commands beside its provider - decision
- * `host-records-are-typed-channels-beside-their-resource-schemes`.
+ * The policy scheme as a channel and commands beside its provider.
  *
  * The channel needs `policy:read`. The store has no watch, so a row edited by
  * hand in the file reaches the channel at the next change made through the

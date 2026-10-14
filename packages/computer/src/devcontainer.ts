@@ -60,8 +60,7 @@ export const cliOf = (options: CliOptions = {}): Cli => ({
  * `a-dev-container-is-reached-by-docker-exec`.
  *
  * The provider's own label is one of the pair, so the container is listed like
- * any other computer - decision
- * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`.
+ * any other computer.
  */
 export const idLabels = (label: string, folder: string): string[] => [
   '--id-label', label,
@@ -554,8 +553,7 @@ export interface DevContainerOptions {
    * `devcontainer.json`. So this is the only record that it is a computer at
    * all - who adopted it, under its id, beside the configuration. A listing, an
    * inspection and an up-time stretch read it from there, which is what makes
-   * an adopted container owned and metered like any other the relay starts -
-   * decision `a-relay-container-is-owned-by-who-connected`.
+   * an adopted container owned and metered like any other the relay starts.
    */
   onAdopted?: (connect: ContainerConnect, id: string) => void;
   /**
@@ -914,8 +912,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
        *
        * A relay finds the same computer a session makes: the container a
        * folder's `devcontainer.json` made is one object, listed and reached
-       * like any other - decision
-       * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`. Only
+       * like any other. Only
        * the id and whether it is up are asked for, because this port has no
        * listing of its own: the plugin hands the runtime's own answer in.
        */

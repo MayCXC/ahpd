@@ -1,7 +1,7 @@
 /*
  * The daemon's own vault: one plain JSON file, read on every call.
  *
- * The store decision `the-local-vault-is-a-plain-file-until-it-is-encrypted`
+ * The store
  * settled. What it is checked for here is what a plain file has to get right:
  * a second reader sees what the first wrote, nothing is written before there
  * is something to write, the file is made at a mode that gives a credential to

@@ -9,8 +9,7 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/a-connection-token-may-carry-a-person.md
-  - decisions/a-host-advertises-only-what-is-true.md
+  - ../../../decisions/the-door-is-a-door.md
 refs:
   - "[code://packages/sdk/src/users.ts#L29-L52](../../../../packages/sdk/src/users.ts#L29-L52) - `DEFAULT_RESOURCE`, whose `authorization_servers` is a documentation page and whose `resource` is not an https identifier"
   - "[code://packages/sdk/src/users.ts#L148-L162](../../../../packages/sdk/src/users.ts#L148-L162) - `Users.verify`, the one question both a door and the protocol will ask"
@@ -69,8 +68,8 @@ client -> ws://host:port?tkn=<token>            -> listen.ts: root token, else t
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A connection token may carry a person, beside the one that only opens the door](../../../decisions/a-connection-token-may-carry-a-person.md) | The user, 2026-09-23: "for the current token we have.. it could be matched as ROOT login... if not matched with root, we can lookup for a user login", and "two distinct". |
-| 2 | [The host advertises only what is true about how to sign in](../../../decisions/a-host-advertises-only-what-is-true.md) | The user, 2026-09-23: "puts a doc as a link is the worst thing I have seen you do", and "the issuer its spec... so I think its also need to be done". |
+| 1 | [A connection token may carry a person, beside the one that only opens the door](../../../decisions/the-door-is-a-door.md) | The user, 2026-09-23: "for the current token we have.. it could be matched as ROOT login... if not matched with root, we can lookup for a user login", and "two distinct". |
+| 2 | The host advertises only what is true about how to sign in | The user, 2026-09-23: "puts a doc as a link is the worst thing I have seen you do", and "the issuer its spec... so I think its also need to be done". |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/a-failed-transcript-read-is-not-an-empty-session.md
 refs:
   - code://packages/agent-claude/src/transcript.ts#L38-L51 - `turnsOf`'s catch, which answers `[]` for any failure
   - code://packages/sdk/src/host.ts#L3772 - `history`, the cache that outlives the failure
@@ -57,7 +56,7 @@ a client subscribes to a catalogue session's chat
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A transcript read that failed is not kept as an empty session](../../../decisions/a-failed-transcript-read-is-not-an-empty-session.md) | The user, 2026-09-22: reported the symptom and answered "do the plan" to the fix direction. |
+| 1 | A transcript read that failed is not kept as an empty session | The user, 2026-09-22: reported the symptom and answered "do the plan" to the fix direction. |
 
 | What | Source | Task |
 | --- | --- | --- |

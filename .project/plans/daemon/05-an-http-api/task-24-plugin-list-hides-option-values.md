@@ -10,7 +10,7 @@ refs:
 
 ## Objective
 
-`GET /api/plugin/list`, which needs only `config:read`, never answers a plugin option value, per decision [the-config-command-hides-its-secrets](../../../decisions/the-config-command-hides-its-secrets.md); the terminal's `ahpd plugin list` keeps printing them.
+`GET /api/plugin/list`, which needs only `config:read`, never answers a plugin option value, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md); the terminal's `ahpd plugin list` keeps printing them.
 
 ## Files
 

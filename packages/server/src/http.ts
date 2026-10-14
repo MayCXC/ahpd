@@ -4,7 +4,7 @@
  * `@cofold/remote`'s `serve()` answers a registry over HTTP; this is the two
  * decisions around it: the API lives under `/api`, and when the configuration
  * gives it a port of its own it gets a listener of its own rather than sharing
- * the daemon's - decision `the-http-api-is-on-the-daemon-port-under-api`.
+ * the daemon's.
  *
  * Off, the daemon's listener still answers plain requests, so `/api` is a 404
  * rather than the 426 it would otherwise be; everything that is not the API
@@ -12,7 +12,7 @@
  *
  * A plugin's own route is mounted here too, under `/plugins/<name>/`, because
  * it is the same listener, the same `Request` and the same path handling as
- * the API - decision `plugin-registration-kinds`, whose route row is this.
+ * the API, whose route row is this.
  */
 
 import { serve, toNodeListener, type RequestHandler } from '@cofold/remote';
@@ -126,7 +126,7 @@ export function apiHandler(options: ApiOptions): RequestHandler {
   });
 }
 
-/** The path the model proxy is served under, beside the API - decision `the-proxy-answers-under-v1-beside-the-api`. */
+/** The path the model proxy is served under, beside the API. */
 export const PROXY_PREFIX = '/v1';
 
 /** Whether a path is `prefix` or under it. */

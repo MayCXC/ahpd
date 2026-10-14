@@ -24,7 +24,7 @@ What an ACP server replays on `session/load` becomes the session's earlier turns
 
 ## Departures from the plan
 
-- [A read and the turn after it each load the session](../../../decisions/an-acp-read-and-the-turn-after-it-load-twice.md), decided during the build: a read's connection has no session ports for a turn to reuse.
+- A read and the turn after it each load the session, decided during the build. A read's connection has no session ports for a turn to reuse.
 - A read puts its row in the process's watched registry, so the turn that follows finds it.
 
 ## Left for later

@@ -18,8 +18,7 @@ import { inTurn, roomFor } from './runtime.js';
  * be asked for. The root lists what exists.
  *
  * A write to `computer://<name>` makes one and a delete destroys it, which is
- * the person's route: the body is a JSON manifest and the URI is the name -
- * decision `the-computer-is-an-object-a-person-manages`. The three tools still
+ * the person's route: the body is a JSON manifest and the URI is the name. The three tools still
  * exist for a model, marked as needing advanced permission.
  */
 
@@ -78,7 +77,7 @@ export interface ProviderOptions {
    *
    * The host's own `secret`, handed down by the plugin: a machine made from a
    * body has an owner and no team, so a `team:` secret in the profile it picked
-   * is refused - decision `a-secret-is-named-in-a-host-team-or-user-scope`.
+   * is refused.
    */
   secret: PluginHost['secret'];
 }
@@ -201,8 +200,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
    * `state` answers `running` or `stopped`, and writing one of `running`,
    * `stopped` or `restarted` puts it there. That keeps starting a machine
    * inside the same `computer:put` grant that makes one, with no new method
-   * for a gate to be taught about - decision
-   * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+   * for a gate to be taught about.
    */
   const STATES = ['running', 'stopped', 'restarted'] as const;
 
@@ -261,8 +259,7 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
    *
    * `owner` is whoever asked, which the machine keeps as a label: its time up
    * is charged to them, so the record of who made it has to outlive the
-   * request - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   * request.
    */
   const create = async (name: string, manifest: Write, owner?: Owner): Promise<void> => {
     const work: SecretWork = owner === undefined ? {} : { owner };

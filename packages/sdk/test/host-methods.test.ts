@@ -14,7 +14,7 @@ import type { Grant } from '../src/types/users.js';
 /*
  * A served `x-` command: the host answers it with the method's `handle`, gates
  * it by the method's grant and `authorize`, and lists it in
- * `_meta['ahpd.methods']` - decision `a-plugin-serves-an-x-command`.
+ * `_meta['ahpd.methods']`.
  *
  * One plugin, `test`, serves `x-test/echo`, which answers with what it was
  * asked and who asked it.

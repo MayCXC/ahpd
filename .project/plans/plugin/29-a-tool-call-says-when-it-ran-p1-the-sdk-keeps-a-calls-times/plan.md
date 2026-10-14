@@ -8,7 +8,6 @@ revalidated: 2026-10-03
 requires:
   - plans/plugin/29-a-tool-call-says-when-it-ran/plan.md
 decisions:
-  - decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md
 refs:
   - "[code://packages/sdk/src/host.ts#L2214-L2250](../../../../packages/sdk/src/host.ts#L2214-L2250) - `unstamped`, `withWorkerUri` and `stampedCalls`, the pattern for a `_meta` key kept across actions"
   - "[code://packages/sdk/src/paging.ts](../../../../packages/sdk/src/paging.ts) - a small sdk module a plugin imports, the shape the helper's module takes"
@@ -23,7 +22,7 @@ A helper in the sdk builds `{ 'ahpd.startedAt', 'ahpd.endedAt', 'ahpd.durationMs
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's times are stamped by its plugin, as ahpd keys](../../../decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md) | Softov, 2026-10-03 |
+| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

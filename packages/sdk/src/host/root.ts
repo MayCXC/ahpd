@@ -18,8 +18,7 @@ import type { ResourceProvider } from '../types/resources.js';
  * `role://` body and have it mean the method the host will call. They were
  * `read` and `write` before, which named a group rather than an act, and
  * a client that wrote `policy:read` into a role was naming a group the gate
- * never asked for - decision
- * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+ * never asked for.
  */
 const ORDER = ['get', 'list', 'resolve', 'watch', 'put', 'delete', 'mkdir', 'move', 'copy'] as const;
 
@@ -348,8 +347,7 @@ export function createRoot(ctx: HostContext): Root {
    *
    * The provider's own claim plus what the host can see for itself: the root
    * URI and the operations its methods implement. Absent when no provider is
-   * registered, because presence is how a client knows the key means anything
-   * - decision `a-resource-scheme-is-advertised-in-meta`.
+   * registered, because presence is how a client knows the key means anything.
    */
   const advertisedSchemes = (): Record<string, unknown> | undefined => {
     const providers = options.resourceProviders;
@@ -533,8 +531,7 @@ export function createRoot(ctx: HostContext): Root {
        * its id by taking the root snapshot again, and this is the same statement
        * as the handshake's, so a client that subscribes later reads what a
        * client that connected earlier was told. Nobody else's - a snapshot is
-       * never cached and never replayed to another connection - decision
-       * `a-connection-is-told-who-it-is-on-initialize-and-in-root-state`.
+       * never cached and never replayed to another connection.
        */
       ...(connection === undefined || ctx.ownerFor(connection) === undefined ? {} : { 'ahpd.principal': ctx.ownerFor(connection) }),
     };

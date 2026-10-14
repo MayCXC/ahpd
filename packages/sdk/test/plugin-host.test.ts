@@ -511,8 +511,7 @@ it('advertises every scheme it serves on the handshake and on the root state', a
   expect(ready._meta?.['vscode.removeSessionArtifact']).toBe(true);
 
   // No entry anywhere advertises `read` or `write`: those are groups, and the
-  // gate asks for an operation - decision
-  // `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+  // gate asks for an operation.
   for (const [scheme, entry] of Object.entries(ready._meta?.['ahpd.resourceProviders'] as Record<string, { operations: string[] }>)) {
     for (const word of ['read', 'write']) expect(entry.operations, scheme).not.toContain(word);
   }

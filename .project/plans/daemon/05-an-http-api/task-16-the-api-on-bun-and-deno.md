@@ -4,7 +4,7 @@ status: done
 depends: [task-15-serve-takes-a-request.md, task-07-the-listener-survives-a-malformed-request.md]
 layer: "sdk | server"
 refs:
-  - "[decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md](../../../decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md) - what this task applies"
+  - "[./plan.md](./plan.md) - what this task applies"
   - "[code://packages/sdk/src/types/listen.ts#L95-L107](../../../../packages/sdk/src/types/listen.ts#L95-L107) - `ListenOptions.request`, a `Request` handler, and `nodeRequest` beside it"
   - "[code://packages/sdk/src/listen.ts#L142](../../../../packages/sdk/src/listen.ts#L142) - Bun's `fetch`, which hands a plain request to `request` before the upgrade path"
   - "[code://packages/sdk/src/listen.ts#L194](../../../../packages/sdk/src/listen.ts#L194) - Deno's handler, the same"

@@ -16,7 +16,7 @@ A plugin that subscribes to `input_needed_set` and `input_needed_removed` is cal
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/events.ts:18-39` - two names in `EventName`, and the rule comment rewritten to decision `a-plugin-hears-input-needed-though-a-client-does-too`.
+- `UPDATE: packages/sdk/src/types/events.ts:18-39` - two names in `EventName`, and the rule comment rewritten to [A plugin hears a session's input needed set and removed, although a client receives the same actions](../../../../docs/PLUGINS.md).
 - `UPDATE: packages/sdk/src/types/events.ts:203-218` - `InputNeededSetEvent` (`session`, `chat`, `id`, `kind`) and `InputNeededRemovedEvent` (`session`, `id`) added to `HostEvent`.
 - `UPDATE: packages/sdk/src/host.ts:3575-3597` - two `fire` calls after the dispatch, beside the turn events.
 - `UPDATE: packages/sdk/test/plugin-events-fire.test.ts` - the cases below.

@@ -48,11 +48,11 @@ This is the *connection* token, which is about who may reach the host at all. Wi
 
 ## The deployment token
 
-The deployment's token needs no credential. A socket on it is the host: every capability, including a scheme no role names, because the key to the door is the operator's own. It is the one thing `authenticate` cannot demote or revoke, and the one thing never asked to justify itself. Rotating the deployment's token is what locks somebody out of the door entirely, and that token is the host itself - decision [the door token is the host, and a person's own token is that person](../.project/decisions/the-door-token-is-the-host.md).
+The deployment's token needs no credential. A socket on it is the host: every capability, including a scheme no role names, because the key to the door is the operator's own. It is the one thing `authenticate` cannot demote or revoke, and the one thing never asked to justify itself. Rotating the deployment's token is what locks somebody out of the door entirely, and that token is the host itself - decision [the door token is the host, and a person's own token is that person](../.project/decisions/the-door-is-a-door.md).
 
 ## A person's token
 
-A person's own token opens the socket and names nobody, and the first gated command answers `-32007`, so the client signs in. That is the default because a token in a URL can end up in a log and a login does not - decision [a person signs in through `authenticate`, not through the connection token](../.project/decisions/a-person-signs-in-through-authenticate.md).
+A person's own token opens the socket and names nobody, and the first gated command answers `-32007`, so the client signs in. That is the default because a token in a URL can end up in a log and a login does not - decision [a person signs in through `authenticate`, not through the connection token](../.project/decisions/the-door-is-a-door.md).
 
 Two things opt out of it:
 
@@ -67,13 +67,13 @@ Two things opt out of it:
 
 `trustToken` at the top of the configuration trusts everybody's connection token; on a record it decides for that one person and wins over the host. Use it for a client that cannot complete a sign-in, such as a phone with only a URL to paste. A host that wants the token to be enough everywhere sets it once - decision [the door admits a socket and names nobody, and the deployment's token is still the host](../.project/decisions/the-door-is-a-door.md).
 
-Removing a user **does not close their socket**, but the next command on it is refused `-32007`: the directory is read again for every command, so removal and a role change both take effect at once, with no reconnection - decision [a role is read on every command, not once at sign-in](../.project/decisions/a-role-is-read-on-every-command.md).
+Removing a user **does not close their socket**, but the next command on it is refused `-32007`: the directory is read again for every command, so removal and a role change both take effect at once, with no reconnection.
 
 ## `authenticate`
 
 The command names a resource this host advertised and a token. The host's own sign-in resource is the one credential this host verifies itself, against its user directory; every other resource keeps the token unverified and spends it on that connection's sessions. An empty token takes the credential back, which the protocol names as revocation beside `expiresIn`. An unknown resource is `-32602`, and a token the directory does not know answers `-32007`.
 
-The host advertises, on every agent, a record describing its sign-in: `resource`, the identifier a client names in `authenticate`; `resource_name`; `resource_documentation`; and `required`. There is no `authorization_servers` until an issuer is configured, because this host is not an authorization server. The daemon prints the identifier at startup on a `sign-in` line. A connection the host already treats as somebody - the deployment's own token, or a personal token that has signed in - is told `required: false` instead, and every other connection reads `true` - decisions [a connection that is already authorized is told the host's sign-in is not required](../.project/decisions/an-authorized-connection-is-told-sign-in-is-not-required.md) and [the host advertises only what is true about how to sign in](../.project/decisions/a-host-advertises-only-what-is-true.md).
+The host advertises, on every agent, a record describing its sign-in: `resource`, the identifier a client names in `authenticate`; `resource_name`; `resource_documentation`; and `required`. There is no `authorization_servers` until an issuer is configured, because this host is not an authorization server. The daemon prints the identifier at startup on a `sign-in` line. A connection the host already treats as somebody - the deployment's own token, or a personal token that has signed in - is told `required: false` instead, and every other connection reads `true`.
 
 A token pushed for a backend's own resource or an MCP server's is held per connection, unverified, and spent only on the sessions that connection asks for. An empty token withdraws it; what is already running keeps the credential it was started with. `expiresIn`, a positive integer of seconds, is kept beside the token, and `auth/required` with `reason: 'expired'` is sent to that connection when it runs out.
 
@@ -85,7 +85,7 @@ A host that is its own issuer mints every secret and prints it for a person to p
 { "users": "/home/me/.config/ahpd/users.json", "issuer": "github" }
 ```
 
-or `--issuer github`, or `--issuer https://login.example.com` for an OpenID Connect issuer - decision [the issuer option names an OpenID Connect issuer by URL, with GitHub as a preset](../.project/decisions/the-issuer-option-takes-a-url-or-github.md). The record then carries it, which is the field left empty otherwise:
+or `--issuer github`, or `--issuer https://login.example.com` for an OpenID Connect issuer. The record then carries it, which is the field left empty otherwise:
 
 ```json
 {
@@ -98,7 +98,7 @@ or `--issuer github`, or `--issuer https://login.example.com` for an OpenID Conn
 }
 ```
 
-A client resolves a provider for that identifier, obtains a token, and pushes it through `authenticate` exactly as the protocol says. This host then asks the issuer who the token belongs to, and the answer is matched against a record's `id`: a GitHub login, or an OpenID Connect `sub`. The roles still come from the file, because the file is the only place that says who may do what - decision [an issuer answers for a subject, and the directory still decides what they may do](../.project/decisions/an-issuer-answers-for-a-subject.md).
+A client resolves a provider for that identifier, obtains a token, and pushes it through `authenticate` exactly as the protocol says. This host then asks the issuer who the token belongs to, and the answer is matched against a record's `id`: a GitHub login, or an OpenID Connect `sub`. The roles still come from the file, because the file is the only place that says who may do what.
 
 ```json
 {
@@ -110,7 +110,7 @@ A client resolves a provider for that identifier, obtains a token, and pushes it
 
 ### An issuer per person
 
-The `issuer` key is the **default**: a record that names one of its own uses that instead. So one host can take a GitHub login for one person and a token from a company identity provider for another, without a second daemon - decision [a record may name its own issuer, and the host's issuer is the default](../.project/decisions/a-record-may-name-its-own-issuer.md):
+The `issuer` key is the **default**: a record that names one of its own uses that instead. So one host can take a GitHub login for one person and a token from a company identity provider for another, without a second daemon
 
 ```json
 {
@@ -146,7 +146,7 @@ A record may name the claim its roles arrive in:
 }
 ```
 
-The claim's values are **role names this file defines** or built-ins, and they are added to the roles on the record. The issuer never names a grant: a `groups` value of `operators` reaches the grants above because this file wrote them, and a value that names no role here is reported on stderr and dropped. An issuer that omits the claim contributes nothing, which is not a refusal - decision [a claim names the roles, and this file defines them](../.project/decisions/a-claim-names-the-roles-this-host-defines.md).
+The claim's values are **role names this file defines** or built-ins, and they are added to the roles on the record. The issuer never names a grant: a `groups` value of `operators` reaches the grants above because this file wrote them, and a value that names no role here is reported on stderr and dropped. An issuer that omits the claim contributes nothing, which is not a refusal.
 
 The two halves move on different clocks. The claim is read once, at sign-in, because asking again would mean keeping the token. The record's own roles are read on every command, so removing a person still lands at once and a change at the issuer lands the next time they sign in.
 
@@ -175,7 +175,7 @@ Which provider minted a token is not something the token says, so a token that m
 
 The host fetches `<issuer>/.well-known/openid-configuration`, reads `userinfo_endpoint` from it, and asks that endpoint with `Authorization: Bearer <token>`, taking `sub` as the subject. So the issuer must publish both, and an identity provider that does not is one this option cannot use. `github` needs no discovery: its endpoint and its subject field are fixed, and the subject is the login.
 
-An issuer URL is accepted over **https anywhere**, and over plain **http only on loopback** - `127.0.0.1`, `::1` or `localhost`. A local issuer is common and nothing leaves the machine there; a remote one over http would put a bearer token in clear - decision [an issuer may be plain http on loopback, and nowhere else](../.project/decisions/an-issuer-may-be-plain-http-on-loopback.md). A remote issuer with a self-signed certificate needs its CA trusted, or `fetch` fails and every token reads as nobody: start the daemon with `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
+An issuer URL is accepted over **https anywhere**, and over plain **http only on loopback** - `127.0.0.1`, `::1` or `localhost`. A local issuer is common and nothing leaves the machine there; a remote one over http would put a bearer token in clear. A remote issuer with a self-signed certificate needs its CA trusted, or `fetch` fails and every token reads as nobody: start the daemon with `NODE_EXTRA_CA_CERTS=/path/to/ca.pem`.
 
 ### Trying it
 
@@ -220,7 +220,7 @@ The value has two fields. `enabled: false` means the window has workspace trust 
 
 Pushing the key needs `trust:push`, which the `trust:write` group covers and the built-in `member` role holds. Trust decides what a session loads from its project. A folder this host was not told to trust loads none of the project's own settings, hooks or MCP servers. What loads them anyway is the agent's own question: see `honoursTrust` in [PLUGINS.md](PLUGINS.md).
 
-The key is kept on the connection that pushed it, like `defaultShell` beside it. Two windows on one daemon each answer for their own sessions. Each answer covers every folder at once, which is why the grant is one - decisions [a folder is untrusted until a client has pushed `workspaceTrust` saying otherwise](../.project/decisions/a-folder-is-untrusted-until-a-client-says-otherwise.md) and [pushing `workspaceTrust` needs `trust:write`, and the `member` role has it](../.project/decisions/pushing-workspace-trust-needs-trust-write.md).
+The key is kept on the connection that pushed it, like `defaultShell` beside it. Two windows on one daemon each answer for their own sessions. Each answer covers every folder at once, which is why the grant is one.
 
 When a session moves to a folder the window has not vouched for, the host asks the window itself, with `vscode/requestWorkspaceTrust`. A window that says no, or that does not serve the method, means the move is refused with `Workspace trust was not granted for '<folder>'`. A yes is kept on that connection, so the next move into that folder is not asked again.
 
@@ -274,9 +274,9 @@ Who is in the file, the roles and teams, and the resource schemes over them are 
 | `team list` | `team:read` |
 | `team add`, `team rm` | `team:write` |
 
-`user:write` manages people at or below the caller: `user add` refuses a role, and `user add`, `user token` and `user rm` refuse a person, that holds a grant the caller does not hold, so the grant is not `admin` under another name - decision [a user command gives, mints for and removes only what its caller holds](../.project/decisions/a-caller-gives-only-the-grants-it-holds.md).
+`user:write` manages people at or below the caller: `user add` refuses a role, and `user add`, `user token` and `user rm` refuse a person, that holds a grant the caller does not hold, so the grant is not `admin` under another name.
 
-Over HTTP the deployment's token is root, and a person's token is verified the way `authenticate` verifies one. Installing, removing, updating or turning a plugin on or off, changing its options, and `restart` are the deployment's token only, and no grant a person may hold confers them - decision [installing a plugin over HTTP is root only](../.project/decisions/installing-a-plugin-over-http-is-root-only.md).
+Over HTTP the deployment's token is root, and a person's token is verified the way `authenticate` verifies one. Installing, removing, updating or turning a plugin on or off, changing its options, and `restart` are the deployment's token only, and no grant a person may hold confers them.
 
 ## See also
 

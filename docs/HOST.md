@@ -28,7 +28,7 @@ Terms, one line each:
 
 `_meta` carries three things beside them: `ahpd.resourceProviders`, the schemes this host serves; `ahpd.grants`, every subject a grant may name; and `ahpd.restartNeeded`, present only when a configuration change is waiting for a restart. `ahpd.principal` is there for a connection that has already signed in, saying who it is - the same statement the handshake makes, so a client that subscribes later reads what a client that connected earlier was told.
 
-`ahpd.resourceProviders` is advertised in the handshake as well as in every root state, because a client needs it before it can ask for anything - decision [A resource scheme is advertised in `_meta`, and a client reads it there](../.project/decisions/a-resource-scheme-is-advertised-in-meta.md).
+`ahpd.resourceProviders` is advertised in the handshake as well as in every root state, because a client needs it before it can ask for anything.
 
 The root channel is also where a client's own reads are served, whatever they are about: `listSessions`, the resource calls, `authenticate`, `createResourceWatch` and `resolveSessionConfig` all declare `ahp-root://` as their channel. The four root actions and their origins are [AHP.md](AHP.md#root--4-of-4).
 
@@ -51,7 +51,7 @@ Every entry of `agents` is one backend, as the protocol's `AgentInfo`:
 
 `file:` is the host's own scheme. Every other scheme in `ahpd.resourceProviders` is a provider's: `user:`, `team:`, `project:` and `role:` when a directory is configured, `policy:` and `usage:` always, and whatever a plugin registered. Each entry carries the provider's own `describe()`, the root URI - `<scheme>://` - and the operations its methods implement, read off the provider rather than off a list somebody maintains.
 
-A scheme is advertised so a client can put its operations in a role and have the gate ask for what it will actually call - decision [A resource scheme is advertised in `_meta`, and a client reads it there](../.project/decisions/a-resource-scheme-is-advertised-in-meta.md). What each scheme is and who may read it is [RESOURCES.md](RESOURCES.md).
+A scheme is advertised so a client can put its operations in a role and have the gate ask for what it will actually call. What each scheme is and who may read it is [RESOURCES.md](RESOURCES.md).
 
 ## Configuration keys
 
@@ -90,7 +90,7 @@ Seven keys are about who may connect rather than about how the host behaves - `c
 
 Each key that needs more than a line:
 
-`paths` is the list of directories this host catalogues, and the **first** is where a session goes when a client names none. A relative one is taken from the directory of the file that set it, not from where the daemon was started. `--no-cwd` serves only what is named and asks about no other folder; it is refused when the list would be empty. `worktreesRoot` keeps every session worktree under `<dir>/<repo>/<name>` instead of the reference host's `<repo>.worktrees` beside each repository, and is made absolute against the working directory because it is a base other paths are joined to - decision [Worktrees can live under one root, as an option beside the reference's default](../.project/decisions/worktrees-can-live-under-one-root.md).
+`paths` is the list of directories this host catalogues, and the **first** is where a session goes when a client names none. A relative one is taken from the directory of the file that set it, not from where the daemon was started. `--no-cwd` serves only what is named and asks about no other folder; it is refused when the list would be empty. `worktreesRoot` keeps every session worktree under `<dir>/<repo>/<name>` instead of the reference host's `<repo>.worktrees` beside each repository, and is made absolute against the working directory because it is a base other paths are joined to.
 
 `shellEnv` is the environment every shell this host starts is given, as a map of variable name to value. A daemon that runs as a service unit has an environment of its own, and this is how the operator says which of it an agent's shells get: `{"shellEnv": {"XDG_CONFIG_HOME": "/home/me/.config"}}` opens every terminal and runs every Bash command with that directory. A name set to `null` is removed from what the daemon itself runs with, which is the other half - a shell that inherits a variable the operator does not want it to have. It reaches the host terminals and the Claude backend's Bash commands, and the other backends come later. A wrong value is `...: shellEnv.PORT must be text or null`, and a name a shell cannot export is `...: shellEnv.2FA is not a shell variable name`. A client that needs a variable in one session sends `shellInitScripts`, which is that session's own.
 
@@ -104,7 +104,7 @@ The same store is served as the `usage:` scheme, so a client reads it through th
 
 `policies.check` says whether the rows saying who may use which agent, model and computer are enforced. Off by default. The rows are kept and the `policy:` scheme is served either way, so a store can be filled in before anything is switched on; a wrong value is `...: policies.check must be true or false`.
 
-`http` serves the same commands the terminal renders, under `/api`. `true` puts it on the host's own listener; an object with a `port` gives it a listener of its own, and its `host` binds that listener - decision [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](../.project/decisions/the-http-api-is-on-the-daemon-port-under-api.md), and [http.host binds the API's own listener](../.project/decisions/http-host-binds-the-apis-own-listener.md). A host with neither a connection token nor a user directory refuses to start with it on, because there would be nothing to hold a request against - decision [A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../.project/decisions/an-unconfigured-daemon-does-not-serve-the-http-api.md).
+`http` serves the same commands the terminal renders, under `/api`. `true` puts it on the host's own listener; an object with a `port` gives it a listener of its own, and its `host` binds that listener - decision [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](./DAEMON.md), and http.host binds the API's own listener. A host with neither a connection token nor a user directory refuses to start with it on, because there would be nothing to hold a request against.
 
 `mcpServers` is the host's own MCP servers, by the name a person gave each, and every session is offered them whatever agent it runs. An entry is one of the two shapes VS Code uses: a `stdio` server needs a `command`, and an `http` one a `url`:
 
@@ -115,7 +115,7 @@ The same store is served as the `usage:` scheme, so a client reads it through th
 }
 ```
 
-An entry that is neither shape, or that is missing the one its own `type` needs, is one warning in the log and is left out: one server nobody can reach is a gap in one agent's reach, where a wrong `port` is a daemon that would not run at all. A value in `env` or in `headers` is a credential, so each answers `<set>` here and over the API alike - decision [The host's MCP servers are the root config key `mcpServers`, as in VS Code, merged per session with its client plugins' servers](../.project/decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md).
+An entry that is neither shape, or that is missing the one its own `type` needs, is one warning in the log and is left out: one server nobody can reach is a gap in one agent's reach, where a wrong `port` is a daemon that would not run at all. A value in `env` or in `headers` is a credential, so each answers `<set>` here and over the API alike.
 
 `plugins` names what is loaded at startup: a package, a path, or a package installed in the configuration directory. Naming one runs its code in this process with this process's permissions, which is why installing a plugin is the trust decision. A plugin is loaded once and its options make its variants, so an entry may be an object naming one with its `options` and `enabled` - [PLUGINS.md](PLUGINS.md).
 
@@ -134,18 +134,18 @@ Beside them the schema declares every key VS Code's agent host declares at `7516
 
 Three keys VS Code declared before 1.140 are not declared: `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration`. The artifact tools carry one wording, and every session runs under the deferred title strategy.
 
-`defaultShell` and `workspaceTrust` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last - decision [A host-wide root setting needs config:write, and a person's own needs only a sign-in](../.project/decisions/host-wide-root-settings-need-config-write.md). The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
+`defaultShell` and `workspaceTrust` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last. The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
 
-The daemon's half is added to the same schema, and `config:read` is what a connection needs to be shown it. It is `paths`, `port`, `host`, `http`, `routes`, `updateCheck`, `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `wire` and `mcpServers`, and each configured plugin is one more key, `plugins.<id>` by its [id](PLUGINS.md#the-id), whose value is `{ enabled, options }` - so one plugin is one key and its variants are its own options. Nothing else the file holds is there: `stdio`, `configFile`, `noCwd`, `worktreesRoot`, `clientToolTimeoutMs`, the connection token keys, `trustToken`, `issuer`, `resource`, `users`, `automations` and `sessions` are still edited the way they always were. A plugin's configuration travelling in root config rather than in customizations is decision [A plugin's configuration travels in root config, not in customizations](../.project/decisions/plugin-configuration-travels-in-root-config.md).
+The daemon's half is added to the same schema, and `config:read` is what a connection needs to be shown it. It is `paths`, `port`, `host`, `http`, `routes`, `updateCheck`, `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `wire` and `mcpServers`, and each configured plugin is one more key, `plugins.<id>` by its [id](PLUGINS.md#the-id), whose value is `{ enabled, options }` - so one plugin is one key and its variants are its own options. Nothing else the file holds is there: `stdio`, `configFile`, `noCwd`, `worktreesRoot`, `clientToolTimeoutMs`, the connection token keys, `trustToken`, `issuer`, `resource`, `users`, `automations` and `sessions` are still edited the way they always were.
 
 Pushing a key acts in one of two ways, and the answer says which.
 
 - `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `wire` and `mcpServers` apply to this daemon as written. `advancedTools` changes the tools every running session's model is offered at once; the two session tool keys are rebuilt per session, since a provider list is not the same answer for all of them, and each running session is told its own set; the wire capture starts, moves or stops; `mcpServers` is read again for the next session opened, while a running session keeps the servers it started with. `closedChats` is read when the next chat is closed, so no session is rebuilt and none is told.
 - Every other key is written to `config.json` and the answer puts `ahpd.restartNeeded` in the `_meta` of the root state, which every reader of root is shown whether or not it may see the keys the notice is about. `ahpd restart` applies it.
 
-That split, and the reason it is per key rather than all-or-nothing, is decision [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../.project/decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md).
+That split, and the reason it is per key rather than all-or-nothing, is decision A configuration change applies live where the key can, and otherwise on `ahpd restart`.
 
-A key shows what the file holds rather than what this run is using, and when a start flag overrode it the key's description says so. A credential is never sent back: every value a plugin's own options schema marks `writeOnly`, however deep in its options the mark sits, is answered as `<set>`, here and over the API alike, and a client that sends that back has said the credential is left as it is - decision [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../.project/decisions/root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value.md).
+A key shows what the file holds rather than what this run is using, and when a start flag overrode it the key's description says so. A credential is never sent back: every value a plugin's own options schema marks `writeOnly`, however deep in its options the mark sits, is answered as `<set>`, here and over the API alike, and a client that sends that back has said the credential is left as it is.
 
 ## Commands
 
@@ -162,11 +162,11 @@ The verbs that read or change this host's own settings, one line each. The rest 
 
 | What | Grant | Where it is asked |
 | --- | --- | --- |
-| Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` and `plugin list` commands - decision [`status` and `plugin list` need config:read](../.project/decisions/status-and-plugin-list-need-config-read.md) |
+| Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` and `plugin list` commands|
 | Change a host-wide root config key | `config:change` | `root/configChanged`, and a `replace` - `config:write` covers it |
 | Push `workspaceTrust` | `trust:push` | The same action, when every key it carries is a connection's own - `trust:write` covers it |
 | Push only `defaultShell` | none, but a sign-in | It changes nothing anybody else reads |
-| Stop the daemon | `config:change` | The `shutdown` command - decision [A client's `shutdown` needs `config:change`, and the root connection always may](../.project/decisions/shutdown-needs-config-change.md) |
+| Stop the daemon | `config:change` | The `shutdown` command|
 | Edit the configuration over HTTP | `config:write` | `GET /api/config`, and the `plugin` verbs that write - the deployment token only, for those |
 
 ## See also

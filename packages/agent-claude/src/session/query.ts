@@ -315,8 +315,7 @@ export function createQuery(ctx: SessionContext): Query {
        * and the CLI loads a project's `CLAUDE.md` only when `project` is among
        * the sources - so a folder nobody vouched for gets `user` alone and
        * reaches the model with none of it. The person's own file is not a
-       * project's and is kept either way - decision
-       * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+       * project's and is kept either way.
        */
       settingSources: ctx.options.trusted?.(ctx.options.cwd) === true ? ALL_SOURCES : ['user'],
       /*
@@ -702,8 +701,7 @@ export function createQuery(ctx: SessionContext): Query {
              *
              * The CLI names every turn in the transcript by its own uuid, so
              * what the host keeps against the id a client chose is not what a
-             * history read back asks about - decision
-             * `a-backend-says-which-transcript-id-a-turn-was-written-as`. Only
+             * history read back asks about. Only
              * the lead turn's own echo says it: a worker's echo is a uuid in
              * the lead turn's transcript too, and a turn named after a
              * worker's prompt is not a turn a client can find.

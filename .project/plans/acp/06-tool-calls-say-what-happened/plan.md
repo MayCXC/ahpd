@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/acp-ports-come-through-start.md
 refs:
   - "[code://packages/agent-acp/src/mapping.ts#L122-L186](../../../../packages/agent-acp/src/mapping.ts#L122-L186) - `tool_call` and `tool_call_update`: ready on `rawInput`, text content only"
   - "[code://packages/agent-acp/src/mapping.ts#L63-L71](../../../../packages/agent-acp/src/mapping.ts#L63-L71) - how terminal content could be built"
@@ -38,7 +37,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Task |
 | --- | --- |
-| [An ACP backend reaches files and a shell through Start](../../../decisions/acp-ports-come-through-start.md) | 03 |
+| [An ACP backend reaches files and a shell through Start](../../plugin/07-agent-acp/plan.md) | 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

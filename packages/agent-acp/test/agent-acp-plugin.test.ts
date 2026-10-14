@@ -72,8 +72,7 @@ const base = (): HostOptions => ({
   /*
    * Somebody for the window in these cases to be. A backend is told which
    * folders are trusted only by a connection that owns the session, and a
-   * connection owns nothing on a host with no people directory - decision
-   * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+   * connection owns nothing on a host with no people directory.
    */
   users: anyone(),
 });
@@ -105,8 +104,7 @@ async function open(client: ReturnType<ReturnType<typeof createHost>['accept']>,
   const uri = `ahp-session:/${name}`;
   /*
    * The window's own answer about the folders it trusts. A session of a folder
-   * nobody vouched for is refused rather than started - decision
-   * `a-folder-is-untrusted-until-a-client-says-otherwise` - and this case
+   * nobody vouched for is refused rather than started - and this case
    * names no folder at all, so it is a window with workspace trust turned off:
    * `enabled: false` is VS Code's "there is no untrusted folder here".
    */

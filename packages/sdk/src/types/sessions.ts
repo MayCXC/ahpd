@@ -173,8 +173,7 @@ export interface SessionStore {
    */
   setScope(id: string, value: Scope | null | undefined): void;
   /**
-   * Whose work this is, as a typed reference - decision
-   * `work-is-owned-by-a-typed-reference`.
+   * Whose work this is, as a typed reference.
    *
    * `user:<id>` for the person who created it and `root:<host>` for a session
    * a root connection started. Undefined where nobody owns it: a host with no
@@ -296,8 +295,7 @@ export interface SessionStore {
    *
    * A client pastes a picture and the host writes the bytes here before the
    * message they belong to is applied, so what travels from then on is the
-   * path - decision
-   * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+   * path.
    * The store answers rather than the host because the store is what owns the
    * directory a session's own file is written in, and a folder beside it is
    * the same decision made again.

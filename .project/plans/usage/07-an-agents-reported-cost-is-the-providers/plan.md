@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-record-keeps-the-providers-cost-beside-the-charged-one.md
-  - decisions/an-agent-says-whose-cost-report-counts.md
 refs:
   - "[code://packages/sdk/src/meter.ts#L97-L105](../../../../packages/sdk/src/meter.ts#L97-L105) - `costOf`, which reads a harness's `_meta.cost`"
   - "[code://packages/agent-claude/src/session/parts.ts#L163-L190](../../../../packages/agent-claude/src/session/parts.ts#L163-L190) - Claude's cost, the change in `modelUsage` since the last `result`"
@@ -52,8 +50,8 @@ harness usage -> agent mapping (_meta.cost) -> meter costOf -> ModelUse { cost, 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../decisions/a-record-keeps-the-providers-cost-beside-the-charged-one.md) | Softov, 2026-10-07 |
-| 2 | [Each agent says whether its cost comes from the harness or the provider](../../../decisions/an-agent-says-whose-cost-report-counts.md) | Softov, 2026-10-02 |
+| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/USAGE.md) | Softov, 2026-10-07 |
+| 2 | Each agent says whether its cost comes from the harness or the provider | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

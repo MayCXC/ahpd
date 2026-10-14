@@ -546,8 +546,7 @@ export function claim(record: Running, replacing?: number): Running | undefined 
  *
  * A served `paths add` or `paths remove` changes the list the daemon serves
  * now; `ahpd status --json` at the terminal reads the record and never the
- * daemon, so the change is one a terminal sees only if the record says so too -
- * decision `a-served-paths-change-reaches-the-running-daemon`.
+ * daemon, so the change is one a terminal sees only if the record says so too.
  *
  * Every other field is carried over as read, with the same owner-only mode as
  * `claim`: `connectUrl` and `control` are in there, and a rewrite that dropped

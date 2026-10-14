@@ -14,7 +14,7 @@ refs:
   - code://packages/sdk/src/types/github.ts - `PullRequests`
   - code://packages/sdk/src/types/automations.ts - `AutomationStore`
   - code://packages/sdk/src/types/sessions.ts - `SessionStore`
-  - code://.project/decisions/plugin-registration-kinds.md - why the check exists and where it lives
+  - code://docs/PLUGINS.md - why the check exists and where it lives
   - file:///github/doop/packages/sdk/src/plugin-asserts.ts - the same idea in doop, one assert per registered shape
   - code://scripts/dev-hooks.mjs - the repository's own habit of a small hand-written check instead of a dependency
 ---

@@ -10,7 +10,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts#L2175-L2220](../../../../packages/agent-claude/src/session.ts#L2175-L2220) - the `query` options"
   - "[code://packages/agent-claude/src/session.ts#L2657-L2694](../../../../packages/agent-claude/src/session.ts#L2657-L2694) - the SDK's plugins reported as customizations"
   - "[code://packages/agent-claude/test/agent-claude-options.test.ts](../../../../packages/agent-claude/test/agent-claude-options.test.ts) - the options a fake SDK records"
-  - "[code://.project/decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md](../../../decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md) - a client plugin's server wins a clash"
+  - "[code://docs/TOOLS.md](../../../../docs/TOOLS.md) - a client plugin's server wins a clash"
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/claude/claudeSdkOptions.ts#L83-L88 - `plugins` as `{ type: 'local', path, skipMcpDiscovery }`"
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L890-L950 - a plugin's MCP servers read by the host"
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/claude/claudeAgentSession.ts#L1037-L1072 - restart at the next send when the set differs"

@@ -8,7 +8,7 @@
  *
  * One load serves every preset. Each key of `presets` registers an agent of its
  * own, keyed by that key as its provider id, the way `agent-claude`'s variants
- * do - decision `a-plugin-loads-once-and-each-preset-is-a-variant`. A key that
+ * do. A key that
  * names a shipped row takes it and a key that names none writes a spec of its
  * own, so one package serves Copilot, Codex and a server nobody has heard of at
  * once.

@@ -75,11 +75,9 @@ import type { Options } from './options.js';
  * address is the daemon's to answer on but none of them is a name it can tell
  * its own from. `resource` is the public identifier a deployment behind a proxy
  * names, so its hostname is one of them too, alone, at the bound port, and with
- * the port the resource names when it names one - decision
- * `the-http-api-checks-origin-and-host-and-takes-only-json`. Each of `extra`,
+ * the port the resource names when it names one. Each of `extra`,
  * the origins a deployment named, adds exactly its origin and its host, which
- * are what a browser that reached it there sends - decision
- * `a-deployment-names-extra-origins-apart-from-resource`.
+ * are what a browser that reached it there sends.
  */
 export function apiOrigins(host: string, resource: string | undefined, port: number, extra: readonly string[] = []): ApiOrigins {
   const names = ['127.0.0.1', 'localhost', '[::1]'];
@@ -307,8 +305,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * The same registry the terminal renders, under `/api`: `http: true` puts it
    * on this listener beside the WebSocket, and `http.port` puts it on one of
    * its own. Off, the daemon still answers plain requests so `/api` is a 404
-   * rather than the 426 this listener gives everything else - decision
-   * `the-http-api-is-on-the-daemon-port-under-api`.
+   * rather than the 426 this listener gives everything else.
    *
    * Built before the socket is opened, because a shared port is handed to
    * `listen` as its request handler and a port of its own has to be bound
@@ -322,8 +319,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    *
    * With neither a deployment token nor a directory there is nothing to hold a
    * request against, so `http` here would be an administration surface anybody
-   * who reaches the port may drive - decision
-   * `an-unconfigured-daemon-does-not-serve-the-http-api`.
+   * who reaches the port may drive.
    */
   if (options.http !== undefined && token === undefined && users === undefined) {
     stop('http needs a credential: pass --connection-token, --connection-token-file or --users.');
@@ -452,8 +448,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   });
   /*
    * The model proxy, under `/v1` in front of the API on whichever listener
-   * carries it, and only while `http` is on - decision
-   * `the-proxy-answers-under-v1-beside-the-api`. Its providers and model
+   * carries it, and only while `http` is on. Its providers and model
    * names are the configuration read at startup; the environment, the users
    * file and the usage store are read per call.
    */
@@ -526,8 +521,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   /*
    * People, teams, projects, roles and policies, each as an `x-ahpd-<domain>`
-   * channel and `x-ahpd/<domain>/put` and `remove` commands beside its scheme -
-   * decision `host-records-are-typed-channels-beside-their-resource-schemes`.
+   * channel and `x-ahpd/<domain>/put` and `remove` commands beside its scheme.
    *
    * A change to the users file refreshes the four people channels and the
    * policy one, so a reader whose grant went is sent `removed`. The watch is
@@ -610,7 +604,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * Where those trees go, when the operator named a folder.
      *
      * Absent stays absent, which is the reference's own `<repo>.worktrees`
-     * beside each repository - decision `worktrees-can-live-under-one-root`.
+     * beside each repository.
      * One root for the machine is what a deployment with many repositories
      * wants, and the daemon sets it from `worktreesRoot` or --worktrees-root.
      */
@@ -628,8 +622,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      *
      * The same directory the gate above asks, served the way `computer:` is: a
      * client lists `team://` and writes `team://backend`, and the host answers
-     * `team:read` and `team:write` for it as it does for any other scheme -
-     * decision `people-are-resource-schemes-with-a-grant-each`. The people
+     * `team:read` and `team:write` for it as it does for any other scheme. The people
      * schemes are absent with no directory, so an install that never configured
      * people advertises no screen over an empty root.
      *

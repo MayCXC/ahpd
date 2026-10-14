@@ -24,7 +24,6 @@ Removing the computer - `resourceDelete` on `computer://<id>`, or the `release_c
 
 Use a profile when one backend should be moved and the deployment should decide the image.
 Use a folder when the repository already says what its environment is and everything about the session should be inside it.
-The decisions are [a computer is an object a person manages](../.project/decisions/the-computer-is-an-object-a-person-manages.md) and [a dev container is a computer, made from its devcontainer.json](../.project/decisions/a-dev-container-is-a-computer-made-from-its-devcontainer-json.md).
 
 ## Asking for one
 
@@ -113,9 +112,9 @@ A client that does not know `_meta['vscode.devContainers']` ignores all of it, a
 | method | | needs |
 | --- | --- | --- |
 | `vscode/devContainers/isDockerAvailable` | whether Docker can be resolved | nothing |
-| `vscode/devContainers/connect` | `{ connectionId, workspaceFolder, name }`, answered with `{ connectionId, address, name, remoteWorkspaceFolder, hostWorkspaceFolder? }` | `container:write` |
-| `vscode/devContainers/relaySend` | `{ connectionId, data }`: one frame, written to the host inside | `container:write` |
-| `vscode/devContainers/disconnect` | `{ connectionId }`: end the relay | `container:write` |
+| `vscode/devContainers/connect` | `{ connectionId, workspaceFolder, name }`, answered with `{ connectionId, address, name, remoteWorkspaceFolder, hostWorkspaceFolder? }` | `container:connect` |
+| `vscode/devContainers/relaySend` | `{ connectionId, data }`: one frame, written to the host inside | `container:relay` |
+| `vscode/devContainers/disconnect` | `{ connectionId }`: end the relay | `container:disconnect` |
 | `vscode/devContainers/stop` | `{ workspaceFolder }`: end this connection's relay, then stop the container the folder is | `container:stop`, `computer:write` |
 | `vscode/devContainers/remove` | `{ workspaceFolder }`: the same, and the container's record goes with it | `container:remove`, `computer:write` |
 
@@ -128,14 +127,14 @@ A client that does not know `_meta['vscode.devContainers']` ignores all of it, a
 
 `connectionId` is the client's own name for the connection and is namespaced per connection: nothing one client can spell reaches another's container, and a socket that drops stops the relays it opened.
 `address` is `devcontainer:<containerId>`, which is a name a client shows and stores rather than something it can dial.
-The names are the reference client's on purpose - decision [the dev container surface is the reference client's own](../.project/decisions/the-relay-surface-is-the-reference-one.md).
+The names are the reference client's on purpose.
 `stop` and `remove` answer `true`.
 They answer `false` while another connection still relays to that folder, or while a session of this host is placed on its computer.
 They reach a computer the folder already is, so each asks for the container operation and `computer:write` beside it.
-No owner check is made - decision [stopping a dev container needs the computer's grant](../.project/decisions/stopping-a-dev-container-needs-the-computers-grant.md).
-The four that hold a relay ask for `container:write` and not `computer:write`.
+No owner check is made.
+The four that hold a relay ask for the container operation of their own - `container:connect`, `container:relay` and `container:disconnect` - and not `computer:write`. The group `container:write` covers all three.
 Their parameters name a workspace folder rather than a `computer://` URI.
-Starting a container is this host's Docker access by proxy - decision [connecting to a dev container needs a grant of its own](../.project/decisions/connecting-to-a-dev-container-needs-a-grant.md).
+Starting a container is this host's Docker access by proxy.
 
 ## How the host inside runs
 
@@ -168,6 +167,7 @@ The id is the one `up` answered with, never the folder and never the name, and t
 ## `ahpd --stdio`
 
 The transport the step above needs, and the second one this daemon has: one frame per line of JSON on stdin and stdout, and no port.
+Inside the daemon that is a `receive` for each line read and a peer whose `send` writes the frame and a newline. The SDK does the framing, because framing is protocol knowledge and a byte stream is not. A frame cannot carry the separator: JSON escapes a newline inside a string, so the only newlines are between frames.
 The connection is admitted as the host itself, because the process that started it holds the only handle to its pipes - and the outer host's grant is what decided whether it may exist.
 `ahpd start --stdio` is refused: a detached process has no pipe to answer on.
 

@@ -36,7 +36,7 @@ Add Remote Agent Host takes a host, a `host:port`, or a WebSocket URL, and keeps
 AHP does not define the transport, so this is the client's own door, and it is the same convention `ahpd`'s `listen.ts` reads.
 
 That is why a per-user connection token reaches this client at all: a person pastes what `ahpd user token <id> --url` printed, and the socket is admitted.
-The finding was written when that token also arrived as its owner - decision `a-connection-token-may-carry-a-person`, since superseded.
+The finding was written when that token also arrived as its owner - decision `the-door-is-a-door`, since superseded.
 Under decision `the-door-is-a-door` the door says nobody, so the same paste needs the record's `trustToken` for the window to be that person without a sign-in flow.
 
 ## The host-level login has no home in the protocol

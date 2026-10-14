@@ -8,7 +8,6 @@ revalidated: 2026-10-04
 requires:
   - plans/host/31-a-sessions-config-outlives-a-restart/plan.md
 decisions:
-  - decisions/claude-options-are-declared-once-for-sessions-and-presets.md
   - decisions/claude-approvals-keeps-dont-ask.md
 refs:
   - "[code://packages/agent-claude/src/plugin.ts#L30-L64](../../../../packages/agent-claude/src/plugin.ts#L30-L64) - `optionsSchema`, `optionsOf` and `apply`"
@@ -17,7 +16,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts#L2009-L2153](../../../../packages/agent-claude/src/session.ts#L2009-L2153) - `query()`: `sandboxOf` at 2092, `thinking` at 2149-2150"
   - "[code://packages/agent-claude/src/session.ts#L2482-L2488](../../../../packages/agent-claude/src/session.ts#L2482-L2488) - `outputStyle` through `applyFlagSettings`"
   - "[code://packages/agent-claude/src/session.ts#L2962-L3026](../../../../packages/agent-claude/src/session.ts#L2962-L3026) - the live `setConfig` paths"
-  - "[code://.project/decisions/permission-modes-live-in-the-harness.md](../../../decisions/permission-modes-live-in-the-harness.md) - line 28 says the window draws six modes; it draws five"
+  - "[code://.project/plans/plugin/06-permission-modes/plan.md](../../plugin/06-permission-modes/plan.md) - line 28 says the window draws six modes; it draws five"
 ---
 
 ## Goal
@@ -48,7 +47,7 @@ config.json plugins[agent-claude].options.presets -> optionsSchema check at load
 
 | Decision | Task |
 | --- | --- |
-| [A Claude option is declared once, and both the session schema and the preset schema are made from it](../../../decisions/claude-options-are-declared-once-for-sessions-and-presets.md) | 01 |
+| A Claude option is declared once, and both the session schema and the preset schema are made from it | 01 |
 | [Claude's approval modes keep dontAsk, which VS Code's Claude host leaves out](../../../decisions/claude-approvals-keeps-dont-ask.md) | 03 |
 
 | What | Source | Task |

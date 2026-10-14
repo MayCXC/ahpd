@@ -695,8 +695,7 @@ export function createAutomations(ctx: HostContext): Automations {
      * `computer:write`, which only a source asks for: naming one is a machine
      * made for this run, held to the same grant a client's `createSession` is.
      * It is asked of the owner, who is who this run acts as, and read in this
-     * one place - decision
-     * `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+     * one place.
      *
      * Asked before the sign-in below, because it is the narrower of the two:
      * an owner this process has never met has no grants to ask about, and what

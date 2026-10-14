@@ -40,8 +40,7 @@ export function createOwners(ctx: HostContext): Owners {
   /**
    * Whose work a session started on this connection is.
    *
-   * A typed reference, the spelling the usage rules use - decision
-   * `work-is-owned-by-a-typed-reference`. A person who has signed in owns what
+   * A typed reference, the spelling the usage rules use. A person who has signed in owns what
    * they start, a plugin owns what it starts as `plugin:<name>`, and a root
    * connection is the host itself rather than somebody. A host with no users
    * directory has nobody to name at all, so a session there records no owner
@@ -105,8 +104,7 @@ export function createOwners(ctx: HostContext): Owners {
    * The owner beside it says whose the work is; this says which window asked,
    * and only a window can be asked something back - trust is a window's rather
    * than a person's, and two windows of one person may hold different
-   * `workspaceTrust` - decision
-   * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+   * `workspaceTrust`.
    *
    * Kept and let go of exactly as `senders` is, because it answers the same
    * question about the same span: a turn nobody's window sent - an automation's,

@@ -441,8 +441,7 @@ it('writes a harness\'s cost as both costs, with the split it reported', async (
   await settle();
 
   // An agent's harness reports the cost itself, so what its pools are charged
-  // and what the provider reported are the same figure - decision
-  // `a-record-keeps-the-providers-cost-beside-the-charged-one`.
+  // and what the provider reported are the same figure.
   expect(usage.entries[0]?.cost).toEqual({ amount: 1, currency: 'usd', from: 'harness', input: 0.4, output: 0.6 });
   expect(usage.entries[0]?.providerCost).toEqual(usage.entries[0]?.cost);
 });

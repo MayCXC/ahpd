@@ -32,7 +32,7 @@ A client holding `config:read` sees the daemon's own settings and each plugin's 
 
 ## Departures from the plan
 
-- [A plugin loaded more than once is keyed by its provider](../../../decisions/a-repeated-plugin-is-keyed-by-its-provider.md), decided during the build.
+- [A plugin loaded more than once is keyed by its provider](../../../../docs/DAEMON.md), decided during the build.
 - The live capture was merged onto daemon/06's writer when rebasing.
 
 ## Left for later

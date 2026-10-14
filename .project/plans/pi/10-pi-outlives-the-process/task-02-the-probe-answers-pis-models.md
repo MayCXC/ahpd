@@ -24,7 +24,7 @@ refs:
 
 ## Steps
 
-1. Apply decision [pi-models-are-probed-from-pis-model-runtime](../../../decisions/pi-models-are-probed-from-pis-model-runtime.md).
+1. Apply [pi's models are probed from pi's model runtime, before any session opens](./plan.md).
 2. Share the model-to-offer shaping between the probe and the session, so both produce the same ids and fields.
 3. A probe that fails (no credentials file, unreadable models file) answers no models rather than throwing; the host already keeps an empty list out.
 4. The probe is injectable the way `open` is, so a test does not read the real `~/.pi`.

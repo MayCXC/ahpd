@@ -1,8 +1,7 @@
 /**
  * Two ends of one connection, in memory, with no socket between them.
  *
- * A plugin that acts on its own host is a client of it - decision
- * `plugin-contributes-host-options` - and a client reaches this host through a
+ * A plugin that acts on its own host is a client of it - and a client reaches this host through a
  * `Peer` and a `Wire`. Both exist here without a transport: each end's `send`
  * is the other end's input, so `Host.accept` serves a plugin exactly as it
  * serves a window, and the handshake, the gate and the subscriptions are the

@@ -7,7 +7,7 @@ refs:
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts)"
   - "[code://packages/sdk/test/plugin-boundary.test.ts](../../../../packages/sdk/test/plugin-boundary.test.ts)"
   - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md)"
-  - "[code://.project/decisions/a-plugin-gets-frozen-copies-of-host-values.md](../../../decisions/a-plugin-gets-frozen-copies-of-host-values.md)"
+  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md)"
   - "[code://.project/plans/plugin/38-a-plugin-cannot-change-what-the-host-gave-it/plan.md](plan.md)"
 ---
 

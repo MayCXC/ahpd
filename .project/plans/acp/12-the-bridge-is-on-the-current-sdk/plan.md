@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/acp-bridge-uses-the-protocol-sdk.md
 refs:
   - "[code://packages/agent-acp/src/connection.ts#L14](../../../../packages/agent-acp/src/connection.ts#L14) - `ClientSideConnection`, deprecated in the SDK"
   - "[code://packages/agent-acp/src/connection.ts#L45](../../../../packages/agent-acp/src/connection.ts#L45) - `clientInfo` version `0.0.1`"
@@ -34,7 +33,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Task |
 | --- | --- |
-| [The ACP bridge uses the published protocol SDK](../../../decisions/acp-bridge-uses-the-protocol-sdk.md) | 01 |
+| [The ACP bridge uses the published protocol SDK](../../plugin/07-agent-acp/plan.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

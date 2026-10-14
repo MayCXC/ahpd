@@ -6,8 +6,8 @@ layer: "docs"
 refs:
   - "[code://docs/DAEMON.md#L449-L453](../../../../docs/DAEMON.md#L449-L453) - the served-commands paragraph: the daemon's own options, and the fields absent from the manifest"
   - "[code://docs/USERS.md#L371](../../../../docs/USERS.md#L371) - `users` listed with a `read` verb no command uses"
-  - "[code://packages/server/src/commands/registry.ts#L62-L65](../../../../packages/server/src/commands/registry.ts#L62-L65) - the cache comment, citing `remote-reads-its-token-from-a-file-too`"
-  - "[code://packages/server/src/commands/options.ts#L246-L250](../../../../packages/server/src/commands/options.ts#L246-L250) - `servedUserFields`, citing `the-user-commands-need-users-write` for why paths are absent"
+  - "[code://packages/server/src/commands/registry.ts#L62-L65](../../../../packages/server/src/commands/registry.ts#L62-L65) - the cache comment, citing ["`--remote` reads its token from a file too, with --token-file"](../../../../docs/DAEMON.md)"
+  - "[code://packages/server/src/commands/options.ts#L246-L250](../../../../packages/server/src/commands/options.ts#L246-L250) - `servedUserFields`, citing [The user commands need users:write](../../../../docs/USERS.md) for why paths are absent"
 ---
 
 ## Objective
@@ -26,8 +26,8 @@ refs:
 ## Steps
 
 1. DAEMON.md: served `status` and `config` take no fields, and `configFile`, `users`, `plugins` and `paths` are absent from every served command; say so where the paragraph now says "the same flags".
-2. DAEMON.md and USERS.md: `users` has one verb in use, `write`, and it is bounded by what the caller holds, per [a-caller-gives-only-the-grants-it-holds](../../../decisions/a-caller-gives-only-the-grants-it-holds.md). Drop `read` from the row, or say no command needs it yet.
-3. DAEMON.md's served `config` sentence: `connectionToken` and every plugin option value are reported as `<set>`, per [the-config-command-hides-its-secrets](../../../decisions/the-config-command-hides-its-secrets.md).
+2. DAEMON.md and USERS.md: `users` has one verb in use, `write`, and it is bounded by what the caller holds, per [A user command gives, mints for and removes only what its caller holds](../../../../docs/AUTHENTICATION.md). Drop `read` from the row, or say no command needs it yet.
+3. DAEMON.md's served `config` sentence: `connectionToken` and every plugin option value are reported as `<set>`, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md).
 4. `registry.ts`: the private cache is Softov's call recorded in the plan's second table ("The `--remote` manifest cache is per user, mode 0700"), not the token-file decision; cite nothing or cite the plan row's rationale in the comment's own words.
 5. `options.ts`: the served fields leave the paths out because a served command acts on the daemon's own options (the plan's task 08 row); change the cited decision to that reason.
 6. Refs in tasks 07 to 21: the review found task 07 (`http.ts` `guarded`, `pathOf`, `run.ts`, test), task 08 (`scopes.ts` hook at 34-43, test 452-515), task 09 (test), task 10 (`run.ts`, `authorize.ts` 59-85, test), task 11 (`run.ts`, test) and task 12 (`options.ts`, `run.ts`, test) wrong. Move each and check the rest.

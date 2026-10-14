@@ -10,9 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-agent-declares-its-machine-needs-with-a-method.md
-  - decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
 refs:
   - "[code://packages/sdk/src/types/machine.ts#L18-L94](../../../../packages/sdk/src/types/machine.ts#L18-L94) - the need kinds and the fields every need carries; a state need and `when` join them"
   - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`, which gains the mode"
@@ -57,9 +54,9 @@ profile.stateScope = 'owner' (default) | 'shared'
 
 | Decision | Task |
 | --- | --- |
-| [An agent declares what a machine needs through a machine() method](../../../decisions/an-agent-declares-its-machine-needs-with-a-method.md) | 01 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md) | 02 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | 02 |
+| [An agent declares what a machine needs through a machine() method](../../plugin/15-an-agent-says-what-a-machine-needs/plan.md) | 01 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | 02 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/host-wide-root-settings-need-config-write.md
 refs:
   - "[code://packages/sdk/src/host.ts#L271-L281](../../../../packages/sdk/src/host.ts#L271-L281) - `dispatchNeeds`, which gated the root as `file:write` by channel alone"
   - "[code://packages/sdk/src/host.ts#L6846](../../../../packages/sdk/src/host.ts#L6846) - the dispatch gate in `applyDispatch`"
@@ -41,7 +40,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host-wide root setting needs config:write, and a person's own needs only a sign-in](../../../decisions/host-wide-root-settings-need-config-write.md) | The user, 2026-09-25: "do 8. **A capability for host configuration.**" |
+| 1 | [A host-wide root setting needs config:write, and a person's own needs only a sign-in](../../../../docs/HOST.md) | The user, 2026-09-25: "do 8. **A capability for host configuration.**" |
 
 | What | Source | Task |
 | --- | --- | --- |

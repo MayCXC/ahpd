@@ -10,7 +10,7 @@ refs:
   - "[code://packages/server/src/proxy/providers.ts#L25-L39](../../../../packages/server/src/proxy/providers.ts#L25-L39) - a provider's key variable"
   - "[code://packages/sdk/src/nested.ts#L50](../../../../packages/sdk/src/nested.ts#L50) - `NestedAsked`, which carries no env"
   - "[code://packages/computer/src/plugin.ts#L679-L695](../../../../packages/computer/src/plugin.ts#L679-L695) - `nestedHost`, the port's `nested`"
-  - "[code://.project/decisions/a-nested-host-gets-a-per-session-proxy-token-and-url.md](../../../decisions/a-nested-host-gets-a-per-session-proxy-token-and-url.md) - the per-session env holds only the token and the proxy URL"
+  - "[code://.project/plans/container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md](./plan.md) - the per-session env holds only the token and the proxy URL"
 ---
 
 ## Objective

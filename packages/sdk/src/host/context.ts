@@ -229,8 +229,7 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    *
    * Held rather than asked of, because there is nothing to clear it: the flag
    * says a setting is not in force yet, and the thing that puts it in force is
-   * a restart, which is this process ending - decision
-   * `a-configuration-change-applies-live-or-on-ahpd-restart`.
+   * a restart, which is this process ending.
    */
   restartNeeded: boolean;
   /** What this host has learned about a backend, made on first asking. */
@@ -347,7 +346,7 @@ export interface ConnectionContext {
    * Per connection, because a relay is one client's: the name is theirs,
    * nothing another client can spell reaches it, and a socket that drops
    * takes its containers with it. That is where the reference host keeps
-   * them too - decision `the-relay-surface-is-the-reference-one`.
+   * them too.
    *
    * `tail` is the launcher's own last words, kept only so a container that
    * dies can say why in this log.

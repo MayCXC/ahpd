@@ -31,7 +31,7 @@ import type { Principal, Users } from '../src/types/users.js';
  * crosses is a frozen copy, so a plugin that writes to one is refused where it
  * stands rather than changing what the host reads next. Each case below tries
  * one write and checks both halves - that it throws, and that the host is
- * exactly as it was. Decision `a-plugin-gets-frozen-copies-of-host-values`.
+ * exactly as it was.
  */
 
 const DIR = '/tmp/ahpd-plugin-boundary';

@@ -123,8 +123,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
     /*
      * A session naming a source is asking for a machine to be made for it,
      * which is a `computer:write` on top of the `session:create` any
-     * session needs - decision
-     * `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+     * session needs.
      * A `computer://<id>` that already exists is not a source, so a session
      * that names one needs nothing beyond `session:create`.
      */
@@ -159,8 +158,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
     /*
      * Stopping or removing a folder's dev container destroys the machine the
      * folder is, which is `computer:write` as it is for a `computer://` delete
-     * and for a session that names a source - decision
-     * `stopping-a-dev-container-needs-the-computers-grant`. The container's own
+     * and for a session that names a source. The container's own
      * operation rides with it, so a role that may reach the relay surface and
      * not destroy a machine names the two apart.
      */
@@ -168,7 +166,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
     if (method === 'vscode/devContainers/remove') return ['container:remove', 'computer:write'];
     /*
      * An `x-` command the daemon or a plugin serves needs the grant it was
-     * registered with - decision `a-plugin-serves-an-x-command`.
+     * registered with.
      */
     const command = commandOf(method);
     if (command !== undefined) return [command.method.grant];
@@ -182,7 +180,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
        * it was, an entry nobody wrote is the widest answer there is - which
        * is how `shutdown`, in neither table, came to be served to any
        * connection that had completed a handshake, and `shutdown` stops the
-       * daemon - decision `shutdown-needs-config-change`. Refused by
+       * daemon. Refused by
        * omission, a method added later is one the suite names on the next run
        * instead.
        */
@@ -254,8 +252,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
    * theirs.
    *
    * A scheme may open part of itself to a person without a grant of their
-   * own, which is how `usage://user:ana` is read by the person it is about
-   * - decision `a-scheme-provider-may-authorize-a-read-itself`. Asked only
+   * own, which is how `usage://user:ana` is read by the person it is about. Asked only
    * about a read, a listing or a watch, and only of the scheme the URI is
    * under, so it can widen what somebody sees and never what they change.
    *
@@ -368,7 +365,7 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
      * Removed since they signed in, which is a sign-in again and not
      * a role that does not cover this. The directory re-reads its
      * file on every question, so the answer is current as of this
-     * command - decision `a-role-is-read-on-every-command`.
+     * command.
      */
     if (who.standing !== undefined && !who.standing()) {
       throw new RpcError(-32007, `Sign in to use this host`, {

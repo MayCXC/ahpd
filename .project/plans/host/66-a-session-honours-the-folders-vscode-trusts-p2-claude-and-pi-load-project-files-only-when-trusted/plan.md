@@ -46,7 +46,7 @@ agent-cofold loads nothing from a project, so it has no task.
 - **Done so far:** every task is done, reviewed on 2026-10-06.
 - **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** `projectTrust` stays a pi session key; trust can only narrow it. On a host with no people directory the sender's push decides ([the decision](../../../decisions/the-sender-decides-on-a-host-with-no-people.md)), and these backends read whatever answer the host gives them.
+- **Watch out for:** `projectTrust` stays a pi session key; trust can only narrow it. On a host with no people directory the sender's push decides ([the decision](../../../../docs/AUTHENTICATION.md)), and these backends read whatever answer the host gives them.
 
 ## Final verification checklist
 

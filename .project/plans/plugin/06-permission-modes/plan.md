@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/permission-modes-live-in-the-harness.md
 refs:
   - code://.project/plans/plugin/05-endpoint-models/implemented.md - the plan this follows, whose model list the two controls sit beside
   - code://packages/agent-cofold/src/agent.ts - the mode and effort properties, and the effort in `modelOf`
@@ -58,7 +57,7 @@ a client's effort choice -> settings.effortLevel -> modelOf -> openaiCompat({ pa
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A permission mode is a harness policy, and the thinking level is a model request](../../../decisions/permission-modes-live-in-the-harness.md) | Softov, 2026-09-20: "ok do it" |
+| 1 | A permission mode is a harness policy, and the thinking level is a model request | Softov, 2026-09-20: "ok do it" |
 
 ## Proposed architecture
 

@@ -10,7 +10,7 @@ refs:
 
 ## Objective
 
-`commit` on an `uncommitted` changeset commits the index as it is when the index holds any change, and stages everything with `add -A` and commits it all when it holds none, per decision [a-commit-takes-the-index-when-anything-is-staged](../../../decisions/a-commit-takes-the-index-when-anything-is-staged.md).
+`commit` on an `uncommitted` changeset commits the index as it is when the index holds any change, and stages everything with `add -A` and commits it all when it holds none, per [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-asks-first-and-names-what-it-takes.md).
 
 ## Files
 

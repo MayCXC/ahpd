@@ -9,7 +9,6 @@ requires:
   - plans/plugin/29-a-tool-call-says-when-it-ran/plan.md
   - plans/plugin/29-a-tool-call-says-when-it-ran-p1-the-sdk-keeps-a-calls-times/plan.md
 decisions:
-  - decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md
 refs:
   - "[code://packages/agent-pi/src/mapping.ts#L251](../../../../packages/agent-pi/src/mapping.ts#L251) - `mapEvent(turn, event)`, which gains the time"
   - "[code://packages/agent-pi/src/mapping.ts#L87-L104](../../../../packages/agent-pi/src/mapping.ts#L87-L104) - `startCall`, which sends nothing for a call the model's stream opened already"
@@ -32,7 +31,7 @@ Restored, the entry times reach the replayed events so the live mapping stamps b
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's times are stamped by its plugin, as ahpd keys](../../../decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md) | Softov, 2026-10-03 |
+| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

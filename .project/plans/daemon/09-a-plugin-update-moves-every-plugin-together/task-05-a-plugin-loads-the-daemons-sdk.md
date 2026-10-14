@@ -6,7 +6,7 @@ layer: "server"
 refs:
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts) - where a plugin is imported and its peer range checked"
   - "[code://packages/server/src/install.ts](../../../../packages/server/src/install.ts) - the npm calls, and `behind` with the peer-refusal wording"
-  - "[code://.project/decisions/a-plugin-loads-the-daemons-sdk.md](../../../decisions/a-plugin-loads-the-daemons-sdk.md) - the decision"
+  - "[code://.project/decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md](../../../decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md) - the decision"
 ---
 
 ## Objective
@@ -38,4 +38,4 @@ Failing first: `gives a plugin the daemon's own @ahpd/sdk, not the copy beside i
 Runtimes, the same probe by hand: Node 24.19.0 through `registerHooks` and, with `registerHooks` removed, through `register`, from source under `scripts/dev.mjs` and from a build: `plugin sdk 0.8.0` each time. Deno 2.9.6 from a build, the plugin named by path: `plugin sdk 0.8.0` (without the hook Deno cannot resolve `@ahpd/sdk` from there at all). Bun 1.4.0, from source and from a build: `plugin sdk the stale copy`; Bun's `module.register` accepts the hooks and never calls them. With no `@ahpd/sdk` beside the plugin, which `--legacy-peer-deps` now makes the normal case, Bun fails the import (`Cannot find package '@ahpd/sdk'`) while Node answers 0.8.0. Node 22.0 to 22.14 was not run; no such Node is installed.
 Open: a plugin on Bun does not get the daemon's sdk, and after an install with `--legacy-peer-deps` it gets none.
 
-Dropped 2026-09-29: [a plugin uses the sdk npm installs beside it](../../../decisions/a-plugin-uses-the-sdk-npm-installs-beside-it.md) replaced the decision it built; task 06 removes its code.
+Dropped 2026-09-29: [a plugin uses the sdk npm installs beside it](../../../decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md) replaced the decision it built; task 06 removes its code.

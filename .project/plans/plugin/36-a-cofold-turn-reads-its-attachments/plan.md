@@ -11,9 +11,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md
   - decisions/a-pasted-image-goes-as-an-image-when-it-fits.md
-  - decisions/pasted-text-is-inlined-up-to-64-kib.md
 refs:
   - file:///github/cofold/.project/plans/agent/07-a-steer-carries-images-and-text-parts/plan.md - cofold's `steer` takes parts there
   - "[code://packages/agent-cofold/src/session.ts#L288](../../../../packages/agent-cofold/src/session.ts#L288) - `begin`, dropping the fifth argument"
@@ -47,9 +45,9 @@ Session.begin / queue / steer (host 68) -> partsOf(text, attachments, { images: 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An attachment's bytes are written to disk and the message names the file](../../../decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md) | Softov, 2026-10-06 |
+| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 | 2 | [A pasted image goes as an image when it fits](../../../decisions/a-pasted-image-goes-as-an-image-when-it-fits.md) | Softov, 2026-10-06 |
-| 3 | [Pasted text is inlined up to 64 KiB](../../../decisions/pasted-text-is-inlined-up-to-64-kib.md) | Softov, 2026-10-06 |
+| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 
 | What | Source | Task |
 | --- | --- | --- |

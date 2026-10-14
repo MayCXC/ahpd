@@ -12,9 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md
-  - decisions/a-secret-is-named-in-a-host-team-or-user-scope.md
-  - decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md
 refs:
   - "[code://packages/server/src/proxy/providers.ts#L25-L99](../../../../packages/server/src/proxy/providers.ts#L25-L99) - `ProxyProvider`: an endpoint, its dialects, and its key named by an environment variable; the built-in three"
   - "[code://packages/server/src/commands/proxy.ts](../../../../packages/server/src/commands/proxy.ts) - `ahpd proxy list`, which reads the table and never a key"
@@ -66,10 +63,10 @@ session disposed -> token dropped
 
 | Decision | Task |
 | --- | --- |
-| [A nested host is used only for a backend that runs nested and for a machine on another host](../../../decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md) | 02 |
-| [A secret is named in the host's, a team's or a person's scope](../../../decisions/a-secret-is-named-in-a-host-team-or-user-scope.md) | 03 |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md) | 03 |
-| [A nested host gets its machine's profile, and per session only the proxy token and URL](../../../decisions/a-nested-host-gets-a-per-session-proxy-token-and-url.md) | 02 |
+| [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 02 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | 03 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | 03 |
+| A nested host gets its machine's profile, and per session only the proxy token and URL | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

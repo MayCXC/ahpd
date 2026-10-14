@@ -2,8 +2,8 @@
 title: The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares
 status: accepted
 date: 2026-10-03
-supersedes: decisions/root-config-grows-two-keys.md
 refs:
+  - git://668de7bd - the superseded decision, as committed
   - "[code://packages/sdk/src/host.ts#L6087-L6116](../../packages/sdk/src/host.ts#L6087-L6116) - `rootConfig`, which keeps everything pushed, and `ROOT_CONFIG_SCHEMA`, which declares three keys"
   - "[code://packages/sdk/src/host.ts#L9852-L9990](../../packages/sdk/src/host.ts#L9852-L9990) - the `root/configChanged` handler, which applies every key it is sent"
   - "git://7516b04bc94 - VS Code 1.140, the UPSTREAM.md checkpoint: `platformRootSchema` (`src/vs/platform/agentHost/common/agentHostSchema.ts#L806-L1030`), `agentMergeRootConfigSchema` (`common/agentMerge.ts#L159-L197`), `automationRootConfigSchema` (`common/automationConfig.ts#L14-L26`)"

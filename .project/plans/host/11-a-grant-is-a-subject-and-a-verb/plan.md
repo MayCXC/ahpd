@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-grant-is-a-subject-and-a-verb.md
 refs:
   - "[code://packages/sdk/src/types/users.ts#L21-L32](../../../../packages/sdk/src/types/users.ts#L21-L32) - `Capability` and `Grant`, replaced by the grammar"
   - "[code://packages/sdk/src/users.ts#L21-L24](../../../../packages/sdk/src/users.ts#L21-L24) - the built-ins, and `principalOf`"
@@ -56,7 +55,7 @@ a command -> the gate -> capabilityFor(method, params) -> file:read or computer:
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A grant is a subject and a verb](../../../decisions/a-grant-is-a-subject-and-a-verb.md) | The user, 2026-09-23: "I cannot have something like automation:write, automation:read, *:read, *:write?", then "verbs after", and "follow conventions". |
+| 1 | [A grant is a subject and a verb](../../../../docs/USERS.md) | The user, 2026-09-23: "I cannot have something like automation:write, automation:read, *:read, *:write?", then "verbs after", and "follow conventions". |
 
 | What | Source | Task |
 | --- | --- | --- |

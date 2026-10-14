@@ -44,9 +44,9 @@ The client tree is set whole for that reason. It is **MIT-licensed**: read it
 for the design, and keep the prose here ours. Nothing has been copied and
 nothing should be.
 
-**Last read against:** VS Code `832cf23c5` (2026-09-19) and the protocol
-repository at `8549827` (2026-09-19; a `CODEOWNERS` commit, so the wire itself
-is unchanged since `fd0471d4`), on 2026-09-19. What each pass found and
+**Last read against:** VS Code `7baac39ec3c` (the `1.141.1` tag, 2026-10-12)
+and the protocol repository at `cb6ba618` (the wire is `6eec1b91`), on
+2026-10-14. What each pass found and
 what it asked of this repository is [UPSTREAM.md](UPSTREAM.md); the next pass
 starts from these two revisions rather than from wherever the clone was left.
 `git log <that>..HEAD -- src/vs/platform/agentHost` is the list, and

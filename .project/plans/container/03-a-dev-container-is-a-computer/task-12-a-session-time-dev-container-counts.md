@@ -13,7 +13,7 @@ refs:
 ## Objective
 
 `devcontainer://F` picked for a session is refused to a principal without `computer:write`, as `disposable:<profile>` is.
-This applies [A machine made for a session counts against max and needs computer:write](../../../decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md).
+This applies [A machine made for a session counts against max and needs computer:write](../../plugin/16-a-disposable-machine/plan.md).
 
 plugin/16 task 09 is in, so the count and the grant already cover every source: `capabilityFor` and `computerNeeds` ask `computer:write` for any `computer` value `computerSource` answers, which is anything but empty or `computer://<id>`, and the plugin's `devcontainer://` create runs `roomFor` in the same turn as the make. What this task adds is the test that says so for a dev container.
 

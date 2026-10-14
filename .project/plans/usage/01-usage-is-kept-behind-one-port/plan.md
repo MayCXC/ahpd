@@ -7,9 +7,6 @@ created: 2026-10-01
 revalidated: 2026-10-01
 requires: []
 decisions:
-  - decisions/usage-and-computer-time-are-two-records-behind-one-port.md
-  - decisions/the-usage-store-answers-live-totals.md
-  - decisions/work-is-owned-by-a-typed-reference.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L30-L41](../../../../packages/sdk/src/types/plugin.ts#L30-L41) - `PortKey`"
   - "[code://packages/sdk/src/plugins.ts#L29-L32](../../../../packages/sdk/src/plugins.ts#L29-L32) - `PORT_KEYS`"
@@ -42,9 +39,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Source |
 | --- | --- |
-| [Model use and computer time are two record types behind one usage port](../../../decisions/usage-and-computer-time-are-two-records-behind-one-port.md) | Softov, 2026-10-01 |
-| [The usage store answers a pool's live total, not only appends](../../../decisions/the-usage-store-answers-live-totals.md) | Softov, 2026-10-01 |
-| [Work is owned by a typed reference, user, team or project](../../../decisions/work-is-owned-by-a-typed-reference.md) | Softov, 2026-10-01 |
+| [Model use and computer time are two record types behind one usage port](../../../../docs/USAGE.md) | Softov, 2026-10-01 |
+| The usage store answers a pool's live total, not only appends | Softov, 2026-10-01 |
+| [Work is owned by a typed reference, user, team or project](../../../../docs/SESSIONS.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

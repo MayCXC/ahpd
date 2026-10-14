@@ -179,6 +179,38 @@ it('reports each turn of a session once, under its own prompt uuid', async () =>
   ]);
 });
 
+/*
+ * One turn at a time, and the one running is left whole.
+ *
+ * A chat holds one turn in `active`, and a second begun on top of it takes its
+ * place - the parts already streamed into the first go with it, so the turn a
+ * person watched is gone from the transcript while its own answer keeps
+ * arriving.
+ */
+it('leaves the running turn alone when another is begun', async () => {
+  const { session, main } = await replay();
+
+  session.begin('t1', 'the first thing');
+  await settle();
+  expect((session.chatState() as { activeTurn?: { id?: string } }).activeTurn?.id).toBe('t1');
+
+  session.begin('t2', 'a second thing');
+  await settle();
+
+  const after = session.chatState() as { activeTurn?: { id?: string; message?: { text?: string } }; turns?: Bag[] };
+  expect(after.activeTurn?.id).toBe('t1');
+  expect(after.activeTurn?.message?.text).toBe('the first thing');
+  expect(after.turns ?? []).toEqual([]);
+  // And the turn nobody took was never announced, so no client drew it.
+  const started = main.filter((one) => one.action.type === 'chat/turnStarted').map((one) => one.action.turnId);
+  expect(started).toEqual(['t1']);
+
+  // The one that ran is the only turn the session ever had.
+  sdk.push({ type: 'result', subtype: 'success', is_error: false, duration_ms: 5 });
+  await settle();
+  expect((session.chatState() as { turns?: Bag[] }).turns?.map((one) => one.id)).toEqual(['t1']);
+});
+
 it('reports nothing for a turn whose echo carried no uuid', async () => {
   const { session, recorded } = await replay();
 

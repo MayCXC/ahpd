@@ -16,8 +16,7 @@ import type { Contribution, PortContribution, PortKey, Route } from '../src/type
 /*
  * The fold, on its own.
  *
- * `foldHostOptions` is pure, so every rule decision
- * `plugin-contributes-host-options` and `plugin-registration-kinds` names can
+ * `foldHostOptions` is pure, so every rule can
  * be checked without a loader, a filesystem or a plugin package: what appends,
  * what a collision is, what `'replace'` buys, and that the base a caller
  * passed in comes back untouched.

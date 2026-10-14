@@ -9,10 +9,6 @@ requires:
   - plans/host/81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md
   - plans/host/81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md
 decisions:
-  - decisions/host-records-are-typed-channels-beside-their-resource-schemes.md
-  - decisions/a-plugin-serves-an-x-command.md
-  - decisions/an-x-command-is-named-by-domain-and-verb.md
-  - decisions/the-computer-is-an-object-a-person-manages.md
 refs:
   - "[code://packages/computer/src/provider.ts#L270-L335](../../../../packages/computer/src/provider.ts#L270-L335) - `list` and `read`, which answer each machine's `status` and `state`"
   - "[code://packages/computer/src/provider.ts#L335-L430](../../../../packages/computer/src/provider.ts#L335-L430) - `write` and `remove`: create, the three states, and destroy"
@@ -49,10 +45,10 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Host records get typed channels and commands beside their resource schemes](../../../decisions/host-records-are-typed-channels-beside-their-resource-schemes.md) | Softov, 2026-10-11 |
-| 2 | [A plugin serves an x- command with registerMethod](../../../decisions/a-plugin-serves-an-x-command.md) | Softov, 2026-10-11 |
-| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../decisions/an-x-command-is-named-by-domain-and-verb.md) | Softov, 2026-10-11 |
-| 4 | [The computer is an object a person manages](../../../decisions/the-computer-is-an-object-a-person-manages.md) | the scheme stays as it is |
+| 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
+| 2 | [A plugin serves an x- command with registerMethod](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 4 | [The computer is an object a person manages](../../../../docs/COMPUTER.md) | the scheme stays as it is |
 
 | What | Source | Task |
 | --- | --- | --- |

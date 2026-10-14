@@ -12,12 +12,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/any-ahpd-can-be-the-hub.md
   - decisions/a-nested-host-speaks-stdio.md
-  - decisions/a-grant-is-a-subject-and-a-verb.md
-  - decisions/people-are-resource-schemes-with-a-grant-each.md
-  - decisions/a-nested-session-resumes-its-inner-transcript-by-id.md
-  - decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md
 refs:
   - "[code://packages/sdk/src/nested.ts#L47](../../../../packages/sdk/src/nested.ts#L47) - `NestedHost`: stdin, stdout, stderr, `on` and `kill`, all a socket needs to stand in for a process"
   - "[code://packages/sdk/src/nested.ts#L78](../../../../packages/sdk/src/nested.ts#L78) - `NestedOptions.start`, which returns a `NestedHost` instead of spawning"
@@ -68,19 +63,19 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 
 | Decision | Task |
 | --- | --- |
-| [Any ahpd can be the hub other hosts join](../../../decisions/any-ahpd-can-be-the-hub.md) | 01, 02 |
+| Any ahpd can be the hub other hosts join | 01, 02 |
 | [The nested host speaks AHP over stdio, so the relay is a pipe](../../../decisions/a-nested-host-speaks-stdio.md) | 02 |
-| [A grant is a subject and a verb](../../../decisions/a-grant-is-a-subject-and-a-verb.md) | 03 |
-| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../decisions/people-are-resource-schemes-with-a-grant-each.md) | 03 |
-| [A nested session is resumed by resuming the inner transcript by id](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md) | 05 |
-| [A nested host is used only for a backend that runs nested and for a machine on another host](../../../decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md) | 04 |
+| [A grant is a subject and a verb](../../../../docs/USERS.md) | 03 |
+| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/USERS.md) | 03 |
+| [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
+| [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
 | The hub owns the session and relays it, as it does for a nested host | (defaulted: the outer host already owns every nested session) | 02 |
 | The hub is an `AhpClient` to the node's host over a joined socket, through `NestedOptions.start`; the relay is not a raw pipe of a client's frames | the proxy at [`code://packages/sdk/src/nested.ts#L340-L393`](../../../../packages/sdk/src/nested.ts#L340-L393) already speaks AHP to the inner host | 02 |
 | A node is listed by `@ahpd/computer`, beside every other runtime | one `computers` port per host | 04 |
-| The node's sessions resume after a restart of either side, by the inner transcript id | decision `a-nested-session-resumes-its-inner-transcript-by-id`; daemon/13 | 05 |
+| The node's sessions resume after a restart of either side, by the inner transcript id | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md); daemon/13 | 05 |
 | Model keys stay on the hub; a node's session reaches models through p12 | p12 | 04 |
 | A relayed session that waits sends a push through the hub, to the devices that created or opened it there | Softov, 2026-10-11, to "Push 01: which waiting sessions should send a notification to a phone?": "for now created or openned here... but do not forget the subhost relay" | 02 |
 | A node is a `node:` resource scheme with `node:read` and `node:write`; `node:write` adds a node and mints its token, removes it and drops it; a node's token opens the join door and nothing else | Softov, 2026-10-03, asked "is a node a `node:` scheme, or rows under `computer:`?": "a `node:` scheme with node:read/node:write" | 03 |

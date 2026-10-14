@@ -10,9 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md
   - decisions/a-pasted-image-goes-as-an-image-when-it-fits.md
-  - decisions/pasted-text-is-inlined-up-to-64-kib.md
 refs:
   - "[code://packages/sdk/src/attachments.ts#L65-L83](../../../../packages/sdk/src/attachments.ts#L65-L83) - `PartSource` and `Part`: a part names the attachment it came from, and a file's own text where it read one"
   - "[code://packages/sdk/src/attachments.ts#L99-L176](../../../../packages/sdk/src/attachments.ts#L99-L176) - `partsOf` and `partOf`: which of the three an attachment is, within which limits"
@@ -47,9 +45,9 @@ resource attachment (any file://, any size) -> contentOf -> store.read -> readFi
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An attachment's bytes are written to disk and the message names the file](../../../decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md) | Softov, 2026-10-06 |
+| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 | 2 | [A pasted image goes as an image when it fits](../../../decisions/a-pasted-image-goes-as-an-image-when-it-fits.md) | Softov, 2026-10-06 |
-| 3 | [Pasted text is inlined up to 64 KiB](../../../decisions/pasted-text-is-inlined-up-to-64-kib.md) | Softov, 2026-10-06 |
+| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 
 | What | Source | Task |
 | --- | --- | --- |

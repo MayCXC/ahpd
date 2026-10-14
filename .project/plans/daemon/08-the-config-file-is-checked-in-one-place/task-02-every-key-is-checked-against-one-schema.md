@@ -7,7 +7,7 @@ refs:
   - "[code://packages/server/src/commands/options.ts#L111-L205](../../../../packages/server/src/commands/options.ts#L111-L205) - `serverFields`, the schemas the check uses"
   - "[code://packages/server/src/commands/options.ts#L262-L303](../../../../packages/server/src/commands/options.ts#L262-L303) - `said`, `under`, `isOneOf`, `httpOf`, which go"
   - "[code://packages/server/src/config.ts#L28-L130](../../../../packages/server/src/config.ts#L28-L130) - `Config`, which becomes the schema's type"
-  - "[code://.project/decisions/http-host-binds-the-apis-own-listener.md](../../../decisions/http-host-binds-the-apis-own-listener.md) - `http.host` without `http.port` stays refused"
+  - "[code://docs/HOST.md](../../../../docs/HOST.md) - `http.host` without `http.port` stays refused"
 ---
 
 ## Objective

@@ -13,9 +13,9 @@ refs:
   - "[code://packages/sdk/src/types/agent.ts#L151-L152](../../packages/sdk/src/types/agent.ts#L151-L152) - `Agent.schema()`, which is where a session's config schema comes from"
   - "[code://packages/sdk/src/types/plugin.ts#L101-L140](../../packages/sdk/src/types/plugin.ts#L101-L140) - every `register*` a plugin has, and the `registerSessionConfig` that is not there"
   - "[code://packages/sdk/src/types/agent.ts#L92-L141](../../packages/sdk/src/types/agent.ts#L92-L141) - `Start`, which carries a working directory, ports and tools, and no place to run"
-  - "[code://.project/decisions/one-computer-provider-with-runtimes-as-options.md](../../.project/decisions/one-computer-provider-with-runtimes-as-options.md) - one provider per scheme, the runtime an option, `computer://<id>` whatever made it"
-  - "[code://.project/decisions/a-machine-is-made-by-a-host-tool.md](../../.project/decisions/a-machine-is-made-by-a-host-tool.md) - the tool route this note questions"
-  - "[code://.project/decisions/a-scheme-provider-implements-less-than-a-resource-store.md](../../.project/decisions/a-scheme-provider-implements-less-than-a-resource-store.md) - a provider implements only what it serves, and the write half is optional"
+  - "[code://.project/plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) - one provider per scheme, the runtime an option, `computer://<id>` whatever made it"
+  - "[code://docs/COMPUTER.md](../../docs/COMPUTER.md) - the tool route this note questions"
+  - "[code://docs/RESOURCES.md](../../docs/RESOURCES.md) - a provider implements only what it serves, and the write half is optional"
   - "[code://.project/research/host-owned-uri-resources.md](../../.project/research/host-owned-uri-resources.md) - the proposal that named the tool, and said what it is not"
   - "git://7552054:.project/ideas/dev-container-sessions.md - running a session inside a container, which the reference host does with a relay"
 ---
@@ -26,9 +26,9 @@ Written 2026-09-23 after the user's correction: "Agents are not suppose to creat
 
 ## What the records already say, and where the fork was
 
-`one-computer-provider-with-runtimes-as-options` settles the catalogue: one package, the runtime an option, and `computer://<id>` names a machine whatever made it. That part is not in question.
+["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) settles the catalogue: one package, the runtime an option, and `computer://<id>` names a machine whatever made it. That part is not in question.
 
-`a-machine-is-made-by-a-host-tool` settles creation as three host tools, and records the source as the user choosing the tool route. The research that decision points at says something narrower, in its own words at `host-owned-uri-resources.md`: "A tool such as `request_disposable_computer` would be an agent-callable operation within a session, **not the user's primary machine selector before a session exists**." That sentence is the fork. The tool half was built; the selector half was not, and the decision's title reads as though the two were the same thing.
+[A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) settles creation as three host tools, and records the source as the user choosing the tool route. The research that decision points at says something narrower, in its own words at `host-owned-uri-resources.md`: "A tool such as `request_disposable_computer` would be an agent-callable operation within a session, **not the user's primary machine selector before a session exists**." That sentence is the fork. The tool half was built; the selector half was not, and the decision's title reads as though the two were the same thing.
 
 ## What exists in the code
 
@@ -112,20 +112,20 @@ The user, 2026-09-23, chose one from each group above:
 
 | # | Chosen | Decision |
 | --- | --- | --- |
-| 1 | A resource write creates and `resourceDelete` destroys | [`the-computer-is-an-object-a-person-manages`](../decisions/the-computer-is-an-object-a-person-manages.md), which supersedes `a-machine-is-made-by-a-host-tool` |
-| 2 | The model tools stay, each marked `advancedPermission`, with one host key to permit advanced tools | [`a-tool-says-when-it-needs-advanced-permission`](../decisions/a-tool-says-when-it-needs-advanced-permission.md) |
-| 3 | A plugin may contribute a session key | [`a-plugin-may-contribute-a-session-key`](../decisions/a-plugin-may-contribute-a-session-key.md) |
-| 4 | This step includes a session running inside a computer | no decision needed: the fork was how a backend reaches one, which is [a-backend-reaches-a-computer-through-a-port](../decisions/a-backend-reaches-a-computer-through-a-port.md); the work is [plugin/10](../plans/plugin/10-a-computer-a-person-manages/plan.md) and [plugin/11](../plans/plugin/11-a-session-inside-a-computer/plan.md) |
+| 1 | A resource write creates and `resourceDelete` destroys | [[A computer is an object a person manages, and a session runs in one](../../docs/COMPUTER.md)](../../docs/COMPUTER.md), which supersedes [A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) |
+| 2 | The model tools stay, each marked `advancedPermission`, with one host key to permit advanced tools | [[A tool says when it needs advanced permission, and the host says whether it has it](../../docs/TOOLS.md)](../../docs/TOOLS.md) |
+| 3 | A plugin may contribute a session key | [[A plugin may contribute a session config key](../../docs/PLUGINS.md)](../../docs/PLUGINS.md) |
+| 4 | This step includes a session running inside a computer | no decision needed: the fork was how a backend reaches one, which is [A backend reaches a machine through a port the host carries](../plans/plugin/11-a-session-inside-a-computer/plan.md); the work is [plugin/10](../plans/plugin/10-a-computer-a-person-manages/plan.md) and [plugin/11](../plans/plugin/11-a-session-inside-a-computer/plan.md) |
 
 So the shape is: a person makes a machine with a resource write, a session names one through a key the plugin contributes, the model tools each say they need advanced permission and wait for the host's key, and the ACP backend proves a session running inside a machine in the same pass.
 
 ## What this would change in the records
 
-- `a-machine-is-made-by-a-host-tool` would be superseded: creation becomes a resource write a person makes, with the tools kept as an optional agent-facing extra.
-- `one-computer-provider-with-runtimes-as-options` stands as it is.
-- `a-scheme-provider-implements-less-than-a-resource-store` stands, and is the decision that allows the provider to grow a `write` and a `remove` half.
+- [A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) would be superseded: creation becomes a resource write a person makes, with the tools kept as an optional agent-facing extra.
+- ["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) stands as it is.
+- [A scheme provider implements less than a resource store](../../docs/RESOURCES.md) stands, and is the decision that allows the provider to grow a `write` and a `remove` half.
 - The Dev Container idea is the existing home of "a session runs inside a machine"; a generic `computer:` substrate is the same shape with the runtime as an option.
 
 ## Later, and not part of this step
 
-The user's other thought, importing cofold's command or config framework for the CLI, configuration and an HTTP API in front of ahpd, is a proposal for another time. My read: the useful part is the convention (verbs, an options schema, generated help), and the part to avoid is a dependency from the daemon to a coding-agent framework, which is what `plugin-contributes-host-options` deliberately declined when it refused a container. An HTTP surface in front of AHP is a client-side bridge rather than a core key, so it belongs in a package that speaks AHP outward, not in the host. Worth an ideas file when it is picked up, not now.
+The user's other thought, importing cofold's command or config framework for the CLI, configuration and an HTTP API in front of ahpd, is a proposal for another time. My read: the useful part is the convention (verbs, an options schema, generated help), and the part to avoid is a dependency from the daemon to a coding-agent framework, which is what [A plugin contributes the host's own options, and there is no service container](../plans/plugin/01-plugins-load-from-configuration/plan.md) deliberately declined when it refused a container. An HTTP surface in front of AHP is a client-side bridge rather than a core key, so it belongs in a package that speaks AHP outward, not in the host. Worth an ideas file when it is picked up, not now.

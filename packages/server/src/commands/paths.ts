@@ -10,9 +10,7 @@
  * At the terminal, a write with no `--config-file` is sent to the daemon the
  * record names, when that daemon serves the HTTP API: the change applies at once
  * and that daemon's own file is written, so `ahpd status --json` shows the new
- * folders with no restart - decisions
- * `a-served-paths-change-reaches-the-running-daemon` and
- * `ahpd-paths-lists-adds-and-removes-a-served-folder`.
+ * folders with no restart.
  */
 
 import { existsSync, statSync } from 'node:fs';
@@ -179,8 +177,7 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
     /*
      * An add names a folder this creates; a remove takes one out of a list and
      * takes nothing off the disk, so it changes the row it names. That is also
-     * why nothing asks before it runs - decision
-     * `ahpd-paths-lists-adds-and-removes-a-served-folder`.
+     * why nothing asks before it runs.
      */
     effect: sub === 'add' ? 'add' : 'change',
     resource: { kind: 'folder', ...(sub === 'add' ? {} : { key: 'folder' }) },

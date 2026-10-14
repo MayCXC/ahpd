@@ -30,8 +30,7 @@ export interface AuthorizeOptions {
  *
  * Frozen, and its `roles` with it: this one principal is handed to every
  * provider, hook and daemon-internal reader that asks who is calling, and the
- * values behind `can` are the whole of the host's authority - decision
- * `a-plugin-gets-frozen-copies-of-host-values`.
+ * values behind `can` are the whole of the host's authority.
  */
 export const ROOT: Principal = Object.freeze({
   id: 'the deployment token',

@@ -6,10 +6,6 @@ priority: medium
 created: 2026-10-07
 revalidated: 2026-10-07
 decisions:
-  - decisions/a-trigger-rule-has-a-fixed-shape.md
-  - decisions/a-pinned-automation-runs-as-turns-in-one-chat.md
-  - decisions/an-automation-says-what-an-overlapping-event-does.md
-  - decisions/a-run-is-told-what-woke-it.md
 refs:
   - "[code://packages/sdk/src/automations.ts#L382](../../../../packages/sdk/src/automations.ts#L382) - `triggers`, which answered no event trigger types before task 03"
   - "[code://packages/sdk/src/host/automations.ts#L561-L708](../../../../packages/sdk/src/host/automations.ts#L561-L708) - `beginAutomation`, which makes a session and begins a turn"
@@ -57,10 +53,10 @@ chat action in dispatch -> session event -> rule engine (per automation, per ses
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A trigger rule is one event with an optional count, follow-up and state check](../../../decisions/a-trigger-rule-has-a-fixed-shape.md) | Softov, 2026-10-07 |
-| 2 | [A pinned automation runs each time as the next turn in one chat](../../../decisions/a-pinned-automation-runs-as-turns-in-one-chat.md) | Softov, 2026-10-07 |
-| 3 | [An automation says what an event does while it runs](../../../decisions/an-automation-says-what-an-overlapping-event-does.md) | Softov, 2026-10-07 |
-| 4 | [A run is told what woke it, by placeholders and a summary block](../../../decisions/a-run-is-told-what-woke-it.md) | Softov, 2026-10-07 |
+| 1 | [A trigger rule is one event with an optional count, follow-up and state check](../../../../docs/AUTOMATIONS.md) | Softov, 2026-10-07 |
+| 2 | [A pinned automation runs each time as the next turn in one chat](../../../../docs/AUTOMATIONS.md) | Softov, 2026-10-07 |
+| 3 | [An automation says what an event does while it runs](../../../../docs/AUTOMATIONS.md) | Softov, 2026-10-07 |
+| 4 | [A run is told what woke it, by placeholders and a summary block](../../../../docs/AUTOMATIONS.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -8,10 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/host/81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md
 decisions:
-  - decisions/host-records-are-typed-channels-beside-their-resource-schemes.md
-  - decisions/an-x-command-is-named-by-domain-and-verb.md
-  - decisions/usage-is-read-through-a-usage-scheme.md
-  - decisions/usage-lists-the-charged-pools-a-reader-may-read.md
 refs:
   - "[code://packages/sdk/src/usage.ts#L690-L740](../../../../packages/sdk/src/usage.ts#L690-L740) - `groupsBody` and `body`, the answers each leaf gives as text"
   - "[code://packages/sdk/src/usage.ts#L664-L688](../../../../packages/sdk/src/usage.ts#L664-L688) - `rangeOf` and `keysAsked`, which read `from`, `until` and `by` from the query"
@@ -45,10 +41,10 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Host records get typed channels and commands beside their resource schemes](../../../decisions/host-records-are-typed-channels-beside-their-resource-schemes.md) | Softov, 2026-10-11 |
-| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../decisions/an-x-command-is-named-by-domain-and-verb.md) | Softov, 2026-10-11 |
-| 3 | [Usage is read through a usage scheme](../../../decisions/usage-is-read-through-a-usage-scheme.md) | Softov, 2026-10-02; the scheme stays |
-| 4 | [Usage lists the charged pools a reader may read](../../../decisions/usage-lists-the-charged-pools-a-reader-may-read.md) | Softov; `pools` answers the same list |
+| 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
+| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 3 | [Usage is read through a usage scheme](../../../../docs/USAGE.md) | Softov, 2026-10-02; the scheme stays |
+| 4 | [Usage lists the charged pools a reader may read](../../../../docs/USAGE.md) | Softov; `pools` answers the same list |
 
 | What | Source | Task |
 | --- | --- | --- |

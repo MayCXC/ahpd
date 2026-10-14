@@ -7,7 +7,7 @@ refs:
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - the Docker runtime, which is the other mechanism and shares nothing with this"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - the plugin, where a second port would be registered"
   - "[code://test/fixtures/docker.mjs](../../../../test/fixtures/docker.mjs) - the fake Docker the machine tests drive"
-  - "[code://.project/decisions/a-dev-container-is-made-by-the-dev-container-cli.md](../../../decisions/a-dev-container-is-made-by-the-dev-container-cli.md) - why the CLI and not Docker alone"
+  - "[code://.project/decisions/a-dev-container-is-reached-by-docker-exec.md](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) - why the CLI and not Docker alone"
 ---
 
 ## Objective

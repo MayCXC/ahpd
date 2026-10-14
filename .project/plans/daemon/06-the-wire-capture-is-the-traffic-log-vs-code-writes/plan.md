@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/the-traffic-log-is-the-wire-capture-in-vs-codes-shape.md
 refs:
   - "[code://packages/server/src/commands/run.ts#L344-L360](../../../../packages/server/src/commands/run.ts#L344-L360) - the `--wire` tap and the line it writes"
   - "[code://packages/server/src/commands/run.ts#L275-L279](../../../../packages/server/src/commands/run.ts#L275-L279) - `diagnostics.logs`, which hands the capture to a client that collects debug logs"
@@ -54,7 +53,7 @@ pnpm wire -- <file> -> framesIn -> the checker, which [changes] ignores _ahpLog
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The traffic log is the daemon's --wire capture, written in the shape VS Code writes](../../../decisions/the-traffic-log-is-the-wire-capture-in-vs-codes-shape.md) | Softov, 2026-09-26, accepted |
+| 1 | [The traffic log is the daemon's --wire capture, written in the shape VS Code writes](../../../../docs/DAEMON.md) | Softov, 2026-09-26, accepted |
 
 | What | Source | Task |
 | --- | --- | --- |

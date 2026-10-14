@@ -14,9 +14,7 @@ import type { ProxySetting } from './proxy/providers.js';
  *
  * `true` serves it under `/api` on the daemon's own listener, beside the
  * WebSocket; a `port` moves it to a listener of its own, bound to the daemon's
- * `host` unless `host` says otherwise - decisions
- * `the-http-api-is-on-the-daemon-port-under-api` and
- * `http-host-binds-the-apis-own-listener`. The API is off unless this names it,
+ * `host` unless `host` says otherwise. The API is off unless this names it,
  * because an administration surface on a public port is a choice rather than a
  * default.
  */
@@ -96,8 +94,7 @@ export interface Config {
    * The folder every session worktree is made under, as `<root>/<repo>/<name>`.
    *
    * Absent, a tree sits at `<repo>.worktrees` beside its repository, which is
-   * where VS Code's host looks for it - decision
-   * `worktrees-can-live-under-one-root`.
+   * where VS Code's host looks for it.
    */
   worktreesRoot?: string;
   /** The secret every connection must present. */
@@ -131,8 +128,7 @@ export interface Config {
    *
    * `turn` is the default: the running sum every harness reports is held until
    * the turn ends, and one record holds it. `report` writes each report's own
-   * addition as it arrives - decision
-   * `the-agent-meter-writes-per-turn-or-per-report`.
+   * addition as it arrives.
    */
   usage?: UsageSetting;
   /**
@@ -164,8 +160,7 @@ export interface Config {
    * A host bound to a wildcard answers to no name but the loopback ones, so a
    * browser that reaches it by a public address or another name is refused.
    * Each entry here is one the deployment chose: its origin is an `Origin` the
-   * API accepts and its host a `Host` the API and the plugin routes accept -
-   * decision `a-deployment-names-extra-origins-apart-from-resource`.
+   * API accepts and its host a `Host` the API and the plugin routes accept.
    */
   origins?: string[];
   /**
@@ -193,8 +188,7 @@ export interface Config {
    * False, so those tools are absent until this says otherwise: a plugin that
    * starts containers on this host contributes them only to a host that asked
    * for them. A tool that declares nothing is unaffected, and the reference
-   * host's own set declares nothing - decision
-   * `a-tool-says-when-it-needs-advanced-permission`.
+   * host's own set declares nothing.
    */
   advancedTools?: boolean;
   /**
@@ -224,7 +218,7 @@ export interface Config {
    * `hidden`, the default, leaves the conversation where it is and keeps the id
    * it was written under claimed, so it is never listed as a session of its
    * own. `delete` removes it through the same `Agent.delete` a disposed session
-   * goes through - decision `a-closed-chat-is-hidden-or-deleted`.
+   * goes through.
    */
   closedChats?: 'hidden' | 'delete';
   /**
@@ -286,8 +280,7 @@ export interface Config {
    * this key, so the proxy knows where it would call before anybody configures
    * anything, and an entry here replaces one of them whole or adds one that is
    * not built in. A key is named by the environment variable holding it and is
-   * never written here - decision
-   * `a-model-is-named-by-its-maker-and-runs-on-a-provider`.
+   * never written here.
    */
   proxy?: ProxySetting;
   /**
@@ -531,7 +524,7 @@ export const policiesPath = (): string => join(configDir(), 'policies.json');
  *
  * Beside the configuration for the same reason as the policies: one small file
  * a person knows the path of, holding what `config.json` names and no longer
- * carries - decision `the-local-vault-is-a-plain-file-until-it-is-encrypted`.
+ * carries.
  * It is plain JSON and nothing reads it as a secret, so it is kept like any
  * other file holding a credential.
  */

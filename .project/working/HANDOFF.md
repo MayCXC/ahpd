@@ -10,7 +10,7 @@ Current progress and pending items only, as of 2026-10-11.
 ## Main
 
 - 0.11.0 is released: tag `v0.11.0`, release run 38184535861, and all ten packages on npm. `@ahpd/bot` and `@ahpd/push` are published for the first time.
-- The four release blockers of 2026-10-10 are closed. The decision `the-whole-workspace-is-published` still says eight packages; it was true when written, and `PUBLISHED` now names ten.
+- The four release blockers of 2026-10-10 are closed. [One tag publishes every package in the workspace, `@ahpd/computer` included](../../DEVELOPER.md) still says eight packages; it was true when written, and `PUBLISHED` now names ten.
 - Softov's daemon runs the 0.11.0 code. Its bots and automations are Markdown files now, and the originals are kept as `.migrated`.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run. Restore it before a commit.
 

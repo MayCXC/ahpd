@@ -145,14 +145,13 @@ it('keeps the turn of a CLI that answers in time', async () => {
 it('fails nothing for a query this host replaced before the bound', async () => {
   sdk.answers = false;
   const { session, said } = opened({ handshakeTimeoutMs: BOUND });
-  session.begin('t1', 'hello');
   await waited(1);
 
-  // The CLI already up is replaced by one that does answer, before the bound
-  // on the first is up: what the first would have said is about a query
-  // nothing is reading any more.
+  // The CLI the session opened on is replaced by one that does answer, by the
+  // first turn's own pick and before the bound on the first is up: what the
+  // first would have said is about a query nothing is reading any more.
   sdk.answers = true;
-  session.begin('t2', 'plan this', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
+  session.begin('t1', 'plan this', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
   await waited(BOUND * 3);
 
   expect(sdk.built).toBe(2);

@@ -15,8 +15,7 @@
  *
  * `read` and `write` are never an operation on any subject: they name the
  * halves of one, so `user:read` is every read a role may do of people and
- * `user:get` is one record - decision
- * `a-grant-names-an-operation-and-read-and-write-are-its-groups`. A grant
+ * `user:get` is one record. A grant
  * names one of these, a group of them, or an operation of its own.
  */
 export type Verb = 'read' | 'write';
@@ -84,14 +83,11 @@ export interface Principal {
    * The teams and projects their work may be charged to, as written.
    *
    * A question about what they may do is `can`; this is about who pays, and it
-   * grants nothing - decision
-   * `teams-and-projects-are-memberships-in-the-users-file`.
+   * grants nothing.
    */
   readonly memberships?: readonly string[];
   /**
    * The membership work that names no scope of its own is charged to.
-   *
-   * Decision `a-request-naming-no-scope-uses-the-persons-primary`.
    */
   readonly primary?: string | undefined;
   /**
@@ -164,8 +160,7 @@ export interface UserRecord {
   /**
    * The teams and projects their work may be charged to.
    *
-   * Each is written `team`, `team:*` or `team:project` - decision
-   * `teams-and-projects-are-memberships-in-the-users-file`. A membership grants
+   * Each is written `team`, `team:*` or `team:project`. A membership grants
    * nothing and says no permission: it says what a piece of work may be
    * charged to, which is a question roles are never asked.
    */
@@ -174,8 +169,7 @@ export interface UserRecord {
    * The membership work that names no team and project of its own is charged
    * to, and one a person sets for themselves.
    *
-   * `team` or `team:project`, never `*`, and one of their memberships -
-   * decision `a-request-naming-no-scope-uses-the-persons-primary`.
+   * `team` or `team:project`, never `*`, and one of their memberships.
    */
   primary?: string;
 }

@@ -19,8 +19,7 @@ import type { Usage, UsageEntry, UsageTotal } from '../../sdk/src/types/usage.js
  * The up time a machine is charged for.
  *
  * A stretch opens when a machine starts and is written whole when it stops,
- * charged to whoever made the machine - decision
- * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`. Only the
+ * charged to whoever made the machine. Only the
  * clock is faked, so the seconds a record carries are the ones this test chose
  * rather than however long a subprocess took.
  */
@@ -278,8 +277,7 @@ it('charges a machine it found already running, to its team and its project', as
     owner: 'user:ana',
     team: 'backend',
     project: 'ahpd',
-    // The owner as written, the team, and the project within it - decision
-    // `agent-usage-is-charged-to-owner-team-and-project-pools`.
+    // The owner as written, the team, and the project within it.
     pools: ['user:ana', 'team:backend', 'project:backend:ahpd'],
   }]);
 });
@@ -416,8 +414,7 @@ it('charges a relay container to whoever connected and metered it from the conne
   await until(() => dockerHeld(held).machines.length === 1);
 
   // Whose the container is, in the file beside the configuration: the CLI
-  // labels a container only by what identifies it - decision
-  // `a-relay-container-is-owned-by-who-connected`. The entry holds the
+  // labels a container only by what identifies it. The entry holds the
   // machine's probed environment beside the owner, which is what a command run
   // in there is reached with.
   // The machine id is the one a listing answers, which for a container the

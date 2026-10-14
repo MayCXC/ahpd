@@ -133,8 +133,7 @@ it('refuses an owner who may not create a session, in the client\'s own words', 
 
 it('asks for computer:write when the config names a source, as a run does', async () => {
   // Named the way an automation names one and a client names one: a source is a
-  // machine made for this session, and making one is the grant - decision
-  // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+  // machine made for this session, and making one is the grant.
   const asking = { owner: 'user:soft' as const, config: { computer: 'store:code' }, prompt: 'Say hello' };
 
   const asking_ = await startingWith({ soft: ['session:create'] }, 'soft');

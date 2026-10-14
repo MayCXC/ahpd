@@ -4,8 +4,7 @@
  * `config.json` is the source: `values` reads it and `write` edits it in place,
  * beside every entry nothing here touches. The host is handed this as a port
  * rather than given the file, because the host is the protocol and a daemon's
- * settings are not its own - decision
- * `plugin-configuration-travels-in-root-config`.
+ * settings are not its own.
  *
  * A write is checked before the file is touched, so a value this daemon would
  * refuse at the next start never reaches it - and is said in one message naming
@@ -36,8 +35,7 @@ const DAEMON_KEYS = ['paths', 'port', 'host', 'http', 'routes', 'updateCheck', '
  * The keys this daemon can apply while it runs.
  *
  * Every other key is written to the file and answered `restartNeeded`, which is
- * the notice in root state that a setting is not in force yet - decision
- * `a-configuration-change-applies-live-or-on-ahpd-restart`.
+ * the notice in root state that a setting is not in force yet.
  */
 const LIVE = new Set<string>(['advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
 

@@ -10,7 +10,6 @@ requires:
   - plans/host/11-a-grant-is-a-subject-and-a-verb/plan.md
   - plans/host/36-people-are-resources-a-client-manages/plan.md
 decisions:
-  - decisions/a-grant-names-an-operation-and-read-and-write-are-its-groups.md
 refs:
   - "[code://packages/sdk/src/host/gate.ts#L22-L96](../../../../packages/sdk/src/host/gate.ts#L22-L96) - `NEEDS`, method to `subject:read|write`"
   - "[code://packages/sdk/src/host/gate.ts#L108-L131](../../../../packages/sdk/src/host/gate.ts#L108-L131) - `UNGATED`, the handshake, `authenticate`, `subscribe`, `dispatchAction`"
@@ -66,7 +65,7 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 
 | Decision | Source |
 | --- | --- |
-| [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../decisions/a-grant-names-an-operation-and-read-and-write-are-its-groups.md) | Softov, 2026-10-03, "Per-operation grants" |
+| [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/USERS.md) | Softov, 2026-10-03, "Per-operation grants" |
 
 | What | Source | Task |
 | --- | --- | --- |

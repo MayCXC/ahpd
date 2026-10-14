@@ -103,7 +103,7 @@ git push origin vX.Y.Z
   An `npm pack` tarball carries the literal `workspace:^`, which installs here and is broken for everybody else.
 - It runs `npm stage publish --provenance --access public` for every package named in `PUBLISHED`, in that order: `sdk` first, then the agents, `computer` and `tunnel-devtunnel`, then `server`.
 
-The publish list and the tag check are one list - decision [one tag publishes every package in the workspace](.project/decisions/the-whole-workspace-is-published.md).
+The publish list and the tag check are one list - decision [one tag publishes every package in the workspace](./DEVELOPER.md).
 A package npm has never seen is the one thing the workflow cannot do by itself: npm configures a trusted publisher on a package, so a new name needs one token publish first.
 Bootstrap it with a stub - a `package.json` and nothing else - at a version *below* the tag's, because a stub at the tag's own version makes the release skip that package as already published.
 

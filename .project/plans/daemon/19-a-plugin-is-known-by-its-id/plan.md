@@ -58,11 +58,11 @@ ahpd plugin config|enable|disable <spec> -> pluginEntry(file, spec)
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [A plugin's id is the name its module exports, not the spec that loads it](../../../decisions/a-plugins-id-is-its-modules-name.md) | Softov, 2026-10-10 | 01, 02, 03, 04 |
+| [A plugin's id is the name its module exports, not the spec that loads it](../../../../docs/PLUGINS.md) | Softov, 2026-10-10 | 01, 02, 03, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| A config entry has no `id` field of its own, and a module still loads once | Softov, 2026-10-10, asked "Should a config entry be able to set its own id, so one module can load twice?": "Not now (Recommended)"; [decision a-plugin-loads-once-and-each-preset-is-a-variant](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) stays | - |
+| A config entry has no `id` field of its own, and a module still loads once | Softov, 2026-10-10, asked "Should a config entry be able to set its own id, so one module can load twice?": "Not now (Recommended)"; what [`docs/DAEMON.md`](../../../../docs/DAEMON.md) says about a module loading once stays | - |
 | Two entries with the same id are reported as a problem that names both specs, and the first entry loads | (defaulted: the check for a repeated spec today, applied to the id) | 01 |
 | Nothing is migrated: `config.json` keeps its entries by spec, and a key is built when it is read | (defaulted: no file stores a `plugins.<spec>` key) | 02 |
 | A verb and `--plugin-option` find a plugin by its id first, then by its spec as written | (defaulted: a recorded `--plugin-option` line in `daemon.json` names the spec) | 03, 04 |

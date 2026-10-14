@@ -14,8 +14,7 @@ import type { Principal, Users } from '../src/types/users.js';
  * A machine a session asked for belongs to the session, and a machine a person
  * made directly belongs to whoever was signed in when they made it. Either way
  * the creator's owner reaches the plugin that makes the machine, which is what
- * the time it spends up is charged to - decision
- * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+ * the time it spends up is charged to.
  */
 
 const DIR = '/tmp/ahpd-machine-owner';

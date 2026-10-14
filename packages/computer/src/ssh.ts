@@ -3,8 +3,7 @@
  *
  * An ssh machine is listed rather than made: its operator writes the box's
  * destination in the plugin's options, and this runtime answers about it from
- * those options and from what one `ssh` command says - decision
- * `a-machine-runtime-is-named-for-its-maker`. Nothing of this host's is on the
+ * those options and from what one `ssh` command says. Nothing of this host's is on the
  * box, so there is no label here to find one by and no machine to start or to
  * stop, and the verbs that would make one are refused.
  *
@@ -297,8 +296,7 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
     kind: 'ssh',
 
     // A box is another host: a command run here cannot reach an agent there,
-    // so every backend of a session in one runs nested - decision
-    // `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`.
+    // so every backend of a session in one runs nested.
     remote: true,
 
     /*
@@ -357,8 +355,7 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
      *
      * So it says nothing about who owns it, and the plugin reads its own record
      * beside the configuration instead: a box nobody claimed is the host's own,
-     * which is the answer that record ends at - decision
-     * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`, read
+     * which is the answer that record ends at, read
      * the other way round.
      */
     owner: async (id) => (machines[id] === undefined ? undefined : {}),

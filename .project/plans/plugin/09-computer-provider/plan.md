@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/one-computer-provider-with-runtimes-as-options.md
-  - decisions/a-machine-is-made-by-a-host-tool.md
 refs:
   - git://258e8af - `.project/plans/plugin/08-resource-providers/report.md`, the review that found nothing connecting the scheme, the fixture and a running container; removed after it was applied
   - code://.project/research/host-owned-uri-resources.md - `computer://<id>/status`, `capabilities` and `request_disposable_computer`
@@ -65,8 +63,8 @@ a client reads computer://<id>/status
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [One computer: provider, one package, the runtime chosen by option](../../../decisions/one-computer-provider-with-runtimes-as-options.md) | The user, 2026-09-22: "I want 1 also as option", after the duplicate-scheme rule made two packages impossible. |
-| 2 | [A machine is made by a host tool, not by a resource write](../../../decisions/a-machine-is-made-by-a-host-tool.md) | The user, 2026-09-22: asked how a machine would be set up if the provider only reported them. |
+| 1 | [One computer: provider, one package, the runtime chosen by option](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | The user, 2026-09-22: "I want 1 also as option", after the duplicate-scheme rule made two packages impossible. |
+| 2 | [A machine is made by a host tool, not by a resource write](../../../../docs/COMPUTER.md) | The user, 2026-09-22: asked how a machine would be set up if the provider only reported them. |
 
 | What | Source | Task |
 | --- | --- | --- |

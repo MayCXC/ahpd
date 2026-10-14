@@ -759,6 +759,17 @@ describe('a turn and a restart that is stopping the daemon', () => {
     await settle();
   };
 
+  /**
+   * Waits for the turn a case is holding open to end.
+   *
+   * The echo backend streams a word per `pace` and then completes on its own,
+   * so a case that needs a chat free again waits the same way a person would:
+   * by watching what the host says is running.
+   */
+  const quiet = async (host: ReturnType<typeof createHost>): Promise<void> => {
+    for (let i = 0; i < 200 && host.turning().length > 0; i++) await settle(1);
+  };
+
   it('refuses a turn started while it stops, rather than having the close end one', async () => {
     const { host, client, said, chat } = await live();
     const log: string[] = [];
@@ -815,7 +826,10 @@ describe('a turn and a restart that is stopping the daemon', () => {
     await expect(restart(ARGV, false)).rejects.toThrow(`A turn is running in ${String(running[0])}; pass --force to restart anyway.`);
     expect(asked).toEqual([]);
 
-    // The daemon ran on, so the next thing somebody says is theirs again.
+    // The daemon ran on, so turns are taken again. The turn that held the
+    // restart back is the echo backend's own and nothing stopped it, so it
+    // ends before the next thing somebody says.
+    await quiet(host);
     await say(client, chat, 'still here', 't2');
     expect(answeredOn(said, chat)?.rejectionReason).toBeUndefined();
     await host.close();

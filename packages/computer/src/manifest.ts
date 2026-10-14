@@ -17,8 +17,7 @@ import type { SchemeDescription } from '@ahpd/sdk';
  *
  * A machine is made by writing to `computer://<name>`, and the body is the
  * manifest: the runtime it comes from, the image, the limits and, when a
- * session is going to live in it, the mounts and the working directory -
- * decision `the-computer-is-an-object-a-person-manages`.
+ * session is going to live in it, the mounts and the working directory.
  *
  * The URI names the machine and the body says what to make, which is why the
  * name is not a field: a client that writes to `computer://box` and says
@@ -47,8 +46,7 @@ export interface Profile {
    * for gVisor; absent runs it under Docker's own default.
    *
    * The boundary a machine is given rather than what makes it, which is why it
-   * is an option of a profile and not a runtime value - decision
-   * `gvisor-is-a-docker-profile-option-not-a-runtime`. Written as one `docker
+   * is an option of a profile and not a runtime value. Written as one `docker
    * run` argument, `--runtime=<value>`, and passed as given: a Docker that has
    * no such runtime refuses the create with its own message.
    */
@@ -79,8 +77,7 @@ export interface Profile {
    *
    * A value may be the name of a secret rather than the value: whoever picks
    * this profile picks who it is read for, which is not known until the
-   * machine is being made - decision
-   * `a-secret-is-named-in-a-host-team-or-user-scope`.
+   * machine is being made.
    */
   needs?: Record<string, string | SecretRef>;
   /**
@@ -134,8 +131,7 @@ export interface Profile {
    * Mounted read-write at the same path, so a harness keys its history the same
    * inside and out. It is the client's folder and this is the host's
    * filesystem inside a machine, so it takes the profile saying yes rather than
-   * arriving by itself: decision
-   * `a-session-folder-reaches-a-machine-only-where-its-profile-allows`. A
+   * arriving by itself. A
    * profile's own `folder` is the operator's and says nothing about this.
    */
   sessionFolder?: boolean;
@@ -164,8 +160,7 @@ export interface Profile {
    * from the root: the root is mounted at its own path in place of the folder,
    * which for a session in `~/.config/nvim` is the whole of `$HOME`. That is
    * the host's filesystem inside a machine the same way the folder is, so it
-   * takes a profile saying yes of its own rather than coming with the folder:
-   * decision `a-session-folder-reaches-a-machine-only-where-its-profile-allows`.
+   * takes a profile saying yes of its own rather than coming with the folder.
    * Without it the folder alone is mounted, with no git directory, and the
    * daemon logs a line naming the repository that was left out. Meaningless
    * without `sessionFolder`, which is what puts a folder there at all.
@@ -347,8 +342,7 @@ export interface ManifestDefaults {
    * The operator's list of folders is the plugin's, so the plugin answers and
    * this only reports it: a create body is a fourth route beside the session
    * setting, the picker's row and a relay's `connect`, and all four go through
-   * this one check - decision
-   * `a-dev-container-is-made-only-from-a-folder-the-operator-allows`.
+   * this one check.
    */
   folderFor?: (folder: string) => FolderAnswer;
   /**
@@ -356,8 +350,7 @@ export interface ManifestDefaults {
    *
    * Whoever asked for it - the connection's owner on a body a person wrote, the
    * session's on one a session asked for - because a machine's up time is
-   * charged to its owner and the owner has to outlive the daemon that made it -
-   * decision `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   * charged to its owner and the owner has to outlive the daemon that made it.
    * Not a body field: a manifest says what to make, and who asked is not
    * something a client chooses.
    */
@@ -455,8 +448,7 @@ export const MANIFEST_SCHEMA = (
     },
     /*
      * The two recipes, as a choice and the two fields beside it, both always
-     * drawn. Which of them is read is the host's answer and not the form's -
-     * decision `the-computer-form-offers-a-folder-as-a-flat-source-choice`.
+     * drawn. Which of them is read is the host's answer and not the form's.
      */
     ...(options.devcontainer === false ? {} : {
       source: {
@@ -732,8 +724,7 @@ const list = (value: unknown): string[] | undefined => {
  * A form draws both fields and sends both, so the choice beside them is what
  * says which of them is read: `image` reads the image fields and ignores the
  * folder, `devcontainer` reads the folder and needs it. A body that names no
- * `source` is read the way it always was, from whichever field it filled in -
- * decision `the-computer-form-offers-a-folder-as-a-flat-source-choice`.
+ * `source` is read the way it always was, from whichever field it filled in.
  */
 const recipeOf = (held: Record<string, unknown>): 'image' | 'devcontainer' | undefined => {
   const raw = held.source;
@@ -849,8 +840,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
   /*
    * The folder whose `devcontainer.json` makes this machine, when that is the
    * recipe: the folder is the source, the CLI reads the file, and no image is
-   * named at all - decision
-   * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`.
+   * named at all.
    *
    * The folder is checked here rather than left to the CLI, so a body naming
    * one that is not a dev container is a sentence about the body and no
@@ -901,8 +891,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
      * A form sends every field it drew, filled in or not, so the image field
      * arrives carrying the default beside a folder that was chosen - which is
      * the form's untouched value and not a second choice. An image somebody
-     * typed is still refused - decision
-     * `the-computer-form-offers-a-folder-as-a-flat-source-choice`.
+     * typed is still refused.
      */
     const both = said(held, 'image');
     if (both !== undefined && both !== defaults.image) {
@@ -917,8 +906,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
    * A body that names one is refused rather than dropped, as its mounts are:
    * the boundary a machine is given is the operator's to choose, so a client
    * holding `computer:write` cannot ask for a machine less isolated than the
-   * profile it picked - decision
-   * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+   * profile it picked.
    */
   const askedRuntime = said(held, 'ociRuntime');
   if (askedRuntime !== undefined) {

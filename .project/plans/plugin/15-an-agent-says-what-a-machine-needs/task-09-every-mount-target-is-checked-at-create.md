@@ -16,7 +16,7 @@ refs:
 ## Objective
 
 A machine whose mounts share a target is refused at create, with a sentence naming both and where each came from.
-This applies [A shared target is refused at create only when what lands there differs](../../../decisions/a-shared-target-is-refused-only-when-the-mounts-differ.md).
+This applies [A shared target is refused at create only when what lands there differs](../../container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md).
 Today the docs' own `scratch` example mounts `/srv/claude-home:/ahpd/claude`, a Claude session adds `claudeConfigDirectory` at `/ahpd/claude`, and real Docker refuses the duplicate mount point after the fake accepted it.
 
 ## Files

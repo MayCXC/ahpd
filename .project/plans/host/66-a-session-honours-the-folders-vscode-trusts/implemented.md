@@ -23,7 +23,7 @@ Claude and pi load project settings only when the folder is trusted, and an ACP 
 
 ## Departures from the plan
 
-- [The sender decides on a host with no people](../../../decisions/the-sender-decides-on-a-host-with-no-people.md) and [a worktree inherits its repository's trust](../../../decisions/a-worktree-inherits-its-repositorys-trust.md) came from the review.
+- [The sender decides on a host with no people](../../../../docs/AUTHENTICATION.md) and [a worktree inherits its repository's trust](../../../../docs/SESSIONS.md) came from the review.
 
 ## Left for later
 

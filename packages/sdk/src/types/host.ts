@@ -103,8 +103,7 @@ export interface HostOptions {
    * The spec of the plugin that registered each agent, by provider.
    *
    * What a host inside a machine is asked to load for a session of that agent
-   * that runs nested - decision
-   * `the-host-records-which-plugin-registered-each-agent`. `foldHostOptions`
+   * that runs nested. `foldHostOptions`
    * writes it; an agent handed over directly, not through a plugin, has no
    * entry, and a session of it cannot run nested.
    */
@@ -187,8 +186,7 @@ export interface HostOptions {
    * An absolute folder every session tree goes under.
    *
    * With one, a session's worktree is `<root>/<repo>/<name>` rather than
-   * `<repo>.worktrees/<name>` beside its repository - decision
-   * `worktrees-can-live-under-one-root`. It is what a machine with many
+   * `<repo>.worktrees/<name>` beside its repository. It is what a machine with many
    * repositories under one folder wants, and it is this host's own departure
    * from the reference, which fixes the location and offers no setting.
    *
@@ -259,8 +257,7 @@ export interface HostOptions {
    *
    * Contributed by the plugin that owns the `computer:` scheme and handed to
    * every backend through `Start`, so a backend reaches a machine without
-   * depending on the package that made it - decision
-   * `a-backend-reaches-a-computer-through-a-port`.
+   * depending on the package that made it.
    */
   computers?: ComputerPort;
   /**
@@ -269,8 +266,7 @@ export interface HostOptions {
    * Contributed by the plugin that can reach Docker and the Dev Container CLI.
    * Present, this host serves `vscode/devContainers/*` and advertises
    * `_meta['vscode.devContainers']`, so a client offers its dev container flow
-   * only where one can actually be made - decision
-   * `the-relay-surface-is-the-reference-one`.
+   * only where one can actually be made.
    */
   containers?: ContainerPort;
   /**
@@ -286,7 +282,7 @@ export interface HostOptions {
    * `turn`, the default, holds each running turn's last report and writes it
    * when the turn ends; `report` writes what each report added as it arrives, so
    * a turn that is still running is already billed for what it has spent - the
-   * mode decision `the-agent-meter-writes-per-turn-or-per-report` chose between.
+   * mode chose between.
    * It says nothing without a `usage` port.
    */
   usagePer?: 'turn' | 'report';
@@ -301,8 +297,7 @@ export interface HostOptions {
    * Where this host keeps the secrets its work needs, by scoped name.
    *
    * Left out, a plugin that reads a secret is told the host has no vault rather
-   * than handed nothing - decision
-   * `the-local-vault-is-a-plain-file-until-it-is-encrypted`, whose own vault is
+   * than handed nothing, whose own vault is
    * one plain JSON file in the configuration directory.
    */
   vault?: Vault;
@@ -310,16 +305,14 @@ export interface HostOptions {
    * Where each plugin keeps its own records, as named collections.
    *
    * Left out, a plugin that opens a collection is told the host has no record
-   * store on its first call. `memoryRecords()` ships with this package -
-   * decision `a-plugin-keeps-records-in-the-host-store`.
+   * store on its first call. `memoryRecords()` ships with this package.
    */
   records?: RecordStore;
   /**
    * Whether what the policies say is enforced.
    *
    * Off whatever the port holds, so a host that is handed a store still behaves
-   * as it did before policies existed until somebody says otherwise - decision
-   * `policy-checks-are-switched-on-by-a-daemon-option`. It says nothing without
+   * as it did before policies existed until somebody says otherwise. It says nothing without
    * a `policies` port, and it is never about a root connection, an automation or
    * a host with no users directory: those have no person to check.
    */
@@ -407,8 +400,7 @@ export interface HostOptions {
    * The fold fills this from `registerSessionConfig`, so a client draws the
    * key and a backend receives its value in `Start.settings`. A host that
    * sets this itself is contributing settings without a plugin, which is what
-   * an embedder with its own control wants - decision
-   * `a-plugin-may-contribute-a-session-key`.
+   * an embedder with its own control wants.
    */
   sessionConfig?: Record<string, Record<string, unknown>>;
   /**
@@ -430,8 +422,7 @@ export interface HostOptions {
    * False, so a tool that marks itself `advancedPermission` is absent from
    * every session until the host says otherwise: it is not reported in
    * `serverTools` and it is not bound, so a model is never offered it. A tool
-   * that declares nothing is unaffected by this and by the flag - decision
-   * `a-tool-says-when-it-needs-advanced-permission`.
+   * that declares nothing is unaffected by this and by the flag.
    */
   advancedTools?: boolean;
   /**
@@ -553,8 +544,7 @@ export interface HostOptions {
    * The fold fills this from `registerClose`, one entry per registration, and
    * `close` runs them after the sessions have closed and before the stores do.
    * Each entry carries its plugin's name, so one that fails is logged against
-   * the plugin that owns the work - decision
-   * `a-plugin-is-told-when-the-host-closes`.
+   * the plugin that owns the work.
    */
   closers?: { by: string; close: () => void | Promise<void> }[];
   /**
@@ -614,8 +604,7 @@ export interface RootConfigPort {
    * Only ever called with keys the schema above names. A value that is `null`
    * is a key taken back, which is how JSON says it. Throws to refuse, and the
    * message reaches the client that pushed the change as `rejectionReason`, so
-   * it names the key that was refused - decision
-   * `a-configuration-change-applies-live-or-on-ahpd-restart`.
+   * it names the key that was refused.
    */
   write(values: Record<string, unknown>): RootConfigAnswer | Promise<RootConfigAnswer>;
 }
@@ -685,8 +674,7 @@ export interface HostTool {
    * The tool's own claim, and the host's permission decides: a tool that sets
    * this is absent from every session unless `HostOptions.advancedTools` is
    * true, so it is never reported and never bound. A tool that says nothing is
-   * unaffected, whoever contributed it - decision
-   * `a-tool-says-when-it-needs-advanced-permission`. This is a different
+   * unaffected, whoever contributed it. This is a different
    * question from `effects`: one says what running the tool does, which a
    * backend's policy reads, and this says whether the host offers it at all.
    */
@@ -945,8 +933,7 @@ export interface Connection {
    * the answer is the whole of what it said about that folder - so it is kept
    * here rather than thrown away when the backend starts in it: the move
    * starts the backend again, and the process that starts has never heard the
-   * question - decision
-   * `a-folder-is-untrusted-until-a-client-says-otherwise`. It stands until the
+   * question. It stands until the
    * window pushes a `workspaceTrust` value, which answers for every folder at
    * once and so puts the folder-by-folder answers behind it.
    *

@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/a-plugin-is-told-when-the-host-closes.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176](../../../../packages/sdk/src/types/plugin.ts#L176) - `PluginHost`, where `registerClose` goes"
   - "[code://packages/sdk/src/types/plugin.ts#L417](../../../../packages/sdk/src/types/plugin.ts#L417) - `Contribution`, which carries what one plugin registered"
@@ -52,7 +51,7 @@ computer plugin close -> clear every disposal timer -> await removals in flight 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin is told when the host closes, and stops its own work there](../../../decisions/a-plugin-is-told-when-the-host-closes.md) | Softov, 2026-10-07 |
+| 1 | A plugin is told when the host closes, and stops its own work there | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

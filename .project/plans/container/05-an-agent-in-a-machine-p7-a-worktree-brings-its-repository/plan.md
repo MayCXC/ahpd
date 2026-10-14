@@ -11,7 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md
 refs:
   - "[code://packages/sdk/src/host/machines.ts#L182-L212](../../../../packages/sdk/src/host/machines.ts#L182-L212) - `placedIn`, which hands the folder, already the worktree, to the machine maker beside the owner, team and project"
   - "[code://packages/sdk/src/host/lifecycle.ts#L457-L459](../../../../packages/sdk/src/host/lifecycle.ts#L457-L459) - `isolated`, which makes the worktree"
@@ -54,7 +53,7 @@ createSession(isolation: worktree) -> isolated() -> worktree path -> placedIn(fo
 
 | Decision | Task |
 | --- | --- |
-| [A session's folder reaches a machine only where its profile allows it](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md) | 02 |
+| [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

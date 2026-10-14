@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-A session in a folder below a repository's root gets the root mounted only where its profile says `sessionRepository: true`, beside `sessionFolder`, as decision [a-session-folder-reaches-a-machine-only-where-its-profile-allows](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md) gates the folder.
+A session in a folder below a repository's root gets the root mounted only where its profile says `sessionRepository: true`, beside `sessionFolder`, as [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) gates the folder.
 Without it the folder alone is mounted, with no git directory, and the log says the profile does not allow the repository.
 
 ## Files

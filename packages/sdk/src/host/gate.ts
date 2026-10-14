@@ -15,8 +15,7 @@ export const ownIn = <T>(table: Readonly<Record<string, T>>, name: string): T | 
  *
  * One entry per gated method, and one operation rather than the half of a
  * subject it is a part of: the file's ten methods are ten operations, and
- * `session:rename` is what a title is - decision
- * `a-grant-names-an-operation-and-read-and-write-are-its-groups`. With the
+ * `session:rename` is what a title is. With the
  * built-in roles the answer is the same as it was under the verb, because a
  * built-in holds the whole group; what changes is that a role of one's own may
  * now hold one act instead of half a subject.
@@ -89,16 +88,14 @@ export const NEEDS: Record<string, Grant> = {
   //
   // Starting a container and running a host in it is this host's Docker access
   // by proxy, so it is a grant of its own rather than the machine scheme's
-  // operations: the params name a workspace folder, not a `computer://` URI -
-  // decision `connecting-to-a-dev-container-needs-a-grant`.
+  // operations: the params name a workspace folder, not a `computer://` URI.
   'vscode/devContainers/connect': 'container:connect',
   'vscode/devContainers/disconnect': 'container:disconnect',
   'vscode/devContainers/relaySend': 'container:relay',
   /*
    * Stopping or removing a folder's dev container is the act, and the machine
    * it acts on is the one the folder is: `computer:write` is asked beside the
-   * operation in `capabilityFor`, as it is for a session naming a source -
-   * decision `stopping-a-dev-container-needs-the-computers-grant`.
+   * operation in `capabilityFor`, as it is for a session naming a source.
    */
   'vscode/devContainers/stop': 'container:stop',
   'vscode/devContainers/remove': 'container:remove',
@@ -114,7 +111,7 @@ export const NEEDS: Record<string, Grant> = {
   /*
    * Stopping the daemon, which the window's own host answers. It is the one
    * method that ends every session on this machine, so it is a host-wide
-   * change and not the window's - decision `shutdown-needs-config-change`.
+   * change and not the window's.
    */
   shutdown: 'config:change',
 
@@ -214,9 +211,8 @@ export const ACTION_NEEDS: Record<string, Grant> = {
 export const UNGATED = new Set([
   'initialize', 'reconnect', 'ping', 'authenticate', 'subscribe',
   // A boolean about whether this machine has Docker and the CLI, which the
-  // reference client asks before it can ask for anything else -
-  // `connecting-to-a-dev-container-needs-a-grant`. It does start something:
-  // the launcher runs `docker --version` to answer it. A port is expected to
+  // reference client asks before it can ask for anything else. It does start
+  // something: the launcher runs `docker --version` to answer it. A port is expected to
   // hold that answer rather than spawn per call, because this is reachable by
   // a connection that has not signed in, and the one this repository ships
   // does.
@@ -309,8 +305,7 @@ export const dispatchNeeds = (channel: string, kind: ChannelKind, action?: Recor
  *
  * Picking `disposable:<profile>` or `devcontainer://<folder>` makes a machine
  * for the session as surely as `createSession` does, and is held to what
- * `createSession` is held to - decision
- * `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+ * `createSession` is held to.
  * A `computer://<id>` that already exists names no source, so a session moving
  * between machines that are already there is no write here.
  *
@@ -342,8 +337,7 @@ export const computerNeeds = (action: Record<string, unknown>): Grant | undefine
  * `workspaceTrust` is the person's for the same reason and a sharper one: it is
  * a window's answer about the folders that window has opened, and kept in the
  * shared record the last window to connect decided what every session on the
- * host loads from its project - decision
- * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+ * host loads from its project.
  */
 export const PER_CONNECTION = new Set(['defaultShell', 'workspaceTrust']);
 
@@ -352,8 +346,7 @@ export const PER_CONNECTION = new Set(['defaultShell', 'workspaceTrust']);
  *
  * The keys `HostOptions.rootConfig` carries are `config:read`'s and not
  * `config:write`'s, because a write names a key and a read names a value - and
- * one of those values may be a credential - decision
- * `root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value`.
+ * one of those values may be a credential.
  * The read is the whole group rather than the `settings` operation beside it:
  * what is behind it is every key the daemon holds, not one of them.
  * The host's own root holds every grant, as it does at every other gate.

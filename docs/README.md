@@ -4,7 +4,7 @@ One file per area of the host. Each says what is true today and links the decisi
 
 | File | What it covers |
 | --- | --- |
-| [README.md](README.md) | This index |
+| README.md | This index |
 | [AGENT.md](AGENT.md) | Writing a backend: the `Agent` interface, and what a backend owes the host |
 | [AHP.md](AHP.md) | The surface: every command, action and well-known key this host serves, with the row that says why |
 | [AUTHENTICATION.md](AUTHENTICATION.md) | Proving who a client is: the door, the tokens, `authenticate`, the issuer and what is readable before signing in |
@@ -27,4 +27,4 @@ One file per area of the host. Each says what is true today and links the decisi
 | [USERS.md](USERS.md) | The user directory: the people, their roles and what their work may be charged to |
 | [WEBHOOKS.md](WEBHOOKS.md) | Webhooks: a URL that talks to a bot or fires an automation, with a secret per endpoint |
 
-What the repository is, and how to start it, is [the root README](../README.md). Where the reference lives and which revisions were last read is [REFERENCE.md](../REFERENCE.md). The reasoning behind a choice these files link is under [`.project/decisions/`](../.project/decisions/).
+What the repository is, and how to start it, is the root README. Where the reference lives and which revisions were last read is [REFERENCE.md](../REFERENCE.md). The reasoning behind a choice these files link is under [`.project/decisions/`](../.project/decisions/).

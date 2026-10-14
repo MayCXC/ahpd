@@ -18,10 +18,8 @@ requires:
   - plans/daemon/15-a-verb-declares-only-its-own-flags/plan.md
   - plans/daemon/12-a-plugin-option-is-set-from-the-command-line/plan.md
 decisions:
-  - decisions/shutdown-needs-config-change.md
-  - decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md
+  - ../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md
   - decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md
-  - decisions/the-proxy-answers-a-providers-key-refusal-with-its-own-error.md
 refs:
   - git://ca6adcb - host/48 p9-p11
   - git://b677360 - container/05 p7
@@ -51,10 +49,10 @@ Every finding was read in the code at `e1c4ccc` before its task was written; whe
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../decisions/shutdown-needs-config-change.md) | Softov, 2026-10-06, "A host admin grant"; the grant's name defaulted to match `ahpd restart` (p1) |
-| 2 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md) | Softov, 2026-10-06, "Allowlist writable"; the list defaulted from what git writes (p2) |
+| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../../docs/HOST.md) | Softov, 2026-10-06, "A host admin grant"; the grant's name defaulted to match `ahpd restart` (p1) |
+| 2 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) | Softov, 2026-10-06, "Allowlist writable"; the list defaulted from what git writes (p2) |
 | 3 | [On a host with a users directory, no dev container is made until `devcontainer.folders` is set](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) | Softov, 2026-10-06, "Required with users" (p5) |
-| 4 | [The proxy answers a provider's 401 or 403 with its own error, and the provider's words go to the log](../../../decisions/the-proxy-answers-a-providers-key-refusal-with-its-own-error.md) | Softov, 2026-10-06, "The proxy's own error"; the status defaulted to 502 (p1) |
+| 4 | The proxy answers a provider's 401 or 403 with its own error, and the provider's words go to the log | Softov, 2026-10-06, "The proxy's own error"; the status defaulted to 502 (p1) |
 
 | What | Source | Task |
 | --- | --- | --- |

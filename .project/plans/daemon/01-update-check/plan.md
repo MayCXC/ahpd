@@ -9,10 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/update-check-reads-dist-tags.md
-  - decisions/update-check-is-a-file-refreshed-in-the-background.md
-  - decisions/update-check-compares-versions-by-hand.md
-  - decisions/update-check-fails-silently.md
   - decisions/ahpd-and-ahpc-share-no-package.md
 refs:
   - git://165020b - ROADMAP.md "Telling somebody the version is old" as written on 2026-09-06, the prose this plan starts from
@@ -75,10 +71,8 @@ ahpd --version -> untouched
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The update check reads npm's dist-tags endpoint and nothing larger](../../../decisions/update-check-reads-dist-tags.md) | Softov, ROADMAP.md, 2026-09-06 |
-| 2 | [The answer is read from a file, and only the long-lived process refreshes it](../../../decisions/update-check-is-a-file-refreshed-in-the-background.md) | Softov, ROADMAP.md, 2026-09-06 |
-| 3 | [Versions are compared by a function written here, not by a semver package](../../../decisions/update-check-compares-versions-by-hand.md) | Softov, ROADMAP.md, 2026-09-06 |
-| 4 | [Every failure of the update check is nothing to report](../../../decisions/update-check-fails-silently.md) | Softov, ROADMAP.md, 2026-09-06 |
+| 1 | The update check reads npm's dist-tags endpoint and nothing larger | Softov, ROADMAP.md, 2026-09-06 |
+| 2 | [The answer is read from a file, and only the long-lived process refreshes it](../../../../docs/DAEMON.md) | Softov, ROADMAP.md, 2026-09-06 |
 | 5 | [ahpd and ahpc share no package, and carry deliberate copies instead](../../../decisions/ahpd-and-ahpc-share-no-package.md) | Softov, ROADMAP.md "Deliberate duplication", 2026-09-06 |
 
 | What | Source | Task |
@@ -92,6 +86,8 @@ ahpd --version -> untouched
 | Only the daemon fetches; `start`, `status` and `--version` read the file or nothing | ROADMAP.md at 165020b | 02 |
 | The line appears only when something is newer; nothing is said when the version is current or unknown | Softov, 2026-09-18 | 02 |
 | The daemon writes no log line when it refreshes `update.json`; `checkedAt` is the record | Softov, 2026-09-18 | 02 |
+| Versions are compared by a function written here, not by a semver package: the check reads two versions and nothing larger | Softov, ROADMAP.md, 2026-09-06 | 01 |
+| Every failure of the update check is nothing to report, not even a line in the daemon's log | Softov, ROADMAP.md, 2026-09-06 | 01 |
 
 ## Proposed architecture
 

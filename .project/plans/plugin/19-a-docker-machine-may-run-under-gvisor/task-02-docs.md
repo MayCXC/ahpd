@@ -43,7 +43,7 @@ Validation, read against the code by hand:
 
 - `packages/computer/src/runtime.ts:3289` pushes `--runtime=<value>` only when the field is set, which is the "absent means none" sentence.
 - `packages/computer/src/manifest.ts:923-928` refuses a body that names the field, and lines 937-939 refuse a dev container machine from a profile that names it.
-- The value is passed as given, so a runtime the host does not have is Docker's own refusal, as decision `gvisor-is-a-docker-profile-option-not-a-runtime` says.
+- The value is passed as given, so a runtime the host does not have is Docker's own refusal, as [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/COMPUTER.md) says.
 
 Gates at this state: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass, and the suite passes 4728 of 4730 cases. Two cases timed out under load, in `agent-acp-ports.test.ts` and `computer-plugin.test.ts`; both pass when their own files run alone, 42 cases.
 

@@ -305,7 +305,9 @@ const server = (options: AcpOptions, handlers: AcpHandlers): AcpConnection => co
  * session opened after a restart is read by replaying it: the same updates a
  * live turn would have mapped, split into the turns they were. One connection
  * for the read, because a read is not a session and must not leave a server
- * behind.
+ * behind, and the turn that follows loads again rather than reusing it: a
+ * connection's capabilities are fixed by the handlers it is spawned with, and
+ * a read has no session to give it file, terminal or permission handlers.
  *
  * The load asks for the folder the server last said this conversation lives in,
  * because a server that keeps a conversation by its folder finds nothing when

@@ -852,8 +852,7 @@ describe('the repository a session\'s machine is handed', () => {
  *
  * Trust is a window's rather than a folder's: it arrives on a connection, it
  * names the folders that window has opened, and a folder nobody has vouched for
- * is one a session must not walk into on its own - decision
- * `a-folder-is-untrusted-until-a-client-says-otherwise`. So the host asks the
+ * is one a session must not walk into on its own. So the host asks the
  * connection whose turn asked for the move, and goes on only where the answer
  * was yes.
  *

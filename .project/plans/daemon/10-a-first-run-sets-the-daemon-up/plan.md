@@ -8,7 +8,6 @@ revalidated: 2026-09-30
 requires:
   - plans/daemon/09-a-plugin-update-moves-every-plugin-together/plan.md
 decisions:
-  - decisions/a-start-in-an-unserved-folder-asks-to-serve-it.md
 refs:
   - "[code://packages/server/src/commands/run.ts#L398-L406](../../../../packages/server/src/commands/run.ts#L398-L406) - the refusal a daemon with no backend gives today"
   - "[code://packages/server/src/commands/options.ts#L117-L263](../../../../packages/server/src/commands/options.ts#L117-L263) - `serverFields`, the settings and their defaults"
@@ -37,7 +36,7 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [A start at a terminal in a folder the daemon does not serve asks to trust it, and `--no-cwd` neither serves nor asks](../../../decisions/a-start-in-an-unserved-folder-asks-to-serve-it.md) | 02, 04 |
+| [A start at a terminal in a folder the daemon does not serve asks to trust it, and `--no-cwd` neither serves nor asks](../../../../docs/DAEMON.md) | 02, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |

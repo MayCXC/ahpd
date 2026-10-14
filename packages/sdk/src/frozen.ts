@@ -5,8 +5,7 @@
  * copied and then frozen: the copy so a later write by either side changes
  * nothing the other reads, and the freeze so the write is refused where it is
  * made rather than quietly lost. This guards the host against a plugin's
- * writes; it does not sandbox a plugin, which is trusted code either way -
- * decision `a-plugin-gets-frozen-copies-of-host-values`.
+ * writes; it does not sandbox a plugin, which is trusted code either way.
  *
  * `frozenCopy` is for plain data, which is what a JSON document holds. A value
  * with methods, such as a store or a principal, is built new and frozen with

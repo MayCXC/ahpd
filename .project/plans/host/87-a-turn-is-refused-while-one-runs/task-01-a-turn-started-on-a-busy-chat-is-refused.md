@@ -1,6 +1,6 @@
 ---
 title: A turn started on a busy chat is refused
-status: todo
+status: implemented
 depends: []
 layer: "sdk, agent-claude, agent-acp, agent-cofold, agent-pi"
 refs:
@@ -41,4 +41,50 @@ The host refuses a new client turn while a turn runs, and no backend's `begin` r
 
 ## Resume
 
-Not started.
+Implemented 2026-10-14. A turn asked for on a chat that is running one is refused, and the running turn stays whole. The host says the sentence to the client before a backend sees the message, and agent-claude drops the turn again if one reaches it.
+
+### What changed, file by file
+
+- `packages/sdk/src/host/lifecycle.ts` - `beginOrRun` returns "A turn is running in this chat" when the chat has an active turn (step 2). The check reads `chatState().activeTurn` inside `run()`, so it reads the chat at the last moment and after any wait for a followed turn. It sits above the two `set` calls, so a refused turn leaves no sender entry behind.
+- `packages/agent-claude/src/session/turns.ts` - `beginTurn` returns at the top when `busy()` holds, the check `ran`, `resume` and the queue already use (step 3). `busy()` is `ctx.active !== undefined || ctx.beginning !== undefined`, so a turn whose model switch is still in flight counts as running.
+- `packages/sdk/test/host-turn.test.ts` - a new `describe`, `a turn asked for while one is running`, with two cases and its own `busy()` setup.
+- `packages/agent-claude/test/agent-claude-turn-recorded.test.ts` - one case, over the file's own `replay()` harness.
+- `packages/agent-claude/test/agent-claude-agent-pick.test.ts` - two cases end the turn before the next `begin`, which is what one turn at a time allows.
+- `packages/agent-claude/test/agent-claude-handshake.test.ts` - the replaced-query case replaces the CLI on its first turn, rather than with a second turn on a busy chat.
+- `packages/server/test/server-restart.test.ts` - the restart case waits for the echo turn to end before it says the next thing, through a new `quiet` helper.
+
+### Which backends needed the change
+
+- agent-claude: yes. `beginTurn` wrote `ctx.active` over the running turn, and the parts the first had streamed went with it.
+- agent-acp: no. `begin` already returns when `ctx.active !== undefined`.
+- agent-cofold: no. `openTurn` returns `undefined` when `ctx.active !== undefined`, and `startTurn` drops the turn on that.
+- agent-pi: no. `begin` queues the message behind the turn that is running.
+
+The three Files lines for these backends stayed as written, because each carries its own condition. Nothing changed in those packages.
+
+### What the refusal leaves out
+
+A message that waited its turn arrives under `queuedAs`, and the backend begins it when the turn in front ends. A `!command` on a host with terminals keeps its own road, which queues it behind the running turn rather than answering it now. Both leave the check, or the queue stops.
+
+### The cases
+
+- `is refused, and the running turn keeps its id and its parts` - a second `chat/turnStarted` is refused with the sentence, carrying the rejected action back to the window that asked. Nothing of the turn reaches the chat, and a second subscribed window hears nothing of it. The active turn keeps its id, its text and its one part.
+- `lets the next one start once the running turn has ended` - the same window says a turn again after the first ends, and it runs.
+- `leaves the running turn alone when another is begun` - agent-claude's own case: `ctx.active` and `ctx.turns` are as they were, and only `t1` was ever announced.
+- The queued-message case the Validation asks for already exists: `host-input.test.ts`, `becomes the next turn when the running one ends`. It passes unchanged, which is what the `queuedAs` exemption is for.
+
+### Seen, and not this task's
+
+- Three agent-claude and server cases began a turn on top of a running one and relied on the replacement this task removes. They now end the running turn first. Each keeps its own subject: the cost of a switch, the query replaced before its bound, and a daemon that ran on.
+- `packages/sdk/test/nested-proxy.test.ts` failed in the first four-package run and passed in the second. It passes alone, and two of its cases take about four seconds, so this is the suite under load rather than the change.
+
+### Validation
+
+- `pnpm typecheck`, `pnpm boundary` and `pnpm schema` each exit 0. The boundary reports every package's dependencies declared and none undeclared. The schema holds the same 508 definitions from 506 exported types.
+- vitest over `packages/sdk`, `packages/server`, `packages/agent-claude` and `packages/agent-acp` in one run, with `--maxWorkers=2 --testTimeout=10000`: 4402 cases passed in 244 files.
+- Each of the four packages also passes alone: sdk 2845 cases, server 1012, agent-claude 299, agent-acp 246.
+
+### Left
+
+- `packages/sdk/test/fixtures/wire.jsonl` was rewritten by these runs, as it is by every run. `git checkout -- packages/sdk/test/fixtures/wire.jsonl` is denied in this session, so run it before committing.
+- Nothing is committed. This task's own files are the two sources and the five test files above, plus the plan and index rows.

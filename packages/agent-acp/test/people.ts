@@ -7,7 +7,7 @@ import type { Users } from '../../sdk/src/types/users.js';
  *
  * A backend is told which folders are trusted only by a connection that owns
  * the session, and a connection owns nothing on a host with no people
- * directory - decision `a-folder-is-untrusted-until-a-client-says-otherwise`.
+ * directory.
  * So a harness whose window pushes `workspaceTrust` and whose session must
  * actually be trusted has to give the host somebody to be.
  *

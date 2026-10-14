@@ -22,8 +22,7 @@ import type { Bag } from '@ahpd/sdk';
  * `trusted` is the host's answer about a folder, and the project's file is read
  * only where it says yes. A `.mcp.json` names servers this host starts as
  * commands, so a folder nobody vouched for contributes none of them - and an
- * absent `trusted` is the host having said nothing, which is the same answer -
- * decision `a-folder-is-untrusted-until-a-client-says-otherwise`. The home file
+ * absent `trusted` is the host having said nothing, which is the same answer. The home file
  * is the person's own rather than a project's and is read either way, as the
  * CLI's own `user` source is.
  */

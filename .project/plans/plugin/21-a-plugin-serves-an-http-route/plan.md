@@ -11,9 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/plugin-registration-kinds.md
-  - decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md
-  - decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L139-L279](../../../../packages/sdk/src/types/plugin.ts#L139-L279) - `PluginHost`, which gains `registerRoute`"
   - "[code://packages/sdk/src/types/plugin.ts#L329-L364](../../../../packages/sdk/src/types/plugin.ts#L329-L364) - `Contribution`, which gains the routes"
@@ -59,9 +56,9 @@ listener: plainRequests(daemonRequest) -> tools servers -> [new] /plugins/<encod
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../decisions/plugin-registration-kinds.md) | a route is a new row in that set |
-| 2 | [cofold's serve() takes a Request and answers a Response, and Node gets an adapter](../../../decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md) | the handler shape a route shares |
-| 3 | [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md) | the guards, of which a route takes only Host |
+| 1 | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../../docs/PLUGINS.md) | a route is a new row in that set |
+| 2 | [cofold's serve() takes a Request and answers a Response, and Node gets an adapter](../../daemon/05-an-http-api/plan.md) | the handler shape a route shares |
+| 3 | [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) | the guards, of which a route takes only Host |
 
 | What | Source | Task |
 | --- | --- | --- |

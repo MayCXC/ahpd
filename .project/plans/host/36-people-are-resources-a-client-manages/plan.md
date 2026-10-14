@@ -8,8 +8,6 @@ revalidated: 2026-10-02
 requires:
   - plans/host/35-a-person-belongs-to-teams-and-projects/plan.md
 decisions:
-  - decisions/people-are-resource-schemes-with-a-grant-each.md
-  - decisions/a-legacy-users-grant-is-the-user-subject-only.md
 refs:
   - "[code://packages/sdk/src/users.ts#L23-L39](../../../../packages/sdk/src/users.ts#L23-L39) - the built-in roles and `SUBJECTS`"
   - "[code://packages/sdk/src/types/resources.ts#L214-L238](../../../../packages/sdk/src/types/resources.ts#L214-L238) - `SchemeDescription` and `ResourceProvider`, the shape each scheme implements"
@@ -43,8 +41,8 @@ client resourceList/Read/Write/Delete user://, team://, project://, role://
 
 | Decision | Source |
 | --- | --- |
-| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../decisions/people-are-resource-schemes-with-a-grant-each.md) | Softov, 2026-10-01 |
-| [An existing `users:*` grant is `user:*` only, said once at start per role](../../../decisions/a-legacy-users-grant-is-the-user-subject-only.md) | Softov, 2026-10-02 |
+| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/USERS.md) | Softov, 2026-10-01 |
+| [An existing `users:*` grant is `user:*` only, said once at start per role](../../../../docs/USERS.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

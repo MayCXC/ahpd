@@ -7,8 +7,6 @@ created: 2026-09-29
 revalidated: 2026-09-29
 requires: []
 decisions:
-  - decisions/a-plugin-option-is-given-by-repeating-plugin-option.md
-  - decisions/root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value.md
 refs:
   - "[code://packages/server/src/commands/plugin.ts#L81-L173](../../../../packages/server/src/commands/plugin.ts#L81-L173) - `plugin install`, `remove` and `update`, the shape a new command copies"
   - "[code://packages/server/src/commands/options.ts#L367-L440](../../../../packages/server/src/commands/options.ts#L367-L440) - `optionsFrom`, a flag over the file"
@@ -34,8 +32,8 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [A plugin option is given on the command line by repeating `--plugin-option <plugin>.<key>=<value>`](../../../decisions/a-plugin-option-is-given-by-repeating-plugin-option.md) | 02 |
-| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../decisions/root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value.md) | 01 |
+| [A plugin option is given on the command line by repeating `--plugin-option <plugin>.<key>=<value>`](../../../../docs/DAEMON.md) | 02 |
+| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

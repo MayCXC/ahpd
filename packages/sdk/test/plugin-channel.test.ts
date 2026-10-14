@@ -12,7 +12,7 @@ import type { Grant, Principal } from '../src/types/users.js';
 
 /*
  * A plugin channel: an `x-` scheme one plugin serves, which a client
- * subscribes to and never writes - decisions `a-plugin-channel-is-an-x-scheme`
+ * subscribes to and never writes
  * and `a-plugin-channel-filters-each-action-per-subscriber`.
  *
  * One plugin, `demo`, serves `x-demo://`. Its snapshot says who asked, so a

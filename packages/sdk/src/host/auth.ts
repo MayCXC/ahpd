@@ -77,8 +77,7 @@ export function createAuth(ctx: HostContext): Auth {
    * principal, the prompt would be for a token nothing needs, and a client
    * that insists on it never creates a session at all. So that one resource is
    * rewritten for that one connection, and nothing else is: a backend's own
-   * resources and GitHub's are listed as they are - decision
-   * `an-authorized-connection-is-told-sign-in-is-not-required`.
+   * resources and GitHub's are listed as they are.
    *
    * A copy rather than an edit, because `options.users.resource` is the
    * directory's own record and `descriptors()` is rebuilt from it for every

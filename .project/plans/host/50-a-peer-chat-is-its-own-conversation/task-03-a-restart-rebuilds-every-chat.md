@@ -97,6 +97,6 @@ A resume starts the chat the record marks default, not the URI the session is na
 Disposing the first chat moves `default` to a peer chat, and the old resume spawned the closed conversation.
 `snapshots.ts` reads the same mark for the chat it serves read-only.
 Closing a chat keeps its conversation hidden by default.
-It is deleted only under the daemon key `closedChats` - decisions [A closed chat's conversation is hidden by default, and deleted only when the daemon is told to](../../../decisions/a-closed-chat-is-hidden-or-deleted.md) and [What closing a chat does is a daemon key in root config](../../../decisions/the-closed-chat-setting-is-a-daemon-key.md).
+It is deleted only under the daemon key `closedChats` - decisions [A closed chat's conversation is hidden by default, and deleted only when the daemon is told to](../../../../docs/CHATS.md) and [What closing a chat does is a daemon key in root config](../../../../docs/CHATS.md).
 Disposing a session deletes each recorded chat's conversation through the same `deleted` call the session's own id goes through.
 `sessionFor` answers a session URI rather than a bare id, so a session that is not held here is still spelt the way this host names it.

@@ -4,7 +4,7 @@ status: done
 depends: [task-16-the-api-on-bun-and-deno.md]
 layer: "sdk | server"
 refs:
-  - "[decisions/the-sdk-mounts-the-node-listener-the-server-adapts.md](../../../decisions/the-sdk-mounts-the-node-listener-the-server-adapts.md) - what this task applies"
+  - "[../../../rules/the-sdk-depends-only-on-the-protocol.md](../../../rules/the-sdk-depends-only-on-the-protocol.md) - what this task applies"
   - "[code://packages/sdk/src/listen.ts](../../../../packages/sdk/src/listen.ts) - `nodeListener`, which imports `@cofold/remote`, and its two callers"
   - "[code://packages/sdk/src/types/listen.ts](../../../../packages/sdk/src/types/listen.ts) - `ListenOptions.request` and `RequestsOptions`"
   - "[code://packages/sdk/package.json](../../../../packages/sdk/package.json) - `@cofold/remote` in `optionalDependencies`"

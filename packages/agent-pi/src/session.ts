@@ -380,8 +380,7 @@ export function piSession(
   /**
    * What to do about one call: run it, ask a person, or refuse it.
    *
-   * The modes are the siblings' six - decision
-   * `permission-modes-live-in-the-harness`.
+   * The modes are the siblings' six.
    */
   const decide = (toolName: string, input: Bag): ToolCallEventResult | 'ask' | undefined => {
     const effects = effectsOf(toolName);
@@ -762,8 +761,7 @@ export function piSession(
        * can only narrow: a folder the host did not vouch for loads none of its
        * own extensions or settings however the session is configured, and an
        * absent `Start.trusted` is the host having said nothing, which is the
-       * same answer - decision
-       * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+       * same answer.
        */
       trustProject: trust !== 'deny' && start.trusted?.(where) === true,
     });

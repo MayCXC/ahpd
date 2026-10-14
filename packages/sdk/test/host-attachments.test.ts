@@ -6,8 +6,7 @@
  * them, the transcript holds them, and a session reopened a week later reads
  * them back out of a file written for a message that has long finished. The
  * host writes them once, before the action is applied, and what travels from
- * there is a path - decision
- * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+ * there is a path.
  *
  * What is asserted is the message the backend was handed, because that is the
  * whole of what "applied" means here: the state a client reads is the

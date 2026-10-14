@@ -13,10 +13,8 @@ creates:
   - packages/sdk/src/containers.ts
   - packages/sdk/src/types/containers.ts
 decisions:
-  - decisions/a-dev-container-is-made-by-the-dev-container-cli.md
-  - decisions/the-relay-surface-is-the-reference-one.md
+  - ../../../decisions/a-dev-container-is-reached-by-docker-exec.md
   - decisions/a-nested-host-speaks-stdio.md
-  - decisions/connecting-to-a-dev-container-needs-a-grant.md
 refs:
   - "[code://packages/sdk/src/rpc.ts#L74-L100](../../../../packages/sdk/src/rpc.ts#L74-L100) - `createPeer`, whose only demand is a `Wire`"
   - "[code://packages/sdk/src/rpc.ts#L163-L200](../../../../packages/sdk/src/rpc.ts#L163-L200) - `receive`, one frame as a string"
@@ -55,7 +53,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ```
 client: vscode/devContainers/connect { connectionId, workspaceFolder, name }
-  -> the host checks `container:write`, then asks the containers port
+  -> the host checks `container:connect`, then asks the containers port
   -> the port runs `devcontainer up --workspace-folder <dir>`  (the folder's own devcontainer.json)
   -> { containerId, remoteWorkspaceFolder }
   -> the port installs or finds `ahpd` inside, and starts `ahpd --stdio` through `devcontainer exec`
@@ -77,10 +75,10 @@ nested: ahpd --stdio                                            -> one JSON fram
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A dev container is made by the Dev Container CLI](../../../decisions/a-dev-container-is-made-by-the-dev-container-cli.md) | The user, 2026-09-24: "supporting the vscode/devContainers RPC is possible since we will be supporting docker". The client only asks when a `devcontainer.json` exists, so Docker alone would answer a request whose file we ignored. |
-| 2 | [The surface is the reference client's own, name for name](../../../decisions/the-relay-surface-is-the-reference-one.md) | VS Code is the client that has the flow; this host already serves its `vscode/*` methods and gates them on `_meta` keys. |
+| 1 | [A dev container is made by the Dev Container CLI](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | The user, 2026-09-24: "supporting the vscode/devContainers RPC is possible since we will be supporting docker". The client only asks when a `devcontainer.json` exists, so Docker alone would answer a request whose file we ignored. |
+| 2 | [The surface is the reference client's own, name for name](../../../../docs/CONTAINERS.md) | VS Code is the client that has the flow; this host already serves its `vscode/*` methods and gates them on `_meta` keys. |
 | 3 | [The nested host speaks AHP over stdio](../../../decisions/a-nested-host-speaks-stdio.md) | Owning both ends makes the reference's WebSocket-over-a-duplex unnecessary: no forwarder, no endpoint, no token on a URL. |
-| 4 | [Connecting needs `container:write`](../../../decisions/connecting-to-a-dev-container-needs-a-grant.md) | Starting a container is the host's Docker access by proxy, and a method nobody classified is served to anybody. |
+| 4 | [Connecting needs the container's own operation](../../../../docs/CONTAINERS.md) | Starting a container is the host's Docker access by proxy, and a method nobody classified is served to anybody. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -127,7 +125,7 @@ nested: ahpd --stdio                                            -> one JSON fram
 
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` and `pnpm build` green with no Docker and no `devcontainer` installed.
 - [x] A frame written to the daemon's stdin is answered on its stdout, and the gate and the tap apply to it as they do to a socket.
-- [x] `_meta['vscode.devContainers']` is absent without a launcher that answers and present with one; an ungranted client is refused `-32009` with `container:write` in the sentence.
+- [x] `_meta['vscode.devContainers']` is absent without a launcher that answers and present with one; an ungranted client is refused `-32009` with `container:connect` in the sentence.
 - [x] The four methods and four notifications are exercised through a fake port, including a relay whose process exits, whose stderr arrives as `output`, and whose socket closes.
 - [x] With a real nested `ahpd` on stdio and no Docker: `connect`, then `initialize` and one `ping` through `relaySend`, answered by the nested host.
 - [x] By hand, with `@devcontainers/cli` 0.89.0 and Docker 29.6.2: a workspace with a `devcontainer.json`, a container the CLI made, and the tree's own host answering from inside it. Recorded in [implemented.md](implemented.md) and named in `docs/CONTAINERS.md`.

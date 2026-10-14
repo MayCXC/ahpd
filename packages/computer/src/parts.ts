@@ -11,8 +11,7 @@ import type { ComputerRuntime } from './runtime.js';
  * The parts a machine is made of, and the one file that says what they are.
  *
  * A part is one agent CLI, or ahpd itself, at an exact version, built into an
- * image of its own and mounted or copied at `/opt/ahpd/<id>` - decision
- * `an-agent-cli-is-pinned-in-one-versions-file`. Nothing here fetches or builds:
+ * image of its own and mounted or copied at `/opt/ahpd/<id>`. Nothing here fetches or builds:
  * this is the file, what it is allowed to say, the Dockerfiles that build them
  * and the tags they answer, so a version move is a pull request and whether an
  * image is already there is one `docker image inspect`.
@@ -29,7 +28,7 @@ export interface Part {
    * distribution, or ahpd itself.
    */
   kind: 'npm' | 'archive' | 'ahpd' | 'node';
-  /** The exact version, never a range - decision `an-agent-cli-is-pinned-in-one-versions-file`. */
+  /** The exact version, never a range. */
   version: string;
   /**
    * The npm packages it is, each at this part's version, or at its own exact
@@ -59,8 +58,7 @@ const KINDS = ['npm', 'archive', 'ahpd', 'node'] as const;
  * An exact version, which is what the file has to hold.
  *
  * A range would let two hosts building the same tag run different agents, which
- * is the whole thing pinning is against - decision
- * `an-agent-cli-is-pinned-in-one-versions-file`.
+ * is the whole thing pinning is against.
  */
 const EXACT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?(?:\+[0-9A-Za-z.]+)?$/;
 
@@ -477,8 +475,7 @@ const fetching = (withNode: boolean, packages: string): string => [
  * The last stage of every part: nothing but the part.
  *
  * `FROM scratch` and one copy, so the image a machine mounts is the CLI and
- * what it needs to run, and not the Debian it was fetched in - decision
- * `the-published-image-is-the-parts-joined` is about the joined image, and
+ * what it needs to run, and not the Debian it was fetched in is about the joined image, and
  * this is the same rule one part at a time.
  */
 const only = (id: string): string => [
@@ -651,6 +648,13 @@ export const dockerfileOf = (part: Part, source?: AhpdSource): string => {
       `RUN npm install --prefix /opt/ahpd/${part.id} ${flags} @ahpd/sdk@${source.version} @ahpd/server@${source.version}`,
       // The nested backends go in the part, not in the config dir, because a
       // `FROM scratch` stage keeps nothing that is not under `/opt/ahpd/ahpd`.
+      //
+      // `ahpd plugin install` is what installs them, and not a plain `npm
+      // install`: the installer is also what reads the package's `"ahpd"`
+      // field and refuses one that is not a plugin. `AHPD_PLUGIN_ROOT` makes
+      // the part's own root the plugin root. `--no-enable` installs the plugin
+      // into that root without naming it in a configuration, because the
+      // profile that names it is written when a session starts.
       `RUN AHPD_PLUGIN_ROOT=${PLUGIN_ROOT} /opt/ahpd/${part.id}/node_modules/.bin/ahpd plugin install --no-enable ${
         (part.plugins ?? []).map((one) => `${one}@${part.version}`).join(' ')}`,
       ahpdLauncher(part),

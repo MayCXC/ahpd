@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/host-tool-declares-what-it-does.md
-  - decisions/facio-fork-and-rewind-needs-a-cut.md
 refs:
   - code://.project/plans/plugin/03-agent-cofold/plan.md - the plan this follows, and its implemented record
   - code://packages/sdk/src/types/host.ts#L279-L332 - `HostTool`, which task 01 gives an `effects`
@@ -54,8 +52,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host tool says what running it does, and a destructive one is asked about by the policy that already exists](../../../decisions/host-tool-declares-what-it-does.md) | Softov, 2026-09-20: "ok on the fix.. its better than my approach" |
-| 2 | [Fork and rewind are a cut in the store, and the run loop keeps reading the session](../../../decisions/facio-fork-and-rewind-needs-a-cut.md) | Softov, 2026-09-20: "ok do option 2" |
+| 1 | [A host tool says what running it does, and a destructive one is asked about by the policy that already exists](../../../../docs/TOOLS.md) | Softov, 2026-09-20: "ok on the fix.. its better than my approach" |
+| 2 | Fork and rewind are a cut in the store, and the run loop keeps reading the session | Softov, 2026-09-20: "ok do option 2" |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -90,7 +88,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Done so far:** all four tasks, 2026-09-20. Task 01, a host tool's effects; task 02, the fork and the rewind over the cut facio gained; task 03, a client's own tool; task 04, the harness configuration.
 - **Next action:** none; the plan is built and [implemented.md](implemented.md) records it.
-- **Open questions:** none. The cut decision was settled by [facio-fork-and-rewind-needs-a-cut](../../../decisions/facio-fork-and-rewind-needs-a-cut.md) as two store primitives and a loop that keeps reading the session, and the cut is made before the first turn, so the run it drops is never left writing.
+- **Open questions:** none. The cut decision was settled by Fork and rewind are a cut in the store, and the run loop keeps reading the session as two store primitives and a loop that keeps reading the session, and the cut is made before the first turn, so the run it drops is never left writing.
 
 ## Final verification checklist
 

@@ -20,8 +20,7 @@ import type { Cli, CliOptions, Reach } from './devcontainer.js';
  *
  * The seam the provider and the tools are written against, so the package knows
  * what a machine is without knowing what makes it. Docker is the runtime that
- * ships; decision
- * `one-computer-provider-with-runtimes-as-options` is why the runtime is an
+ * ships; is why the runtime is an
  * option of one package rather than a package of its own.
  *
  * A runtime is reached by running a command, which is the same choice
@@ -44,8 +43,7 @@ export interface Machine {
    *
    * Read back from the `ahpd.devcontainer.folder` label, so a listing says
    * which folder a dev container computer belongs to and a picker can tell
-   * that the folder already has one - decision
-   * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`.
+   * that the folder already has one.
    */
   folder?: string;
   /**
@@ -288,8 +286,7 @@ export interface MachineSpec {
    * The image to make it from, or nothing when a dev container makes it.
    *
    * A machine is one of two recipes: an image run by Docker, or a folder's
-   * `devcontainer.json` read by the Dev Container CLI - decision
-   * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`. The
+   * `devcontainer.json` read by the Dev Container CLI. The
    * image is absent exactly when `devcontainer` is set, and the CLI's own
    * file decides what the container is then.
    */
@@ -310,8 +307,7 @@ export interface MachineSpec {
    * gVisor; absent starts it under Docker's own default.
    *
    * What a profile's `ociRuntime` comes to, and the profile's alone: the
-   * boundary a machine is given is the operator's to choose - decision
-   * `gvisor-is-a-docker-profile-option-not-a-runtime`. Written as one argument,
+   * boundary a machine is given is the operator's to choose. Written as one argument,
    * `--runtime=<value>`, and passed as given, so a Docker that has no such
    * runtime refuses the machine with its own message. Nothing reads it on the
    * dev container route, which the CLI makes rather than `docker run`.
@@ -372,8 +368,7 @@ export interface MachineSpec {
    *
    * Each is mounted read-only at `/opt/ahpd/<id>`: from its own image where the
    * runtime takes an image mount, from a volume filled once from that image
-   * otherwise - decision
-   * `a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback`. The
+   * otherwise. The
    * machine is labelled `ahpd.parts` with exactly these, and its `PATH` has each
    * one's `bin` in front.
    */
@@ -428,8 +423,7 @@ export interface MachineSpec {
    *
    * The session URI the caller was asked for, which outlives the daemon that
    * made it: it is what tells a later daemon that a leftover found at startup
-   * is one to adopt rather than one to leave alone - decision
-   * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps` - and
+   * is one to adopt rather than one to leave alone - and
    * it is what a `disposableAlone` machine's own session is read back from.
    */
   session?: string;
@@ -493,8 +487,7 @@ export interface MachineSpec {
    * under beside it.
    *
    * The owner is a typed reference as the usage rules spell one, and it is the
-   * owner of every stretch this machine spends up - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`. Stored
+   * owner of every stretch this machine spends up. Stored
    * rather than remembered because it has to survive the daemon that made it:
    * a machine outlives the process that started it, and a meter that only knew
    * what this run created would charge nothing for a machine it found.
@@ -541,8 +534,7 @@ export interface ComputerRuntime {
    *
    * Asked before a backend is started, because a machine on another box cannot
    * be reached by a command run here: every backend runs nested in such a
-   * machine - decision
-   * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`.
+   * machine.
    */
   readonly remote: boolean;
   list(): Promise<Machine[]>;
@@ -579,8 +571,7 @@ export interface ComputerRuntime {
    * such machine.
    *
    * A descriptor and not a running process, as `nested` answers one: the caller
-   * owns the spawn and its stdio - decision
-   * `a-backend-reaches-a-computer-through-a-port`. The environment a spawned
+   * owns the spawn and its stdio. The environment a spawned
    * program needs travels in the descriptor, so no value is in the argv a
    * process list shows. A runtime that cannot reach its host at all throws,
    * because "there is no such machine" and "the runtime is not answering" are
@@ -592,8 +583,7 @@ export interface ComputerRuntime {
    * machines, or nothing when there is no such machine.
    *
    * The machine's own recipe says it, rather than the caller: a profile's
-   * `host`, or what the runtime starts a host with by default - decision
-   * `a-nested-host-is-configured-by-the-machine-profile-only`.
+   * `host`, or what the runtime starts a host with by default.
    */
   hostCommand(id: string): Promise<string[] | undefined>;
   run(spec: MachineSpec): Promise<Machine>;
@@ -612,8 +602,7 @@ export interface ComputerRuntime {
    * Host paths written into a machine, each at the path it already has.
    *
    * A host file a session is handed by path is a file only if the machine holds
-   * one at that path, and a running machine takes no new mount - decision
-   * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. The copy is
+   * one at that path, and a running machine takes no new mount. The copy is
    * read-only, so nothing inside a machine writes over what it was handed, and
    * the folder above each path is made on the way in.
    *
@@ -672,8 +661,7 @@ export interface ComputerRuntime {
  * Every road that makes a machine asks this: a write to `computer://<name>`,
  * the tool that asks for one in words, and a session that names a source it is
  * started in. One count rather than three, because a limit one road checks and
- * another does not is no limit at all - decision
- * `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+ * another does not is no limit at all.
  *
  * The machines come back with it, because each road says so in its own words:
  * the ones already here to a tool that has to name them, and the one that
@@ -827,8 +815,7 @@ export interface DockerOptions extends CommandOptions {
    * A profile's `host` is what a machine made from it runs its host with, so it
    * is read here rather than in the plugin: which host a machine starts is read
    * from the machine's own record, and that record names the profile it was
-   * made from - decision
-   * `a-nested-host-is-configured-by-the-machine-profile-only`.
+   * made from.
    */
   hosts?: Record<string, string[] | undefined>;
   /** How a nested host is started in a machine, before a profile says otherwise. */
@@ -959,7 +946,7 @@ export const MACHINE_AGENTS = 'ahpd.agents';
  * rather than after anything said here. So the name a `computer://<name>` write
  * asked for is left on the container as a plain label and read back by a
  * listing, and a container with no such label is one the CLI named for its
- * folder - decision `the-name-a-create-gives-a-dev-container-is-a-label-on-it`.
+ * folder.
  *
  * Never an `--id-label`: the set of id labels is how the CLI finds a folder's
  * container, and a name among them would give the folder a second container.
@@ -1005,8 +992,7 @@ export const MACHINE_PROJECT = 'ahpd.project';
  *
  * The session URI, so a daemon that finds a disposable machine at startup can
  * ask whether the session it was made for is one this daemon keeps, and adopt
- * it only then - decision
- * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps`. The
+ * it only then. The
  * same label is what a `disposableAlone` machine's own session is read back
  * from, so the two answers outlive the daemon that made them.
  */
@@ -1781,7 +1767,7 @@ export const adoptedDevContainer = async (
  * How a nested host is started inside a machine, when no profile says otherwise.
  *
  * The daemon's own program, in stdio mode, is what serves a session that runs
- * in a machine - decision `a-nested-host-is-configured-by-the-machine-profile-only`.
+ * in a machine.
  */
 const DEFAULT_HOST: string[] = ['ahpd'];
 
@@ -2306,8 +2292,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * laid over it.
    *
    * The environment a machine is given travels by name, so each value has to be
-   * in the environment `docker` is spawned with or the flag reads nothing -
-   * decision `a-backend-reaches-a-computer-through-a-port`.
+   * in the environment `docker` is spawned with or the flag reads nothing.
    */
   const spawnEnvOf = (over: Record<string, string>): Record<string, string> | undefined =>
     (options.env === undefined && Object.keys(over).length === 0 ? undefined : { ...(options.env ?? {}), ...over });
@@ -3078,7 +3063,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
      * its stdio, and this only says what to spawn. The machine's own environment
      * travels as `-e NAME` flags and the descriptor's `env` is the `docker`
      * program's own with each value laid over it, so no value is in the argv a
-     * process list shows - decision `a-backend-reaches-a-computer-through-a-port`.
+     * process list shows.
      */
     how: async (id, asked) => {
       const found = await look(id);
@@ -3089,8 +3074,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
        * The container Docker knows this machine by, which is not always the name
        * the caller gave: a dev container carries the name its create gave as a
        * label and the CLI named it after the folder, so the `docker exec` is
-       * handed the latter - decision
-       * `the-name-a-create-gives-a-dev-container-is-a-label-on-it`.
+       * handed the latter.
        */
       const at = text(found.Id) === '' ? id : text(found.Id);
       /*
@@ -3285,7 +3269,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
          * second name is refused rather than quietly ignored: a `runArgs` label
          * is set when the container is made, so a create for a folder that
          * already has one finds the container the first made and cannot rename
-         * it - decision `the-name-a-create-gives-a-dev-container-is-a-label-on-it`.
+         * it.
          */
         if (named !== undefined && named !== spec.name) {
           throw new Error(`${spec.devcontainer} is already the computer ${named}, and its name is set when the container is made; destroy ${named} or choose another folder`);
@@ -3375,8 +3359,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       /*
        * The OCI runtime the container is started under, one argument so the
        * value cannot be read as a flag of its own and passed as given: a
-       * Docker that has no such runtime refuses the machine itself - decision
-       * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+       * Docker that has no such runtime refuses the machine itself.
        */
       if (spec.ociRuntime !== undefined) flags.push(`--runtime=${spec.ociRuntime}`);
       /*

@@ -6,7 +6,7 @@ refs:
   - "[code://packages/server/src/commands/plugin.ts#L142-L181](../../../../packages/server/src/commands/plugin.ts#L142-L181) - the `plugin.update` action"
   - "[code://packages/server/test/plugin-install.test.ts](../../../../packages/server/test/plugin-install.test.ts) - the `updatePlugins` cases"
   - "[code://docs/DAEMON.md#L69-L78](../../../../docs/DAEMON.md#L69-L78) - the upgrade paragraph"
-  - "[code://.project/decisions/plugin-update-takes-all-or-names.md](../../../decisions/plugin-update-takes-all-or-names.md)"
+  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md)"
 ---
 
 The plan's last two open tasks are implemented, and every task in it is now implemented or dropped: `ahpd plugin update` takes `--force`, and `docs/DAEMON.md` says what a failed update does.

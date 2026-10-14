@@ -74,8 +74,7 @@ const walk = (schema: Record<string, unknown>, value: unknown): unknown => {
  *
  * `schema` is `undefined` for a plugin whose schema was never read, one that
  * could not be imported or is switched off and so was never loaded: nothing
- * marks a value, so every one answers `<set>` - decision
- * `root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value`.
+ * marks a value, so every one answers `<set>`.
  *
  * Every answer about a plugin's options goes through this one mask, so root
  * state, `GET /api/config`, `GET /api/plugin/list` and `POST /api/plugin/config`
@@ -98,9 +97,7 @@ export const maskOption = (schema: Record<string, unknown> | undefined, option: 
  * The key each entry of `plugins` is carried under in root config.
  *
  * `plugins.<id>`, always: a plugin is loaded once and its options make its
- * variants, so there is one entry per id to key - decisions
- * `a-plugin-loads-once-and-each-preset-is-a-variant` and
- * `a-plugins-id-is-its-modules-name`.
+ * variants, so there is one entry per id to key.
  */
 export const keyed = (specs: readonly PluginSpec[]): { key: string; spec: PluginSpec }[] =>
   specs.map((spec) => ({ key: `plugins.${pluginIdOf(spec, { configDir: configDir(), cwd: process.cwd() })}`, spec }));
@@ -154,8 +151,7 @@ export const withoutSpecSecrets = (spec: PluginSpec, schema: Record<string, unkn
  * The connection token is the deployment's own root credential, and a plugin
  * entry holds one more place a secret is written: the userinfo of a URL it
  * installs from. An option the plugin's own schema marks `writeOnly` is
- * answered as `<set>` and any other as the file holds it - decision
- * `root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value`.
+ * answered as `<set>` and any other as the file holds it.
  * The terminal's own `config` is the process owner reading their own file and
  * keeps printing it.
  */

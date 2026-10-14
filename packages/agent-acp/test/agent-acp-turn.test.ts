@@ -92,8 +92,7 @@ async function talking(options: { changes?: ChangesetSource; tools?: HostTool[] 
   await signIn(client);
   const uri = 'ahp-session:/one';
   // The window says which folders it trusts, and a session of a folder nobody
-  // vouched for is refused rather than started - decision
-  // `a-folder-is-untrusted-until-a-client-says-otherwise`.
+  // vouched for is refused rather than started.
   await client.handle({
     method: 'dispatchAction',
     params: {

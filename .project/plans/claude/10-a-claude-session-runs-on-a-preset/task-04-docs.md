@@ -5,7 +5,7 @@ depends: [task-03-the-chips-move-into-presets.md]
 layer: "docs"
 refs:
   - "[code://packages/agent-claude/README.md](../../../../packages/agent-claude/README.md) - the backend's options"
-  - "[code://.project/decisions/permission-modes-live-in-the-harness.md](../../../decisions/permission-modes-live-in-the-harness.md) - line 28"
+  - "[code://.project/plans/plugin/06-permission-modes/plan.md](../../plugin/06-permission-modes/plan.md) - line 28"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The README documents `presets` with an example of two, the five fields, the defa
 ## Files
 
 - `UPDATE: packages/agent-claude/README.md` - the `presets` option.
-- `UPDATE: .project/decisions/permission-modes-live-in-the-harness.md:28` - the factual correction only.
+- `UPDATE: .project/../../plugin/06-permission-modes/plan.md:28` - the factual correction only.
 
 ## Steps
 

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-connection-is-told-who-it-is-on-initialize-and-in-root-state.md
 refs:
   - "[code://packages/sdk/src/host.ts#L4507-L4511](../../../../packages/sdk/src/host.ts#L4507-L4511) - `ownerFor`, the value both answers carry"
   - "[code://packages/sdk/src/host.ts#L7119-L7128](../../../../packages/sdk/src/host.ts#L7119-L7128) - `accept`, where a connection arrives with a principal or as root"
@@ -45,7 +44,7 @@ subscribe(ahp-root://) -> rootState(mine, connection) -> _meta (no principal tod
 
 | Decision | Source |
 | --- | --- |
-| [A connection is told who it is, on initialize and in its root state snapshot](../../../decisions/a-connection-is-told-who-it-is-on-initialize-and-in-root-state.md) | Softov, 2026-10-03 |
+| [A connection is told who it is, on initialize and in its root state snapshot](../../../../docs/HOST.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

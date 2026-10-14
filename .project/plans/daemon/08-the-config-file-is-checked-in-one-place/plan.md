@@ -8,9 +8,6 @@ revalidated: 2026-09-28
 requires:
   - file:///github/cofold/.project/plans/commands/02-a-program-chooses-its-config-layers/plan.md
 decisions:
-  - decisions/the-daemon-reads-no-project-config-file.md
-  - decisions/config-file-replaces-every-other-layer.md
-  - decisions/an-unknown-config-key-warns-and-starts.md
 refs:
   - "[code://packages/server/src/config.ts#L28-L130](../../../../packages/server/src/config.ts#L28-L130) - `Config`, a TypeScript interface with no check behind it"
   - "[code://packages/server/src/config.ts#L204-L226](../../../../packages/server/src/config.ts#L204-L226) - `loadConfig`, `JSON.parse` cast to `Config`"
@@ -55,9 +52,9 @@ ahpd [flags] -> @cofold/commands checks the flags against serverFields -> option
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The daemon reads no project configuration file](../../../decisions/the-daemon-reads-no-project-config-file.md) | Softov, 2026-09-28 |
-| 2 | [--config-file replaces every other configuration layer](../../../decisions/config-file-replaces-every-other-layer.md) | Softov, 2026-09-28 |
-| 3 | [An unknown configuration key warns, and the daemon starts](../../../decisions/an-unknown-config-key-warns-and-starts.md) | Softov, 2026-09-28 |
+| 1 | [The daemon reads no project configuration file](../../../../docs/DAEMON.md) | Softov, 2026-09-28 |
+| 2 | [--config-file replaces every other configuration layer](../../../../docs/DAEMON.md) | Softov, 2026-09-28 |
+| 3 | An unknown configuration key warns, and the daemon starts | Softov, 2026-09-28 |
 
 | What | Source | Task |
 | --- | --- | --- |

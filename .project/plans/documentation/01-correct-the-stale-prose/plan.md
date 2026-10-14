@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/stale-docs-are-corrected-in-one-task.md
 refs:
   - code://packages/server/src/main.ts#L84-L133 - USAGE, whose `--path` row says a directory not named there is refused
   - code://packages/server/src/main.ts#L147-L156 - the parse comment that explains the fence the flag no longer is
@@ -68,7 +67,7 @@ a person reads USAGE or docs/DAEMON.md or docs/AGENT.md
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The stale documentation is corrected in one task, not left to the next pass](../../../decisions/stale-docs-are-corrected-in-one-task.md) | Softov, asked 2026-09-19: "Fix them all as one small documentation task." |
+| 1 | The stale documentation is corrected in one task, not left to the next pass | Softov, asked 2026-09-19: "Fix them all as one small documentation task." |
 
 | What | Source | Task |
 | --- | --- | --- |

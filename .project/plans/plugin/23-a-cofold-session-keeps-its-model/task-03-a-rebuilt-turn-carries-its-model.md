@@ -25,7 +25,7 @@ After the daemon restarts, a cofold session's rebuilt turns carry `message.model
 ## Steps
 
 1. Take the `@cofold/agents` release from task 01.
-2. Start each run with `model` set to the reference task 02 puts on the turn's `message.model`, per decision [a-cofold-run-is-told-the-model-reference-it-runs-on](../../../decisions/a-cofold-run-is-told-the-model-reference-it-runs-on.md).
+2. Start each run with `model` set to the reference task 02 puts on the turn's `message.model`, per [A cofold run is told the model reference it runs on, and cofold stores it as given](./plan.md).
 3. In `turnsOf`, give each turn opened by a run's `inputMessageId` that run's model, as the reference the backend offers, on `message.model` and on `usage.model`, as claude's rebuilt turns carry `usage.model`.
 4. A run with no model leaves its turn without one.
 

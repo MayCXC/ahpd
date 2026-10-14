@@ -11,9 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/plugin-contributes-host-options.md
-  - decisions/a-grant-is-a-subject-and-a-verb.md
-  - decisions/a-plugin-principal-is-marked-not-read-from-its-id.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L139-L279](../../../../packages/sdk/src/types/plugin.ts#L139-L279) - `PluginHost`, which gains one method"
   - "[code://packages/sdk/src/types/plugin.ts#L66-L73](../../../../packages/sdk/src/types/plugin.ts#L66-L73) - `PluginSpec`, which gains `grants`"
@@ -64,9 +61,9 @@ createHost -> listen -> a plugin calls its connection
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin contributes the host's own options, and there is no service container](../../../decisions/plugin-contributes-host-options.md) | "a plugin that wants to watch a running host is a client instead" |
-| 2 | [A grant is a subject and a verb](../../../decisions/a-grant-is-a-subject-and-a-verb.md) | the grants the plugin's principal holds |
-| 3 | [A plugin's principal is marked, and its id is not read for the owner](../../../decisions/a-plugin-principal-is-marked-not-read-from-its-id.md) | Softov, 2026-10-10: "Mark the principal" |
+| 1 | [A plugin contributes the host's own options, and there is no service container](../01-plugins-load-from-configuration/plan.md) | "a plugin that wants to watch a running host is a client instead" |
+| 2 | [A grant is a subject and a verb](../../../../docs/USERS.md) | the grants the plugin's principal holds |
+| 3 | A plugin's principal is marked, and its id is not read for the owner | Softov, 2026-10-10: "Mark the principal" |
 
 | What | Source | Task |
 | --- | --- | --- |

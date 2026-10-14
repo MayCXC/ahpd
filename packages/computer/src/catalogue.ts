@@ -8,8 +8,7 @@ import type { ComputerRuntime } from './runtime.js';
  * A subscribe answers `{ records }`, each entry `{ id, record }` where the
  * record is `{ state, status }`: `state` is what `computer://<id>/state` reads,
  * and `status` is what `computer://<id>/status` reads. `added`, `changed` and
- * `removed` follow it, as every records channel sends them - decision
- * `host-records-are-typed-channels-beside-their-resource-schemes`.
+ * `removed` follow it, as every records channel sends them.
  *
  * The runtime is the record of truth and has no event stream, so the channel
  * hears only what `refresh` is called for: the changes this plugin makes.

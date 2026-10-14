@@ -298,8 +298,7 @@ export const under = (folder: string, served: string): boolean => {
  *
  * A folder a host serves is one its agents read, edit and run in, which is what
  * Claude Code asks a person to trust before it does, so a folder under none of
- * them is asked about rather than served quietly - decision
- * `a-start-in-an-unserved-folder-asks-to-serve-it`.
+ * them is asked about rather than served quietly.
  *
  * Yes writes the folder to the configuration file, so it is asked once, and adds
  * it to this run's folders, because the options were read before the question

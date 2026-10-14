@@ -98,7 +98,7 @@ function readGlobal(argv: readonly string[], name: string): string | undefined {
  * is refused rather than tried. A token that is empty or only spaces, from any
  * of the three, is no token. A remote call with no credential at all is refused
  * here, before anything is fetched, because every daemon that serves the API
- * requires one - decision `remote-needs-a-token`.
+ * requires one.
  */
 function tokenFor(argv: readonly string[], url: string): string {
   const inline = readGlobal(argv, '--token');
@@ -130,7 +130,7 @@ function tokenFor(argv: readonly string[], url: string): string {
  * `--remote` to plain http anywhere but loopback sends `Authorization: Bearer`
  * readable by anything on the path. The request still goes, because a daemon on
  * a trusted network or behind a tunnel that terminates TLS elsewhere is worth
- * reaching - decision `remote-warns-when-its-token-travels-in-cleartext`.
+ * reaching.
  */
 function warnCleartext(url: string): void {
   if (!/^http:\/\//iu.test(url) || ON_MACHINE.test(url)) return;

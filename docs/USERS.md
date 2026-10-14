@@ -114,7 +114,7 @@ may be done to a session and `session:list` is listing them; `user:get` is one
 person's record and `user:read` is every one of them. A subject has no
 operation called `read` or `write`, and the two words in that position mean the
 group every time - decision
-`a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+A grant names a subject and one of its operations, and read and write are groups of those operations.
 
 The host advertises every subject a grant may name in `_meta['ahpd.grants']` on
 the handshake and on the root state, so a client reads the operations from the

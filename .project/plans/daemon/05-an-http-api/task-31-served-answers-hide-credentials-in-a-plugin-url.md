@@ -12,12 +12,12 @@ refs:
 
 ## Objective
 
-`GET /api/config` and `GET /api/plugin/list` never answer the user and password of a plugin spec written as a URL (`git+https://user:pat@host/repo`), per decision [served-answers-hide-plugin-option-values-and-url-credentials](../../../decisions/served-answers-hide-plugin-option-values-and-url-credentials.md); the terminal's `ahpd config` and `ahpd plugin list` keep printing the file.
+`GET /api/config` and `GET /api/plugin/list` never answer the user and password of a plugin spec written as a URL (`git+https://user:pat@host/repo`), per [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/HOST.md); the terminal's `ahpd config` and `ahpd plugin list` keep printing the file.
 
 ## Files
 
 - `UPDATE: packages/server/src/commands/config.ts:24-44` - the served mask also replaces a URL's userinfo.
-  The comment on `withoutOptionValues` names decision `the-config-command-hides-its-secrets`, which this one supersedes; it names the new one.
+  The comment on `withoutOptionValues` names [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md), which this one supersedes; it names the new one.
 - `UPDATE: packages/server/src/commands/plugin.ts:36-43` - every field of a served row, `problem` included.
 - `UPDATE: packages/server/test/server-http.test.ts` - the cases below.
 - `UPDATE: docs/DAEMON.md` - the served answers mask a URL's credentials as they mask option values.

@@ -260,8 +260,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * And the session's own files, taken back out of that machine.
      *
      * What a session in a machine was handed, one message at a time, is this
-     * host's copy made for that one session - decision
-     * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. A machine
+     * host's copy made for that one session. A machine
      * another session is still in keeps nothing of the one that has gone, and
      * a machine that has gone with the session is nothing to take anything out
      * of. Asked before the leave below, because a machine whose last session
@@ -413,8 +412,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    * the session - a stop whose dispose never landed, a daemon that was killed,
    * a machine that came back - and the profile of that machine is what decides
    * what happens to it: `inside` starts a host in the machine for the one
-   * question, `record` leaves the transcript where it is - decision
-   * `a-nested-host-is-configured-by-the-machine-profile-only`.
+   * question, `record` leaves the transcript where it is.
    *
    * The plugin the session's agent was registered by is what the host inside is
    * started with, so a record whose plugin this daemon does not have ends with a
@@ -780,8 +778,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * The same question a client adding a folder is asked, and answered from
      * the same value: a folder the asking window has already pushed as trusted
      * is entered without a round trip, and one it has not is entered only on
-     * its yes - decision
-     * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+     * its yes.
      */
     const effective = { ...held.agent.defaults(), ...contributedDefaults(), ...held.config };
     const auto = autoApproved(effective, rootConfig);
@@ -795,8 +792,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
        * have opened.
        *
        * The worktree itself is not asked about: the host makes it, and one the
-       * host made is trusted exactly when its repository is - decision
-       * `a-worktree-inherits-its-repositorys-trust`. The repository the window
+       * host made is trusted exactly when its repository is. The repository the window
        * vouches for here is remembered on its connection, so the backend
        * started in the worktree is told the same thing.
        */
@@ -1029,11 +1025,23 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
        * across there rather than looked for here under an id it will never
        * carry again.
        */
+      const command = text.startsWith(BANG) ? text.slice(BANG.length).trim() : '';
+      /*
+       * One turn at a time in a chat, for the turns that ask the agent.
+       *
+       * A message asking for a turn while one is running is refused here, in
+       * the words the client shows, rather than handed to a backend that would
+       * have to drop it or lose the turn in front of it. A command is left
+       * out: it queues behind the running turn by its own road, and a message
+       * that waited its turn arrives under `queuedAs` and is begun by the
+       * backend when that turn ends.
+       */
+      if (queuedAs === undefined && (command === '' || !options.terminals)
+        && session.chatState().activeTurn !== undefined) return 'A turn is running in this chat';
       if (who !== undefined) senders.set(queuedAs ?? turnId, who);
       // And the window itself, under the same id, for whatever has to ask it
       // something later - the move an agent asks for in this turn most of all.
       if (sender !== undefined) sentBy.set(queuedAs ?? turnId, sender);
-      const command = text.startsWith(BANG) ? text.slice(BANG.length).trim() : '';
       if (command === '' || !options.terminals) {
         /*
          * With what this turn is told, decided by the backend when it begins.

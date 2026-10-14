@@ -84,8 +84,7 @@ export interface SessionRequest {
    * Required: the whole point of this door is starting work *for* somebody, and
    * a plugin that wants work of the host's own says `root:<hostName>` rather
    * than leaving it to be guessed. The owner's own grants and policies are what
-   * the session is started under - decision
-   * `work-is-owned-by-a-typed-reference`.
+   * the session is started under.
    */
   owner: Owner;
   /** The backend it runs on, or the host's own default. */
@@ -139,7 +138,7 @@ export interface PluginStarts {
  * and `close` ends the connection from this side. There is no typed client and
  * no second layer over the protocol, so what a plugin writes here is AHP,
  * spelled with the protocol's own types. A plugin that wants to watch a running
- * host is a client of it, which is what decision `plugin-contributes-host-options`
+ * host is a client of it, which is what
  * says and what this end is for.
  */
 export interface PluginPeer {
@@ -179,8 +178,7 @@ export interface PluginPeer {
  *
  * A client subscribes to any URI on the scheme and is answered with
  * `snapshot`; what changes after that is sent with `ChannelHandle.publish`. A
- * client may not dispatch to it: the plugin is the only writer - decision
- * `a-plugin-channel-is-an-x-scheme`.
+ * client may not dispatch to it: the plugin is the only writer.
  */
 export interface PluginChannel {
   /** What a reader needs to subscribe, unless `authorize` lets them in. */
@@ -272,8 +270,8 @@ export interface ServedChannel {
  * A command a plugin or the daemon serves, under an `x-` name of its own.
  *
  * A client sends it as any other request, and what `handle` answers is the
- * result - decision `a-plugin-serves-an-x-command`. This host names its own
- * `x-ahpd/<domain>/<verb>` - decision `an-x-command-is-named-by-domain-and-verb`.
+ * result. This host names its own
+ * `x-ahpd/<domain>/<verb>`.
  */
 export interface PluginMethod {
   /** What a caller needs to send the command, unless `authorize` lets them in. */
@@ -382,8 +380,7 @@ export type PortOf<K extends PortKey> = NonNullable<HostOptions[K]>;
  *
  * A `Request` in and a `Response` out: the shape `Bun.serve` and `Deno.serve`
  * take and the one `toNodeListener` wraps for Node, so a route is the same
- * handler on every runtime - decision
- * `cofold-serve-is-fetch-style-with-a-node-adapter`. The request reaches it
+ * handler on every runtime. The request reaches it
  * whole, so a plugin reads `new URL(request.url).pathname` and finds its own
  * prefix on the path rather than being handed a remainder it has to trust.
  */
@@ -497,7 +494,7 @@ export interface PluginContext {
    * A YAML text as data, with the subset the host reads its own files with.
    *
    * The host's, so a plugin that reads a frontmatter or a skill file needs no
-   * YAML dependency of its own - decision `a-plugin-gets-yaml-from-the-host`.
+   * YAML dependency of its own.
    * Throws with the line that is wrong.
    */
   parseYaml(text: string): unknown;
@@ -517,9 +514,8 @@ export type LoaderContext = Omit<PluginContext, 'parseYaml' | 'stringifyYaml'> &
 /**
  * The contribution surface, which is `HostOptions` named back.
  *
- * Every method that contributes a value is named `register*` (decision
- * `plugin-contributes-host-options`), and the set of kinds is closed, one
- * method each (decision `plugin-registration-kinds`). Every registration is
+ * Every method that contributes a value is named `register*` (), and the set of kinds is closed, one
+ * method each (). Every registration is
  * checked against the contract it satisfies before it is recorded, so a value
  * the daemon did not write is refused at this boundary; the check and the
  * implementation of this interface are the loader's, not this file's.
@@ -550,8 +546,7 @@ export interface PluginHost extends PluginContext {
    * profile lists `agents` is made at create time, and the plugin that
    * registers an agent may load before or after this one, so nothing can be
    * read while `apply` runs. The host is the one thing that knows every agent,
-   * and it answers the agent's `machine()` here - decision
-   * `the-host-hands-an-agents-machine-needs-to-the-machine-maker`.
+   * and it answers the agent's `machine()` here.
    *
    * `undefined` when no agent has that provider, which is a profile naming an
    * agent this host does not have. An agent that declares nothing answers an
@@ -562,8 +557,7 @@ export interface PluginHost extends PluginContext {
    * Keep one usage record, in the host's `usage` port.
    *
    * The way a plugin says what it cost: a computer records the time it spent
-   * up, and a backend that meters itself records what its turns used - decision
-   * `usage-and-computer-time-are-two-records-behind-one-port`. The record is
+   * up, and a backend that meters itself records what its turns used. The record is
    * `UsageEntry`, either kind, and the store is the host's own rather than a
    * plugin's, so every record a daemon keeps lands in one place.
    *
@@ -578,8 +572,7 @@ export interface PluginHost extends PluginContext {
    * The value of one secret, under the scope rule of its name.
    *
    * `host:<name>` is read for anything, `team:<team>/<name>` only for work
-   * charged to that team and `user:<id>/<name>` only for that person's own work
-   * - decision `a-secret-is-named-in-a-host-team-or-user-scope`. The value is
+   * charged to that team and `user:<id>/<name>` only for that person's own work. The value is
    * read when it is asked for rather than at load, and a host with no `vault`
    * port refuses the name rather than answering it with nothing.
    */
@@ -588,8 +581,7 @@ export interface PluginHost extends PluginContext {
    * Whether this daemon keeps one session, read when called.
    *
    * The computer plugin asks at startup about a disposable machine it found,
-   * to know whether that leftover is one of its own to adopt - decision
-   * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps`. The
+   * to know whether that leftover is one of its own to adopt. The
    * store is the host's own and the plugin that made the machine may have
    * loaded before the session was ever kept, so it is read when it is asked
    * for.
@@ -623,8 +615,7 @@ export interface PluginHost extends PluginContext {
    * two plugins never share one collection. Each call on the collection waits
    * until the fold names the port, so a plugin opens one while `apply` runs and
    * a plugin that registers a store may load after this one. A host with no
-   * `records` port refuses each call - decision
-   * `a-plugin-keeps-records-in-the-host-store`.
+   * `records` port refuses each call.
    */
   records(name: string, options?: CollectionOptions): RecordCollection;
   /**
@@ -678,7 +669,7 @@ export interface PluginHost extends PluginContext {
    * which is what "if plugin is loaded" means, and its value reaches the
    * backend in `Start.settings`. A key the backend's own schema already
    * declares is a collision and is reported rather than merged, the way a
-   * duplicate scheme is - decision `a-plugin-may-contribute-a-session-key`.
+   * duplicate scheme is.
    *
    * The schema is one property of a JSON Schema object: `type`, `title`,
    * `description`, `default` and whatever a client draws from.
@@ -709,8 +700,7 @@ export interface PluginHost extends PluginContext {
    */
   registerChannel(scheme: string, channel: PluginChannel): ChannelHandle;
   /**
-   * Serve one command a client sends by name - decision
-   * `a-plugin-serves-an-x-command`.
+   * Serve one command a client sends by name.
    *
    * The name starts with `x-`, such as `x-demo/echo`. A name without it, or
    * one the daemon or another plugin serves, is refused.
@@ -744,8 +734,7 @@ export interface PluginHost extends PluginContext {
    * Set `HostOptions.computers`, or take the daemon's over with `'replace'`.
    *
    * The port a backend asks how to run its process in a named machine. One per
-   * host, because a host serves one `computer:` provider -
-   * decision `one-computer-provider-with-runtimes-as-options`.
+   * host, because a host serves one `computer:` provider.
    */
   registerComputers(computers: PortOf<'computers'>, when?: 'replace'): void;
   /**
@@ -775,8 +764,7 @@ export interface PluginHost extends PluginContext {
    * Set `HostOptions.vault`, or take the daemon's over with `'replace'`.
    *
    * The store a plugin option's `{ "$secret": "<name>" }` is read through, and
-   * what a secret manager or a database several daemons share takes over -
-   * decision `the-local-vault-is-a-plain-file-until-it-is-encrypted`, whose own
+   * what a secret manager or a database several daemons share takes over, whose own
    * vault is a plain file beside the configuration.
    */
   registerVault(vault: PortOf<'vault'>, when?: 'replace'): void;
@@ -814,7 +802,7 @@ export interface PluginHost extends PluginContext {
    * before its stores do, so a plugin stops the work it owns: a timer it armed,
    * a removal it started, a process it spawned. Nothing else knows about that
    * work, so a plugin that leaves it running leaves it running for the rest of
-   * the process's life - decision `a-plugin-is-told-when-the-host-closes`.
+   * the process's life.
    *
    * Called more than once, each function is kept and each runs, in the order
    * they were registered. A failure is logged against this plugin and does not

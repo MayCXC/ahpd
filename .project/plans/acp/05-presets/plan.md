@@ -11,7 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
   - decisions/agent-package-only-when-it-brings-a-runtime.md
 refs:
   - "[code://packages/agent-acp/src/plugin.ts#L35-L87](../../../../packages/agent-acp/src/plugin.ts#L35-L87) - `optionsSchema`, `optionsOf` and `apply`: one load is one backend, written out by hand"
@@ -55,7 +54,7 @@ config plugins[] -> server loadPlugins (one per name) -> agent-acp apply -> opti
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
 | [A new `@ahpd/agent-*` package exists only when the target brings its own agent runtime](../../../decisions/agent-package-only-when-it-brings-a-runtime.md) | 01 |
 
 | What | Source | Task |

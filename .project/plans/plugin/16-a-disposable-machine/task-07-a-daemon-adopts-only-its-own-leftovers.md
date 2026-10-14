@@ -23,7 +23,7 @@ refs:
 
 A disposable machine carries the session it was made for as a label, and at startup a daemon adopts only leftovers whose session it keeps, counting that session as a user until it is disposed and opening the machine's up-time stretch.
 A leftover whose session this daemon does not keep is not watched, not removed and not metered.
-This applies [A daemon adopts only the disposable machines whose session it keeps](../../../decisions/a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps.md); not opening a stretch for another daemon's machine follows from it, since that machine "is left alone", and stops `usage/03`'s startup listing charging one machine's up time twice.
+This applies [A daemon adopts only the disposable machines whose session it keeps](./plan.md); not opening a stretch for another daemon's machine follows from it, since that machine "is left alone", and stops `usage/03`'s startup listing charging one machine's up time twice.
 
 ## Files
 

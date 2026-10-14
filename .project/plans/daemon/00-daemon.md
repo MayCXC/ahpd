@@ -18,7 +18,7 @@ It builds a host from `@ahpd/sdk` with `@ahpd/agent-claude` as its one backend a
 - `code://packages/server/src/daemon.ts#L8-L18` - `Running`, what a detached daemon records about itself in `daemon.json`.
 - `code://packages/server/src/plugins.ts` - `resolvePlugin`, `loadPlugins`, `describePlugin`: the half of the plugin mechanism that touches the filesystem and the module loader.
 - `code://packages/sdk/src/types/plugin.ts` - `Plugin`, `PluginHost` and `PluginSpec`, the contract a plugin is written against.
-- `code://.project/decisions/plugin-contributes-host-options.md` - what a plugin is allowed to contribute.
+- `code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md` - what a plugin is allowed to contribute.
 
 ## Runtime path
 

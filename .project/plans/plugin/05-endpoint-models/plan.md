@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/listed-models-are-provider-references.md
 refs:
   - code://.project/plans/plugin/04-agent-cofold-extras/plan.md - the plan that made the harness configuration the default and left the list at one row
   - code://packages/agent-cofold/src/agent.ts - `connectionOf`, `listModels`, the catalogue cache and `probe`
@@ -58,7 +57,7 @@ a chosen id -> session setting `model` or a turn's model -> modelOf -> splitMode
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A listed model is selected by the reference the harness already writes](../../../decisions/listed-models-are-provider-references.md) | Softov, 2026-09-20: "the config facio was suppose to be the default model. not the only one" |
+| 1 | [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | Softov, 2026-09-20: "the config facio was suppose to be the default model. not the only one" |
 
 ## Proposed architecture
 

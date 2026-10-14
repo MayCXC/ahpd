@@ -12,7 +12,7 @@ refs:
 ## Objective
 
 The manifest schema offers a `source` choice (`image` or `devcontainer`), which it has not today, and a flat string field for the folder, so ahpapp draws it with no change of its own: its form reads only flat properties (`type`, `enum`, `x-choices`, `default`).
-This applies [The computer form offers a folder as a flat source choice](../../../decisions/the-computer-form-offers-a-folder-as-a-flat-source-choice.md).
+This applies [the computer form offers a folder as a flat source choice](./plan.md), which the `manifestOf` check carries.
 
 ## Files
 

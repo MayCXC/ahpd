@@ -40,9 +40,9 @@ A plugin that has to act rather than contribute calls `host.connect()` and gets 
 - `grantProblem` is a new export from `packages/sdk/src/index.ts`, which no task named; the loader cannot check a grant without it.
 - `packages/server/test/plugin-spec.test.ts` and `packages/server/test/config-check.test.ts` gained the `grants` cases. Neither is in task 02's Files list; both are the `asSpec` and schema halves of the field it adds.
 - A grant of the wrong shape is refused by `asSpec` as part of the entry, and only a well-shaped grant that names no operation is dropped by the loader - the plan's task 02 Step gives both to the loader.
-- Task 03's Step names decision `a-grant-is-a-subject-and-a-verb`, which is `superseded`; the docs link the accepted `a-grant-names-an-operation-and-read-and-write-are-its-groups`, which the file already cites for the same grammar.
+- Task 03's Step names [A grant is a subject and a verb](../../../../docs/USERS.md), which is `superseded`; the docs link the accepted [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/USERS.md), which the file already cites for the same grammar.
 - Both of task 03's ref line ranges had moved, including at the plan's own `revalidated: 2026-10-04`. The `connect()` section follows its ref's note and sits beside `### Read-only context`; the `grants` prose sits in `## Naming a plugin`, which is the configuration entry its note names.
-- Review: the plugin's owner is read from `Principal.plugin`, not from the id's `plugin:` prefix. A user id may be any string - decision [a plugin's principal is marked](../../../decisions/a-plugin-principal-is-marked-not-read-from-its-id.md). `packages/sdk/test/values.test.ts` covers both.
+- Review: the plugin's owner is read from `Principal.plugin`, not from the id's `plugin:` prefix. A user id may be any string - decision [a plugin's principal is marked](./plan.md). `packages/sdk/test/values.test.ts` covers both.
 - Review: a pair that closes removes itself from the plugin's open list. Before, a plugin held every pair it opened until the daemon stopped.
 - Task 03's Validation is a hand run of the example against a daemon, and none was made. The commands it shows are the ones `plugin-connect.test.ts` exercises end to end.
 

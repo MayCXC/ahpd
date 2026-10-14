@@ -86,7 +86,7 @@ One key changes a terminal, and it is root config rather than the file.
 | --- | --- | --- | --- |
 | `defaultShell` | an absolute path | the system shell | The shell a host-managed terminal opens |
 
-It is **per connection**: it is kept on the connection that pushed it and read back by that connection, so two people on one daemon each get theirs and neither can name the binary the other's terminal opens. VS Code pushes it out of `terminal.integrated.agentHostProfile.<os>` when it connects, which is why it is a preference of a person rather than a key of the deployment. Pushing it needs no grant and only a sign-in, because it changes nothing anybody else reads - decision [A host-wide root setting needs config:write, and a person's own needs only a sign-in](../.project/decisions/host-wide-root-settings-need-config-write.md).
+It is **per connection**: it is kept on the connection that pushed it and read back by that connection, so two people on one daemon each get theirs and neither can name the binary the other's terminal opens. VS Code pushes it out of `terminal.integrated.agentHostProfile.<os>` when it connects, which is why it is a preference of a person rather than a key of the deployment. Pushing it needs no grant and only a sign-in, because it changes nothing anybody else reads.
 
 It reaches two of the three ways in: a client's terminal uses it, and a `!` command and a backend's terminal do not, for the reason above.
 

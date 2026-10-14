@@ -114,8 +114,8 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 
 | Item | VS Code host | ahpd | Covered by | Note |
 | --- | --- | --- | --- | --- |
-| `mode` (`sessionMutable`) | `interactive`, `plan`, `autopilot` (Copilot, `ahp-session:`); `interactive`, `plan` (Codex) | absent | [decision](../decisions/permission-modes-live-in-the-harness.md) | ahpd folds plan mode into `permissionMode`; the window's Agent Mode picker draws nothing for ahpd. |
-| `autoApprove` (`sessionMutable`) | `default`, `assisted`, `autoApprove` | absent; `permissionMode` (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`, `dontAsk`) | [decision](../decisions/permission-modes-live-in-the-harness.md) | Both are titled "Approvals". |
+| `mode` (`sessionMutable`) | `interactive`, `plan`, `autopilot` (Copilot, `ahp-session:`); `interactive`, `plan` (Codex) | absent | [decision](../plans/plugin/06-permission-modes/plan.md) | ahpd folds plan mode into `permissionMode`; the window's Agent Mode picker draws nothing for ahpd. |
+| `autoApprove` (`sessionMutable`) | `default`, `assisted`, `autoApprove` | absent; `permissionMode` (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`, `dontAsk`) | [decision](../plans/plugin/06-permission-modes/plan.md) | Both are titled "Approvals". |
 | `codex.permissionsPreset` | Codex only | absent | - | Codex only. |
 | `sandboxEnabled` | Copilot and `ahp-session:` | absent | UPSTREAM.md Pass 4 (ticked) | A Claude preset field instead ([`code://docs/AHP.md`](../../docs/AHP.md)). |
 | `shellInitScripts` (`readOnly`, `sessionMutable`) | yes | yes on Claude | UPSTREAM.md Pass 4 (ticked) | Same. |

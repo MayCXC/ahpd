@@ -329,7 +329,7 @@ export function createTooling(ctx: HostContext): Tooling {
    *
    * A tool that says it needs advanced permission is left out unless the host
    * permits it, so it is neither reported in `serverTools` nor bound for a
-   * call - decision `a-tool-says-when-it-needs-advanced-permission`. Applied
+   * call. Applied
    * where the set is built, so `setTools` cannot put one back.
    */
   const permitted = (tools: readonly HostTool[]): HostTool[] =>
@@ -337,8 +337,7 @@ export function createTooling(ctx: HostContext): Tooling {
   /**
    * Whether the advanced tools are offered, held here rather than read off
    * `options` because the daemon's `advancedTools` key is this host's option as
-   * much as the daemon's, and a write of it takes hold while the daemon runs -
-   * decision `a-configuration-change-applies-live-or-on-ahpd-restart`.
+   * much as the daemon's, and a write of it takes hold while the daemon runs.
    */
   ctx.advancedTools = options.advancedTools === true;
   /**
@@ -381,8 +380,7 @@ export function createTooling(ctx: HostContext): Tooling {
    * Where `permitted` decides once and for every session, this is decided per
    * session, because a list of providers is: it is applied both to the
    * definitions that go on the wire and to the tools a backend binds, so a
-   * session offered none is neither told of them nor handed them - decision
-   * `a-tool-says-when-it-needs-advanced-permission`, whose shape this follows.
+   * session offered none is neither told of them nor handed them, whose shape this follows.
    */
   const contributingTo = (uri: string, provider?: string): HostTool[] =>
     sessionToolsFor(uri, provider)
@@ -1193,8 +1191,7 @@ export function createTooling(ctx: HostContext): Tooling {
   /**
    * Whether a grant is one of the read half of whatever it names.
    *
-   * `read` and `write` are the groups and never operations - decision
-   * `a-grant-names-an-operation-and-read-and-write-are-its-groups` - so a
+   * `read` and `write` are the groups and never operations - so a
    * grant is read as its group when it names the group itself, and as the
    * group of the operation when it names one.
    */
@@ -1333,8 +1330,7 @@ export function createTooling(ctx: HostContext): Tooling {
       /*
        * Frozen copies of the turns, for the same reason a tool definition is
        * one: this leaves the host with whichever host tool asked, and a tool
-       * that rewrote a turn would be rewriting the conversation - decision
-       * `a-plugin-gets-frozen-copies-of-host-values`.
+       * that rewrote a turn would be rewriting the conversation.
        */
       return frozenCopy({
         turns: Array.isArray(state.turns) ? state.turns as Bag[] : [],
@@ -1678,8 +1674,7 @@ export function createTooling(ctx: HostContext): Tooling {
         /*
          * A frozen copy: this one leaves the host with the backend, and a
          * backend that changed the wording would be changing what the host
-         * offers the next session - decision
-         * `a-plugin-gets-frozen-copies-of-host-values`.
+         * offers the next session.
          */
         definition: frozenCopy(definition),
         // The call and its outcome are one event, raised after the tool is

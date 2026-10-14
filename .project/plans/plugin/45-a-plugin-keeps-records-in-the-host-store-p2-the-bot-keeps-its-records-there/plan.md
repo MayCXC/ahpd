@@ -9,9 +9,7 @@ requires:
   - plans/plugin/43-a-bot-can-be-watched/plan.md
   - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md
 decisions:
-  - decisions/a-plugin-keeps-records-in-the-host-store.md
   - decisions/a-bot-record-stays-in-config.md
-  - decisions/the-daemon-reloads-a-hand-edited-file.md
 refs:
   - "[code://packages/bot/src/store.ts#L83-L128](../../../../packages/bot/src/store.ts#L83-L128) - `botStore`, which reads `<slug>.json` once and writes it whole"
   - "[code://packages/bot/src/store.ts#L50-L62](../../../../packages/bot/src/store.ts#L50-L62) - `kept`, the check every record read passes"
@@ -51,9 +49,9 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin keeps its records in a record store the host gives it](../../../decisions/a-plugin-keeps-records-in-the-host-store.md) | Softov, 2026-10-11 |
+| 1 | [A plugin keeps its records in a record store the host gives it](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | Softov, 2026-10-11 |
 | 2 | [A bot record stays in the configuration folder, apart from its workspace](../../../decisions/a-bot-record-stays-in-config.md) | Softov, 2026-10-10 |
-| 3 | [The daemon reloads a bot or an automation file that a person edits](../../../decisions/the-daemon-reloads-a-hand-edited-file.md) | Softov, 2026-10-10 |
+| 3 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

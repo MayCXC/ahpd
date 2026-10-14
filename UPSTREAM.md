@@ -4,6 +4,67 @@ What VS Code's agent host changed since this host was last read against it, and 
 
 How a pass is made is in [REFERENCE.md](REFERENCE.md). The short of it: `git -C /github/externals/vscode fetch --depth=200 origin main && git merge --ff-only origin/main`, then `git log <last>..HEAD -- src/vs/platform/agentHost`, reading `common/state/protocol/` first because that is the wire, then `node/claude/`, `node/protocolServerHandler.ts`, and the workbench client under `src/vs/workbench/contrib/chat/browser/agentSessions/agentHost`, which is what VS Code *sends* to a host. The `.md` files were reflowed to one-line paragraphs upstream, so read them with `--word-diff`.
 
+## Pass 6 - 2026-10-14, VS Code 1.141.1
+
+VS Code `7516b04bc94` (2026-10-02) to the `1.141.1` tag `7baac39ec3c` (2026-10-12; `1.141.0` is `2a59476c9bf`): 72 agentHost commits, 64 under `src/vs/sessions`, 22 in the workbench agentHost client, 118 in the union. The release branch leaves main at `ae1080a9ed1` and carries 44 commits after it. **The wire moved**: `.ahp-version` `9f940395` to `6eec1b91` (protocol `01292d03` and `6eec1b91`, both in the published `@microsoft/agent-host-protocol@1.0.0`; the protocol repository is at `cb6ba618`). Upstream `35787c9cb26` sets `PROTOCOL_VERSION` to `0.10.0` and registers `chat/isReadChanged` and the canvas actions as `0.10.0`, while the published 1.0.0 package registers `chat/isReadChanged` as `0.9.0` and offers only `1.0.0` and `0.9.0`. Most 1.141 release-note features landed inside Pass 5's range; this pass covers what reached the host after it and checks each feature against ahpd. `REFERENCE.md` "Last read against" moves to `7baac39ec3c`.
+
+### Read state and nested sessions
+
+A 1.141 window shows unread and modified time per chat in the session tree and offers Mark as Read and Mark as Unread on a chat and on a session. The window decides per host whether read state is per chat: a host that answers below `0.10.0` is treated as legacy, and the window keeps one read bit for the session.
+
+- [ ] **Accept `0.10.0` in the handshake as an alias of the 1.0.0 contract.** A 1.141.1 window offers `0.10.0`; `negotiateProtocolVersion` in the 1.0.0 package does not know it, so ahpd answers `0.9.0` and the window drops to the legacy read path (upstream `0c9eb8e027b`, `baseAgentHostSessionsProvider.ts`). Upstream main maps `0.10.0` to the 1.0.0 contract in `agentHostProtocolCompatibility.ts` (`51ec2ee42fd`, not in 1.141.1). Upstream also adds `0.10.0` to the version list in the `-32005` refusal. The 1.0.0 package registers the canvas actions at `0.10.0`, so a version check does not keep them off the wire; ahpd sends none today. Upstream `35787c9cb26`, `0c9eb8e027b`, `51ec2ee42fd`. `packages/sdk/src/host/handshake.ts`.
+- [x] **`chat/isReadChanged` changes only the addressed chat, and the host projects chat status into `SessionChatSummary.status` and publishes the catalog.** `packages/sdk/src/host/chatactions.ts` stores the chat flags, dispatches on the chat, sends `session/chatUpdated` with the status and calls `summaryMoved`; `packages/sdk/src/host/catalogue.ts` `chatSummary` ORs the chat flags into `status`. Built in `host/44` p3 task 02.
+- [x] **`ChatSummary.modifiedAt` per chat**, which the tree sorts and shows. `packages/sdk/src/host/catalogue.ts` `chatSummary` (`chat.modifiedAt()`), re-sent by `packages/sdk/src/host/spawn.ts` when a chat's title, status or activity changes.
+- [x] **`SessionChatSummary.status` replaces the deprecated `archived`.** `packages/sdk/src/host/catalogue.ts` `compactChats` carries `status`.
+- [ ] **A chat whose turn ends is marked unread.** Upstream sets the read bit off on the chat at turn end and when a subagent chat finishes (`node/chatContributions/markUnread/markUnreadContribution.ts`, `0817aaa8245`). Nothing in ahpd clears `IsRead` at turn end, so a finished chat never shows as new. `packages/sdk/src/host/spawn.ts` turn end, through the chat flag path in `packages/sdk/src/host/chatactions.ts`.
+- [ ] **Session and chat read state stay in step.** The session is read only when all its chats are read. Marking the session read marks its chat read when it has one counted chat; with more than one unread, upstream turns the action back to unread, and the 1.141 window marks each chat read first (`agentHostStateManager.ts`, `43ac7a4a236`; `chatRead/chatReadContribution.ts`). Upstream starts a new chat as read; ahpd starts it unread. In ahpd `sessionFlag()` and the chat bit handler in `packages/sdk/src/host/chatactions.ts` change one level only.
+- [ ] **Archiving a chat marks it read** (`chatArchive/chatArchiveContribution.ts`). `packages/sdk/src/host/chatactions.ts`.
+
+### Worktree cleanup
+
+The storage suggestion, its thresholds (5 GB or 20 worktrees) and the setting `chat.agentSessions.sessionStorageCleanupSuggestion.enabled` are window-only (`sessionWorktreeCleanupService.ts`, `a58d8774308`, `116e03d9526`, `2eb200531dd`). The cleanup itself is `archiveSession`, so the work falls on the host's archive path.
+
+- [ ] **Archiving a session removes its clean worktree, and unarchiving recreates it on the same branch.** Upstream does it in the `SessionIsArchivedChanged` side effect (`node/agentSideEffects.ts`), and first commits uncommitted changes with "Saving uncommitted changes before archiving session" (`c289a58900a`). The worktree record is in memory only (`lifecycle.ts` `worktrees`), and deleting a sleeping session skips `teardown`, so an archived session's worktree is never removed today. ahpd removes a worktree only on delete, and only when it is clean (`packages/sdk/src/host/lifecycle.ts` teardown); archive only queues `ctx.sleep` (`packages/sdk/src/host/chatactions.ts` `sessionFlag`). `packages/sdk/src/repo/worktrees.ts` for the recreate.
+- [ ] **Act on `autoArchiveMergedSessionsAfterDays` and `autoDeleteArchivedMergedSessionsAfterDays`.** Upstream `b5db36cf258` (2026-09-09, inside Pass 5's range). Both are declared (`packages/sdk/src/vscoderootconfig.ts`) and nothing reads them. Depends on the box above for the disk to be freed.
+- [x] **`resourceResolve` honors `followSymlinks`**, which the disk usage scan sets to `false` (`worktreeDiskUsage.ts`). `packages/sdk/src/host/resourcemethods.ts` `resourceResolve`.
+- [x] **Detached worktrees are removed on archive.** `vscode/setAgentHostDetachedWorktreeArchived`, `packages/sdk/src/host/vscodemethods.ts`.
+
+### Cross-platform sandboxing
+
+The sandbox in 1.141 is the Copilot SDK's and the terminal tool engine's; the upstream Claude agent does not sandbox. The root config gains a `sandbox` object (`enabled`, network and path rules; `common/sandboxConfigSchema.ts`), and the session key `sandboxEnabled` stays an enum in `common/agentHostSchema.ts`. The MSRC fixes to the MCP sandbox in this range are Copilot-only.
+
+- [x] **`sandboxEnabled` is replaced by the `sandbox` preset declaration in the Claude backend**, which maps `default`/`on`/`off` to the SDK `settings.sandbox.enabled`, and a stored `sandboxEnabled: 'on'` still applies. `packages/agent-claude/src/options.ts` (`storedSandbox`), `docs/AHP.md` (the Claude backend does not declare `sandboxEnabled`), decisions `a-stored-sandbox-on-survives-the-preset.md` and `a-preset-sandbox-off-wins-over-a-stored-on.md`.
+- [ ] **Declare the root `sandbox` object.** A 1.141 window pushes it in `root/configChanged`; `packages/sdk/src/host/actions.ts` logs it as refused because `packages/sdk/src/vscoderootconfig.ts` does not declare it. Declaring it stops the noise. Mapping `enabled`, network and paths onto the Claude SDK `settings.sandbox` when the preset says `default` is Softov's call. `packages/sdk/src/vscoderootconfig.ts`, `packages/agent-claude/src/options.ts`.
+
+### Session grid
+
+Window-only: the two-dimensional session grid with nested splits and persisted geometry is in `src/vs/sessions/browser/parts/` (`cc8e72aa53b`, `86c80ce2ef4`) and sends nothing new to the host. ahpw already lays out its main area as tabs, tab groups, split, spatial, stack or single through scena (`/github/ahpw/src/view/layouts.ts`, `LayoutSelect.tsx`).
+
+### Continuing external Copilot and Codex sessions
+
+Not possible here, as Pass 4 found: discovery and adoption read the Copilot CLI and Codex stores through their SDKs. `showExternalSessions` is declared (`packages/sdk/src/vscoderootconfig.ts`). The writer-lock chat input state `_meta` (`c17dab99841`), which disables the input while another process holds the session, is reusable if ahpd adopts Claude CLI sessions that may still be running elsewhere.
+
+### Other host changes
+
+- [ ] **Session config `sensitiveEditLocations`**: edits under the listed globs always ask, even with auto-approve on. Upstream `06687ce3dfd`, `fffc9bc6481` (`common/agentHostSchema.ts`, `node/shared/sessionPermissions.ts` `_matchesSensitiveEditLocations`). `packages/agent-claude/src/claude.ts` schema, approvals in `packages/sdk/src/host/trust.ts`.
+- [ ] **Root config keys `activeAgentTitleGeneration` and `deferredTitleGeneration`.** Undeclared today, so they are logged as refused. `packages/sdk/src/vscoderootconfig.ts`.
+- [ ] **`send_message` takes the mode and model controls of the target chat.** Upstream `d3ef8534b9a` (`node/shared/sessionServerTools.ts`). `packages/sdk/src/tools/session.ts`.
+- [ ] **A subagent's failed and cancelled outcomes are reported as such** rather than as a completed result. Upstream `3f4647a7f9c`. `packages/sdk/src/host/spawn.ts`.
+- [ ] **A cancelled subscription is told apart from a missing resource.** Upstream `539b7502df7`. `packages/sdk/src/host/relay.ts`.
+- [ ] **Peer chats are restored after a refresh.** Upstream `2cab7c729da`. `packages/sdk/src/host/catalogue.ts`.
+- [ ] **Background shell output is kept and readable after the turn.** Upstream `57b4202903e`. `packages/agent-claude/src/session.ts`.
+- [ ] **Read-only config values survive a config push.** Upstream `b9573ffde95`. `packages/sdk/src/host/actions.ts`.
+- [ ] **The commit action takes only uncommitted changes.** Upstream `880f8d903e7`. `packages/sdk/src/changes.ts`.
+- [ ] **A nested session's Session Changes defaults to its own chat.** Upstream `88ff9e3b9f5`. `packages/sdk/src/changes.ts`.
+
+### Not host
+
+Block pasting, several GitHub Enterprise accounts, list density, session filters and the dev container samples are window or extension features and touch nothing on the host.
+
+### Canvas
+
+`chat/canvasesChanged`, `ChatState.canvases` and the `ahp-canvas:` channels are in the 1.0.0 package and stay left out, as in `host/47`. The handshake box above keeps them off the wire.
+
 ## Pass 5 - 2026-10-02, VS Code 1.140
 
 VS Code `832cf23c5` (2026-09-19) to `7516b04bc94` (2026-10-02): 337 agentHost commits, 409 under `src/vs/sessions`, 108 in the workbench agentHost client. **The wire moved**: `.ahp-version` `fd0471d4` to `9f940395`, and the protocol repository `8549827` to `9f94039` (64 commits). `PROTOCOL_VERSION` is still `0.9.0` with no new tag, so the new actions are registered as `0.9.0` but are not in the published `@microsoft/agent-host-protocol@0.9.0`. The [release notes](https://code.visualstudio.com/updates/v1_140) name five features; each group below is one, except the last two.

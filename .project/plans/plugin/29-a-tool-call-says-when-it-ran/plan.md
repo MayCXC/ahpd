@@ -7,7 +7,6 @@ created: 2026-09-29
 revalidated: 2026-10-03
 requires: []
 decisions:
-  - decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md
 refs:
   - https://github.com/microsoft/agent-host-protocol - AHP 0.9.0 and 1.0.0: a turn has `startedAt` and `duration`, a tool call has only an open `_meta`, and 1.0.0's new `startedAt` is on background work; an action's `_meta` replaces the call's whole `_meta`, and an action with none leaves it (`channels-chat/reducer.ts` `tcBaseWithMeta`)
   - "[code://packages/agent-cofold/src/transcript.ts#L107-L113](../../../../packages/agent-cofold/src/transcript.ts#L107-L113) - the unprefixed names already shipped on restored cofold calls, which p5 prefixes"
@@ -39,7 +38,7 @@ harness transcript on disk -> plugin restores the turns -> the same _meta on eac
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's start and end are stamped by the plugin that runs it, as _meta ahpd.startedAt, ahpd.endedAt and ahpd.durationMs](../../../decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md) | Softov, 2026-10-03 |
+| [A tool call's start and end are stamped by the plugin that runs it, as _meta ahpd.startedAt, ahpd.endedAt and ahpd.durationMs](../../../../docs/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Plan |
 | --- | --- | --- |

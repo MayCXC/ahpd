@@ -10,10 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-backend-opens-a-subagent-chat-through-the-host.md
   - decisions/subagent-chats-are-restored-from-the-cli-meta-file.md
-  - decisions/a-worker-whose-spawning-call-was-compacted-is-listed.md
-  - decisions/a-spawning-call-carries-the-reference-subagent-meta.md
 refs:
   - "[code://packages/agent-claude/src/session.ts#L2187](../../../../packages/agent-claude/src/session.ts#L2187) - where every `stream_event` is handled, with `parent_tool_use_id` read only for round state"
   - "[code://packages/agent-claude/src/session.ts#L818](../../../../packages/agent-claude/src/session.ts#L818) - `rounds`, already kept per `parent_tool_use_id`"
@@ -71,10 +68,10 @@ tool_result for the call (foreground) or task_notification (background) -> [new]
 
 | Decision | Task |
 | --- | --- |
-| [A backend opens a subagent chat through the host](../../../decisions/a-backend-opens-a-subagent-chat-through-the-host.md) | 02, 03 |
+| A backend opens a subagent chat through the host | 02, 03 |
 | [A subagent chat is restored from the CLI's own meta file](../../../decisions/subagent-chats-are-restored-from-the-cli-meta-file.md) | 06, 12, 13 |
-| [A restored worker whose spawning call was compacted out is listed anyway](../../../decisions/a-worker-whose-spawning-call-was-compacted-is-listed.md) | 06 |
-| [A spawning call carries the reference's subagent _meta, under its names](../../../decisions/a-spawning-call-carries-the-reference-subagent-meta.md) | 10 |
+| A restored worker whose spawning call was compacted out is listed anyway | 06 |
+| [A spawning call carries the reference's subagent _meta, under its names](../../../../docs/AHP.md) | 10 |
 
 | What | Source | Task |
 | --- | --- | --- |

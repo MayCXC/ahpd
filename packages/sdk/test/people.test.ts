@@ -172,8 +172,7 @@ it('creates and edits a role from its grants, and refuses one that confers nothi
   await expect(schemes.role!.write('role://broken', body({ grants: ['session:edit'] })))
     .rejects.toMatchObject({ code: -32602, message: expect.stringContaining('create, dispose, rename') });
   // A grant on a scheme this host does not decide is the scheme's own to say
-  // what its operations are, so any word is kept - decision
-  // `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+  // what its operations are, so any word is kept.
   await schemes.role!.write('role://plugin', body({ grants: ['team:edit'] }));
   expect(await read('role', 'plugin')).toEqual({ id: 'plugin', grants: ['team:edit'] });
   expect(await directory.roles()).toEqual([
@@ -314,7 +313,7 @@ it('advertises the four on the handshake, with the operations each implements', 
   }) as { _meta?: Record<string, Record<string, unknown>> };
 
   // Every one is the same shape as `computer:`, so a client draws the screen
-  // the same way for each - decision `people-are-resource-schemes-with-a-grant-each`.
+  // the same way for each.
   for (const [scheme, title] of [['user', 'People'], ['team', 'Teams'], ['project', 'Projects'], ['role', 'Roles']] as const) {
     const entry = ready._meta?.['ahpd.resourceProviders']?.[scheme] as Record<string, unknown> | undefined;
     expect(entry, scheme).toMatchObject({ title, root: `${scheme}://`, operations: ['get', 'list', 'resolve', 'put', 'delete'] });
