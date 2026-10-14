@@ -14,6 +14,7 @@ import type { Registry } from '@cofold/commands';
 import type { Usage, Users, Vault } from '@ahpd/sdk';
 import type { Options } from './options.js';
 import { declareConfig } from './config.js';
+import { declarePaths } from './paths.js';
 import { declarePlugin } from './plugin.js';
 import { declareProxy } from './proxy.js';
 import { declareRestart } from './restart.js';
@@ -79,6 +80,7 @@ export const servedRegistry = (facts: ServedFacts): Registry<object> => {
   declareConfig(registry, facts);
   declareUser(registry, facts);
   declareTeams(registry, facts);
+  declarePaths(registry, facts);
   declarePlugin(registry, facts);
   declareProxy(registry, facts);
   declareUsage(registry, facts);

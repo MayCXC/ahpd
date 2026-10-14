@@ -1,7 +1,7 @@
 ---
 title: ahpd paths sets the served folders
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -17,7 +17,7 @@ refs:
 
 ## Goal
 
-A client sets the folders a host serves with one command, and asks nothing.
+A client sets the folders a host serves with one command.
 ahp-desk needs this for the folder step of Add host, which Softov noted on 2026-10-13.
 Today only `ahpd configure` and the question at `ahpd start` write `paths`, and `--path` serves a folder for one run only.
 
@@ -47,7 +47,7 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Decision | Source |
 | --- | --- |
-| [`ahpd paths list`, `add` and `remove` change the served folders with no question](../../../decisions/ahpd-paths-lists-adds-and-removes-a-served-folder.md) | Softov, 2026-10-14 |
+| [`ahpd paths list`, `add` and `remove` change the served folders](../../../decisions/ahpd-paths-lists-adds-and-removes-a-served-folder.md) | Softov, 2026-10-14 |
 | [A `paths` change served by the daemon also changes the folders it serves now](../../../decisions/a-served-paths-change-reaches-the-running-daemon.md) | Softov, 2026-10-14; the terminal half defaulted |
 
 | What | Source | Task |
@@ -67,8 +67,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-and-removes-a-folder.md) | todo | - |
-| [02 - a served paths change reaches the running daemon](task-02-a-served-paths-change-reaches-the-running-daemon.md) | todo | 01 |
+| [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-and-removes-a-folder.md) | implemented | - |
+| [02 - a served paths change reaches the running daemon](task-02-a-served-paths-change-reaches-the-running-daemon.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -78,10 +78,10 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-14.
-- **Next action:** build task 01, then task 02.
+- **Done so far:** planned 2026-10-14; tasks 01 and 02 implemented 2026-10-14, not reviewed. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
+- **Next action:** review tasks 01 and 02, then the checks by hand.
 - **Open questions:** none.
-- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit.
+- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb and gains none from this plan, which names no doc file - the three `paths` verbs are missing there.
 
 ## Final verification checklist
 

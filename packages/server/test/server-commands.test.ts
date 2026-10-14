@@ -726,6 +726,11 @@ describe('teams, projects and memberships', () => {
     expect(inputs('vault.set')).toEqual(['name', 'value']);
     expect(inputs('vault.delete')).toEqual(['name']);
     expect(inputs('vault.list')).toEqual([]);
+    // The folders served are the daemon's own too, so a request names the folder
+    // and never the file the folder is written in.
+    expect(inputs('paths.add')).toEqual(['folder']);
+    expect(inputs('paths.remove')).toEqual(['folder']);
+    expect(inputs('paths.list')).toEqual([]);
   });
 });
 
@@ -760,6 +765,11 @@ describe('what a served command says it does', () => {
       ['daemon.config', 'read', null],
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],
+      // A folder is served or it is not, so `add` creates one and `remove` acts
+      // on the one it names.
+      ['paths.add', 'add', { kind: 'folder' }],
+      ['paths.list', 'read', { kind: 'folder' }],
+      ['paths.remove', 'remove', { kind: 'folder', key: 'folder' }],
       ['plugin.config', 'read', { kind: 'plugin', key: 'name' }],
       ['plugin.config.set', 'change', { kind: 'plugin', key: 'name' }],
       ['plugin.config.unset', 'change', { kind: 'plugin', key: 'name' }],

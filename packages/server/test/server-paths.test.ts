@@ -14,8 +14,16 @@ import { join, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Output } from '@cofold/commands';
 import { Program } from '@cofold/terminal';
+import { fileUsers, type Users } from '@ahpd/sdk';
+import type { Options } from '../src/commands/options.js';
 import { programGlobals } from '../src/commands/options.js';
 import { cliRegistry } from '../src/commands/registry.js';
+import { apiOrigins } from '../src/commands/run.js';
+import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
+import { apiHandler } from '../src/http.js';
+
+/** The origin the cases' daemon is reached on, which its routes and grants are read against. */
+const AUTHORITY = '127.0.0.1:9350';
 
 let home: string;
 let config: string;
@@ -200,5 +208,123 @@ describe('ahpd paths at the terminal', () => {
     const removed = await run('paths.remove', { folder: two });
     expect(removed.said).toBe(`Removed ${two} from "paths" in ${config}.\n`);
     expect(removed.output?.data).toEqual({ paths: [one] });
+  });
+});
+
+/*
+ * The same three verbs over HTTP, against the daemon's own facts.
+ *
+ * The options object is the one the daemon was started with and `running()`
+ * reads its folders per request, so a case sees a change the way `ahpd status`
+ * does. Served, the file is the daemon's own, so the case's `configFile` is
+ * never named by a request.
+ */
+describe('ahpd paths, served', () => {
+  /** A daemon serving `paths`, and the API handler it answers with. */
+  const daemon = (paths: string[], people?: Users) => {
+    const own = { paths } as Options;
+    const facts: ServedFacts = {
+      options: own,
+      configFile: config,
+      running: () => ({
+        pid: process.pid, url: `ws://${AUTHORITY}`, host: '127.0.0.1', port: 9350, paths: own.paths, startedAt: '',
+      }),
+      turning: () => [],
+      restart: () => {},
+    };
+    const handler = apiHandler({
+      registry: servedRegistry(facts),
+      token: 'root-secret',
+      ...(people === undefined ? {} : { users: people }),
+      program: { name: 'ahpd', version: '0.0.0' },
+      origins: () => apiOrigins('127.0.0.1', undefined, 9350),
+    });
+    return {
+      own,
+      running: facts.running,
+      ask: (method: string, path: string, body?: unknown, token = 'root-secret'): Promise<Response> =>
+        handler(new Request(`http://${AUTHORITY}/api${path}`, {
+          method,
+          headers: { host: AUTHORITY, 'content-type': 'application/json', authorization: `Bearer ${token}` },
+          ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+        })),
+    };
+  };
+
+  it('writes the daemon\'s own file, and the list it serves, when a folder is added', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    const served = daemon([one]);
+
+    const added = await served.ask('POST', '/paths/add', { folder: two });
+    expect(added.status).toBe(200);
+    expect(await added.json()).toEqual({ paths: [one, two] });
+    expect(read().paths).toEqual([one, two]);
+    expect(served.own.paths).toEqual([one, two]);
+  });
+
+  it('answers the folders the daemon serves now, not the file', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    const listed = await daemon([one, two]).ask('GET', '/paths/list');
+    expect(listed.status).toBe(200);
+    expect(await listed.json()).toEqual([one, two]);
+  });
+
+  it('shows a new folder in the list the daemon reports, so status names it with no restart', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    const served = daemon([one]);
+    expect(served.running().paths).toEqual([one]);
+
+    await served.ask('POST', '/paths/add', { folder: two });
+    expect(served.running().paths).toEqual([one, two]);
+  });
+
+  it('takes a folder out of the file and out of the list when one is removed', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one, two] });
+    const served = daemon([one, two]);
+
+    const removed = await served.ask('POST', '/paths/remove', { folder: two });
+    expect(removed.status).toBe(200);
+    expect(await removed.json()).toEqual({ paths: [one] });
+    expect(read().paths).toEqual([one]);
+    expect(served.running().paths).toEqual([one]);
+  });
+
+  it('refuses a person\'s token, whoever they are, and takes the deployment\'s', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    const people = fileUsers({ path: join(home, 'users.json') });
+    // An administrator, so what refuses her is the deployment-only rule and not
+    // a grant she is missing.
+    await people.add('ada', ['admin']);
+    const served = daemon([one], people);
+
+    const refused = await served.ask('POST', '/paths/add', { folder: two }, await people.mint('ada'));
+    expect(refused.status).toBe(403);
+    expect((await refused.json() as { message: string }).message)
+      .toBe('ada may not add or remove a served folder here; only the deployment token may');
+    expect(read().paths).toEqual([one]);
+    expect(served.running().paths).toEqual([one]);
+
+    const taken = await served.ask('POST', '/paths/add', { folder: two });
+    expect(taken.status).toBe(200);
+    expect(read().paths).toEqual([one, two]);
+  });
+
+  it('answers the new list and no restart, because this daemon already serves it', async () => {
+    const one = folder('one');
+    put({ port: 1234 });
+    const added = await daemon([]).ask('POST', '/paths/add', { folder: one });
+    expect(added.status).toBe(200);
+    // The whole answer: the folders, and no key or line about a restart.
+    expect(await added.json()).toEqual({ paths: [one] });
   });
 });

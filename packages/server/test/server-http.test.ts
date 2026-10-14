@@ -894,6 +894,17 @@ describe('--remote', () => {
     return { one, url: `http://127.0.0.1:${String(one.port)}` };
   };
 
+  /**
+   * The folders a remote answer carries, read off its `paths` line.
+   *
+   * A served answer has no plain text to print, so the client renders the
+   * fields of what the daemon returned, one per line.
+   */
+  const foldersIn = (text: string): string[] => {
+    const line = text.split('\n').find((one) => one.startsWith('paths:')) ?? '';
+    return line.slice('paths:'.length).split(',').map((one) => one.trim()).filter((one) => one !== '');
+  };
+
   it('answers from the daemon, not from this machine', async () => {
     const { one, url } = await remote();
     // The served declarations take no field: the daemon's own options are what
@@ -984,5 +995,42 @@ describe('--remote', () => {
     expect(said.stderr).toContain('cleartext');
     expect(said.code).toBe(0);
     expect(said.stdout).toContain(String(one.child.pid));
+  }, 40000);
+
+  /*
+   * What `paths add` says at the terminal of a machine with a daemon on it:
+   * the change reaches the daemon by `--remote` instead of a restart. This is
+   * that line, against a daemon that is up, and the `status` after it is what
+   * says the daemon serves the folder - the run's own `XDG_CONFIG_HOME` is the
+   * client's and not the daemon's, so a write that read the wrong file would
+   * land where this case would see it.
+   */
+  it('adds a folder to the daemon it reaches, and the daemon serves it with no restart', async () => {
+    const serving = join(home, 'serving');
+    const added = join(home, 'added');
+    mkdirSync(serving);
+    mkdirSync(added);
+    const one = await daemon(
+      { http: true, paths: [serving], plugins: [BACKEND] },
+      ['--connection-token', 'root-secret'],
+    );
+    const url = `http://127.0.0.1:${String(one.port)}`;
+
+    const before = await cli(['--remote', url, '--token', 'root-secret', 'status']);
+    expect(before.code).toBe(0);
+    expect(foldersIn(before.stdout)).toEqual([serving]);
+
+    const wrote = await cli(['--remote', url, '--token', 'root-secret', 'paths', 'add', added]);
+    expect(wrote.code).toBe(0);
+    // The answer is the list the daemon now serves, and nothing about a
+    // restart, because the daemon serving is the one that was written to.
+    expect(foldersIn(wrote.stdout)).toEqual([serving, added]);
+    expect(wrote.stdout).not.toContain('Restart the daemon');
+    // The daemon's own file, which is the file the next start reads.
+    expect((JSON.parse(readFileSync(config, 'utf8')) as { paths: string[] }).paths).toEqual([serving, added]);
+
+    const after = await cli(['--remote', url, '--token', 'root-secret', 'status']);
+    expect(after.code).toBe(0);
+    expect(foldersIn(after.stdout)).toEqual([serving, added]);
   }, 40000);
 });
