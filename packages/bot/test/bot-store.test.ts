@@ -57,6 +57,7 @@ async function made() {
     store,
     sessions: { owner: async () => undefined, start: async () => 'echo:/one' },
     hostName: 'test',
+    templates: { text: async () => undefined, lastChats: 10 },
   });
   return { records, bots, graves, store, provider, problems };
 }

@@ -111,3 +111,10 @@ it('keeps what an edit did not name, and refuses what an edit may not move', () 
   expect(() => checkRecord('motion', { name: 'Moved', owner: 'user:ana' }, WAS)).toThrow(/user:ana/);
   expect(() => checkRecord('motion', { name: 'Moved', workspace: '/elsewhere' }, WAS)).toThrow(/elsewhere/);
 });
+
+it('takes a template by name, refuses one that is not a slug, and keeps it on an edit', () => {
+  expect(checkRecord('motion', { name: 'Motion', template: 'short' }).template).toBe('short');
+  expect(() => checkRecord('motion', { name: 'Motion', template: '../x' })).toThrow(expect.objectContaining({ code: -32602 }) as Error);
+  expect(checkRecord('motion', { name: 'Calm' }, { ...WAS, template: 'short' }).template).toBe('short');
+  expect(checkRecord('motion', { name: 'Calm' }, WAS).template).toBeUndefined();
+});

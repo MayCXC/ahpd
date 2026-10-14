@@ -14,7 +14,8 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 | `description` | One line about it, for a list of bots |
 | `body` | Which body it is drawn with, from the fifteen below |
 | `color` | Which colour it is drawn in: one of the eleven below, or a hex colour `#rrggbb` |
-| `instructions` | What it was asked to be, in its own words. The session's first turn |
+| `instructions` | What it was asked to be, in its own words. The template puts it in the first turn |
+| `template` | The template its first turn is made from, by name. Absent is the default template - [The first turn](#the-first-turn) |
 | `harness` | The backend a session of it runs on, where a bot chooses one |
 | `model` | The model it asks for |
 | `preset` | The session preset it starts from. Where one is set it wins over `harness` and `model` |
@@ -83,11 +84,46 @@ A bot is talked to in its session, and there are two ways it gets one.
 
 A body may **link** a session its owner already has, by naming it in `session`. The link is kept only where the host has that session and it belongs to the bot's owner: a URI the host has no session for is refused `-32602`, and one that belongs to somebody else is refused `-32009`. A link to somebody else's conversation would be this bot's work in a room its writer has no business in.
 
-A bot made with **no** `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. The session runs the bot's `preset`, or its `harness` and `model`, or the host's own default harness and model, in the bot's `workspace` - on this host, or in the `computer` the record names. Its first turn is the bot's `instructions`, and a bot with none asks for a session that opens silent. Its title is the bot's `name`.
+A bot made with **no** `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. The session runs the bot's `preset`, or its `harness` and `model`, or the host's own default harness and model, in the bot's `workspace` - on this host, or in the `computer` the record names. Its first turn is the bot's template, filled, so a bot never opens silent. Its title is the bot's `name`.
 
 A start the owner may not make leaves no record at all: the host is asked before the bot is saved, so a make that failed is one that did not happen rather than one claiming a session it has not got.
 
 An edit that sets `session` to `null` takes the link away. An edit that says nothing about `session` leaves the link as it was, so changing a bot's name does not unlink it.
+
+## The first turn
+
+A bot's session opens with its template, filled. A bot that names no `template` gets the default one that the plugin ships:
+
+```text
+You are {{name}}. {{description}}
+
+{{instructions}}
+
+## Your last chats
+
+{{chats}}
+```
+
+| Word | What it becomes |
+| --- | --- |
+| `{{name}}` | The bot's `name` |
+| `{{description}}` | The bot's `description`, or nothing |
+| `{{instructions}}` | The bot's `instructions`, or nothing |
+| `{{chats}}` | One line `- <title>` per chat of the bot's session, newest first, at most `lastChats` of them. `None.` when there are none, which is every make |
+
+A word that is not in this table is left as it was written.
+
+A template is a record in the `templates` collection, so the daemon keeps each one as a file: `<configDir>/templates/<name>.md`. Its frontmatter holds `title`, and its body is the text:
+
+```markdown
+---
+title: Short
+---
+
+You are {{name}}. {{instructions}}
+```
+
+A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it.
 
 ## Who may do what
 
@@ -176,12 +212,13 @@ An edit that links a session the owner already has, and one that takes a link aw
 | Option | Default | What it does |
 | --- | --- | --- |
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
+| `lastChats` | `10` | How many chats `{{chats}}` lists |
 
 ```json
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
 ```
 
-The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. A plugin that takes the record store over keeps them wherever that store keeps them.
+The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. The templates are in `<configDir>/templates/`. A plugin that takes the record store over keeps them wherever that store keeps them.
 
 ## See also
 

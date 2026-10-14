@@ -6,9 +6,11 @@ import {
   BOT_BODIES, BOT_COLORS, checkRecord, isSlug, sameOwner,
 } from './record.js';
 import { sessionFor } from './start.js';
+import { DEFAULT_TEMPLATE, firstTurn, templateOf } from './template.js';
 import type { BotCatalogue } from './catalogue.js';
 import type { BotRecord } from './record.js';
 import type { BotStore } from './store.js';
+import type { BotTemplates } from './template.js';
 import type {
   Bag, Entry, Metadata, Owner, Principal, Read, ResourceChange, ResourceProvider, SchemeDescription, SessionRequest, Watcher,
   WatchOptions, Write,
@@ -82,6 +84,8 @@ export interface BotOptions {
   hostName: string;
   /** The `x-ahpd-bots://` catalogue, told each make, edit and delete. */
   catalogue?: BotCatalogue;
+  /** The templates a bot's first turn is made from. */
+  templates: BotTemplates;
 }
 
 /**
@@ -183,6 +187,7 @@ const manifest = (hostName: string) => ({
       description: 'Which colour it is drawn in: a name, or `#rrggbb`.',
     },
     instructions: { type: 'string', description: 'What it was asked to be, in its own words.' },
+    template: { type: 'string', description: 'The template its first turn is made from, by name. Absent is the default.' },
     harness: { type: 'string', description: 'The backend a session of it runs on.' },
     model: { type: 'string', description: 'The model it asks for.' },
     preset: { type: 'string', description: 'The session preset it starts from.' },
@@ -490,6 +495,12 @@ export function botProvider(options: BotOptions): BotProvider {
       const said = parsed(uri, content);
       const draft = checkRecord(slug, said, existing);
       const whose = ownerFor(draft.owner, owner, reader, existing);
+      // A make reads its template to fill the first turn. An edit reads it only
+      // where the body names one, so a bot whose template was removed can still
+      // be edited.
+      const reads = existing === undefined || (said as Bag)['template'] !== undefined;
+      const template = reads ? await templateOf(draft, options.templates) : DEFAULT_TEMPLATE;
+      if (template === undefined) throw new RpcError(-32602, `The template ${draft.template as string} does not exist.`);
       // Asked only where the body named a session: a link a write carried over
       // from the record is one an earlier write already had checked, and an
       // edit of the name is not an edit of this.
@@ -504,6 +515,7 @@ export function botProvider(options: BotOptions): BotProvider {
         body: draft.body,
         color: draft.color,
         ...(draft.instructions === undefined ? {} : { instructions: draft.instructions }),
+        ...(draft.template === undefined ? {} : { template: draft.template }),
         ...(draft.harness === undefined ? {} : { harness: draft.harness }),
         ...(draft.model === undefined ? {} : { model: draft.model }),
         ...(draft.preset === undefined ? {} : { preset: draft.preset }),
@@ -526,7 +538,7 @@ export function botProvider(options: BotOptions): BotProvider {
        */
       if (existing === undefined && record.session === undefined) {
         if (record.computer === undefined) mkdirSync(record.workspace, { recursive: true });
-        record.session = await options.sessions.start(sessionFor(record));
+        record.session = await options.sessions.start(sessionFor(record, firstTurn(record, template, [], options.templates.lastChats)));
       }
       await store.put(record);
       told(existing === undefined ? 'added' : 'updated', record);

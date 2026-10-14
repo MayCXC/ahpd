@@ -65,6 +65,8 @@ export interface BotRecord {
   color: BotColor;
   /** What it was asked to be, in its own words, for whoever it answers. */
   instructions?: string;
+  /** The template its first turn is made from, by name. Absent is the plugin's default. */
+  template?: string;
   /** The backend a session of it runs on, where a bot chooses one. */
   harness?: string;
   /** The model it asks for. */
@@ -102,6 +104,7 @@ export interface BotDraft {
   workspace?: string | undefined;
   description?: string | undefined;
   instructions?: string | undefined;
+  template?: string | undefined;
   harness?: string | undefined;
   model?: string | undefined;
   preset?: string | undefined;
@@ -111,7 +114,7 @@ export interface BotDraft {
 
 /** The keys a body may carry: a bot's own fields, and nothing else. */
 const FIELDS = [
-  'id', 'name', 'labels', 'description', 'body', 'color', 'instructions',
+  'id', 'name', 'labels', 'description', 'body', 'color', 'instructions', 'template',
   'harness', 'model', 'preset', 'workspace', 'computer', 'session', 'owner',
   // The two times are here rather than refused, because a client that read a
   // bot and wrote the whole record back is writing what it was given. Neither
@@ -223,6 +226,11 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
     throw new RpcError(INVALID_PARAMS, `${said_} is not whose this bot is; it is ${existing.owner}`);
   }
 
+  const template = line('template', body['template']);
+  if (template !== undefined && !isSlug(template)) {
+    throw new RpcError(INVALID_PARAMS, `${template} is not a template name: lowercase letters, digits and a dash, starting with a letter`);
+  }
+
   const workspace = line('workspace', body['workspace']);
   if (workspace !== undefined && existing !== undefined && workspace !== existing.workspace) {
     throw new RpcError(INVALID_PARAMS, `${workspace} is not where this bot works; it is ${existing.workspace}`);
@@ -237,6 +245,7 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
     workspace,
     description: line('description', body['description']) ?? existing?.description,
     instructions: line('instructions', body['instructions']) ?? existing?.instructions,
+    template: template ?? existing?.template,
     harness: line('harness', body['harness']) ?? existing?.harness,
     model: line('model', body['model']) ?? existing?.model,
     preset: line('preset', body['preset']) ?? existing?.preset,
