@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROTOCOL_VERSION } from '@microsoft/agent-host-protocol';
 import { sdkVersion } from '../src/version.js';
 import {
-  resetSdk, actions, hello, open, peer, sdk, serving, sessionQueries,
+  resetSdk, actions, emit, hello, open, peer, sdk, serving, sessionQueries,
   settle, running,
 } from './support/host.js';
 
@@ -18,6 +18,49 @@ describe('the handshake', () => {
     }
   });
 
+  it('answers 0.10.0 to an offer that holds it and agrees on nothing above it', async () => {
+    // VS Code 1.141 offers `0.10.0`, a version that reads the 1.0.0 wire.
+    // Under the package's caret rule it matches neither baseline, so without
+    // the alias that window is answered `0.9.0` and keeps one read bit for the
+    // whole session.
+    for (const offered of [['0.10.0', '0.9.0'], ['0.9.0', '0.10.0'], ['0.10.0']]) {
+      const result = await open().handle(hello(offered)) as { protocolVersion: string };
+      expect(result.protocolVersion).toBe('0.10.0');
+    }
+    const above = await open().handle(hello(['1.0.0', '0.10.0'])) as { protocolVersion: string };
+    expect(above.protocolVersion).toBe('1.0.0');
+    const below = await open().handle(hello(['0.9.0'])) as { protocolVersion: string };
+    expect(below.protocolVersion).toBe('0.9.0');
+  });
+
+  it('sends no canvas action to a client that agreed on 0.10.0', async () => {
+    // The 1.0.0 package registers the canvas actions at `0.10.0`, so the
+    // version alone would let them through. ahpd sends none, to anyone.
+    const p = peer();
+    const client = serving('/home/softov').accept(p);
+    const result = await client.handle(hello(['0.10.0', '0.9.0'], { initialSubscriptions: ['ahp-root://'] })) as { protocolVersion: string };
+    expect(result.protocolVersion).toBe('0.10.0');
+    const uri = 'ahp-session:/live';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
+    const opened = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+      snapshot: { state: { defaultChat: string } };
+    };
+    const chatUri = opened.snapshot.state.defaultChat;
+    await client.handle({ method: 'subscribe', params: { channel: chatUri } });
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },
+    });
+    await settle();
+    await emit({ type: 'assistant', message: { id: 'm1', content: [{ type: 'text', text: 'Done' }] } });
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 42 });
+    const types = actions(p).map((e) => e.action.type);
+    expect(types).toContain('chat/turnComplete');
+    expect(types).not.toContain('chat/canvasesChanged');
+    expect(types).not.toContain('canvas/stateChanged');
+    expect(types.filter((type) => /canvas/i.test(String(type)))).toEqual([]);
+  });
+
   it('refuses with the versions it can speak, so the client can say why', async () => {
     for (const offered of [['0.8.0'], ['99.0.0']]) {
       await expect(open().handle(hello(offered))).rejects.toMatchObject({
@@ -25,7 +68,7 @@ describe('the handshake', () => {
         // `supportedVersions`, which is the name the protocol gives it. Under
         // any other one the client has read `undefined` and has no version to
         // retry with, which is the whole point of the field.
-        data: { supportedVersions: ['1.0.0', '0.9.0'] },
+        data: { supportedVersions: ['1.0.0', '0.10.0', '0.9.0'] },
       });
     }
   });

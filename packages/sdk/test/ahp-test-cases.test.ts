@@ -32,7 +32,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   annotationsReducer, automationReducer, automationRunReducer, canvasReducer, changesetReducer, chatReducer,
-  IS_CLIENT_DISPATCHABLE, resourceWatchReducer, rootReducer, sessionReducer, SUPPORTED_PROTOCOL_VERSIONS,
+  IS_CLIENT_DISPATCHABLE, resourceWatchReducer, rootReducer, negotiateProtocolVersion, sessionReducer,
   terminalReducer,
 } from '@microsoft/agent-host-protocol';
 import type { Peer } from '../src/types/rpc.js';
@@ -195,6 +195,14 @@ interface NegotiationRow {
   invalid?: boolean;
 }
 
+/*
+ * The rows are the package's caret rule, so they run against the package's
+ * `negotiateProtocolVersion`, as VS Code runs them. The host also answers
+ * `0.10.0`, which the rule refuses; `host-handshake.test.ts` covers that.
+ * Every row that does not offer `0.10.0` also goes through the host, which
+ * answers it the same way, refuses a malformed entry with `-32602`, and
+ * refuses an offer it cannot answer with `-32005` and the versions it speaks.
+ */
 describe('the protocol’s version negotiation cases', () => {
   for (const [at, row] of read<NegotiationRow[]>('', 'version-negotiation.json').entries()) {
     const offered = row.offered.length === 0 ? 'nothing' : row.offered.join(' ');
@@ -206,15 +214,22 @@ describe('the protocol’s version negotiation cases', () => {
         params: { channel: 'ahp-root://', clientId: 'negotiation', protocolVersions: row.offered },
       });
       if (row.invalid === true) {
+        expect(() => negotiateProtocolVersion(row.offered)).toThrow(/Invalid protocol version/);
         // Not a version at all, so not a version this host can decline politely.
         await expect(hello).rejects.toMatchObject({ code: -32602 });
+        return;
+      }
+      expect(negotiateProtocolVersion(row.offered) ?? null).toBe(row.expected ?? null);
+      if (row.offered.includes('0.10.0')) {
+        // The host answers `0.10.0` here, where the rule does not.
+        await hello.catch(() => undefined);
         return;
       }
       if (row.expected === null) {
         // Nothing in common, which is recoverable: the answer says what to try.
         await expect(hello).rejects.toMatchObject({
           code: -32005,
-          data: { supportedVersions: [...SUPPORTED_PROTOCOL_VERSIONS] },
+          data: { supportedVersions: ['1.0.0', '0.10.0', '0.9.0'] },
         });
         return;
       }

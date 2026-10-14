@@ -1,7 +1,7 @@
 ---
 title: A 0.10.0 offer gets the 1.0.0 contract
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -52,6 +52,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | An offer that holds `0.10.0` and agrees on nothing above it gets `0.10.0`, with the 1.0.0 wire | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 51ec2ee42fd) | 01 |
 | An offer that holds `1.0.0` still gets `1.0.0`, and a malformed entry is still `-32602` | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 51ec2ee42fd) | 01 |
 | The `-32005` refusal lists `1.0.0`, `0.10.0` and `0.9.0` | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 51ec2ee42fd) | 01 |
+| The version table of the protocol package runs against the package's `negotiateProtocolVersion`, as VS Code does; the host answers each row that does not offer `0.10.0` the same way, and its refusal lists `1.0.0`, `0.10.0` and `0.9.0` | Softov, 2026-10-14, to "Accepting 0.10.0 breaks three rows of the protocol package's version table, which our test runs against ahpd's handshake. How should that test change?" - "Do what VS Code does" | 01 |
 | No canvas action reaches a client that agreed on `0.10.0` | Softov, 2026-10-14, chose "Record and plan" for Pass 6 | 01 |
 | The host sends no canvas action, a test proves it, and `seenBy` gets no filter | Softov, 2026-10-14, "How does canvas stay off the wire for a `0.10.0` client?" (defaulted: proposed, ahpd has no canvas sender) | 01 |
 
@@ -67,7 +68,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A 0.10.0 offer is answered with 0.10.0](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md) | todo | - |
+| [01 - A 0.10.0 offer is answered with 0.10.0](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -77,8 +78,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-0-10-0-offer-is-answered-with-0-10-0.md](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md).
+- **Done so far:** the plan, 2026-10-14; task 01 implemented, 2026-10-14.
+- **Next action:** Softov reviews [task-01-a-0-10-0-offer-is-answered-with-0-10-0.md](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md).
 - **Open questions:** none.
 - **Watch out for:** `isActionKnownToVersion` answers true for canvas at `0.10.0`. Do not use it as the canvas gate.
 

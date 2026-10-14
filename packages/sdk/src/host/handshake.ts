@@ -1,4 +1,4 @@
-import { negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
+import { compareProtocolVersions, negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
 import { RUN_HISTORY_LIMIT } from '../automations.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { uriOf } from '../fileuri.js';
@@ -19,6 +19,19 @@ export interface Handshake {
   reconnect: (params: Record<string, unknown>) => Promise<unknown>;
   authenticate: (params: Record<string, unknown>) => Promise<unknown>;
 }
+
+/**
+ * The version VS Code 1.141 offers, which reads the 1.0.0 wire.
+ *
+ * The package's caret rule matches a `0.x` offer only on the same minor, so
+ * this one agrees with neither baseline. VS Code's own host answers it, and
+ * lists it among the versions it speaks.
+ */
+const LEGACY_COMPATIBLE_VERSION = '0.10.0';
+
+/** Every version the host speaks, highest first: the package's baselines and the 1.141 alias. */
+const SPOKEN_VERSIONS = [...SUPPORTED_PROTOCOL_VERSIONS, LEGACY_COMPATIBLE_VERSION]
+  .sort((a, b) => compareProtocolVersions(b, a));
 
 export function createHandshake(ctx: HostContext, conn: ConnectionContext): Handshake {
   const { connection } = conn;
@@ -128,7 +141,8 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
      * Version negotiation is the highest version the client offered that
      * is compatible with one of `SUPPORTED_PROTOCOL_VERSIONS`, which is
      * what the specification asks for and what `negotiateProtocolVersion`
-     * is for. A host that answers with a version the client did not offer
+     * is for, or `0.10.0` when the client offered it and nothing above it
+     * agreed. A host that answers with a version the client did not offer
      * has answered with a version the client cannot read.
      */
     initialize: async (params) => {
@@ -144,13 +158,19 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
         // An uncaught throw is not a JSON-RPC error a client can read.
         throw new RpcError(INVALID_PARAMS, problem instanceof Error ? problem.message : String(problem));
       }
+      // An offer that holds the alias gets it, unless the package agreed
+      // on something above it.
+      if (offered.includes(LEGACY_COMPATIBLE_VERSION)
+        && (agreed === undefined || compareProtocolVersions(LEGACY_COMPATIBLE_VERSION, agreed) > 0)) {
+        agreed = LEGACY_COMPATIBLE_VERSION;
+      }
       if (!agreed) {
         // `supportedVersions`, which is the name the protocol gives this
         // field and the only reason the error is recoverable: it is what a
         // client reads to pick a version to retry with. Under any other
         // spelling, the one way out of a version mismatch reads
         // `undefined`.
-        throw new RpcError(-32005, 'No protocol version in common', { supportedVersions: [...SUPPORTED_PROTOCOL_VERSIONS] });
+        throw new RpcError(-32005, 'No protocol version in common', { supportedVersions: [...SPOKEN_VERSIONS] });
       }
       /*
        * Whether a container can be made here, asked before the answer

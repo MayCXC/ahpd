@@ -6,8 +6,11 @@ published.
 
 The versions negotiated are the package's own `SUPPORTED_PROTOCOL_VERSIONS` -
 `1.0.0` and `0.9.0` - and this host answers the highest of them the client
-offered, as the specification asks. VS Code 1.140 offers `0.9.0` and is
-answered `0.9.0`, and an editor newer than this daemon connects rather than
+offered, as the specification asks. It also speaks `0.10.0`, the version VS
+Code 1.141 offers, which reads the 1.0.0 wire: an offer that holds `0.10.0` and
+agrees on nothing above it is answered `0.10.0`, as VS Code's own host does. A
+refusal lists `1.0.0`, `0.10.0` and `0.9.0`. VS Code 1.140 offers `0.9.0` and
+is answered `0.9.0`, and an editor newer than this daemon connects rather than
 refusing.
 
 Everything below was read off the source and the type declarations, not off the
