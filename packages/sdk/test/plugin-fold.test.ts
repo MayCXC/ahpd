@@ -51,6 +51,7 @@ const contribution = (
     sessionCompletions?: Contribution['sessionCompletions'];
     routes?: Route;
     closers?: (() => void | Promise<void>)[];
+    preambles?: Contribution['preambles'];
   } = {},
 ): Contribution => ({
   by,
@@ -67,6 +68,7 @@ const contribution = (
   starts: { by },
   connects: { by, close: () => {} },
   closers: parts.closers ?? [],
+  preambles: parts.preambles ?? [],
   ...(parts.routes === undefined ? {} : { routes: parts.routes }),
 });
 
@@ -307,6 +309,20 @@ it('refuses a session setting a backend already declares', () => {
   const folded = foldHostOptions(base(), [contribution('one', { sessionConfig: { voice: { type: 'string' } } })]);
   expect(folded.options.sessionConfig?.voice).toBeUndefined();
   expect(folded.problems[0]).toContain("a backend's own schema already declares");
+});
+
+it('folds every plugin\'s chat preambles in plugin order, and sets none when there are none', () => {
+  const one = async (): Promise<string> => 'one';
+  const two = async (): Promise<string> => 'two';
+  const three = async (): Promise<string> => 'three';
+  const folded = foldHostOptions(base(), [
+    contribution('alpha', { preambles: [one, two] }),
+    contribution('beta'),
+    contribution('gamma', { preambles: [three] }),
+  ]);
+  expect(folded.problems).toEqual([]);
+  expect(folded.options.chatPreambles).toEqual([one, two, three]);
+  expect(foldHostOptions(base(), [contribution('alpha')]).options.chatPreambles).toBeUndefined();
 });
 
 describe('the routes a fold carries', () => {

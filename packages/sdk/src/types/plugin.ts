@@ -12,7 +12,7 @@
  * composes several contributions into one option object.
  */
 
-import type { AutomationTriggerDefinition } from '@microsoft/agent-host-protocol';
+import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
 
 import type { Agent } from './agent.js';
 import type { StartSession } from './automations.js';
@@ -716,6 +716,14 @@ export interface PluginHost extends PluginContext {
    * one the daemon or another plugin serves, is refused.
    */
   registerMethod(name: string, method: PluginMethod): void;
+  /**
+   * Give text to each chat a person or a tool opens.
+   *
+   * The host asks every preamble before it opens the chat, and puts the
+   * answers, joined with a blank line in plugin order, in the hidden `context`
+   * of the chat's first turn. A worker chat and a changeset chat are not asked.
+   */
+  registerChatPreamble(preamble: ChatPreamble): void;
   /** Set `HostOptions.terminals`, or take the daemon's over with `'replace'`. */
   registerTerminals(store: PortOf<'terminals'>, when?: 'replace'): void;
   /** Set `HostOptions.changes`, or take the daemon's over with `'replace'`. */
@@ -892,6 +900,21 @@ export interface PortContribution {
   replace: boolean;
 }
 
+/** A chat that a person or a tool opened, as a chat preamble is told it. */
+export interface OpenedChat {
+  /** The session the chat is in. */
+  session: string;
+  /** The new chat. */
+  chat: string;
+  /** What the chat was made from, when it was made from another chat. */
+  origin?: ChatOrigin;
+  /** The session's other chats, as its catalogue lists them. */
+  chats: readonly ChatSummary[];
+}
+
+/** Text for the hidden context of a chat's first turn, or `undefined` for none. */
+export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
+
 /**
  * What one `apply` produced, kept apart from the host until every plugin has run.
  *
@@ -992,6 +1015,8 @@ export interface Contribution {
    * under, so a route and the path that reaches it cannot drift apart.
    */
   routes?: Route;
+  /** The chat preambles this plugin registered, in registration order. */
+  preambles: ChatPreamble[];
 }
 
 /** One plugin that was resolved and imported, before or after it was applied. */

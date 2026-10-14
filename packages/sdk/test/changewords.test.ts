@@ -462,6 +462,20 @@ describe('the session\'s agent writes the words', () => {
     expect((added[0]?.summary as { resource?: string }).resource).toBe(written[0]?.chat);
   });
 
+  it('opens the side chat that writes the words without asking a chat preamble', async () => {
+    const dir = repository();
+    const { agent, asked } = backing(dir, 'Name it well', { chats: { sideChat: true } });
+    let preambles = 0;
+    const { config, say, commit } = await studio(dir, agent, { chatPreambles: [async () => { preambles++; return 'You are Motion.'; }] });
+    writeFileSync(join(dir, 'tracked.txt'), 'two\n');
+    await say('Fix the flaky kqueue build');
+    await config({ mode: 'agent' });
+    await commit();
+
+    expect(asked.filter((one) => one.text.startsWith('Write a commit message'))).toHaveLength(1);
+    expect(preambles).toBe(0);
+  });
+
   it('falls back to the session title when the agent has no side chat, and says so', async () => {
     const dir = repository();
     const { agent, asked } = backing(dir, 'never read');
