@@ -97,9 +97,13 @@ describe('the schema a client reads', () => {
     expect(written['updateCheck']).toMatchObject({ type: 'boolean', title: 'Update check' });
     expect(written['advancedTools']).toMatchObject({ type: 'boolean', title: 'Advanced tools' });
     // Two keys, because one key cannot be both a boolean and a list: the
-    // switch is a control, and the providers it narrows to are a list.
-    expect(written['sessionTools']).toMatchObject({ type: 'boolean', title: 'Session tools', default: true });
-    expect(written['sessionToolsProviders']).toMatchObject({ type: 'array', title: 'Session tool providers', default: [], items: { type: 'string', title: 'Provider' } });
+    // switch is a control, and the providers it narrows to are a list. Neither
+    // declares a default, for the same reason `advancedTools` does not: a
+    // default on the field would fill the input before the file was read.
+    expect(written['sessionTools']).toMatchObject({ type: 'boolean', title: 'Session tools' });
+    expect(written['sessionTools']).not.toHaveProperty('default');
+    expect(written['sessionToolsProviders']).toMatchObject({ type: 'array', title: 'Session tool providers', items: { type: 'string', title: 'Provider' } });
+    expect(written['sessionToolsProviders']).not.toHaveProperty('default');
     expect(written['closedChats']).toMatchObject({ type: 'string', title: 'Closed Chats', enum: ['hidden', 'delete'] });
     expect(written['wire']).toMatchObject({ type: 'string', title: 'Wire capture' });
     expect(written['mcpServers']).toMatchObject({ type: 'object', title: 'MCP servers' });

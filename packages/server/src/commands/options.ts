@@ -478,7 +478,6 @@ export const serverFields = {
     type: 'boolean',
     title: 'Session tools',
     description: 'Offer the session tools. On by default; --no-session-tools offers none.',
-    default: true,
     cli: { negatable: true },
   },
   sessionToolsProviders: {
@@ -486,7 +485,6 @@ export const serverFields = {
     items: { type: 'string', title: 'Provider' },
     title: 'Session tool providers',
     description: 'Offer the session tools only to the sessions of these providers. Empty offers them to every provider.',
-    default: [],
     cli: { value: 'PROVIDER' },
   },
   closedChats: {

@@ -473,20 +473,42 @@ export function createClientTools(ctx: SessionContext): ClientTools {
      * active, which is the only thing that moves this list after a session is
      * built.
      *
-     * The next declaration is built on the side and kept only once the SDK has
-     * taken it: a `setMcpServers` that refuses - a session whose CLI has gone,
-     * or one that says no to this set - leaves the session offering what it
-     * offered before, so the same list coming again is a change to send again
-     * rather than one already sent.
+     * `ahp` goes out in two declarations and not one, because the SDK connects
+     * only a server name it has not registered yet and `ahp` was registered
+     * when the session started: the first call leaves it out, which is what
+     * makes the SDK disconnect it, and the second carries the new one, which is
+     * what makes the SDK connect that. Between the two the CLI has no `ahp`
+     * server, so a session tool called in that moment fails - decision
+     * `a-live-tool-change-removes-the-ahp-server-then-adds-it-again`. A list
+     * with nothing in it is the first call alone, there being no server to add
+     * back, and a session with no `ahp` yet is the second alone.
+     *
+     * Each declaration is built on the side and kept only once the SDK has
+     * taken it, so a `setMcpServers` that refuses - a session whose CLI has
+     * gone, or one that says no to this set - leaves the session holding what
+     * the CLI actually has. A removal that took and an add that did not leaves
+     * it holding the set without `ahp`, and the list that failed comes again as
+     * a change to send rather than one already sent.
      */
     setTools: async (next) => {
       const before = ctx.offering.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
       const after = next.map((one) => `${one.definition.name}\u0000${one.owner ?? ''}`).join('\n');
       if (before === after) return true;
-      const declared: Record<string, Bag> = { ...ctx.declared };
+      // Without `ahp`: the declaration the SDK disconnects the old one on.
+      const removed: Record<string, Bag> = { ...ctx.declared };
+      delete removed.ahp;
+      const declared: Record<string, Bag> = { ...removed };
       if (next.length > 0) declared.ahp = contributed(next, ranByClient) as Bag;
-      else delete declared.ahp;
-      try { await ctx.handle.setMcpServers(declared as never); }
+      try {
+        if (ctx.declared.ahp !== undefined) {
+          await ctx.handle.setMcpServers(removed as never);
+          // Gone from the CLI now, so what this session holds is the set
+          // without it, whatever the second declaration answers.
+          ctx.offering = [];
+          ctx.declared = removed;
+        }
+        if (next.length > 0) await ctx.handle.setMcpServers(declared as never);
+      }
       catch { return false; }
       ctx.offering = [...next];
       ctx.declared = declared;

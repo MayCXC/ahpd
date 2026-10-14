@@ -1074,9 +1074,11 @@ export function createTooling(ctx: HostContext): Tooling {
    *
    * Every chat, because the clients are the session's rather than one chat's -
    * somebody with two conversations open in one session contributes the same
-   * tools to both. A backend that cannot take tools at all answers false and
-   * is left alone; there is nothing to report to a client either way, because
-   * what it announced is already on the session state.
+   * tools to both. An answer of false, or a throw, is logged with the session's
+   * URI: a chat that did not take the new set goes on offering the old one, and
+   * nothing else says so - what the client announced is already on the session
+   * state, and the agent is told nothing either way. A session whose backend
+   * has no `setTools` at all answers nothing and is left alone.
    *
    * The plugins go through here as well, which is why the reconcile comes
    * first and before the guard: a session this host is only browsing has no
@@ -1087,7 +1089,13 @@ export function createTooling(ctx: HostContext): Tooling {
     const held = sessions.get(uri);
     if (!held) return;
     for (const [chatUri, chat] of held.chats) {
-      void chat.setTools?.(boundTools(uri, chatUri)).catch(() => {});
+      void Promise.resolve(chat.setTools?.(boundTools(uri, chatUri)))
+        .then((took) => {
+          if (took === false) console.warn(`@ahpd/sdk: ${uri} did not take its tools; a chat of it still offers what it did`);
+        })
+        .catch((error: unknown) => {
+          console.warn(`@ahpd/sdk: ${uri} could not be retooled: ${(error as Error).message}`);
+        });
     }
   };
 

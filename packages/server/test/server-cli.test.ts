@@ -137,6 +137,31 @@ describe('the flags of a run', () => {
     expect(listed.stderr).toContain('session tools: offered to claude, echo');
   }, 20000);
 
+  /*
+   * The file's word, with the line saying nothing about either key.
+   *
+   * A `default` on either field filled the canonical input before the file was
+   * read, so `optionsFrom` never reached the file and a switch turned off in
+   * `config.json` was answered on. The case is a process, because the filling
+   * happens in the parse and not in `optionsFrom`: the assertion is the
+   * announcement, which is where a person reads back what the run decided.
+   */
+  it('takes the session tools keys from the file when the line names neither', async () => {
+    const off = await cli(
+      ['--stdio', '--plugin', BACKEND, '--config-file', config, '--no-update-check'],
+      { config: { sessionTools: false } },
+    );
+    expect(off.code).toBe(0);
+    expect(off.stderr).toContain('session tools: offered to no session');
+
+    const narrowed = await cli(
+      ['--stdio', '--plugin', BACKEND, '--config-file', config, '--no-update-check'],
+      { config: { sessionToolsProviders: ['claude'] } },
+    );
+    expect(narrowed.code).toBe(0);
+    expect(narrowed.stderr).toContain('session tools: offered to claude');
+  }, 20000);
+
   it('writes nothing to stdout over --stdio but the frames', async () => {
     const said = await cli(['--stdio', '--plugin', BACKEND, '--config-file', config, '--no-update-check']);
     expect(said.code).toBe(0);

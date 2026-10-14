@@ -31,14 +31,19 @@ const offeredTool = (name: string, owner = 'probe'): BoundTool => ({
 }) as unknown as BoundTool;
 
 /**
- * A session whose `setMcpServers` refuses while `refuse` is true.
+ * A session whose `setMcpServers` refuses: every declaration, one of them, or
+ * none.
  *
- * Only the fields `setTools` reads are here. `declared` starts as the host's
- * own server does - the host tools this session was built with - so a case can
- * see that a set the SDK refused left those beside it untouched.
+ * Only the fields `setTools` reads are here. `declared` starts as a session's
+ * does: the host's own server, and no `ahp` - `session.ts` declares that one
+ * from `ctx.offering`, so a session built with nothing contributed has none.
+ * A case that wants an `ahp` to move declares one with a first change, which
+ * is one declaration; every change after that is two.
  */
 const session = () => {
-  let refuse = false;
+  /** Which of the declarations refuse: all of them, the `n`th, or none. */
+  let refuse: 'all' | number | undefined;
+  let made = 0;
   const sent: Record<string, Bag>[] = [];
   const hostServer = { type: 'sdk', name: 'host' } as Bag;
   const ctx = {
@@ -48,7 +53,8 @@ const session = () => {
     offering: [] as BoundTool[],
     handle: {
       setMcpServers: async (servers: Record<string, Bag>) => {
-        if (refuse) throw new Error('the CLI said no');
+        made += 1;
+        if (refuse === 'all' || refuse === made) throw new Error('the CLI said no');
         sent.push(servers);
       },
     },
@@ -59,7 +65,9 @@ const session = () => {
     sent,
     /** What the session offers and declares now, which `setTools` moves. */
     state: () => ({ offering: ctx.offering, declared: ctx.declared }),
-    refusing: (on: boolean) => { refuse = on; },
+    refusing: (on: boolean) => { made = 0; refuse = on ? 'all' : undefined; },
+    /** Refuse the `at`-th declaration made from here on, and no other. */
+    refusingAt: (at: number) => { made = 0; refuse = at; },
   };
 };
 
@@ -68,8 +76,10 @@ it('sends a list the SDK refused again when the same list comes back', async () 
   held.refusing(true);
   const list = [offeredTool('openFile')];
   expect(await held.setTools(list)).toBe(false);
-  // Nothing came of it, so nothing moved: the list is not one this session is
-  // holding, and the host's own server is still beside it.
+  // No `ahp` yet, so the one declaration is the one that adds it, and it
+  // refused: nothing went out, and what is held is what it was, the host's
+  // own server still beside it.
+  expect(held.sent).toEqual([]);
   expect(held.state().offering).toEqual([]);
   expect(Object.keys(held.state().declared)).toEqual(['host']);
 
@@ -87,6 +97,54 @@ it('does not send a list the SDK took when it comes again', async () => {
   // Taken, so what comes again is what is already there.
   expect(await held.setTools([offeredTool('openFile')])).toBe(true);
   expect(held.sent).toHaveLength(1);
+});
+
+/*
+ * The order is the whole of it: the SDK connects only a name it has not
+ * registered, and `ahp` is registered from the session's start. A declaration
+ * that carries it is taken for the server already there, so only the one that
+ * leaves it out makes the SDK let it go - decision
+ * `a-live-tool-change-removes-the-ahp-server-then-adds-it-again`.
+ */
+it('removes the ahp server first, then declares it again with the new tools', async () => {
+  const held = session();
+  // A session with no `ahp` yet has nothing to remove: one declaration.
+  expect(await held.setTools([offeredTool('openFile')])).toBe(true);
+  expect(held.sent).toHaveLength(1);
+  expect(await held.setTools([offeredTool('openFile'), offeredTool('closeFile')])).toBe(true);
+  expect(held.sent).toHaveLength(3);
+  expect(Object.keys(held.sent[1] as Record<string, Bag>)).toEqual(['host']);
+  expect(Object.keys(held.sent[2] as Record<string, Bag>).sort()).toEqual(['ahp', 'host']);
+});
+
+it('declares one set, with no ahp in it, when the list is emptied', async () => {
+  const held = session();
+  expect(await held.setTools([offeredTool('openFile')])).toBe(true);
+  expect(await held.setTools([])).toBe(true);
+  // Two declarations in all: the add of the first change, then the removal
+  // alone - an empty list has no server to add back.
+  expect(held.sent).toHaveLength(2);
+  expect(Object.keys(held.sent[1] as Record<string, Bag>)).toEqual(['host']);
+  expect(held.state().offering).toEqual([]);
+});
+
+it('holds the set without ahp when the declaration that adds it back is refused', async () => {
+  const held = session();
+  const first = [offeredTool('openFile')];
+  expect(await held.setTools(first)).toBe(true);
+  held.refusingAt(2);
+  expect(await held.setTools([offeredTool('closeFile')])).toBe(false);
+  // The removal went through and the re-add did not, so the CLI has no `ahp`,
+  // and the session holds just that rather than the list it no longer offers.
+  expect(held.sent).toHaveLength(2);
+  expect(Object.keys(held.sent[1] as Record<string, Bag>)).toEqual(['host']);
+  expect(held.state().offering).toEqual([]);
+  expect(Object.keys(held.state().declared)).toEqual(['host']);
+  // So the first list coming back is a change to send, and not one taken.
+  held.refusing(false);
+  expect(await held.setTools(first)).toBe(true);
+  expect(held.sent).toHaveLength(3);
+  expect(held.state().offering).toEqual(first);
 });
 
 it('declares the set whole, so a re-declare cannot take the host server away', async () => {
