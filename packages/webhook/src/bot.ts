@@ -188,7 +188,7 @@ export function botTarget(seams: BotSeams): Target {
       const done = await Promise.race([end, late]);
       clearTimeout(timer);
       if (done === undefined) return answer(202, { ...said, status: 'running' });
-      return answer(200, { ...said, ...ended(done) });
+      return answer(done.status === 'error' ? 502 : 200, { ...said, ...ended(done) });
     }
 
     if (callback !== undefined) {

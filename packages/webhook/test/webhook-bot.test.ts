@@ -240,12 +240,12 @@ describe('the reply modes', () => {
     expect(await answer.json()).toEqual({ thread: 'pr-12', turn: sent[0]?.turn, status: 'complete', text: 'echo: hello' });
   });
 
-  it('answers 200 with status error and the message when a sync turn fails', async () => {
+  it('answers 502 with status error and the message when a sync turn fails', async () => {
     const { target, sent, finish } = await made();
     const pending = target(endpoint({ reply: 'sync' }), call({ thread: 'pr-12', text: 'hello' }));
     setTimeout(() => { finish(0, 'half', 'error', 'the model refused'); }, 10);
     const answer = await pending;
-    expect(answer.status).toBe(200);
+    expect(answer.status).toBe(502);
     expect(await answer.json()).toEqual({ thread: 'pr-12', turn: sent[0]?.turn, status: 'error', text: 'half', error: 'the model refused' });
   });
 

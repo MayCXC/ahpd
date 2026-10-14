@@ -80,10 +80,10 @@ The plugin keeps each thread in the `webhook-threads` collection, as the endpoin
 | `reply` | What the call answers |
 | --- | --- |
 | `callback` | 202 with `{ thread, turn }` once the turn is sent. At the turn's end, the plugin posts `{ thread, turn, status, text, error }` to the call's `callback` URL |
-| `sync` | 200 with `{ thread, turn, status, text, error }` at the turn's end. When the turn runs longer than the timeout, 202 with `status: "running"`, and the turn goes on |
+| `sync` | 200 with `{ thread, turn, status, text, error }` at the turn's end, or 502 when the turn failed. When the turn runs longer than the timeout, 202 with `status: "running"`, and the turn goes on |
 | `none` | 202 with `{ thread, turn }` once the turn is sent |
 
-`text` is the bot's answer in that turn, and `status` is `complete`, `cancelled` or `error`. A turn that failed has `status: "error"` and the message of its error in `error`, which no other answer holds. A `sync` call answers a failed turn with 200, as it answers a cancelled one: the call did its work, and `status` says how the turn ended.
+`text` is the bot's answer in that turn, and `status` is `complete`, `cancelled` or `error`. A turn that failed has `status: "error"` and the message of its error in `error`, which no other answer holds. A `sync` call answers a failed turn with 502, so a caller that reads only the HTTP status sees the failure. A cancelled turn answers 200.
 
 A callback URL must start with the endpoint's `callbackPrefix`. The plugin compares the URL as `new URL` writes it, so `https://ci.example.com.evil.test/` does not pass the prefix `https://ci.example.com/`. Without this check, any caller could make the host post to any address.
 
