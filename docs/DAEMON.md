@@ -173,6 +173,12 @@ ahpd status                 say whether one is, and where
 ahpd config                 say where the configuration is, and what it says
 ahpd configure              ask at the terminal for each setting a first install
                             needs, and write them
+ahpd paths list             the folders this host serves
+ahpd paths add <folder>     serve one, and everything under it.
+                            --config-file edits another file
+ahpd paths remove <folder>  stop serving one. The last folder cannot be
+                            removed, because a daemon with no "paths" serves
+                            the folder it is started in
 ahpd plugin list            what the configuration names, and what a run would
                             load, without applying any of it
 ahpd plugin install <name>  install a plugin into the configuration directory
@@ -204,6 +210,8 @@ ahpd vault list             every name this host keeps a secret under, and
                             whether each is set. No value is ever printed
 ahpd completion <shell>     print the completion script: bash, zsh or fish
 ```
+
+`ahpd paths` writes the configuration; with no `--config-file` given, and with a record naming a daemon that serves the HTTP API, it sends the change to that daemon instead. The daemon applies it at once, writes its own file, and rewrites the record it keeps, so `ahpd status --json` lists the new folders with no restart. With `--config-file`, or with no record, or with a record whose daemon serves no HTTP API, or with one that does not answer, the file is written and `ahpd restart` is what applies the change. A daemon bound to every address announces `0.0.0.0` or `::`, which no request can be sent to, so the change goes to the loopback of that port instead. The three verbs are served over HTTP as well, and a served change needs the deployment's own token.
 
 `ahpd [options]` with no verb is the foreground daemon, and it is the same
 declaration `ahpd start` renders. Every command and every flag can be read

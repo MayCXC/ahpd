@@ -39,6 +39,13 @@ export interface Running {
   paths: string[];
   startedAt: string;
   /**
+   * The origin this daemon's HTTP API answers on, without the `/api` its routes
+   * hang off. What a verb at the terminal reads to send a change to this daemon
+   * rather than write the file and ask for a restart. Absent when the daemon
+   * serves no API, and from a record an older daemon wrote.
+   */
+  api?: string;
+  /**
    * Where automations are kept and whether their schedules fire, in the
    * daemon's own words. Absent from a record an older daemon wrote.
    */
@@ -267,6 +274,7 @@ export function readyUrl(origin: string, token?: string): string {
 export function recordOf(announced: string, pid: number, token?: string, argv?: string[], control?: Control): Running {
   const url = /ws:\/\/[^\s,]+/.exec(announced)?.[0] ?? announced;
   const automations = /^automations (.+)$/m.exec(announced)?.[1]?.trim();
+  const api = apiOf(announced);
   const skipped = skippedOf(announced);
   return {
     pid,
@@ -275,11 +283,29 @@ export function recordOf(announced: string, pid: number, token?: string, argv?: 
     paths: (/sessions in (.+)/.exec(announced)?.[1] ?? '')
       .trim().split(',').map((one) => one.trim()).filter((one) => one !== ''),
     startedAt: new Date().toISOString(),
+    ...(api !== undefined ? { api } : {}),
     ...(automations !== undefined ? { automations } : {}),
     ...(argv !== undefined ? { argv } : {}),
     ...(skipped.length > 0 ? { skipped } : {}),
     ...(control === undefined ? {} : { control }),
   };
+}
+
+/**
+ * The origin an announcement says the HTTP API answers on, or nothing when the
+ * daemon serves none.
+ *
+ * The line is `http on <origin>/api`, which is written from the prefix the
+ * routes hang off; a caller sends to the origin, so the prefix comes off here.
+ * It is written out rather than imported from `http.ts`, which reaches this
+ * file through the commands a served request runs.
+ */
+const API_SUFFIX = '/api';
+
+export function apiOf(announced: string): string | undefined {
+  const said = /^http on (\S+)$/m.exec(announced)?.[1];
+  if (said === undefined) return undefined;
+  return said.endsWith(API_SUFFIX) ? said.slice(0, -API_SUFFIX.length) : said;
 }
 
 /**
@@ -512,6 +538,26 @@ export function claim(record: Running, replacing?: number): Running | undefined 
   // token in it.
   writeJsonAtomic(daemonPath(), record, { mode: 0o600 });
   return undefined;
+}
+
+/**
+ * Write the record again with the folders the daemon `pid` serves, when the
+ * record on disk names that daemon.
+ *
+ * A served `paths add` or `paths remove` changes the list the daemon serves
+ * now; `ahpd status --json` at the terminal reads the record and never the
+ * daemon, so the change is one a terminal sees only if the record says so too -
+ * decision `a-served-paths-change-reaches-the-running-daemon`.
+ *
+ * Every other field is carried over as read, with the same owner-only mode as
+ * `claim`: `connectUrl` and `control` are in there, and a rewrite that dropped
+ * either would lose a token or a pipe.
+ */
+export function rewritePaths(pid: number, paths: readonly string[]): void {
+  const found = recorded();
+  if (found === undefined || found.pid !== pid) return;
+  sweepTemps([daemonPath()]);
+  writeJsonAtomic(daemonPath(), { ...found, paths: [...paths] }, { mode: 0o600 });
 }
 
 /**

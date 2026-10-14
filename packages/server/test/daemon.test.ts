@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawn } from 'node:child_process';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { announcementOf, claim, controlFor, deliver, forget, logSince, readyUrl, recordOf, running, start, statusLine, stop } from '../src/daemon.js';
+import { announcementOf, claim, controlFor, deliver, forget, logSince, readyUrl, recordOf, rewritePaths, running, start, statusLine, stop } from '../src/daemon.js';
 import { automationStatePath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
 import type { Control, Running } from '../src/daemon.js';
 
@@ -138,6 +138,17 @@ describe('recordOf', () => {
     const control: Control = { pipe: '\\\\.\\pipe\\ahpd-abc', key: 'def' };
     expect(recordOf(ANNOUNCED, 42, 'abc', undefined, control).control).toEqual(control);
     expect(recordOf(ANNOUNCED, 42, 'abc').control).toBeUndefined();
+  });
+
+  it('reads the API origin off the announcement, without the path its routes hang off', () => {
+    // The line `run.ts` writes when there is an API: the origin a caller needs,
+    // and the prefix its routes are under, which is not part of the origin.
+    const said = `${ANNOUNCED}http on http://127.0.0.1:9187/api\n`;
+    expect(recordOf(said, 42, 'abc').api).toBe('http://127.0.0.1:9187');
+  });
+
+  it('carries no api for a daemon that serves none', () => {
+    expect(recordOf(ANNOUNCED, 42, 'abc').api).toBeUndefined();
   });
 
   it('keeps the key out of every field a verb prints', () => {
@@ -487,6 +498,43 @@ describe('the record on disk', () => {
     const found = running();
     expect(found?.url).not.toContain('secret');
     expect(found?.connectUrl).toBe('ws://127.0.0.1:9187/?tkn=secret');
+  });
+
+  /** The record on disk, as the reader beside this case writes and reads it. */
+  const file = (): string => join(home, 'ahpd', 'daemon.json');
+
+  it('rewrites the folders a daemon serves, keeping every other field and the mode', () => {
+    put({
+      pid: process.pid,
+      url: 'ws://127.0.0.1:9187',
+      connectUrl: 'ws://127.0.0.1:9187/?tkn=abc',
+      paths: ['/a'],
+      startedAt: '2026-09-19T00:00:00.000Z',
+      automations: 'in /c, schedules fire',
+      api: 'http://127.0.0.1:9187',
+    });
+    rewritePaths(process.pid, ['/a', '/b']);
+    // The folders are the change; everything else a daemon recorded about
+    // itself is what a later reader needs and is left where it was.
+    expect(JSON.parse(readFileSync(file(), 'utf8'))).toEqual({
+      pid: process.pid,
+      url: 'ws://127.0.0.1:9187',
+      connectUrl: 'ws://127.0.0.1:9187/?tkn=abc',
+      paths: ['/a', '/b'],
+      startedAt: '2026-09-19T00:00:00.000Z',
+      automations: 'in /c, schedules fire',
+      api: 'http://127.0.0.1:9187',
+    });
+    // It holds the connect URL, which is the origin with the token in it, so it
+    // is owner-only where it is written again.
+    expect(statSync(file()).mode & 0o777).toBe(0o600);
+  });
+
+  it('leaves the record of another daemon alone', () => {
+    put(naming(NEVER));
+    const before = readFileSync(file(), 'utf8');
+    rewritePaths(process.pid, ['/a', '/b']);
+    expect(readFileSync(file(), 'utf8')).toBe(before);
   });
 });
 

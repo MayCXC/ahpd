@@ -47,8 +47,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Decision | Source |
 | --- | --- |
-| [`ahpd paths list`, `add` and `remove` change the served folders](../../../decisions/ahpd-paths-lists-adds-and-removes-a-served-folder.md) | Softov, 2026-10-14 |
-| [A `paths` change served by the daemon also changes the folders it serves now](../../../decisions/a-served-paths-change-reaches-the-running-daemon.md) | Softov, 2026-10-14; the terminal half defaulted |
+| [`ahpd paths list`, `add` and `remove` change the served folders, and none of them asks](../../../decisions/ahpd-paths-lists-adds-and-removes-a-served-folder.md) | Softov, 2026-10-14 |
+| [`ahpd paths add` and `remove` at the terminal reach a running daemon by themselves](../../../decisions/a-served-paths-change-reaches-the-running-daemon.md) | Softov, 2026-10-14 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -56,6 +56,7 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 | `add` of a folder already under a served one changes nothing and says so | `under` in `askToServe` | 01 |
 | `remove` refuses the last folder | `configure.ts:219-222`: an empty `paths` serves the current folder | 01 |
 | Served, `add` and `remove` take the deployment's own token only | `plugin install` and `remove`: a change of what agents can reach | 02 |
+| A served change rewrites `paths` in `daemon.json`, so `ahpd status --json` at the terminal shows it | Softov's Windows run, 2026-10-14: local status showed the old folders | 03 |
 
 ## Proposed architecture
 
@@ -69,6 +70,7 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 | --- | --- | --- |
 | [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-and-removes-a-folder.md) | implemented | - |
 | [02 - a served paths change reaches the running daemon](task-02-a-served-paths-change-reaches-the-running-daemon.md) | implemented | 01 |
+| [03 - what the Windows run found in ahpd paths is fixed](task-03-what-the-windows-run-found.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -78,14 +80,14 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-14; tasks 01 and 02 implemented 2026-10-14, not reviewed. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
-- **Next action:** review tasks 01 and 02, then the checks by hand.
+- **Done so far:** planned 2026-10-14; tasks 01 to 03 implemented 2026-10-14; task 03 reviewed. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
+- **Next action:** the checks by hand, on Linux and on Windows. At the terminal, `ahpd paths add` and `remove` send the change to a running daemon that serves the HTTP API, and write the file otherwise.
 - **Open questions:** none.
-- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb and gains none from this plan, which names no doc file - the three `paths` verbs are missing there.
+- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb, the three `paths` verbs included.
 
 ## Final verification checklist
 
 - [ ] On a fresh folder, `ahpd paths add <folder>` writes `config.json`, and `ahpd start` serves the folder.
-- [ ] With a daemon running, `ahpd --remote <url> paths add <folder>` makes `ahpd status` show the folder with no restart.
-- [ ] `ahpd paths remove` of the last folder is refused.
+- [ ] With a daemon running and `http` on, a plain `ahpd paths add <folder>` makes `ahpd status --json` show the folder with no restart.
+- [ ] `ahpd paths remove` of the last folder is refused, and of a folder not listed stops with no question.
 - [ ] `plans/index.md` updated.

@@ -7,35 +7,33 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L408](../../packages/server/src/commands/run.ts#L408) - `running().paths`, which `ahpd status` shows"
   - "[code://packages/server/src/plugins.ts#L895](../../packages/server/src/plugins.ts#L895) - the frozen copy of `paths` a plugin gets when it loads"
   - "[code://packages/server/src/commands/plugin.ts#L166-L172](../../packages/server/src/commands/plugin.ts#L166-L172) - a plugin change at the terminal says a restart loads it"
+  - "[code://packages/server/src/commands/paths.ts](../../packages/server/src/commands/paths.ts) - the verbs, and `restartLine`, the hint at the terminal"
+  - "[code://packages/server/src/daemon.ts#L264-L285](../../packages/server/src/daemon.ts#L264-L285) - `recordOf`, the record the terminal reads"
 ---
 
 ## Context
 
-The running daemon reads `paths` in three places.
-The host's default folder is `paths[0]`, set at start.
-`ahpd status` shows the list.
-Each plugin gets a frozen copy when it loads.
-No session is refused for a folder outside `paths`.
+A served `paths add` or `paths remove` changes the folders the daemon serves now.
+At the terminal, the verbs wrote `config.json` only and printed `ahpd --remote <url> paths ...` as the way to apply the change now.
+On Windows that line did not work.
+The record holds the `ws://` origin, but `--remote` needs the HTTP address of the API and a token the person must find.
+The record is an owner-only file, and it already holds the daemon's token in `connectUrl`.
 
 ## Decision
 
-`paths add` and `paths remove`, served by the daemon, write the daemon's own `config.json` and change its list at once.
-`ahpd status` then shows the new list without a restart.
-The default folder and the plugins' copies change only at the next start.
+A served `paths add` or `paths remove` writes the daemon's own `config.json`, changes the list it serves, and rewrites `paths` in `daemon.json`.
+At the terminal, with a daemon recorded that serves the HTTP API and with no `--config-file` given, the verb sends the change to that daemon.
+It uses the API address and the token from the record, so the change applies at once.
+Otherwise the verb writes `config.json` only and says that `ahpd restart` applies the change.
 
-At the terminal, the verbs write `config.json` only.
-With a daemon recorded, they say that a restart applies the change, or that `ahpd --remote <url> paths ...` applies it now.
-This is the shape the plugin commands have.
-
-Source: Softov, 2026-10-14, asked whether a running daemon takes the change: "Yes, live through a route".
-The terminal half is defaulted: it copies `plugin install`, and `--remote` is already the way a terminal reaches a daemon.
+Source: Softov, 2026-10-14, asked what a plain `ahpd paths add` does while a daemon runs: "Forward to the daemon itself".
 
 ## Consequences
 
-A client that holds the daemon's token changes the folders with one request.
-A plugin that reads `paths` sees a change only after a restart.
+ahp-desk adds a folder with a plain `ahpd paths add`, with no token and no restart, when the daemon serves the API.
+`ahpd status --json` shows the new list, because the record changes too.
+A daemon without `http` still needs a restart.
 
 ## Options
 
-- **File only**: every change waits for a restart, so a new host shows its folder only after it starts again.
-- **The terminal forwards to a recorded daemon by itself**: this needs the daemon's token at the terminal, which `--remote` already asks for.
+- **Fix the hint only**: the terminal writes the file and prints a command that works, with the API address and `--token-file`. The person or the desk runs the second command.

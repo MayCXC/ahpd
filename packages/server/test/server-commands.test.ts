@@ -765,11 +765,12 @@ describe('what a served command says it does', () => {
       ['daemon.config', 'read', null],
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],
-      // A folder is served or it is not, so `add` creates one and `remove` acts
-      // on the one it names.
+      // A folder is served or it is not, so `add` creates one; a `remove` takes
+      // one out of the list and takes nothing off the disk, so it changes the row
+      // it names rather than removing it.
       ['paths.add', 'add', { kind: 'folder' }],
       ['paths.list', 'read', { kind: 'folder' }],
-      ['paths.remove', 'remove', { kind: 'folder', key: 'folder' }],
+      ['paths.remove', 'change', { kind: 'folder', key: 'folder' }],
       ['plugin.config', 'read', { kind: 'plugin', key: 'name' }],
       ['plugin.config.set', 'change', { kind: 'plugin', key: 'name' }],
       ['plugin.config.unset', 'change', { kind: 'plugin', key: 'name' }],

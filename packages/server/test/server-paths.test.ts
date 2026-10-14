@@ -13,14 +13,17 @@ import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Output } from '@cofold/commands';
+import type { RequestHandler } from '@cofold/remote';
 import { Program } from '@cofold/terminal';
 import { fileUsers, type Users } from '@ahpd/sdk';
+import { running } from '../src/daemon.js';
 import type { Options } from '../src/commands/options.js';
 import { programGlobals } from '../src/commands/options.js';
+import { reachable } from '../src/commands/paths.js';
 import { cliRegistry } from '../src/commands/registry.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
-import { apiHandler } from '../src/http.js';
+import { apiHandler, listenApi } from '../src/http.js';
 
 /** The origin the cases' daemon is reached on, which its routes and grants are read against. */
 const AUTHORITY = '127.0.0.1:9350';
@@ -50,10 +53,23 @@ const folder = (...parts: string[]): string => {
   return at;
 };
 
-/** The record a detached daemon writes of itself, which is what says one is up. */
-const record = (paths: string[] = []): void => {
+/**
+ * The record a detached daemon writes of itself, which is what says one is up.
+ *
+ * `api` is the origin its routes hang off, and a record without one is a daemon
+ * that serves none. The token is what the connect URL carries, which is where a
+ * verb reads the credential a forwarded change presents; its default is the
+ * token every daemon in this file answers with, because a record is written by
+ * the daemon it names.
+ */
+const record = (paths: string[] = [], daemon: { api?: string; token?: string } = {}): void => {
   writeFileSync(join(home, 'ahpd', 'daemon.json'), JSON.stringify({
-    pid: process.pid, url: 'ws://127.0.0.1:9187', connectUrl: 'ws://127.0.0.1:9187/', paths, startedAt: '',
+    pid: process.pid,
+    url: 'ws://127.0.0.1:9187',
+    connectUrl: `ws://127.0.0.1:9187/?tkn=${daemon.token ?? 'root-secret'}`,
+    paths,
+    startedAt: '',
+    ...(daemon.api === undefined ? {} : { api: daemon.api }),
   }));
 };
 
@@ -193,13 +209,13 @@ describe('ahpd paths at the terminal', () => {
     expect(added.err).toContain(`Added ${two} to "paths" in ${config}.`);
   });
 
-  it('says a restart applies the change, or a served call, when a daemon is recorded', async () => {
+  it('writes the file and says that a restart applies the change, when a daemon is recorded', async () => {
     const one = folder('one');
     const two = folder('two');
     record();
     const added = await run('paths.add', { folder: one });
     expect(added.said).toBe(`Added ${one} to "paths" in ${config}.\n`
-      + `Restart the daemon to apply the change: ahpd restart. To reach it now: ahpd --remote <url> paths add ${one}\n`);
+      + 'Restart the daemon to apply the change: ahpd restart.\n');
     expect(added.output?.data).toEqual({ paths: [one], restart: true });
 
     // With no record, nothing is said about a restart, and no key is carried.
@@ -208,6 +224,194 @@ describe('ahpd paths at the terminal', () => {
     const removed = await run('paths.remove', { folder: two });
     expect(removed.said).toBe(`Removed ${two} from "paths" in ${config}.\n`);
     expect(removed.output?.data).toEqual({ paths: [one] });
+  });
+
+  /*
+   * The forward: a plain `ahpd paths add` at the terminal reaches the daemon
+   * that is running and serving the API, so the change applies at once instead
+   * of waiting for a restart - decision
+   * `ahpd-paths-add-at-the-terminal-reaches-a-running-daemon` and the second
+   * half of `ahpd-paths-remove-asks-nothing`.
+   *
+   * The daemon's end is a real listener on a real port, because the forward is
+   * a request over the network and not a call: what the case holds is the same
+   * handler `serve()` mounts, with every request kept.
+   */
+  const listening = async (paths: string[], token = 'root-secret'): Promise<{
+    api: string;
+    own: Options;
+    seen: { method: string; path: string; authorization: string | null; body: unknown }[];
+    done(): Promise<void>;
+  }> => {
+    const own = { paths } as Options;
+    // The daemon's own file, and not the one the terminal edits: a case tells
+    // the two apart by which of them changed.
+    const file = join(home, 'served.json');
+    writeFileSync(file, `${JSON.stringify({ paths }, null, 2)}\n`);
+    const bound = { port: 0 };
+    const seen: { method: string; path: string; authorization: string | null; body: unknown }[] = [];
+    const handler = apiHandler({
+      registry: servedRegistry({
+        options: own,
+        configFile: file,
+        running: () => ({
+          pid: process.pid, url: `ws://127.0.0.1:${String(bound.port)}`, host: '127.0.0.1', port: bound.port, paths: own.paths, startedAt: '',
+        }),
+        turning: () => [],
+        restart: () => {},
+      }),
+      token,
+      program: { name: 'ahpd', version: '0.0.0' },
+      origins: () => apiOrigins('127.0.0.1', undefined, bound.port),
+    });
+    const watched: RequestHandler = async (request) => {
+      seen.push({
+        method: request.method,
+        path: new URL(request.url).pathname,
+        authorization: request.headers.get('authorization'),
+        body: await request.clone().json().catch(() => undefined),
+      });
+      return handler(request);
+    };
+    const api = await listenApi(watched, { port: 0, host: '127.0.0.1' });
+    bound.port = api.port;
+    return { api: `http://127.0.0.1:${String(api.port)}`, own, seen, done: async () => { await api.close(); } };
+  };
+
+  it('sends the change to the recorded daemon, with the token its record carries', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    // A token that is not this file's usual one, so the header the case reads
+    // can only have come from the record.
+    const api = await listening([one], 'the-daemons-token');
+    record([one], { api: api.api, token: 'the-daemons-token' });
+    try {
+      const added = await line(['paths', 'add', two, '--json']);
+      expect(added.code).toBe(0);
+      // The daemon's own answer, which is the verb's.
+      expect(JSON.parse(added.out) as unknown).toEqual({ paths: [one, two] });
+      expect(added.err).toBe(`Added ${two} to "paths" on the running daemon.\n`);
+      expect(api.seen).toEqual([{
+        method: 'POST',
+        path: '/api/paths/add',
+        authorization: 'Bearer the-daemons-token',
+        body: { folder: two },
+      }]);
+      expect(api.own.paths).toEqual([one, two]);
+    }
+    finally { await api.done(); }
+  });
+
+  it('sends the folder it resolved, and writes no configuration file of its own', async () => {
+    const work = folder('work');
+    const api = await listening([]);
+    record([], { api: api.api });
+    try {
+      const added = await line(['paths', 'add', `${work}${sep}.`]);
+      expect(added.code).toBe(0);
+      expect(api.seen[0]?.body).toEqual({ folder: work });
+      // The daemon wrote its own file; this process wrote none of the two.
+      expect(existsSync(config)).toBe(false);
+      expect(api.own.paths).toEqual([work]);
+    }
+    finally { await api.done(); }
+  });
+
+  it('is refused with the daemon\'s own sentence, which is the check that ran', async () => {
+    const gone = join(home, 'gone');
+    const api = await listening([]);
+    record([], { api: api.api });
+    try {
+      await expect(line(['paths', 'add', gone])).rejects.toThrow(`No folder at ${gone}.`);
+      // The sentence is the daemon's, so the daemon is what refused: the check
+      // that ran is the check the file would have been written by.
+      expect(api.seen).toHaveLength(1);
+      expect(existsSync(config)).toBe(false);
+    }
+    finally { await api.done(); }
+  });
+
+  it('sends to the loopback when the record names a wildcard bind', async () => {
+    const one = folder('one');
+    const api = await listening([]);
+    /*
+     * What a daemon bound to every address announces. `0.0.0.0` names no one
+     * machine - a Windows fetch to it fails - and the `Host` it sends is not a
+     * name the API answers to either. The loopback at that port is the daemon.
+     */
+    record([], { api: `http://0.0.0.0:${new URL(api.api).port}` });
+    try {
+      const added = await line(['paths', 'add', one]);
+      expect(added.code).toBe(0);
+      expect(added.out).toBe(`Added ${one} to "paths" on the running daemon.\n`);
+      expect(api.seen).toHaveLength(1);
+      expect(api.own.paths).toEqual([one]);
+    }
+    finally { await api.done(); }
+  });
+
+  it('sends every shape of wildcard bind to the loopback', () => {
+    // Bound to every address as IPv4 and as IPv6, and bound with no host at all,
+    // which is announced without one and is not a URL.
+    expect(reachable('http://0.0.0.0:9187')).toBe('http://127.0.0.1:9187');
+    expect(reachable('http://[::]:9187')).toBe('http://[::1]:9187');
+    expect(reachable('http://:9187')).toBe('http://127.0.0.1:9187');
+    // One machine, named or numbered, is left as the record wrote it.
+    expect(reachable('http://127.0.0.1:9187')).toBe('http://127.0.0.1:9187');
+    expect(reachable('http://[::1]:9187')).toBe('http://[::1]:9187');
+    expect(reachable('http://build.local:9187')).toBe('http://build.local:9187');
+  });
+
+  it('writes the file, and says the restart line, when the recorded daemon serves no API', async () => {
+    const one = folder('one');
+    record();
+    const added = await line(['paths', 'add', one]);
+    expect(added.code).toBe(0);
+    expect(read().paths).toEqual([one]);
+    expect(added.out).toBe(`Added ${one} to "paths" in ${config}.\n`
+      + 'Restart the daemon to apply the change: ahpd restart.\n');
+  });
+
+  it('writes the file, and says the restart line, when the daemon does not answer', async () => {
+    const one = folder('one');
+    // A port nothing listens on, which is a daemon that was recorded and is not
+    // there: the change is one a restart applies, not one this can send.
+    record([], { api: 'http://127.0.0.1:1' });
+    const added = await line(['paths', 'add', one]);
+    expect(added.code).toBe(0);
+    expect(read().paths).toEqual([one]);
+    expect(added.out).toBe(`Added ${one} to "paths" in ${config}.\n`
+      + 'Restart the daemon to apply the change: ahpd restart.\n');
+  });
+
+  it('writes the file it names, and sends nothing, when --config-file is given', async () => {
+    const one = folder('one');
+    const api = await listening([]);
+    record([], { api: api.api });
+    try {
+      const added = await line(['paths', 'add', one, '--config-file', config]);
+      expect(added.code).toBe(0);
+      expect(read().paths).toEqual([one]);
+      // The file named is the one edited, so there is nothing to send anywhere.
+      expect(api.seen).toEqual([]);
+      expect(api.own.paths).toEqual([]);
+    }
+    finally { await api.done(); }
+  });
+
+  it('stops at once on a folder "paths" does not name, with no --yes and no question', async () => {
+    const one = folder('one');
+    const other = folder('other');
+    put({ paths: [one] });
+    record();
+    /*
+     * It reaches the command and is refused there. A question would have ended
+     * the run before the command ran at all, which is the shape the Windows run
+     * found: asked about a folder that was then refused.
+     */
+    await expect(line(['paths', 'remove', other])).rejects.toThrow(`${other} is not in "paths" in ${config}.`);
+    expect(read().paths).toEqual([one]);
   });
 });
 
@@ -282,6 +486,19 @@ describe('ahpd paths, served', () => {
 
     await served.ask('POST', '/paths/add', { folder: two });
     expect(served.running().paths).toEqual([one, two]);
+  });
+
+  it('rewrites the record, so a terminal reading it lists the folder too', async () => {
+    const one = folder('one');
+    const two = folder('two');
+    put({ paths: [one] });
+    record([one]);
+    expect(running()?.paths).toEqual([one]);
+
+    // `ahpd status --json` reads the record and never the daemon, so a change
+    // the daemon serves and does not record is one a terminal cannot see.
+    await daemon([one]).ask('POST', '/paths/add', { folder: two });
+    expect(running()?.paths).toEqual([one, two]);
   });
 
   it('takes a folder out of the file and out of the list when one is removed', async () => {
