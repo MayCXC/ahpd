@@ -66,8 +66,13 @@ export interface Running {
  * How long a start waits for the new daemon to say where it is listening.
  * `ahpd restart` gives a successor longer than this, `SUCCESSOR_WAIT_MS`, so
  * the restarting daemon's own answer always reaches it first.
+ *
+ * A minute, because a first start on a machine that has never run the daemon
+ * is the slow one: the pseudoterminal probe, the plugins, and whatever npm
+ * does the first time it is asked for something. The stages `run` stamps are what a start that still did not make
+ * it is read for; this is only how long it is given before it is killed.
  */
-export const READY_TIMEOUT_MS = 20_000;
+export const READY_TIMEOUT_MS = 60_000;
 
 /**
  * Set in the environment of a daemon `start` spawns: the one process that will

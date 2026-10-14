@@ -243,7 +243,7 @@ const firstLine = (said: string): string | undefined =>
  * How long a check is given before it is killed and the restart refused.
  *
  * A check is a parse and a file read, and the daemon's own start gives a whole
- * successor twenty seconds. The bound is not for a slow check but for a child
+ * successor a minute. The bound is not for a slow check but for a child
  * that is not one: the entry at that path may be an ahpd older than the
  * variable this asks by - a downgrade under a running daemon - and what that
  * one does with a line is start serving it.

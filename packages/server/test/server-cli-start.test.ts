@@ -80,6 +80,27 @@ describe('start, stop and status', () => {
     expect(log).not.toContain('skipped');
   }, 40000);
 
+  it('logs each stage of a start before it begins, and all of them before the announcement', async () => {
+    const began = await cli([
+      'start', '--port', '0', '--plugin', BACKEND, '--sessions', 'memory', '--automations', 'memory', '--no-update-check',
+    ]);
+    expect(began.code).toBe(0);
+    spawned.push(recordOf().pid);
+
+    // Each line is stamped, so the time it was written is in front of it and
+    // the stage is what is left. `daemon.ts` waits `READY_TIMEOUT_MS` for the
+    // announcement, and a start that never reaches it is read from these: the
+    // last stage in the log is the one that did not finish.
+    const log = readFileSync(join(home, 'ahpd', 'daemon.log'), 'utf8');
+    const stages = log.split('\n')
+      .map((one) => one.replace(/^\S+ /u, ''))
+      .filter((one) => one.startsWith('start: '));
+    expect(stages).toEqual(['start: terminals', 'start: plugins', 'start: listen', 'start: listening', 'start: checks']);
+    // And before it, since a stage line after the announcement would be about
+    // a start that had already finished.
+    expect(log.indexOf('start: checks')).toBeLessThan(log.indexOf('ahpd on ws://'));
+  }, 40000);
+
   it('prints what a plugin failed on, and what a plugin skipped, before it says it started', async () => {
     // Both cost one item and not the daemon: the throwing plugin and the one
     // that dropped a preset are both told about, and the echo backend is still

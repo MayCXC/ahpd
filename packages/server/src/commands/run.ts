@@ -547,6 +547,16 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   let wayDown: (() => void) | undefined;
 
+  /*
+   * The stages of a start, each said before it begins.
+   *
+   * One line per stage, written first rather than last, so the last line in
+   * the log of a start killed at `READY_TIMEOUT_MS` is the stage that did not
+   * finish.
+   */
+  stamp('start: terminals');
+  const terminalBinding = await pty();
+
   const base: HostOptions = {
     path: options.paths[0] as string,
     /*
@@ -582,7 +592,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * `shellEnv` is how the operator says which of it an agent's shells get.
      */
     terminals: shellTerminals({
-      ...(await pty()),
+      ...terminalBinding,
       ...(options.shellEnv === undefined ? {} : { shellEnv: options.shellEnv }),
     }),
     directories: gitBranches(),
@@ -874,6 +884,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * as well as stamped, which is how the person who ran `ahpd start` is told
    * what their daemon is missing before it says it started.
    */
+  stamp('start: plugins');
   const { options: folded, problems, loaded, routes: registered } = await loadPlugins(options.plugins, {
     base,
     paths: options.paths,
@@ -968,6 +979,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * it may exist. `listen` is the only file that knows which runtime answered,
    * and the announcement says which one it found.
    */
+  stamp('start: listen');
   const listener = options.stdio
     ? await overStdio(
       { tap },
@@ -1013,6 +1025,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * process that started this one is already holding the only handle to it.
    */
   if (!options.stdio) {
+    // Not said over stdio, where nothing is listening for anybody to reach.
+    stamp('start: listening');
     await raise(
       folded.events,
       {
@@ -1026,6 +1040,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     );
   }
 
+  stamp('start: checks');
   await startingChecks();
 
   /*
