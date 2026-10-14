@@ -674,9 +674,15 @@ it('answers a grant from the group its operation is in, and not from the other o
   expect(holds(set('session:write'), 'chat:turns')).toBe(false);
   expect(holds(set('chat:send'), 'chat:cancel')).toBe(false);
   expect(holds(set('session:read'), 'chat:turns')).toBe(true);
+  // And a chat's group is the session's group too, so a role holding one may
+  // hand the chat's out: `bounded` asks exactly this of the person giving it.
+  expect(holds(set('session:write'), 'chat:write')).toBe(true);
+  expect(holds(set('session:read'), 'chat:read')).toBe(true);
+  expect(holds(set('session:read'), 'chat:write')).toBe(false);
   // Holding an operation is not holding its group: the answer cannot widen by
   // being asked the other way round.
   expect(holds(set('chat:send'), 'chat:write')).toBe(false);
+  expect(holds(set('chat:turns'), 'chat:read')).toBe(false);
   expect(holds(set('file:read'), 'file:get')).toBe(true);
   expect(holds(set('file:get'), 'file:read')).toBe(false);
   expect(holds(set('user:write'), 'user:put')).toBe(true);
@@ -687,6 +693,25 @@ it('answers a grant from the group its operation is in, and not from the other o
   expect(holds(set('computer:read'), 'computer:list')).toBe(true);
   expect(holds(set('file:read'), 'computer:list')).toBe(false);
   expect(holds(set('computer:write'), 'computer:put')).toBe(true);
+});
+
+it('lets somebody holding session:write hand a chat:write role on', async () => {
+  writeFileSync(path, JSON.stringify({
+    roles: { handler: ['session:write'], chats: ['chat:write'] },
+    users: [{ id: 'h', roles: ['handler'], token: '' }],
+  }));
+  const users = open();
+  const holder = await users.verify(await users.mint('h'));
+
+  // The path `bounded` takes when a role is handed out: the grants the role
+  // confers, each asked of the person giving it. `ahpd user add --role chats`
+  // is what this is.
+  const giving = await users.grantsOfRoles(['chats']);
+  expect(giving).toEqual(['chat:write']);
+  for (const one of giving) expect(holder?.can(one)).toBe(true);
+  // It widens one way only: a chat's group confers nothing of a session's.
+  expect(holder?.can('file:write')).toBe(false);
+  expect(holds(new Set(['chat:write']), 'session:dispose')).toBe(false);
 });
 
 it('keeps every operation in exactly one group, and no subject a read or a write', () => {

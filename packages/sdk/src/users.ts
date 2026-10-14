@@ -266,16 +266,26 @@ const LEGACY: Record<string, Grant> = { 'users:read': 'user:read', 'users:write'
  * groups are the session's - decision
  * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
  *
- * A grant naming a *group* is answered only by that group or a wildcard, never
- * by holding each operation in it: `chat:send` does not hold `chat:write`, and
- * the answer cannot widen by being spelled the long way.
+ * A grant naming a *group* is answered only by that group, a wildcard, or the
+ * session's group of the same name for a chat - never by holding each
+ * operation in it: `chat:send` does not hold `chat:write`, and the answer
+ * cannot widen by being spelled the long way.
  */
 export const holds = (held: ReadonlySet<string>, grant: Grant): boolean => {
   if (held.has(grant) || held.has('*:*')) return true;
   const at = grant.indexOf(':');
   const subject = grant.slice(0, at);
   const operation = grant.slice(at + 1);
-  const group = groupOf(subject, operation);
+  /*
+   * The group the grant names, whether it spelled an operation in it or the
+   * group itself.
+   *
+   * `groupOf` answers nothing for `read` and `write`, which are the groups
+   * rather than operations of any subject - so a grant naming one asks for
+   * exactly itself below, and for the session's when the subject is a chat.
+   */
+  const group = groupOf(subject, operation)
+    ?? (GROUPS.includes(operation as 'read' | 'write') ? operation as 'read' | 'write' : undefined);
   if (group !== undefined) {
     if (held.has(`${subject}:${group}`) || held.has(`*:${group}`)) return true;
     // A chat lives in a session, which is what its own groups were before it
