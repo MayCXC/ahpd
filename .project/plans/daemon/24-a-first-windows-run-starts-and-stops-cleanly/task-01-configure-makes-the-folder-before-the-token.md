@@ -1,6 +1,6 @@
 ---
 title: configure makes the folder before the token
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

@@ -1,6 +1,6 @@
 ---
 title: a start logs its stages and waits 60 s
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

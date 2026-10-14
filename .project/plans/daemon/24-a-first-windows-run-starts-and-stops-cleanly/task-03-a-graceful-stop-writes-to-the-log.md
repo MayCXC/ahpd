@@ -1,6 +1,6 @@
 ---
 title: a graceful stop writes to the log
-status: implemented
+status: done
 depends: [task-02-the-daemon-forgets-its-record-on-the-way-down.md]
 layer: server
 refs:

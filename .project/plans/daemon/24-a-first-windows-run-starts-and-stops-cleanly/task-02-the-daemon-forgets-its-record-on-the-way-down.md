@@ -1,6 +1,6 @@
 ---
 title: the daemon forgets its record on the way down
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

@@ -1,7 +1,7 @@
 ---
 title: A first Windows run starts and stops cleanly
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -70,10 +70,10 @@ ahpd start -> spawn -> pty probe, plugins, listen, listening, checks -> announce
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - configure makes the folder before the token](task-01-configure-makes-the-folder-before-the-token.md) | implemented | - |
-| [02 - the daemon forgets its record on the way down](task-02-the-daemon-forgets-its-record-on-the-way-down.md) | implemented | - |
-| [03 - a graceful stop writes to the log](task-03-a-graceful-stop-writes-to-the-log.md) | implemented | 02 |
-| [04 - a start logs its stages and waits 60 s](task-04-a-start-logs-its-stages-and-waits-60-s.md) | implemented | - |
+| [01 - configure makes the folder before the token](task-01-configure-makes-the-folder-before-the-token.md) | done | - |
+| [02 - the daemon forgets its record on the way down](task-02-the-daemon-forgets-its-record-on-the-way-down.md) | done | - |
+| [03 - a graceful stop writes to the log](task-03-a-graceful-stop-writes-to-the-log.md) | done | 02 |
+| [04 - a start logs its stages and waits 60 s](task-04-a-start-logs-its-stages-and-waits-60-s.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -83,16 +83,16 @@ ahpd start -> spawn -> pty probe, plugins, listen, listening, checks -> announce
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-13; all four tasks implemented and reviewed 2026-10-13. Each of the four problems in the Gaps is fixed and has a case.
-- **Next action:** the three Windows checks by hand, which are the last four lines of the checklist below.
+- **Done so far:** planned 2026-10-13; all four tasks implemented and reviewed 2026-10-13, and done after the Windows checks the same day. Each of the four problems in the Gaps is fixed and has a case.
+- **Next action:** none. Softov ran the Windows checks on 2026-10-13, and each passed.
 - **Open questions:** none.
 - **Watch out for:** the build runs on Linux, so the Windows checks are by hand. Only task 04's five `start:` lines are read off a real daemon's log, in `server-cli-start.test.ts`. The other checks are verified only by the cases.
 - **Touched by all four tasks:** `packages/server/src/commands/restart.ts` (02 and 03), `packages/server/test/server-restart.test.ts` (02 and 03) and `packages/server/src/commands/run.ts` (03 through `log: stamp`, 04 through the stage lines). Task 03 also changed `packages/server/test/shutdown-method.test.ts`, which the plan did not name.
 
 ## Final verification checklist
 
-- [ ] On Windows, with no configuration folder, `ahpd configure` runs to the end.
-- [ ] On Windows, after a shutdown request, `daemon.json` is gone and the log shows `stopping` and `stopped`.
-- [ ] On Windows, after `ahpd stop`, the log shows `stopping` and `stopped`.
-- [ ] A start log shows each stage before the announcement.
-- [ ] `plans/index.md` updated.
+- [x] On Windows, with no configuration folder, `ahpd configure` runs to the end.
+- [x] On Windows, after a shutdown request, `daemon.json` is gone and the log shows `stopping` and `stopped`.
+- [x] On Windows, after `ahpd stop`, the log shows `stopping` and `stopped`.
+- [x] A start log shows each stage before the announcement.
+- [x] `plans/index.md` updated.
