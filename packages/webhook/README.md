@@ -27,6 +27,7 @@ That installs it where the daemon looks for plugins and adds it to `plugins` in 
 id: ci
 bot: bot://motion
 secret: host:ci-hook
+callbackPrefix: https://ci.example.com/hooks/
 ---
 ```
 

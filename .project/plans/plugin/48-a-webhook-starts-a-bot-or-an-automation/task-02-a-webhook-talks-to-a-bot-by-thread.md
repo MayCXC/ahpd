@@ -1,6 +1,6 @@
 ---
 title: A webhook talks to a bot by thread
-status: todo
+status: implemented
 depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
 layer: "packages/webhook"
 refs:
@@ -99,3 +99,26 @@ The endpoint's reply mode decides the answer: a callback at turn end by default,
 
 ## Resume
 
+Built in `packages/webhook/src/bot.ts` and `thread.ts`, with the bot seams over the plugin's connection in `plugin.ts`. `record.ts` checks `callbackPrefix` and `syncTimeoutSeconds`. `packages/webhook/test/webhook-bot.test.ts` holds 20 cases, `webhook-record.test.ts` gained 4, and `packages/server/test/webhook-bot.test.ts` holds 2.
+
+How the parts work:
+
+- `botTarget(seams)` takes the seams `threads`, `session`, `chat`, `send`, `ended`, `post`, `syncTimeoutSeconds` and `problem`, so the unit cases stub the host.
+- The lookups of one thread run one after another, so two first calls make one chat.
+- The wait for a turn's end is made before the turn is sent, and `turnEnds()` matches each `turn_end` by chat and turn id.
+- At the turn's end, the plugin subscribes to the chat and joins the turn's `markdown` parts from the snapshot.
+- The end-to-end case runs with a users directory. It needs exactly `bot:get`, `session:read` and `session:write`, and `docs/WEBHOOKS.md` lists them.
+
+Where the build departs from the plan:
+
+- A thread record whose session is not the bot's current session gets a new chat, and the record keeps its id. The plan did not say what happens when a bot is linked to a new session.
+- When the plugin may not read the bot, the call answers 409 and the plugin reports the problem. The plan named 409 only for a bot with no session.
+- A `callback` call with no callback URL answers 400, as a URL outside the prefix does.
+- The 202 answer of `callback` and `none` carries `{ thread, turn }`.
+
+Open questions for Softov:
+
+- A turn that ends in `chat/error` raises no `turn_end`. A `sync` call then waits to its timeout and answers 202 `running`, and a callback is never posted. Should the plugin also hear a turn that failed?
+- When the plugin lacks `session:write`, `createChat` throws and the call answers 500. Should that be 409, like a bot the plugin may not read?
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes 3898 of 3899 tests. The one failure is `packages/sdk/test/nested-start.test.ts`, the same 5 s timeout under load as in task 01.

@@ -55,4 +55,29 @@ describe('an endpoint', () => {
     expect(() => checkEndpoint('ci')).toThrow();
     expect(() => checkEndpoint(null)).toThrow();
   });
+
+  it('takes a callbackPrefix that is an http or https URL whose path ends in /', () => {
+    const endpoint = checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', callbackPrefix: 'https://ci.example.com/hooks/' });
+    expect(endpoint.callbackPrefix).toBe('https://ci.example.com/hooks/');
+    expect(checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', callbackPrefix: 'http://ci.example.com/' }).callbackPrefix)
+      .toBe('http://ci.example.com/');
+  });
+
+  it('refuses a callbackPrefix that is not an http or https URL', () => {
+    for (const callbackPrefix of ['ftp://ci.example.com/', 'file:///tmp/', 'ci.example.com/', 42]) {
+      expect(() => checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', callbackPrefix })).toThrow('callbackPrefix');
+    }
+  });
+
+  it('refuses a callbackPrefix whose path does not end in /', () => {
+    expect(() => checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', callbackPrefix: 'https://ci.example.com/hooks' }))
+      .toThrow('callbackPrefix');
+  });
+
+  it('takes a positive syncTimeoutSeconds, and refuses 0, a negative number and a string', () => {
+    expect(checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', syncTimeoutSeconds: 5 }).syncTimeoutSeconds).toBe(5);
+    for (const syncTimeoutSeconds of [0, -3, '5']) {
+      expect(() => checkEndpoint({ id: 'ci', bot: 'bot://motion', secret: 's', syncTimeoutSeconds })).toThrow('syncTimeoutSeconds');
+    }
+  });
 });

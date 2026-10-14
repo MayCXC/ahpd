@@ -24,6 +24,10 @@ export interface Endpoint {
   secret: string;
   /** How a call to a bot is answered. */
   reply: Reply;
+  /** What every callback URL a caller names must start with: an `http` or `https` URL whose path ends in `/`. */
+  callbackPrefix?: string;
+  /** How long a `sync` call waits for its turn to end, over the plugin's option. */
+  syncTimeoutSeconds?: number;
 }
 
 /** A bot URI, with the slug rule of the bot plugin. */
@@ -68,11 +72,38 @@ export function checkEndpoint(said: unknown): Endpoint {
     throw new Error('The reply field is callback, sync or none.');
   }
 
+  const prefix = record['callbackPrefix'];
+  let callbackPrefix: string | undefined;
+  if (prefix !== undefined) {
+    const url = typeof prefix === 'string' ? parsed(prefix) : undefined;
+    if (url === undefined || (url.protocol !== 'http:' && url.protocol !== 'https:') || !url.pathname.endsWith('/')) {
+      throw new Error('The callbackPrefix field is an http or https URL whose path ends in /.');
+    }
+    callbackPrefix = url.href;
+  }
+
+  const timeout = record['syncTimeoutSeconds'];
+  if (timeout !== undefined && (typeof timeout !== 'number' || !Number.isFinite(timeout) || timeout <= 0)) {
+    throw new Error('The syncTimeoutSeconds field is a positive number.');
+  }
+
   return {
     id,
     ...(bot === undefined ? {} : { bot: bot as string }),
     ...(automation === undefined ? {} : { automation: true as const }),
     secret: secret.trim(),
     reply: reply as Reply,
+    ...(callbackPrefix === undefined ? {} : { callbackPrefix }),
+    ...(timeout === undefined ? {} : { syncTimeoutSeconds: timeout as number }),
   };
 }
+
+/** A URL, or nothing when the text is not one. */
+export const parsed = (text: string): URL | undefined => {
+  try {
+    return new URL(text);
+  }
+  catch {
+    return undefined;
+  }
+};
