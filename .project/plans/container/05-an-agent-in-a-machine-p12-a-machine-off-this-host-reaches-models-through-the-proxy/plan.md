@@ -1,7 +1,7 @@
 ---
 title: A machine off this host reaches its models through this host's proxy
 domain: container
-status: planned
+status: draft
 priority: high
 created: 2026-10-02
 revalidated: 2026-10-04
@@ -27,9 +27,10 @@ refs:
 
 ## Goal
 
-A model credential never leaves this host.
-A session in a machine off this host reaches its model through this host's proxy, with a token made for that session and dropped with it, so the box holds nothing worth stealing once the session ends.
-A machine off this host is refused while placing it would send a key with it.
+A session in a machine off this host may reach its model through this host's proxy.
+It uses a token made for that session and dropped with it.
+The proxy is one way for a remote machine to reach its models, not the only way.
+A remote ahpd with its own key or its own Claude subscription runs as it does today.
 
 This plan does not build the proxy's listener.
 The listener is [proxy/02](../../proxy/02-the-proxy-serves-a-persons-model-calls/plan.md), which is built.
@@ -72,15 +73,11 @@ session disposed -> token dropped
 
 | What | Source | Task |
 | --- | --- | --- |
-| A model credential is never sent to another box; a machine off this host reaches its model through this host's proxy with a per-session token | the parent's [deferred.md](../05-an-agent-in-a-machine/deferred.md), "A host proxy for model credentials", which waits for p8 to p10 | 01, 02 |
-| This plan goes before p8, p10, p11 and any p9 use beyond the by-hand test | (defaulted: a key would otherwise leave this host in each of them) | all |
+| The proxy is one way for a machine off this host to reach its models, not the only way; a remote ahpd with its own key or Claude subscription still runs | Softov, 2026-10-14, asked to build task 03: "as the only way a remote ahpd it by proxy calls. so its wrong" | 01, 02 |
 | The listener is proxy/02's and is not planned here | proxy 01's Resume state, "Next action: the proxy listener plan" | 01, 02 |
 | The token is minted in the nested start, keyed by session URI, and dropped in `removeSession`, so a create, a resume, a chat restart and an automation each get one | (defaulted: the nested start is the one road every nested session takes) | 01 |
 | The proxy URL is the port's answer, `ComputerPort.proxyUrl?(id)`; `ssh.ts` opens the `-R` with `-o ExitOnForwardFailure=yes` | (defaulted: only the runtime knows how its machine is reached, and a forward that failed must fail the start) | 02 |
 | `nestedHost` takes `env` by name (p1), and `NestedAsked` gains `env` | (defaulted: the token is a credential and stays out of argv) | 02 |
-| A key is refused by where its value comes from (this daemon's env, the vault, a profile or plugin value), so a minted token passes; secret-marked needs, `CLAUDE_CODE_OAUTH_TOKEN` among them, are refused too; credentials a profile names on purpose (p8's `gitCredential`) may travel | (defaulted: a check by name refuses the session's own token) | 03 |
-| The refusal is per agent at session start, not the whole machine | Softov, 2026-10-03, asked "when a `$secret` in a plugin's options can't be read at load, what fails?": "Only its item" | 03 |
-| A machine off this host is refused while a key would travel with it | (defaulted: the refusal is what keeps the first row true before every agent declares its variables) | 03 |
 | For now an ssh machine and a VM reached by ssh get a reverse forward (`-R`) on the session's own ssh connection, so nothing listens on a public address; a joined node and a remote Docker use the URL this host is reached at; one member, the port's `proxyUrl(id)`, answers it | Softov, 2026-10-03, asked "how does a machine off this host reach the proxy's listener?": "as proposed" | 02 |
 | The ssh runtime's option `proxyForward` picks how its `-R` forward reaches the proxy: `port` (the default), a random remote port retried on `ExitOnForwardFailure`, or `socket`, a remote unix socket that the inner host relays to a loopback URL | Softov, 2026-10-13, asked "the `-R` forward needs a port on the remote box: which?": "configurable"; then "which part do you want to set?": "The method, port by default" | 02 |
 | For now an `EnvNeed` gains `proxy: '<provider id>'` and `role: 'key' \| 'url'`, so Claude declares `ANTHROPIC_API_KEY` as the key and `ANTHROPIC_BASE_URL` as the URL of `anthropic`, and an ACP preset says the same for its own variables | Softov, 2026-10-03, asked "which variable carries the base URL for each agent?": "as proposed" | 02 |
@@ -100,26 +97,26 @@ session disposed -> token dropped
 | --- | --- | --- |
 | [01 - A session placed off this host has a token of its own](task-01-a-session-has-a-token.md) | todo | p9 task 03 |
 | [02 - The inner host gets the proxy and the token instead of a key](task-02-the-inner-host-gets-the-proxy-and-the-token.md) | todo | 01, p9 task 03 |
-| [03 - A machine off this host is refused while a key would travel](task-03-a-key-never-travels.md) | todo | - |
-| [04 - Docs](task-04-docs.md) | todo | 02, 03 |
+| [03 - A machine off this host is refused while a key would travel](task-03-a-key-never-travels.md) | dropped | - |
+| [04 - Docs](task-04-docs.md) | todo | 02 |
 
 ## Risks and tradeoffs
 
 - The token sits in the box's process list and environment for the session's life - it opens only that session's model calls, through this host, and is dropped with the session.
 - A box that keeps a copy can call models until the session ends - the proxy listener's limits and policy/01's rows apply to the token's owner as to any other call.
-- An agent that calls its provider without honouring a base URL variable cannot use the proxy - task 03 refuses such a session off this host rather than sending the key.
+- An agent that calls its provider without honouring a base URL variable cannot use the proxy; it uses its own credentials on that machine.
 
 ## Resume state
 
-- **Done so far:** nothing; drafted 2026-10-02, planned 2026-10-03.
-- **Next action:** [task-03-a-key-never-travels.md](task-03-a-key-never-travels.md), which p9 task 03's `remote(id)` now allows. Tasks 01 and 02 need [proxy/02](../../proxy/02-the-proxy-serves-a-persons-model-calls/plan.md), the proxy listener plan, which is built. Proxy/02's task 02 names the hook task 01 fills: `ProxyOptions.whose?(token): SessionCaller | undefined`, `SessionCaller = { session, chat?, turn?, owner?, principal?, scope? }`, asked after the deployment token and before `users.verify`. The proxy URL is the API's address under `/v1`, served only while `http` is on, and the token is accepted as `x-api-key` or `Authorization: Bearer`. Proxy/02 accepts a loopback `Host` at any port, so the `-R` forward is answered, and by default checks and records a session's calls with `source: 'proxy'`, linked by session, chat and turn, unless `proxy.sessionCalls` is `skip`; `whose` should answer the running chat and turn when it knows them.
-- **Open questions:** none; the two asked before task 02 were answered 2026-10-13.
-- **Watch out for:** container/04 task 17 and p9 must land first; claude/16 makes a preset's `env` `secretAtUse`, which task 03's per-agent refusal reads; do not plan or build the listener here, it is proxy/02's; nothing under `plans/proxy/` is this plan's to change; p9's by-hand test gives dev02 its own key by hand, which is the operator's choice and not a key this host sent.
+- **Done so far:** drafted 2026-10-02, planned 2026-10-03, back to draft 2026-10-14. Task 03 is dropped: it made the proxy the only way a remote machine reaches its models.
+- **Next action:** none until the computer plans are next. Then answer the open question and amend tasks 01, 02 and 04.
+- **Open questions:** how a machine or a profile chooses the proxy instead of its own credentials.
+- **Watch out for:** p8, p10 and p11 still assume the proxy is the only way. Amend them with this plan. The ssh `-R` forward and `proxyForward` answers still hold for a machine that uses the proxy. Do not plan or build the listener here; it is proxy/02's.
 
 ## Final verification checklist
 
 - [ ] A session on an ssh machine answers a turn with no provider key anywhere on the box, and its usage is charged to the session's owner.
 - [ ] Disposing the session makes the token refused by the proxy.
-- [ ] A machine off this host whose agent would get a key is refused with a sentence naming the variable.
+- [ ] A remote ahpd with its own key or Claude subscription still runs a session.
 - [ ] `pnpm test`, `pnpm typecheck` green.
 - [ ] `docs/COMPUTER.md`, `plans/index.md` updated.

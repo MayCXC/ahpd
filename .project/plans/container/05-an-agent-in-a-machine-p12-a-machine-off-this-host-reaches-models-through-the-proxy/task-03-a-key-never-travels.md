@@ -1,6 +1,6 @@
 ---
 title: A machine off this host is refused while a key would travel with it
-status: todo
+status: dropped
 depends: []
 layer: "sdk | computer"
 refs:
