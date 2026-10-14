@@ -38,9 +38,10 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-11; the Windows checks by hand remain | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; the Windows check by hand remains | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; the check by hand remains | - | - |
-| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; the Windows checks by hand remain | - | - |
+| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
+| [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | active 2026-10-13; four tasks implemented and reviewed; the Windows checks by hand remain | - | - |
 
-Next free number in `daemon`: `23`.
+Next free number in `daemon`: `25`.
 
 ## host
 
