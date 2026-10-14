@@ -40,8 +40,10 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; the check by hand remains | - | - |
 | [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
+| [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | planned 2026-10-14 | - | - |
+| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | planned 2026-10-14 | - | - |
 
-Next free number in `daemon`: `25`.
+Next free number in `daemon`: `27`.
 
 ## host
 
