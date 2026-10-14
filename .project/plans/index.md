@@ -188,8 +188,9 @@ Reference: [00-host.md](host/00-host.md)
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-the-environment-of-agent-shells/plan.md) | medium | built 2026-10-11 ([implemented.md](host/84-the-operator-sets-the-environment-of-agent-shells/implemented.md)); the check by hand remains; ACP, cofold and pi deferred | - | ACP, cofold and pi shells |
 | [85 - A watched changeset gets its files when a turn ends](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/plan.md) | high | built 2026-10-13 ([implemented.md](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/implemented.md)); a session in a machine is not checked | - | - |
 | [86 - Every automation due at once fires](host/86-every-automation-due-at-once-fires/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed | - | - |
+| [87 - A turn is refused while one runs](host/87-a-turn-is-refused-while-one-runs/plan.md) | high | planned 2026-10-14 | - | - |
 
-Next free number in `host`: `87`.
+Next free number in `host`: `88`.
 
 ## claude
 
