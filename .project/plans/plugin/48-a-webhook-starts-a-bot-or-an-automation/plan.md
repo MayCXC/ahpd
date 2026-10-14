@@ -66,6 +66,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 | A bot call is a JSON body `{ thread, text, callback }`; any other body is the raw text, with `thread` and `callback` from the query | Softov, 2026-10-14, asked "Where does a call to a bot carry its thread, text and callback?": "JSON body, with query fallback" | 02 |
 | A synchronous reply waits for the plugin option `syncTimeoutSeconds`, default 60, and an endpoint field of the same name overrides it | Softov, 2026-10-14, asked "How long does a sync reply wait, and where is it set?": "Endpoint field, plugin default 60 s" | 02 |
 | A bot turn that ends in `chat/error` is reported: the host's `turn_end` carries `status: 'error'` and the error's message, a `sync` call answers 200 with them, and a callback posts them | Softov, 2026-10-14, to "A webhook bot turn that ends in an error raises no turn_end. What should happen?" - "Report the failure" | 02 |
+| A call whose chat the host refuses, because the plugin lacks `session:write`, answers 409, and the plugin reports a problem that names `session:write` | Softov, 2026-10-14, to "When the plugin lacks `session:write`, `createChat` throws and the call answers 500. Should that be 409, like a bot the plugin may not read?" - "409, like a bot it cannot read" | 02 |
 
 ## Proposed architecture
 

@@ -99,7 +99,7 @@ The endpoint's reply mode decides the answer: a callback at turn end by default,
 
 ## Resume
 
-Built in `packages/webhook/src/bot.ts` and `thread.ts`, with the bot seams over the plugin's connection in `plugin.ts`. `record.ts` checks `callbackPrefix` and `syncTimeoutSeconds`. `packages/webhook/test/webhook-bot.test.ts` holds 20 cases, `webhook-record.test.ts` gained 4, and `packages/server/test/webhook-bot.test.ts` holds 2.
+Built in `packages/webhook/src/bot.ts` and `thread.ts`, with the bot seams over the plugin's connection in `plugin.ts`. `record.ts` checks `callbackPrefix` and `syncTimeoutSeconds`. `packages/webhook/test/webhook-bot.test.ts` holds 24 cases, `webhook-record.test.ts` gained 4, and `packages/server/test/webhook-bot.test.ts` holds 3.
 
 How the parts work:
 
@@ -116,9 +116,8 @@ Where the build departs from the plan:
 - A `callback` call with no callback URL answers 400, as a URL outside the prefix does.
 - The 202 answer of `callback` and `none` carries `{ thread, turn }`.
 - A turn that ends in `chat/error` now raises `turn_end` with `status: 'error'` and the error's message, and the plugin answers or posts both. Softov chose this after the build.
+- When the host refuses `createChat` because the plugin lacks `session:write`, the call answers 409 and the plugin reports a problem that names the grant. Softov chose this after the build.
 
-Open questions for Softov:
-
-- When the plugin lacks `session:write`, `createChat` throws and the call answers 500. Should that be 409, like a bot the plugin may not read?
+Open questions: none.
 
 Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes 3898 of 3899 tests. The one failure is `packages/sdk/test/nested-start.test.ts`, the same 5 s timeout under load as in task 01.

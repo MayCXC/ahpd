@@ -163,3 +163,26 @@ it('answers 409 when the plugin may not read the bot', async () => {
   }));
   expect(answer.status).toBe(409);
 });
+
+it('answers 409 and names the grant when the plugin may not make a chat', async () => {
+  const { host, lines, routes, records } = await started(['bot:get', 'session:read']);
+  const root = host.accept(peer(), undefined, true);
+  await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+  await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
+  const read = async (): Promise<Bag> => {
+    const answer = await root.handle({ method: 'resourceRead', params: { uri: 'bot://motion' } }) as Bag;
+    return JSON.parse(String(answer['data'])) as Bag;
+  };
+  await until(async () => typeof (await read())['session'] === 'string', 'the bot session to start');
+  const webhooks = await records.collection('webhooks');
+  await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
+
+  const answer = await routes['@ahpd/webhook']!(new Request('http://127.0.0.1:1/plugins/%40ahpd/webhook/ci?thread=pr-12', {
+    method: 'POST',
+    headers: { authorization: 'Bearer right-token' },
+    body: 'hello',
+  }));
+  expect(answer.status).toBe(409);
+  expect(lines.some((line) => line.includes('@ahpd/webhook') && line.includes('session:write'))).toBe(true);
+  expect(await (await records.collection('webhook-threads')).list()).toEqual([]);
+});

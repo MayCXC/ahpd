@@ -25,7 +25,7 @@ interface Sent { chat: string; turn: string; text: string }
  * A turn ends when the case says so with `finish`, or at once when `auto` is
  * set, with the text `echo: <what was sent>`.
  */
-async function made(options: { auto?: boolean; sessions?: Record<string, string>; timeout?: number } = {}) {
+async function made(options: { auto?: boolean; sessions?: Record<string, string>; timeout?: number; refused?: boolean } = {}) {
   const threads = await memoryRecords().collection('webhook-threads');
   const chats: { session: string; chat: string }[] = [];
   const sent: Sent[] = [];
@@ -39,6 +39,7 @@ async function made(options: { auto?: boolean; sessions?: Record<string, string>
     chat: async (session) => {
       // A yield, so two first calls of one thread overlap here.
       await new Promise((r) => { setTimeout(r, 5); });
+      if (options.refused === true) return undefined;
       const chat = `ahp-chat:/c${chats.length + 1}`;
       chats.push({ session, chat });
       return chat;
@@ -155,6 +156,14 @@ describe('the thread map', () => {
     const { target, sent } = await made({ sessions: {} });
     const answer = await target(endpoint(), call({ thread: 'pr-12', text: 'hello' }));
     expect(answer.status).toBe(409);
+    expect(sent).toEqual([]);
+  });
+
+  it('answers 409 and keeps no thread when the plugin may not make a chat', async () => {
+    const { target, threads, sent } = await made({ refused: true });
+    const answer = await target(endpoint(), call({ thread: 'pr-12', text: 'hello' }));
+    expect(answer.status).toBe(409);
+    expect(await threads.list()).toEqual([]);
     expect(sent).toEqual([]);
   });
 });

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { reason } from '@ahpd/sdk';
+import { reason, RpcError } from '@ahpd/sdk';
 import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
 import { NAME, webhookRoute } from './route.js';
@@ -40,6 +40,9 @@ export const optionsSchema = {
     },
   },
 };
+
+/** The code the host refuses a call with when the caller lacks a grant. */
+const REFUSED = -32009;
 
 /** What the plugin's connection calls itself. */
 const CLIENT = 'ahpd-webhook';
@@ -83,7 +86,14 @@ function botSeams(host: PluginHost, peer: () => Promise<PluginPeer>, timeout: nu
       // A chat is made only in a session the host has loaded, and a subscribe loads it.
       await conn.request('subscribe', { channel: session });
       const chat = `ahp-chat:/${randomUUID()}`;
-      await conn.request('createChat', { channel: session, chat });
+      try {
+        await conn.request('createChat', { channel: session, chat });
+      }
+      catch (error) {
+        if (!(error instanceof RpcError) || error.code !== REFUSED) throw error;
+        problem(`needs the grant session:write to make a chat in ${session}: ${reason(error)}`);
+        return undefined;
+      }
       return chat;
     },
     send: async (chat, turn, text) => {

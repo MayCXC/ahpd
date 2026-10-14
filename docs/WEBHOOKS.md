@@ -100,7 +100,7 @@ A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugi
 | Answer | When |
 | --- | --- |
 | 400 | The call has no thread or no text, or its callback URL is missing or outside the prefix |
-| 409 | The bot has no session, or the plugin may not read the bot |
+| 409 | The bot has no session, the plugin may not read the bot, or the plugin may not make a chat in the bot's session. The last two are also a problem in the daemon's log, and the last names the grant `session:write` |
 
 ### The grants
 

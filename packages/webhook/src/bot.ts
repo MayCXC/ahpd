@@ -26,8 +26,8 @@ export interface BotSeams {
   threads: RecordCollection;
   /** The session a bot is linked to, or nothing when it has none. */
   session(bot: string): Promise<string | undefined>;
-  /** Make a new chat in a session, and give its URI. */
-  chat(session: string): Promise<string>;
+  /** Make a new chat in a session, and give its URI, or nothing when the host refuses the plugin. */
+  chat(session: string): Promise<string | undefined>;
   /** Send one turn in a chat. */
   send(chat: string, turn: string, text: string): Promise<void>;
   /** Wait for one turn to end. Asked before the turn is sent, so no end is missed. */
@@ -135,18 +135,19 @@ export function turnEnds() {
  */
 export function botTarget(seams: BotSeams): Target {
   /** The last lookup of each thread, so the lookups of one thread run one after another and make one chat. */
-  const queued = new Map<string, Promise<Thread>>();
+  const queued = new Map<string, Promise<Thread | undefined>>();
 
-  const lookOrMake = async (endpoint: Endpoint, thread: string, session: string): Promise<Thread> => {
+  const lookOrMake = async (endpoint: Endpoint, thread: string, session: string): Promise<Thread | undefined> => {
     const kept = await findThread(seams.threads, endpoint.id, thread);
     if (kept !== undefined && kept.session === session) return kept;
     const chat = await seams.chat(session);
+    if (chat === undefined) return undefined;
     const record: Thread = { id: kept?.id ?? threadId(), endpoint: endpoint.id, thread, session, chat };
     await seams.threads.put({ ...record });
     return record;
   };
 
-  const threadOf = (endpoint: Endpoint, thread: string, session: string): Promise<Thread> => {
+  const threadOf = (endpoint: Endpoint, thread: string, session: string): Promise<Thread | undefined> => {
     const key = `${endpoint.id}\n${thread}`;
     const before = queued.get(key) ?? Promise.resolve(undefined);
     const next = before.catch(() => undefined).then(() => lookOrMake(endpoint, thread, session));
@@ -173,6 +174,7 @@ export function botTarget(seams: BotSeams): Target {
     if (session === undefined) return answer(409, { message: 'The bot has no session.' });
 
     const thread = await threadOf(endpoint, call.thread, session);
+    if (thread === undefined) return answer(409, { message: 'The plugin may not make a chat in the bot session.' });
     const turn = randomUUID();
     const end = seams.ended(thread.chat, turn);
     end.catch((error: unknown) => { seams.problem(`webhooks/${endpoint.id} lost the end of turn ${turn}: ${reason(error)}`); });
