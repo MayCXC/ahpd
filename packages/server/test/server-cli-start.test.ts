@@ -4,7 +4,7 @@
  * `start`, `stop` and `status`, with a daemon started in the background.
  */
 import { spawn } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { alive, BACKEND, cli, config, daemonEnv, ENV, gone, home, knock, MAIN, MULTILINE, recordOf, REPO, SKIPS, spawned, THROWS } from './cli.js';
@@ -62,6 +62,22 @@ describe('start, stop and status', () => {
     const record = JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as { pid: number; argv?: string[] };
     spawned.push(record.pid);
     expect(record.argv).toEqual(['--port', '0', '--path', home, '--plugin', BACKEND, '--no-update-check']);
+  }, 40000);
+
+  it('serves a folder added with `paths add`, and the start line names it', async () => {
+    const folder = join(home, 'served');
+    mkdirSync(folder);
+    const added = await cli(['paths', 'add', folder]);
+    expect(added.code).toBe(0);
+    expect(added.stdout).toBe(`Added ${folder} to "paths" in ${join(home, 'ahpd', 'config.json')}.\n`);
+
+    // No `--path` anywhere: the folder is served because the file names it.
+    const began = await cli([
+      'start', '--port', '0', '--plugin', BACKEND, '--sessions', 'memory', '--automations', 'memory', '--no-update-check',
+    ]);
+    expect(began.code).toBe(0);
+    spawned.push(recordOf().pid);
+    expect(readFileSync(join(home, 'ahpd', 'daemon.log'), 'utf8')).toContain(`sessions in ${folder}`);
   }, 40000);
 
   it('forwards --plugin-option to the child, which loads with it', async () => {

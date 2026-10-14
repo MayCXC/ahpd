@@ -76,7 +76,12 @@ describe('the command registry', () => {
     expect(scopes('plugin.remove')).toEqual(['config:write']);
     expect(scopes('plugin.update')).toEqual(['config:write']);
     expect(scopes('daemon.restart')).toEqual(['config:write']);
+    expect(scopes('paths.list')).toEqual(['config:read']);
     const only = (id: string): string | undefined => registry.find(id)?.meta?.deploymentTokenOnly;
+    for (const id of ['paths.add', 'paths.remove']) {
+      expect(scopes(id)).toEqual(['config:write']);
+      expect(only(id)).toBe('add or remove a served folder');
+    }
     for (const id of ['plugin.install', 'plugin.remove']) expect(only(id)).toBe('install or remove a plugin');
     expect(only('plugin.update')).toBe('update a plugin');
     for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset']) expect(only(id)).toBe("change a plugin's options");

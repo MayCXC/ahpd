@@ -287,7 +287,7 @@ export async function offerConfigure(options: OfferOptions): Promise<boolean> {
 }
 
 /** Whether a folder is one of the folders, or is under one of them. */
-const under = (folder: string, served: string): boolean => {
+export const under = (folder: string, served: string): boolean => {
   const inside = resolve(folder);
   const above = resolve(served);
   return inside === above || inside.startsWith(above.endsWith(sep) ? above : `${above}${sep}`);
