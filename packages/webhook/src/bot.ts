@@ -10,10 +10,15 @@ import type { Thread } from './thread.js';
 
 /** How one turn ended, and what the bot said in it. */
 export interface TurnEnd {
-  status: 'complete' | 'cancelled';
+  status: 'complete' | 'cancelled' | 'error';
   /** The turn's `markdown` response parts, joined. */
   text: string;
+  /** The message of the error that ended the turn, on `error` only. */
+  error?: string;
 }
+
+/** How one turn ended, as the host's `turn_end` says it. */
+type Ending = Omit<TurnEnd, 'text'>;
 
 /** What the bot target reads and calls, so a test gives each one. */
 export interface BotSeams {
@@ -92,6 +97,13 @@ function checkCallback(endpoint: Endpoint, callback: string | undefined): { url:
   return { url: url.href };
 }
 
+/** What a reply says of a turn that ended: its status, its text, and its error when it failed. */
+const ended = (done: TurnEnd): Record<string, unknown> => ({
+  status: done.status,
+  text: done.text,
+  ...(done.error === undefined ? {} : { error: done.error }),
+});
+
 /**
  * Waits for the end of the turns a webhook sent.
  *
@@ -99,16 +111,16 @@ function checkCallback(endpoint: Endpoint, callback: string | undefined): { url:
  * one turn by chat and turn id. A wait is made before its turn is sent.
  */
 export function turnEnds() {
-  const waiting = new Map<string, (status: TurnEnd['status']) => void>();
+  const waiting = new Map<string, (ending: Ending) => void>();
   const key = (chat: string, turn: string): string => `${chat}\n${turn}`;
   return {
-    heard(event: { chat: string; turn: string; status: TurnEnd['status'] }): void {
+    heard(event: { chat: string; turn: string } & Ending): void {
       const done = waiting.get(key(event.chat, event.turn));
       if (done === undefined) return;
       waiting.delete(key(event.chat, event.turn));
-      done(event.status);
+      done(event.error === undefined ? { status: event.status } : { status: event.status, error: event.error });
     },
-    wait(chat: string, turn: string): Promise<TurnEnd['status']> {
+    wait(chat: string, turn: string): Promise<Ending> {
       return new Promise((resolve) => { waiting.set(key(chat, turn), resolve); });
     },
   };
@@ -174,14 +186,14 @@ export function botTarget(seams: BotSeams): Target {
       const done = await Promise.race([end, late]);
       clearTimeout(timer);
       if (done === undefined) return answer(202, { ...said, status: 'running' });
-      return answer(200, { ...said, status: done.status, text: done.text });
+      return answer(200, { ...said, ...ended(done) });
     }
 
     if (callback !== undefined) {
       const url = callback;
       end.then(async (done) => {
         try {
-          await seams.post(url, { ...said, status: done.status, text: done.text });
+          await seams.post(url, { ...said, ...ended(done) });
         }
         catch (error) {
           seams.problem(`webhooks/${endpoint.id} could not call back ${url}: ${reason(error)}`);

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
-import { botTarget } from '../src/bot.js';
+import { botTarget, turnEnds } from '../src/bot.js';
 import { checkEndpoint } from '../src/record.js';
 import type { BotSeams, TurnEnd } from '../src/bot.js';
 import type { Endpoint } from '../src/record.js';
@@ -54,9 +54,9 @@ async function made(options: { auto?: boolean; sessions?: Record<string, string>
   };
   const target = botTarget(seams);
   /** End the turn the target sent `n`th, counted from 0. */
-  const finish = (n: number, text: string, status: TurnEnd['status'] = 'complete'): void => {
+  const finish = (n: number, text: string, status: TurnEnd['status'] = 'complete', error?: string): void => {
     const turn = sent[n]?.turn ?? '';
-    waiting.get(turn)?.({ status, text });
+    waiting.get(turn)?.({ status, text, ...(error === undefined ? {} : { error }) });
   };
   return { target, threads, chats, sent, posted, problems, finish };
 }
@@ -231,6 +231,30 @@ describe('the reply modes', () => {
     expect(await answer.json()).toEqual({ thread: 'pr-12', turn: sent[0]?.turn, status: 'complete', text: 'echo: hello' });
   });
 
+  it('answers 200 with status error and the message when a sync turn fails', async () => {
+    const { target, sent, finish } = await made();
+    const pending = target(endpoint({ reply: 'sync' }), call({ thread: 'pr-12', text: 'hello' }));
+    setTimeout(() => { finish(0, 'half', 'error', 'the model refused'); }, 10);
+    const answer = await pending;
+    expect(answer.status).toBe(200);
+    expect(await answer.json()).toEqual({ thread: 'pr-12', turn: sent[0]?.turn, status: 'error', text: 'half', error: 'the model refused' });
+  });
+
+  it('posts status error and the message to the callback when the turn fails', async () => {
+    const { target, posted, sent, finish } = await made();
+    const answer = await target(
+      endpoint({ reply: 'callback', callbackPrefix: 'https://ci.example.com/hooks/' }),
+      call({ thread: 'pr-12', text: 'hello', callback: 'https://ci.example.com/hooks/pr-12' }),
+    );
+    expect(answer.status).toBe(202);
+    finish(0, '', 'error', 'the model refused');
+    await settle();
+    expect(posted).toEqual([{
+      url: 'https://ci.example.com/hooks/pr-12',
+      body: { thread: 'pr-12', turn: sent[0]?.turn, status: 'error', text: '', error: 'the model refused' },
+    }]);
+  });
+
   it('answers 202 with status running when a sync turn outlives the timeout, and leaves the turn alone', async () => {
     const { target, sent, posted } = await made({ timeout: 0.02 });
     const answer = await target(endpoint({ reply: 'sync' }), call({ thread: 'pr-12', text: 'hello' }));
@@ -261,6 +285,13 @@ describe('the reply modes', () => {
     const quick = await short(endpoint({ reply: 'sync', syncTimeoutSeconds: 0.02 }), call({ thread: 'pr-12', text: 'hello' }));
     expect(quick.status).toBe(202);
   });
+});
+
+it('hears a turn that ended in an error, with its message', async () => {
+  const ends = turnEnds();
+  const waited = ends.wait('ahp-chat:/c1', 't1');
+  ends.heard({ chat: 'ahp-chat:/c1', turn: 't1', status: 'error', error: 'the model refused' });
+  expect(await waited).toEqual({ status: 'error', error: 'the model refused' });
 });
 
 it('gives the plugin option syncTimeoutSeconds a default of 60', async () => {

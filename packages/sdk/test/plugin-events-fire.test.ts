@@ -126,7 +126,32 @@ function asker(): { agent: Agent; say: (action: Bag) => void } {
   };
 }
 
-const probeTool = (run: () => Promise<string> | string): HostTool => ({
+/** A backend whose every turn starts and then ends in `chat/error`. */
+const failer = (): Agent => {
+  const inner = echo({ path: DIR, pace: 0 });
+  return {
+    ...inner,
+    provider: 'failer',
+    displayName: 'Failer',
+    create: (start) => {
+      const session = inner.create(start);
+      return {
+        ...session,
+        begin: (turnId, text) => {
+          start.emit('chat', { type: 'chat/turnStarted', turnId, message: { text } });
+          start.emit('chat', {
+            type: 'chat/error',
+            turnId,
+            duration: 1,
+            part: { kind: 'error', error: { errorType: 'turnFailed', message: 'the model refused' } },
+          });
+        },
+      };
+    },
+  };
+};
+
+const probeTool =(run: () => Promise<string> | string): HostTool => ({
   definition: { name: 'probe_tool', description: 'A tool the test calls.', inputSchema: { type: 'object', properties: {} } },
   run,
 });
@@ -313,6 +338,22 @@ it('fires turn_end cancelled when a running turn is stopped', async () => {
   const ended = of(seen, 'turn_end');
   expect(ended).toHaveLength(1);
   expect(ended[0]).toMatchObject({ turn: 'turn-c', status: 'cancelled' });
+});
+
+it('fires turn_end error, with the message, when a turn ends in chat/error', async () => {
+  const { seen, client } = watched({ agents: [failer()] });
+  await hello(client);
+  await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/fail', provider: 'failer' } });
+  await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/fail' } });
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: 'ahp-chat:/fail', action: { type: 'chat/turnStarted', turnId: 'turn-f', message: { text: 'hello' } } },
+  });
+  await wait(100);
+
+  const ended = of(seen, 'turn_end');
+  expect(ended).toHaveLength(1);
+  expect(ended[0]).toMatchObject({ turn: 'turn-f', status: 'error', error: 'the model refused' });
 });
 
 it('names who sent each turn, and a queued message keeps its sender when it runs', async () => {

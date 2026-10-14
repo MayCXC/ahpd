@@ -115,10 +115,10 @@ Where the build departs from the plan:
 - When the plugin may not read the bot, the call answers 409 and the plugin reports the problem. The plan named 409 only for a bot with no session.
 - A `callback` call with no callback URL answers 400, as a URL outside the prefix does.
 - The 202 answer of `callback` and `none` carries `{ thread, turn }`.
+- A turn that ends in `chat/error` now raises `turn_end` with `status: 'error'` and the error's message, and the plugin answers or posts both. Softov chose this after the build.
 
 Open questions for Softov:
 
-- A turn that ends in `chat/error` raises no `turn_end`. A `sync` call then waits to its timeout and answers 202 `running`, and a callback is never posted. Should the plugin also hear a turn that failed?
 - When the plugin lacks `session:write`, `createChat` throws and the call answers 500. Should that be 409, like a bot the plugin may not read?
 
 Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes 3898 of 3899 tests. The one failure is `packages/sdk/test/nested-start.test.ts`, the same 5 s timeout under load as in task 01.

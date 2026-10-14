@@ -117,8 +117,13 @@ export interface TurnEndEvent {
   chat: string;
   /** The turn's id. */
   turn: string;
-  /** `complete` when the backend finished it, `cancelled` when somebody stopped it. */
-  status: 'complete' | 'cancelled';
+  /**
+   * `complete` when the backend finished it, `cancelled` when somebody stopped
+   * it, `error` when it ended in `chat/error`.
+   */
+  status: 'complete' | 'cancelled' | 'error';
+  /** The message of the `chat/error` that ended it, on `error` only. */
+  error?: string;
   /** Who sent it, as `TurnStartEvent.sender` says: the same name or nothing. */
   sender?: Owner;
 }

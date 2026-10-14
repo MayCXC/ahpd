@@ -801,8 +801,9 @@ export function createSpawn(ctx: HostContext): Spawn {
         if (action.type === 'session/titleChanged' && typeof action.title === 'string') moveNested(idOf(uri), { title: action.title });
         else if (channel === 'chat' && action.type === 'chat/turnComplete') moveNested(idOf(uri), {});
         // The two ends of a turn, as the host sees them: the backend saying it
-        // began, and saying it finished or was stopped. A per-token delta is
-        // not an event, because a plugin that wants the stream is a client.
+        // began, and saying it finished, was stopped or failed. A per-token
+        // delta is not an event, because a plugin that wants the stream is a
+        // client.
         if (action.type === 'chat/turnStarted') {
           void fire({
             type: 'turn_start',
@@ -819,6 +820,18 @@ export function createSpawn(ctx: HostContext): Spawn {
             chat: chatUri,
             turn,
             status: action.type === 'chat/turnCancelled' ? 'cancelled' : 'complete',
+            ...(sender === undefined ? {} : { sender }),
+          });
+        }
+        else if (action.type === 'chat/error') {
+          const failure = (((action.part ?? {}) as Bag).error ?? {}) as Bag;
+          void fire({
+            type: 'turn_end',
+            session: uri,
+            chat: chatUri,
+            turn,
+            status: 'error',
+            error: typeof failure.message === 'string' ? failure.message : 'The turn failed',
             ...(sender === undefined ? {} : { sender }),
           });
         }

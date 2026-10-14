@@ -94,10 +94,10 @@ function botSeams(host: PluginHost, peer: () => Promise<PluginPeer>, timeout: nu
       });
     },
     ended: async (chat, turn) => {
-      const status = await ends.wait(chat, turn);
+      const ending = await ends.wait(chat, turn);
       const conn = await peer();
       const opened = await conn.request('subscribe', { channel: chat }) as { snapshot?: { state?: unknown } };
-      return { status, text: textOf(opened.snapshot?.state, turn) };
+      return { ...ending, text: textOf(opened.snapshot?.state, turn) };
     },
     post: async (url, body) => {
       const answered = await fetch(url, {
