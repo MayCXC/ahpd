@@ -1,7 +1,7 @@
 ---
 title: Every automation due at once fires
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -54,7 +54,7 @@ timer -> fire -> due listener (run 1) -> store write -> onChanged -> rearm (all 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - fire takes every due automation before it announces one](task-01-fire-takes-every-due-automation-first.md) | todo | - |
+| [01 - fire takes every due automation before it announces one](task-01-fire-takes-every-due-automation-first.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -62,8 +62,8 @@ timer -> fire -> due listener (run 1) -> store write -> onChanged -> rearm (all 
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-fire-takes-every-due-automation-first.md](task-01-fire-takes-every-due-automation-first.md).
+- **Done so far:** task 01 implemented 2026-10-13, not reviewed and not set to done. `fire` takes the whole due list before it announces any of it.
+- **Next action:** review task 01, then the *Final verification checklist* by hand.
 - **Open questions:** none.
 - **Watch out for:** `onChanged` must still rearm before it tells its listeners, for the reason its comment gives.
 

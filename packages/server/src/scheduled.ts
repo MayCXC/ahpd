@@ -513,20 +513,37 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
     timer = arm(() => { fire(); }, Math.min(wait, MAX_DELAY));
   };
 
-  /** Say what is due, then look again. */
+  /**
+   * Say what is due, then look again.
+   *
+   * Every automation due at this instant is taken before any of them is
+   * announced. A listener runs the automation it was told about, and a run
+   * writes the store - which reaches `onChanged`, rearms the clock from now,
+   * and moves every other automation to its next occurrence. Read one at a
+   * time, the second automation due at this same instant was read after the
+   * first one's run had already pushed it past the clock, and was passed over:
+   * two automations on one schedule, and only one of them ever fired.
+   */
   const fire = (): void => {
     if (closed) return;
     const at = now();
+    const ready: { automation: string; when: Date; origin: Bag }[] = [];
     for (const automation of inner.list()) {
       const when = nextAt.get(automation.resource);
       if (!when || when > at) continue;
       const schedule = soonest(automation, new Date(when.getTime() - 1));
-      const origin: Bag = {
-        kind: 'trigger',
-        triggerId: schedule?.schedule.triggerId ?? '',
-        scheduledFor: when.toISOString(),
-      };
-      for (const listener of due) listener({ automation: automation.resource, origin });
+      ready.push({
+        automation: automation.resource,
+        when,
+        origin: {
+          kind: 'trigger',
+          triggerId: schedule?.schedule.triggerId ?? '',
+          scheduledFor: when.toISOString(),
+        },
+      });
+    }
+    for (const one of ready) {
+      for (const listener of due) listener({ automation: one.automation, origin: one.origin });
     }
     rearm();
   };

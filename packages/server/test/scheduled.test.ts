@@ -16,6 +16,7 @@ import { scheduledAutomations } from '../src/scheduled.js';
  */
 
 const ONE = 'ahp-automation:/one';
+const TWO = 'ahp-automation:/two';
 
 /** A timer that is armed and never fires until a test says so. */
 function clockwork() {
@@ -183,6 +184,55 @@ describe('when the time comes', () => {
     store.update(ONE, { enabled: false });
     clock.advance('2026-09-01T09:00:00Z');
     expect(seen).toEqual([]);
+  });
+
+  /*
+   * Two automations on one schedule, which is what a copy of an automation's
+   * file is: one expression, one minute, two resources.
+   *
+   * Found on a second daemon, 2026-10-13 - a copy of a file never fired while
+   * the original was on. A run writes the store, that write reaches the clock's
+   * `onChanged` and rearms it, and the second automation's `nextAt` had moved
+   * to the next occurrence before `fire` came to read it.
+   */
+  describe('two automations due at the same minute', () => {
+    it('says both are due, then arms both for the next one', () => {
+      const clock = clockwork();
+      store = scheduledAutomations({ dir: folder, state, now: clock.now, timer: clock.timer });
+      const seen: string[] = [];
+      store.onDue?.((event) => seen.push(event.automation));
+      store.create(ONE, nightly());
+      store.create(TWO, nightly());
+
+      clock.advance('2026-09-01T09:00:00Z');
+
+      expect(seen).toEqual([ONE, TWO]);
+      // Tomorrow for both, and not today again for the one that fired late.
+      expect(store.get(ONE)?.nextRunAt).toBe('2026-09-02T09:00:00.000Z');
+      expect(store.get(TWO)?.nextRunAt).toBe('2026-09-02T09:00:00.000Z');
+    });
+
+    it('still says the second one when the first listener runs it', () => {
+      const clock = clockwork();
+      store = scheduledAutomations({ dir: folder, state, now: clock.now, timer: clock.timer });
+      const seen: string[] = [];
+      store.onDue?.((event) => {
+        seen.push(event.automation);
+        /*
+         * What the host does with a due event, and what makes this case worth
+         * having: a run writes the store, and that write is what rearms the
+         * clock from inside the loop. Nothing else in these cases writes a
+         * thing, so the plain case above passes either way.
+         */
+        void store?.run(event.automation, event.origin, async () => 'ahp-session:/made');
+      });
+      store.create(ONE, nightly());
+      store.create(TWO, nightly());
+
+      clock.advance('2026-09-01T09:00:00Z');
+
+      expect(seen).toEqual([ONE, TWO]);
+    });
   });
 
   /*
