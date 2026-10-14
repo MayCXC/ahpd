@@ -497,7 +497,8 @@ export function botProvider(options: BotOptions): BotProvider {
       const whose = ownerFor(draft.owner, owner, reader, existing);
       // A make reads its template to fill the first turn. An edit reads it only
       // where the body names one, so a bot whose template was removed can still
-      // be edited.
+      // be edited; its next chat gets the default one and a problem, from
+      // `botPreamble`.
       const reads = existing === undefined || (said as Bag)['template'] !== undefined;
       const template = reads ? await templateOf(draft, options.templates) : DEFAULT_TEMPLATE;
       if (template === undefined) throw new RpcError(-32602, `The template ${draft.template as string} does not exist.`);

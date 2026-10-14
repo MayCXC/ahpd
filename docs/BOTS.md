@@ -123,7 +123,7 @@ title: Short
 You are {{name}}. {{instructions}}
 ```
 
-A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it.
+A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it. An edit that does not name `template` passes even when the bot's template was deleted, and the bot keeps the name; its next chat gets the default template and a problem, as below.
 
 Each chat a person or a tool opens in a bot's session starts with the template too. It is filled again, with the session's chats at that moment. The text is hidden context before the chat's first message. A chat opened with no message gets it with the person's first message. The template is read for each chat, so an edit reaches the next one. A template that no longer exists gives the default one, and the plugin reports a problem that names the bot and the template.
 

@@ -132,7 +132,7 @@ You are {{name}}. {{description}}
 ## Resume
 
 
-Built in `packages/sdk/src/wakemessage.ts` and the bot package. `fill-words.test.ts` has 6 cases, and `bot-template.test.ts` has 8. `bot-record.test.ts` gained 1 case, and `bot-provider.test.ts` gained 3 and changed 3.
+Built in `packages/sdk/src/wakemessage.ts` and the bot package. `fill-words.test.ts` has 6 cases, and `bot-template.test.ts` has 8. `bot-record.test.ts` gained 1 case, and `bot-provider.test.ts` gained 4 and changed 3.
 
 How the parts work:
 
@@ -147,13 +147,12 @@ How the parts work:
 Where the build departs from the plan:
 
 - An edit reads the template only when its body names `template`. So a bot whose template was deleted can still be edited.
+- Softov chose to let that edit pass. A test in `bot-provider.test.ts` proves it, and the bot's next chat gets the default template and a problem from the task 03 preamble.
 - `templateOf` and `chatLines` are exported, so task 03 and the tests use them.
 - `fillWords` looks up a dotted name as one key, such as `event.repo`.
 - `fill-words.test.ts` has an extra case: a word named like an `Object` prototype key is left as written.
 
-Open questions:
-
-- Should an edit that does not name `template` be refused when the bot's kept template was deleted? The build takes the smaller option and lets it pass.
+Open questions: none.
 
 Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 4015 of 4017 tests.
 The 2 failures are timeouts under load in `nested-proxy.test.ts` and `nested-start.test.ts`, which do not use the files this task changed. `nested-proxy` passes alone, and `nested-start` passes with `--testTimeout 30000`.

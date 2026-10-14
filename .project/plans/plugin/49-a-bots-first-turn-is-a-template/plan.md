@@ -62,6 +62,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 | A chat opened with `initialMessage` gets the template first, then the initial message | Softov, 2026-10-14, to "Which new chats get the template?" - "Chats a person or tool opens" | 02 |
 | A plugin registers a chat preamble, and the host places its text before the first turn of a chat that a person or a tool opens, `initialMessage` included; only the bot plugin uses it | Softov, 2026-10-14, to "How does the template come before `initialMessage`?" - "Host hook for a new chat's preamble" | 02, 03 |
 | A new chat whose bot's template was deleted after the bot was written gets the default template, and the plugin reports a problem | Softov, 2026-10-14, to "What does a new chat get when its bot's template was deleted after the bot was written?" - "Default template, report a problem" | 03 |
+| An edit that does not name `template` passes when the bot's kept template was deleted; the bot's next chat gets the default template and the plugin reports a problem that names it | Softov, 2026-10-14, to "Should an edit that does not name `template` be refused when the bot's kept template was deleted?" - "Let it pass, flag a problem" | 01 |
 | The host puts a preamble in the hidden `context` of the chat's first turn, before `initialMessage`; no turn runs until someone writes | Softov, 2026-10-14, to "Where does the host place a preamble?" - "Hidden first-turn context" | 02, 03 |
 | A changeset chat keeps the origin the protocol allows, and the host never asks the preamble hook from `changesets.ts` or `spawn.ts` | Softov, 2026-10-14, to "How does the bot tell a changeset chat from a side chat, when `ChatOriginKind` is closed?" - "Keep origin, hook skips it". It replaces his answer "Changeset chats get their own kind" | 02 |
 
@@ -88,7 +89,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 
 - **Done so far:** the plan, 2026-10-13; the task files, 2026-10-14; Softov's answers to eleven questions, 2026-10-14; tasks 01, 02 and 03 implemented, 2026-10-14. Task 02 of the first draft became tasks 02 and 03, for the host hook and the bot's use of it.
 - **Next action:** Softov reviews the three tasks.
-- **Open questions:** tasks 01 and 02 have one each, in their Resume sections.
+- **Open questions:** none. Softov answered the task 01 question on 2026-10-14.
 - **Watch out for:**
   - The first chat opens with the session and not through `createChat`, so it gets the template once.
   - Plugin 37 opened a silent session for a bot with no instructions, but a template always gives a first turn.

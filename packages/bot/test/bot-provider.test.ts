@@ -126,7 +126,13 @@ function made(
   // live off the host, the way the sessions are, so the plugin and the host
   // hold the same one.
   const records = memoryRecords();
-  const { host: plugin, contribution } = pluginHost('bot', context, { sessions: () => sessions, records: () => records });
+  /** The problems the plugin reported while the host ran. */
+  const reported: string[] = [];
+  const { host: plugin, contribution } = pluginHost('bot', context, {
+    sessions: () => sessions,
+    records: () => records,
+    problem: (line) => { reported.push(line); },
+  });
   apply(plugin, { root: bots });
 
   const base: HostOptions = {
@@ -139,7 +145,7 @@ function made(
     ...over,
   };
   const { options, problems } = foldHostOptions(base, [contribution]);
-  return { host: createHost(options), bots, root, problems, sessions, records };
+  return { host: createHost(options), bots, root, problems, reported, sessions, records };
 }
 
 type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
@@ -854,6 +860,43 @@ it('edits a bot whose template was removed, and refuses an edit that names a mis
   got(await write(soft, 'bot://motion', { name: 'Calm' }));
   expect(await write(soft, 'bot://motion', { name: 'Calm', template: 'short' }))
     .toMatchObject({ code: -32602, message: 'The template short does not exist.' });
+});
+
+/** The example backend under `provider`, keeping the hidden `context` each chat was started with. */
+const opening = (provider: string, contexts: Map<string, string | undefined>): Agent => {
+  const agent = echo({ path: tmpdir(), pace: 0 });
+  return {
+    ...agent,
+    provider,
+    displayName: provider,
+    create: (start: Start): Session => {
+      contexts.set(start.chatUri, start.context);
+      return agent.create(start);
+    },
+  };
+};
+
+it('lets an edit pass when the bot\'s template was removed, and its next chat gets the default and a problem', async () => {
+  const contexts = new Map<string, string | undefined>();
+  const { host, records, reported } = made({ soft: ['bot:*', 'session:*', 'chat:*'] }, {}, {}, true, [opening('whisper', contexts)]);
+  const soft = await as(host, 'soft');
+  const templates = await records.collection('templates', { body: 'text' });
+  await templates.put({ id: 'short', title: 'Short', text: '{{name}}' });
+  got(await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', template: 'short' }, { createOnly: true }));
+  await templates.remove('short');
+
+  // The edit names no template, so it passes and the bot keeps the name of the one it had.
+  got(await write(soft, 'bot://motion', { name: 'Calm' }));
+  const kept = await record(soft, 'bot://motion');
+  expect(kept).toMatchObject({ name: 'Calm', template: 'short' });
+  expect(reported).toEqual([]);
+
+  // The next chat of its session opens with the default template, and the plugin says why.
+  const session = String(kept['session']);
+  got(await call(soft, 'subscribe', { channel: session }));
+  got(await call(soft, 'createChat', { channel: session, chat: 'ahp-chat:/next' }));
+  expect(contexts.get('ahp-chat:/next')).toMatch(/^You are Calm\. /);
+  expect(reported).toEqual(['@ahpd/bot: bot motion: the template short does not exist, so the new chat got the default one']);
 });
 
 it('refuses a make that names a template that does not exist', async () => {
