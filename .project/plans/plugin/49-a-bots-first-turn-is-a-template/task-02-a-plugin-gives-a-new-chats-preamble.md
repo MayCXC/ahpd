@@ -1,6 +1,6 @@
 ---
 title: A plugin gives a new chat's preamble
-status: todo
+status: implemented
 depends: []
 layer: "packages/sdk, docs"
 refs:
@@ -107,3 +107,30 @@ export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
 
 ## Resume
 
+
+Built in `packages/sdk`: `types/plugin.ts`, `types/host.ts`, `types/index.ts`, `plugins.ts`, `host/sessionmethods.ts`, `host/tooling.ts` and a new `host/preamble.ts`. `chat-preamble.test.ts` has 13 cases, `plugin-fold.test.ts` gained 1, and `changewords.test.ts` gained 1.
+
+How the parts work:
+
+- `registerChatPreamble` refuses a value that is not a function, and keeps a wrapper that names the plugin in an error the preamble throws.
+- The fold sets `chatPreambles` from every contribution in plugin order, and leaves it unset when there are none.
+- `preambleOf` asks every preamble at once, logs one that throws, and joins the other answers with a blank line.
+- `createChat` asks after every check, then checks the session and the chat name again, because both can change while the plugins answer.
+- The text goes to `spawn` as `context`. A side chat gets the preamble, a blank line, then the text of its turn.
+- The `createChat` tool asks with no `origin`, and passes the text as the context of the chat it opens.
+- The host asks only when a plugin registered a preamble, so a host with none opens a chat in the same tick as before.
+
+Where the build departs from the plan:
+
+- The types are exported from `types/index.ts`, which `index.ts` exports whole.
+- `session` and each chat in `OpenedChat` are the names the host holds them under, which are not always the names a client used.
+- The changeset case is in `changewords.test.ts`, whose harness opens the changeset side chat. `chat-preamble.test.ts` has the subagent case.
+- `plugin-host.test.ts` gained `preambles: []` in its contributions, because the field is required.
+- `chat-preamble.test.ts` has three extra cases for `registerChatPreamble` itself.
+- A fork also gets the preamble as its `context`, beside the turns it resumes.
+
+Open questions:
+
+- A fork resumes the conversation of the chat it came from, which already had the preamble. Should a fork get the preamble again? The build follows the answers table and gives it.
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 4032 of 4032 tests.

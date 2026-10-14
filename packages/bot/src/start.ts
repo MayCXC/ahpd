@@ -16,15 +16,14 @@ import type { SessionRequest } from '@ahpd/sdk';
  *
  * The folder is the bot's own, and it is the working directory whatever else
  * the record says: a bot's workspace is the one thing about it that never
- * moves. The instructions are the first turn, which is what a session with
- * nothing said in it is not - and a bot with none asks for a session that
- * opens silent, which is a bot somebody talks to first.
+ * moves. `prompt` is the first turn, the bot's template filled, so a bot
+ * never opens silent.
  *
  * A `computer` on the record goes in as the session's config, the way a client
  * names one: a machine that already exists, or a source the host makes one
  * from. Which of the two it is is the host's reading and not this file's.
  */
-export function sessionFor(bot: BotRecord): SessionRequest {
+export function sessionFor(bot: BotRecord, prompt: string): SessionRequest {
   const provider = bot.preset ?? bot.harness;
   return {
     owner: bot.owner,
@@ -32,7 +31,7 @@ export function sessionFor(bot: BotRecord): SessionRequest {
     workingDirectory: bot.workspace,
     ...(bot.preset !== undefined || bot.model === undefined ? {} : { model: { id: bot.model } }),
     ...(bot.computer === undefined ? {} : { config: { computer: bot.computer } }),
-    ...(bot.instructions === undefined ? {} : { prompt: bot.instructions }),
+    prompt,
     title: bot.name,
   };
 }

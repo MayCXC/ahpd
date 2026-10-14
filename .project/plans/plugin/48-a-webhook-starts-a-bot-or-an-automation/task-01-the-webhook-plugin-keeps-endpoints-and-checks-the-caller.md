@@ -1,6 +1,6 @@
 ---
 title: The webhook plugin keeps endpoints and checks the caller
-status: todo
+status: implemented
 depends: []
 layer: "packages/webhook"
 refs:
@@ -89,3 +89,12 @@ One plugin serves both kinds of endpoint, a bot and an automation, and this task
 
 ## Resume
 
+Built as the task says. The package is `packages/webhook`, with `record.ts`, `route.ts`, `plugin.ts` and `index.ts`, and the two test files hold 18 cases.
+
+Where the build departs from the plan:
+
+- The route has a fourth seam, `problem(line)`. A record in `webhooks` that fails `checkEndpoint` is reported through it, and the call answers 404, as for an endpoint that does not exist. The plan did not say what a broken record answers.
+- `NAME` and `PREFIX` live in `route.ts`, and `plugin.ts` takes `name` from there, so the two files do not import each other.
+- `index.ts` also exports `checkEndpoint`, `REPLIES`, `PREFIX` and `webhookRoute`, as `packages/bot/src/index.ts` exports its parts.
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes 3872 of 3873 tests. The one failure is `packages/sdk/test/nested-start.test.ts`, which times out at 5 s under the parallel load and passes alone; it does not touch this package.

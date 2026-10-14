@@ -615,6 +615,15 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   const pluginConnects = contributions.map((one) => one.connects);
   if (pluginConnects.length > 0) options.pluginConnects = pluginConnects;
 
+  /*
+   * Every plugin's chat preambles, in plugin order and then registration order.
+   *
+   * Unnamed like `pluginConnects`: two plugins may both give a new chat text,
+   * and the host joins the answers rather than choosing one.
+   */
+  const chatPreambles = contributions.flatMap((one) => one.preambles);
+  if (chatPreambles.length > 0) options.chatPreambles = chatPreambles;
+
   return { options, problems, routes };
 }
 
@@ -801,6 +810,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     triggers,
     starts,
     connects,
+    preambles: [],
   };
   const providers = new Set<string>();
   const tools = new Set<string>();
@@ -1101,6 +1111,21 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'registerMethod', named, 'a name no other method in this plugin uses'));
       }
       contribution.methods[named] = { by, name: named, method };
+    },
+    registerChatPreamble(preamble) {
+      open();
+      if (typeof preamble !== 'function') {
+        throw new Error(miss(by, 'registerChatPreamble', 'the preamble', 'a function'));
+      }
+      // The host logs a preamble that throws, so the error names the plugin.
+      contribution.preambles.push(async (opened) => {
+        try {
+          return await preamble(opened);
+        }
+        catch (error) {
+          throw new Error(`plugin ${by}: ${reason(error)}`);
+        }
+      });
     },
     registerTerminals: (store, when) => { setPort('terminals', 'registerTerminals', store, when); },
     registerChanges: (source, when) => { setPort('changes', 'registerChanges', source, when); },

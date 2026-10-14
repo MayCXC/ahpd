@@ -113,6 +113,14 @@ const wakeOf = (definition: Bag): AutomationWake => {
   };
 };
 
+/**
+ * Whether a fire's data matches a trigger's `config`: every key the config
+ * holds has the same value in the data, compared as JSON. An empty config
+ * matches every fire.
+ */
+const configMatches = (config: Bag, data: Record<string, unknown>): boolean =>
+  Object.entries(config).every(([key, value]) => JSON.stringify(data[key]) === JSON.stringify(value));
+
 /** One automation this host is watching for what a session does. */
 interface Waking {
   /** The trigger type's own name, as the definition wrote it. */
@@ -129,6 +137,8 @@ interface Waking {
   owner?: Owner | undefined;
   /** What it says about a run of its own and about an event arriving during one. */
   wake: AutomationWake;
+  /** The trigger's `config`, which a plugin's fire must match key by key to wake it. */
+  config: Bag;
 }
 
 /**
@@ -1028,6 +1038,7 @@ export function createAutomations(ctx: HostContext): Automations {
       events: chosen,
       ...(owner === undefined ? {} : { owner }),
       wake: wakeOf(found.definition),
+      config: bag(trigger.config),
     });
     // A trigger that stopped being one the engine matches stops being watched
     // by it, which is what an edit from a session trigger to a plugin's is.
@@ -1130,9 +1141,10 @@ export function createAutomations(ctx: HostContext): Automations {
     const title = eventName(held.definition, event);
     for (const [automation, one] of watched) {
       if (one.type !== type || !one.events.includes(event)) continue;
+      if (!configMatches(one.config, data)) continue;
       if (!maySee(one.owner)) continue;
       const origin = { kind: 'trigger', triggerId: one.id, event: { ...data, event } };
-      const facts: WakeFacts = { trigger: one.title, event: title, count: 1, at: new Date().toISOString() };
+      const facts: WakeFacts = { trigger: one.title, event: title, count: 1, at: new Date().toISOString(), data };
       request(automation, origin, facts, `${automation} woke on ${title} from ${by}`, true);
     }
   };

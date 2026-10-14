@@ -57,6 +57,7 @@ export type { NestedAsked, NestedHost, NestedOptions, NestedStarted } from './ne
 export { resolveNeeds, expandHome, partTarget, PART_ROOT } from './machine.js';
 export type { NeedSources } from './machine.js';
 export { sessionTools, wakeupTool } from './tools/session.js';
+export { fillWords } from './wakemessage.js';
 export { artifactTools, ARTIFACTS_META } from './tools/artifacts.js';
 export { gitWorktrees, worktreesOf, worktreeFor } from './repo/worktrees.js';
 export { githubPullRequests } from './repo/github.js';

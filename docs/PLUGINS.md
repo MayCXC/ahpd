@@ -178,6 +178,7 @@ against its contract before it is recorded.
 | `registerRecords(store, when?)` | set | where every plugin's records are kept: `collection(name, options)` |
 | `registerRoute(handler)` | register, open key | one HTTP route served on this host's own listener, under `/plugins/<name>/` |
 | `registerTriggerType(definition)` | register, open key | one event trigger type an automation may be saved with, listed beside the host's own `session` and `watch` |
+| `registerChatPreamble(preamble)` | append | text the host puts before the first turn of each chat a person or a tool opens |
 | `registerClose(close)` | register, open key | one function the host runs when it closes, once its sessions have closed and before its stores do |
 
 ### A route authenticates its own caller
@@ -196,11 +197,15 @@ export const apply: Plugin['apply'] = (host) => {
 
 **Nothing stands between this and the public internet.** The request's `Host` is checked against the names this host answers to, and that is the only guard in front of your handler: there is no bearer token, and no `Origin` check, because a webhook is not a browser. **Authenticate the caller yourself** - check the signature, or a token in the path or a header - and refuse with 401 before you read the body. What your route does on the host goes through your plugin's connection, so the grants your operator wrote for your plugin are the gate on what it may do.
 
+`@ahpd/webhook` is a plugin that does this: each endpoint names a vault secret, and a call passes only with that secret as its bearer token - [WEBHOOKS.md](WEBHOOKS.md).
+
 One route per plugin, and the prefix is your plugin's name with each `/`-separated segment percent-encoded: `@acme/webhooks` is served under `/plugins/%40acme/webhooks/`. Nothing is refused for the shape of its name, because a throw there would cost the plugin everything else it registered.
 
 The path reaches your handler whole, prefix and all, so `new URL(request.url).pathname` is the path you wrote the webhook for. The prefix is matched by whole segments: `/plugins/%40acme/webhooksy/hook` reaches nothing, rather than being the start of yours.
 
 A route is served whether `http` is on or off, and on the daemon's own port rather than one of its own, so a tunnel forwards it like everything else here and no second port is opened for you. `/api` is unaffected.
+
+The operator can move every route to a listener of its own with the daemon key `routes`, such as `"routes": { "port": 8443, "host": "0.0.0.0" }`. That listener serves `/plugins/*` and nothing else: AHP, `/api` and `/v1` answer 404 there, and `/plugins/*` answers 404 on the daemon's port. Its `Host` check takes the names of its own port, and a plugin's announced names are not among them. The daemon says where it is in a `routes on http://<host>:<port>/plugins/` line. `routes` is refused with `--stdio`, and `routes.host` is refused without `routes.port`.
 
 A handler that throws is answered 500 with the shape of the failure, its reason goes to the daemon's log against your plugin's name, and the daemon keeps serving.
 
@@ -635,6 +640,27 @@ The scope is checked against the `work` your own call passes, so a plugin is tru
 Nobody but your own plugin ever sees the value: it comes from the vault at the call, it is not written to the configuration, and no answer this host serves carries it. A host built with no vault - a client running the contract in a test - refuses with `<name> cannot be read: this host has no vault`.
 
 `registerVault(vault, 'replace')` takes the port over, for a store of your own: a keychain, a secrets manager, an encrypted file. The host's own is `vault.json` in the config folder, plain JSON at mode 0600, and `ahpd vault set|delete|list` is how a person fills it. A plugin listed first can take it over with `'replace'`; one that does not is refused, and one listed after the plugins that already named a secret never gets to be the vault they resolved against, so list a vault plugin first. Its own options cannot name a secret: a vault that had to read itself to build is a vault nothing can check.
+
+### A new chat's preamble
+
+`host.registerChatPreamble(preamble)` gives text to each new chat that a person or a tool opens.
+The host asks the preamble in a client's `createChat`, which makes a plain chat, a fork or a side chat, and in the `createChat` tool.
+It does not ask for the first chat of a session, a subagent worker chat or a changeset chat.
+
+```ts
+host.registerChatPreamble(async ({ session, chat, origin, chats }) => {
+  return session === mine ? 'You are Motion. Answer in one line.' : undefined;
+});
+```
+
+The preamble gets the session, the new chat, its `origin` when it was made from another chat, and the session's other chats as `ChatSummary` rows.
+It answers text, or `undefined` for none.
+The host joins the answers of every preamble with a blank line, in plugin order.
+
+The text is the hidden `context` of the chat's first turn, so the model reads it and the chat does not show it.
+It comes before `initialMessage`, and a side chat gets it before the text of the turn it was made from.
+A chat with no `initialMessage` runs no turn, so the text goes with the person's first message.
+A preamble that throws is logged with the plugin's name, and the chat opens with the other answers.
 
 ### Keeping records
 

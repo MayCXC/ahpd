@@ -150,8 +150,9 @@ The agent reads its message and nothing else, so the event that woke it arrives 
 | `{{sessionTitle}}` | That session's title, where this host has one to give |
 | `{{count}}` | How many events the rule counted |
 | `{{at}}` | When the event happened, ISO 8601 |
+| `{{event.<field>}}` | One top-level field of a plugin event's data: a string as it is, any other value as JSON |
 
-A name that is not one of the six is left exactly as it was written, and a placeholder for something an event does not carry is filled with nothing rather than left in the message. A plugin's event names no session, because it may have none to name.
+A name that is not in this table is left exactly as it was written, and a placeholder for something an event does not carry is filled with nothing rather than left in the message. A plugin's event names no session, because it may have none to name. A session event has no data, so `{{event.<field>}}` is filled with nothing there.
 
 The summary block goes after whatever the automation wrote:
 

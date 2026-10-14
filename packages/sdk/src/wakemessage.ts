@@ -11,7 +11,7 @@
 /**
  * What a run is told about the event that woke it.
  *
- * The same six facts wherever the wake came from. A session event names the
+ * The same facts wherever the wake came from. A session event names the
  * session it happened in; an event a plugin fired may name none, and a message
  * that asks for one is then filled with nothing rather than left as it was.
  */
@@ -28,12 +28,39 @@ export interface WakeFacts {
   count: number;
   /** When it happened, ISO 8601. */
   at: string;
+  /**
+   * The data a plugin fired the event with, which `{{event.<field>}}` reads.
+   * Absent on a session event.
+   */
+  data?: Record<string, unknown> | undefined;
 }
 
 /** The names a message may carry, in one place so the list is checkable. */
-export const WAKE_PLACEHOLDERS = ['session', 'sessionTitle', 'event', 'count', 'trigger', 'at'] as const;
+export const WAKE_PLACEHOLDERS = ['session', 'sessionTitle', 'event', 'count', 'trigger', 'at', 'event.<field>'] as const;
 
-const PLACEHOLDER = /\{\{(\w+)\}\}/gu;
+/** `{{name}}`, or `{{name.field}}` for one top-level field. */
+const PLACEHOLDER = /\{\{(\w+)(?:\.(\w+))?\}\}/gu;
+
+/** One field of a fire's data as text: a string as it is, any other value as JSON, and nothing for a missing one. */
+const fieldText = (data: Record<string, unknown> | undefined, field: string): string => {
+  if (data === undefined || !Object.hasOwn(data, field)) return '';
+  const value = data[field];
+  if (value === undefined) return '';
+  return typeof value === 'string' ? value : JSON.stringify(value);
+};
+
+/**
+ * A text with each `{{word}}` that `words` holds filled with its value.
+ *
+ * A dotted name such as `{{event.repo}}` is looked up whole. A name the map
+ * does not hold is left exactly as it was written.
+ */
+export function fillWords(text: string, words: Readonly<Record<string, string>>): string {
+  return text.replace(PLACEHOLDER, (whole, name: string, field: string | undefined) => {
+    const key = field === undefined ? name : `${name}.${field}`;
+    return Object.hasOwn(words, key) ? words[key] as string : whole;
+  });
+}
 
 /**
  * The block a woken run's message ends with.
@@ -57,10 +84,11 @@ const summary = (facts: WakeFacts): string => [
  *
  * Every placeholder the automation wrote is filled, and one that is not in
  * {@link WAKE_PLACEHOLDERS} is left exactly as it was written: this host fills
- * the six it offers and does not claim a meaning for anything else.
+ * the ones it offers and does not claim a meaning for anything else.
+ * `{{event.<field>}}` is one field of the fire's data.
  */
 export function wakeMessage(text: string, facts: WakeFacts): string {
-  const held: Record<(typeof WAKE_PLACEHOLDERS)[number], string> = {
+  const held: Record<Exclude<(typeof WAKE_PLACEHOLDERS)[number], 'event.<field>'>, string> = {
     session: facts.session ?? '',
     sessionTitle: facts.sessionTitle ?? '',
     event: facts.event,
@@ -68,7 +96,9 @@ export function wakeMessage(text: string, facts: WakeFacts): string {
     trigger: facts.trigger,
     at: facts.at,
   };
-  const filled = text.replace(PLACEHOLDER, (whole, name: string) =>
-    (Object.hasOwn(held, name) ? held[name as keyof typeof held] : whole));
-  return `${filled}\n\n${summary(facts)}`;
+  // Each field the text names, so a field the data does not hold is filled with nothing.
+  const fields = Object.fromEntries([...text.matchAll(PLACEHOLDER)]
+    .filter((match) => match[1] === 'event' && match[2] !== undefined)
+    .map((match) => [`event.${match[2] as string}`, fieldText(facts.data, match[2] as string)]));
+  return `${fillWords(text, { ...held, ...fields })}\n\n${summary(facts)}`;
 }

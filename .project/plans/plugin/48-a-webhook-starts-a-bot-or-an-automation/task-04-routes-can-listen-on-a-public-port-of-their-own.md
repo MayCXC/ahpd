@@ -1,6 +1,6 @@
 ---
 title: Routes can listen on a public port of their own
-status: todo
+status: implemented
 depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
 layer: "packages/server, docs"
 refs:
@@ -76,3 +76,21 @@ With no `routes.port`, the routes stay on the daemon port, which is the default 
 
 ## Resume
 
+Built in `packages/server/src/config.ts`, `commands/options.ts`, `rootconfig.ts` and `commands/run.ts`. `plugin-route.test.ts` gained 6 cases, and `server-root-config.test.ts` lists `routes` among the twelve daemon keys.
+
+How the parts work:
+
+- `RoutesSetting { port?, host? }` is a file-only key, and `routesOf` refuses `routes.host` without `routes.port`.
+- `run.ts` refuses `routes` with `--stdio`.
+- With `routes.port`, a `listenApi` listener serves `pluginRoutes` with a 404 below it, bound on `routes.host` or the daemon's host.
+- Its `Host` check takes `apiOrigins` at its own port.
+- On the daemon's port, the route mount then holds no routes, so `/plugins/*` answers 404.
+- The daemon announces the listener in a line `routes on http://<host>:<port>/plugins/`, and closes it at shutdown after the API listener.
+
+Where the build departs from the plan:
+
+- The announcement line is new. The tests read the bound port from it, and an operator learns the port when it is `0`.
+- The routes listener does not take the names that a plugin announced, because a tunnel forwards to the daemon's port. It takes `resource` and `origins`, as the API's own listener does.
+- The existing group `a route with http off` covers a route on the daemon port with no `routes` key, so that case is not new.
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 3999 of 3999 tests.

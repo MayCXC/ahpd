@@ -12,6 +12,7 @@ import { groupOf } from '../users.js';
 import { enablementKeyOf } from '../enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
 import { need } from './common.js';
+import { preambleOf } from './preamble.js';
 import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -19,7 +20,7 @@ import type { ClientPlugins, SyncedPlugin } from '../types/clientplugins.js';
 import type { HostTool, ToolCall, TitleStrategy } from '../types/host.js';
 import type { BoundTool, McpServer } from '../types/agent.js';
 import type { Session, TurnOptions } from '../types/session.js';
-import type { ToolDefinition } from '@microsoft/agent-host-protocol';
+import type { ChatSummary, ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { ToolsEndpoint } from '../tools/server.js';
 import type { Held } from './state.js';
 import type { Move } from './lifecycle.js';
@@ -1447,7 +1448,15 @@ export function createTooling(ctx: HostContext): Tooling {
       const tree = treeOf(idOf(uri));
       room(tree, 'chats');
       const chatUri = `ahp-chat:/${crypto.randomUUID()}`;
-      const chat = spawn(held.agent, at, chatUri, chatIdFor(at, chatUri), backendsOwn(held.config), undefined, held.workingDirectory, undefined, held.additional);
+      // What the plugins give a chat a tool opens, ahead of the tool's prompt.
+      const preambles = options.chatPreambles ?? [];
+      const preamble = preambles.length === 0 ? undefined : await preambleOf(preambles, {
+        session: at,
+        chat: chatUri,
+        chats: [...held.chats].map(([one, chat]) => chatSummary(at, one, chat) as unknown as ChatSummary),
+      }, log);
+      if (sessions.get(at) !== held) throw new Error(`${session} is not a session this host is running`);
+      const chat = spawn(held.agent, at, chatUri, chatIdFor(at, chatUri), backendsOwn(held.config), preamble === undefined ? undefined : { context: preamble }, held.workingDirectory, undefined, held.additional);
       log(`opened ${chatUri} in ${at}`);
       if (asked.title !== undefined) { chat.setTitle?.(asked.title); keepTitle(at, chatUri, asked.title); }
       dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });

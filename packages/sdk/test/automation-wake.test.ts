@@ -1,6 +1,7 @@
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
 import { chatUriFor } from '../src/host/channels.js';
+import { wakeMessage } from '../src/wakemessage.js';
 import { RECORD, directory } from './users-gate-helpers.js';
 import {
   claude, createHost, hello, machine, peer, resetSdk, running, sdk, sessionQueries, settle,
@@ -240,6 +241,44 @@ it('fills the placeholders and adds the summary block', async () => {
     `Look at ${session} (Nightly live): A turn failed x1 at ${at} via When a turn fails`
     + `\n\nWhat woke this run: A turn failed\nSession: Nightly live (${session})\nCount: 1\nAt: ${at}`,
   );
+});
+
+describe('the fields of a fired event', () => {
+  /** The facts of a fire whose data is `data`, or of a session event when there is none. */
+  const facts = (data?: Record<string, unknown>) => ({
+    trigger: 'On a call', event: 'A webhook call', count: 1, at: '2026-10-14T00:00:00.000Z',
+    ...(data === undefined ? {} : { data }),
+  });
+  /** The message without the summary block after it. */
+  const filled = (text: string, data?: Record<string, unknown>): string => wakeMessage(text, facts(data)).split('\n\n')[0] ?? '';
+
+  it('fills a string field as it is', () => {
+    expect(filled('Look at {{event.repo}}.', { repo: 'softov/ahpd' })).toBe('Look at softov/ahpd.');
+  });
+
+  it('fills a number field as its text', () => {
+    expect(filled('PR {{event.number}}', { number: 42 })).toBe('PR 42');
+  });
+
+  it('fills an object field as its JSON text', () => {
+    expect(filled('By {{event.sender}}', { sender: { login: 'softov', id: 7 } })).toBe('By {"login":"softov","id":7}');
+  });
+
+  it('fills a field the data does not hold with nothing', () => {
+    expect(filled('[{{event.missing}}]', { repo: 'softov/ahpd' })).toBe('[]');
+  });
+
+  it('fills a field with nothing on a session event, which has no data', () => {
+    expect(filled('[{{event.repo}}]')).toBe('[]');
+  });
+
+  it('still fills {{event}} with the event title', () => {
+    expect(filled('{{event}}: {{event.repo}}', { repo: 'softov/ahpd', event: 'call' })).toBe('A webhook call: softov/ahpd');
+  });
+
+  it('leaves another dotted name as written', () => {
+    expect(filled('{{session.title}}', { title: 'x' })).toBe('{{session.title}}');
+  });
 });
 
 it('ignores a session the owner may not read', async () => {

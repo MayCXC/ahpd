@@ -259,7 +259,7 @@ it('offers in the make form every field a write takes, the session among them', 
   expect(entry).toMatchObject({ title: 'Bot', root: 'bot://' });
   const properties = ((entry?.['manifest'] as Bag)?.['properties'] ?? {}) as Bag;
   expect(Object.keys(properties)).toEqual(expect.arrayContaining([
-    'name', 'labels', 'description', 'body', 'color', 'instructions', 'harness', 'model', 'preset',
+    'name', 'labels', 'description', 'body', 'color', 'instructions', 'template', 'harness', 'model', 'preset',
     'workspace', 'computer', 'session', 'owner',
   ]));
   // A colour is a name or a hex, and the manifest says both.
@@ -776,7 +776,8 @@ it('starts a bot on its harness, with the model it asked for', async () => {
   expect(String(bot['session'])).toMatch(/^whisper:\//);
   // The model rides on the first turn, which is the only place a session has
   // one - the host's own words for it.
-  expect(seen.at(-1)).toMatchObject({ text: 'Be calm', model: { id: 'the-big-one' } });
+  expect(seen.at(-1)).toMatchObject({ model: { id: 'the-big-one' } });
+  expect(String(seen.at(-1)?.['text'])).toContain('Be calm');
 });
 
 it('starts a bot on the host\'s own harness when it names neither', async () => {
@@ -818,18 +819,51 @@ it('starts a bot with a computer in that computer, in the same path', async () =
   expect((await row(soft, uri))['workingDirectories']).toEqual([`file://${join(bots, 'motion')}`]);
 });
 
-it('opens a bot\'s session with its instructions, and says nothing when it has none', async () => {
+it('opens a bot\'s session with the default template filled, instructions or none', async () => {
   const seen: Bag[] = [];
   const { host } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('whisper', seen)]);
   const soft = await as(host, 'soft');
 
   await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', instructions: 'Be calm' }, { createOnly: true });
-  expect(seen.map((one) => one['text'])).toEqual(['Be calm']);
-
-  // A bot with nothing to say asks for a session that opens silent, and a turn
-  // with no text in it is an empty bubble rather than no turn.
   await write(soft, 'bot://quiet', { name: 'Quiet', harness: 'whisper' }, { createOnly: true });
-  expect(seen.map((one) => one['text'])).toEqual(['Be calm']);
+  expect(seen.map((one) => one['text'])).toEqual([
+    'You are Motion. \n\nBe calm\n\n## Your last chats\n\nNone.',
+    'You are Quiet. \n\n\n\n## Your last chats\n\nNone.',
+  ]);
+});
+
+it('opens a bot\'s session with the template it names', async () => {
+  const seen: Bag[] = [];
+  const { host, records } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('whisper', seen)]);
+  const soft = await as(host, 'soft');
+  await (await records.collection('templates', { body: 'text' })).put({ id: 'short', title: 'Short', text: '{{name}}: {{instructions}}' });
+
+  await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', instructions: 'Be calm', template: 'short' }, { createOnly: true });
+  expect(seen.map((one) => one['text'])).toEqual(['Motion: Be calm']);
+  expect((await record(soft, 'bot://motion'))['template']).toBe('short');
+});
+
+it('edits a bot whose template was removed, and refuses an edit that names a missing one', async () => {
+  const { host, records } = made({ soft: ['bot:*', 'session:*'] });
+  const soft = await as(host, 'soft');
+  const templates = await records.collection('templates', { body: 'text' });
+  await templates.put({ id: 'short', title: 'Short', text: '{{name}}' });
+  got(await write(soft, 'bot://motion', { name: 'Motion', template: 'short' }, { createOnly: true }));
+  await templates.remove('short');
+
+  got(await write(soft, 'bot://motion', { name: 'Calm' }));
+  expect(await write(soft, 'bot://motion', { name: 'Calm', template: 'short' }))
+    .toMatchObject({ code: -32602, message: 'The template short does not exist.' });
+});
+
+it('refuses a make that names a template that does not exist', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:*'] });
+  const soft = await as(host, 'soft');
+
+  expect(await write(soft, 'bot://motion', { name: 'Motion', template: 'missing' }, { createOnly: true }))
+    .toMatchObject({ code: -32602, message: 'The template missing does not exist.' });
+  // Nothing was made, so the name is still free.
+  expect(await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true })).toMatchObject({ result: {} });
 });
 
 it('leaves no bot behind when the owner may not start the session', async () => {

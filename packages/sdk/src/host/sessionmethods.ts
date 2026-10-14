@@ -6,7 +6,9 @@ import { namesOf } from '../scopes.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { CLOSING } from './common.js';
 import { chatIdFor, named, ROOT } from './channels.js';
+import { preambleOf, withPreamble } from './preamble.js';
 import { SEEDS } from './sessionconfig.js';
+import type { ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
 import type { Bag } from '../types/common.js';
 import type { Session } from '../types/session.js';
 import type { Claimed, Held, LiveSubagent } from './state.js';
@@ -1130,6 +1132,29 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       const stray = asked.find((one) => !own.includes(one));
       if (stray !== undefined)
         throw new RpcError(INVALID_PARAMS, `${stray} is not a working directory of ${uri}`);
+      /*
+       * What the plugins give a chat a person opens, ahead of its first turn.
+       *
+       * Asked after every check, so a refused call asks nobody. The session and
+       * the name are checked again after, because both can change while the
+       * plugins answer.
+       */
+      const preambles = options.chatPreambles ?? [];
+      if (preambles.length > 0) {
+        const preamble = await preambleOf(preambles, {
+          session: uri,
+          chat: chatUri,
+          ...(origin === undefined ? {} : { origin: origin as unknown as ChatOrigin }),
+          chats: [...held.chats].map(([one, chat]) => chatSummary(uri, one, chat) as unknown as ChatSummary),
+        }, log);
+        if (sessions.get(uri) !== held)
+          throw new RpcError(-32001, `No agent for session ${uri}`);
+        if (byChat.has(chatUri))
+          throw new RpcError(-32003, `${chatUri} already exists`);
+        claimable(chatUri, 'chat');
+        const context = withPreamble(preamble, made?.context);
+        if (context !== undefined) made = { ...made, context };
+      }
       const peers = asked.length > 0
         ? asked.filter((one) => one !== held.workingDirectory)
         : held.additional;

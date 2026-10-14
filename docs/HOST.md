@@ -81,6 +81,7 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | `usage` | `{ "per": "turn" \| "report", "timezone": "<zone>" }` | `per: turn`, the system's own zone | How a turn is written down, and where a day and a week are cut - [USAGE.md](USAGE.md) |
 | `policies` | `{ "check": true \| false }` | `false` | Whether the rows saying who may use which agent, model and computer are enforced - [POLICY.md](POLICY.md) |
 | `http` | `true`, or `{ "port": <n>, "host": "<addr>" }` | off | Serve the commands over HTTP under `/api` |
+| `routes` | `{ "port": <n>, "host": "<addr>" }` | the daemon's port | Serve the plugins' routes on a listener of their own - [PLUGINS.md](PLUGINS.md#a-route-authenticates-its-own-caller) |
 | `mcpServers` | an object of server entries | none | The MCP servers every session is offered |
 | `plugins` | a list of specs | none | The plugins loaded at startup - [PLUGINS.md](PLUGINS.md) |
 | `proxy` | see [PROXY.md](PROXY.md) | none | The providers this host's model proxy calls, and the model names that point at them |
@@ -135,7 +136,7 @@ Three keys VS Code declared before 1.140 are not declared: `artifactToolsCompact
 
 `defaultShell` and `workspaceTrust` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last. The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
 
-The daemon's half is added to the same schema, and `config:read` is what a connection needs to be shown it. It is `paths`, `port`, `host`, `http`, `updateCheck`, `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `wire` and `mcpServers`, and each configured plugin is one more key, `plugins.<id>` by its [id](PLUGINS.md#the-id), whose value is `{ enabled, options }` - so one plugin is one key and its variants are its own options. Nothing else the file holds is there: `stdio`, `configFile`, `noCwd`, `worktreesRoot`, `clientToolTimeoutMs`, the connection token keys, `trustToken`, `issuer`, `resource`, `users`, `automations` and `sessions` are still edited the way they always were.
+The daemon's half is added to the same schema, and `config:read` is what a connection needs to be shown it. It is `paths`, `port`, `host`, `http`, `routes`, `updateCheck`, `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `wire` and `mcpServers`, and each configured plugin is one more key, `plugins.<id>` by its [id](PLUGINS.md#the-id), whose value is `{ enabled, options }` - so one plugin is one key and its variants are its own options. Nothing else the file holds is there: `stdio`, `configFile`, `noCwd`, `worktreesRoot`, `clientToolTimeoutMs`, the connection token keys, `trustToken`, `issuer`, `resource`, `users`, `automations` and `sessions` are still edited the way they always were.
 
 Pushing a key acts in one of two ways, and the answer says which.
 

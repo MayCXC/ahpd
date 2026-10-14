@@ -1,7 +1,10 @@
 import { expandHome } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
+import { botPreamble } from './preamble.js';
 import { botProvider } from './provider.js';
+import { isSlug } from './record.js';
 import { botStore } from './store.js';
+import { LAST_CHATS } from './template.js';
 import type { Plugin } from '@ahpd/sdk';
 
 /**
@@ -14,7 +17,10 @@ import type { Plugin } from '@ahpd/sdk';
  * operator's to choose.
  *
  * `instructions` is the collection's body, so it is the Markdown half of the
- * file a person edits, and every other field is frontmatter above it.
+ * file a person edits, and every other field is frontmatter above it. A
+ * template is a record of the `templates` collection, whose body is `text`.
+ * Each chat a person or a tool opens in a bot's session starts with the
+ * bot's template, filled again.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -26,6 +32,7 @@ export const title = 'Bot';
 /** What an option falls back to. */
 export const defaults = {
   root: '~/.bots',
+  lastChats: LAST_CHATS,
 } as const;
 
 /** The options `apply` receives, as a JSON Schema the daemon checks them against. */
@@ -33,6 +40,7 @@ export const optionsSchema = {
   type: 'object',
   properties: {
     root: { type: 'string', description: "The folder a bot's own workspace is under, as <root>/<slug>." },
+    lastChats: { type: 'integer', minimum: 1, description: 'How many chats a template lists for {{chats}}.' },
   },
 };
 
@@ -44,6 +52,19 @@ export const apply: Plugin['apply'] = (host, options) => {
     host.records('bots-gone'),
     (line) => { host.problem(`${name}: ${line}`); },
   );
+  const asked_ = options.lastChats;
+  const lastChats = typeof asked_ === 'number' && Number.isInteger(asked_) && asked_ >= 1 ? asked_ : defaults.lastChats;
+  const kept = host.records('templates', { body: 'text' });
+  const templates = {
+    // A bot file is edited by hand too, so a name is checked again here.
+    text: async (name: string): Promise<string | undefined> => {
+      if (!isSlug(name)) return undefined;
+      const text = (await kept.get(name))?.['text'];
+      return typeof text === 'string' ? text : undefined;
+    },
+    lastChats,
+  };
+  host.registerChatPreamble(botPreamble(store, templates, (line) => { host.problem(`${name}: ${line}`); }));
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
@@ -52,6 +73,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     store,
     catalogue,
     hostName: host.hostName,
+    templates,
     sessions: {
       owner: (uri) => host.sessionOwner(uri),
       start: (wanted) => host.startSession(wanted),

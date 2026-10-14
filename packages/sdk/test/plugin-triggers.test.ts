@@ -40,7 +40,7 @@ const WEATHER: TriggerTypeDefinition = {
 const BATTEN: Bag = {
   title: 'Batten down',
   enabled: true,
-  message: { text: 'Weather: {{event}} ({{trigger}})' },
+  message: { text: 'Weather: {{event}} ({{trigger}}) on {{event.where}}' },
   session: { provider: 'claude', workingDirectories: [`file://${DIR}`] },
   triggers: [{
     id: 't1',
@@ -129,6 +129,41 @@ it('starts a run when the plugin fires its event', async () => {
   // And the words the type gave the event are what the run is told: an agent
   // receives its message and nothing else, so the event has to be in there.
   await until(() => sdk.said.some((line) => line.includes('A storm is coming')), 'the message the run was given');
+  // A field of the fire's data is named in the message, and filled from it.
+  expect(sdk.said.some((line) => line.includes('Weather: A storm is coming (The weather) on the coast'))).toBe(true);
+});
+
+/** BATTEN, with its trigger's `config` set to `config`. */
+const battenWith = (config: Bag): Bag => ({
+  ...BATTEN,
+  triggers: [{ ...(BATTEN['triggers'] as Bag[])[0], config }],
+});
+
+it('runs a trigger whose config matches the fire data', async () => {
+  const { plugin, store, client } = offered([WEATHER], battenWith({ where: 'the coast' }));
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+  plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
+  await until(() => runs(store).length === 1, 'the run the fire started');
+});
+
+it('does not run a trigger whose config differs from the fire data', async () => {
+  const { plugin, store, client } = offered([WEATHER], battenWith({ where: 'the hills' }));
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+  plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
+  // A fire whose config matches, after the one that does not, so the wait has an end.
+  plugin.fireTrigger('weather', 'storm', { where: 'the hills' });
+  await until(() => runs(store).length === 1, 'the run the matching fire started');
+  await new Promise((r) => { setTimeout(r, 20); });
+  expect(runs(store)).toHaveLength(1);
+  expect(bag(bag(runs(store)[0]?.['origin'])['event'])).toMatchObject({ where: 'the hills' });
+});
+
+it('runs a trigger with no config on every fire of its type and event', async () => {
+  const { plugin, store, client } = offered([WEATHER], { ...BATTEN, _meta: { ahpd: { overlap: 'parallel' } } });
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+  plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
+  plugin.fireTrigger('weather', 'storm', { where: 'the hills' });
+  await until(() => runs(store).length === 2, 'a run for each fire');
 });
 
 it('leaves an automation nobody owns out when the host says so', async () => {

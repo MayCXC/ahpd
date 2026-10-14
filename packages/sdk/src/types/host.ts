@@ -12,7 +12,7 @@ import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../enablement.js';
-import type { PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod } from './plugin.js';
+import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -576,6 +576,13 @@ export interface HostOptions {
    * plugin's own entry is the whole of what removing it would take.
    */
   pluginConnects?: PluginConnects[];
+  /**
+   * What the plugins give a chat a person or a tool opens, in plugin order.
+   *
+   * The fold fills this from every `registerChatPreamble`, and leaves it unset
+   * when no plugin registered one.
+   */
+  chatPreambles?: ChatPreamble[];
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: A bot's first turn is its filled template
-status: todo
+status: implemented
 depends: []
 layer: "packages/bot, packages/sdk, docs"
 refs:
@@ -131,3 +131,29 @@ You are {{name}}. {{description}}
 
 ## Resume
 
+
+Built in `packages/sdk/src/wakemessage.ts` and the bot package. `fill-words.test.ts` has 6 cases, and `bot-template.test.ts` has 8. `bot-record.test.ts` gained 1 case, and `bot-provider.test.ts` gained 3 and changed 3.
+
+How the parts work:
+
+- `fillWords(text, words)` replaces each `{{name}}` and `{{name.field}}` that the map holds, and leaves the others as written.
+- `wakeMessage` builds its `event.<field>` words from the text, then fills through `fillWords`.
+- `template.ts` holds `DEFAULT_TEMPLATE`, `templateOf`, `chatLines` and `firstTurn`.
+- `plugin.ts` reads templates with `host.records('templates', { body: 'text' })`, and offers the option `lastChats`, 10 by default.
+- A bot write that names a missing template is refused with the sentence "The template <name> does not exist."
+- `sessionFor` always sends a prompt, which is the filled template.
+- At the make, the bot has no chats, so `{{chats}}` is `None.`.
+
+Where the build departs from the plan:
+
+- An edit reads the template only when its body names `template`. So a bot whose template was deleted can still be edited.
+- `templateOf` and `chatLines` are exported, so task 03 and the tests use them.
+- `fillWords` looks up a dotted name as one key, such as `event.repo`.
+- `fill-words.test.ts` has an extra case: a word named like an `Object` prototype key is left as written.
+
+Open questions:
+
+- Should an edit that does not name `template` be refused when the bot's kept template was deleted? The build takes the smaller option and lets it pass.
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 4015 of 4017 tests.
+The 2 failures are timeouts under load in `nested-proxy.test.ts` and `nested-start.test.ts`, which do not use the files this task changed. `nested-proxy` passes alone, and `nested-start` passes with `--testTimeout 30000`.

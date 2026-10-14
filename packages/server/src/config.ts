@@ -26,6 +26,20 @@ export interface HttpSetting {
 }
 
 /**
+ * Where the plugins' routes are served.
+ *
+ * Absent is the daemon's own listener. A `port` moves every route to a listener
+ * of its own, which serves `/plugins/*` and nothing else, so a route can be on
+ * a public address while AHP and the API are not.
+ */
+export interface RoutesSetting {
+  /** The port the routes' own listener is bound to. */
+  port?: number;
+  /** The address the routes' own listener binds. Absent is the daemon's host. */
+  host?: string;
+}
+
+/**
  * How this host writes down what its work cost, and where it cuts it.
  *
  * `per: 'turn'` - the default - is one record for a turn, holding what the turn
@@ -255,6 +269,8 @@ export interface Config {
    * asked for an API keeps.
    */
   http?: boolean | HttpSetting;
+  /** Where the plugins' routes are served. Absent is the daemon's own listener. */
+  routes?: RoutesSetting;
   /**
    * The providers this proxy calls, and the model names that point at them.
    *
