@@ -1,10 +1,10 @@
 ---
 title: A webhook talks to a bot or fires an automation
 domain: plugin
-status: draft
+status: planned
 priority: medium
 created: 2026-10-13
-revalidated: 2026-10-13
+revalidated: 2026-10-14
 requires:
   - plans/plugin/21-a-plugin-serves-an-http-route/plan.md
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
@@ -40,7 +40,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Runtime path
 
 ```
-POST /plugins/webhook/<endpoint> + bearer -> route -> endpoint record -> bot: thread map -> chat -> turn -> reply
+POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record -> bot: thread map -> chat -> turn -> reply
                                                                       -> automation: fireTrigger -> run prompt with {{event.<field>}}
 ```
 
@@ -62,10 +62,13 @@ POST /plugins/webhook/<endpoint> + bearer -> route -> endpoint record -> bot: th
 | A callback URL must start with a prefix set on its endpoint | (defaulted: else a caller makes the host call any address) | 02 |
 | A synchronous reply ends at a timeout and says the turn still runs | (defaulted: a turn can wait for a person) | 02 |
 | A run's prompt names the event's fields as `{{event.<field>}}`, with the wake filler | (defaulted: reuse the one filler the host has) | 03 |
+| An automation's trigger names the endpoint: its `config` holds `endpoint: <id>`, the host matches `config` against the fire's data in `fired`, and a client form offers the field | Softov, 2026-10-14, asked "How does a webhook call reach one automation?": "Automation names the endpoint" | 03 |
+| A bot call is a JSON body `{ thread, text, callback }`; any other body is the raw text, with `thread` and `callback` from the query | Softov, 2026-10-14, asked "Where does a call to a bot carry its thread, text and callback?": "JSON body, with query fallback" | 02 |
+| A synchronous reply waits for the plugin option `syncTimeoutSeconds`, default 60, and an endpoint field of the same name overrides it | Softov, 2026-10-14, asked "How long does a sync reply wait, and where is it set?": "Endpoint field, plugin default 60 s" | 02 |
 
 ## Proposed architecture
 
-- **Data flow** - An endpoint record names its target, a bot or an automation, its secret and its reply. The route reads the record, checks the bearer, and acts.
+- **Data flow** - An endpoint record names a bot or marks itself as an automation endpoint, and names its secret and its reply. An automation's trigger names the endpoint in its `config`. The route reads the record, checks the bearer, and acts.
 - **Event flow** - For a bot, the plugin sends the body as a turn through its own client connection, and hears the turn end to reply. For an automation, it calls `fireTrigger`.
 - **State flow** - The thread map lives in the plugin's records, so it survives a restart.
 - **Layer responsibilities** - webhook, a new package: endpoints, route, thread map, reply · sdk: event fields in a prompt, public listener · docs.
@@ -75,10 +78,10 @@ POST /plugins/webhook/<endpoint> + bearer -> route -> endpoint record -> bot: th
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| 01 - The webhook plugin keeps endpoints and checks the caller | not written | - |
-| 02 - A webhook talks to a bot by thread | not written | 01 |
-| 03 - A webhook fires an automation, and the run reads the event | not written | 01 |
-| 04 - Routes can listen on a public port of their own | not written | 01 |
+| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | todo | - |
+| [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | todo | 01 |
+| [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | todo | 01 |
+| [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | todo | 01 |
 
 ## Risks and tradeoffs
 
@@ -88,13 +91,17 @@ POST /plugins/webhook/<endpoint> + bearer -> route -> endpoint record -> bot: th
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13.
-- **Next action:** write the four task files.
-- **Open questions:** none.
-- **Watch out for:** the plugin acts as `plugin:webhook`; it must start a turn in a bot's session with the grants the operator gave it.
+- **Done so far:** the plan, 2026-10-13; the four task files, 2026-10-14; tasks 02 and 03 amended with the answers, 2026-10-14.
+- **Next action:** build task 01. Tasks 02, 03 and 04 can start after it.
+- **Open questions:** none. Softov answered the three questions on 2026-10-14, and the *Decisions locked in* table holds the answers.
+- **Watch out for:**
+  - The plugin acts as `plugin:@ahpd/webhook`, and its route is `/plugins/%40ahpd/webhook/<endpoint>`, because a plugin's id is its package name. It needs the grants that the operator gives it to read a bot, create a chat and send a turn.
+  - The fire's data is kept on the run's origin, which other readers of the run see. A webhook body must carry no secret.
+  - A `webhook` trigger with no `config` matches every fire of its event. The form requires `endpoint`, but the host does not refuse a trigger without it.
+  - An endpoint is a hand-edited record file. The plan names no scheme or command that makes one.
 
 ## Final verification checklist
 
-- [ ] `pnpm vitest run packages/webhook packages/sdk` passes.
-- [ ] `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- [ ] `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes.
+- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
 - [ ] `plans/index.md` updated.
