@@ -177,6 +177,12 @@ importers:
         specifier: workspace:*
         version: link:../sdk
 
+  packages/webhook:
+    devDependencies:
+      '@ahpd/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+
 packages:
 
   '@agentclientprotocol/sdk@1.6.0':

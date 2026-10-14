@@ -17,7 +17,7 @@ on:
 # What the staging, rehearsal and approval steps name. The pack step packs
 # every workspace package; this list is what is published.
 env:
-  PUBLISHED: sdk agent-claude agent-cofold agent-acp agent-pi bot computer push tunnel-devtunnel server
+  PUBLISHED: sdk agent-claude agent-cofold agent-acp agent-pi bot computer push webhook tunnel-devtunnel server
 
 jobs:
   release:

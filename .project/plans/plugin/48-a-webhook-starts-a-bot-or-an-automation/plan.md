@@ -1,7 +1,7 @@
 ---
 title: A webhook talks to a bot or fires an automation
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-13
 revalidated: 2026-10-14
@@ -78,7 +78,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | todo | - |
+| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | implemented | - |
 | [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | todo | 01 |
 | [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | todo | 01 |
 | [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | todo | 01 |
@@ -91,8 +91,8 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13; the four task files, 2026-10-14; tasks 02 and 03 amended with the answers, 2026-10-14.
-- **Next action:** build task 01. Tasks 02, 03 and 04 can start after it.
+- **Done so far:** the plan, 2026-10-13; the four task files, 2026-10-14; tasks 02 and 03 amended with the answers, 2026-10-14; task 01 implemented, 2026-10-14.
+- **Next action:** build task 02, then tasks 03 and 04.
 - **Open questions:** none. Softov answered the three questions on 2026-10-14, and the *Decisions locked in* table holds the answers.
 - **Watch out for:**
   - The plugin acts as `plugin:@ahpd/webhook`, and its route is `/plugins/%40ahpd/webhook/<endpoint>`, because a plugin's id is its package name. It needs the grants that the operator gives it to read a bot, create a chat and send a turn.

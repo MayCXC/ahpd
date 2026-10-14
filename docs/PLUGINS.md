@@ -196,6 +196,8 @@ export const apply: Plugin['apply'] = (host) => {
 
 **Nothing stands between this and the public internet.** The request's `Host` is checked against the names this host answers to, and that is the only guard in front of your handler: there is no bearer token, and no `Origin` check, because a webhook is not a browser. **Authenticate the caller yourself** - check the signature, or a token in the path or a header - and refuse with 401 before you read the body. What your route does on the host goes through your plugin's connection, so the grants your operator wrote for your plugin are the gate on what it may do.
 
+`@ahpd/webhook` is a plugin that does this: each endpoint names a vault secret, and a call passes only with that secret as its bearer token - [WEBHOOKS.md](WEBHOOKS.md).
+
 One route per plugin, and the prefix is your plugin's name with each `/`-separated segment percent-encoded: `@acme/webhooks` is served under `/plugins/%40acme/webhooks/`. Nothing is refused for the shape of its name, because a throw there would cost the plugin everything else it registered.
 
 The path reaches your handler whole, prefix and all, so `new URL(request.url).pathname` is the path you wrote the webhook for. The prefix is matched by whole segments: `/plugins/%40acme/webhooksy/hook` reaches nothing, rather than being the start of yours.

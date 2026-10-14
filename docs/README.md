@@ -25,5 +25,6 @@ One file per area of the host. Each says what is true today and links the decisi
 | [TOOLS.md](TOOLS.md) | What tools a session's model is offered, and where each set of them comes from |
 | [USAGE.md](USAGE.md) | Usage: the records this host writes and what a pool has been charged |
 | [USERS.md](USERS.md) | The user directory: the people, their roles and what their work may be charged to |
+| [WEBHOOKS.md](WEBHOOKS.md) | Webhooks: a URL that talks to a bot or fires an automation, with a secret per endpoint |
 
 What the repository is, and how to start it, is [the root README](../README.md). Where the reference lives and which revisions were last read is [REFERENCE.md](../REFERENCE.md). The reasoning behind a choice these files link is under [`.project/decisions/`](../.project/decisions/).
