@@ -65,10 +65,10 @@ const keySchema = (root: RootConfigPort, key: string): Record<string, unknown> =
   ((root.schema() as { properties: Record<string, { properties: Record<string, unknown> }> }).properties[key] ?? { properties: {} }).properties;
 
 describe('the daemon keys root config carries', () => {
-  it('are the eleven of them, and none of the others', () => {
+  it('are the twelve of them, and none of the others', () => {
     const { schema } = port();
     const properties = (schema() as { properties: Record<string, unknown> }).properties;
-    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
+    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
     for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'trustToken', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
       expect(Object.keys(properties)).not.toContain(key);
     }

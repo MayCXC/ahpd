@@ -48,7 +48,7 @@ import type { ControlServer } from '../control.js';
 import { here } from '../ask.js';
 import { offerConfigure, askToServe } from './configure.js';
 import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, customizationStatePath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
-import { API_PREFIX, apiHandler, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
+import { API_PREFIX, apiHandler, json, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
 import { proxyHandler } from '../proxy/listener.js';
 import { loadPlugins } from '../plugins.js';
@@ -328,7 +328,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   if (options.http !== undefined && token === undefined && users === undefined) {
     stop('http needs a credential: pass --connection-token, --connection-token-file or --users.');
   }
+  if (options.routes !== undefined && options.stdio) {
+    stop('routes needs a listening port, and --stdio serves one connection on this process\'s own pipes.');
+  }
   const ownPort = options.http?.port;
+  /** The port of the routes' own listener, when `routes.port` gives them one. */
+  const routesPort = options.routes?.port;
+  // The routes' own listener binds where `routes.host` says, and on the
+  // daemon's address otherwise.
+  const routesHost = options.routes?.host ?? options.host;
   // The API's own listener binds where `http.host` says, and on the daemon's
   // address otherwise.
   const apiHost = options.http?.host ?? options.host;
@@ -922,11 +930,31 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * answered as a request this listener does not speak.
    */
   pluginRequests = pluginRoutes({
-    routes: () => registered,
+    // With a port of their own, the routes are not on this listener, and a
+    // path under `/plugins/` here is told there is nothing there.
+    routes: () => (routesPort === undefined ? registered : {}),
     authorities: () => [...apiOrigins(apiHost, options.resource, boundPort, options.origins).authorities, ...announcedNames(said)],
     onProblem: stamp,
     otherwise: below,
   });
+  /*
+   * The routes' own listener, for `routes.port`.
+   *
+   * It serves the plugins' routes and a 404 for everything else, so AHP, the
+   * API and the proxy are never reached on it. Its names are the ones of its
+   * own port. A name a plugin announced is left out, because what a tunnel
+   * forwards to is the daemon's port.
+   */
+  let routesBoundPort = 0;
+  const routesListener: ApiListener | undefined = routesPort === undefined
+    ? undefined
+    : await listenApi(pluginRoutes({
+      routes: () => registered,
+      authorities: () => apiOrigins(routesHost, options.resource, routesBoundPort, options.origins).authorities,
+      onProblem: stamp,
+      otherwise: (request) => Promise.resolve(json(404, { message: `No plugin route at ${new URL(request.url).pathname}` })),
+    }), { port: routesPort, host: routesHost });
+  routesBoundPort = routesListener?.port ?? 0;
 
   /*
    * A daemon with no backend, said in the words of the thing that fixes it.
@@ -1057,6 +1085,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // `http.port` bound. Its own line, and `http://` rather than `ws://`, so
     // `daemon.ts` keeps reading the origin off the line above.
     + (api === undefined ? '' : `http on http://${urlHost(apiHost)}:${apiListener?.port ?? listener.port}${API_PREFIX}\n`)
+    // Where the routes are, when `routes.port` gave them a listener of their own.
+    + (routesListener === undefined ? '' : `routes on http://${urlHost(routesHost)}:${routesListener.port}/plugins/\n`)
     // Its own line, in the same write as the origin, so `start` reading a log
     // other daemons also write to takes the announcement of the child it spawned.
     + `pid ${String(process.pid)}\n`
@@ -1156,6 +1186,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       // a listener the daemon is no longer behind, and a successor does not
       // find its port still bound.
       await apiListener?.close();
+      await routesListener?.close();
       await listener.close();
       // Then what the host runs: the clock, the sessions and their agents,
       // the terminals, and the stores, so a successor is their only writer.

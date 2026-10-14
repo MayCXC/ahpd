@@ -36,6 +36,7 @@ const TUNNEL_HOST = 'fixture-tunnel.example.com';
 interface Daemon {
   child: ChildProcess;
   port: number;
+  stdout(): string;
   stderr(): string;
 }
 
@@ -73,7 +74,7 @@ const daemon = (value: unknown, args: string[] = []): Promise<Daemon> => new Pro
     if (ws === null || settled) return;
     settled = true;
     clearTimeout(timer);
-    const one: Daemon = { child, port: Number(ws[2]), stderr: () => stderr };
+    const one: Daemon = { child, port: Number(ws[2]), stdout: () => stdout, stderr: () => stderr };
     started.push(one);
     resolve(one);
   });
@@ -114,6 +115,18 @@ const raw = (port: number, head: string): Promise<string> => new Promise((resolv
   let text = '';
   socket.on('data', (chunk: Buffer) => { text += String(chunk); });
   socket.on('end', () => { resolve(text); });
+  socket.on('error', () => { resolve(text); });
+  socket.setTimeout(5000, () => { socket.destroy(); resolve(text); });
+});
+
+/** One request written by hand with its own request line, as the first bytes of its answer, or '' when the socket closed with none. */
+const rawAt = (port: number, line: string, head: string): Promise<string> => new Promise((resolve) => {
+  const socket = connect(port, '127.0.0.1', () => {
+    socket.write(`${line}\r\n${head}\r\n`);
+  });
+  let text = '';
+  socket.on('data', (chunk: Buffer) => { text += String(chunk); socket.destroy(); resolve(text); });
+  socket.on('close', () => { resolve(text); });
   socket.on('error', () => { resolve(text); });
   socket.setTimeout(5000, () => { socket.destroy(); resolve(text); });
 });
@@ -261,6 +274,62 @@ describe('a route on a daemon that names an origin', () => {
     expect(status(await raw(one.port, 'Host: 203.0.113.5:37537\r\n'))).toBe(200);
     expect(status(await raw(one.port, 'Host: 203.0.113.5:9999\r\n'))).toBe(403);
     expect(status(await raw(one.port, 'Host: 203.0.113.5\r\n'))).toBe(403);
+  });
+});
+
+/** The port the announcement gives the routes' own listener. */
+const routesPortOf = (one: Daemon): number => {
+  const found = /routes on http:\/\/[^\s]+:(\d+)\/plugins\//u.exec(one.stdout());
+  if (found === null) throw new Error(`the daemon announced no routes listener:\n${one.stdout()}`);
+  return Number(found[1]);
+};
+
+describe('the routes option', () => {
+  it('stops a daemon whose routes.host has no routes.port, naming both keys', async () => {
+    const failed = await daemon({ routes: { host: '127.0.0.1' }, plugins: [BACKEND, ROUTE] }).then(() => '', (error: unknown) => String(error));
+    expect(failed).toContain('routes.host');
+    expect(failed).toContain('routes.port');
+  }, 40000);
+
+  it('stops a daemon that is given routes and --stdio', async () => {
+    const failed = await daemon({ routes: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--stdio']).then(() => '', (error: unknown) => String(error));
+    expect(failed).toContain('routes needs a listening port');
+  }, 40000);
+});
+
+describe('routes on a port of their own', () => {
+  let one: Daemon;
+  let routes: number;
+
+  beforeAll(async () => {
+    one = await daemon({ http: true, routes: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
+    routes = routesPortOf(one);
+  }, 40000);
+
+  it('answers a route on that port', async () => {
+    const answer = await hook(routes, `${PREFIX}/hook`, 'a=1');
+    expect(answer.status).toBe(200);
+    expect((await seen(answer)).path).toBe(`${PREFIX}/hook`);
+  });
+
+  it('answers 404 to the same route on the daemon port', async () => {
+    expect((await hook(one.port, `${PREFIX}/hook`, 'a=1')).status).toBe(404);
+  });
+
+  it('answers 404 to an AHP upgrade, to /api and to /v1 on the routes port', async () => {
+    const upgrade = await rawAt(routes, 'GET / HTTP/1.1', `Host: 127.0.0.1:${String(routes)}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\nSec-WebSocket-Version: 13\r\n`);
+    expect(status(upgrade)).toBe(404);
+    const headers = { authorization: 'Bearer root-secret' };
+    expect((await fetch(`http://127.0.0.1:${String(routes)}/api/cli-manifest`, { headers })).status).toBe(404);
+    expect((await fetch(`http://127.0.0.1:${String(routes)}/v1/models`, { headers })).status).toBe(404);
+    // The daemon's own port still serves the API.
+    expect((await fetch(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, { headers })).status).toBe(200);
+  });
+
+  it('refuses a Host that does not name the routes port', async () => {
+    expect(status(await raw(routes, `Host: 127.0.0.1:${String(routes)}\r\n`))).toBe(200);
+    expect(status(await raw(routes, `Host: 127.0.0.1:${String(one.port)}\r\n`))).toBe(403);
+    expect(status(await raw(routes, `Host: evil.example:${String(routes)}\r\n`))).toBe(403);
   });
 });
 

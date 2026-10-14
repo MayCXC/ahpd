@@ -19,7 +19,7 @@ import { dirname, resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
 import type { McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
-import type { Config, HttpSetting } from '../config.js';
+import type { Config, HttpSetting, RoutesSetting } from '../config.js';
 import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
 import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
 import { proxyConfiguration, proxyProblems, proxySchema, type ProxyConfiguration } from '../proxy/providers.js';
@@ -123,6 +123,13 @@ export interface Options {
    * decision put it in the configuration.
    */
   http?: HttpSetting;
+  /**
+   * Where the plugins' routes are served.
+   *
+   * Absent is the daemon's own listener. A `port` is a listener of the routes'
+   * own, which serves nothing else.
+   */
+  routes?: RoutesSetting;
   /** The providers this proxy calls and the model names that point at them. */
   proxy: ProxyConfiguration;
   /**
@@ -567,6 +574,15 @@ export const serverFields = {
     },
     description: "Serve the HTTP API: true under /api on the daemon's own listener, or an object whose port gives it a listener of its own and whose host binds that listener. Set in the configuration file only.",
   },
+  routes: {
+    type: 'object',
+    title: 'Plugin routes',
+    properties: {
+      port: { type: 'integer', title: 'Port', minimum: 0, maximum: 65535 },
+      host: { type: 'string', title: 'Host', pattern: '^\\S+$' },
+    },
+    description: "Where the plugins' routes are served. Absent is the daemon's own port. A port gives them a listener of their own that serves nothing else, and a host binds that listener. Set in the configuration file only.",
+  },
   proxy: {
     ...proxySchema,
     description: 'The providers this proxy calls and the model names that point at them: providers are keyed by the id a model entry names, and a model name is written <maker>/<name> with the entries serving it. An entry under a built-in id replaces it whole. A key is named by the environment variable holding it, never written here. sessionCalls is record (the default) or skip: whether a call made with a session\'s own token is policy-checked and recorded by the proxy. Set in the configuration file only.',
@@ -605,7 +621,7 @@ export const serverFields = {
 } satisfies Record<string, Field>;
 
 /** The fields only the configuration file sets, which have no flag. */
-const FILE_ONLY = ['http', 'usage', 'proxy', 'policies', 'mcpServers', 'shellEnv'] as const;
+const FILE_ONLY = ['http', 'routes', 'usage', 'proxy', 'policies', 'mcpServers', 'shellEnv'] as const;
 
 /** The flags that mean something only when typed, which the file does not set. */
 const TYPED_ONLY = ['stdio', 'configFile', 'noPlugins', 'noCwd', 'pluginOptions'] as const;
@@ -859,6 +875,18 @@ const httpOf = (value: Config['http'], source: string): HttpSetting | undefined 
 };
 
 /**
+ * `routes` as a run takes it. `host` binds the routes' own listener and has
+ * none to bind without a `port`, so it is refused on its own.
+ */
+const routesOf = (value: Config['routes'], source: string): RoutesSetting | undefined => {
+  if (value === undefined) return undefined;
+  if (value.host !== undefined && value.port === undefined) {
+    return stop(`${source}: routes.host names the routes' own listener, so it needs a routes.port to bind.`);
+  }
+  return value;
+};
+
+/**
  * One `origins` entry as the origin it names, or the start stops.
  *
  * An origin is a scheme, a host and a port and nothing else, because that is
@@ -1028,6 +1056,7 @@ const noCwd = input['noCwd'] === true;
   const sessionResidencyLimit = given('sessionResidencyLimit');
   const usageZone = given('usage')?.timezone;
   const http = httpOf(file.http, source('http'));
+  const routes = routesOf(file.routes, source('routes'));
   const proxy = proxyConfiguration(given('proxy'));
 
   return {
@@ -1063,6 +1092,7 @@ const noCwd = input['noCwd'] === true;
     policiesCheck: given('policies')?.check ?? false,
     ...(wire === undefined ? {} : { wire }),
     ...(http === undefined ? {} : { http }),
+    ...(routes === undefined ? {} : { routes }),
     proxy,
     mcpServers: mcp.servers,
     plugins,

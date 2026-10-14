@@ -204,6 +204,8 @@ The path reaches your handler whole, prefix and all, so `new URL(request.url).pa
 
 A route is served whether `http` is on or off, and on the daemon's own port rather than one of its own, so a tunnel forwards it like everything else here and no second port is opened for you. `/api` is unaffected.
 
+The operator can move every route to a listener of its own with the daemon key `routes`, such as `"routes": { "port": 8443, "host": "0.0.0.0" }`. That listener serves `/plugins/*` and nothing else: AHP, `/api` and `/v1` answer 404 there, and `/plugins/*` answers 404 on the daemon's port. Its `Host` check takes the names of its own port, and a plugin's announced names are not among them. The daemon says where it is in a `routes on http://<host>:<port>/plugins/` line. `routes` is refused with `--stdio`, and `routes.host` is refused without `routes.port`.
+
 A handler that throws is answered 500 with the shape of the failure, its reason goes to the daemon's log against your plugin's name, and the daemon keeps serving.
 
 ### A trigger type of your own

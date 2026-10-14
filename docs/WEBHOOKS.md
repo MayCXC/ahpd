@@ -48,6 +48,20 @@ Put the token in the vault under the name that `secret` gives, with `ahpd vault 
 
 The plugin compares the token in constant time, and reads no body before the token passes.
 
+### A public port
+
+The webhooks can be on a public address while AHP and the API stay on loopback. The daemon key `routes` gives every plugin route a listener of its own, which serves nothing else:
+
+```json
+{
+  "host": "127.0.0.1",
+  "routes": { "port": 8443, "host": "0.0.0.0" },
+  "origins": ["https://hooks.example.com"]
+}
+```
+
+The routes listener checks the `Host` header like the daemon's port does. A caller that reaches it by a public name needs that name in `origins`. With `routes.port` set, `/plugins/*` answers 404 on the daemon's port. See [HOST.md](HOST.md#configuration-keys).
+
 ## A call to a bot
 
 A call to a bot endpoint sends its text as a turn in one chat of the bot's session. The caller names a thread, and every call with the same thread goes to the same chat. The first call of a thread makes the chat.
