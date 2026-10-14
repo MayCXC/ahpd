@@ -181,8 +181,8 @@ export function createAdmission(ctx: HostContext, conn: ConnectionContext): Admi
        * That one is refused rather than served. Read as "needs no grant", as
        * it was, an entry nobody wrote is the widest answer there is - which
        * is how `shutdown`, in neither table, came to be served to any
-       * connection that had completed a handshake, and `shutdown` is `SIGTERM`
-       * to the daemon - decision `shutdown-needs-config-change`. Refused by
+       * connection that had completed a handshake, and `shutdown` stops the
+       * daemon - decision `shutdown-needs-config-change`. Refused by
        * omission, a method added later is one the suite names on the next run
        * instead.
        */

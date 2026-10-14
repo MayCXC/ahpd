@@ -1,7 +1,7 @@
 ---
 title: The shutdown method stops the daemon gracefully
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -56,7 +56,7 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The shutdown method runs the way down](task-01-the-shutdown-method-runs-the-way-down.md) | todo | - |
+| [01 - The shutdown method runs the way down](task-01-the-shutdown-method-runs-the-way-down.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -65,8 +65,8 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-shutdown-method-runs-the-way-down.md](task-01-the-shutdown-method-runs-the-way-down.md).
+- **Done so far:** planned 2026-10-13; task 01 implemented 2026-10-13, not reviewed. `diagnostics.shutdown` now runs the lifecycle's way down, so a `shutdown` request raises `stopping` and closes the listeners on every platform instead of signalling the daemon.
+- **Next action:** review task 01, then the checks by hand.
 - **Open questions:** none.
 - **Watch out for:** daemon/20 is not in 0.11.0. A Windows user gets both fixes in the next release.
 

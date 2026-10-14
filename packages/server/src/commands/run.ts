@@ -536,6 +536,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     { ...peopleLists?.methods, ...policyLists.methods },
   );
 
+  /*
+   * Where a `shutdown` request goes, once this daemon has a way down.
+   *
+   * `diagnostics` is a field of the host below, and the lifecycle is built from
+   * the host, so neither can be made first: the host is handed a shutdown that
+   * reads this, and the line after the lifecycle is made is what fills it in.
+   * The socket is bound in between the two, so a request that arrives early has
+   * no way down to run and is answered the way it always was.
+   */
+  let wayDown: (() => void) | undefined;
+
   const base: HostOptions = {
     path: options.paths[0] as string,
     /*
@@ -788,13 +799,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      *
      * The version out of the manifest, the log a detached daemon writes to and
      * every file of the wire capture when there is one - a capture that stops
-     * at the last roll is missing its start - and a shutdown that is the same
-     * signal handler `ahpd stop` reaches through `SIGTERM`.
+     * at the last roll is missing its start - and a shutdown that runs the same
+     * way down `ahpd stop` does, so it stops the daemon gracefully on every
+     * platform rather than signalling itself.
      */
     diagnostics: {
       version: version(),
       logs: () => [daemonLog(), ...(capture.at === undefined ? [] : filesOf(capture.at))],
-      shutdown: () => { process.kill(process.pid, 'SIGTERM'); },
+      shutdown: daemonShutdown(() => wayDown),
     },
   };
 
@@ -1145,6 +1157,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     exit: (code) => process.exit(code),
     later: (step) => { setTimeout(step, 0); },
   });
+  // From here a `shutdown` request runs the way down, as the control pipe does.
+  wayDown = way.shutdown;
   process.on('SIGINT', way.shutdown);
   process.on('SIGTERM', way.shutdown);
   /*
@@ -1203,6 +1217,28 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     }
   }
 }
+
+/**
+ * What a `shutdown` request does to this daemon: the way down once there is
+ * one, and the signal it sent itself before that.
+ *
+ * `way` answers the way down the daemon has now, or nothing in the window
+ * between the host being built with this and the lifecycle being made - the
+ * socket is bound in that window, so a request can land in it. There is no way
+ * down to run there, and the signal is kept for it rather than a request that
+ * does nothing. Once the way is there, this runs the same steps `ahpd stop`
+ * and the signals do, `stopping` first, so the stopping event, the plugin
+ * connections, the listeners and `host.close()` all happen - which sending
+ * `SIGTERM` to itself never did on Windows, where Node makes that a hard kill.
+ */
+export const daemonShutdown = (way: () => (() => void) | undefined): (() => void) => () => {
+  const down = way();
+  if (down === undefined) {
+    process.kill(process.pid, 'SIGTERM');
+    return;
+  }
+  down();
+};
 
 /**
  * The options a recorded line runs with, read over the configuration as it is
