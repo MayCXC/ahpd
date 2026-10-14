@@ -123,6 +123,17 @@ export function createTurns(ctx: SessionContext): Turns {
     options?: TurnOptions,
   ): Promise<void> => {
     /*
+     * One turn at a time in a chat.
+     *
+     * `active` is the one turn this chat has, and a second begun on top of it
+     * takes its place and the parts it has already streamed with it - so the
+     * turn a person is watching leaves the transcript while its own answer is
+     * still arriving. A turn that arrives while one runs is dropped here, and
+     * the host refuses it to the client with a sentence before it gets this
+     * far. `beginning` counts as running, which is a turn switching its model.
+     */
+    if (busy()) return;
+    /*
      * A session whose CLI has exited answers at once, and says why.
      *
      * The turn is recorded as one that failed rather than refused, because a

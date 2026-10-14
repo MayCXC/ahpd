@@ -1029,11 +1029,23 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
        * across there rather than looked for here under an id it will never
        * carry again.
        */
+      const command = text.startsWith(BANG) ? text.slice(BANG.length).trim() : '';
+      /*
+       * One turn at a time in a chat, for the turns that ask the agent.
+       *
+       * A message asking for a turn while one is running is refused here, in
+       * the words the client shows, rather than handed to a backend that would
+       * have to drop it or lose the turn in front of it. A command is left
+       * out: it queues behind the running turn by its own road, and a message
+       * that waited its turn arrives under `queuedAs` and is begun by the
+       * backend when that turn ends.
+       */
+      if (queuedAs === undefined && (command === '' || !options.terminals)
+        && session.chatState().activeTurn !== undefined) return 'A turn is running in this chat';
       if (who !== undefined) senders.set(queuedAs ?? turnId, who);
       // And the window itself, under the same id, for whatever has to ask it
       // something later - the move an agent asks for in this turn most of all.
       if (sender !== undefined) sentBy.set(queuedAs ?? turnId, sender);
-      const command = text.startsWith(BANG) ? text.slice(BANG.length).trim() : '';
       if (command === '' || !options.terminals) {
         /*
          * With what this turn is told, decided by the backend when it begins.

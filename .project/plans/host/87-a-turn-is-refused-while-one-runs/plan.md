@@ -1,7 +1,7 @@
 ---
 title: A turn is refused while one runs
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -59,7 +59,7 @@ client chat/turnStarted -> lifecycle.ts beginOrRun -> session.begin -> beginTurn
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A turn started on a busy chat is refused](task-01-a-turn-started-on-a-busy-chat-is-refused.md) | todo | - |
+| [01 - A turn started on a busy chat is refused](task-01-a-turn-started-on-a-busy-chat-is-refused.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -68,10 +68,10 @@ client chat/turnStarted -> lifecycle.ts beginOrRun -> session.begin -> beginTurn
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-turn-started-on-a-busy-chat-is-refused.md](task-01-a-turn-started-on-a-busy-chat-is-refused.md).
+- **Done so far:** task 01 implemented 2026-10-14, not reviewed and not set to done. The host refuses a turn on a busy chat, and agent-claude drops one that still reaches `begin`. agent-acp, agent-cofold and agent-pi needed no change.
+- **Next action:** review task 01, then the *Final verification checklist* by hand.
 - **Open questions:** none.
-- **Watch out for:** a turn whose model switch is still in progress is busy through `ctx.beginning`, not `ctx.active`. Count it as busy.
+- **Watch out for:** a turn whose model switch is still in progress is busy through `ctx.beginning`, not `ctx.active`. Count it as busy. A message that waited its turn and a `!command` are exempt from the host's check, so the queue keeps moving.
 
 ## Final verification checklist
 

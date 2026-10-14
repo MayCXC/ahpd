@@ -133,6 +133,10 @@ it('does not restart a CLI for a message that picked the agent already running',
   const { session } = await open();
   session.begin('t1', 'plan this', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
   await settle();
+  // Ended, because a second turn on a chat is refused while one runs rather
+  // than begun on top of it.
+  sdk.push({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+  await settle(40);
   session.begin('t2', 'and this', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
   await settle();
   expect(sdk.built).toHaveLength(2);
@@ -142,8 +146,12 @@ it('goes back to the default agent for a message that picked none, on the same c
   const { session } = await open();
   session.begin('t1', 'plan this', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
   await settle();
+  sdk.push({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+  await settle(40);
   session.begin('t2', 'now just answer', undefined, { agent: { uri: 'claude-internal:/agent/Plan' } });
   await settle();
+  sdk.push({ type: 'result', subtype: 'success', is_error: false, duration_ms: 1 });
+  await settle(40);
   session.begin('t3', 'actually, no plan', undefined);
   await settle();
 

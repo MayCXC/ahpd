@@ -532,6 +532,79 @@ describe('driving a turn', () => {
   });
 });
 
+describe('a turn asked for while one is running', () => {
+  /** A live session with a turn under way, and something already said in it. */
+  const busy = async () => {
+    const started = await running();
+    started.client.handle({
+      method: 'dispatchAction',
+      params: { channel: started.chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'first' } } },
+    });
+    await settle();
+    await emit({ type: 'assistant', message: { id: 'm1', content: [{ type: 'text', text: 'Working' }] } });
+    return started;
+  };
+
+  /** The turn the chat is running, as a client reading a snapshot sees it. */
+  const activeTurn = async (client: Awaited<ReturnType<typeof busy>>['client'], chatUri: string) =>
+    (await client.handle({ method: 'subscribe', params: { channel: chatUri } }) as {
+      snapshot: {
+        state: { activeTurn?: { id: string; message: { text: string }; responseParts: { kind?: string }[] } };
+      };
+    }).snapshot.state.activeTurn;
+
+  const say = (client: Awaited<ReturnType<typeof busy>>['client'], chatUri: string, turnId: string, text: string) => {
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId, message: { text } } },
+    });
+  };
+
+  it('is refused, and the running turn keeps its id and its parts', async () => {
+    const { host, client, peer: p, chatUri } = await busy();
+    // A second window on the same chat, to tell a refusal from a turn.
+    const other = peer();
+    const b = host.accept(other);
+    await b.handle(hello(['0.9.0']));
+    await b.handle({ method: 'subscribe', params: { channel: chatUri } });
+
+    say(client, chatUri, 't2', 'second');
+    await settle();
+
+    // Refused rather than accepted: a client applies its own dispatch before it
+    // sends it, so a host that dropped this leaves it holding a turn that will
+    // never be answered and a conversation with one turn missing from it.
+    const rejected = p.notes
+      .map((n) => n.params as { action?: { turnId?: string }; rejectionReason?: string })
+      .find((one) => one.rejectionReason !== undefined);
+    expect(rejected?.rejectionReason).toBe('A turn is running in this chat');
+    expect(rejected?.action?.turnId).toBe('t2');
+    // The refusal carries the action back rather than applying it, so what is
+    // counted here is everything else: nothing of `t2` reaches the chat, and
+    // the window that did not ask hears nothing of it at all.
+    const applied = actions(p, chatUri).filter((e) => e.rejectionReason === undefined);
+    expect(applied.some((e) => e.action.type === 'chat/turnStarted' && e.action.turnId === 't2')).toBe(false);
+    expect(actions(other, chatUri).some((e) => e.action.turnId === 't2')).toBe(false);
+    expect(sdk.said).toEqual(['first']);
+
+    const still = await activeTurn(client, chatUri);
+    expect(still?.id).toBe('t1');
+    expect(still?.message.text).toBe('first');
+    expect(still?.responseParts).toHaveLength(1);
+  });
+
+  it('lets the next one start once the running turn has ended', async () => {
+    const { client, chatUri } = await busy();
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 5 });
+
+    say(client, chatUri, 't2', 'second');
+    await settle();
+    // Nothing is refused on an idle chat, which is what the check has to leave alone.
+    expect(sdk.said).toEqual(['first', 'second']);
+    expect((await activeTurn(client, chatUri))?.id).toBe('t2');
+  });
+});
+
 describe('what the client is told about its own turn', () => {
   it('says the turn started, so the parts that follow have somewhere to go', async () => {
     const { client, peer: p, uri, chatUri } = await running();
