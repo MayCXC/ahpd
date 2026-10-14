@@ -23,7 +23,7 @@ The built-in file store explains non-`file:` URIs as belonging to some other sou
 
 This behavior is coherent for the current daemon and is not a protocol violation.
 It becomes awkward when a plugin wants to add one host-owned URI scheme alongside files.
-The accepted [plugin contribution decision](../decisions/plugin-contributes-host-options.md) intentionally made ports singleton, so changing that needs an explicit design choice rather than treating it as a defect in the original implementation.
+The accepted [plugin contribution decision](../plans/plugin/01-plugins-load-from-configuration/plan.md) intentionally made ports singleton, so changing that needs an explicit design choice rather than treating it as a defect in the original implementation.
 
 ## Proposal
 

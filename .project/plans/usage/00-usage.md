@@ -57,6 +57,6 @@ ahpd usage [pool] -> usageProvider, over the same store, at the terminal or serv
 ## Known gaps
 
 - A stretch open when the daemon crashes is lost, and a machine stopped outside ahpd stays open until the plugin next sees it (usage/03 deferred).
-- A report that names no model and a turn that asked for none is written with an empty `model.name` (decision `a-model-record-with-no-model-named-has-an-empty-name`).
+- A report that names no model and a turn that asked for none is written with an empty `model.name` ().
 - Per report, a count that came down is written as the value it is now, so a harness that recounts overstates rather than understates.
 - The policy rules are a draft: file:///github/ahp-review/prospect/ahp-user-rules.md.

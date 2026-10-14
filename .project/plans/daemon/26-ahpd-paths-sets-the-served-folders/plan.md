@@ -47,8 +47,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Decision | Source |
 | --- | --- |
-| [`ahpd paths list`, `add` and `remove` change the served folders, and none of them asks](../../../decisions/ahpd-paths-lists-adds-and-removes-a-served-folder.md) | Softov, 2026-10-14 |
-| [`ahpd paths add` and `remove` at the terminal reach a running daemon by themselves](../../../decisions/a-served-paths-change-reaches-the-running-daemon.md) | Softov, 2026-10-14 |
+| [`ahpd paths list`, `add` and `remove` change the served folders, and none of them asks](../../../../docs/DAEMON.md) | Softov, 2026-10-14 |
+| [`ahpd paths add` and `remove` at the terminal reach a running daemon by themselves](../../../../docs/DAEMON.md) | Softov, 2026-10-14 |
 
 | What | Source | Task |
 | --- | --- | --- |

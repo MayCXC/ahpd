@@ -9,7 +9,7 @@ refs:
   - code://packages/agent-cofold/src/plugin.ts - the entry this mirrors, options checked key by key
   - code://packages/server/src/plugins.ts - `loadPlugins`, which resolves, checks and imports this package
   - code://docs/PLUGINS.md - the worked example and the options table this package joins
-  - code://.project/decisions/plugin-manifest-is-package-json.md - where a plugin declares `entry` and `title`
+  - code://docs/PLUGINS.md - where a plugin declares `entry` and `title`
   - code://test/plugin-end-to-end.test.ts - the daemon-level test a contributed backend is held to
 ---
 
@@ -47,7 +47,7 @@ refs:
 
 Done 2026-09-22, and by hand against a real server as well.
 Built: `packages/agent-acp/src/plugin.ts` (`name`, `title`, `apply`, one backend per spec, `command` required and reported at load when absent), the re-export from `index.ts`, the `ahpd` key in the manifest, and `test/agent-acp-plugin.test.ts`.
-Then released: the manifest lost `private`, gained the published metadata and an `ahpd.options` declaring `command` required (so `ahpd plugin list` reports a spec with no command as `unconfigured`), and moved to `0.6.2` with the other four packages. `release.yml` now checks, packs and stages all five; see [release-versions-move-together.md](../../../decisions/release-versions-move-together.md).
+Then released: the manifest lost `private`, gained the published metadata and an `ahpd.options` declaring `command` required (so `ahpd plugin list` reports a spec with no command as `unconfigured`), and moved to `0.6.2` with the other four packages. `release.yml` now checks, packs and stages all five; see [DEVELOPER.md](../../../../DEVELOPER.md).
 Written: the `@ahpd/agent-acp` worked example in `docs/PLUGINS.md`, with the options, the four commands it is known to cover, the capability-to-port table and the binary permission rule.
 Run by hand: `scripts/acp-smoke.mts` drives one real turn against `copilot --acp` (GitHub Copilot CLI 1.0.87) through a host built here. It handshook, named provider `copilot`, mapped Copilot's three modes into `permissionMode`, streamed `PONG` for a one-word prompt and completed with no error. Copilot puts its session store under `$HOME/.copilot`, which this sandbox mounts read-only, so the run names `COPILOT_HOME` to a writable directory; on a normal machine it needs no environment at all.
 Run by hand through the daemon itself, 2026-09-22: `node packages/server/dist/main.js --plugin ./packages/agent-acp` loaded the package, listed provider `dsh` beside `claude`, and served one real turn against `@deepseek-ai/dsh-acp` - the shipped `dsh --profile acp` profile - ending in `chat/turnComplete` with `PONG` and no error. That closes the last line the plan's checklist had left open: the daemon's argv and configuration path rather than an in-process host, and `@deepseek-ai/dsh-acp` rather than only the scripted fixture and Copilot.

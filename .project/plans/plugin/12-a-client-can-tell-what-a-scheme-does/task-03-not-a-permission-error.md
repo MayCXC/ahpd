@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4604-L4608](../../../../packages/sdk/src/host.ts#L4604-L4608) - `storeFor`, where the scheme is resolved"
   - "[code://packages/sdk/src/resources.ts#L45-L60](../../../../packages/sdk/src/resources.ts#L45-L60) - `why`, the sentence to keep"
   - "[code://test/uri-resources.test.ts#L84-L93](../../../../test/uri-resources.test.ts#L84-L93) - the case that pins `-32009`"
-  - "[code://.project/decisions/a-scheme-nobody-serves-is-not-a-permission-error.md](../../../decisions/a-scheme-nobody-serves-is-not-a-permission-error.md) - the decision"
+  - "[code://docs/RESOURCES.md](../../../../docs/RESOURCES.md) - the decision"
 ---
 
 ## Objective

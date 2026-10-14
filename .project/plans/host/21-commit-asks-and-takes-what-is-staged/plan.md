@@ -10,7 +10,7 @@ changes: []
 creates: []
 decisions:
   - decisions/a-commit-asks-first-and-names-what-it-takes.md
-  - decisions/a-commit-takes-the-index-when-anything-is-staged.md
+  - ../../../decisions/a-commit-asks-first-and-names-what-it-takes.md
 refs:
   - "[code://packages/sdk/src/changes.ts#L121-L129](../../../../packages/sdk/src/changes.ts#L121-L129) - `COMMIT`, declared with no `confirmation`"
   - "[code://packages/sdk/src/changes.ts#L362-L440](../../../../packages/sdk/src/changes.ts#L362-L440) - `look`: one pass over `git status --porcelain=v1 -z`, where each row is built"
@@ -63,13 +63,13 @@ Commit clicked -> confirmation shown -> invokeChangesetOperation commit -> git c
 | Decision | Tasks |
 | --- | --- |
 | [The commit operation asks first, naming its subject line and the files it will take](../../../decisions/a-commit-asks-first-and-names-what-it-takes.md) | 03 |
-| [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-takes-the-index-when-anything-is-staged.md) | 02, 03 |
+| [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-asks-first-and-names-what-it-takes.md) | 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |
 | This plan carries the commit work, and the other session's uncommitted draft of it is folded in rather than committed on its own. | Softov, 2026-09-27, asked who carries the commit work: "I plan host/21". | 01 |
 | A row's `_meta.staged` and `_meta.unstaged` stay, for a client that can show them; VS Code ignores them. | the protocol's `ChangesetFile._meta`, and the draft | 01 |
-| `_meta['ahp.commit'].files` goes: staging is the selection. | decision [a-commit-takes-the-index-when-anything-is-staged](../../../decisions/a-commit-takes-the-index-when-anything-is-staged.md), Consequences | 02 |
+| `_meta['ahp.commit'].files` goes: staging is the selection. | [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-asks-first-and-names-what-it-takes.md), Consequences | 02 |
 | `_meta['ahp.commit'].message` stays as the subject's replacement when a client sends one. | (defaulted: the protocol has no field for it, and the draft already reads it; Softov may drop it) | 02 |
 | The uncommitted changeset also refreshes on git's `index` and `HEAD`, a completed tool call, a client's file write, and a terminal's exit, only while a client watches and coalesced per directory. | Softov, 2026-09-27, asked which extra refresh triggers go in: "Git index and HEAD, Tool call completes, Client file writes, Terminal exits". | 04 |
 | The git watch closes whenever nobody watches its directory, and a watcher error falls back to the other triggers. | Softov, 2026-09-27, asked which review findings become fix tasks: "Git watcher lifecycle". | 06 |

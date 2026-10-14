@@ -9,8 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/artifact-answers-match-the-reference.md
-  - decisions/pull-request-artifact-on-both-paths.md
 refs:
   - code://.project/review/2026-09-19-upstream-pass-4.md#L25-L27 - the three items this plan takes: promotion, the answer shape, and the pull request recorded as an artifact
   - code://packages/sdk/src/artifacttools.ts#L173-L193 - the ADD run, where a duplicate is answered "Already recorded" and a reference is never promoted
@@ -75,8 +73,8 @@ add_artifact_or_reference -> match on value -> a reference re-added as an artifa
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Artifact tool answers are the reference's, status and id only](../../../decisions/artifact-answers-match-the-reference.md) | Softov, 2026-09-19: "Match the reference exactly: `<status>: <id>`." |
-| 2 | [A pull request is recorded as an artifact whether it was opened or reused](../../../decisions/pull-request-artifact-on-both-paths.md) | Softov, 2026-09-19: "Both opened and reused, as the reference does." |
+| 1 | Artifact tool answers are the reference's, status and id only | Softov, 2026-09-19: "Match the reference exactly: `<status>: <id>`." |
+| 2 | A pull request is recorded as an artifact whether it was opened or reused | Softov, 2026-09-19: "Both opened and reused, as the reference does." |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -7,8 +7,6 @@ created: 2026-10-01
 revalidated: 2026-10-01
 requires: []
 decisions:
-  - decisions/teams-and-projects-are-memberships-in-the-users-file.md
-  - decisions/a-request-naming-no-scope-uses-the-persons-primary.md
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L115](../../../../packages/sdk/src/types/users.ts#L84-L115) - `UserRecord`"
   - "[code://packages/sdk/src/types/users.ts#L157-L162](../../../../packages/sdk/src/types/users.ts#L157-L162) - `UserFile`"
@@ -42,8 +40,8 @@ AHP: session picker `scope` (fixed after the first turn) -> scopeFor ; proxy: he
 
 | Decision | Source |
 | --- | --- |
-| [Teams and projects are memberships in the users file, written team:project](../../../decisions/teams-and-projects-are-memberships-in-the-users-file.md) | Softov, 2026-10-01 |
-| [A request that names no team and project uses the person's primary](../../../decisions/a-request-naming-no-scope-uses-the-persons-primary.md) | Softov, 2026-10-01 |
+| [Teams and projects are memberships in the users file, written team:project](../../../../docs/USERS.md) | Softov, 2026-10-01 |
+| [A request that names no team and project uses the person's primary](../../../../docs/PROXY.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

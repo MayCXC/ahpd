@@ -16,7 +16,7 @@ refs:
 
 ## Objective
 
-The host knows which plugin spec registered each agent, the inner host loads that plugin whatever the provider is called and wherever the plugin came from, and the inner session is created under the provider the inner host serves, per [the plugin decision](../../../decisions/the-host-records-which-plugin-registered-each-agent.md) and [the profile decision](../../../decisions/a-nested-host-is-configured-by-the-machine-profile-only.md).
+The host knows which plugin spec registered each agent, the inner host loads that plugin whatever the provider is called and wherever the plugin came from, and the inner session is created under the provider the inner host serves, per [the plugin decision](./plan.md) and [the profile decision](../05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md).
 
 ## Files
 

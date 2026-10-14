@@ -397,8 +397,7 @@ describe('a call ends when either side does, and on a timeout', () => {
      * The proxy calls the provider with the host's key, so a 401 or 403 is
      * about that key and not the caller's. Streamed back as it came, a client
      * reads a 401 as its own token being wrong and is shown a body that may
-     * name the host's account - decision
-     * `the-proxy-answers-a-providers-key-refusal-with-its-own-error`.
+     * name the host's account.
      */
     for (const status of [401, 403]) {
       const provider = await fake(answerJson(status, { error: { message: `key sk-account-1234 for org-acme is ${String(status)}`, type: 'authentication_error' } }));

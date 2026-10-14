@@ -12,7 +12,7 @@ refs:
 
 ## Objective
 
-A run takes the model reference its caller names as an option, and every `RunRecord` cofold writes keeps it as given, per decisions [a-cofold-turns-model-is-kept-in-cofolds-store](../../../decisions/a-cofold-turns-model-is-kept-in-cofolds-store.md) and [a-cofold-run-is-told-the-model-reference-it-runs-on](../../../decisions/a-cofold-run-is-told-the-model-reference-it-runs-on.md).
+A run takes the model reference its caller names as an option, and every `RunRecord` cofold writes keeps it as given, per [The model a cofold turn ran on is kept in cofold's own store, and the transcript reads it back](./plan.md) and [A cofold run is told the model reference it runs on, and cofold stores it as given](./plan.md).
 
 ## Files
 

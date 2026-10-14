@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-record-keeps-the-providers-cost-beside-the-charged-one.md
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L21-L29](../../../../packages/sdk/src/types/usage.ts#L21-L29) - `Cost`, one amount and `from`"
   - "[code://packages/sdk/src/types/usage.ts#L50-L51](../../../../packages/sdk/src/types/usage.ts#L50-L51) - `UsageBase.cost`"
@@ -67,7 +66,7 @@ provider answer -> usageReader (tokens, and now cost) -> record: cost from price
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../decisions/a-record-keeps-the-providers-cost-beside-the-charged-one.md) | Softov, 2026-10-07 |
+| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/USAGE.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

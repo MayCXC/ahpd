@@ -9,8 +9,7 @@ import type { Owner } from './types/usage.js';
  * named in `Start.settings`. A backend that spawns its process through the
  * host's `computers` port honours it, and the one that does is
  * `@ahpd/agent-acp`. Every other backend must refuse rather than run on the
- * host and leave a person believing they are inside a sandbox they are not in -
- * decision `a-backend-reaches-a-computer-through-a-port`.
+ * host and leave a person believing they are inside a sandbox they are not in.
  *
  * **Having the port is not the same as using it.** The host hands `computers`
  * to every backend, because whether a machine can be reached is the host's to
@@ -95,7 +94,7 @@ export const openComputer = async (
  * machine that was not prepared for it fails much later and further away, if
  * it runs at all. A machine made from a `disposableAlone` profile is kept for
  * the one session it was made for, and the picker is not consulted when an id
- * is typed - decision `a-disposable-alone-machine-refuses-another-session`. And
+ * is typed. And
  * a machine made without a part the agent needs - its build failed, or nothing
  * asked for it - is refused naming the part, since a machine never gains one
  * while it runs.

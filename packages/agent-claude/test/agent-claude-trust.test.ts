@@ -10,7 +10,7 @@ import { claude } from '../src/claude.js';
  * A folder carries things a model is made to obey and nobody has read: settings
  * with hooks that run on this host, MCP servers that are commands, a `CLAUDE.md`
  * that is instructions. None of it loads in a folder the host says is not
- * trusted - decision `a-folder-is-untrusted-until-a-client-says-otherwise` -
+ * trusted -
  * and all of it loads as before where the host says the folder is trusted.
  */
 

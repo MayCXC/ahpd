@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/a-plugin-gets-frozen-copies-of-host-values.md
 refs:
   - "[code://packages/sdk/src/users.ts#L782-L810](../../../../packages/sdk/src/users.ts#L782-L810) - a principal is a writable literal; `can` and `id` are own properties"
   - "[code://packages/server/src/commands/authorize.ts#L29-L33](../../../../packages/server/src/commands/authorize.ts#L29-L33) - `ROOT`, one module-level principal for the deployment token"
@@ -66,7 +65,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin gets frozen copies of the host's values, never the host's own objects](../../../decisions/a-plugin-gets-frozen-copies-of-host-values.md) | Softov, 2026-10-08 |
+| 1 | [A plugin gets frozen copies of the host's values, never the host's own objects](../../../../docs/PLUGINS.md) | Softov, 2026-10-08 |
 
 | What | Source | Task |
 | --- | --- | --- |

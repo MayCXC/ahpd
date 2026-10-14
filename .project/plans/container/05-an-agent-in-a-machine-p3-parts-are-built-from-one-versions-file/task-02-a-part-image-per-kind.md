@@ -4,7 +4,7 @@ status: done
 depends: [task-01-the-versions-file.md]
 layer: "computer"
 refs:
-  - "[code://.project/decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md](../../../decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md) - how the ahpd part gets its plugins"
+  - "[code://packages/computer/src/parts.ts#L651](../../../../packages/computer/src/parts.ts#L651) - the `ahpd plugin install` line the ahpd part's Dockerfile carries"
   - "[code://packages/server/src/install.ts#L429](../../../../packages/server/src/install.ts#L429) - `ahpd plugin install` runs `npm install --prefix <configDir>`"
   - "[code://packages/server/src/config.ts#L218-L222](../../../../packages/server/src/config.ts#L218-L222) - `configDir`, `$XDG_CONFIG_HOME/ahpd`, which is not inside `/opt/ahpd/ahpd`"
   - "[code://packages/server/src/plugins.ts#L169-L200](../../../../packages/server/src/plugins.ts#L169-L200) - `resolvePlugin`, which resolves a bare name from the config dir only"
@@ -61,7 +61,7 @@ Done 2026-10-04.
   `installPlugins` checks every argument against, and `./agent-cofold.tgz` is a
   path. `ahpd plugin install --no-enable` still installs the plugins of an
   installed package, which is the case decision
-  `a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install` is
+   is
   about. Both land in the same root, so nothing downstream can tell them apart.
 - `pnpm pack` runs `prepack`, which is `tsc -p .`, so a checkout has to be
   built before its ahpd part can be packed - the same order `release.yml` uses

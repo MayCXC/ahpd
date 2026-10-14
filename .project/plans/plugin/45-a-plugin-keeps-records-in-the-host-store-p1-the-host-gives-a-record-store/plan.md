@@ -6,11 +6,6 @@ priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
 decisions:
-  - decisions/a-plugin-keeps-records-in-the-host-store.md
-  - decisions/yaml-lives-in-server.md
-  - decisions/a-plugin-gets-yaml-from-the-host.md
-  - decisions/a-person-edits-a-record-as-a-markdown-file.md
-  - decisions/the-daemon-reloads-a-hand-edited-file.md
 refs:
   - "[code://packages/sdk/src/plugins.ts#L86-L89](../../../../packages/sdk/src/plugins.ts#L86-L89) - `PORT_KEYS`, the ports a plugin may set"
   - "[code://packages/sdk/src/plugins.ts#L787-L791](../../../../packages/sdk/src/plugins.ts#L787-L791) - `recordUsage`, a port read when it is called"
@@ -56,11 +51,11 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin keeps its records in a record store the host gives it](../../../decisions/a-plugin-keeps-records-in-the-host-store.md) | Softov, 2026-10-11 |
-| 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../decisions/yaml-lives-in-server.md) | Softov, 2026-10-11 |
-| 3 | [A plugin gets parseYaml and stringifyYaml from the host](../../../decisions/a-plugin-gets-yaml-from-the-host.md) | Softov, 2026-10-11 |
-| 4 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../decisions/a-person-edits-a-record-as-a-markdown-file.md) | Softov, 2026-10-10 |
-| 5 | [The daemon reloads a bot or an automation file that a person edits](../../../decisions/the-daemon-reloads-a-hand-edited-file.md) | Softov, 2026-10-10 |
+| 1 | A plugin keeps its records in a record store the host gives it | Softov, 2026-10-11 |
+| 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../rules/the-sdk-depends-only-on-the-protocol.md) | Softov, 2026-10-11 |
+| 3 | [A plugin gets parseYaml and stringifyYaml from the host](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 4 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 5 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

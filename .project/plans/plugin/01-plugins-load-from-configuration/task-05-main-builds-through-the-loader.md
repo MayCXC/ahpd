@@ -12,7 +12,7 @@ refs:
   - code://packages/server/src/daemon.ts#L88-L100 - the stdout parser that reads `sessions in` and the automations line, which must not be disturbed
   - code://packages/server/src/plugins.ts - `loadPlugins`, which this task calls
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, the type of the `base` value
-  - code://.project/decisions/plugin-contributes-host-options.md - a plugin contributes this object and nothing else
+  - code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md - a plugin contributes this object and nothing else
 ---
 
 ## Objective

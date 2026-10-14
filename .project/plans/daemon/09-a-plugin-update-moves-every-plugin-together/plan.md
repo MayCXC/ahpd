@@ -43,12 +43,12 @@ npm i -g @ahpd/server (0.8.0) -> ahpd plugin install @ahpd/agent-claude ... -> n
 
 | Decision | Source |
 | --- | --- |
-| [`ahpd plugin update` takes `all` or the names to move](../../../decisions/plugin-update-takes-all-or-names.md) | Softov, 2026-09-29 |
+| [`ahpd plugin update` takes `all` or the names to move](../../../../docs/DAEMON.md) | Softov, 2026-09-29 |
 | [ahpd installs the daemon's own @ahpd/sdk version beside the plugins, and npm checks no peers](../../../decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md) | Softov, 2026-09-29 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| `update all` moves every registry dependency in the configuration directory, `update <name>...` only those named; an `@ahpd/*` package goes to the daemon's version, as `pinned` does, any other to `latest` | [decision plugin-update-takes-all-or-names](../../../decisions/plugin-update-takes-all-or-names.md); (defaulted: the version rule is `pinned`'s) | 01 |
+| `update all` moves every registry dependency in the configuration directory, `update <name>...` only those named; an `@ahpd/*` package goes to the daemon's version, as `pinned` does, any other to `latest` | the `plugin update` section of [`docs/DAEMON.md`](../../../../docs/DAEMON.md); (defaulted: the version rule is `pinned`'s) | 01 |
 | `update` has the CLI and HTTP surfaces `install` has, the same scope and `deploymentTokenOnly`, and says to restart as `install` does | (defaulted: the shape of `plugin install`) | 01 |
 | No resolve hook | [decision the-daemon-installs-its-own-sdk-beside-the-plugins](../../../decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md) | 06 |
 | Install and update run npm with `--legacy-peer-deps` and `@ahpd/sdk` at the daemon's version; no refusal names a blocking plugin | [decision the-daemon-installs-its-own-sdk-beside-the-plugins](../../../decisions/the-daemon-installs-its-own-sdk-beside-the-plugins.md) | 08 |

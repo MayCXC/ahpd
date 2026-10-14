@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-cofold-write-rechecks-the-file-it-opened.md
-  - decisions/a-cofold-write-to-a-file-changed-since-read-is-refused.md
 refs:
   - "[code://packages/agent-cofold/src/session.ts#L37-L51](../../../../packages/agent-cofold/src/session.ts#L37-L51) - `insideDirectory`, the check a write is allowed by"
   - "[code://packages/agent-cofold/src/session.ts#L446](../../../../packages/agent-cofold/src/session.ts#L446) - where the harness is given it"
@@ -54,8 +52,8 @@ model tool call -> ahpd permission check (insideDirectory, real paths now) -> co
 
 | Decision | Task |
 | --- | --- |
-| [A cofold write opens the file, checks the descriptor is the file the check allowed, and writes through it](../../../decisions/a-cofold-write-rechecks-the-file-it-opened.md) | 02 |
-| [A cofold write to a file that changed since the session read it, or that it never read, is refused](../../../decisions/a-cofold-write-to-a-file-changed-since-read-is-refused.md) | 03 |
+| A cofold write opens the file, checks the descriptor is the file the check allowed, and writes through it | 02 |
+| A cofold write to a file that changed since the session read it, or that it never read, is refused | 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

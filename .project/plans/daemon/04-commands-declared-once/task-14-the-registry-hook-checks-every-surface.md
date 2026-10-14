@@ -30,7 +30,7 @@ Every surface that runs a command goes through the registry's `authorize` hook, 
 
 ## Steps
 
-1. This applies decision [ahpd-commands-are-declared-with-cofold-commands](../../../decisions/ahpd-commands-are-declared-with-cofold-commands.md) as written: "each command's `scopes` are ahpd's grant pairs, checked by the registry's `authorize` hook". It is a code fix to match an accepted decision, not a new one.
+1. This applies [ahpd's commands are declared once, with @cofold/commands](./plan.md) as written: "each command's `scopes` are ahpd's grant pairs, checked by the registry's `authorize` hook". It is a code fix to match an accepted decision, not a new one.
 2. The hook reads the caller from `context.surface` and `context.request`: on `cli` the caller is the process owner and holds every grant; on `remote` the caller is the principal the HTTP half resolved, or the deployment token, which is root.
 3. The hook refuses a missing grant with `HttpError(403, refusalReason(id, grant))`, the WebSocket's sentence, reading the command's scopes from the `scopes` it is handed.
 4. `authorizeOverHttp` keeps the Bearer parsing, the token comparison and `users.verify`, refuses with 401 as it does now, and stops reading `scopesFor`.

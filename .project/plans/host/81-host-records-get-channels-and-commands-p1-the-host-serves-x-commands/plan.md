@@ -8,8 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/plugin/44-a-plugin-serves-a-channel/plan.md
 decisions:
-  - decisions/a-plugin-serves-an-x-command.md
-  - decisions/an-x-command-is-named-by-domain-and-verb.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176-L262](../../../../packages/sdk/src/types/plugin.ts#L176-L262) - `PluginChannel` and `ServedChannel`, the shapes a method mirrors"
   - "[code://packages/sdk/src/plugins.ts#L957-L982](../../../../packages/sdk/src/plugins.ts#L957-L982) - `registerChannel`, the registration a method mirrors"
@@ -48,8 +46,8 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin serves an x- command with registerMethod](../../../decisions/a-plugin-serves-an-x-command.md) | Softov, 2026-10-11 |
-| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../decisions/an-x-command-is-named-by-domain-and-verb.md) | Softov, 2026-10-11 |
+| 1 | [A plugin serves an x- command with registerMethod](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
 
 | What | Source | Task |
 | --- | --- | --- |

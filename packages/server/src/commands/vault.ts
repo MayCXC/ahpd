@@ -47,7 +47,7 @@ const vaultOf = (served?: ServedFacts): Vault => {
  * takes `team:write` and a membership in that team, and `user:` is the person's
  * own and takes nothing but being them. No grant of its own: these are the
  * grants the scopes already named, asked again where a secret's scope is the
- * question, as decision `a-secret-is-named-in-a-host-team-or-user-scope` says.
+ * question, as says.
  */
 const mayWrite = (context: Pick<CommandContext, 'request' | 'surface'>, name: string): void => {
   const actor = context.request?.actor as Principal | undefined;

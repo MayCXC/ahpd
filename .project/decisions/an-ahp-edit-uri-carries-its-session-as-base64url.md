@@ -2,8 +2,8 @@
 title: A changes URI is parsed on read, and an ahp-edit URI carries its session as one base64url segment
 status: accepted
 date: 2026-09-27
-supersedes: decisions/changes-uris-are-parsed-on-read-and-minted-to-survive-a-client.md
 refs:
+  - git://88cff218 - the superseded decision, as committed
   - "[code://packages/sdk/src/changes.ts#L86](../../packages/sdk/src/changes.ts#L86) - `beforeUri`, `ahp-git:` with an empty authority"
   - "[code://packages/sdk/src/changes.ts#L254-L255](../../packages/sdk/src/changes.ts#L254-L255) - `capturedUri`, `ahp-edit:` with the session URI as the authority"
   - git://6e4b2c4 - `gitChanges` and the `ahp-git:` URI

@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/pi-models-are-probed-from-pis-model-runtime.md
-  - decisions/a-pi-session-from-disk-is-replayed-through-the-live-mapping.md
 refs:
   - "[code://packages/agent-pi/src/backend.ts#L16-L30](../../../../packages/agent-pi/src/backend.ts#L16-L30) - the runtime imports of pi, taken when the plugin module loads"
   - "[code://packages/agent-pi/src/catalog.ts#L15](../../../../packages/agent-pi/src/catalog.ts#L15) - `SessionManager`, imported at module load"
@@ -61,8 +59,8 @@ resumed session -> [new] ends seeded from the same replay -> endPoint answers
 
 | Decision | Tasks |
 | --- | --- |
-| [pi's models are probed from pi's model runtime, before any session opens](../../../decisions/pi-models-are-probed-from-pis-model-runtime.md) | 02 |
-| [A pi session from disk is replayed through the live mapping, and its turns keep their entry ids](../../../decisions/a-pi-session-from-disk-is-replayed-through-the-live-mapping.md) | 03 |
+| pi's models are probed from pi's model runtime, before any session opens | 02 |
+| A pi session from disk is replayed through the live mapping, and its turns keep their entry ids | 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

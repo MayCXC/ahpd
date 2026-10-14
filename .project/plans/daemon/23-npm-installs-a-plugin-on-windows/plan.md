@@ -6,7 +6,6 @@ priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
 decisions:
-  - decisions/windows-runs-npm-as-node-and-npm-cli.md
 refs:
   - "[code://packages/server/src/install.ts#L55-L72](../../../../packages/server/src/install.ts#L55-L72) - `run`, the one runner of every npm call"
   - "[code://packages/server/src/install.ts#L551](../../../../packages/server/src/install.ts#L551) - the install of `ahpd configure`"
@@ -44,7 +43,7 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 | Decision | Source |
 | --- | --- |
-| [npm runs as `node` with `npm-cli.js` on Windows](../../../decisions/windows-runs-npm-as-node-and-npm-cli.md) | Softov, 2026-10-13 |
+| npm runs as `node` with `npm-cli.js` on Windows, because Node refuses a `.cmd` without a shell and a shell breaks argument quoting | Softov, 2026-10-13; the comment on the spawn in `install.ts` |
 
 ## Proposed architecture
 

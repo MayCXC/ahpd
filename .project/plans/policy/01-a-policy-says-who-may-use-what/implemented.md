@@ -29,7 +29,7 @@ A host can keep policies that say who may use which harness, model and machine, 
 
 ## Departures from the plan
 
-- [A deny binds only when everything it names was asked](../../../decisions/a-deny-binds-only-what-was-asked.md), decided during the build: the draft's `A5` refused the whole session before.
+- [A deny binds only when everything it names was asked](../../../../docs/POLICY.md), decided during the build: the draft's `A5` refused the whole session before.
 - `beginOrRun` answers at once when there is nothing to check and returns a promise only when a store was read, so the order of a turn's actions is kept.
 - A store that cannot be read refuses the work.
 

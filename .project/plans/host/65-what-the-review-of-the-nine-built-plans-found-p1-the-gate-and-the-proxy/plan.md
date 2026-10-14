@@ -8,8 +8,6 @@ revalidated: 2026-10-06
 requires:
   - plans/host/65-what-the-review-of-the-nine-built-plans-found/plan.md
 decisions:
-  - decisions/shutdown-needs-config-change.md
-  - decisions/the-proxy-answers-a-providers-key-refusal-with-its-own-error.md
 refs:
   - "[code://packages/sdk/src/host/gate.ts#L9-L95](../../../../packages/sdk/src/host/gate.ts#L9-L95) - `NEEDS`, whose comment says a method with no entry is served to anybody connected"
   - "[code://packages/sdk/src/host/gate.ts#L172-L205](../../../../packages/sdk/src/host/gate.ts#L172-L205) - `UNGATED`"
@@ -48,8 +46,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../decisions/shutdown-needs-config-change.md) | Softov, 2026-10-06, "A host admin grant"; the name `(defaulted: matches ahpd restart)` |
-| 2 | [The proxy answers a provider's 401 or 403 with its own error, and the provider's words go to the log](../../../decisions/the-proxy-answers-a-providers-key-refusal-with-its-own-error.md) | Softov, 2026-10-06, "The proxy's own error" |
+| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../../docs/HOST.md) | Softov, 2026-10-06, "A host admin grant"; the name `(defaulted: matches ahpd restart)` |
+| 2 | The proxy answers a provider's 401 or 403 with its own error, and the provider's words go to the log | Softov, 2026-10-06, "The proxy's own error" |
 
 | What | Source | Task |
 | --- | --- | --- |

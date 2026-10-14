@@ -13,7 +13,7 @@ refs:
   - "[code://packages/server/src/commands/user.ts#L7-L9](../../../../packages/server/src/commands/user.ts#L7-L9) - why every sub-command declares the same fields"
   - "[code://packages/server/src/commands/stop.ts#L4-L6](../../../../packages/server/src/commands/stop.ts#L4-L6) - what the flags on `stop` are for"
   - "[code://packages/server/src/main.ts#L14-L16](../../../../packages/server/src/main.ts#L14-L16) and [#L142-L151](../../../../packages/server/src/main.ts#L142-L151) - what the entry is left with, and the run word"
-  - "[code://.project/decisions/ahpd-commands-are-declared-with-cofold-commands.md](../../../decisions/ahpd-commands-are-declared-with-cofold-commands.md) - the refs now name `git://7a7e9d1` and `options.ts`"
+  - "[code://.project/plans/daemon/04-commands-declared-once/plan.md](./plan.md) - the refs now name `git://7a7e9d1` and `options.ts`"
 ---
 
 ## Objective
@@ -30,7 +30,7 @@ Every comment under `packages/server/src/commands/` and in `main.ts` says what t
 - `UPDATE: packages/server/src/commands/user.ts:7-9` - the fields every sub-command declares.
 - `UPDATE: packages/server/src/commands/stop.ts:4-6` - what `stop` does with the flags a run takes.
 - `UPDATE: packages/server/src/main.ts:14-16, 142-151` - what the entry is left with, and the run word.
-- `UPDATE: .project/decisions/ahpd-commands-are-declared-with-cofold-commands.md` - its two `refs` to the hand-written `main.ts` become `git://7a7e9d1` and `code://packages/server/src/commands/options.ts`.
+- `UPDATE: .project/./plan.md` - its two `refs` to the hand-written `main.ts` become `git://7a7e9d1` and `code://packages/server/src/commands/options.ts`.
 
 ## Steps
 

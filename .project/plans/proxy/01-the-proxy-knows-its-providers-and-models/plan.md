@@ -7,7 +7,6 @@ created: 2026-10-01
 revalidated: 2026-10-01
 requires: []
 decisions:
-  - decisions/a-model-is-named-by-its-maker-and-runs-on-a-provider.md
 refs:
   - "[code://packages/server/src/config.ts#L32-L130](../../../../packages/server/src/config.ts#L32-L130) - `Config`"
   - "[code://packages/server/src/commands/options.ts#L143-L295](../../../../packages/server/src/commands/options.ts#L143-L295) - `serverFields` and `configSchema`"
@@ -38,7 +37,7 @@ config.json proxy.providers + proxy.models -> checked at start -> ahpd proxy lis
 
 | Decision | Source |
 | --- | --- |
-| [A model is named by its maker, and where it runs is a provider](../../../decisions/a-model-is-named-by-its-maker-and-runs-on-a-provider.md) | Softov, 2026-10-01 |
+| A model is named by its maker, and where it runs is a provider | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

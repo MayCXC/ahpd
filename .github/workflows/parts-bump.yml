@@ -1,8 +1,7 @@
 name: Parts bump
 
 # A part is pinned to an exact version, so something has to notice that the
-# versions have moved - decision `an-agent-cli-is-pinned-in-one-versions-file`.
-# It proposes; it never lands one on its own.
+# versions have moved. It proposes; it never lands one on its own.
 on:
   schedule:
     # Weekly, off the hour nobody waits on.

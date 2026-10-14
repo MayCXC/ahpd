@@ -3,8 +3,7 @@
  *
  * A collection is the folder `<configDir>/<name>/`, and a record is `<id>.md`
  * in it - the fields as YAML frontmatter and the collection's body field as
- * the Markdown body. Decisions `a-person-edits-a-record-as-a-markdown-file` and
- * `the-daemon-reloads-a-hand-edited-file`.
+ * the Markdown body.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, watch as watchPath, writeFileSync } from 'node:fs';

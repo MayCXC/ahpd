@@ -10,9 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-agent-cli-is-pinned-in-one-versions-file.md
-  - decisions/the-published-image-is-the-parts-joined.md
-  - decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md
 refs:
   - "[code://packages/computer/src/runtime.ts#L570-L577](../../../../packages/computer/src/runtime.ts#L570-L577) - `must`, how the runtime runs docker"
   - "[code://packages/computer/src/plugin.ts#L38](../../../../packages/computer/src/plugin.ts#L38) - the default image, `debian:bookworm-slim`"
@@ -59,9 +56,8 @@ build-joined -> every part -> ahpd-agents:<hash of versions.json + the ahpd part
 
 | Decision | Task |
 | --- | --- |
-| [Every agent CLI is pinned in one versions file, and none updates itself](../../../decisions/an-agent-cli-is-pinned-in-one-versions-file.md) | 01, 05 |
-| [The image ahpd publishes is its parts joined, and there is no other base](../../../decisions/the-published-image-is-the-parts-joined.md) | 04 |
-| [A nested host's image installs its plugins with ahpd plugin install](../../../decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md) | 02 |
+| Every agent CLI is pinned in one versions file, and none updates itself | 01, 05 |
+| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/COMPUTER.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -75,6 +71,7 @@ build-joined -> every part -> ahpd-agents:<hash of versions.json + the ahpd part
 | One `tagOf` spells every part's tag; the ahpd part's carries its source hash, and the joined hash folds that tag in | (defaulted: two hashes for one source drift apart) | 01, 02, 04 |
 | A part whose build fails refuses only the machines that need it | Softov, 2026-10-03, asked "when a `$secret` in a plugin's options can't be read at load, what fails?": "Only its item" (a failure belongs to the item that failed) | 04 |
 | For now, from a checkout the ahpd part is built from the workspace's packed tarballs, so a checkout tests its own code; from an installed package it comes from npm at the pinned version; one function, `ahpdSourceOf`, makes the choice, so it can change | Softov, 2026-10-03, asked "from a checkout, is the ahpd part built from the workspace's packed tarballs or from npm?": "packed tarballs" | 02, 03 |
+| A nested host's image installs its plugins with `ahpd plugin install`, not `npm i -g`: an inner host started in the image cannot resolve a package installed outside its own prefix | the image it is built into; the part's Dockerfile `RUN` line carries the reason | 02 |
 
 ## Proposed architecture
 

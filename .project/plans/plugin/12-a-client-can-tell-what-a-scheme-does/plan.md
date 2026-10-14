@@ -11,8 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-resource-scheme-is-advertised-in-meta.md
-  - decisions/a-scheme-nobody-serves-is-not-a-permission-error.md
 refs:
   - "[code://packages/sdk/src/types/resources.ts#L204-L211](../../../../packages/sdk/src/types/resources.ts#L204-L211) - `ResourceProvider`, which gains `describe`"
   - "[code://packages/sdk/src/types/host.ts](../../../../packages/sdk/src/types/host.ts) - `HostOptions.resourceProviders`, the map the advertisement is built from"
@@ -52,8 +50,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A resource scheme is advertised in `_meta`, and a client reads it there](../../../decisions/a-resource-scheme-is-advertised-in-meta.md) | The user, 2026-09-23: "I liked the _meta suggestion... if its the only way", after the reading showed no typed host field exists and adding one is an upstream change. |
-| 2 | [A scheme nobody serves is not a permission error](../../../decisions/a-scheme-nobody-serves-is-not-a-permission-error.md) | The user, 2026-09-23: "-32009 is a permission gate? If does not exists its not -32008?", which is the question this answers. |
+| 1 | [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/RESOURCES.md) | The user, 2026-09-23: "I liked the _meta suggestion... if its the only way", after the reading showed no typed host field exists and adding one is an upstream change. |
+| 2 | [A scheme nobody serves is not a permission error](../../../../docs/RESOURCES.md) | The user, 2026-09-23: "-32009 is a permission gate? If does not exists its not -32008?", which is the question this answers. |
 
 | What | Source | Task |
 | --- | --- | --- |

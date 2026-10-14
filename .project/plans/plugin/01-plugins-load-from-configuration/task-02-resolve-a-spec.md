@@ -10,8 +10,8 @@ refs:
   - code://packages/sdk/src/listen.ts#L15-L19 - `runtimeOf()`, the one place the runtime is known, which this task exports rather than copies
   - code://packages/sdk/src/index.ts - where the exported runtime joins the SDK's surface
   - code://packages/sdk/src/types/plugin.ts - `PluginSpec`, which this task takes as input
-  - code://.project/decisions/plugin-manifest-is-package-json.md - the `ahpd.entry` a directory spec resolves through
-  - code://.project/decisions/plugin-compat-is-checked-before-import.md - why a directory resolves through its manifest at all
+  - code://docs/PLUGINS.md - the `ahpd.entry` a directory spec resolves through
+  - code://docs/PLUGINS.md - why a directory resolves through its manifest at all
   - file:///github/deepseek-harness/packages/boot/plugin-manager/src/install-spec.ts - the spec shapes accepted there: registry range, absolute `file:` path, tarball, git shorthand
   - code://test/update.test.ts#L1-L40 - the temporary `XDG_CONFIG_HOME` pattern the resolver test follows
 ---

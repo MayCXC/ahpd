@@ -44,7 +44,7 @@ begin -> [changes] open() first, mapping set after -> session/load -> replay -> 
 | A replayed turn starts at each user message rather than at each `user_message_chunk`, because a message arrives as several chunks | the spec's replay order: the user message, then the agent's updates | 02 |
 | Plugin 18 task 01 builds on this plan | both change `open`; this one is the ground | - |
 | A session this process never watched is loaded when a client reads its transcript, where the server advertises `loadSession`; its restored tool calls carry no times, since ACP has none | Softov, 2026-09-29, asked "After a daemon restart, an ACP session opens blank until a turn starts, although the server could replay its history with session/load (v1) or session/resume with replayFrom (v2 draft). Should that be planned?": "Plan it in acp" | 03 |
-| [A read and the turn after it each load the session, rather than sharing one load](../../../decisions/an-acp-read-and-the-turn-after-it-load-twice.md) | Softov, 2026-10-02, asked "Two loads" | 03 |
+| A read and the turn after it each load the session, rather than sharing one load | a read's connection carries none of a session's ports, so a turn has nothing to reuse; Softov, 2026-10-02, asked "Two loads" | 03 |
 
 ## Proposed architecture
 

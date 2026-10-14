@@ -10,11 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-agent-declares-its-machine-needs-with-a-method.md
-  - decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md
   - decisions/cofold-config-reaches-a-machine-by-a-path-variable.md
-  - decisions/a-session-on-a-machine-not-prepared-for-its-agent-fails-at-creation.md
-  - decisions/a-shared-target-is-refused-only-when-the-mounts-differ.md
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L335-L353](../../../../packages/sdk/src/types/agent.ts#L335-L353) - `schema()`, `defaults()` and `machine?()` beside them"
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts) - `MachineNeed` and `ResolvedNeed`"
@@ -65,11 +61,11 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [An agent declares what a machine needs through a machine() method](../../../decisions/an-agent-declares-its-machine-needs-with-a-method.md) | Softov, 2026-09-26 | 01, 05, 06 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md) | Softov, 2026-09-26 | 02, 03, 04 |
+| An agent declares what a machine needs through a machine() method | Softov, 2026-09-26 | 01, 05, 06 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | Softov, 2026-09-26 | 02, 03, 04 |
 | [Cofold's configuration reaches a machine at a fixed target, named by a path variable](../../../decisions/cofold-config-reaches-a-machine-by-a-path-variable.md) | Softov, 2026-09-26 and 2026-10-03 | 06 |
-| [A session on a machine not prepared for its agent fails at creation](../../../decisions/a-session-on-a-machine-not-prepared-for-its-agent-fails-at-creation.md) | Softov, 2026-09-26 | 11 |
-| [A shared target is refused at create only when what lands there differs](../../../decisions/a-shared-target-is-refused-only-when-the-mounts-differ.md) | Softov, 2026-09-26 and 2026-10-03 | 09 |
+| A session on a machine not prepared for its agent fails at creation | Softov, 2026-09-26 | 11 |
+| [A shared target is refused at create only when what lands there differs](../../container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md) | Softov, 2026-09-26 and 2026-10-03 | 09 |
 
 | What | Source | Task |
 | --- | --- | --- |

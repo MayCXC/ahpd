@@ -320,8 +320,7 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
    * A contributed key is a control a client draws beside the backend's own,
    * and it exists only while its plugin is loaded. The backend's own property
    * wins where both declare one, because the fold already reported that as a
-   * collision and a plugin may not quietly move a setting a backend owns -
-   * decision `a-plugin-may-contribute-a-session-key`.
+   * collision and a plugin may not quietly move a setting a backend owns.
    */
   const sessionSchema = (agent: Agent): Bag => {
     const schema = published(agent.schema());
@@ -363,8 +362,7 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
      *
      * `sessionSchema` reads the contributed keys out of the fold, which are
      * another plugin's entries; a backend handed them live could change what a
-     * client is drawn - decision
-     * `a-plugin-gets-frozen-copies-of-host-values`. The host's own reads of the
+     * client is drawn. The host's own reads of the
      * schema are elsewhere and keep the store, which is what a contributed key
      * exists in.
      */

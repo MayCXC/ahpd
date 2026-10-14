@@ -12,7 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/acp-bridge-uses-the-protocol-sdk.md
 refs:
   - "[code://packages/agent-acp/src/session.ts#L1006-L1147](../../../../packages/agent-acp/src/session.ts#L1006-L1147) - `open`: a resume and a reopen after a death are always `session/load` today"
   - "[code://packages/agent-acp/src/session.ts#L1123-L1136](../../../../packages/agent-acp/src/session.ts#L1123-L1136) - the watched record, built only from what `session/load` replayed"
@@ -62,7 +61,7 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The ACP bridge uses the published protocol SDK](../../../decisions/acp-bridge-uses-the-protocol-sdk.md) | Softov, 2026-09-22 |
+| 1 | [The ACP bridge uses the published protocol SDK](../07-agent-acp/plan.md) | Softov, 2026-09-22 |
 
 | What | Source | Task |
 | --- | --- | --- |

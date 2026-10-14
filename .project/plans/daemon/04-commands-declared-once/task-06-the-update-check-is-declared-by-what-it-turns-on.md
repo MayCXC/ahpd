@@ -26,10 +26,10 @@ refs:
 
 ## Steps
 
-1. Apply decision [a-daemon-flag-is-declared-by-what-it-turns-on](../../../decisions/a-daemon-flag-is-declared-by-what-it-turns-on.md): the field `updateCheck` is a boolean whose `true` means the check runs, with a description that says it is on by default and that `--no-update-check`, `NO_UPDATE_NOTIFIER`, `CI` and `"updateCheck": false` turn it off.
+1. Apply [A daemon flag is declared by what it turns on, and --no-X turns it off](./plan.md): the field `updateCheck` is a boolean whose `true` means the check runs, with a description that says it is on by default and that `--no-update-check`, `NO_UPDATE_NOTIFIER`, `CI` and `"updateCheck": false` turn it off.
 2. The spelling: the field is spelled `--update-check` with `cli: { negatable: true }`, so `--no-update-check` sets it to `false` and `--update-check` to `true`.
    This needs the cofold release from task 12, and the fold in step 3 needs the one from task 17, which Softov publishes; do not start until ahpd depends on it.
-3. Keep the field without a schema `default`, as the header of `options.ts` requires, so a flag is told apart from the file; in `optionsFrom` the fold becomes, per decision [an-untyped-flag-stays-absent-in-cofold-input](../../../decisions/an-untyped-flag-stays-absent-in-cofold-input.md): the input's boolean when one was typed (after task 17 an untyped flag is absent, not `false`), else `false` when the file says `"updateCheck": false`, else `true`.
+3. Keep the field without a schema `default`, as the header of `options.ts` requires, so a flag is told apart from the file; in `optionsFrom` the fold becomes, per [A boolean flag nobody typed stays absent in cofold's canonical input](./plan.md): the input's boolean when one was typed (after task 17 an untyped flag is absent, not `false`), else `false` when the file says `"updateCheck": false`, else `true`.
 4. Give `cli()` in `packages/server/test/server-cli.test.ts` a way to run a case with `CI` and `NO_UPDATE_NOTIFIER` both removed from the environment (for example an `unset` list), leaving every other case as it is.
 
 ## Validation
@@ -54,7 +54,7 @@ Question for you: which way do you want this?
 
 Tried and reverted: the `--update-check` plus `negatable: true` declaration, the input-first fold, the `unset` list in `cli()`, the rewritten update case, the `optionsFrom` case and `DAEMON_FLAGS` renaming. The failing assertion was `['status']` printing no `update:` line, because the default had become off.
 
-Decided 2026-09-26: Softov chose option 2, recorded in [an-untyped-flag-stays-absent-in-cofold-input](../../../decisions/an-untyped-flag-stays-absent-in-cofold-input.md). Task 17 makes the cofold change and takes the release; this task starts again after it, from the steps above.
+Decided 2026-09-26: Softov chose option 2, recorded in [A boolean flag nobody typed stays absent in cofold's canonical input](./plan.md). Task 17 makes the cofold change and takes the release; this task starts again after it, from the steps above.
 
 - 2026-09-27: built on `@cofold/commands` 0.2.2.
   `updateCheck` is declared with `cli: { negatable: true }` and no schema default, so help spells it `--update-check` and `--no-update-check` still turns it off, and its description says it is on by default and names the four ways to turn it off.

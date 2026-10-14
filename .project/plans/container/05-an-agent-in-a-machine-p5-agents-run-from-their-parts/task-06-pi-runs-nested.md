@@ -7,7 +7,7 @@ refs:
   - "[code://packages/agent-pi/src/agent.ts#L90-L155](../../../../packages/agent-pi/src/agent.ts#L90-L155) - the agent object `piAgent` answers"
   - "[code://packages/agent-cofold/src/agent.ts#L640-L646](../../../../packages/agent-cofold/src/agent.ts#L640-L646) - cofold's `runsNested`, the pattern"
   - "[code://.project/plans/container/04-a-cofold-session-in-a-computer/task-17-a-backend-names-its-nested-plugin.md](../04-a-cofold-session-in-a-computer/task-17-a-backend-names-its-nested-plugin.md) - the inner host loads the plugin that registered the agent"
-  - "[code://.project/decisions/a-session-reaches-a-nested-host-through-a-generic-proxy.md](../../../decisions/a-session-reaches-a-nested-host-through-a-generic-proxy.md) - the proxy names pi as a later user"
+  - "[code://.project/plans/container/04-a-cofold-session-in-a-computer/plan.md](../04-a-cofold-session-in-a-computer/plan.md) - the proxy names pi as a later user"
 ---
 
 ## Objective

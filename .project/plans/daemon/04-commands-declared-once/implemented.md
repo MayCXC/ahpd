@@ -30,7 +30,7 @@ Nothing a person typed before changed meaning.
 
 ## Departures from the plan
 
-- Task 06 waited on a cofold change: an untyped boolean read as `false`, so `@cofold/commands` 0.2.2 leaves it out of the input (task 17, [the decision](../../../decisions/an-untyped-flag-stays-absent-in-cofold-input.md)).
+- Task 06 waited on a cofold change: an untyped boolean read as `false`, so `@cofold/commands` 0.2.2 leaves it out of the input (task 17, [the decision](./plan.md)).
 - Under `--json` a failure is still one prose line on stderr; a JSON failure shape was set aside by Softov.
 - Tasks 05 to 23 after task 04 were review fixes.
 

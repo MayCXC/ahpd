@@ -4,8 +4,7 @@
  * A backend that spawns a harness - the ACP bridge spawns one command and
  * speaks a protocol over its stdio - cannot reach a machine by itself, and it
  * may not import the plugin that owns the runtime. So the host carries this
- * port from that plugin to the backend, the way it carries every other port -
- * decision `a-backend-reaches-a-computer-through-a-port`.
+ * port from that plugin to the backend, the way it carries every other port.
  *
  * The answer is a descriptor and not a running process: the caller owns the
  * spawn and the stdio, and a value is something a test can assert without a
@@ -32,8 +31,7 @@ export interface Spawn {
  *
  * The one command the port runs that is not a backend's own: a whole `ahpd`
  * inside the machine, in stdio mode, so a session the outer host owns can run
- * there through it - decision
- * `a-cofold-session-in-a-computer-runs-in-a-nested-host`.
+ * there through it.
  */
 export interface NestedStart {
   /**
@@ -90,8 +88,7 @@ export interface SpawnOptions {
  * machine is made when the session starts rather than ahead of time. The
  * shape is what the host hands over - the source, the session, the harness it
  * must run and the folder it works in - so the plugin never has to look an
- * agent up - decision
- * `the-host-hands-an-agents-machine-needs-to-the-machine-maker`.
+ * agent up.
  */
 export interface MachineSource {
   /**
@@ -128,8 +125,7 @@ export interface MachineSource {
    * Whose the machine is, and who pays for the time it is up.
    *
    * Whoever asked for it: the session's owner when a session named a source, and
-   * the connection's when a person made the machine directly - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   * the connection's when a person made the machine directly.
    * Absent where this host has nobody to name, which is a machine with no
    * recorded owner rather than one somebody is.
    */
@@ -215,8 +211,7 @@ export interface ComputerPort {
    *
    * A machine this host did not make - a box it reaches over ssh - cannot be
    * entered by moving a process into it, and every backend of a session in one
-   * runs nested whatever it declared - decision
-   * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. A
+   * runs nested whatever it declared. A
    * machine on this host is not, which is what a runtime that makes its own
    * machines answers. Absent, and `false`, are both "not off this host": a
    * port that keeps no such record runs the session the way it always did.
@@ -249,8 +244,7 @@ export interface ComputerPort {
    * The machine's own labels, read back the way `agents` is: a machine made
    * from a `disposableAlone` profile belongs to the session it was made for,
    * and a second session naming it is refused rather than sharing a machine
-   * that was built for one - decision
-   * `a-disposable-alone-machine-refuses-another-session`.
+   * that was built for one.
    *
    * The owner is the second half of the same refusal and is what a client
    * cannot choose: a session id comes from the client's own channel, so a new
@@ -285,7 +279,7 @@ export interface ComputerPort {
    * a host inside the machine for exactly this, unless the machine's operator
    * said `record`: a transcript the machine keeps is a session that comes back
    * where it was left, which is what a profile for a machine somebody works in
-   * by hand wants - decision `a-nested-host-is-configured-by-the-machine-profile-only`.
+   * by hand wants.
    *
    * Undefined for a machine that is not there, and for a profile that says
    * nothing - which is `inside`, the same answer a port that keeps no such
@@ -343,8 +337,7 @@ export interface ComputerPort {
    *
    * A message's attachment is a file this host wrote and the message names it
    * by path, so a session running in a machine reads that file only if the
-   * machine holds one at the same path - decision
-   * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. A running
+   * machine holds one at the same path. A running
    * machine takes no new mount, and a machine an operator made ahead of time
    * belongs to no session, so the files arrive one message at a time instead.
    * Read-only, because the bytes are a copy of what somebody sent.
@@ -372,8 +365,7 @@ export interface ComputerPort {
    * The host calls this once, before the session's backend is started, when
    * the session's `computer` setting is not a `computer://<id>`: the answer is
    * what the host rewrites the setting to, so the session runs in the machine
-   * as if it had named it - decision
-   * `the-host-hands-an-agents-machine-needs-to-the-machine-maker`.
+   * as if it had named it.
    *
    * `undefined` is "this is not a source I serve", which is a different answer
    * from a refusal: a plugin that owns one kind of source says nothing about

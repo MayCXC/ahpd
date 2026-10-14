@@ -10,12 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-host-records-which-plugin-registered-each-agent.md
-  - decisions/a-machine-runtime-is-named-for-its-maker.md
   - decisions/a-nested-host-speaks-stdio.md
-  - decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md
-  - decisions/a-nested-session-resumes-its-inner-transcript-by-id.md
-  - decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L56-L91](../../../../packages/computer/src/plugin.ts#L56-L91) - `optionsSchema`; every new option needs an entry here, a credential `writeOnly` (daemon/11)"
   - "[code://packages/computer/src/plugin.ts#L59](../../../../packages/computer/src/plugin.ts#L59) - the `runtime` enum, `['docker']`"
@@ -91,25 +86,25 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 
 | Decision | Task |
 | --- | --- |
-| [The host records which plugin registered each agent, and a nested host loads that plugin](../../../decisions/the-host-records-which-plugin-registered-each-agent.md) | 03 |
-| [One computer: provider, the runtime named for what makes the machine](../../../decisions/a-machine-runtime-is-named-for-its-maker.md) | 01, 02 |
+| [The host records which plugin registered each agent, and a nested host loads that plugin](../04-a-cofold-session-in-a-computer/plan.md) | 03 |
+| [One computer: provider, the runtime named for what makes the machine](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | 01, 02 |
 | [The nested host speaks AHP over stdio, so the relay is a pipe](../../../decisions/a-nested-host-speaks-stdio.md) | 03 |
-| [A nested host is used only for a backend that runs nested and for a machine on another host](../../../decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md) | 03 |
-| [A nested session is resumed by resuming the inner transcript by id](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md) | 05 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md) | 02 |
+| [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 03 |
+| [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| `ssh` is a runtime value, and several runtimes serve one host | decision `a-machine-runtime-is-named-for-its-maker`, "A machine id records which runtime made it" | 01 |
+| `ssh` is a runtime value, and several runtimes serve one host | ["One computer: provider, the runtime named for what makes the machine"](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md), "A machine id records which runtime made it" | 01 |
 | Every runtime lives inside `@ahpd/computer` | one `computers` port per host, [`code://packages/sdk/src/plugins.ts#L393`](../../../../packages/sdk/src/plugins.ts#L393) | 01 |
 | The first test is a box set up by hand and listed as an ssh machine, before any maker code | Softov, 2026-10-02, asked "Does the first Proxmox test use a VM made by hand, listed as an ssh machine (p9 only), before any maker code?": "Yes, by hand first" | 06 |
 | The test box is dev02 | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 06 |
 | An ssh machine's records are the plugin's options, not labels on the box | an ssh machine is listed, never made, so there is nothing of ours on the box to label | 02 |
 | ssh has no `-w` or `-e`: the directory and the variables are written into the remote command with shell quoting, `cd <dir> && env K=V <cmd>` | `ssh(1)` | 03 |
 | `within` gives no answer for an ssh machine: a path on this host is not a path on the box, so the machine's own `workdir` stands | there is no mount to read a host path through | 03 |
-| A session on a machine off this host runs nested whatever its backend | decision `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`, "A runtime that reaches another host answers `nested()` for every backend" | 03 |
+| A session on a machine off this host runs nested whatever its backend | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md), "A runtime that reaches another host answers `nested()` for every backend" | 03 |
 | `nested` sends no environment and no secret: the box's ahpd holds whatever it was given by hand | model credentials never leave this host; p12 adds the per-session token | 03 |
-| A restart of this host, and every close that is followed by a resume, leaves the inner session to resume; only `removeSession` and a chat removal dispose it | decision `a-nested-session-resumes-its-inner-transcript-by-id` | 05 |
+| A restart of this host, and every close that is followed by a resume, leaves the inner session to resume; only `removeSession` and a chat removal dispose it | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
 | The router lists with `allSettled`, bounds each runtime, keeps the rows that answered and reports each that did not; `claimOf` reads through the router, and the `stopping` loop closes each stretch alone | Softov, 2026-10-03, asked "when a `$secret` in a plugin's options can't be read at load, what fails?": "Only its item" (a failure belongs to the runtime that failed) | 01 |
 | An ssh machine that answers is listed as `running` | (defaulted: `isRunning` reads `running` or `Up ` with a trailing space, so a bare `Up` would read as down) | 02 |
 | The vault-named env refusal in `how` applies to exec tools; a session's credentials are p12 task 03's | (defaulted: a session on a remote machine runs nested and `nested` sends no env, so the check never fires for one) | 03 |

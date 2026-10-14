@@ -1,7 +1,7 @@
 /**
  * Reading a secret for a piece of work, and saying which work may read it.
  *
- * The scope rule decision `a-secret-is-named-in-a-host-team-or-user-scope`
+ * The scope rule
  * settled, in one place so the loader and `PluginHost.secret` cannot hold two:
  * a store answers a name it holds and knows nothing of who is asking, so
  * whether a name may be read is decided here, beside the work that is being

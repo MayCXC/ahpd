@@ -7,7 +7,6 @@ created: 2026-09-29
 revalidated: 2026-09-29
 requires: []
 decisions:
-  - decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md
 refs:
   - "[code://packages/server/src/daemon.ts#L9-L30](../../../../packages/server/src/daemon.ts#L9-L30) - `Running`, the record, which held no argv before this plan"
   - "[code://packages/server/src/daemon.ts#L240-L380](../../../../packages/server/src/daemon.ts#L240-L380) - start: detached spawn, the log poll, the record; claim, forget; stop: SIGTERM"
@@ -36,7 +35,7 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md) | 01, 02 |
+| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../../docs/HOST.md) | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

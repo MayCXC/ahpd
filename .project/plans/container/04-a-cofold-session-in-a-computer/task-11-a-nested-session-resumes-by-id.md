@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-A nested session resumed by the outer host continues the conversation the inner host holds under the same id, per [the decision](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md).
+A nested session resumed by the outer host continues the conversation the inner host holds under the same id, per [the decision](./plan.md).
 
 ## Files
 

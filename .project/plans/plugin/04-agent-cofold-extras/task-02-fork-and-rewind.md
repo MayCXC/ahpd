@@ -14,7 +14,7 @@ refs:
   - file:///github/cofold/packages/agents/src/types/run.ts - `RunArgs` and `ResumeArgs`, neither of which can start at a message
   - code://packages/agent-claude/src/session.ts - a backend that already answers both
   - code://test/agent-cofold-fork.test.ts - the cases
-  - code://.project/decisions/facio-fork-and-rewind-needs-a-cut.md - the decision this task implements
+  - code://.project/plans/plugin/04-agent-cofold-extras/plan.md - the decision this task implements
 ---
 
 ## Objective

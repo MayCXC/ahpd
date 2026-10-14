@@ -26,7 +26,7 @@ A request with no `Host` is refused like a foreign one; a daemon bound to an IPv
 
 ## Steps
 
-1. `foreign`: a request with no `Host` header answers 403 with a sentence saying the API answers only to its own names, the same as a foreign one; decision [the-http-api-checks-origin-and-host-and-takes-only-json](../../../decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md) says a request is answered only when its Host is one of the daemon's own.
+1. `foreign`: a request with no `Host` header answers 403 with a sentence saying the API answers only to its own names, the same as a foreign one; [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) says a request is answered only when its Host is one of the daemon's own.
 2. `apiOrigins`: a host containing `:` is written `[host]` in both lists (`net.isIPv6`).
 3. `http.host`: an empty or whitespace-only string stops with `http.host must name an address, not ""`; the `--host` flag the same, if it reaches the same check.
 4. `checkScopes`: when the surface is not `cli` and there is no actor, throw `HttpError(401, ...)` with the sentence `authorizeOverHttp` gives for a missing credential.

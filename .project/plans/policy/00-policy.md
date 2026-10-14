@@ -30,6 +30,12 @@ sendMessage -> uncharged refusal -> [no policy check]
 
 - [`code://packages/sdk/test/people.test.ts`](../../../packages/sdk/test/people.test.ts) - the people schemes, the pattern a policy scheme follows.
 
+## Answers
+
+| What | Source | Task |
+| --- | --- | --- |
+| A person with no charge rule of their own is charged to the most specific pool first: their own, then the project, then the team, then everyone, and any one pool that allows the work is enough | Softov, 2026-10-02, asked "what does a user's `auto` charge order mean, when they have no charge rule of their own?": "Most specific first"; no plan builds charge rules yet | - |
+
 ## Known gaps
 
 - No policy store, check, limit or charge rule.

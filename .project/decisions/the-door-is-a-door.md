@@ -2,8 +2,8 @@
 title: The door admits a socket and names nobody, and the deployment's token is still the host
 status: accepted
 date: 2026-09-23
-supersedes: decisions/the-door-token-is-the-host.md
 refs:
+  - git://20a050a2 - the superseded decision, as committed
   - "[code://packages/sdk/src/listen.ts#L82-L124](../../packages/sdk/src/listen.ts#L82-L124) - `identityOf`, which still answers root for the deployment's token and now admits a person's token as nobody unless the record trusts it"
   - "[code://packages/sdk/src/types/listen.ts#L74-L90](../../packages/sdk/src/types/listen.ts#L74-L90) - `ListenOptions.identify` and `root`, and why `identify` may answer an arrival with no principal"
   - "[code://packages/sdk/src/users.ts#L258-L281](../../packages/sdk/src/users.ts#L258-L281) - `principalOf`, where `trusted` is the record's `trustToken` or the host default"
@@ -15,7 +15,7 @@ refs:
 
 ## Context
 
-Decision `the-door-token-is-the-host` gave a person's connection token two meanings at once: it opened the socket and it arrived as that person, so a client that can only carry a URL never had to sign in.
+Decision `the-door-is-a-door` gave a person's connection token two meanings at once: it opened the socket and it arrived as that person, so a client that can only carry a URL never had to sign in.
 That was written to get the operator's own key working and it carried the person's token along with it.
 
 It also made the door the authorization. A token in a query string ends up in a proxy log, a shell history and a screenshot, and a leaked personal token was an authenticated person for the life of the connection, with nothing asked at `authenticate` and nothing to revoke but the record.
@@ -49,4 +49,4 @@ Root is untouched: `trustToken` is about a person's token, and the deployment's 
 - **Keep a personal token as both door and authorization.** Rejected: it is one secret doing two jobs, a URL leak is a full identity, and `authenticate` was decoration for the clients that did sign in.
 - **Make it a per-client setting instead of a host setting.** Rejected: the host cannot tell a client that will sign in from one that will not, and a client that asks to be trusted is asking to be trusted by itself.
 - **Keep the person's principal at the door and have `authenticate` upgrade it.** Rejected: the socket would already be that person before the credential was presented, which is the leak this removes, and a person whose roles changed would have two answers on one connection.
-- **Require `authenticate` even for the deployment's token.** Rejected: the operator's own key would be challenged by the host it starts, and decision `the-door-token-is-the-host` settled why the key is root.
+- **Require `authenticate` even for the deployment's token.** Rejected: the operator's own key would be challenged by the host it starts, and decision `the-door-is-a-door` settled why the key is root.

@@ -8,7 +8,7 @@ refs:
   - code://packages/server/src/main.ts#L271-L318 - the verb dispatch, where `plugin` joins beside `stop`, `status` and `config`
   - code://packages/server/src/plugins.ts - `resolvePlugin` and `readManifest`, which the listing uses and the loader shares
   - code://packages/server/src/main.ts#L84-L133 - `USAGE`, which gains the verb
-  - code://.project/decisions/plugin-manifest-is-package-json.md - the listing is the reason the `ahpd` key exists at all
+  - code://docs/PLUGINS.md - the listing is the reason the `ahpd` key exists at all
   - file:///github/doop/pood/src/providers/plugins/plugin-loader.ts#L133-L150 - the loader states (`loaded` / `unconfigured` / `error` / `offline` / `disabled`) this listing adapts
   - file:///github/doop/plugins/STRUCTURE.md - the same states written down for a person
 ---

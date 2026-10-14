@@ -91,7 +91,7 @@ describe('the command registry', () => {
       expect(scopes(id)).toEqual(['config:write']);
     }
     // Each scheme is its own subject, and a verb is gated by the one its own
-    // verb touches - decision `people-are-resource-schemes-with-a-grant-each`.
+    // verb touches.
     expect(scopes('user.list')).toEqual(['user:read', 'role:read']);
     for (const id of ['user.add', 'user.rm', 'user.token', 'user.member']) {
       expect(scopes(id)).toEqual(['user:write']);
@@ -147,7 +147,7 @@ describe('the command registry', () => {
     expect(await ask('user.list', {}, ['user:write'])).toBe(403);
     expect(await ask('user.add', { id: 'eve' }, ['team:write'])).toBe(403);
     // The role given is bounded by what the caller holds, so it is one the
-    // caller has: decision `a-caller-gives-only-the-grants-it-holds`.
+    // caller has.
     expect(await ask('user.add', { id: 'eve', role: ['keeper'] }, ['user:write'])).toBe(200);
     expect(await ask('user.add', { id: 'eve', role: ['admin'] }, ['user:write'])).toBe(403);
     // Listing people asks for the roles it prints, so a caller who may not

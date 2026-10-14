@@ -9,7 +9,6 @@ requires:
   - plans/plugin/29-a-tool-call-says-when-it-ran/plan.md
   - plans/plugin/29-a-tool-call-says-when-it-ran-p1-the-sdk-keeps-a-calls-times/plan.md
 decisions:
-  - decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md
 refs:
   - "[code://packages/agent-claude/src/session.ts#L1830-L1845](../../../../packages/agent-claude/src/session.ts#L1830-L1845) - `chat/toolCallReady` with `confirmed: 'not-needed'`, the start of a call nobody is asked about; it sends `_meta` only for a spawning call today"
   - "[code://packages/agent-claude/src/session.ts#L2144-L2152](../../../../packages/agent-claude/src/session.ts#L2144-L2152) - the ready `canUseTool` sends for a call a person is asked about, with no `_meta`"
@@ -28,7 +27,7 @@ Restored, a call takes its `tool_use` frame time as start and its `tool_result` 
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's times are stamped by its plugin, as ahpd keys](../../../decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md) | Softov, 2026-10-03 |
+| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -11,9 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-computer-is-an-object-a-person-manages.md
-  - decisions/a-tool-says-when-it-needs-advanced-permission.md
-  - decisions/a-plugin-may-contribute-a-session-key.md
 refs:
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - the read-only provider this gives a write half"
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - `ComputerRuntime`, which already has `run`, `remove` and `run`'s limits"
@@ -68,9 +65,9 @@ a session -> createSession({ computer: 'computer://<name>' })  -> schema has the
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A computer is an object a person manages, and a session runs in one](../../../decisions/the-computer-is-an-object-a-person-manages.md) | The user, 2026-09-23: "The intent is to create a computer and run a agent inside it", and "A resource write seens to be the correct approach." |
-| 2 | [A tool says when it needs advanced permission, and the host says whether it has it](../../../decisions/a-tool-says-when-it-needs-advanced-permission.md) | The user, 2026-09-23: "A plugin tool could enforce to be off unless defined.. something like, `advancedPermission: true` on the tool. some important tools.. not all.." |
-| 3 | [A plugin may contribute a session config key](../../../decisions/a-plugin-may-contribute-a-session-key.md) | The user, 2026-09-23: "For plugin contribution its a good thing. So it will show on session before creating its that the idea?" |
+| 1 | [A computer is an object a person manages, and a session runs in one](../../../../docs/COMPUTER.md) | The user, 2026-09-23: "The intent is to create a computer and run a agent inside it", and "A resource write seens to be the correct approach." |
+| 2 | [A tool says when it needs advanced permission, and the host says whether it has it](../../../../docs/TOOLS.md) | The user, 2026-09-23: "A plugin tool could enforce to be off unless defined.. something like, `advancedPermission: true` on the tool. some important tools.. not all.." |
+| 3 | [A plugin may contribute a session config key](../../../../docs/PLUGINS.md) | The user, 2026-09-23: "For plugin contribution its a good thing. So it will show on session before creating its that the idea?" |
 
 | What | Source | Task |
 | --- | --- | --- |

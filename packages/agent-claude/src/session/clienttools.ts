@@ -478,8 +478,7 @@ export function createClientTools(ctx: SessionContext): ClientTools {
      * when the session started: the first call leaves it out, which is what
      * makes the SDK disconnect it, and the second carries the new one, which is
      * what makes the SDK connect that. Between the two the CLI has no `ahp`
-     * server, so a session tool called in that moment fails - decision
-     * `a-live-tool-change-removes-the-ahp-server-then-adds-it-again`. A list
+     * server, so a session tool called in that moment fails. A list
      * with nothing in it is the first call alone, there being no server to add
      * back, and a session with no `ahp` yet is the second alone.
      *

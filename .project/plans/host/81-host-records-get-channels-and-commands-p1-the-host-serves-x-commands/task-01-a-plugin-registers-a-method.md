@@ -27,7 +27,7 @@ refs:
 1. Add `PluginMethod` with `grant`, an optional `authorize(params, reader)`, `handle(params, reader, client)` and an optional `describe()`.
 2. Add `ServedMethod` with `by`, `name` and `method`.
 3. Add `methods?: Record<string, ServedMethod>` to `HostOptions`.
-4. Add `registerMethod(name, method)` to `PluginHost`, with a comment that names decision `a-plugin-serves-an-x-command`.
+4. Add `registerMethod(name, method)` to `PluginHost`, with a comment that names [A plugin serves an x- command with registerMethod](../../../../docs/PLUGINS.md).
 5. Remove `registerMethod` from the "Not here yet" comment on `PluginHost`.
 6. Write `checkMethod` to refuse a name without `x-`, a bad grant and a missing `handle`.
 7. In `plugins.ts`, seed `methods` from `base.methods`, the same as `channels`.

@@ -1210,8 +1210,7 @@ it('counts a machine made for a session against max, and refuses the next one', 
   await until(() => held(state).machines.length === 1);
 
   // The host is full, so the second session is refused the sentence a write to
-  // `computer://<name>` is refused with - decision
-  // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+  // `computer://<name>` is refused with.
   await expect(open('ahp-session:/two', { computer: 'disposable:claude' }, folder))
     .rejects.toThrow(/This host holds 1 computers already/);
   await settle();
@@ -1263,8 +1262,7 @@ it('leaves the folder of a session out of a machine whose profile did not ask fo
   await open('ahp-session:/one', { computer: 'disposable:claude' }, folder);
 
   // Nothing of the session's folder is in the machine, and the session starts
-  // where the profile said rather than in a folder it cannot see - decision
-  // `a-session-folder-reaches-a-machine-only-where-its-profile-allows`.
+  // where the profile said rather than in a folder it cannot see.
   const box = held(state).machines[0] as NonNullable<Held['machines'][number]>;
   expect(box.mounts ?? []).toEqual([]);
   expect(box.workdir).toBe('/ahpd');
@@ -1512,8 +1510,7 @@ it('mounts the folder alone, with no git directory, where the profile does not s
   // `sessionFolder` - and the repository it sits inside does not: the host's
   // whole home is not the client's folder, so it is the profile saying
   // `sessionRepository` that brings it, and without that there is no git
-  // directory either, since the one beside the root is not under the folder
-  // - decision `a-session-folder-reaches-a-machine-only-where-its-profile-allows`.
+  // directory either, since the one beside the root is not under the folder.
   const box = held(state).machines[0] as NonNullable<Held['machines'][number]>;
   expect(box.mounts).toEqual([`${scratch}:${scratch}`]);
   expect(box.mounts).not.toContain(`${repo}:${repo}`);

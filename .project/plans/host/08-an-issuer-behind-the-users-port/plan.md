@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-issuer-answers-for-a-subject.md
-  - decisions/the-issuer-option-takes-a-url-or-github.md
 refs:
   - "[code://packages/sdk/src/users.ts#L29-L70](../../../../packages/sdk/src/users.ts#L29-L70) - `DEFAULT_RESOURCE`, `signInRecord` and `FileUserOptions`, where an issuer joins the record and the options"
   - "[code://packages/sdk/src/users.ts#L148-L175](../../../../packages/sdk/src/users.ts#L148-L175) - `verify`, which compares local hashes and is where the issuer is asked"
@@ -62,8 +60,8 @@ client -> authenticate(resource, token)   -> Users.verify
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An issuer answers for a subject, and the directory still decides what they may do](../../../decisions/an-issuer-answers-for-a-subject.md) | `(defaulted: roles live in one file, and an issuer that returned a principal would put a second role table somewhere else.)` |
-| 2 | [The issuer option names an OpenID Connect issuer by URL, with GitHub as a preset](../../../decisions/the-issuer-option-takes-a-url-or-github.md) | The user, 2026-09-23: "A issuer options seems more concise", and "the issuer its spec... need to be done". |
+| 1 | [An issuer answers for a subject, and the directory still decides what they may do](../../../../docs/AUTHENTICATION.md) | `(defaulted: roles live in one file, and an issuer that returned a principal would put a second role table somewhere else.)` |
+| 2 | [The issuer option names an OpenID Connect issuer by URL, with GitHub as a preset](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "A issuer options seems more concise", and "the issuer its spec... need to be done". |
 
 | What | Source | Task |
 | --- | --- | --- |

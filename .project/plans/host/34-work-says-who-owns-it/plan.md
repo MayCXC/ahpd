@@ -7,7 +7,6 @@ created: 2026-10-01
 revalidated: 2026-10-01
 requires: []
 decisions:
-  - decisions/work-is-owned-by-a-typed-reference.md
 refs:
   - "[code://packages/sdk/src/host.ts#L7853](../../../../packages/sdk/src/host.ts#L7853) - `createSession` opens the session with no principal"
   - "[code://packages/sdk/src/sessions.ts#L80-L91](../../../../packages/sdk/src/sessions.ts#L80-L91) - `Saved`, the persisted session fields; unknown keys are ignored on load"
@@ -40,7 +39,7 @@ connection.principal -> createSession -> session owner (persisted) ; sendMessage
 
 | Decision | Source |
 | --- | --- |
-| [Work is owned by a typed reference, user, team or project](../../../decisions/work-is-owned-by-a-typed-reference.md) | Softov, 2026-10-01 |
+| [Work is owned by a typed reference, user, team or project](../../../../docs/SESSIONS.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

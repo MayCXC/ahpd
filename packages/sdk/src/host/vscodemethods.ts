@@ -47,7 +47,7 @@ const DEV_CONTAINER_SOURCE = 'devcontainer://';
  *
  * The worktree handles it holds, the session state file and the logs it
  * collects, its own shutdown, and the devContainer requests the relay is
- * decided on - decision `the-relay-surface-is-the-reference-one`.
+ * decided on.
  */
 export interface VscodeMethods {
   'vscode/createAgentHostDetachedWorktree': (params: Record<string, unknown>) => Promise<unknown>;
@@ -189,8 +189,7 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
    * Whether a session of this host is running in the folder's computer.
    *
    * The user the reference host has none of. A dev container is a `computer://`
-   * machine here, and the sessions placed on one are this host's own - decision
-   * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`. A session
+   * machine here, and the sessions placed on one are this host's own. A session
    * that asked for the container by folder is what `sessionMachines` holds,
    * under the source it named; the folder is compared as a path, because the
    * source is a spelling a client chose and the folder a client names here is
@@ -475,8 +474,7 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
      *
      * The reference client asks these four, and it reads the capability key
      * on `initialize` before it offers the flow at all, so the names and
-     * the shapes are another program's on purpose - decision
-     * `the-relay-surface-is-the-reference-one`. What crosses here is a
+     * the shapes are another program's on purpose. What crosses here is a
      * nested host's own frames: this host carries them and does not read
      * them, which is what makes the container the container's and not
      * this host's pretending to be there.
@@ -549,8 +547,7 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
          *
          * The connection is the whole of the answer: a person who has signed
          * in owns what their relay runs, and a connection the host made for
-         * itself is the host - decision
-         * `a-relay-container-is-owned-by-who-connected`.
+         * itself is the host.
          */
         const owner = ownerFor(connection);
         result = await launcher.connect(owner === undefined ? one : { ...one, owner }, sink);
@@ -603,8 +600,7 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
      * the folder's relays, stops or removes the container, and answers `false`
      * while another client still uses it. This host answers the same, with one
      * more user than the reference has - a session placed on the folder's
-     * computer, which after `container/03` is a machine ahpd sessions run in -
-     * decision `stopping-a-dev-container-needs-the-computers-grant`.
+     * computer, which after `container/03` is a machine ahpd sessions run in.
      */
     'vscode/devContainers/stop': async (params) => await devContainerStopped('stop', params),
     'vscode/devContainers/remove': async (params) => await devContainerStopped('remove', params),

@@ -9,8 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/usage-lists-the-charged-pools-a-reader-may-read.md
-  - decisions/usage-is-grouped-by-the-host.md
 refs:
   - "[code://packages/sdk/src/usage.ts#L520-L545](../../../../packages/sdk/src/usage.ts#L520-L545) - `refused`, `notYours` and `visible`, the read rule and the list"
   - "[code://packages/sdk/src/usage.ts#L558-L590](../../../../packages/sdk/src/usage.ts#L558-L590) - `body`, the totals and the records a read answers"
@@ -49,12 +47,12 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The usage list shows the charged pools a reader may read](../../../decisions/usage-lists-the-charged-pools-a-reader-may-read.md) | Softov, 2026-10-09 |
-| 2 | [Usage is grouped by the host](../../../decisions/usage-is-grouped-by-the-host.md) | Softov, 2026-10-09 |
+| 1 | [The usage list shows the charged pools a reader may read](../../../../docs/USAGE.md) | Softov, 2026-10-09 |
+| 2 | [Usage is grouped by the host](../../../../docs/USAGE.md) | Softov, 2026-10-09 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| A member of `team:*` or of `team:project` reads `team:<team>` | [`usage-is-read-through-a-usage-scheme`](../../../decisions/usage-is-read-through-a-usage-scheme.md): a person reads "the `team:` and `project:` pools they are a member of" | 01 |
+| A member of `team:*` or of `team:project` reads `team:<team>` | [[Usage is read through a usage resource scheme, totals and records, and a person reads their own pools without a grant](../../../../docs/USAGE.md)](../../../../docs/USAGE.md): a person reads "the `team:` and `project:` pools they are a member of" | 01 |
 | `team:*` lets a person read `project:<team>:<any>`, not the install's project list crossed with the team | the same decision | 01 |
 | ahpd sends each pool's kind and name | Softov, 2026-10-07, in ahpapp `usage/01`: "ahpd sends kind and name" | 03 |
 | A total is read for any range, and the records follow the same range | Softov, 2026-10-09, asked "How should a custom date range be picked?" and answered "A fourth tab, Range" | 04 |

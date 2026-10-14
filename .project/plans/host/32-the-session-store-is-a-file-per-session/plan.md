@@ -8,7 +8,6 @@ revalidated: 2026-09-30
 requires:
   - plans/host/31-a-sessions-config-outlives-a-restart/plan.md
 decisions:
-  - decisions/the-session-store-is-one-file-per-session.md
 refs:
   - "[code://packages/sdk/src/sessions.ts#L27-L207](../../../../packages/sdk/src/sessions.ts#L27-L207) - `memorySessions` and `fileSessions`: load, coalesced save, temp and rename"
   - "[code://packages/sdk/src/types/sessions.ts#L41-L95](../../../../packages/sdk/src/types/sessions.ts#L41-L95) - `SessionStore`, with no list or prune"
@@ -41,7 +40,7 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [The session store is one file per session, and rows whose session is gone are pruned](../../../decisions/the-session-store-is-one-file-per-session.md) | 01, 02, 03 |
+| [The session store is one file per session, and rows whose session is gone are pruned](../../../../docs/SESSIONS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

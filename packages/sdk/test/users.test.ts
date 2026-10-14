@@ -212,8 +212,7 @@ it('reads an old users grant as the user subject, and says so once per role', as
   const users = open((one) => said.push(one));
   const held = await users.verify(await users.mint('k'));
 
-  // One subject for people, and only for people: decision
-  // `a-legacy-users-grant-is-the-user-subject-only`.
+  // One subject for people, and only for people.
   expect(held?.can('user:write')).toBe(true);
   expect(held?.can('team:write')).toBe(false);
   expect(held?.can('project:write')).toBe(false);
@@ -235,9 +234,7 @@ it('gives each scheme its own subject, so a role may see teams and not people', 
     users: [{ id: 't', roles: ['teamreader'], token: '' }],
   }));
   const held = await open().verify(await open().mint('t'));
-
-  // Decision `people-are-resource-schemes-with-a-grant-each`: the split is the
-  // whole point, so a team is not reachable through a user grant.
+  // The split is the whole point, so a team is not reachable through a user grant.
   expect(held?.can('team:read')).toBe(true);
   expect(held?.can('team:write')).toBe(false);
   expect(held?.can('user:read')).toBe(false);

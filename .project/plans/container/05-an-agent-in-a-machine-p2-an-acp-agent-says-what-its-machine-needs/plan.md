@@ -11,8 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-agent-declares-its-machine-needs-with-a-method.md
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
 refs:
   - "[code://packages/agent-acp/src/plugin.ts#L35-L48](../../../../packages/agent-acp/src/plugin.ts#L35-L48) - `optionsSchema`: one spec, no presets, no machine"
   - "[code://packages/agent-acp/src/plugin.ts#L59-L61](../../../../packages/agent-acp/src/plugin.ts#L59-L61) - `apply` registers one agent"
@@ -59,8 +57,8 @@ presets.<key>.machine -> the variant's acpAgent().machine() -> host.placedIn(pro
 
 | Decision | Task |
 | --- | --- |
-| [An agent declares what a machine needs through a machine() method](../../../decisions/an-agent-declares-its-machine-needs-with-a-method.md) | 01 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | 01 |
+| [An agent declares what a machine needs through a machine() method](../../plugin/15-an-agent-says-what-a-machine-needs/plan.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

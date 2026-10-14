@@ -10,12 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md
-  - decisions/a-disposable-alone-machine-refuses-another-session.md
-  - decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md
-  - decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md
-  - decisions/a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps.md
-  - decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L103-L141](../../../../packages/computer/src/plugin.ts#L103-L141) - `profilesOf`, where the disposable fields are read"
   - "[code://packages/computer/src/plugin.ts#L464-L536](../../../../packages/computer/src/plugin.ts#L464-L536) - `disposables`, `arm`, `watch` and the startup listing"
@@ -66,12 +60,12 @@ another session names an alone machine -> [new] refused
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md) | Softov, 2026-09-26 | 02 |
-| [A disposableAlone machine refuses every session but the one that made it](../../../decisions/a-disposable-alone-machine-refuses-another-session.md) | Softov, 2026-09-26 | 08 |
-| [A machine made for a session counts against max and needs computer:write](../../../decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md) | Softov, 2026-09-26 | 09 |
-| [A session's folder reaches a machine only where its profile allows it](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md) | Softov, 2026-09-26 | 10 |
-| [A daemon adopts only the disposable machines whose session it keeps](../../../decisions/a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps.md) | Softov, 2026-09-26 | 07 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md) | Softov, 2026-10-02 | 07 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | Softov, 2026-09-26 | 02 |
+| A disposableAlone machine refuses every session but the one that made it | Softov, 2026-09-26 | 08 |
+| A machine made for a session counts against max and needs computer:write | Softov, 2026-09-26 | 09 |
+| [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | Softov, 2026-09-26 | 10 |
+| A daemon adopts only the disposable machines whose session it keeps | Softov, 2026-09-26 | 07 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 07 |
 
 | What | Source | Task |
 | --- | --- | --- |

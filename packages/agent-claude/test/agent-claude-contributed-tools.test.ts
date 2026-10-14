@@ -103,8 +103,7 @@ it('does not send a list the SDK took when it comes again', async () => {
  * The order is the whole of it: the SDK connects only a name it has not
  * registered, and `ahp` is registered from the session's start. A declaration
  * that carries it is taken for the server already there, so only the one that
- * leaves it out makes the SDK let it go - decision
- * `a-live-tool-change-removes-the-ahp-server-then-adds-it-again`.
+ * leaves it out makes the SDK let it go.
  */
 it('removes the ahp server first, then declares it again with the new tools', async () => {
   const held = session();

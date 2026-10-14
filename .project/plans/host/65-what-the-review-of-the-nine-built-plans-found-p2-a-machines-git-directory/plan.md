@@ -9,8 +9,7 @@ requires:
   - plans/host/65-what-the-review-of-the-nine-built-plans-found/plan.md
   - plans/container/05-an-agent-in-a-machine-p7-a-worktree-brings-its-repository/plan.md
 decisions:
-  - decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md
-  - decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md
+  - ../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md
 refs:
   - "[code://packages/computer/src/gitdir.ts#L115-L150](../../../../packages/computer/src/gitdir.ts#L115-L150) - `gitMounts`: the git directory read-write, four parts read-only over it"
   - "[code://packages/computer/src/gitdir.ts#L160-L181](../../../../packages/computer/src/gitdir.ts#L160-L181) - `gitInside`, `guardedMounts`, `runsAsHost`, comparing paths as spelled"
@@ -64,8 +63,8 @@ placedIn -> repositoryOf(folder) -> worktrees.gitDir -> { gitDir, repository? }
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md) | Softov, 2026-10-06, "Allowlist writable"; for a main checkout "Also allow the root index" and "Writable root, pinned files" |
-| 2 | [A session's folder reaches a machine only where its profile allows it](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md) | Softov, 2026-09-26, the gate task 04 extends to the repository root |
+| 1 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) | Softov, 2026-10-06, "Allowlist writable"; for a main checkout "Also allow the root index" and "Writable root, pinned files" |
+| 2 | [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | Softov, 2026-09-26, the gate task 04 extends to the repository root |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/acp-bridge-uses-the-protocol-sdk.md
 refs:
   - "[code://packages/agent-acp/src/connection.ts#L55-L64](../../../../packages/agent-acp/src/connection.ts#L55-L64) - the spawn: no `error` or `exit` listener, stderr drained and dropped"
   - "[code://packages/agent-acp/src/connection.ts#L159-L164](../../../../packages/agent-acp/src/connection.ts#L159-L164) - close: stdin ended, SIGTERM to the direct child only"
@@ -47,7 +46,7 @@ close -> [new] session/close when advertised -> stdin end -> SIGTERM group -> SI
 
 | Decision | Task |
 | --- | --- |
-| [The ACP bridge uses the published protocol SDK](../../../decisions/acp-bridge-uses-the-protocol-sdk.md) | 04 |
+| [The ACP bridge uses the published protocol SDK](../../plugin/07-agent-acp/plan.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |

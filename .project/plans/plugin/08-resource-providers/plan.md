@@ -9,8 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/host-owned-schemes-are-provider-contributions.md
-  - decisions/a-scheme-provider-implements-less-than-a-resource-store.md
 refs:
   - code://.project/research/host-owned-uri-resources.md - the proposal this plan answers, and where the gap was written down
   - code://packages/sdk/src/types/plugin.ts#L83-L130 - `PluginHost`, the contribution surface the new method joins
@@ -74,8 +72,8 @@ ahpd --plugin <pkg> -> loadPlugins -> apply(host) -> host.registerResourceProvid
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host-owned URI scheme is a provider a plugin contributes](../../../decisions/host-owned-schemes-are-provider-contributions.md) | The user, 2026-09-22: asked which route the plan should take and answered "The provider mechanism". |
-| 2 | [A scheme provider implements less than a resource store](../../../decisions/a-scheme-provider-implements-less-than-a-resource-store.md) | (defaulted: a `computer:` provider has no path completion to offer, and the research asks for a smaller contract rather than fake file semantics). |
+| 1 | [A host-owned URI scheme is a provider a plugin contributes](../../../../docs/RESOURCES.md) | The user, 2026-09-22: asked which route the plan should take and answered "The provider mechanism". |
+| 2 | [A scheme provider implements less than a resource store](../../../../docs/RESOURCES.md) | (defaulted: a `computer:` provider has no path completion to offer, and the research asks for a smaller contract rather than fake file semantics). |
 
 | What | Source | Task |
 | --- | --- | --- |

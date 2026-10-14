@@ -8,8 +8,7 @@
  * and grows what the turn has used so far, so the last one before the turn
  * ended is the turn's total, and that is what one record per turn holds. Per
  * report, the earlier sum is taken off instead and each report's own addition is
- * written as it arrives - decision
- * `the-agent-meter-writes-per-turn-or-per-report`.
+ * written as it arrives.
  *
  * A worker is not counted twice, and not here. A harness that runs subagents
  * inside one turn - Claude Code, which counts every call the turn's main agent
@@ -89,8 +88,7 @@ const metaOf = (usage: Bag): Bag => {
 /**
  * What a harness reported it cost, in the record's own spelling.
  *
- * Kept only as the harness said it - decision
- * `usage-and-computer-time-are-two-records-behind-one-port` - because what a
+ * Kept only as the harness said it - because what a
  * call cost in dollars is worked out from a price list, which is a later plan.
  * The currency is lowercased, because every harness spells US dollars in caps
  * and a total is summed by what its own store reads the currency as.
@@ -186,8 +184,7 @@ const addition = (now: Bag, before: Bag | undefined): Bag => {
 };
 
 /**
- * The pools one record is charged to - decision
- * `agent-usage-is-charged-to-owner-team-and-project-pools`.
+ * The pools one record is charged to.
  *
  * Each is named only when the record has it, so work with no owner and no scope
  * is charged to no pool rather than to one whose name says nothing. A project
@@ -236,14 +233,19 @@ export const meter = (options: MeterOptions): Meter => {
     const name = typeof reported.model === 'string' ? reported.model : held.model;
     /*
      * An agent's harness calls its model itself, so the figure it reports is
-     * what its pools are charged and what the provider reported both - decision
-     * `a-record-keeps-the-providers-cost-beside-the-charged-one`. A cost of 0
+     * what its pools are charged and what the provider reported both. A cost of 0
      * on a turn that counted no token is a harness saying it spent nothing,
      * which is no cost at all: absent and 0 mean different things, and a record
      * of 0 there would charge a pool for a call that never happened.
      */
     const cost = costOf(reported);
     const billed = cost !== undefined && cost.amount === 0 && !usedAny(reported) ? undefined : cost;
+    /*
+     * A turn whose report named no model, and which asked for none either, is
+     * written with an empty name rather than left out: `ModelCall.name` is
+     * required, and the tokens and the cost the report carried are real even
+     * when nobody said which model ran.
+     */
     const entry: ModelUse = {
       at: held.at,
       kind: 'model',

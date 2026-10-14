@@ -4,8 +4,7 @@
  * Named collections of JSON records, each with a slug `id`, behind one host
  * port. A plugin opens a collection with `host.records(name)` and never names
  * a file or a format, so a plugin that takes the port over with
- * `registerRecords(store, 'replace')` moves every plugin's records at once -
- * decision `a-plugin-keeps-records-in-the-host-store`.
+ * `registerRecords(store, 'replace')` moves every plugin's records at once.
  */
 
 /**

@@ -8,9 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/host/81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md
 decisions:
-  - decisions/host-records-are-typed-channels-beside-their-resource-schemes.md
-  - decisions/each-people-scheme-has-its-own-channel.md
-  - decisions/an-x-command-is-named-by-domain-and-verb.md
 refs:
   - "[code://packages/sdk/src/records.ts#L162-L244](../../../../packages/sdk/src/records.ts#L162-L244) - `recordsProvider`, whose write and remove the commands share"
   - "[code://packages/sdk/src/people.ts#L239-L240](../../../../packages/sdk/src/people.ts#L239-L240) - `peopleProviders`, the four people schemes"
@@ -51,9 +48,9 @@ users file changes -> Users.watch -> refresh the four people channels
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Host records get typed channels and commands beside their resource schemes](../../../decisions/host-records-are-typed-channels-beside-their-resource-schemes.md) | Softov, 2026-10-11 |
-| 2 | [Each people scheme has its own channel](../../../decisions/each-people-scheme-has-its-own-channel.md) | Softov, 2026-10-11 |
-| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../decisions/an-x-command-is-named-by-domain-and-verb.md) | Softov, 2026-10-11 |
+| 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
+| 2 | [Each people scheme has its own channel](../../../../docs/USERS.md) | Softov, 2026-10-11 |
+| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
 
 | What | Source | Task |
 | --- | --- | --- |

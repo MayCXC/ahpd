@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-This task is a check, made by reading VS Code: with no model configured and none sent, the person sees the sentence decision [a-cofold-turn-with-no-model-fails-and-says-where-to-name-one](../../../decisions/a-cofold-turn-with-no-model-fails-and-says-where-to-name-one.md) gives, in VS Code as in the protocol.
+This task is a check, made by reading VS Code: with no model configured and none sent, the person sees the sentence [A cofold turn with no model configured fails and says to add "model" to the cofold configuration file](../14-cofold-runs-its-own-tools/plan.md) gives, in VS Code as in the protocol.
 
 ## Files
 

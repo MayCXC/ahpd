@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-issuer-may-be-plain-http-on-loopback.md
 refs:
   - "[code://packages/sdk/src/issuers.ts#L89-L115](../../../../packages/sdk/src/issuers.ts#L89-L115) - `isIssuerUrl` and the discovered endpoint's check"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - `namedIssuer`"
@@ -41,7 +40,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An issuer may be plain http on loopback, and nowhere else](../../../decisions/an-issuer-may-be-plain-http-on-loopback.md) | The user, 2026-09-23: "how I can ran a issuer?", after asking for the loopback exception. |
+| 1 | [An issuer may be plain http on loopback, and nowhere else](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "how I can ran a issuer?", after asking for the loopback exception. |
 
 | What | Source | Task |
 | --- | --- | --- |

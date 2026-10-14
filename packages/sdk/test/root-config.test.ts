@@ -456,8 +456,7 @@ it('reads a folder as trusted from one connection\'s workspaceTrust', () => {
   // no untrusted folder.
   expect(trusted('/anything', { enabled: false, trustedUris: [] })).toBe(true);
   // And nothing pushed at all, which is an ahpc window, an ahpapp window and
-  // every automation - decision
-  // `a-folder-is-untrusted-until-a-client-says-otherwise`.
+  // every automation.
   expect(trusted('/a', undefined)).toBe(false);
   expect(trusted('/a', {})).toBe(false);
 });

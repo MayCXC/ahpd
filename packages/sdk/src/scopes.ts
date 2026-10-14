@@ -2,8 +2,7 @@
  * Which team and project a piece of work is charged to.
  *
  * A session, a proxy request and a turn all resolve to one, from what they
- * name or from the person's primary - decision
- * `a-request-naming-no-scope-uses-the-persons-primary`. Nothing here grants
+ * name or from the person's primary. Nothing here grants
  * anything: a membership says what work may be charged to, and a role says
  * what a person may do.
  */
@@ -130,8 +129,7 @@ export const poolsFor = (principal: Principal): string[] => [
 ];
 
 /**
- * Whether one person may read one usage pool without `usage:read` - decision
- * `usage-is-read-through-a-usage-scheme`.
+ * Whether one person may read one usage pool without `usage:read`.
  *
  * Their own `user:<id>` pool, `team:<team>` for any membership in that team,
  * and `project:<team>:<project>` for `team:*` or `team:<project>`. A bare

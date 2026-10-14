@@ -3,8 +3,7 @@
  *
  * A message's attachment is a file this host wrote under the session's own
  * folder and the message names it by path, so a session running in a machine
- * reads that path only once the machine holds a file there - decision
- * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. The copy is the
+ * reads that path only once the machine holds a file there. The copy is the
  * plugin's to make, through the port below, and this file is about when the
  * host asks for it: after the file is written and before the action is applied,
  * for every session in a machine however that machine was made, and out again

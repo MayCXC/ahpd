@@ -4,7 +4,7 @@ domain: acp
 revalidated: 2026-09-26
 ---
 
-`packages/agent-acp` (`@ahpd/agent-acp`) is the ACP bridge: it spawns one Agent Client Protocol server per configured spec, acts as its ACP client over `@agentclientprotocol/sdk`, and turns what the server says into AHP `chat/*` and `session/*` actions (decisions [acp-bridge-uses-the-protocol-sdk](../../decisions/acp-bridge-uses-the-protocol-sdk.md) and [acp-ports-come-through-start](../../decisions/acp-ports-come-through-start.md)).
+`packages/agent-acp` (`@ahpd/agent-acp`) is the ACP bridge: it spawns one Agent Client Protocol server per configured spec, acts as its ACP client over `@agentclientprotocol/sdk`, and turns what the server says into AHP `chat/*` and `session/*` actions ([The ACP bridge uses the published protocol SDK](../plugin/07-agent-acp/plan.md) and [An ACP backend reaches files and a shell through Start](../plugin/07-agent-acp/plan.md)).
 Every agent that speaks ACP is configuration for this one package, not a package of its own (decision [agent-package-only-when-it-brings-a-runtime](../../decisions/agent-package-only-when-it-brings-a-runtime.md)).
 
 ## Packages

@@ -8,7 +8,6 @@ revalidated: 2026-10-10
 requires:
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
 decisions:
-  - decisions/a-bot-colour-is-a-name-or-a-hex.md
 refs:
   - "[code://packages/bot/src/record.ts#L43-L49](../../../../packages/bot/src/record.ts#L43-L49) - `BOT_COLORS` and `BotColor`"
   - "[code://packages/bot/src/record.ts#L150-L156](../../../../packages/bot/src/record.ts#L150-L156) - `among`, the check a closed list uses"
@@ -48,7 +47,7 @@ client resourceRead bot://motion -> record JSON -> client draws the name or the 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A bot's colour is one of the eleven names or a hex colour](../../../decisions/a-bot-colour-is-a-name-or-a-hex.md) | Softov, 2026-10-10 |
+| 1 | [A bot's colour is one of the eleven names or a hex colour](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

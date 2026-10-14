@@ -12,8 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback.md
-  - decisions/a-shared-target-is-refused-only-when-the-mounts-differ.md
   - decisions/a-dev-container-is-reached-by-docker-exec.md
 refs:
   - "[code://packages/sdk/src/types/machine.ts#L74-L94](../../../../packages/sdk/src/types/machine.ts#L74-L94) - `MachineNeed`, `NeedKind` (four kinds) and `ResolvedNeed`, where a fifth kind goes"
@@ -59,8 +57,8 @@ agent.machine() { codex: { part: 'codex' } } + profile.parts
 
 | Decision | Task |
 | --- | --- |
-| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../decisions/a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback.md) | 03, 04 |
-| [A shared target is refused at create only when what lands there differs](../../../decisions/a-shared-target-is-refused-only-when-the-mounts-differ.md) | 02 |
+| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/COMPUTER.md) | 03, 04 |
+| A shared target is refused at create only when what lands there differs | 02 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | 05 |
 
 | What | Source | Task |

@@ -6,9 +6,7 @@
  * a whole `ahpd` with that backend loaded is started inside the machine, in
  * stdio mode, and this is the outer session that carries it: it speaks AHP to
  * the host inside with `AhpClient`, forwards the client's turns and answers,
- * and emits what the inner host says as the outer session's own actions -
- * decisions `a-cofold-session-in-a-computer-runs-in-a-nested-host` and
- * `a-session-reaches-a-nested-host-through-a-generic-proxy`.
+ * and emits what the inner host says as the outer session's own actions.
  *
  * Two things make it a proxy rather than a second host: the inner turn ids are
  * the outer ones, so a client's optimistic write matches what comes back, and
@@ -34,8 +32,7 @@
  *   which are not the machine's.
  *
  * `resume` is carried: the inner session goes by the outer one's id, so a
- * resume continues the transcript the machine holds - decision
- * `a-nested-session-resumes-its-inner-transcript-by-id`.
+ * resume continues the transcript the machine holds.
  */
 
 import { spawn as startProcess } from 'node:child_process';
@@ -138,8 +135,7 @@ export interface NestedStarted {
 export interface NestedOptions {
   /**
    * The plugins the host inside loads: the one that registered this agent on
-   * this host, as the host recorded its spec - decision
-   * `the-host-records-which-plugin-registered-each-agent`.
+   * this host, as the host recorded its spec.
    *
    * Empty when nothing is recorded, and then the session ends with a sentence
    * saying the host does not know which plugin serves it, and nothing is
@@ -837,8 +833,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     /*
      * A resumed session is not made again: the inner host holds it under the
      * same id, and the first turn forwarded to it resumes it there, the way any
-     * host resumes a session it is not running - decision
-     * `a-nested-session-resumes-its-inner-transcript-by-id`.
+     * host resumes a session it is not running.
      *
      * But this host asks to resume whenever `agentId()` is set, and that is the
      * session id from the first breath: a restart before the turn inside has
@@ -1091,8 +1086,7 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
      * `reason` says which of the two this close is. `dispose` is a session
      * being deleted, which loses the transcript inside; `stopping` is one
      * being started again - a directory added, a folder moved, this daemon
-     * going down - which keeps it, because the inner host resumes it -
-     * decision `a-nested-session-resumes-its-inner-transcript-by-id`. Only the
+     * going down - which keeps it, because the inner host resumes it. Only the
      * first call decides, since it is the one that starts the sequence.
      *
      * A restart's promise settles when the process has gone, because the

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-authorized-connection-is-told-sign-in-is-not-required.md
 refs:
   - "[code://packages/sdk/src/host.ts#L2219-L2226](../../../../packages/sdk/src/host.ts#L2219-L2226) - `resourcesOf`, where the host's sign-in resource joins every agent's list"
   - "[code://packages/sdk/src/host.ts#L2706](../../../../packages/sdk/src/host.ts#L2706) - `descriptors`, the one builder of `agents`"
@@ -60,7 +59,7 @@ VS Code -> _ensureRequiredAuthentication -> required !== false -> "Authenticatio
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A connection that is already authorized is told the host's sign-in is not required](../../../decisions/an-authorized-connection-is-told-sign-in-is-not-required.md) | The user, 2026-09-25, after VS Code refused on the deployment token: "Real fix: tell a token (root) connection that the users resource is required: false." |
+| 1 | [A connection that is already authorized is told the host's sign-in is not required](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-25, after VS Code refused on the deployment token: "Real fix: tell a token (root) connection that the users resource is required: false." |
 
 | What | Source | Task |
 | --- | --- | --- |

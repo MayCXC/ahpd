@@ -14,14 +14,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback.md
-  - decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md
-  - decisions/any-ahpd-can-be-the-hub.md
-  - decisions/the-published-image-is-the-parts-joined.md
-  - decisions/an-agent-cli-is-pinned-in-one-versions-file.md
   - decisions/a-dev-container-is-reached-by-docker-exec.md
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
-  - decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md
 refs:
   - "[code://packages/computer/src/runtime.ts#L697-L746](../../../../packages/computer/src/runtime.ts#L697-L746) - how a docker machine is made today: image, labels (owner, team and project among them), bind mounts, `-e KEY=VALUE`"
   - "[code://packages/computer/src/plugin.ts#L562-L620](../../../../packages/computer/src/plugin.ts#L562-L620) - how a command enters a machine: `docker exec -i -e KEY=VALUE` (L606), or `devcontainer exec` for a dev container until container/03 switches it"
@@ -77,14 +70,14 @@ session start -> placedIn(folder = worktree, owner, team, project) -> the varian
 
 | Decision | Plans |
 | --- | --- |
-| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../decisions/a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback.md) | p4 |
-| [A nested host is used only for a backend that runs nested and for a machine on another host](../../../decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md) | p5, p8, p9, p10 |
-| [Any ahpd can be the hub other hosts join](../../../decisions/any-ahpd-can-be-the-hub.md) | p10 |
-| [The image ahpd publishes is its parts joined, and there is no other base](../../../decisions/the-published-image-is-the-parts-joined.md) | p3 |
-| [Every agent CLI is pinned in one versions file, and none updates itself](../../../decisions/an-agent-cli-is-pinned-in-one-versions-file.md) | p3 |
+| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/COMPUTER.md) | p4 |
+| A nested host is used only for a backend that runs nested and for a machine on another host | p5, p8, p9, p10 |
+| [Any ahpd can be the hub other hosts join](../05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | p10 |
+| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/COMPUTER.md) | p3 |
+| [Every agent CLI is pinned in one versions file, and none updates itself](../05-an-agent-in-a-machine-p3-parts-are-built-from-one-versions-file/plan.md) | p3 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | p1, p4 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | p2, p5, p6 |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md) | p1, p2 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | p2, p5, p6 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | p1, p2 |
 
 | What | Source | Plans |
 | --- | --- | --- |

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-listed-session-belongs-to-the-provider-the-host-recorded.md
 refs:
   - "[code://packages/sdk/src/host.ts#L3897-L3940](../../../../packages/sdk/src/host.ts#L3897-L3940) - `listing()`, which publishes every agent's rows as `<provider>:/<id>`"
   - "[code://packages/sdk/src/host.ts#L6339-L6366](../../../../packages/sdk/src/host.ts#L6339-L6366) - `openSession`, where a new session's owner and config are kept"
@@ -41,7 +40,7 @@ listing() -> for each agent: agent.list() -> every row as <provider>:/<id> (name
 
 | What | Source | Task |
 | --- | --- | --- |
-| [A listed session belongs to the provider the host recorded, else the first loaded harness that lists it](../../../decisions/a-listed-session-belongs-to-the-provider-the-host-recorded.md) | Softov, 2026-10-02 | 01, 02 |
+| A listed session belongs to the provider the host recorded, else the first loaded harness that lists it | Softov, 2026-10-02 | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

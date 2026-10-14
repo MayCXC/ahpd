@@ -48,6 +48,6 @@ A host says which schemes it serves, what each can be asked to do and what a cre
 
 ## Left for later
 
-- The typed `InitializeResult.resourceSchemes` field upstream, which supersedes the `_meta` key when it exists - decision `a-resource-scheme-is-advertised-in-meta`.
+- The typed `InitializeResult.resourceSchemes` field upstream, which supersedes the `_meta` key when it exists - [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/RESOURCES.md).
 - A registered session key still cannot answer `sessionConfigCompletions`, so a picker for the `computer` key is the client's own; `HANDOFF.md` pending 11.
 - The ahpapp Computers screen, which reads this key, is built in that repository and is not this plan.

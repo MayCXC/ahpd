@@ -926,8 +926,7 @@ it('starts, stops and restarts a machine by writing what it should be', async ()
 
 /*
  * Plan plugin/19 task 01: the OCI runtime a profile names reaches `docker run`
- * as one argument, `--runtime=<value>` - decision
- * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+ * as one argument, `--runtime=<value>`.
  *
  * Written before the image, as a machine's other flags are, and one argument
  * rather than two so the value cannot be read as a flag of its own. A profile

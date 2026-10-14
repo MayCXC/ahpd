@@ -132,8 +132,7 @@ const WAIT_LIMIT = 60_000;
  *
  * Frozen in place rather than copied, and the principal is not spread before
  * it: a principal the user directory built carries getters that re-read the
- * file, and spreading it would stamp each one with today's answer. Decision
- * `a-plugin-gets-frozen-copies-of-host-values`.
+ * file, and spreading it would stamp each one with today's answer.
  */
 function heldPrincipal(who: Principal): Principal {
   if (Array.isArray(who.roles)) Object.freeze(who.roles);
@@ -1165,8 +1164,7 @@ export function createHost(options: HostOptions): Host {
          * A session has left its machine by now, so this is the point where a
          * plugin stops what it owns: a timer it armed, a removal it started, a
          * process it spawned. Each runs as a step, so one that fails is logged
-         * against its plugin and the next one still runs - decision
-         * `a-plugin-is-told-when-the-host-closes`.
+         * against its plugin and the next one still runs.
          */
         for (const { by, close } of options.closers ?? []) {
           await step(`the plugin ${by}`, close);
@@ -1210,8 +1208,7 @@ export function createHost(options: HostOptions): Host {
          * place this host sees it before a provider, a hook or a scheme's own
          * methods are handed it - and an embedder that built its own answered
          * for nothing beyond this process. `heldPrincipal` is that freeze, and
-         * it takes the roles with it. Decision
-         * `a-plugin-gets-frozen-copies-of-host-values`.
+         * it takes the roles with it.
          */
         ...(principal === undefined ? {} : { principal: heldPrincipal(principal) }),
         // And one admitted on the deployment's own token is the host itself.
@@ -1373,7 +1370,7 @@ export function createHost(options: HostOptions): Host {
           }
           /*
            * A protocol handler first, and then an `x-` command the daemon or a
-           * plugin serves - decision `a-plugin-serves-an-x-command`. A served
+           * plugin serves. A served
            * one passes the same handshake check and the same gate below.
            */
           const served = methodIn(options.methods, request.method);

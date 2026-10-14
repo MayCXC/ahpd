@@ -27,7 +27,7 @@ Every key is checked against one schema built from the flag fields: a wrong valu
 
 ## Departures from the plan
 
-- The project file: the plan first read `ahpd.json`, then [the daemon reads no project config file](../../../decisions/the-daemon-reads-no-project-config-file.md) superseded that before building.
+- The project file: the plan first read `ahpd.json`, then [the daemon reads no project config file](../../../../docs/DAEMON.md) superseded that before building.
 - A relative plugin spec keeps the loader's rule, the working directory and then the configuration directory, after anchoring it to the file's directory broke `./packages/...` entries in Softov's user file (`d0e9714`).
 - A typed flag now beats the file for booleans too, and `stdio`, `configFile` and `noPlugins` in a file are warned about as unknown keys.
 

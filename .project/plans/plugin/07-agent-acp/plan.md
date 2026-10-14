@@ -9,8 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/acp-bridge-uses-the-protocol-sdk.md
-  - decisions/acp-ports-come-through-start.md
 refs:
   - code://packages/sdk/src/types/agent.ts#L90-L168 - `Start`, what a backend is handed, and where the two ports this plan adds would go
   - code://packages/sdk/src/types/agent.ts#L182-L314 - `Agent`, the contract this package implements
@@ -80,8 +78,8 @@ ahpd --plugin @ahpd/agent-acp
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The bridge speaks ACP through the published protocol SDK](../../../decisions/acp-bridge-uses-the-protocol-sdk.md) | the user, 2026-09-22, over hand-rolling the stdio JSON-RPC |
-| 2 | [An ACP backend reaches files and a shell through `Start`](../../../decisions/acp-ports-come-through-start.md) | defaulted from [agents as extensions](../../../ideas/agents-as-extensions.md), which orders "ports through `Start`" and rejects building the access twice |
+| 1 | The bridge speaks ACP through the published protocol SDK | the user, 2026-09-22, over hand-rolling the stdio JSON-RPC |
+| 2 | An ACP backend reaches files and a shell through `Start` | defaulted from [agents as extensions](../../../ideas/agents-as-extensions.md), which orders "ports through `Start`" and rejects building the access twice |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -12,7 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/vscode-reaches-ahpd-through-a-dev-tunnel.md
 refs:
   - "[code://.project/research/how-vscode-offers-a-dev-container.md](../../../research/how-vscode-offers-a-dev-container.md) - the checks VS Code makes, and which ones ahpd fails"
   - "[code://packages/sdk/src/host/handshake.ts#L259](../../../../packages/sdk/src/host/handshake.ts#L259) - the `vscode.devContainers` key"
@@ -56,8 +55,8 @@ idle or removed                                 -> [new] vscode/devContainers/st
 
 | Decision | Task |
 | --- | --- |
-| [VS Code reaches ahpd through a Dev Tunnel for its dev container flow](../../../decisions/vscode-reaches-ahpd-through-a-dev-tunnel.md) | 01, 02, 03 |
-| [Stopping a dev container needs the computer's grant](../../../decisions/stopping-a-dev-container-needs-the-computers-grant.md) | 04 |
+| VS Code reaches ahpd through a Dev Tunnel for its dev container flow | 01, 02, 03 |
+| [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -87,7 +86,7 @@ idle or removed                                 -> [new] vscode/devContainers/st
 
 - **Done so far:** the research note and the route decision, 2026-09-26. Task 04 built, reviewed and done 2026-10-10, with its decision; a stop that misses a session placed by computer URI is an open problem.
 - **Next action:** task 01 again, with the tunnel made under the same provider and account VS Code signs in with. Tasks 02 and 03 wait on it.
-- **Open question (answered 2026-10-10):** what do `vscode/devContainers/stop` and `remove` need from the asker? Softov: `container:write` and `computer:write`, with no owner check, because a grant is role-wide everywhere else in the host. Recorded in [Stopping a dev container needs the computer's grant](../../../decisions/stopping-a-dev-container-needs-the-computers-grant.md).
+- **Open question (answered 2026-10-10):** what do `vscode/devContainers/stop` and `remove` need from the asker? Softov: `container:write` and `computer:write`, with no owner check, because a grant is role-wide everywhere else in the host. Recorded in [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
 - **Watch out for:** a local Windows folder is launched by VS Code with Windows' Docker and never reaches ahpd; testing with one proves nothing about ahpd. The tunnel labels already match what VS Code filters on; VS Code lists tunnels with its own GitHub or Microsoft token, so a tunnel made by `devtunnel user login` under another provider or account never appears.
 
 ## Final verification checklist

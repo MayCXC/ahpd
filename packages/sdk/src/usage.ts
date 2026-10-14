@@ -112,21 +112,18 @@ export interface FileUsageOptions {
  * Append-only, because a record is written once and is never edited: a second
  * line for the same call would be a different record, and the day's totals are
  * the sum rather than the last word. The month and kind are in the file name,
- * and each line still carries its `kind` so a line read alone says what it is -
- * decision `usage-and-computer-time-are-two-records-behind-one-port`.
+ * and each line still carries its `kind` so a line read alone says what it is.
  *
  * **Totals per pool per day, rebuilt at construction.** A limit is checked
  * before a call and debited as usage arrives, so the answer has to be a running
- * one rather than a read of the month's file - decision
- * `the-usage-store-answers-live-totals`. A day is the granularity, which is
+ * one rather than a read of the month's file. A day is the granularity, which is
  * exact for the ranges a limit asks about and counts a partly covered day
  * whole. A large install moves the totals into a database plugin, which answers
  * the same calls from the same records.
  *
  * **The pools and the records behind the totals read the files.** The totals
  * are charged in memory because a limit asks them mid-turn, but a report wants
- * what was charged and to what, and the lines are the whole of that - decision
- * `usage-is-read-through-a-usage-scheme`. Neither read goes through the queue
+ * what was charged and to what, and the lines are the whole of that. Neither read goes through the queue
  * below: it is what `record` is serialised against, and a line is already whole
  * on disk because one append writes it.
  *
@@ -654,8 +651,7 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
   };
 
   /**
-   * The pools something was charged to that this reader may read - decision
-   * `usage-lists-the-charged-pools-a-reader-may-read`.
+   * The pools something was charged to that this reader may read.
    *
    * The same rows for root and for a member, for the same work: a pool nothing
    * was charged to is listed for neither.

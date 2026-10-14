@@ -29,7 +29,7 @@ The host now names the client: `session_start` carries the creating client, `ses
 
 ## Departures from the plan
 
-- The token is write-only, by decision [a-push-token-is-write-only](../../../decisions/a-push-token-is-write-only.md), made in review.
+- The token is write-only, by, made in review.
 - The checklist asked for a fixture backend's `inputNeededSet` against a stubbed endpoint. The tests drive the plugin's handlers directly instead.
 - A pair is marked seen before its send, so a pair whose send failed is not sent again.
 - `heldResources` in `spawn.ts` passes the new `client` argument through, a fix made in review.

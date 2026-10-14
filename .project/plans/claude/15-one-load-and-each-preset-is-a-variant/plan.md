@@ -10,8 +10,6 @@ requires:
   - plans/claude/12-a-second-claude-runs-on-another-endpoint/plan.md
   - plans/claude/13-a-claude-harness-offers-the-models-it-is-told/plan.md
 decisions:
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
-  - decisions/claude-options-are-declared-once-for-sessions-and-presets.md
 refs:
   - "[code://packages/agent-claude/src/plugin.ts](../../../../packages/agent-claude/src/plugin.ts) - `optionsSchema`, `optionsOf` and `apply`, which registers one agent"
   - "[code://packages/agent-claude/src/claude.ts#L60-L148](../../../../packages/agent-claude/src/claude.ts#L60-L148) - `ClaudeOptions`: top-level `provider`, `displayName`, `models`, `keepCliModels`, `presets`"
@@ -55,8 +53,8 @@ config plugins[] -> server loadPlugins (one per name) -> agent-claude apply -> o
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | 01, 02 |
-| [A Claude option is declared once, and both the session schema and the preset schema are made from it](../../../decisions/claude-options-are-declared-once-for-sessions-and-presets.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01, 02 |
+| [A Claude option is declared once, and both the session schema and the preset schema are made from it](../10-a-claude-session-runs-on-a-preset/plan.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

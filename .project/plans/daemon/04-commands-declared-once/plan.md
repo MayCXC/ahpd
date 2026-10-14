@@ -10,10 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/ahpd-commands-are-declared-with-cofold-commands.md
-  - decisions/a-daemon-flag-is-declared-by-what-it-turns-on.md
-  - decisions/ahpd-refuses-strictly-and-names-the-sub-commands.md
-  - decisions/an-untyped-flag-stays-absent-in-cofold-input.md
 refs:
   - "git://7a7e9d1 - packages/server/src/main.ts before the migration: the hand-written flag parser and the verbs `start`, `stop`, `status`, `config`, `user list|add|rm|token`, `plugin list|install|remove`"
   - "[code://packages/server/src/commands](../../../../packages/server/src/commands) - the declarations: one file per verb, the flags in `options.ts`"
@@ -44,10 +40,10 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Task |
 | --- | --- |
-| [ahpd's commands are declared once, with @cofold/commands](../../../decisions/ahpd-commands-are-declared-with-cofold-commands.md) | 02, 03, 14 |
-| [A daemon flag is declared by what it turns on, and --no-X turns it off](../../../decisions/a-daemon-flag-is-declared-by-what-it-turns-on.md) | 06 |
-| [ahpd keeps cofold's strict refusals, and a verb with no sub-command names its sub-commands](../../../decisions/ahpd-refuses-strictly-and-names-the-sub-commands.md) | 15 |
-| [A boolean flag nobody typed stays absent in cofold's canonical input](../../../decisions/an-untyped-flag-stays-absent-in-cofold-input.md) | 17, 06 |
+| ahpd's commands are declared once, with @cofold/commands | 02, 03, 14 |
+| A daemon flag is declared by what it turns on, and --no-X turns it off | 06 |
+| [ahpd keeps cofold's strict refusals, and a verb with no sub-command names its sub-commands](../../../../docs/DAEMON.md) | 15 |
+| A boolean flag nobody typed stays absent in cofold's canonical input | 17, 06 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-role-is-read-on-every-command.md
 refs:
   - "[code://packages/sdk/src/users.ts#L177-L205](../../../../packages/sdk/src/users.ts#L177-L205) - `principalOf`, frozen at verification and now resolved per question"
   - "[code://packages/sdk/src/types/users.ts#L34-L60](../../../../packages/sdk/src/types/users.ts#L34-L60) - `Principal`, which gains `standing`"
@@ -51,7 +50,7 @@ any command -> the gate -> connection.principal.standing()  false -> -32007
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A role is read on every command, not once at sign-in](../../../decisions/a-role-is-read-on-every-command.md) | The user, 2026-09-23: named this deferred item as the next thing to do, after the page was found to describe a behaviour the code did not have. |
+| 1 | A role is read on every command, not once at sign-in | The user, 2026-09-23: named this deferred item as the next thing to do, after the page was found to describe a behaviour the code did not have. |
 
 | What | Source | Task |
 | --- | --- | --- |

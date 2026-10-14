@@ -16,8 +16,7 @@ import type { SessionStore } from '../types/sessions.js';
  * written once per client that opens the session, and again for every session
  * that reads the message back. So they are written here, once, before the
  * action is applied, and what the message carries from then on is the path to
- * the file: decision
- * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+ * the file.
  *
  * Four things are left exactly as the client sent them, each for the same
  * reason - this host cannot make a better one:
@@ -102,7 +101,7 @@ function wouldWrite(value: unknown): boolean {
  * The files a settled message names under the session's own folder.
  *
  * What a machine is given, so the path a message was handed is a file in there
- * too - decision `a-session-in-a-machine-gets-each-attachment-copied-into-it`.
+ * too.
  * Only the folder's own files: an attachment this host left as it came names
  * somebody else's file on this host, which is not this host's to copy into a
  * machine. Read off the message rather than remembered from the writing,

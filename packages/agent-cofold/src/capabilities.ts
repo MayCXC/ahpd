@@ -6,7 +6,7 @@
  * a turn runs on. cofold executes them in this process, against the machine it
  * runs on - the way the Claude backend's tools run in the Claude CLI - so ahpd
  * reports the calls, asks through the policy and reports the edits rather than
- * running anything (decision `cofold-runs-its-own-tools-in-its-process`).
+ * running anything ().
  *
  * The section's shape, the search providers and the memory layout are cofold's
  * (cofold decision 123), so this file only places the run: which directory the

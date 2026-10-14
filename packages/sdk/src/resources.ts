@@ -63,8 +63,7 @@ const why = (uri: string): string => notServedWords(uri) ?? `${uri} is not an ab
  * file URI.
  *
  * Exported because the routing step above this store answers the same case and
- * the two must say the same thing - decision
- * `a-scheme-nobody-serves-is-not-a-permission-error`.
+ * the two must say the same thing.
  */
 export const notServedWords = (uri: string): string | undefined => {
   const scheme = /^([a-zA-Z][\w+.-]*):/.exec(uri)?.[1];

@@ -10,8 +10,7 @@ import type { MadePart } from '../src/parts.js';
 /*
  * A part reaches a machine read-only at `/opt/ahpd/<id>`: from its own image
  * where Docker takes an image mount, and from a volume filled once from that
- * image where it does not - decision
- * `a-part-is-mounted-from-its-image-and-a-volume-is-the-fallback`.
+ * image where it does not.
  *
  * The parts here are already built: building them is the plugin's, before the
  * runtime is asked to make anything, so the fake Docker holds their images.

@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-device-registers-for-push-by-writing-a-resource.md
-  - decisions/a-push-token-is-write-only.md
 refs:
   - "[code://packages/sdk/src/types/events.ts#L105-L116](../../../../packages/sdk/src/types/events.ts#L105-L116) - `InputNeededSetEvent`: session, chat, id, kind"
   - "[code://packages/sdk/src/host/root.ts#L171-L185](../../../../packages/sdk/src/host/root.ts#L171-L185) - `advertisedSchemes`, which advertises `push` once it is registered"
@@ -54,8 +52,8 @@ backend session/inputNeededSet -> emit -> input_needed_set -> push plugin -> Exp
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A device registers for push by writing a resource the push plugin serves](../../../decisions/a-device-registers-for-push-by-writing-a-resource.md) | Softov, 2026-10-04 |
-| 2 | [A push token is write-only](../../../decisions/a-push-token-is-write-only.md) | Softov, 2026-10-10 |
+| 1 | A device registers for push by writing a resource the push plugin serves | Softov, 2026-10-04 |
+| 2 | A push token is write-only | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

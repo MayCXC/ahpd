@@ -43,24 +43,20 @@ const roleIn = (table: Record<string, Grant[]> | undefined, name: string): Grant
 export const SUBJECTS = [
   'session', 'chat', 'file', 'automation', 'terminal', 'diagnostics', 'container', 'config',
   // People, teams, projects and roles, one subject each, so somebody may be let
-  // see a team's names without being let see who is on it - decision
-  // `people-are-resource-schemes-with-a-grant-each`.
+  // see a team's names without being let see who is on it.
   'user', 'team', 'project', 'role',
   // What a pool has been charged and the records charged to it, which is a
-  // question about cost and is nobody else's by default - decision
-  // `usage-is-read-through-a-usage-scheme`.
+  // question about cost and is nobody else's by default.
   'usage',
   // Who may use which agent, model and computer, which is a question about what
-  // a host allows rather than what it may be told - decision
-  // `policies-are-a-scheme-clients-edit`.
+  // a host allows rather than what it may be told.
   'policy',
   // Calling a model through the proxy (write) and listing the names it serves
   // (read), which spends the host's provider keys.
   'proxy',
   // Pushing a window's answer about a folder to this host, which decides what
   // that window's sessions load from the project. The gate asks for
-  // `trust:push`, and the write group covers it - decision
-  // `pushing-workspace-trust-needs-trust-write`.
+  // `trust:push`, and the write group covers it.
   'trust',
 ] as const;
 
@@ -100,13 +96,11 @@ const RESOURCE: SubjectOperations = {
  * A grant names one of these operations, one of the two groups, or `*`. Every
  * operation is in exactly one group, and no subject has an operation called
  * `read` or `write`: those two words are only ever the groups, so `user:read`
- * is the whole of what a role may read and `user:get` is one record - decision
- * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+ * is the whole of what a role may read and `user:get` is one record.
  *
  * The one act the table does not decide is `computer:write`, which is asked
  * beside `session:create` rather than in place of it: a session naming a source
- * is asking for a machine to be made for it - decision
- * `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+ * is asking for a machine to be made for it.
  * `computer` is not in the table and reads the resource operations, as every
  * other scheme does.
  */
@@ -253,8 +247,7 @@ export const isGrant = (value: string): value is Grant => grantProblem(value) ==
  * One `users` subject used to cover people, teams, projects and roles
  * together, and a file saying `users:write` means it said so before the split -
  * so it reads as `user:write` and nothing more, rather than widening to three
- * subjects it never named - decision
- * `a-legacy-users-grant-is-the-user-subject-only`.
+ * subjects it never named.
  */
 const LEGACY: Record<string, Grant> = { 'users:read': 'user:read', 'users:write': 'user:write' };
 
@@ -263,8 +256,7 @@ const LEGACY: Record<string, Grant> = { 'users:read': 'user:read', 'users:write'
  *
  * Exact, or through a wildcard in either position, which is the whole of the
  * matching rule. Beyond that, an operation is held by its group and a chat's
- * groups are the session's - decision
- * `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+ * groups are the session's.
  *
  * A grant naming a *group* is answered only by that group, a wildcard, or the
  * session's group of the same name for a chat - never by holding each
@@ -303,7 +295,7 @@ export const holds = (held: ReadonlySet<string>, grant: Grant): boolean => {
  * RFC 9728 wants a resource identifier that uses the https scheme, so the one
  * here is only what a library with no address to advertise can offer, and the
  * documentation link sits in `resource_documentation` where the format
- * provides for it - decision `a-host-advertises-only-what-is-true`.
+ * provides for it.
  */
 export const DEFAULT_RESOURCE = {
   resource: 'ahpd://users',
@@ -329,7 +321,7 @@ export const DEFAULT_RESOURCE = {
  * told is an https identifier rather than the fallback above. An issuer, when
  * one is configured, is what fills `authorization_servers`: it is a real
  * RFC 8414 identifier, which is the field's one job and the reason it stays
- * empty otherwise - decision `a-host-advertises-only-what-is-true`.
+ * empty otherwise.
  *
  * More than one is the shape a host with a per-record issuer has: the list is
  * every provider a client may resolve for this host, and the scopes are the
@@ -371,7 +363,7 @@ export interface FileUserOptions {
    *
    * A name rather than an `Issuer`, because the file names issuers the same way
    * and both go through one resolver. `github`, or an OpenID Connect issuer URL
-   * this host may reach - decision `an-issuer-answers-for-a-subject`. Asked
+   * this host may reach. Asked
    * only when no local hash matched, so a deployment that mints secrets keeps
    * working exactly as it does and the issuer is the second way in.
    */
@@ -397,7 +389,14 @@ export interface FileUserOptions {
   onProblem?(message: string): void;
 }
 
-/** The stored form of a secret. Opaque and 256 bits, so a hash is enough. */
+/**
+ * The stored form of a secret.
+ *
+ * SHA-256, with no salt and no stretching, because a token is a long random
+ * string rather than a word a person chose: there is nothing to guess, so a
+ * password hash buys nothing here. A token this host mints is 256 opaque bits,
+ * and only its hash is kept.
+ */
 const hashOf = (token: string): string =>
   `sha256:${createHash('sha256').update(token, 'utf8').digest('hex')}`;
 
@@ -503,7 +502,7 @@ export function fileUsers(options: FileUserOptions): Users {
    * One of their own memberships, covered by the rule `scopeFor` resolves a
    * named scope with, and checked as a place as a membership is: a wildcard is
    * not a place and a project this file does not name is not one anybody works
-   * in - decision `a-request-naming-no-scope-uses-the-persons-primary`.
+   * in.
    */
   const primaryOf = (
     record: UserRecord,
@@ -770,8 +769,7 @@ export function fileUsers(options: FileUserOptions): Users {
    * promise past the moment of sign-in: `standing` says whether the record is
    * still there, and `can` resolves the roles it holds *now*. So `ahpd user rm`
    * is refused on the next command rather than the next connection, and a role
-   * change is in force at the same point - decision
-   * `a-role-is-read-on-every-command`.
+   * change is in force at the same point.
    */
   const principalOf = (record: UserRecord, fromIssuer: string[] = []): Principal => {
     // Said once, as the record is verified, so a role that nothing defines is
@@ -808,8 +806,7 @@ export function fileUsers(options: FileUserOptions): Users {
      * home-made scheme's own methods, and a provider that replaced `can`, `id`
      * or a getter would be deciding what the gate asks next - so the literal is
      * frozen where it is built and the getters go on re-reading the file, which
-     * freezing an accessor does not stop. Decision
-     * `a-plugin-gets-frozen-copies-of-host-values`.
+     * freezing an accessor does not stop.
      */
     return Object.freeze({
       id: record.id,
@@ -890,8 +887,7 @@ export function fileUsers(options: FileUserOptions): Users {
        * A deployment that mints secrets keeps working because this branch is
        * never reached for one, and a record with no hash can only be reached
        * here: the subject an issuer answers with is that record's id, so the
-       * file still says who may do what - decision
-       * `an-issuer-answers-for-a-subject`.
+       * file still says who may do what.
        *
        * The host's default is asked first, then each issuer a record names, in
        * the order the file lists them, and the first subject that names a

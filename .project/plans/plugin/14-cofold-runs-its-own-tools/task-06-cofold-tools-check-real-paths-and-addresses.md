@@ -13,7 +13,7 @@ refs:
 
 ## Objective
 
-In `/github/cofold`, `resolveWithin` judges inside or outside on real paths, and `web_fetch` refuses a loopback, private or link-local address on the first request and on every redirect, per [web_fetch refuses loopback, private and link-local addresses, on every hop](../../../decisions/web-fetch-refuses-internal-addresses.md).
+In `/github/cofold`, `resolveWithin` judges inside or outside on real paths, and `web_fetch` refuses a loopback, private or link-local address on the first request and on every redirect, per [web_fetch refuses loopback, private and link-local addresses, on every hop](./plan.md).
 
 ## Files
 

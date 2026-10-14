@@ -196,8 +196,7 @@ export function createMachines(ctx: HostContext): Machines {
    *
    * A message's attachment is a file this host wrote and the message names it
    * by path, so a session in a machine reads it only once the machine holds one
-   * at the same path - decision
-   * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. Awaited by
+   * at the same path. Awaited by
    * the caller, because the model's next turn is the thing that reads the path:
    * this is the one call here that is not bookkeeping and is not left behind.
    *
@@ -238,8 +237,7 @@ export function createMachines(ctx: HostContext): Machines {
    * leave does - reading the machine's work out, and reading the machine again
    * - lands after the call that asked for it. A host that closes waits here, so
    * what a daemon leaves behind is a machine nothing is still reading rather
-   * than a removal in the middle of one - decision
-   * `a-plugin-is-told-when-the-host-closes`.
+   * than a removal in the middle of one.
    *
    * The set is looked at again after each round, so nothing started while this
    * waited is left behind. A failure is already a line in the log by the time
@@ -478,8 +476,7 @@ export function createMachines(ctx: HostContext): Machines {
    *
    * `owner` is whose the machine is - whoever asked for it, which is what the
    * time it spends up is later charged to - and the session's own scope rides
-   * along so the machine carries it too - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   * along so the machine carries it too.
    */
   const placedIn = async (
     uri: string,

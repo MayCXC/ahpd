@@ -13,7 +13,7 @@ refs:
 
 ## Objective
 
-Under `gitGuard: "bind"`, the git directory is mounted read-only, `.git` itself included, with read-write binds over it for `objects/` (and `objects/info/` read-only again), `refs/`, `logs/` and the session's own worktree entry (its `commondir`, `gitdir` and `config.worktree` read-only again), and, for a session on a main checkout only, the git directory's root read-write with `commondir` (holding `.`), `config.worktree`, `config`, `packed-refs`, `info/` and `hooks/` bound read-only over it, as decision [a-machines-git-directory-is-read-only-but-what-a-commit-writes](../../../decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md) says.
+Under `gitGuard: "bind"`, the git directory is mounted read-only, `.git` itself included, with read-write binds over it for `objects/` (and `objects/info/` read-only again), `refs/`, `logs/` and the session's own worktree entry (its `commondir`, `gitdir` and `config.worktree` read-only again), and, for a session on a main checkout only, the git directory's root read-write with `commondir` (holding `.`), `config.worktree`, `config`, `packed-refs`, `info/` and `hooks/` bound read-only over it, as [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) says.
 
 ## Files
 

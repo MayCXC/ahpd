@@ -61,7 +61,7 @@ A `session` trigger picks its event in `events`, and its `config` holds four opt
 | `then` | What has to follow: `{ "kind": "event", "event": "id", "within": "5m" }` for another event, `{ "kind": "idle", "for": "3m" }` for quiet, `{ "kind": "absent", "event": "id", "for": "3m" }` for an event that does not come |
 | `when` | What the session has to look like as the event arrives: `running`, `queuedAtLeast`, `toolCallsAtLeast`, `turnLongerThan` |
 
-A duration is written `30s`, `5m` or `2h`. A key the rule does not have is refused with the key named, and so is a value of the wrong kind, when the automation is saved. The shape is fixed rather than open, which is decision [A trigger rule is one event with an optional count, follow-up and state check](../.project/decisions/a-trigger-rule-has-a-fixed-shape.md).
+A duration is written `30s`, `5m` or `2h`. A key the rule does not have is refused with the key named, and so is a value of the wrong kind, when the automation is saved.
 
 ```json
 {
@@ -108,7 +108,7 @@ A preset also takes the same `filter` the rule does, so one can be narrowed to a
 
 A run is started by a schedule, by an event, or by a person pressing Run, and all three go through the same door, because what an automation says about running twice is about the automation rather than about what asked. Starting a run and a person pressing Run both begin the first turn in `beginAutomation`.
 
-The store records the run before the session exists, marks it `running` when the session is asked for, and the host settles it when its sessions stop - decision [An automation run settles when its sessions stop, not when it starts](../.project/decisions/automation-run-settles-when-its-sessions-stop.md). Its lifecycle is `pending`, then `running`, then one of `completed`, `failed` or `cancelled`, and a `failed` one carries the error. A run that could not start at all is `failed` with no `startedAt`, because no execution began.
+The store records the run before the session exists, marks it `running` when the session is asked for, and the host settles it when its sessions stop, not when it starts. Its lifecycle is `pending`, then `running`, then one of `completed`, `failed` or `cancelled`, and a `failed` one carries the error. A run that could not start at all is `failed` with no `startedAt`, because no execution began.
 
 An automation's entry carries its runs newest first, twenty at a time, with `runsNextCursor` when there are more: `fetchAutomationRuns` grows the page in view and every subscriber reads the longer list off the same `automation/set`, because the protocol's answer to that command is empty. `operations` is always `update`, `remove` and `run`: `enabled` governs the schedule only, so a person can run a switched-off automation by hand.
 
@@ -122,7 +122,6 @@ A pinned automation also types into a chat somebody else may be using, so a turn
 { "_meta": { "ahpd": { "session": "pinned", "pinnedSession": "ahp-session://claude/local/..." } } }
 ```
 
-Decision: [A pinned automation runs each time as the next turn in one chat](../.project/decisions/a-pinned-automation-runs-as-turns-in-one-chat.md).
 
 ## What an event does while a run is going
 
@@ -135,7 +134,7 @@ An event can arrive while the automation's own last run is still going, and `_me
 | `parallel` | A run starts for every event |
 | `skip` | The event is dropped, and counted on the run it arrived during |
 
-A pinned automation refuses `parallel` when it is saved, because it has one chat and two turns in it at once is not a thing. A scheduled automation answers to this setting exactly as an event does. A run somebody presses by hand is not held behind one that is going - what the press is answered with is the run it started - with one exception: a press on a pinned automation is refused while its chat has a turn running, because that chat takes one turn at a time. Decision: [An automation says what an event does while it runs](../.project/decisions/an-automation-says-what-an-overlapping-event-does.md).
+A pinned automation refuses `parallel` when it is saved, because it has one chat and two turns in it at once is not a thing. A scheduled automation answers to this setting exactly as an event does. A run somebody presses by hand is not held behind one that is going - what the press is answered with is the run it started - with one exception: a press on a pinned automation is refused while its chat has a turn running, because that chat takes one turn at a time. Decision: An automation says what an event does while it runs.
 
 An event dropped by `skip` is dropped before anything is counted, so it is not one of the twenty an hour either; the one counted on the run is noted as `ahpd.dropped` in the run's `_meta`, which is how the agent working in that turn, and anybody watching the run, learns what happened while it worked.
 
@@ -165,7 +164,6 @@ Count: 3
 At: 2026-10-07T14:22:05.118Z
 ```
 
-Decision: [A run is told what woke it, by placeholders and a summary block](../.project/decisions/a-run-is-told-what-woke-it.md).
 
 ## The owner
 

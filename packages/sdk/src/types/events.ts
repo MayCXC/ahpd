@@ -102,8 +102,7 @@ export interface TurnStartEvent {
   /** The turn's id. */
   turn: string;
   /**
-   * Who sent it, as a typed reference - decision
-   * `work-is-owned-by-a-typed-reference`. Absent where nobody sent it on this
+   * Who sent it, as a typed reference. Absent where nobody sent it on this
    * host: no users directory to name, or a turn the backend began by itself.
    */
   sender?: Owner;

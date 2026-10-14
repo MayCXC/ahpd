@@ -10,10 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-cofold-turns-model-is-kept-in-cofolds-store.md
-  - decisions/a-cofold-run-is-told-the-model-reference-it-runs-on.md
-  - decisions/a-cofold-turn-with-no-model-fails-and-says-where-to-name-one.md
-  - decisions/listed-models-are-provider-references.md
 refs:
   - "[code://packages/agent-cofold/src/session.ts#L719-L778](../../../../packages/agent-cofold/src/session.ts#L719-L778) - `openTurn`: the model is chosen, and set on a non-protocol `Turn.model` rather than `message.model`"
   - "[code://packages/agent-cofold/src/transcript.ts#L236-L244](../../../../packages/agent-cofold/src/transcript.ts#L236-L244) - a rebuilt turn's `message`, with no `model`"
@@ -58,10 +54,10 @@ restart -> list() -> transcript() -> turns (message.model) -> VS Code's model pi
 
 | Decision | Tasks |
 | --- | --- |
-| [The model a cofold turn ran on is kept in cofold's own store, and the transcript reads it back](../../../decisions/a-cofold-turns-model-is-kept-in-cofolds-store.md) | 01, 03 |
-| [A cofold run is told the model reference it runs on, and cofold stores it as given](../../../decisions/a-cofold-run-is-told-the-model-reference-it-runs-on.md) | 01, 03 |
-| [A cofold turn with no model configured fails and says to add "model" to the cofold configuration file](../../../decisions/a-cofold-turn-with-no-model-fails-and-says-where-to-name-one.md) | 04 |
-| [A listed model is selected by the reference the harness already writes](../../../decisions/listed-models-are-provider-references.md) | 01, 02, 03 |
+| The model a cofold turn ran on is kept in cofold's own store, and the transcript reads it back | 01, 03 |
+| A cofold run is told the model reference it runs on, and cofold stores it as given | 01, 03 |
+| [A cofold turn with no model configured fails and says to add "model" to the cofold configuration file](../14-cofold-runs-its-own-tools/plan.md) | 04 |
+| [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

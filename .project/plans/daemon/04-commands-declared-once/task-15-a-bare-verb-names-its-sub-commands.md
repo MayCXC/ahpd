@@ -22,7 +22,7 @@ refs:
 
 ## Steps
 
-1. Apply decision [ahpd-refuses-strictly-and-names-the-sub-commands](../../../decisions/ahpd-refuses-strictly-and-names-the-sub-commands.md).
+1. Apply [ahpd keeps cofold's strict refusals, and a verb with no sub-command names its sub-commands](../../../../docs/DAEMON.md).
 2. In `main.ts`, from the words already tokenized: when the first word is the first word of a registered command's pattern, and the words match no command, write `<verb> takes <sub>, <sub> or <sub>.` to stderr, listing the second pattern words of the visible commands under it in registry order, and exit 2.
 3. `--help` on the same line (`ahpd plugin --help`) is still answered by the program's help, so the hint is skipped when the line asks for help.
 4. Every other refusal, and every exit code, stays what cofold gives.

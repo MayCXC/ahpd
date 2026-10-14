@@ -8,11 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md
 decisions:
-  - decisions/the-automation-store-lives-in-server.md
-  - decisions/yaml-lives-in-server.md
-  - decisions/a-person-edits-a-record-as-a-markdown-file.md
-  - decisions/an-automation-run-state-is-kept-apart.md
-  - decisions/the-daemon-reloads-a-hand-edited-file.md
 refs:
   - "[code://packages/sdk/src/scheduled.ts#L12-L60](../../../../packages/sdk/src/scheduled.ts#L12-L60) - `ScheduledOptions` and `Saved`, the one file and its shape"
   - "[code://packages/sdk/src/scheduled.ts#L185-L217](../../../../packages/sdk/src/scheduled.ts#L185-L217) - `save`, which writes every automation on each change"
@@ -56,11 +51,11 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The scheduled automation store lives in the server](../../../decisions/the-automation-store-lives-in-server.md) | Softov, 2026-10-11 |
-| 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../decisions/yaml-lives-in-server.md) | Softov, 2026-10-11 |
-| 3 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../decisions/a-person-edits-a-record-as-a-markdown-file.md) | Softov, 2026-10-10 |
-| 4 | [An automation's run state is kept apart from its file](../../../decisions/an-automation-run-state-is-kept-apart.md) | Softov, 2026-10-10 |
-| 5 | [The daemon reloads a bot or an automation file that a person edits](../../../decisions/the-daemon-reloads-a-hand-edited-file.md) | Softov, 2026-10-10 |
+| 1 | The scheduled automation store lives in the server | Softov, 2026-10-11 |
+| 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../rules/the-sdk-depends-only-on-the-protocol.md) | Softov, 2026-10-11 |
+| 3 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 4 | [An automation's run state is kept apart from its file](../../../../docs/AUTOMATIONS.md) | Softov, 2026-10-10 |
+| 5 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -70,7 +65,7 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 | The file name is the id after `ahp-automation:/`, so a copy under a new name is a new automation | a bot file is named by its slug the same way | 02 |
 | An automation id is lowercase letters, digits and hyphens, starts with a letter or a digit, and has at most 64 characters | Softov, 2026-10-11, to "How should the id rule go?" - "Allow a leading digit" | 06 |
 | `RESERVED_COLLECTIONS` names `automations`, so a plugin cannot open the daemon's automation folder, and `bots` stays open for the bot plugin | Softov, 2026-10-11, to "What should be reserved?" - "Only automations" | 06 |
-| `owner` and `createdAt` are in the frontmatter, and `runCount`, `nextRunAt`, `modifiedAt` and `customizations` are in the state file | [the run state decision](../../../decisions/an-automation-run-state-is-kept-apart.md) | 02 |
+| `owner` and `createdAt` are in the frontmatter, and `runCount`, `nextRunAt`, `modifiedAt` and `customizations` are in the state file | [the run state decision](../../../../docs/AUTOMATIONS.md) | 02 |
 | `automations.json` is converted at start and renamed `automations.json.migrated` | `migrateSessions` | 03 |
 
 ## Proposed architecture

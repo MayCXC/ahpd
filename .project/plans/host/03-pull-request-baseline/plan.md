@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/session-pull-request-baseline-is-sent.md
 refs:
   - code://.project/review/2026-09-19-upstream-pass-4.md#L79 - the item: this host reports `pullRequestUrls` and no baseline, so every pull request reads as inherited
   - code://packages/sdk/src/host.ts#L2065-L2098 - `refreshPullRequests`, the only writer of `pullRequestUrls`
@@ -69,7 +68,7 @@ create-pr -> recordPullRequest (plan 01) -> the URL becomes the session's
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The session pull request baseline is sent, not inferred by every client](../../../decisions/session-pull-request-baseline-is-sent.md) | Softov, 2026-09-19: "Adopt in ahpc and emit the baseline from ahpd." |
+| 1 | The session pull request baseline is sent, not inferred by every client | Softov, 2026-09-19: "Adopt in ahpc and emit the baseline from ahpd." |
 
 | What | Source | Task |
 | --- | --- | --- |

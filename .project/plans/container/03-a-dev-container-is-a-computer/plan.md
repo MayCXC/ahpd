@@ -11,14 +11,8 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-dev-container-is-a-computer-made-from-its-devcontainer-json.md
   - decisions/a-dev-container-is-reached-by-docker-exec.md
-  - decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md
-  - decisions/the-computer-form-offers-a-folder-as-a-flat-source-choice.md
-  - decisions/a-dev-container-is-made-only-from-a-folder-the-operator-allows.md
-  - decisions/a-devcontainer-source-names-any-allowed-folder.md
-  - decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md
-  - decisions/the-name-a-create-gives-a-dev-container-is-a-label-on-it.md
+  - ../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md
   - decisions/a-dev-container-owner-is-kept-beside-the-config.md
 refs:
   - "[code://packages/computer/src/devcontainer.ts#L59-L62](../../../../packages/computer/src/devcontainer.ts#L59-L62) - `idLabels`, shared today by `up` and every `exec`"
@@ -78,14 +72,13 @@ vscode/devContainers/connect  -> find the computer for F or make it -> [new] pro
 
 | Decision | Task |
 | --- | --- |
-| [A dev container is a computer, made from its devcontainer.json](../../../decisions/a-dev-container-is-a-computer-made-from-its-devcontainer-json.md) | 01, 03, 04, 05 |
+| [A dev container is a computer, made from its devcontainer.json](../../../../docs/CONTAINERS.md) | 01, 03, 04, 05 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | 01, 17, 18 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../decisions/the-host-hands-an-agents-machine-needs-to-the-machine-maker.md) | 04, 09 |
-| [The computer form offers a folder through a flat source choice, not a oneOf](../../../decisions/the-computer-form-offers-a-folder-as-a-flat-source-choice.md) | 03 |
-| [A dev container is made only from a folder the operator allows, and devcontainer false turns every route off](../../../decisions/a-dev-container-is-made-only-from-a-folder-the-operator-allows.md) | 08 |
-| [A devcontainer source may name any allowed folder, not only the session's own](../../../decisions/a-devcontainer-source-names-any-allowed-folder.md) | 08 |
-| [A machine made for a session counts against max and needs computer:write](../../../decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md) | 12 |
-| [The name a create gives a dev container is kept as a label on the container](../../../decisions/the-name-a-create-gives-a-dev-container-is-a-label-on-it.md) | 10 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | 04, 09 |
+| [A dev container is made only from a folder the operator allows, and devcontainer false turns every route off](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) | 08 |
+| A devcontainer source may name any allowed folder, not only the session's own | 08 |
+| [A machine made for a session counts against max and needs computer:write](../../plugin/16-a-disposable-machine/plan.md) | 12 |
+| [The name a create gives a dev container is kept as a label on the container](../../../../docs/CONTAINERS.md) | 10 |
 | [A machine the Dev Container CLI made keeps its owner in a file beside the config, not on the container](../../../decisions/a-dev-container-owner-is-kept-beside-the-config.md) | 10, 11 |
 
 | What | Source | Task |
@@ -103,6 +96,7 @@ vscode/devContainers/connect  -> find the computer for F or make it -> [new] pro
 | For now the probed environment is kept in the machine's `computers.json` entry, keyed by machine id, and rewritten when `up` answers a new container id; one pair of functions reads and writes it, so the store can change | Softov, 2026-10-03, asked "where is the probed environment kept between commands and across a restart?": "the `computers.json` entry, keyed by machine id" | 13, 18 |
 | For now a need's environment reaches every command as `containerEnv` in the override config, in place of `up --remote-env`; the override is written 0600 and a need named from the vault is not written there in clear (`container/05-p1` task 02) | Softov, 2026-10-03, asked "how does a need's environment reach every command?": "`containerEnv` in the override config" | 09 |
 | The probe kept in `computers.json` holds only the variables whose value differs from the container's `Config.Env`, the same rule each `docker exec` follows, so no need value is written to disk by this plan | Softov, 2026-10-05, asked "the stored probe keeps every `containerEnv` value, vault ones included, until the machine is removed: strip those keys in container/03, or leave it to container/05 p1?": strip in container/03 | 18 |
+| The computer form offers a folder as a flat source choice, not a `oneOf`: the form always sends the default image, so an image that names the default is not a second source | the shape of the form's own answer, which the `manifestOf` check carries | 03 |
 
 ## Tasks
 

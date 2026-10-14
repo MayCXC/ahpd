@@ -37,8 +37,7 @@ const git = (dir: string, args: string[], ms = 60_000, stdin?: string): Promise<
  * tree finds the same project twice. The name is the one VS Code's host uses,
  * so a worktree either of them makes is one the other finds.
  *
- * A `root` puts them under that folder instead, as `<root>/<repo>/<name>` -
- * decision `worktrees-can-live-under-one-root`. That is this host's own
+ * A `root` puts them under that folder instead, as `<root>/<repo>/<name>`. That is this host's own
  * departure from the reference, which fixes the location and offers no
  * setting, so a tree made under a root is one the reference host does not
  * find.

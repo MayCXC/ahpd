@@ -3,10 +3,7 @@
  *
  * A name carries its scope - `host:`, `team:` or `user:` - and the store behind
  * the port knows nothing about that: it answers a name it holds and refuses one
- * it does not. Decision
- * `the-local-vault-is-a-plain-file-until-it-is-encrypted` and
- * `a-secret-is-named-in-a-host-team-or-user-scope` are what the port and the
- * rule over it are.
+ * it does not.
  */
 
 import type { Owner } from './usage.js';

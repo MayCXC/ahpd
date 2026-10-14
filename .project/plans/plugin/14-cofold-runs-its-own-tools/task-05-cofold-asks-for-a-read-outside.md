@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-In `/github/cofold`, a tool that reads and names a path outside the workspace asks in `default`, `acceptEdits` and `plan`, and is refused in `dontAsk`, per [decision: a read outside the workspace asks](../../../decisions/a-cofold-read-outside-the-workspace-asks-in-default-mode.md).
+In `/github/cofold`, a tool that reads and names a path outside the workspace asks in `default`, `acceptEdits` and `plan`, and is refused in `dontAsk`, per [decision: a read outside the workspace asks](./plan.md).
 
 ## Files
 

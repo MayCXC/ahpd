@@ -39,7 +39,7 @@ So the Activepieces engine is not needed to run an action.
 
 - **List the pieces.** Each installed piece is a connector kind, with its name, logo, auth kind and actions.
 - **Draw the form.** The connection form comes from `piece.auth`, and a dropdown's choices come from its `options({ auth })`.
-- **Keep the credentials.** A connection's token or secret goes in the vault through [`secret()`](../../packages/sdk/src/types/plugin.ts), under the scope rule of [a-secret-is-named-in-a-host-team-or-user-scope](../decisions/a-secret-is-named-in-a-host-team-or-user-scope.md).
+- **Keep the credentials.** A connection's token or secret goes in the vault through [`secret()`](../../packages/sdk/src/types/plugin.ts), under the scope rule of [A secret is named in the host's, a team's or a person's scope](../../docs/DAEMON.md).
 - **Do OAuth itself.** The callback is a route on the daemon's listener, as [plugin 21](../plans/plugin/21-a-plugin-serves-an-http-route/plan.md) allows, and the plugin refreshes each token.
 - **Offer the tools.** Each action of each connection in the session's connector profile becomes one tool, such as `instagram_shop__upload_photo`.
 - **Report health.** A piece has no health call, so the plugin makes the state from three facts.
@@ -52,7 +52,7 @@ No tool can remove it, because Meta owns the API.
 ## What must be settled first
 
 - **A piece turns off TLS checks for the whole process.** The bundled `FetchHttpClient.sendRequest` sets `process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"` on every request. In the daemon, every other HTTPS call would then skip certificate checks, model API calls included. The pieces have to run in a child process, with the variable pinned so a piece cannot set it.
-- **A tool is offered to every session.** `registerTool` appends to `HostOptions.tools`, and a [`HostTool`](../../packages/sdk/src/types/host.ts) has no session filter. A connector profile needs tools bound to a session, which is a host change before it is a plugin. A session key from [a-plugin-may-contribute-a-session-key](../decisions/a-plugin-may-contribute-a-session-key.md) could name the connector profile, if a tool can read it at the call.
+- **A tool is offered to every session.** `registerTool` appends to `HostOptions.tools`, and a [`HostTool`](../../packages/sdk/src/types/host.ts) has no session filter. A connector profile needs tools bound to a session, which is a host change before it is a plugin. A session key from [A plugin may contribute a session config key](../../docs/PLUGINS.md) could name the connector profile, if a tool can read it at the call.
 - **ahpd has no named agent or bot.** A session runs a provider for a person. "One account for each bot" needs to say what a bot is here: a session, an automation, a person, or a team.
 - **The license of each piece.** The npm metadata of the Instagram piece has no `license` field. The community pieces are MIT in the Activepieces repository, and each piece the plugin uses has to be confirmed.
 

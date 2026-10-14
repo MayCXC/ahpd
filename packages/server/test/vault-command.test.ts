@@ -6,7 +6,7 @@
  * What is pinned here is that neither surface can be made to print a value,
  * that the value comes from standard input at a terminal and from the body over
  * HTTP, and that which name a caller may write follows the scope of the name -
- * the rule of decision `a-secret-is-named-in-a-host-team-or-user-scope`, asked
+ * the rule of, asked
  * of the grants the host already had rather than of a grant of its own.
  *
  * The vault is the real file, under a temporary configuration directory, so a

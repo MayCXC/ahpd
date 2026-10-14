@@ -6,8 +6,7 @@ import type { LoaderContext, PluginMethod, ServedMethod } from '../src/types/plu
 
 /*
  * A plugin registers an `x-` command, and the fold carries it into
- * `HostOptions.methods` beside the daemon's own - decision
- * `a-plugin-serves-an-x-command`.
+ * `HostOptions.methods` beside the daemon's own.
  */
 
 const context = (): LoaderContext => ({ path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: root, log: () => {}, say: () => {} });

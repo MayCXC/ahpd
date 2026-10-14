@@ -67,7 +67,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - A personal token still opens the socket, so an unauthenticated caller reads what the protocol serves without a principal.
   The mitigation is that the gate is the one place that answers commands, and the spec's own root state is not a command.
 - The deployment's token bypasses all of it.
-  That is deliberate and decided by `the-door-token-is-the-host`; the mitigation is that it is one secret, rotatable, and never printed by `user list`.
+  That is deliberate and decided by `the-door-is-a-door`; the mitigation is that it is one secret, rotatable, and never printed by `user list`.
 
 ## Resume state
 

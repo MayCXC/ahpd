@@ -16,7 +16,7 @@ refs:
 ## Objective
 
 `createSession`, a configuration change before the first turn and an automation's start read the machine's `ahpd.agents` label and fail with the refusal sentence when the session's agent is not among them, before any backend starts.
-This applies [A session on a machine not prepared for its agent fails at creation](../../../decisions/a-session-on-a-machine-not-prepared-for-its-agent-fails-at-creation.md); the port check in `computersFor` stays.
+This applies [A session on a machine not prepared for its agent fails at creation](./plan.md); the port check in `computersFor` stays.
 
 ## Files
 

@@ -34,7 +34,7 @@ export interface Automation {
    */
   customizations?: CapturedPlugin[];
   /**
-   * Who made it - decision `work-is-owned-by-a-typed-reference`.
+   * Who made it.
    *
    * Set once, by the connection that created it, and never patched: an
    * automation somebody else may run or switch off is still their work. Absent

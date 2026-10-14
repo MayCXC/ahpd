@@ -13,10 +13,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-machine-runtime-is-named-for-its-maker.md
-  - decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md
-  - decisions/a-nested-session-resumes-its-inner-transcript-by-id.md
-  - decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L76](../../../../packages/computer/src/plugin.ts#L76) - the `env` option, which already sets `DOCKER_HOST` for the whole plugin"
   - "[code://packages/computer/src/plugin.ts#L354-L360](../../../../packages/computer/src/plugin.ts#L354-L360) - the one `dockerRuntime`, given that `env`"
@@ -71,14 +67,14 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 
 | Decision | Task |
 | --- | --- |
-| [One computer: provider, the runtime named for what makes the machine](../../../decisions/a-machine-runtime-is-named-for-its-maker.md) | 01 |
-| [A nested host is used only for a backend that runs nested and for a machine on another host](../../../decisions/a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent.md) | 04 |
-| [A nested session is resumed by resuming the inner transcript by id](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md) | 04 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md) | 01 |
+| [One computer: provider, the runtime named for what makes the machine](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | 01 |
+| [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
+| [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 04 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| `dockerHost` is a profile option, not a runtime: the machine is still made by Docker | decision `a-machine-runtime-is-named-for-its-maker`, the runtime names what makes the machine | 01 |
+| `dockerHost` is a profile option, not a runtime: the machine is still made by Docker | ["One computer: provider, the runtime named for what makes the machine"](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md), the runtime names what makes the machine | 01 |
 | One Docker runner per profile that names `dockerHost`, beside the plugin's own | the single `dockered` at [`code://packages/computer/src/plugin.ts#L354-L360`](../../../../packages/computer/src/plugin.ts#L354-L360) | 01 |
 | A remote runner's machines carry a per-host label its listing filters on, and a `dockerHost` equal to the plugin's own Docker is skipped with a line | (defaulted: the plugin label is the same on every host, so two hosts on one Docker would list each other's machines, and one Docker reached twice lists each machine twice) | 01 |
 | Every call through the router has a per-runner timeout, and a startup adoption that fails is logged and tried again at the next listing | (defaulted: `ran` has no timeout, so a hung `ssh://` Docker would block the listing and the picker) | 01 |
@@ -89,7 +85,7 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 | A machine's id records which Docker made it | two Dockers can hold the same name | 01 |
 | The session's code reaches the machine by clone | Softov, 2026-10-02, asked "How does a session's code reach a machine on another box?": "clone everywhere.. but leave open for future case with virtiofs on local libvirt" | 03 |
 | A machine on another Docker takes no bind mount; a copy-in still works | `docker cp` streams through the Docker API, a bind mount names a path on the Docker's own host | 02 |
-| Every session in such a machine runs nested | decision `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent` | 04 |
+| Every session in such a machine runs nested | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 | The test target is dev02's Docker | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 05 |
 | Both ways in exist, chosen per profile with `code` (for now the option's name and its two values): `bundle` (default), a git bundle of the session's branch made here, copied in with `docker cp` and cloned inside with `origin` set to the repository's remote, with no credential in the box; and `clone`, the machine cloning from `origin` with a git credential named from the vault as `gitCredential: { "$secret": ... }`; one function picks the route | Softov, 2026-10-03, asked "where does the clone come from and get its credentials?": "Both, a profile option"; "one or another is not a valid choise" | 03, 07 |
 | For now this host fetches the work back: a bundle made inside, copied out with `docker cp`, fetched into the session's worktree branch | Softov, 2026-10-03, asked "does the machine push the branch back, or does this host fetch it?": "as proposed" | 03 |

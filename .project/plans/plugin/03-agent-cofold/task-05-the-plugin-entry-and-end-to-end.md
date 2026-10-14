@@ -10,7 +10,7 @@ refs:
   - code://packages/sdk/src/types/plugin.ts - `Plugin` and `PluginHost`, which `apply` implements
   - code://packages/server/src/plugins.ts - `loadPlugins`, which resolves, manifest-checks and imports this package
   - code://packages/server/src/main.ts#L539-L545 - where the daemon folds what a plugin contributed
-  - code://.project/decisions/plugin-manifest-is-package-json.md - the `ahpd` key and the peer range
+  - code://docs/PLUGINS.md - the `ahpd` key and the peer range
   - code://test/plugin-end-to-end.test.ts - the spec-to-served-backend shape this test follows
   - code://docs/PLUGINS.md - the author's guide this package is the first real example of
 ---

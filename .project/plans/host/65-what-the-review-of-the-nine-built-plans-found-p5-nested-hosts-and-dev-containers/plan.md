@@ -11,8 +11,6 @@ requires:
   - plans/container/03-a-dev-container-is-a-computer/plan.md
 decisions:
   - decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md
-  - decisions/a-nested-session-resumes-its-inner-transcript-by-id.md
-  - decisions/a-nested-host-is-configured-by-the-machine-profile-only.md
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L409-L470](../../../../packages/sdk/src/host/lifecycle.ts#L409-L470) - a restart: the chats closed, `talking` from `agentId()`, then `spawn`"
   - "[code://packages/sdk/src/nested.ts#L511-L548](../../../../packages/sdk/src/nested.ts#L511-L548) - `openWorker`"
@@ -60,7 +58,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [On a host with a users directory, no dev container is made until `devcontainer.folders` is set](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) | Softov, 2026-10-06, "Required with users" |
-| 2 | [A nested session resumes its inner transcript by id](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md) | container/04, the decision task 01 keeps |
+| 2 | [A nested session resumes its inner transcript by id](../../container/04-a-cofold-session-in-a-computer/plan.md) | container/04, the decision task 01 keeps |
 
 | What | Source | Task |
 | --- | --- | --- |

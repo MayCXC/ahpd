@@ -6,8 +6,6 @@ priority: high
 created: 2026-10-07
 revalidated: 2026-10-07
 decisions:
-  - decisions/pushing-workspace-trust-needs-trust-write.md
-  - decisions/a-preset-sandbox-off-wins-over-a-stored-on.md
 refs:
   - "[code://packages/computer/src/runtime.ts#L770-L789](../../../../packages/computer/src/runtime.ts#L770-L789) - `ran` resolves on a non-zero exit, so a failed `docker exec` reads as empty output"
   - "[code://packages/computer/src/runtime.ts#L2200](../../../../packages/computer/src/runtime.ts#L2200) - `bringBackBranch` reads only stdout"
@@ -69,8 +67,8 @@ remove(machine) -> running? start it -> bringBack (a failed exec throws) -> keep
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../decisions/pushing-workspace-trust-needs-trust-write.md) | Softov, 2026-10-07 |
-| 2 | [A preset that says sandbox off wins over a session stored with it on](../../../decisions/a-preset-sandbox-off-wins-over-a-stored-on.md) | Softov, 2026-10-07 |
+| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-07 |
+| 2 | [A preset that says sandbox off wins over a session stored with it on](../../../../docs/AHP.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

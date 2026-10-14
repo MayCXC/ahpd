@@ -9,8 +9,7 @@ import { inTurn, roomFor } from './runtime.js';
  * Making a machine, using one, and throwing it away.
  *
  * Tools rather than resource writes, because a write carries a URI and a mode
- * and can say neither what image nor what limits - decision
- * `a-machine-is-made-by-a-host-tool`. Each declares its `effects` so a backend
+ * and can say neither what image nor what limits. Each declares its `effects` so a backend
  * with a policy has something to ask a person on.
  */
 

@@ -75,7 +75,7 @@ None of them runs here. The call is reported against the client that provides it
 }
 ```
 
-An entry that is neither shape, or that is missing the one its own `type` needs, is one warning in the log and is left out: one server nobody can reach is a gap in one agent's reach, where a wrong `port` is a daemon that would not run at all. A value in `env` or in `headers` is a credential, so each answers `<set>` wherever root config is shown - decision [The host's MCP servers are the root config key `mcpServers`, as in VS Code, merged per session with its client plugins' servers](../.project/decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md).
+An entry that is neither shape, or that is missing the one its own `type` needs, is one warning in the log and is left out: one server nobody can reach is a gap in one agent's reach, where a wrong `port` is a daemon that would not run at all. A value in `env` or in `headers` is a credential, so each answers `<set>` wherever root config is shown.
 
 The map is read at each session's start rather than once when the host was built, so a change reaches the next session opened and a running one keeps the servers it started with. It is absent rather than empty when the host holds none. A backend that cannot take MCP servers ignores it, which is what the in-process backends do - they reach the same servers through their own configuration. A server a client plugin contributes is merged over the host's, a client plugin winning a name clash, but this host has no client plugin customizations to merge yet, so nothing overrides a name today.
 
@@ -83,11 +83,11 @@ The map is read at each session's start rather than once when the host was built
 
 `advancedPermission` is a tool's own statement that it does more than a session's ordinary work, and `advancedTools` is the operator's answer to it. A tool that declares one is absent from every session unless the host permits them: not reported in `serverTools`, not bound for a call, so a model is never offered it rather than being refused at call time.
 
-Off by default. Turned on with `advancedTools` in the configuration, `--advanced-tools` on the command line, or a root config push, which takes hold while the daemon runs - decision [A tool says when it needs advanced permission, and the host says whether it has it](../.project/decisions/a-tool-says-when-it-needs-advanced-permission.md) and [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../.project/decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md).
+Off by default. Turned on with `advancedTools` in the configuration, `--advanced-tools` on the command line, or a root config push, which takes hold while the daemon runs./HOST.md).
 
 The three that declare it are the computer's: `request_disposable_computer`, which makes a machine, `release_computer`, which destroys one, and `computer_exec`, which runs a command inside one. `ahpd plugin list` is unaffected either way: it says what would load, which is a different question from what a session is offered.
 
-`effects` is a different claim and is not a permission. `reads`, `writes`, `network` and `destructive` say what running the tool does, and a backend's policy reads them to decide what to ask a person about - decision [A host tool says what running it does, so a policy can ask about it](../.project/decisions/host-tool-declares-what-it-does.md). The computer's three declare both: `effects` for the policy, `advancedPermission` for whether the host offers them at all.
+`effects` is a different claim and is not a permission. `reads`, `writes`, `network` and `destructive` say what running the tool does, and a backend's policy reads them to decide what to ask a person about. The computer's three declare both: `effects` for the policy, `advancedPermission` for whether the host offers them at all.
 
 ## Which sessions are offered the session tools
 
@@ -117,7 +117,7 @@ Every tool may carry an `instruction`, which a backend that can add to its syste
 
 A backend that can call the host's tools in process is handed them as `Start.tools`, and the harness's own server is what the model sees them through: by name they are all `mcp__ahp__*`, whether they came from this host or from a client.
 
-A backend that cannot - an ACP agent, which asks its client for tools - is handed an endpoint instead. `start.toolsServer()` opens one MCP server per session on the host's own listener, under `/ahp-mcp`, with one path and one bearer token for that session, speaking streamable HTTP at revision `2025-06-18` and answering `initialize`, `tools/list` and `tools/call`. The same list as the in-process case, and a `tools/call` for a client's tool is handed to the backend's runner rather than run here. The endpoint is opened once per session and closed when the session goes. A daemon over stdio has nothing to serve on, so a session there is offered none. The shape that goes to an agent, and what a server that cannot take an `http` server is told, is [PLUGINS.md](PLUGINS.md) - decision [The host's tools are an MCP server the host serves, and each agent plugin says whether its sessions take it](../.project/decisions/the-hosts-tools-are-an-mcp-server-each-backend-may-take.md).
+A backend that cannot - an ACP agent, which asks its client for tools - is handed an endpoint instead. `start.toolsServer()` opens one MCP server per session on the host's own listener, under `/ahp-mcp`, with one path and one bearer token for that session, speaking streamable HTTP at revision `2025-06-18` and answering `initialize`, `tools/list` and `tools/call`. The same list as the in-process case, and a `tools/call` for a client's tool is handed to the backend's runner rather than run here. The endpoint is opened once per session and closed when the session goes. A daemon over stdio has nothing to serve on, so a session there is offered none. The shape that goes to an agent, and what a server that cannot take an `http` server is told, is [PLUGINS.md](PLUGINS.md).
 
 ## Configuration keys
 

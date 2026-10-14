@@ -5,8 +5,7 @@
  * the process, so nothing is checked there. A request's caller is what
  * `authorizeOverHttp` resolved and `serve()` passed on as
  * `context.request.actor`: the deployment's token, which is root, or a person
- * whose grants are held to the command's scopes - decision
- * `ahpd-commands-are-declared-with-cofold-commands`.
+ * whose grants are held to the command's scopes.
  */
 
 import type { AuthorizeRequest } from '@cofold/commands';
@@ -23,8 +22,7 @@ declare module '@cofold/commands' {
      * What it changes is code the daemon's process runs, or what that code is
      * given: installing, updating or removing a plugin, its options, turning
      * it on or off, and a restart, which runs it all again. No grant a person
-     * may hold should confer that - decision
-     * `installing-a-plugin-over-http-is-root-only`.
+     * may hold should confer that.
      */
     deploymentTokenOnly?: string;
   }

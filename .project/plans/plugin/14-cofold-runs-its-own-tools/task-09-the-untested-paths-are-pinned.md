@@ -23,7 +23,7 @@ Every path that sends an edit's `after`, the kill of a cancelled shell command, 
 1. Denial: in `plan`, a `write_file` call; record `onFileEdit` calls and emitted actions in one ordered log, and assert the `after` comes before the call's `chat/toolCallComplete`; the end-of-run sweep would also send it, but only after that completion, so the order is what proves the `tool.denied` line at `session.ts:527`.
 2. Sweep: in `default`, a `write_file` that asks, then `session.cancel('t1')`; assert `before` then `after` and a `chat/turnCancelled`; delete the sweep at `session.ts:528-530` locally and check the case fails; if the declined-approval path settles it instead, find the ending only the sweep covers (a `session.close()` during the ask is the next candidate) and record which in *Resume*.
 3. Cancel: in `bypassPermissions`, `shell_exec` with `sleep 30 & echo $! > child.pid; wait`; once `child.pid` exists, cancel the turn; assert the turn is cancelled and `process.kill(pid, 0)` throws `ESRCH` for the backgrounded child, which proves the whole group is killed, not only `sh`.
-4. No directory: a session created without `workingDirectory`, in `bypassPermissions`, is offered `shell_exec` and `read_file`, and `shell_exec` of `pwd` prints `process.cwd()`, per [decision: a session without a directory keeps its tools](../../../decisions/a-session-without-a-directory-keeps-its-tools.md).
+4. No directory: a session created without `workingDirectory`, in `bypassPermissions`, is offered `shell_exec` and `read_file`, and `shell_exec` of `pwd` prints `process.cwd()`, per [decision: a session without a directory keeps its tools](./plan.md).
 
 ## Validation
 

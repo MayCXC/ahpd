@@ -47,7 +47,6 @@ export const ownerOf = (value: unknown): Owner | undefined =>
  * directory is written under. A plugin owns what it starts as
  * `plugin:<name>`, and only the `plugin` field says a principal is one: the
  * id alone cannot, because a person's id may be any string.
- * Decision `work-is-owned-by-a-typed-reference`.
  */
 export const ownerOfPrincipal = (principal: Pick<Principal, 'id' | 'plugin'>): Owner =>
   (principal.plugin !== undefined ? `plugin:${principal.plugin}` : `user:${principal.id}`);

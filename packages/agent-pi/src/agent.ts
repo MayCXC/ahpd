@@ -75,8 +75,7 @@ export function piAgent(
       },
       /*
        * The same six modes Claude and cofold advertise, because the labels are
-       * what a person reads and the harness owns the meanings - decision
-       * `permission-modes-live-in-the-harness`. `default` asks before a call
+       * what a person reads and the harness owns the meanings. `default` asks before a call
        * that writes, reaches the network or destroys.
        */
       permissionMode: permissionModeProperty(),
@@ -169,8 +168,7 @@ export function piAgent(
     /*
      * The machine half. pi is a library in this process, so no command can
      * run it in a machine: a session on one runs in an `ahpd` started inside
-     * it, which loads this plugin, and the session is the SDK's proxy to it -
-     * decision `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`.
+     * it, which loads this plugin, and the session is the SDK's proxy to it.
      */
     runsNested: true,
 

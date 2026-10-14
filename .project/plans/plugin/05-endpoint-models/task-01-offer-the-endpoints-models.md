@@ -9,7 +9,7 @@ refs:
   - code://packages/agent-cofold/src/config.ts#L111-L115 - `splitModel`, the rule a listed id satisfies
   - code://packages/agent-claude/src/probe.ts#L50-L120 - the backend whose probe already offers every model
   - https://openrouter.ai/docs/api-reference/list-available-models - `GET /api/v1/models` and its `id`/`name`
-  - code://.project/decisions/listed-models-are-provider-references.md - why a listed id carries the provider prefix
+  - code://docs/PLUGINS.md - why a listed id carries the provider prefix
   - code://test/agent-cofold-models.test.ts - the cases
 ---
 

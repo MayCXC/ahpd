@@ -64,8 +64,7 @@ export const nameOf = (spec: PluginSpec): string => (typeof spec === 'string' ? 
 /**
  * Each plugin's id, by its spec as written: the name its module exports, then
  * its manifest's, then its file's, then the spec. Filled by `loadPlugins` and
- * `pluginIdsOf`, which import a module to read it. Decision
- * `a-plugins-id-is-its-modules-name`.
+ * `pluginIdsOf`, which import a module to read it.
  */
 const ids = new Map<string, string>();
 
@@ -153,8 +152,7 @@ const parseManifest = (dir: string): Record<string, unknown> | undefined => {
 /**
  * The entry a directory's own manifest names, in the order it is looked for.
  *
- * `ahpd.entry` first, because that is the field decision
- * `plugin-manifest-is-package-json` added for exactly this; then the package's
+ * `ahpd.entry` first, because that is the field added for exactly this; then the package's
  * own `exports["."]`; then `main`; then the conventional `index.js`. An entry
  * that resolves outside the directory is refused rather than followed, so a
  * manifest cannot point its own package at somebody else's code.
@@ -324,7 +322,7 @@ export const readManifest = (packageDir: string): Manifest => {
 /**
  * Whether a manifest is a shape anything can read.
  *
- * The one place decision `plugin-manifest-is-package-json` names: an `ahpd`
+ * The one place names: an `ahpd`
  * that is not an object, an `ahpd.entry` that is not a string or that points
  * outside its own package, and a `@ahpd/sdk` peer that is not a string. A
  * `package.json` that does not parse is the reader's own `problem` and is
@@ -525,7 +523,7 @@ function locate(resolved: Resolved, version: string): Located | { refused: strin
    * Where the module actually is.
    *
    * The manifest wins for resolution only when the caller resolved the
-   * *package* rather than a file - decision `plugin-manifest-is-package-json`.
+   * *package* rather than a file.
    * A spec that named a file is served as that file even when a manifest
    * walked up from it names a build beside it, because the caller said which
    * file to run and the walk only found the package the file lives in. So the
@@ -631,8 +629,7 @@ const asNames = (value: unknown): { forCheck: unknown; named: boolean } => {
  *
  * Nothing owns a plugin's load, so a reference resolved here may only name a
  * `host:` secret: a `team:` or `user:` name is refused by `readSecret` as out of
- * scope, which is the rule decision
- * `a-secret-is-named-in-a-host-team-or-user-scope` settled rather than a second
+ * scope, which is the rule settled rather than a second
  * check here.
  */
 const resolveSecrets = async (
@@ -730,8 +727,10 @@ export async function namePlugin(resolved: Resolved, version: string): Promise<N
 
 /**
  * Import and name every spec, enabled or not, and remember each id for
- * `pluginIdOf`. For a command that runs without a daemon: a daemon names its
- * plugins as it loads them.
+ * `pluginIdOf`. A disabled plugin is imported too, because its id is the name
+ * its module exports and the id is what a configuration entry is keyed by, so
+ * the name cannot be read from the file. For a command that runs without a
+ * daemon: a daemon names its plugins as it loads them.
  */
 export async function pluginIdsOf(specs: readonly PluginSpec[], where: { configDir: string; cwd: string }): Promise<void> {
   for (const spec of specs) {
@@ -831,7 +830,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * the same reading a role written through the people provider gets. The line
    * naming it is this loader's rather than the plugin's, because the entry it
    * was read from is the loader's: a plugin never sees what it was configured
-   * with. Decision `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+   * with.
    *
    * `asSpec` has already refused an entry whose `grants` is not a list of
    * strings, so the guard below is for the spec this loader was handed rather
@@ -887,8 +886,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
    * rather than the daemon's: a plugin that pushed to it would be adding a
    * directory the daemon does not serve, to a line that says which ones it
    * does. The object is frozen too, so the rest of the context cannot be
-   * rewritten under the plugin that was handed it. Decision
-   * `a-plugin-gets-frozen-copies-of-host-values`.
+   * rewritten under the plugin that was handed it.
    */
   const context: PluginContext = Object.freeze({
     path: options.path,
@@ -1103,8 +1101,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   }
 
   /*
-   * An id that repeats is one plugin configured twice, which decision
-   * `a-plugin-loads-once-and-each-preset-is-a-variant` refuses: a plugin is
+   * An id that repeats is one plugin configured twice, which refuses: a plugin is
    * loaded once and its options are what make its variants, so the second and
    * later entries of an id are problems naming it. A switched-off entry still
    * counts, since root config would key it the same.
@@ -1188,7 +1185,6 @@ export interface PluginRow {
   /**
    * The plugin's id, which is what every other `plugin` verb takes and what
    * root config keys the entry by: a client reads a row and passes this back.
-   * Decision `a-plugins-id-is-its-modules-name`.
    */
   name: string;
   /** Which of the six states this spec is in. */

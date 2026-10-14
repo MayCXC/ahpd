@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/connect-url-lives-in-the-record.md
 refs:
   - code://packages/server/src/daemon.ts#L8-L18 - `Running`, the record a detached daemon writes about itself, which holds the token-free `url` and no ready URL
   - code://packages/server/src/daemon.ts#L100-L127 - the stdout poll that reads the origin the child announced
@@ -66,7 +65,7 @@ stdout of the child -> `ahpd on ws://host:port`, `automations ...`, `token: from
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The ready connect URL lives in the daemon record, never on stdout](../../../decisions/connect-url-lives-in-the-record.md) | Softov, asked 2026-09-19: "Keep stdout token-free; put the ready URL in the 0600 daemon record." |
+| 1 | [The ready connect URL lives in the daemon record, never on stdout](../../../../docs/DAEMON.md) | Softov, asked 2026-09-19: "Keep stdout token-free; put the ready URL in the 0600 daemon record." |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -8,7 +8,7 @@ This is what is left of that idea once `ssh`, `libvirt`, `proxmox`, several runt
 
 ## What is there
 
-Decision [a-machine-runtime-is-named-for-its-maker](../decisions/a-machine-runtime-is-named-for-its-maker.md) keeps one package and names each runtime for what makes the machine.
+["One computer: provider, the runtime named for what makes the machine"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) keeps one package and names each runtime for what makes the machine.
 gVisor is not part of this: it is a docker profile option, [plugin 19](../plans/plugin/19-a-docker-machine-may-run-under-gvisor/plan.md).
 
 ## Runtimes not planned

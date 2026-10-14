@@ -10,13 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/cofold-runs-its-own-tools-in-its-process.md
-  - decisions/a-cofold-session-in-a-computer-runs-in-a-nested-host.md
-  - decisions/a-cofold-read-outside-the-workspace-asks-in-default-mode.md
-  - decisions/cofold-memory-is-per-workspace.md
-  - decisions/a-session-without-a-directory-keeps-its-tools.md
-  - decisions/a-cofold-turn-with-no-model-fails-and-says-where-to-name-one.md
-  - decisions/web-fetch-refuses-internal-addresses.md
 refs:
   - "[code://packages/agent-cofold/src/session.ts#L406-L425](../../../../packages/agent-cofold/src/session.ts#L406-L425) - `agentOf`: the per-turn agent, with the capabilities built here and the host's tools"
   - "[code://packages/agent-cofold/src/session.ts#L799](../../../../packages/agent-cofold/src/session.ts#L799) - `run(...)` with `workspace: where`, which the capabilities resolve paths against"
@@ -65,13 +58,13 @@ model calls edit_file -> beforeTool [new] onFileEdit(before) -> policy asks or a
 
 | Decision | Task |
 | --- | --- |
-| [Cofold runs its own tools in its own process, as Claude does](../../../decisions/cofold-runs-its-own-tools-in-its-process.md) | 01, 02, 03 |
-| [A cofold session in a computer runs in an ahpd started inside it](../../../decisions/a-cofold-session-in-a-computer-runs-in-a-nested-host.md) | - (container/04) |
-| [In the default mode a cofold read outside the workspace asks first](../../../decisions/a-cofold-read-outside-the-workspace-asks-in-default-mode.md) | 05, 08 |
-| [A cofold session's memory is per workspace, shared by the sessions in it](../../../decisions/cofold-memory-is-per-workspace.md) | 01 |
-| [A cofold session with no working directory keeps its tools, and the permission mode confines them](../../../decisions/a-session-without-a-directory-keeps-its-tools.md) | 09 |
-| [A cofold turn with no model configured fails and says to add "model" to the cofold configuration file](../../../decisions/a-cofold-turn-with-no-model-fails-and-says-where-to-name-one.md) | 13 |
-| [web_fetch refuses loopback, private and link-local addresses, on every hop](../../../decisions/web-fetch-refuses-internal-addresses.md) | 06, 08 |
+| Cofold runs its own tools in its own process, as Claude does | 01, 02, 03 |
+| [A cofold session in a computer runs in an ahpd started inside it](../../container/04-a-cofold-session-in-a-computer/plan.md) | - (container/04) |
+| In the default mode a cofold read outside the workspace asks first | 05, 08 |
+| A cofold session's memory is per workspace, shared by the sessions in it | 01 |
+| A cofold session with no working directory keeps its tools, and the permission mode confines them | 09 |
+| A cofold turn with no model configured fails and says to add "model" to the cofold configuration file | 13 |
+| web_fetch refuses loopback, private and link-local addresses, on every hop | 06, 08 |
 
 | What | Source | Task |
 | --- | --- | --- |

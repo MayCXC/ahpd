@@ -44,7 +44,7 @@ A plugin is known by its id. The id is the module's `name` export. A module with
 { "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
 ```
 
-When `./plugins/mine` exports `name = '@acme/agent-mine'`, its root config key is `plugins.@acme/agent-mine` and `ahpd plugin config @acme/agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on. Why the id is the module's own name is decision [A plugin's id is the name its module exports](../.project/decisions/a-plugins-id-is-its-modules-name.md).
+When `./plugins/mine` exports `name = '@acme/agent-mine'`, its root config key is `plugins.@acme/agent-mine` and `ahpd plugin config @acme/agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on.
 
 ### Declaring the options
 
@@ -387,13 +387,13 @@ The host adds `root` and `operations` itself, from what the provider implements,
 so a provider never claims an operation it does not serve and the map is absent
 when no provider is registered. The protocol says a client must ignore a key it
 does not know, and this one is `ahpd.`-prefixed, so no client is worse off for
-not reading it - decision `a-resource-scheme-is-advertised-in-meta`.
+not reading it - [A resource scheme is advertised in `_meta`, and a client reads it there](./RESOURCES.md).
 
 `operations` names what the provider implements in the words a grant is made of,
 not the provider's method names: a `read` is advertised as `get` and a `write` as
 `put`, so `notes:get` in a role is exactly what `resourceRead` on `notes://` asks
 for. The words changed from `read` and `write` when grants stopped naming a
-group - decision `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+group - [A grant names a subject and one of its operations, and read and write are groups of those operations](./USERS.md).
 Every other operation keeps its provider's name, because a resource scheme has
 no other pair that differs. The scheme is a subject in the `ahpd.grants` key
 beside it, under its own name and carrying those operations with the groups they
@@ -432,7 +432,7 @@ A plugin may serve a channel: state a client subscribes to and the plugin
 changes, as the host serves `ahp-automations://`. Its scheme starts with `x-`,
 the protocol's extension prefix, which is why `registerChannel` takes the one
 prefix the other registrations refuse - decision
-`a-plugin-channel-is-an-x-scheme`.
+.
 
 ```ts
 const handle = host.registerChannel('x-notes', {
@@ -485,10 +485,10 @@ says what it sends.
 
 A plugin may serve a command: a request a client sends by name, which the
 plugin answers. Its name starts with `x-`, the protocol's extension prefix, as
-a channel's scheme does - decision `a-plugin-serves-an-x-command`. This host
+a channel's scheme does - A plugin serves an x- command with registerMethod. This host
 names its own commands `x-ahpd/<domain>/<verb>`, such as `x-ahpd/usage/totals`,
 and a plugin names its own after itself, such as `x-notes/put` - decision
-`an-x-command-is-named-by-domain-and-verb`.
+An x- command is named x-ahpd/<domain>/<verb>.
 
 ```ts
 host.registerMethod('x-notes/put', {
@@ -526,7 +526,7 @@ tool does more than a session's ordinary work, so the host withholds it from
 every session until `advancedTools` says otherwise. Nothing the reference host
 ships declares it, so a plugin that marks a tool is asking the operator for
 something rather than taking it - decision
-`a-tool-says-when-it-needs-advanced-permission`.
+[A tool says when it needs advanced permission, and the host says whether it has it](./TOOLS.md).
 
 ```ts
 host.registerTool({
@@ -615,7 +615,7 @@ Two reads go with it. `host.sessionKept(uri)` answers whether this host keeps th
 
 `host.recordUsage(entry)` keeps one `UsageEntry` in the host's `usage` port: a model call (`kind: 'model'`) or a stretch a computer was up (`kind: 'computer'`). It is how a plugin says what its work cost, and the store is the host's own, so every record a daemon keeps lands in one place whichever plugin wrote it.
 
-The entry names `pools` - the keys it is charged to - and the reader charges nothing else. Build them as the decision `agent-usage-is-charged-to-owner-team-and-project-pools` says: the owner as written (`user:<id>`, `root:<host>`), `team:<team>` and `project:<team>:<project>`, each only when the record has it.
+The entry names `pools` - the keys it is charged to - and the reader charges nothing else. Build them as [Usage is charged to the owner's, the team's and the project's pool](./USAGE.md) says: the owner as written (`user:<id>`, `root:<host>`), `team:<team>` and `project:<team>:<project>`, each only when the record has it.
 
 Two hosts behave differently on purpose. One whose daemon carries a `usage` store keeps the record. One with no store records nothing and does not fail, because there is nowhere to write rather than a plugin that got it wrong. A store that *is* there and refuses the write throws at the caller, so say what to do with that inside your own plugin.
 
@@ -763,7 +763,7 @@ second window under another id, is heard from once per window.
 An event may repeat a state action a client also receives, and is added only
 for a moment a plugin acts on without watching the session - a turn's two ends,
 a session that began or stopped waiting on a person - decision
-[`a-plugin-hears-input-needed-though-a-client-does-too`](../.project/decisions/a-plugin-hears-input-needed-though-a-client-does-too.md).
+[A plugin hears a session's input needed set and removed, although a client receives the same actions](./PLUGINS.md).
 `input_needed_set` is raised once per action, and the protocol's action is an
 upsert keyed by `id`, so a handler that tracks what a session is waiting on
 dedupes by `id` rather than counting.
@@ -814,7 +814,7 @@ it is.
 A plugin this repository ships is `@ahpd/<name>`, as `@ahpd/computer` is, and an
 agent backend is `@ahpd/agent-<name>`, as `@ahpd/agent-acp` is; a plugin from
 elsewhere takes its author's scope - decision
-[`plugin-packages-are-named-ahpd-name`](../.project/decisions/plugin-packages-are-named-ahpd-name.md).
+[A plugin package is @ahpd/<name>, and an agent backend is @ahpd/agent-<name>](./PLUGINS.md).
 
 ```bash
 ahpd --plugin @acme/agent-mine              # an installed package
@@ -845,7 +845,7 @@ contradictory. The options an object names are merged over the plugin's own
 An object may also carry `grants`, what the plugin's own connection to this
 host may do. Each one is `<subject>:<operation>`, the grammar a role's grants
 use - decision
-[`a-grant-names-an-operation-and-read-and-write-are-its-groups`](../.project/decisions/a-grant-names-an-operation-and-read-and-write-are-its-groups.md).
+[[A grant names a subject and one of its operations, and read and write are groups of those operations](./USERS.md)](./USERS.md).
 None is the default, so a plugin given no `grants` may not start a session,
 send a turn or run an automation. A grant that names no operation is dropped
 where the plugin is loaded, and the daemon says which line it was. See
@@ -1446,5 +1446,5 @@ directory, which is the same path `npm i` there leaves behind.
   configuration key and the listing from the operator's side.
 - [packages/sdk/src/types/plugin.ts](../packages/sdk/src/types/plugin.ts) - the
   contract, in full.
-- [.project/decisions/plugin-registration-kinds.md](../.project/decisions/plugin-registration-kinds.md)
+- .project/./PLUGINS.md
   - why the set of kinds is closed and one method each.

@@ -10,7 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-commit-takes-the-index-when-anything-is-staged.md
+  - ../../../decisions/a-commit-asks-first-and-names-what-it-takes.md
 refs:
   - "[code://packages/sdk/src/changes.ts#L107-L136](../../../../packages/sdk/src/changes.ts#L107-L136) - `settled` and `pathIn`, which judge a target where it resolves"
   - "[code://packages/sdk/src/changes.ts#L212-L238](../../../../packages/sdk/src/changes.ts#L212-L238) - `DISCARD`, `STAGE` and `UNSTAGE`"
@@ -52,7 +52,7 @@ client invokeChangesetOperation stage|unstage { target.resource: file:///<dir>/<
 
 | Decision | Tasks |
 | --- | --- |
-| [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-takes-the-index-when-anything-is-staged.md) | 02 |
+| [The commit operation commits the index when anything is staged, and everything when nothing is](../../../decisions/a-commit-asks-first-and-names-what-it-takes.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

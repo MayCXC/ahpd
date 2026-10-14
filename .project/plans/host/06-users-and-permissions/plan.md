@@ -9,8 +9,7 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/a-person-signs-in-through-authenticate.md
-  - decisions/ahpd-keeps-its-own-user-directory.md
+  - ../../../decisions/the-door-is-a-door.md
   - decisions/a-role-refuses-at-the-dispatch-boundary.md
 refs:
   - "[code://packages/sdk/src/host.ts#L5118-L5185](../../../../packages/sdk/src/host.ts#L5118-L5185) - the `authenticate` handler, which holds a credential per connection and gains verification for one resource"
@@ -29,7 +28,7 @@ refs:
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the daemon config the user file sits beside"
   - "[code://docs/AHP.md](../../../../docs/AHP.md) - the compatibility table, whose `authenticate` row and error codes move"
   - "[code://packages/computer/src/plugin.ts#L72](../../../../packages/computer/src/plugin.ts#L72) - the `computer:` provider and the three host tools that make this a release blocker, not a nicety"
-  - "[code://.project/decisions/client-writes-are-served-not-gated.md](../../../../.project/decisions/client-writes-are-served-not-gated.md) - the gate `host/04` removed, and the 2026-09-22 note saying the removal was too wide"
+  - "[code://docs/HOST.md](../../../../docs/HOST.md) - the gate `host/04` removed, and the 2026-09-22 note saying the removal was too wide"
   - npm://@microsoft/agent-host-protocol@0.9.0 - `AhpErrorCodes.AuthRequired` (-32007), `PermissionDenied` (-32009), `AuthRequiredErrorData` and `PermissionDeniedErrorData`
   - file:///github/externals/agent-host-protocol/docs/specification/authentication.md - the flow, the error handling and the per-connection rule this follows
 ---
@@ -81,8 +80,8 @@ client -> WebSocket with ?tkn=      -> listen.ts, one shared secret, unchanged
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A person signs in through `authenticate`, not through the connection token](../../../decisions/a-person-signs-in-through-authenticate.md) | The user, 2026-09-23: asked where a user presents their credential and chose "authenticate on `ahp-root://`". |
-| 2 | [`ahpd` keeps its own user directory](../../../decisions/ahpd-keeps-its-own-user-directory.md) | The user, 2026-09-23: asked who issues and verifies the credential and chose "ahpd's own directory". |
+| 1 | [A person signs in through `authenticate`, not through the connection token](../../../decisions/the-door-is-a-door.md) | The user, 2026-09-23: asked where a user presents their credential and chose "authenticate on `ahp-root://`". |
+| 2 | [`ahpd` keeps its own user directory](../../../../docs/USERS.md) | The user, 2026-09-23: asked who issues and verifies the credential and chose "ahpd's own directory". |
 | 3 | [A role refuses at the dispatch boundary, and never hides root state](../../../decisions/a-role-refuses-at-the-dispatch-boundary.md) | (defaulted: `serverSeq` and the replay buffer are per host, so a filtered root state is corrected by the next broadcast). |
 
 | What | Source | Task |

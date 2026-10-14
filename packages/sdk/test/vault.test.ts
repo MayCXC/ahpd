@@ -10,7 +10,7 @@ import type { Vault } from '../src/types/vault.js';
  *
  * A store answers a name it holds and knows nothing of who is asking, so what
  * is left to check is the grammar of a name and the work that decides whether
- * it may be read - decision `a-secret-is-named-in-a-host-team-or-user-scope`.
+ * it may be read.
  */
 
 const held = (...secrets: string[]): Vault => {
@@ -136,8 +136,7 @@ describe('PluginHost.secret', () => {
  *
  * `fromEnvRef` is `secretRef`'s sibling and takes its rule: the one key is the
  * whole of it. `readSecrets` is one preset's `env`, read through the host, so
- * the loader is not the one asking for a credential - decision
- * `a-secret-is-named-in-a-host-team-or-user-scope`.
+ * the loader is not the one asking for a credential.
  */
 
 describe('fromEnvRef', () => {

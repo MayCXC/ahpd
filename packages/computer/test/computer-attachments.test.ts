@@ -23,7 +23,7 @@ import type { SessionStore } from '../../sdk/src/types/sessions.js';
  * is handed a path only once the machine holds a file at the same one. A
  * machine takes no new mount while it runs and a machine an operator made ahead
  * of time belongs to no session, so the file is written into the machine
- * instead - decision `a-session-in-a-machine-gets-each-attachment-copied-into-it`.
+ * instead.
  * Read-only, as root, because the bytes are a copy of what somebody sent and
  * the machine's own user could write over its own file.
  *

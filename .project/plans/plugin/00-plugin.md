@@ -16,22 +16,22 @@ Every kind after those waits, and the whole list is in [deferred.md](01-plugins-
 - `code://packages/agent-claude`, `code://packages/agent-cofold` and `code://packages/agent-acp` - the backends that ship, and the worked examples of a package the host knows nothing about: one over a harness library, one over a protocol, and one over a protocol spoken to a subprocess.
 - `code://packages/computer` - the first package to serve a host-owned URI scheme, so the resource-provider kind has a consumer that is not a test fixture.
 
-A plugin package from this repository is `@ahpd/<name>`, and an agent backend is `@ahpd/agent-<name>` ([decision](../../decisions/plugin-packages-are-named-ahpd-name.md)).
+A plugin package from this repository is `@ahpd/<name>`, and an agent backend is `@ahpd/agent-<name>` ([decision](../../../docs/PLUGINS.md)).
 
 ## Contracts
 
 - `code://packages/sdk/src/types/host.ts#L132-L245` - `HostOptions`, the whole contribution surface: `agents`, `tools`, and the ports `resources`, `terminals`, `changes`, `directories`, `worktrees`, `github`, `automations` and `sessions`.
 - `code://packages/sdk/src/types/host.ts#L279-L332` - `HostTool`, what a plugin contributes to every session's model.
 - `code://packages/sdk/src/types/agent.ts#L158-L300` - `Agent`, what a harness plugin implements, and `types/session.ts#L160` for the `Session` it returns.
-- `code://.project/decisions/plugin-contributes-host-options.md` - what a plugin is allowed to contribute and what it is not.
-- `code://.project/decisions/plugin-manifest-is-package-json.md` - where a plugin declares its entry and its title.
-- `code://.project/decisions/plugin-contract-lives-in-the-sdk.md` - where the contract lives, and why it is not a package of its own.
-- `code://.project/decisions/plugin-registration-kinds.md` - why the set below is closed and one method per kind.
+- `code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md` - what a plugin is allowed to contribute and what it is not.
+- `code://docs/PLUGINS.md` - where a plugin declares its entry and its title.
+- `code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md` - where the contract lives, and why it is not a package of its own.
+- `code://docs/PLUGINS.md` - why the set below is closed and one method per kind.
 
 ## Registration kinds
 
 The whole of what a plugin may register, one method each, and the plan each kind belongs to.
-This is the list decision [plugin-registration-kinds](../../decisions/plugin-registration-kinds.md) closes; nothing registers anything that is not a row here.
+This is the list [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../docs/PLUGINS.md) closes; nothing registers anything that is not a row here.
 
 | Kind | `PluginHost` method | Operation | Lands in | Status |
 | --- | --- | --- | --- | --- |

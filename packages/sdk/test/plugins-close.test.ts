@@ -4,8 +4,7 @@
  * `registerClose` is where a plugin stops the work the host does not own: a
  * timer it armed, a removal it started, a child process it spawned. The fold
  * carries every registration into `HostOptions.closers` in load order, with the
- * name of the plugin that made it - decision
- * `a-plugin-is-told-when-the-host-closes`.
+ * name of the plugin that made it.
  */
 
 import { expect, it } from 'vitest';

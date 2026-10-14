@@ -104,8 +104,7 @@ export interface Policy {
 }
 
 /**
- * Where a host keeps its policies - decision
- * `policies-are-a-scheme-clients-edit`.
+ * Where a host keeps its policies.
  *
  * The port, and not the file, is what a plugin takes: a sqlite or a postgresql
  * several daemons share answers the same four calls from the same rows.

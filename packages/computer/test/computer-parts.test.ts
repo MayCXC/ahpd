@@ -353,8 +353,8 @@ it('builds the ahpd part from npm with its own plugins inside it', () => {
   const file = dockerfileOf(part, { from: 'npm', version: '0.8.0', hash: 'abcdef123456' });
 
   expect(file).toContain('@ahpd/sdk@0.8.0 @ahpd/server@0.8.0');
-  // Decision `a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install`:
-  // the nested backends are installed by the command they will be run through.
+  // The nested backends are installed by the command they will be run through,
+  // because an inner host resolves a package only under its own prefix.
   expect(file).toContain('AHPD_PLUGIN_ROOT=/opt/ahpd/ahpd/plugins /opt/ahpd/ahpd/node_modules/.bin/ahpd plugin install --no-enable @ahpd/agent-cofold@0.8.0 @ahpd/agent-pi@0.8.0');
   // And the launcher sets the root, because a `FROM scratch` stage keeps nothing
   // that is not under /opt/ahpd/ahpd - the config dir is not writable here.

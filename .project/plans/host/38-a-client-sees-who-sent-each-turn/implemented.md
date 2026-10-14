@@ -27,7 +27,7 @@ A client can say whose a session is and which person sent each of its turns, liv
 
 ## Departures from the plan
 
-- Claude's transcript names turns by the CLI's uuid, found in review; fixed by decision `a-backend-says-which-transcript-id-a-turn-was-written-as`.
+- Claude's transcript names turns by the CLI's uuid, found in review; fixed by [A backend says which transcript id a turn was written under](./plan.md).
 - The task-02 test fixture gave `ana` a membership so `scopeFor` admits her turns.
 
 ## Left for later

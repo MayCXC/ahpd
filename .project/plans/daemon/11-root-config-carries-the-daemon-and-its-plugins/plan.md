@@ -7,10 +7,6 @@ created: 2026-09-29
 revalidated: 2026-09-29
 requires: []
 decisions:
-  - decisions/plugin-configuration-travels-in-root-config.md
-  - decisions/root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value.md
-  - decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md
-  - decisions/a-repeated-plugin-is-keyed-by-its-provider.md
 refs:
   - "[code://packages/sdk/src/host.ts#L4954-L5044](../../../../packages/sdk/src/host.ts#L4954-L5044) - `rootConfig`, `ROOT_CONFIG_SCHEMA` and `rootState`, in memory only"
   - "[code://packages/sdk/src/host.ts#L8086-L8145](../../../../packages/sdk/src/host.ts#L8086-L8145) - `root/configChanged`, and the retool that follows `artifactToolsCompactPrompts`"
@@ -51,10 +47,10 @@ root/configChanged { paths: [...] } -> dispatchNeeds: config:write -> rootConfig
 
 | Decision | Task |
 | --- | --- |
-| [A plugin's configuration travels in root config, not in customizations](../../../decisions/plugin-configuration-travels-in-root-config.md) | 01, 03 |
-| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../decisions/root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value.md) | 01, 04 |
-| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../decisions/a-configuration-change-applies-live-or-on-ahpd-restart.md) | 02, 05 |
-| [A plugin loaded more than once is keyed by its provider in root config](../../../decisions/a-repeated-plugin-is-keyed-by-its-provider.md) | 03, 04 |
+| [A plugin's configuration travels in root config, not in customizations](../../../../docs/HOST.md) | 01, 03 |
+| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) | 01, 04 |
+| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../../docs/HOST.md) | 02, 05 |
+| [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/DAEMON.md) | 03, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -65,7 +61,7 @@ root/configChanged { paths: [...] } -> dispatchNeeds: config:write -> rootConfig
 | Root config shows the file's value; a start flag that overrides it is said in the key's description | (defaulted: the file is what a form edits) | 02 |
 | A write is checked with `checkConfig` and the plugin's schema before `config.json` is touched, and a refusal names the key | (defaulted: a bad write must not stop the next start) | 02, 03 |
 | Our plugins mark their credentials `writeOnly`, wherever in their options the credential sits | the decision above | 04 |
-| A plugin loaded once is `plugins.<name>`; a repeated name is keyed `plugins.<name>#<provider>`, and an entry of it with no provider is refused at start | [a-repeated-plugin-is-keyed-by-its-provider](../../../decisions/a-repeated-plugin-is-keyed-by-its-provider.md) | 03 |
+| A plugin loaded once is `plugins.<name>`; a repeated name is keyed `plugins.<name>#<provider>`, and an entry of it with no provider is refused at start | [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/DAEMON.md) | 03 |
 
 ## Proposed architecture
 

@@ -22,7 +22,7 @@ export interface ContainerConnect {
    * Handed back with every frame and every close, so a client holding two
    * containers can tell them apart. It is not unique across clients: the host
    * keeps one map per connection, which is where the reference host puts it
-   * too - decision `the-relay-surface-is-the-reference-one`.
+   * too.
    */
   connectionId: string;
   /**
@@ -39,7 +39,7 @@ export interface ContainerConnect {
    *
    * The client does not send it and is never asked: the host fills it from the
    * connection the relay was made on, because that is who owns what the
-   * container runs - decision `a-relay-container-is-owned-by-who-connected`.
+   * container runs.
    * Absent on a connection with nobody to name, and the container is then the
    * host's own.
    */
@@ -150,8 +150,7 @@ export interface ContainerPort {
    *
    * The daemon's own stop. A nested host left running is a process nobody is
    * talking to and a container still holding pipes, so a launcher that started
-   * one ends it here rather than leaving it for the rest of the process's life
-   * - decision `a-plugin-is-told-when-the-host-closes`. The containers
+   * one ends it here rather than leaving it for the rest of the process's life. The containers
    * themselves stay, as they do for `disconnect`: what ends is the relay.
    *
    * Optional, because a launcher with no process of its own has nothing to
