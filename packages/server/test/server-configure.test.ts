@@ -135,6 +135,24 @@ it('shows what it wrote as the default on a second run, and installs nothing aga
   expect(read().plugins).toEqual(['@ahpd/agent-claude']);
 });
 
+it('makes the configuration folder on a first run, rather than failing on the token file', async () => {
+  // A machine that has never configured this daemon has neither the folder nor
+  // anything in it, and the token is written before the configuration file is:
+  // a `writeFileSync` that makes no folder fails the whole command at its last
+  // question.
+  const fresh = join(root, 'never-made');
+  const file = join(fresh, 'config.json');
+  const term = terminal('', '', '', '', '', '', '');
+  const answered = await configure({
+    configDir: fresh, configFile: file, version: '0.8.0', term: term.term, run, fetch, say: () => {},
+  });
+  expect(answered.paths).toEqual([process.cwd()]);
+  const wrote = join(fresh, 'connection-token');
+  expect(existsSync(wrote)).toBe(true);
+  expect(readFileSync(wrote, 'utf8').trim()).not.toBe('');
+  expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({ connectionTokenFile: wrote });
+});
+
 it('writes a typed token to the token file', async () => {
   await asked('', '', '', '', '', 'shh', '');
   expect(read().connectionTokenFile).toBe(tokenFile());

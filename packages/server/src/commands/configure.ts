@@ -20,8 +20,8 @@
  */
 
 import { randomUUID } from 'node:crypto';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { join, resolve, sep } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, resolve, sep } from 'node:path';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
 import { ask, answering, confirm, here, type Term } from '../ask.js';
@@ -176,6 +176,15 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
   const make = `generate one in ${tokenFile}`;
   const keep = fileToken === undefined ? `keep the token in ${options.configFile}` : `keep ${tokenFile}`;
   const typed = await ask('Connection token', kept === undefined ? make : keep, options.term);
+  /*
+   * The folder the token goes in, made before it is written.
+   *
+   * A first run on a machine that has never configured this daemon has no
+   * configuration folder yet. The token is written before the configuration
+   * file is, and it is that later write - `writeEntry` below - that makes the
+   * folder, through `writeJsonAtomic`. `writeFileSync` makes none.
+   */
+  mkdirSync(dirname(tokenFile), { recursive: true });
   if (kept !== undefined && typed === keep) {
     if (fileToken !== undefined) options.say(`${tokenFile} still holds the token.`);
     else {
