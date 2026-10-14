@@ -1,7 +1,7 @@
 ---
 title: A token file in a new folder is written
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -55,7 +55,7 @@ ahpd start --connection-token-file <dir>/token -> secret(options) -> no file -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - secret makes the folder before the token](task-01-secret-makes-the-folder-before-the-token.md) | todo | - |
+| [01 - secret makes the folder before the token](task-01-secret-makes-the-folder-before-the-token.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -63,10 +63,10 @@ ahpd start --connection-token-file <dir>/token -> secret(options) -> no file -> 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-14.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-14; the one task implemented 2026-10-14, not reviewed and not set to done.
+- **Next action:** the review, then the check by hand on Windows: [task-01-secret-makes-the-folder-before-the-token.md](task-01-secret-makes-the-folder-before-the-token.md).
 - **Open questions:** none.
-- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit.
+- **Watch out for:** the build runs on Linux, so the Windows start is not exercised here. The suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit.
 
 ## Final verification checklist
 

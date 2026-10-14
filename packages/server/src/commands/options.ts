@@ -14,8 +14,8 @@
  * defaults live in `optionsFrom`, after the fold, where the order is visible.
  */
 
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
 import type { McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
@@ -1101,6 +1101,8 @@ export function secret(options: Options): { token?: string; from: string } {
       return { token: held, from: `token: read from ${options.tokenFile}` };
     }
     const made = crypto.randomUUID().replaceAll('-', '');
+    // A first run may name a folder nothing has made yet.
+    mkdirSync(dirname(options.tokenFile), { recursive: true });
     // Owner-only, because the file is the credential.
     writeFileSync(options.tokenFile, `${made}\n`, { mode: 0o600 });
     return { token: made, from: `token: written to ${options.tokenFile}` };
