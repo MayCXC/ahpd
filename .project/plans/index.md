@@ -189,8 +189,12 @@ Reference: [00-host.md](host/00-host.md)
 | [85 - A watched changeset gets its files when a turn ends](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/plan.md) | high | built 2026-10-13 ([implemented.md](host/85-a-watched-changeset-gets-its-files-when-a-turn-ends/implemented.md)); a session in a machine is not checked | - | - |
 | [86 - Every automation due at once fires](host/86-every-automation-due-at-once-fires/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed | - | - |
 | [87 - A turn is refused while one runs](host/87-a-turn-is-refused-while-one-runs/plan.md) | high | planned 2026-10-14 | - | - |
+| [88 - A 0.10.0 offer gets the 1.0.0 contract](host/88-a-0-10-0-offer-gets-the-1-0-0-contract/plan.md) | high | planned 2026-10-14 | - | - |
+| [89 - Chat and session read state stay in step](host/89-chat-and-session-read-state-stay-in-step/plan.md) | high | planned 2026-10-14 | - | - |
+| [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | planned 2026-10-14 | - | 91 |
+| [91 - Merged sessions archive and delete themselves](host/91-merged-sessions-archive-and-delete-themselves/plan.md) | medium | planned 2026-10-14 | 90 | - |
 
-Next free number in `host`: `88`.
+Next free number in `host`: `92`.
 
 ## claude
 
