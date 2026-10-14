@@ -21,7 +21,9 @@ const driving = (): { way: Lifecycle; ran: string[] } => {
   const ran: string[] = [];
   const way = lifecycle({
     // The daemon's own way down raises `stopping` first; this stands in for it.
-    down: async () => { ran.push('stopping'); },
+    // The word is `raise stopping` and not `stopping`, which is the line the
+    // lifecycle writes itself, a step earlier.
+    down: async () => { ran.push('raise stopping'); },
     start: async () => { throw new Error('no successor is started here'); },
     stop: () => { ran.push('stop'); },
     forget: () => { ran.push('forget'); },
@@ -41,9 +43,11 @@ describe('the shutdown a request is given', () => {
     daemonShutdown(() => way.shutdown)();
     // Answered by the way down before it settles, so a request cannot exit
     // ahead of the stopping handlers a plugin is still running in.
-    expect(ran).toEqual(['stopping']);
+    expect(ran).toEqual(['log stopping', 'raise stopping']);
     await settled();
-    expect(ran).toEqual(['stopping', 'exit 0']);
+    // Said either side of it, and the record goes once it is complete: the
+    // daemon a request stopped is not one `ahpd status` should go on offering.
+    expect(ran).toEqual(['log stopping', 'raise stopping', 'log stopped', 'forget', 'exit 0']);
   });
 
   it('sends no signal to this daemon\'s own process', async () => {
@@ -52,7 +56,7 @@ describe('the shutdown a request is given', () => {
     daemonShutdown(() => way.shutdown)();
     await settled();
     expect(kill).not.toHaveBeenCalled();
-    expect(ran).toEqual(['stopping', 'exit 0']);
+    expect(ran).toEqual(['log stopping', 'raise stopping', 'log stopped', 'forget', 'exit 0']);
   });
 
   it('keeps the signal while there is no way down yet', () => {

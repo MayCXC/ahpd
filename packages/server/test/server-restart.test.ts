@@ -268,7 +268,92 @@ describe('lifecycle', () => {
     });
     way.shutdown();
     await settle();
-    expect(said).toEqual(['Could not stop cleanly: the listener would not close', 'exit 1']);
+    // No `stopped`: that is a claim about the way down, and this one failed.
+    expect(said).toEqual(['stopping', 'Could not stop cleanly: the listener would not close', 'exit 1']);
+  });
+
+  /*
+   * The record is the daemon's own, and a daemon that is going is the one that
+   * knows it. The `forget` step is given the pid, so a restart's successor -
+   * which has claimed the record by then - is never the one taken away.
+   */
+  it('forgets its record once the way down is complete, before it exits', async () => {
+    const { said, way, release } = daemon();
+    way.shutdown();
+    release();
+    await settle();
+    // The three steps this case is about, and nothing else the way down says
+    // around them. A restart's cases below assert their whole sequence.
+    expect(said.filter((one) => one === 'down' || one === 'forget' || one.startsWith('exit')))
+      .toEqual(['down', 'forget', 'exit 0']);
+  });
+
+  it('forgets its record even when the way down failed, before it exits with 1', async () => {
+    const said: string[] = [];
+    const way = lifecycle({
+      down: () => Promise.reject(new Error('the listener would not close')),
+      start: async () => ({ pid: 7, url: '', connectUrl: '', paths: [], startedAt: '' }),
+      stop: () => {},
+      forget: () => { said.push('forget'); },
+      log: (line) => { said.push(line); },
+      exit: (code) => { said.push(`exit ${String(code)}`); },
+      later: (step) => { step(); },
+    });
+    way.shutdown();
+    await settle();
+    // A daemon that could not close its listeners is still a daemon that must
+    // not leave a record naming a process that is going: the answer is said
+    // first, and the record goes either way.
+    const about = said.filter((one) => one === 'forget' || one.startsWith('exit') || one.startsWith('Could not stop cleanly'));
+    expect(about).toEqual(['Could not stop cleanly: the listener would not close', 'forget', 'exit 1']);
+  });
+
+  /*
+   * The two lines the checklists of daemon 20 and 21 read a stop off. They are
+   * the daemon's own, not the `stopping` event a plugin's handlers are raised
+   * with: the event has no line unless a handler writes one, and a daemon with
+   * no plugins would leave nothing behind saying it had been asked to stop.
+   */
+  it('logs stopping before the way down, and stopped once it is complete', async () => {
+    const { said, way, release } = daemon();
+    way.shutdown();
+    // The line is written before the way down is begun, and the way down has
+    // begun by the time `shutdown` returns: a log read while it runs says where
+    // the daemon was when the stop arrived, and not only that it went.
+    expect(said).toEqual(['stopping', 'down']);
+    release();
+    await settle();
+    expect(said).toEqual(['stopping', 'down', 'stopped', 'forget', 'exit 0']);
+  });
+
+  it('logs nothing more for a second stop while the first runs', async () => {
+    const { said, way, release } = daemon();
+    way.shutdown();
+    way.shutdown();
+    // The second is the same request as the first, and the way down it would
+    // begin is already running: one `stopping` is one stop under way.
+    expect(said).toEqual(['stopping', 'down']);
+    release();
+    await settle();
+    expect(said.filter((one) => one === 'stopping' || one === 'stopped')).toEqual(['stopping', 'stopped']);
+  });
+
+  it('exits even when forgetting the record itself throws', async () => {
+    const said: string[] = [];
+    const way = lifecycle({
+      down: async () => {},
+      start: async () => ({ pid: 7, url: '', connectUrl: '', paths: [], startedAt: '' }),
+      stop: () => {},
+      forget: () => { throw new Error('EACCES: permission denied, unlink daemon.json'); },
+      log: (line) => { said.push(line); },
+      exit: (code) => { said.push(`exit ${String(code)}`); },
+      later: (step) => { step(); },
+    });
+    way.shutdown();
+    await settle();
+    // A record that could not be removed is not a reason to stay up with
+    // nothing listening, which is what a daemon that never exits would be.
+    expect(said.at(-1)).toBe('exit 0');
   });
 
   it('starts the successor with the token it was handed', async () => {
@@ -295,7 +380,7 @@ describe('lifecycle', () => {
     expect(() => { way.restart(ARGV); }).toThrow('It is stopping.');
     release();
     await settle();
-    expect(said).toEqual(['down', 'exit 0']);
+    expect(said).toEqual(['stopping', 'down', 'stopped', 'forget', 'exit 0']);
   });
 
   it('goes down once for two stops', async () => {
@@ -304,7 +389,7 @@ describe('lifecycle', () => {
     way.shutdown();
     release();
     await settle();
-    expect(said).toEqual(['down', 'exit 0']);
+    expect(said).toEqual(['stopping', 'down', 'stopped', 'forget', 'exit 0']);
   });
 
   it('lets a stop during a restart win: no successor is started', async () => {

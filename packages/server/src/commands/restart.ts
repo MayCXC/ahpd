@@ -67,6 +67,16 @@ const COULD_NOT = 'Could not restart it: ';
 const FAILED = /Could not restart it: .*/u;
 /** What the daemon writes when its way down failed on a stop. */
 const COULD_NOT_STOP = 'Could not stop cleanly: ';
+/**
+ * What a stop writes either side of its way down, one line each.
+ *
+ * The `stopping` event a plugin's handlers are raised with is not one of these:
+ * an event is not a log line, and a daemon with no plugin listening would leave
+ * nothing behind saying it had been asked to stop. These two are the daemon's
+ * own, and they are what a log read after the fact is read for.
+ */
+const STOPPING = 'stopping';
+const STOPPED = 'stopped';
 
 const FOREGROUND = 'This daemon runs in the foreground, not from ahpd start; restart it where it runs.';
 const notRecorded = (pid: number): string =>
@@ -189,9 +199,30 @@ export function lifecycle(steps: LifecycleSteps): Lifecycle {
       // may also be holding a terminal on: twice would take a tunnel down under
       // the handler still bringing it down.
       if (going !== undefined) return;
+      // Before the way down, so a log read while it runs says where the daemon
+      // was when the stop arrived, and not only that it went.
+      steps.log(STOPPING);
       going = steps.down();
-      going.then(() => { steps.exit(0); }, (error: unknown) => {
+      /*
+       * The record goes with the daemon, on the way down and on a way down
+       * that failed.
+       *
+       * `steps.forget` is handed this process's own pid, so it removes the
+       * record only where that record is this daemon's: a record a successor
+       * has claimed in the meantime names the successor, and is left alone.
+       * A removal that fails is not a reason to stay up - a daemon with
+       * nothing listening and a record naming it is worse than no record -
+       * so each arm reaches its own exit either way.
+       */
+      going.then(() => {
+        steps.log(STOPPED);
+        try { steps.forget(); }
+        catch { /* the record is not this daemon's to remove, or cannot be */ }
+        steps.exit(0);
+      }, (error: unknown) => {
         steps.log(`${COULD_NOT_STOP}${wordsOf(error)}`);
+        try { steps.forget(); }
+        catch { /* as above */ }
         steps.exit(1);
       });
     },
