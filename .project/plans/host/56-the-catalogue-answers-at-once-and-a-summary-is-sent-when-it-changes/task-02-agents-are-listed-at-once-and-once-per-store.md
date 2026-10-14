@@ -13,7 +13,7 @@ refs:
 
 ## Objective
 
-A listing asks every agent at the same time, and the Claude variants of one load read the projects directory once between them, per the decision [Claude variants share one listing inside the plugin](../../../decisions/claude-variants-share-one-listing-inside-the-plugin.md).
+A listing asks every agent at the same time, and the Claude variants of one load read the projects directory once between them, per the decision [Claude variants share one listing inside the plugin](./plan.md).
 
 ## Files
 

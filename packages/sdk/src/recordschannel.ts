@@ -2,8 +2,7 @@
  * A list of records as an `x-` channel, and the commands that change one.
  *
  * Users, teams, projects, roles and policies are each a channel beside their
- * resource scheme - decision
- * `host-records-are-typed-channels-beside-their-resource-schemes`. A subscribe
+ * resource scheme. A subscribe
  * answers `{ records }`, each entry `{ id, record }` with the record the
  * scheme's `resourceRead` answers for that id. Three actions follow it:
  *

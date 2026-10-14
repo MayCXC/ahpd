@@ -8,8 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/daemon/13-ahpd-restart/plan.md
 decisions:
-  - decisions/windows-reaches-a-daemon-through-a-named-pipe.md
-  - decisions/ahpd-stop-waits-for-the-daemon-to-exit.md
 refs:
   - "[code://packages/server/src/daemon.ts#L9-L37](../../../../packages/server/src/daemon.ts#L9-L37) - `Running`, the record in `daemon.json`"
   - "[code://packages/server/src/daemon.ts#L304-L400](../../../../packages/server/src/daemon.ts#L304-L400) - `start`, which spawns the child with `AHPD_DETACHED=1` and writes the record"
@@ -59,8 +57,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [On Windows, `ahpd stop` and `ahpd restart` reach a daemon through a named pipe with a key](../../../decisions/windows-reaches-a-daemon-through-a-named-pipe.md) | Softov, 2026-10-11 | 01, 02, 03 |
-| [`ahpd stop` waits for the daemon to exit, then kills it](../../../decisions/ahpd-stop-waits-for-the-daemon-to-exit.md) | Softov, 2026-10-11 | 04 |
+| [On Windows, `ahpd stop` and `ahpd restart` reach a daemon through a named pipe with a key](../../../../docs/DAEMON.md) | Softov, 2026-10-11 | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -74,6 +71,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 | A pipe that does not answer reads as the `ESRCH` case: the daemon is gone | (defaulted: the meaning `unsignalled` gives today) | 03 |
 | `STOP_WAIT_MS` is 30 seconds; after it, `stop` sends `SIGKILL` and prints `Killed <url> (pid <n>): it did not stop within 30 seconds.` | (defaulted: a shutdown awaits plugin `stopping` handlers, which can take seconds) | 04 |
 | `ahpd stop` forgets the record only after the process is gone | (defaulted: the record is how a second `stop` finds it) | 04 |
+| `ahpd stop` waits for the daemon to exit, then kills it, so the line it prints is true only once the process is gone | docs/DAEMON.md already says stop waits; the fix makes the printed line match | 04 |
 
 ## Proposed architecture
 

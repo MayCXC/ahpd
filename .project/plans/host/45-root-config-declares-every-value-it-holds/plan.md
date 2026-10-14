@@ -63,7 +63,7 @@ VS Code connect -> dispatchAction root/configChanged { ~43 keys } -> applyDispat
 ### Context, not this plan's work
 
 The connection that signs in with the deployment token is nobody, so it holds no `config:read` and reads none of the daemon's keys while the daemon has no users directory.
-That is decision `root-config-shows-daemon-keys-to-config-read-and-never-a-write-only-value` working as written; it was seen on the same live check and is said here so the two are not confused.
+That is [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) working as written; it was seen on the same live check and is said here so the two are not confused.
 
 ## Decisions locked in
 

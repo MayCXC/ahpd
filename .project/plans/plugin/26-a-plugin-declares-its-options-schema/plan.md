@@ -14,7 +14,7 @@ refs:
   - "[code://packages/agent-pi/src/plugin.ts](../../../../packages/agent-pi/src/plugin.ts) - its own `optionsOf`"
   - "[code://packages/agent-cofold/src/plugin.ts](../../../../packages/agent-cofold/src/plugin.ts) - its own `optionsOf`"
   - "[code://packages/agent-claude/src/plugin.ts](../../../../packages/agent-claude/src/plugin.ts) - its own `optionsOf`"
-  - "[code://.project/decisions/plugin-contract-lives-in-the-sdk.md](../../../decisions/plugin-contract-lives-in-the-sdk.md) - the contract is the SDK's, and the SDK imports no `@cofold/*`"
+  - "[code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md](../01-plugins-load-from-configuration/plan.md) - the contract is the SDK's, and the SDK imports no `@cofold/*`"
   - npm://@cofold/commands@^0.2.2 - `check`, which the server already uses
 ---
 
@@ -49,8 +49,8 @@ No decision records of its own; the choices below are scope.
 | What | Source | Task |
 | --- | --- | --- |
 | Options that fail the plugin's schema report and skip that plugin, like every other plugin failure | Softov, 2026-09-28, asked "When a plugin declares a schema for its options and the configured options fail it:": "Report and skip it" | 01 |
-| The schema is a plain JSON Schema object exported as `optionsSchema`, typed in the SDK without importing `@cofold/*` | [decision plugin-contract-lives-in-the-sdk](../../../decisions/plugin-contract-lives-in-the-sdk.md); (defaulted: the export name) | 01 |
-| An unknown option key warns, as an unknown daemon key does | [decision an-unknown-config-key-warns-and-starts](../../../decisions/an-unknown-config-key-warns-and-starts.md) | 01 |
+| The schema is a plain JSON Schema object exported as `optionsSchema`, typed in the SDK without importing `@cofold/*` | the sdk's plugin contract, [plugin/01](../01-plugins-load-from-configuration/plan.md); (defaulted: the export name) | 01 |
+| An unknown option key warns, as an unknown daemon key does | [daemon/08's unknown-key warning](../../daemon/08-the-config-file-is-checked-in-one-place/plan.md) | 01 |
 
 ## Proposed architecture
 

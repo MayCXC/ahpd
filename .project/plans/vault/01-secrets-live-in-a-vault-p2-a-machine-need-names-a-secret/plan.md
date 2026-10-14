@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-secret-is-named-in-a-host-team-or-user-scope.md
-  - decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L56-L90](../../../../packages/computer/src/plugin.ts#L56-L90) - `optionsSchema`; `needs` at L71 and `profiles` at L73"
   - "[code://packages/computer/src/plugin.ts#L95-L100](../../../../packages/computer/src/plugin.ts#L95-L100) - `named`, which drops every value that is not a string"
@@ -60,8 +58,8 @@ form write (owner) -> provider.write -> revealed(..., { owner }) -> manifestOf
 
 | Decision | Source |
 | --- | --- |
-| [A secret is named in the host's, a team's or a person's scope](../../../decisions/a-secret-is-named-in-a-host-team-or-user-scope.md) | Softov, 2026-10-02 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md) | Softov, 2026-10-02; the owner a `user:` secret is matched against |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | Softov, 2026-10-02 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | Softov, 2026-10-02; the owner a `user:` secret is matched against |
 
 | What | Source | Task |
 | --- | --- | --- |

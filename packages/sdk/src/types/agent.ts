@@ -172,7 +172,7 @@ export interface Start {
    *
    * Absent is "the host said nothing", and a backend must read that as
    * untrusted: a folder whose trust nobody stated is a folder nobody vouched
-   * for - decision `a-folder-is-untrusted-until-a-client-says-otherwise`.
+   * for.
    */
   trusted?: (folder: string) => boolean;
   /**
@@ -305,7 +305,7 @@ export interface Start {
    *
    * Absent on a host with no `computer:` provider. A backend that was asked to
    * run in a machine and is handed nothing must refuse rather than run on the
-   * host - decision `a-backend-reaches-a-computer-through-a-port`.
+   * host.
    */
   computers?: ComputerPort;
   /** The config schema to report on the session channel. This agent's own. */
@@ -527,8 +527,7 @@ export interface Agent {
    * What this agent needs from the host for a machine to run it.
    *
    * Read when a machine is made for this agent, never at load, so an agent
-   * registered after the plugin that makes machines still declares them -
-   * decision `an-agent-declares-its-machine-needs-with-a-method`. Each entry is
+   * registered after the plugin that makes machines still declares them. Each entry is
    * named by this backend and delivered as a mount, an environment variable or
    * a copy-in; the machine's runtime turns the resolved needs into its own
    * flags. A backend that needs nothing of the host leaves it out, which is
@@ -546,8 +545,7 @@ export interface Agent {
    * shell all run in this process - answers `true` here, and the host gives a
    * session that names a computer a session of the SDK's proxy backend
    * instead of this one: a whole `ahpd` with this backend loaded is started
-   * inside the machine, and its actions are carried out as the session's -
-   * decision `a-cofold-session-in-a-computer-runs-in-a-nested-host`.
+   * inside the machine, and its actions are carried out as the session's.
    *
    * Absent or `false` is a backend that must refuse a computer it cannot
    * enter, which is what every backend did before this existed. A backend

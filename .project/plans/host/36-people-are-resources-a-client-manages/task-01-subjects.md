@@ -21,7 +21,7 @@ refs:
 ## Steps
 
 1. Replace the subject.
-2. Read an existing `users:read` / `users:write` as `user:read` / `user:write` only, and log once at start for each role read that way (decision `a-legacy-users-grant-is-the-user-subject-only`). Rewrite the built-in roles with the four subjects.
+2. Read an existing `users:read` / `users:write` as `user:read` / `user:write` only, and log once at start for each role read that way ([An existing users grant reads as the user subject only, not teams, projects or roles](../../../../docs/USERS.md)). Rewrite the built-in roles with the four subjects.
 3. Move each command's `scopes`.
 
 ## Validation

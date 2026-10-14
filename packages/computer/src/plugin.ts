@@ -31,7 +31,7 @@ import type { GitGuard, SessionTree } from './gitdir.js';
  * One runtime, one provider for the `computer:` scheme and three tools, all
  * built from the options and registered before the host exists. The runtime is
  * an option rather than a package of its own because a host serves one provider
- * per scheme - decision `one-computer-provider-with-runtimes-as-options`.
+ * per scheme.
  *
  * The options are checked against `optionsSchema` before `apply` runs. The
  * values of a map - `env`, `needs`, a profile - are what the schema cannot
@@ -277,8 +277,7 @@ export const profilesOf = (value: unknown): Record<string, Profile> | undefined 
       ...(said.disposableAlone === true ? { disposableAlone: true } : {}),
       // And whether the session that made the machine brings its folder in,
       // which is the host's filesystem inside a machine the client chose to be
-      // somewhere else - decision
-      // `a-session-folder-reaches-a-machine-only-where-its-profile-allows`.
+      // somewhere else.
       ...(said.sessionFolder === true ? { sessionFolder: true } : {}),
       // And where a machine made for a session works: in the host's tree, the
       // default, or in a copy of it of its own - decision
@@ -401,8 +400,7 @@ export interface StretchBook {
  * them.
  *
  * Charged to the host, because a machine on a runtime that only lists is
- * nobody's: it was not made here, so no owner was recorded for it - decision
- * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`, read the
+ * nobody's: it was not made here, so no owner was recorded for it, read the
  * other way round.
  *
  * Two events rather than one call, because a listing is not the only thing that
@@ -432,8 +430,7 @@ export const makesMachines = (runtime: ComputerRuntime | undefined): boolean =>
  * The pools a stretch is charged to.
  *
  * The owner as written, the team and the project within it, each only when the
- * record has it - decision
- * `agent-usage-is-charged-to-owner-team-and-project-pools`.
+ * record has it.
  */
 const poolsOf = (claimed: Claim): string[] => [
   claimed.owner,
@@ -481,15 +478,13 @@ export const apply: Plugin['apply'] = (host, options) => {
   const prefix = options.prefix as string | undefined ?? defaults.prefix;
   /*
    * How a nested host is started in a machine, when the machine's profile says
-   * nothing: the daemon's own program, in stdio mode - decision
-   * `a-nested-host-is-configured-by-the-machine-profile-only`.
+   * nothing: the daemon's own program, in stdio mode.
    */
   const hostDefault = options.host as string[] | undefined ?? defaults.host;
   /*
    * The session setting, which is how a person names the machine a session
    * runs in. Contributed unless the option switches it off, and its default is
-   * one machine the operator chose rather than every session sharing one -
-   * decision `a-plugin-may-contribute-a-session-key`.
+   * one machine the operator chose rather than every session sharing one.
    */
   const sessionSetting = options.sessionSetting !== false;
   const sessionDefault = options.sessionDefault as string | undefined ?? '';
@@ -526,7 +521,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * A box is on a machine somebody else set up, so it is an operator's line in
    * the configuration rather than anything a session or a person may ask this
    * host for: what it adds is a runtime that answers, and nothing it can be
-   * asked to make - decision `a-machine-runtime-is-named-for-its-maker`.
+   * asked to make.
    */
   const ssh = sshOptionsOf(options.ssh);
   /*
@@ -658,8 +653,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * One check for all four routes - a create body, a `devcontainer://` session
    * setting, the picker's row and a relay's `connect` - because a route that
    * checked for itself is a route the operator's list does not cover, and the
-   * folder is the whole of what a definition can reach - decision
-   * `a-dev-container-is-made-only-from-a-folder-the-operator-allows`.
+   * folder is the whole of what a definition can reach.
    *
    * It answers with the folder rather than a yes, so no route can pass on the
    * spelling it was given: the CLI is handed this one and the container is
@@ -706,8 +700,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     configDir: host.configDir,
     log: noted,
     // How a machine starts its nested host, read from the machine's own record
-    // as the profile it names says - decision
-    // `a-nested-host-is-configured-by-the-machine-profile-only`. The profile's
+    // as the profile it names says. The profile's
     // own `host` wins over the plugin's, which is the one thing a profile can
     // say about it.
     hosts: Object.fromEntries(Object.entries(profiles ?? {}).map(([key, one]) => [key, one.host])),
@@ -734,7 +727,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * One entry today, and this map is where a later runtime is added: the plugin
    * holds one runtime per value, and every road into a machine - the provider,
    * the tools, `reach` - goes through the router, so nothing outside it knows
-   * how many there are - decision `a-machine-runtime-is-named-for-its-maker`.
+   * how many there are.
    * The two differ in what they can be asked, not in how they are reached:
    * docker makes machines and ssh only lists them.
    */
@@ -749,8 +742,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    *
    * Handed the host's own `secret` and nothing of this plugin's: the vault is
    * the host's, and a need is read for the machine's owner and team rather than
-   * for whoever loaded the option - decision
-   * `a-secret-is-named-in-a-host-team-or-user-scope`.
+   * for whoever loaded the option.
    */
   const secret = async (name: string, work: SecretWork): Promise<string> => host.secret(name, work);
 
@@ -759,8 +751,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    *
    * What a machine costs is known only once it has stopped, so a stretch
    * opens when a machine starts and is written whole when it stops: `at` is when
-   * it began and `seconds` how long it ran - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`. The
+   * it began and `seconds` how long it ran. The
    * epoch it began at is the whole of it that is held, because the owner is read
    * at the other end, where the machine's own labels are still there to read.
    */
@@ -911,8 +902,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * from them.
    *
    * A machine on such a runtime is never started or stopped by this host, so the
-   * only moment that says it is up is a listing that found it reachable -
-   * decision `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`,
+   * only moment that says it is up is a listing that found it reachable,
    * read the other way round: nobody here made it, so the host pays. Every
    * listing feeds the book rather than only the one at startup, because a
    * stretch is what the time between two listings is, and a host whose only
@@ -1227,8 +1217,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    *
    * Another daemon's machine is left where it is, with one line saying so: a
    * daemon neither enters another's machine nor removes it, which is the rule
-   * every disposable machine already follows - decision
-   * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps`. One
+   * every disposable machine already follows. One
    * with no daemon label at all is nobody's, and goes.
    *
    * A removal Docker refuses costs the removal and not the answer: the line
@@ -1289,8 +1278,7 @@ export const apply: Plugin['apply'] = (host, options) => {
        * daemon that made it and keeps that session adopts it: a session id is
        * the client's to choose and two daemons on the same Docker keep
        * sessions under the same ones, so the machine's own `ahpd.host` is what
-       * says whose it is - decision
-       * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps`.
+       * says whose it is.
        */
       const mine = one.host === host.hostId;
       const adopted = one.disposable !== undefined && one.session !== undefined && mine && await host.sessionKept(one.session);
@@ -1395,8 +1383,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      * the git directory beside it does - that directory is not under the folder
      * either, so mounting it alone would put part of a repository the session
      * cannot see inside the machine. The folder itself still reaches the
-     * machine where the profile says `sessionFolder` - decision
-     * `a-session-folder-reaches-a-machine-only-where-its-profile-allows`.
+     * machine where the profile says `sessionFolder`.
      */
     if (asked.repository !== undefined && !repository) {
       noted(`the profile does not say sessionRepository, so ${asked.folder} is mounted without ${asked.repository}, the repository it is in, and without its git directory`);
@@ -1459,8 +1446,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * How a backend reaches one of these machines.
    *
    * A descriptor rather than a running process: the backend owns the spawn and
-   * its stdio, and this only says what to spawn - decision
-   * `a-backend-reaches-a-computer-through-a-port`. What to spawn is the routed
+   * its stdio, and this only says what to spawn. What to spawn is the routed
    * runtime's own answer, because what reaches a machine is a property of what
    * made it: a `docker exec` here, an `ssh` there.
    *
@@ -1501,8 +1487,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * takes - so a dev container is reached through its CLI, an image through
    * Docker, and a box over ssh, without any of them being spelled twice. The
    * recipe is read back from the machine, so a machine found by a daemon that
-   * did not make it still starts its own host - decision
-   * `a-cofold-session-in-a-computer-runs-in-a-nested-host`.
+   * did not make it still starts its own host.
    */
   const nestedHost: NonNullable<ComputerPort['nested']> = async (id, asked) => {
     const held = await made.inspect(id);
@@ -1519,8 +1504,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     /*
      * A machine off this host is handed nothing of this host's vault: the ahpd
      * on the box holds what it was given by hand there, and a value read from
-     * the vault would be written into the remote command that starts it -
-     * decision `a-nested-host-is-configured-by-the-machine-profile-only`, which
+     * the vault would be written into the remote command that starts it, which
      * also keeps a session in such a machine clear of the refusal above, since
      * it never reaches it.
      */
@@ -1589,8 +1573,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    *
    * The runtime's own call, under the id a caller holds: a file arriving on a
    * command's input, as root, and read-only once it is there is the runtime's
-   * business - decision
-   * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. Two sessions
+   * business. Two sessions
    * in one machine each get their own, because the paths are the ones this host
    * wrote and they are per session.
    */
@@ -1612,8 +1595,7 @@ export const apply: Plugin['apply'] = (host, options) => {
      *
      * The host asks this before it starts any backend, so a session in a box
      * another host reaches runs nested whatever its backend declared: what
-     * cannot be reached is not the agent's to know - decision
-     * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. The
+     * cannot be reached is not the agent's to know. The
      * router answers for the id's prefix, so a machine of a runtime this host
      * does not serve is the fallback runtime's answer rather than a throw.
      */
@@ -1675,11 +1657,8 @@ export const apply: Plugin['apply'] = (host, options) => {
      *
      * The daemon that made it is the fourth, and it is said rather than kept
      * quiet: a machine another daemon made is still alone for its own session,
-     * and a machine this daemon neither made nor removes is not one to hand out
-     * - decision
-     * `a-daemon-adopts-only-the-disposable-machines-whose-session-it-keeps` for
-     * the daemon label, `a-disposable-alone-machine-refuses-another-session`
-     * for the refusal.
+     * and a machine this daemon neither made nor removes is not one to hand out,
+     * for the daemon label: a machine made alone for one session refuses another.
      */
     keptFor: async (id) => {
       const held = await made.inspect(id);
@@ -1726,8 +1705,7 @@ export const apply: Plugin['apply'] = (host, options) => {
        * the file. What the session's harness needs is resolved by `manifestOf`
        * exactly as it is for a profile, and the runtime hands the result to the
        * CLI: a mount as `--mount`, a read-only one and an environment need
-       * through the override config's own `mounts` and `containerEnv` - decision
-       * `the-host-hands-an-agents-machine-needs-to-the-machine-maker`.
+       * through the override config's own `mounts` and `containerEnv`.
        */
       const devPrefix = 'devcontainer://';
       if (asked.source.startsWith(devPrefix)) {
@@ -1774,8 +1752,7 @@ export const apply: Plugin['apply'] = (host, options) => {
         });
         // Counted before it is made, and with the same count a write to
         // `computer://<name>` passes: a machine made for a session is a machine
-        // this host holds - decision
-        // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+        // this host holds.
         // The count and the create are one turn, so a second session starting
         // while this one is making its machine counts the machine being made.
         return inTurn(made, async () => {
@@ -1831,8 +1808,7 @@ export const apply: Plugin['apply'] = (host, options) => {
        *
        * Only where the profile says `sessionFolder`. The folder is the client's
        * and this is the host's filesystem inside a machine, so it reaches one
-       * machine the profile opted in - decision
-       * `a-session-folder-reaches-a-machine-only-where-its-profile-allows`. A
+       * machine the profile opted in. A
        * profile's own `folder` is the operator's and is untouched either way.
        */
       const chosen: Profile = {
@@ -1871,8 +1847,7 @@ export const apply: Plugin['apply'] = (host, options) => {
         for: asked.provider,
         /*
          * Whose the machine is, which the host hands down from the session that
-         * asked for it and the machine keeps as a label - decision
-         * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+         * asked for it and the machine keeps as a label.
          */
         ...(asked.owner === undefined ? {} : { owner: asked.owner }),
         ...(asked.team === undefined ? {} : { team: asked.team }),
@@ -1885,8 +1860,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       });
       // Counted before it is made, and with the same count a write to
       // `computer://<name>` passes: a machine made for a session is a machine
-      // this host holds - decision
-      // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+      // this host holds.
       // The count and the create are one turn, so a second session starting
       // while this one is making its machine counts the machine being made.
       await inTurn(made, async () => {
@@ -2032,8 +2006,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       // An adopted container carries no label this host could find it by, so
       // the record beside the configuration is what makes it a computer: it is
       // listed from there, inspected from there, metered from there and
-      // forgotten from there when it is removed - decision
-      // `a-relay-container-is-owned-by-who-connected`.
+      // forgotten from there when it is removed.
       onAdopted: (one, id) => {
         claimAdopted(host.configDir, id, one.owner === undefined ? {} : { owner: one.owner }, noted);
       },
@@ -2056,8 +2029,7 @@ export const apply: Plugin['apply'] = (host, options) => {
        *
        * A relay container is a computer like any other: the host fills the
        * connection's owner into the ask, and the first creator pays, so a
-       * container a session made earlier keeps the owner it was made with -
-       * decision `a-relay-container-is-owned-by-who-connected`. Its stretch
+       * container a session made earlier keeps the owner it was made with. Its stretch
        * opens here rather than at the next listing, so a container this
        * connection started is metered from now.
        */
@@ -2161,8 +2133,7 @@ export const apply: Plugin['apply'] = (host, options) => {
        * file defines, made when the session starts. The row is offered only
        * while no computer is labelled with the folder, so a person who already
        * made it picks the ordinary `computer://` row and nothing is made
-       * twice - decision
-       * `a-dev-container-is-a-computer-made-from-its-devcontainer-json`.
+       * twice.
        */
       /*
        * The folder the session would work in, which a client sends as a URI.
@@ -2231,7 +2202,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    * The timers are cleared rather than fired. A machine whose delay is cut
    * short is one removed out from under a session that may be resumed when this
    * daemon starts again, and the startup scan hands a machine it finds the
-   * delay back - decision `a-plugin-is-told-when-the-host-closes`. The removals
+   * delay back. The removals
    * already running are waited for, because half a removal is worse than none:
    * a machine with its work fetched out and its volume still there.
    */

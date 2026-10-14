@@ -4,8 +4,7 @@
  * A need is written `{ "$secret": "<name>" }` rather than as the value itself,
  * which is what keeps a credential out of a configuration file and out of a
  * git repository holding one. The name carries its scope, so it is read for the
- * machine's owner and its team and not for whoever happens to be asking -
- * decision `a-secret-is-named-in-a-host-team-or-user-scope`.
+ * machine's owner and its team and not for whoever happens to be asking.
  *
  * The read is where the machine is made, not where the option was loaded:
  * nothing owns a load, so a `team:` or `user:` name is out of scope there by

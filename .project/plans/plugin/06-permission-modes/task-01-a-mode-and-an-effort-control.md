@@ -9,7 +9,7 @@ refs:
   - code://packages/agent-claude/src/claude.ts#L126-L196 - the properties, labels and scopes mirrored
   - file:///github/cofold/packages/agents/src/policy/modes.ts - `policyOf`, now in the harness
   - file:///github/cofold/packages/papo/src/agent.ts - the call site that moved to the core's mapping
-  - code://.project/decisions/permission-modes-live-in-the-harness.md - the mode set and the two host facts
+  - code://.project/plans/plugin/06-permission-modes/plan.md - the mode set and the two host facts
   - code://test/agent-cofold-modes.test.ts - the cases
 ---
 

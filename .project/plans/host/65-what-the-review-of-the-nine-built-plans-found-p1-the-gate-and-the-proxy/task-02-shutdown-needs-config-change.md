@@ -12,7 +12,7 @@ refs:
 
 ## Objective
 
-`shutdown` needs `config:change` and `getManagedSettingsDiagnostics` needs `diagnostics:network`, so every served method is in a table (decision [shutdown-needs-config-change](../../../decisions/shutdown-needs-config-change.md)).
+`shutdown` needs `config:change` and `getManagedSettingsDiagnostics` needs `diagnostics:network`, so every served method is in a table ([A client's `shutdown` needs `config:change`, and the root connection always may](../../../../docs/HOST.md)).
 
 ## Files
 

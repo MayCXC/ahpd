@@ -8,7 +8,7 @@ refs:
   - "[code://packages/agent-pi/src/session.ts#L565-L570](../../../../packages/agent-pi/src/session.ts#L565-L570) - `setConfig`, which only takes `projectTrust`"
   - "[code://packages/agent-claude/src/claude.ts#L166-L189](../../../../packages/agent-claude/src/claude.ts#L166-L189) - the sibling's `permissionMode`"
   - "[code://packages/agent-cofold/src/agent.ts#L115-L135](../../../../packages/agent-cofold/src/agent.ts#L115-L135) - the other sibling's modes and their meanings"
-  - "[code://.project/decisions/permission-modes-live-in-the-harness.md](../../../../.project/decisions/permission-modes-live-in-the-harness.md) - what each of the six modes means"
+  - "[code://.project/plans/plugin/06-permission-modes/plan.md](../../plugin/06-permission-modes/plan.md) - what each of the six modes means"
 ---
 
 ## Objective

@@ -234,8 +234,7 @@ it('takes the credential away when it runs out, and says so', async () => {
  * before it sends anything. It is `true` for a connection whose commands would
  * be refused without a credential, and `false` for one the host already treats
  * as somebody - root, or carrying a principal - because a prompt for a token
- * nothing needs is a client that never creates a session - decision
- * `an-authorized-connection-is-told-sign-in-is-not-required`.
+ * nothing needs is a client that never creates a session.
  */
 
 it('tells a root connection the host\'s sign-in is not required, and a personal one that it is', async () => {

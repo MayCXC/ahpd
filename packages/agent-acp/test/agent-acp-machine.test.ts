@@ -209,8 +209,7 @@ it('gives a host spawn none of the machine env', async () => {
     uri: 'ahp-session:/host',
     chatUri: 'ahp-chat:/host',
     settings: {},
-    // This case is not about trust, and an absent answer is untrusted -
-    // decision `a-folder-is-untrusted-until-a-client-says-otherwise`.
+    // This case is not about trust, and an absent answer is untrusted.
     trusted: () => true,
     schema: () => ({ type: 'object', properties: {} }),
     emit: (_channel: string, action: Bag) => {

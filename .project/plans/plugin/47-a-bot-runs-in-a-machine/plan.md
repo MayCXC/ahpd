@@ -8,9 +8,6 @@ revalidated: 2026-10-13
 requires:
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
 decisions:
-  - decisions/a-bot-owns-one-folder.md
-  - decisions/a-bot-from-a-profile-gets-its-own-machine-and-a-named-machine-is-shared.md
-  - decisions/a-bot-keeps-its-own-agent-state.md
 refs:
   - "[code://packages/bot/src/record.ts#L76-L77](../../../../packages/bot/src/record.ts#L76-L77) - `computer`, kept on the record and never checked"
   - "[code://packages/bot/src/start.ts#L27-L38](../../../../packages/bot/src/start.ts#L27-L38) - `sessionFor`, which passes `computer` as session config"
@@ -56,9 +53,9 @@ resourceWrite bot://<slug> -> botProvider.write -> check computer -> sessionFor 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A bot owns one folder, and every session the host starts for it runs there](../../../decisions/a-bot-owns-one-folder.md) | The decision file, 2026-10-07 |
-| 2 | [A bot from a profile gets its own machine, and a named machine is shared](../../../decisions/a-bot-from-a-profile-gets-its-own-machine-and-a-named-machine-is-shared.md) | Softov, 2026-10-13, "Profile: own; machine: shared" |
-| 3 | [A bot keeps its own agent state, and its owner pays for the machine](../../../decisions/a-bot-keeps-its-own-agent-state.md) | Softov, 2026-10-13, "The bot's own" |
+| 1 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/BOTS.md) | The decision file, 2026-10-07 |
+| 2 | A bot from a profile gets its own machine, and a named machine is shared | Softov, 2026-10-13, "Profile: own; machine: shared" |
+| 3 | A bot keeps its own agent state, and its owner pays for the machine | Softov, 2026-10-13, "The bot's own" |
 
 | What | Source | Task |
 | --- | --- | --- |

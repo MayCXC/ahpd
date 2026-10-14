@@ -49,7 +49,7 @@ A live change of either key reaches a running claude session: a tool switched of
 
 ## Resume
 
-Step 7 stopped the task on 2026-10-13: the Claude Agent SDK keeps the old tools when the `ahp` server is declared again, so re-declaring it was a no-op. Softov took option 1 below the same day - "Remove, then add again" - recorded in [the decision](../../../../decisions/a-live-tool-change-removes-the-ahp-server-then-adds-it-again.md), and steps 8 to 11 are built on it. Every step of the task is now built; nothing here is reviewed or set to done.
+Step 7 stopped the task on 2026-10-13: the Claude Agent SDK keeps the old tools when the `ahp` server is declared again, so re-declaring it was a no-op. Softov took option 1 below the same day - "Remove, then add again" - and steps 8 to 11 are built on it. Every step of the task is now built; nothing here is reviewed or set to done.
 
 ### Step 6: what the SDK does with a server of the same name
 

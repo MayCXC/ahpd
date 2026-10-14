@@ -2,8 +2,8 @@
 title: ahpd installs the daemon's own @ahpd/sdk version beside the plugins, and npm checks no peers
 status: accepted
 date: 2026-09-29
-supersedes: decisions/a-plugin-uses-the-sdk-npm-installs-beside-it.md
 refs:
+  - git://21a44887 - the superseded decision, as committed
   - "[code://packages/server/src/install.ts](../../packages/server/src/install.ts) - `npm install --prefix <config dir>` for install and update"
   - "[code://packages/server/src/plugins.ts](../../packages/server/src/plugins.ts) - the loader checks each plugin's `@ahpd/sdk` peer range against the daemon's version"
 ---

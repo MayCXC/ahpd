@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-backend-says-which-transcript-id-a-turn-was-written-as.md
 refs:
   - "[code://packages/sdk/src/host.ts#L3614-L3679](../../../../packages/sdk/src/host.ts#L3614-L3679) - the per-chat emit, where a turn's sender is read, `dispatch` happens and `turn_start` fired"
   - "[code://packages/sdk/src/host.ts#L4322-L4331](../../../../packages/sdk/src/host.ts#L4322-L4331) - `senders` and `senderOf`, held only while a turn runs"
@@ -55,7 +54,7 @@ session owner -> SessionStore.owner -> never on a summary
 | A host with no users directory sends neither | host/34: no owner is recorded there | 01, 02 |
 | A turn sent before this was kept has no `_meta.sender` | (defaulted: nothing to read) | 02 |
 | A historic turn's sender rides on its message, `turn.message._meta.sender`, in snapshots and `chat/turnsLoaded`; the live `chat/turnStarted` carries `action._meta.sender`. `Turn`, `ActiveTurn` and `ChatTurnsLoadedAction` declare no `_meta` | Softov, 2026-10-02, asked "Where does a turn's sender ride?": "On the message" | 02 |
-| [A backend says which transcript id a turn was written under, and the host keeps the sender under that id too](../../../decisions/a-backend-says-which-transcript-id-a-turn-was-written-as.md) | Softov, 2026-10-02, asked "How should Claude's turns keep their sender after a restart?": "Claude tells us its id" | 02 |
+| A backend says which transcript id a turn was written under, and the host keeps the sender under that id too | Softov, 2026-10-02, asked "How should Claude's turns keep their sender after a restart?": "Claude tells us its id" | 02 |
 
 ## Tasks
 

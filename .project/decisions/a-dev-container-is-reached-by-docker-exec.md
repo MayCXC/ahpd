@@ -2,8 +2,8 @@
 title: A dev container is made by the Dev Container CLI and reached by docker exec
 status: accepted
 date: 2026-10-02
-supersedes: decisions/a-dev-container-is-made-by-the-dev-container-cli.md
 refs:
+  - git://34140bed - the superseded decision, as committed
   - "[code://packages/computer/src/plugin.ts#L563-L595](../../packages/computer/src/plugin.ts#L563-L595) - `reach` builds `devcontainer exec` for a dev container today"
   - "[code://packages/computer/src/devcontainer.ts#L311-L312](../../packages/computer/src/devcontainer.ts#L311-L312) - `inside()`, the relay's probe, installs and config write through the CLI"
   - "[code://packages/computer/src/runtime.ts#L767-L786](../../packages/computer/src/runtime.ts#L767-L786) - `exec` for the `computer_exec` tool"

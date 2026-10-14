@@ -3,8 +3,7 @@
  *
  * A provider is an endpoint and the APIs it answers in. A model name is
  * `<maker>/<name>` and lists the providers that serve it, each under that
- * provider's own model id - decision
- * `a-model-is-named-by-its-maker-and-runs-on-a-provider`. Three are built in
+ * provider's own model id. Three are built in
  * and are there without any configuration, and the file may add one or replace
  * one, because an endpoint that moves upstream is a default rather than a fact.
  *

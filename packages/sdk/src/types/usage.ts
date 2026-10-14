@@ -2,8 +2,7 @@
  * What the host records about the work it did, and what a pool has been charged.
  *
  * Two kinds of record share one base and one port: model use, written by the
- * proxy and by the agent meter, and computer time - decision
- * `usage-and-computer-time-are-two-records-behind-one-port`. The base says
+ * proxy and by the agent meter, and computer time. The base says
  * who, where and what it cost, so a listing by agent or computer is a filter
  * and never a join.
  *
@@ -12,12 +11,11 @@
  */
 
 /**
- * Who a piece of work belongs to - decision `work-is-owned-by-a-typed-reference`.
+ * Who a piece of work belongs to.
  *
  * `root:<host>` is a root connection on the named daemon, and `plugin:<name>` is
  * a plugin acting on its own host as the principal it was configured as - a
- * plugin is not a person, so its work is nobody's but its own. Decision
- * `plugin-contributes-host-options`.
+ * plugin is not a person, so its work is nobody's but its own.
  */
 export type Owner = `user:${string}` | `team:${string}` | `project:${string}` | `root:${string}` | `plugin:${string}`;
 
@@ -67,7 +65,7 @@ export interface UsageBase {
 
 /** The model a call ran on, and the tokens it used. */
 export interface ModelCall {
-  /** `<maker>/<name>` - decision `a-model-is-named-by-its-maker-and-runs-on-a-provider`. */
+  /** `<maker>/<name>`. */
   name: string;
   /** Where it ran, such as `openrouter` or `anthropic`. */
   provider?: string;
@@ -127,8 +125,7 @@ export interface UsageTotal {
 }
 
 /**
- * Where the host keeps usage, and what a pool has been charged - decision
- * `the-usage-store-answers-live-totals`.
+ * Where the host keeps usage, and what a pool has been charged.
  */
 export interface Usage {
   /**
@@ -167,7 +164,7 @@ export interface Usage {
   records(pool: string, from?: string, until?: string): Promise<UsageEntry[]>;
   /**
    * What the records between `from` and `until` (ISO 8601) were charged,
-   * summed by the keys in `by` - decision `usage-is-grouped-by-the-host`.
+   * summed by the keys in `by`.
    *
    * One row per distinct set of key values, each record counted once however
    * many pools it is charged to. `keep` is asked with a record's pools, and a

@@ -9,8 +9,8 @@ refs:
   - code://packages/server/src/plugins.ts - where `resolvePlugin` already lives and `loadPlugins` joins it
   - code://packages/server/src/version.ts#L20-L37 - the nearest-manifest walk `readManifest` mirrors from a resolved entry
   - code://packages/server/src/update.ts#L28-L68 - `parse`, which `satisfies` in `compat.ts` is built on rather than a second parser
-  - code://.project/decisions/plugin-compat-is-checked-before-import.md - the check and why it is before `import()`
-  - code://.project/decisions/plugin-manifest-is-package-json.md - the `ahpd` key the reader honours and the drift it reports
+  - code://docs/PLUGINS.md - the check and why it is before `import()`
+  - code://docs/PLUGINS.md - the `ahpd` key the reader honours and the drift it reports
   - code://packages/sdk/src/version.ts - `sdkVersion()`, the version a plugin's range is checked against
   - code://packages/sdk/src/plugins.ts - `foldHostOptions`, which this task calls with what `apply` produced
   - code://packages/sdk/src/types/plugin.ts - `Plugin`, `PluginHost` and `Contribution`, which the shape check enforces

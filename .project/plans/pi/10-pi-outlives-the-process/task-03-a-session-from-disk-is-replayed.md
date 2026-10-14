@@ -11,7 +11,7 @@ refs:
   - "[code://packages/agent-pi/src/session.ts#L849](../../../../packages/agent-pi/src/session.ts#L849) - `endPoint`"
   - "[code://packages/agent-pi/src/catalog.ts#L51-L65](../../../../packages/agent-pi/src/catalog.ts#L51-L65) - `stateFile`, which finds a session's file"
   - "[code://packages/agent-pi/README.md#L66](../../../../packages/agent-pi/README.md#L66) - the catalogue paragraph that says a row from disk opens empty"
-  - "[code://.project/decisions/a-failed-transcript-read-is-not-an-empty-session.md](../../../decisions/a-failed-transcript-read-is-not-an-empty-session.md) - what the host does with `undefined`"
+  - "[code://.project/plans/host/05-transcript-reads/plan.md](../../host/05-transcript-reads/plan.md) - what the host does with `undefined`"
   - npm://@earendil-works/pi-coding-agent@^0.87.1 - `SessionManager.findById`, `SessionManager.open(path)`, `getBranch()`, and the `SessionEntry` and message types in `dist/core/session-manager.d.ts`
 ---
 
@@ -30,7 +30,7 @@ refs:
 
 ## Steps
 
-1. Apply decision [a-pi-session-from-disk-is-replayed-through-the-live-mapping](../../../decisions/a-pi-session-from-disk-is-replayed-through-the-live-mapping.md).
+1. Apply [A pi session from disk is replayed through the live mapping, and its turns keep their entry ids](./plan.md).
 2. Read the branch with `SessionManager.findById` and `SessionManager.open(...).getBranch()`, through the loader from task 01.
 3. A user message opens a turn; assistant text and thinking become `message_update` deltas; each tool call becomes `tool_execution_start`, a ready as the hook gives it, and `tool_execution_end` with its tool result; an assistant message with `stopReason: 'error'` ends its turn as `error` with its message; one with `stopReason: 'aborted'` ends it as `cancelled`; the turn is `complete` otherwise.
 4. Entries with no turn meaning (the leading `system` message, `model_change`, `thinking_level_change`, `context_edit`, labels, session info) are skipped; a `model_change` sets the turn's `usage.model` if it applies.

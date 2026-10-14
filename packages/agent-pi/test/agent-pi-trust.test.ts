@@ -9,8 +9,7 @@ import { opened, settled } from './fake-pi.js';
  * `.pi/settings.json` load, which is code and configuration a person who did
  * not write the folder has never read. The host answers for a folder and never
  * the folder for itself, so the host's answer is what narrows the session's
- * own `projectTrust` - and an absent answer is untrusted, decision
- * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+ * own `projectTrust` - and an absent answer is untrusted,
  */
 
 /** What the backend was opened with, once the session has started a turn. */

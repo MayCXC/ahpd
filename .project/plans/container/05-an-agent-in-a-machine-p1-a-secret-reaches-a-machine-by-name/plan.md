@@ -12,7 +12,6 @@ changes: []
 creates: []
 decisions:
   - decisions/a-dev-container-is-reached-by-docker-exec.md
-  - decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L606](../../../../packages/computer/src/plugin.ts#L606) - `docker exec -e KEY=VALUE`, inside `reach`, the value in argv"
   - "[code://packages/computer/src/plugin.ts#L579](../../../../packages/computer/src/plugin.ts#L579) - `devcontainer exec --remote-env KEY=VALUE`, which goes away with container/03's switch to `docker exec`"
@@ -89,7 +88,7 @@ manifest env -> runtime.run() -> must([run, -e, KEY=VALUE, ...])                
 | The needs a machine was made with (names and `$secret` references, never values) are recorded in its `computers.json` entry, and a re-read after a restart uses those rather than the agent's registered needs | Softov, 2026-10-05, asked "after a restart, a session-time machine's vault values are re-read with the agent's registered needs, not the needs the session asked with: record the session's needs with the machine?": record them | 01 |
 | The setting is the profile's `secretUnreadable: "fail" \| "drop"`, `"fail"` when absent, and a machine made without a profile always fails | (defaulted: a profile is the machine's recipe, and its other per-machine choices, `disposable`, `sessionFolder` and `host`, are flat fields of `Profile` in [code://packages/computer/src/manifest.ts#L34-L100](../../../../packages/computer/src/manifest.ts#L34-L100) read by `profilesOf` in [code://packages/computer/src/plugin.ts#L142-L178](../../../../packages/computer/src/plugin.ts#L142-L178)) | 01, 03 |
 | The fake Docker fails on an absent `-e NAME`, stricter than Docker, which drops it silently | (defaulted: a dropped `Spawn.env` must fail a test rather than leave a variable missing) | 01 |
-| A `$secret` is resolved by the vault before it reaches this plan; this plan only delivers | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md) | - |
+| A `$secret` is resolved by the vault before it reaches this plan; this plan only delivers | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | - |
 | For now the names the `docker` program itself reads (`PATH`, `HOME`, `DOCKER_HOST`) stay `NAME=VALUE` in argv, and every other name goes by name; the list is one constant beside `byName`, so it can grow or change | Softov, 2026-10-03, asked "how does a variable docker itself reads reach the machine?": "those stay NAME=VALUE, every other name by name" | 01 |
 | For now a dev container's plain values reach it as `containerEnv` in the override config `container/03` task 09 writes 0600 | `container/03`, Softov, 2026-10-03: "`containerEnv` in the override config" | 02 |
 | For now a vault-named value reaches a dev container on each `docker exec` as `-e NAME`, never through `up`, since the real CLI puts `containerEnv` values in its own `docker run` argv, its log and `docker inspect` | Softov, 2026-10-03, asked how a secret reaches a dev container: "Per docker exec, by name" | 02 |

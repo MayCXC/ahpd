@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/permission-modes-live-in-the-harness.md
 refs:
   - "[code://packages/agent-cofold/src/pauses.ts#L43-L178](../../../../packages/agent-cofold/src/pauses.ts#L43-L178) - `owePause`, `payPause`, `rejoin`, `route`, `stopNow` and `stop`: the workaround for a `run()` handle that took no answer"
   - "[code://packages/agent-cofold/src/runs.ts#L78-L228](../../../../packages/agent-cofold/src/runs.ts#L78-L228) - `settleTurn`, `apply` and `read`: the pause bookkeeping and the synthesized `run.finished`"
@@ -93,7 +92,7 @@ tool.writes(input) -> the changeset's before and after, when the file is inside 
 | `PERMISSION_MODES` | agent 06 | task 03 |
 | `PERMISSION_MODE_DESCRIPTIONS` | agent 06 | task 03 |
 | `EFFORT_LEVELS`, `effortOf` and the type `EffortLevel` | agent 06 | task 03 |
-| `PermissionModeRules.isEdit` is optional, and its default is `tool.writes !== undefined` | agent 06 | no change, because ahpd's `isEdit` reads `effects.writes`, which a host tool declares ([decision](../../../decisions/permission-modes-live-in-the-harness.md)) |
+| `PermissionModeRules.isEdit` is optional, and its default is `tool.writes !== undefined` | agent 06 | no change, because ahpd's `isEdit` reads `effects.writes`, which a host tool declares ([decision](../06-permission-modes/plan.md)) |
 | `acceptEdits` judges the file `tool.writes(input)` names, else `input.path` | agent 06 | task 05: `memory_write` under `acceptEdits` now asks, a test |
 | A `params.reasoning` turns `features.reasoning` on | model-openai-compat 0.2.0 | task 03 removes the forced feature |
 | `tool.proposed.subject`, and `Tool.subject` on every cofold tool | tools 02, decision 117 | task 04 |
@@ -161,7 +160,7 @@ tool.writes(input) -> the changeset's before and after, when the file is inside 
 
 | Decision | Tasks |
 | --- | --- |
-| [A permission mode is a harness policy, and the thinking level is a model request](../../../decisions/permission-modes-live-in-the-harness.md): ahpd supplies `inside` and `isEdit` | 03, 05 |
+| [A permission mode is a harness policy, and the thinking level is a model request](../06-permission-modes/plan.md): ahpd supplies `inside` and `isEdit` | 03, 05 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -2,9 +2,10 @@
 title: A machine commits in a git directory of its own, and ahpd fetches the work into the host's repository
 status: accepted
 date: 2026-10-06
-supersedes: decisions/a-machines-git-directory-is-read-only-but-what-a-commit-writes.md
 refs:
+  - git://56d881c7 - the superseded decision, as committed
   - "[code://packages/computer/src/gitdir.ts](../../packages/computer/src/gitdir.ts) - `gitMounts`, the writable allowlist this replaces"
+  - "[code://docs/COMPUTER.md](../../docs/COMPUTER.md) - the machine's own git directory, the read-only objects and the bundle fetch, written out"
   - "[code://packages/sdk/src/repo/hardened.ts#L11-L30](../../packages/sdk/src/repo/hardened.ts#L11-L30) - the argv every host git runs with"
   - git://0cdbb95 - the superseded decision, as committed
   - https://git-scm.com/docs/git-bundle - a bundle is refs and a pack, read by `git fetch` like a remote
@@ -23,10 +24,12 @@ No list of writable paths closes this, because the host's own git writes into ev
 Nothing of the host's git directory is mounted writable in a machine.
 A machine with a repository gets a git directory of its own, in a volume, and commits there; ahpd brings the work back by fetching it into the host's repository, where git checks every object and ref and follows nothing the machine wrote.
 
+The layout underneath is written out in [docs/COMPUTER.md](../../docs/COMPUTER.md): the machine's own git directory, the read-only objects and the bundle the work comes back as.
+
 - A profile's `sessionTree` says where the machine works `(defaulted: the name mirrors sessionFolder and sessionRepository beside it)`: `shared`, the default, binds the host's folder read-write as before, so the host sees the agent's edits as it makes them; `copy` gives the machine its own checkout in its volume, at the folder's path, with nothing of the host's folder writable, and its work reaches the host only as commits fetched by bundle.
 - Under `copy`, the session's changes view reads the host's folder, which holds the fetched commits and nothing uncommitted `(defaulted: simpler than streaming a diff out of the machine, and the view stays git on the host)`.
-- The machine's git directory reads the host's objects through `objects/info/alternates`, from the host's `objects/` mounted read-only `(defaulted: read-only, the machine only reads; a bundle or a fresh clone would copy the whole history into every machine)`.
-- The work comes back as a bundle the machine's git writes to standard output through `docker exec`, saved by ahpd to a private file and fetched by the host's git with `transfer.fsckObjects` into `refs/ahpd/machines/<machine>/<branch>` `(defaulted: a bundle on a pipe is data; a fetch from a path in the machine's volume would have the host's git run `upload-pack` against a repository the machine wrote, reading its config)`.
+- The machine's git directory reads the host's objects through read-only alternates rather than a copy `(defaulted: a bundle or a fresh clone would copy the whole history into every machine)`.
+- The work comes back as a bundle on a pipe, fetched with object checking on, rather than from a path in the machine's volume `(defaulted: a bundle on a pipe is data; a fetch from a path inside the machine would have the host's git run `upload-pack` against a repository the machine wrote, reading its config)`.
 - The session's branch on the host moves to what was fetched only when that is a fast-forward and the host's index holds nothing staged; otherwise the commits wait under the hidden ref and the log says so `(defaulted: never rewrite a branch or an index a person moved)`.
 
 `gitGuard` takes `fetch`, this decision and the default, and `open`, unchanged: the git directory mounted writable as a whole, the operator's own choice for a machine they trust with it.

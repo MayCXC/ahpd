@@ -26,7 +26,7 @@ import type { ServedFacts } from './served.js';
  *
  * `user:write` says a caller manages people; what it may hand out is bounded by
  * what it holds, or granting a role it does not have is `admin` under another
- * name - decision `a-caller-gives-only-the-grants-it-holds`. The terminal's own
+ * name. The terminal's own
  * run has no caller to hold to anything, and the deployment token holds every
  * grant. A served call with nobody behind it is refused here as the registry's
  * hook refuses it, so the bound holds whatever hook the registry was built with.
@@ -120,8 +120,7 @@ export const declareUser = (registry: Registry<object>, served?: ServedFacts): C
     resource: { kind: 'user' },
     input: at,
     // The two the answer is made of: who they are, and what the roles they
-    // hold resolved to - decision
-    // `people-are-resource-schemes-with-a-grant-each`.
+    // hold resolved to.
     scopes: ['user:read', 'role:read'],
     run: async (context) => {
       const { path, directory } = people(context, served);
@@ -330,8 +329,7 @@ export const declareUser = (registry: Registry<object>, served?: ServedFacts): C
       }
       if (entry !== undefined && away) stop('--unset and a membership cannot both be given.');
       const actor = context.request?.actor as Principal | undefined;
-      // One's own primary is a person's own business - decision
-      // `a-request-naming-no-scope-uses-the-persons-primary` - and it grants
+      // One's own primary is a person's own business - and it grants
       // nothing, so holding `user:write` is asked only for somebody else's.
       if (actor?.id !== id) bounded(context, ['user:write']);
       const one = await recordOf(directory, id);

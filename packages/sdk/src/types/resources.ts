@@ -155,12 +155,10 @@ export interface ResourceStore {
   /**
    * Write, create or splice one file.
    *
-   * `owner` is the connection that asked, as a typed reference - decision
-   * `work-is-owned-by-a-typed-reference`. Absent on a host with no users
+   * `owner` is the connection that asked, as a typed reference. Absent on a host with no users
    * directory, and on a connection that is neither a person nor the root one.
    * The `file:` store has no use for it; a scheme whose objects cost money does,
-   * and a `computer:` machine writes its own up time against it - decision
-   * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+   * and a `computer:` machine writes its own up time against it.
    *
    * `client` is the id of the connection that asked, as it gave it at
    * `initialize`. It is what tells a provider which of a person's windows did
@@ -226,7 +224,7 @@ export interface ResourceStore {
  * Everything `ResourceStore` has except `complete`, and with only `read`
  * required. A provider for a scheme like `computer:` may serve bytes and say
  * what a URI is while having no directories, no paths and nothing to complete,
- * and decision `a-scheme-provider-implements-less-than-a-resource-store` is
+ * and is
  * that it should not have to invent them.
  *
  * Every signature is `ResourceStore`'s own, so a file store is a provider and
@@ -274,16 +272,14 @@ export type ResourceProvider = Pick<ResourceStore, 'watch' | 'write' | 'remove' 
    * What this scheme is for, so a client can draw a screen before it asks one.
    *
    * Optional: a provider that does not answer is advertised by its scheme and
-   * the operations the host can see it implements - decision
-   * `a-resource-scheme-is-advertised-in-meta`.
+   * the operations the host can see it implements.
    */
   describe?(): SchemeDescription;
   /**
    * Whether this reader may be let past the scheme's grant for this URI.
    *
    * The gate asks before it requires `<scheme>:read`, so `true` lets one read
-   * through that the grant would have refused - decision
-   * `a-scheme-provider-may-authorize-a-read-itself`. Any scheme can open part of
+   * through that the grant would have refused. Any scheme can open part of
    * itself to a person without a host change; nothing opens a write, which is
    * why the hook is only asked about reads: `resourceRead`, `resourceList`,
    * `createResourceWatch`, and a subscribe to the watch it made.

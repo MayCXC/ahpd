@@ -124,7 +124,7 @@ it('does not let a connection that is nobody stop the daemon', async () => {
    * `shutdown` was served and classified nowhere, so any connection that had
    * completed a handshake could stop the daemon - and in the daemon it is
    * `SIGTERM`, so it takes every session on the machine with it. It has a
-   * grant now: decision `shutdown-needs-config-change`.
+   * grant now.
    */
   let stopped = 0;
   const made = host({
@@ -185,8 +185,7 @@ it('gates shutdown on config:change and the managed-settings read on diagnostics
   /*
    * Both were served and classified nowhere, so every connection that had
    * completed a handshake reached them: `shutdown` is `SIGTERM` to the daemon,
-   * and the managed settings are the window's own troubleshooting pane -
-   * decision `shutdown-needs-config-change`.
+   * and the managed settings are the window's own troubleshooting pane.
    */
   let stopped = 0;
   const made = host({
@@ -264,8 +263,7 @@ it('serves a member what it has, and refuses what it has not with nothing to neg
 it('serves a connection that arrived as somebody, with no authenticate', async () => {
   // A socket admitted on a personal connection token: the principal is on the
   // connection before the first frame, so the first command is served as them
-  // and no `authenticate` is needed - decision
-  // `a-connection-token-may-carry-a-person`.
+  // and no `authenticate` is needed.
   const made = host({ users: directory({ m: ['file:read', 'file:write', 'session:read', 'session:write', 'terminal:read', 'terminal:write'] }) });
   const granted: Grant[] = ['file:read', 'file:write', 'session:read', 'session:write', 'terminal:read', 'terminal:write'];
   const client = made.accept(peer(), { id: 'm', roles: ['r'], can: can(granted) });
@@ -436,7 +434,7 @@ it('lets a person read their own usage pools, and refuses them another person\'s
   /*
    * Every `usage:` URI is `usage:read` at the gate, which would refuse the very
    * person the scheme serves their own pools to. The provider's own `authorize`
-   * is what opens those - decision `a-scheme-provider-may-authorize-a-read-itself`.
+   * is what opens those.
    */
   const usage = fileUsage({ folder: join(root, 'usage') });
   for (const [who, pool] of [['ana', 'user:ana'], ['bob', 'user:bob']] as const) {
@@ -486,8 +484,7 @@ it('lets a socket on the deployment token do everything, and nothing demotes it'
   /*
    * The deployment's token is the host's own key, so it is the host: no
    * `authenticate`, every capability including a scheme no role names, and
-   * signing in or out on that connection does not change it - decision
-   * `the-door-token-is-the-host`.
+   * signing in or out on that connection does not change it.
    */
   const provider: ResourceProvider = { read: async () => ({ data: 'machine', encoding: 'utf-8' }) };
   const made = host({ users: directory({ m: ['file:read'] }), resourceProviders: { computer: provider } });
@@ -512,8 +509,7 @@ it('reads the roles again on every command, so removal and a role change land at
   /*
    * The directory re-reads its file on every question, and the principal it
    * handed out resolves through that file as well, so `ahpd user rm` is refused
-   * on the next command rather than the next connection - decision
-   * `a-role-is-read-on-every-command`.
+   * on the next command rather than the next connection.
    */
   const usersPath = join(root, 'users.json');
   // A role of this deployment's own, so the change below is from a role that

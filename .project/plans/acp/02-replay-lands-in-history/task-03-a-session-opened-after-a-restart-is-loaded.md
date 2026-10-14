@@ -11,7 +11,7 @@ refs:
 ## Objective
 
 When `Agent.transcript` is asked for a session this process never watched and the server advertises `loadSession`, the bridge opens the server, runs `session/load`, and answers the turns task 02 builds from the replay.
-A read loads the session and lets the server go; the turn after it loads it again, as [a read's connection carries none of a session's ports](../../../decisions/an-acp-read-and-the-turn-after-it-load-twice.md), and the replay the second load sends is not added to a record that already holds turns.
+A read loads the session and lets the server go; the turn after it loads it again, because a read's connection carries none of a session's ports for a turn to reuse, and the replay the second load sends is not added to a record that already holds turns.
 A server without `loadSession` answers `undefined`, as now.
 
 ## Steps

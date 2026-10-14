@@ -6,7 +6,7 @@ Docker is the only runtime today.
 
 A machine is named `computer://<id>`, and it has two recipes: an image the host runs, or a folder's `devcontainer.json`, which the Dev Container CLI reads.
 Writing a manifest to that name makes one, deleting it destroys it, and a session whose `computer` setting names it runs its agent in there.
-A dev container is listed, picked and reached like any machine made from an image, and it survives the connection that made it - decision [a dev container is a computer, made from its devcontainer.json](../.project/decisions/a-dev-container-is-a-computer-made-from-its-devcontainer-json.md).
+A dev container is listed, picked and reached like any machine made from an image, and it survives the connection that made it.
 
 ## Setup
 

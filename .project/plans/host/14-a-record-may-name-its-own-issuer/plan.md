@@ -11,7 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-record-may-name-its-own-issuer.md
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L101](../../../../packages/sdk/src/types/users.ts#L84-L101) - `UserRecord.issuer`"
   - "[code://packages/sdk/src/users.ts#L130-L146](../../../../packages/sdk/src/users.ts#L130-L146) - `FileUserOptions.issuer` as a name, and `issuerFor`"
@@ -46,7 +45,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record may name its own issuer, and the host's issuer is the default](../../../decisions/a-record-may-name-its-own-issuer.md) | The user, 2026-09-23: "ok do the pending 3. So I can test better...", naming what `HANDOFF.md` listed as "an issuer per record with the host's `issuer` as the default". |
+| 1 | [A record may name its own issuer, and the host's issuer is the default](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "ok do the pending 3. So I can test better...", naming what `HANDOFF.md` listed as "an issuer per record with the host's `issuer` as the default". |
 
 | What | Source | Task |
 | --- | --- | --- |

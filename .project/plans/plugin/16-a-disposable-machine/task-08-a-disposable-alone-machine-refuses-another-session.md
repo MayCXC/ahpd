@@ -15,7 +15,7 @@ refs:
 ## Objective
 
 A session that is not the one a `disposableAlone` machine was made for is refused when it names that machine, including by a hand-typed `computer://<id>`, at creation and when it enters the machine.
-This applies [A disposableAlone machine refuses every session but the one that made it](../../../decisions/a-disposable-alone-machine-refuses-another-session.md).
+This applies [A disposableAlone machine refuses every session but the one that made it](./plan.md).
 
 ## Files
 

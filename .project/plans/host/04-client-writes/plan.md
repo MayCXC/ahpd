@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/client-writes-are-served-not-gated.md
 refs:
   - code://packages/sdk/src/host.ts#L4388-L4412 - `mayWrite` and `needsWrite`, the gate every write half calls
   - code://packages/sdk/src/host.ts#L4963-L4973 - the `resource*` comment that says the write half is gated
@@ -68,7 +67,7 @@ invokeChangesetOperation with offered.writes === true
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A client that may connect may write a file it may read](../../../decisions/client-writes-are-served-not-gated.md) | The user chose "Plan it first" on 2026-09-22, so this file is the proposal under review. |
+| 1 | [A client that may connect may write a file it may read](../../../../docs/HOST.md) | The user chose "Plan it first" on 2026-09-22, so this file is the proposal under review. |
 
 | What | Source | Task |
 | --- | --- | --- |

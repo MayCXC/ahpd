@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/pushing-workspace-trust-needs-trust-write.md
 refs:
   - "[code://packages/sdk/src/users.ts#L111-L189](../../../../packages/sdk/src/users.ts#L111-L189) - `OPERATIONS`, the table the advertisement and `grantProblem` read"
   - "[code://packages/sdk/src/users.ts#L30](../../../../packages/sdk/src/users.ts#L30) - the built-in member role, which holds `proxy:read`, `proxy:write` and `trust:write`"
@@ -47,7 +46,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../decisions/pushing-workspace-trust-needs-trust-write.md) | Softov, 2026-10-07 |
+| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

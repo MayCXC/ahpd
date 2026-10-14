@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-No comment under `commands/` describes code that is gone or a line that cannot reach it, and tasks 18, 20 and 21, the plan and the decision `an-untyped-flag-stays-absent-in-cofold-input` say what the code does.
+No comment under `commands/` describes code that is gone or a line that cannot reach it, and tasks 18, 20 and 21, the plan and [A boolean flag nobody typed stays absent in cofold's canonical input](./plan.md) say what the code does.
 
 ## Files
 
@@ -20,7 +20,7 @@ No comment under `commands/` describes code that is gone or a line that cannot r
 - `UPDATE: task-18-start-forwards-its-options-wherever-they-are-typed.md` - Resume.
 - `UPDATE: task-21-the-refs-follow-the-code.md` - Resume, and refs after task 20.
 - `UPDATE: plan.md` - refs and Watch out for.
-- `UPDATE: .project/decisions/an-untyped-flag-stays-absent-in-cofold-input.md` - the `options.ts` ref.
+- `UPDATE: .project/./plan.md` - the `options.ts` ref.
 - `UPDATE: /github/cofold/packages/commands/src/input.test.ts` - the comment on the absent-flag case (uncommitted work from task 17).
 
 ## Steps

@@ -2,8 +2,8 @@
 title: Cofold's configuration reaches a machine at a fixed target, named by a path variable
 status: accepted
 date: 2026-10-03
-supersedes: decisions/cofold-config-reaches-a-machine-at-a-fixed-target.md
 refs:
+  - git://dbefdf19 - the superseded decision, as committed
   - "[code://packages/agent-cofold/src/config.ts](../../packages/agent-cofold/src/config.ts) - `harnessConfigPath`, where agent-cofold looks for cofold's configuration"
   - "[code://packages/agent-cofold/src/agent.ts](../../packages/agent-cofold/src/agent.ts) - `machine()`, the needs a cofold machine gets"
 ---

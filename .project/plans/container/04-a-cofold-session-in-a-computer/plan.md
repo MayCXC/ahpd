@@ -11,12 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-cofold-session-in-a-computer-runs-in-a-nested-host.md
-  - decisions/a-session-reaches-a-nested-host-through-a-generic-proxy.md
-  - decisions/a-nested-session-resumes-its-inner-transcript-by-id.md
-  - decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md
-  - decisions/a-nested-host-is-configured-by-the-machine-profile-only.md
-  - decisions/the-host-records-which-plugin-registered-each-agent.md
 refs:
   - "[code://packages/agent-cofold/src/agent.ts#L673](../../../../packages/agent-cofold/src/agent.ts#L673) - cofold's `runsNested: true`"
   - "[code://packages/sdk/src/nested.ts](../../../../packages/sdk/src/nested.ts) - the proxy: the nested host's stdio, the inner session, the mirror"
@@ -65,12 +59,11 @@ process exits                    -> [new] the session ends with the stderr tail 
 
 | Decision | Task |
 | --- | --- |
-| [A cofold session in a computer runs in an ahpd started inside it](../../../decisions/a-cofold-session-in-a-computer-runs-in-a-nested-host.md) | 01, 04 |
-| [A session reaches a nested host through a generic proxy backend in the SDK](../../../decisions/a-session-reaches-a-nested-host-through-a-generic-proxy.md) | 02, 03, 04 |
-| [A nested session is resumed by resuming the inner transcript by id](../../../decisions/a-nested-session-resumes-its-inner-transcript-by-id.md) | 11 |
-| [A nested host's image installs its plugins with ahpd plugin install](../../../decisions/a-nested-host-image-installs-its-plugins-with-ahpd-plugin-install.md) | 16 |
-| [A nested host is configured by the machine's profile only](../../../decisions/a-nested-host-is-configured-by-the-machine-profile-only.md) | 17 |
-| [The host records which plugin registered each agent, and a nested host loads that plugin](../../../decisions/the-host-records-which-plugin-registered-each-agent.md) | 17 |
+| A cofold session in a computer runs in an ahpd started inside it | 01, 04 |
+| A session reaches a nested host through a generic proxy backend in the SDK | 02, 03, 04 |
+| A nested session is resumed by resuming the inner transcript by id | 11 |
+| [A nested host is configured by the machine's profile only](../05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | 17 |
+| The host records which plugin registered each agent, and a nested host loads that plugin | 17 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -91,6 +84,7 @@ process exits                    -> [new] the session ends with the stderr tail 
 | The outer host records a nested session in its own session store when it opens (provider, machine, inner session id, title), and lists and resumes it from that record after a restart without asking the machine | Softov, 2026-10-06, asked how a nested session is listed after a restart: "Outer host keeps a record". | 11 |
 | The proxy serves the inner host's subagent chats as outer chats now: their rows, their actions and the links to them in chat content all carry outer URIs | Softov, 2026-10-06, asked whether inner subagent chats wait for a wider `Emit`: "Build now". | 10 |
 | After a nested session ends, read/archived and terminal actions stay allowed; chat actions and `session/activeClientSet` are refused with its sentence | Softov, 2026-10-06, asked "should read/archived and terminal actions be refused too after the end?": "Keep them allowed", since archiving is how a person clears a dead session and a terminal is the session's | 09 |
+| A nested host's image installs its plugins with `ahpd plugin install`, not `npm i -g`: an inner host started in the image cannot resolve a package installed outside its own prefix | the image it is built into; the Dockerfile's `RUN` line carries the reason | 16 |
 
 ## Tasks
 

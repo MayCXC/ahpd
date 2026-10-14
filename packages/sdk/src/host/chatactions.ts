@@ -78,15 +78,12 @@ export function chatAction(
    * A message whose attachments are files before anything reads them.
    *
    * The bytes a client pasted are written under the session's own folder and
-   * the message names them, so what is applied, stored and echoed is the path
-   * - decision
-   * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+   * the message names them, so what is applied, stored and echoed is the path.
    * A store that keeps no files has no folder to write into, and every message
    * is then the one that arrived.
    *
    * A session running in a machine is handed the files it was told about, at
-   * the paths the message names, so a path is a file on both sides - decision
-   * `a-session-in-a-machine-gets-each-attachment-copied-into-it`. The copy
+   * the paths the message names, so a path is a file on both sides. The copy
    * comes after the writing and before the action is applied, which is where
    * the machine's session is handed the same paths this one read. A copy that
    * fails is said in a line and the message goes on: the bytes are here
@@ -182,8 +179,7 @@ export function chatAction(
    *
    * A pasted picture arrives as its own bytes and a file only the client has
    * does not arrive at all, so both are written under the session's own folder
-   * and the message names them - decision
-   * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+   * and the message names them.
    * Here, ahead of everything else this action does, because a session resumed
    * for it reads a transcript and a turn started by it runs a model, and
    * neither should be reached with bytes the host means to write.
@@ -572,12 +568,10 @@ export function chatAction(
       /*
        * The window is asked about the folder before the session enters it - the
        * question a move asks, answered from the same pushed value or by the
-       * same request - decision
-       * `a-folder-is-untrusted-until-a-client-says-otherwise`. A worktree the
+       * same request. A worktree the
        * restart makes from it needs no question: one the host made is trusted
        * exactly when its repository is, and the folder just answered for is
-       * where that worktree is cut from - decision
-       * `a-worktree-inherits-its-repositorys-trust`.
+       * where that worktree is cut from.
        */
       const auto = autoApproved({ ...owner.agent.defaults(), ...contributedDefaults(), ...owner.config }, rootConfig);
       void (async () => {

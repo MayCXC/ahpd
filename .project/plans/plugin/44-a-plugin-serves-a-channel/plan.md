@@ -8,8 +8,6 @@ revalidated: 2026-10-10
 requires:
   - plans/plugin/42-a-reserved-name-is-refused/plan.md
 decisions:
-  - decisions/bots-are-watched-and-catalogued.md
-  - decisions/a-plugin-channel-is-an-x-scheme.md
   - decisions/a-plugin-channel-filters-each-action-per-subscriber.md
 refs:
   - "[code://packages/sdk/src/host/channels.ts#L14](../../../../packages/sdk/src/host/channels.ts#L14) - `AUTOMATIONS`, the host's own catalogue channel and the pattern to mirror"
@@ -61,8 +59,8 @@ client unsubscribe or disconnect -> channel.left(client)
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Bots are watched and catalogued](../../../decisions/bots-are-watched-and-catalogued.md) | Softov, 2026-10-10 |
-| 2 | [A plugin channel is an x- scheme](../../../decisions/a-plugin-channel-is-an-x-scheme.md) | Softov, 2026-10-10 |
+| 1 | [Bots are watched and catalogued](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 2 | A plugin channel is an x- scheme | Softov, 2026-10-10 |
 | 3 | [A plugin channel filters each action per subscriber](../../../decisions/a-plugin-channel-filters-each-action-per-subscriber.md) | (defaulted: the shared `serverSeq` warning) |
 
 | What | Source | Task |

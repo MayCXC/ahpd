@@ -4,8 +4,7 @@
  * People, teams, projects and roles were reachable only from the CLI and
  * `/api`, under one `users` subject for all of them. Here they are `user:`,
  * `team:`, `project:` and `role:` resource schemes, advertised the way
- * `computer:` is and gated by the grant whose subject is the scheme - decision
- * `people-are-resource-schemes-with-a-grant-each`.
+ * `computer:` is and gated by the grant whose subject is the scheme.
  *
  * A record is a file whose bytes are its JSON, and the scheme's root is a
  * directory of them. There is no leaf under a record and no directory but the
@@ -181,8 +180,7 @@ const roles = (directory: Users): Records => ({
    * Operations, not verbs.
    *
    * A grant is `<subject>:<operation>` and the operation is one the subject
-   * has - decision
-   * `a-grant-names-an-operation-and-read-and-write-are-its-groups`. `read` and
+   * has. `read` and
    * `write` are still writable here because they are the two names that group a
    * subject's operations, and `*` is still either half.
    */
@@ -260,8 +258,7 @@ export interface PeopleChannels {
 }
 
 /**
- * The four people schemes as channels and commands beside their providers -
- * decision `each-people-scheme-has-its-own-channel`.
+ * The four people schemes as channels and commands beside their providers.
  *
  * Each channel needs its scheme's read grant. The users channel shows a reader
  * without `user:read` their own record, as `user://<id>` does. A change to the

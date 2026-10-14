@@ -40,8 +40,7 @@ export interface Options {
    * The folder every session worktree is made under, as an absolute path.
    *
    * Absent, a tree sits at `<repo>.worktrees` beside its repository, which is
-   * where VS Code's host looks for it. With one, it is `<root>/<repo>/<name>`
-   * - decision `worktrees-can-live-under-one-root`.
+   * where VS Code's host looks for it. With one, it is `<root>/<repo>/<name>`.
    */
   worktreesRoot?: string;
   /** The secret every connection must present, given directly. */
@@ -108,8 +107,7 @@ export interface Options {
    *
    * `policies.check` in the file, and off unless it says otherwise. It has no
    * flag, as the decision to refuse somebody is one an operator makes about a
-   * deployment rather than about one run - decision
-   * `policy-checks-are-switched-on-by-a-daemon-option`.
+   * deployment rather than about one run.
    */
   policiesCheck: boolean;
   /** A file every frame is appended to, both directions, one JSON line each. */
@@ -118,8 +116,7 @@ export interface Options {
    * Whether the HTTP API is served, and where.
    *
    * Absent is off. `{}` is the daemon's own listener under `/api`; a `port`
-   * moves it to a listener of its own - decision
-   * `the-http-api-is-on-the-daemon-port-under-api`. It has no flag, because the
+   * moves it to a listener of its own. It has no flag, because the
    * decision put it in the configuration.
    */
   http?: HttpSetting;
@@ -885,8 +882,7 @@ const originOf = (entry: string, source: string | undefined): string => {
  * `optionsFrom`, after the plugins it names are imported to read their ids, so
  * that `--plugin-option` can name a plugin by the name its module exports.
  *
- * Nothing is imported when no `--plugin-option` is given. Decision
- * `a-plugins-id-is-its-modules-name`.
+ * Nothing is imported when no `--plugin-option` is given.
  */
 export async function namedOptionsFrom(input: Readonly<Record<string, unknown>>): Promise<Options> {
   const typed = input['pluginOptions'] as string[] | undefined;

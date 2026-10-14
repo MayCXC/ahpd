@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-A provider's 401 or 403 reaches the caller as the dialect's own error with status 502, saying the host's provider refused the host's key for that model; the provider's status and message are on the daemon's log line (decision [the-proxy-answers-a-providers-key-refusal-with-its-own-error](../../../decisions/the-proxy-answers-a-providers-key-refusal-with-its-own-error.md)).
+A provider's 401 or 403 reaches the caller as the dialect's own error with status 502, saying the host's provider refused the host's key for that model; the provider's status and message are on the daemon's log line ().
 
 ## Files
 

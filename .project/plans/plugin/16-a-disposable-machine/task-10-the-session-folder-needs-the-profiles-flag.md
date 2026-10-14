@@ -14,7 +14,7 @@ refs:
 ## Objective
 
 A machine made for a session from a disposable profile mounts the session's folder only when its profile says `sessionFolder: true`.
-This applies [A session's folder reaches a machine only where its profile allows it](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md).
+This applies [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md).
 A `devcontainer://<folder>` source is the folder itself, chosen by the person, and the CLI mounts it as its workspace, so it is not this flag's.
 
 ## Files

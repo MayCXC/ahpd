@@ -29,7 +29,7 @@ Every machine the computer plugin makes, a reopen-in-container relay's included,
 ## Departures from the plan
 
 - A machine the Dev Container CLI made keeps its owner in `computers.json`, not a label - decision [a-dev-container-owner-is-kept-beside-the-config](../../../decisions/a-dev-container-owner-is-kept-beside-the-config.md).
-- The relay's containers are owned and metered - decision [a-relay-container-is-owned-by-who-connected](../../../decisions/a-relay-container-is-owned-by-who-connected.md).
+- The relay's containers are owned and metered - [A container the reopen-in-container relay makes is owned by whoever connected, and metered like any machine](./plan.md).
 - The labels and the owner file live in `runtime.ts` and `owners.ts`, not `devcontainer.ts`, which `runtime.ts` imports.
 - `seconds` keeps milliseconds, so a machine up under a second is not zero.
 

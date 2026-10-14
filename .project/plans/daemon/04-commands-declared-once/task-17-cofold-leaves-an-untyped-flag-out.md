@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-In the cofold repository, a boolean flag with no typed value, no environment value and no declared default is absent from the canonical input from the terminal and from an object, `context.flag` still answers `false` for it, and ahpd depends on the release that carries this, per decision [an-untyped-flag-stays-absent-in-cofold-input](../../../decisions/an-untyped-flag-stays-absent-in-cofold-input.md).
+In the cofold repository, a boolean flag with no typed value, no environment value and no declared default is absent from the canonical input from the terminal and from an object, `context.flag` still answers `false` for it, and ahpd depends on the release that carries this, per [A boolean flag nobody typed stays absent in cofold's canonical input](./plan.md).
 
 ## Files
 

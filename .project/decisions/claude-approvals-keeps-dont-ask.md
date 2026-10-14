@@ -5,7 +5,7 @@ date: 2026-09-29
 refs:
   - "[code://packages/agent-claude/src/claude.ts#L174-L198](../../packages/agent-claude/src/claude.ts#L174-L198) - `permissionMode`, six values"
   - https://github.com/microsoft/vscode/blob/832cf23c588/src/vs/platform/agentHost/common/claudeSessionConfigKeys.ts#L8-L29 - VS Code's five modes, `dontAsk` excluded on purpose
-  - "[code://.project/decisions/stale-docs-are-corrected-in-one-task.md](stale-docs-are-corrected-in-one-task.md) - where `dontAsk` was added to match the SDK"
+  - "[code://.project/plans/documentation/01-correct-the-stale-prose/plan.md](../plans/documentation/01-correct-the-stale-prose/plan.md) - where `dontAsk` was added to match the SDK"
 ---
 
 ## Context

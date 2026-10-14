@@ -32,7 +32,7 @@ Otherwise they write `config.json` and say `Restart the daemon to apply the chan
 
 ## Steps
 
-1. Read the decisions `a-served-paths-change-reaches-the-running-daemon.md` and `ahpd-paths-lists-adds-and-removes-a-served-folder.md` in `.project/decisions/`.
+1. Read what `docs/DAEMON.md` says about the served folders and about a change forwarded to a running daemon.
 2. Add a `daemon.test.ts` case: `recordOf` reads `api` as `http://127.0.0.1:9187` from `http on http://127.0.0.1:9187/api`.
 3. Add a `daemon.test.ts` case: `recordOf` has no `api` when the announcement has no `http on` line.
 4. Add a `daemon.test.ts` case: `rewritePaths` changes `paths` and keeps every other field, with mode 0600.
@@ -96,7 +96,7 @@ Judgement calls the plan does not decide:
 
 What the plan did not know:
 
-- Step 1 names `ahpd-paths-add-at-the-terminal-reaches-a-running-daemon.md` and `ahpd-paths-remove-asks-nothing.md`. Neither is in the worktree: they were folded into `a-served-paths-change-reaches-the-running-daemon.md` and `ahpd-paths-lists-adds-and-removes-a-served-folder.md`, which are the two the step's own prose goes on to describe.
+- Step 1 first named two decisions that were already gone from the worktree. Their content is in `docs/DAEMON.md`, which the step's own prose goes on to describe.
 - The older case `writes the file and says that a restart applies the change, when a daemon is recorded` is now the no-`api` case, because the record it writes carries none. It is the shape a daemon without `http` leaves.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by the suite on every run and is left dirty. `git restore packages/sdk/test/fixtures/wire.jsonl` is denied in this mode, so Softov has to run it before a commit.
 

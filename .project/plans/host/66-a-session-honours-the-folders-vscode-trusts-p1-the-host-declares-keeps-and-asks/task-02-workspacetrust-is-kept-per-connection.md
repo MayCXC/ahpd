@@ -28,7 +28,7 @@ An entry that names no folder here - the empty string, `file://`, another machin
 ## Steps
 
 1. Failing case first: two connections; A pushes `workspaceTrust` `{ enabled: true, trustedUris: [uriOf('/a')] }`. Today B's root snapshot shows A's value; after, B sees none and A sees its own.
-2. Cases for `trusted`: the helper trusts `/a/b` under `/a`, and refuses `/ab` beside it. `enabled: false` trusts every folder, and no value trusts nothing ([the decision](../../../decisions/a-folder-is-untrusted-until-a-client-says-otherwise.md)).
+2. Cases for `trusted`: the helper trusts `/a/b` under `/a`, and refuses `/ab` beside it. `enabled: false` trusts every folder, and no value trusts nothing ([the decision](../../../../docs/AUTHENTICATION.md)).
 3. A folder written as `<trusted>/../../etc`: the helper answers false.
 4. A symlink inside a trusted folder that points outside it: false, and a folder under that link too.
 5. `''` and `file://` in `trustedUris`: they vouch for nothing.

@@ -39,7 +39,7 @@ subscribe changeset -> first read -> startWatchingDir -> gitChanges.watch: rev-p
 
 | Decision | Source |
 | --- | --- |
-| [A changeset source says when its watch is armed, and the host re-reads then](../../../decisions/a-changeset-watch-says-when-it-is-armed.md) | Softov, 2026-09-28 |
+| A changeset source says when its watch is armed, and the host re-reads then | Softov, 2026-09-28 |
 
 | What | Source | Task |
 | --- | --- | --- |

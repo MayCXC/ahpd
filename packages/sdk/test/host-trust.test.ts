@@ -21,8 +21,7 @@ import type { Worktrees } from '../src/types/worktrees.js';
  * agent must not load, and the host is the only thing that knows which those
  * are: trust arrives on a connection, from a window, and belongs to the person
  * whose session it is. So the start carries the answer, and this is what that
- * answer is in each of the cases the decision names - decision
- * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+ * answer is in each of the cases the decision names.
  */
 
 const DIR = mkdtempSync(join(tmpdir(), 'ahpd-trust-'));
@@ -134,8 +133,7 @@ const about = (told: Told, folder: string): boolean | undefined =>
  *
  * `people` is whether the host was given a people directory at all, which is
  * what `--users` decides: without one there is nobody a connection can be, and
- * the deployment is the single-person case - decision
- * `the-sender-decides-on-a-host-with-no-people`. `answer` is what a client says
+ * the deployment is the single-person case. `answer` is what a client says
  * when the host asks it a question, which is where a trust question lands.
  */
 function serving({
@@ -300,7 +298,7 @@ it('tells an automation nothing is trusted, since no window sent it', async () =
  * a session on such a host has no owner either. Comparing the two would refuse
  * every folder, which would make the value a window pushes dead on exactly the
  * deployment - one person, one machine - most likely to have anything to
- * trust - decision `the-sender-decides-on-a-host-with-no-people`. So the
+ * trust. So the
  * sender decides, and an automation, which has no sender at all, still decides
  * nothing.
  */
@@ -354,8 +352,7 @@ it('tells an automation on a host with no people directory nothing is trusted', 
  * A worktree lives beside its repository - `<repo>.worktrees/<branch>` - so it
  * is never a folder under one a window vouched for, and a window cannot be
  * asked about a folder it has never opened. One the host made is trusted
- * exactly when the repository it was cut from is - decision
- * `a-worktree-inherits-its-repositorys-trust`.
+ * exactly when the repository it was cut from is.
  */
 
 /**

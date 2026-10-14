@@ -5,7 +5,7 @@ title: A connection is told who it is - implemented
 ## What exists
 
 - `packages/sdk/src/host.ts`: `initialize` answers `_meta['ahpd.principal']` beside `ahpd.resourceProviders`, and `rootState` puts the same key in the `_meta` of that connection's root snapshot, built fresh per connection, never in shared state. `user:<id>` for a person, `root:<host>` for the deployment token; absent with no users directory and for a connection that has not signed in.
-- `authenticate` still answers `{}`; a client takes the root snapshot again after it signs in, out, or expires - decision [a-connection-is-told-who-it-is-on-initialize-and-in-root-state](../../../decisions/a-connection-is-told-who-it-is-on-initialize-and-in-root-state.md), superseding the authenticate-result one.
+- `authenticate` still answers `{}`; a client takes the root snapshot again after it signs in, out, or expires - [A connection is told who it is, on initialize and in its root state snapshot](../../../../docs/HOST.md), superseding the authenticate-result one.
 - `docs/USERS.md` says how a client learns it.
 
 ## Verified

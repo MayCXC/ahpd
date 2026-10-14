@@ -4,8 +4,7 @@
  * VS Code's host logs every frame in its transport: the JSON-RPC message at the
  * root of the line, and a `_ahpLog` beside it carrying what the protocol has no
  * field for - when the frame went, which way, which connection, how long it
- * was. Tools built for that read that shape, so this writes it. The decision
- * is `the-traffic-log-is-the-wire-capture-in-vs-codes-shape`.
+ * was. Tools built for that read that shape, so this writes it.
  *
  * One file for every connection, as `--wire` names a file and not a folder,
  * with `connectionId` telling them apart.

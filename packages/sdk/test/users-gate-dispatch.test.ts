@@ -280,7 +280,7 @@ it('lets anybody signed in set their own shell, and only config:write change the
  * signed in decided what its sessions load from a folder, project settings and
  * hooks included. The trust key alone needs `trust:push`, and the `trust:write`
  * group covers it; a shell preference is still the person's with nothing asked
- * for it - decision `pushing-workspace-trust-needs-trust-write`.
+ * for it.
  */
 
 /** The refusals a connection was told, which is how a notification is refused. */

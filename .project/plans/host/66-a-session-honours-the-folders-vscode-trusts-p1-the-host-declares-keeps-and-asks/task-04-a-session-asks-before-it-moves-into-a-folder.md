@@ -18,7 +18,7 @@ The same happens when a client adds a folder (`session/workingDirectorySet`).
 The host sends `vscode/requestWorkspaceTrust` `{ workspace }` when the folder is outside that connection's `trustedUris`.
 The move goes ahead only on `{ trusted: true }`, and anything else, an error or a disconnect, refuses it with `Workspace trust was not granted for <folder>`.
 A move that names a repository asks about the repository alone.
-A worktree the host makes there inherits its repository's trust ([the decision](../../../decisions/a-worktree-inherits-its-repositorys-trust.md)).
+A worktree the host makes there inherits its repository's trust ([the decision](../../../../docs/SESSIONS.md)).
 The host sends no request when root config's `globalAutoApproveEnabled` is true or the session's `autoApprove` is `autoApprove`.
 
 ## Files

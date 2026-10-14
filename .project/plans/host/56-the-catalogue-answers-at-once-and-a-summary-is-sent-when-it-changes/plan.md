@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/claude-variants-share-one-listing-inside-the-plugin.md
 refs:
   - "[code://packages/sdk/src/host/sessionmethods.ts#L402-L403](../../../../packages/sdk/src/host/sessionmethods.ts#L402-L403) - `listSessions` awaits `listNow` on every call"
   - "[code://packages/sdk/src/host/history.ts#L20](../../../../packages/sdk/src/host/history.ts#L20) - `LISTING_FRESH`, two seconds"
@@ -84,7 +83,7 @@ any change to a live session -> summaryMoved(uri) -> root/sessionSummaryChanged 
 
 | Decision | Task |
 | --- | --- |
-| [Claude variants share one listing inside the plugin](../../../decisions/claude-variants-share-one-listing-inside-the-plugin.md) | 02 |
+| Claude variants share one listing inside the plugin | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -65,7 +65,7 @@ const CONFLICT = -32011;
     const provider = options.resourceProviders?.[scheme];
     // A scheme nobody serves is not the file store's to read, and it is
     // not a permission answer either: the host has nothing for it, which
-    // is `-32601` - decision `a-scheme-nobody-serves-is-not-a-permission-error`.
+    // is `-32601`.
     if (provider === undefined) throw notServed(uri);
     return provider;
   };
@@ -153,8 +153,7 @@ const CONFLICT = -32011;
        *
        * The `file:` store has no use for either. A plugin's scheme may: what a
        * write makes is sometimes charged to whoever asked, and a machine
-       * made by a `computer:` write is up from then on - decision
-       * `a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time`.
+       * made by a `computer:` write is up from then on.
        *
        * The client is the connection's own id, which is what tells a provider
        * *which* of a person's windows wrote: a `push:` device is registered by

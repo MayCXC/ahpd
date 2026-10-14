@@ -7,7 +7,6 @@ created: 2026-10-03
 requires:
   - plans/claude/15-one-load-and-each-preset-is-a-variant/plan.md
 decisions:
-  - decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md
 refs:
   - "[code://packages/agent-claude/src/plugin.ts#L111-L162](../../../../packages/agent-claude/src/plugin.ts#L111-L162) - `optionsOf` checks every preset before registering any, and `apply` throws on the first"
   - "[code://packages/agent-claude/src/options.ts#L201-L220](../../../../packages/agent-claude/src/options.ts#L201-L220) - `heldTo`, where a missing `fromEnv` variable is reported"
@@ -48,7 +47,7 @@ config plugins[] -> server loadPlugins -> agent-claude apply -> optionsOf (prese
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../decisions/a-plugin-loads-once-and-each-preset-is-a-variant.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

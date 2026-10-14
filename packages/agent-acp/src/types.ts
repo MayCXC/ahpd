@@ -124,8 +124,7 @@ export interface AcpOptions {
    *
    * ACP carries no trust field and this host reads none of a project's files
    * for an ACP agent, so a session in a folder the host did not vouch for is
-   * refused rather than handed a folder nobody has read - decision
-   * `a-folder-is-untrusted-until-a-client-says-otherwise`. `true` is a preset
+   * refused rather than handed a folder nobody has read. `true` is a preset
    * saying its agent asks on its own, which is what makes the folder its
    * business rather than this host's.
    */

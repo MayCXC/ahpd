@@ -71,7 +71,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 ## Risks and tradeoffs
 
 - A short question gets the whole template first - The default template is short, and a bot can name a shorter one.
-- `PENDING.md` in a machine is not on this host's disk - Read it through the machine's folder, which decision `a-bot-owns-one-folder` mounts at the same path.
+- `PENDING.md` in a machine is not on this host's disk - Read it through the machine's folder, which [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/BOTS.md) mounts at the same path.
 
 ## Resume state
 

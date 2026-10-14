@@ -3,9 +3,7 @@
  *
  * One helper decides it, so every backend sends the same thing for the same
  * message: the text first, a small image as an image, a small host-written text
- * as itself, and everything else by path in one reference block - decisions
- * `a-pasted-image-goes-as-an-image-when-it-fits` and
- * `pasted-text-is-inlined-up-to-64-kib`.
+ * as itself, and everything else by path in one reference block.
  *
  * The files here are written the way the host writes them: read-only, under a
  * name of its own, with the snapshot tag on the attachment. A file without the

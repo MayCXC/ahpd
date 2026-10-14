@@ -1,8 +1,7 @@
 name: Release
 
 # A pushed tag is the whole gesture: `git tag v0.7.0 && git push --tags`.
-# Every package in the workspace moves together, so one tag releases them all -
-# decision `the-whole-workspace-is-published`.
+# Every package in the workspace moves together, so one tag releases them all.
 on:
   push:
     tags: ['v*']

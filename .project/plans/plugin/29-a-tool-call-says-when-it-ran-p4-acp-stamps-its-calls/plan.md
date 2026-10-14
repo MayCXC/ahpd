@@ -9,7 +9,6 @@ requires:
   - plans/plugin/29-a-tool-call-says-when-it-ran/plan.md
   - plans/plugin/29-a-tool-call-says-when-it-ran-p1-the-sdk-keeps-a-calls-times/plan.md
 decisions:
-  - decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md
 refs:
   - "[code://packages/agent-acp/src/types.ts#L314-L336](../../../../packages/agent-acp/src/types.ts#L314-L336) - `WatchedTurn.updates`, raw `SessionUpdate[]` with no receive time"
   - "[code://packages/agent-acp/src/types.ts#L222-L249](../../../../packages/agent-acp/src/types.ts#L222-L249) - `AcpCall`, what the mapping keeps of a call between updates"
@@ -33,7 +32,7 @@ ACP has no time of its own; a call replayed by `session/load` after a restart ca
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's times are stamped by its plugin, as ahpd keys](../../../decisions/a-tool-calls-times-are-stamped-as-ahpd-keys.md) | Softov, 2026-10-03 |
+| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

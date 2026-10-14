@@ -10,7 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-door-token-is-the-host.md
+  - ../../../decisions/the-door-is-a-door.md
 refs:
   - "[code://packages/sdk/src/listen.ts#L73-L115](../../../../packages/sdk/src/listen.ts#L73-L115) - `identityOf`, which admits the deployment's token and names nobody"
   - "[code://packages/sdk/src/types/listen.ts#L38-L80](../../../../packages/sdk/src/types/listen.ts#L38-L80) - `ListenOptions`, which gains what the door token means"
@@ -56,7 +56,7 @@ client -> ?tkn=<deployment token>   -> listen.identityOf: admitted, and the host
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The door token is the host, and a person's own token is that person](../../../decisions/the-door-token-is-the-host.md) | The user, 2026-09-23: "Make the deployment connection token a root login... the deploy token was supose to be the root.. thats WHY I cannot do anything anymore". |
+| 1 | [The door token is the host, and a person's own token is that person](../../../decisions/the-door-is-a-door.md) | The user, 2026-09-23: "Make the deployment connection token a root login... the deploy token was supose to be the root.. thats WHY I cannot do anything anymore". |
 
 | What | Source | Task |
 | --- | --- | --- |

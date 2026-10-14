@@ -12,7 +12,7 @@ refs:
   - code://packages/sdk/src/host.ts#L4194 - the request handlers, where `resource_write`, `terminal_open` and `authenticated` are raised
   - code://packages/sdk/src/host.ts#L4761-L4816 - `createTerminal`, for `terminal_open`
   - code://packages/sdk/src/host.ts#L4076-L4092 - `accept`, where `client_connect` and `client_disconnect` are raised
-  - code://.project/decisions/plugin-events-are-observed-not-answered.md - an event carries what a handler cannot get elsewhere
+  - code://docs/PLUGINS.md - an event carries what a handler cannot get elsewhere
 ---
 
 ## Objective

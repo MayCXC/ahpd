@@ -10,7 +10,6 @@ requires:
   - plans/container/05-an-agent-in-a-machine-p7-a-worktree-brings-its-repository/plan.md
 decisions:
   - decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md
-  - decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md
 refs:
   - "[code://packages/computer/src/gitdir.ts](../../../../packages/computer/src/gitdir.ts) - `gitMounts`, `guardedMounts`, `runsAsHost`, `releaseLock` as host/65 p2 leaves them; the allowlist goes"
   - "[code://packages/computer/src/runtime.ts#L451-L466](../../../../packages/computer/src/runtime.ts#L451-L466) - `MachineSpec.gitDir`, `repository`, `gitGuard`, `user`"
@@ -78,7 +77,7 @@ after:  ... -> -v <root> + <gitDir>/objects:ro + volume ahpd-git-<machine> as th
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [A machine commits in a git directory of its own, and ahpd fetches the work into the host's repository](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) | Softov, 2026-10-06, "Host fetches from machine", and "configurable shared bound read-write as default, copy as opt" for `sessionTree`; its name, the changes view under `copy`, the read-only alternates, the bundle on a pipe, the fast-forward and `bind` read as `fetch` are defaulted in the file |
-| 2 | [A session folder reaches a machine only where its profile allows](../../../decisions/a-session-folder-reaches-a-machine-only-where-its-profile-allows.md) | unchanged: a folder below a repository's root gets a git directory only where the profile says `sessionRepository` |
+| 2 | [A session folder reaches a machine only where its profile allows](../../../../docs/COMPUTER.md) | unchanged: a folder below a repository's root gets a git directory only where the profile says `sessionRepository` |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -1,7 +1,7 @@
 /**
  * The daemon's own vault: one plain JSON file in the configuration directory.
  *
- * The store decision `the-local-vault-is-a-plain-file-until-it-is-encrypted`
+ * The store
  * settled - the fallback a `vault` port is read through until a plugin registers
  * one of its own, in the same shape the host's other files are written. It is
  * not encrypted; encrypting it, and the key a daemon is started with, is the

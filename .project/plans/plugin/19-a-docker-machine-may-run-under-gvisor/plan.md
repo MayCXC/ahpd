@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/gvisor-is-a-docker-profile-option-not-a-runtime.md
-  - decisions/a-machine-runtime-is-named-for-its-maker.md
 refs:
   - "[code://packages/computer/src/manifest.ts#L34-L106](../../../../packages/computer/src/manifest.ts#L34-L106) - `Profile`, which gains `ociRuntime`"
   - "[code://packages/computer/src/manifest.ts#L508-L745](../../../../packages/computer/src/manifest.ts#L508-L745) - `manifestOf`, where a profile's fields become a `MachineSpec`"
@@ -50,8 +48,8 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../decisions/gvisor-is-a-docker-profile-option-not-a-runtime.md) | Softov, 2026-09-26 |
-| 2 | [One computer: provider, the runtime named for what makes the machine](../../../decisions/a-machine-runtime-is-named-for-its-maker.md) | Softov, 2026-10-02 |
+| 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/COMPUTER.md) | Softov, 2026-09-26 |
+| 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

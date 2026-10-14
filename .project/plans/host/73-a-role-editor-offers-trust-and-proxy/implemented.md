@@ -41,7 +41,7 @@ A role naming a word either subject does not have is refused with the list that 
 ## Departures from the plan
 
 - Task 01's *Files* named three files. A fourth, `docs/USERS.md`, had to move. The page's own test requires a row for each subject of `OPERATIONS` to name each of its operations. The two rows the page already had named none. Its `member` row also omitted `trust:write`, which `users.ts` gives the role and which the same page's *Trusted folders* section says it holds. Task 01's *Resume* records both.
-- The decision `pushing-workspace-trust-needs-trust-write` pointed at `gate.ts#L269-L276`, which stopped covering the line it is about when host/70 landed. It points at `gate.ts#L271-L280` now, and its note says what that code does rather than what it did before.
+- [Pushing workspaceTrust needs trust:write, and the member role has it](../../../../docs/AUTHENTICATION.md) pointed at `gate.ts#L269-L276`, which stopped covering the line it is about when host/70 landed. It points at `gate.ts#L271-L280` now, and its note says what that code does rather than what it did before.
 - The plan defaulted "the gate keeps asking for the groups", and the first build left it that way. A review found that this makes the advertisement a lie: a role holding only `trust:push` could not push. Softov answered the fork the same day, the plan's row carries the answer now, and the gate asks the operation. The rejected option was that the editor offers the groups only, which leaves the gate as it was.
 
 ## Left for later

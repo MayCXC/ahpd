@@ -11,8 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-backend-reaches-a-computer-through-a-port.md
-  - decisions/the-computer-is-an-object-a-person-manages.md
 refs:
   - "[code://packages/computer/src/runtime.ts#L30-L45](../../../../packages/computer/src/runtime.ts#L30-L45) - `MachineSpec`, which names no mount and no working directory"
   - "[code://packages/computer/src/runtime.ts#L173-L182](../../../../packages/computer/src/runtime.ts#L173-L182) - `run`, which starts a container with none"
@@ -64,8 +62,8 @@ createSession({ computer: 'computer://box' })
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A backend reaches a machine through a port the host carries](../../../decisions/a-backend-reaches-a-computer-through-a-port.md) | The user, 2026-09-23: "Include ACP-inside-a-computer in this step", and no backend may depend on one machine plugin. |
-| 2 | [A computer is an object a person manages, and a session runs in one](../../../decisions/the-computer-is-an-object-a-person-manages.md) | The user, 2026-09-23: "restricted.. sandboxed.. private. On the same computer... or just fire/run/die a computer per session." |
+| 1 | A backend reaches a machine through a port the host carries | The user, 2026-09-23: "Include ACP-inside-a-computer in this step", and no backend may depend on one machine plugin. |
+| 2 | [A computer is an object a person manages, and a session runs in one](../../../../docs/COMPUTER.md) | The user, 2026-09-23: "restricted.. sandboxed.. private. On the same computer... or just fire/run/die a computer per session." |
 
 | What | Source | Task |
 | --- | --- | --- |

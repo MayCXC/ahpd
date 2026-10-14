@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/plugin-install-also-names-the-plugin.md
 refs:
   - "[code://packages/server/src/main.ts#L601-L620](../../../../packages/server/src/main.ts#L601-L620) - the `plugin` verb, which takes only `list`"
   - "[code://packages/server/src/main.ts#L139-L160](../../../../packages/server/src/main.ts#L139-L160) - `USAGE`, where the subcommands are listed"
@@ -58,7 +57,7 @@ devcontainer up -> npm i -g @ahpd/server@<v> -> ahpd plugin install <npm-named d
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [ahpd plugin install installs the package and names it in the configuration](../../../decisions/plugin-install-also-names-the-plugin.md) | The user, 2026-09-25: "its there a way to make a install using ahpd? `ahpd plugin install`" |
+| 1 | [ahpd plugin install installs the package and names it in the configuration](../../../../docs/DAEMON.md) | The user, 2026-09-25: "its there a way to make a install using ahpd? `ahpd plugin install`" |
 
 | What | Source | Task |
 | --- | --- | --- |

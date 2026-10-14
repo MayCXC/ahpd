@@ -20,7 +20,7 @@ refs:
 ## Objective
 
 A `disposable:<profile>` or `devcontainer://<folder>` machine made when a session starts is counted against `max`, and the request that names the source needs `computer:write` as well as `session:write`, on all three roads: `createSession`, a configuration change before the first turn and an automation's start.
-This applies [A machine made for a session counts against max and needs computer:write](../../../decisions/a-machine-made-for-a-session-counts-against-max-and-needs-computer-write.md).
+This applies [A machine made for a session counts against max and needs computer:write](./plan.md).
 The `policy/01` computer rows are a separate check and do not stand in for the grant; for now they also run on the pre-turn change and the automation's start, with the same kinds as `createSession`.
 An automation's start acts as its owner through `principalFor(owner)`, and is refused a source when that owner has not signed in since the daemon started.
 

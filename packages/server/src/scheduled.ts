@@ -3,8 +3,7 @@
  *
  * Each automation is one Markdown file a person reads and edits, and what
  * changes on every run is kept apart from it, in a state file of the daemon's
- * own. Decisions `a-person-edits-a-record-as-a-markdown-file` and
- * `an-automation-run-state-is-kept-apart`.
+ * own.
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync, watch as watchPath, writeFileSync } from 'node:fs';

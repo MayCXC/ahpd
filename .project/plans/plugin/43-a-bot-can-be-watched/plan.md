@@ -8,7 +8,6 @@ revalidated: 2026-10-10
 requires:
   - plans/plugin/42-a-reserved-name-is-refused/plan.md
 decisions:
-  - decisions/bots-are-watched-and-catalogued.md
 refs:
   - "[code://packages/sdk/src/host/resourcemethods.ts#L102-L134](../../../../packages/sdk/src/host/resourcemethods.ts#L102-L134) - `createResourceWatch`, which calls a provider's `watch` with no reader"
   - "[code://packages/sdk/src/types/resources.ts#L211-L215](../../../../packages/sdk/src/types/resources.ts#L211-L215) - `watch`, the signature a provider takes from `ResourceStore`"
@@ -55,7 +54,7 @@ client subscribe ahp-resource-watch:/<id> -> gate (bot:watch, from the watched r
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Bots are watched and catalogued](../../../decisions/bots-are-watched-and-catalogued.md) | Softov, 2026-10-10 |
+| 1 | [Bots are watched and catalogued](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

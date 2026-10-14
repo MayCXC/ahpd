@@ -88,7 +88,7 @@ export interface Spawn {
  * and nothing else, while the bytes it reads are still the host's. The live
  * store is one object shared by every session and by the resource commands,
  * and a backend that reached into it would be changing what the next client
- * reads - decision `a-plugin-gets-frozen-copies-of-host-values`.
+ * reads.
  *
  * The write half is the store's to offer or leave out, and this view offers
  * exactly what it holds: a store that cannot be written stays a read-only
@@ -488,19 +488,17 @@ export function createSpawn(ctx: HostContext): Spawn {
      * A backend that cannot move its own process into a machine declares
      * `runsNested`, and a session of it that names a computer runs through the
      * SDK's proxy instead: a whole host with that backend loaded is started
-     * inside the machine and its frames are carried out as this session's -
-     * decision `a-cofold-session-in-a-computer-runs-in-a-nested-host`. A
+     * inside the machine and its frames are carried out as this session's. A
      * session with no machine, or a backend without the flag, is started here
      * exactly as it was.
      *
      * The host inside loads the plugin that registered the agent here, as its
      * spec was recorded, and an agent with no record ends its session saying
-     * so - decision `the-host-records-which-plugin-registered-each-agent`.
+     * so.
      *
      * A machine off this host is nested whatever the backend declared, because
      * one that moves its own process into a machine on this host still cannot
-     * reach a box on another - decision
-     * `a-nested-host-is-used-only-where-a-command-cannot-reach-the-agent`. The
+     * reach a box on another. The
      * port is asked once, here, because whether a machine is off this host is
      * the port's to know and every road to a running backend goes through this
      * one place.
@@ -599,8 +597,7 @@ export function createSpawn(ctx: HostContext): Spawn {
      *
      * Read from the connection that sent the turn that starts or restarts this
      * backend, and on a host with people only when that connection is the
-     * session's owner - decision
-     * `a-folder-is-untrusted-until-a-client-says-otherwise`. A turn somebody
+     * session's owner. A turn somebody
      * else sends into this session is not theirs to widen, which is why the
      * two are compared rather than the value simply passed along; and an
      * automation, a host tool and a daemon coming back up have no connection
@@ -608,16 +605,14 @@ export function createSpawn(ctx: HostContext): Spawn {
      * window that pushed nothing.
      *
      * Where the host has no people directory there is nobody to be other than
-     * the sender, and the sender decides - decision
-     * `the-sender-decides-on-a-host-with-no-people`. `ownerFor` answers
+     * the sender, and the sender decides. `ownerFor` answers
      * `undefined` for every connection there, so comparing owners would refuse
      * every folder on such a host and make the value a window pushes dead on
      * it.
      *
      * A worktree this host made is read as the repository it was cut from: it
      * is a folder the window has never opened and so cannot have pushed, and
-     * one the host made is trusted exactly when its repository is - decision
-     * `a-worktree-inherits-its-repositorys-trust`.
+     * one the host made is trusted exactly when its repository is.
      */
     const trustedBy = (folder: string): boolean => {
       if (sender === undefined) return false;
@@ -708,8 +703,7 @@ export function createSpawn(ctx: HostContext): Spawn {
        *
        * A backend reads these to know what it was started with; one that set
        * `model` on them would be setting what the host records against this
-       * session and what the next turn is started with - decision
-       * `a-plugin-gets-frozen-copies-of-host-values`.
+       * session and what the next turn is started with.
        */
       settings: frozenCopy({ ...agent.defaults(), ...contributedDefaults(), ...config }),
       schema: () => runningSchema(agent),
@@ -1005,8 +999,7 @@ export function createSpawn(ctx: HostContext): Spawn {
        * Claude names every turn by the CLI's frame uuid - is read back by that
        * other id after a restart, finding nothing. So the sender is kept under
        * it as well, rather than the host learning one backend's transcript
-       * format: decision
-       * `a-backend-says-which-transcript-id-a-turn-was-written-as`.
+       * format.
        *
        * The in-memory entry first, because a turn still running is only in
        * that map, and the store after it for the turn a backend names once

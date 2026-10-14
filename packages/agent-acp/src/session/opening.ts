@@ -212,8 +212,7 @@ export function createOpening(ctx: SessionContext): Opening {
    * The machine this session was told to run in, as something to spawn.
    *
    * A session whose settings name a computer runs the server there, through
-   * the port the host carries - decision
-   * `a-backend-reaches-a-computer-through-a-port`. A name that cannot be
+   * the port the host carries. A name that cannot be
    * reached throws rather than falling back to this host: a session that asked
    * for a sandbox and silently ran outside one is worse than one that did not
    * start.
@@ -322,8 +321,7 @@ export function createOpening(ctx: SessionContext): Opening {
     const pending = (async () => {
       /*
        * A folder the host did not vouch for, and an agent that loads the
-       * folder's own hooks and settings unchecked - decision
-       * `a-folder-is-untrusted-until-a-client-says-otherwise`.
+       * folder's own hooks and settings unchecked.
        *
        * ACP carries no trust field and this host reads none of a project's
        * files for an ACP agent, so what a folder holds reaches the agent

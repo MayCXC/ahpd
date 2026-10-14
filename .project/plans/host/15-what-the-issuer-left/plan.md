@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-claim-names-the-roles-this-host-defines.md
 refs:
   - "[code://packages/sdk/src/types/users.ts#L96-L134](../../../../packages/sdk/src/types/users.ts#L96-L134) - `rolesFrom` and `IssuerAnswer`"
   - "[code://packages/sdk/src/users.ts#L343-L397](../../../../packages/sdk/src/users.ts#L343-L397) - `principalOf` and `rolesFromClaim`"
@@ -44,7 +43,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A claim names the roles, and this file defines them](../../../decisions/a-claim-names-the-roles-this-host-defines.md) | The user, 2026-09-23: "c now, then b", choosing the roles-from-claims option after the deferred item named "a claim mapping" as what it needs. |
+| 1 | [A claim names the roles, and this file defines them](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "c now, then b", choosing the roles-from-claims option after the deferred item named "a claim mapping" as what it needs. |
 
 | What | Source | Task |
 | --- | --- | --- |

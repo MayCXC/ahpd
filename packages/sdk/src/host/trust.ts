@@ -6,7 +6,7 @@ import type { Bag } from '../types/common.js';
 
 /*
  * Whether a client trusts a folder, read from the `workspaceTrust` value it
- * pushed - decision `a-folder-is-untrusted-until-a-client-says-otherwise` - and
+ * pushed - and
  * from the folders it said yes to one at a time, which are kept on its
  * connection until it pushes a new value.
  *
@@ -169,8 +169,7 @@ export const autoApproved = (config: Record<string, unknown>, rootConfig: Record
  * the answer is `{ trusted: boolean }`. `trustedParent`, which VS Code sends
  * for a folder that does not exist yet, is not sent: the one folder this host
  * asks about before it exists is a worktree, and a worktree is vouched for by
- * the repository it was cut from rather than by a window - decision
- * `a-worktree-inherits-its-repositorys-trust`.
+ * the repository it was cut from rather than by a window.
  *
  * Whatever comes back that is not `{ trusted: true }` is a no, and so is a
  * client that does not serve the method at all - it answers `-32601`, which

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-plugin-hears-input-needed-though-a-client-does-too.md
 refs:
   - "[code://packages/sdk/src/types/events.ts#L18-L39](../../../../packages/sdk/src/types/events.ts#L18-L39) - `EventName` and the rule it states, which this plan rewrites"
   - "[code://packages/sdk/src/host.ts#L3575-L3597](../../../../packages/sdk/src/host.ts#L3575-L3597) - `emit`, where `turn_start` and `turn_end` are raised from the backend's own actions; the new events are raised beside them"
@@ -54,7 +53,7 @@ backend emit('session', session/inputNeededRemoved) -> host.ts emit -> dispatch
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin hears a session's input needed set and removed, although a client receives the same actions](../../../decisions/a-plugin-hears-input-needed-though-a-client-does-too.md) | Softov, 2026-09-26, accepted |
+| 1 | [A plugin hears a session's input needed set and removed, although a client receives the same actions](../../../../docs/PLUGINS.md) | Softov, 2026-09-26, accepted |
 
 | What | Source | Task |
 | --- | --- | --- |

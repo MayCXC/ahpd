@@ -9,12 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/bot-records-live-in-the-bot-plugin.md
-  - decisions/a-bot-gets-its-session-by-a-link-or-at-make.md
-  - decisions/a-plugin-starts-a-session-as-an-owner.md
-  - decisions/a-bot-owns-one-folder.md
-  - decisions/the-computer-is-an-object-a-person-manages.md
-  - decisions/a-scheme-provider-may-authorize-a-read-itself.md
 refs:
   - "[code://packages/computer/src/plugin.ts#L1053](../../../../packages/computer/src/plugin.ts#L1053) - the computer plugin registers its scheme, the pattern this package follows"
   - "[code://packages/computer/src/provider.ts#L85-L92](../../../../packages/computer/src/provider.ts#L85-L92) - a provider with list, resolve, read, write, remove and describe"
@@ -61,12 +55,12 @@ client resourceRead bot:/motion -> bot provider read -> record JSON
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Bot records live in a bot plugin, the way computers do](../../../decisions/bot-records-live-in-the-bot-plugin.md) | Softov, 2026-10-07 |
-| 2 | [A bot gets its session by a link to one its owner has, or a new one at make](../../../decisions/a-bot-gets-its-session-by-a-link-or-at-make.md) | Softov, 2026-10-07 |
-| 3 | [A plugin starts a session as a named owner](../../../decisions/a-plugin-starts-a-session-as-an-owner.md) | defaulted |
-| 4 | [A computer is an object a person manages](../../../decisions/the-computer-is-an-object-a-person-manages.md) | a bot is made, edited and deleted the same way |
-| 5 | [A scheme provider may authorize a read itself](../../../decisions/a-scheme-provider-may-authorize-a-read-itself.md) | an owner reads their own bot without `bot:get` |
-| 6 | [A bot owns one folder, and every session the host starts for it runs there](../../../decisions/a-bot-owns-one-folder.md) | Softov, 2026-10-07 |
+| 1 | Bot records live in a bot plugin, the way computers do | Softov, 2026-10-07 |
+| 2 | [A bot gets its session by a link to one its owner has, or a new one at make](../../../../docs/BOTS.md) | Softov, 2026-10-07 |
+| 3 | [A plugin starts a session as a named owner](../../../../docs/PLUGINS.md) | defaulted |
+| 4 | [A computer is an object a person manages](../../../../docs/COMPUTER.md) | a bot is made, edited and deleted the same way |
+| 5 | [A scheme provider may authorize a read itself](../../../../docs/RESOURCES.md) | an owner reads their own bot without `bot:get` |
+| 6 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/BOTS.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |

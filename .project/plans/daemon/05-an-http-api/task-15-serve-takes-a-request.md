@@ -4,7 +4,7 @@ status: done
 depends: [task-06-serve-survives-a-malformed-request.md]
 layer: "cofold remote"
 refs:
-  - "[decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md](../../../decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md) - what this task applies"
+  - "[./plan.md](./plan.md) - what this task applies"
   - file:///github/cofold/packages/remote/src/serve.ts - `RequestHandler` at line 44, `serve()` at line 78, `readBody` at line 200
   - file:///github/cofold/packages/remote/src/serve.test.ts - the cases, several over a real server or `node:net`
   - file:///github/cofold/packages/remote/src/index.ts - the exports
@@ -30,7 +30,7 @@ It is released as `@cofold/remote` 0.4.0.
 
 ## Steps
 
-1. Apply decision [cofold-serve-is-fetch-style-with-a-node-adapter](../../../decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md).
+1. Apply [cofold's serve() takes a Request and answers a Response, and Node gets an adapter](./plan.md).
 2. `serve()` uses only web-standard globals (`Request`, `Response`, `Headers`, `URL`, `ReadableStream`), so the module imports nothing from `node:`; `node.ts` is the only file that does.
 3. Pass `request.signal` to `registry.execute` as the command's signal.
 4. Keep `readBody`'s rules: an empty body is `{}`, a non-empty body must be `application/json`, a body past the limit is 413 and stops being read.

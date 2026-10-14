@@ -23,7 +23,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts#L3226-L3262](../../../../packages/agent-claude/src/session.ts#L3226-L3262) - `confirm`: found by call id, answered with `chat/toolCallConfirmed`, then the wait is settled"
   - "[code://packages/agent-claude/src/claude.ts#L166-L189](../../../../packages/agent-claude/src/claude.ts#L166-L189) - the `permissionMode` session key a client draws its approvals picker from"
   - "[code://packages/agent-cofold/src/agent.ts#L115-L135](../../../../packages/agent-cofold/src/agent.ts#L115-L135) - the other sibling's six modes, decided from a tool's effects"
-  - "[code://.project/decisions/permission-modes-live-in-the-harness.md](../../../../.project/decisions/permission-modes-live-in-the-harness.md) - why the six modes are the same six on every backend"
+  - "[code://.project/plans/plugin/06-permission-modes/plan.md](../../plugin/06-permission-modes/plan.md) - why the six modes are the same six on every backend"
   - npm://@earendil-works/pi-coding-agent@^0.87.1 - `AgentSession` owns pi-agent-core's `beforeToolCall` and routes it to extensions' `tool_call` handlers (`dist/core/agent-session.js`, `_installAgentToolHooks`); an inline extension comes in through `resourceLoaderOptions.extensionFactories`; `ToolCallEventResult` is `{ block, reason }`, in `dist/core/extensions/types.d.ts`
   - npm://@earendil-works/pi-agent-core@0.87.1 - `beforeToolCall`, in `dist/types.d.ts`
 ---

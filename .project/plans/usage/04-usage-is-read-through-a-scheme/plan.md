@@ -12,9 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/usage-is-read-through-a-usage-scheme.md
-  - decisions/the-usage-store-answers-live-totals.md
-  - decisions/a-scheme-provider-may-authorize-a-read-itself.md
 refs:
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts) - `Usage.record` and `total`; no way to read records yet"
   - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts) - `fileUsage`, monthly JSONL files and per-day totals"
@@ -49,8 +46,8 @@ meters -> Usage.record -> fileUsage (monthly JSONL, per-day totals) -> Usage.tot
 
 | What | Source | Task |
 | --- | --- | --- |
-| [A `usage:` scheme, totals and records, own pools readable without a grant](../../../decisions/usage-is-read-through-a-usage-scheme.md) | Softov, 2026-10-02 | 01, 02 |
-| [A scheme provider may let a read through with `authorize?(uri, reader)`](../../../decisions/a-scheme-provider-may-authorize-a-read-itself.md) | Softov, 2026-10-02 | 02 |
+| [A `usage:` scheme, totals and records, own pools readable without a grant](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [A scheme provider may let a read through with `authorize?(uri, reader)`](../../../../docs/RESOURCES.md) | Softov, 2026-10-02 | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

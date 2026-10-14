@@ -44,8 +44,7 @@ export const dialectAt = (path: string): Dialect | undefined => {
  * The dialect a request that names none by its path is answered in.
  *
  * Anthropic's SDKs and Claude Code send `anthropic-version` on every request
- * and OpenAI's never do - decision
- * `the-models-list-answers-in-the-dialect-the-caller-sent`.
+ * and OpenAI's never do.
  */
 export const dialectOfHeaders = (headers: Headers): Dialect =>
   headers.has('anthropic-version') ? 'anthropic-messages' : 'openai-chat';

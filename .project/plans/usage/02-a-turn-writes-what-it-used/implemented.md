@@ -26,7 +26,7 @@ Every turn on a host with a `usage` port leaves a `ModelUse` (`source: 'agent'`)
 - `usage.per` is declared in `packages/server/src/commands/options.ts`, which the task did not name, because the config file is checked against `serverFields` there.
 - A report for a turn the host never saw start is metered from the report; a report after a turn ended is ignored, remembering the last 1024 ended turn ids.
 - Per report, an unchanged count writes zero, so the records of a turn sum to its last report.
-- A record with no model named is written with `name: ''` - decision [a-model-record-with-no-model-named-has-an-empty-name](../../../decisions/a-model-record-with-no-model-named-has-an-empty-name.md).
+- A record with no model named is written with `name: ''`
 
 ## Left for later
 

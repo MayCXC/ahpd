@@ -10,9 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/acp-ports-come-through-start.md
-  - decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md
-  - decisions/the-hosts-tools-are-an-mcp-server-each-backend-may-take.md
 refs:
   - "[code://packages/agent-acp/src/session.ts#L537-L549](../../../../packages/agent-acp/src/session.ts#L537-L549) - `mcpServers: []` on every open"
   - "[code://packages/agent-acp/src/session.ts#L1145-L1147](../../../../packages/agent-acp/src/session.ts#L1145-L1147) - `startMcpServer` answers false"
@@ -36,9 +33,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Task |
 | --- | --- |
-| [An ACP backend reaches files and a shell through Start](../../../decisions/acp-ports-come-through-start.md) | 02 |
-| [The host's MCP servers are the root config key `mcpServers`, as in VS Code](../../../decisions/the-hosts-mcp-servers-are-root-config-as-in-vscode.md) | 01, 02 |
-| [The host's tools are an MCP server the host serves, and each agent plugin says whether its sessions take it](../../../decisions/the-hosts-tools-are-an-mcp-server-each-backend-may-take.md) | 03, 04 |
+| [An ACP backend reaches files and a shell through Start](../../plugin/07-agent-acp/plan.md) | 02 |
+| [The host's MCP servers are the root config key `mcpServers`, as in VS Code](../../../../docs/TOOLS.md) | 01, 02 |
+| [The host's tools are an MCP server the host serves, and each agent plugin says whether its sessions take it](../../../../docs/TOOLS.md) | 03, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |

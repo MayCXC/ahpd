@@ -8,8 +8,6 @@ revalidated: 2026-10-11
 requires:
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
 decisions:
-  - decisions/the-bot-manifest-names-the-host-owner.md
-  - decisions/any-root-owner-is-this-host.md
 refs:
   - "[code://packages/bot/src/provider.ts#L281-L307](../../../../packages/bot/src/provider.ts#L281-L307) - `ownerFor`, which refuses another person's `user:` to everyone except root"
   - "[code://packages/bot/src/provider.ts#L224-L233](../../../../packages/bot/src/provider.ts#L224-L233) - `mayWrite`, which already reads `*:*` as the admin test"
@@ -48,8 +46,8 @@ resourceWrite bot://<slug> createOnly -> botProvider.write -> ownerFor -> record
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The bot manifest names the host's own owner, so a client never builds it](../../../decisions/the-bot-manifest-names-the-host-owner.md) | (defaulted: a client draws only what the host sends) |
-| 2 | [Any root owner is this host, whatever name follows it](../../../decisions/any-root-owner-is-this-host.md) | Softov, 2026-10-11, "Any root:* is this host" |
+| 1 | [The bot manifest names the host's own owner, so a client never builds it](../../../../docs/BOTS.md) | (defaulted: a client draws only what the host sends) |
+| 2 | Any root owner is this host, whatever name follows it | Softov, 2026-10-11, "Any root:* is this host" |
 
 | What | Source | Task |
 | --- | --- | --- |

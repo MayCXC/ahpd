@@ -26,7 +26,7 @@ It is not encrypted; that is [an idea](../../../ideas/the-local-vault-is-encrypt
 3. A file that is not JSON, or not that shape, makes every call throw `<file> is not a vault: <why>`; it is never overwritten.
 4. `set` and `delete` check the name with `scopeOf`, then write the whole map to a temporary file beside it, created at mode 0600, and rename it over `vault.json`.
 5. `list` answers the names, sorted; `get` answers `undefined` for a name not held; `delete` answers whether it was there.
-6. Comments say what each declaration is, and the file's comment names decision `the-local-vault-is-a-plain-file-until-it-is-encrypted`.
+6. Comments say what each declaration is, and the file's comment names [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md).
 
 ## Validation
 

@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-grant-names-an-operation-and-read-and-write-are-its-groups.md
 refs:
   - "[code://packages/sdk/src/host/root.ts#L173-L202](../../../../packages/sdk/src/host/root.ts#L173-L202) - `advertisedSchemes`, each registered scheme's `describe()`, root and the operations its provider implements"
   - "[code://packages/sdk/src/host/root.ts#L215-L234](../../../../packages/sdk/src/host/root.ts#L215-L234) - `advertisedGrants`, read off `OPERATIONS` only, so the eight built-in subjects and no scheme"
@@ -52,7 +51,7 @@ resourceProviders (users directory, plugins) -> advertisedGrants -> initialize _
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A grant names an operation, and read and write are its groups](../../../decisions/a-grant-names-an-operation-and-read-and-write-are-its-groups.md) | a scheme's groups are `RESOURCE`'s |
+| 1 | [A grant names an operation, and read and write are its groups](../../../../docs/USERS.md) | a scheme's groups are `RESOURCE`'s |
 
 | What | Source | Task |
 | --- | --- | --- |

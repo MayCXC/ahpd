@@ -8,9 +8,6 @@ revalidated: 2026-10-06
 requires:
   - plans/host/66-a-session-honours-the-folders-vscode-trusts/plan.md
 decisions:
-  - decisions/a-folder-is-untrusted-until-a-client-says-otherwise.md
-  - decisions/the-sender-decides-on-a-host-with-no-people.md
-  - decisions/a-worktree-inherits-its-repositorys-trust.md
 refs:
   - "[code://packages/sdk/src/host/root.ts#L162-L184](../../../../packages/sdk/src/host/root.ts#L162-L184) - `ROOT_CONFIG_SCHEMA`"
   - "[code://packages/sdk/src/host/gate.ts#L289-L302](../../../../packages/sdk/src/host/gate.ts#L289-L302) - `PER_CONNECTION`, the person's keys, `defaultShell` today"
@@ -49,9 +46,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A folder is untrusted until a client has pushed workspaceTrust saying otherwise](../../../decisions/a-folder-is-untrusted-until-a-client-says-otherwise.md) | Softov, 2026-10-06, "Untrusted, as VS Code" |
-| 2 | [The sender's push decides a folder's trust on a host with no people](../../../decisions/the-sender-decides-on-a-host-with-no-people.md) | Softov, 2026-10-06, "The sender's push" |
-| 3 | [A worktree the host made is trusted when its repository is](../../../decisions/a-worktree-inherits-its-repositorys-trust.md) | Softov, 2026-10-06, "Inherit from its repository" |
+| 1 | [A folder is untrusted until a client has pushed workspaceTrust saying otherwise](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-06, "Untrusted, as VS Code" |
+| 2 | [The sender's push decides a folder's trust on a host with no people](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-06, "The sender's push" |
+| 3 | [A worktree the host made is trusted when its repository is](../../../../docs/SESSIONS.md) | Softov, 2026-10-06, "Inherit from its repository" |
 
 | What | Source | Task |
 | --- | --- | --- |

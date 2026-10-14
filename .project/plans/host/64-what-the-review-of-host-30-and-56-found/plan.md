@@ -11,7 +11,6 @@ requires:
   - plans/daemon/13-ahpd-restart/plan.md
   - plans/claude/10-a-claude-session-runs-on-a-preset/plan.md
 decisions:
-  - decisions/a-stored-sandbox-on-survives-the-preset.md
 problems:
   - problems/a-claimed-chat-is-read-as-a-session.md
   - problems/an-unreadable-session-file-is-overwritten.md
@@ -54,7 +53,7 @@ The review's probes reproduced tasks 01, 02 and 03; their cases are the first te
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A session stored with the sandbox on keeps it on, whatever its preset says](../../../decisions/a-stored-sandbox-on-survives-the-preset.md) | Softov, 2026-10-06, "Honour the stored value" |
+| 1 | [A session stored with the sandbox on keeps it on, whatever its preset says](../../../../docs/AHP.md) | Softov, 2026-10-06, "Honour the stored value" |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -90,7 +89,7 @@ The review's probes reproduced tasks 01, 02 and 03; their cases are the first te
 
 - **Done so far:** tasks 01-07 implemented 2026-10-06, each with a case that failed before the fix. Task 07 stopped on a fork - the value a store actually holds - which Softov answered on 2026-10-06: a stored `'on'` or `true`, so both the decision and the task now read that.
 - **Next action:** Softov's review, which sets the tasks to `done`.
-- **Open questions:** none. The one task 07 stopped on is answered and recorded in [the decision](../../../decisions/a-stored-sandbox-on-survives-the-preset.md).
+- **Open questions:** none. The one task 07 stopped on is answered and recorded in [the decision](../../../../docs/AHP.md).
 - **Watch out for:** every task starts with a test that fails on `main`; a fix with no failing test first is not done.
 
 ## Final verification checklist

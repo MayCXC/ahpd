@@ -23,9 +23,9 @@ The host announces `session/ready` once the backend is up and before the session
 
 The session is stored under the id the client named and the backend is told that name, so its transcript is written where this host can find it again. Left to itself the backend invents an id, and a host that did not pass the client's own down answers to two names while it runs and loses the client's the moment it restarts - `No agent for session`, about a session that is still there.
 
-`disposeSession` checks first, then tears the running half down, then asks the backend for its own copy, then drops the row and tells every client with `root/sessionRemoved`. A session this host only lists has nothing to tear down and goes straight to the same delete - decision [Deleting a session deletes the backend's own copy of it](../.project/decisions/deleting-a-session-deletes-the-backends-copy.md).
+`disposeSession` checks first, then tears the running half down, then asks the backend for its own copy, then drops the row and tells every client with `root/sessionRemoved`. A session this host only lists has nothing to tear down and goes straight to the same delete.
 
-Nothing about a session outlives the process except what a store was given. The sessions themselves come back either way, because they are read from the backend's own transcripts; what is this host's own is the read and archived bits, the settings chosen, the owner and who sent each turn, and where those go is `--sessions`. `file`, the default, writes one file per session and reads them once at startup - decision [The session store is one file per session, and rows whose session is gone are pruned](../.project/decisions/the-session-store-is-one-file-per-session.md). `memory` forgets them, which a daemon started for one run wants and a daemon that restarts does not: a restart there returns every archived session to the catalogue and marks every read one unread.
+Nothing about a session outlives the process except what a store was given. The sessions themselves come back either way, because they are read from the backend's own transcripts; what is this host's own is the read and archived bits, the settings chosen, the owner and who sent each turn, and where those go is `--sessions`. `file`, the default, writes one file per session and reads them once at startup. `memory` forgets them, which a daemon started for one run wants and a daemon that restarts does not: a restart there returns every archived session to the catalogue and marks every read one unread.
 
 ## Sleep and wake
 
@@ -39,7 +39,7 @@ A sleeping session **wakes** when something needs it, resumed in place with its 
 
 ## Whose it is, and what it is charged to
 
-An owner is a typed reference: `user:<id>` for a person who signed in, `root:<host>` for a connection that is this host itself, and nothing at all on a host with no users directory, which has nobody to name. It is written when the session opens and travels with the run, so a turn sent later by somebody else does not change whose work the session is - decision [Work is owned by a typed reference, user, team or project](../.project/decisions/work-is-owned-by-a-typed-reference.md).
+An owner is a typed reference: `user:<id>` for a person who signed in, `root:<host>` for a connection that is this host itself, and nothing at all on a host with no users directory, which has nobody to name. It is written when the session opens and travels with the run, so a turn sent later by somebody else does not change whose work the session is.
 
 Two things are asked of the owner. Deleting a session is the owner's or an administrator's: `disposeSession` refuses anybody else with `-32009` and `Only the session's owner can delete it.`, because ending somebody's conversation is not the same as writing in it, and a host with no users directory refuses nobody. And a run acts as its owner for the machine it asked for.
 
@@ -87,7 +87,7 @@ Every key in the table is `sessionMutable: false`: it is decided once, when the 
 
 The backend's own keys are the rest, and a key that says neither `sessionMutable` nor `scope` gets the safe answers: mutable, and the session's. A key whose property says `scope: chat` reaches one chat and the others all reach the session, because a voice set on one chat is a session whose two conversations answer differently.
 
-A key a plugin contributed is a control a client draws beside the backend's own, and it exists only while its plugin is loaded. Where both declare one the backend's wins, because a plugin may not quietly move a setting a backend owns - decision [A plugin may contribute a session config key](../.project/decisions/a-plugin-may-contribute-a-session-key.md). A contributed key with a picker of its own is marked `enumDynamic` and answers through `sessionConfigCompletions`.
+A key a plugin contributed is a control a client draws beside the backend's own, and it exists only while its plugin is loaded. Where both declare one the backend's wins, because a plugin may not quietly move a setting a backend owns. A contributed key with a picker of its own is marked `enumDynamic` and answers through `sessionConfigCompletions`.
 
 A value a session was stored with and its backend no longer offers is left out so the default applies, and said once in the log; the store only holds keys the backend took, and a backend takes some it does not declare. A stored string for `worktreeIncludeFiles` is read as the list it spells rather than refused.
 
@@ -95,11 +95,11 @@ A value a session was stored with and its backend no longer offers is left out s
 
 A worktree is a second checkout of one repository, so two sessions in it do not edit under each other. A tree carries what git checked out and nothing else, which is the whole of why `worktreeIncludeFiles` and `worktreeSymlinkFolders` exist: an ordinary project arrives without its `.env` and without `node_modules`, and the isolation would work while the agent inside it could not build. The copy is best effort pattern by pattern, and the links are made before the copy so a folder that is linked is not also copied. A link is one directory reached from two places, so a write into it from inside the worktree is a write into the checkout, which is why only git-ignored folders are eligible.
 
-A tree is made at `<repo>.worktrees/<name>`, beside its repository, which is where the reference host puts one, or as `<dir>/<repo>/<name>` under `--worktrees-root <dir>` - decision [Worktrees can live under one root, as an option beside the reference's default](../.project/decisions/worktrees-can-live-under-one-root.md). A tree made under a root is not where the reference host looks, so a tree either makes is found by the other only at the default.
+A tree is made at `<repo>.worktrees/<name>`, beside its repository, which is where the reference host puts one, or as `<dir>/<repo>/<name>` under `--worktrees-root <dir>`. A tree made under a root is not where the reference host looks, so a tree either makes is found by the other only at the default.
 
 The window has five requests of its own for trees it manages, made when `initialize` says `_meta['vscode.detachedWorktrees']`: create, claim, archive, unarchive and reconcile. They are served over the same trees, so the window's "new session in a worktree" flow runs against this host unchanged. Archiving takes a clean tree off the disk once its session is gone and keeps the branch; a tree with somebody's work in it, or a session still running in it, stays.
 
-A worktree the host made is trusted when the repository it came from is - decision [A worktree the host made is trusted when its repository is](../.project/decisions/a-worktree-inherits-its-repositorys-trust.md).
+A worktree the host made is trusted when the repository it came from is.
 
 ## Commands
 

@@ -385,8 +385,7 @@ it('refuses a body that is not a manifest, field by field', async () => {
 
 /*
  * Plan plugin/19 task 01: a profile names the OCI runtime Docker starts its
- * machines under, `runsc` for gVisor - decision
- * `gvisor-is-a-docker-profile-option-not-a-runtime`.
+ * machines under, `runsc` for gVisor.
  *
  * The profile's alone, because the boundary a machine is given is the
  * operator's to choose: a body that names one is refused rather than obeyed,

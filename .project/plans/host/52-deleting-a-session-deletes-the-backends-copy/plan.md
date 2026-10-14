@@ -9,7 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/deleting-a-session-deletes-the-backends-copy.md
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L95-L98](../../../../packages/sdk/src/host/lifecycle.ts#L95-L98) - `removeSession` refuses a session the daemon is not holding with -32001"
   - "[code://packages/sdk/src/host/lifecycle.ts#L226](../../../../packages/sdk/src/host/lifecycle.ts#L226) - the stored row is forgotten, and with it the agent that ran the session"
@@ -57,7 +56,7 @@ disposeSession(channel) -> heldAs -> removeSession(uri) [held: teardown] -> agen
 
 | Decision | Task |
 | --- | --- |
-| [Deleting a session deletes the backend's own copy of it](../../../decisions/deleting-a-session-deletes-the-backends-copy.md) | 01, 02, 03 |
+| [Deleting a session deletes the backend's own copy of it](../../../../docs/SESSIONS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

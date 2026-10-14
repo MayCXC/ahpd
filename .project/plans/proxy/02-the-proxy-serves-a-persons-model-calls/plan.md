@@ -13,13 +13,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-proxy-answers-under-v1-beside-the-api.md
-  - decisions/the-models-list-answers-in-the-dialect-the-caller-sent.md
-  - decisions/a-model-is-named-by-its-maker-and-runs-on-a-provider.md
-  - decisions/the-http-api-is-on-the-daemon-port-under-api.md
-  - decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md
-  - decisions/a-request-naming-no-scope-uses-the-persons-primary.md
-  - decisions/agent-usage-is-charged-to-owner-team-and-project-pools.md
 refs:
   - "[code://packages/server/src/proxy/providers.ts#L19-L111](../../../../packages/server/src/proxy/providers.ts#L19-L111) - dialects, providers, model entries, the built-ins and `proxyConfiguration`: the table a call is routed by"
   - "[code://packages/server/src/commands/proxy.ts#L74-L93](../../../../packages/server/src/commands/proxy.ts#L74-L93) - `proxy.list`, which reads `keySet` from the environment and never the key; the pattern for reading a key"
@@ -87,9 +80,9 @@ tool -> POST /v1/chat/completions | /v1/messages on the API's listener
 
 | Decision | Source |
 | --- | --- |
-| [The proxy answers under /v1 on the listener that carries /api, and only while http is on](../../../decisions/the-proxy-answers-under-v1-beside-the-api.md) | defaulted |
-| [GET /v1/models answers in the dialect the caller sent](../../../decisions/the-models-list-answers-in-the-dialect-the-caller-sent.md) | defaulted |
-| [A model is named by its maker, and where it runs is a provider](../../../decisions/a-model-is-named-by-its-maker-and-runs-on-a-provider.md) | Softov, 2026-10-01 |
+| [The proxy answers under /v1 on the listener that carries /api, and only while http is on](../../../../docs/PROXY.md) | defaulted |
+| [GET /v1/models answers in the dialect the caller sent](../../../../docs/PROXY.md) | defaulted |
+| [A model is named by its maker, and where it runs is a provider](../01-the-proxy-knows-its-providers-and-models/plan.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -25,7 +25,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/admission.ts:35-104` - `capabilityFor` answers `subscribe` and `completions` with operations; `createChat` with `source.kind: 'fork'` asks `chat:fork`.
 - `UPDATE: packages/sdk/src/host/actions.ts:100-125` - the gate asks `ACTION_NEEDS[action.type]`.
 - `UPDATE: packages/sdk/test/users-gate.test.ts` - the staleness test and the matrix below.
-- Comments citing `a-grant-is-a-subject-and-a-verb` cite `a-grant-names-an-operation-and-read-and-write-are-its-groups`.
+- Comments citing [A grant is a subject and a verb](../../../../docs/USERS.md) cite [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/USERS.md).
 
 ## Steps
 

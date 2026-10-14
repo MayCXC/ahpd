@@ -10,9 +10,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md
   - decisions/a-pasted-image-goes-as-an-image-when-it-fits.md
-  - decisions/pasted-text-is-inlined-up-to-64-kib.md
 refs:
   - "[code://packages/agent-pi/src/session.ts#L867-L874](../../../../packages/agent-pi/src/session.ts#L867-L874) - the inner `begin`, which takes the turn's attachments as its last parameter"
   - "[code://packages/agent-pi/src/session.ts#L951](../../../../packages/agent-pi/src/session.ts#L951) - the prompt a turn's parts are built for"
@@ -50,9 +48,9 @@ Session.begin / queue / steer (host 68) -> partsOf(text, attachments, { images: 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An attachment's bytes are written to disk and the message names the file](../../../decisions/an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file.md) | Softov, 2026-10-06 |
+| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 | 2 | [A pasted image goes as an image when it fits](../../../decisions/a-pasted-image-goes-as-an-image-when-it-fits.md) | Softov, 2026-10-06 |
-| 3 | [Pasted text is inlined up to 64 KiB](../../../decisions/pasted-text-is-inlined-up-to-64-kib.md) | Softov, 2026-10-06 |
+| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
 
 | What | Source | Task |
 | --- | --- | --- |

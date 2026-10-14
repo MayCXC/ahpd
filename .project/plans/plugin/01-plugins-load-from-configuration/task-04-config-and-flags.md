@@ -11,7 +11,7 @@ refs:
   - code://packages/server/src/main.ts#L84-L133 - `USAGE`, which documents them
   - code://packages/server/src/main.ts#L193-L210 - the `paths` merge, which is the shape a command line `--plugin` follows: it replaces the file's list rather than adding to it
   - code://packages/sdk/src/types/plugin.ts - `PluginSpec`, which is the field's type
-  - code://.project/decisions/plugin-manifest-is-package-json.md - the two spec forms a person may write
+  - code://docs/PLUGINS.md - the two spec forms a person may write
 ---
 
 ## Objective

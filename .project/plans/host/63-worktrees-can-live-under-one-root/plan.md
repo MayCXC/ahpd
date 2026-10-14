@@ -6,7 +6,6 @@ priority: medium
 created: 2026-10-06
 revalidated: 2026-10-06
 decisions:
-  - decisions/worktrees-can-live-under-one-root.md
 refs:
   - "[code://packages/sdk/src/repo/worktrees.ts#L31-L45](../../../../packages/sdk/src/repo/worktrees.ts#L31-L45) - `worktreesOf` and `worktreeFor`, the path a tree is given"
   - "[code://packages/sdk/src/host/lifecycle.ts#L590-L640](../../../../packages/sdk/src/host/lifecycle.ts#L590-L640) - `isolated`, the one caller that makes a session's tree path"
@@ -48,7 +47,7 @@ ahpd config / --worktrees-root -> run.ts createHost({ worktreesRoot }) -> lifecy
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Worktrees can live under one root, as an option beside the reference's default](../../../decisions/worktrees-can-live-under-one-root.md) | Softov, 2026-10-06, "Plan an option" |
+| 1 | [Worktrees can live under one root, as an option beside the reference's default](../../../../docs/HOST.md) | Softov, 2026-10-06, "Plan an option" |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -12,10 +12,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/the-agent-meter-writes-per-turn-or-per-report.md
-  - decisions/agent-usage-is-charged-to-owner-team-and-project-pools.md
-  - decisions/usage-and-computer-time-are-two-records-behind-one-port.md
-  - decisions/a-model-record-with-no-model-named-has-an-empty-name.md
 refs:
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts) - `ModelUse`, `UsageBase`, the `Usage` port"
   - "[code://packages/sdk/src/host.ts#L3585-L3600](../../../../packages/sdk/src/host.ts#L3585-L3600) - the dispatch loop, where a turn's sender is read and let go of"
@@ -36,10 +32,10 @@ A daemon configured for it writes one record per report instead of one per turn.
 
 | What | Source | Task |
 | --- | --- | --- |
-| [One record per turn, or per report when configured](../../../decisions/the-agent-meter-writes-per-turn-or-per-report.md) | Softov, 2026-10-02 | 01, 02 |
-| [Pools are owner, `team:<team>` and `project:<team>:<project>`](../../../decisions/agent-usage-is-charged-to-owner-team-and-project-pools.md) | Softov, 2026-10-02 | 01 |
-| [Records share one base; model records nest `model`](../../../decisions/usage-and-computer-time-are-two-records-behind-one-port.md) | Softov, 2026-10-01 | 01 |
-| [A record with no model named has an empty name](../../../decisions/a-model-record-with-no-model-named-has-an-empty-name.md) | Softov, 2026-10-02 | 01 |
+| [One record per turn, or per report when configured](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [Pools are owner, `team:<team>` and `project:<team>:<project>`](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01 |
+| [Records share one base; model records nest `model`](../../../../docs/USAGE.md) | Softov, 2026-10-01 | 01 |
+| A record with no model named has an empty name | Softov, 2026-10-02 | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

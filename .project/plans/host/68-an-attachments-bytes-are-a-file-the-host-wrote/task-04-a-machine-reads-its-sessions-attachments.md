@@ -47,7 +47,7 @@ The session's folder goes out of the machine when the session is removed.
 
 ## Resume
 
-Built. Decision [a-session-in-a-machine-gets-each-attachment-copied-into-it](../../../decisions/a-session-in-a-machine-gets-each-attachment-copied-into-it.md) answers the fork of the first draft's step 3: every session in every machine gets its own files, one message at a time.
+Built. [A session in a machine gets each attachment copied into that machine at the same path](../../../../docs/CHATS.md) answers the fork of the first draft's step 3: every session in every machine gets its own files, one message at a time.
 A session that moves to another machine is not a removal, so its folder stays in the machine it left until that machine goes. The plan records this under Risks.
 
 A review finding then reached the two paths this task writes and removes. A path that is not below a folder named `attachments` is one this plugin did not get from a session. The folder holding every session is the one path a `rm -rf` must never reach. So both the copy and the removal refuse it, in a line, before anything is run in a machine. The store refuses the same shape on its own side, which is where the folder is named.

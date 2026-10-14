@@ -5,8 +5,7 @@
  * token, naming a model `<maker>/<name>`. The call is checked (the guard, the
  * caller, the body), routed to the first provider entry that can take it, and
  * sent there with that provider's own model id and key; the provider's answer
- * streams back as it came, SSE included, and nothing is translated - decision
- * `the-proxy-answers-under-v1-beside-the-api`.
+ * streams back as it came, SSE included, and nothing is translated.
  *
  * Every refusal is the caller's dialect's own error body, so a tool shows it
  * rather than failing to parse it. A provider's key is read from its variable
@@ -211,8 +210,7 @@ const NEVER_ARRIVED = new Set([
 
 /**
  * The pools one record is charged to: the owner, the team and the project,
- * each only when the record has it - decision
- * `agent-usage-is-charged-to-owner-team-and-project-pools`. The same spelling
+ * each only when the record has it. The same spelling
  * the agent meter charges under.
  */
 const poolsOf = (owner: Owner | undefined, scope: Scope | undefined): string[] => [
@@ -509,9 +507,7 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
        * A provider's 401 or 403 is about the key this host called it with and
        * not the credential the caller arrived with, so it is not streamed back
        * as it came: a client that read a 401 would ask its person to sign in
-       * again over the host's key, and the body can name the host's account -
-       * decision
-       * `the-proxy-answers-a-providers-key-refusal-with-its-own-error`. The
+       * again over the host's key, and the body can name the host's account. The
        * caller gets this host's own error, and the provider's status and words
        * go to the log, with anything key-shaped redacted out of it.
        *

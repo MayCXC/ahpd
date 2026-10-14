@@ -10,8 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/policies-are-a-scheme-clients-edit.md
-  - decisions/policy-checks-are-switched-on-by-a-daemon-option.md
 refs:
   - "[code://packages/sdk/src/people.ts](../../../../packages/sdk/src/people.ts) - `peopleProviders`, the schemes a client lists and edits; the `policy:` scheme follows it"
   - "[code://packages/sdk/src/users.ts#L40-L46](../../../../packages/sdk/src/users.ts#L40-L46) - `SUBJECTS`, where `policy` joins as a grant subject"
@@ -78,9 +76,9 @@ policy:/ list, policy:/<id> read and write -> [new] policies port -> policies.js
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Policies are kept behind a port and edited through a policy scheme](../../../decisions/policies-are-a-scheme-clients-edit.md) | Softov, 2026-10-02 |
-| 2 | [Policy checks are switched on by a daemon option](../../../decisions/policy-checks-are-switched-on-by-a-daemon-option.md) | Softov, 2026-10-02 |
-| 3 | [A deny binds only when everything it names was asked, while an allow skips what was not](../../../decisions/a-deny-binds-only-what-was-asked.md) | Softov, 2026-10-02 |
+| 1 | [Policies are kept behind a port and edited through a policy scheme](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
+| 2 | [Policy checks are switched on by a daemon option](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
+| 3 | [A deny binds only when everything it names was asked, while an allow skips what was not](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

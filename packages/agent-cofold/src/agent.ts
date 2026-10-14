@@ -820,8 +820,7 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
      * `runsNested` is the machine half. cofold's loop, tools and shell all run
      * in this process, so a session that names a computer cannot be served
      * here: the host starts a whole `ahpd` with this backend loaded inside the
-     * machine and gives the session the SDK's proxy instead - decision
-     * `a-cofold-session-in-a-computer-runs-in-a-nested-host`.
+     * machine and gives the session the SDK's proxy instead.
      */
     runsNested: true,
     create: (start) => {

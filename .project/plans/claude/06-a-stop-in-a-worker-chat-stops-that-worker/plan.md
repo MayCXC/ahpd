@@ -10,7 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-stop-in-a-worker-chat-stops-that-worker.md
 refs:
   - "[code://packages/sdk/src/host.ts#L8835-L8847](../../../../packages/sdk/src/host.ts#L8835-L8847) - a worker chat's `chat/turnCancelled` cancels the lead turn"
   - "[code://packages/sdk/src/host.ts#L1253](../../../../packages/sdk/src/host.ts#L1253) - `WORKER_ACTIONS`"
@@ -53,7 +52,7 @@ worker chat Stop -> chat/turnCancelled on ahp-chat://subagent/<session>/<call>
 
 | Decision | Task |
 | --- | --- |
-| [A stop in a worker chat stops that worker, and an option makes it stop the session](../../../decisions/a-stop-in-a-worker-chat-stops-that-worker.md) | 01, 02 |
+| [A stop in a worker chat stops that worker, and an option makes it stop the session](../../../../docs/CHATS.md) | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

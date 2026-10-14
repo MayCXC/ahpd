@@ -11,9 +11,7 @@ import type { MessageAttachment } from './types/session.js';
  * One helper, so every backend makes the same decision about the same
  * attachment and one limit moves for all of them: a pasted screenshot arrives
  * as an image, pasted text arrives as the text, and everything else is named by
- * the path the host wrote it to - decisions
- * `a-pasted-image-goes-as-an-image-when-it-fits` and
- * `pasted-text-is-inlined-up-to-64-kib`.
+ * the path the host wrote it to.
  *
  * What a backend does with a part is its own: Claude wants a base64 image
  * source, ACP an image block, pi its `images` list. What is decided here is

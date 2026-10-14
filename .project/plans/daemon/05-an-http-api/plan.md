@@ -10,24 +10,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/ahpd-commands-are-declared-with-cofold-commands.md
-  - decisions/the-http-api-is-on-the-daemon-port-under-api.md
-  - decisions/an-http-api-is-served-by-cofold-remote.md
-  - decisions/an-unconfigured-daemon-does-not-serve-the-http-api.md
-  - decisions/status-and-plugin-list-need-config-read.md
-  - decisions/installing-a-plugin-over-http-is-root-only.md
-  - decisions/the-config-command-hides-the-connection-token.md
-  - decisions/the-config-command-hides-its-secrets.md
-  - decisions/served-answers-hide-plugin-option-values-and-url-credentials.md
-  - decisions/http-host-binds-the-apis-own-listener.md
-  - decisions/remote-needs-a-token.md
-  - decisions/the-user-commands-need-users-write.md
-  - decisions/remote-warns-when-its-token-travels-in-cleartext.md
-  - decisions/remote-reads-its-token-from-a-file-too.md
-  - decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md
-  - decisions/the-sdk-mounts-the-node-listener-the-server-adapts.md
-  - decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md
-  - decisions/a-caller-gives-only-the-grants-it-holds.md
 refs:
   - "[code://packages/sdk/src/listen.ts](../../../../packages/sdk/src/listen.ts) - the listener; plain requests to `/api` are answered beside the WebSocket upgrade"
   - "[code://packages/sdk/src/host.ts#L141](../../../../packages/sdk/src/host.ts#L141) - `NEEDS`, the grant pairs a command is checked against"
@@ -70,24 +52,24 @@ ahpd --remote URL plugin list -> [new] manifest from URL/api/cli-manifest -> com
 
 | Decision | Task |
 | --- | --- |
-| [An HTTP API is served by @cofold/remote, and ahpd mounts it](../../../decisions/an-http-api-is-served-by-cofold-remote.md) | 01, 02 |
-| [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](../../../decisions/the-http-api-is-on-the-daemon-port-under-api.md) | 02 |
-| [ahpd's commands are declared once, with @cofold/commands](../../../decisions/ahpd-commands-are-declared-with-cofold-commands.md) | 03 |
-| [A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../decisions/an-unconfigured-daemon-does-not-serve-the-http-api.md) | 10 |
-| [`status` and `plugin list` need config:read](../../../decisions/status-and-plugin-list-need-config-read.md) | 09 |
-| [Installing or removing a plugin over HTTP needs the deployment token](../../../decisions/installing-a-plugin-over-http-is-root-only.md) | 09 |
-| [The config command hides the connection token over HTTP](../../../decisions/the-config-command-hides-the-connection-token.md) (superseded) | 09 |
-| [The config command hides the connection token and every plugin option value over HTTP](../../../decisions/the-config-command-hides-its-secrets.md) (superseded) | 20 |
-| [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../decisions/served-answers-hide-plugin-option-values-and-url-credentials.md) | 20, 24, 31 |
-| [The user commands need users:write](../../../decisions/the-user-commands-need-users-write.md) | 09, 17 |
-| [http.host binds the API's own listener](../../../decisions/http-host-binds-the-apis-own-listener.md) | 12 |
-| [`--remote` needs a token](../../../decisions/remote-needs-a-token.md) | 13 |
-| [`--remote` to plain http on a host that is not loopback sends the token, with a warning](../../../decisions/remote-warns-when-its-token-travels-in-cleartext.md) | 13 |
-| [`--remote` reads its token from a file too, with --token-file](../../../decisions/remote-reads-its-token-from-a-file-too.md) | 13 |
-| [cofold's serve() takes a Request and answers a Response, and Node gets an adapter](../../../decisions/cofold-serve-is-fetch-style-with-a-node-adapter.md) | 15, 16 |
-| [The SDK mounts the Node listener the server adapts, and depends on no cofold package](../../../decisions/the-sdk-mounts-the-node-listener-the-server-adapts.md) | 35 |
-| [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../decisions/the-http-api-checks-origin-and-host-and-takes-only-json.md) | 06, 11, 18 |
-| [A user command gives, mints for and removes only what its caller holds](../../../decisions/a-caller-gives-only-the-grants-it-holds.md) | 17 |
+| An HTTP API is served by @cofold/remote, and ahpd mounts it | 01, 02 |
+| [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](../../../../docs/DAEMON.md) | 02 |
+| [ahpd's commands are declared once, with @cofold/commands](../04-commands-declared-once/plan.md) | 03 |
+| [A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../../docs/HOST.md) | 10 |
+| [`status` and `plugin list` need config:read](../../../../docs/HOST.md) | 09 |
+| [Installing or removing a plugin over HTTP needs the deployment token](../../../../docs/AUTHENTICATION.md) | 09 |
+| [The config command hides the connection token over HTTP](../../../../docs/HOST.md) (superseded) | 09 |
+| [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md) (superseded) | 20 |
+| [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/HOST.md) | 20, 24, 31 |
+| [The user commands need users:write](../../../../docs/USERS.md) | 09, 17 |
+| [http.host binds the API's own listener](../../../../docs/HOST.md) | 12 |
+| [`--remote` needs a token](../../../../docs/DAEMON.md) | 13 |
+| [`--remote` to plain http on a host that is not loopback sends the token, with a warning](../../../../docs/DAEMON.md) | 13 |
+| [`--remote` reads its token from a file too, with --token-file](../../../../docs/DAEMON.md) | 13 |
+| cofold's serve() takes a Request and answers a Response, and Node gets an adapter | 15, 16 |
+| [The SDK mounts the Node listener the server adapts, and depends on no cofold package](../../../rules/the-sdk-depends-only-on-the-protocol.md) | 35 |
+| [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) | 06, 11, 18 |
+| [A user command gives, mints for and removes only what its caller holds](../../../../docs/AUTHENTICATION.md) | 17 |
 
 | What | Source | Task |
 | --- | --- | --- |

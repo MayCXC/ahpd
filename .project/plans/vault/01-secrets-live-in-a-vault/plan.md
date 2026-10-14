@@ -9,8 +9,6 @@ requires: []
 changes: []
 creates: []
 decisions:
-  - decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md
-  - decisions/a-secret-is-named-in-a-host-team-or-user-scope.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L31-L44](../../../../packages/sdk/src/types/plugin.ts#L31-L44) - `PortKey`, which `vault` joins"
   - "[code://packages/sdk/src/types/plugin.ts#L233-L240](../../../../packages/sdk/src/types/plugin.ts#L233-L240) - `registerUsage`, the registration `registerVault` mirrors"
@@ -49,8 +47,8 @@ ahpd vault set|delete|list -> the daemon's vault (served) or the file itself (at
 
 | Decision | Source |
 | --- | --- |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../decisions/the-local-vault-is-a-plain-file-until-it-is-encrypted.md) | Softov, 2026-10-02 and 2026-10-03 |
-| [A secret is named in the host's, a team's or a person's scope](../../../decisions/a-secret-is-named-in-a-host-team-or-user-scope.md) | Softov, 2026-10-02 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | Softov, 2026-10-02 and 2026-10-03 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

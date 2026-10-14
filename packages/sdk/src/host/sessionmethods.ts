@@ -1308,7 +1308,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       dropChat(found.uri, chatUri);
       /*
        * And what the backend holds of it, when a closed chat is deleted rather
-       * than hidden - decision `a-closed-chat-is-hidden-or-deleted`. The chat
+       * than hidden. The chat
        * is closed either way: a backend that would not remove the conversation
        * is a line in the log, raised by the delete itself, rather than a client
        * told its request failed.

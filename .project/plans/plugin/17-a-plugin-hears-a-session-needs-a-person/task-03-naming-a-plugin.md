@@ -5,7 +5,7 @@ depends: []
 layer: "docs"
 refs:
   - "[code://docs/PLUGINS.md#L323-L361](../../../../docs/PLUGINS.md#L323-L361) - Naming a plugin, which says how a plugin is named on the command line but not what a package is called"
-  - "[code://.project/decisions/plugin-packages-are-named-ahpd-name.md](../../../decisions/plugin-packages-are-named-ahpd-name.md) - the convention"
+  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the convention"
 ---
 
 ## Objective
@@ -26,7 +26,7 @@ refs:
 
 ## Resume
 
-Done. A paragraph at the top of "Naming a plugin", before the command line, saying a plugin from this repository is `@ahpd/<name>` with `@ahpd/computer` as the example, an agent backend is `@ahpd/agent-<name>` with `@ahpd/agent-acp`, and a plugin from elsewhere takes its author's scope. It links `plugin-packages-are-named-ahpd-name`.
+Done. A paragraph at the top of "Naming a plugin", before the command line, saying a plugin from this repository is `@ahpd/<name>` with `@ahpd/computer` as the example, an agent backend is `@ahpd/agent-<name>` with `@ahpd/agent-acp`, and a plugin from elsewhere takes its author's scope. It links [A plugin package is @ahpd/<name>, and an agent backend is @ahpd/agent-<name>](../../../../docs/PLUGINS.md).
 
 It runs to more than the two lines the step asked for, because the third-party case needed a clause of its own and the decision link a fourth; the examples are the two the task named. Read by hand.
 

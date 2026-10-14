@@ -11,11 +11,7 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md
-  - decisions/agent-usage-is-charged-to-owner-team-and-project-pools.md
-  - decisions/usage-and-computer-time-are-two-records-behind-one-port.md
   - decisions/a-dev-container-owner-is-kept-beside-the-config.md
-  - decisions/a-relay-container-is-owned-by-who-connected.md
 refs:
   - "[code://packages/sdk/src/types/computers.ts](../../../../packages/sdk/src/types/computers.ts) - `MachineSource` and `ComputerPort.create`, where the owner is handed over"
   - "[code://packages/sdk/src/types/plugin.ts#L206](../../../../packages/sdk/src/types/plugin.ts#L206) - `registerUsage`; a plugin has no way to write a record yet"
@@ -32,10 +28,10 @@ Each machine the computer plugin makes carries its creator as its owner, and eve
 
 | What | Source | Task |
 | --- | --- | --- |
-| [The creator owns a machine and pays for its up time](../../../decisions/a-machine-is-owned-by-whoever-created-it-and-pays-for-its-up-time.md) | Softov, 2026-10-02 | 01, 02 |
-| [Pools are owner, team and project](../../../decisions/agent-usage-is-charged-to-owner-team-and-project-pools.md) | Softov, 2026-10-02 | 02 |
+| [The creator owns a machine and pays for its up time](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [Pools are owner, team and project](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 02 |
 | [A CLI-made machine's owner is kept in `computers.json` beside the config](../../../decisions/a-dev-container-owner-is-kept-beside-the-config.md) | Softov, 2026-10-02 | 01 |
-| [A relay container is owned by who connected, and metered](../../../decisions/a-relay-container-is-owned-by-who-connected.md) | Softov, 2026-10-02 | 01, 02 |
+| A relay container is owned by who connected, and metered | Softov, 2026-10-02 | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

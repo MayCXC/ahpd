@@ -21,8 +21,7 @@ export const UNTITLED = 'pi session';
  * The permission modes every backend offers, in the order a client reads them.
  *
  * The same six `@ahpd/agent-claude` and `@ahpd/agent-cofold` advertise, because
- * the labels are what a person reads and the harness owns the meanings -
- * decision `permission-modes-live-in-the-harness`. `default` asks before a
+ * the labels are what a person reads and the harness owns the meanings. `default` asks before a
  * change, and is what a session that chooses none starts on.
  */
 export const PERMISSION_MODES = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions', 'dontAsk'] as const;

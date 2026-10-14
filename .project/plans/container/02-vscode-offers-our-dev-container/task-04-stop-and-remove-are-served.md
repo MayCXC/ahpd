@@ -21,7 +21,7 @@ refs:
 
 ahpd serves `vscode/devContainers/stop` and `vscode/devContainers/remove` under VS Code's own names: each takes `{ workspaceFolder }`, ends the asking connection's relays to that folder's computer, stops or removes the computer, and answers `true`; it answers `true` when the folder has no computer, and `false` when another connection still has a relay to it, as VS Code's reference host does.
 After container/03 that computer is a shared computer that ahpd sessions are placed on, so it also answers `false` while any session is placed on it.
-Each method needs `container:stop` or `container:remove` and `computer:write` beside it, and no owner check - decision `stopping-a-dev-container-needs-the-computers-grant`.
+Each method needs `container:stop` or `container:remove` and `computer:write` beside it, and no owner check - [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
 
 ## Files
 
@@ -41,7 +41,7 @@ Each method needs `container:stop` or `container:remove` and `computer:write` be
 - `UPDATE: docs/USERS.md:138` - the `container` row lists all five operations.
 - `UPDATE: docs/CONTAINERS.md:110-132` - the surface table gains both methods with their grants and answers.
 - `UPDATE: docs/AHP.md:864-865` - both methods in "What is served outside the protocol".
-- `CREATE: .project/decisions/stopping-a-dev-container-needs-the-computers-grant.md` - the decision both grants come from.
+- `CREATE: .project/../../../../docs/CONTAINERS.md` - the decision both grants come from.
 
 ## Steps
 
@@ -49,7 +49,7 @@ Each method needs `container:stop` or `container:remove` and `computer:write` be
 2. `remove` removes the container and never the folder or its `devcontainer.json`.
 3. VS Code asks its client for workspace trust before either; here the grant is the gate, and nothing asks the client.
 4. Build after container/03 and plugin/16 have landed: the computer a folder is, and the sessions placed on it, come from container/03, and the `computer:write` gate and the machine's owner from plugin/16.
-5. Ask for `container:stop` or `container:remove` and `computer:write` beside it, with no owner check: decision `stopping-a-dev-container-needs-the-computers-grant`.
+5. Ask for `container:stop` or `container:remove` and `computer:write` beside it, with no owner check: [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
 
 ## Validation
 

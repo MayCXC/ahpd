@@ -506,8 +506,8 @@ It must name a plugin this run loads, the file's or a typed `--plugin`, and not 
 A plain value is written down twice over: it lands in the shell's history, and a flag's lands again in the daemon record's `argv`, which `ahpd restart` starts from. A credential is given as a `$secret` reference instead, and the value stays in the [vault](#the-vault):
 
 ```bash
-ahpd --plugin-option '@ahpd/plugin-orders.apiKey={"$secret":"host:stripe"}'
-ahpd plugin config @ahpd/plugin-orders apiKey '{"$secret":"host:stripe"}'
+ahpd --plugin-option '@ahpd/orders.apiKey={"$secret":"host:stripe"}'
+ahpd plugin config @ahpd/orders apiKey '{"$secret":"host:stripe"}'
 ```
 
 The first leaves only the reference in the record a restart reads, and the second only the reference in `config.json`; neither holds the credential itself.
@@ -593,7 +593,7 @@ A plugin's option names one rather than holding it:
 
 ```json
 {
-  "plugins": [{ "name": "@ahpd/plugin-orders", "options": { "apiKey": { "$secret": "host:stripe" } } }]
+  "plugins": [{ "name": "@ahpd/orders", "options": { "apiKey": { "$secret": "host:stripe" } } }]
 }
 ```
 
@@ -737,9 +737,9 @@ when that is a specific one (an IPv6 one in brackets), and the host of
 `resource` when a deployment names it, with the port it names if it names one,
 and the host of each entry in `origins` - and when its `Origin`, if a browser
 sends one, is one of them too. A deployment that a browser reaches by another
-address or name puts that origin in `origins` - decision [A deployment names
+address or name puts that origin in `origins`
 the extra origins the daemon answers to in `origins`, apart from
-`resource`](../.project/decisions/a-deployment-names-extra-origins-apart-from-resource.md). A body
+`resource`. A body
 is served only when its `content-type` is `application/json`; anything else is
 answered 415. That keeps a page on another site, or one that rebinds its own
 name to loopback, from driving the API.

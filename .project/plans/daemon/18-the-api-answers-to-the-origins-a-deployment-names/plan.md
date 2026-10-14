@@ -48,7 +48,7 @@ browser -> GET http://203.0.113.1:37537/plugins/ahpd-web/ (Host: 203.0.113.1:375
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [A deployment names the extra origins the daemon answers to in `origins`, apart from `resource`](../../../decisions/a-deployment-names-extra-origins-apart-from-resource.md) | Softov, 2026-10-10 | 01, 02 |
+| [A deployment names the extra origins the daemon answers to in `origins`, apart from `resource`](../../../../docs/DAEMON.md) | Softov, 2026-10-10 | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

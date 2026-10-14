@@ -27,8 +27,7 @@ export type Space = 'session' | 'chat' | 'terminal' | 'own' | 'plugin';
  * `ahp-session:` is a session's, `ahp-chat:` a chat's, `ahp-terminal:` a
  * terminal's, `file:` and every other `ahp-` scheme - the root, the
  * logs, resource watches, the automations - this host's own, and every `x-`
- * scheme a plugin channel's, served or not - decision
- * `a-plugin-channel-is-an-x-scheme`. Any other scheme says nothing, and the
+ * scheme a plugin channel's, served or not. Any other scheme says nothing, and the
  * name is whatever `claims` holds it as.
  */
 export const spaceOf = (uri: string): Space | undefined => {

@@ -460,8 +460,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
    *
    * The host writes a pasted picture here and the message names the file, so
    * the bytes are written once rather than carried in every copy of the
-   * conversation - decision
-   * `an-attachments-bytes-are-written-to-disk-and-the-message-names-the-file`.
+   * conversation.
    * Named by the same encoding as the file beside it, because an id is an
    * opaque key and a folder name is not.
    *

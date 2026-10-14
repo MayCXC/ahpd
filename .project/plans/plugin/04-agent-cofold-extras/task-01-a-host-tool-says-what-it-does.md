@@ -8,7 +8,7 @@ refs:
   - code://packages/agent-cofold/src/tools.ts - `facioTool`, which passes it to `createTool`
   - "file:///github/cofold/packages/agents/src/types/tool.ts - `ToolEffects`: `reads`, `writes`, `network`, `destructive`"
   - file:///github/cofold/packages/agents/src/policy/rules.ts - the default that asks when a tool is destructive
-  - code://.project/decisions/host-tool-declares-what-it-does.md - why four flags and not one boolean
+  - code://docs/TOOLS.md - why four flags and not one boolean
   - code://test/agent-cofold-approval.test.ts - the harness the new case follows
 ---
 

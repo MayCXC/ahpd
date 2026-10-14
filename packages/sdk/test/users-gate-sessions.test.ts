@@ -333,8 +333,7 @@ it('needs computer:write to name a source for a session, and no more to name a m
   })).toHaveProperty('result');
 
   // Naming a source is asking for a machine to be made for the session, which
-  // is what the grant is for - decision
-  // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+  // is what the grant is for.
   expect(await call(worker.client, 'createSession', {
     channel: 'ahp-session:/four', provider: 'claude', config: { computer: 'disposable:s' },
   })).toMatchObject({ code: -32009, message: 'w may not computer:write here' });
@@ -353,8 +352,7 @@ it('needs computer:write to name a folder\'s dev container for a session', async
   expect(await call(worker.client, 'createSession', { channel: 'ahp-session:/one', provider: 'claude' })).toHaveProperty('result');
 
   // A dev container made for the session is a machine made for it, held to
-  // the grant a disposable one is - decision
-  // `a-machine-made-for-a-session-counts-against-max-and-needs-computer-write`.
+  // the grant a disposable one is.
   expect(await call(worker.client, 'createSession', {
     channel: 'ahp-session:/two', provider: 'claude', config: { computer: 'devcontainer:///w/app' },
   })).toMatchObject({ code: -32009, message: 'w may not computer:write here' });

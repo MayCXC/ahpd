@@ -7,8 +7,7 @@ import type { Entry, Metadata, Owner, Principal, Read, ResourceProvider, SchemeD
  *
  * A registration is a record under `push://devices/<install id>`: a client
  * writes one with the protocol's own `resourceWrite` and takes it out with
- * `resourceDelete`, which is the whole of the seam - decision
- * `a-device-registers-for-push-by-writing-a-resource`.
+ * `resourceDelete`, which is the whole of the seam.
  *
  * What a record holds is the push token, the platform it belongs to and, when
  * a device asked for a language, that language. It also holds the id of the

@@ -8,7 +8,7 @@ refs:
   - code://packages/sdk/src/types/agent.ts#L90-L168 - `Start`, which gains `resources` and `terminals`
   - code://packages/sdk/src/types/host.ts - `HostOptions.resources` and `HostOptions.terminals`, the ports the host already holds
   - code://packages/sdk/src/types/session.ts#L321-L369 - `confirm` and `answer`, how a person's reply is carried
-  - code://.project/decisions/acp-ports-come-through-start.md - the fork this task implements
+  - code://.project/plans/plugin/07-agent-acp/plan.md - the fork this task implements
   - code://.project/plans/plugin/01-plugins-load-from-configuration/deferred.md - the row this task closes
   - npm://@agentclientprotocol/sdk@^1.4.0 - `readTextFile`, `writeTextFile`, `createTerminal` and `requestPermission`
 ---

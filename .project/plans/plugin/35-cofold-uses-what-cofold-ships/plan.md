@@ -11,8 +11,6 @@ requires:
 changes: []
 creates: []
 decisions:
-  - decisions/listed-models-are-provider-references.md
-  - decisions/a-compacted-session-keeps-its-history-and-shows-a-notice.md
 refs:
   - "[code://packages/agent-cofold/src/agent.ts#L292-L337](../../../../packages/agent-cofold/src/agent.ts#L292-L337) - `CATALOGUE_TIMEOUT_MS` and the hand-rolled `listModels`: a plain `GET /models`, 5 s, every failure an empty list, ids prefixed `<provider>/`"
   - "[code://packages/agent-cofold/src/agent.ts#L354-L377](../../../../packages/agent-cofold/src/agent.ts#L354-L377) - `modelOf`, which builds a new `openaiCompat()` for every turn with no pricing"
@@ -62,7 +60,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -n "maxContextWindow" packages/*/src` - pi sets it on an offered row (`models.ts:104`); cofold does not.
 - `rg -n "slice\(0, (60|200)\)" packages/agent-cofold/src` - the two titles, `agent.ts:110` and `turns.ts:50`; host 61 task 02 already owns the rule.
 - `.project` searched for every `code://` path above: plugin 05 built the catalogue, plugin 32 p3 sends `_meta.cost`, host 57 task 02 and host 61 task 02 touch `titleOf`, host 62 p3 task 02 touches `turnagent.ts` 115-150 and 229-285.
-- `rg -li "compact" .project/decisions` - no decision on keeping or hiding a compacted history, so [a-compacted-session-keeps-its-history-and-shows-a-notice](../../../decisions/a-compacted-session-keeps-its-history-and-shows-a-notice.md) is new.
+- `rg -li "compact" .project/decisions` - no decision on keeping or hiding a compacted history, so [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md) is new.
 
 ### Runtime path
 
@@ -87,8 +85,8 @@ transcript() -> turnsOf -> every message kept; a summary message -> the same com
 
 | Decision | Tasks |
 | --- | --- |
-| [A listed model is selected by the reference the harness already writes](../../../decisions/listed-models-are-provider-references.md) | 01, 02 |
-| [A compacted session keeps its history and shows a notice](../../../decisions/a-compacted-session-keeps-its-history-and-shows-a-notice.md) | 04, 06 |
+| [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | 01, 02 |
+| [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md) | 04, 06 |
 
 | What | Source | Task |
 | --- | --- | --- |

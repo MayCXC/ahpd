@@ -222,7 +222,7 @@ export const claimOwned = (configDir: string, id: string, said: Owned, log: (lin
  * cannot add one to a container that already exists, and the CLI is not asked
  * again or it would make a second container beside it. The record here is what
  * makes it listed and inspected like any other machine, under the person whose
- * connect adopted it - decision `a-relay-container-is-owned-by-who-connected`.
+ * connect adopted it.
  */
 export const adoptedOf = (configDir: string, log: (line: string) => void): string[] =>
   Object.entries(read(configDir, log) ?? {})

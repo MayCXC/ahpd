@@ -118,8 +118,7 @@ const loopbackUrl = (value: string): boolean =>
  *
  * https anywhere, and plain http only on loopback. A self-hosted issuer is
  * common and on loopback nothing leaves the machine; a remote one over http
- * would put a bearer token in clear - decision
- * `an-issuer-may-be-plain-http-on-loopback`.
+ * would put a bearer token in clear.
  */
 export const isIssuerUrl = (value: string): boolean => {
   if (/^https:\/\/[^\s#]+$/.test(value)) return true;

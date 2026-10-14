@@ -8,8 +8,6 @@ revalidated: 2026-10-13
 requires:
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
 decisions:
-  - decisions/a-plugin-may-contribute-a-session-key.md
-  - decisions/a-secret-is-named-in-a-host-team-or-user-scope.md
 refs:
   - "[code://packages/sdk/src/types/host.ts#L676](../../../../packages/sdk/src/types/host.ts#L676) - `forSession`, which sees only `titleStrategy`, so a tool cannot be offered per session"
   - "[code://packages/sdk/src/host/tooling.ts#L310](../../../../packages/sdk/src/host/tooling.ts#L310) - one caller of `forSession`"
@@ -53,8 +51,8 @@ session offered tools -> forSession(session) -> connections of the bot or the se
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin may contribute a session config key](../../../decisions/a-plugin-may-contribute-a-session-key.md) | The decision file |
-| 2 | [A secret is named in the host's, a team's or a person's scope](../../../decisions/a-secret-is-named-in-a-host-team-or-user-scope.md) | The decision file |
+| 1 | [A plugin may contribute a session config key](../../../../docs/PLUGINS.md) | The decision file |
+| 2 | [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | The decision file |
 
 | What | Source | Task |
 | --- | --- | --- |

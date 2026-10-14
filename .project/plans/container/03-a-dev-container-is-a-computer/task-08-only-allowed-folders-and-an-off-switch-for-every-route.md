@@ -16,7 +16,7 @@ refs:
 
 The computer plugin takes an allowlist of folders for dev containers; a folder outside it is refused on every route (a create body, a `devcontainer://` session setting, the picker row and the relay's `connect`), and `devcontainer: false` turns all four off.
 With no allowlist, any folder is allowed.
-This applies [A dev container is made only from a folder the operator allows](../../../decisions/a-dev-container-is-made-only-from-a-folder-the-operator-allows.md) and [A devcontainer source names any allowed folder](../../../decisions/a-devcontainer-source-names-any-allowed-folder.md).
+This applies [A dev container is made only from a folder the operator allows](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) and [A devcontainer source names any allowed folder](./plan.md).
 
 This allowlist is the operator's, per plugin; policy/01's `computer:` rows are the person's, per principal, and already gate `devcontainer://F` before placement but not the form create or the relay's `connect`.
 Both apply, and this task does not change policy/01's check.
