@@ -38,6 +38,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-11; the Windows checks by hand remain | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | planned 2026-10-13; 1 task | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | planned 2026-10-13; 1 task | - | - |
+| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | planned 2026-10-13; 1 task | - | - |
 
 Next free number in `daemon`: `23`.
 
@@ -131,7 +132,7 @@ Reference: [00-host.md](host/00-host.md)
 | [53 - ahpd.grants lists every subject a role can name, the schemes included](host/53-ahpd-grants-lists-every-scheme/plan.md) | high | built 2026-10-04 ([implemented.md](host/53-ahpd-grants-lists-every-scheme/implemented.md)); every task done, reviewed 2026-10-10 | host 46 | ahpapp people/01's role editor |
 | [54 - host.test.ts is split into one test file per area, with its helpers in one module](host/54-host-test-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](host/54-host-test-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [55 - users-gate.test.ts is split into one test file per area, with its shared helpers in one module](host/55-users-gate-test-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](host/55-users-gate-test-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
-| [56 - The catalogue answers at once, and a summary is sent only when it changes](host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/plan.md) | high | active 2026-10-04; tasks 01-04 done (reviewed, fixed in host 64); 05 by hand | - | - |
+| [56 - The catalogue answers at once, and a summary is sent only when it changes](host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/plan.md) | high | built 2026-10-13 ([implemented.md](host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/implemented.md)); measured here and on dev-01 | - | - |
 | [57 - pi, cofold and ACP find a session by id, and the listing throttle goes](host/57-pi-cofold-and-acp-find-a-session-by-id/plan.md) | high | built 2026-10-06 ([implemented.md](host/57-pi-cofold-and-acp-find-a-session-by-id/implemented.md)) | host 56 | - |
 | [58 - Policy and automation files are private, a cursor the host did not issue is refused, and a file URI is decoded](host/58-private-files-refused-cursors-and-decoded-file-uris/plan.md) | high | built 2026-10-06 ([implemented.md](host/58-private-files-refused-cursors-and-decoded-file-uris/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | - | host 59, host 60 |
 | [59 - People and policy are served by one record-store provider, and the value readers are one sdk module](host/59-one-record-store-provider-and-shared-value-helpers/plan.md) | medium | built 2026-10-10 ([implemented.md](host/59-one-record-store-provider-and-shared-value-helpers/implemented.md)) | host 58 | host 61, host 60 task 04 |

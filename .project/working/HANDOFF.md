@@ -48,4 +48,3 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`. Each re
 
 - [2026-09-19-upstream-pass-4.md](../review/2026-09-19-upstream-pass-4.md)
 - [daemon-13-restart-checks.md](../review/daemon-13-restart-checks.md)
-- [host-56-measure.md](../review/host-56-measure.md)

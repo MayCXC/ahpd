@@ -1,6 +1,6 @@
 ---
 title: Measured before and after, on this machine and on dev-01
-status: todo
+status: done
 depends: [task-01-a-summary-that-did-not-change-is-not-sent.md, task-02-agents-are-listed-at-once-and-once-per-store.md, task-03-the-catalogue-is-held.md, task-04-opening-a-past-session-reads-the-held-row.md]
 layer: "by hand, for Softov"
 refs:
@@ -47,6 +47,7 @@ Measured 2026-10-13 on dev-01 (`ws://203.0.113.1:37537`), read-only, with the tw
 | Measure | Before (2026-10-04) | After (2026-10-13) |
 | --- | --- | --- |
 | `listSessions` on dev-01 | 48.6 s for 162 sessions | 21 ms for 137 sessions; `initialize` at 75 ms |
-| `root/sessionSummaryChanged` on dev-01 | about 28 a second, with one build | 0 in 70 s, with no turn known to run |
+| `root/sessionSummaryChanged` on dev-01 | about 28 a second, with one build | 23 in 70 s with two builds running, about 0.33 a second |
+| Identical to the one before on dev-01 | about 210 of 225 | at most 4 of 22: 18 changed `activity`, the others the git and GitHub fields |
 
-The flood number on dev-01 is not yet taken with one build running, which step 2 asks for.
+The first dev-01 run, earlier on 2026-10-13, saw 0 events because no turn ran. The second run had two build sessions running.

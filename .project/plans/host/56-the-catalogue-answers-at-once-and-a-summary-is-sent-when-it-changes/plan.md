@@ -1,7 +1,7 @@
 ---
 title: The catalogue answers at once, and a summary is sent only when it changes
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-04
 revalidated: 2026-10-04
@@ -120,7 +120,7 @@ any change to a live session -> summaryMoved(uri) -> root/sessionSummaryChanged 
 | [02 - Agents are listed at once, and Claude's variants read their store once](task-02-agents-are-listed-at-once-and-once-per-store.md) | done | - |
 | [03 - The catalogue is held, and a refresh sends what moved](task-03-the-catalogue-is-held.md) | done | 01, 02 |
 | [04 - Opening a past session reads the held row](task-04-opening-a-past-session-reads-the-held-row.md) | done | 03 |
-| [05 - Measured before and after, by hand](task-05-measured-before-and-after.md) | todo | 01, 02, 03, 04 |
+| [05 - Measured before and after, by hand](task-05-measured-before-and-after.md) | done | 01, 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -133,16 +133,16 @@ any change to a live session -> summaryMoved(uri) -> root/sessionSummaryChanged 
 
 ## Resume state
 
-- **Done so far:** tasks 01, 02, 03 and 04, implemented on 2026-10-04 and uncommitted. A `root/sessionSummaryChanged` is not sent when its `changes` equal the last one for that session (01); the catalogue asks every agent at once and Claude's variants of one load share one listing per store (02); the catalogue is held, `listSessions` answers from it, and a background refresh sends only what moved (03); `past` reads the held row and asks the backends for one id through `Agent.find` rather than listing, and Claude settles a session's directory with `getSessionInfo` (04).
-- **Next action:** [task-05-measured-before-and-after.md](task-05-measured-before-and-after.md), by hand on this machine and on dev-01. The changes are uncommitted and want a review first.
+- **Done so far:** all five tasks done; task 05 measured here on 2026-10-09 and on dev-01 on 2026-10-13, see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** `listing` has side effects (`names`, `owners`, `wheres`, `births`, `moves`, the prune), so a refresh is a call to it and not a copy of it; `summaryMoved` is called for listed rows too, which have no `Held` and send `status` and `changes` only; the held rows are handed out with `status`, `changes` and `_meta` read again from this host's own state (`allRows`), so a listing's answer is not frozen for as long as the rows are held; `past` still lists for a backend that has no `find`, throttled to once in two seconds, so the cost is gone for Claude and not for pi, cofold and ACP.
 
 ## Final verification checklist
 
 - [ ] `listSessions` on a started host answers without calling any agent's `list`.
-- [ ] A build session's flood is down to the events whose fields changed.
+- [x] A build session's flood is down to the events whose fields changed.
 - [ ] Opening a past session calls no agent's `list`.
-- [ ] Task 05's numbers are in its Resume, before and after, on this machine and on dev-01.
+- [x] Task 05's numbers are in its Resume, before and after, on this machine and on dev-01.
 - [ ] `pnpm exec tsc --noEmit`, `pnpm boundary`, `pnpm test` pass.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.
