@@ -77,7 +77,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 | --- | --- | --- |
 | [01 - A bot's first turn is its filled template](task-01-a-bots-first-turn-is-its-filled-template.md) | implemented | - |
 | [02 - A plugin gives a new chat's preamble](task-02-a-plugin-gives-a-new-chats-preamble.md) | implemented | - |
-| [03 - Each new chat of a bot starts with the template](task-03-each-new-chat-of-a-bot-starts-with-the-template.md) | todo | 01, 02 |
+| [03 - Each new chat of a bot starts with the template](task-03-each-new-chat-of-a-bot-starts-with-the-template.md) | implemented | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -85,8 +85,8 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13; the task files, 2026-10-14; Softov's answers to eleven questions, 2026-10-14; tasks 01 and 02 implemented, 2026-10-14. Task 02 of the first draft became tasks 02 and 03, for the host hook and the bot's use of it.
-- **Next action:** build task 03.
+- **Done so far:** the plan, 2026-10-13; the task files, 2026-10-14; Softov's answers to eleven questions, 2026-10-14; tasks 01, 02 and 03 implemented, 2026-10-14. Task 02 of the first draft became tasks 02 and 03, for the host hook and the bot's use of it.
+- **Next action:** Softov reviews the three tasks.
 - **Open questions:** tasks 01 and 02 have one each, in their Resume sections.
 - **Watch out for:**
   - The first chat opens with the session and not through `createChat`, so it gets the template once.

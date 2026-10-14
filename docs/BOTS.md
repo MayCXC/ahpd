@@ -84,7 +84,7 @@ A bot is talked to in its session, and there are two ways it gets one.
 
 A body may **link** a session its owner already has, by naming it in `session`. The link is kept only where the host has that session and it belongs to the bot's owner: a URI the host has no session for is refused `-32602`, and one that belongs to somebody else is refused `-32009`. A link to somebody else's conversation would be this bot's work in a room its writer has no business in.
 
-A bot made with **no** `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. The session runs the bot's `preset`, or its `harness` and `model`, or the host's own default harness and model, in the bot's `workspace` - on this host, or in the `computer` the record names. Its first turn is the bot's template, filled, so a bot never opens silent. Its title is the bot's `name`.
+A bot made with **no** `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. The session runs the bot's `preset`, or its `harness` and `model`, or the host's own default harness and model, in the bot's `workspace` - on this host, or in the `computer` the record names. Its first turn is the bot's template, filled, so a bot never opens silent. Each new chat in the session starts with the template as well - [The first turn](#the-first-turn). Its title is the bot's `name`.
 
 A start the owner may not make leaves no record at all: the host is asked before the bot is saved, so a make that failed is one that did not happen rather than one claiming a session it has not got.
 
@@ -124,6 +124,8 @@ You are {{name}}. {{instructions}}
 ```
 
 A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it.
+
+Each chat a person or a tool opens in a bot's session starts with the template too. It is filled again, with the session's chats at that moment. The text is hidden context before the chat's first message. A chat opened with no message gets it with the person's first message. The template is read for each chat, so an edit reaches the next one. A template that no longer exists gives the default one, and the plugin reports a problem that names the bot and the template.
 
 ## Who may do what
 

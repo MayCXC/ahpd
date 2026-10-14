@@ -1,5 +1,6 @@
 import { expandHome } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
+import { botPreamble } from './preamble.js';
 import { botProvider } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
@@ -18,6 +19,8 @@ import type { Plugin } from '@ahpd/sdk';
  * `instructions` is the collection's body, so it is the Markdown half of the
  * file a person edits, and every other field is frontmatter above it. A
  * template is a record of the `templates` collection, whose body is `text`.
+ * Each chat a person or a tool opens in a bot's session starts with the
+ * bot's template, filled again.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -61,6 +64,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
     lastChats,
   };
+  host.registerChatPreamble(botPreamble(store, templates, (line) => { host.problem(`${name}: ${line}`); }));
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });

@@ -1,6 +1,6 @@
 ---
 title: Each new chat of a bot starts with the template
-status: todo
+status: implemented
 depends: [task-01-a-bots-first-turn-is-its-filled-template.md, task-02-a-plugin-gives-a-new-chats-preamble.md]
 layer: "packages/bot, docs"
 refs:
@@ -64,3 +64,22 @@ When the bot's template no longer exists, the chat gets the default template, an
 
 ## Resume
 
+Built in `packages/bot`: a new `src/preamble.ts`, and `src/plugin.ts` registers it in `apply`. `test/bot-preamble.test.ts` has 8 cases. `docs/BOTS.md` and `packages/bot/README.md` say that each new chat starts with the template.
+
+How the parts work:
+
+- `botPreamble` waits for the store, and finds the bot whose session has the opened chat's session id.
+- It reads the template on every chat, so an edit reaches the next one.
+- A missing template gives `DEFAULT_TEMPLATE` and one problem, which names the bot and the template.
+- The other chats go to `firstTurn` with their `modifiedAt` as a number, and `firstTurn` sorts them and keeps `lastChats`.
+- `apply` registers the preamble, and reports a problem through `host.problem` with the plugin's name first.
+
+Where the build departs from the plan:
+
+- The bot is matched by `idOf` of the session, because the host names a session under its own scheme.
+- A `modifiedAt` that does not parse sorts as the oldest chat.
+- The test file has two extra cases, for a named template and for a session named under another scheme.
+
+Open questions: none.
+
+Gates: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass. `pnpm exec vitest run packages/sdk packages/server packages/bot packages/webhook` passes 4038 of 4040 tests. The 2 failures are load timeouts in `nested-proxy` and `nested-start`, which pass alone with `--testTimeout 30000`.
