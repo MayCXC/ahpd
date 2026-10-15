@@ -87,6 +87,8 @@ The plugin keeps each thread in the `webhook-threads` collection, as the endpoin
 
 A callback URL must start with the endpoint's `callbackPrefix`. The plugin compares the URL as `new URL` writes it, so `https://ci.example.com.evil.test/` does not pass the prefix `https://ci.example.com/`. Without this check, any caller could make the host post to any address.
 
+A callback that answers with a redirect is a failed callback. The plugin does not follow the redirect, and the daemon's log gets a problem line.
+
 A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugin option, which is 60 by default.
 
 ```json
@@ -100,7 +102,7 @@ A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugi
 | Answer | When |
 | --- | --- |
 | 400 | The call has no thread or no text, or its callback URL is missing or outside the prefix |
-| 409 | The bot has no session, the plugin may not read the bot, or the plugin may not make a chat in the bot's session. The last two are also a problem in the daemon's log, and the last names the grant `session:write` |
+| 409 | The bot has no session, the plugin may not read the bot, the plugin may not make a chat in the bot's session, or the host refused the turn. The answer's `message` is the host's reason. A turn that the host does not echo in 10 seconds is not refused: the call goes on, and the daemon's log gets a problem line. The last three are also a problem in the daemon's log, and the plugin's chat refusal names the grant `session:write` |
 
 ### The grants
 

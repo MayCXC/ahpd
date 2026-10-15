@@ -1,6 +1,6 @@
 ---
 title: A callback follows no redirect, and a refused turn is answered
-status: todo
+status: done
 depends: [task-02-a-webhook-talks-to-a-bot-by-thread.md]
 layer: "packages/webhook, docs"
 refs:
@@ -34,7 +34,7 @@ A turn that the host refuses gets an error answer to the caller, instead of a 20
 3. Set one `onMessage` handler that matches an `action` frame by `origin.clientId` and `origin.clientSeq`.
 4. Subscribe to the chat before the dispatch, so the host echoes an accepted turn to the plugin.
 5. Resolve `send` with `rejectionReason` when the echo carries one, and with `undefined` when it carries none.
-6. Resolve `send` with a reason that names the wait when no echo comes in 10 seconds.
+6. Resolve `send` with `undefined` and report a problem line when no echo comes in 10 seconds.
 7. In `bot.ts`, answer 409 `{ message }` with the reason when `send` gives one, and report a problem line.
 8. Drop the wait for the turn's end when `send` gives a reason, so no waiter stays.
 9. Add the test cases below.
@@ -52,3 +52,35 @@ A turn that the host refuses gets an error answer to the caller, instead of a 20
 
 ## Resume
 
+
+### Built
+
+- `post` passes `redirect: 'manual'`, so a 3xx answer fails the `ok` check and the plugin follows no redirect.
+- `post` is the exported function `callBack` in `packages/webhook/src/plugin.ts`.
+- The exported function `dispatcher` sets the one `onMessage` handler on the plugin connection.
+- Each dispatch sends the next `clientSeq`, and waits for the `action` frame with the same `origin.clientId` and `origin.clientSeq`.
+- A frame with `rejectionReason` resolves the dispatch with the reason, and a frame without one resolves it with `undefined`.
+- A dispatch that hears no echo in 10 seconds resolves with `undefined`, and the plugin reports a problem line.
+- Review, 2026-10-15: a held dispatch can still run after the wait, so a 409 on silence could start a turn twice on a retry.
+- The `send` seam subscribes to the chat, then dispatches `chat/turnStarted` through the dispatcher.
+- `BotSeams.send` gives the refusal reason or `undefined`, and the new seam `BotSeams.forget` drops the wait for a turn end.
+- `turnEnds` has `forget`, which removes the waiter of one turn.
+- A refused turn answers 409 `{ message }`, reports a problem line, and forgets its end wait before any callback or sync wait.
+- `docs/WEBHOOKS.md` has the redirect line and the refused turn in the 409 row.
+
+### Validation
+
+- `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0.
+- Vitest on `packages/webhook`, `packages/sdk` and `packages/server` passes 205 files and 4006 tests.
+- New bot case: a refused callback call answers 409 and posts nothing.
+- New bot case: a refused sync call answers 409 at once.
+- New plugin case: an echo with `rejectionReason` resolves the dispatch with the reason.
+- New plugin case: a dispatch with no echo resolves with `undefined` and calls `silent`.
+- New callback case: a callback that answers 307 makes `callBack` throw, and the redirect target gets no request.
+- The server case for a sync call passes, so the host echoes an accepted turn to the plugin.
+
+### Seen and not done
+
+- The check by hand on a test daemon was not done; the 307 test on two local servers stands for it.
+- A sync call that times out leaves its end waiter until the turn ends, as before this task.
+- The plugin stays subscribed to each chat that it sends a turn in, and the handler ignores the other actions of that chat.

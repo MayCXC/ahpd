@@ -47,6 +47,77 @@ const REFUSED = -32009;
 /** What the plugin's connection calls itself. */
 const CLIENT = 'ahpd-webhook';
 
+/** How long a dispatch waits for the host's echo before it goes on as taken, in milliseconds. */
+const ECHO_MS = 10_000;
+
+/** Dispatches actions on the plugin's connection, and hears whether the host took each one. */
+export interface Dispatcher {
+  /** Dispatch one action, and give the host's refusal reason, or `undefined` when the host took it or said nothing. */
+  dispatch(channel: string, action: Record<string, unknown>): Promise<string | undefined>;
+}
+
+/**
+ * The dispatcher over one connection, which sets the connection's one `onMessage` handler.
+ *
+ * Each dispatch carries the next `clientSeq`. The host answers a dispatch with an
+ * `action` frame whose `origin` names `clientId` and that `clientSeq`: with a
+ * `rejectionReason` when it refused the action, and without one when it took it.
+ * The host echoes a taken action only to the subscribers of its channel, so the
+ * caller subscribes first. A dispatch that hears nothing in `waitMs` gives
+ * `undefined` and calls `silent`: only a refusal the host sent is a refusal, since
+ * a held dispatch can still be applied after the wait.
+ */
+export function dispatcher(conn: PluginPeer, clientId: string, waitMs = ECHO_MS, silent?: (channel: string) => void): Dispatcher {
+  let seq = 0;
+  const waiting = new Map<number, (refused: string | undefined) => void>();
+  conn.onMessage((message) => {
+    if (message.method !== 'action') return;
+    const params = message.params as { origin?: { clientId?: unknown; clientSeq?: unknown }; rejectionReason?: unknown } | undefined;
+    const origin = params?.origin;
+    if (origin?.clientId !== clientId || typeof origin.clientSeq !== 'number') return;
+    const done = waiting.get(origin.clientSeq);
+    if (done === undefined) return;
+    waiting.delete(origin.clientSeq);
+    done(typeof params?.rejectionReason === 'string' ? params.rejectionReason : undefined);
+  });
+  return {
+    dispatch: (channel, action) => {
+      seq += 1;
+      const clientSeq = seq;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          waiting.delete(clientSeq);
+          silent?.(channel);
+          resolve(undefined);
+        }, waitMs);
+        timer.unref?.();
+        waiting.set(clientSeq, (refused) => {
+          clearTimeout(timer);
+          resolve(refused);
+        });
+        conn.notify('dispatchAction', { channel, clientSeq, action });
+      });
+    },
+  };
+}
+
+/** POST a JSON body to a callback URL. A redirect is not followed, and fails as any answer that is not 2xx. */
+export async function callBack(url: string, body: Record<string, unknown>): Promise<void> {
+  const answered = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    redirect: 'manual',
+  });
+  if (!answered.ok) throw new Error(`the callback answered ${answered.status}`);
+}
+
+/** The plugin's connection to the host, and the dispatcher over it. */
+interface Opened {
+  conn: PluginPeer;
+  sender: Dispatcher;
+}
+
 /** The text of one turn in a chat's state: its `markdown` response parts, joined. */
 const textOf = (state: unknown, turn: string): string => {
   const turns = (state as { turns?: unknown } | undefined)?.turns;
@@ -57,7 +128,8 @@ const textOf = (state: unknown, turn: string): string => {
 };
 
 /** The bot seams over the plugin's connection, which `peer` gives once it is open. */
-function botSeams(host: PluginHost, peer: () => Promise<PluginPeer>, timeout: number): BotSeams {
+function botSeams(host: PluginHost, open: () => Promise<Opened>, timeout: number): BotSeams {
+  const peer = async (): Promise<PluginPeer> => (await open()).conn;
   const ends = turnEnds();
   host.on('turn_end', (event: TurnEndEvent) => { ends.heard(event); });
   const problem = (line: string): void => { host.problem(`${name}: ${line}`); };
@@ -97,26 +169,19 @@ function botSeams(host: PluginHost, peer: () => Promise<PluginPeer>, timeout: nu
       return chat;
     },
     send: async (chat, turn, text) => {
-      const conn = await peer();
-      conn.notify('dispatchAction', {
-        channel: chat,
-        action: { type: 'chat/turnStarted', turnId: turn, message: { text } },
-      });
+      const { conn, sender } = await open();
+      // The host echoes a taken turn only to the subscribers of its chat.
+      await conn.request('subscribe', { channel: chat });
+      return await sender.dispatch(chat, { type: 'chat/turnStarted', turnId: turn, message: { text } });
     },
+    forget: (chat, turn) => { ends.forget(chat, turn); },
     ended: async (chat, turn) => {
       const ending = await ends.wait(chat, turn);
       const conn = await peer();
       const opened = await conn.request('subscribe', { channel: chat }) as { snapshot?: { state?: unknown } };
       return { ...ending, text: textOf(opened.snapshot?.state, turn) };
     },
-    post: async (url, body) => {
-      const answered = await fetch(url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!answered.ok) throw new Error(`the callback answered ${answered.status}`);
-    },
+    post: callBack,
     syncTimeoutSeconds: timeout,
     problem,
   };
@@ -127,16 +192,19 @@ export const apply: Plugin['apply'] = (host, options) => {
   const timeout = typeof asked === 'number' && asked > 0 ? asked : defaults.syncTimeoutSeconds;
 
   /** The connection, once the daemon listens and the host has answered `initialize`. */
-  let opened: Promise<PluginPeer> | undefined;
+  let opened: Promise<Opened> | undefined;
   host.on('listening', () => {
     opened = (async () => {
       const conn = host.connect();
+      const sender = dispatcher(conn, CLIENT, ECHO_MS, (channel) => {
+        host.problem(`${name}: the host did not echo a turn in ${channel} in ${ECHO_MS / 1000} seconds`);
+      });
       await conn.request('initialize', { clientId: CLIENT, protocolVersions: ['0.9.0'] });
-      return conn;
+      return { conn, sender };
     })();
     opened.catch((error: unknown) => { host.problem(`${name}: the connection to the host failed: ${reason(error)}`); });
   });
-  const peer = async (): Promise<PluginPeer> => {
+  const open = async (): Promise<Opened> => {
     if (opened === undefined) throw new Error('the plugin has no connection to the host yet');
     return await opened;
   };
@@ -147,7 +215,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     endpoint: (id) => webhooks.get(id),
     secret: (secret) => host.secret(secret),
     problem: (line) => { host.problem(`${name}: ${line}`); },
-    bot: botTarget(botSeams(host, peer, timeout)),
+    bot: botTarget(botSeams(host, open, timeout)),
     automation: automationTarget({ fire: (data) => { host.fireTrigger(WEBHOOK_TRIGGER.type, 'call', data); } }),
   }));
 };

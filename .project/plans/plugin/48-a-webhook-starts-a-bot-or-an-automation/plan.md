@@ -71,7 +71,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 | `fired` compares only the `config` keys that the fire's data also holds; a `config` key the data does not hold never blocks a run | Softov, 2026-10-14, to "`fired` compares every key of a trigger's `config` with the fire's data. A plugin whose form holds a setting that is not a data field would never run. Should the match cover only the keys that the data holds?" - "Only keys the data has" | 03 |
 | A callback that answers with a redirect is a failed callback, and the plugin follows no redirect | Softov, 2026-10-15, to "The callback follows a redirect to any address. Fix it?" - "Fix as a small task" | 05 |
 | A turn that the host refuses answers the caller with an error | Softov, 2026-10-15, to "The plugin sends the turn as a notification and never hears a refusal. Fix it?" - "Fix with the redirect task" | 05 |
-| A refused turn answers 409 with the host's reason, and a turn with no echo in 10 seconds is refused | (defaulted: the other host refusals answer 409) | 05 |
+| A refused turn answers 409 with the host's reason; a turn with no echo in 10 seconds goes on and is a problem line | (defaulted: the other host refusals answer 409, and a held dispatch can still run after the wait) | 05 |
 
 ## Proposed architecture
 
@@ -89,7 +89,7 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 | [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | implemented | 01 |
 | [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | implemented | 01 |
 | [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | implemented | 01 |
-| [05 - A callback follows no redirect, and a refused turn is answered](task-05-a-callback-follows-no-redirect-and-a-refused-turn-is-answered.md) | todo | 02 |
+| [05 - A callback follows no redirect, and a refused turn is answered](task-05-a-callback-follows-no-redirect-and-a-refused-turn-is-answered.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -99,8 +99,8 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13, and its four tasks with the answers, 2026-10-14. All four tasks are implemented, 2026-10-14. The review of 2026-10-15 added task 05.
-- **Next action:** build task 05. The plan closes after task 05 and after a session keeps its working folder, because a thread's chat is lost after a restart until then.
+- **Done so far:** the plan, 2026-10-13, and its four tasks with the answers, 2026-10-14. All four tasks are implemented, 2026-10-14. The review of 2026-10-15 added task 05, which is done, 2026-10-15.
+- **Next action:** close the plan after [host/92](../../host/92-a-session-keeps-its-working-folder/plan.md) lands, because a thread's chat is lost after a restart until then.
 - **Open questions:** none. Softov answered the three planning questions and the build questions of tasks 02 and 03 on 2026-10-14.
 - **Watch out for:**
   - The plugin acts as `plugin:@ahpd/webhook`, and its route is `/plugins/%40ahpd/webhook/<endpoint>`, because a plugin's id is its package name. It needs the grants that the operator gives it to read a bot, create a chat and send a turn.

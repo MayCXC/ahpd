@@ -1,7 +1,12 @@
+import { createServer } from 'node:http';
 import { describe, expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { botTarget, turnEnds } from '../src/bot.js';
+import { callBack, dispatcher } from '../src/plugin.js';
 import { checkEndpoint } from '../src/record.js';
+import type { AddressInfo } from 'node:net';
+import type { ServerResponse } from 'node:http';
+import type { PluginPeer } from '../../sdk/src/types/plugin.js';
 import type { BotSeams, TurnEnd } from '../src/bot.js';
 import type { Endpoint } from '../src/record.js';
 
@@ -25,7 +30,7 @@ interface Sent { chat: string; turn: string; text: string }
  * A turn ends when the case says so with `finish`, or at once when `auto` is
  * set, with the text `echo: <what was sent>`.
  */
-async function made(options: { auto?: boolean; sessions?: Record<string, string>; timeout?: number; refused?: boolean } = {}) {
+async function made(options: { auto?: boolean; sessions?: Record<string, string>; timeout?: number; refused?: boolean; turnRefused?: string } = {}) {
   const threads = await memoryRecords().collection('webhook-threads');
   const chats: { session: string; chat: string }[] = [];
   const sent: Sent[] = [];
@@ -46,9 +51,12 @@ async function made(options: { auto?: boolean; sessions?: Record<string, string>
     },
     send: async (chat, turn, text) => {
       sent.push({ chat, turn, text });
+      if (options.turnRefused !== undefined) return options.turnRefused;
       if (options.auto === true) waiting.get(turn)?.({ status: 'complete', text: `echo: ${text}` });
+      return undefined;
     },
     ended: (_chat, turn) => new Promise<TurnEnd>((resolve) => { waiting.set(turn, resolve); }),
+    forget: (_chat, turn) => { waiting.delete(turn); },
     post: async (url, body) => { posted.push({ url, body }); },
     syncTimeoutSeconds: options.timeout ?? 60,
     problem: (line) => { problems.push(line); },
@@ -59,7 +67,7 @@ async function made(options: { auto?: boolean; sessions?: Record<string, string>
     const turn = sent[n]?.turn ?? '';
     waiting.get(turn)?.({ status, text, ...(error === undefined ? {} : { error }) });
   };
-  return { target, threads, chats, sent, posted, problems, finish };
+  return { target, threads, chats, sent, posted, problems, finish, waiting };
 }
 
 /** An endpoint as the route hands it over: checked. */
@@ -296,6 +304,43 @@ describe('the reply modes', () => {
   });
 });
 
+describe('a turn the host refused', () => {
+  it('answers 409 with the reason, and posts no callback', async () => {
+    const { target, posted, problems, finish, waiting } = await made({ turnRefused: 'the chat is busy' });
+    const answer = await target(
+      endpoint({ reply: 'callback', callbackPrefix: 'https://ci.example.com/hooks/' }),
+      call({ thread: 'pr-12', text: 'hello', callback: 'https://ci.example.com/hooks/pr-12' }),
+    );
+    expect(answer.status).toBe(409);
+    expect(await answer.json()).toEqual({ message: 'the chat is busy' });
+    expect(waiting.size).toBe(0);
+    finish(0, 'late');
+    await settle();
+    expect(posted).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('the chat is busy');
+  });
+
+  it('answers 409 to a sync call at once, without the timeout', async () => {
+    const { target, waiting } = await made({ turnRefused: 'the chat is busy', timeout: 60 });
+    const started = Date.now();
+    const answer = await target(endpoint({ reply: 'sync' }), call({ thread: 'pr-12', text: 'hello' }));
+    expect(answer.status).toBe(409);
+    expect(Date.now() - started).toBeLessThan(1000);
+    expect(waiting.size).toBe(0);
+  });
+});
+
+it('forgets the wait for a turn the host refused', async () => {
+  const ends = turnEnds();
+  let settled = false;
+  void ends.wait('ahp-chat:/c1', 't1').then(() => { settled = true; });
+  ends.forget('ahp-chat:/c1', 't1');
+  ends.heard({ chat: 'ahp-chat:/c1', turn: 't1', status: 'complete' });
+  await settle();
+  expect(settled).toBe(false);
+});
+
 it('hears a turn that ended in an error, with its message', async () => {
   const ends = turnEnds();
   const waited = ends.wait('ahp-chat:/c1', 't1');
@@ -307,4 +352,67 @@ it('gives the plugin option syncTimeoutSeconds a default of 60', async () => {
   const { defaults, optionsSchema } = await import('../src/plugin.js');
   expect(defaults.syncTimeoutSeconds).toBe(60);
   expect(optionsSchema.properties).toHaveProperty('syncTimeoutSeconds');
+});
+
+describe('the plugin connection', () => {
+  /** A connection stub that keeps what the plugin sent, and lets a case speak as the host. */
+  const stub = () => {
+    const notified: { method: string; params: Record<string, unknown> }[] = [];
+    let handle: (message: Record<string, unknown>) => void = () => {};
+    const conn: PluginPeer = {
+      send: () => {},
+      notify: (method, params) => { notified.push({ method, params: params as Record<string, unknown> }); },
+      request: async () => ({}),
+      onMessage: (next) => { handle = next; },
+      close: () => {},
+    };
+    return { conn, notified, say: (message: Record<string, unknown>) => { handle(message); } };
+  };
+
+  it('resolves a dispatch with the rejectionReason of the action that carries its clientSeq', async () => {
+    const { conn, notified, say } = stub();
+    const sender = dispatcher(conn, 'ahpd-webhook');
+    const first = sender.dispatch('ahp-chat:/c1', { type: 'chat/turnStarted', turnId: 't1' });
+    const second = sender.dispatch('ahp-chat:/c1', { type: 'chat/turnStarted', turnId: 't2' });
+    expect(notified.map((one) => one.params['clientSeq'])).toEqual([1, 2]);
+    // Another client's action with the same seq is not this one's answer.
+    say({ method: 'action', params: { channel: 'ahp-chat:/c1', origin: { clientId: 'other', clientSeq: 2 }, rejectionReason: 'no' } });
+    say({ method: 'action', params: { channel: 'ahp-chat:/c1', origin: { clientId: 'ahpd-webhook', clientSeq: 2 }, rejectionReason: 'the chat is busy' } });
+    say({ method: 'action', params: { channel: 'ahp-chat:/c1', origin: { clientId: 'ahpd-webhook', clientSeq: 1 } } });
+    expect(await second).toBe('the chat is busy');
+    expect(await first).toBeUndefined();
+  });
+
+  it('goes on as taken, and says so, when no echo comes', async () => {
+    const { conn } = stub();
+    const silent: string[] = [];
+    const sender = dispatcher(conn, 'ahpd-webhook', 20, (channel) => { silent.push(channel); });
+    expect(await sender.dispatch('ahp-chat:/c1', { type: 'chat/turnStarted', turnId: 't1' })).toBeUndefined();
+    expect(silent).toEqual(['ahp-chat:/c1']);
+  });
+});
+
+describe('the callback', () => {
+  /** A server on a free port that answers each request with `reply`, and counts them. */
+  const serve = async (reply: (response: ServerResponse) => void) => {
+    let hits = 0;
+    const server = createServer((_request, response) => { hits += 1; reply(response); });
+    await new Promise<void>((resolve) => { server.listen(0, '127.0.0.1', resolve); });
+    const { port } = server.address() as AddressInfo;
+    return { url: `http://127.0.0.1:${port}/`, hits: () => hits, close: () => new Promise((r) => { server.close(r); }) };
+  };
+
+  it('fails on a redirect, and does not follow it', async () => {
+    const second = await serve((response) => { response.end('ok'); });
+    const first = await serve((response) => { response.writeHead(307, { location: second.url }).end(); });
+    try {
+      await expect(callBack(first.url, { thread: 'pr-12' })).rejects.toThrow('the callback answered');
+      expect(first.hits()).toBe(1);
+      expect(second.hits()).toBe(0);
+    }
+    finally {
+      await first.close();
+      await second.close();
+    }
+  });
 });

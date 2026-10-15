@@ -28,10 +28,12 @@ export interface BotSeams {
   session(bot: string): Promise<string | undefined>;
   /** Make a new chat in a session, and give its URI, or nothing when the host refuses the plugin. */
   chat(session: string): Promise<string | undefined>;
-  /** Send one turn in a chat. */
-  send(chat: string, turn: string, text: string): Promise<void>;
+  /** Send one turn in a chat, and give the host's reason when it refused the turn, or `undefined` when it took it. */
+  send(chat: string, turn: string, text: string): Promise<string | undefined>;
   /** Wait for one turn to end. Asked before the turn is sent, so no end is missed. */
   ended(chat: string, turn: string): Promise<TurnEnd>;
+  /** Stop the wait for one turn's end, for a turn the host refused. */
+  forget(chat: string, turn: string): void;
   /** POST a JSON body to a callback URL. */
   post(url: string, body: Record<string, unknown>): Promise<void>;
   /** How long a `sync` call waits when its endpoint names no time. */
@@ -108,7 +110,8 @@ const ended = (done: TurnEnd): Record<string, unknown> => ({
  * Waits for the end of the turns a webhook sent.
  *
  * `heard` takes every `turn_end` the host raises, and `wait` gives the end of
- * one turn by chat and turn id. A wait is made before its turn is sent.
+ * one turn by chat and turn id. A wait is made before its turn is sent, and
+ * `forget` drops it when the host refuses the turn.
  */
 export function turnEnds() {
   const waiting = new Map<string, (ending: Ending) => void>();
@@ -122,6 +125,9 @@ export function turnEnds() {
     },
     wait(chat: string, turn: string): Promise<Ending> {
       return new Promise((resolve) => { waiting.set(key(chat, turn), resolve); });
+    },
+    forget(chat: string, turn: string): void {
+      waiting.delete(key(chat, turn));
     },
   };
 }
@@ -178,7 +184,12 @@ export function botTarget(seams: BotSeams): Target {
     const turn = randomUUID();
     const end = seams.ended(thread.chat, turn);
     end.catch((error: unknown) => { seams.problem(`webhooks/${endpoint.id} lost the end of turn ${turn}: ${reason(error)}`); });
-    await seams.send(thread.chat, turn, call.text);
+    const refused = await seams.send(thread.chat, turn, call.text);
+    if (refused !== undefined) {
+      seams.forget(thread.chat, turn);
+      seams.problem(`webhooks/${endpoint.id} turn ${turn} was refused: ${refused}`);
+      return answer(409, { message: refused });
+    }
     const said = { thread: call.thread, turn };
 
     if (endpoint.reply === 'sync') {
