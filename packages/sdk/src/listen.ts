@@ -186,7 +186,7 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
       guarded: token !== undefined,
       // The sockets first, since a stop waits on an open one as on a request.
       close: () => {
-        for (const ws of bound.keys()) (ws as BunSocket).close();
+        for (const ws of bound.keys()) (ws as BunSocket).close(GOING_AWAY, STOPPING);
         return stopBun(server);
       },
     };
@@ -241,7 +241,7 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
       port: server.addr.port,
       guarded: token !== undefined,
       close: () => {
-        for (const socket of sockets) socket.close();
+        for (const socket of sockets) socket.close(GOING_AWAY, STOPPING);
         return within(server.shutdown());
       },
     };
@@ -332,10 +332,18 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
     // What was bound, not what was asked for: port 0 means the OS chooses.
     port: server.address()?.port ?? options.port,
     guarded: token !== undefined,
-    // Settled once the port is let go of and every connection has been dropped.
+    // Settled once the port is let go of and every connection is gone: each
+    // client is told the host is going away, and dropped if it has not closed
+    // after `CLOSE_GRACE_MS`.
     close: () => new Promise<void>((done) => {
-      for (const client of server.clients) client.terminate();
-      server.close(() => { void closeHttp(plain).then(done); });
+      for (const client of server.clients) client.close(GOING_AWAY, STOPPING);
+      const stuck = setTimeout(() => {
+        for (const client of server.clients) client.terminate();
+      }, CLOSE_GRACE_MS);
+      server.close(() => {
+        clearTimeout(stuck);
+        void closeHttp(plain).then(done);
+      });
     }),
   };
 }
@@ -395,6 +403,12 @@ export async function serveRequests(options: RequestsOptions, handler: RequestHa
  * connection is dropped, and how long a Deno shutdown is waited on.
  */
 const CLOSE_GRACE_MS = 2_000;
+
+/** The close code each WebSocket client gets when its listener closes: 1001, going away. */
+const GOING_AWAY = 1001;
+
+/** The reason sent with `GOING_AWAY`. */
+const STOPPING = 'the host is stopping';
 
 /**
  * Close a `node:http` server: the port at once, idle connections at once and
@@ -545,11 +559,11 @@ export async function overStdio(options: StdioOptions, onConnect: OnConnect): Pr
 /** A server `Bun.serve` answered: `stop(true)` drops the connections still open, `stop(false)` waits for them. */
 interface BunServer { stop(closeActive?: boolean): void | Promise<void>; port: number }
 
-interface BunSocket { send(text: string): unknown; close(): void; readyState: number; data?: unknown }
+interface BunSocket { send(text: string): unknown; close(code?: number, reason?: string): void; readyState: number; data?: unknown }
 
 interface DenoSocket {
   send(text: string): void;
-  close(): void;
+  close(code?: number, reason?: string): void;
   readyState: number;
   onopen: (() => void) | null;
   onmessage: ((event: { data: unknown }) => void) | null;
@@ -579,7 +593,7 @@ interface NodeServer {
   once(event: 'listening' | 'error', handler: (error?: unknown) => void): void;
   address(): { port: number } | null;
   /** Every socket still open. */
-  readonly clients: Set<{ terminate(): void }>;
+  readonly clients: Set<{ close(code: number, reason: string): void; terminate(): void }>;
   close(done?: () => void): void;
 }
 

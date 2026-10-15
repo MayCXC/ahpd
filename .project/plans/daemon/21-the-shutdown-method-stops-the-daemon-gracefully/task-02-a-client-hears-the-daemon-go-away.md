@@ -1,6 +1,6 @@
 ---
 title: A client hears the daemon go away
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -36,3 +36,36 @@ A client can then tell a stopped daemon from a lost network.
 - `listen.test.ts`: keep a client that ignores the close frame; the listener drops it after `CLOSE_GRACE_MS`, and `close()` settles.
 - Run `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema`; each exits 0.
 - Run vitest on `packages/sdk`, `packages/server`, `packages/agent-claude` and `packages/agent-acp`; all pass.
+
+## Resume
+
+Implemented and reviewed 2026-10-15.
+
+### Built
+
+- `packages/sdk/src/listen.ts`: `GOING_AWAY` (1001) and `STOPPING` (`the host is stopping`) are declared beside `CLOSE_GRACE_MS`.
+- `packages/sdk/src/listen.ts`: the Node close calls `client.close(GOING_AWAY, STOPPING)` for each client.
+- `packages/sdk/src/listen.ts`: a `CLOSE_GRACE_MS` timer then terminates each client still open, and the `ws` server close clears it.
+- The `ws` server close fires only when every client is gone, so `close()` still settles after the HTTP close.
+- `packages/sdk/src/listen.ts`: the Bun and Deno closes pass `GOING_AWAY` and `STOPPING` to each socket.
+- `packages/sdk/src/listen.ts`: the `BunSocket`, `DenoSocket` and `NodeServer` shapes take the code and the reason.
+- `packages/sdk/test/listen.test.ts`: a `ws` client open at `close()` gets 1001 and the reason.
+- `packages/sdk/test/listen.test.ts`: a raw socket does the handshake by hand and never answers the close frame.
+- That test reads 1001 and the reason from the frame, and finds the socket still open at 1900 ms on fake timers.
+- At 2100 ms the listener drops it, and `close()` settles.
+
+### Validation
+
+- Against the old source, both new tests fail.
+- The first sees code 1006 with an empty reason.
+- The second times out, because no close frame comes.
+- With the change, `listen.test.ts` passes 17 of 17.
+- `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0.
+- Vitest on `packages/sdk`, `packages/server`, `packages/agent-claude` and `packages/agent-acp`: 248 files and 4493 tests pass.
+- No doc describes how the listener closes a WebSocket, so no doc changed.
+
+### Seen and not done
+
+- The Bun and Deno closes are not tested, because the suite runs on Node only.
+- The Bun and Deno closes do not drop a client that ignores the close frame; each runtime's own stop handles it as before.
+- Checked by hand on Linux, 2026-10-15: after `shutdown`, the caller and a second client each get 1001 and `the host is stopping`.

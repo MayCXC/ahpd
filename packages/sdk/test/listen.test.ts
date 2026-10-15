@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from 'vitest';
+import { connect, type Socket } from 'node:net';
 import { WebSocket } from 'ws';
 import { listen, serveRequests } from '../src/listen.js';
 import type { Listener } from '../src/types/listen.js';
@@ -244,5 +245,74 @@ it('drops a request still running two seconds into the close, and then settles',
   }
   finally {
     vi.useRealTimers();
+  }
+});
+
+it('closes a client open at close with 1001 and the reason', async () => {
+  const first = await listen({ port: 0 }, nothing);
+  const socket = new WebSocket(`ws://127.0.0.1:${first.port}`);
+  await new Promise((opened) => { socket.on('open', opened); });
+  const heard = new Promise<{ code: number; reason: string }>((resolve) => {
+    socket.on('close', (code: number, reason: Buffer) => { resolve({ code, reason: reason.toString('utf8') }); });
+  });
+  await first.close();
+  expect(await heard).toEqual({ code: 1001, reason: 'the host is stopping' });
+});
+
+/** A client that completes the handshake by hand and never answers a close frame. */
+const deaf = (port: number): Promise<{ socket: Socket; told: Promise<Buffer>; gone: Promise<void> }> => new Promise((resolve, reject) => {
+  const socket = connect(port, '127.0.0.1');
+  const chunks: Buffer[] = [];
+  let frame = (_close: Buffer): void => {};
+  const told = new Promise<Buffer>((done) => { frame = done; });
+  const gone = new Promise<void>((done) => { socket.on('close', () => { done(); }); });
+  socket.on('error', () => undefined);
+  socket.once('error', reject);
+  socket.on('data', (chunk: Buffer) => {
+    chunks.push(chunk);
+    const all = Buffer.concat(chunks);
+    if (chunks.length === 1) {
+      if (!all.toString('latin1').startsWith('HTTP/1.1 101')) reject(new Error(all.toString('latin1')));
+      resolve({ socket, told, gone });
+    }
+    // An unmasked close frame from the server, after the handshake's blank line.
+    const body = all.subarray(all.indexOf('\r\n\r\n') + 4);
+    if (body[0] === 0x88 && body.length >= 2 + (body[1] ?? 0)) frame(body.subarray(2, 2 + (body[1] ?? 0)));
+  });
+  socket.write([
+    'GET / HTTP/1.1',
+    `Host: 127.0.0.1:${port}`,
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+    'Sec-WebSocket-Version: 13',
+    '',
+    '',
+  ].join('\r\n'));
+});
+
+it('drops a client that ignores the close frame after the grace, and then settles', async () => {
+  const first = await listen({ port: 0 }, nothing);
+  const client = await deaf(first.port);
+  vi.useFakeTimers({ toFake: ['setTimeout', 'setInterval', 'clearTimeout', 'clearInterval'] });
+  try {
+    let settled = false;
+    const closed = Promise.resolve(first.close()).then(() => { settled = true; });
+    const told = await client.told;
+    expect(told.readUInt16BE(0)).toBe(1001);
+    expect(told.subarray(2).toString('utf8')).toBe('the host is stopping');
+    await vi.advanceTimersByTimeAsync(CLOSE_GRACE_MS - 100);
+    await new Promise((turn) => { setImmediate(turn); });
+    expect(settled).toBe(false);
+    expect(client.socket.destroyed).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+    vi.useRealTimers();
+    await client.gone;
+    await closed;
+    expect(settled).toBe(true);
+  }
+  finally {
+    vi.useRealTimers();
+    client.socket.destroy();
   }
 });

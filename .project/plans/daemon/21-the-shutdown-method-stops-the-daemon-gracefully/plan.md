@@ -58,7 +58,7 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The shutdown method runs the way down](task-01-the-shutdown-method-runs-the-way-down.md) | implemented | - |
-| [02 - A client hears the daemon go away](task-02-a-client-hears-the-daemon-go-away.md) | todo | - |
+| [02 - A client hears the daemon go away](task-02-a-client-hears-the-daemon-go-away.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -68,8 +68,8 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 ## Resume state
 
 - **Done so far:** planned 2026-10-13; task 01 implemented 2026-10-13, not reviewed. `diagnostics.shutdown` now runs the lifecycle's way down, so a `shutdown` request raises `stopping` and closes the listeners on every platform instead of signalling the daemon.
-- **Checked by hand:** on Linux, 2026-10-15, at `3cf1dc13`. After `initialize`, a `shutdown` request is answered, and the log shows `stopping` and `stopped` with no signal. The client sees code 1006, because the listener drops each socket; task 02 fixes that.
-- **Next action:** build task 02. The Windows check waits in [windows-checks.md](../../../pending/windows-checks.md).
+- **Checked by hand:** on Linux, 2026-10-15, at `3cf1dc13`. After `initialize`, a `shutdown` request is answered, and the log shows `stopping` and `stopped` with no signal. With task 02, each client open at `shutdown` gets code 1001 and `the host is stopping`, checked the same day.
+- **Next action:** none on Linux; task 02 done 2026-10-15. The Windows check waits in [windows-checks.md](../../../pending/windows-checks.md).
 - **Open questions:** none.
 - **Watch out for:** daemon/20 is not in 0.11.0. A Windows user gets both fixes in the next release.
 
@@ -77,5 +77,5 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 
 - [x] A `shutdown` request raises `stopping` and closes the listeners before the exit, and sends no signal.
 - [ ] By hand on Windows: after `shutdown`, the daemon log shows the way down.
-- [ ] A client open at `shutdown` gets close code 1001.
+- [x] A client open at `shutdown` gets close code 1001.
 - [ ] `plans/index.md` updated.
