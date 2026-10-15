@@ -1354,6 +1354,8 @@ export function chatAction(
       break;
     case 'chat/pendingMessageRemoved':
       session.unqueue(String(action.id ?? ''));
+      // A queued message taken back never becomes a turn to let its sender go.
+      if (action.kind === 'queued') ctx.forgetSender(String(action.id ?? ''));
       break;
     case 'chat/queuedMessagesReordered':
       session.reorder(Array.isArray(action.order)

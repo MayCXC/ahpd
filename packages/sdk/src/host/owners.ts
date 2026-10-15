@@ -21,6 +21,8 @@ export interface Owners {
   senders: Map<string, Owner>;
   senderOf(turn: string): Owner | undefined;
   sentBy: Map<string, Connection>;
+  forgetSender(id: string): void;
+  forgetSendersIn(chat: Bag): void;
   charge(uri: string, principal: Principal | undefined, named?: string): void;
   checked(
     principal: Principal | undefined,
@@ -112,6 +114,24 @@ export function createOwners(ctx: HostContext): Owners {
    * an absence.
    */
   const sentBy = new Map<string, Connection>();
+
+  /** Let go of who sent a turn or a queued message, out of both maps, by its id. */
+  const forgetSender = (id: string): void => {
+    senders.delete(id);
+    sentBy.delete(id);
+  };
+
+  /**
+   * Let go of the senders a chat's state still names: its running turn and
+   * every message queued behind it. For a chat closed with nothing left to
+   * end them, because a closed backend sends no turn end.
+   */
+  const forgetSendersIn = (chat: Bag): void => {
+    const active = chat.activeTurn as Bag | undefined;
+    if (typeof active?.id === 'string') forgetSender(active.id);
+    const queued = Array.isArray(chat.queuedMessages) ? chat.queuedMessages as Bag[] : [];
+    for (const one of queued) if (typeof one?.id === 'string') forgetSender(one.id);
+  };
 
   /**
    * Resolve what a session is charged to and write the answer down.
@@ -224,6 +244,6 @@ export function createOwners(ctx: HostContext): Owners {
 
   return {
     charged, ownerFor, principals, principalFor, forWhom, senders, senderOf, sentBy,
-    charge, checked, scoping, settle,
+    forgetSender, forgetSendersIn, charge, checked, scoping, settle,
   };
 }

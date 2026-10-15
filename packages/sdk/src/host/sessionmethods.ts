@@ -42,7 +42,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
     about, activeSessionsMoved, admitted, agents, answeredAs, backendsOwn, beginOrRun, beside, byChat,
     charged, chatIdOf, chatOf,
     chatSummary, chatsReordered, claimable, claims, dir, dispatch, drafts, dropChat, first, flushDeltas,
-    forWhom, heldAs,
+    forWhom, forgetSendersIn, heldAs,
     isolating, isolated, keepChat, keepProvider, kept, leadOf, allRows, log, madeFrom, meantBy, messageFrom,
     movable, movableMoved, openSession, openedBy, options, orderChats,
     ownerFor, past, placedIn, presence, replayable, removeSession, respell, retool, scoping, seeded,
@@ -1316,6 +1316,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       }
       // A client removing a chat is a removal, and one of the two roads that
       // dispose: the chat is not started again, so nothing of it is kept.
+      forgetSendersIn(found.chat.chatState());
       found.chat.close('dispose');
       byChat.delete(chatUri);
       drafts.delete(chatUri);

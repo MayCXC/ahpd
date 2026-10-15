@@ -129,7 +129,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     options, sessions, byChat, subagents, owners, kept, names, births, drafts, about,
     dispatch, log, described, links, resumedSessions,
     sessionHolding, respell, dirOf, operationsMoved, refreshWatched, refreshFacts,
-    fire, charged, senders, senderOf, sentBy, enteredIn, inMachine, bringBackOf,
+    fire, charged, senders, senderOf, sentBy, forgetSender, enteredIn, inMachine, bringBackOf,
     contributedDefaults, runningSchema, chatSummary, subagentSummary, summaryMoved, learnModels,
     movableMoved,
   } = ctx;
@@ -779,6 +779,8 @@ export function createSpawn(ctx: HostContext): Spawn {
           // connection that queued it.
           const queuedBy = sentBy.get(action.queuedMessageId);
           if (queuedBy !== undefined) sentBy.set(turn, queuedBy);
+          // The queued id names nothing once its turn has one of its own.
+          if (action.queuedMessageId !== turn) forgetSender(action.queuedMessageId);
           // And a command waiting its turn is a command turn once it runs.
           if (ctx.commandTurns.delete(action.queuedMessageId)) ctx.commandTurns.set(turn, false);
         }
@@ -825,11 +827,11 @@ export function createSpawn(ctx: HostContext): Spawn {
             || action.type === 'chat/error') metering.ended(turn);
         }
         // A turn that has ended is let go of, once what a usage record will want
-        // has been read off it and what a history needs is the store's.
-        if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled') {
-          senders.delete(turn);
-          sentBy.delete(turn);
-        }
+        // has been read off it and what a history needs is the store's. A turn
+        // that failed is ended by its `chat/error`, as the protocol's reducer
+        // ends it.
+        if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled'
+          || action.type === 'chat/error') forgetSender(turn);
         // A nested session's record follows the title and the last turn.
         if (action.type === 'session/titleChanged' && typeof action.title === 'string') moveNested(idOf(uri), { title: action.title });
         else if (channel === 'chat' && action.type === 'chat/turnComplete') moveNested(idOf(uri), {});

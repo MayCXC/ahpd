@@ -180,7 +180,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     dispatch, broadcast, flushDeltas, log, fire, sessionEvents, leadOf, chatOf,
     dirOf, changesetOf, stopUnwatched, captureBaseline,
     sessionMachines, enteredIn, inMachine, takeOut, placedIn, followOf,
-    isolating, charged, senders, sentBy, checked, principalFor, machineFor, ownerFor,
+    isolating, charged, senders, sentBy, forgetSender, forgetSendersIn, checked, principalFor, machineFor, ownerFor,
     contributedDefaults, rootConfig,
     spawn, keepTitle, keepProvider, forgetChats,
     sessionAdded, forgetSent, activeSessionsMoved,
@@ -217,6 +217,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
    */
   const teardown = (held: Held, uri: string): void => {
     for (const [chatUri, chat] of held.chats) {
+      // The senders of what this chat still holds, because a closed backend
+      // ends no turn and runs nothing it had queued.
+      forgetSendersIn(chat.chatState());
       // This is a removal, one of the two roads that dispose: a session that
       // is gone from here is gone inside its machine as well.
       chat.close('dispose');
@@ -1241,7 +1244,11 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
         else session.queue(queuedAs, text, model, from, attachments, ctx.turnInstructions(session.uri));
         return undefined;
       }
-      if (!session.ran) return `${provider} cannot run a command in a turn; use a terminal instead`;
+      if (!session.ran) {
+        // Refused, so no turn will ever end under this id to let its sender go.
+        forgetSender(queuedAs ?? turnId);
+        return `${provider} cannot run a command in a turn; use a terminal instead`;
+      }
       ctx.commandTurns.set(queuedAs ?? turnId, false);
       const first = session.workingDirectories()[0];
       const where = first === undefined ? options.path : localPath(first);
