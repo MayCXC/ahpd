@@ -16,7 +16,7 @@ import { statSync } from 'node:fs';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
 import { daemonLog } from '../config.js';
-import { READY_TIMEOUT_MS, deliver, logSince, running } from '../daemon.js';
+import { READY_TIMEOUT_MS, deliver, logSince, running, throughPipe } from '../daemon.js';
 import type { ControlledSignal, Running } from '../daemon.js';
 import { conflict } from './options.js';
 import type { ServedFacts } from './served.js';
@@ -48,16 +48,31 @@ export const FORCED_SIGNAL = 'SIGUSR2';
 export const RECEIPT_WAIT_MS = 5_000;
 
 /**
- * What the daemon writes when it will not restart, naming the signal it
- * answers; the terminal reads the rest of the line.
+ * How the log names a restart asked through the control pipe, in the place a
+ * signal's name goes: no signal was sent. A forced one says so, so a terminal
+ * reads only its own kind of answer, as the two signals let it.
  */
-const refusedTo = (signal: string): string => `restart refused (${signal}): `;
+const CONTROL_PIPE = 'control pipe';
+const FORCED_PIPE = 'control pipe, forced';
+
+/** How the log names a restart that came that way: the pipe, or the signal. */
+const cameBy = (piped: boolean, forced: boolean): string => {
+  if (piped) return forced ? FORCED_PIPE : CONTROL_PIPE;
+  return forced ? FORCED_SIGNAL : RESTART_SIGNAL;
+};
+
+/**
+ * What the daemon writes when it will not restart, naming how the request
+ * came, the signal or the control pipe; the terminal reads the rest of the line.
+ */
+const refusedTo = (came: string): string => `restart refused (${came}): `;
 /**
  * What the daemon writes once it has read its line and token and begins to
- * stop. The signal is named because a signal carries no sender: a terminal
- * reads its own kind of answer, and two of one kind are the same request.
+ * stop. How the request came is named because a request carries no sender: a
+ * terminal reads its own kind of answer, and two of one kind are the same
+ * request.
  */
-const receiptOf = (signal: string): string => `restart: stopping (${signal})`;
+const receiptOf = (came: string): string => `restart: stopping (${came})`;
 /** What the daemon writes once its successor has announced itself. */
 const RESTARTED = /restarted as (\S+) \(pid (\d+)\)/u;
 /** What the daemon writes once it has stopped and is starting its successor. */
@@ -388,9 +403,9 @@ export interface SignalFacts {
  * reading: a refusal, and the daemon keeps running, or the receipt, written
  * before the restart, which is the served one, begins.
  */
-export async function answerRestartSignal(forced: boolean, facts: SignalFacts): Promise<void> {
-  const signal = forced ? FORCED_SIGNAL : RESTART_SIGNAL;
-  const refuse = (why: string): void => { facts.log(`${refusedTo(signal)}${why}`); };
+export async function answerRestartSignal(forced: boolean, facts: SignalFacts, piped = false): Promise<void> {
+  const came = cameBy(piped, forced);
+  const refuse = (why: string): void => { facts.log(`${refusedTo(came)}${why}`); };
   const record = facts.recorded();
   const refused = notRestartable(record, facts.self);
   if (refused !== undefined) {
@@ -409,7 +424,7 @@ export async function answerRestartSignal(forced: boolean, facts: SignalFacts): 
     refuse(wordsOf(error));
     return;
   }
-  facts.log(receiptOf(signal));
+  facts.log(receiptOf(came));
 }
 
 /** What the terminal's restart is done with, so it can be driven without a process. */
@@ -429,13 +444,15 @@ export interface AtTerminal {
   /** How long the successor is given, from the daemon's `STARTING` line. */
   timeoutMs: number;
   now(): number;
+  /** Whether `signal` reaches the daemon through its control pipe, so its answer names the pipe. */
+  piped: boolean;
 }
 
 /** The terminal's restart against the real record, log and process table. */
 const realTerminal = (): AtTerminal => ({
   running,
   // The signal on Linux and macOS, and the record's own pipe on Windows, which
-  // `deliver` decides: the terminal does not know which it is sending.
+  // `deliver` decides by the same `throughPipe` that `piped` reads.
   signal: (record, signal) => deliver(record, signal),
   alive: (pid) => {
     try { process.kill(pid, 0); return true; }
@@ -450,6 +467,7 @@ const realTerminal = (): AtTerminal => ({
   receiptMs: RECEIPT_WAIT_MS,
   timeoutMs: SUCCESSOR_WAIT_MS,
   now: () => Date.now(),
+  piped: throughPipe(),
 });
 
 /** Why a signal to the recorded pid could not be sent, in words. */
@@ -474,8 +492,9 @@ export async function restartAtTerminal(force: boolean, steps: AtTerminal): Prom
   if (record === undefined) conflict('None running in the background; a daemon run in the foreground is restarted where it runs.');
   if (record.argv === undefined) conflict(OLDER);
   const signal = force ? FORCED_SIGNAL : RESTART_SIGNAL;
-  const receipt = receiptOf(signal);
-  const refusal = refusedTo(signal);
+  const came = cameBy(steps.piped, force);
+  const receipt = receiptOf(came);
+  const refusal = refusedTo(came);
   const from = steps.mark();
   try {
     await steps.signal(record, signal);

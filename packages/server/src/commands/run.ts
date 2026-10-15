@@ -1237,26 +1237,26 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * answers it here. A daemon run in the foreground never listens for them.
    */
   if (detached) {
-    const answer = (forced: boolean) => (): void => {
+    const answer = (forced: boolean, piped: boolean) => (): void => {
       void answerRestartSignal(forced, {
         self: process.pid, recorded: running, turning: () => host.turning(), log: stamp, restart,
-      });
+      }, piped);
     };
-    const onRestart = answer(false);
-    const onForced = answer(true);
+    const onRestart = answer(false, false);
+    const onForced = answer(true, false);
     process.on(RESTART_SIGNAL, onRestart);
     process.on(FORCED_SIGNAL, onForced);
     /*
      * And on Windows, the same three handlers over the control pipe, because
      * the signals above cannot be sent there: `SIGTERM` is a hard kill, and the
      * other two do not exist. A request names the signal it stands for, so what
-     * runs is what the signal would have run.
+     * runs is what the signal would have run, and the log names the pipe.
      *
      * `process.on` stays on every platform. On Linux and macOS the terminal
      * still sends the signals, and the record holds no pipe there.
      */
     if (control !== undefined) {
-      controlListener = controlServer(control, { SIGTERM: way.shutdown, SIGHUP: onRestart, SIGUSR2: onForced }, stamp);
+      controlListener = controlServer(control, { SIGTERM: way.shutdown, SIGHUP: answer(false, true), SIGUSR2: answer(true, true) }, stamp);
     }
   }
 }

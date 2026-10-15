@@ -612,6 +612,12 @@ const ask = async (control: Control, signal: ControlledSignal): Promise<void> =>
 };
 
 /**
+ * Whether a stop or a restart reaches a daemon on that platform through its
+ * control pipe rather than as a signal: on Windows, which cannot send them.
+ */
+export const throughPipe = (platform: NodeJS.Platform = process.platform): boolean => platform === 'win32';
+
+/**
  * Send a daemon the request a signal stands for.
  *
  * On a platform whose signals reach another process this is the signal itself:
@@ -628,7 +634,7 @@ export async function deliver(
   signal: ControlledSignal,
   platform: NodeJS.Platform = process.platform,
 ): Promise<void> {
-  if (platform !== 'win32') {
+  if (!throughPipe(platform)) {
     process.kill(record.pid, signal);
     return;
   }

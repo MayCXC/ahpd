@@ -209,6 +209,7 @@ describe('deliver', () => {
       receiptMs: 1000,
       timeoutMs: 1000,
       now: () => 0,
+      piped: true,
     };
     await expect(restartAtTerminal(false, steps)).rejects
       .toThrow('pid 7, which the record names, is gone; nothing was restarted.');
@@ -225,14 +226,14 @@ describe('a restart reached over the control', () => {
     restart: (argv: string[]) => { restarted.push(argv); },
   });
 
-  /** The three handlers `run.ts` binds the control to, over those facts. */
+  /** The three handlers `run.ts` binds the control to, over those facts, each said to come through the pipe. */
   const handlersFor = (said: string[], restarted: string[][], turning: string[], shutdown: () => void): ControlHandlers => ({
     SIGTERM: shutdown,
-    SIGHUP: () => { void answerRestartSignal(false, facts(turning, said, restarted)); },
-    SIGUSR2: () => { void answerRestartSignal(true, facts(turning, said, restarted)); },
+    SIGHUP: () => { void answerRestartSignal(false, facts(turning, said, restarted), true); },
+    SIGUSR2: () => { void answerRestartSignal(true, facts(turning, said, restarted), true); },
   });
 
-  it('logs the refusal a SIGHUP writes while a turn runs, and a SIGUSR2 restarts', async () => {
+  it('logs the refusal of a SIGHUP request while a turn runs, naming the pipe, and a SIGUSR2 request restarts', async () => {
     const control = here();
     const said: string[] = [];
     const restarted: string[][] = [];
@@ -240,13 +241,13 @@ describe('a restart reached over the control', () => {
     await server.listening;
     try {
       await send(control, request(control.key, 'SIGHUP'));
-      expect(said).toEqual(['restart refused (SIGHUP): A turn is running in ahp-session:/a; pass --force to restart anyway.']);
+      expect(said).toEqual(['restart refused (control pipe): A turn is running in ahp-session:/a; pass --force to restart anyway.']);
       expect(restarted).toEqual([]);
 
-      // The same turn, forced: the restart runs, and its receipt names SIGUSR2.
+      // The same turn, forced: the restart runs, and its receipt names the pipe and the force.
       await send(control, request(control.key, 'SIGUSR2'));
       expect(restarted).toEqual([['--port', '0']]);
-      expect(said).toContain('restart: stopping (SIGUSR2)');
+      expect(said).toContain('restart: stopping (control pipe, forced)');
     }
     finally { await server.close(); }
   });
@@ -260,7 +261,7 @@ describe('a restart reached over the control', () => {
     try {
       await send(control, request(control.key, 'SIGHUP'));
       expect(restarted).toEqual([['--port', '0']]);
-      expect(said).toEqual(['restart: stopping (SIGHUP)']);
+      expect(said).toEqual(['restart: stopping (control pipe)']);
     }
     finally { await server.close(); }
   });

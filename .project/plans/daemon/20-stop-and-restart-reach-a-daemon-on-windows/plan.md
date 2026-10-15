@@ -1,7 +1,7 @@
 ---
 title: "`ahpd stop` and `ahpd restart` reach a daemon on Windows"
 domain: daemon
-status: built
+status: active
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -72,6 +72,8 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 | `STOP_WAIT_MS` is 30 seconds; after it, `stop` sends `SIGKILL` and prints `Killed <url> (pid <n>): it did not stop within 30 seconds.` | (defaulted: a shutdown awaits plugin `stopping` handlers, which can take seconds) | 04 |
 | `ahpd stop` forgets the record only after the process is gone | (defaulted: the record is how a second `stop` finds it) | 04 |
 | `ahpd stop` waits for the daemon to exit, then kills it, so the line it prints is true only once the process is gone | docs/DAEMON.md already says stop waits; the fix makes the printed line match | 04 |
+| A restart through the control pipe logs `restart refused (control pipe): ...` and `restart: stopping (control pipe)`, and a signal on Unix keeps its name | Softov, 2026-10-14, to "On Windows, a restart asked through the control pipe logs `restart refused (SIGHUP)` and `restart: stopping (SIGUSR2)`, though no signal was sent. What should the log say?": "Name the pipe" | 06 |
+| A forced restart through the control pipe logs `(control pipe, forced)`, so a terminal reads only its own kind of answer | (defaulted: the review of task 06, 2026-10-14: the two signals keep the kinds apart, and the pipe must too) | 06 |
 
 ## Proposed architecture
 
@@ -90,6 +92,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 | [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | done | 02 |
 | [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | done | 03 |
 | [05 - The docs describe stop and restart on Windows](task-05-docs.md) | done | 04 |
+| [06 - a pipe request names the pipe in the log](task-06-a-pipe-request-names-the-pipe-in-the-log.md) | implemented | 05 |
 
 ## Risks and tradeoffs
 
@@ -104,7 +107,8 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 03: `deliver(record, signal, platform)` sends the request on win32 and the signal elsewhere, `stop` awaits it, and `realTerminal.signal` calls it.
   Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
   Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
-- **Next action:** the two Windows checks in the final list, by hand. The plan is built and reviewed; see [implemented.md](implemented.md).
+  Task 06, implemented 2026-10-14: a restart through the control pipe names the pipe in its two log lines. A forced one adds `forced`, and a signal keeps its name.
+- **Next action:** review task 06, then check on Windows that the log names the pipe. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** never write the key or `connectUrl` to a log line or to stdout; `ahpd status --json` must not print `control`.
 

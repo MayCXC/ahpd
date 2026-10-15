@@ -409,7 +409,7 @@ const recordFor = (pid: number, argv: string[] | null = ARGV): Running => ({
 });
 
 describe('the daemon, told to restart by a signal', () => {
-  const answer = async (forced: boolean, over: { recorded?: Running | undefined; turning?: string[] } = {}) => {
+  const answer = async (forced: boolean, over: { recorded?: Running | undefined; turning?: string[]; piped?: boolean } = {}) => {
     const said: string[] = [];
     const restarts: string[][] = [];
     await answerRestartSignal(forced, {
@@ -418,7 +418,7 @@ describe('the daemon, told to restart by a signal', () => {
       turning: () => over.turning ?? [],
       log: (line) => { said.push(line); },
       restart: (argv) => { restarts.push(argv); },
-    });
+    }, over.piped ?? false);
     return { said, restarts };
   };
 
@@ -434,6 +434,23 @@ describe('the daemon, told to restart by a signal', () => {
 
   it('restarts anyway when forced, and names that signal in its receipt', async () => {
     expect(await answer(true, { turning: ['ahp-session:/a'] })).toEqual({ said: ['restart: stopping (SIGUSR2)'], restarts: [ARGV] });
+  });
+
+  /*
+   * The Windows run of 2026-10-14: a restart asked through the control pipe
+   * logged the name of a signal that was never sent.
+   */
+  it('names the control pipe, not a signal, in the refusal and the receipt of a request through it', async () => {
+    const refused = await answer(false, { turning: ['ahp-session:/a'], piped: true });
+    expect(refused).toEqual({
+      said: ['restart refused (control pipe): A turn is running in ahp-session:/a; pass --force to restart anyway.'],
+      restarts: [],
+    });
+    expect(await answer(false, { piped: true })).toEqual({ said: ['restart: stopping (control pipe)'], restarts: [ARGV] });
+    expect(await answer(true, { turning: ['ahp-session:/a'], piped: true }))
+      .toEqual({ said: ['restart: stopping (control pipe, forced)'], restarts: [ARGV] });
+    expect((await answer(true, { recorded: recordFor(8), piped: true })).said)
+      .toEqual(['restart refused (control pipe, forced): The record names pid 8, not this daemon; restart this one where it runs.']);
   });
 
   it('refuses when the record is not its own, or holds no line', async () => {
@@ -554,6 +571,7 @@ describe('restartAtTerminal', () => {
     then: (signal: string, state: Daemon) => void = () => {},
     each: (state: Daemon) => void = () => {},
     alive?: (state: Daemon) => boolean,
+    piped = false,
   ) => {
     const state: Daemon = { record, log: 'earlier lines\n', signals: [], alive: true, waits: 0 };
     const clock = { at: 0 };
@@ -567,6 +585,7 @@ describe('restartAtTerminal', () => {
       receiptMs: 3000,
       timeoutMs: 5000,
       now: () => clock.at,
+      piped,
     };
     return { state, steps };
   };
@@ -615,6 +634,19 @@ describe('restartAtTerminal', () => {
       state.log += '2026-09-30T00:00:00.000Z restart refused (SIGHUP): A turn is running in ahp-session:/a; pass --force to restart anyway.\n';
     });
     await expect(restartAtTerminal(false, steps)).rejects.toThrow('A turn is running in ahp-session:/a; pass --force to restart anyway.');
+  });
+
+  it('reads the answer that names the control pipe, when the request went through it', async () => {
+    const refused = faked(recordFor(7), (_signal, state) => {
+      state.log += '2026-10-14T00:00:00.000Z restart refused (control pipe): A turn is running in ahp-session:/a; pass --force to restart anyway.\n';
+    }, undefined, undefined, true);
+    await expect(restartAtTerminal(false, refused.steps)).rejects.toThrow('A turn is running in ahp-session:/a; pass --force to restart anyway.');
+
+    const { steps } = faked(recordFor(7), (_signal, state) => {
+      state.record = recordFor(8);
+      state.log += 'restart: stopping (control pipe, forced)\nrestart: starting the successor\nrestarted as ws://127.0.0.1:9008 (pid 8)\n';
+    }, undefined, undefined, true);
+    expect((await restartAtTerminal(true, steps)).pid).toBe(8);
   });
 
   it('answers a new daemon that did not start', async () => {
@@ -670,6 +702,31 @@ describe('restartAtTerminal', () => {
       }
     });
     expect((await restartAtTerminal(false, steps)).pid).toBe(8);
+  });
+
+  /*
+   * Two terminals at once, one plain and one forced: each reads only the
+   * answer of its own kind, through the pipe as with signals.
+   */
+  it('ignores the other kind\'s refusal, through the pipe and as a signal', async () => {
+    const kinds = [
+      { piped: false, force: false, own: 'SIGHUP', other: 'SIGUSR2' },
+      { piped: false, force: true, own: 'SIGUSR2', other: 'SIGHUP' },
+      { piped: true, force: false, own: 'control pipe', other: 'control pipe, forced' },
+      { piped: true, force: true, own: 'control pipe, forced', other: 'control pipe' },
+    ];
+    for (const kind of kinds) {
+      const { steps } = faked(recordFor(7), (_signal, daemon) => {
+        daemon.log += `restart refused (${kind.other}): A turn is running in ahp-session:/a; pass --force to restart anyway.\n`;
+        daemon.log += `restart: stopping (${kind.own})\n`;
+      }, (daemon) => {
+        if (daemon.waits === 1) {
+          daemon.record = recordFor(8);
+          daemon.log += 'restart: starting the successor\nrestarted as ws://127.0.0.1:9008 (pid 8)\n';
+        }
+      }, undefined, kind.piped);
+      expect((await restartAtTerminal(kind.force, steps)).pid).toBe(8);
+    }
   });
 
   it('stops waiting when the old daemon went without an answer', async () => {
