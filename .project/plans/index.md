@@ -42,8 +42,11 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
+| [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15 | - | - |
+| [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
+| [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
 
-Next free number in `daemon`: `27`.
+Next free number in `daemon`: `30`.
 
 ## host
 
@@ -457,6 +460,7 @@ None. `host`, `claude`, `documentation`, `plugin`, `container`, `pi`, `acp`, `us
 Ideas, one file each:
 
 - [agents as extensions](../ideas/agents-as-extensions.md)
+- [the install script uninstalls](../ideas/the-install-script-uninstalls.md)
 - [an SSH command that attaches to the daemon](../ideas/an-ssh-command-that-attaches-to-the-daemon.md)
 - [a plugin reloads without a restart](../ideas/a-plugin-reloads-without-a-restart.md)
 - [Copilot through the CLI](../ideas/copilot-goes-through-the-cli.md)
