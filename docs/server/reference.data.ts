@@ -59,6 +59,10 @@ export interface Reference {
 
 export declare const data: Reference;
 
+/** Sorts by a name, ignoring case and leading dashes. */
+const byName = <T>(name: (row: T) => string) => (a: T, b: T): number =>
+  name(a).replace(/^-+/u, '').localeCompare(name(b).replace(/^-+/u, ''), 'en', { sensitivity: 'base' });
+
 const SERVER = resolve(dirname(fileURLToPath(import.meta.url)), '../../packages/server');
 
 /** A module of the built server, or of a package it depends on, imported where it lives. */
@@ -140,6 +144,10 @@ export default {
       };
     });
 
-    return { commands, daemon, globals: visible(program.globals).map(optionRow) };
+    return {
+      commands: commands.sort(byName((row) => row.usage)),
+      daemon: daemon.sort(byName((row) => row.key ?? row.flags[0] ?? '')),
+      globals: visible(program.globals).map(optionRow).sort(byName((row: OptionRow) => row.flags[0])),
+    };
   },
 };

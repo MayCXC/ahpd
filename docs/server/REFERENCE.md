@@ -4,7 +4,7 @@ import CliReference from './CliReference.vue';
 
 # Reference
 
-The tables on this page are generated from the code when the site is built.
+The tables on this page are generated from the code when the site is built, and each one is in alphabetical order.
 
 ## Commands
 
