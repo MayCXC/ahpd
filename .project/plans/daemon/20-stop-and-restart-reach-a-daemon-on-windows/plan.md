@@ -109,13 +109,16 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
   Task 06, implemented 2026-10-14: a restart through the control pipe names the pipe in its two log lines. A forced one adds `forced`, and a signal keeps its name.
 - **Next action:** review task 06, then check on Windows that the log names the pipe. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
+- **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. During a turn, `ahpd restart` exits 1 with the turn named, and the pid stays the same. `ahpd restart --force` restarts from the recorded line in about 3 seconds, and the client reconnects. `ahpd stop` during a turn logs `stopping` and `stopped`, removes `daemon.json`, and `ahpd status --json` prints `{"running":false}`.
+  Left to check: the stop line in the final list, on a daemon started with `--connection-token-file`. The run does not show that the daemon was started with that flag.
+  Left to check for task 06: a restart while a turn runs logs `restart refused (control pipe)`, and a forced one logs `restart: stopping (control pipe, forced)`.
 - **Open questions:** none.
 - **Watch out for:** never write the key or `connectUrl` to a log line or to stdout; `ahpd status --json` must not print `control`.
 
 ## Final verification checklist
 
-- [x] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass, and the signal messages are unchanged.
+- [ ] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass. A signal keeps its name in the restart log lines, and a request through the control pipe names the pipe.
 - [ ] On Windows: `ahpd start --connection-token-file <f>`, open a session, start a turn, `ahpd stop`; the log shows `stopping`, `daemon.json` is gone, and `ahpd status --json` prints `{"running":false}`.
-- [ ] On Windows: `ahpd restart` refuses while a turn runs, `ahpd restart --force` restarts, and the successor comes up from the recorded line.
+- [x] On Windows: `ahpd restart` refuses while a turn runs, `ahpd restart --force` restarts, and the successor comes up from the recorded line.
 - [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass.
 - [x] `plans/index.md` updated.

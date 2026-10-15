@@ -35,13 +35,13 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [17 - A plugin installs at the newest version whose sdk range admits the daemon](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/plan.md) | high | built 2026-10-09 ([implemented.md](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/implemented.md)) | daemon 09 | - |
 | [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/18-the-api-answers-to-the-origins-a-deployment-names/implemented.md)) | daemon 05 | - |
 | [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); checked 2026-10-13 | daemon 11 | - |
-| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-14; task 06 implemented; its review and the Windows checks by hand remain | daemon 13 | - |
+| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-14; task 06 implemented; checked on Windows 2026-10-14; the review of task 06 and its Windows check remain | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; the Windows check by hand remains | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; the check by hand remains | - | - |
 | [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
-| [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; the Windows check by hand remains | - | - |
-| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented; the review of tasks 04 and 05 and the checks by hand remain | - | - |
+| [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
+| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented; checked on Windows 2026-10-14; the review of tasks 04 and 05 and three checks by hand remain | - | - |
 
 Next free number in `daemon`: `27`.
 
