@@ -194,8 +194,9 @@ Reference: [00-host.md](host/00-host.md)
 | [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | planned 2026-10-14 | - | 91 |
 | [91 - Merged sessions archive and delete themselves](host/91-merged-sessions-archive-and-delete-themselves/plan.md) | medium | planned 2026-10-14 | 90 | - |
 | [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
+| [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | planned 2026-10-15 | - | - |
 
-Next free number in `host`: `93`.
+Next free number in `host`: `94`.
 
 ## claude
 
