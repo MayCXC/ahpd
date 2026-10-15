@@ -1,7 +1,7 @@
 ---
 title: A 0.10.0 offer gets the 1.0.0 contract
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -68,7 +68,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A 0.10.0 offer is answered with 0.10.0](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md) | implemented | - |
+| [01 - A 0.10.0 offer is answered with 0.10.0](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -79,15 +79,15 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Resume state
 
 - **Done so far:** the plan, 2026-10-14; task 01 implemented, 2026-10-14.
-- **Next action:** Softov reviews [task-01-a-0-10-0-offer-is-answered-with-0-10-0.md](task-01-a-0-10-0-offer-is-answered-with-0-10-0.md).
+- **Next action:** none. Built 2026-10-15; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** `isActionKnownToVersion` answers true for canvas at `0.10.0`. Do not use it as the canvas gate.
 
 ## Final verification checklist
 
-- [ ] A test: an offer of `0.10.0` and `0.9.0` gets `0.10.0`.
-- [ ] A test: an offer of `1.0.0` and `0.10.0` gets `1.0.0`.
-- [ ] A test: the refusal lists `1.0.0`, `0.10.0` and `0.9.0`.
-- [ ] A test: a `0.10.0` client gets no canvas action.
-- [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.
+- [x] A test: an offer of `0.10.0` and `0.9.0` gets `0.10.0`.
+- [x] A test: an offer of `1.0.0` and `0.10.0` gets `1.0.0`.
+- [x] A test: the refusal lists `1.0.0`, `0.10.0` and `0.9.0`.
+- [x] A test: a `0.10.0` client gets no canvas action.
+- [x] The gates pass: typecheck, boundary, schema and vitest.
+- [x] `plans/index.md` updated.

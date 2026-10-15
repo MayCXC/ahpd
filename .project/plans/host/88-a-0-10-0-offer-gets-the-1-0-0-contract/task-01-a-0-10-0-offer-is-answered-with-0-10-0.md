@@ -1,6 +1,6 @@
 ---
 title: A 0.10.0 offer is answered with 0.10.0
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:
