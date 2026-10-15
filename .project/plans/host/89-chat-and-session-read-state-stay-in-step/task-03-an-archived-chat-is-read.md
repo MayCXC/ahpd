@@ -1,6 +1,6 @@
 ---
 title: An archived chat is read
-status: implemented
+status: done
 depends: [task-01-session-and-chat-read-bits-move-together.md]
 layer: "sdk"
 refs:

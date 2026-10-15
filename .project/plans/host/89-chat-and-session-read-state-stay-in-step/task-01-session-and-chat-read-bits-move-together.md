@@ -1,6 +1,6 @@
 ---
 title: Session and chat read bits move together
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

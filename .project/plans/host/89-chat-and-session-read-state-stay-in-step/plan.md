@@ -1,7 +1,7 @@
 ---
 title: Chat and session read state stay in step
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -55,7 +55,6 @@ client chat/isReadChanged -> chatactions.ts chat bit handler -> chat bit only
 | What | Source | Task |
 | --- | --- | --- |
 | A chat whose turn ends with `chat/turnComplete`, `chat/turnCancelled` or `chat/error` is marked unread | Softov, 2026-10-14, chose "Record and plan" for Pass 6 | 02 |
-| A `!` command turn keeps the read state as it was | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 0817aaa8245) | 02 |
 | A worker chat is marked unread at its end, and does not count toward the session | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 43ac7a4a236) | 01, 02 |
 | A chat that becomes unread makes a read session unread | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 43ac7a4a236) | 01 |
 | A chat that becomes read makes the session read when every counted chat is read | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 43ac7a4a236) | 01 |
@@ -63,11 +62,12 @@ client chat/isReadChanged -> chatactions.ts chat bit handler -> chat bit only
 | A session marked read marks every counted chat read | Softov, 2026-10-14, chose "Mark every chat read" for "What does `session/isReadChanged` true do to unread chats?" | 01 |
 | A new session and a new chat start read | Softov, 2026-10-14, "Do a new chat and a new session start read?" (defaulted: upstream 7baac39ec3c) | 01 |
 | Archiving a chat that is not the default chat marks it read | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream 0817aaa8245) | 03 |
+| The host clears a chat's read bit where the protocol chat reducer clears it, and a `!` command turn puts the bit back at its end | Softov, 2026-10-15, chose "Follow the protocol" for "the protocol's reducer marks a chat unread when a turn starts and on each response part; the host keeps the bit until the turn ends. What should the host do?" | 02 |
 
 ## Proposed architecture
 
 - **Data flow** - one `chatFlag` helper sets a chat bit, dispatches on the chat, sends `session/chatUpdated` and moves the summary. The chat handler, the turn end and the archive all call it.
-- **Event flow** - a turn end sends `chat/isReadChanged` false on the chat, then `session/isReadChanged` false on the session when it was read. A client sees two server actions after the turn end.
+- **Event flow** - `chat/turnStarted`, `chat/turnResume` and `chat/inputRequested` send `chat/isReadChanged` false, as the protocol reducer does. A turn end sends it false again, and a `!` command turn's end puts back the bit it had at its start. `session/isReadChanged` follows each change of a counted chat.
 - **State flow** - the kept flags stay the only state. A new session and a new chat get `IsRead` when they are made. The counted chats are the open chats from `recordedChats`, without a `tool` origin.
 - **Layer responsibilities** - sdk: the helper and the sync in `chatactions.ts`, the turn end in `spawn.ts`, the command turn mark in `lifecycle.ts`.
 - **Source-of-truth files** - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts)
@@ -76,9 +76,9 @@ client chat/isReadChanged -> chatactions.ts chat bit handler -> chat bit only
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Session and chat read bits move together](task-01-session-and-chat-read-bits-move-together.md) | todo | - |
-| [02 - A finished turn marks its chat unread](task-02-a-finished-turn-marks-its-chat-unread.md) | todo | 01 |
-| [03 - An archived chat is read](task-03-an-archived-chat-is-read.md) | todo | 01 |
+| [01 - Session and chat read bits move together](task-01-session-and-chat-read-bits-move-together.md) | done | - |
+| [02 - A finished turn marks its chat unread](task-02-a-finished-turn-marks-its-chat-unread.md) | done | 01 |
+| [03 - An archived chat is read](task-03-an-archived-chat-is-read.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -89,19 +89,19 @@ client chat/isReadChanged -> chatactions.ts chat bit handler -> chat bit only
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-session-and-chat-read-bits-move-together.md](task-01-session-and-chat-read-bits-move-together.md).
+- **Done so far:** tasks 01, 02 and 03 are done, and the plan is built, 2026-10-15.
+- **Next action:** none. The cases that wait are in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** the chat handler runs only for a loaded session (`sessions.has`). A sleeping session has no turn end, but a session read on it still needs the stored chat flags.
 
 ## Final verification checklist
 
-- [ ] A test: a turn end marks the chat unread and a read session unread.
-- [ ] A test: a `!` command turn leaves both bits as they were.
-- [ ] A test: a worker end marks the worker chat unread and leaves the session read.
-- [ ] A test: the last unread chat marked read makes the session read.
-- [ ] A test: a session marked read marks every counted chat read.
-- [ ] A test: a new session and a new chat start read.
-- [ ] A test: archiving a peer chat marks it read.
-- [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.
+- [x] A test: a turn end marks the chat unread and a read session unread.
+- [x] A test: a `!` command turn ends with both bits as they were at its start.
+- [x] A test: a worker end marks the worker chat unread and leaves the session read.
+- [x] A test: the last unread chat marked read makes the session read.
+- [x] A test: a session marked read marks every counted chat read.
+- [x] A test: a new session and a new chat start read.
+- [x] A test: archiving a peer chat marks it read.
+- [x] The gates pass: typecheck, boundary, schema and vitest.
+- [x] `plans/index.md` updated.
