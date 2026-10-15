@@ -1089,6 +1089,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // Its own line for the same reason: a client that only needs the names reads
     // one line, and `daemon.ts` keeps matching the two above unchanged.
     + `plugins ${loaded.length === 0 ? 'none' : loaded.map((one) => one.name).join(', ')}\n`
+    // The folder this run serves because nothing names one. `daemon.ts`
+    // records it, and the first `ahpd paths add` writes it beside the new folder.
+    + (options.startFolder === undefined ? '' : `start folder ${options.startFolder}\n`)
     // Every configuration file read, in the order they were merged.
     + `config ${options.configFiles.length === 0 ? 'none' : options.configFiles.join(', ')}\n`
     // Where the secrets are, or that a plugin took the vault over. Its own

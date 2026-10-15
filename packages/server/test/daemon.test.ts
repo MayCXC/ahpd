@@ -151,6 +151,12 @@ describe('recordOf', () => {
     expect(recordOf(ANNOUNCED, 42, 'abc').api).toBeUndefined();
   });
 
+  it('reads the start folder off the announcement, and no field without the line', () => {
+    const said = `${ANNOUNCED}start folder /a\n`;
+    expect(recordOf(said, 42, 'abc').startFolder).toBe('/a');
+    expect(recordOf(ANNOUNCED, 42, 'abc').startFolder).toBeUndefined();
+  });
+
   it('keeps the key out of every field a verb prints', () => {
     const control = controlFor('win32') as Control;
     const record = recordOf(ANNOUNCED, 42, 'abc', undefined, control);

@@ -57,6 +57,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 | `remove` refuses the last folder | `configure.ts:219-222`: an empty `paths` serves the current folder | 01 |
 | Served, `add` and `remove` take the deployment's own token only | `plugin install` and `remove`: a change of what agents can reach | 02 |
 | A served change rewrites `paths` in `daemon.json`, so `ahpd status --json` at the terminal shows it | Softov's Windows run, 2026-10-14: local status showed the old folders | 03 |
+| When the file names no `paths` and the daemon serves its start folder, the first `add` writes the start folder and the new folder | Softov, 2026-10-14, to "A daemon started with no paths serves its start folder, but config.json does not hold it. What should the first `ahpd paths add` do?": "Write both folders" | 04 |
+| When the file names no `paths` and no daemon is recorded, the first `add` writes only the new folder | Softov, 2026-10-14, to "With no daemon running and no \"paths\" in config.json, nothing records a start folder. What should `ahpd paths add extra` write?": "Only the new folder" | 04 |
 
 ## Proposed architecture
 
@@ -71,6 +73,7 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 | [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-and-removes-a-folder.md) | implemented | - |
 | [02 - a served paths change reaches the running daemon](task-02-a-served-paths-change-reaches-the-running-daemon.md) | implemented | 01 |
 | [03 - what the Windows run found in ahpd paths is fixed](task-03-what-the-windows-run-found.md) | implemented | 02 |
+| [04 - the first ahpd paths add keeps the start folder](task-04-the-first-add-keeps-the-start-folder.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -80,8 +83,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-14; tasks 01 to 03 implemented 2026-10-14; task 03 reviewed. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
-- **Next action:** the checks by hand, on Linux and on Windows. At the terminal, `ahpd paths add` and `remove` send the change to a running daemon that serves the HTTP API, and write the file otherwise.
+- **Done so far:** planned 2026-10-14; tasks 01 to 04 implemented 2026-10-14; task 03 reviewed. In task 04, a daemon that names no folder records its start folder. The first `paths add` to a file with no `paths` writes that folder and the new one. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
+- **Next action:** review task 04, then the checks by hand, on Linux and on Windows. At the terminal, `ahpd paths add` and `remove` send the change to a running daemon that serves the HTTP API, and write the file otherwise.
 - **Open questions:** none.
 - **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb, the three `paths` verbs included.
 

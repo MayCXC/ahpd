@@ -80,6 +80,27 @@ describe('start, stop and status', () => {
     expect(readFileSync(join(home, 'ahpd', 'daemon.log'), 'utf8')).toContain(`sessions in ${folder}`);
   }, 40000);
 
+  it('records the start folder of a daemon that names none, and the first `paths add` keeps it', async () => {
+    const began = await cli([
+      'start', '--port', '0', '--plugin', BACKEND, '--sessions', 'memory', '--automations', 'memory', '--no-update-check',
+    ]);
+    expect(began.code).toBe(0);
+    const record = JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as { pid: number; paths: string[]; startFolder?: string };
+    spawned.push(record.pid);
+    // The case's processes run in the repository, so that is the start folder.
+    expect(record.startFolder).toBe(REPO);
+    expect(record.paths).toEqual([REPO]);
+
+    const extra = join(home, 'extra');
+    mkdirSync(extra);
+    const file = join(home, 'ahpd', 'config.json');
+    const added = await cli(['paths', 'add', extra]);
+    expect(added.code).toBe(0);
+    expect(added.stdout).toBe(`Added ${REPO}, the folder the daemon was started in, and ${extra} to "paths" in ${file}.\n`
+      + 'Restart the daemon to apply the change: ahpd restart.\n');
+    expect((JSON.parse(readFileSync(file, 'utf8')) as { paths: unknown }).paths).toEqual([REPO, extra]);
+  }, 40000);
+
   it('forwards --plugin-option to the child, which loads with it', async () => {
     // The schema fixture requires `command`, so it loads only when the flag reached the child.
     const schema = join(import.meta.dirname, 'fixtures', 'plugin-schema', 'index.ts');

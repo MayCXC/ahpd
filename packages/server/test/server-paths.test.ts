@@ -18,7 +18,7 @@ import { Program } from '@cofold/terminal';
 import { fileUsers, type Users } from '@ahpd/sdk';
 import { running } from '../src/daemon.js';
 import type { Options } from '../src/commands/options.js';
-import { programGlobals } from '../src/commands/options.js';
+import { optionsFrom, programGlobals } from '../src/commands/options.js';
 import { reachable } from '../src/commands/paths.js';
 import { cliRegistry } from '../src/commands/registry.js';
 import { apiOrigins } from '../src/commands/run.js';
@@ -62,7 +62,7 @@ const folder = (...parts: string[]): string => {
  * token every daemon in this file answers with, because a record is written by
  * the daemon it names.
  */
-const record = (paths: string[] = [], daemon: { api?: string; token?: string } = {}): void => {
+const record = (paths: string[] = [], daemon: { api?: string; token?: string; startFolder?: string } = {}): void => {
   writeFileSync(join(home, 'ahpd', 'daemon.json'), JSON.stringify({
     pid: process.pid,
     url: 'ws://127.0.0.1:9187',
@@ -70,6 +70,7 @@ const record = (paths: string[] = [], daemon: { api?: string; token?: string } =
     paths,
     startedAt: '',
     ...(daemon.api === undefined ? {} : { api: daemon.api }),
+    ...(daemon.startFolder === undefined ? {} : { startFolder: daemon.startFolder }),
   }));
 };
 
@@ -237,17 +238,19 @@ describe('ahpd paths at the terminal', () => {
    * a request over the network and not a call: what the case holds is the same
    * handler `serve()` mounts, with every request kept.
    */
-  const listening = async (paths: string[], token = 'root-secret'): Promise<{
+  const listening = async (paths: string[], token = 'root-secret', startFolder?: string): Promise<{
     api: string;
     own: Options;
+    file: string;
     seen: { method: string; path: string; authorization: string | null; body: unknown }[];
     done(): Promise<void>;
   }> => {
-    const own = { paths } as Options;
+    const own = { paths, ...(startFolder === undefined ? {} : { startFolder }) } as Options;
     // The daemon's own file, and not the one the terminal edits: a case tells
-    // the two apart by which of them changed.
+    // the two apart by which of them changed. A daemon serving its start folder
+    // was started from a file that names none.
     const file = join(home, 'served.json');
-    writeFileSync(file, `${JSON.stringify({ paths }, null, 2)}\n`);
+    writeFileSync(file, `${JSON.stringify(startFolder === undefined ? { paths } : {}, null, 2)}\n`);
     const bound = { port: 0 };
     const seen: { method: string; path: string; authorization: string | null; body: unknown }[] = [];
     const handler = apiHandler({
@@ -275,7 +278,7 @@ describe('ahpd paths at the terminal', () => {
     };
     const api = await listenApi(watched, { port: 0, host: '127.0.0.1' });
     bound.port = api.port;
-    return { api: `http://127.0.0.1:${String(api.port)}`, own, seen, done: async () => { await api.close(); } };
+    return { api: `http://127.0.0.1:${String(api.port)}`, own, file, seen, done: async () => { await api.close(); } };
   };
 
   it('sends the change to the recorded daemon, with the token its record carries', async () => {
@@ -413,6 +416,69 @@ describe('ahpd paths at the terminal', () => {
     await expect(line(['paths', 'remove', other])).rejects.toThrow(`${other} is not in "paths" in ${config}.`);
     expect(read().paths).toEqual([one]);
   });
+
+  /*
+   * A daemon that names no folder serves its start folder, and the file does
+   * not hold it. The first add writes both, so the file, the list, the record
+   * and the next start name the same folders.
+   */
+  it('writes the start folder and the new folder, when the recorded daemon serves its start folder', async () => {
+    const work = folder('work');
+    const extra = folder('extra');
+    put({ port: 1234 });
+    record([work], { startFolder: work });
+
+    const added = await line(['paths', 'add', extra]);
+    expect(added.code).toBe(0);
+    expect(added.out).toBe(`Added ${work}, the folder the daemon was started in, and ${extra} to "paths" in ${config}.\n`
+      + 'Restart the daemon to apply the change: ahpd restart.\n');
+    expect(read()).toEqual({ port: 1234, paths: [work, extra] });
+
+    // The list, and what a restart reads, are the two folders.
+    const listed = await line(['paths', 'list']);
+    expect(listed.out).toBe(`${work}\n${extra}\n`);
+    expect(optionsFrom({}).paths).toEqual([work, extra]);
+  });
+
+  it('removes either folder after the first add', async () => {
+    const work = folder('work');
+    const extra = folder('extra');
+    put({});
+    record([work], { startFolder: work });
+    await line(['paths', 'add', extra]);
+
+    await line(['paths', 'remove', extra]);
+    expect(read().paths).toEqual([work]);
+    await line(['paths', 'add', extra]);
+    await line(['paths', 'remove', work]);
+    expect(read().paths).toEqual([extra]);
+  });
+
+  it('sends the first add to a daemon serving its start folder, which writes both', async () => {
+    const work = folder('work');
+    const extra = folder('extra');
+    const api = await listening([work], 'root-secret', work);
+    record([work], { api: api.api, startFolder: work });
+    try {
+      const added = await line(['paths', 'add', extra, '--json']);
+      expect(added.code).toBe(0);
+      expect(JSON.parse(added.out) as unknown).toEqual({ paths: [work, extra] });
+      expect(api.own.paths).toEqual([work, extra]);
+      expect((JSON.parse(readFileSync(api.file, 'utf8')) as { paths: unknown }).paths).toEqual([work, extra]);
+      expect(running()?.paths).toEqual([work, extra]);
+    }
+    finally { await api.done(); }
+  });
+
+  it('adds only the new folder when the file names "paths", whatever the record says', async () => {
+    const one = folder('one');
+    const work = folder('work');
+    const extra = folder('extra');
+    put({ paths: [one] });
+    record([one], { startFolder: work });
+    await line(['paths', 'add', extra]);
+    expect(read().paths).toEqual([one, extra]);
+  });
 });
 
 /*
@@ -425,8 +491,8 @@ describe('ahpd paths at the terminal', () => {
  */
 describe('ahpd paths, served', () => {
   /** A daemon serving `paths`, and the API handler it answers with. */
-  const daemon = (paths: string[], people?: Users) => {
-    const own = { paths } as Options;
+  const daemon = (paths: string[], people?: Users, startFolder?: string) => {
+    const own = { paths, ...(startFolder === undefined ? {} : { startFolder }) } as Options;
     const facts: ServedFacts = {
       options: own,
       configFile: config,
@@ -543,5 +609,70 @@ describe('ahpd paths, served', () => {
     expect(added.status).toBe(200);
     // The whole answer: the folders, and no key or line about a restart.
     expect(await added.json()).toEqual({ paths: [one] });
+  });
+
+  /*
+   * The Windows run of 2026-10-14: a daemon started with no "paths" serves its
+   * start folder, and an add that wrote only the new folder left the file and
+   * the daemon naming different folders.
+   */
+  it('writes the start folder and the new folder, so the file, the list and status agree', async () => {
+    const work = folder('work');
+    const extra = folder('extra');
+    put({ port: 1234 });
+    const served = daemon([work], undefined, work);
+
+    const added = await served.ask('POST', '/paths/add', { folder: extra });
+    expect(added.status).toBe(200);
+    expect(await added.json()).toEqual({ paths: [work, extra] });
+    expect(read()).toEqual({ port: 1234, paths: [work, extra] });
+    expect(served.own.paths).toEqual([work, extra]);
+    expect(served.running().paths).toEqual([work, extra]);
+    expect(await (await served.ask('GET', '/paths/list')).json()).toEqual([work, extra]);
+    // What a restart reads is the same two folders.
+    expect(optionsFrom({ configFile: config }).paths).toEqual([work, extra]);
+  });
+
+  it('removes the new folder, or the start folder, after the first add', async () => {
+    const work = folder('work');
+    const extra = folder('extra');
+    put({});
+    const first = daemon([work], undefined, work);
+    await first.ask('POST', '/paths/add', { folder: extra });
+    const removed = await first.ask('POST', '/paths/remove', { folder: extra });
+    expect(removed.status).toBe(200);
+    expect(read().paths).toEqual([work]);
+    expect(first.running().paths).toEqual([work]);
+
+    put({});
+    const second = daemon([work], undefined, work);
+    await second.ask('POST', '/paths/add', { folder: extra });
+    const gone = await second.ask('POST', '/paths/remove', { folder: work });
+    expect(gone.status).toBe(200);
+    expect(read().paths).toEqual([extra]);
+    expect(second.running().paths).toEqual([extra]);
+  });
+
+  it('writes nothing for a folder under the start folder, which is served already', async () => {
+    const work = folder('work');
+    const inside = folder('work', 'sub');
+    put({ port: 1234 });
+    const served = daemon([work], undefined, work);
+    const added = await served.ask('POST', '/paths/add', { folder: inside });
+    expect(added.status).toBe(200);
+    expect(await added.json()).toEqual({ paths: [work] });
+    expect(read()).toEqual({ port: 1234 });
+    expect(served.own.paths).toEqual([work]);
+  });
+
+  it('adds only the new folder to a file that names "paths"', async () => {
+    const one = folder('one');
+    const work = folder('work');
+    const extra = folder('extra');
+    put({ paths: [one] });
+    const served = daemon([one], undefined, work);
+    await served.ask('POST', '/paths/add', { folder: extra });
+    expect(read().paths).toEqual([one, extra]);
+    expect(served.own.paths).toEqual([one, extra]);
   });
 });

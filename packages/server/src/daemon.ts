@@ -37,6 +37,13 @@ export interface Running {
    */
   connectUrl: string;
   paths: string[];
+  /**
+   * The folder the daemon was started in, when it serves that folder because
+   * nothing names one. What the first `ahpd paths add` writes beside the new
+   * folder. Absent when a folder is named, and from a record an older daemon
+   * wrote.
+   */
+  startFolder?: string;
   startedAt: string;
   /**
    * The origin this daemon's HTTP API answers on, without the `/api` its routes
@@ -276,12 +283,14 @@ export function recordOf(announced: string, pid: number, token?: string, argv?: 
   const automations = /^automations (.+)$/m.exec(announced)?.[1]?.trim();
   const api = apiOf(announced);
   const skipped = skippedOf(announced);
+  const startFolder = /^start folder (.+)$/m.exec(announced)?.[1]?.trim();
   return {
     pid,
     url,
     connectUrl: readyUrl(url, token),
     paths: (/sessions in (.+)/.exec(announced)?.[1] ?? '')
       .trim().split(',').map((one) => one.trim()).filter((one) => one !== ''),
+    ...(startFolder !== undefined ? { startFolder } : {}),
     startedAt: new Date().toISOString(),
     ...(api !== undefined ? { api } : {}),
     ...(automations !== undefined ? { automations } : {}),

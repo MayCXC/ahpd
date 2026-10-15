@@ -129,6 +129,19 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
   const restarting = (): boolean => served === undefined && running() !== undefined;
 
   /**
+   * The folder the daemon serves because nothing names one, which a file with
+   * no `paths` does not hold.
+   *
+   * Served, it is this daemon's own. At the terminal it is the recorded
+   * daemon's, and only for the file a plain write edits: a named file is one
+   * that daemon may not read. Nothing when no daemon is recorded.
+   */
+  const startFolderOf = (named: string | undefined): string | undefined => {
+    if (served !== undefined) return served.options.startFolder;
+    return named === undefined ? running()?.startFolder : undefined;
+  };
+
+  /**
    * Send one change to the daemon the record names, which applies it and writes
    * its own file.
    *
@@ -171,7 +184,7 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
     id: `paths.${sub}`,
     summary: sub === 'add' ? 'Serve a folder' : 'Stop serving a folder',
     description: sub === 'add'
-      ? 'The folder is added to "paths" in the configuration, so a daemon started from it serves the folder and everything under it. A folder that is already served, or that is under one that is, is left as it is. With no --config-file given, and with a record naming a daemon that serves the HTTP API, the change is sent to that daemon and applies at once.'
+      ? 'The folder is added to "paths" in the configuration, so a daemon started from it serves the folder and everything under it. A folder that is already served, or that is under one that is, is left as it is. When the file names no "paths" and the daemon serves the folder it was started in, that folder is written too, so a restart still serves it. With no --config-file given, and with a record naming a daemon that serves the HTTP API, the change is sent to that daemon and applies at once.'
       : 'The folder is taken out of "paths" in the configuration, and every other key in the file is kept. The last folder cannot be removed, because a daemon that names none serves the folder it is started in. With no --config-file given, and with a record naming a daemon that serves the HTTP API, the change is sent to that daemon and applies at once.',
     surfaces: { cli: { pattern: ['paths', sub, ':folder'] }, http: { method: 'POST', path: `/paths/${sub}` } },
     /*
@@ -229,8 +242,16 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
          * this changes, and every other key in the file is the person's.
          */
         const held = readEntry(file);
-        const paths = pathsIn(held);
-        const said = sub === 'add' ? `Added ${folder} to "paths" in ${file}.` : `Removed ${folder} from "paths" in ${file}.`;
+        /*
+         * A file with no `paths` and a daemon that serves its start folder: the
+         * first add writes that folder too, so the file names what the daemon
+         * serves, and a restart serves it still.
+         */
+        const start = sub === 'add' && pathsIn(held).length === 0 ? startFolderOf(named) : undefined;
+        const paths = start === undefined ? pathsIn(held) : [start];
+        const said = sub === 'add'
+          ? `Added ${start === undefined ? '' : `${start}, the folder the daemon was started in, and `}${folder} to "paths" in ${file}.`
+          : `Removed ${folder} from "paths" in ${file}.`;
 
         if (sub === 'add') {
           if (!existsSync(folder)) stop(`No folder at ${folder}.`);

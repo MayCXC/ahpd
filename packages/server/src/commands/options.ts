@@ -34,6 +34,11 @@ export interface Options {
   stdio: boolean;
   /** The directories whose sessions this host serves, the first being the default. */
   paths: string[];
+  /**
+   * The folder this run was started in, when it serves that folder because no
+   * flag and no file names one. Absent when a folder is named.
+   */
+  startFolder?: string;
   /** Serve only `paths`, and ask about no folder at all. */
   noCwd: boolean;
   /**
@@ -1013,6 +1018,7 @@ const noCwd = input['noCwd'] === true;
   }
 
   const paths = [...given('paths') ?? []];
+  let startFolder: string | undefined;
   if (paths.length === 0) {
     /*
      * `--no-cwd` with nothing named would serve nothing at all, which is not a
@@ -1022,7 +1028,8 @@ const noCwd = input['noCwd'] === true;
     if (noCwd) {
       stop('--no-cwd serves only what --path or "paths" names, and neither does. Pass --path, or run ahpd configure.');
     }
-    paths.push(process.cwd());
+    startFolder = process.cwd();
+    paths.push(startFolder);
   }
 
   /*
@@ -1060,6 +1067,7 @@ const noCwd = input['noCwd'] === true;
     host: given('host') ?? '127.0.0.1',
     stdio: input['stdio'] === true,
     paths,
+    ...(startFolder === undefined ? {} : { startFolder }),
     noCwd,
     ...(worktreesRoot === undefined ? {} : { worktreesRoot }),
     ...(token === undefined ? {} : { token }),

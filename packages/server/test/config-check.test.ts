@@ -229,6 +229,13 @@ describe('a valid file', () => {
     put({});
     expect(() => optionsFrom({ configFile: config, noCwd: true })).toThrow(/--no-cwd serves only/u);
   });
+
+  it('names the start folder only when nothing names a folder', () => {
+    expect(folded({}).startFolder).toBe(process.cwd());
+    expect(folded({ paths: [home] }).startFolder).toBeUndefined();
+    put({});
+    expect(optionsFrom({ configFile: config, paths: [home] }).startFolder).toBeUndefined();
+  });
 });
 
 describe('the schema', () => {
