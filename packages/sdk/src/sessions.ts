@@ -26,6 +26,8 @@ interface Held {
   nested(id: string): NestedRecord | undefined;
   setNested(id: string, value: NestedRecord | undefined): void;
   nestedSessions(): [string, NestedRecord][];
+  workingDirectory(id: string): string | undefined;
+  setWorkingDirectory(id: string, value: string | undefined): void;
   /** Everything held about one session, in the file's field order, or nothing where nothing is. */
   rowOf(id: string): Row | undefined;
 }
@@ -117,6 +119,8 @@ export function memorySessions(): SessionStore & Held {
     setRemoteOrigin: (id, value) => { patch(id, { remoteOrigin: value }); },
     createdBy: (id) => rows.get(id)?.createdBy,
     setCreatedBy: (id, value) => { patch(id, { createdBy: value }); },
+    workingDirectory: (id) => rows.get(id)?.workingDirectory,
+    setWorkingDirectory: (id, value) => { patch(id, { workingDirectory: value === '' ? undefined : value }); },
     nestedSessions: () => [...rows.entries()]
       .flatMap(([id, held]) => held.nested === undefined ? [] : [[id, held.nested] as [string, NestedRecord]]),
     artifacts: (id) => rows.get(id)?.artifacts,
@@ -224,6 +228,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.chats === undefined ? {} : { chats: held.chats }),
         ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
         ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
+        ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
       };
     },
     forget: (id) => { rows.delete(id); },
@@ -345,9 +350,16 @@ interface Row {
   chats?: StoredChat[] | undefined;
   remoteOrigin?: RemoteOrigin | undefined;
   createdBy?: CreatedBy | undefined;
+  workingDirectory?: string | undefined;
 }
 
-/** Whether a row says nothing at all, and so is not one to keep. */
+/**
+ * Whether a row says nothing at all, and so is not one to keep.
+ *
+ * The working folder is not counted. It says where a session ran, which is
+ * worth keeping for a session something else was recorded for and for no
+ * other: a folder alone is a session this host was never told anything about.
+ */
 const empty = (row: Row): boolean =>
   row.flags === undefined && row.config === undefined && row.scope === undefined
   && row.owner === undefined && row.senders === undefined && row.provider === undefined
@@ -387,6 +399,8 @@ interface Saved {
   remoteOrigin?: RemoteOrigin;
   /** The session that made this one, as a window recorded it. */
   createdBy?: CreatedBy;
+  /** The folder the session works in, as a path. */
+  workingDirectory?: string;
 }
 
 /**
@@ -521,6 +535,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.chats === undefined ? {} : { chats: held.chats }),
       ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
       ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
+      ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
     };
   };
 
@@ -666,6 +681,9 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       if (origin !== undefined) inner.setRemoteOrigin?.(row.id, origin);
       const createdBy = asCreatedBy(row.createdBy);
       if (createdBy !== undefined) inner.setCreatedBy?.(row.id, createdBy);
+      // A path, and anything that is not a non-empty string is ignored rather
+      // than guessed at, as every other field here is.
+      if (typeof row.workingDirectory === 'string' && row.workingDirectory !== '') inner.setWorkingDirectory(row.id, row.workingDirectory);
     }
   };
 
@@ -695,6 +713,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setRemoteOrigin: (id, value) => { touched(id, () => { inner.setRemoteOrigin?.(id, value); }); },
     createdBy: (id) => inner.createdBy?.(id),
     setCreatedBy: (id, value) => { touched(id, () => { inner.setCreatedBy?.(id, value); }); },
+    workingDirectory: (id) => inner.workingDirectory(id),
+    setWorkingDirectory: (id, value) => { touched(id, () => { inner.setWorkingDirectory(id, value); }); },
     artifacts: (id) => inner.artifacts(id),
     setArtifacts: (id, values) => { touched(id, () => { inner.setArtifacts(id, values); }); },
     pullRequests: (id) => inner.pullRequests(id),

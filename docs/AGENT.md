@@ -82,8 +82,9 @@ const host = createHost({ path, agents: [shout()] });
 | `probe()` | What you offer, asked once at startup | optional |
 | `directories()` | The directories you will work in | optional |
 | `list()` | Sessions somebody can browse | optional |
-| `find(id)` | One of those, on its own, for an id the host has not got | optional |
-| `transcript(id)` | One of those, as turns - a read, with nothing started | optional |
+| `find(id, at?)` | One of those, on its own, for an id the host has not got | optional |
+| `transcript(id, at?)` | One of those, as turns - a read, with nothing started | optional |
+| `subagents(id, turns?, at?)` | The worker chats one of those holds - a read, with nothing started | optional |
 | `protectedResources` | RFC 9728 metadata for anything you can be given a token for | optional |
 | `stateFile(id, directory)` | Where your own record of a session is, for the window to open or pack into a bug report | optional |
 | `endpoints()` | What to probe when the network is in question | optional |
@@ -112,6 +113,12 @@ to find one.
 **`transcript(id)` is what makes a catalogue row openable.** It is a read with
 nothing started; `create` is called with `resume` only when somebody actually
 says something to that row.
+
+**`at` says where the session ran.** It is `{ workingDirectory }`, a path,
+when the host recorded the session's folder, and absent when it did not.
+Look for the session there first and in your own directories after, so a
+session that ran in a subfolder, a worktree or any folder you do not serve
+still opens after a restart.
 
 ## `Session`
 

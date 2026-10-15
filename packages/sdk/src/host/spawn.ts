@@ -2,7 +2,7 @@ import { chatReducer } from '@microsoft/agent-host-protocol';
 import type { ChatAction, ChatState, SessionInputRequestKind } from '@microsoft/agent-host-protocol';
 import { RpcError, INTERNAL_ERROR } from '../rpc.js';
 import { computerId, computersFor } from '../computers.js';
-import { uriOf } from '../fileuri.js';
+import { localPath, uriOf } from '../fileuri.js';
 import { deepFreeze, frozenCopy } from '../frozen.js';
 import { nestedAgent } from '../nested.js';
 import { idOf, uriFor, Status } from '../catalog.js';
@@ -455,6 +455,16 @@ export function createSpawn(ctx: HostContext): Spawn {
   };
 
   /**
+   * A session's working folder, written into its record as a path where the
+   * record says another or none.
+   */
+  const keepFolder = (id: string, folder: string | undefined): void => {
+    const path = folder === undefined ? '' : localPath(folder);
+    if (path === '' || kept.workingDirectory?.(id) === path) return;
+    kept.setWorkingDirectory?.(id, path);
+  };
+
+  /**
    * Which harness a session runs on, written down under every id it answers to.
    *
    * The host's own and the agent's, which are one name unless the backend chose
@@ -463,11 +473,17 @@ export function createSpawn(ctx: HostContext): Spawn {
    * listing is a read, and a session that was never recorded still has to open
    * somewhere. A backend that names its own id only once a turn has run is
    * recorded at the end of that turn instead, in the chat's own emit.
+   *
+   * The working folder goes under the agent's id as well, so a backend that
+   * finds the session by that id is told where it ran.
    */
   const keepProvider = (uri: string, agent: Agent, session: Session): void => {
     kept.setProvider(idOf(uri), agent.provider);
     const own = session.agentId();
-    if (own !== undefined && own !== '') kept.setProvider(own, agent.provider);
+    if (own !== undefined && own !== '') {
+      kept.setProvider(own, agent.provider);
+      keepFolder(own, sessions.get(uri)?.workingDirectory);
+    }
   };
 
   const spawn = (
@@ -895,6 +911,7 @@ export function createSpawn(ctx: HostContext): Spawn {
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled') {
           const own = byChat.get(chatUri)?.chat.agentId();
           if (own !== undefined && own !== '' && kept.provider(own) !== agent.provider) kept.setProvider(own, agent.provider);
+          if (own !== undefined && own !== '') keepFolder(own, sessions.get(uri)?.workingDirectory);
           if (own !== undefined && own !== '' && ctx.recordedChat(idOf(uri), chatUri)?.backendId !== own) {
             ctx.keepChat(uri, chatUri, own, false);
           }
@@ -1069,6 +1086,10 @@ export function createSpawn(ctx: HostContext): Spawn {
      * backend answers with its own, which the chat's own emit records.
      */
     ctx.keepChat(uri, chatUri, chatId ?? idOf(uri), held.defaultChat === chatUri);
+    // And the folder it works in, which is where a backend is told to look for
+    // it after a restart. Only on a change, so a chat started again in the
+    // same folder writes nothing.
+    keepFolder(idOf(uri), held.workingDirectory);
     /*
      * The name it had before, when it is being created again.
      *

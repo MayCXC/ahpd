@@ -1,6 +1,6 @@
 import { idFor } from '../catalog.js';
 import { subagentChatUri } from './channels.js';
-import type { Agent, Listed } from '../types/agent.js';
+import type { Agent, Listed, SessionAt } from '../types/agent.js';
 import type { Bag } from '../types/common.js';
 import type { Summary } from '../types/catalog.js';
 import type { WireTurn } from '../types/wire.js';
@@ -13,6 +13,11 @@ export interface History {
   subHistory: Map<string, Bag[]>;
   titles: Map<string, string>;
   restoredSubagents(id: string, owner: Agent, turns?: WireTurn<Turn>[]): Promise<Bag[]>;
+  /**
+   * Where a session's record says it ran, as a backend is handed it to find or
+   * read the session, or nothing where the record names no folder.
+   */
+  sessionAt(id: string): SessionAt | undefined;
   restoredParentChat(session: string, lead: string, one: Bag): string;
   linkedTurns(session: string, turns: Bag[], workers: Bag[]): Bag[];
   /**
@@ -60,13 +65,17 @@ export function createHistory(ctx: HostContext): History {
    * promise: the read is one directory listing and one file per worker.
    */
   const subHistory = new Map<string, Bag[]>();
+  const sessionAt = (id: string): SessionAt | undefined => {
+    const workingDirectory = ctx.kept.workingDirectory?.(id);
+    return workingDirectory === undefined ? undefined : { workingDirectory };
+  };
   /** A session's restored workers; an answer is kept only when the read succeeded. */
   const restoredSubagents = async (id: string, owner: Agent, turns?: WireTurn<Turn>[]): Promise<Bag[]> => {
     const held = subHistory.get(id);
     if (held !== undefined) return held;
     if (owner.subagents === undefined) return [];
     let found: Awaited<ReturnType<NonNullable<Agent['subagents']>>>;
-    try { found = await owner.subagents(id, turns); }
+    try { found = await owner.subagents(id, turns, sessionAt(id)); }
     catch { return []; }
     const built = (found ?? []).map((one) => ({ ...one } as unknown as Bag));
     subHistory.set(id, built);
@@ -259,6 +268,9 @@ export function createHistory(ctx: HostContext): History {
    *
    * A backend that refuses is a backend with nothing to say, the same as one
    * that answers nothing: the others are still asked.
+   *
+   * Each is told the folder the record names, so a session that ran outside
+   * the paths a backend serves is looked for where it ran.
    */
   const findOf = async (id: string): Promise<{ agent: Agent; row: Listed } | undefined> => {
     const asked = [...ctx.agents.values()].filter((agent) => agent.find !== undefined);
@@ -266,8 +278,9 @@ export function createHistory(ctx: HostContext): History {
     const order = recorded === undefined
       ? asked
       : [...asked.filter((agent) => agent.provider === recorded), ...asked.filter((agent) => agent.provider !== recorded)];
+    const at = sessionAt(id);
     for (const agent of order) {
-      const row = await agent.find?.(id).catch(() => undefined);
+      const row = await agent.find?.(id, at).catch(() => undefined);
       if (row !== undefined) return { agent, row };
     }
     return undefined;
@@ -361,7 +374,7 @@ export function createHistory(ctx: HostContext): History {
       if (!row || !owner?.transcript)
         return undefined;
       titles.set(id, row.title);
-      const built = await owner.transcript(id);
+      const built = await owner.transcript(id, sessionAt(id));
       if (!built)
         return undefined;
       /*
@@ -394,7 +407,7 @@ export function createHistory(ctx: HostContext): History {
   };
 
   return {
-    history, subHistory, titles, restoredSubagents, restoredParentChat, linkedTurns, refresh, held, past,
+    history, subHistory, titles, restoredSubagents, sessionAt, restoredParentChat, linkedTurns, refresh, held, past,
     drop, keepRow,
   };
 }

@@ -254,6 +254,9 @@ export function createSleep(ctx: HostContext): Sleep {
     // about.
     const first = wheres.get(named)?.[0];
     const ran = first === undefined ? undefined : localPath(first);
+    // Where its chats' transcripts are looked for: the folder its record
+    // names, or else the one its row was listed in.
+    const at = ctx.sessionAt(id) ?? (ran === undefined ? undefined : { workingDirectory: ran });
     /*
      * What the work is charged to: the one this session was settled with, or
      * the one the asking connection resolves to. A session the store holds no
@@ -276,7 +279,7 @@ export function createSleep(ctx: HostContext): Sleep {
     // The chat it starts again as: the store's default where that is not the
     // session's own chat, which is a first chat closed under `hidden`.
     const other = lead === undefined || lead.uri === chatUriFor(named) ? undefined : lead;
-    const back = other === undefined ? undefined : await owner.transcript?.(other.backendId);
+    const back = other === undefined ? undefined : await owner.transcript?.(other.backendId, at);
     // A host that closed while this resume read its record starts no agent.
     if (ctx.closed) throw new Error(CLOSING);
     const session = spawn(
@@ -298,7 +301,7 @@ export function createSleep(ctx: HostContext): Sleep {
     // its own, resumed the way a chat restarted on its own is.
     for (const one of recorded) {
       if (one.default === true) continue;
-      const own = await owner.transcript?.(one.backendId);
+      const own = await owner.transcript?.(one.backendId, at);
       if (ctx.closed) throw new Error(CLOSING);
       spawn(
         owner,

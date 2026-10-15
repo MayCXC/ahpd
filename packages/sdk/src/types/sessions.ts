@@ -277,6 +277,18 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setCreatedBy?(id: string, value: CreatedBy | undefined): void;
   /**
+   * The folder this session works in, as a path, or nothing where none was
+   * recorded.
+   *
+   * What a backend is told when it is asked to find or read the session, so a
+   * session that ran outside the paths it serves - a subfolder, a worktree, a
+   * bot's own folder - is looked for where it ran. Optional: a store without it
+   * leaves every backend to look in the paths it serves.
+   */
+  workingDirectory?(id: string): string | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setWorkingDirectory?(id: string, value: string | undefined): void;
+  /**
    * What the agent recorded as worth coming back to, or nothing where it
    * recorded nothing.
    *

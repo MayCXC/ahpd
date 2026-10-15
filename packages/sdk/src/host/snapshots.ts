@@ -388,7 +388,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
         ? undefined
         : recordedChat(id, channel);
       if (opened !== undefined && opened.uri !== chatUriFor(nameOf(id))) {
-        const own = await owner.transcript?.(opened.backendId);
+        const own = await owner.transcript?.(opened.backendId, ctx.sessionAt(id));
         return value({
           resource: channel,
           state: {

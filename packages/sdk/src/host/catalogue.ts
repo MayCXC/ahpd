@@ -1,5 +1,6 @@
 import { ROOT, subagentChatUri } from './channels.js';
 import { Status, idFor, idOf } from '../catalog.js';
+import { localPath } from '../fileuri.js';
 import type { Summary, SummaryChat } from '../types/catalog.js';
 import type { Agent, Listed } from '../types/agent.js';
 import type { Bag } from '../types/common.js';
@@ -800,6 +801,12 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * `waiting` is a provider the host recorded for this session and is not
    * serving, so the row keeps its own provider and no owner: nothing here can
    * open it, and the session waits for the agent it actually ran on.
+   *
+   * The row's folder goes into the session's record when the record has none,
+   * so a backend is told where to look for it after a restart. Only into a
+   * record the host already keeps, which is one with a provider: a listing
+   * names every session on the machine, and a file for each is a file for
+   * sessions this host never ran.
    */
   const adopt = (agent: Agent, row: Listed, waiting?: string): Summary => {
     const provider = waiting ?? agent.provider;
@@ -807,6 +814,11 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     names.set(row.id, resource);
     if (waiting === undefined) owners.set(resource, agent);
     wheres.set(resource, row.workingDirectories);
+    const folder = row.workingDirectories[0];
+    if (folder !== undefined && kept.provider(row.id) !== undefined && kept.workingDirectory?.(row.id) === undefined) {
+      const path = localPath(folder);
+      if (path !== '') kept.setWorkingDirectory?.(row.id, path);
+    }
     births.set(resource, row.createdAt);
     moves.set(resource, row.modifiedAt);
     return {

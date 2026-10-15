@@ -1,6 +1,6 @@
 ---
 title: The record keeps the folder, and the host passes it
-status: todo
+status: done
 depends: []
 layer: "packages/sdk, docs"
 refs:
@@ -53,4 +53,32 @@ The session record keeps the session's working folder, and the host gives it to 
 - Run vitest on `packages/sdk`, `packages/server`, `packages/agent-claude` and `packages/agent-acp`; all pass.
 
 ## Resume
+
+### Built
+
+- `Row` and `Saved` in `sessions.ts` keep `workingDirectory` as a path, and both stores read and write it.
+- The load reads the field only when it is a string that is not empty.
+- `empty(row)` does not count the folder, so a folder alone keeps no record.
+- `SessionStore` has the optional `workingDirectory(id)` and `setWorkingDirectory(id, value)`.
+- `Agent` has the type `SessionAt`, and `find`, `transcript` and `subagents` take it as the optional last argument `at`.
+- `spawn` records the folder of each started session, after `keepChat`, and only on a change.
+- `keepProvider` and the turn end record the folder under the backend's own id too.
+- `adopt` records the folder of a listed or found row only when the record has a provider and no folder.
+- `History.sessionAt(id)` reads the record, and `findOf`, `past` and `restoredSubagents` pass it.
+- The peer chat read in `snapshots.ts` passes the folder of the session.
+- The sleep restore passes the folder of the record, or else the folder of the listed row.
+- `docs/AGENT.md` names `at` in the table, adds the `subagents` row, and has one paragraph about `at`.
+
+### Validation
+
+- `host-past-open.test.ts` has four new cases: the folder in the record, no folder, a found row, and a created session.
+- `sessions.test.ts` has one new case for the store: round trip, old rows, bad values, and a folder alone.
+- `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0.
+- Vitest on `packages/sdk`, `packages/server`, `packages/agent-claude`, `packages/agent-acp` and `packages/agent-pi` passes 4692 tests in 262 files.
+
+### Seen and not done
+
+- `askModel` in `changesets.ts` gives `openSession` a `file://` URI as the folder, and `Start.workingDirectory` says a path.
+- `keepFolder` stores a path from either form, so the record is correct, but the backend still gets the URI.
+- A listing gives no folder to a record without a provider. A session the host never ran stays lost outside the paths.
 

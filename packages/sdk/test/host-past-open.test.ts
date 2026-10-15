@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHost, hello, machine, peer, settle } from './support/host.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { memorySessions } from '../src/sessions.js';
-import type { Agent, Listed } from '@ahpd/sdk';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileSessions, memorySessions } from '../src/sessions.js';
+import type { Agent, Listed, SessionAt } from '@ahpd/sdk';
 import type { SessionStore } from '../src/types/sessions.js';
 
 /*
@@ -185,5 +188,83 @@ describe('opening a past session', () => {
     // would be a pass over the machine for nothing.
     expect(counted.lists).toBe(passes);
     expect(counted.asked).toEqual(['claude']);
+  });
+
+  it('tells the backend the folder the record names, and opens a session found only there', async () => {
+    const BOT = '/home/softov/.bots/support';
+    const asked: (SessionAt | undefined)[] = [];
+    const read: (SessionAt | undefined)[] = [];
+    const agent: Agent = {
+      ...backend('claude', { listed: [] }, counting()),
+      // A store that looks in the folder it is told and nowhere else, which is
+      // a session that ran outside every path this backend serves.
+      find: async (id: string, at?: SessionAt) => {
+        asked.push(at);
+        return id === 'bot' && at?.workingDirectory === BOT ? { ...row('bot', 'Bot'), workingDirectories: [`file://${BOT}`] } : undefined;
+      },
+      transcript: async (_id: string, at?: SessionAt) => {
+        read.push(at);
+        return [];
+      },
+    };
+    const store = memorySessions();
+    store.setProvider('bot', 'claude');
+    store.setWorkingDirectory('bot', BOT);
+    const { client } = await watching([agent], store);
+
+    expect((await opened(client, 'claude:/bot')).snapshot?.resource).toBe('claude:/bot');
+    expect(asked).toEqual([{ workingDirectory: BOT }]);
+    expect(read).toEqual([{ workingDirectory: BOT }]);
+  });
+
+  it('asks with no folder for a session whose record names none, as before', async () => {
+    const asked: unknown[][] = [];
+    const agent: Agent = {
+      ...backend('claude', { listed: [] }, counting()),
+      find: async (...args: [string, SessionAt?]) => {
+        asked.push(args);
+        return args[0] === 'late' ? row('late', 'Late') : undefined;
+      },
+    };
+    const { client } = await watching([agent]);
+
+    expect((await opened(client, 'claude:/late')).snapshot?.resource).toBe('claude:/late');
+    expect(asked).toEqual([['late', undefined]]);
+  });
+
+  it('records the folder a found row ran in, only for a session the host keeps a record for', async () => {
+    const found = (id: string): Listed => ({ ...row(id, id), workingDirectories: ['file:///srv/worktrees/fix'] });
+    const agent: Agent = {
+      ...backend('claude', { listed: [] }, counting()),
+      find: async (id: string) => found(id),
+    };
+    const store = memorySessions();
+    store.setProvider('ran', 'claude');
+    const { client } = await watching([agent], store);
+
+    await opened(client, 'claude:/ran');
+    await opened(client, 'claude:/never-ran');
+    expect(store.workingDirectory('ran')).toBe('/srv/worktrees/fix');
+    // A session this host never ran gets no record for being looked at.
+    expect(store.rowOf('never-ran')).toBeUndefined();
+  });
+
+  it('writes the folder of a session it creates into the record file', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-folder-'));
+    try {
+      const dir = join(root, 'sessions');
+      const store = fileSessions({ dir });
+      const host = createHost({ path: root, agents: [echo({ path: root, pace: 0 })], ...machine(), sessions: store });
+      const client = host.accept(peer());
+      await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+      await client.handle({
+        method: 'createSession',
+        params: { channel: 'ahp-session:/made', provider: 'echo', workingDirectories: [`file://${root}`] },
+      });
+      await new Promise((tick) => { setTimeout(tick, 5); });
+      const saved = JSON.parse(readFileSync(join(dir, 'made.json'), 'utf8')) as { workingDirectory?: string };
+      expect(saved.workingDirectory).toBe(root);
+    }
+    finally { rmSync(root, { recursive: true, force: true }); }
   });
 });

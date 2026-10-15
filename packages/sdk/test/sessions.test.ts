@@ -869,6 +869,37 @@ it('keeps which harness a session runs on across a restart, and forgets it with 
   expect(memorySessions().provider('a')).toBeUndefined();
 });
 
+it('keeps the folder a session works in across a restart, and reads a row without one as before', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setProvider('a', 'claude');
+  store.setWorkingDirectory?.('a', '/home/softov/.bots/support');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude', workingDirectory: '/home/softov/.bots/support' });
+  const second = fileSessions({ dir });
+  expect(second.workingDirectory?.('a')).toBe('/home/softov/.bots/support');
+  expect(second.provider('a')).toBe('claude');
+  // A row written before folders were kept reads as one with no folder, and
+  // one that is not a path is ignored rather than guessed at.
+  writeFileSync(join(dir, 'b.json'), JSON.stringify({ version: 1, id: 'b', flags: READ }));
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ version: 1, id: 'c', provider: 'claude', workingDirectory: '' }));
+  writeFileSync(join(dir, 'd.json'), JSON.stringify({ version: 1, id: 'd', provider: 'claude', workingDirectory: 7 }));
+  const third = fileSessions({ dir });
+  expect(third.flags('b')).toBe(READ);
+  expect(third.workingDirectory?.('b')).toBeUndefined();
+  expect(third.workingDirectory?.('c')).toBeUndefined();
+  expect(third.workingDirectory?.('d')).toBeUndefined();
+  third.setWorkingDirectory?.('a', undefined);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', provider: 'claude' });
+  // A folder alone is no record: it says where a session ran, and nothing
+  // else was recorded for this one.
+  third.setWorkingDirectory?.('lone', '/home/softov/elsewhere');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'lone')).toBeUndefined();
+  expect(third.workingDirectory?.('lone')).toBeUndefined();
+});
+
 it('keeps a session\'s attachments in a folder of its own, whatever the id says', () => {
   const dir = join(root, 'sessions');
   const store = fileSessions({ dir });

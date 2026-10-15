@@ -76,7 +76,7 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The record keeps the folder, and the host passes it](task-01-the-record-keeps-the-folder-and-the-host-passes-it.md) | todo | - |
+| [01 - The record keeps the folder, and the host passes it](task-01-the-record-keeps-the-folder-and-the-host-passes-it.md) | done | - |
 | [02 - Claude looks in the folder first](task-02-claude-looks-in-the-folder-first.md) | todo | 01 |
 | [03 - pi looks in the folder first](task-03-pi-looks-in-the-folder-first.md) | todo | 01 |
 
@@ -88,8 +88,8 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-15, from the plugin/48 review.
-- **Next action:** [task-01-the-record-keeps-the-folder-and-the-host-passes-it.md](task-01-the-record-keeps-the-folder-and-the-host-passes-it.md).
+- **Done so far:** the plan, 2026-10-15, from the plugin/48 review. Task 01 is done, 2026-10-15.
+- **Next action:** [task-02-claude-looks-in-the-folder-first.md](task-02-claude-looks-in-the-folder-first.md) and [task-03-pi-looks-in-the-folder-first.md](task-03-pi-looks-in-the-folder-first.md).
 - **Open questions:** none.
 - **Watch out for:**
   - plugin/48 closes after this plan, because a webhook thread's chat lives in a bot session under `~/.bots`.

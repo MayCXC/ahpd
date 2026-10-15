@@ -128,6 +128,12 @@ export interface Listed {
   workingDirectories: string[];
 }
 
+/** Where the host recorded a past session as working, handed to a backend that finds or reads it. */
+export interface SessionAt {
+  /** The session's working folder, as a path. Absent where none was recorded. */
+  workingDirectory?: string;
+}
+
 /** How the host asks a backend to start a session. */
 export interface Start {
   /** The session channel URI the client chose. */
@@ -607,8 +613,14 @@ export interface Agent {
    * `list` would have answered, and `undefined` is a real answer: this backend
    * has no such session. Left out is a backend whose store cannot be asked
    * about one session, and the host falls back to listing for it.
+   *
+   * `at` is where the host recorded the session as working, when it recorded
+   * a folder: `workingDirectory` is a path, not a `file://` URI. A backend
+   * looks there first, and in the paths it serves after, so a session that
+   * ran in a subfolder or a worktree is still found. Absent, or without a
+   * folder, is a session the host knows no folder for.
    */
-  find?(id: string): Promise<Listed | undefined>;
+  find?(id: string, at?: SessionAt): Promise<Listed | undefined>;
 
   /**
    * Remove this backend's own copy of a session, and nothing else.
@@ -681,8 +693,10 @@ export interface Agent {
    * rebuilt transcript wrote a tool-call `status` that is not one of the
    * seven, left off three fields the completed state requires, and gave its
    * content blocks no `type`.
+   *
+   * `at` is the session's recorded folder, as `find` is handed it.
    */
-  transcript?(id: string): Promise<WireTurn<Turn>[] | undefined>;
+  transcript?(id: string, at?: SessionAt): Promise<WireTurn<Turn>[] | undefined>;
 
   /**
    * The worker chats one past session holds, read without starting anything.
@@ -695,8 +709,10 @@ export interface Agent {
    * `turns` is the session's own transcript, which the host has already read
    * to serve the chat: handed over so a backend that needs it to resolve a
    * worker's link does not read the same file a second time.
+   *
+   * `at` is the session's recorded folder, as `find` is handed it.
    */
-  subagents?(id: string, turns?: WireTurn<Turn>[]): Promise<RestoredSubagent[] | undefined>;
+  subagents?(id: string, turns?: WireTurn<Turn>[], at?: SessionAt): Promise<RestoredSubagent[] | undefined>;
 
   /** Start one. */
   create(start: Start): Session;
