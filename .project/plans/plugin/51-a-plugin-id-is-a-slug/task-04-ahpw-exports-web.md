@@ -1,6 +1,6 @@
 ---
 title: ahpw exports `web` and serves `/plugins/web/`
-status: todo
+status: implemented
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "ahpw"
 refs:
@@ -41,3 +41,7 @@ This task is committed in the ahpw repository.
 
 ## Resume
 
+- **Done:** 2026-10-14, in ahpw commit `d4272a3`. The plugin exports `name = 'web'` and serves its page under `/plugins/web/`.
+- **Kept:** `README.md:164` names a folder, `/path/to/ahpd-web`, and not a route, so it stays.
+- **Gates:** `pnpm typecheck` passes, and `pnpm test` passes with 282 tests.
+- **Check:** `rg -n "plugins/ahpd-web"` finds only the `CHANGELOG.md` entries, the new one and the 0.1.0 one.
