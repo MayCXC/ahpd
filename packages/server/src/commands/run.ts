@@ -410,6 +410,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       host: boundHost,
       port: boundPort,
       paths: options.paths,
+      ...(options.startFolder === undefined ? {} : { startFolder: options.startFolder }),
       startedAt,
       automations: memory ? 'in memory, schedules do not fire' : `in ${automationsDir()}, schedules fire`,
     }),

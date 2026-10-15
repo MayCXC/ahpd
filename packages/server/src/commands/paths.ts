@@ -48,6 +48,13 @@ const API_WAIT_MS = 10_000;
  */
 const API_PREFIX = '/api';
 
+/**
+ * The line an add prints: the folder, the start folder before it when the add
+ * wrote that too, and where the change was made.
+ */
+const addedLine = (folder: string, start: string | undefined, where: string): string =>
+  `Added ${start === undefined ? '' : `${start}, the folder the daemon was started in, and `}${folder} to "paths" ${where}.`;
+
 /** The folders a configuration entry names, and nothing for one holding anything else. */
 const pathsIn = (held: { paths?: unknown }): string[] => (Array.isArray(held.paths)
   ? held.paths.filter((one): one is string => typeof one === 'string')
@@ -174,10 +181,12 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
       return undefined;
     }
     const body: unknown = await answer.json().catch(() => undefined);
-    const said = body as { message?: unknown; paths?: unknown } | undefined;
+    const said = body as { message?: unknown; paths?: unknown; startFolder?: unknown } | undefined;
     if (!answer.ok) stop(typeof said?.message === 'string' ? said.message : `The daemon refused the change (HTTP ${String(answer.status)}).`);
-    say(`${verb === 'add' ? 'Added' : 'Removed'} ${folder} ${verb === 'add' ? 'to' : 'from'} "paths" on the running daemon.`);
-    return output({ paths: Array.isArray(said?.paths) ? said.paths : [] }, '');
+    // The start folder the daemon wrote beside the new one, said as a file write says it.
+    const start = typeof said?.startFolder === 'string' ? said.startFolder : undefined;
+    say(verb === 'add' ? addedLine(folder, start, 'on the running daemon') : `Removed ${folder} from "paths" on the running daemon.`);
+    return output({ paths: Array.isArray(said?.paths) ? said.paths : [], ...(start === undefined ? {} : { startFolder: start }) }, '');
   };
 
   const write = (sub: 'add' | 'remove') => registry.action({
@@ -249,9 +258,7 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
          */
         const start = sub === 'add' && pathsIn(held).length === 0 ? startFolderOf(named) : undefined;
         const paths = start === undefined ? pathsIn(held) : [start];
-        const said = sub === 'add'
-          ? `Added ${start === undefined ? '' : `${start}, the folder the daemon was started in, and `}${folder} to "paths" in ${file}.`
-          : `Removed ${folder} from "paths" in ${file}.`;
+        const said = sub === 'add' ? addedLine(folder, start, `in ${file}`) : `Removed ${folder} from "paths" in ${file}.`;
 
         if (sub === 'add') {
           if (!existsSync(folder)) stop(`No folder at ${folder}.`);
@@ -299,7 +306,12 @@ export const declarePaths = (registry: Registry<object>, served?: ServedFacts): 
         say(said);
         const restart = restarting();
         if (restart) say(restartLine);
-        return output({ paths: pathsIn(held), ...(restart ? { restart: true } : {}) }, '');
+        return output({
+          paths: pathsIn(held),
+          // The start folder, when this add wrote it beside the new folder.
+          ...(start === undefined ? {} : { startFolder: start }),
+          ...(restart ? { restart: true } : {}),
+        }, '');
       });
     },
   });

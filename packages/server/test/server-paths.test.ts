@@ -462,7 +462,8 @@ describe('ahpd paths at the terminal', () => {
     try {
       const added = await line(['paths', 'add', extra, '--json']);
       expect(added.code).toBe(0);
-      expect(JSON.parse(added.out) as unknown).toEqual({ paths: [work, extra] });
+      expect(JSON.parse(added.out) as unknown).toEqual({ paths: [work, extra], startFolder: work });
+      expect(added.err).toBe(`Added ${work}, the folder the daemon was started in, and ${extra} to "paths" on the running daemon.\n`);
       expect(api.own.paths).toEqual([work, extra]);
       expect((JSON.parse(readFileSync(api.file, 'utf8')) as { paths: unknown }).paths).toEqual([work, extra]);
       expect(running()?.paths).toEqual([work, extra]);
@@ -497,7 +498,13 @@ describe('ahpd paths, served', () => {
       options: own,
       configFile: config,
       running: () => ({
-        pid: process.pid, url: `ws://${AUTHORITY}`, host: '127.0.0.1', port: 9350, paths: own.paths, startedAt: '',
+        pid: process.pid,
+        url: `ws://${AUTHORITY}`,
+        host: '127.0.0.1',
+        port: 9350,
+        paths: own.paths,
+        startedAt: '',
+        ...(own.startFolder === undefined ? {} : { startFolder: own.startFolder }),
       }),
       turning: () => [],
       restart: () => {},
@@ -624,7 +631,7 @@ describe('ahpd paths, served', () => {
 
     const added = await served.ask('POST', '/paths/add', { folder: extra });
     expect(added.status).toBe(200);
-    expect(await added.json()).toEqual({ paths: [work, extra] });
+    expect(await added.json()).toEqual({ paths: [work, extra], startFolder: work });
     expect(read()).toEqual({ port: 1234, paths: [work, extra] });
     expect(served.own.paths).toEqual([work, extra]);
     expect(served.running().paths).toEqual([work, extra]);
@@ -674,5 +681,72 @@ describe('ahpd paths, served', () => {
     await served.ask('POST', '/paths/add', { folder: extra });
     expect(read().paths).toEqual([one, extra]);
     expect(served.own.paths).toEqual([one, extra]);
+  });
+});
+
+/*
+ * The Windows run of 2026-10-14: the record held the start folder, and `ahpd
+ * status --json` left it out, because the status answer is a fixed list of the
+ * record's fields.
+ */
+describe('ahpd status names the start folder', () => {
+  it('shows the start folder the record carries, as a field and as a line', async () => {
+    const work = folder('work');
+    record([work], { startFolder: work });
+    const json = await line(['status', '--json', '--no-update-check']);
+    expect(json.code).toBe(0);
+    expect((JSON.parse(json.out) as { startFolder?: unknown }).startFolder).toBe(work);
+    const text = await line(['status', '--no-update-check']);
+    expect(text.out).toContain(`sessions in ${work}\nstart folder ${work}\n`);
+  });
+
+  it('has no start folder key or line when the record carries none', async () => {
+    const one = folder('one');
+    record([one]);
+    const json = await line(['status', '--json', '--no-update-check']);
+    expect(json.code).toBe(0);
+    expect(Object.keys(JSON.parse(json.out) as object)).not.toContain('startFolder');
+    const text = await line(['status', '--no-update-check']);
+    expect(text.out).not.toContain('start folder');
+  });
+
+  /** A served status, against a daemon that serves `paths` and was started in `startFolder` when one is given. */
+  const servedStatus = async (paths: string[], startFolder?: string): Promise<Record<string, unknown>> => {
+    const own = { paths, ...(startFolder === undefined ? {} : { startFolder }) } as Options;
+    const handler = apiHandler({
+      registry: servedRegistry({
+        options: own,
+        configFile: config,
+        running: () => ({
+          pid: process.pid,
+          url: `ws://${AUTHORITY}`,
+          host: '127.0.0.1',
+          port: 9350,
+          paths: own.paths,
+          startedAt: '',
+          ...(own.startFolder === undefined ? {} : { startFolder: own.startFolder }),
+        }),
+        turning: () => [],
+        restart: () => {},
+      }),
+      token: 'root-secret',
+      program: { name: 'ahpd', version: '0.0.0' },
+      origins: () => apiOrigins('127.0.0.1', undefined, 9350),
+    });
+    const answer = await handler(new Request(`http://${AUTHORITY}/api/status`, {
+      headers: { host: AUTHORITY, authorization: 'Bearer root-secret' },
+    }));
+    expect(answer.status).toBe(200);
+    return await answer.json() as Record<string, unknown>;
+  };
+
+  it('shows the start folder of the daemon answering, served', async () => {
+    const work = folder('work');
+    expect((await servedStatus([work], work)).startFolder).toBe(work);
+  });
+
+  it('has no start folder key, served, when the daemon names its folders', async () => {
+    const one = folder('one');
+    expect(Object.keys(await servedStatus([one]))).not.toContain('startFolder');
   });
 });

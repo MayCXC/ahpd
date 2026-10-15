@@ -35,6 +35,7 @@ export const declareStatus = (registry: Registry<object>, served?: ServedFacts):
     }
     let text = `${statusLine(found)}\n`;
     if (found.paths.length > 0) text += `sessions in ${found.paths.join(', ')}\n`;
+    if (found.startFolder !== undefined) text += `start folder ${found.startFolder}\n`;
     // Absent from a record written by an older daemon, which is the one case
     // where saying nothing is better than guessing which store it was given.
     if (found.automations !== undefined) text += `automations ${found.automations}\n`;
@@ -46,6 +47,7 @@ export const declareStatus = (registry: Registry<object>, served?: ServedFacts):
       pid: found.pid,
       url: found.url,
       paths: found.paths,
+      ...(found.startFolder === undefined ? {} : { startFolder: found.startFolder }),
       startedAt: found.startedAt,
       ...(found.automations === undefined ? {} : { automations: found.automations }),
     }, text);

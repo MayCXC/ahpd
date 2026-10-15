@@ -35,6 +35,8 @@ export interface ServedRunning {
   /** The port the daemon's own listener is bound to. */
   port: number;
   paths: string[];
+  /** The folder the daemon was started in, when it serves that folder because nothing names one. */
+  startFolder?: string;
   startedAt: string;
   /** Where automations are kept and whether their schedules fire. */
   automations?: string;

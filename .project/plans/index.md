@@ -41,7 +41,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; the Windows check by hand remains | - | - |
-| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 04 implemented; task 04 review and the checks by hand remain | - | - |
+| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented; the review of tasks 04 and 05 and the checks by hand remain | - | - |
 
 Next free number in `daemon`: `27`.
 
