@@ -1,6 +1,6 @@
 ---
 title: The worktree record outlives the daemon
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -48,4 +48,20 @@ Every reader of the `worktrees` map falls back to the stored record.
 
 ## Resume
 
-Not started.
+### Built
+
+- The session store keeps a `StoredWorktree` record, with `worktree` and `setWorktree` in the memory store and the file store.
+- The file store ignores a record without a non-empty repository, path and base, or with an empty branch.
+- The host reads a tree through `worktreeOf`, which reads the map and then the store.
+- `isolated` writes the record, and `teardown`, the move and the detached methods clear it.
+- Facts, changesets, spawn trust, machines and the detached create also read the tree through `worktreeOf`.
+
+### Validation
+
+- `sessions.test.ts` checks the record across a file store reopen, three malformed records and a clear.
+- `worktrees.test.ts` deletes a session after a restart, and the clean tree goes and the record clears.
+- The `worktrees.test.ts` case fails when `teardown` reads only the map.
+
+### Seen and not done
+
+- A deleted session that sleeps still keeps its tree, because the plan does not change that path.

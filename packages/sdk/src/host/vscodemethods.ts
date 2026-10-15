@@ -7,6 +7,7 @@ import { idOf } from '../catalog.js';
 import { hostLogPath } from '../debuglogs.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { need, reason } from './common.js';
+import { symlinkFolders } from './lifecycle.js';
 import type { LogFile } from '../debuglogs.js';
 import type { ContainerConnect, ContainerConnectResult, ContainerSink } from '../types/containers.js';
 import type { ConnectionContext, HostContext } from './context.js';
@@ -75,8 +76,11 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
   const { connection } = conn;
   const {
     agents, byChat, chatOf, detached, dirOf, kept, leadOf, log, logs, options, ownerFor, owners,
-    sessionFor, sessions, setArtifacts, worktrees,
+    sessionFor, sessions, setArtifacts, worktreeOf, worktrees,
   } = ctx;
+
+  /** The folders linked into a session's tree, whose links are not work in it. */
+  const linkedOf = (session: string): string[] => symlinkFolders(kept.config(idOf(session)) ?? ctx.decided.get(session) ?? {});
 
   /**
    * The backend's own file for a session, or for one chat of it.
@@ -246,7 +250,7 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
       const session = stringParam(params, 'session', 'a URI string');
       stringParam(params, 'prompt');
       const uri = sessionFor(session);
-      const tree = worktrees.get(uri);
+      const tree = worktreeOf(uri);
       if (tree === undefined) {
         throw new RpcError(INVALID_PARAMS, sessions.has(uri)
           ? `Session is not configured for worktree isolation: ${session}`
@@ -300,11 +304,11 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
           log(`kept ${held.path}: ${held.session} is running in it`);
           return {};
         }
-        if (await port.dirty(held.path).catch(() => true)) {
+        if (await port.dirty(held.path, linkedOf(held.session)).catch(() => true)) {
           log(`kept ${held.path}: it has changes nobody committed`);
           return {};
         }
-        await port.remove(held.repository, held.path)
+        await port.remove(held.repository, held.path, undefined, linkedOf(held.session))
           .then(() => { log(`removed ${held.path} for the archived ${handle}`); })
           .catch((error: unknown) => { log(`kept ${held.path}: ${error instanceof Error ? error.message : String(error)}`); });
         return {};
@@ -323,9 +327,10 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
       if (sessions.has(held.session)) throw new RpcError(-32004, `${held.session} is running in ${held.path}; dispose the session first`);
       detached.delete(handle);
       worktrees.delete(held.session);
+      kept.setWorktree?.(idOf(held.session), undefined);
       // Already gone with its session, which is the ordinary order of things.
       if (!await stat(held.path).then(() => true, () => false)) return {};
-      await options.worktrees?.remove(held.repository, held.path, held.branch)
+      await options.worktrees?.remove(held.repository, held.path, held.branch, linkedOf(held.session))
         .then(() => { log(`removed ${held.path} for ${handle}`); })
         .catch((error: unknown) => {
           throw new RpcError(INTERNAL_ERROR, `Could not remove ${held.path}: ${error instanceof Error ? error.message : String(error)}`);
@@ -355,9 +360,10 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
         detached.delete(handle);
         if (sessions.has(held.session)) continue;
         const port = options.worktrees;
-        if (port === undefined || await port.dirty(held.path).catch(() => true)) continue;
+        if (port === undefined || await port.dirty(held.path, linkedOf(held.session)).catch(() => true)) continue;
         worktrees.delete(held.session);
-        await port.remove(held.repository, held.path, held.branch)
+        kept.setWorktree?.(idOf(held.session), undefined);
+        await port.remove(held.repository, held.path, held.branch, linkedOf(held.session))
           .then(() => { log(`removed ${held.path}: the window let ${handle} go`); })
           .catch((error: unknown) => { log(`kept ${held.path}: ${error instanceof Error ? error.message : String(error)}`); });
       }

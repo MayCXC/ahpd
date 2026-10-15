@@ -53,7 +53,7 @@ export interface Changesets {
 }
 
 export function createChangesets(ctx: HostContext): Changesets {
-  const { options, connections, sessions, heldAs, leadOf, wheres, worktrees, githubFacts, lent, dispatch } = ctx;
+  const { options, connections, sessions, heldAs, leadOf, wheres, worktreeOf, githubFacts, lent, dispatch } = ctx;
 
   /**
    * The directory a session works in, as a path.
@@ -387,7 +387,7 @@ export function createChangesets(ctx: HostContext): Changesets {
    */
   const operationContext = (asked: string, dir: string): ChangesetOperationContext => {
     const uri = heldAs(asked);
-    const base = worktrees.get(uri)?.base;
+    const base = worktreeOf(uri)?.base;
     const git = (options.directories?.meta(dir) as { git?: Record<string, unknown> } | undefined)?.git;
     const facts = githubFacts.get(dir) as { pullRequestUrls?: string[]; pullRequestBranchName?: string } | undefined;
     const owner = git?.githubOwner;

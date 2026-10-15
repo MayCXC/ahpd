@@ -651,7 +651,7 @@ export function createSpawn(ctx: HostContext): Spawn {
         const who = ctx.ownerFor(sender);
         if (who === undefined || who !== kept.owner(idOf(uri))) return false;
       }
-      const made = ctx.worktrees.get(uri);
+      const made = ctx.worktreeOf(uri);
       const vouched = made !== undefined && sameFolder(made.path, folder) ? made.repository : folder;
       return trusted(vouched, sender.config?.workspaceTrust, sender.trustedFolders);
     };

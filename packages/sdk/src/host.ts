@@ -41,6 +41,7 @@ import type { Bag } from './types/common.js';
 import type { Session, SubagentChat, SubagentRequest } from './types/session.js';
 import type { Peer } from './types/rpc.js';
 import type { Owner } from './types/usage.js';
+import type { StoredWorktree } from './types/sessions.js';
 import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
 import { bag, ownerOfPrincipal } from './values.js';
 import { reason } from './host/common.js';
@@ -410,7 +411,12 @@ export function createHost(options: HostOptions): Host {
    * theirs, and removing it because a session ended would be this daemon
    * deleting a project.
    */
-  const worktrees = new Map<string, { repository: string; path: string; branch?: string; base?: string }>();
+  const worktrees = new Map<string, StoredWorktree>();
+  /**
+   * The worktree a session runs in: the one this process made, else the one
+   * the store kept from a process before it.
+   */
+  const worktreeOf = (uri: string): StoredWorktree | undefined => worktrees.get(uri) ?? kept.worktree?.(idOf(uri));
   /**
    * The worktrees the reference window holds a handle on.
    *
@@ -895,7 +901,7 @@ export function createHost(options: HostOptions): Host {
    */
   const ctx = {
     options, dir, known, replayable, leaves, seenBy, claims, agents, first, connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
-    leadOf, wheres, worktrees, githubFacts, kept, offered, decided, about, terminals,
+    leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
     madeFrom, origins, births, moves, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse,
     serverSeq: 0,

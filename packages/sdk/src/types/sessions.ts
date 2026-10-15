@@ -52,6 +52,21 @@ export interface RemoteOrigin {
 }
 
 /**
+ * The worktree a session runs in, as this host made it.
+ *
+ * `base` is what the tree was cut from, and `branch` the branch made for the
+ * session, absent where the session continued `base` rather than making one.
+ * Kept so a tree outlives the process that made it: a delete after a restart
+ * still knows which tree to take, and an unarchive knows where to put it back.
+ */
+export interface StoredWorktree {
+  repository: string;
+  path: string;
+  base: string;
+  branch?: string;
+}
+
+/**
  * The session this one was made by, as the window recorded it.
  *
  * The id of the session, and optionally the chat and the turn inside it the
@@ -266,6 +281,15 @@ export interface SessionStore {
   remoteOrigin?(id: string): RemoteOrigin | undefined;
   /** Record it, or forget it with `undefined`. */
   setRemoteOrigin?(id: string, value: RemoteOrigin | undefined): void;
+  /**
+   * The worktree this host made for the session, or nothing for a session
+   * that runs in a folder somebody chose.
+   *
+   * Optional: a store without it forgets every tree when the host stops.
+   */
+  worktree?(id: string): StoredWorktree | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setWorktree?(id: string, value: StoredWorktree | undefined): void;
   /**
    * The session this one was made by, as a window recorded it, or nothing.
    *

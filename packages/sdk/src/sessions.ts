@@ -5,7 +5,7 @@ import { join, sep } from 'node:path';
 import { readJson, writeJsonAtomic } from './jsonfile.js';
 import { asCreatedBy, asOrigin } from './remotesession.js';
 import type { Scope } from './scopes.js';
-import type { CreatedBy, NestedRecord, PullRequestBaseline, RemoteOrigin, SessionStore, StoredChat } from './types/sessions.js';
+import type { CreatedBy, NestedRecord, PullRequestBaseline, RemoteOrigin, SessionStore, StoredChat, StoredWorktree } from './types/sessions.js';
 import type { Owner } from './types/usage.js';
 import { ownerOf } from './values.js';
 
@@ -28,6 +28,8 @@ interface Held {
   nestedSessions(): [string, NestedRecord][];
   workingDirectory(id: string): string | undefined;
   setWorkingDirectory(id: string, value: string | undefined): void;
+  worktree(id: string): StoredWorktree | undefined;
+  setWorktree(id: string, value: StoredWorktree | undefined): void;
   /** Everything held about one session, in the file's field order, or nothing where nothing is. */
   rowOf(id: string): Row | undefined;
 }
@@ -119,6 +121,8 @@ export function memorySessions(): SessionStore & Held {
     setRemoteOrigin: (id, value) => { patch(id, { remoteOrigin: value }); },
     createdBy: (id) => rows.get(id)?.createdBy,
     setCreatedBy: (id, value) => { patch(id, { createdBy: value }); },
+    worktree: (id) => rows.get(id)?.worktree,
+    setWorktree: (id, value) => { patch(id, { worktree: value }); },
     workingDirectory: (id) => rows.get(id)?.workingDirectory,
     setWorkingDirectory: (id, value) => { patch(id, { workingDirectory: value === '' ? undefined : value }); },
     nestedSessions: () => [...rows.entries()]
@@ -229,6 +233,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
         ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
         ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
+        ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
       };
     },
     forget: (id) => { rows.delete(id); },
@@ -275,6 +280,26 @@ const nestedOf = (value: unknown): NestedRecord | undefined => {
     createdAt: held.createdAt,
     modifiedAt: held.modifiedAt,
     workingDirectories: held.workingDirectories.filter((one): one is string => typeof one === 'string'),
+  };
+};
+
+/**
+ * A session's worktree as the file wrote it, or nothing when it is not one:
+ * the repository, the path and the base as non-empty strings, and a branch
+ * that is one too where it is there at all. Anything else is ignored rather
+ * than guessed at, since this record decides which tree a host takes away.
+ */
+const worktreeOf = (value: unknown): StoredWorktree | undefined => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const held = value as Partial<Record<keyof StoredWorktree, unknown>>;
+  const text = (one: unknown): one is string => typeof one === 'string' && one !== '';
+  if (!text(held.repository) || !text(held.path) || !text(held.base)) return undefined;
+  if (held.branch !== undefined && !text(held.branch)) return undefined;
+  return {
+    repository: held.repository,
+    path: held.path,
+    base: held.base,
+    ...(held.branch === undefined ? {} : { branch: held.branch }),
   };
 };
 
@@ -351,6 +376,7 @@ interface Row {
   remoteOrigin?: RemoteOrigin | undefined;
   createdBy?: CreatedBy | undefined;
   workingDirectory?: string | undefined;
+  worktree?: StoredWorktree | undefined;
 }
 
 /**
@@ -366,7 +392,7 @@ const empty = (row: Row): boolean =>
   && row.artifacts === undefined && row.pullRequests === undefined && row.chatTitles === undefined
   && row.chatFlags === undefined
   && row.parent === undefined && row.nested === undefined && row.chats === undefined
-  && row.remoteOrigin === undefined && row.createdBy === undefined;
+  && row.remoteOrigin === undefined && row.createdBy === undefined && row.worktree === undefined;
 
 /**
  * What is persisted for one session: a `Row` as the file holds it.
@@ -401,6 +427,8 @@ interface Saved {
   createdBy?: CreatedBy;
   /** The folder the session works in, as a path. */
   workingDirectory?: string;
+  /** The worktree this host made for the session. */
+  worktree?: StoredWorktree;
 }
 
 /**
@@ -536,6 +564,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.remoteOrigin === undefined ? {} : { remoteOrigin: held.remoteOrigin }),
       ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
       ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
+      ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
     };
   };
 
@@ -684,6 +713,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       // A path, and anything that is not a non-empty string is ignored rather
       // than guessed at, as every other field here is.
       if (typeof row.workingDirectory === 'string' && row.workingDirectory !== '') inner.setWorkingDirectory(row.id, row.workingDirectory);
+      const worktree = worktreeOf(row.worktree);
+      if (worktree !== undefined) inner.setWorktree(row.id, worktree);
     }
   };
 
@@ -713,6 +744,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setRemoteOrigin: (id, value) => { touched(id, () => { inner.setRemoteOrigin?.(id, value); }); },
     createdBy: (id) => inner.createdBy?.(id),
     setCreatedBy: (id, value) => { touched(id, () => { inner.setCreatedBy?.(id, value); }); },
+    worktree: (id) => inner.worktree(id),
+    setWorktree: (id, value) => { touched(id, () => { inner.setWorktree(id, value); }); },
     workingDirectory: (id) => inner.workingDirectory(id),
     setWorkingDirectory: (id, value) => { touched(id, () => { inner.setWorkingDirectory(id, value); }); },
     artifacts: (id) => inner.artifacts(id),

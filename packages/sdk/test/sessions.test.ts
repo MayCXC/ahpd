@@ -1213,6 +1213,35 @@ it('keeps the record of a nested session across a restart, lists it, and forgets
   expect(row(dir, 'n1')).toBeUndefined();
 });
 
+it('keeps the worktree a session runs in across a restart, and ignores one that is not a record', async () => {
+  const dir = join(root, 'sessions');
+  const tree = { repository: '/srv/app', path: '/srv/app.worktrees/agents-a1', base: 'main', branch: 'agents/a1' };
+  const store = fileSessions({ dir });
+  store.setWorktree?.('a', tree);
+  store.setWorktree?.('b', { repository: '/srv/app', path: '/srv/app.worktrees/release', base: 'release' });
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', worktree: tree });
+  // Read back by a second store on the same folder, which is what a restart is.
+  const second = fileSessions({ dir });
+  expect(second.worktree?.('a')).toEqual(tree);
+  expect(second.worktree?.('b')).toEqual({ repository: '/srv/app', path: '/srv/app.worktrees/release', base: 'release' });
+  expect(second.worktree?.('nobody')).toBeUndefined();
+  // A value that is not a record of strings is ignored rather than guessed at,
+  // since this record decides which tree a host takes away.
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ version: 1, id: 'c', provider: 'echo', worktree: { repository: '/srv/app', path: 7, base: 'main' } }));
+  writeFileSync(join(dir, 'd.json'), JSON.stringify({ version: 1, id: 'd', provider: 'echo', worktree: { repository: '/srv/app', path: '/x', base: 'main', branch: '' } }));
+  writeFileSync(join(dir, 'e.json'), JSON.stringify({ version: 1, id: 'e', provider: 'echo', worktree: 'not a record' }));
+  const third = fileSessions({ dir });
+  expect(third.worktree?.('c')).toBeUndefined();
+  expect(third.worktree?.('d')).toBeUndefined();
+  expect(third.worktree?.('e')).toBeUndefined();
+  expect(third.provider('c')).toBe('echo');
+  third.setWorktree?.('a', undefined);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toBeUndefined();
+  expect(memorySessions().worktree?.('a')).toBeUndefined();
+});
+
 it('starts empty and says so when a file cannot be read', () => {
   const dir = join(root, 'sessions');
   mkdirSync(dir, { recursive: true });

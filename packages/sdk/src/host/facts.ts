@@ -24,7 +24,7 @@ export interface Facts {
 
 export function createFacts(ctx: HostContext): Facts {
   const {
-    options, sessions, owners, connections, worktrees, githubFacts, kept, log, lent, dispatch,
+    options, sessions, owners, connections, worktreeOf, githubFacts, kept, log, lent, dispatch,
     dirOf, leadOf, changesetAt, changesetOf, catalogueOf, contentMoved, operationsMoved, heldAs,
   } = ctx;
 
@@ -41,7 +41,7 @@ export function createFacts(ctx: HostContext): Facts {
     const dir = dirOf(uri);
     if (dir === undefined) return undefined;
     const meta = options.directories?.meta(dir);
-    const base = worktrees.get(uri)?.base;
+    const base = worktreeOf(uri)?.base;
     const git = typeof (meta as { git?: unknown } | undefined)?.git === 'object'
       ? (meta as { git: Record<string, unknown> }).git
       : undefined;

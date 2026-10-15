@@ -94,7 +94,7 @@ export type { Membership, Scope, ScopeAnswer } from './scopes.js';
 export { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, oidcIssuer } from './issuers.js';
 export type { Fetcher, GitHubIssuerOptions, IssuerKind, OidcIssuerOptions } from './issuers.js';
 export type { Issuer, IssuerAnswer } from './types/users.js';
-export type { CreatedBy, NestedRecord, RemoteOrigin, SessionStore, StoredChat } from './types/sessions.js';
+export type { CreatedBy, NestedRecord, RemoteOrigin, SessionStore, StoredChat, StoredWorktree } from './types/sessions.js';
 export { uriFor, idFor, idOf, Status, statusOf, activityOf, titleFrom } from './catalog.js';
 export type { Activity, StatusBits } from './catalog.js';
 export { tail, older, PAGE } from './paging.js';

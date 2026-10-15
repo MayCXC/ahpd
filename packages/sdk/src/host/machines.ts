@@ -448,7 +448,7 @@ export function createMachines(ctx: HostContext): Machines {
       return {};
     }
     if (found === undefined) return {};
-    const stranger = notOwn(found, ctx.worktrees.get(uri));
+    const stranger = notOwn(found, ctx.worktreeOf(uri));
     if (stranger !== undefined) {
       ctx.log(`computers: no git directory for ${folder}: ${stranger}`);
       return {};
