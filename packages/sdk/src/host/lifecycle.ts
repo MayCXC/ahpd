@@ -1078,7 +1078,26 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     }
     const linked = linkedOf(uri);
     const clean = async (): Promise<boolean> => await port.dirty(tree.path, linked).catch(() => true) === false;
-    if (!await clean()) {
+    /*
+     * An archive the host made itself never commits and never loses a commit:
+     * the tree goes only when it is clean and its branch is on a remote as it
+     * is here, whatever `archiveDirtyWorktree` says.
+     */
+    if (kept.autoArchivedAt?.(idOf(uri)) !== undefined) {
+      if (!await clean()) {
+        log(`kept ${tree.path}: it has changes nobody committed`);
+        return;
+      }
+      if (port.pushed === undefined) {
+        log(`kept ${tree.path}: this host cannot tell whether its branch is pushed`);
+        return;
+      }
+      if (!await port.pushed(tree.path).catch(() => false)) {
+        log(`kept ${tree.path}: its branch has no upstream or has commits nobody pushed`);
+        return;
+      }
+    }
+    else if (!await clean()) {
       if (ctx.archiveDirtyWorktree !== 'commit') {
         log(`kept ${tree.path}: it has changes nobody committed`);
         return;

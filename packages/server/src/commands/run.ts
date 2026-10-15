@@ -698,6 +698,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     closedChats: options.closedChats,
     archiveDirtyWorktree: options.archiveDirtyWorktree,
+    pullRequestLookup: options.pullRequestLookup,
     /*
      * How long a session's client calls may wait, when this deployment said.
      *

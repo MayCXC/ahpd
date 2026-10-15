@@ -8,6 +8,7 @@ import { computerNeeds, dispatchNeeds, ACTION_HOMES, ACTION_NEEDS, HOME_WORDS, o
 import { chatUriFor, isRootChannel, MARKS, ROOT, spaceOf, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { chatAction, sessionFlag } from './chatactions.js';
 import { HOSTS_OWN } from './common.js';
+import { AUTO_ARCHIVE_KEY, AUTO_DELETE_KEY } from './merged.js';
 import { claimOf } from './terminals.js';
 import type { HeldCopies, TemplatePlugin } from '../types/clientplugins.js';
 import type { Bag } from '../types/common.js';
@@ -362,6 +363,8 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
           delete connection.trustedFolders;
         }
         into(rootConfig, ours);
+        // A merged sessions key moved: the pass runs now, with the new days.
+        if (Object.prototype.hasOwnProperty.call(config, AUTO_ARCHIVE_KEY) || Object.prototype.hasOwnProperty.call(config, AUTO_DELETE_KEY)) ctx.mergedSoon();
         if (Object.keys(mine).length > 0) into(connection.config ??= {}, mine);
         /*
          * A `workspaceTrust` push answers for every folder at once, so the
@@ -478,6 +481,9 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
         // And what archive does with a dirty tree, read the same way: when a tree is given back.
         const dirtyTree = theirs['archiveDirtyWorktree'];
         if (dirtyTree === 'keep' || dirtyTree === 'commit') ctx.archiveDirtyWorktree = dirtyTree;
+        // And how the merged sessions pass looks a pull request up, read at its next pass.
+        const lookup = theirs['pullRequestLookup'];
+        if (lookup === 'url' || lookup === 'branch') ctx.pullRequestLookup = lookup;
       });
     }
     if (type === 'changeset/filesReviewChanged') {

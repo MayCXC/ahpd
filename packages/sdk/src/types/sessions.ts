@@ -291,6 +291,16 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setWorktree?(id: string, value: StoredWorktree | undefined): void;
   /**
+   * When the host archived this session itself, because its pull requests
+   * were merged, as an ISO time. Nothing for a session a person archived, and
+   * for one that is not archived.
+   *
+   * Optional: a store without it never has a session the host may delete.
+   */
+  autoArchivedAt?(id: string): string | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setAutoArchivedAt?(id: string, value: string | undefined): void;
+  /**
    * The session this one was made by, as a window recorded it, or nothing.
    *
    * Beside the origin rather than part of it: a session is made by another

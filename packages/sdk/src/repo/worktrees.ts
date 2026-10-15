@@ -258,6 +258,15 @@ export function gitWorktrees(): Worktrees {
       const name = said.trim();
       return name === '' ? undefined : name;
     },
+
+    pushed: async (path) => {
+      // No upstream fails `rev-parse`, and that is the same answer as commits
+      // nobody pushed: the branch is not on a remote as it is here.
+      const upstream = await git(path, ['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}'], 10_000).catch(() => '');
+      if (upstream.trim() === '') return false;
+      const ahead = await git(path, ['rev-list', '@{u}..HEAD'], 10_000).catch(() => undefined);
+      return ahead !== undefined && ahead.trim() === '';
+    },
   };
 }
 

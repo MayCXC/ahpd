@@ -24,6 +24,9 @@ const MOST = 10;
  * one, `gh pr list`, which reads the login `gh auth login` left on this
  * machine; a machine with neither answers none rather than failing.
  *
+ * One pull request is asked for by its page the same two ways: the API's
+ * `pulls/<number>`, or `gh pr view`.
+ *
  * ```ts
  * createHost({ path, agents, directories: gitBranches(), github: githubPullRequests() });
  * ```
@@ -79,6 +82,56 @@ export function githubPullRequests(): PullRequests {
       });
     });
 
+  /** A pull request's page as its repository and number, or nothing for a page that is not one. */
+  const pageOf = (url: string): { owner: string; repo: string; number: string } | undefined => {
+    const found = /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)\/?$/.exec(url.trim());
+    if (found === null) return undefined;
+    return { owner: found[1] as string, repo: found[2] as string, number: found[3] as string };
+  };
+
+  const oneByApi = async (url: string, token: string): Promise<PullRequest | undefined> => {
+    const page = pageOf(url);
+    if (page === undefined) return undefined;
+    const answer = await fetch(`https://api.github.com/repos/${page.owner}/${page.repo}/pulls/${page.number}`, {
+      headers: {
+        Accept: 'application/vnd.github+json',
+        Authorization: `Bearer ${token}`,
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+      signal: AbortSignal.timeout(10_000),
+    });
+    // No pull request at that page is an answer, and every other refusal is not.
+    if (answer.status === 404) return undefined;
+    if (!answer.ok) throw new Error(`GitHub answered ${answer.status} for ${url}`);
+    const item = await answer.json() as { html_url?: unknown; state?: unknown; merged_at?: unknown; title?: unknown };
+    if (typeof item.html_url !== 'string') return undefined;
+    return {
+      url: item.html_url,
+      state: stateOf(item.state, item.merged_at != null),
+      ...(typeof item.title === 'string' ? { title: item.title } : {}),
+    };
+  };
+
+  const oneByGh = (url: string, cwd: string): Promise<PullRequest | undefined> =>
+    new Promise((answer, refuse) => {
+      execFile('gh', ['pr', 'view', url, '--json', 'url,state,title'], { cwd, timeout: 10_000, maxBuffer: 1 << 20 }, (error, out, bad) => {
+        if (error) {
+          refuse(new Error(bad.toString().trim() || error.message));
+          return;
+        }
+        const item = JSON.parse(out.toString()) as { url?: unknown; state?: unknown; title?: unknown };
+        if (typeof item.url !== 'string') {
+          answer(undefined);
+          return;
+        }
+        answer({
+          url: item.url,
+          state: stateOf(item.state, String(item.state).toUpperCase() === 'MERGED'),
+          ...(typeof item.title === 'string' ? { title: item.title } : {}),
+        });
+      });
+    });
+
   const createByApi = async (owner: string, repo: string, wanted: NewPullRequest, token: string): Promise<PullRequest> => {
     const answer = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
       method: 'POST',
@@ -124,6 +177,10 @@ export function githubPullRequests(): PullRequests {
     forBranch: async ({ owner, repo }, branch, token, cwd) => {
       if (token !== undefined) return byApi(owner, repo, branch, token);
       return byGh(owner, repo, branch, cwd);
+    },
+    byUrl: async (url, token, cwd) => {
+      if (token !== undefined) return oneByApi(url, token);
+      return oneByGh(url, cwd);
     },
     create: async ({ owner, repo }, wanted, token, cwd) => {
       if (token !== undefined) return createByApi(owner, repo, wanted, token);

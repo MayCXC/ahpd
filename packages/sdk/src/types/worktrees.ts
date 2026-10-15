@@ -155,4 +155,11 @@ export interface Worktrees {
 
   /** The branch checked out in it, or undefined for a detached `HEAD` or a tree git cannot read. */
   head?(path: string): Promise<string | undefined>;
+
+  /**
+   * Whether the branch checked out in it has an upstream and nothing left to
+   * push to it. False for a branch with no upstream, and for a tree git
+   * cannot read.
+   */
+  pushed?(path: string): Promise<boolean>;
 }

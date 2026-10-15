@@ -33,6 +33,7 @@ import type { Automations } from './automations.js';
 import type { SessionEvents } from './sessionevents.js';
 import type { Sleep } from './sleep.js';
 import type { Wakes } from './wakes.js';
+import type { Merged } from './merged.js';
 
 /**
  * Everything an area of the host reaches for, in one object.
@@ -43,7 +44,7 @@ import type { Wakes } from './wakes.js';
  * used rather than copied onto the factory's own scope at construction - so
  * the order the areas are built in never matters and nothing is frozen.
  */
-export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Facts, Telemetry, Auth, Owners, Machines, SessionConfig, Root, Catalogue, History, Snapshots, Spawn, Lifecycle, Tooling, Terminals, Automations, Sleep, Wakes {
+export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Facts, Telemetry, Auth, Owners, Machines, SessionConfig, Root, Catalogue, History, Snapshots, Spawn, Lifecycle, Tooling, Terminals, Automations, Sleep, Wakes, Merged {
   /** The options `createHost` was given. */
   options: HostOptions;
   /** The directory this host serves. */
@@ -208,6 +209,12 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * takes hold while the daemon runs, read when a tree is given back.
    */
   archiveDirtyWorktree: 'keep' | 'commit';
+  /**
+   * How the merged sessions pass learns the state of a pull request: `url`
+   * asks for each related pull request by its page, `branch` asks for the
+   * session's branch. A daemon key that takes hold while the daemon runs.
+   */
+  pullRequestLookup: 'url' | 'branch';
   /** Every tool the host was given, before the permission was applied. */
   contributed: readonly HostTool[];
   /** The tools this host contributes, with the permission applied. */

@@ -83,3 +83,51 @@ describe('the pull requests of a branch', () => {
     await expect(githubPullRequests().forBranch({ owner: 'softov', repo: 'ahpd' }, 'main', undefined, dir)).rejects.toThrow('not logged in');
   });
 });
+
+describe('one pull request by its page', () => {
+  it('asks the API for each page, and reads a merged, an open and a closed one', async () => {
+    const asked: string[] = [];
+    const answers: Record<string, unknown> = {
+      '9': { html_url: 'https://github.com/softov/ahpd/pull/9', state: 'closed', merged_at: '2026-09-13T10:00:00Z', title: 'Merged' },
+      '7': { html_url: 'https://github.com/softov/ahpd/pull/7', state: 'open', merged_at: null, title: 'Open' },
+      '2': { html_url: 'https://github.com/softov/ahpd/pull/2', state: 'closed', merged_at: null, title: 'Closed' },
+    };
+    vi.stubGlobal('fetch', async (url: string, init: { headers: Record<string, string> }) => {
+      asked.push(`${url} ${init.headers.Authorization}`);
+      const number = url.slice(url.lastIndexOf('/') + 1);
+      const found = answers[number];
+      return found === undefined
+        ? { ok: false, status: 404, json: async () => ({}) }
+        : { ok: true, status: 200, json: async () => found };
+    });
+    const port = githubPullRequests();
+    expect(await port.byUrl?.('https://github.com/softov/ahpd/pull/9', 'gho_x', '/tmp'))
+      .toEqual({ url: 'https://github.com/softov/ahpd/pull/9', state: 'merged', title: 'Merged' });
+    expect(await port.byUrl?.('https://github.com/softov/ahpd/pull/7', 'gho_x', '/tmp'))
+      .toEqual({ url: 'https://github.com/softov/ahpd/pull/7', state: 'open', title: 'Open' });
+    expect(await port.byUrl?.('https://github.com/softov/ahpd/pull/2/', 'gho_x', '/tmp'))
+      .toEqual({ url: 'https://github.com/softov/ahpd/pull/2', state: 'closed', title: 'Closed' });
+    // No pull request at the page, and a page that is not a pull request, are none.
+    expect(await port.byUrl?.('https://github.com/softov/ahpd/pull/404', 'gho_x', '/tmp')).toBeUndefined();
+    expect(await port.byUrl?.('https://example.com/softov/ahpd/pull/9', 'gho_x', '/tmp')).toBeUndefined();
+    expect(asked).toEqual([
+      'https://api.github.com/repos/softov/ahpd/pulls/9 Bearer gho_x',
+      'https://api.github.com/repos/softov/ahpd/pulls/7 Bearer gho_x',
+      'https://api.github.com/repos/softov/ahpd/pulls/2 Bearer gho_x',
+      'https://api.github.com/repos/softov/ahpd/pulls/404 Bearer gho_x',
+    ]);
+  });
+
+  it('says so when GitHub refuses, rather than answering none', async () => {
+    vi.stubGlobal('fetch', async () => ({ ok: false, status: 401, json: async () => ({}) }));
+    await expect(githubPullRequests().byUrl?.('https://github.com/softov/ahpd/pull/9', 'bad', '/tmp')).rejects.toThrow('401');
+  });
+
+  it('asks gh without a token, and reads its spelling of a state', async () => {
+    const dir = fakeGh(JSON.stringify({ url: 'https://github.com/softov/ahpd/pull/9', state: 'MERGED', title: 'The fix' }));
+    expect(await githubPullRequests().byUrl?.('https://github.com/softov/ahpd/pull/9', undefined, dir))
+      .toEqual({ url: 'https://github.com/softov/ahpd/pull/9', state: 'merged', title: 'The fix' });
+    const { readFileSync } = await import('node:fs');
+    expect(readFileSync(join(dir, 'asked'), 'utf8').trim()).toBe('pr view https://github.com/softov/ahpd/pull/9 --json url,state,title');
+  });
+});

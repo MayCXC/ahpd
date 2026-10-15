@@ -447,6 +447,15 @@ export interface HostOptions {
    */
   archiveDirtyWorktree?: 'keep' | 'commit';
   /**
+   * How the pass that archives and deletes merged sessions learns the state
+   * of a pull request.
+   *
+   * `url`, which is the default, asks `PullRequests.byUrl` for each pull
+   * request related to the session, and asks by branch when the port has no
+   * `byUrl`. `branch` asks `PullRequests.forBranch` for the session's branch.
+   */
+  pullRequestLookup?: 'url' | 'branch';
+  /**
    * How long a call a client runs may wait before the host calls it failed.
    *
    * A client's tool call blocks the turn that made it, and a client that has

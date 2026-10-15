@@ -30,6 +30,8 @@ interface Held {
   setWorkingDirectory(id: string, value: string | undefined): void;
   worktree(id: string): StoredWorktree | undefined;
   setWorktree(id: string, value: StoredWorktree | undefined): void;
+  autoArchivedAt(id: string): string | undefined;
+  setAutoArchivedAt(id: string, value: string | undefined): void;
   /** Everything held about one session, in the file's field order, or nothing where nothing is. */
   rowOf(id: string): Row | undefined;
 }
@@ -123,6 +125,8 @@ export function memorySessions(): SessionStore & Held {
     setCreatedBy: (id, value) => { patch(id, { createdBy: value }); },
     worktree: (id) => rows.get(id)?.worktree,
     setWorktree: (id, value) => { patch(id, { worktree: value }); },
+    autoArchivedAt: (id) => rows.get(id)?.autoArchivedAt,
+    setAutoArchivedAt: (id, value) => { patch(id, { autoArchivedAt: value === '' ? undefined : value }); },
     workingDirectory: (id) => rows.get(id)?.workingDirectory,
     setWorkingDirectory: (id, value) => { patch(id, { workingDirectory: value === '' ? undefined : value }); },
     nestedSessions: () => [...rows.entries()]
@@ -234,6 +238,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
         ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
         ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
+        ...(held.autoArchivedAt === undefined ? {} : { autoArchivedAt: held.autoArchivedAt }),
       };
     },
     forget: (id) => { rows.delete(id); },
@@ -377,6 +382,7 @@ interface Row {
   createdBy?: CreatedBy | undefined;
   workingDirectory?: string | undefined;
   worktree?: StoredWorktree | undefined;
+  autoArchivedAt?: string | undefined;
 }
 
 /**
@@ -392,7 +398,8 @@ const empty = (row: Row): boolean =>
   && row.artifacts === undefined && row.pullRequests === undefined && row.chatTitles === undefined
   && row.chatFlags === undefined
   && row.parent === undefined && row.nested === undefined && row.chats === undefined
-  && row.remoteOrigin === undefined && row.createdBy === undefined && row.worktree === undefined;
+  && row.remoteOrigin === undefined && row.createdBy === undefined && row.worktree === undefined
+  && row.autoArchivedAt === undefined;
 
 /**
  * What is persisted for one session: a `Row` as the file holds it.
@@ -429,6 +436,8 @@ interface Saved {
   workingDirectory?: string;
   /** The worktree this host made for the session. */
   worktree?: StoredWorktree;
+  /** When the host archived the session because its pull requests were merged. */
+  autoArchivedAt?: string;
 }
 
 /**
@@ -565,6 +574,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.createdBy === undefined ? {} : { createdBy: held.createdBy }),
       ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
       ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
+      ...(held.autoArchivedAt === undefined ? {} : { autoArchivedAt: held.autoArchivedAt }),
     };
   };
 
@@ -715,6 +725,11 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       if (typeof row.workingDirectory === 'string' && row.workingDirectory !== '') inner.setWorkingDirectory(row.id, row.workingDirectory);
       const worktree = worktreeOf(row.worktree);
       if (worktree !== undefined) inner.setWorktree(row.id, worktree);
+      // A time, and anything that is not one is ignored rather than guessed
+      // at, since this record decides which session a host deletes.
+      if (typeof row.autoArchivedAt === 'string' && !Number.isNaN(Date.parse(row.autoArchivedAt))) {
+        inner.setAutoArchivedAt(row.id, row.autoArchivedAt);
+      }
     }
   };
 
@@ -746,6 +761,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setCreatedBy: (id, value) => { touched(id, () => { inner.setCreatedBy?.(id, value); }); },
     worktree: (id) => inner.worktree(id),
     setWorktree: (id, value) => { touched(id, () => { inner.setWorktree(id, value); }); },
+    autoArchivedAt: (id) => inner.autoArchivedAt(id),
+    setAutoArchivedAt: (id, value) => { touched(id, () => { inner.setAutoArchivedAt(id, value); }); },
     workingDirectory: (id) => inner.workingDirectory(id),
     setWorkingDirectory: (id, value) => { touched(id, () => { inner.setWorkingDirectory(id, value); }); },
     artifacts: (id) => inner.artifacts(id),

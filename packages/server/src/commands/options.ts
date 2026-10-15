@@ -76,6 +76,8 @@ export interface Options {
   closedChats: 'hidden' | 'delete';
   /** What archiving a session does with a working tree that has changes nobody committed. */
   archiveDirtyWorktree: 'keep' | 'commit';
+  /** How the merged sessions pass learns the state of a pull request. */
+  pullRequestLookup: 'url' | 'branch';
   /** How long a call a client runs may wait, absent when the deployment said nothing. */
   clientToolTimeoutMs?: number;
   /** The environment every shell this host starts is given, absent when the deployment named none. */
@@ -507,6 +509,11 @@ export const serverFields = {
     type: 'string',
     enum: ['keep', 'commit'],
     description: 'What archiving a session does with a working tree that has uncommitted changes: keep leaves the tree, commit commits the changes on its branch and removes the tree.',
+  },
+  pullRequestLookup: {
+    type: 'string',
+    enum: ['url', 'branch'],
+    description: 'How merged sessions learn the state of a pull request: url asks for each pull request by its page, branch asks for the pull requests of the session\'s branch.',
   },
   clientToolTimeoutMs: {
     type: 'integer',
@@ -1091,6 +1098,7 @@ const noCwd = input['noCwd'] === true;
     sessionToolsProviders: given('sessionToolsProviders') ?? [],
     closedChats: given('closedChats') ?? 'hidden',
     archiveDirtyWorktree: given('archiveDirtyWorktree') ?? 'keep',
+    pullRequestLookup: given('pullRequestLookup') ?? 'url',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),

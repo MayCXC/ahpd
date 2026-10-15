@@ -73,6 +73,7 @@ import { createAutomations } from './host/automations.js';
 import { createHistory } from './host/history.js';
 import { createSnapshots } from './host/snapshots.js';
 import { createSleep } from './host/sleep.js';
+import { createMerged } from './host/merged.js';
 import { createWakes } from './host/wakes.js';
 import { createTelemetry } from './host/telemetry.js';
 import { createAuth } from './host/auth.js';
@@ -935,6 +936,7 @@ export function createHost(options: HostOptions): Host {
   Object.assign(ctx, createHistory(ctx));
   Object.assign(ctx, createSnapshots(ctx));
   Object.assign(ctx, createSleep(ctx));
+  Object.assign(ctx, createMerged(ctx));
   Object.assign(ctx, createWakes(ctx));
   /*
    * The state a subscriber reads, with the entries and the client plugins on it.
@@ -1053,6 +1055,7 @@ export function createHost(options: HostOptions): Host {
 
   ctx.startSleep();
   ctx.startWakes();
+  ctx.startMerged();
 
   options.automations?.onDue?.(due);
 
@@ -1115,6 +1118,7 @@ export function createHost(options: HostOptions): Host {
         deltas.stop();
         ctx.stopSleep();
         ctx.stopWakes();
+        ctx.stopMerged();
         ctx.closed = true;
         /*
          * And no wait outlives the host it was begun in. What a client that

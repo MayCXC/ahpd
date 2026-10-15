@@ -41,6 +41,14 @@ export interface PullRequests {
    */
   forBranch(repo: { owner: string; repo: string }, branch: string, token: string | undefined, cwd: string): Promise<PullRequest[]>;
   /**
+   * One pull request, by its page, or undefined when GitHub has no pull
+   * request there.
+   *
+   * The same token rule as `forBranch`. Optional: a host whose port has none
+   * asks by branch instead.
+   */
+  byUrl?(url: string, token: string | undefined, cwd: string): Promise<PullRequest | undefined>;
+  /**
    * Open one, from a branch already pushed, answering its page.
    *
    * `head` is the branch on the repository's own remote; a fork is

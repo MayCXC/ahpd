@@ -231,6 +231,14 @@ export interface Config {
    */
   archiveDirtyWorktree?: 'keep' | 'commit';
   /**
+   * How the pass that archives and deletes merged sessions learns the state of
+   * a pull request.
+   *
+   * `url`, the default, asks GitHub for each related pull request by its page.
+   * `branch` asks for the pull requests of the session's branch.
+   */
+  pullRequestLookup?: 'url' | 'branch';
+  /**
    * How long a call a client runs may wait before it is failed.
    *
    * Unset is ten minutes; zero waits for ever, for a deployment whose clients

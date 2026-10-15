@@ -1242,6 +1242,28 @@ it('keeps the worktree a session runs in across a restart, and ignores one that 
   expect(memorySessions().worktree?.('a')).toBeUndefined();
 });
 
+it('keeps the time the host archived a session across a restart, and ignores one that is not a time', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  store.setAutoArchivedAt?.('a', '2026-10-15T08:00:00.000Z');
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toEqual({ version: 1, id: 'a', autoArchivedAt: '2026-10-15T08:00:00.000Z' });
+  // Read back by a second store on the same folder, which is what a restart is.
+  const second = fileSessions({ dir });
+  expect(second.autoArchivedAt?.('a')).toBe('2026-10-15T08:00:00.000Z');
+  expect(second.autoArchivedAt?.('nobody')).toBeUndefined();
+  // A value that is not a time is ignored, since this time decides which session a host deletes.
+  writeFileSync(join(dir, 'b.json'), JSON.stringify({ version: 1, id: 'b', provider: 'echo', autoArchivedAt: 'yesterday' }));
+  writeFileSync(join(dir, 'c.json'), JSON.stringify({ version: 1, id: 'c', provider: 'echo', autoArchivedAt: 7 }));
+  const third = fileSessions({ dir });
+  expect(third.autoArchivedAt?.('b')).toBeUndefined();
+  expect(third.autoArchivedAt?.('c')).toBeUndefined();
+  third.setAutoArchivedAt?.('a', undefined);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  expect(row(dir, 'a')).toBeUndefined();
+  expect(memorySessions().autoArchivedAt?.('a')).toBeUndefined();
+});
+
 it('starts empty and says so when a file cannot be read', () => {
   const dir = join(root, 'sessions');
   mkdirSync(dir, { recursive: true });
