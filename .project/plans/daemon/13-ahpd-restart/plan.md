@@ -1,7 +1,7 @@
 ---
 title: "`ahpd restart` restarts the daemon in place, and refuses while a turn runs"
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-09-29
 revalidated: 2026-09-29
@@ -106,7 +106,7 @@ The files read are the `refs` above.
 - **Done so far:** tasks 01 to 04 done. `plugin config` names the recorded `--plugin-option` that overrides a key it set, at the terminal and in the served answer, and `docs/DAEMON.md` says the line.
 - **Reviews applied:** the first review of 2026-09-30, the terminal signalling only and waiting while the old daemon stops; the second, with the receipt line, refusals tagged by signal, the claimed record, the grace close and the quiesce; the third, with `stop` forgetting only its daemon's record, `Host.close` awaited and refusing new work, the line and token read before going down, the record's lock, the announcement by pid, Bun and Deno closes, and the terminal's words. The fourth, with the lock made whole by a hard link and reaped by compare, every failure after the way down began exiting 1, `Host.close` steps each logged and the stores closed after the wait, the turns read again after the line, `typedValue` refusing only what loses its value, and the log read from its offset. The fifth, with the lock dropped at Softov's answer, the listen tests waiting on the request rather than the clock, the receipt's words, `typedValue` alike at every depth, and a close waiting for automation runs already starting. The merge-readiness review, with a file that holds no record cleared, the child stopped when its record cannot be written, and the temp sweep keeping another user's pid.
 - **Checked by hand:** on Linux, 2026-10-15, at `3cf1dc13`, on a second daemon with its own config folder. The checks below pass. The Restart button in ahpapp is not pressed yet; it waits in [a-client-restarts-the-daemon.md](../../../ideas/a-client-restarts-the-daemon.md).
-- **Next action:** `implemented.md` and `status: built`.
+- **Next action:** none. Built 2026-10-15; see [implemented.md](implemented.md).
 - **Watch out for:** `start` leaves out the program globals (`--remote`, `--token`); the recorded argv must be the child's, not the parent's.
 - **Watch out for:** a signal names no sender, so two terminals sending the same kind of signal read the same answer; they asked for the same thing, so either answer is true for both.
 
@@ -116,5 +116,5 @@ The files read are the `refs` above.
 - [x] With a turn running, `ahpd restart` names the session and does nothing; `--force` restarts.
 - [x] `POST /api/restart` restarts a daemon started with `ahpd start` and `"http": true`.
 - [x] Started with `--plugin-option agent-claude.workerStop=session`, `ahpd plugin config agent-claude workerStop worker` says the flag overrides it.
-- [ ] `pnpm typecheck`, `pnpm boundary`, full `pnpm test`.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm typecheck`, `pnpm boundary`, full `pnpm test`.
+- [x] `plans/index.md` updated.

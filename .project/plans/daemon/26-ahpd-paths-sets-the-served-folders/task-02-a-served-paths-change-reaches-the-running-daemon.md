@@ -1,6 +1,6 @@
 ---
 title: a served paths change reaches the running daemon
-status: implemented
+status: done
 depends: [task-01-ahpd-paths-lists-adds-and-removes-a-folder.md]
 layer: server
 refs:

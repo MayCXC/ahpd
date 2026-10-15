@@ -1,6 +1,6 @@
 ---
 title: what the Windows run found in ahpd paths is fixed
-status: implemented
+status: done
 depends: [task-02-a-served-paths-change-reaches-the-running-daemon.md]
 layer: server
 refs:

@@ -1,6 +1,6 @@
 ---
 title: ahpd paths lists, adds and removes a folder
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

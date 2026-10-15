@@ -1,6 +1,6 @@
 ---
 title: status shows the start folder
-status: implemented
+status: done
 depends: [task-04-the-first-add-keeps-the-start-folder.md]
 layer: server
 refs:

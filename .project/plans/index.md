@@ -28,7 +28,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [10 - `ahpd configure` sets the daemon up, and a first start at a terminal offers it](daemon/10-a-first-run-sets-the-daemon-up/plan.md) | medium | built 2026-10-02 ([implemented.md](daemon/10-a-first-run-sets-the-daemon-up/implemented.md)) | daemon 09 | - |
 | [11 - Root config carries the daemon's settings and each plugin's options, and a client edits them](daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md) | high | built 2026-10-02 ([implemented.md](daemon/11-root-config-carries-the-daemon-and-its-plugins/implemented.md)) | - | - |
 | [12 - A plugin option is set from the command line, in the file or for one run](daemon/12-a-plugin-option-is-set-from-the-command-line/plan.md) | medium | built 2026-10-04 ([implemented.md](daemon/12-a-plugin-option-is-set-from-the-command-line/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65; by-hand checks not run | - | - |
-| [13 - `ahpd restart` restarts the daemon in place, and refuses while a turn runs](daemon/13-ahpd-restart/plan.md) | high | active 2026-09-30; tasks 01-04 done; checked on Linux 2026-10-15; the ahpapp Restart button waits in an idea | - | - |
+| [13 - `ahpd restart` restarts the daemon in place, and refuses while a turn runs](daemon/13-ahpd-restart/plan.md) | high | built 2026-10-15 | - | - |
 | [14 - The daemon log rotates at start](daemon/14-the-daemon-log-rotates-at-start/plan.md) | low | built 2026-10-02 ([implemented.md](daemon/14-the-daemon-log-rotates-at-start/implemented.md)) | - | - |
 | [15 - A verb declares only the flags it reads](daemon/15-a-verb-declares-only-its-own-flags/plan.md) | medium | built 2026-10-06 ([implemented.md](daemon/15-a-verb-declares-only-its-own-flags/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | - | - |
 | [16 - A command says what it does to what, and the daemon serves on the cofold that checks it](daemon/16-a-command-says-what-it-does-to-what/plan.md) | high | built 2026-10-06 ([implemented.md](daemon/16-a-command-says-what-it-does-to-what/implemented.md)) | cofold commands/03, commands/04 | ahpd-web resource screens |
@@ -37,11 +37,11 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); checked 2026-10-13 | daemon 11 | - |
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-14; task 06 implemented and reviewed; the Windows checks wait in `pending/windows-checks.md` | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | active 2026-10-15; task 01 implemented and reviewed, checked on Linux 2026-10-15; task 02 todo; the Windows check waits in `pending/windows-checks.md` | daemon 20 | - |
-| [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; checked on Linux 2026-10-15 | - | - |
+| [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | built 2026-10-15 | - | - |
 | [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
-| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented and reviewed; checked on Windows 2026-10-14 and on Linux 2026-10-15 | - | - |
+| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
 
 Next free number in `daemon`: `27`.
 
