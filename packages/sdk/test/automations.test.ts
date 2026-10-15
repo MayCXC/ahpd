@@ -417,6 +417,24 @@ describe('a template that names client plugins', () => {
     });
     expect('customizations' in (answer.automations ?? {})).toBe(false);
   });
+
+  it('says its automations run with no client', async () => {
+    const host = createHost({ path: DIR, agents: [echo({ path: DIR })], automations: memoryAutomations() });
+    const answer = await host.accept(peer()).handle({
+      method: 'initialize',
+      params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: [] },
+    }) as { _meta?: Record<string, unknown> };
+    expect(answer._meta?.['vscode.autonomousAutomations']).toBe(true);
+  });
+
+  it('says nothing of autonomous automations on a host with no automation store', async () => {
+    const host = createHost({ path: DIR, agents: [echo({ path: DIR })] });
+    const answer = await host.accept(peer()).handle({
+      method: 'initialize',
+      params: { clientId: 'a', protocolVersions: ['0.9.0'], initialSubscriptions: [] },
+    }) as { _meta?: Record<string, unknown> };
+    expect('vscode.autonomousAutomations' in (answer._meta ?? {})).toBe(false);
+  });
 });
 
 /*

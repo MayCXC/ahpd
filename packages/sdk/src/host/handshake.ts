@@ -304,6 +304,10 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
           'vscode.removeSessionArtifact': true,
           'vscode.detachedWorktrees': true,
           'vscode.getAgentHostSessionStateFile.chat': true,
+          // A run of this host's automations needs no client connected. The
+          // reference client offers a host's automations only where it says
+          // so, so it goes with the `automations` capability above.
+          ...(options.automations ? { 'vscode.autonomousAutomations': true } : {}),
           /*
            * This host's session URIs are the AHP ones, and not the legacy
            * `provider:/id` spelling.
