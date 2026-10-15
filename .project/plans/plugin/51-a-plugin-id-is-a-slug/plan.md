@@ -108,7 +108,7 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 
 ## Resume state
 
-- **Done so far:** the plan and tasks 01 to 07, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
+- **Done so far:** the plan and tasks 01 to 07, 2026-10-14. Task 04 is ahpw commit `e500c19`.
 - **Next action:** review tasks 05, 06 and 07.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
