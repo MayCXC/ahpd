@@ -74,6 +74,8 @@ export interface Options {
   sessionToolsProviders: string[];
   /** What closing one chat of a session does to that chat's conversation in the backend. */
   closedChats: 'hidden' | 'delete';
+  /** What archiving a session does with a working tree that has changes nobody committed. */
+  archiveDirtyWorktree: 'keep' | 'commit';
   /** How long a call a client runs may wait, absent when the deployment said nothing. */
   clientToolTimeoutMs?: number;
   /** The environment every shell this host starts is given, absent when the deployment named none. */
@@ -500,6 +502,11 @@ export const serverFields = {
     type: 'string',
     enum: ['hidden', 'delete'],
     description: 'What closing one chat of a session does to its conversation in the backend: hidden keeps it, delete removes it.',
+  },
+  archiveDirtyWorktree: {
+    type: 'string',
+    enum: ['keep', 'commit'],
+    description: 'What archiving a session does with a working tree that has uncommitted changes: keep leaves the tree, commit commits the changes on its branch and removes the tree.',
   },
   clientToolTimeoutMs: {
     type: 'integer',
@@ -1083,6 +1090,7 @@ const noCwd = input['noCwd'] === true;
     sessionTools: given('sessionTools') ?? true,
     sessionToolsProviders: given('sessionToolsProviders') ?? [],
     closedChats: given('closedChats') ?? 'hidden',
+    archiveDirtyWorktree: given('archiveDirtyWorktree') ?? 'keep',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),

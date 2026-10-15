@@ -68,7 +68,7 @@ describe('the daemon keys root config carries', () => {
   it('are the twelve of them, and none of the others', () => {
     const { schema } = port();
     const properties = (schema() as { properties: Record<string, unknown> }).properties;
-    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
+    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'wire', 'mcpServers']);
     for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'trustToken', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
       expect(Object.keys(properties)).not.toContain(key);
     }
@@ -105,6 +105,7 @@ describe('the schema a client reads', () => {
     expect(written['sessionToolsProviders']).toMatchObject({ type: 'array', title: 'Session tool providers', items: { type: 'string', title: 'Provider' } });
     expect(written['sessionToolsProviders']).not.toHaveProperty('default');
     expect(written['closedChats']).toMatchObject({ type: 'string', title: 'Closed Chats', enum: ['hidden', 'delete'] });
+    expect(written['archiveDirtyWorktree']).toMatchObject({ type: 'string', enum: ['keep', 'commit'] });
     expect(written['wire']).toMatchObject({ type: 'string', title: 'Wire capture' });
     expect(written['mcpServers']).toMatchObject({ type: 'object', title: 'MCP servers' });
   });
@@ -318,11 +319,12 @@ describe('the keys that apply while this daemon runs', () => {
     expect(await port().write({ host: '127.0.0.2' })).toEqual({ restartNeeded: true });
   });
 
-  it('answers no restart for the tool keys and closedChats, which apply here', async () => {
+  it('answers no restart for the tool keys, closedChats and archiveDirtyWorktree, which apply here', async () => {
     expect(await port().write({ advancedTools: true })).toEqual({ restartNeeded: false });
     expect(await port().write({ sessionTools: false })).toEqual({ restartNeeded: false });
     expect(await port().write({ sessionToolsProviders: ['claude'] })).toEqual({ restartNeeded: false });
     expect(await port().write({ closedChats: 'delete' })).toEqual({ restartNeeded: false });
+    expect(await port().write({ archiveDirtyWorktree: 'commit' })).toEqual({ restartNeeded: false });
   });
 });
 

@@ -697,6 +697,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * a daemon setting, not a per-session one.
      */
     closedChats: options.closedChats,
+    archiveDirtyWorktree: options.archiveDirtyWorktree,
     /*
      * How long a session's client calls may wait, when this deployment said.
      *
@@ -1116,6 +1117,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       ? (options.sessionToolsProviders.length === 0 ? '' : `session tools: offered to ${options.sessionToolsProviders.join(', ')}\n`)
       : 'session tools: offered to no session\n')
     + (options.closedChats === 'hidden' ? '' : 'closed chats: their conversations are deleted\n')
+    + (options.archiveDirtyWorktree === 'keep' ? '' : 'archived sessions: uncommitted changes are committed, then the tree is removed\n')
     + (options.wire === undefined ? '' : `wire to ${options.wire}\n`)
     // What this daemon started without, one line each, so whoever started it
     // reads it here rather than in the log they are not watching. The line

@@ -11,6 +11,8 @@ import { fileResources } from '../src/resources.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { ComputerPort, MachineSource } from '../src/types/computers.js';
 import type { GitDir, Worktrees } from '../src/types/worktrees.js';
+import type { Agent } from '../src/types/agent.js';
+import type { HostOptions } from '../src/types/host.js';
 
 /*
  * A working tree of a session's own.
@@ -90,8 +92,8 @@ const observed = () => {
   const removed: string[] = [];
   const port: Worktrees = {
     ...base,
-    dirty: (path) => { const answer = base.dirty(path); checks.push(answer); return answer; },
-    remove: (repository, path, branch) => { removed.push(path); return base.remove(repository, path, branch); },
+    dirty: (path, linked) => { const answer = base.dirty(path, linked); checks.push(answer); return answer; },
+    remove: (repository, path, branch, linked) => { removed.push(path); return base.remove(repository, path, branch, linked); },
   };
   // Every check answered, and whatever the host did next with the answer run.
   const settled = async (): Promise<void> => {
@@ -157,6 +159,37 @@ const until = async (
     await new Promise((resolve) => { setTimeout(resolve, 20); });
   }
   throw new Error(`${uri} never got there`);
+};
+
+/** Start a turn on a chat and wait until it has finished. */
+const say = async (client: Awaited<ReturnType<typeof joined>>['client'], chat: string, turnId: string): Promise<void> => {
+  const turns = async (): Promise<number> => ((await client.handle({ method: 'subscribe', params: { channel: chat } }) as {
+    snapshot: { state: { turns: unknown[]; activeTurn?: unknown } };
+  }).snapshot.state.turns.length);
+  const before = await turns();
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: chat, clientSeq: 0, action: { type: 'chat/turnStarted', turnId, message: { text: 'hello' } } },
+  });
+  for (let tries = 0; tries < 200 && await turns() === before; tries++) await new Promise((r) => { setTimeout(r, 10); });
+  await client.handle({ method: 'unsubscribe', params: { channel: chat } });
+};
+
+/**
+ * A session's tree and its default chat, after one finished turn and with
+ * nobody watching either: the state a session has to be in to sleep.
+ */
+const spoken = async (
+  client: Awaited<ReturnType<typeof joined>>['client'],
+  uri: string,
+): Promise<{ where: string; chat: string }> => {
+  const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    snapshot: { state: { defaultChat: string; workingDirectories: string[] } };
+  }).snapshot.state;
+  const where = (state.workingDirectories[0] ?? '').replace('file://', '');
+  await say(client, state.defaultChat, 't1');
+  await client.handle({ method: 'unsubscribe', params: { channel: uri } });
+  return { where, chat: state.defaultChat };
 };
 
 describe('a session with a working tree of its own', () => {
@@ -874,6 +907,39 @@ describe('a session with a working tree of its own', () => {
     expect(listed).toContain(where);
   });
 
+  it('takes a clean worktree away with a session deleted after a restart', async () => {
+    const root = repository();
+    // One backend and one store for both hosts, because what a restart leaves
+    // behind is the store and the transcripts rather than the process.
+    const agent = echo({ path: project(root), pace: 0 });
+    const store = memorySessions();
+    const host = (): ReturnType<typeof createHost> => createHost({ path: root, agents: [agent], worktrees: gitWorktrees(), sessions: store });
+    const first = host().accept(peer());
+    await first.handle({ method: 'initialize', params: { clientId: 'probe', protocolVersions: ['0.9.0'] } });
+    const uri = 'ahp-session:/restarted';
+    await first.handle({
+      method: 'createSession',
+      params: {
+        channel: uri, provider: 'echo',
+        workingDirectories: [`file://${project(root)}`],
+        config: { isolation: 'worktree', branch: 'main' },
+      },
+    });
+    const { where, chat } = await spoken(first, uri);
+    const branch = branchOf(where);
+    expect(store.worktree?.('restarted')).toEqual({ repository: project(root), path: where, base: 'main', branch });
+
+    // A second host over the same store knows the tree only from the record.
+    const second = host().accept(peer());
+    await second.handle({ method: 'initialize', params: { clientId: 'probe', protocolVersions: ['0.9.0'] } });
+    await second.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
+    await say(second, chat, 't2');
+    await second.handle({ method: 'disposeSession', params: { channel: 'echo:/restarted' } });
+    await cleared(project(root), branch);
+    expect(existsSync(where)).toBe(false);
+    expect(store.worktree?.('restarted')).toBeUndefined();
+  });
+
   it('isolates a session whose host serves only the project itself', async () => {
     const root = repository();
     // Worktrees sit beside their repository, outside `--path`. That was a
@@ -904,6 +970,413 @@ describe('a session with a working tree of its own', () => {
       method: 'resourceList', params: { channel: 'ahp-root://', uri: `file://${where}` },
     }) as { entries: { name: string }[] };
     expect(seen.entries.map((e) => e.name)).toContain('.git');
+  });
+});
+
+describe('an archived session\'s tree', () => {
+  /*
+   * Archive gives a clean tree back and keeps its branch; unarchive, or a
+   * wake of the archived session, puts it back at the same path on the same
+   * branch. Every case waits on the host's own log line for the step it is
+   * about, since neither half is awaited by the action that started it.
+   */
+  const archiving = async (
+    root: string,
+    options: {
+      worktrees?: Worktrees; agent?: Agent; archiveDirtyWorktree?: 'keep' | 'commit'; rootConfig?: HostOptions['rootConfig'];
+    } = {},
+  ) => {
+    const lines: string[] = [];
+    const store = memorySessions();
+    const host = createHost({
+      path: root,
+      agents: [options.agent ?? echo({ path: project(root), pace: 0 })],
+      worktrees: options.worktrees ?? gitWorktrees(),
+      sessions: store,
+      onEvent: (line) => { lines.push(line); },
+      ...(options.archiveDirtyWorktree === undefined ? {} : { archiveDirtyWorktree: options.archiveDirtyWorktree }),
+      ...(options.rootConfig === undefined ? {} : { rootConfig: options.rootConfig }),
+    });
+    const client = host.accept(peer());
+    await client.handle({ method: 'initialize', params: { clientId: 'probe', protocolVersions: ['0.9.0'] } });
+    /** The first log line that holds `text`, once there is one. */
+    const logged = async (text: string): Promise<string> => {
+      for (let tries = 0; tries < 400; tries++) {
+        const line = lines.find((one) => one.includes(text));
+        if (line !== undefined) return line;
+        await new Promise((r) => { setTimeout(r, 10); });
+      }
+      throw new Error(`never logged "${text}" in:\n${lines.join('\n')}`);
+    };
+    const open = async (name: string, config: Record<string, unknown> = {}) => {
+      const channel = `ahp-session:/${name}`;
+      await client.handle({
+        method: 'createSession',
+        params: {
+          channel, provider: 'echo',
+          workingDirectories: [`file://${project(root)}`],
+          config: { isolation: 'worktree', branch: 'main', ...config },
+        },
+      });
+      return { channel, ...await spoken(client, channel) };
+    };
+    const archive = (channel: string, isArchived: boolean) => client.handle({
+      method: 'dispatchAction',
+      params: { channel, clientSeq: 0, action: { type: 'session/isArchivedChanged', isArchived } },
+    });
+    return { client, store, lines, logged, open, archive };
+  };
+
+  /** The subjects of a branch's commits, newest first. */
+  const subjects = (root: string, branch: string): string[] =>
+    execFileSync('git', ['-C', project(root), 'log', '--format=%s', branch]).toString().trim().split('\n');
+
+  const branches = (root: string): string => execFileSync('git', ['-C', project(root), 'branch', '--list']).toString();
+
+  it('takes a clean tree away when the archived session sleeps, and keeps its branch', async () => {
+    const root = repository();
+    const { store, logged, open, archive } = await archiving(root);
+    const one = await open('tidy');
+    const branch = branchOf(one.where);
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+    expect(branches(root)).toContain(branch);
+    // The record stays, because it is what an unarchive puts the tree back from.
+    expect(store.worktree?.('tidy')).toMatchObject({ path: one.where, branch });
+  });
+
+  it('keeps a tree with changes nobody committed, and says so', async () => {
+    const root = repository();
+    const watched = observed();
+    const { logged, open, archive } = await archiving(root, { worktrees: watched.port });
+    const one = await open('busy');
+    writeFileSync(join(one.where, 'unsaved.txt'), 'the whole point\n');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: it has changes nobody committed`);
+    expect(watched.removed).toEqual([]);
+    expect(readFileSync(join(one.where, 'unsaved.txt'), 'utf8')).toBe('the whole point\n');
+  });
+
+  it('puts the tree back on its branch on unarchive, with its folders linked again', async () => {
+    const root = repository();
+    // `.gitignore` names `node_modules/` as a directory, so git lists the link
+    // as untracked; it is the host's own link, and the tree is still clean.
+    const { store, logged, open, archive } = await archiving(root);
+    const one = await open('linked', { worktreeSymlinkFolders: ['node_modules'] });
+    const branch = branchOf(one.where);
+    execFileSync('git', ['-C', one.where, 'commit', '-q', '--allow-empty', '-m', 'the session\'s own'], { stdio: 'pipe' });
+    expect(lstatSync(join(one.where, 'node_modules')).isSymbolicLink()).toBe(true);
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+
+    await archive(one.channel, false);
+    await logged(`put ${one.where} back on ${branch}`);
+    expect(branchOf(one.where)).toBe(branch);
+    expect(execFileSync('git', ['-C', one.where, 'log', '-1', '--format=%s']).toString().trim()).toBe('the session\'s own');
+    expect(lstatSync(join(one.where, 'node_modules')).isSymbolicLink()).toBe(true);
+    expect(readFileSync(join(one.where, 'node_modules', 'dep', 'index.js'), 'utf8')).toBe('installed\n');
+    expect(store.worktree?.('linked')).toMatchObject({ path: one.where, branch });
+  });
+
+  it('leaves the tree in place for an archive and an unarchive sent together', async () => {
+    const root = repository();
+    const { lines, open, archive } = await archiving(root);
+    const one = await open('together');
+    await Promise.all([archive(one.channel, true), archive(one.channel, false)]);
+    await new Promise((r) => { setTimeout(r, 300); });
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+    expect(lines.some((line) => line.includes(`removed ${one.where}`))).toBe(false);
+  });
+
+  it('leaves the tree in place for an unarchive sent while the archive was deciding', async () => {
+    const root = repository();
+    const base = gitWorktrees();
+    // The dirty check held open until the test lets it answer.
+    let asked!: () => void;
+    const checking = new Promise<void>((r) => { asked = r; });
+    let answer!: () => void;
+    const answered = new Promise<void>((r) => { answer = r; });
+    const removed: string[] = [];
+    const port: Worktrees = {
+      ...base,
+      dirty: async (path, linked) => { asked(); await answered; return base.dirty(path, linked); },
+      remove: (repository, path, branch, linked) => { removed.push(path); return base.remove(repository, path, branch, linked); },
+    };
+    const { lines, open, archive } = await archiving(root, { worktrees: port });
+    const one = await open('undecided');
+    await archive(one.channel, true);
+    await checking;
+    await archive(one.channel, false);
+    answer();
+    await new Promise((r) => { setTimeout(r, 300); });
+    expect(removed).toEqual([]);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+    expect(lines.some((line) => line.includes(`removed ${one.where}`))).toBe(false);
+  });
+
+  it('leaves a tree the window holds a handle on to the window', async () => {
+    const root = repository();
+    const { client, lines, logged, open, archive } = await archiving(root);
+    const one = await open('handled');
+    await client.handle({ method: 'vscode/createAgentHostDetachedWorktree', params: { session: one.channel, prompt: 'x' } });
+    await archive(one.channel, true);
+    await logged('slept');
+    await new Promise((r) => { setTimeout(r, 200); });
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+    expect(lines.some((line) => line.includes(`removed ${one.where}`))).toBe(false);
+  });
+
+  it('keeps a tree with no branch of its own, and says why', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root);
+    // A checkout of `release` itself: the branch is not the session's to keep.
+    const one = await open('continued', { branch: 'release', worktreeCreateNewBranch: 'false' });
+    expect(branchOf(one.where)).toBe('release');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: it has no branch of its own`);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+  });
+
+  it('puts the tree back before the agent starts, when an archived session is woken', async () => {
+    const root = repository();
+    const base = echo({ path: project(root), pace: 0 });
+    let where = '';
+    // Whether the tree was there each time the backend was asked to run the session.
+    const seen: boolean[] = [];
+    const agent: Agent = {
+      ...base,
+      create: (...args: Parameters<Agent['create']>) => { seen.push(where !== '' && existsSync(where)); return base.create(...args); },
+    };
+    const { client, logged, open, archive } = await archiving(root, { agent });
+    const one = await open('woken');
+    where = one.where;
+    const branch = branchOf(one.where);
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+
+    seen.length = 0;
+    await say(client, one.chat, 't2');
+    await logged(`put ${one.where} back on ${branch}`);
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((there) => there)).toBe(true);
+    expect(branchOf(one.where)).toBe(branch);
+  });
+
+  it('keeps a tree whose HEAD has left its branch with a commit, and says why', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root);
+    const one = await open('wandered');
+    execFileSync('git', ['-C', one.where, 'checkout', '-q', '--detach'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', one.where, 'commit', '-q', '--allow-empty', '-m', 'only here'], { stdio: 'pipe' });
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: its HEAD is not on a branch`);
+    expect(execFileSync('git', ['-C', one.where, 'log', '-1', '--format=%s']).toString().trim()).toBe('only here');
+  });
+
+  it('keeps a tree with another branch checked out, and says why', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root);
+    const one = await open('elsewhere');
+    const branch = branchOf(one.where);
+    execFileSync('git', ['-C', one.where, 'checkout', '-q', '-b', 'side'], { stdio: 'pipe' });
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: it has side checked out rather than ${branch}`);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+  });
+
+  it('keeps the tree when the port cannot say which branch it is on', async () => {
+    const root = repository();
+    const { head: _head, ...port } = gitWorktrees();
+    const { logged, open, archive } = await archiving(root, { worktrees: port });
+    const one = await open('unread');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: this host cannot tell which branch it has checked out`);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+  });
+
+  it('removes a deleted session\'s clean tree with a linked folder in it', async () => {
+    const root = repository();
+    const { client, logged, open } = await archiving(root);
+    const one = await open('linkgone', { worktreeSymlinkFolders: ['node_modules'] });
+    expect(lstatSync(join(one.where, 'node_modules')).isSymbolicLink()).toBe(true);
+    await client.handle({ method: 'disposeSession', params: { channel: one.channel } });
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+  });
+
+  it('puts the links back when git refuses to remove the tree', async () => {
+    const root = repository();
+    // A port that misses the untracked file, so git's own refusal is what keeps the tree.
+    const port: Worktrees = { ...gitWorktrees(), dirty: async () => false };
+    const { logged, open, archive } = await archiving(root, { worktrees: port });
+    const one = await open('relinked', { worktreeSymlinkFolders: ['node_modules'] });
+    writeFileSync(join(one.where, 'unsaved.txt'), 'kept\n');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: fatal`);
+    expect(readFileSync(join(one.where, 'unsaved.txt'), 'utf8')).toBe('kept\n');
+    expect(lstatSync(join(one.where, 'node_modules')).isSymbolicLink()).toBe(true);
+    expect(lstatSync(join(one.where, 'packages', 'app', 'node_modules')).isSymbolicLink()).toBe(true);
+  });
+
+  it('keeps a deleted session\'s tree whose HEAD has left its branch with a commit', async () => {
+    const root = repository();
+    const { client, logged, open } = await archiving(root);
+    const one = await open('detachedgone');
+    execFileSync('git', ['-C', one.where, 'checkout', '-q', '--detach'], { stdio: 'pipe' });
+    execFileSync('git', ['-C', one.where, 'commit', '-q', '--allow-empty', '-m', 'only here'], { stdio: 'pipe' });
+    await client.handle({ method: 'disposeSession', params: { channel: one.channel } });
+    await logged(`kept ${one.where}: its HEAD is not on a branch`);
+    expect(execFileSync('git', ['-C', one.where, 'log', '-1', '--format=%s']).toString().trim()).toBe('only here');
+  });
+
+  it('keeps a deleted session\'s tree with another branch checked out', async () => {
+    const root = repository();
+    const { client, logged, open } = await archiving(root);
+    const one = await open('sidegone');
+    const branch = branchOf(one.where);
+    execFileSync('git', ['-C', one.where, 'checkout', '-q', '-b', 'side'], { stdio: 'pipe' });
+    await client.handle({ method: 'disposeSession', params: { channel: one.channel } });
+    await logged(`kept ${one.where}: it has side checked out rather than ${branch}`);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+  });
+
+  it('keeps the tree when git refuses to remove it, and says why', async () => {
+    const root = repository();
+    const refusing: Worktrees = { ...gitWorktrees(), remove: async () => { throw new Error('refused'); } };
+    const { logged, open, archive } = await archiving(root, { worktrees: refusing });
+    const one = await open('refused');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: refused`);
+    expect(existsSync(join(one.where, 'tracked.txt'))).toBe(true);
+  });
+
+  it('says why it could not put a tree back whose branch is gone, and stays unarchived', async () => {
+    const root = repository();
+    const { store, logged, open, archive } = await archiving(root);
+    const one = await open('orphan');
+    const branch = branchOf(one.where);
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    execFileSync('git', ['-C', project(root), 'branch', '-D', branch], { stdio: 'pipe' });
+    await archive(one.channel, false);
+    await logged(`could not put ${one.where} back`);
+    expect(existsSync(one.where)).toBe(false);
+    expect(store.flags('orphan') & 64).toBe(0);
+  });
+
+  it('keeps a dirty tree under keep, as it was asked to', async () => {
+    const root = repository();
+    const watched = observed();
+    const { logged, open, archive } = await archiving(root, { worktrees: watched.port, archiveDirtyWorktree: 'keep' });
+    const one = await open('kept');
+    writeFileSync(join(one.where, 'unsaved.txt'), 'kept\n');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: it has changes nobody committed`);
+    expect(watched.removed).toEqual([]);
+    expect(existsSync(join(one.where, 'unsaved.txt'))).toBe(true);
+  });
+
+  it('commits a dirty tree under commit, then gives the tree back and keeps the branch', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root, { archiveDirtyWorktree: 'commit' });
+    const one = await open('saved');
+    const branch = branchOf(one.where);
+    writeFileSync(join(one.where, 'unsaved.txt'), 'the whole point\n');
+    writeFileSync(join(one.where, 'tracked.txt'), 'changed\n');
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+    expect(subjects(root, branch)[0]).toBe('Saving uncommitted changes before archiving session');
+    const shown = (file: string): string => execFileSync('git', ['-C', project(root), 'show', `${branch}:${file}`]).toString();
+    expect(shown('unsaved.txt')).toBe('the whole point\n');
+    expect(shown('tracked.txt')).toBe('changed\n');
+    // And back with the work in it.
+    await archive(one.channel, false);
+    await logged(`put ${one.where} back on ${branch}`);
+    expect(readFileSync(join(one.where, 'unsaved.txt'), 'utf8')).toBe('the whole point\n');
+  });
+
+  it('commits a dirty tree under commit without the folder it linked', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root, { archiveDirtyWorktree: 'commit' });
+    const one = await open('linksaved', { worktreeSymlinkFolders: ['node_modules'] });
+    const branch = branchOf(one.where);
+    writeFileSync(join(one.where, 'unsaved.txt'), 'the whole point\n');
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    const files = execFileSync('git', ['-C', project(root), 'show', '--name-only', '--format=', branch]).toString().trim().split('\n');
+    expect(subjects(root, branch)[0]).toBe('Saving uncommitted changes before archiving session');
+    expect(files).toEqual(['unsaved.txt']);
+    expect(execFileSync('git', ['-C', project(root), 'ls-tree', branch, 'node_modules']).toString()).toBe('');
+  });
+
+  it('makes no commit for a clean tree under commit, and still gives it back', async () => {
+    const root = repository();
+    const { logged, open, archive } = await archiving(root, { archiveDirtyWorktree: 'commit' });
+    const one = await open('spotless');
+    const branch = branchOf(one.where);
+    const before = subjects(root, branch);
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(existsSync(one.where)).toBe(false);
+    expect(subjects(root, branch)).toEqual(before);
+  });
+
+  it('keeps a dirty tree under commit when the port cannot commit, and says why', async () => {
+    const root = repository();
+    const { commit: _commit, ...port } = gitWorktrees();
+    const { logged, open, archive } = await archiving(root, { worktrees: port, archiveDirtyWorktree: 'commit' });
+    const one = await open('uncommittable');
+    writeFileSync(join(one.where, 'unsaved.txt'), 'kept\n');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: it has changes nobody committed, and this host cannot commit them`);
+    expect(existsSync(join(one.where, 'unsaved.txt'))).toBe(true);
+  });
+
+  it('keeps a dirty tree under commit when the commit fails, and says why', async () => {
+    const root = repository();
+    const removed: string[] = [];
+    const port: Worktrees = {
+      ...gitWorktrees(),
+      remove: async (repository, path, branch, linked) => { removed.push(path); await gitWorktrees().remove(repository, path, branch, linked); },
+      commit: async () => { throw new Error('no identity'); },
+    };
+    const { logged, open, archive } = await archiving(root, { worktrees: port, archiveDirtyWorktree: 'commit' });
+    const one = await open('unsigned');
+    writeFileSync(join(one.where, 'unsaved.txt'), 'kept\n');
+    await archive(one.channel, true);
+    await logged(`kept ${one.where}: could not commit its changes: no identity`);
+    expect(removed).toEqual([]);
+    expect(readFileSync(join(one.where, 'unsaved.txt'), 'utf8')).toBe('kept\n');
+  });
+
+  it('takes a push of archiveDirtyWorktree at once', async () => {
+    const root = repository();
+    // A daemon that holds the one key, so what it holds is what the push left.
+    const held: Record<string, unknown> = {};
+    const rootConfig: NonNullable<HostOptions['rootConfig']> = {
+      schema: () => ({
+        type: 'object',
+        properties: { archiveDirtyWorktree: { type: 'string', enum: ['keep', 'commit'], title: 'Archive dirty worktree' } },
+      }),
+      values: async () => ({ ...held }),
+      write: async (values) => { Object.assign(held, values); return {}; },
+    };
+    const { client, logged, open, archive } = await archiving(root, { rootConfig });
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-root://', action: { type: 'root/configChanged', config: { archiveDirtyWorktree: 'commit' } } },
+    });
+    expect(held.archiveDirtyWorktree).toBe('commit');
+    const one = await open('pushed');
+    const branch = branchOf(one.where);
+    writeFileSync(join(one.where, 'unsaved.txt'), 'saved\n');
+    await archive(one.channel, true);
+    await logged(`removed ${one.where}`);
+    expect(subjects(root, branch)[0]).toBe('Saving uncommitted changes before archiving session');
   });
 });
 

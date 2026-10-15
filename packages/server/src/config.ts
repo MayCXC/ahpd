@@ -222,6 +222,15 @@ export interface Config {
    */
   closedChats?: 'hidden' | 'delete';
   /**
+   * What archiving a session does with a working tree that has changes nobody
+   * committed.
+   *
+   * `keep`, the default, leaves the tree where it is. `commit` commits every
+   * change on the session's branch, then removes the tree and keeps the
+   * branch, so an unarchive can put the tree back.
+   */
+  archiveDirtyWorktree?: 'keep' | 'commit';
+  /**
    * How long a call a client runs may wait before it is failed.
    *
    * Unset is ten minutes; zero waits for ever, for a deployment whose clients

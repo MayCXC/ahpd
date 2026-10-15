@@ -475,6 +475,9 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
          */
         const closing = theirs['closedChats'];
         if ((closing === 'hidden' || closing === 'delete') && closing !== ctx.closedChats) ctx.closedChats = closing;
+        // And what archive does with a dirty tree, read the same way: when a tree is given back.
+        const dirtyTree = theirs['archiveDirtyWorktree'];
+        if (dirtyTree === 'keep' || dirtyTree === 'commit') ctx.archiveDirtyWorktree = dirtyTree;
       });
     }
     if (type === 'changeset/filesReviewChanged') {

@@ -6,6 +6,7 @@ import type { Session } from '../types/session.js';
 import type { Bag } from '../types/common.js';
 import type { AnnotationsState } from '@microsoft/agent-host-protocol';
 import type { Terminal } from '../types/terminals.js';
+import type { StoredWorktree } from '../types/sessions.js';
 import type { DebugLogs } from '../debuglogs.js';
 import type { CallLinks } from '../calllinks.js';
 import type { Claiming, Claimed, Held, Learned, LiveSubagent, Origin } from './state.js';
@@ -201,6 +202,12 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * and read where a chat is dropped rather than held per chat.
    */
   closedChats: 'hidden' | 'delete';
+  /**
+   * What archiving a session does with a tree that has changes nobody
+   * committed: `keep` it, or `commit` them and remove it. A daemon key that
+   * takes hold while the daemon runs, read when a tree is given back.
+   */
+  archiveDirtyWorktree: 'keep' | 'commit';
   /** Every tool the host was given, before the permission was applied. */
   contributed: readonly HostTool[];
   /** The tools this host contributes, with the permission applied. */
@@ -224,7 +231,9 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   /** The directories a session may be pointed at, by its own uri. */
   wheres: Map<string, string[]>;
   /** The worktree each isolated session runs in, by session URI. */
-  worktrees: Map<string, { repository: string; path: string; branch?: string; base?: string }>;
+  worktrees: Map<string, StoredWorktree>;
+  /** A session's worktree: the map's entry, else the record the store kept. */
+  worktreeOf: (uri: string) => StoredWorktree | undefined;
   /** What GitHub last said about each served directory's branch. */
   githubFacts: Map<string, Bag>;
   /** What the host remembers about sessions that are not running here. */

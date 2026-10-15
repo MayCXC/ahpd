@@ -1,6 +1,6 @@
 ---
 title: A daemon key decides what archive does with a dirty tree
-status: todo
+status: implemented
 depends: [task-02-archive-shelves-the-tree-and-unarchive-restores-it.md]
 layer: "sdk, server"
 refs:
@@ -65,4 +65,26 @@ The daemon key `archiveDirtyWorktree` decides what archive does with a dirty tre
 
 ## Resume
 
-Not started.
+### Built
+
+- The `Worktrees` port has an optional `commit`, and the git port stages every change and commits only when something is staged.
+- The host option and the daemon key `archiveDirtyWorktree` take `keep` or `commit`, and `keep` is the default.
+- Under `commit`, `shelve` commits a dirty tree, checks that the tree is clean, and then removes it without the branch.
+- A port with no `commit`, a failed commit or a tree still dirty after the commit keeps the tree, and the log says why.
+- A push of the key applies at once, and the server start line names `commit`.
+- The configuration, the flags, the root config, the help text and `docs/HOST.md` carry the key.
+- `commit` excludes the links at the linked folder names from staging, so a link is never committed.
+
+### Validation
+
+- `worktrees.test.ts` checks `keep`, and a dirty and a clean tree under `commit`.
+- `worktrees.test.ts` also checks a port with no `commit`, a failed commit and a push of the key.
+- `server-root-config.test.ts` checks the schema enum and that a push needs no restart.
+- `config-check.test.ts` checks the default `keep`.
+- `worktrees.test.ts` commits a dirty tree with links, and the commit holds only the new file.
+- The gates pass: typecheck, boundary, schema and 4528 tests.
+
+### Seen and not done
+
+- The help text list did not name `closedChats` before this change, and it still does not.
+- The commit uses the git identity of the host, so a missing identity keeps the tree.

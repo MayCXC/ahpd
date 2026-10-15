@@ -29,7 +29,7 @@ import { optionsSchemaLoaded } from './plugins.js';
  * left out on purpose: a form that could change them would be a form that could
  * take the door off its hinges and leave nothing behind that would open it.
  */
-const DAEMON_KEYS = ['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers'] as const;
+const DAEMON_KEYS = ['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'wire', 'mcpServers'] as const;
 
 /**
  * The keys this daemon can apply while it runs.
@@ -37,7 +37,7 @@ const DAEMON_KEYS = ['paths', 'port', 'host', 'http', 'routes', 'updateCheck', '
  * Every other key is written to the file and answered `restartNeeded`, which is
  * the notice in root state that a setting is not in force yet.
  */
-const LIVE = new Set<string>(['advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'wire', 'mcpServers']);
+const LIVE = new Set<string>(['advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'wire', 'mcpServers']);
 
 /** A flag as a person types it: `--port`, and `--path` where the field says so. */
 const flagOf = (key: ConfigKey): string => {

@@ -437,6 +437,16 @@ export interface HostOptions {
    */
   closedChats?: 'hidden' | 'delete';
   /**
+   * What archiving a session does with a working tree that has changes
+   * nobody committed.
+   *
+   * `keep`, which is the default, leaves the tree where it is. `commit`
+   * commits every change on the session's branch, then removes the tree as
+   * it would a clean one, keeping the branch so an unarchive can put the tree
+   * back. A commit that fails keeps the tree.
+   */
+  archiveDirtyWorktree?: 'keep' | 'commit';
+  /**
    * How long a call a client runs may wait before the host calls it failed.
    *
    * A client's tool call blocks the turn that made it, and a client that has

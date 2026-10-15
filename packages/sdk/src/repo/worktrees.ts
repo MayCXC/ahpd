@@ -3,9 +3,30 @@
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { basename, dirname, isAbsolute, join, relative } from 'node:path';
-import { cp, lstat, mkdir, mkdtemp, readdir, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { cp, lstat, mkdir, mkdtemp, readdir, readlink, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import type { Worktree, Worktrees } from '../types/worktrees.js';
 import { gitArgv } from './hardened.js';
+
+/**
+ * The untracked entries of a `status --porcelain` answer that are links this
+ * host made: a link, whose last segment is one of the `linked` folder names.
+ *
+ * The links read as untracked when `.gitignore` names the folder in its
+ * directory form, and they are not anybody's work. Only while each is still a
+ * link: a real folder at that name is.
+ */
+const linksIn = async (path: string, said: string, linked: readonly string[]): Promise<string[]> => {
+  const names = new Set(linked.map((one) => one.replace(/\/+$/, '')));
+  if (names.size === 0) return [];
+  const found: string[] = [];
+  for (const line of said.split('\n')) {
+    if (!line.startsWith('?? ')) continue;
+    const entry = line.slice(3).replace(/\/+$/, '');
+    if (!names.has(entry.slice(entry.lastIndexOf('/') + 1))) continue;
+    if (await lstat(join(path, entry)).then((info) => info.isSymbolicLink(), () => false)) found.push(entry);
+  }
+  return found;
+};
 
 /**
  * Run git, and answer what it said. Rejects with git's own words.
@@ -179,16 +200,35 @@ export function gitWorktrees(): Worktrees {
       }
     },
 
-    dirty: async (path) => {
+    dirty: async (path, linked = []) => {
       // `--porcelain` says nothing at all about a clean tree, which makes the
       // empty answer the reliable one. Untracked files count: a file the
-      // agent wrote and never added is exactly the work worth keeping.
-      const said = await git(path, ['status', '--porcelain'], 10_000).catch(() => 'unknown');
-      return said.trim() !== '';
+      // agent wrote and never added is exactly the work worth keeping. With
+      // folders linked, every untracked file on its own line, so a link
+      // inside an untracked folder is not hidden behind the folder.
+      const every = linked.length === 0 ? [] : ['--untracked-files=all'];
+      const said = await git(path, ['status', '--porcelain', ...every], 10_000).catch(() => 'unknown');
+      const links = new Set(await linksIn(path, said, linked));
+      return said.split('\n').some((line) => line.trim() !== '' && !(line.startsWith('?? ') && links.has(line.slice(3))));
     },
 
-    remove: async (repository, path, branch) => {
-      await git(repository, ['worktree', 'remove', path]);
+    remove: async (repository, path, branch, linked = []) => {
+      /*
+       * The host's own links out of the way first, since git refuses a tree
+       * with anything untracked in it, and that refusal is still the guard
+       * for everything else. Put back when it refuses, so a tree that stays
+       * is the tree it was.
+       */
+      const said = linked.length === 0 ? '' : await git(path, ['status', '--porcelain', '--untracked-files=all'], 10_000).catch(() => '');
+      const links: { entry: string; target: string }[] = [];
+      for (const entry of await linksIn(path, said, linked)) {
+        links.push({ entry, target: await readlink(join(path, entry)) });
+      }
+      for (const { entry } of links) await rm(join(path, entry));
+      await git(repository, ['worktree', 'remove', path]).catch(async (error: unknown) => {
+        for (const { entry, target } of links) await symlink(target, join(path, entry)).catch(() => undefined);
+        throw error;
+      });
       /*
        * The branch too, and only the one this host made.
        *
@@ -199,6 +239,24 @@ export function gitWorktrees(): Worktrees {
        * is the same judgement the dirty check makes about uncommitted work.
        */
       if (branch !== undefined) await git(repository, ['branch', '-d', branch]).catch(() => undefined);
+    },
+
+    commit: async (path, message, linked = []) => {
+      const said = await git(path, ['status', '--porcelain', '--untracked-files=all'], 10_000);
+      const links = await linksIn(path, said, linked);
+      await git(path, ['add', '-A', '--', '.', ...links.map((one) => `:(exclude,literal)${one}`)]);
+      // A clean tree stages nothing, and is no commit at all.
+      const staged = await git(path, ['diff', '--cached', '--name-only']);
+      if (staged.trim() === '') return;
+      await git(path, ['commit', '--quiet', '-m', message]);
+    },
+
+    head: async (path) => {
+      // `--quiet` answers a detached `HEAD` with a bare failure, which is the
+      // same answer as a tree git cannot read: no branch to name.
+      const said = await git(path, ['symbolic-ref', '--quiet', '--short', 'HEAD'], 10_000).catch(() => '');
+      const name = said.trim();
+      return name === '' ? undefined : name;
     },
   };
 }

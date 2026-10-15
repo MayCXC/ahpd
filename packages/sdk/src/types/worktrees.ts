@@ -131,14 +131,28 @@ export interface Worktrees {
    *
    * Asked before it is removed, and the answer decides whether it is: work
    * nobody committed is work this daemon cannot judge the value of.
+   *
+   * `linked` names the folders this host linked into the tree, whose links
+   * are not work: an untracked link at one of those names does not count.
    */
-  dirty(path: string): Promise<boolean>;
+  dirty(path: string, linked?: readonly string[]): Promise<boolean>;
 
   /**
    * Take one away, and the branch with it if nothing else points at it.
    *
    * Only ever called for a worktree this host made and only when `dirty`
-   * answered no.
+   * answered no. The links at the `linked` folder names are taken out first,
+   * and put back when git refuses the rest.
    */
-  remove(repository: string, path: string, branch?: string): Promise<void>;
+  remove(repository: string, path: string, branch?: string, linked?: readonly string[]): Promise<void>;
+
+  /**
+   * Commit every change in it, untracked files included, on the branch it
+   * has checked out. Nothing to commit is not a failure. The `linked`
+   * folders are never staged.
+   */
+  commit?(path: string, message: string, linked?: readonly string[]): Promise<void>;
+
+  /** The branch checked out in it, or undefined for a detached `HEAD` or a tree git cannot read. */
+  head?(path: string): Promise<string | undefined>;
 }
