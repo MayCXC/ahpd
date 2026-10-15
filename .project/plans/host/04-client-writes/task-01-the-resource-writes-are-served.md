@@ -15,7 +15,7 @@ refs:
   - code://test/writes.test.ts#L282-L309 - the two grant cases, replaced
   - code://test/host.test.ts#L3375-L3395 - the refusal case, replaced
   - code://test/clients.test.ts#L200-L241 - the client-owned refusal, which must keep passing untouched
-  - code://docs/AHP.md#L91-L96 - the `resourceWrite` and `resourceRequest` rows
+  - code://docs/sdk/AHP.md#L91-L96 - the `resourceWrite` and `resourceRequest` rows
   - code://README.md#L248 - the Resources row
 ---
 
@@ -35,7 +35,7 @@ refs:
 - `UPDATE: test/writes.test.ts:242-280` - the move to `outside` now lands; the case keeps the `failIfExists` refusal and says why the far end is no longer refused.
 - `UPDATE: test/writes.test.ts:282-309` - one case that a first write with no `resourceRequest` lands, and one that `resourceRequest` still answers `{}`.
 - `UPDATE: test/host.test.ts:3375-3395` - the `-32009` case becomes one where the same write succeeds and answers `{}`.
-- `UPDATE: docs/AHP.md:91-96` - the rows stop saying "Behind `resourceRequest`" and "The write gate".
+- `UPDATE: docs/sdk/AHP.md:91-96` - the rows stop saying "Behind `resourceRequest`" and "The write gate".
 - `UPDATE: README.md:248` - the Resources row drops "writes behind `resourceRequest`".
 
 ## Steps
@@ -45,7 +45,7 @@ refs:
 3. Leave `resourceRequest` served: it still refuses a non-`file:` URI with `-32009` and still logs `<client> may write <uri>`, without writing to a set, per decision 1.
 4. Update `test/writes.test.ts`: simplify the helper, rewrite the far-end case, and replace the two grant cases with one that a write needs no grant and one that `resourceRequest` still answers.
 5. Update `test/host.test.ts`'s case to assert the write succeeds, and confirm `test/clients.test.ts`'s client-owned refusal still passes with no change.
-6. Update `docs/AHP.md`'s two rows and `README.md`'s row.
+6. Update `docs/sdk/AHP.md`'s two rows and `README.md`'s row.
 7. Run `pnpm test`, `pnpm typecheck` and `pnpm boundary`.
 
 ## Validation

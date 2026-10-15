@@ -40,7 +40,7 @@ Each of these has its tasks built and reviewed. To close one, follow its Resume 
 
 ## Small fixes, not yet written up
 
-- `docs/DAEMON.md` near line 745 has a broken sentence about `origins`.
+- `docs/server/REFERENCE.md` near line 745 has a broken sentence about `origins`.
 - `spawn.ts` leaks `senders` entries. Find the cause and write a task before you fix it.
 
 ## Releases, each on Softov's go

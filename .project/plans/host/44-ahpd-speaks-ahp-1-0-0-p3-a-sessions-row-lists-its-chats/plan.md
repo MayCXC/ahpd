@@ -87,7 +87,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Files the plan's lists did not name:** `packages/sdk/src/types/catalog.ts` (task 01's row fields).
 - `packages/sdk/src/validate.ts` and `packages/sdk/test/plugin-validate.test.ts` (task 02's store members).
 - `packages/sdk/test/ahp-test-cases.test.ts` (task 02, whose refusal lists name these two actions).
-- `README.md` (task 02, whose coverage line carries the same state-action total as `docs/AHP.md`).
+- `README.md` (task 02, whose coverage line carries the same state-action total as `docs/sdk/AHP.md`).
 - Each is written up in its task's Resume.
 
 ## Final verification checklist

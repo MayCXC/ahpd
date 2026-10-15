@@ -10,7 +10,7 @@ refs:
   - "[code://packages/sdk/test/wire.test.ts#L670](../../../../packages/sdk/test/wire.test.ts#L670) - the comparison with the known list and the departures"
   - "[code://packages/sdk/src/rpc.ts#L168-L182](../../../../packages/sdk/src/rpc.ts#L168-L182) - `resultFrame`, the one function the wire and the recording both use"
   - "[code://packages/server/src/rootconfig.ts](../../../../packages/server/src/rootconfig.ts) - `daemonRootConfig`, the port a `config:read` connection reads"
-  - "[code://docs/AHP.md#L146](../../../../docs/AHP.md#L146) - `activity: null`, already written down as the reference's"
+  - "[code://docs/sdk/AHP.md#L146](../../../../docs/sdk/AHP.md#L146) - `activity: null`, already written down as the reference's"
 ---
 
 ## Objective
@@ -32,7 +32,7 @@ The wire test records each answer as the frame `rpc.ts` sends, over a host whose
 5. Raise `chat/inputRequested` from a claude turn through an `AskUserQuestion` call. Create and subscribe an echo session, and ask `resolveSessionConfig` for `provider: 'echo'`.
 6. Send `completions` with `kind`, `text`, `offset`; `sessionConfigCompletions` with `property`; `createTerminal` with a `claim` and no `command`.
 7. Replace `expect(found).toEqual([])` with `expect(found).toEqual(KNOWN)`. `KNOWN` holds today's findings, each line with a comment naming the plan that removes it (`p2`, `p3`). A fix that removes a defect must remove its line.
-8. `DEPARTURES` holds every method `skipped()` reports, and each entry names the `docs/AHP.md` heading that records it. It also holds the `activity: null` finding on `root/sessionSummaryChanged`. The list covers `shutdown`, `getNetworkDiagnosticsInfo`, `getManagedSettingsDiagnostics`, `diagnosticsFetch`, the `vscode/*` requests and the `vscode/devContainers/*` notifications. The test calls at least `getManagedSettingsDiagnostics` and one `vscode/*` request. That exercises the list. `moveChat` is in `CommandMap` and not served. It is not an entry: nothing calls it, so it is not in the traffic.
+8. `DEPARTURES` holds every method `skipped()` reports, and each entry names the `docs/sdk/AHP.md` heading that records it. It also holds the `activity: null` finding on `root/sessionSummaryChanged`. The list covers `shutdown`, `getNetworkDiagnosticsInfo`, `getManagedSettingsDiagnostics`, `diagnosticsFetch`, the `vscode/*` requests and the `vscode/devContainers/*` notifications. The test calls at least `getManagedSettingsDiagnostics` and one `vscode/*` request. That exercises the list. `moveChat` is in `CommandMap` and not served. It is not an entry: nothing calls it, so it is not in the traffic.
 9. In `describes`, compose what the agent put in `_meta` with what the host puts there. A signed-in person makes the host write its own map. Replacing `_meta` whole erased a backend's key on the state and on the row.
 
 ## Validation

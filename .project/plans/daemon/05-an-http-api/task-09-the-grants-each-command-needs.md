@@ -4,10 +4,10 @@ status: done
 depends: [task-08-served-commands-act-on-the-daemons-own-options.md]
 layer: "server | sdk"
 refs:
-  - "[../../../../docs/HOST.md](../../../../docs/HOST.md) - `config:read`"
-  - "[../../../../docs/USERS.md](../../../../docs/USERS.md) - `users:write`"
-  - "[../../../../docs/AUTHENTICATION.md](../../../../docs/AUTHENTICATION.md) - the deployment token only"
-  - "[../../../../docs/HOST.md](../../../../docs/HOST.md) - no `connectionToken` value"
+  - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - `config:read`"
+  - "[../../../../docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - `users:write`"
+  - "[../../../../docs/sdk/AUTHENTICATION.md](../../../../docs/sdk/AUTHENTICATION.md) - the deployment token only"
+  - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - no `connectionToken` value"
   - "[code://packages/sdk/src/users.ts#L39](../../../../packages/sdk/src/users.ts#L39) - `SUBJECTS`, which now has `users`"
   - "[code://packages/server/src/commands/scopes.ts#L17-L45](../../../../packages/server/src/commands/scopes.ts#L17-L45) - the mark and the hook that reads it"
   - "[code://packages/server/src/commands/plugin.ts#L27](../../../../packages/server/src/commands/plugin.ts#L27) and [#L72-L74](../../../../packages/server/src/commands/plugin.ts#L72-L74) - `config:read` on the list, and the deployment-token mark on install and remove"
@@ -37,11 +37,11 @@ This task starts after daemon/04's task that moves the scope check into the regi
 
 ## Steps
 
-1. Add `users` to `SUBJECTS` ([The user commands need users:write](../../../../docs/USERS.md)), and change the four `user` scopes.
-2. Add `config:read` to `status` and `plugin list` (["`status` and `plugin list` need config:read"](../../../../docs/HOST.md)).
-3. Mark `plugin install` and `plugin remove` in their declaration, and have the registry's `authorize` hook read the mark: the deployment token passes, and a person is refused with 403 and a sentence that names them and says only the deployment token may ([Installing or removing a plugin over HTTP needs the deployment token](../../../../docs/AUTHENTICATION.md)).
+1. Add `users` to `SUBJECTS` ([The user commands need users:write](../../../../docs/sdk/USERS.md)), and change the four `user` scopes.
+2. Add `config:read` to `status` and `plugin list` (["`status` and `plugin list` need config:read"](../../../../docs/sdk/HOST.md)).
+3. Mark `plugin install` and `plugin remove` in their declaration, and have the registry's `authorize` hook read the mark: the deployment token passes, and a person is refused with 403 and a sentence that names them and says only the deployment token may ([Installing or removing a plugin over HTTP needs the deployment token](../../../../docs/sdk/AUTHENTICATION.md)).
 4. `authorizeOverHttp` resolves the principal (root, or the person `users.verify` answered) and keeps only the 401s; the principal reaches the registry's hook the way daemon/04's task passes it, and the 403s come from the hook, with `refusalReason`.
-5. Strip the `connectionToken` value from the remote answer of `config` ([The config command hides the connection token over HTTP](../../../../docs/HOST.md)); the terminal keeps printing the file.
+5. Strip the `connectionToken` value from the remote answer of `config` ([The config command hides the connection token over HTTP](../../../../docs/sdk/HOST.md)); the terminal keeps printing the file.
 6. The daemon/04 plan's scope row (`status` and `plugin list` need nothing, `user` needs `admin`) is replaced by these decisions; the code follows these.
 
 ## Validation

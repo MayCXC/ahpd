@@ -18,7 +18,7 @@ A watcher hears `added`, `updated` and `deleted` for each bot its reader may rea
 - [`code://packages/sdk/src/types/resources.ts`](../../../../packages/sdk/src/types/resources.ts) - `watch` takes an optional fourth argument, the reader.
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - a scheme whose provider has `watch` advertises the `watch` operation.
 - [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts) - a set of watchers, `watch`, and `told`, which `write` and `remove` call.
-- `docs/BOTS.md` has a section "A watch", `docs/RESOURCES.md` names the grant a watch asks for, and `packages/bot/README.md` has a row for the watch.
+- `docs/plugins/BOTS.md` has a section "A watch", `docs/sdk/RESOURCES.md` names the grant a watch asks for, and `packages/bot/README.md` has a row for the watch.
 
 ## Verified
 
@@ -32,7 +32,7 @@ A watcher hears `added`, `updated` and `deleted` for each bot its reader may rea
 - Task 01 - the gate cases are in a new file, `users-gate-watch.test.ts`, not in `watches.test.ts`. They need the users directory, and `watches.test.ts` has none.
 - Task 01 - `ResourceChange`, `Watcher` and `WatchOptions` are now exported from the sdk types, so a plugin can type its `watch`.
 - Task 02 - a watch on `bot://` also hears every bot when the reader holds `bot:list`. That is what the listing shows the same reader.
-- Task 03 - `docs/BOTS.md` has no commands table, so the watch has its own section with a table. The commands table is in `packages/bot/README.md`.
+- Task 03 - `docs/plugins/BOTS.md` has no commands table, so the watch has its own section with a table. The commands table is in `packages/bot/README.md`.
 
 ## Left for later
 

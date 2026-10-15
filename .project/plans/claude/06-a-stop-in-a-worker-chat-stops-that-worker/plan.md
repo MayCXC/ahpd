@@ -52,7 +52,7 @@ worker chat Stop -> chat/turnCancelled on ahp-chat://subagent/<session>/<call>
 
 | Decision | Task |
 | --- | --- |
-| [A stop in a worker chat stops that worker, and an option makes it stop the session](../../../../docs/CHATS.md) | 01, 02 |
+| [A stop in a worker chat stops that worker, and an option makes it stop the session](../../../../docs/sdk/CHATS.md) | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

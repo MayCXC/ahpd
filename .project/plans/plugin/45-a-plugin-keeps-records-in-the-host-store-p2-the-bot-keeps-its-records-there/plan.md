@@ -51,7 +51,7 @@ a person edits bots/<slug>.md -> collection watch -> botStore reloads one -> kep
 | --- | --- | --- |
 | 1 | [A plugin keeps its records in a record store the host gives it](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | Softov, 2026-10-11 |
 | 2 | [A bot record stays in the configuration folder, apart from its workspace](../../../decisions/a-bot-record-stays-in-config.md) | Softov, 2026-10-10 |
-| 3 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 3 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |

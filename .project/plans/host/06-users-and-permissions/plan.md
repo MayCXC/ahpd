@@ -26,9 +26,9 @@ refs:
   - "[code://packages/sdk/src/listen.ts#L45-L70](../../../../packages/sdk/src/listen.ts#L45-L70) - the connection token and its constant-time compare, unchanged by this plan and reused for the token hash"
   - "[code://packages/server/src/main.ts#L440-L470](../../../../packages/server/src/main.ts#L440-L470) - where the ports are handed to `createHost`, and where `users` joins"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the daemon config the user file sits beside"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md) - the compatibility table, whose `authenticate` row and error codes move"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - the compatibility table, whose `authenticate` row and error codes move"
   - "[code://packages/computer/src/plugin.ts#L72](../../../../packages/computer/src/plugin.ts#L72) - the `computer:` provider and the three host tools that make this a release blocker, not a nicety"
-  - "[code://docs/HOST.md](../../../../docs/HOST.md) - the gate `host/04` removed, and the 2026-09-22 note saying the removal was too wide"
+  - "[code://docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - the gate `host/04` removed, and the 2026-09-22 note saying the removal was too wide"
   - npm://@microsoft/agent-host-protocol@0.9.0 - `AhpErrorCodes.AuthRequired` (-32007), `PermissionDenied` (-32009), `AuthRequiredErrorData` and `PermissionDeniedErrorData`
   - file:///github/externals/agent-host-protocol/docs/specification/authentication.md - the flow, the error handling and the per-connection rule this follows
 ---
@@ -81,7 +81,7 @@ client -> WebSocket with ?tkn=      -> listen.ts, one shared secret, unchanged
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [A person signs in through `authenticate`, not through the connection token](../../../decisions/the-door-is-a-door.md) | The user, 2026-09-23: asked where a user presents their credential and chose "authenticate on `ahp-root://`". |
-| 2 | [`ahpd` keeps its own user directory](../../../../docs/USERS.md) | The user, 2026-09-23: asked who issues and verifies the credential and chose "ahpd's own directory". |
+| 2 | [`ahpd` keeps its own user directory](../../../../docs/sdk/USERS.md) | The user, 2026-09-23: asked who issues and verifies the credential and chose "ahpd's own directory". |
 | 3 | [A role refuses at the dispatch boundary, and never hides root state](../../../decisions/a-role-refuses-at-the-dispatch-boundary.md) | (defaulted: `serverSeq` and the replay buffer are per host, so a filtered root state is corrected by the next broadcast). |
 
 | What | Source | Task |
@@ -101,7 +101,7 @@ client -> WebSocket with ?tkn=      -> listen.ts, one shared secret, unchanged
 - **Data flow** - a `Users` port answers `verify(token)` with a `Principal` or nothing. `authenticate` calls it for one resource id and hangs the result on the `Connection`. The gate reads `connection.principal` and a static map from method to capability, and either serves or throws.
 - **Event flow** - unchanged except at the edges: `authenticated` still fires on a successful push, and the existing `expire`/`auth/required` path additionally detaches the principal when the host's own resource runs out.
 - **State flow** - the directory is a file the host reads through the port and never caches beyond a record's lifetime; the principal lives on the `Connection` and dies with the socket, which is what the specification requires of authentication status.
-- **Layer responsibilities** - packages/sdk: the `Users` and `Principal` types, `fileUsers`, the advertised resource, the verification branch in `authenticate`, and the gate · packages/server: the config key, the wiring into `createHost`, and the `ahpd user` verbs · test/: the directory, the verification, the gate matrix and the proof that an unconfigured daemon is unchanged · docs: `docs/AHP.md`, `README.md` and a new `docs/USERS.md`.
+- **Layer responsibilities** - packages/sdk: the `Users` and `Principal` types, `fileUsers`, the advertised resource, the verification branch in `authenticate`, and the gate · packages/server: the config key, the wiring into `createHost`, and the `ahpd user` verbs · test/: the directory, the verification, the gate matrix and the proof that an unconfigured daemon is unchanged · docs: `docs/sdk/AHP.md`, `README.md` and a new `docs/sdk/USERS.md`.
 - **Source-of-truth files** - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/types/host.ts`](../../../../packages/sdk/src/types/host.ts), [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts).
 
 ## Tasks
@@ -126,7 +126,7 @@ client -> WebSocket with ?tkn=      -> listen.ts, one shared secret, unchanged
 
 ## Resume state
 
-- **Done so far:** all five tasks, 2026-09-23: 01 to 04, then the review that followed and the task it produced. `Users` and `fileUsers`, the host's own sign-in resource, verification in `authenticate`, the gate at the dispatch boundary with a scheme-scoped capability, the four `ahpd user` verbs, `docs/USERS.md` and the document moves. See [implemented.md](implemented.md).
+- **Done so far:** all five tasks, 2026-09-23: 01 to 04, then the review that followed and the task it produced. `Users` and `fileUsers`, the host's own sign-in resource, verification in `authenticate`, the gate at the dispatch boundary with a scheme-scoped capability, the four `ahpd user` verbs, `docs/sdk/USERS.md` and the document moves. See [implemented.md](implemented.md).
   The review found two holes and both were fixed the same day. `dispatchAction` is a notification and never reaches the boundary, so it is now gated at the top of `applyDispatch` by the channel it names; left open it was arbitrary command execution, because root state hands every open terminal's URI to anybody who completes a handshake. And `defaultShell` was reachable with `write` alone although it names the binary a backend's terminal runs, ; that was patched to need `terminal`, then fixed properly by task 05, which made it the connection's own.
 - **Next action:** none; the plan is built. Pending step 9's tool half is still untouched and is not this plan's.
 - **Open questions:**

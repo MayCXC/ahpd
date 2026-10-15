@@ -12,9 +12,9 @@ decisions:
 refs:
   - code://packages/server/src/main.ts#L84-L133 - USAGE, whose `--path` row says a directory not named there is refused
   - code://packages/server/src/main.ts#L147-L156 - the parse comment that explains the fence the flag no longer is
-  - code://docs/DAEMON.md#L33-L46 - the options table, which omits `--sessions`, `--wire` and `--version`
-  - code://docs/DAEMON.md#L63-L79 - the section that already says `--path` "is not a fence"
-  - code://docs/AGENT.md#L115-L124 - the controls row listing four setters that do not exist
+  - code://docs/server/REFERENCE.md - the options table, which omits `--sessions`, `--wire` and `--version`
+  - code://docs/server/REFERENCE.md - the section that already says `--path` "is not a fence"
+  - code://docs/sdk/AGENT.md#L115-L124 - the controls row listing four setters that do not exist
   - code://packages/sdk/src/types/session.ts#L401 - `setConfig(key, value)`, the only control setter the `Session` interface declares
   - code://packages/sdk/src/host.ts#L4546-L4553 - the `resource*` comment that calls the write half unserved
   - code://packages/sdk/src/host.ts#L4837-L4905 - the write half that is served behind `needsWrite` and `-32009`
@@ -40,9 +40,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `grep -n "refused" packages/server/src/main.ts` - the `--path` row at 98 and the parse comment at 153 both still describe a fence, while `docs/DAEMON.md:74` says it is not one and `git://24bb04c` removed it.
-- `grep -n "setModel\|setPermissionMode\|setEffort\|setOutputStyle" docs/AGENT.md packages/sdk/src/types/session.ts` - the four names appear only at `docs/AGENT.md:122`; `session.ts:401` declares `setConfig` and no such setters.
-- `grep -n -- "--sessions\|--wire\|--version" docs/DAEMON.md packages/server/src/main.ts` - all three are in USAGE at 109, 113 and 120 and absent from the `docs/DAEMON.md` table at 35 to 46.
+- `grep -n "refused" packages/server/src/main.ts` - the `--path` row at 98 and the parse comment at 153 both still describe a fence, while `docs/server/REFERENCE.md:74` says it is not one and `git://24bb04c` removed it.
+- `grep -n "setModel\|setPermissionMode\|setEffort\|setOutputStyle" docs/sdk/AGENT.md packages/sdk/src/types/session.ts` - the four names appear only at `docs/sdk/AGENT.md:122`; `session.ts:401` declares `setConfig` and no such setters.
+- `grep -n -- "--sessions\|--wire\|--version" docs/server/REFERENCE.md packages/server/src/main.ts` - all three are in USAGE at 109, 113 and 120 and absent from the `docs/server/REFERENCE.md` table at 35 to 46.
 - `grep -n "is not served" packages/sdk/src/host.ts` - two comments, at 4549 and 5144, both contradicted by the served methods at 4837 to 4905 and 5167 to 5188.
 - `grep -n "permissionMode" packages/agent-claude/src/claude.ts packages/agent-claude/src/session.ts` - `claude.ts:130` advertises five modes and `session.ts:2198` accepts six.
 - `grep -n "dontAsk" packages/agent-claude/src packages/sdk/src` - nothing; the sixth mode is accepted but never advertised.
@@ -50,7 +50,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Runtime path
 
 ```
-a person reads USAGE or docs/DAEMON.md or docs/AGENT.md
+a person reads USAGE or docs/server/REFERENCE.md or docs/sdk/AGENT.md
   -> the prose names a refusal, a setter, a flag or a mode
   -> the code at the cited line does something else
   -> the person acts on the prose and the daemon refuses, ignores or offers less than promised
@@ -82,8 +82,8 @@ a person reads USAGE or docs/DAEMON.md or docs/AGENT.md
 - **Data flow** - none; this is prose and one enum changed to match the code beside it.
 - **Event flow** - none.
 - **State flow** - none.
-- **Layer responsibilities** - packages/server/src/main.ts: `USAGE` and its parse comment · docs/AGENT.md: the controls row · docs/DAEMON.md: the options table · packages/sdk/src/host.ts: two method comments · packages/agent-claude/src/claude.ts and session.ts: the advertised and accepted permission modes, which must end equal.
-- **Source-of-truth files** - `code://packages/server/src/main.ts`, `code://docs/DAEMON.md`, `code://packages/agent-claude/src/claude.ts`.
+- **Layer responsibilities** - packages/server/src/main.ts: `USAGE` and its parse comment · docs/sdk/AGENT.md: the controls row · docs/server/REFERENCE.md: the options table · packages/sdk/src/host.ts: two method comments · packages/agent-claude/src/claude.ts and session.ts: the advertised and accepted permission modes, which must end equal.
+- **Source-of-truth files** - `code://packages/server/src/main.ts`, `code://docs/server/REFERENCE.md`, `code://packages/agent-claude/src/claude.ts`.
 
 ## Tasks
 
@@ -109,8 +109,8 @@ a person reads USAGE or docs/DAEMON.md or docs/AGENT.md
 ## Final verification checklist
 
 - [x] `grep -n "is refused\|refused rather than served" packages/server/src/main.ts` returns no `--path` claim; the one hit is the unrelated bad-option line.
-- [x] `docs/DAEMON.md`'s options table names `--sessions`, `--wire` and `--version`.
-- [x] `docs/AGENT.md` lists only `setConfig` among the control setters it names.
+- [x] `docs/server/REFERENCE.md`'s options table names `--sessions`, `--wire` and `--version`.
+- [x] `docs/sdk/AGENT.md` lists only `setConfig` among the control setters it names.
 - [x] The `resource*` comment and the `source` comment say what the code serves.
 - [x] `claude.ts` and `session.ts` agree on six permission modes and the two test assertions match.
 - [x] `pnpm test` green; `pnpm typecheck` and `pnpm boundary` green.

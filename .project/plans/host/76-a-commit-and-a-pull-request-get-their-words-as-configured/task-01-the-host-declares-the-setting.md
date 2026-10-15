@@ -19,7 +19,7 @@ Root config has one key that names where a commit message and a pull request's w
 - `UPDATE: packages/sdk/src/host/changesets.ts:332-356` - `operationContext` passes the setting to the source.
 - `UPDATE: packages/sdk/src/types/changes.ts` - the setting, the ask the host hands the source, and the two fields `ChangesetOperationContext` carries for them.
 - `UPDATE: packages/sdk/test/root-config.test.ts` - the key, its four modes, the two refusals, and the push that names the mode and the provider in two parts.
-- `UPDATE: docs/AHP.md` - the key, its modes and its default.
+- `UPDATE: docs/sdk/AHP.md` - the key, its modes and its default.
 
 ## Steps
 
@@ -35,7 +35,7 @@ Root config has one key that names where a commit message and a pull request's w
 ## Resume
 
 - **Implemented** 2026-10-09 on `build/agents/016ab0b2`, uncommitted.
-- `packages/sdk/src/host/root.ts:228-263` declares `changeWords` in `ROOT_CONFIG_SCHEMA.properties`. `mode` is required and defaults to `session-title`; `provider` and `model` are optional, each with a description. `docs/AHP.md` names the key among the ones this host acts on, and the section on an operation's arguments carries the four modes.
+- `packages/sdk/src/host/root.ts:228-263` declares `changeWords` in `ROOT_CONFIG_SCHEMA.properties`. `mode` is required and defaults to `session-title`; `provider` and `model` are optional, each with a description. `docs/sdk/AHP.md` names the key among the ones this host acts on, and the section on an operation's arguments carries the four modes.
 - `packages/sdk/src/host/actions.ts:277-301` refuses a `model` mode that names something this host cannot ask, before any part of the write is applied.
 - `packages/sdk/src/types/changes.ts` declares `ChangeWordsMode`, `ChangeWordsSetting`, `ChangeWordsAsk` and `ChangeWords`, and the two fields `ChangesetOperationContext` carries: `changeWords` and `conversation`. `packages/sdk/src/host/changesets.ts:332-356` builds the setting on the context.
 - `packages/sdk/test/root-config.test.ts` (25 tests) covers the default, each of the four modes, both refusals, and a push that names the mode and the provider in two parts.

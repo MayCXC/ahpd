@@ -102,5 +102,5 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - [ ] Each task's case fails on the code before it and passes after.
 - [ ] `pnpm exec vitest run packages/sdk/test/nested-*.test.ts packages/computer/test/computer-*.test.ts` passes.
-- [ ] `docs/COMPUTER.md` says what a host with users needs for dev containers.
+- [ ] `docs/plugins/COMPUTERS.md` says what a host with users needs for dev containers.
 - [ ] `plans/index.md` updated.

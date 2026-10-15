@@ -9,21 +9,21 @@ refs:
 
 ## Objective
 
-`docs/PLUGINS.md` describes `registerChannel` and `users_changed`.
-`docs/BOTS.md` describes the catalogue and its three actions.
+`docs/plugins/PLUGINS.md` describes `registerChannel` and `users_changed`.
+`docs/plugins/BOTS.md` describes the catalogue and its three actions.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md` - a section on `registerChannel`, `publish`, `subscribers`, `left` and `users_changed`.
-- `UPDATE: docs/BOTS.md` - the catalogue, its snapshot and its actions.
+- `UPDATE: docs/plugins/PLUGINS.md` - a section on `registerChannel`, `publish`, `subscribers`, `left` and `users_changed`.
+- `UPDATE: docs/plugins/BOTS.md` - the catalogue, its snapshot and its actions.
 - `UPDATE: packages/bot/README.md` - one line on the catalogue.
 - `UPDATE: .project/plans/plugin/00-plugin.md:47` - a `channel` row, built, and the `registerMethod` row without the channel.
 
 ## Steps
 
-1. Write the `registerChannel` section in `docs/PLUGINS.md`.
-2. Add `users_changed` to the event list in `docs/PLUGINS.md`.
-3. Write the catalogue section in `docs/BOTS.md`.
+1. Write the `registerChannel` section in `docs/plugins/PLUGINS.md`.
+2. Add `users_changed` to the event list in `docs/plugins/PLUGINS.md`.
+3. Write the catalogue section in `docs/plugins/BOTS.md`.
 4. Add the line to `packages/bot/README.md`.
 5. Add the `channel` row to `00-plugin.md`, and remove the channel from the `registerMethod` row.
 

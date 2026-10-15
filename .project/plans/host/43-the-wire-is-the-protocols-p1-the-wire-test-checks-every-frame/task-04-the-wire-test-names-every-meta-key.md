@@ -5,10 +5,10 @@ depends: [task-03-the-wire-test-records-a-whole-host.md]
 layer: "tools"
 refs:
   - "[code://tools/wire.mjs#L378-L398](../../../../tools/wire.mjs#L378-L398) - `metaKeys`, the census, beside the checker"
-  - "[code://docs/AHP.md#L81](../../../../docs/AHP.md#L81) - `_meta.command` and `_meta.isSkill` on a completion item, the reference client's"
-  - "[code://docs/AHP.md#L218](../../../../docs/AHP.md#L218) - `toolKind`, `subagentDescription`, `subagentAgentName`, `subagentChatUri`, the reference's"
-  - "[code://docs/AHP.md#L556-L562](../../../../docs/AHP.md#L556-L562) - `command`, `description`, `argumentHint` on a completion item's attachment"
-  - "[code://docs/AHP.md#L637](../../../../docs/AHP.md#L637) - `githubData`, `workingDirectoryKeys`, `github`, `git`"
+  - "[code://docs/sdk/AHP.md#L81](../../../../docs/sdk/AHP.md#L81) - `_meta.command` and `_meta.isSkill` on a completion item, the reference client's"
+  - "[code://docs/sdk/AHP.md#L218](../../../../docs/sdk/AHP.md#L218) - `toolKind`, `subagentDescription`, `subagentAgentName`, `subagentChatUri`, the reference's"
+  - "[code://docs/sdk/AHP.md#L556-L562](../../../../docs/sdk/AHP.md#L556-L562) - `command`, `description`, `argumentHint` on a completion item's attachment"
+  - "[code://docs/sdk/AHP.md#L637](../../../../docs/sdk/AHP.md#L637) - `githubData`, `workingDirectoryKeys`, `github`, `git`"
   - "[code://UPSTREAM.md#L75](../../../../UPSTREAM.md#L75) - `_meta.kind: 'responseRoundEnded'`, the reference's"
 ---
 
@@ -20,7 +20,7 @@ Every `_meta` key in the recorded traffic is `ahpd.`-prefixed, or is one of the 
 
 - `UPDATE: tools/wire.mjs:378-398` - `metaKeys(frame)` answers each `_meta` key with the path it was found at.
 - `UPDATE: tools/wire.d.mts` - the type for `metaKeys` and `MetaKey`, so a suite importing it typechecks.
-- `UPDATE: packages/sdk/test/wire.test.ts` - `REFERENCE` (key and path pattern, each with the `docs/AHP.md` or `UPSTREAM.md` line it comes from) and `PENDING` (today's unprefixed keys, each naming its p4 task); the traffic grows a skill with an argument hint and a result with cache writes and a cost.
+- `UPDATE: packages/sdk/test/wire.test.ts` - `REFERENCE` (key and path pattern, each with the `docs/sdk/AHP.md` or `UPSTREAM.md` line it comes from) and `PENDING` (today's unprefixed keys, each naming its p4 task); the traffic grows a skill with an argument hint and a result with cache writes and a cost.
 - `UPDATE: packages/agent-claude/test/agent-claude-usage.test.ts` - the census over what a turn's usage emits.
 - `UPDATE: packages/sdk/test/commit.test.ts` - the census over what a changeset row carries.
 

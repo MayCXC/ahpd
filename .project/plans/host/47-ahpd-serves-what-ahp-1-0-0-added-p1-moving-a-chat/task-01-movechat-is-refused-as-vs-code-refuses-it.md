@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L1021-L1026](../../../../packages/sdk/src/host.ts#L1021-L1026) - the unknown-method answer `moveChat` reaches"
   - "[code://packages/sdk/test/host-handshake.test.ts#L98-L200](../../../../packages/sdk/test/host-handshake.test.ts#L98-L200) - `what it will not pretend`, the describe the new case joins"
-  - "[code://docs/AHP.md#L75-L76](../../../../docs/AHP.md#L75-L76) - the `createChat` and `disposeChat` rows the `moveChat` row goes beside"
+  - "[code://docs/sdk/AHP.md#L75-L76](../../../../docs/sdk/AHP.md#L75-L76) - the `createChat` and `disposeChat` rows the `moveChat` row goes beside"
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/protocolServerHandler.ts#L1720-L1722 - `MethodNotFound` for `moveChat`"
 ---
 
@@ -17,7 +17,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/test/host-handshake.test.ts` - two cases in `what it will not pretend`.
-- `UPDATE: docs/AHP.md` - a `moveChat` row beside `createChat`: not served, as in VS Code's agent host, and no chat says it is movable.
+- `UPDATE: docs/sdk/AHP.md` - a `moveChat` row beside `createChat`: not served, as in VS Code's agent host, and no chat says it is movable.
 
 ## Steps
 

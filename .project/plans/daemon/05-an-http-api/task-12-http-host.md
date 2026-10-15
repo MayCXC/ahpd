@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "server"
 refs:
-  - "[../../../../docs/HOST.md](../../../../docs/HOST.md) - what this task applies"
+  - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - what this task applies"
   - "[code://packages/server/src/config.ts#L8-L24](../../../../packages/server/src/config.ts#L8-L24) - `HttpSetting`, which now has `host`"
   - "[code://packages/server/src/commands/options.ts#L272-L303](../../../../packages/server/src/commands/options.ts#L272-L303) - `httpOf`, which reads and validates it"
   - "[code://packages/server/src/commands/run.ts#L197-L199](../../../../packages/server/src/commands/run.ts#L197-L199) and [#L240-L242](../../../../packages/server/src/commands/run.ts#L240-L242) - `apiHost`, and `listenApi` bound to it"
@@ -19,7 +19,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/server/src/config.ts:8-24` - `HttpSetting` gains `host`.
-- `UPDATE: packages/server/src/commands/options.ts:272-303` - `httpOf` reads `host`; a non-string, or a `host` without a `port`, refuses the start ([http.host binds the API's own listener](../../../../docs/HOST.md)).
+- `UPDATE: packages/server/src/commands/options.ts:272-303` - `httpOf` reads `host`; a non-string, or a `host` without a `port`, refuses the start ([http.host binds the API's own listener](../../../../docs/sdk/HOST.md)).
 - `UPDATE: packages/server/src/commands/run.ts:197-199, 240-242, 525` - `apiHost` is what `listenApi` binds and what the `http on` line names.
 - `UPDATE: packages/server/test/server-http.test.ts:46-49, 115-126, 365-411` - the daemon fixture reads the announced hosts, and the four cases.
 

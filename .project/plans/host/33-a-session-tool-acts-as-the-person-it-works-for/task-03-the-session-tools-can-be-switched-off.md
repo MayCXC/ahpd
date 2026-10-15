@@ -29,9 +29,9 @@ The artifact tools, `schedule_wakeup` and `ahp_terminals` are not session tools 
 - `UPDATE: packages/server/src/commands/run.ts:626` - the host is given both keys.
 - `UPDATE: packages/sdk/src/host/tooling.ts:1316-1358` - `offeredTools` leaves out the nine session tools for a session whose provider is not offered them.
 - `UPDATE: packages/sdk/src/host/actions.ts:429-441` - a change to either key retools the running sessions.
-- `UPDATE: docs/HOST.md` - the option.
-- `UPDATE: docs/TOOLS.md` - which tools the option covers.
-- `UPDATE: docs/DAEMON.md` - the option in the config reference.
+- `UPDATE: docs/sdk/HOST.md` - the option.
+- `UPDATE: docs/sdk/TOOLS.md` - which tools the option covers.
+- `UPDATE: docs/server/REFERENCE.md` - the option in the config reference.
 - `UPDATE: packages/sdk/test/host-tools.test.ts` - the option cases below.
 
 ## Steps
@@ -45,7 +45,7 @@ The artifact tools, `schedule_wakeup` and `ahp_terminals` are not session tools 
 7. In `offeredTools`, leave out the listed tools when `sessionTools` is `false`.
 8. Leave them out also when `sessionToolsProviders` is not empty and does not hold the session's provider from `providerOf`.
 9. On a live change to either key, dispatch `session/serverToolsChanged` and call `retool` for every running session, as for `advancedTools`.
-10. Write the option in `docs/HOST.md`, `docs/TOOLS.md` and `docs/DAEMON.md`.
+10. Write the option in `docs/sdk/HOST.md`, `docs/sdk/TOOLS.md` and `docs/server/REFERENCE.md`.
 
 ## Validation
 
@@ -73,9 +73,9 @@ File by file:
 - `packages/sdk/src/tools/session.ts` - `SESSION_TOOL_NAMES`, the nine by name. Step 6.
 - `packages/sdk/src/host/tooling.ts` - `ctx.sessionTools` and `ctx.sessionToolsProviders` off the options, defaulting to `true` and `[]`. `sessionToolsFor(uri, provider)` answers whether one session is offered them. `contributingTo(uri, provider)` is the host's tools less the session tools where that answer is no. `toolDefinitions` and `offeredTools` both read it. Steps 7 and 8.
 - `packages/sdk/src/host/actions.ts` - after the `advancedTools` block, the same shape for the two keys: every running session is dispatched `session/serverToolsChanged` with its own `toolDefinitions(uri)` and `retool`ed. Step 9.
-- `docs/HOST.md` - two rows in the configuration table, both keys in the daemon-keys list, and the live/restart split. The split says the two session tool keys are rebuilt per session, since a provider list is not one answer for all of them. Step 10.
-- `docs/TOOLS.md` - the `Which sessions are offered the session tools` section, rewritten for two keys. Then two rows in the configuration table, and `The first four` where the daemon's live keys are counted. Step 10.
-- `docs/DAEMON.md` - `--session-tools` and `--session-tools-providers <id>` in the flag table, and the `Configuration` sentence. Step 10.
+- `docs/sdk/HOST.md` - two rows in the configuration table, both keys in the daemon-keys list, and the live/restart split. The split says the two session tool keys are rebuilt per session, since a provider list is not one answer for all of them. Step 10.
+- `docs/sdk/TOOLS.md` - the `Which sessions are offered the session tools` section, rewritten for two keys. Then two rows in the configuration table, and `The first four` where the daemon's live keys are counted. Step 10.
+- `docs/server/REFERENCE.md` - `--session-tools` and `--session-tools-providers <id>` in the flag table, and the `Configuration` sentence. Step 10.
 - `packages/sdk/test/host-tools.test.ts` - a new describe, `the session tools, which an install may switch off`, with the three cases the Validation asks for. 63 cases before, 66 after.
 
 Judgement calls the plan does not decide, each visible in the file it is made in:

@@ -50,7 +50,7 @@ harness usage -> agent mapping (_meta.cost) -> meter costOf -> ModelUse { cost, 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/USAGE.md) | Softov, 2026-10-07 |
+| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-07 |
 | 2 | Each agent says whether its cost comes from the harness or the provider | Softov, 2026-10-02 |
 
 | What | Source | Task |

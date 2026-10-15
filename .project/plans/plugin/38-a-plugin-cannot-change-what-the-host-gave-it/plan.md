@@ -65,7 +65,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin gets frozen copies of the host's values, never the host's own objects](../../../../docs/PLUGINS.md) | Softov, 2026-10-08 |
+| 1 | [A plugin gets frozen copies of the host's values, never the host's own objects](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-08 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -77,7 +77,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 | `fired` checks the type belongs to the plugin that fires it | survey, 2026-10-08 | 03 |
 | Each listener gets its own frozen event; each plugin gets its own frozen `paths`; `apply` options are copied whole | survey, 2026-10-08 | 04 |
 | `foldHostOptions` keeps the base's getters, so a root-config edit to `mcpServers` reaches the next session | survey, 2026-10-08, found on the way | 05 |
-| `docs/PLUGINS.md` says every value a plugin gets is read-only | (defaulted: plugin authors read that file) | 06 |
+| `docs/plugins/PLUGINS.md` says every value a plugin gets is read-only | (defaulted: plugin authors read that file) | 06 |
 
 ## Proposed architecture
 
@@ -112,7 +112,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
   - **03 - the host holds copies of contributions.** The fold takes its own copy of every agent, tool, session-config schema, trigger type and `optionsSchema`; a `register*` after `apply` returns throws the loader's seal sentence; `fired` asks the door which plugin holds a trigger type.
   - **04 - events, paths and options are per plugin copies.** `raise` hands one frozen copy of the event to every listener; the plugin context is a frozen literal with `paths: frozenCopy(...)`; a `secretAtUse` node is copied like any other.
   - **05 - the fold keeps the base's getters.** The fold starts from `Object.defineProperties({}, Object.getOwnPropertyDescriptors(base))`, so the daemon's `get mcpServers()` is still read at each session's start. Found on the way and fixed here rather than left.
-  - **06 - docs.** `docs/PLUGINS.md` gained "Everything you are handed is read-only", at the end of the contract and before what may be registered.
+  - **06 - docs.** `docs/plugins/PLUGINS.md` gained "Everything you are handed is read-only", at the end of the contract and before what may be registered.
   - **Review round, 2026-10-08.** Softov read the diff and found three sites where the promise held on paper and not in the value. All three are fixed, each with a case that failed first: an agent written as a class lost its prototype methods to `keptAgent`; a plugin that lost every trigger type kept its own record and dropped a fire in silence; and a principal was frozen one level deep, so `roles` stayed a writable array in both `users.ts` and the embedder's road into `host.ts`. The details are in `implemented.md` and in the Resume sections of tasks 01 and 03.
 - **Next action:** none; the plan is built.
 - **Open questions:** none.

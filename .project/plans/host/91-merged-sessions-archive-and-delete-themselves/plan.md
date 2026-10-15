@@ -117,5 +117,5 @@ window root/configChanged { autoArchiveMergedSessionsAfterDays: 7 } -> actions.t
 - [x] A test: a session archived by hand is never deleted.
 - [x] A test: `0`, a negative number and a fraction turn each action off.
 - [x] The gates pass: typecheck, boundary, schema and vitest.
-- [x] `docs/HOST.md` lists `pullRequestLookup`.
+- [x] `docs/sdk/HOST.md` lists `pullRequestLookup`.
 - [x] `plans/index.md` updated.

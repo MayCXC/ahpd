@@ -20,7 +20,7 @@ refs:
   - "[code://examples/notes/agent.ts#L271](../../../../examples/notes/agent.ts#L271) - the same in the notes example"
   - "[code://packages/sdk/src/host/sessionconfig.ts#L300-L314](../../../../packages/sdk/src/host/sessionconfig.ts#L300-L314) - `published()`, the one road a backend's session schema leaves by"
   - "[code://packages/sdk/src/host/snapshots.ts#L224-L232](../../../../packages/sdk/src/host/snapshots.ts#L224-L232) - the session state is the backend's answer with `resource` taken off"
-  - "[code://docs/AHP.md#L750-L771](../../../../docs/AHP.md#L750-L771) - the requests for VS Code parity, whose list the new section makes complete"
+  - "[code://docs/sdk/AHP.md#L750-L771](../../../../docs/sdk/AHP.md#L750-L771) - the requests for VS Code parity, whose list the new section makes complete"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - `CommandMap` results `null` (`src/types/common/messages.ts:164-173`); `FetchAutomationRunsResult {}`, delivered by action (`channels-automation/commands.ts:95-125`); `ChatInputRequestedAction` has `type` and `request` (`channels-chat/actions.ts:908-912`); `SessionConfigSchema` requires `type`; `SessionState` declares no `resource`"
 ---
 
@@ -45,7 +45,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rpc.ts` cannot send `null`: `??` turns it into `{}`, so the handlers' change alone does nothing.
 - The store has no notion of a page loaded beyond the first, so `entry()` cannot grow.
-- `docs/AHP.md` has no list of what is served outside `CommandMap`, and does not mention `vscode/devContainers/*` at all.
+- `docs/sdk/AHP.md` has no list of what is served outside `CommandMap`, and does not mention `vscode/devContainers/*` at all.
 
 ## Decisions locked in
 
@@ -88,7 +88,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Done so far:** all five tasks, which is the plan. `KNOWN` holds no line naming p2.
 - **Next action:** none. Reviewed and closed on 2026-10-07.
 - **Open questions:** none.
-- **Watch out for:** `docs/AHP.md` and `packages/sdk/test/wire.test.ts` now hold the same twenty-two departures, and either one moving alone fails the wire test.
+- **Watch out for:** `docs/sdk/AHP.md` and `packages/sdk/test/wire.test.ts` now hold the same twenty-two departures, and either one moving alone fails the wire test.
 
 ## Final verification checklist
 

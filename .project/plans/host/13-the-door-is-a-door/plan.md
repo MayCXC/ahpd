@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/types/listen.ts#L74-L102](../../../../packages/sdk/src/types/listen.ts#L74-L102) - `Arrival`, `identify` and `root`"
   - "[code://packages/sdk/src/users.ts#L130-L155](../../../../packages/sdk/src/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
   - "[code://packages/server/src/main.ts#L810-L830](../../../../packages/server/src/main.ts#L810-L830) - the daemon's `identify`, which passes the record only when it is trusted"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the two layers this makes true"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the two layers this makes true"
 ---
 
 ## Goal
@@ -30,7 +30,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `grep -rn "trusted\|trustToken" packages test` - there was no such name anywhere, so the opt-out is new vocabulary and its default is decided in one place per layer.
-- `grep -rn "arrives as\|as themselves" docs README.md packages/*/README.md` - one stale passage in `docs/DAEMON.md`, plus the `USERS.md` table, which is the page this rewrites.
+- `grep -rn "arrives as\|as themselves" docs README.md packages/*/README.md` - one stale passage in `docs/server/REFERENCE.md`, plus the `USERS.md` table, which is the page this rewrites.
 - `rg -n "identify" packages/sdk/src packages/server/src` - one caller per runtime in `listen.ts` and one in the daemon, so the arrival shape changes in four places and nowhere else.
 
 ### Gaps
@@ -85,4 +85,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] `test/users-gate.test.ts`, `test/users-host.test.ts`, `test/users-issuer.test.ts`, `test/users.test.ts` - the gate refuses `-32007` on a personal token before `authenticate`, `trusted` is per record and per host, and root is never asked.
 - [x] `test/daemon.test.ts` - `--trust-token` and the `trustToken` key, and `user list` printing `trusted` or `sign-in`.
 - [x] By hand: a daemon on the deployment token, on a personal token before and after `authenticate`, and with `--trust-token`. See [implemented.md](implemented.md).
-- [x] `plans/index.md`, `docs/USERS.md`, `docs/DAEMON.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md`, `docs/server/REFERENCE.md` and `working/HANDOFF.md` updated.

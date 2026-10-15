@@ -29,4 +29,4 @@ A person who starts a detached daemon can copy a ready `ws://<host>:<port>/?tkn=
 
 ## Left for later
 
-- `docs/DAEMON.md` does not yet point at the ready URL in the record - see [deferred.md](deferred.md).
+- `docs/server/REFERENCE.md` does not yet point at the ready URL in the record - see [deferred.md](deferred.md).

@@ -76,9 +76,9 @@ nested: ahpd --stdio                                            -> one JSON fram
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [A dev container is made by the Dev Container CLI](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | The user, 2026-09-24: "supporting the vscode/devContainers RPC is possible since we will be supporting docker". The client only asks when a `devcontainer.json` exists, so Docker alone would answer a request whose file we ignored. |
-| 2 | [The surface is the reference client's own, name for name](../../../../docs/CONTAINERS.md) | VS Code is the client that has the flow; this host already serves its `vscode/*` methods and gates them on `_meta` keys. |
+| 2 | [The surface is the reference client's own, name for name](../../../../docs/plugins/CONTAINERS.md) | VS Code is the client that has the flow; this host already serves its `vscode/*` methods and gates them on `_meta` keys. |
 | 3 | [The nested host speaks AHP over stdio](../../../decisions/a-nested-host-speaks-stdio.md) | Owning both ends makes the reference's WebSocket-over-a-duplex unnecessary: no forwarder, no endpoint, no token on a URL. |
-| 4 | [Connecting needs the container's own operation](../../../../docs/CONTAINERS.md) | Starting a container is the host's Docker access by proxy, and a method nobody classified is served to anybody. |
+| 4 | [Connecting needs the container's own operation](../../../../docs/plugins/CONTAINERS.md) | Starting a container is the host's Docker access by proxy, and a method nobody classified is served to anybody. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -128,6 +128,6 @@ nested: ahpd --stdio                                            -> one JSON fram
 - [x] `_meta['vscode.devContainers']` is absent without a launcher that answers and present with one; an ungranted client is refused `-32009` with `container:connect` in the sentence.
 - [x] The four methods and four notifications are exercised through a fake port, including a relay whose process exits, whose stderr arrives as `output`, and whose socket closes.
 - [x] With a real nested `ahpd` on stdio and no Docker: `connect`, then `initialize` and one `ping` through `relaySend`, answered by the nested host.
-- [x] By hand, with `@devcontainers/cli` 0.89.0 and Docker 29.6.2: a workspace with a `devcontainer.json`, a container the CLI made, and the tree's own host answering from inside it. Recorded in [implemented.md](implemented.md) and named in `docs/CONTAINERS.md`.
-- [x] `plans/index.md`, `docs/CONTAINERS.md`, `docs/PLUGINS.md` and `working/HANDOFF.md` updated.
+- [x] By hand, with `@devcontainers/cli` 0.89.0 and Docker 29.6.2: a workspace with a `devcontainer.json`, a container the CLI made, and the tree's own host answering from inside it. Recorded in [implemented.md](implemented.md) and named in `docs/plugins/CONTAINERS.md`.
+- [x] `plans/index.md`, `docs/plugins/CONTAINERS.md`, `docs/plugins/PLUGINS.md` and `working/HANDOFF.md` updated.
 - [x] The `ahpapp` half of task 06, which is a scope document in that repository's own convention.

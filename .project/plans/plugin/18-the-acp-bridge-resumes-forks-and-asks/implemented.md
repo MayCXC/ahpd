@@ -23,7 +23,7 @@ A server that offers only `session.resume` is resumable.
 - [`code://packages/agent-acp/src/mapping.ts`](../../../../packages/agent-acp/src/mapping.ts) - a form's fields to questions, and the answers back.
 - [`code://packages/sdk/src/types/session.ts`](../../../../packages/sdk/src/types/session.ts) - `Session.answer` takes an optional response kind.
 - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts) - the host passes the client's response kind to the backend.
-- [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) and [`code://packages/agent-acp/README.md`](../../../../packages/agent-acp/README.md) - the resume, the fork and the question.
+- [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) and [`code://packages/agent-acp/README.md`](../../../../packages/agent-acp/README.md) - the resume, the fork and the question.
 
 ## Verified
 

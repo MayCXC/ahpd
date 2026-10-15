@@ -14,7 +14,7 @@ A plugin's option is set in the file with `ahpd plugin config`, switched with `p
 
 - [`code://packages/server/src/commands/plugin.ts`](../../../../packages/server/src/commands/plugin.ts) - `plugin config`, `plugin enable` and `plugin disable`, in `5221af7`.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `--plugin-option`, finding the plugin as the longest name this run loads that the flag starts with, and `setAt`, which sets the rest of the flag as a key path, makes a missing key on the way down, refuses one that is there and is not an object, and refuses `__proto__`, `constructor` and `prototype`.
-- `docs/DAEMON.md` says the key is a path and that a credential goes as a `{"$secret":"..."}` reference.
+- `docs/server/REFERENCE.md` says the key is a path and that a credential goes as a `{"$secret":"..."}` reference.
 
 ## Verified
 

@@ -4,16 +4,16 @@ status: done
 depends: [task-02-stderr-rides-on-a-failure.md, task-03-a-dead-agent-is-reopened-by-its-id.md, task-04-close-ends-the-session-and-its-processes.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the ACP section"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the ACP section"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` says what a person sees when the command is missing or the server dies, and that a session continues after a death.
+`docs/plugins/PLUGINS.md` says what a person sees when the command is missing or the server dies, and that a session continues after a death.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md`.
+- `UPDATE: docs/plugins/PLUGINS.md`.
 
 ## Steps
 

@@ -24,7 +24,7 @@ A peer chat carries `movable: true` in its `ChatState` and `ChatSummary` exactly
 - `UPDATE: packages/agent-acp/src/session.ts` - `resumable` answers whether the handshake advertised `loadSession`.
 - `UPDATE: packages/sdk/src/host/catalogue.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/host/sessionmethods.ts` - a `movable(chatUri)` function; `movable` in `chatSummary` and a peer chat's state; a `movableMoved(chatUri)` that dispatches the two actions when the answer changed, called at a turn's start and end (`packages/sdk/src/host/spawn.ts:615`), when a worker of the chat starts or ends a turn, and when the default chat changes in `disposeChat`.
 - `UPDATE: packages/sdk/test/host-chats.test.ts`, `packages/agent-acp/test/agent-acp.test.ts` - the cases below, the host's in `more than one chat in a session`.
-- `UPDATE: docs/AHP.md` - the `chat/movableChanged` row.
+- `UPDATE: docs/sdk/AHP.md` - the `chat/movableChanged` row.
 
 ## Steps
 

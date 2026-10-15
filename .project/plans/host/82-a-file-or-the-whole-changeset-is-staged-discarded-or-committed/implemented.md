@@ -5,7 +5,7 @@ refs:
   - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts)"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts)"
   - "[code://packages/sdk/test/changes-uris.test.ts](../../../../packages/sdk/test/changes-uris.test.ts)"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md)"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md)"
 ---
 
 Stage, unstage, discard and commit each take one file or the whole changeset.
@@ -19,7 +19,7 @@ A renamed file's row has the old path in `before` and the new path in `after`.
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `COMMIT` takes the resource scope. One file is committed with `git commit --only`, and a renamed row passes both paths. The confirmation names the message first and then what the whole changeset takes.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - each operation on the whole changeset, and commit on one file over each kind of change.
 - [`code://packages/sdk/test/changes-uris.test.ts`](../../../../packages/sdk/test/changes-uris.test.ts) - a rename's two URIs, from the repository root and from a subfolder.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - what each operation takes, and a rename's two URIs.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - what each operation takes, and a rename's two URIs.
 
 ## Verified
 

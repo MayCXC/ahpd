@@ -7,7 +7,7 @@ layer: packages/agent-acp
 refs:
   - "[code://packages/agent-acp/src/connection.ts](../../../../packages/agent-acp/src/connection.ts) - the server this starts in a machine"
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - the runtime the machine comes from"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - where the by-hand case is written"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - where the by-hand case is written"
   - "[code://test/scenario.ts](../../../../test/scenario.ts) - the scripted host the suite drives"
   - "[code://README.md](../../../../README.md) - `pnpm test` is the suite with no network"
 ---
@@ -19,7 +19,7 @@ The suite proves the shape without Docker: a session naming a machine gets a des
 ## Files
 
 - `CREATE: test/computer-session.test.ts` - a host with a fake `computers` port, an ACP backend, and a session created with `computer`, asserting the spawned command line.
-- `UPDATE: docs/COMPUTER.md` - the by-hand case, with the image, the create manifest and the session, so it can be repeated.
+- `UPDATE: docs/plugins/COMPUTERS.md` - the by-hand case, with the image, the create manifest and the session, so it can be repeated.
 - `UPDATE: .project/working/HANDOFF.md` - what the by-hand case needs and what it showed.
 
 ## Steps
@@ -32,7 +32,7 @@ The suite proves the shape without Docker: a session naming a machine gets a des
 ## Validation
 
 - `test/computer-session.test.ts` - the two spawn cases above, with no Docker and no network.
-- By hand, in `docs/COMPUTER.md`: `docker` running, an image with the server, a machine made by a resource write, and a session whose server answers from inside the machine.
+- By hand, in `docs/plugins/COMPUTERS.md`: `docker` running, an image with the server, a machine made by a resource write, and a session whose server answers from inside the machine.
 - `pnpm test` green with no network, which is the suite's own promise.
 
 ## Resume

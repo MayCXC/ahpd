@@ -53,7 +53,7 @@ resourceWrite bot://<slug> -> botProvider.write -> check computer -> sessionFor 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/BOTS.md) | The decision file, 2026-10-07 |
+| 1 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/plugins/BOTS.md) | The decision file, 2026-10-07 |
 | 2 | A bot from a profile gets its own machine, and a named machine is shared | Softov, 2026-10-13, "Profile: own; machine: shared" |
 | 3 | A bot keeps its own agent state, and its owner pays for the machine | Softov, 2026-10-13, "The bot's own" |
 

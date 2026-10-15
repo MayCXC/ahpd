@@ -21,7 +21,7 @@ refs:
 - `UPDATE: packages/server/src/config.ts` - `namedIssuer` uses `isIssuerUrl`.
 - `CREATE: scripts/dev-issuer.mjs` - discovery and userinfo over http on loopback, any bearer token answering as its own subject.
 - `UPDATE: test/users-issuer.test.ts`, `test/daemon.test.ts` - the loopback and remote cases, and `isIssuerUrl`.
-- `UPDATE: docs/USERS.md`, `docs/DAEMON.md` - what an issuer must publish, the loopback rule, and the three ways to try one.
+- `UPDATE: docs/sdk/USERS.md`, `docs/server/REFERENCE.md` - what an issuer must publish, the loopback rule, and the three ways to try one.
 
 ## Steps
 

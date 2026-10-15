@@ -9,7 +9,7 @@ refs:
 
 ## Context
 
-[A machine is owned by whoever created it, and its owner pays for the time it is up](../../docs/USAGE.md) stores the owner with the machine so it survives a restart.
+[A machine is owned by whoever created it, and its owner pays for the time it is up](../../docs/sdk/USAGE.md) stores the owner with the machine so it survives a restart.
 A `docker run` machine carries it as `ahpd.owner`, `ahpd.team` and `ahpd.project` labels.
 The Dev Container CLI sets labels only through `--id-label`, which is also how it finds an existing container, so an owner label there would make a second container for a folder that already has one and leave the relay's folder lookup matching two.
 

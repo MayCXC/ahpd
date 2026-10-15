@@ -20,7 +20,7 @@ refs:
   - "[code://packages/agent-pi/src/catalog.ts#L54](../../../../packages/agent-pi/src/catalog.ts#L54) - `stateFile`, pi's one file per session"
   - "[code://packages/agent-cofold/src/agent.ts#L625](../../../../packages/agent-cofold/src/agent.ts#L625) - cofold's `list` over its store"
   - "[code://packages/agent-acp/src/agent.ts#L94](../../../../packages/agent-acp/src/agent.ts#L94) - ACP's `list`, the server's `session/list`"
-  - "[code://docs/AHP.md#L74](../../../../docs/AHP.md#L74) - the `disposeSession` row"
+  - "[code://docs/sdk/AHP.md#L74](../../../../docs/sdk/AHP.md#L74) - the `disposeSession` row"
   - npm://@anthropic-ai/claude-agent-sdk@0.3.278 - `deleteSession(sessionId, { dir })` removes `<id>.jsonl` and the `<id>/` subagent folder, and throws when neither exists
   - npm://@agentclientprotocol/sdk@^1.5.0 - `session/delete`, offered when the agent advertises `sessionCapabilities.delete`
   - git://90f4677 - the problem file this plan replaced, with the reproduction
@@ -56,7 +56,7 @@ disposeSession(channel) -> heldAs -> removeSession(uri) [held: teardown] -> agen
 
 | Decision | Task |
 | --- | --- |
-| [Deleting a session deletes the backend's own copy of it](../../../../docs/SESSIONS.md) | 01, 02, 03 |
+| [Deleting a session deletes the backend's own copy of it](../../../../docs/sdk/SESSIONS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -69,7 +69,7 @@ disposeSession(channel) -> heldAs -> removeSession(uri) [held: teardown] -> agen
 | pi's session is deleted by removing the file `stateFile` names | (defaulted: pi 0.87.1's `SessionManager` has no delete, and pi writes one file per session) | 03 |
 | An ACP agent sends `session/delete` only when the server advertises `sessionCapabilities.delete`; otherwise it has no delete | (defaulted: the method is capability-gated in the ACP schema) | 03 |
 | The ACP capability is read from the handshake `catalogueOf` already makes and `delete` is a getter over it, so the property is absent until the server has advertised `session/delete`; a dispose before the first listing takes the old path and is logged | Softov, 2026-10-04, asked how a conditionally absent `delete` is spelled on a plain `Agent` object: "present only when the server supports session/delete, through a getter over the capability cached from the handshake; a dispose before the first `list()` takes the old path and logs it" | 03 |
-| A deleted session's worktree is still kept when dirty, as `removeSession` does today | (defaulted: unchanged behaviour, see `docs/AHP.md`) | 01 |
+| A deleted session's worktree is still kept when dirty, as `removeSession` does today | (defaulted: unchanged behaviour, see `docs/sdk/AHP.md`) | 01 |
 | A caller who is neither the session's owner nor a holder of `session:*` is refused, not given a host-only dispose | (defaulted: refusing is the safe choice; Softov may change it) | 05 |
 
 ## Proposed architecture

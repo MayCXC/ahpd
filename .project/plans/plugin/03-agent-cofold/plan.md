@@ -131,5 +131,5 @@ ahpd --plugin @ahpd/agent-cofold
 - [x] By hand: the daemon started with `--plugin @ahpd/agent-cofold` serves provider `facio`, and a turn answers from a model through a configured endpoint.
 - [x] A client that needs a confirmation is asked, answers, and the run continues - by `test/agent-cofold-approval.test.ts`, because a configuration file cannot carry the policy function.
 - [x] A daemon restarted mid-conversation lists the session and resumes it - by `test/agent-cofold-store.test.ts`, and a resumed paused run is seen once.
-- [x] `docs/PLUGINS.md` names the package and its session config.
+- [x] `docs/plugins/PLUGINS.md` names the package and its session config.
 - [x] `plans/index.md` and `plans/plugin/00-plugin.md` updated.

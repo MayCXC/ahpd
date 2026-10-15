@@ -55,9 +55,9 @@ chat/turnStarted or pendingMessageSet -> host 68 writes the bytes to disk -> Ses
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
+| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/sdk/CHATS.md) | Softov, 2026-10-06 |
 | 2 | [A pasted image goes as an image when it fits](../../../decisions/a-pasted-image-goes-as-an-image-when-it-fits.md) | Softov, 2026-10-06 |
-| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
+| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/sdk/CHATS.md) | Softov, 2026-10-06 |
 
 | What | Source | Task |
 | --- | --- | --- |

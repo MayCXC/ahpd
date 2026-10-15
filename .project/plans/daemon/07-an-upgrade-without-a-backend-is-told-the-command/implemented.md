@@ -11,7 +11,7 @@ A daemon that starts with no backend names the command that installs Claude Code
 ## What was built
 
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the refusal names `ahpd plugin install @ahpd/agent-claude`, then `npm i` as the other way.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the sentence, and why 0.6 needed no plugin.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the sentence, and why 0.6 needed no plugin.
 
 ## Verified
 

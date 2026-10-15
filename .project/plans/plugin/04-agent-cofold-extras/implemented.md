@@ -13,7 +13,7 @@ refs:
   - code://test/agent-cofold-client-tool.test.ts
   - file:///github/cofold/packages/agents/src/store/cut.ts
   - file:///github/cofold/packages/store-file/src/store.ts
-  - code://docs/PLUGINS.md
+  - code://docs/plugins/PLUGINS.md
 ---
 
 `@ahpd/agent-cofold` now does the four things plan 03 left open: a host tool can say that running it writes or is destructive so facio's own default policy asks about it, a conversation can be forked at a turn and rewound to one, a tool a connected client runs is offered and waited for, and the backend reads the harness's own configuration so a provider already written for facio does not have to be repeated or lent.

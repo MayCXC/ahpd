@@ -16,7 +16,7 @@ The host keeps a hex colour in lowercase, and refuses any other form with `-3260
 - [`code://packages/bot/src/record.ts`](../../../../packages/bot/src/record.ts) - `BotColor` is a name or a `#` string. `colour` checks a write and lowercases a hex colour. `isBotColor` checks a stored value. `among` has no change.
 - [`code://packages/bot/src/store.ts`](../../../../packages/bot/src/store.ts) - `kept` uses `isBotColor`, so a bot with a hex colour loads at the next start.
 - [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts) - the manifest's `color` is `anyOf` the eleven names or the hex pattern.
-- `docs/BOTS.md` and `packages/bot/README.md` name the hex colour.
+- `docs/plugins/BOTS.md` and `packages/bot/README.md` name the hex colour.
 
 ## Verified
 

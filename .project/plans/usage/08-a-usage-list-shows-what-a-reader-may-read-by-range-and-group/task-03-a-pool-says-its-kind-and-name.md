@@ -15,7 +15,7 @@ refs:
 
 - `UPDATE: packages/sdk/src/usage.ts` - the pool body gains `kind` and `name`, read from the people records the provider is given.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the name cases.
-- `UPDATE: docs/USAGE.md` - the two fields.
+- `UPDATE: docs/sdk/USAGE.md` - the two fields.
 
 ## Steps
 
@@ -24,7 +24,7 @@ refs:
 3. Answer `name`: the user's name, the team's title, or `<team title> / <project title>`, each falling back to its id.
 4. Write a test: a reader with no `team` grant gets `Backend / ahpapp` for `project:backend:ahpapp`.
 5. Write a test: a team with no title gets its id.
-6. Describe `kind` and `name` in `docs/USAGE.md`.
+6. Describe `kind` and `name` in `docs/sdk/USAGE.md`.
 
 ## Validation
 
@@ -39,4 +39,4 @@ refs:
 - `packages/server/src/commands/run.ts`: the daemon passes its `users` directory as `titles`.
 - `packages/server/src/commands/usage.ts`: the served `ahpd usage` passes `served.users` as `titles`, and `TotalsRow` declares `kind` and `name`.
 - `packages/sdk/test/usage-scheme.test.ts`: a test of the names, and `packages/server/test/usage-command.test.ts` expects the two new fields.
-- `docs/USAGE.md`: a section on the kind and the name.
+- `docs/sdk/USAGE.md`: a section on the kind and the name.

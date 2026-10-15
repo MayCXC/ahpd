@@ -16,7 +16,7 @@ refs:
   - "[code://packages/computer/src/manifest.ts#L34-L100](../../../../packages/computer/src/manifest.ts#L34-L100) - `Profile`, which gains `state`"
   - "[code://packages/computer/src/manifest.ts#L574-L592](../../../../packages/computer/src/manifest.ts#L574-L592) - each agent the profile names is resolved by its provider id"
   - "[code://packages/computer/src/runtime.ts#L736-L744](../../../../packages/computer/src/runtime.ts#L736-L744) - copy-ins between create and start, paid on every create"
-  - "[code://docs/COMPUTER.md#L256](../../../../docs/COMPUTER.md#L256) - \"A copy-in is paid on every create\""
+  - "[code://docs/plugins/COMPUTERS.md#L256](../../../../docs/plugins/COMPUTERS.md#L256) - \"A copy-in is paid on every create\""
   - "[code://packages/computer/src/manifest.ts#L408-L419](../../../../packages/computer/src/manifest.ts#L408-L419) - `oneMountEach`, which already makes one entry of identical mounts"
   - "[code://packages/computer/src/manifest.ts#L689-L691](../../../../packages/computer/src/manifest.ts#L689-L691) - env needs as one object, last one wins"
   - "[code://packages/agent-claude/src/claude.ts#L373-L397](../../../../packages/agent-claude/src/claude.ts#L373-L397) - every Claude variant of one load declares identical needs"
@@ -55,8 +55,8 @@ profile.stateScope = 'owner' (default) | 'shared'
 | Decision | Task |
 | --- | --- |
 | [An agent declares what a machine needs through a machine() method](../../plugin/15-an-agent-says-what-a-machine-needs/plan.md) | 01 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | 02 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 02 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/plugins/PLUGINS.md) | 02 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -116,4 +116,4 @@ profile.stateScope = 'owner' (default) | 'shared'
 - [ ] `state: "host"` makes exactly today's machine.
 - [ ] A profile naming the built-in Claude and a Claude variant makes one machine with two state volumes at `/ahpd/claude` and `/ahpd/<variant>`, and two differing needs at one target are still refused.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [x] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

@@ -16,7 +16,7 @@ refs:
 
 - `UPDATE: packages/sdk/src/usage.ts` - add `range` to `LEAVES`, and answer it from `store.total`.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the range cases.
-- `UPDATE: docs/USAGE.md` - the `range` leaf.
+- `UPDATE: docs/sdk/USAGE.md` - the `range` leaf.
 
 ## Steps
 
@@ -25,7 +25,7 @@ refs:
 3. Refuse a bad `from` or `until` with the error that the `records` leaf gives.
 4. Write a test: a range of two days sums the records of those two days only.
 5. Write a test: `records` and `range` with the same `from` and `until` agree.
-6. Describe `range` in `docs/USAGE.md`.
+6. Describe `range` in `docs/sdk/USAGE.md`.
 
 ## Validation
 
@@ -37,4 +37,4 @@ refs:
 - `rangeOf` holds the `records` defaults, the first day of the month in the zone and now, and `records`, `range` and `groups` read their bounds through it.
 - A bound that is not a date is refused with `-32602`. The `records` leaf had no such error before, so this adds it to `records` as well.
 - `packages/sdk/test/usage-scheme.test.ts`: a test of a two-day range, of `records` and `range` agreeing, of the default range, and of the refusal on both leaves.
-- `docs/USAGE.md`: the `range` row and a section on the range.
+- `docs/sdk/USAGE.md`: the `range` row and a section on the range.

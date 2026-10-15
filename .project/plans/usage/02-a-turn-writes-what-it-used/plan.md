@@ -32,9 +32,9 @@ A daemon configured for it writes one record per report instead of one per turn.
 
 | What | Source | Task |
 | --- | --- | --- |
-| [One record per turn, or per report when configured](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
-| [Pools are owner, `team:<team>` and `project:<team>:<project>`](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01 |
-| [Records share one base; model records nest `model`](../../../../docs/USAGE.md) | Softov, 2026-10-01 | 01 |
+| [One record per turn, or per report when configured](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [Pools are owner, `team:<team>` and `project:<team>:<project>`](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 01 |
+| [Records share one base; model records nest `model`](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-01 | 01 |
 | A record with no model named has an empty name | Softov, 2026-10-02 | 01 |
 
 | What | Source | Task |

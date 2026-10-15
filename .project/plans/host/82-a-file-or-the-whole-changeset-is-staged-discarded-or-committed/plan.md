@@ -11,7 +11,7 @@ refs:
   - "[code://packages/sdk/src/changes.ts#L588-L680](../../../../packages/sdk/src/changes.ts#L588-L680) - `look()`, which reads `git status` and drops the path a rename came from"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L300-L315](../../../../packages/sdk/src/host/resourcemethods.ts#L300-L315) - no target is the changeset, and the host refuses a target kind the operation does not list"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the commit tests over a real repository"
-  - "[code://docs/AHP.md#L697-L710](../../../../docs/AHP.md#L697-L710) - what the docs say each operation takes"
+  - "[code://docs/sdk/AHP.md#L697-L710](../../../../docs/sdk/AHP.md#L697-L710) - what the docs say each operation takes"
   - https://github.com/microsoft/vscode/blob/51ac693b174/src/vs/platform/agentHost/node/agentHostCommitOperationProvider.ts#L53 - VS Code's commit takes the changeset only
   - https://github.com/microsoft/vscode/blob/51ac693b174/src/vs/platform/agentHost/node/agentHostDiscardChangesOperationProvider.ts#L45-L47 - VS Code's discard takes one file only
 ---
@@ -83,5 +83,5 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] `pnpm build`, `pnpm typecheck` and `pnpm boundary` pass.
 - [x] `commit.test.ts` covers each operation on one file and on the whole changeset, over a real repository.
 - [x] A rename test shows the old path in `before` and the new one in `after`.
-- [x] `docs/AHP.md` says what each operation takes.
+- [x] `docs/sdk/AHP.md` says what each operation takes.
 - [x] `plans/index.md` updated.

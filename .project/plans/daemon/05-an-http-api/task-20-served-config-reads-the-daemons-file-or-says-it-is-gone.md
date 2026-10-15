@@ -10,7 +10,7 @@ refs:
 
 ## Objective
 
-`GET /api/config` never shows one file's contents under another file's path, with the daemon's configuration file gone answering the daemon's path with nothing set; and it masks every plugin option value, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md).
+`GET /api/config` never shows one file's contents under another file's path, with the daemon's configuration file gone answering the daemon's path with nothing set; and it masks every plugin option value, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/sdk/HOST.md).
 
 ## Files
 
@@ -34,6 +34,6 @@ refs:
 
 Seen to fail first: with the daemon's own configuration file deleted, `GET /api/config` answered `port: 1234` from the `XDG_CONFIG_HOME` default where it wanted the daemon's path and no port; and a served answer whose file listed a plugin with `options: { apiKey: "k1", region: "eu" }` contained both `k1` and `eu` where it wanted `<set>` twice. Both pass after the change.
 
-Done: the served branch reads `served.configFile` and nothing else, answering `{}` under that path when the file is gone, and the terminal branch still has `loadConfig` refuse a `--config-file` that names nothing. `withoutToken` is now `withoutSecrets`: it masks `connectionToken` and, for every plugin entry that is an object with `options`, keeps the keys and replaces every value with `<set>`, leaving a string entry alone. Its comment names [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md).
+Done: the served branch reads `served.configFile` and nothing else, answering `{}` under that path when the file is gone, and the terminal branch still has `loadConfig` refuse a `--config-file` that names nothing. `withoutToken` is now `withoutSecrets`: it masks `connectionToken` and, for every plugin entry that is an object with `options`, keeps the keys and replaces every value with `<set>`, leaving a string entry alone. Its comment names [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/sdk/HOST.md).
 
 Review 2026-09-26: not passed against its decision. `config` masks the option values, but served `plugin list`, which needs only `config:read`, answers them in full. Task 24 masks them there.

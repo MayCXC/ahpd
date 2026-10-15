@@ -11,7 +11,7 @@ One reading this backend keeps deliberately is all that waits.
 
 ## Closed since
 
-- **A host tool declaring what it does.** Built by [plan 04](../04-agent-cofold-extras/plan.md) task 01; the fork it settled is [A host tool says what running it does, so a policy can ask about it](../../../../docs/TOOLS.md).
+- **A host tool declaring what it does.** Built by [plan 04](../04-agent-cofold-extras/plan.md) task 01; the fork it settled is [A host tool says what running it does, so a policy can ask about it](../../../../docs/sdk/TOOLS.md).
 - **Fork and rewind.** Built by [plan 04](../04-agent-cofold-extras/plan.md) task 02, bundled there rather than with the ACP plan because it is the runtime's own run history that has to be cut.
 - **A client's own tool.** Built by [plan 04](../04-agent-cofold-extras/plan.md) task 03.
 - **A key that was never a credential.** The session's `apiKey` setting was removed after the protocol was read: a bearer token belongs to `authenticate` against the advertised protected resource, which the package now does.

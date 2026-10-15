@@ -19,7 +19,7 @@ refs:
   - code://packages/agent-acp/package.json - the manifest shape, `ahpd.entry` and the options table
   - code://scripts/boundary.mjs - the check a package with a peer dependency has to pass
   - code://scripts/computer.mjs - the operator's half, whose Docker verbs the runtime performs
-  - code://docs/COMPUTER.md - what a person does once so an account may reach Docker and KVM
+  - code://docs/plugins/COMPUTERS.md - what a person does once so an account may reach Docker and KVM
   - code://.github/workflows/release.yml - the five-wide loops that gain a sixth package
 ---
 
@@ -64,7 +64,7 @@ a client reads computer://<id>/status
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [One computer: provider, one package, the runtime chosen by option](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | The user, 2026-09-22: "I want 1 also as option", after the duplicate-scheme rule made two packages impossible. |
-| 2 | [A machine is made by a host tool, not by a resource write](../../../../docs/COMPUTER.md) | The user, 2026-09-22: asked how a machine would be set up if the provider only reported them. |
+| 2 | [A machine is made by a host tool, not by a resource write](../../../../docs/plugins/COMPUTERS.md) | The user, 2026-09-22: asked how a machine would be set up if the provider only reported them. |
 
 | What | Source | Task |
 | --- | --- | --- |

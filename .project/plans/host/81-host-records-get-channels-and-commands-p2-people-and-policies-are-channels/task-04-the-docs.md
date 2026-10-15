@@ -4,8 +4,8 @@ status: done
 depends: [task-03-the-daemon-serves-the-five.md]
 layer: "docs"
 refs:
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the people schemes"
-  - "[code://docs/POLICY.md](../../../../docs/POLICY.md) - the policy scheme"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the people schemes"
+  - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - the policy scheme"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ refs:
 
 ## Files
 
-- `UPDATE: docs/USERS.md` - the four channels, their commands, and the own-record rule.
-- `UPDATE: docs/POLICY.md` - the policy channel, its commands, and that a hand edit reaches no channel.
+- `UPDATE: docs/sdk/USERS.md` - the four channels, their commands, and the own-record rule.
+- `UPDATE: docs/sdk/POLICY.md` - the policy channel, its commands, and that a hand edit reaches no channel.
 
 ## Steps
 

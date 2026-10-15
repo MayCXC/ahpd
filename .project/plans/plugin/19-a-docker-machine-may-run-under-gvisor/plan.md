@@ -17,7 +17,7 @@ refs:
   - "[code://packages/computer/src/runtime.ts#L778-L830](../../../../packages/computer/src/runtime.ts#L778-L830) - the `docker run` flags, where `--runtime` is added"
   - "[code://packages/computer/src/manifest.ts#L323](../../../../packages/computer/src/manifest.ts#L323) - `allowedImages`: what a machine is made from is the operator's to name, not a body's"
   - "[code://packages/computer/test/computer.test.ts](../../../../packages/computer/test/computer.test.ts) - the docker runtime's tests over a fake `docker`"
-  - "[code://docs/COMPUTER.md#L206-L263](../../../../docs/COMPUTER.md#L206-L263) - the Profiles section"
+  - "[code://docs/plugins/COMPUTERS.md#L206-L263](../../../../docs/plugins/COMPUTERS.md#L206-L263) - the Profiles section"
 ---
 
 ## Goal
@@ -48,7 +48,7 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/COMPUTER.md) | Softov, 2026-09-26 |
+| 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/plugins/COMPUTERS.md) | Softov, 2026-09-26 |
 | 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
@@ -64,7 +64,7 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 - **Data flow** - profile field to `MachineSpec` to one `docker run` flag.
 - **Event flow** - none.
 - **State flow** - none; Docker records the runtime on the container.
-- **Layer responsibilities** - `packages/computer/src/manifest.ts`: the field and the refusal · `packages/computer/src/runtime.ts`: the flag · `docs/COMPUTER.md`: the option.
+- **Layer responsibilities** - `packages/computer/src/manifest.ts`: the field and the refusal · `packages/computer/src/runtime.ts`: the flag · `docs/plugins/COMPUTERS.md`: the option.
 - **Source-of-truth files** - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts)
 
 ## Tasks
@@ -89,4 +89,4 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 
 - [x] A profile with `"ociRuntime": "runsc"` makes a machine with `--runtime=runsc`, and one without it makes the same machine as today.
 - [x] A body naming `ociRuntime` is refused with a sentence, and so is a dev container machine from a profile that names it.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/COMPUTER.md`, `plans/index.md` updated.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

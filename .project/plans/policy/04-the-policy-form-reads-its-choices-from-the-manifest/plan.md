@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/policies.ts#L21-L53](../../../../packages/sdk/src/policies.ts#L21-L53) - `MEASURES` and `MATCHES` by kind, `PERIODS`, `KINDS`, `EFFECTS`, `LIMIT_POOLS`: the values `checkPolicy` accepts"
   - "[code://packages/sdk/src/policy.ts#L71-L150](../../../../packages/sdk/src/policy.ts#L71-L150) - the manifest, built from those tables"
   - "[code://packages/sdk/test/policy-scheme.test.ts#L175-L278](../../../../packages/sdk/test/policy-scheme.test.ts#L175-L278) - the manifest test and the choices it carries"
-  - "[code://docs/POLICY.md](../../../../docs/POLICY.md) - the row, its match types and measures by kind, for a person"
+  - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - the row, its match types and measures by kind, for a person"
   - npm://ajv@^8.20.0 - already a dev dependency; validates a body against the manifest in the test
   - file:///github/ahpapp/.project/plans/policy/01-a-host-shows-its-policies/plan.md - the client that draws pickers from this
 ---
@@ -22,7 +22,7 @@ refs:
 ## Goal
 
 A client drawing the policy form reads every choice from the `policy:` manifest: the kinds, the effects, the periods, the limit pools, and which measures and which match types each kind takes.
-Today those values are only in the descriptions' prose and in `docs/POLICY.md`, so a client either offers free text or writes the values into itself, and the second goes stale the day the host adds one.
+Today those values are only in the descriptions' prose and in `docs/sdk/POLICY.md`, so a client either offers free text or writes the values into itself, and the second goes stale the day the host adds one.
 
 ## Reconnaissance
 
@@ -53,7 +53,7 @@ policy.ts manifest -> describe() -> initialize _meta['ahpd.resourceProviders'].p
 | The manifest's values are built from the tables `checkPolicy` uses, so the two cannot disagree | (defaulted: one source; a second list is the drift this plan exists to remove) | 01 |
 | A kind's measures and match types are said with JSON Schema `allOf` of `if` `kind` is a value `then` the narrower `enum` and `propertyNames`, standard schema a validator such as ajv reads | (defaulted: standard JSON Schema rather than an ahpd key of its own; Softov may prefer a flat map) | 01 |
 | The descriptions keep their sentences and drop the value lists they repeat | (defaulted: a value list in prose is the copy that went stale) | 01 |
-| `docs/POLICY.md` says the manifest is where a client reads the choices | follows row 1 | 02 |
+| `docs/sdk/POLICY.md` says the manifest is where a client reads the choices | follows row 1 | 02 |
 
 ## Proposed architecture
 
@@ -86,5 +86,5 @@ policy.ts manifest -> describe() -> initialize _meta['ahpd.resourceProviders'].p
 
 - [x] The manifest's `kind`, `effect`, `measure`, `period` and limit `pool` carry `enum`, equal to the tables.
 - [x] ajv, compiling the manifest, accepts each kind's valid body and refuses a measure or match type that kind does not take.
-- [x] `docs/POLICY.md` names the manifest as where the choices are.
+- [x] `docs/sdk/POLICY.md` names the manifest as where the choices are.
 - [x] `plans/index.md` updated.

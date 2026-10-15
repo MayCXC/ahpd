@@ -4,16 +4,16 @@ status: done
 depends: [task-01-initialize-and-sign-in-say-who.md]
 layer: "docs"
 refs:
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the people-as-resources section and the own-record rule"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the people-as-resources section and the own-record rule"
 ---
 
 ## Objective
 
-`docs/USERS.md` says that a client reads `_meta['ahpd.principal']` from `initialize` and from the root state snapshot, takes the snapshot again after it signs in, and reads the rest from `user://<id>`.
+`docs/sdk/USERS.md` says that a client reads `_meta['ahpd.principal']` from `initialize` and from the root state snapshot, takes the snapshot again after it signs in, and reads the rest from `user://<id>`.
 
 ## Files
 
-- `UPDATE: docs/USERS.md` - the paragraph on a person's own `user://<id>` names the key, its two spellings and when it is absent.
+- `UPDATE: docs/sdk/USERS.md` - the paragraph on a person's own `user://<id>` names the key, its two spellings and when it is absent.
 
 ## Steps
 

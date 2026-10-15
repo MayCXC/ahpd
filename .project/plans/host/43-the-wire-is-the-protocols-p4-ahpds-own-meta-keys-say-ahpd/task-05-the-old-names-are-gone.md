@@ -11,14 +11,14 @@ refs:
 
 ## Objective
 
-ahpd reads no `ahp.commit`, the wire test's `PENDING` list is empty and gone, and `docs/AHP.md` names only `ahpd.` keys for ahpd's extensions.
+ahpd reads no `ahp.commit`, the wire test's `PENDING` list is empty and gone, and `docs/sdk/AHP.md` names only `ahpd.` keys for ahpd's extensions.
 
 ## Files
 
 - `UPDATE: packages/sdk/src/changes.ts:1068-1069` - drop the `ahp.commit` fallback.
 - `UPDATE: packages/sdk/test/commit.test.ts` - `ahp.commit` is ignored.
 - `UPDATE: packages/sdk/test/wire.test.ts` - remove `PENDING`; a bare invented key fails the census.
-- `UPDATE: docs/AHP.md` - one paragraph saying ahpd's own `_meta` keys are `ahpd.<name>` and the reference's are kept as the reference spells them.
+- `UPDATE: docs/sdk/AHP.md` - one paragraph saying ahpd's own `_meta` keys are `ahpd.<name>` and the reference's are kept as the reference spells them.
 
 ## Steps
 
@@ -39,6 +39,6 @@ Step 1: `packages/sdk/src/changes.ts` takes a commit's message from `_meta['ahpd
 
 Step 2 needed no work: `rg -n "ahpd\.startedAt|ahpd\.endedAt|ahpd\.durationMs" packages/*/src` finds the three constants in `packages/sdk/src/timing.ts`, and every plugin stamps a call through `callTimes` and `withCallTimes`, so plugin/29 built the prefixed names already. The bare names survive only as cofold's own transcript fields and as the test that refuses them on the wire.
 
-`docs/AHP.md` states the convention once - this host's own `_meta` keys are `ahpd.<name>`, and a key the protocol or the reference client defines keeps its spelling - and the `commit` paragraph no longer says `ahp.commit` is read.
+`docs/sdk/AHP.md` states the convention once - this host's own `_meta` keys are `ahpd.<name>`, and a key the protocol or the reference client defines keeps its spelling - and the `commit` paragraph no longer says `ahp.commit` is read.
 
 `pnpm install`, `node tools/schema.mjs` (508 definitions, 633 closed objects), `pnpm build`, `pnpm typecheck` and `pnpm boundary` are clean. `npx vitest run --maxWorkers=2 --testTimeout=10000` passes.

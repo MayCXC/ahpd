@@ -13,7 +13,7 @@ Every turn on a host with a `usage` port leaves a `ModelUse` (`source: 'agent'`)
 
 - [`code://packages/sdk/src/meter.ts`](../../../../packages/sdk/src/meter.ts) - the meter: holds each running turn's last report, writes it when the turn completes, is cancelled or fails, or per report writes what each report added; reads every harness's cost spelling and lowercases the currency.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - a meter per session where `options.usage` is set, fed from the session's emit before the sender is let go of.
-- `HostOptions.usagePer`, and `usage.per` in the daemon config (`Config`, `serverFields`, file only), passed by `run.ts`; documented in `docs/DAEMON.md`.
+- `HostOptions.usagePer`, and `usage.per` in the daemon config (`Config`, `serverFields`, file only), passed by `run.ts`; documented in `docs/server/REFERENCE.md`.
 
 ## Verified
 

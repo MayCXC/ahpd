@@ -17,7 +17,7 @@ Every gated method and client-dispatchable action asks for one operation, and th
 - [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts) - `NEEDS` in operations and `ACTION_NEEDS` with all 47 client-dispatchable actions; an action with no row is refused as not served.
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - `advertisedGrants()`, on every root state and on `initialize` through [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts).
 - [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts) - the `role:` scheme writes `<subject>:<operation>` and names the subject's operations in a refusal.
-- `docs/USERS.md` lists every subject with its operations and its read and write groups.
+- `docs/sdk/USERS.md` lists every subject with its operations and its read and write groups.
 
 ## Verified
 
@@ -28,7 +28,7 @@ Every gated method and client-dispatchable action asks for one operation, and th
 ## Departures from the plan
 
 - `seesConfig` asks `config:settings` and `root/configChanged` asks `config:change`, rather than the groups task 03 named; Softov, 2026-10-04.
-- The matrix test asserts the invariant over `admin`, `member`, `guest`, `viewer` and `editor`, because the `operators` role the plan names is not in `docs/USERS.md`.
+- The matrix test asserts the invariant over `admin`, `member`, `guest`, `viewer` and `editor`, because the `operators` role the plan names is not in `docs/sdk/USERS.md`.
 - Tests outside the task files changed with the task that broke them: `containers`, `policy-scheme`, `people`, `computer-plugin`, `plugin-host`, `root-config`, `users-gate`, and the regenerated `fixtures/wire.jsonl`.
 
 ## Left for later

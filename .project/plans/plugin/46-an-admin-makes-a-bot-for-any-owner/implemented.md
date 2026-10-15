@@ -15,7 +15,7 @@ The bot manifest gives `root:<hostName>` as a `const` in `owner`.
 
 - [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts) - `ownerFor` lets an admin name any owner and records a named `root:` as `root:<hostName>`. An edit keeps the owner on record. `mayLink` uses `sameOwner`, and `manifest(hostName)` replaces `MANIFEST`.
 - [`code://packages/bot/src/record.ts`](../../../../packages/bot/src/record.ts) - `sameOwner`, which `checkRecord` uses to compare the owner an edit names.
-- `docs/BOTS.md` gives the owner rule for an admin and for the host.
+- `docs/plugins/BOTS.md` gives the owner rule for an admin and for the host.
 
 ## Verified
 

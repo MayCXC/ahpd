@@ -57,7 +57,7 @@ build-joined -> every part -> ahpd-agents:<hash of versions.json + the ahpd part
 | Decision | Task |
 | --- | --- |
 | Every agent CLI is pinned in one versions file, and none updates itself | 01, 05 |
-| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/COMPUTER.md) | 04 |
+| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/plugins/COMPUTERS.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -122,7 +122,7 @@ build-joined -> every part -> ahpd-agents:<hash of versions.json + the ahpd part
 - [x] From a checkout, the ahpd part holds the workspace's own code, and a change to it builds a new part.
 - [ ] `ahpd-agents:<hash>` runs `/opt/ahpd/codex/bin/codex-acp --help` on a real Docker.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/COMPUTER.md` updated. `plans/index.md` was left alone.
+- [x] `docs/plugins/COMPUTERS.md` updated. `plans/index.md` was left alone.
 
 The joined image was not built by hand - the box that ran this had under 5 GB
 free and fifteen parts plus the joined image do not fit beside what its daemon

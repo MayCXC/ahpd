@@ -20,7 +20,7 @@ The host now names the client: `session_start` carries the creating client, `ses
 - [`code://packages/push/src/plugin.ts`](../../../../packages/push/src/plugin.ts) - one push per new `(session, id)` pair of `input_needed_set`.
 - [`code://packages/sdk/src/host/routing.ts`](../../../../packages/sdk/src/host/routing.ts) - `openedBy`, which raises `session_opened` once per client and session.
 - [`code://packages/sdk/src/types/resources.ts`](../../../../packages/sdk/src/types/resources.ts) - `write` takes the writing client before the reader.
-- `packages/push/README.md` and `docs/PLUGINS.md` document the plugin.
+- `packages/push/README.md` and `docs/plugins/PLUGINS.md` document the plugin.
 
 ## Verified
 

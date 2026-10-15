@@ -76,16 +76,16 @@ GET /api/config -> walk: a { "$secret" } value is answered as written
 
 | Decision | Source |
 | --- | --- |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | Softov, 2026-10-02 and 2026-10-03 |
-| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | Softov, 2026-10-02 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-02 and 2026-10-03 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| `vault` joins `PortKey`, and `registerVault(vault, 'replace')` is wired exactly as `registerUsage` is | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | 01 |
-| A name is `host:<name>`, `team:<team>/<name>` or `user:<id>/<name>`; anything else is refused where it is written | [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | 01 |
-| A plugin option resolved at load names only `host:` | [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | 04 |
-| `vault.json` is plain JSON, mode 0600, written by temporary file and rename and re-read on every call; no cipher, no key, no locked state, and the port has no `locked()` | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | 01, 02 |
-| The daemon builds its vault beside the usage store and hands it as `HostOptions.vault` and `ServedFacts.vault`, and says `vault <path>` at start | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md); the usage port's wiring | 08 |
+| `vault` joins `PortKey`, and `registerVault(vault, 'replace')` is wired exactly as `registerUsage` is | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | 01 |
+| A name is `host:<name>`, `team:<team>/<name>` or `user:<id>/<name>`; anything else is refused where it is written | [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | 01 |
+| A plugin option resolved at load names only `host:` | [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | 04 |
+| `vault.json` is plain JSON, mode 0600, written by temporary file and rename and re-read on every call; no cipher, no key, no locked state, and the port has no `locked()` | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | 01, 02 |
+| The daemon builds its vault beside the usage store and hands it as `HostOptions.vault` and `ServedFacts.vault`, and says `vault <path>` at start | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md); the usage port's wiring | 08 |
 | A secret is written by: `host:` with `config:write`; `team:<team>/` with `team:write` and a membership in that team; `user:<id>/` only that person; root any. `list` shows names in the same scopes, with `config:read` for `host:`. No new subject | Softov, 2026-10-03, asked "Which grant writes a secret?": "Reuse existing grants" | 05 |
 | A plugin keeps a `team:` or `user:` reference to read at use time by marking the option's schema `"secretAtUse": true`, as Claude's `fromEnv` is; the loader leaves that option as written, and computer `needs` and `profiles` set it | Softov, 2026-10-03, asked "How does a plugin keep a team: or user: reference to read at use time?": "secretAtUse schema keyword" | 04 |
 | `{ "$secret" }` is resolved in the daemon's option loading, so every plugin gets it; claude/12's `fromEnv` stays in Claude's own options, untouched | Softov, 2026-10-02, asked "What does the vault unlock first?": "Options and machines" | 04 |
@@ -135,4 +135,4 @@ GET /api/config -> walk: a { "$secret" } value is answered as written
 - [x] `ahpd vault list` and `GET /api/vault/list` show names and whether set, and no response carries a value.
 - [x] Root config answers a `$secret` reference as written.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/DAEMON.md`, `docs/PLUGINS.md` and `plans/index.md` updated.
+- [x] `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md` and `plans/index.md` updated.

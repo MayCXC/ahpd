@@ -7,4 +7,4 @@ The record is now where the ready URL lives, and the prose that tells a person h
 
 | What | Why it waits | Where it goes |
 | --- | --- | --- |
-| `docs/DAEMON.md` points at the record and its `connectUrl` | The plan left the document for a later change so the record could land first | the `documentation` domain, beside [01 - The stale prose matches the code again](../../documentation/01-correct-the-stale-prose/plan.md) |
+| `docs/server/REFERENCE.md` points at the record and its `connectUrl` | The plan left the document for a later change so the record could land first | the `documentation` domain, beside [01 - The stale prose matches the code again](../../documentation/01-correct-the-stale-prose/plan.md) |

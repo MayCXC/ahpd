@@ -32,8 +32,8 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [A plugin option is given on the command line by repeating `--plugin-option <plugin>.<key>=<value>`](../../../../docs/DAEMON.md) | 02 |
-| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) | 01 |
+| [A plugin option is given on the command line by repeating `--plugin-option <plugin>.<key>=<value>`](../../../../docs/server/REFERENCE.md) | 02 |
+| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/sdk/HOST.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

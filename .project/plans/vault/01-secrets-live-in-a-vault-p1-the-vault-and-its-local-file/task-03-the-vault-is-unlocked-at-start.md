@@ -6,4 +6,4 @@ layer: "server"
 refs: []
 ---
 
-Dropped 2026-10-03: the local vault is not encrypted yet, so there is no key to give at start ([the decision](../../../../docs/DAEMON.md), [the idea](../../../ideas/the-local-vault-is-encrypted.md)); the wiring it held is [task 08](task-08-the-daemon-holds-its-vault.md).
+Dropped 2026-10-03: the local vault is not encrypted yet, so there is no key to give at start ([the decision](../../../../docs/server/REFERENCE.md), [the idea](../../../ideas/the-local-vault-is-encrypted.md)); the wiring it held is [task 08](task-08-the-daemon-holds-its-vault.md).

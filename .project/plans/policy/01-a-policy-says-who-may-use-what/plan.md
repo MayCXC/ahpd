@@ -36,9 +36,9 @@ refs:
   - "[code://packages/sdk/src/computers.ts#L69-L84](../../../../packages/sdk/src/computers.ts#L69-L84) - `openComputer`, the only place a machine is made for a session"
   - "[code://packages/sdk/src/meter.ts#L176-L207](../../../../packages/sdk/src/meter.ts#L176-L207) - how a record finds the model a turn ran on, which is what a turn's check may and may not know"
   - "[code://packages/sdk/src/index.ts](../../../../packages/sdk/src/index.ts) - what the package exports, where the port, the stores, the scheme and `decide` go"
-  - "[code://docs/PLUGINS.md#L70-L88](../../../../docs/PLUGINS.md#L70-L88) - the registration table `registerPolicies` joins"
-  - "[code://docs/USERS.md#L354-L398](../../../../docs/USERS.md#L354-L398) - the subject and verb table, where `policy` is a row"
-  - "[code://docs/DAEMON.md#L419-L427](../../../../docs/DAEMON.md#L419-L427) - the settings list the `policies` key joins"
+  - "[code://docs/plugins/PLUGINS.md#L70-L88](../../../../docs/plugins/PLUGINS.md#L70-L88) - the registration table `registerPolicies` joins"
+  - "[code://docs/sdk/USERS.md#L354-L398](../../../../docs/sdk/USERS.md#L354-L398) - the subject and verb table, where `policy` is a row"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the settings list the `policies` key joins"
   - "file:///github/ahp-review/prospect/ahp-user-rules.md - the rules draft: the row shape, the match types, the check steps and the examples"
 ---
 
@@ -76,9 +76,9 @@ policy:/ list, policy:/<id> read and write -> [new] policies port -> policies.js
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Policies are kept behind a port and edited through a policy scheme](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
-| 2 | [Policy checks are switched on by a daemon option](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
-| 3 | [A deny binds only when everything it names was asked, while an allow skips what was not](../../../../docs/POLICY.md) | Softov, 2026-10-02 |
+| 1 | [Policies are kept behind a port and edited through a policy scheme](../../../../docs/sdk/POLICY.md) | Softov, 2026-10-02 |
+| 2 | [Policy checks are switched on by a daemon option](../../../../docs/sdk/POLICY.md) | Softov, 2026-10-02 |
+| 3 | [A deny binds only when everything it names was asked, while an allow skips what was not](../../../../docs/sdk/POLICY.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -4,16 +4,16 @@ status: todo
 depends: [task-06-dev02-runs-a-session.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the operator's page"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the operator's page"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` says how to list a box, what it needs installed, how an id names its runtime, that every session there runs nested, and what an ssh machine cannot do.
+`docs/plugins/COMPUTERS.md` says how to list a box, what it needs installed, how an id names its runtime, that every session there runs nested, and what an ssh machine cannot do.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md` - an "ssh machines" section.
+- `UPDATE: docs/plugins/COMPUTERS.md` - an "ssh machines" section.
 - `UPDATE: .project/plans/container/00-container.md` - several runtimes, and ssh among them.
 
 ## Steps

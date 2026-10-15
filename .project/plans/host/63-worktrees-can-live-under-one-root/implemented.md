@@ -20,7 +20,7 @@ A daemon can be told one folder to keep every session worktree in, as `worktrees
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `serverFields.worktreesRoot`, a string with `cli: { value: 'DIR' }`, in neither `FILE_ONLY` nor `TYPED_ONLY`, so it is a flag and a configuration key at once. `Options.worktreesRoot` and the fold below it answer it whole through `resolve`, which is this key's one difference from `paths`.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - `Config.worktreesRoot`, and `anchored` takes it with `users` and `connectionTokenFile`: a relative value in a file is made absolute against the folder of the file that set it.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the root spread into the `base` host options only when it is set, beside `gitWorktrees()`.
-- [`code://packages/sdk/README.md`](../../../../packages/sdk/README.md), [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) and [`code://docs/AHP.md`](../../../../docs/AHP.md) - the option row, the flag row, the anchoring sentence, and where a new tree is made.
+- [`code://packages/sdk/README.md`](../../../../packages/sdk/README.md), [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) and [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the option row, the flag row, the anchoring sentence, and where a new tree is made.
 
 ## Verified
 

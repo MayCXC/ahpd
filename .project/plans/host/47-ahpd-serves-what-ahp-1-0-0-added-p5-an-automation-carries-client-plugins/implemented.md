@@ -20,7 +20,7 @@ A host with no client plugins directory does not advertise `customizations` and 
 - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts) - `customizations: {}` in the automation capabilities, only beside the port.
 - [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) and [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - the copies on the entry and the run, kept across a restart.
 - [`code://packages/sdk/src/types/index.ts`](../../../../packages/sdk/src/types/index.ts) - exports `CapturedPlugin`, `HeldCopies` and `TemplatePlugin`, which the public port and store signatures use.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the capability, the two automation rows and the `Automation` client.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the capability, the two automation rows and the `Automation` client.
 
 ## Verified
 

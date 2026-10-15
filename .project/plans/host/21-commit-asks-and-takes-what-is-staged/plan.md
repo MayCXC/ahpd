@@ -91,7 +91,7 @@ Commit clicked -> confirmation shown -> invokeChangesetOperation commit -> git c
 
 ## Risks and tradeoffs
 
-- The working tree holds another session's uncommitted draft of this work in `docs/AHP.md`, `packages/sdk/src/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
+- The working tree holds another session's uncommitted draft of this work in `docs/sdk/AHP.md`, `packages/sdk/src/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
   Task 01 starts from it; the refs' line numbers are that working tree's.
 - A `confirmation` marks an operation as destructive in the protocol, so VS Code styles Commit as a warning.
 - Watching `.git` is one watcher per repository directory a session works in, closed when no session is left there.

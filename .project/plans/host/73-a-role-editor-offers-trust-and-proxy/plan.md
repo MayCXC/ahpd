@@ -46,7 +46,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-07 |
+| 1 | [Pushing workspaceTrust needs trust:write, and the member role has it](../../../../docs/sdk/AUTHENTICATION.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -76,7 +76,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 - **Done so far:** task 01 implemented 2026-10-07. `OPERATIONS` holds `trust` and `proxy`, the advertisement carries them, the page documents them, and every gate passes. A review then found that the gate still asked for the groups, so a role holding only `trust:push` could not push. Softov answered the fork, and the gate asks the operation now.
 - **Next action:** none. Reviewed and merged 2026-10-08; the plan is built.
 - **Open questions:** none.
-- **Watch out for:** the comment at `root.ts` now says "Ten subjects". `docs/USERS.md` was not in the task's *Files* and had to move, and task 01's *Resume* explains why. The *Resume* also records the review fix and the two further pages that moved with it.
+- **Watch out for:** the comment at `root.ts` now says "Ten subjects". `docs/sdk/USERS.md` was not in the task's *Files* and had to move, and task 01's *Resume* explains why. The *Resume* also records the review fix and the two further pages that moved with it.
 
 ## Final verification checklist
 

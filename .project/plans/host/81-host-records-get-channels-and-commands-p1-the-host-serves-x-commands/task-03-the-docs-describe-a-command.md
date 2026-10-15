@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-host-answers-a-served-method.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - \"A channel of your own\", the section this one follows"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - \"A channel of your own\", the section this one follows"
   - "[code://.project/plans/plugin/00-plugin.md#L48](../../../../.project/plans/plugin/00-plugin.md#L48) - the `registerMethod` row"
 ---
 
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md` - a section "A command of your own", after "A channel of your own".
+- `UPDATE: docs/plugins/PLUGINS.md` - a section "A command of your own", after "A channel of your own".
 - `UPDATE: .project/plans/plugin/00-plugin.md:48` - the `registerMethod` row, built, with a link to this plan.
 
 ## Steps

@@ -25,7 +25,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/catalogue.ts:173-191` - `summaryOf` adds `chats` (each entry cut to `resource`, `title`, `origin`, `interactivity`, `status`) and `defaultChat`.
 - `UPDATE: packages/sdk/src/host/spawn.ts:211`, `packages/sdk/src/host/lifecycle.ts:121`, `packages/sdk/src/host/tooling.ts:305`, `packages/sdk/src/host/sessionmethods.ts:676` and `:714-717` - `summaryMoved` after each, where it is not already called.
 - `UPDATE: packages/sdk/test/host-catalogue.test.ts`, `packages/sdk/test/conformance.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - `SessionSummary.chats` and `defaultChat` are served.
+- `UPDATE: docs/sdk/AHP.md` - `SessionSummary.chats` and `defaultChat` are served.
 
 ## Steps
 
@@ -56,5 +56,5 @@ refs:
 - **Departure 1.** `packages/sdk/src/types/catalog.ts` is not in the Files list. `SummaryChat`, and the two optional fields on `Summary`, are declared there.
 - **Departure 2.** `lifecycle.ts:121` needed no change. `teardown` is reached only from `removeSession`, and `root/sessionRemoved` follows at once.
 - `packages/sdk/test/conformance.test.ts` folds the two root notifications by hand, because the protocol ships no reducer for them. It compares the folded `chats` with the session state's.
-- `docs/AHP.md`: the `root/sessionAdded` and `root/sessionSummaryChanged` rows say a running session's row carries `chats` and `defaultChat`.
+- `docs/sdk/AHP.md`: the `root/sessionAdded` and `root/sessionSummaryChanged` rows say a running session's row carries `chats` and `defaultChat`.
 - `pnpm typecheck`, `pnpm boundary` and the full suite pass.

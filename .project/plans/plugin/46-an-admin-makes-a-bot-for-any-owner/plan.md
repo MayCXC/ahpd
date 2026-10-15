@@ -46,7 +46,7 @@ resourceWrite bot://<slug> createOnly -> botProvider.write -> ownerFor -> record
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The bot manifest names the host's own owner, so a client never builds it](../../../../docs/BOTS.md) | (defaulted: a client draws only what the host sends) |
+| 1 | [The bot manifest names the host's own owner, so a client never builds it](../../../../docs/plugins/BOTS.md) | (defaulted: a client draws only what the host sends) |
 | 2 | Any root owner is this host, whatever name follows it | Softov, 2026-10-11, "Any root:* is this host" |
 
 | What | Source | Task |

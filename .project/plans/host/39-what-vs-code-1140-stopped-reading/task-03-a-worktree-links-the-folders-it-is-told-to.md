@@ -15,8 +15,8 @@ refs:
   - "[code://packages/sdk/src/worktrees.ts#L140-L170](../../../../packages/sdk/src/worktrees.ts#L140-L170) - `copy`, the shallow matcher the new pass sits beside and does not replace"
   - "[code://packages/sdk/test/worktrees.test.ts#L30-L49](../../../../packages/sdk/test/worktrees.test.ts#L30-L49) - the `repository()` harness, which a test with an ignored folder extends"
   - "[code://packages/sdk/test/worktrees.test.ts#L210-L232](../../../../packages/sdk/test/worktrees.test.ts#L210-L232) - the include case, beside which the symlink case sits"
-  - "[code://docs/AHP.md#L85](../../../../docs/AHP.md#L85) - the `resolveSessionConfig` row, which says how many worktree properties this host contributes"
-  - "[code://docs/AHP.md#L689-L709](../../../../docs/AHP.md#L689-L709) - `### Worktrees the window manages`, where what a tree is given is described"
+  - "[code://docs/sdk/AHP.md#L85](../../../../docs/sdk/AHP.md#L85) - the `resolveSessionConfig` row, which says how many worktree properties this host contributes"
+  - "[code://docs/sdk/AHP.md#L689-L709](../../../../docs/sdk/AHP.md#L689-L709) - `### Worktrees the window manages`, where what a tree is given is described"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/worktreeSymlink.ts - `createWorktreeSymlink` and `assertTargetParentDoesNotContainSymlink`, the four refusals the local helper mirrors"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/agentHostGitService.ts - `symlinkWorktreeFolders` and `_getWorktreeSymlinkFolders`, the `ls-files --others --ignored` and `check-ignore --no-index` pass, and `getWorktreeSymlinkFolderCandidates` / `filterWorktreeSymlinkFolders` which select the folders"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/shared/worktreeIsolation.ts - the property at 877-887, and the order at 1022-1038: symlink first, then the include copy, each in its own try"
@@ -40,8 +40,8 @@ The pass runs before the include copy, is best effort, and a failure in it does 
 - `UPDATE: packages/sdk/src/worktrees.ts:140-170` - the new `link` helper beside `copy`, and whatever the pass needs to enumerate candidates.
 - `UPDATE: packages/sdk/test/worktrees.test.ts:30-49` - the `repository()` harness, given an ignored folder to have.
 - `UPDATE: packages/sdk/test/worktrees.test.ts:210-232` - a new case beside the include one.
-- `UPDATE: docs/AHP.md:85` - the `resolveSessionConfig` row's count of worktree properties.
-- `UPDATE: docs/AHP.md:689-709` - what a new tree is given.
+- `UPDATE: docs/sdk/AHP.md:85` - the `resolveSessionConfig` row's count of worktree properties.
+- `UPDATE: docs/sdk/AHP.md:689-709` - what a new tree is given.
 
 ## Steps
 
@@ -58,7 +58,7 @@ The pass runs before the include copy, is best effort, and a failure in it does 
 11. `packages/sdk/test/worktrees.test.ts`, the `repository()` harness at 30-49 gains what the new cases need: `node_modules` added to the `.gitignore` written at line 43, the directory made, and a file written inside it, so the folder is git-ignored, is not tracked, and has something to read through the link.
 12. A new case beside the include case at 210: a session with `worktreeSymlinkFolders: ['node_modules']` and `isolation: 'worktree'`, whose worktree carries `node_modules` as a symlink - `lstatSync(join(where, 'node_modules')).isSymbolicLink()` is true, `readFileSync(join(where, 'node_modules', 'dep'), 'utf8')` is what the checkout has, and the checkout's own copy is the same file rather than a copy of it.
 13. Two more cases in the same file: a session with `worktreeSymlinkFolders: ['nothing/here']` makes a tree with no symlink in it and runs, which is what best effort means; and a session whose pattern names a folder the checkout tracks is not refused, since the target exists in a fresh worktree and the link is skipped. The second is the case the four refusals exist for, and it is the one that would turn a bad pattern into a session that will not start.
-14. `docs/AHP.md`, the `resolveSessionConfig` row at 85: six becomes seven, since this is the host's seventh worktree property. `### Worktrees the window manages` gains what a new tree is given: the git-ignored files matching `worktreeIncludeFiles` are copied in and the git-ignored folders matching `worktreeSymlinkFolders` are linked in, the links before the copy, both best effort, and a link is a folder the worktree and the checkout share - which is the sentence a person needs before they name `node_modules`, and the one that belongs in the docs rather than only on the field.
+14. `docs/sdk/AHP.md`, the `resolveSessionConfig` row at 85: six becomes seven, since this is the host's seventh worktree property. `### Worktrees the window manages` gains what a new tree is given: the git-ignored files matching `worktreeIncludeFiles` are copied in and the git-ignored folders matching `worktreeSymlinkFolders` are linked in, the links before the copy, both best effort, and a link is a folder the worktree and the checkout share - which is the sentence a person needs before they name `node_modules`, and the one that belongs in the docs rather than only on the field.
 
 ## Validation
 

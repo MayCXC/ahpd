@@ -14,7 +14,7 @@ The uncommitted changeset follows git, tool calls, client writes and terminals w
 
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - a row carries `_meta.staged` and `_meta.unstaged` and a staged rename is one row; `commit` takes the index when it differs from `HEAD`, else `add -A`; `commit` carries a `confirmation` built from the last look; `watch` follows the index, `HEAD`, the checked-out branch's ref and `packed-refs`, and a watcher error closes its handle.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `subject` moved to the operation context; one coalescing re-read per watched directory on the git watch, `chat/toolCallComplete`, client resource writes and `terminal/exited`; `stopUnwatched` closes a directory's watch when nobody watches it.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - what Commit takes and asks, the staging fields and the refresh triggers.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - what Commit takes and asks, the staging fields and the refresh triggers.
 
 ## Verified
 

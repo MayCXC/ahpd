@@ -38,7 +38,7 @@ ahpd reads no project file for an ACP agent. It passes `cwd` and the host's own 
 - **Done so far:** every task is done, reviewed on 2026-10-06.
 - **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** a preset that runs pi through ACP has pi's own `projectTrust`, which ahpd does not reach here. No shipped row sets `honoursTrust`. On a host with no people directory the sender's push decides ([the decision](../../../../docs/AUTHENTICATION.md)). An ACP session there starts in a folder that connection pushed, and the host refuses it everywhere else.
+- **Watch out for:** a preset that runs pi through ACP has pi's own `projectTrust`, which ahpd does not reach here. No shipped row sets `honoursTrust`. On a host with no people directory the sender's push decides ([the decision](../../../../docs/sdk/AUTHENTICATION.md)). An ACP session there starts in a folder that connection pushed, and the host refuses it everywhere else.
 
 ## Final verification checklist
 

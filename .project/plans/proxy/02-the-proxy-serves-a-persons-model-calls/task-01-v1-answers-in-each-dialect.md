@@ -7,7 +7,7 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L353-L394](../../../../packages/server/src/commands/run.ts#L353-L394) - the `/api` mount and `below`, where `/v1` is chained"
   - "[code://packages/server/src/http.ts#L77-L124](../../../../packages/server/src/http.ts#L77-L124) - `hostRefusal` and `foreign`, the guard `/v1` takes"
   - "[code://packages/server/src/http.ts#L221-L238](../../../../packages/server/src/http.ts#L221-L238) - `guarded`"
-  - "[code://docs/PROXY.md](../../../../docs/PROXY.md) - where and when it is served"
+  - "[code://docs/server/PROXY.md](../../../../docs/server/PROXY.md) - where and when it is served"
 ---
 
 ## Objective

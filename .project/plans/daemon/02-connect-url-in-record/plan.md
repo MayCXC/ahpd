@@ -65,7 +65,7 @@ stdout of the child -> `ahpd on ws://host:port`, `automations ...`, `token: from
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The ready connect URL lives in the daemon record, never on stdout](../../../../docs/DAEMON.md) | Softov, asked 2026-09-19: "Keep stdout token-free; put the ready URL in the 0600 daemon record." |
+| 1 | [The ready connect URL lives in the daemon record, never on stdout](../../../../docs/server/REFERENCE.md) | Softov, asked 2026-09-19: "Keep stdout token-free; put the ready URL in the 0600 daemon record." |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -96,7 +96,7 @@ stdout of the child -> `ahpd on ws://host:port`, `automations ...`, `token: from
 - A future verb that dumps the whole record prints the token; task 02 audits every reader and keeps each printer on `url`, and the tested line builder is the guard.
 - A daemon bound to `0.0.0.0` announces `0.0.0.0`, which is not a routable address; the ready URL inherits that from the origin `status` already prints, and choosing a routable host is out of scope.
 - The parent and the child both call `secret()`; for a missing token file the parent writes it first and the child reads the same file, so both sides agree on the token.
-- `docs/DAEMON.md` still tells a person the token goes on the URL and does not yet point at the record, so the ready URL is discoverable from the file and this plan leaves the document for a later change.
+- `docs/server/REFERENCE.md` still tells a person the token goes on the URL and does not yet point at the record, so the ready URL is discoverable from the file and this plan leaves the document for a later change.
 - `start()` is exported and its signature changes; it has one caller, and the task updates it in the same change.
 
 ## Resume state

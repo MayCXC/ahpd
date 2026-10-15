@@ -57,14 +57,14 @@ a chosen id -> session setting `model` or a turn's model -> modelOf -> splitMode
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | Softov, 2026-09-20: "the config facio was suppose to be the default model. not the only one" |
+| 1 | [A listed model is selected by the reference the harness already writes](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-09-20: "the config facio was suppose to be the default model. not the only one" |
 
 ## Proposed architecture
 
 - **Data flow** - one `GET <baseUrl>/models` per endpoint and key, cached for the life of the backend; `probe` awaits it for the configured connection, `session.models()` reads the cache for the session's connection and asks in the background when it is missing.
 - **Event flow** - none of its own: the host already announces `root/agentsChanged` when the probe answers, and an empty model list is kept out of the root state.
 - **State flow** - a catalogue is cached by `baseUrl` and key; a configured model that the list does not carry is prepended; an endpoint that answers nothing caches nothing, so it is asked again rather than remembered as empty.
-- **Layer responsibilities** - `packages/agent-cofold`: `agent.ts` resolves a connection once and reads its catalogue, `session.ts` answers `models()` from the same cache · `packages/sdk`: unchanged · `docs/PLUGINS.md`: says the list is the endpoint's and the configured model is the default.
+- **Layer responsibilities** - `packages/agent-cofold`: `agent.ts` resolves a connection once and reads its catalogue, `session.ts` answers `models()` from the same cache · `packages/sdk`: unchanged · `docs/plugins/PLUGINS.md`: says the list is the endpoint's and the configured model is the default.
 - **Source-of-truth files** - `code://packages/agent-cofold/src/agent.ts`, `code://packages/agent-cofold/src/session.ts`.
 
 ## Tasks
@@ -92,5 +92,5 @@ a chosen id -> session setting `model` or a turn's model -> modelOf -> splitMode
 - [x] `pnpm test` green with a stubbed `GET /models` listing several models, the configured default first, and the fallback when the endpoint refuses: 799 passed.
 - [x] `pnpm typecheck` and `pnpm boundary` green.
 - [x] Every offered id resolves through `modelOf` to the endpoint the catalogue came from.
-- [x] `docs/PLUGINS.md` says the list is the endpoint's and the configured `model` is the default.
+- [x] `docs/plugins/PLUGINS.md` says the list is the endpoint's and the configured `model` is the default.
 - [x] `plans/index.md` updated.

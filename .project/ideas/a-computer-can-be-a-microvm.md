@@ -11,7 +11,7 @@ Background: Docker's [Why MicroVMs: the architecture behind Docker Sandboxes](ht
 ## Two ways in
 
 - **Kata Containers as a Docker runtime** (https://github.com/kata-containers/kata-containers).
-  A profile names the OCI runtime, `ociRuntime: "kata"`, the way [plugin/19](../plans/plugin/19-a-docker-machine-may-run-under-gvisor/plan.md) names `runsc`, under [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../docs/COMPUTER.md).
+  A profile names the OCI runtime, `ociRuntime: "kata"`, the way [plugin/19](../plans/plugin/19-a-docker-machine-may-run-under-gvisor/plan.md) names `runsc`, under [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../docs/plugins/COMPUTERS.md).
   `docker run`, `docker exec -i`, the session folder at the same path, parts and dev containers stay as they are, so ahpd changes nothing beyond plugin/19.
   The cost is on the host: the `kata-static` tarball, the `vhost_vsock` and `vhost_net` modules, a `runtimes` entry in `/etc/docker/daemon.json` and a Docker restart.
 - **microsandbox as a runtime of its own** (https://github.com/superradcompany/microsandbox).

@@ -4,18 +4,18 @@ status: done
 depends: [task-01-a-capture-line-is-vs-codes-line.md, task-02-the-capture-rolls-and-caps.md, task-03-the-capture-is-owner-only.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md#L157](../../../../docs/DAEMON.md#L157) - the `--wire` row"
-  - "[code://docs/AHP.md#L801-L808](../../../../docs/AHP.md#L801-L808) - where a capture and `pnpm wire` are described"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the `--wire` row"
+  - "[code://docs/sdk/AHP.md#L801-L808](../../../../docs/sdk/AHP.md#L801-L808) - where a capture and `pnpm wire` are described"
 ---
 
 ## Objective
 
-A reader of `docs/DAEMON.md` knows a capture is in VS Code's shape, rolls at 75 MiB into five files, and is owner-only.
+A reader of `docs/server/REFERENCE.md` knows a capture is in VS Code's shape, rolls at 75 MiB into five files, and is owner-only.
 
 ## Files
 
-- `UPDATE: docs/DAEMON.md:157` - the row says the shape, the roll and the mode.
-- `UPDATE: docs/AHP.md:801-808` - one line that a VS Code capture is checked the same way.
+- `UPDATE: docs/server/REFERENCE.md:157` - the row says the shape, the roll and the mode.
+- `UPDATE: docs/sdk/AHP.md:801-808` - one line that a VS Code capture is checked the same way.
 
 ## Steps
 

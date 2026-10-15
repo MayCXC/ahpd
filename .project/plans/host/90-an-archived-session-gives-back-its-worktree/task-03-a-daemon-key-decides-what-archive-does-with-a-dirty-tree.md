@@ -33,8 +33,8 @@ The daemon key `archiveDirtyWorktree` decides what archive does with a dirty tre
 - `UPDATE: packages/server/src/commands/run.ts:1084` - add a start line when the value is `commit`.
 - `UPDATE: packages/server/src/rootconfig.ts:32-40` - add the key to `DAEMON_KEYS` and to `LIVE`.
 - `UPDATE: packages/server/src/main.ts:264` - add the key to the list in the help text.
-- `UPDATE: docs/HOST.md:75` - a table row after `closedChats`.
-- `UPDATE: docs/HOST.md:138-142` - add the key to the daemon keys and to the keys that apply at once.
+- `UPDATE: docs/sdk/HOST.md:75` - a table row after `closedChats`.
+- `UPDATE: docs/sdk/HOST.md:138-142` - add the key to the daemon keys and to the keys that apply at once.
 - `UPDATE: packages/sdk/test/worktrees.test.ts` - the host cases in Validation.
 - `UPDATE: packages/server/test/server-root-config.test.ts` - the schema and the live push.
 - `UPDATE: packages/server/test/config-check.test.ts:219` - the default in the checked options.
@@ -49,7 +49,7 @@ The daemon key `archiveDirtyWorktree` decides what archive does with a dirty tre
 6. Keep the tree and log the reason when the port has no `commit` or the commit fails.
 7. Add the key to the server configuration, the flags, the root config and the help text.
 8. Apply a push of the key at once, as `actions.ts` applies a push of `closedChats`.
-9. Write the key in `docs/HOST.md`.
+9. Write the key in `docs/sdk/HOST.md`.
 
 ## Validation
 
@@ -72,7 +72,7 @@ The daemon key `archiveDirtyWorktree` decides what archive does with a dirty tre
 - Under `commit`, `shelve` commits a dirty tree, checks that the tree is clean, and then removes it without the branch.
 - A port with no `commit`, a failed commit or a tree still dirty after the commit keeps the tree, and the log says why.
 - A push of the key applies at once, and the server start line names `commit`.
-- The configuration, the flags, the root config, the help text and `docs/HOST.md` carry the key.
+- The configuration, the flags, the root config, the help text and `docs/sdk/HOST.md` carry the key.
 - `commit` excludes the links at the linked folder names from staging, so a link is never committed.
 
 ### Validation

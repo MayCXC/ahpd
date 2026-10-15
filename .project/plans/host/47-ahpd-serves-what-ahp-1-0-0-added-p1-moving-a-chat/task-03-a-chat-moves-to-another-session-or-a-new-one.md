@@ -26,7 +26,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts` - the two destinations in the `moveChat` handler; a `moveChat` helper that closes the chat and its workers, rewrites `byChat`, the subagent map and the claims, and spawns under the destination with `{ resume: <backend id>, seed: allTurns(), chatId: <backend id> }` and the chat's own folders.
 - `UPDATE: packages/sdk/src/sessions.ts`, `packages/sdk/src/types/sessions.ts` - a `moveChat(from, to, uri)` on both stores that moves the chat's title, senders and its entry in host/50's chat list in one write.
 - `UPDATE: packages/sdk/test/host-chats.test.ts`, `packages/sdk/test/sessions.test.ts` - the cases below, the host's in `more than one chat in a session`.
-- `UPDATE: docs/AHP.md` - the `moveChat` row.
+- `UPDATE: docs/sdk/AHP.md` - the `moveChat` row.
 
 ## Steps
 

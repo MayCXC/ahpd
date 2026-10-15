@@ -57,7 +57,7 @@ restart -> list() -> transcript() -> turns (message.model) -> VS Code's model pi
 | The model a cofold turn ran on is kept in cofold's own store, and the transcript reads it back | 01, 03 |
 | A cofold run is told the model reference it runs on, and cofold stores it as given | 01, 03 |
 | [A cofold turn with no model configured fails and says to add "model" to the cofold configuration file](../14-cofold-runs-its-own-tools/plan.md) | 04 |
-| [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | 01, 02, 03 |
+| [A listed model is selected by the reference the harness already writes](../../../../docs/plugins/PLUGINS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

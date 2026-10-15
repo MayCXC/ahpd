@@ -4,17 +4,17 @@ status: blocked
 depends: [task-01-the-tunnel-route-tried-by-hand.md]
 layer: "docs"
 refs:
-  - "[code://docs/CONTAINERS.md](../../../../docs/CONTAINERS.md) - the page a person reads about dev containers"
+  - "[code://docs/plugins/CONTAINERS.md](../../../../docs/plugins/CONTAINERS.md) - the page a person reads about dev containers"
   - "[code://packages/tunnel-devtunnel/README.md](../../../../packages/tunnel-devtunnel/README.md) - where the tunnel is set up"
 ---
 
 ## Objective
 
-A person reading `docs/CONTAINERS.md` knows that VS Code offers a dev container only on a host connected through a Dev Tunnel (or SSH or WSL), that it needs the tunnel made under the same provider and account VS Code signs in with, that `chat.remoteAgentHostsEnabled` and `chat.agentHost.devContainer.enabled` are on by default and turning either off hides it, and that Docker is needed on the ahpd host, not on the machine running VS Code.
+A person reading `docs/plugins/CONTAINERS.md` knows that VS Code offers a dev container only on a host connected through a Dev Tunnel (or SSH or WSL), that it needs the tunnel made under the same provider and account VS Code signs in with, that `chat.remoteAgentHostsEnabled` and `chat.agentHost.devContainer.enabled` are on by default and turning either off hides it, and that Docker is needed on the ahpd host, not on the machine running VS Code.
 
 ## Files
 
-- `UPDATE: docs/CONTAINERS.md` - a "From VS Code" section.
+- `UPDATE: docs/plugins/CONTAINERS.md` - a "From VS Code" section.
 - `UPDATE: packages/tunnel-devtunnel/README.md` - one line pointing at it.
 
 ## Steps

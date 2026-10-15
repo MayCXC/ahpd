@@ -11,7 +11,7 @@ A person stages and unstages from the session itself, a file or a whole folder, 
 ## What was built
 
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `pathIn` decodes a target, and requires both the written and the resolved path inside the session's folder, answering the written one; a folder is refused for `discard` and `revert`; `stage` runs `git add -A` and `unstage` runs `git restore --staged`, or `git rm --cached` before the first commit.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - how a person stages, in VS Code, ahpapp, a terminal or Source Control.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - how a person stages, in VS Code, ahpapp, a terminal or Source Control.
 
 ## Verified
 

@@ -15,7 +15,7 @@ The host hands `session/mcpServerBackgroundRequested` to a backend that can do i
 - [`code://packages/sdk/src/types/session.ts`](../../../../packages/sdk/src/types/session.ts) - the optional `backgroundMcpServerStartup` on `Session`, VS Code's name for the seam.
 - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts) - the action calls it where it exists, with no refusal either way.
 - [`code://packages/sdk/src/nested.ts`](../../../../packages/sdk/src/nested.ts) - a nested session hands the action to the host inside.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the action row.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the action row.
 
 ## Verified
 

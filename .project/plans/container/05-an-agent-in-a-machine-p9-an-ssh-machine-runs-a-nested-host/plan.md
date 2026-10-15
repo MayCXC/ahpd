@@ -91,7 +91,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | [The nested host speaks AHP over stdio, so the relay is a pipe](../../../decisions/a-nested-host-speaks-stdio.md) | 03 |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 03 |
 | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | 02 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -161,4 +161,4 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 - [ ] dev02's up time as an ssh machine is written as stretches charged to `root:<host>`, closed when it stops answering.
 - [ ] A body asking for `runtime: "ssh"` is refused with a sentence: an ssh machine is listed, never made.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

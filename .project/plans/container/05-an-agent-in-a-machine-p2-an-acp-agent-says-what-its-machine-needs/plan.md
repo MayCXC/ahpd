@@ -21,7 +21,7 @@ refs:
   - "[code://packages/agent-cofold/src/agent.ts#L561-L572](../../../../packages/agent-cofold/src/agent.ts#L561-L572) - cofold's `machine()`, the pattern to mirror"
   - "[code://packages/agent-claude/src/options.ts#L96-L105](../../../../packages/agent-claude/src/options.ts#L96-L105) - claude/12's `{ fromEnv }` env value, the shape a secret takes here"
   - "[code://packages/agent-claude/src/options.ts#L225-L229](../../../../packages/agent-claude/src/options.ts#L225-L229) - `fromEnvOf`, the reader to mirror"
-  - "[code://docs/PLUGINS.md#L662-L712](../../../../docs/PLUGINS.md#L662-L712) - the ACP section"
+  - "[code://docs/plugins/PLUGINS.md#L662-L712](../../../../docs/plugins/PLUGINS.md#L662-L712) - the ACP section"
 ---
 
 ## Goal
@@ -58,7 +58,7 @@ presets.<key>.machine -> the variant's acpAgent().machine() -> host.placedIn(pro
 | Decision | Task |
 | --- | --- |
 | [An agent declares what a machine needs through a machine() method](../../plugin/15-an-agent-says-what-a-machine-needs/plan.md) | 01 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -106,4 +106,4 @@ presets.<key>.machine -> the variant's acpAgent().machine() -> host.placedIn(pro
 - [x] Two presets of one load make two machines with their own env (against the fake Docker, `agent-acp-machine.test.ts`).
 - [x] An ACP session in a machine that cannot reach the daemon gets no host tools server and the log says why; one on this host gets it.
 - [x] `pnpm test`, `pnpm typecheck` green.
-- [x] `docs/PLUGINS.md`, `plans/index.md` updated.
+- [x] `docs/plugins/PLUGINS.md`, `plans/index.md` updated.

@@ -5,7 +5,7 @@ depends: [task-02-a-caller-is-somebody.md, task-03-a-name-is-routed.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/commands/proxy.ts#L74-L93](../../../../packages/server/src/commands/proxy.ts#L74-L93) - `proxy.list`, which lists the same table to an operator"
-  - "[code://docs/PROXY.md](../../../../docs/PROXY.md) - the shape by `anthropic-version`"
+  - "[code://docs/server/PROXY.md](../../../../docs/server/PROXY.md) - the shape by `anthropic-version`"
 ---
 
 ## Objective

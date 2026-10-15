@@ -14,7 +14,7 @@ refs:
 - [`code://packages/server/src/wire.ts`](../../../../packages/server/src/wire.ts) - `lineFor` (the message at the root, `_raw` for a frame that is not an object, `_ahpLog` with `ts`, `dir`, `connectionId`, `transport`, `byteLength`), `writerFor` (append, roll, line cap with `truncated`, `0600` on every file), `filesOf`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the tap writes through `writerFor`; `diagnostics.logs` names every capture file, oldest first.
 - [`code://tools/wire.mjs`](../../../../tools/wire.mjs) - the checker takes `_ahpLog` off before checking; `framesIn` reads both the old and the new line.
-- `docs/DAEMON.md`, `docs/AHP.md` - the `--wire` row and the two shapes.
+- `docs/server/REFERENCE.md`, `docs/sdk/AHP.md` - the `--wire` row and the two shapes.
 
 ## Verified
 

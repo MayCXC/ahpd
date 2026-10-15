@@ -9,7 +9,7 @@ refs:
   - code://test/writes.test.ts
   - code://test/host.test.ts
   - code://test/operations.test.ts
-  - code://docs/AHP.md
+  - code://docs/sdk/AHP.md
   - code://README.md
 ---
 
@@ -25,7 +25,7 @@ The store's own refusals and a client-owned resource's relayed refusal are untou
 - `code://test/writes.test.ts` - the helper loses its grant argument, the far-end move asserts it lands, and the two grant cases become one that a first write needs no grant and that `resourceRequest` still answers.
 - `code://test/host.test.ts` - the refusal case becomes one that the same write succeeds, the read-only-store case no longer asks for a grant, and the `create-pr` helper opens with no request.
 - `code://test/operations.test.ts` - `commit` runs with no grant, and the `resourceRequest` case says it answers rather than grants.
-- `code://docs/AHP.md` and `code://README.md` - the resource, changeset and `resourceRequest` rows say what is true now.
+- `code://docs/sdk/AHP.md` and `code://README.md` - the resource, changeset and `resourceRequest` rows say what is true now.
 
 ## Verified
 

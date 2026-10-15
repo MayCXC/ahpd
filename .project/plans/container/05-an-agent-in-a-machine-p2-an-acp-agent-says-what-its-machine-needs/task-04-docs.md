@@ -4,18 +4,18 @@ status: done
 depends: [task-01-a-spec-declares-what-its-machine-needs.md, task-05-the-hosts-tools-reach-a-machine-only-where-it-can-reach-the-daemon.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md#L662-L712](../../../../docs/PLUGINS.md#L662-L712) - the ACP section"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the table of what enters a machine"
+  - "[code://docs/plugins/PLUGINS.md#L662-L712](../../../../docs/plugins/PLUGINS.md#L662-L712) - the ACP section"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the table of what enters a machine"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` shows a preset's `machine` option with one example, and `docs/COMPUTER.md` says an ACP preset may declare what its machine needs.
+`docs/plugins/PLUGINS.md` shows a preset's `machine` option with one example, and `docs/plugins/COMPUTERS.md` says an ACP preset may declare what its machine needs.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md` - the ACP section.
-- `UPDATE: docs/COMPUTER.md` - the ACP row of the backends table.
+- `UPDATE: docs/plugins/PLUGINS.md` - the ACP section.
+- `UPDATE: docs/plugins/COMPUTERS.md` - the ACP row of the backends table.
 
 ## Steps
 
@@ -29,4 +29,4 @@ refs:
 
 ## Resume
 
-- Implemented 2026-10-05: `docs/PLUGINS.md` has the `machine` row, the example, the need names, the `fromEnv` and `$secret` sentences linking `DAEMON.md#the-vault`, and the host tools sentence with its log line; `docs/COMPUTER.md`'s ACP row links it. `packages/agent-acp/README.md` was not in the plan's files and got the same row and skip sentence, since it carries the same options table.
+- Implemented 2026-10-05: `docs/plugins/PLUGINS.md` has the `machine` row, the example, the need names, the `fromEnv` and `$secret` sentences linking `DAEMON.md#the-vault`, and the host tools sentence with its log line; `docs/plugins/COMPUTERS.md`'s ACP row links it. `packages/agent-acp/README.md` was not in the plan's files and got the same row and skip sentence, since it carries the same options table.

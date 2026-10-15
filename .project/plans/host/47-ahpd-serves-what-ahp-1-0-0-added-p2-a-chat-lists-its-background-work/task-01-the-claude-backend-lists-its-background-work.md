@@ -21,7 +21,7 @@ While a Claude session runs, each chat's `backgroundWork` is the live, non-ambie
 
 - `UPDATE: packages/agent-claude/src/session.ts` - beside `background`: `taskInfo` (task id to `{ type, toolUseId, description, startedAt }`), `live` (the last level's non-ambient ids), and `told` (chat URI to entries by id); a `reconcileWork()` that builds the entries and emits the difference; reading `background_tasks_changed`; `chatState` lists the lead chat's entries; `close` clears all three without emitting.
 - `CREATE: packages/agent-claude/test/agent-claude-background-work.test.ts` - the cases below, on the fake SDK feed copied from `agent-claude-subagent.test.ts`.
-- `UPDATE: docs/AHP.md` - `chat/backgroundWorkSet` and `chat/backgroundWorkRemoved` rows: host, Claude only, what each kind carries.
+- `UPDATE: docs/sdk/AHP.md` - `chat/backgroundWorkSet` and `chat/backgroundWorkRemoved` rows: host, Claude only, what each kind carries.
 
 ## Steps
 
@@ -50,4 +50,4 @@ The plan's step 6 says a subagent entry's `chat` is `spawning.get(toolUseId)?.ch
 
 A `shell` entry carries the `Bash` call's `input.command` when that is a string and the description otherwise, and no `terminal`. `startedAt` is `new Date().toISOString()` read when the frame arrives, because the SDK sends no start time. A removal for a chat is emitted before a set for it, and a level that repeats the same entries emits nothing. A task whose type is neither `local_bash` nor `local_agent`, and a task whose call no scope holds, is passed over.
 
-`packages/agent-claude/test/agent-claude-background-work.test.ts` has the nine cases of Validation, the first replaying `claude-subagent-background.jsonl` frame by frame and the rest synthetic. It checks a listed subagent's `chat` against the URI the seam really hands that worker, so a name built wrongly fails the case. `docs/AHP.md` gained the two action rows and its `chat/*` count moved to 31 of 32.
+`packages/agent-claude/test/agent-claude-background-work.test.ts` has the nine cases of Validation, the first replaying `claude-subagent-background.jsonl` frame by frame and the rest synthetic. It checks a listed subagent's `chat` against the URI the seam really hands that worker, so a name built wrongly fails the case. `docs/sdk/AHP.md` gained the two action rows and its `chat/*` count moved to 31 of 32.

@@ -24,7 +24,7 @@ A session summary and state carry `_meta['ahpd.owner']`, a live `chat/turnStarte
 - `UPDATE: packages/sdk/src/changes.ts:634, 108, 244` - write and read the new keys.
 - `UPDATE: packages/sdk/test/*.test.ts` - the `host-*.test.ts` area files, `sessions.test.ts`, `plugin-events-fire.test.ts`, `commit.test.ts` and any other that reads the old keys (`rg -n "_meta\??\.(owner|sender|staged|unstaged)" packages/sdk/test`).
 - `UPDATE: packages/sdk/test/wire.test.ts` - `owner` and `sender` leave `PENDING`.
-- `UPDATE: docs/AHP.md:217, 246, 349, 633, 661` - the new names.
+- `UPDATE: docs/sdk/AHP.md:217, 246, 349, 633, 661` - the new names.
 
 ## Steps
 
@@ -42,4 +42,4 @@ A session summary and state carry `_meta['ahpd.owner']`, a live `chat/turnStarte
 Implemented 2026-10-09, in the `build/agents/6dac4670` worktree.
 Step 1 was already met: ahpapp reads both names for staging since host/05 (a66f582). No client reads `owner` or `sender` yet (ahpapp `chat/02` is todo), so nothing goes blank.
 `packages/sdk/src/host/facts.ts` sends `ahpd.owner` on the summary and the state. `packages/sdk/src/host/spawn.ts` sends `ahpd.sender` on a stored turn's message and on a live `chat/turnStarted`; the plugin event's own `sender` field is not `_meta` and stays. `packages/sdk/src/changes.ts` writes `ahpd.staged` and `ahpd.unstaged`, and its two readers read the new names.
-Tests: `commit.test.ts`, `sessions.test.ts`, `plugin-events-fire.test.ts`. Docs: `docs/AHP.md`, `docs/LIBRARY.md`.
+Tests: `commit.test.ts`, `sessions.test.ts`, `plugin-events-fire.test.ts`. Docs: `docs/sdk/AHP.md`, `docs/sdk/LIBRARY.md`.

@@ -9,8 +9,8 @@ refs:
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
   - code://test/users-issuer.test.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
 ---
 
 Two people on one host can now sign in through two providers. A record names its own `issuer` with the same names the configuration takes, the configuration's `issuer` is what a record that names none gets, and the record a client is told lists every provider the file uses.
@@ -23,8 +23,8 @@ Two people on one host can now sign in through two providers. A record names its
 - `code://packages/sdk/src/index.ts` - `issuerFrom`, `issuerKind` and `IssuerKind` exported.
 - `code://packages/server/src/config.ts` - `namedIssuer` delegates to `issuerKind`, so the daemon's key and a record's field are one rule.
 - `code://packages/server/src/main.ts` - the daemon passes the issuer name, builds the advertised record without an issuer so the directory fills it, and prints the issuer in `user list`.
-- `code://docs/USERS.md` - an issuer per person, the advertised list, and two issuers tried at once with the dev issuer.
-- `code://docs/DAEMON.md` - the `issuer` key as the default for records, and that the record lists every provider.
+- `code://docs/sdk/USERS.md` - an issuer per person, the advertised list, and two issuers tried at once with the dev issuer.
+- `code://docs/server/REFERENCE.md` - the `issuer` key as the default for records, and that the record lists every provider.
 
 ## Verified
 

@@ -19,7 +19,7 @@ A `config:read` connection can tell which root config keys hold a secret, in the
 - `UPDATE: packages/server/src/rootconfig.ts` - collect the paths of every `writeOnly` property, `additionalProperties` included, as the answer requires.
 - `UPDATE: packages/sdk/src/host.ts` and `packages/sdk/src/types/host.ts` - if the answer is `RootState._meta`, the root config port gains a way to say the paths and the host puts them there for a `config:read` connection only.
 - `UPDATE: packages/sdk/test/wire.test.ts` - the `writeOnly` lines leave `KNOWN`; the census in p1 task 04 allows the new key.
-- `UPDATE: docs/AHP.md` - root config's row says where secrets are named.
+- `UPDATE: docs/sdk/AHP.md` - root config's row says where secrets are named.
 
 ## Steps
 

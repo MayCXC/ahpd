@@ -13,8 +13,8 @@ refs:
   - code://test/computer-plugin.test.ts
   - code://test/plugin-validate.test.ts
   - code://test/uri-resources.test.ts
-  - code://docs/PLUGINS.md
-  - code://docs/COMPUTER.md
+  - code://docs/plugins/PLUGINS.md
+  - code://docs/plugins/COMPUTERS.md
 ---
 
 A host says which schemes it serves, what each can be asked to do and what a create body takes, before any object exists. A scheme nobody serves answers a code that says so, so a capability probe is a branch rather than a string match.
@@ -28,7 +28,7 @@ A host says which schemes it serves, what each can be asked to do and what a cre
 - `code://packages/sdk/src/host.ts` - `storeFor` refuses a non-`file:` scheme no provider owns with `-32601`, before the file store is asked.
 - `code://packages/computer/src/manifest.ts` - `MANIFEST_SCHEMA`, the create body as a schema, one source with `manifestOf`.
 - `code://packages/computer/src/provider.ts` - `describe()` and a `capabilities.manifest` that is the same schema.
-- `code://docs/PLUGINS.md`, `code://docs/COMPUTER.md`, `code://packages/sdk/README.md` - the provider contract, the key a client reads, and the port line.
+- `code://docs/plugins/PLUGINS.md`, `code://docs/plugins/COMPUTERS.md`, `code://packages/sdk/README.md` - the provider contract, the key a client reads, and the port line.
 
 ## Verified
 
@@ -48,6 +48,6 @@ A host says which schemes it serves, what each can be asked to do and what a cre
 
 ## Left for later
 
-- The typed `InitializeResult.resourceSchemes` field upstream, which supersedes the `_meta` key when it exists - [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/RESOURCES.md).
+- The typed `InitializeResult.resourceSchemes` field upstream, which supersedes the `_meta` key when it exists - [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/sdk/RESOURCES.md).
 - A registered session key still cannot answer `sessionConfigCompletions`, so a picker for the `computer` key is the client's own; `HANDOFF.md` pending 11.
 - The ahpapp Computers screen, which reads this key, is built in that repository and is not this plan.

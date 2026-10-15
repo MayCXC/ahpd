@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L6131-L6150](../../../../packages/sdk/src/host.ts#L6131-L6150) - `rootState(mine, connection)`, the per-connection snapshot and its `_meta`"
   - "[code://tools/wire.mjs#L167-L180](../../../../tools/wire.mjs#L167-L180) - `checker.frame()`, which routes subscribe snapshots to the schema"
   - "[code://packages/sdk/test/wire.test.ts](../../../../packages/sdk/test/wire.test.ts) - the gate that closes every object the host sends against the protocol schema"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - where a client is told how to read its own record"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - where a client is told how to read its own record"
 ---
 
 ## Goal
@@ -44,7 +44,7 @@ subscribe(ahp-root://) -> rootState(mine, connection) -> _meta (no principal tod
 
 | Decision | Source |
 | --- | --- |
-| [A connection is told who it is, on initialize and in its root state snapshot](../../../../docs/HOST.md) | Softov, 2026-10-03 |
+| [A connection is told who it is, on initialize and in its root state snapshot](../../../../docs/sdk/HOST.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

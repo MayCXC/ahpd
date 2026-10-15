@@ -63,7 +63,7 @@ VS Code connect -> dispatchAction root/configChanged { ~43 keys } -> applyDispat
 ### Context, not this plan's work
 
 The connection that signs in with the deployment token is nobody, so it holds no `config:read` and reads none of the daemon's keys while the daemon has no users directory.
-That is [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) working as written; it was seen on the same live check and is said here so the two are not confused.
+That is [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/sdk/HOST.md) working as written; it was seen on the same live check and is said here so the two are not confused.
 
 ## Decisions locked in
 
@@ -108,7 +108,7 @@ That is [Daemon and plugin keys reach only connections with config:read, and a w
 
 ## Risks and tradeoffs
 
-- A declared key ahpd does not act on reads as a setting that works: `automationsEnabled` defaults to `false` and ahpd runs automations anyway. The description stays upstream's; what ahpd honours is said in `docs/AHP.md`.
+- A declared key ahpd does not act on reads as a setting that works: `automationsEnabled` defaults to `false` and ahpd runs automations anyway. The description stays upstream's; what ahpd honours is said in `docs/sdk/AHP.md`.
 - A VS Code release that adds a pushed key has it refused until the next UPSTREAM.md pass adds it; the log line names the key, so the pass finds it.
 - Softov's daemon keeps the about forty values it holds until it restarts; nothing reads them, so nothing changes before then.
 
@@ -119,8 +119,8 @@ That is [Daemon and plugin keys reach only connections with config:read, and a w
 - A pushed key no schema declares is refused by name, and the rest of the push applies. That is `root.ts`'s `declaresConfigKey` and the `root/configChanged` handler.
 - `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration` are gone, with the compact wording, `strategies` and the compact re-dispatch. Every session is deferred, and `rename_chat` is `deferLoading: true`.
 - `packages/sdk/test/fixtures/vscode-root-config.json` holds the 43 declared keys and the four a 1.140-era client still sends. `wire.test.ts` dispatches it, and fails on any value in root `config.values` with no property.
-- `docs/AHP.md` and `docs/HOST.md` say what the schema holds and what goes out.
-- **Forced moves and departures to report:** the hand-written `globalAutoApproveEnabled` that host/70 task 05 added is replaced by upstream's property. `conformance.test.ts`'s case that pushed `githubEnterpriseUri` now pushes `telemetryLevel`. `docs/HOST.md`'s Root config section, `gate.ts`'s `PER_CONNECTION` docblock and `types/host.ts`'s `Connection.config` docblock were stale about the two removed keys and were rewritten. No task's Files names those three.
+- `docs/sdk/AHP.md` and `docs/sdk/HOST.md` say what the schema holds and what goes out.
+- **Forced moves and departures to report:** the hand-written `globalAutoApproveEnabled` that host/70 task 05 added is replaced by upstream's property. `conformance.test.ts`'s case that pushed `githubEnterpriseUri` now pushes `telemetryLevel`. `docs/sdk/HOST.md`'s Root config section, `gate.ts`'s `PER_CONNECTION` docblock and `types/host.ts`'s `Connection.config` docblock were stale about the two removed keys and were rewritten. No task's Files names those three.
 - **The gate chain passes on 2026-10-09:** `pnpm install`, `node tools/schema.mjs`, `pnpm build`, `pnpm typecheck`, `pnpm boundary` and `npx vitest run --maxWorkers=2 --testTimeout=10000` all pass, 4612 tests in 263 files.
 - **The protocol's three root config cases are refused, as Softov decided.** `127-root-configchanged-merges-into-config-values`, `128-root-configchanged-noops-when-config-undefined` and `130-root-configchanged-replace-replaces-all-values` push `{"theme": "dark"}`, which no schema here declares. `ahp-test-cases.test.ts` names them in `HOST_REFUSED` and drops them from `HOST_OWNS`. The counts move with them: `NOT_REPLAYED` 205 to 208, `HOST_REFUSED` 59 to 62, `HOST_OWNS` 14 to 11. The second table under *Decisions locked in* carries the answer.
 - **Next action:** none. The plan is built.

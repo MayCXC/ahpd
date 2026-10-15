@@ -22,7 +22,7 @@ The record the host advertises on every agent says only what is true: a document
 - `UPDATE: packages/server/src/config.ts` - a `resource` key: the identifier this host advertises for itself, when the operator wants to name one.
 - `UPDATE: packages/server/src/main.ts:548-560` - build the record the daemon passes to `fileUsers`, deriving the identifier from the configured `host` and `port` when neither the flag nor the config names one.
 - `UPDATE: test/users.test.ts` - the record's shape and the derivation.
-- `UPDATE: docs/USERS.md` - the record a daemon advertises, in the words the field names.
+- `UPDATE: docs/sdk/USERS.md` - the record a daemon advertises, in the words the field names.
 
 ## Steps
 
@@ -43,7 +43,7 @@ The record the host advertises on every agent says only what is true: a document
 
 Done 2026-09-23.
 `DEFAULT_RESOURCE` lost `authorization_servers` and gained `resource_documentation`; `signInRecord` composes the same record under a deployment's identifier, and `signInIdentifier` and `isIdentifier` in the daemon derive and check one, which `--resource` or the `resource` key names.
-The daemon prints a `sign-in <url>` line at startup, and `docs/USERS.md` was rewritten under task 04 rather than here.
+The daemon prints a `sign-in <url>` line at startup, and `docs/sdk/USERS.md` was rewritten under task 04 rather than here.
 Verified by `test/users.test.ts`, `test/daemon.test.ts` and the rest of the suite, and by hand: a daemon with a user file printed `sign-in https://127.0.0.1:9199/`.
 `test/users-host.test.ts` and `test/users-gate.test.ts` were not changed: both supply their own record, so the identifier they sign in against is theirs and the plan's assumption that they read the default was wrong.
 

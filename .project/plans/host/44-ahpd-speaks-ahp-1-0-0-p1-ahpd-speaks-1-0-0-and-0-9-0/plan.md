@@ -21,7 +21,7 @@ refs:
   - "[code://packages/sdk/test/nested-proxy.test.ts#L302-L335](../../../../packages/sdk/test/nested-proxy.test.ts#L302-L335) - an inner host on another version, and one on 0.9.0"
   - "[code://tools/schema.mjs#L276-L285](../../../../tools/schema.mjs#L276-L285) - the strict schema it writes, which says nothing of the package it came from"
   - "[code://packages/sdk/test/wire.test.ts#L339-L345](../../../../packages/sdk/test/wire.test.ts#L339-L345) - a bare vitest run builds the schema only when the file is missing"
-  - "[code://docs/AHP.md#L3-L13](../../../../docs/AHP.md#L3-L13) - 0.9.0, the old version list and the client-order rule"
+  - "[code://docs/sdk/AHP.md#L3-L13](../../../../docs/sdk/AHP.md#L3-L13) - 0.9.0, the old version list and the client-order rule"
   - "[code://README.md#L8](../../../../README.md#L8) - the AHP 0.9.0 badge"
   - "[code://README.md#L381](../../../../README.md#L381) - `targets ... 0.9.0`"
   - "[code://scripts/acp-smoke.mts#L60](../../../../scripts/acp-smoke.mts#L60) - offers `['0.8.0']`"
@@ -66,7 +66,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Proposed architecture
 
 - **Data flow** - `initialize` -> `negotiateProtocolVersion(offered)` -> the chosen version, `-32005` with `supportedVersions`, or `-32602` for a malformed entry.
-- **Layer responsibilities** - root and packages: ranges and lockfile · sdk: `host.ts`, `nested.ts` and their tests · tools: the schema stamp · docs: `docs/AHP.md`, `README.md`.
+- **Layer responsibilities** - root and packages: ranges and lockfile · sdk: `host.ts`, `nested.ts` and their tests · tools: the schema stamp · docs: `docs/sdk/AHP.md`, `README.md`.
 - **Source-of-truth files** - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://tools/schema.mjs`](../../../../tools/schema.mjs)
 
 ## Tasks

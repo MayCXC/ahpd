@@ -17,7 +17,7 @@ A cofold session now runs on what the published cofold packages ship rather than
 - [`code://packages/agent-cofold/src/mapping.ts`](../../../../packages/agent-cofold/src/mapping.ts) - `compactionNotice(before, after)`; `context.compacted` becomes one `chat/responsePart` of kind `systemNotification`; a non-streamed step's text is held for one event so the compaction step's summary is never shown as the model's answer.
 - [`code://packages/agent-cofold/src/transcript.ts`](../../../../packages/agent-cofold/src/transcript.ts) - the run log's `context.compacted` is read beside the messages, and a `summary` message becomes the same notice the live turn sent, with the same numbers.
 - [`code://packages/agent-cofold/src/context.ts`](../../../../packages/agent-cofold/src/context.ts), [`code://packages/agent-cofold/src/session.ts`](../../../../packages/agent-cofold/src/session.ts) - `SessionContext.held`, the backend's `Held` handed to `cofoldSession`.
-- [`code://packages/agent-cofold/src/plugin.ts`](../../../../packages/agent-cofold/src/plugin.ts), [`code://packages/agent-cofold/README.md`](../../../../packages/agent-cofold/README.md), [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) - the `autoCompactTokens` option in the schema and both options tables.
+- [`code://packages/agent-cofold/src/plugin.ts`](../../../../packages/agent-cofold/src/plugin.ts), [`code://packages/agent-cofold/README.md`](../../../../packages/agent-cofold/README.md), [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) - the `autoCompactTokens` option in the schema and both options tables.
 
 ## Verified
 

@@ -52,8 +52,8 @@ ahpd [flags] -> @cofold/commands checks the flags against serverFields -> option
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The daemon reads no project configuration file](../../../../docs/DAEMON.md) | Softov, 2026-09-28 |
-| 2 | [--config-file replaces every other configuration layer](../../../../docs/DAEMON.md) | Softov, 2026-09-28 |
+| 1 | [The daemon reads no project configuration file](../../../../docs/server/REFERENCE.md) | Softov, 2026-09-28 |
+| 2 | [--config-file replaces every other configuration layer](../../../../docs/server/REFERENCE.md) | Softov, 2026-09-28 |
 | 3 | An unknown configuration key warns, and the daemon starts | Softov, 2026-09-28 |
 
 | What | Source | Task |
@@ -98,5 +98,5 @@ ahpd [flags] -> @cofold/commands checks the flags against serverFields -> option
 - [x] An `ahpd.json` or `.ahpd.json` in the working directory is not read.
 - [x] `--config-file` reads that file only, with `$AHPD_CONFIG` set.
 - [x] `pnpm typecheck`, `pnpm boundary` and the full `pnpm test` clean.
-- [x] `docs/DAEMON.md` describes the layers and the checks.
+- [x] `docs/server/REFERENCE.md` describes the layers and the checks.
 - [x] `plans/index.md` updated.

@@ -18,7 +18,7 @@ refs:
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `Host.close` waits for the agents and terminals it ended, and refuses new work.
 - [`code://packages/sdk/src/listen.ts`](../../../../packages/sdk/src/listen.ts) - a listener close lets a response in flight finish for `CLOSE_GRACE_MS`.
 - [`code://packages/server/src/commands/plugin.ts`](../../../../packages/server/src/commands/plugin.ts) - `plugin config` names a recorded `--plugin-option` that overrides the key it set.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the restart, its refusal and its wait.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the restart, its refusal and its wait.
 
 ## Verified
 

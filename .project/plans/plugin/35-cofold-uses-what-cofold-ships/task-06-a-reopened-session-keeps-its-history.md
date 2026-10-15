@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-`turnsOf` keeps every message, covered or not, and a summary message becomes one `systemNotification` at the place it was written, whose content is `compactionNotice` with the numbers its `context.compacted` event recorded, the same sentence the live turn showed, per [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md).
+`turnsOf` keeps every message, covered or not, and a summary message becomes one `systemNotification` at the place it was written, whose content is `compactionNotice` with the numbers its `context.compacted` event recorded, the same sentence the live turn showed, per [A compacted session keeps its history and shows a notice](../../../../docs/sdk/CHATS.md).
 The summary text, written for the model, is not shown, and a summary is never an assistant message.
 
 ## Files

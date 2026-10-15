@@ -12,7 +12,7 @@ A personal-token connection that has not signed in still reads `true`.
 ## What was built
 
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `agentsFor(connection, agents)`, applied in the root snapshot and in `seenBy` for `root/agentsChanged`, so the live broadcast and both replays carry it.
-- [`code://docs/USERS.md`](../../../../docs/USERS.md) - the paragraph on what each connection is told.
+- [`code://docs/sdk/USERS.md`](../../../../docs/sdk/USERS.md) - the paragraph on what each connection is told.
 
 ## Verified
 

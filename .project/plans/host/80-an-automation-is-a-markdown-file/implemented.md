@@ -18,7 +18,7 @@ A person can edit or copy a file, and the daemon reloads it and arms the clock a
 - [`code://packages/server/src/scheduled.ts`](../../../../packages/server/src/scheduled.ts) - the store, moved from the sdk, over a folder and a state file. It writes with `recordFile`, reads with `readRecordFile` and watches the folder. An id is lowercase letters, digits and hyphens, starts with a letter or a digit, and has at most 64 characters.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `daemonAutomations` runs `migrateAutomations` and then opens the store.
 - [`code://packages/server/src/records.ts`](../../../../packages/server/src/records.ts) - a plugin cannot open a collection named `automations`.
-- `docs/AUTOMATIONS.md`, `docs/DAEMON.md`, `docs/LIBRARY.md` and `docs/PLUGINS.md` describe the file and the folder.
+- `docs/sdk/AUTOMATIONS.md`, `docs/server/REFERENCE.md`, `docs/sdk/LIBRARY.md` and `docs/plugins/PLUGINS.md` describe the file and the folder.
 
 ## Verified
 

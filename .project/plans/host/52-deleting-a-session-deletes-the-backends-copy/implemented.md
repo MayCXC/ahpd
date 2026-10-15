@@ -14,7 +14,7 @@ refs:
 - `mayDispose` in the same file refuses a caller who is not the owner and does not hold `session:*`, before anything is torn down. A host with no users directory refuses nobody.
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - the optional `delete(id, directory)`, checked by `validate.ts`.
 - Claude deletes through the SDK's `deleteSession`; pi removes its session file only when it is under pi's own session folder; cofold deletes from its store; ACP sends `session/delete` when the server advertises it, through a getter on `delete`.
-- `docs/AHP.md` says a delete is permanent.
+- `docs/sdk/AHP.md` says a delete is permanent.
 
 ## Verified
 

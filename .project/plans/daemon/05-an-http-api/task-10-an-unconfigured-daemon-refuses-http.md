@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "server"
 refs:
-  - "[../../../../docs/HOST.md](../../../../docs/HOST.md) - what this task applies"
+  - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - what this task applies"
   - "[code://packages/server/src/commands/run.ts#L179-L195](../../../../packages/server/src/commands/run.ts#L179-L195) - the startup refusals `http` has, the credential one included"
   - "[code://packages/server/src/commands/authorize.ts#L61-L87](../../../../packages/server/src/commands/authorize.ts#L61-L87) - the hook, which now always has a token or a directory behind it"
   - "[code://packages/server/test/server-http.test.ts#L330-L349](../../../../packages/server/test/server-http.test.ts#L330-L349) - the three cases"
@@ -23,7 +23,7 @@ refs:
 
 ## Steps
 
-1. The startup refusal, in the same place as the other `http` refusals ([A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../../docs/HOST.md)).
+1. The startup refusal, in the same place as the other `http` refusals ([A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../../docs/sdk/HOST.md)).
 2. Remove the admit branch and its comment from `authorizeOverHttp`.
 
 ## Validation

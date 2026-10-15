@@ -4,16 +4,16 @@ status: todo
 depends: [task-05-dev02s-docker-runs-a-session.md, task-07-a-profile-may-clone-from-origin.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the operator's page"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the operator's page"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` says what `dockerHost` does, how it differs from the plugin's `env.DOCKER_HOST`, what a remote machine cannot mount, and how the code gets there and back.
+`docs/plugins/COMPUTERS.md` says what `dockerHost` does, how it differs from the plugin's `env.DOCKER_HOST`, what a remote machine cannot mount, and how the code gets there and back.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`.
+- `UPDATE: docs/plugins/COMPUTERS.md`.
 
 ## Steps
 

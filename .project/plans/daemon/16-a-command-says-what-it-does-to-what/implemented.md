@@ -21,7 +21,7 @@ Every list's rows carry the key its keyed commands take, so a client acts on a r
 - `commands/status.ts`, `config.ts`, `user.ts`, `teams.ts`, `plugin.ts`, `proxy.ts`, `usage.ts`, `vault.ts` - `effect` and `resource` on every command `servedRegistry` declares, by task 04's table; the commands only the line has (`start`, `stop`, `run`, `configure` and the rest) declare nothing.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - `PluginRow.name` is the key the entry is held under (`nameOf(spec)`), which is what `plugin enable` and the rest take, and the name the module or the manifest declares moved to `module`; `pluginLine` prints `module`, so `ahpd plugin list` reads as it read before.
 - `commands/plugin.ts` - a served `plugin list` row masks the userinfo in `name` as it does in `spec`, since a spec that is a URL carries it in both.
-- `docs/DAEMON.md` - the command list with the three `plugin config` forms, a paragraph saying the five removes ask first and that a script without a terminal passes `--yes`, the served `plugin config` routes, and what a served list row carries.
+- `docs/server/REFERENCE.md` - the command list with the three `plugin config` forms, a paragraph saying the five removes ask first and that a script without a terminal passes `--yes`, the served `plugin config` routes, and what a served list row carries.
 
 ## Verified
 

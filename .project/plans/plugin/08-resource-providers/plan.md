@@ -25,7 +25,7 @@ refs:
   - code://packages/sdk/src/host.ts#L5419 - `resourceResolve`
   - code://packages/sdk/src/host.ts#L4726-L4745 - the `@` completion, which stays on the file store
   - code://packages/sdk/src/host.ts#L7160-L7194 - the client relay, which runs before every handler
-  - code://docs/PLUGINS.md - the worked examples and the options table the new kind joins
+  - code://docs/plugins/PLUGINS.md - the worked examples and the options table the new kind joins
   - code://.project/plans/plugin/00-plugin.md#L28-L54 - the registration kinds, one method each, grouped by operation
 ---
 
@@ -72,8 +72,8 @@ ahpd --plugin <pkg> -> loadPlugins -> apply(host) -> host.registerResourceProvid
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host-owned URI scheme is a provider a plugin contributes](../../../../docs/RESOURCES.md) | The user, 2026-09-22: asked which route the plan should take and answered "The provider mechanism". |
-| 2 | [A scheme provider implements less than a resource store](../../../../docs/RESOURCES.md) | (defaulted: a `computer:` provider has no path completion to offer, and the research asks for a smaller contract rather than fake file semantics). |
+| 1 | [A host-owned URI scheme is a provider a plugin contributes](../../../../docs/sdk/RESOURCES.md) | The user, 2026-09-22: asked which route the plan should take and answered "The provider mechanism". |
+| 2 | [A scheme provider implements less than a resource store](../../../../docs/sdk/RESOURCES.md) | (defaulted: a `computer:` provider has no path completion to offer, and the research asks for a smaller contract rather than fake file semantics). |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -91,7 +91,7 @@ ahpd --plugin <pkg> -> loadPlugins -> apply(host) -> host.registerResourceProvid
 - **Data flow** - `HostOptions.resourceProviders` is a record keyed by scheme. A handler parses the URI's scheme once through one helper and gets a store back: `options.resources` for `file:`, the record for anything registered, and `undefined` otherwise, which answers the scheme sentence.
 - **Event flow** - unchanged; `resource_write` and the rest fire as they do, and a provider's changes reach a client through the same watch channel `createResourceWatch` mints.
 - **State flow** - nothing new is stored. The record lives in `HostOptions` for the host's life, and a plugin's registration is folded before `createHost` sees it.
-- **Layer responsibilities** - packages/sdk: the contract, `HostOptions.resourceProviders`, the keyed fold, the checker and the routing · packages/server: nothing but the loader's existing per-kind checks, if they name kinds explicitly · test/: the fold, the validation, the routing and a fixture provider · docs: `docs/PLUGINS.md` and the kinds table in `00-plugin.md`.
+- **Layer responsibilities** - packages/sdk: the contract, `HostOptions.resourceProviders`, the keyed fold, the checker and the routing · packages/server: nothing but the loader's existing per-kind checks, if they name kinds explicitly · test/: the fold, the validation, the routing and a fixture provider · docs: `docs/plugins/PLUGINS.md` and the kinds table in `00-plugin.md`.
 - **Source-of-truth files** - `code://packages/sdk/src/types/resources.ts`, `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/sdk/src/host.ts`.
 
 ## Tasks

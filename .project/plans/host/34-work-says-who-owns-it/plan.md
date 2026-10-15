@@ -39,7 +39,7 @@ connection.principal -> createSession -> session owner (persisted) ; sendMessage
 
 | Decision | Source |
 | --- | --- |
-| [Work is owned by a typed reference, user, team or project](../../../../docs/SESSIONS.md) | Softov, 2026-10-01 |
+| [Work is owned by a typed reference, user, team or project](../../../../docs/sdk/SESSIONS.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -6,9 +6,9 @@ layer: "plugin packages, docs"
 refs:
   - "[code://packages/webhook/src/route.ts#L8-L11](../../../../packages/webhook/src/route.ts#L8-L11) - `NAME` and `PREFIX`"
   - "[code://packages/bot/src/plugin.ts#L27](../../../../packages/bot/src/plugin.ts#L27) - one of the nine `name` exports"
-  - "[code://docs/WEBHOOKS.md](../../../../docs/WEBHOOKS.md) - the route URLs and the principal"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the verb and `--plugin-option` examples"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the contract example and the section on the id"
+  - "[code://docs/plugins/WEBHOOKS.md](../../../../docs/plugins/WEBHOOKS.md) - the route URLs and the principal"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the verb and `--plugin-option` examples"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the contract example and the section on the id"
 ---
 
 ## Objective
@@ -36,9 +36,9 @@ The docs name each plugin by its new id.
 - `UPDATE: packages/webhook/test/webhook-automation.test.ts:13` - the URL is under `/plugins/webhook/`.
 - `UPDATE: packages/server/test/webhook-bot.test.ts:130-180` - the route key is `webhook`, and the URLs are under `/plugins/webhook/`.
 - `UPDATE: packages/server/test/server-root-config.test.ts:481` - the key is `plugins.agent-claude`.
-- `UPDATE: docs/WEBHOOKS.md:32-107` - the route URLs and the principal `plugin:webhook`.
-- `UPDATE: docs/DAEMON.md:473-510` - the verb and `--plugin-option` examples name the id.
-- `UPDATE: docs/PLUGINS.md:24-72` - the contract example exports a slug, and the id section names the first-party ids.
+- `UPDATE: docs/plugins/WEBHOOKS.md:32-107` - the route URLs and the principal `plugin:webhook`.
+- `UPDATE: docs/server/REFERENCE.md:473-510` - the verb and `--plugin-option` examples name the id.
+- `UPDATE: docs/plugins/PLUGINS.md:24-72` - the contract example exports a slug, and the id section names the first-party ids.
 
 ## Steps
 
@@ -49,9 +49,9 @@ The docs name each plugin by its new id.
 5. Run the package tests, and change each test that asserts an `@ahpd/<x>` id to the slug.
 6. Keep each spec written as `@ahpd/<x>` in a test, because it is a package name.
 7. Change the webhook comments and `packages/webhook/README.md` to the new path.
-8. Change `docs/WEBHOOKS.md` to `/plugins/webhook/` and `plugin:webhook`.
-9. Change the `docs/DAEMON.md` examples of a verb and of `--plugin-option` to the id.
-10. Change the `docs/PLUGINS.md` contract example and the id section to a slug id.
+8. Change `docs/plugins/WEBHOOKS.md` to `/plugins/webhook/` and `plugin:webhook`.
+9. Change the `docs/server/REFERENCE.md` examples of a verb and of `--plugin-option` to the id.
+10. Change the `docs/plugins/PLUGINS.md` contract example and the id section to a slug id.
 11. Run the gates.
 
 ## Validation
@@ -68,5 +68,5 @@ The docs name each plugin by its new id.
 - **Also changed:** the tests that assert an id, a problem line or a root config key. They are in agent-acp, agent-claude, agent-cofold, agent-pi, bot, computer, push and tunnel-devtunnel. A spec written as `@ahpd/<x>` stays in each test.
 - **Departure:** two cofold tests keep `@ahpd/agent-cofold` as the id, because their module exports no `name`, so the id is the manifest's name.
 - **Departure:** the server `webhook-bot.test.ts` 409 case checks for a line that starts with `webhook: `, because the old check matched the id inside the line.
-- **Left for task 02:** the route section of `docs/PLUGINS.md` at lines 190-204 still names `/plugins/%40acme/webhooks/`.
+- **Left for task 02:** the route section of `docs/plugins/PLUGINS.md` at lines 190-204 still names `/plugins/%40acme/webhooks/`.
 - **Gates:** typecheck, boundary and schema pass. The test gate passes with 5078 tests, and agent-cofold, agent-pi and tunnel-devtunnel pass with 444 tests.

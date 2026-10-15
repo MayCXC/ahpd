@@ -61,9 +61,9 @@ chat/turnStarted | chat/pendingMessageSet with message.attachments
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
+| 1 | [An attachment's bytes are written to disk and the message names the file](../../../../docs/sdk/CHATS.md) | Softov, 2026-10-06 |
 | 2 | [A pasted image goes as an image when it fits](../../../decisions/a-pasted-image-goes-as-an-image-when-it-fits.md) | Softov, 2026-10-06 |
-| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/CHATS.md) | Softov, 2026-10-06 |
+| 3 | [Pasted text is inlined up to 64 KiB](../../../../docs/sdk/CHATS.md) | Softov, 2026-10-06 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -74,7 +74,7 @@ chat/turnStarted | chat/pendingMessageSet with message.attachments
 | A client-only file is fetched with `resourceRead` only when its `sizeHint` is absent or at most 32 MiB; a larger one is left as sent | (defaulted: below `ws`'s 100 MiB payload, so a fetch never asks for more than a message could carry) | 01 |
 | The attachments folder is removed with its session | the folder is the session's | 01 |
 | A folder name that is empty, `.` or `..` after encoding is escaped to one no id produces, and a folder not strictly inside `<dir>/attachments` is refused in a line | an id is an opaque key and a folder name is not; the folder that holds every session is nobody's to remove | 01 |
-| [A session in a machine gets each attachment copied into that machine at the same path](../../../../docs/CHATS.md) | Softov, 2026-10-07, chose "Copy into the machine" for how a machine session sees its attachments | 04 |
+| [A session in a machine gets each attachment copied into that machine at the same path](../../../../docs/sdk/CHATS.md) | Softov, 2026-10-07, chose "Copy into the machine" for how a machine session sees its attachments | 04 |
 
 ## Proposed architecture
 

@@ -52,7 +52,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host tool says what running it does, and a destructive one is asked about by the policy that already exists](../../../../docs/TOOLS.md) | Softov, 2026-09-20: "ok on the fix.. its better than my approach" |
+| 1 | [A host tool says what running it does, and a destructive one is asked about by the policy that already exists](../../../../docs/sdk/TOOLS.md) | Softov, 2026-09-20: "ok on the fix.. its better than my approach" |
 | 2 | Fork and rewind are a cut in the store, and the run loop keeps reading the session | Softov, 2026-09-20: "ok do option 2" |
 
 | What | Source | Task |
@@ -95,5 +95,5 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] `pnpm test` green, with a destructive host tool gated by the default policy, a fork, a rewind, and a client-run tool: 790 passed with one pre-existing `host.test.ts` `create-pr` flake that passes alone.
 - [x] `pnpm typecheck` and `pnpm boundary` green.
 - [x] By hand: a window's fork and rewind work on a facio session, and a client tool offered to the model runs on the client. The window was not driven; the host handlers a window calls are exercised end to end by `test/agent-cofold-fork.test.ts` through `createHost`, so what is unverified is the client's drawing of the controls and not the backend.
-- [x] `docs/PLUGINS.md` names `effects` and what a destructive tool does.
+- [x] `docs/plugins/PLUGINS.md` names `effects` and what a destructive tool does.
 - [x] `plans/index.md` updated.

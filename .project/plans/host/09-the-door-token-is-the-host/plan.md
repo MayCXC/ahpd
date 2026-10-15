@@ -70,7 +70,7 @@ client -> ?tkn=<deployment token>   -> listen.identityOf: admitted, and the host
 - **Data flow** - `ListenOptions.root` says the deployment token is the host. `identityOf` admits it with `{ root: true }`, which travels to `accept` as an `Arrival` and is written on the `Connection`. Both gates return before asking for a capability when `connection.root` is true.
 - **Event flow** - unchanged. `authenticate` still attaches a person and arms their expiry; it simply does not touch a connection that is already the host.
 - **State flow** - no new store. `root` lives on the connection and dies with the socket, like the principal beside it.
-- **Layer responsibilities** - packages/sdk: `Connection.root`, `Arrival`, the door's resolution and the two gates · packages/server: passing `root` when a directory is configured · test/: the gate matrix and the door matrix · docs: `docs/USERS.md` and `HANDOFF.md`.
+- **Layer responsibilities** - packages/sdk: `Connection.root`, `Arrival`, the door's resolution and the two gates · packages/server: passing `root` when a directory is configured · test/: the gate matrix and the door matrix · docs: `docs/sdk/USERS.md` and `HANDOFF.md`.
 - **Source-of-truth files** - [`code://packages/sdk/src/listen.ts`](../../../../packages/sdk/src/listen.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
 
 ## Tasks

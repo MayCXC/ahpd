@@ -42,7 +42,7 @@ A client older than 1.140 that still pushes any of the three has that key refuse
 - `UPDATE: packages/sdk/src/validate.ts:101` - `compact` leaves `TOOL_OPTIONAL`; `checkTool` does not look at a member the table does not list, so a plugin tool still carrying `compact` registers and the member is ignored.
 - `UPDATE: packages/sdk/src/tools/session.ts:515-546` - `rename_chat` gains `deferLoading: true`.
 - `UPDATE: packages/sdk/test/host-tools.test.ts`, `packages/sdk/test/host-github.test.ts`, `packages/sdk/test/artifacttools.test.ts`, `packages/sdk/test/users-gate.test.ts`, `packages/sdk/test/root-config.test.ts`, `packages/sdk/test/conformance.test.ts`, `packages/sdk/test/sessiontools.test.ts`, `packages/sdk/test/plugin-validate.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - task 01's root config paragraph says ahpd acts on `defaultShell` and the daemon's keys; a sentence says the compact wording and the two title keys were removed with VS Code 1.140 and a push of them is refused; the artifact and session tool rows, where they mention either key, say the long wording and deferred titles are the only ones.
+- `UPDATE: docs/sdk/AHP.md` - task 01's root config paragraph says ahpd acts on `defaultShell` and the daemon's keys; a sentence says the compact wording and the two title keys were removed with VS Code 1.140 and a push of them is refused; the artifact and session tool rows, where they mention either key, say the long wording and deferred titles are the only ones.
 
 ## Steps
 
@@ -73,6 +73,6 @@ Built on 2026-10-09, uncommitted on `build/agents/db49ec10`.
 
 **Departures, reported:**
 
-- `docs/HOST.md`'s Root config section still said the host's own schema is five keys and listed the two removed ones. No task's Files line names it, and it is stale prose rather than behaviour, so it was rewritten here. It now says two host keys. The VS Code half of the schema is declared and read back, and `globalAutoApproveEnabled` is the one of those read. The three 1.140 keys are named as gone. The stale link to the superseded decision `root-config-declares-what-vscode-pushes-and-refuses-the-rest` was dropped with it.
+- `docs/sdk/HOST.md`'s Root config section still said the host's own schema is five keys and listed the two removed ones. No task's Files line names it, and it is stale prose rather than behaviour, so it was rewritten here. It now says two host keys. The VS Code half of the schema is declared and read back, and `globalAutoApproveEnabled` is the one of those read. The three 1.140 keys are named as gone. The stale link to the superseded decision `root-config-declares-what-vscode-pushes-and-refuses-the-rest` was dropped with it.
 - Two comments named the removed key by description and were in no task's Files. They are `gate.ts`'s `PER_CONNECTION` docblock ("whether artifact prompts are compact changes what every session is told") and `types/host.ts`'s `Connection.config` docblock. The second read "like whether artifact prompts are compact". Both now name `globalAutoApproveEnabled`, which is the host-wide key that does change what every session is told.
 - The em dash inside the copied `artifactTools` description stays. It is upstream's string, copied as written under task 01's rule, and not prose written for this repository. Every em dash in prose this task wrote is absent.

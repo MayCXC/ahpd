@@ -21,7 +21,7 @@ Each row of an `uncommitted` changeset carries `_meta.staged` and `_meta.unstage
 
 ## Steps
 
-1. The working tree holds an uncommitted draft of this plan's work, left by another session: `docs/AHP.md`, `packages/sdk/src/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
+1. The working tree holds an uncommitted draft of this plan's work, left by another session: `docs/sdk/AHP.md`, `packages/sdk/src/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
    Start from it; this task keeps its `_meta` on a row and its two staging cases.
 2. In the status loop, when the record's first letter is `R` or `C`, consume the following NUL-separated record as the old path, so it is not read as a row of its own.
 3. The rename's row is the new path, marked staged.

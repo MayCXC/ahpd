@@ -36,7 +36,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "registerAgent" packages/*/src` - every agent plugin registers exactly one agent; the SDK already allows several per plugin.
 - `rg -n "a-repeated-plugin-is-keyed" .` - the check in `server/src/plugins.ts`, the key in `server/src/commands/config.ts`, the test `agent-claude/test/agent-claude-presets.test.ts` and the fixture `server/test/fixtures/plugin-provider`.
-- `rg -n "preset" packages/agent-claude/README.md docs/DAEMON.md` - the README documents presets as a session choice and the second load for OpenRouter.
+- `rg -n "preset" packages/agent-claude/README.md docs/server/REFERENCE.md` - the README documents presets as a session choice and the second load for OpenRouter.
 
 ### Runtime path
 
@@ -53,7 +53,7 @@ config plugins[] -> server loadPlugins (one per name) -> agent-claude apply -> o
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01, 02 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 01, 02 |
 | [A Claude option is declared once, and both the session schema and the preset schema are made from it](../10-a-claude-session-runs-on-a-preset/plan.md) | 01 |
 
 | What | Source | Task |

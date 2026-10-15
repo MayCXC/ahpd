@@ -16,7 +16,7 @@ A client can say whose a session is and which person sent each of its turns, liv
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `chat/turnStarted` carries `_meta.sender`; `withSender` puts `message._meta.sender` on snapshot turns, the active turn, transcript-read sessions, worker chats and `chat/turnsLoaded` pages; `describes` puts `_meta.owner` on rows and session state; `onTurnRecorded` keeps a sender under a backend's own transcript id.
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - the optional `Start.onTurnRecorded(turnId, transcriptId)`.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - calls it once per lead turn with the prompt's CLI uuid, never for a worker's echo.
-- `docs/AHP.md`, `docs/LIBRARY.md`, `docs/DAEMON.md` - where the sender and owner ride, and that a host with no users directory sends neither.
+- `docs/sdk/AHP.md`, `docs/sdk/LIBRARY.md`, `docs/server/REFERENCE.md` - where the sender and owner ride, and that a host with no users directory sends neither.
 
 ## Verified
 

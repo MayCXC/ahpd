@@ -4,17 +4,17 @@ status: done
 depends: []
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md#L323-L361](../../../../docs/PLUGINS.md#L323-L361) - Naming a plugin, which says how a plugin is named on the command line but not what a package is called"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the convention"
+  - "[code://docs/plugins/PLUGINS.md#L323-L361](../../../../docs/plugins/PLUGINS.md#L323-L361) - Naming a plugin, which says how a plugin is named on the command line but not what a package is called"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the convention"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` "Naming a plugin" says a plugin from this repository is `@ahpd/<name>`, an agent backend is `@ahpd/agent-<name>`, and a third-party plugin takes its author's scope.
+`docs/plugins/PLUGINS.md` "Naming a plugin" says a plugin from this repository is `@ahpd/<name>`, an agent backend is `@ahpd/agent-<name>`, and a third-party plugin takes its author's scope.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md:323-361` - two lines at the top of the section, with `@ahpd/computer` and `@ahpd/agent-acp` as the examples.
+- `UPDATE: docs/plugins/PLUGINS.md:323-361` - two lines at the top of the section, with `@ahpd/computer` and `@ahpd/agent-acp` as the examples.
 
 ## Steps
 
@@ -26,7 +26,7 @@ refs:
 
 ## Resume
 
-Done. A paragraph at the top of "Naming a plugin", before the command line, saying a plugin from this repository is `@ahpd/<name>` with `@ahpd/computer` as the example, an agent backend is `@ahpd/agent-<name>` with `@ahpd/agent-acp`, and a plugin from elsewhere takes its author's scope. It links [A plugin package is @ahpd/<name>, and an agent backend is @ahpd/agent-<name>](../../../../docs/PLUGINS.md).
+Done. A paragraph at the top of "Naming a plugin", before the command line, saying a plugin from this repository is `@ahpd/<name>` with `@ahpd/computer` as the example, an agent backend is `@ahpd/agent-<name>` with `@ahpd/agent-acp`, and a plugin from elsewhere takes its author's scope. It links [A plugin package is @ahpd/<name>, and an agent backend is @ahpd/agent-<name>](../../../../docs/plugins/PLUGINS.md).
 
 It runs to more than the two lines the step asked for, because the third-party case needed a clause of its own and the decision link a fourth; the examples are the two the task named. Read by hand.
 

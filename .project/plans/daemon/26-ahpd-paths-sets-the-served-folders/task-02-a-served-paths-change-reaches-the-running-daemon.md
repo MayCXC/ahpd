@@ -62,7 +62,7 @@ What the plan did not know:
 
 - The task's Files list names `packages/server/test/server-paths.test.ts` alone among the tests. It does not name `packages/server/test/server-http.test.ts`, where the `--remote` cases and the daemon helper live. That is where the by-hand line was written.
 - It does not name `packages/server/test/server-commands.test.ts` either. That file's pinned manifest table, grants and served-input rows gained the three `paths.*` entries in task 01. Task 02 adds nothing to it.
-- `docs/DAEMON.md`'s `## Commands` block (line 163) lists every verb and gains none from this plan, because the plan names no doc file. `ahpd paths list`, `add` and `remove` are missing there.
+- `docs/server/REFERENCE.md`'s `## Commands` block (line 163) lists every verb and gains none from this plan, because the plan names no doc file. `ahpd paths list`, `add` and `remove` are missing there.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by the suite on every run and is left dirty. `git restore packages/sdk/test/fixtures/wire.jsonl` is denied in this mode, so Softov has to run it before a commit.
 
 Validation:

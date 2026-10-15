@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/meter.ts#L190-L205](../../../../packages/sdk/src/meter.ts#L190-L205) - the meter charges a scoped record to its `team:` pool too"
   - "[code://packages/sdk/src/types/usage.ts#L128-L165](../../../../packages/sdk/src/types/usage.ts#L128-L165) - the `Usage` port"
   - "[code://packages/sdk/src/host/admission.ts#L136-L172](../../../../packages/sdk/src/host/admission.ts#L136-L172) - every `usage:` read is gated as `usage:get`"
-  - "[code://docs/USAGE.md](../../../../docs/USAGE.md) - the scheme as documented"
+  - "[code://docs/sdk/USAGE.md](../../../../docs/sdk/USAGE.md) - the scheme as documented"
 ---
 
 ## Goal
@@ -47,12 +47,12 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The usage list shows the charged pools a reader may read](../../../../docs/USAGE.md) | Softov, 2026-10-09 |
-| 2 | [Usage is grouped by the host](../../../../docs/USAGE.md) | Softov, 2026-10-09 |
+| 1 | [The usage list shows the charged pools a reader may read](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-09 |
+| 2 | [Usage is grouped by the host](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-09 |
 
 | What | Source | Task |
 | --- | --- | --- |
-| A member of `team:*` or of `team:project` reads `team:<team>` | [[Usage is read through a usage resource scheme, totals and records, and a person reads their own pools without a grant](../../../../docs/USAGE.md)](../../../../docs/USAGE.md): a person reads "the `team:` and `project:` pools they are a member of" | 01 |
+| A member of `team:*` or of `team:project` reads `team:<team>` | [[Usage is read through a usage resource scheme, totals and records, and a person reads their own pools without a grant](../../../../docs/sdk/USAGE.md)](../../../../docs/sdk/USAGE.md): a person reads "the `team:` and `project:` pools they are a member of" | 01 |
 | `team:*` lets a person read `project:<team>:<any>`, not the install's project list crossed with the team | the same decision | 01 |
 | ahpd sends each pool's kind and name | Softov, 2026-10-07, in ahpapp `usage/01`: "ahpd sends kind and name" | 03 |
 | A total is read for any range, and the records follow the same range | Softov, 2026-10-09, asked "How should a custom date range be picked?" and answered "A fourth tab, Range" | 04 |
@@ -93,5 +93,5 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [ ] Each pool body has a `kind` and a `name` that a reader with no `team` or `project` grant gets.
 - [ ] `range`, `records` and `groups` take `from` and `until`.
 - [ ] A group by `user,project` sums each record once.
-- [ ] `docs/USAGE.md` describes the list, the name, the range and the groups.
+- [ ] `docs/sdk/USAGE.md` describes the list, the name, the range and the groups.
 - [ ] `plans/index.md` updated.

@@ -33,5 +33,5 @@ Implemented 2026-09-29 in the `fixes-0-8-1` worktree, test-first.
 - `pnpm typecheck` 0, `pnpm boundary` 0, full `pnpm test`: run 1 exit 1 (1748 of 1749, ENOTEMPTY in agent-acp-ports' cleanup), runs 2 and 3 exit 0, 1749 passed.
 Added 2026-09-29, approved by Softov:
 - `updatePlugins` says `Nothing to update.` when it ran npm and no package's version moved, for `all` and for names. Failing first with the fake runner: an update whose versions are the same on disk before and after said nothing.
-- `docs/DAEMON.md` says `plugin install` refuses a registry package whose `package.json` has no `"ahpd"` field before npm runs, and that `update` says `Nothing to update.` when no version moved. No em dash; the file's wrapping kept.
+- `docs/server/REFERENCE.md` says `plugin install` refuses a registry package whose `package.json` has no `"ahpd"` field before npm runs, and that `update` says `Nothing to update.` when no version moved. No em dash; the file's wrapping kept.
 - `pnpm typecheck` 0, `pnpm boundary` 0, full `pnpm test`: run 1 exit 1 (1749 of 1750, ENOTEMPTY in computer-devcontainer's cleanup), runs 2 and 3 exit 0, 1750 passed.

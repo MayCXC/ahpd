@@ -34,9 +34,9 @@ With `http.host: "::1"` the daemon prints `http://[::1]:N/api`, which `--remote`
 
 Implemented 2026-09-27. Tests first, each seen to fail: the IPv6 case read `::1` off the `http on` line where it now wants `[::1]`, and `apiOrigins('127.0.0.1', 'https://ahpd.example.com:8443/', 9187).authorities` lacked `ahpd.example.com:8443`. This machine has an IPv6 loopback, so the IPv6 case ran rather than skipped.
 
-`run.ts` has `urlHost`, which brackets an IPv6 address; `apiOrigins`, the `http on` line and the served facts' `url` use it. The `ahpd on ws://` line uses it too: its reader, `recordOf` in `daemon.ts`, takes `ws://[^\s,]+`, which keeps the brackets, and `readyUrl` only appends a slash and the token, so the record's `url` becomes one a parser reads and nothing else changes. `apiOrigins` adds `at.host` when the resource names a port. `docs/DAEMON.md` says both.
+`run.ts` has `urlHost`, which brackets an IPv6 address; `apiOrigins`, the `http on` line and the served facts' `url` use it. The `ahpd on ws://` line uses it too: its reader, `recordOf` in `daemon.ts`, takes `ws://[^\s,]+`, which keeps the brackets, and `readyUrl` only appends a slash and the token, so the record's `url` becomes one a parser reads and nothing else changes. `apiOrigins` adds `at.host` when the resource names a port. `docs/server/REFERENCE.md` says both.
 
-Departure: `--remote` is given the origin of the `http on` line, `http://[::1]:N`, not the line's URL with `/api`. `remoteRegistry` appends `/api` to what it is given, `docs/DAEMON.md` says "The URL is the daemon's origin; `/api` is appended", and `registry.ts` is not in this task's Files; the IPv4 line is not taken with `/api` either.
+Departure: `--remote` is given the origin of the `http on` line, `http://[::1]:N`, not the line's URL with `/api`. `remoteRegistry` appends `/api` to what it is given, `docs/server/REFERENCE.md` says "The URL is the daemon's origin; `/api` is appended", and `registry.ts` is not in this task's Files; the IPv4 line is not taken with `/api` either.
 
 Found, not changed: `personalUrl` in `packages/server/src/config.ts` writes `ws://${host}:${port}` unbracketed, so a served `user token --url` on an IPv6 bind names a URL a parser rejects. It is outside this task's Files.
 

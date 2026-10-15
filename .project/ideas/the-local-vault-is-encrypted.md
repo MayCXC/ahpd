@@ -3,7 +3,7 @@ title: The local vault is encrypted, with a key the daemon is given at start
 created: 2026-10-03
 ---
 
-The host's own vault is one plain JSON file, `vault.json`, mode 0600, in the configuration directory ([the decision](../../docs/DAEMON.md), built by [vault/01 p1](../plans/vault/01-secrets-live-in-a-vault-p1-the-vault-and-its-local-file/plan.md)).
+The host's own vault is one plain JSON file, `vault.json`, mode 0600, in the configuration directory ([the decision](../../docs/server/REFERENCE.md), built by [vault/01 p1](../plans/vault/01-secrets-live-in-a-vault-p1-the-vault-and-its-local-file/plan.md)).
 Encrypting it was decided on 2026-10-02 and set aside on 2026-10-03, so the vault comes first and the encryption after.
 Source: Softov, 2026-10-03: "to the valt now. crypt lattter".
 

@@ -10,10 +10,10 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - 1043 lines; automations, configuration and who may connect move out"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - 683 lines; the door, the issuer and trusted folders move out"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md) - the surface; its session and chat behaviour is linked from the new docs"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - how a plugin serves a scheme, linked from RESOURCES.md"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - 1043 lines; automations, configuration and who may connect move out"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - 683 lines; the door, the issuer and trusted folders move out"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - the surface; its session and chat behaviour is linked from the new docs"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - how a plugin serves a scheme, linked from RESOURCES.md"
 ---
 
 ## Goal
@@ -30,7 +30,7 @@ Softov, 2026-10-08: "make a file for each sector ... so we can define things in 
 ### Searches performed
 
 - `wc -l docs/*.md` - ten docs, 5521 lines; DAEMON.md and PLUGINS.md each hold over 1000.
-- `grep -n "^## " docs/DAEMON.md docs/USERS.md docs/AHP.md` - the sections each move names.
+- `grep -n "^## " docs/server/REFERENCE.md docs/sdk/USERS.md docs/sdk/AHP.md` - the sections each move names.
 - `rg -ln "code://packages/sdk/src/host/<area>" .project/decisions/` - the decisions each area doc links; run per area.
 
 ### Gaps
@@ -71,7 +71,7 @@ Softov, 2026-10-08: "make a file for each sector ... so we can define things in 
 
 ## Resume state
 
-- **Done so far:** every task. The nine new area docs are written - `docs/AUTHENTICATION.md`, `docs/HOST.md`, `docs/AUTOMATIONS.md`, `docs/SESSIONS.md`, `docs/CHATS.md`, `docs/TERMINALS.md`, `docs/TOOLS.md`, `docs/RESOURCES.md` and `docs/USAGE.md` - and `docs/README.md` names all twenty files in `docs/`, the documentation domain reference and the root `README.md` list the same set ([implemented.md](implemented.md) has what was made and what the old docs got wrong). Out of `docs/USERS.md` (683 lines, now 414): the four authentication sections. Out of `docs/DAEMON.md` (1043 lines, now 807): "Who may connect", "Automations" (130 lines), the per-key prose of "Configuration" and "What a client can configure". Each moved section left a stub and a link. USERS.md's two resource sections kept their text and gained one line each pointing at RESOURCES.md; that task moved nothing, so no link had to be repaired. Two stale claims about `authorization_servers` in USERS.md were corrected, and `docs/AHP.md`'s `automationRun/cancelRequested` row contradicts `packages/sdk/src/host/actions.ts:484` (the code refuses it, the row says ✅). In task 04, `packages/sdk/src/host/terminals.ts:249-257` claims a served-directory check `createTerminal` does not make, and `TitleStrategy`'s `utility` is a value this host never selects. Task 05 found no contradiction with the code in its area; its one correction was to this plan's own assumption, since no decision cites `usage.ts` or `resourcemethods.ts` by `code://` and the two this area needs came from the wider sweep over `resources.ts`.
+- **Done so far:** every task. The nine new area docs are written - `docs/sdk/AUTHENTICATION.md`, `docs/sdk/HOST.md`, `docs/sdk/AUTOMATIONS.md`, `docs/sdk/SESSIONS.md`, `docs/sdk/CHATS.md`, `docs/sdk/TERMINALS.md`, `docs/sdk/TOOLS.md`, `docs/sdk/RESOURCES.md` and `docs/sdk/USAGE.md` - and `docs/README.md` names all twenty files in `docs/`, the documentation domain reference and the root `README.md` list the same set ([implemented.md](implemented.md) has what was made and what the old docs got wrong). Out of `docs/sdk/USERS.md` (683 lines, now 414): the four authentication sections. Out of `docs/server/REFERENCE.md` (1043 lines, now 807): "Who may connect", "Automations" (130 lines), the per-key prose of "Configuration" and "What a client can configure". Each moved section left a stub and a link. USERS.md's two resource sections kept their text and gained one line each pointing at RESOURCES.md; that task moved nothing, so no link had to be repaired. Two stale claims about `authorization_servers` in USERS.md were corrected, and `docs/sdk/AHP.md`'s `automationRun/cancelRequested` row contradicts `packages/sdk/src/host/actions.ts:484` (the code refuses it, the row says ✅). In task 04, `packages/sdk/src/host/terminals.ts:249-257` claims a served-directory check `createTerminal` does not make, and `TitleStrategy`'s `utility` is a value this host never selects. Task 05 found no contradiction with the code in its area; its one correction was to this plan's own assumption, since no decision cites `usage.ts` or `resourcemethods.ts` by `code://` and the two this area needs came from the wider sweep over `resources.ts`.
 - **Next action:** none. Reviewed and merged 2026-10-08 (210143a).
 - **Open questions:** none.
 - **Watch out for:** plugin/38 adds a read-only section to PLUGINS.md; this plan does not move PLUGINS.md text. `.project/plans/**` cites USERS.md and DAEMON.md by `#L<n>` anchor in twelve places and every anchor below a removed section has drifted, though none pointed into one.

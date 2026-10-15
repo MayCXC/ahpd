@@ -11,7 +11,7 @@ refs:
   - code://test/uri-resources.test.ts
   - code://test/uri-resources-plugin.test.ts
   - code://test/fixtures/plugin-uri-resources
-  - code://docs/PLUGINS.md
+  - code://docs/plugins/PLUGINS.md
 ---
 
 A plugin can serve one host-owned URI scheme beside the daemon's file store with `registerResourceProvider(scheme, provider)`, and the host routes every `resource*` command by the scheme in the URI.
@@ -28,7 +28,7 @@ A provider implements less than a `ResourceStore`: `read` is required, `list`, `
 - `code://packages/sdk/src/host.ts` - `storeFor(uri)`, the nine routed call sites, and the cross-scheme `-32602` on move and copy.
 - `code://test/uri-resources.test.ts`, `code://test/uri-resources-plugin.test.ts` - the routing cases and the whole path through the loader.
 - `code://test/fixtures/plugin-uri-resources` - a read-only `computer:` serving `computer://local/status` and `computer://local/capabilities`.
-- `code://docs/PLUGINS.md`, `code://.project/plans/plugin/00-plugin.md` - the method, the contract table, the fixture and the kinds row.
+- `code://docs/plugins/PLUGINS.md`, `code://.project/plans/plugin/00-plugin.md` - the method, the contract table, the fixture and the kinds row.
 
 ## Verified
 
@@ -46,5 +46,5 @@ A provider implements less than a `ResourceStore`: `read` is required, `list`, `
 ## Left for later
 
 - A real `computer:` provider, and what it asks for a machine. Docker is available on this machine and `/dev/kvm` is readable once the account is in the `kvm` group and the session is new, so both a container path and a VM path are open; the plan names the substrate and builds neither.
-- `scripts/computer.mjs` and `docs/COMPUTER.md` landed after this plan closed, in `0194e5e`: the operator's half, one Docker container owned by name and labelled `ahpd.computer=1`, with `start`, `status`, `exec`, `stop`, `rm` and `list`. It is referenced from the README and the plugin docs. It is not the provider: nothing yet connects the scheme, the fixture and a running container.
+- `scripts/computer.mjs` and `docs/plugins/COMPUTERS.md` landed after this plan closed, in `0194e5e`: the operator's half, one Docker container owned by name and labelled `ahpd.computer=1`, with `start`, `status`, `exec`, `stop`, `rm` and `list`. It is referenced from the README and the plugin docs. It is not the provider: nothing yet connects the scheme, the fixture and a running container.
 - Nothing here is released: a `0.6.4` would carry it, together with the transcript fix from `host/05`.

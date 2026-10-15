@@ -10,12 +10,12 @@ refs:
 
 ## Objective
 
-`docs/SESSIONS.md` says what a session is: owner, lifecycle, every session-config key with each option, isolation and worktrees, listing. `docs/CHATS.md` says what a chat is within a session: turns, attachments, compaction, subagents.
+`docs/sdk/SESSIONS.md` says what a session is: owner, lifecycle, every session-config key with each option, isolation and worktrees, listing. `docs/sdk/CHATS.md` says what a chat is within a session: turns, attachments, compaction, subagents.
 
 ## Files
 
-- `CREATE: docs/SESSIONS.md`, `CREATE: docs/CHATS.md`.
-- `UPDATE: docs/AHP.md` - "Behaviour worth knowing" entries about sessions and chats stay as wire rows and gain a link to the area doc.
+- `CREATE: docs/sdk/SESSIONS.md`, `CREATE: docs/sdk/CHATS.md`.
+- `UPDATE: docs/sdk/AHP.md` - "Behaviour worth knowing" entries about sessions and chats stay as wire rows and gain a link to the area doc.
 
 ## Steps
 
@@ -32,11 +32,11 @@ refs:
 
 ## Resume
 
-`docs/SESSIONS.md` is written, 136 lines: what a session is and its terms; the life of one, from `createSession`'s order of work to `disposeSession`; whose it is and what it is charged to; the status bitset and the state a session reports; how `listSessions` pages; the config keys with each option, default and what changes; isolation and worktrees; the commands; the grants; and what to read next. Every claim was read in `packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/sessionconfig.ts`, `packages/sdk/src/host/lifecycle.ts`, `packages/sdk/src/host/owners.ts`, `packages/sdk/src/host/machines.ts`, `packages/sdk/src/host/gate.ts`, `packages/sdk/src/host/state.ts`, `packages/sdk/src/scopes.ts`, `packages/sdk/src/catalog.ts` and `packages/sdk/src/sessions.ts`.
+`docs/sdk/SESSIONS.md` is written, 136 lines: what a session is and its terms; the life of one, from `createSession`'s order of work to `disposeSession`; whose it is and what it is charged to; the status bitset and the state a session reports; how `listSessions` pages; the config keys with each option, default and what changes; isolation and worktrees; the commands; the grants; and what to read next. Every claim was read in `packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/sessionconfig.ts`, `packages/sdk/src/host/lifecycle.ts`, `packages/sdk/src/host/owners.ts`, `packages/sdk/src/host/machines.ts`, `packages/sdk/src/host/gate.ts`, `packages/sdk/src/host/state.ts`, `packages/sdk/src/scopes.ts`, `packages/sdk/src/catalog.ts` and `packages/sdk/src/sessions.ts`.
 
-`docs/CHATS.md` is written, 108 lines: what a chat is and its terms; the first chat and how a chat is named; a chat made out of another (`fork` and `sideChat`); turns, senders, endings, pending messages and drafts; compaction and the rewind; attachments with their limits; subagents as worker chats; the commands; the grants; and what to read next. Read against `packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/channels.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/host/state.ts`, `packages/sdk/src/host/routing.ts`, `packages/sdk/src/attachments.ts`, `packages/sdk/src/host/attachments.ts` and `packages/agent-claude/src/session/query.ts`.
+`docs/sdk/CHATS.md` is written, 108 lines: what a chat is and its terms; the first chat and how a chat is named; a chat made out of another (`fork` and `sideChat`); turns, senders, endings, pending messages and drafts; compaction and the rewind; attachments with their limits; subagents as worker chats; the commands; the grants; and what to read next. Read against `packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/channels.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/host/state.ts`, `packages/sdk/src/host/routing.ts`, `packages/sdk/src/attachments.ts`, `packages/sdk/src/host/attachments.ts` and `packages/agent-claude/src/session/query.ts`.
 
-Updated: `docs/AHP.md`'s "Behaviour worth knowing" now opens with one line naming the area doc for each thing it describes, so its rows stay wire rows and a reader who wants what a session *is* is sent to SESSIONS.md. `docs/DAEMON.md`'s `--sessions` row gained a link to SESSIONS.md.
+Updated: `docs/sdk/AHP.md`'s "Behaviour worth knowing" now opens with one line naming the area doc for each thing it describes, so its rows stay wire rows and a reader who wants what a session *is* is sent to SESSIONS.md. `docs/server/REFERENCE.md`'s `--sessions` row gained a link to SESSIONS.md.
 
 No section moved in this task, so no link pointed at anything that left. The sweep found the same anchors as after task 02, all resolving.
 

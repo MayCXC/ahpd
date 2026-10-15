@@ -62,7 +62,7 @@ createHost -> listen -> a plugin calls its connection
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [A plugin contributes the host's own options, and there is no service container](../01-plugins-load-from-configuration/plan.md) | "a plugin that wants to watch a running host is a client instead" |
-| 2 | [A grant is a subject and a verb](../../../../docs/USERS.md) | the grants the plugin's principal holds |
+| 2 | [A grant is a subject and a verb](../../../../docs/sdk/USERS.md) | the grants the plugin's principal holds |
 | 3 | A plugin's principal is marked, and its id is not read for the owner | Softov, 2026-10-10: "Mark the principal" |
 
 | What | Source | Task |
@@ -76,14 +76,14 @@ createHost -> listen -> a plugin calls its connection
 | A malformed grant is dropped and reported in the loader's `problems`, naming `plugins.<name>.grants` | (defaulted: a load problem is reported where every other one is) | 02 |
 | On a host with no user directory there is no gate, so the grants are not consulted | [`code://.project/decisions/the-door-is-a-door.md`](../../../decisions/the-door-is-a-door.md) | 02 |
 | Acting as a person comes later, as a grant the plugin must hold | Softov, 2026-09-26 | - |
-| `docs/PLUGINS.md` describes the connection and `grants` | the plugin docs cover every method | 03 |
+| `docs/plugins/PLUGINS.md` describes the connection and `grants` | the plugin docs cover every method | 03 |
 
 ## Proposed architecture
 
 - **Data flow** - two ends of an in-memory pair; the host's end is a `Peer` handed to `Host.accept`, the plugin's end sends requests and notifications and receives what the host sends.
 - **Event flow** - none new; the plugin subscribes to channels like any client.
 - **State flow** - one connection per call, closed by the plugin or at `stopping`.
-- **Layer responsibilities** - `packages/sdk`: the method, the pair, the principal · `packages/server`: `grants` on the spec and handing the built host to the plugins · `docs/PLUGINS.md`: the method.
+- **Layer responsibilities** - `packages/sdk`: the method, the pair, the principal · `packages/server`: `grants` on the spec and handing the built host to the plugins · `docs/plugins/PLUGINS.md`: the method.
 - **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts)
 
 ## Tasks
@@ -101,7 +101,7 @@ createHost -> listen -> a plugin calls its connection
 
 ## Resume state
 
-- **Done so far:** all three tasks, 2026-10-10. `PluginHost.connect()` answers the plugin's end of an in-memory pair, and `Host.accept` serves it as `plugin:<name>`. The grants arrive from the configuration entry through `PluginSpec.grants`, `asSpec`, the loader's `grantProblem` and `HostRecordingOptions.grants`. `Owner`, `Principal.plugin` and `ownerOfPrincipal` make a plugin's sessions and usage its own. `docs/PLUGINS.md` describes the connection and the entry's `grants`.
+- **Done so far:** all three tasks, 2026-10-10. `PluginHost.connect()` answers the plugin's end of an in-memory pair, and `Host.accept` serves it as `plugin:<name>`. The grants arrive from the configuration entry through `PluginSpec.grants`, `asSpec`, the loader's `grantProblem` and `HostRecordingOptions.grants`. `Owner`, `Principal.plugin` and `ownerOfPrincipal` make a plugin's sessions and usage its own. `docs/plugins/PLUGINS.md` describes the connection and the entry's `grants`.
 - **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none. The one the plan left open - `user:plugin:<name>` or `plugin:<name>` - Softov answered on 2026-10-04, in the table above.
 - **Watch out for:** the plugin's end must introduce itself with `initialize` like any client, and the host refuses anything before it. `connect()` is not a registration, so it is never refused after `apply` returned. A plugin asking before the host exists is told rather than dropped.
@@ -112,4 +112,4 @@ createHost -> listen -> a plugin calls its connection
 - [x] With a user directory, a plugin with no `grants` is refused `-32009`, and one with `session:write` is not.
 - [x] Asking for a connection during `apply` refuses with a sentence.
 - [x] A session a plugin creates is owned by `plugin:<name>`, and its usage is recorded under that owner.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/PLUGINS.md`, `plans/index.md` updated.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/PLUGINS.md`, `plans/index.md` updated.

@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/validate.ts#L126-L166](../../../../packages/sdk/src/validate.ts#L126-L166) - `PORT_MEMBERS` and `PORT_METHOD`, the tables that must name the new key"
   - "[code://packages/sdk/src/index.ts#L53-L67](../../../../packages/sdk/src/index.ts#L53-L67) - where `fileUsage` and `peopleProviders` are exported"
   - "[code://packages/sdk/src/types/index.ts](../../../../packages/sdk/src/types/index.ts) - the type barrel `index.ts` re-exports with `export type *`"
-  - "[code://docs/PLUGINS.md#L87](../../../../docs/PLUGINS.md#L87) - the registration table a client reads before writing a plugin"
+  - "[code://docs/plugins/PLUGINS.md#L87](../../../../docs/plugins/PLUGINS.md#L87) - the registration table a client reads before writing a plugin"
   - "file:///github/ahp-review/prospect/ahp-user-rules.md - the row shape, the measures by kind and the limits this task validates and stores"
 ---
 
@@ -33,7 +33,7 @@ A row written through the port comes back exactly as it was written, and nothing
 - `UPDATE: packages/sdk/src/types/plugin.ts:31-44`, `packages/sdk/src/plugins.ts:30-33`, `packages/sdk/src/validate.ts:126-166` - `'policies'` in `PortKey`, in `PORT_KEYS`, and in `PORT_MEMBERS` and `PORT_METHOD`; the last two are `Record<PortKey, ...>`, so nothing compiles until the key is in them.
 - `UPDATE: packages/sdk/src/types/plugin.ts:232-239`, `packages/sdk/src/plugins.ts:395` - `registerPolicies(policies, when?)` beside `registerUsage`.
 - `UPDATE: packages/sdk/src/index.ts:53-67` - `filePolicies`, `memoryPolicies` and the check; `UPDATE: packages/sdk/src/types/index.ts` - the row types and `Policies`, which reach the surface through the barrel's `export type *`.
-- `UPDATE: docs/PLUGINS.md:87` - the `registerPolicies` row of the registration table, and a short section on what a plugin's store has to answer.
+- `UPDATE: docs/plugins/PLUGINS.md:87` - the `registerPolicies` row of the registration table, and a short section on what a plugin's store has to answer.
 
 ## Steps
 

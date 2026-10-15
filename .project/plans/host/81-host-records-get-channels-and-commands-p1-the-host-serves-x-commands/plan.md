@@ -46,8 +46,8 @@ client request x-ahpd/usage/totals -> host handle -> no protocol handler -> serv
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin serves an x- command with registerMethod](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
-| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 1 | [A plugin serves an x- command with registerMethod](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
+| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
 
 | What | Source | Task |
 | --- | --- | --- |

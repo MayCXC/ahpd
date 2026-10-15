@@ -59,7 +59,7 @@ client unsubscribe or disconnect -> channel.left(client)
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Bots are watched and catalogued](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 1 | [Bots are watched and catalogued](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 | 2 | A plugin channel is an x- scheme | Softov, 2026-10-10 |
 | 3 | [A plugin channel filters each action per subscriber](../../../decisions/a-plugin-channel-filters-each-action-per-subscriber.md) | (defaulted: the shared `serverSeq` warning) |
 

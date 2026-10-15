@@ -20,7 +20,7 @@ Examples are a bot's session under `~/.bots`, a session in a subfolder of a path
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `keepFolder` records the folder of a started session.
 - [`code://packages/agent-claude/src/catalog.ts`](../../../../packages/agent-claude/src/catalog.ts) - `findSession` asks the given folder first, when its project folder holds the transcript.
 - [`code://packages/agent-pi/src/catalog.ts`](../../../../packages/agent-pi/src/catalog.ts) - `lookupDirectories` puts the given folder first, when it exists.
-- [`code://docs/AGENT.md`](../../../../docs/AGENT.md) - the `Agent` table names `at`.
+- [`code://docs/sdk/AGENT.md`](../../../../docs/sdk/AGENT.md) - the `Agent` table names `at`.
 
 ## Verified
 

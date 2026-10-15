@@ -8,7 +8,7 @@ A call is readied only once the agent starts it, keeps its arguments from whiche
 ## What was built
 
 - `packages/agent-acp/src/mapping.ts` - the shared completion branch, held input, the `asked` flag; `session.ts` - `askPermission` registers its call, `writeTextFile` awaits both sides; `packages/sdk` - the before text a diff carries.
-- `agent-acp-turn.test.ts` and `agent-acp-ports.test.ts` cases; `docs/PLUGINS.md`.
+- `agent-acp-turn.test.ts` and `agent-acp-ports.test.ts` cases; `docs/plugins/PLUGINS.md`.
 
 ## Verified
 

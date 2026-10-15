@@ -16,7 +16,7 @@ refs:
 - [`code://packages/server/src/commands/configure.ts`](../../../../packages/server/src/commands/configure.ts) - `configure`: a backend already named and answered No is switched off with its options kept; a literal `connectionToken` is kept by moving it into the token file at `0600`; every folder answered No is refused; `offerConfigure`; `askToServe`, whose Enter is No.
 - `options.ts` - `--no-cwd`, and the empty-`paths` refusal naming `--path` and `ahpd configure`.
 - `start.ts`, `run.ts` - configure offered, then the folder question, before the options are read.
-- `README.md`, `docs/DAEMON.md`.
+- `README.md`, `docs/server/REFERENCE.md`.
 
 ## Verified
 

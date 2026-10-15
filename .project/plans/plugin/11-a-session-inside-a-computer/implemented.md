@@ -15,7 +15,7 @@ refs:
   - code://packages/agent-cofold/src/agent.ts
   - code://test/computer-session.test.ts
   - code://test/computer-refusal.test.ts
-  - code://docs/COMPUTER.md
+  - code://docs/plugins/COMPUTERS.md
 ---
 
 A session created with `computer: 'computer://<id>'` runs its ACP server inside that machine. The plugin answers how to reach one as a process, the host carries that answer to the backend, and a session that names a machine which is not there - or a host with no computer plugin - refuses rather than running outside the sandbox it asked for.
@@ -33,7 +33,7 @@ A session created with `computer: 'computer://<id>'` runs its ACP server inside 
 - `code://packages/sdk/src/computers.ts` - `refuseComputer` and `machineAsked`: the one gate a backend that cannot reach a machine applies, and the one place an empty setting is read as the host. Added after the fact, when Claude and cofold were still running on the host in silence.
 - `code://packages/agent-claude/src/claude.ts`, `code://packages/agent-cofold/src/agent.ts` - both refuse a session that names a machine, in their own `create`, before anything is spawned.
 - `code://test/computer-refusal.test.ts` - every backend that ships here is asked, so a new one cannot skip the rule.
-- `code://docs/COMPUTER.md` - the session key, the by-hand case that ran, and what a bind mount is and is not.
+- `code://docs/plugins/COMPUTERS.md` - the session key, the by-hand case that ran, and what a bind mount is and is not.
 
 ## Verified
 
@@ -47,7 +47,7 @@ A session created with `computer: 'computer://<id>'` runs its ACP server inside 
 
 - The port answers a `Spawn` descriptor and `undefined`, rather than a descriptor or a sentence; the backend owns the sentence, and the three cases it needs are distinguishable (`undefined` is "no such machine", a throw is "the runtime is not answering").
 - `placed()` deliberately passes no `cwd`: the session's working directory is a host path and the machine does not have it. The port uses the machine's own working directory, read from `docker inspect`, when the caller names none. Found while preparing the by-hand case, before it could fail there.
-- The by-hand case is a checklist in `docs/COMPUTER.md` rather than a test, because `pnpm test` is network-free and may have no Docker.
+- The by-hand case is a checklist in `docs/plugins/COMPUTERS.md` rather than a test, because `pnpm test` is network-free and may have no Docker.
 
 ## Left for later
 

@@ -56,7 +56,7 @@ idle or removed                                 -> [new] vscode/devContainers/st
 | Decision | Task |
 | --- | --- |
 | VS Code reaches ahpd through a Dev Tunnel for its dev container flow | 01, 02, 03 |
-| [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md) | 04 |
+| [Stopping a dev container needs the computer's grant](../../../../docs/plugins/CONTAINERS.md) | 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -86,7 +86,7 @@ idle or removed                                 -> [new] vscode/devContainers/st
 
 - **Done so far:** the research note and the route decision, 2026-09-26. Task 04 built, reviewed and done 2026-10-10, with its decision; a stop that misses a session placed by computer URI is an open problem.
 - **Next action:** task 01 again, with the tunnel made under the same provider and account VS Code signs in with. Tasks 02 and 03 wait on it.
-- **Open question (answered 2026-10-10):** what do `vscode/devContainers/stop` and `remove` need from the asker? Softov: `container:write` and `computer:write`, with no owner check, because a grant is role-wide everywhere else in the host. Recorded in [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
+- **Open question (answered 2026-10-10):** what do `vscode/devContainers/stop` and `remove` need from the asker? Softov: `container:write` and `computer:write`, with no owner check, because a grant is role-wide everywhere else in the host. Recorded in [Stopping a dev container needs the computer's grant](../../../../docs/plugins/CONTAINERS.md).
 - **Watch out for:** a local Windows folder is launched by VS Code with Windows' Docker and never reaches ahpd; testing with one proves nothing about ahpd. The tunnel labels already match what VS Code filters on; VS Code lists tunnels with its own GitHub or Microsoft token, so a tunnel made by `devtunnel user login` under another provider or account never appears.
 
 ## Final verification checklist
@@ -94,7 +94,7 @@ idle or removed                                 -> [new] vscode/devContainers/st
 - [ ] VS Code on Windows, connected to ahpd by the chosen route, shows "Use Dev Container" on a folder with a `devcontainer.json`.
 - [ ] The first send makes the container on the ahpd host and the session runs in it.
 - [ ] After a VS Code reload the session is there and continues.
-- [ ] `docs/CONTAINERS.md` has the route.
+- [ ] `docs/plugins/CONTAINERS.md` has the route.
 - [ ] VS Code stopping an idle dev container, and removing one, acts on the folder's computer on the ahpd host.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
 - [ ] `plans/index.md` updated.

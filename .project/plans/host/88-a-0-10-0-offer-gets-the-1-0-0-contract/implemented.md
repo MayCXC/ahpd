@@ -13,7 +13,7 @@ A VS Code 1.141 window that offers `0.10.0` gets `0.10.0` back, so it keeps a re
 - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts) - `LEGACY_COMPATIBLE_VERSION` and `SPOKEN_VERSIONS`, and the `0.10.0` rule after the package negotiation, the same rule as VS Code's `negotiateAgentHostProtocolVersion`.
 - [`code://packages/sdk/test/host-handshake.test.ts`](../../../../packages/sdk/test/host-handshake.test.ts) - the offers, the refusal list, `-32602` for a malformed entry, and no canvas action for a `0.10.0` client.
 - [`code://packages/sdk/test/ahp-test-cases.test.ts`](../../../../packages/sdk/test/ahp-test-cases.test.ts) - the package's version table against `negotiateProtocolVersion`, and through the host for each row that does not offer `0.10.0`.
-- `docs/AHP.md` says the host speaks `0.10.0`.
+- `docs/sdk/AHP.md` says the host speaks `0.10.0`.
 
 ## Verified
 

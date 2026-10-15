@@ -5,7 +5,7 @@ date: 2026-10-06
 refs:
   - git://56d881c7 - the superseded decision, as committed
   - "[code://packages/computer/src/gitdir.ts](../../packages/computer/src/gitdir.ts) - `gitMounts`, the writable allowlist this replaces"
-  - "[code://docs/COMPUTER.md](../../docs/COMPUTER.md) - the machine's own git directory, the read-only objects and the bundle fetch, written out"
+  - "[code://docs/plugins/COMPUTERS.md](../../docs/plugins/COMPUTERS.md) - the machine's own git directory, the read-only objects and the bundle fetch, written out"
   - "[code://packages/sdk/src/repo/hardened.ts#L11-L30](../../packages/sdk/src/repo/hardened.ts#L11-L30) - the argv every host git runs with"
   - git://0cdbb95 - the superseded decision, as committed
   - https://git-scm.com/docs/git-bundle - a bundle is refs and a pack, read by `git fetch` like a remote
@@ -24,7 +24,7 @@ No list of writable paths closes this, because the host's own git writes into ev
 Nothing of the host's git directory is mounted writable in a machine.
 A machine with a repository gets a git directory of its own, in a volume, and commits there; ahpd brings the work back by fetching it into the host's repository, where git checks every object and ref and follows nothing the machine wrote.
 
-The layout underneath is written out in [docs/COMPUTER.md](../../docs/COMPUTER.md): the machine's own git directory, the read-only objects and the bundle the work comes back as.
+The layout underneath is written out in [docs/plugins/COMPUTERS.md](../../docs/plugins/COMPUTERS.md): the machine's own git directory, the read-only objects and the bundle the work comes back as.
 
 - A profile's `sessionTree` says where the machine works `(defaulted: the name mirrors sessionFolder and sessionRepository beside it)`: `shared`, the default, binds the host's folder read-write as before, so the host sees the agent's edits as it makes them; `copy` gives the machine its own checkout in its volume, at the folder's path, with nothing of the host's folder writable, and its work reaches the host only as commits fetched by bundle.
 - Under `copy`, the session's changes view reads the host's folder, which holds the fetched commits and nothing uncommitted `(defaulted: simpler than streaming a diff out of the machine, and the view stays git on the host)`.

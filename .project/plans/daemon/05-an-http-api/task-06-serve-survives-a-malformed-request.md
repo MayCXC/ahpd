@@ -6,7 +6,7 @@ layer: "cofold remote"
 refs:
   - file:///github/cofold/packages/remote/src/serve.ts - the handler, uncommitted in the cofold repository
   - file:///github/cofold/packages/remote/src/serve.test.ts - its tests
-  - "[The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) - JSON bodies only"
+  - "[The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md) - JSON bodies only"
 ---
 
 ## Objective
@@ -26,7 +26,7 @@ A body is read only as `application/json`, and an error that is not a deliberate
 
 1. Parse the URL inside the handler's error path: a `Host` or URL that does not parse is answered 400 with a sentence, and the handler's promise ends in a `catch` that answers 500 when nothing has been sent, so no rejection escapes.
 2. In `match`, a path segment whose `decodeURIComponent` throws is answered 400, not a crash.
-3. In `readBody`, a request with a body whose `content-type` is not `application/json` is refused with `HttpError(415)`; the form-encoded branch goes ([The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md)).
+3. In `readBody`, a request with a body whose `content-type` is not `application/json` is refused with `HttpError(415)`; the form-encoded branch goes ([The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md)).
 4. In `messageOf`, an error that is not an expected `CofoldError`, not an `HttpError` and carries no numeric `status` answers `"Failed"`, never its own message.
 5. `npm run check` in `/github/cofold`.
 6. Commit, tag and publish are Softov's : leave the change uncommitted in `/github/cofold`, say in Resume that it is ready for 0.3.1, and do not run `npm publish`.

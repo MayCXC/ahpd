@@ -7,8 +7,8 @@ refs:
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, which gains `events`
   - code://packages/sdk/src/types/plugin.ts - `PluginHost`, which gains `on`; `PluginContext` and the `register*` methods arrive with plan 01
   - code://packages/sdk/src/plugins.ts - `foldHostOptions`, which merges the handlers
-  - code://docs/PLUGINS.md - the handler returns nothing and is awaited
-  - code://docs/PLUGINS.md - `on` is the one method not named `register*`
+  - code://docs/plugins/PLUGINS.md - the handler returns nothing and is awaited
+  - code://docs/plugins/PLUGINS.md - `on` is the one method not named `register*`
   - file:///github/pi/packages/coding-agent/src/core/extensions/types.ts#L1262-L1318 - `pi.on` and its per-event overloads
 ---
 

@@ -19,7 +19,7 @@ A client holding `config:read` sees the daemon's own settings and each plugin's 
 - [`code://packages/server/src/commands/config.ts`](../../../../packages/server/src/commands/config.ts) - one mask that walks a value against the plugin's schema and answers `<set>` for `writeOnly` at any depth; `keyed`, the `#<provider>` key for a repeated plugin.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the live capture, through daemon/06's `writerFor`.
 - `@ahpd/agent-claude`, `@ahpd/agent-acp`, `@ahpd/computer`, `@ahpd/agent-cofold` - credentials marked `writeOnly`: preset and server `env` values, and cofold's keys.
-- `docs/DAEMON.md`, `docs/PLUGINS.md`.
+- `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`.
 
 ## Verified
 
@@ -32,7 +32,7 @@ A client holding `config:read` sees the daemon's own settings and each plugin's 
 
 ## Departures from the plan
 
-- [A plugin loaded more than once is keyed by its provider](../../../../docs/DAEMON.md), decided during the build.
+- [A plugin loaded more than once is keyed by its provider](../../../../docs/server/REFERENCE.md), decided during the build.
 - The live capture was merged onto daemon/06's writer when rebasing.
 
 ## Left for later

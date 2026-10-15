@@ -5,7 +5,7 @@ date: 2026-10-06
 refs:
   - "[code://packages/computer/src/plugin.ts#L443-L454](../../packages/computer/src/plugin.ts#L443-L454) - `devcontainer.folders`, where absent allows any folder"
   - "[code://packages/computer/src/plugin.ts#L481-L490](../../packages/computer/src/plugin.ts#L481-L490) - `folderFor`, which every dev container route asks"
-  - "[code://docs/COMPUTER.md#L537-L547](../../docs/COMPUTER.md#L537-L547) - `computer:write` and a `devcontainer.json`, and the allowed folders"
+  - "[code://docs/plugins/COMPUTERS.md#L537-L547](../../docs/plugins/COMPUTERS.md#L537-L547) - `computer:write` and a `devcontainer.json`, and the allowed folders"
   - git://52f98f6 - container/03, which made a dev container a computer
   - "git://63a25e0b - the merged decision: a dev container is made only from a folder the operator allows, and `devcontainer: false` turns every route off"
 ---
@@ -33,7 +33,7 @@ The options offered were: gate by `bodyMounts` or a new `devcontainers` allowlis
 
 ## Consequences
 
-- A host that adds a users file stops making dev containers until its operator names the folders; the refusal and `docs/COMPUTER.md` say so.
+- A host that adds a users file stops making dev containers until its operator names the folders; the refusal and `docs/plugins/COMPUTERS.md` say so.
 - The computer plugin has to know whether the host has a users directory, which its context does not tell it today.
 
 ## Options

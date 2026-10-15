@@ -94,7 +94,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
   - The first chat opens with the session and not through `createChat`, so it gets the template once.
   - Plugin 37 opened a silent session for a bot with no instructions, but a template always gives a first turn.
   - The store does not check optional fields of a hand-edited bot, so the reader checks the template name with `isSlug`.
-  - The docs file is `docs/BOTS.md`, not `BOT.md`.
+  - The docs file is `docs/plugins/BOTS.md`, not `BOT.md`.
 
 ## Final verification checklist
 

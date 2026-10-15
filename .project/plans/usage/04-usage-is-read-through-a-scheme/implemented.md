@@ -18,7 +18,7 @@ A person reads their own pool and their teams' and projects' pools without `usag
 - [`code://packages/sdk/src/scopes.ts`](../../../../packages/sdk/src/scopes.ts) - `poolsFor`, the pools one person may see.
 - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `usage` as a grant subject.
 - [`code://packages/server/src/commands/usage.ts`](../../../../packages/server/src/commands/usage.ts) - `ahpd usage`, and `usage.timezone` in the daemon configuration.
-- `docs/USERS.md`, `docs/DAEMON.md`, `docs/PLUGINS.md`.
+- `docs/sdk/USERS.md`, `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`.
 
 ## Verified
 

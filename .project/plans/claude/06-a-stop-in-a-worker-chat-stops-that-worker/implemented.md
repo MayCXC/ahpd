@@ -14,7 +14,7 @@ The Claude backend's `workerStop: "session"` cancels the whole turn instead.
 
 - `Session.stopWorker?(toolCallId)`; the host calls it for a stop in a worker chat, and cancels the lead turn when a backend has none.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - `stopWorker` calls `stopTask` with the worker's task id; with `workerStop: "session"`, or before the task has an id, it cancels the lead turn.
-- `docs/PLUGINS.md`, `docs/AGENT.md` and the agent-claude README.
+- `docs/plugins/PLUGINS.md`, `docs/sdk/AGENT.md` and the agent-claude README.
 
 ## Verified
 

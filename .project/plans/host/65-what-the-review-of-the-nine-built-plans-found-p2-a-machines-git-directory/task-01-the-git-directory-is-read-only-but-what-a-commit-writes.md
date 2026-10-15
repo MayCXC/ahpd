@@ -7,8 +7,8 @@ refs:
   - "[code://packages/computer/src/gitdir.ts#L115-L150](../../../../packages/computer/src/gitdir.ts#L115-L150) - `gitMounts`"
   - "[code://packages/computer/src/gitdir.ts#L170-L174](../../../../packages/computer/src/gitdir.ts#L170-L174) - `guardedMounts`, which leaves `.git` unmounted for a root session"
   - "[code://packages/computer/test/computer-disposable.test.ts#L1366-L1515](../../../../packages/computer/test/computer-disposable.test.ts#L1366-L1515) - the cases that pin today's binds"
-  - "[code://docs/COMPUTER.md#L435](../../../../docs/COMPUTER.md#L435) - what the docs say is read-only"
-  - "[code://docs/COMPUTER.md#L580](../../../../docs/COMPUTER.md#L580) - a mounted git directory"
+  - "[code://docs/plugins/COMPUTERS.md#L435](../../../../docs/plugins/COMPUTERS.md#L435) - what the docs say is read-only"
+  - "[code://docs/plugins/COMPUTERS.md#L580](../../../../docs/plugins/COMPUTERS.md#L580) - a mounted git directory"
 ---
 
 ## Objective
@@ -21,7 +21,7 @@ Under `gitGuard: "bind"`, the git directory is mounted read-only, `.git` itself 
 - `UPDATE: packages/computer/src/gitdir.ts:170-174` - `guardedMounts` mounts the git directory read-only whether or not the tree holds it; today a root session gets no mount for `.git`, so `.git` is not a mount point and `mv .git .old && mkdir .git` replaces it with a directory the agent fills (finding B5).
 - `UPDATE: packages/computer/src/gitdir.ts:1-11,97-114` - the comments say what is writable rather than what is closed.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts:1366-1515` - the cases below; the cases pinning today's order change with them.
-- `UPDATE: docs/COMPUTER.md:435,580` - what is writable, what git cannot do in a machine (deleting a packed branch, `gc`, `worktree add`, the config), the `packed-refs.lock` line a commit prints, and that a main checkout's root is writable with six paths pinned.
+- `UPDATE: docs/plugins/COMPUTERS.md:435,580` - what is writable, what git cannot do in a machine (deleting a packed branch, `gc`, `worktree add`, the config), the `packed-refs.lock` line a commit prints, and that a main checkout's root is writable with six paths pinned.
 
 ## Steps
 

@@ -24,7 +24,7 @@ refs:
 - `UPDATE: packages/sdk/src/rpc.ts:183` - the shared result function p1 exported sends `null` as `null` and `undefined` as `{}`.
 - `UPDATE: packages/sdk/src/host/handshake.ts:286` and `packages/sdk/src/host/terminals.ts:323, 334` and `packages/sdk/src/host/sessionmethods.ts:606, 730, 761, 768` - each returns `null`; any other path in those handlers that answers is read and made `null` too (a `return` inside a nested callback, such as `along` at `sessionmethods.ts:543`, is not an answer).
 - `UPDATE: packages/sdk/test/wire.test.ts` - the seven `result is {}` lines leave `KNOWN`.
-- `UPDATE: docs/AHP.md` - wherever a row says one of the seven answers `{}` (`rg -n "answers \`\{\}\`" docs/AHP.md`); `shutdown` keeps `{}`, being outside `CommandMap`.
+- `UPDATE: docs/sdk/AHP.md` - wherever a row says one of the seven answers `{}` (`rg -n "answers \`\{\}\`" docs/sdk/AHP.md`); `shutdown` keeps `{}`, being outside `CommandMap`.
 
 ## Steps
 

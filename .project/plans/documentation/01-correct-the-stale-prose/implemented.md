@@ -3,8 +3,8 @@ title: The stale prose matches the code again - implemented
 date: 2026-09-20
 refs:
   - code://packages/server/src/main.ts
-  - code://docs/DAEMON.md
-  - code://docs/AGENT.md
+  - code://docs/server/REFERENCE.md
+  - code://docs/sdk/AGENT.md
   - code://packages/sdk/src/host.ts
   - code://packages/agent-claude/src/claude.ts
   - code://packages/agent-claude/src/session.ts
@@ -18,8 +18,8 @@ Six places where this repository's own prose contradicted its code now agree, an
 ## What was built
 
 - `code://packages/server/src/main.ts` - the `--path` USAGE row says the first path is the default and the catalogue is the union, and the parse comment keeps only why a second `--path` exists.
-- `code://docs/DAEMON.md` - the options table gained `--sessions <where>`, `--wire <file>` and `--version, -v`, in the USAGE order.
-- `code://docs/AGENT.md` - the controls row names `setConfig(key, value)` and `settings()` and drops the four setters that do not exist on `Session`.
+- `code://docs/server/REFERENCE.md` - the options table gained `--sessions <where>`, `--wire <file>` and `--version, -v`, in the USAGE order.
+- `code://docs/sdk/AGENT.md` - the controls row names `setConfig(key, value)` and `settings()` and drops the four setters that do not exist on `Session`.
 - `code://packages/sdk/src/host.ts` - the `resource*` comment says both halves are served and the write half is gated by a `resourceRequest` grant answering `-32009`; the `source` comment says a `fork` and a `sideChat` are accepted.
 - `code://packages/agent-claude/src/claude.ts` - the advertised `permissionMode` enum, labels and descriptions carry `dontAsk`, and the comment beside it says six values.
 - `code://packages/agent-claude/src/session.ts` - the two comments that counted four or five permission modes now say six; the accepted list at line 2264 already carried `dontAsk`.
@@ -29,7 +29,7 @@ Six places where this repository's own prose contradicted its code now agree, an
 
 ## Verified
 
-- The six checklist greps: no `--path` refusal claim in `main.ts`; the three new rows in `docs/DAEMON.md`; no `setModel`, `setPermissionMode`, `setEffort` or `setOutputStyle` in `docs/AGENT.md`; no `is not served` on the two corrected comments; `dontAsk` in `claude.ts`, `session.ts`, `test/conformance.test.ts` and `test/host.test.ts`.
+- The six checklist greps: no `--path` refusal claim in `main.ts`; the three new rows in `docs/server/REFERENCE.md`; no `setModel`, `setPermissionMode`, `setEffort` or `setOutputStyle` in `docs/sdk/AGENT.md`; no `is not served` on the two corrected comments; `dontAsk` in `claude.ts`, `session.ts`, `test/conformance.test.ts` and `test/host.test.ts`.
 - `pnpm test` green: 36 files, 641 tests.
 - `pnpm typecheck` and `pnpm boundary` green.
 
@@ -42,5 +42,5 @@ Six places where this repository's own prose contradicted its code now agree, an
 
 ## Left for later
 
-- `docs/AGENT.md`'s "Config keys" section still says `permissionMode`, `model`, `effortLevel` and `outputStyle` "have setters of their own", which reads as the four setters the controls row just dropped; it is the same drift the task scoped to the controls row and no step names it, so it is left rather than folded in.
+- `docs/sdk/AGENT.md`'s "Config keys" section still says `permissionMode`, `model`, `effortLevel` and `outputStyle` "have setters of their own", which reads as the four setters the controls row just dropped; it is the same drift the task scoped to the controls row and no step names it, so it is left rather than folded in.
 - The detached-worktrees comment is the plan's recorded seventh drift and is untouched.

@@ -7,7 +7,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts#L3125-L3127](../../../../packages/agent-claude/src/session.ts#L3125-L3127) - `_meta: { model }` on the session state"
   - "[code://packages/agent-claude/src/session.ts#L326](../../../../packages/agent-claude/src/session.ts#L326) - `_meta: { argumentHint }` on a skill customization"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L386](../../../../packages/sdk/src/host/sessionmethods.ts#L386) - `argumentHint` on a completion item, the reference client's, which stays"
-  - "[code://docs/AHP.md#L556-L569](../../../../docs/AHP.md#L556-L569) - why the completion item's key is the reference's"
+  - "[code://docs/sdk/AHP.md#L556-L569](../../../../docs/sdk/AHP.md#L556-L569) - why the completion item's key is the reference's"
   - "file:///github/ahpc/src/ahp/live.ts - line 3166, the reader of `_meta.model`"
 ---
 

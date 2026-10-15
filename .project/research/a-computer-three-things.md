@@ -14,8 +14,8 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L101-L140](../../packages/sdk/src/types/plugin.ts#L101-L140) - every `register*` a plugin has, and the `registerSessionConfig` that is not there"
   - "[code://packages/sdk/src/types/agent.ts#L92-L141](../../packages/sdk/src/types/agent.ts#L92-L141) - `Start`, which carries a working directory, ports and tools, and no place to run"
   - "[code://.project/plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) - one provider per scheme, the runtime an option, `computer://<id>` whatever made it"
-  - "[code://docs/COMPUTER.md](../../docs/COMPUTER.md) - the tool route this note questions"
-  - "[code://docs/RESOURCES.md](../../docs/RESOURCES.md) - a provider implements only what it serves, and the write half is optional"
+  - "[code://docs/plugins/COMPUTERS.md](../../docs/plugins/COMPUTERS.md) - the tool route this note questions"
+  - "[code://docs/sdk/RESOURCES.md](../../docs/sdk/RESOURCES.md) - a provider implements only what it serves, and the write half is optional"
   - "[code://.project/research/host-owned-uri-resources.md](../../.project/research/host-owned-uri-resources.md) - the proposal that named the tool, and said what it is not"
   - "git://7552054:.project/ideas/dev-container-sessions.md - running a session inside a container, which the reference host does with a relay"
 ---
@@ -28,7 +28,7 @@ Written 2026-09-23 after the user's correction: "Agents are not suppose to creat
 
 ["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) settles the catalogue: one package, the runtime an option, and `computer://<id>` names a machine whatever made it. That part is not in question.
 
-[A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) settles creation as three host tools, and records the source as the user choosing the tool route. The research that decision points at says something narrower, in its own words at `host-owned-uri-resources.md`: "A tool such as `request_disposable_computer` would be an agent-callable operation within a session, **not the user's primary machine selector before a session exists**." That sentence is the fork. The tool half was built; the selector half was not, and the decision's title reads as though the two were the same thing.
+[A machine is made by a host tool, not by a resource write](../../docs/plugins/COMPUTERS.md) settles creation as three host tools, and records the source as the user choosing the tool route. The research that decision points at says something narrower, in its own words at `host-owned-uri-resources.md`: "A tool such as `request_disposable_computer` would be an agent-callable operation within a session, **not the user's primary machine selector before a session exists**." That sentence is the fork. The tool half was built; the selector half was not, and the decision's title reads as though the two were the same thing.
 
 ## What exists in the code
 
@@ -112,18 +112,18 @@ The user, 2026-09-23, chose one from each group above:
 
 | # | Chosen | Decision |
 | --- | --- | --- |
-| 1 | A resource write creates and `resourceDelete` destroys | [[A computer is an object a person manages, and a session runs in one](../../docs/COMPUTER.md)](../../docs/COMPUTER.md), which supersedes [A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) |
-| 2 | The model tools stay, each marked `advancedPermission`, with one host key to permit advanced tools | [[A tool says when it needs advanced permission, and the host says whether it has it](../../docs/TOOLS.md)](../../docs/TOOLS.md) |
-| 3 | A plugin may contribute a session key | [[A plugin may contribute a session config key](../../docs/PLUGINS.md)](../../docs/PLUGINS.md) |
+| 1 | A resource write creates and `resourceDelete` destroys | [[A computer is an object a person manages, and a session runs in one](../../docs/plugins/COMPUTERS.md)](../../docs/plugins/COMPUTERS.md), which supersedes [A machine is made by a host tool, not by a resource write](../../docs/plugins/COMPUTERS.md) |
+| 2 | The model tools stay, each marked `advancedPermission`, with one host key to permit advanced tools | [[A tool says when it needs advanced permission, and the host says whether it has it](../../docs/sdk/TOOLS.md)](../../docs/sdk/TOOLS.md) |
+| 3 | A plugin may contribute a session key | [[A plugin may contribute a session config key](../../docs/plugins/PLUGINS.md)](../../docs/plugins/PLUGINS.md) |
 | 4 | This step includes a session running inside a computer | no decision needed: the fork was how a backend reaches one, which is [A backend reaches a machine through a port the host carries](../plans/plugin/11-a-session-inside-a-computer/plan.md); the work is [plugin/10](../plans/plugin/10-a-computer-a-person-manages/plan.md) and [plugin/11](../plans/plugin/11-a-session-inside-a-computer/plan.md) |
 
 So the shape is: a person makes a machine with a resource write, a session names one through a key the plugin contributes, the model tools each say they need advanced permission and wait for the host's key, and the ACP backend proves a session running inside a machine in the same pass.
 
 ## What this would change in the records
 
-- [A machine is made by a host tool, not by a resource write](../../docs/COMPUTER.md) would be superseded: creation becomes a resource write a person makes, with the tools kept as an optional agent-facing extra.
+- [A machine is made by a host tool, not by a resource write](../../docs/plugins/COMPUTERS.md) would be superseded: creation becomes a resource write a person makes, with the tools kept as an optional agent-facing extra.
 - ["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) stands as it is.
-- [A scheme provider implements less than a resource store](../../docs/RESOURCES.md) stands, and is the decision that allows the provider to grow a `write` and a `remove` half.
+- [A scheme provider implements less than a resource store](../../docs/sdk/RESOURCES.md) stands, and is the decision that allows the provider to grow a `write` and a `remove` half.
 - The Dev Container idea is the existing home of "a session runs inside a machine"; a generic `computer:` substrate is the same shape with the runtime as an option.
 
 ## Later, and not part of this step

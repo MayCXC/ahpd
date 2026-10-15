@@ -4,16 +4,16 @@ status: done
 depends: [task-03-main-runs-through-the-program.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the CLI reference"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the CLI reference"
 ---
 
 ## Objective
 
-`docs/DAEMON.md` shows help, completion and `--json`, and the lockfile carries the new dependencies.
+`docs/server/REFERENCE.md` shows help, completion and `--json`, and the lockfile carries the new dependencies.
 
 ## Files
 
-- `UPDATE: docs/DAEMON.md`
+- `UPDATE: docs/server/REFERENCE.md`
 - `UPDATE: pnpm-lock.yaml`
 
 ## Steps
@@ -27,6 +27,6 @@ refs:
 
 ## Resume
 
-Done: `docs/DAEMON.md` names the declarations under `packages/server/src/commands` as the source of help, completion and `--json`, and documents `--json`, `--quiet`, `--verbose`, `--no-color` and the three completion installs.
+Done: `docs/server/REFERENCE.md` names the declarations under `packages/server/src/commands` as the source of help, completion and `--json`, and documents `--json`, `--quiet`, `--verbose`, `--no-color` and the three completion installs.
 `pnpm-lock.yaml` carries `@cofold/commands@0.2.0` and `@cofold/terminal@0.2.0` under `packages/server`; `pnpm install --frozen-lockfile` is clean and `pnpm boundary` is green.
 The environment's global pnpm store is read-only, so installs were run with `--store-dir /tmp/pnpm-store`.

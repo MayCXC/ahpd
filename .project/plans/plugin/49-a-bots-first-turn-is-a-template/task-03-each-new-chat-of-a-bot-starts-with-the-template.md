@@ -7,7 +7,7 @@ refs:
   - "[code://packages/bot/src/plugin.ts#L39-L60](../../../../packages/bot/src/plugin.ts#L39-L60) - `apply`, where the plugin registers its preamble"
   - "[code://packages/bot/src/store.ts#L39-L58](../../../../packages/bot/src/store.ts#L39-L58) - `BotStore`, whose `all()` finds the bot that owns a session"
   - "[code://packages/sdk/src/host/changesets.ts#L296-L309](../../../../packages/sdk/src/host/changesets.ts#L296-L309) - a changeset chat, which has the origin kind `sideChat` and which the host does not ask about"
-  - "[code://docs/BOTS.md#L80-L90](../../../../docs/BOTS.md#L80-L90) - the session, which gains the template on each new chat"
+  - "[code://docs/plugins/BOTS.md#L80-L90](../../../../docs/plugins/BOTS.md#L80-L90) - the session, which gains the template on each new chat"
 ---
 
 ## Objective
@@ -23,7 +23,7 @@ When the bot's template no longer exists, the chat gets the default template, an
 - `CREATE: packages/bot/src/preamble.ts` - `botPreamble(store, templates, problem)`, the `ChatPreamble` the bot plugin registers.
 - `UPDATE: packages/bot/src/plugin.ts:39-60` - register `botPreamble` with `host.registerChatPreamble`.
 - `CREATE: packages/bot/test/bot-preamble.test.ts` - cases for a bot's new chat, a session that is not a bot's, `{{chats}}` and a deleted template.
-- `UPDATE: docs/BOTS.md:80-90` - say that each new chat of a bot starts with the filled template.
+- `UPDATE: docs/plugins/BOTS.md:80-90` - say that each new chat of a bot starts with the filled template.
 - `UPDATE: packages/bot/README.md:112` - say that each new chat starts with the filled template.
 
 ## Steps
@@ -41,7 +41,7 @@ When the bot's template no longer exists, the chat gets the default template, an
 11. Answer `firstTurn(bot, template, chats)` from task 01.
 12. Register `botPreamble` in `apply` with `host.registerChatPreamble`, and give it `host.problem` as `problem`.
 13. Run `pnpm exec vitest run packages/bot`, and see every case pass.
-14. Say in `docs/BOTS.md` that a chat a person or a tool opens starts with the filled template.
+14. Say in `docs/plugins/BOTS.md` that a chat a person or a tool opens starts with the filled template.
 15. Say there that a missing template gives the default template and a problem.
 16. Say there that a chat with no first message gets the template with the person's first message.
 17. Update `packages/bot/README.md` at line 112 to match.
@@ -60,11 +60,11 @@ When the bot's template no longer exists, the chat gets the default template, an
 - `pnpm -s boundary` passes.
 - `pnpm -s schema` passes.
 - `pnpm exec vitest run packages/bot packages/sdk` passes.
-- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/BOTS.md` reports nothing on the lines this task wrote.
+- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/plugins/BOTS.md` reports nothing on the lines this task wrote.
 
 ## Resume
 
-Built in `packages/bot`: a new `src/preamble.ts`, and `src/plugin.ts` registers it in `apply`. `test/bot-preamble.test.ts` has 8 cases. `docs/BOTS.md` and `packages/bot/README.md` say that each new chat starts with the template.
+Built in `packages/bot`: a new `src/preamble.ts`, and `src/plugin.ts` registers it in `apply`. `test/bot-preamble.test.ts` has 8 cases. `docs/plugins/BOTS.md` and `packages/bot/README.md` say that each new chat starts with the template.
 
 How the parts work:
 

@@ -54,7 +54,7 @@ client subscribe ahp-resource-watch:/<id> -> gate (bot:watch, from the watched r
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Bots are watched and catalogued](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 1 | [Bots are watched and catalogued](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -98,5 +98,5 @@ client subscribe ahp-resource-watch:/<id> -> gate (bot:watch, from the watched r
 
 - [x] `pnpm -s typecheck` and `pnpm -s boundary` pass.
 - [x] `pnpm exec vitest run packages/sdk packages/bot packages/server` passes.
-- [x] `docs/BOTS.md` and `docs/RESOURCES.md` describe the watch.
+- [x] `docs/plugins/BOTS.md` and `docs/sdk/RESOURCES.md` describe the watch.
 - [x] `plans/index.md` updated.

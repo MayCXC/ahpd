@@ -11,7 +11,7 @@ A client reads one key, `_meta['ahpd.grants']`, for every subject a role can nam
 ## What was built
 
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - `schemeGrants`, one entry per registered scheme the table does not hold, and `schemeOperations`, the one lookup `ahpd.resourceProviders` and `ahpd.grants` both read; descriptions pass through as written.
-- `docs/USERS.md`, `docs/PLUGINS.md` and `docs/COMPUTER.md` send a client to each scheme's own entry.
+- `docs/sdk/USERS.md`, `docs/plugins/PLUGINS.md` and `docs/plugins/COMPUTERS.md` send a client to each scheme's own entry.
 
 ## Verified
 
@@ -20,7 +20,7 @@ A client reads one key, `_meta['ahpd.grants']`, for every subject a role can nam
 
 ## Departures from the plan
 
-- `docs/COMPUTER.md` carried the same sentence about the `file` entry's groups and was corrected too.
+- `docs/plugins/COMPUTERS.md` carried the same sentence about the `file` entry's groups and was corrected too.
 - `membership` is a field of a person's record, not a scheme, so it is not listed; `usage` is, because the daemon serves it.
 
 ## Left for later

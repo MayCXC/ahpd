@@ -22,7 +22,7 @@ Other backends see no change.
 - `UPDATE: packages/agent-acp/src/session/handlers.ts:479-487` - `answerElicitation` answers `cancel` when the response is `cancel`.
 - `UPDATE: packages/agent-acp/test/agent-acp-ports.test.ts` - a client's decline and a client's cancel, each read from the server's log.
 - `UPDATE: packages/agent-acp/README.md` - what a decline and a cancel answer.
-- `UPDATE: docs/PLUGINS.md` - the same, where the question paragraph is.
+- `UPDATE: docs/plugins/PLUGINS.md` - the same, where the question paragraph is.
 
 ## Steps
 
@@ -31,7 +31,7 @@ Other backends see no change.
 3. In `answerElicitation`, settle `{ action: 'cancel' }` when the response is `cancel`, and `{ action: 'decline' }` for any other refusal.
 4. Leave the other backends as they are, because the parameter is optional.
 5. Add one test for a client's decline and one for a client's cancel.
-6. Change the README and `docs/PLUGINS.md` sentences that say the two are the same.
+6. Change the README and `docs/plugins/PLUGINS.md` sentences that say the two are the same.
 
 ## Validation
 

@@ -17,7 +17,7 @@ A client then shows it as a rename, as the protocol defines one.
 
 - `UPDATE: packages/sdk/src/changes.ts:637-680` - keep the old path that `R` and `C` records carry, and use it for `before`.
 - `UPDATE: packages/sdk/test/changes-uris.test.ts` - a staged rename, and a rename in a subdirectory.
-- `UPDATE: docs/AHP.md:697-710` - a rename's row has two URIs.
+- `UPDATE: docs/sdk/AHP.md:697-710` - a rename's row has two URIs.
 
 ## Steps
 

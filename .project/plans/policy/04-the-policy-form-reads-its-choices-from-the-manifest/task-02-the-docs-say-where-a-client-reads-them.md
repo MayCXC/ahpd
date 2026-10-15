@@ -4,16 +4,16 @@ status: done
 depends: [task-01-the-manifest-says-its-choices.md]
 layer: "docs"
 refs:
-  - "[code://docs/POLICY.md](../../../../docs/POLICY.md) - \"The scheme\", where a client is told how to write a row"
+  - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - \"The scheme\", where a client is told how to write a row"
 ---
 
 ## Objective
 
-`docs/POLICY.md` tells a client that the kinds, effects, periods, limit pools, and each kind's measures and match types are in the `policy:` manifest.
+`docs/sdk/POLICY.md` tells a client that the kinds, effects, periods, limit pools, and each kind's measures and match types are in the `policy:` manifest.
 
 ## Files
 
-- `UPDATE: docs/POLICY.md` - one paragraph under "The scheme".
+- `UPDATE: docs/sdk/POLICY.md` - one paragraph under "The scheme".
 
 ## Steps
 

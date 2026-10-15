@@ -4,7 +4,7 @@ status: done
 depends: [task-02-root-config-keys-each-plugin-by-its-id.md, task-03-the-plugin-verbs-take-the-id.md, task-04-plugin-option-names-the-id.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md#L21-L62](../../../../docs/PLUGINS.md#L21-L62) - how a plugin is named"
+  - "[code://docs/plugins/PLUGINS.md#L21-L62](../../../../docs/plugins/PLUGINS.md#L21-L62) - how a plugin is named"
 ---
 
 ## Objective
@@ -14,10 +14,10 @@ PLUGINS.md says what the id is and links the decision.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md:21-62` - say what the id is, and that a disabled plugin is imported to read it.
-- `UPDATE: docs/DAEMON.md` - the examples of `--plugin-option`, the verbs and `plugins.<id>`.
-- `UPDATE: docs/HOST.md:131` - the root config key.
-- `UPDATE: docs/TOOLS.md:117-129` - the examples that name a plugin.
+- `UPDATE: docs/plugins/PLUGINS.md:21-62` - say what the id is, and that a disabled plugin is imported to read it.
+- `UPDATE: docs/server/REFERENCE.md` - the examples of `--plugin-option`, the verbs and `plugins.<id>`.
+- `UPDATE: docs/sdk/HOST.md:131` - the root config key.
+- `UPDATE: docs/sdk/TOOLS.md:117-129` - the examples that name a plugin.
 - `UPDATE: packages/server/README.md:140-154` - the flag rows.
 
 ## Steps

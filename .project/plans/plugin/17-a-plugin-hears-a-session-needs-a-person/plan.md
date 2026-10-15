@@ -16,7 +16,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts](../../../../packages/agent-claude/src/session.ts) - one backend that emits `session/inputNeededSet`"
   - "[code://packages/agent-acp/src/session.ts](../../../../packages/agent-acp/src/session.ts) - another"
   - "[code://packages/agent-cofold/src/mapping.ts](../../../../packages/agent-cofold/src/mapping.ts) - and the third"
-  - "[code://docs/PLUGINS.md#L241-L290](../../../../docs/PLUGINS.md#L241-L290) - the Events section and its table"
+  - "[code://docs/plugins/PLUGINS.md#L241-L290](../../../../docs/plugins/PLUGINS.md#L241-L290) - the Events section and its table"
   - https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/session-channel.md#aggregated-input-requests - `session/inputNeededSet` and `session/inputNeededRemoved`, and the entry's `id`, `chat` and `kind`
 ---
 
@@ -53,7 +53,7 @@ backend emit('session', session/inputNeededRemoved) -> host.ts emit -> dispatch
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin hears a session's input needed set and removed, although a client receives the same actions](../../../../docs/PLUGINS.md) | Softov, 2026-09-26, accepted |
+| 1 | [A plugin hears a session's input needed set and removed, although a client receives the same actions](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-09-26, accepted |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ backend emit('session', session/inputNeededRemoved) -> host.ts emit -> dispatch
 | `input_needed_set` carries `session`, `chat`, `id` and `kind`; `input_needed_removed` carries `session` and `id` | the spec's `SessionInputRequestBase` and `SessionInputNeededRemovedAction` | 01 |
 | Raised in `emit`, after the action is dispatched, as `turn_end` is | [`code://packages/sdk/src/host.ts#L3575-L3597`](../../../../packages/sdk/src/host.ts#L3575-L3597) | 01 |
 | The rule in `events.ts` is rewritten to what decision 1 says | decision 1 | 01 |
-| `docs/PLUGINS.md` lists both events | the Events table lists every event | 02 |
+| `docs/plugins/PLUGINS.md` lists both events | the Events table lists every event | 02 |
 | "Naming a plugin" states the `@ahpd/<name>` convention | Softov, 2026-09-26 | 03 |
 
 ## Proposed architecture
@@ -69,7 +69,7 @@ backend emit('session', session/inputNeededRemoved) -> host.ts emit -> dispatch
 - **Data flow** - a backend's action reaches `emit`, is dispatched as today, and its identifiers are copied onto the event.
 - **Event flow** - `fire` calls each handler in plugin order, awaited, exactly as for every other event.
 - **State flow** - none; the host keeps no copy of what it raised.
-- **Layer responsibilities** - `packages/sdk/src/types/events.ts`: the two names and payloads · `packages/sdk/src/host.ts`: the two `fire` calls · `docs/PLUGINS.md`: the table.
+- **Layer responsibilities** - `packages/sdk/src/types/events.ts`: the two names and payloads · `packages/sdk/src/host.ts`: the two `fire` calls · `docs/plugins/PLUGINS.md`: the table.
 - **Source-of-truth files** - [`code://packages/sdk/src/types/events.ts`](../../../../packages/sdk/src/types/events.ts)
 
 ## Tasks
@@ -95,5 +95,5 @@ backend emit('session', session/inputNeededRemoved) -> host.ts emit -> dispatch
 
 - [x] A fixture plugin subscribed to both events is called once for each action a scripted backend emits, with the session, chat, id and kind.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/PLUGINS.md` lists both events, and "Naming a plugin" states the convention.
+- [x] `docs/plugins/PLUGINS.md` lists both events, and "Naming a plugin" states the convention.
 - [x] `plans/index.md` updated.

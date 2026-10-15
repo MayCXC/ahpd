@@ -22,7 +22,7 @@ refs:
   - "[code://packages/sdk/test/github.test.ts](../../../../packages/sdk/test/github.test.ts) - `githubPullRequests`, the port itself, which this plan does not change"
   - "[code://packages/sdk/test/host.test.ts#L7263-L7407](../../../../packages/sdk/test/host.test.ts#L7263-L7407) - `what GitHub knows about the branch`, where the `_meta.github` cases are and where a per-folder case sits beside them"
   - "[code://packages/sdk/test/worktrees.test.ts](../../../../packages/sdk/test/worktrees.test.ts) - the worktree harness, with `worktreeIncludeFiles: '.env'` as a string"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md) - the `pull request` row that names `_meta.github`"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - the `pull request` row that names `_meta.github`"
   - https://code.visualstudio.com/updates/v1_140 - multi-folder sessions and shared worktree folders
   - file:///github/externals/vscode/src/vs/platform/agentHost/common/state/sessionState.ts - `githubData` and `workingDirectoryKeys` (`SESSION_META_GITHUB_DATA_KEY`, `withFolderGitHubState`, `withWorkingDirectoryKey`), and `_meta.github` now only a `createSession` input
   - file:///github/externals/vscode/src/vs/sessions/contrib/providers/agentHost/browser/baseAgentHostSessionsProvider.ts - `readCompatibleFolderGitHubState` and `toGitHubInfo`: a host-published folder key is authoritative, and `_meta.git` is still read for the session folder

@@ -18,7 +18,7 @@ refs:
 - `UPDATE: packages/server/src/main.ts:67-97` - an empty or blank token is no token.
 - `UPDATE: packages/server/src/commands/options.ts:289-297` - the host is refused unless it equals its trimmed self and is not empty.
 - `UPDATE: packages/server/src/commands/authorize.ts:11-13` - the citation.
-- `UPDATE: task-22-the-docs-comments-and-refs-say-what-the-code-does.md` - its `docs/DAEMON.md` ref.
+- `UPDATE: task-22-the-docs-comments-and-refs-say-what-the-code-does.md` - its `docs/server/REFERENCE.md` ref.
 - `UPDATE: packages/server/test/server-cli.test.ts` - the cases below.
 
 ## Steps
@@ -26,7 +26,7 @@ refs:
 1. `tokenFor` treats a blank token from `--token`, `--token-file` or `AHPD_TOKEN` like none, so the refusal that names the three is what the person reads.
 2. `http.host` with leading or trailing space stops with the sentence the empty host gets.
 3. `authorize.ts`: the 403 carrying the WebSocket's sentence is the plan's own row; the comment says what the function does and cites nothing.
-4. Task 22's ref points at the served-commands paragraph in `docs/DAEMON.md`.
+4. Task 22's ref points at the served-commands paragraph in `docs/server/REFERENCE.md`.
 
 ## Validation
 
@@ -37,7 +37,7 @@ refs:
 
 Implemented 2026-09-27. Tests first, each seen to fail: `--remote http://127.0.0.1:9 --token= status` exited 2 with `Cannot read the command surface from http://127.0.0.1:9/api/cli-manifest`, having tried the fetch with an empty bearer; `{"http":{"port":0,"host":" 127.0.0.1 "}}` exited 1, failing at bind. The token case also covers `--token '  '`, a token file holding only spaces and `AHPD_TOKEN='  '`, and each now exits 2 with exactly `ahpd: http://127.0.0.1:9 needs a token: pass --token, --token-file or AHPD_TOKEN.`.
 
-`tokenFor` keeps the precedence it had (a file, else `--token`, else `AHPD_TOKEN`) and refuses whatever that yields when it is empty or only spaces, so a blank flag does not fall through to the environment. A file holding only spaces now gets the three-name sentence instead of `<file> is empty.`, which is what step 1 asks; a missing file keeps `no token file at <file>.`. `httpOf` refuses a host that is empty or does not equal its trimmed self, with the sentence the empty host had. `authorize.ts`'s comment cites nothing. Task 22's `docs/DAEMON.md` ref names the served-commands paragraph, L449-L453. `docs/DAEMON.md` says a blank token is refused.
+`tokenFor` keeps the precedence it had (a file, else `--token`, else `AHPD_TOKEN`) and refuses whatever that yields when it is empty or only spaces, so a blank flag does not fall through to the environment. A file holding only spaces now gets the three-name sentence instead of `<file> is empty.`, which is what step 1 asks; a missing file keeps `no token file at <file>.`. `httpOf` refuses a host that is empty or does not equal its trimmed self, with the sentence the empty host had. `authorize.ts`'s comment cites nothing. Task 22's `docs/server/REFERENCE.md` ref names the served-commands paragraph, L449-L453. `docs/server/REFERENCE.md` says a blank token is refused.
 
 The refs and `Files` ranges in tasks 07 to 27 of this plan that point into a file these tasks changed were moved by the diff against HEAD, and those in daemon/04 by the diff of this plan's changes alone.
 

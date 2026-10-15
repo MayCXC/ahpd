@@ -17,7 +17,7 @@ An operator sets `shellEnv` in the daemon's `config.json`: a map of variable to 
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - the key, with no flag, and the refusal in `checkConfig`.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `Start.shellEnv` for each backend.
 - [`code://packages/agent-claude/src/session/config.ts`](../../../../packages/agent-claude/src/session/config.ts) - the `PreToolUse` hook puts the lines in front of each Bash command.
-- [`code://docs/HOST.md`](../../../../docs/HOST.md) - the key and an example.
+- [`code://docs/sdk/HOST.md`](../../../../docs/sdk/HOST.md) - the key and an example.
 
 ## Verified
 

@@ -42,7 +42,7 @@ refs:
 
 Implemented 2026-10-06.
 
-- `worktreesOf(repository, root?)` answers `join(root, basename(repository))` when a root is given and `<repo>.worktrees` beside the repository otherwise; the doc comment keeps why the default is beside and carries the reference's name, and says a root is this host's departure from it, citing [Worktrees can live under one root, as an option beside the reference's default](../../../../docs/HOST.md).
+- `worktreesOf(repository, root?)` answers `join(root, basename(repository))` when a root is given and `<repo>.worktrees` beside the repository otherwise; the doc comment keeps why the default is beside and carries the reference's name, and says a root is this host's departure from it, citing [Worktrees can live under one root, as an option beside the reference's default](../../../../docs/sdk/HOST.md).
 - `HostOptions.worktreesRoot?: string` sits after `worktrees`, documented as an absolute folder every session tree goes under and as meaningless without the port.
 - `isolated` passes `options.worktreesRoot` to `worktreesOf`; nothing else in it changed.
 - The unused `worktreesOf`/`worktreeFor` import is gone from `host.ts`.

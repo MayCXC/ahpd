@@ -19,7 +19,7 @@ With `inside` and no machine, the outer record is deleted and the log says the i
 
 - `UPDATE: packages/computer/src/plugin.ts:104-110,220` - `nestedDelete: 'inside' | 'record'` in the profile schema and read, as `secretUnreadable` is; a value that is neither is refused at load as that key is.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:342-381` or the nested backend's `delete` - today a recorded nested session that is not running is deleted from the outer store and the record, and its inner transcript stays in the machine's store; a running one is disposed inside through `close`.
-- `UPDATE: docs/COMPUTER.md:433` - a `nestedDelete` row in the profile table.
+- `UPDATE: docs/plugins/COMPUTERS.md:433` - a `nestedDelete` row in the profile table.
 - `UPDATE: packages/sdk/test/nested-proxy.test.ts` - the cases below.
 
 ## Steps

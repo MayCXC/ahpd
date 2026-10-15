@@ -26,7 +26,7 @@ A record with an `issuer` signs in through that provider, a record without one s
 - `UPDATE: packages/server/src/config.ts` - `namedIssuer` is the SDK's rule rather than a second copy.
 - `UPDATE: packages/server/src/main.ts` - pass the issuer name, build the advertised record without the host issuer so the directory can fill it, and print the issuer in `user list`.
 - `UPDATE: test/users-issuer.test.ts` - the per-record cases, and the existing cases moved to the name form.
-- `UPDATE: docs/USERS.md`, `docs/DAEMON.md` - the default, the field, the advertised list and how to try two at once.
+- `UPDATE: docs/sdk/USERS.md`, `docs/server/REFERENCE.md` - the default, the field, the advertised list and how to try two at once.
 
 ## Steps
 

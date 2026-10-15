@@ -7,21 +7,21 @@ layer: docs
 refs:
   - code://test/fixtures/plugin-echo - the shape a plugin fixture takes, manifest and entry together
   - code://test/plugin-end-to-end.test.ts - the loader-to-a-turn case the new fixture joins
-  - code://docs/PLUGINS.md - the worked examples and the options table
+  - code://docs/plugins/PLUGINS.md - the worked examples and the options table
   - code://.project/plans/plugin/00-plugin.md#L28-L54 - the registration kinds table and the four operations
   - code://.project/research/host-owned-uri-resources.md - the `computer://<id>/status` example this follows
 ---
 
 ## Objective
 
-A read-only fixture provider serves `computer://local/status` and `computer://local/capabilities` through the real loader and a real host, `file:` still lists beside it, and `docs/PLUGINS.md` and the kinds table say what the new kind is and what a provider may leave out.
+A read-only fixture provider serves `computer://local/status` and `computer://local/capabilities` through the real loader and a real host, `file:` still lists beside it, and `docs/plugins/PLUGINS.md` and the kinds table say what the new kind is and what a provider may leave out.
 
 ## Files
 
 - `CREATE: test/fixtures/plugin-uri-resources/package.json` - the manifest with an `ahpd` key naming its entry and title, as `plugin-echo` has.
 - `CREATE: test/fixtures/plugin-uri-resources/index.mjs` - a plugin whose `apply` registers one `computer:` provider with `read` and `resolve`, no `list`, no `watch` and no writes, and one server tool beside it only if it earns its place.
 - `CREATE: test/uri-resources-plugin.test.ts` - the loader listing the fixture as `ready`, `resourceRead` over `computer://local/status` answering the fixture's bytes, `resourceList` on it answering `-32601`, and `file:` listing unchanged.
-- `UPDATE: docs/PLUGINS.md` - a third worked example: the method, the URI shapes, what a provider may leave out and what a client then hears, and the relay precedence.
+- `UPDATE: docs/plugins/PLUGINS.md` - a third worked example: the method, the URI shapes, what a provider may leave out and what a client then hears, and the relay precedence.
 - `UPDATE: .project/plans/plugin/00-plugin.md` - a `resource provider` row in the kinds table with the `register, open key` operation, and the known-gaps line replaced by the plan.
 - `UPDATE: .project/plans/index.md` - the plugin row for 08.
 

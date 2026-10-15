@@ -4,17 +4,17 @@ status: done
 depends: []
 layer: "docs"
 refs:
-  - "[code://docs/AHP.md#L443-L452](../../../../docs/AHP.md#L443-L452) - the input request table"
+  - "[code://docs/sdk/AHP.md#L443-L452](../../../../docs/sdk/AHP.md#L443-L452) - the input request table"
   - "[code://packages/sdk/src/tools/clientcalls.ts#L228-L230](../../../../packages/sdk/src/tools/clientcalls.ts#L228-L230) - `toolClientExecution`, raised by the client call holder"
 ---
 
 ## Objective
 
-`docs/AHP.md` names the four kinds of input request that the host serves, and the code that raises each one.
+`docs/sdk/AHP.md` names the four kinds of input request that the host serves, and the code that raises each one.
 
 ## Files
 
-- `UPDATE: docs/AHP.md:443-452` - the table with four rows, and the sentence above it.
+- `UPDATE: docs/sdk/AHP.md:443-452` - the table with four rows, and the sentence above it.
 
 ## Steps
 
@@ -25,7 +25,7 @@ refs:
 ## Validation
 
 - Each row names a kind that `rg "kind: '<kind>'" packages` finds.
-- `node <do-spec>/scripts/lint-prose.mjs docs/AHP.md` reports nothing new on the lines this task wrote.
+- `node <do-spec>/scripts/lint-prose.mjs docs/sdk/AHP.md` reports nothing new on the lines this task wrote.
 
 ## Resume
 
@@ -38,8 +38,8 @@ The section above the table said two kinds are served and the table named two, w
 
 The sentence below the table said "Both are held in a map keyed by id", which counted the rows and so went wrong with them: it now says "All four", which is the only word in it that changed. That sentence is one line past the `443-451` the Files list named, and it was changed because the two added rows made its number wrong rather than for its own sake.
 
-`node .agents/skills/do-spec/scripts/lint-prose.mjs docs/AHP.md` reports the same eleven findings it did before this task - all of them above line 440, none on a line this task wrote. Every kind in the table is one `rg "kind: '<kind>'" packages` finds: `toolConfirmation` and `chatInput` in every backend, `toolClientExecution` in `packages/sdk/src/tools/clientcalls.ts`, `toolAuthentication` in `packages/agent-claude/src/session/servers.ts`.
+`node .agents/skills/do-spec/scripts/lint-prose.mjs docs/sdk/AHP.md` reports the same eleven findings it did before this task - all of them above line 440, none on a line this task wrote. Every kind in the table is one `rg "kind: '<kind>'" packages` finds: `toolConfirmation` and `chatInput` in every backend, `toolClientExecution` in `packages/sdk/src/tools/clientcalls.ts`, `toolAuthentication` in `packages/agent-claude/src/session/servers.ts`.
 
 Files this task changed:
 
-- `docs/AHP.md` - the sentence above the input request table, its two added rows, and the one word in the sentence below it.
+- `docs/sdk/AHP.md` - the sentence above the input request table, its two added rows, and the one word in the sentence below it.

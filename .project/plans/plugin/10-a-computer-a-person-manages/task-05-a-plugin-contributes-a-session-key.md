@@ -24,7 +24,7 @@ refs:
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.sessionConfig?: Record<string, Record<string, unknown>>` or the shape the fold needs, so `createHost` can merge it.
 - `UPDATE: packages/sdk/src/host.ts` - merge the contributed properties into the schema `published` returns, and into the defaults a session resolves, without the plugin learning how a session is stored.
 - `UPDATE: test/plugin-host.test.ts` - registration, duplicate, and the collision with a backend's own key.
-- `UPDATE: docs/PLUGINS.md` - the new registration in the list.
+- `UPDATE: docs/plugins/PLUGINS.md` - the new registration in the list.
 
 ## Steps
 
@@ -38,7 +38,7 @@ refs:
 
 - `test/plugin-host.test.ts` - a plugin registers a key and it is on the published schema; two plugins cannot register one; a key the backend declares is refused; the value a client sets arrives in `Start.settings`.
 - `pnpm test`, `pnpm typecheck` and `pnpm boundary` green.
-- `docs/PLUGINS.md` lists the registration.
+- `docs/plugins/PLUGINS.md` lists the registration.
 
 ## Resume
 

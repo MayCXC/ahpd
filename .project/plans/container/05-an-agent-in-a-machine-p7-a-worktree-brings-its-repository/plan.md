@@ -53,7 +53,7 @@ createSession(isolation: worktree) -> isolated() -> worktree path -> placedIn(fo
 
 | Decision | Task |
 | --- | --- |
-| [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | 02 |
+| [A session's folder reaches a machine only where its profile allows it](../../../../docs/plugins/COMPUTERS.md) | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -107,4 +107,4 @@ createSession(isolation: worktree) -> isolated() -> worktree path -> placedIn(fo
 - [ ] After a commit in the machine, every file it wrote under the host's `.git` and the worktree is owned by the host user.
 - [ ] Inside the machine, `.git/hooks` and `.git/config` cannot be written, and a commit still works.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

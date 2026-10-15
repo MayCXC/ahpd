@@ -6,8 +6,8 @@ depends:
   - task-05-the-relay-carries-the-frames.md
 layer: docs, /github/ahpapp, .project
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the machine page this one must not be confused with"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - where a `register*` is documented"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the machine page this one must not be confused with"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - where a `register*` is documented"
   - "[code://packages/sdk/README.md](../../../../packages/sdk/README.md) - the package's own page"
   - "[code://.project/working/HANDOFF.md](../../../working/HANDOFF.md) - the pending list"
   - "[code://.project/plans/index.md](../../index.md) - the plan index"
@@ -19,9 +19,9 @@ The container feature is written down where a person meets it: a page that says 
 
 ## Files
 
-- `CREATE: docs/CONTAINERS.md` - the operator's page: what a dev container session is, the CLI dependency, the capability key, the four methods and four notifications, the `container:write` grant, and the by-hand case.
-- `UPDATE: docs/PLUGINS.md` - `registerContainers` beside the other registrations, and the key it makes the host advertise.
-- `UPDATE: docs/DAEMON.md` - `--stdio` and what it is for, which task 01 wrote and this task checks against the code.
+- `CREATE: docs/plugins/CONTAINERS.md` - the operator's page: what a dev container session is, the CLI dependency, the capability key, the four methods and four notifications, the `container:write` grant, and the by-hand case.
+- `UPDATE: docs/plugins/PLUGINS.md` - `registerContainers` beside the other registrations, and the key it makes the host advertise.
+- `UPDATE: docs/server/REFERENCE.md` - `--stdio` and what it is for, which task 01 wrote and this task checks against the code.
 - `UPDATE: README.md`, `packages/sdk/README.md` - one line each that points at the page.
 - `UPDATE: .project/plans/index.md` - the `container` domain and this plan.
 - `UPDATE: .project/working/HANDOFF.md` - the pending list, with this plan and what it does not cover.
@@ -37,12 +37,12 @@ The container feature is written down where a person meets it: a page that says 
 
 ## Validation
 
-- Every link in `docs/CONTAINERS.md` resolves, and every method and notification named there exists in the code with the same spelling.
+- Every link in `docs/plugins/CONTAINERS.md` resolves, and every method and notification named there exists in the code with the same spelling.
 - The by-hand case is either run and recorded with its versions, or written as not yet run in the handoff rather than in the page's present tense.
 - `pnpm test`, `pnpm typecheck` and `pnpm boundary` green.
 - In `ahpapp`: `npx tsc --noEmit` and the web export green, with the plan only and no code.
 
 ## Resume
 
-Done, 2026-09-24. The pages are `docs/CONTAINERS.md`, `docs/DAEMON.md`, `docs/PLUGINS.md` and the README; the client half is `/github/ahpapp/.project/working/dev-containers.md`, a scope document in that repository's own convention rather than a plan, because it has no `plans/`.
+Done, 2026-09-24. The pages are `docs/plugins/CONTAINERS.md`, `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md` and the README; the client half is `/github/ahpapp/.project/working/dev-containers.md`, a scope document in that repository's own convention rather than a plan, because it has no `plans/`.
 The page is the last thing written and the first thing read: it says what is true when the tasks above are done, and nothing about them before that.

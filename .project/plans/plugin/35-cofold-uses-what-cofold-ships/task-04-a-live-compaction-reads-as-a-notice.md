@@ -12,7 +12,7 @@ refs:
 
 ## Objective
 
-When cofold compacts during a live turn, the client sees one `systemNotification` part, `Context compacted automatically: <before> tokens to <after>.`, worded as the Claude backend words it, and never the summary text written as the model's answer, per [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md).
+When cofold compacts during a live turn, the client sees one `systemNotification` part, `Context compacted automatically: <before> tokens to <after>.`, worded as the Claude backend words it, and never the summary text written as the model's answer, per [A compacted session keeps its history and shows a notice](../../../../docs/sdk/CHATS.md).
 The sentence comes from one exported function, `compactionNotice`, which task 06 uses for the transcript.
 
 ## Files

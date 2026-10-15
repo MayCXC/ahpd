@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/types/listen.ts#L26-L35](../../../../packages/sdk/src/types/listen.ts#L26-L35) - `Tap`: `from`, `text`, `peer`"
   - "[code://tools/wire.mjs#L221-L232](../../../../tools/wire.mjs#L221-L232) - `framesIn`, which `pnpm wire` reads a capture through"
   - "[code://test/wire.test.ts](../../../../test/wire.test.ts) - the tests over `--wire` and its lines"
-  - "[code://docs/DAEMON.md#L157](../../../../docs/DAEMON.md#L157) - the `--wire` row"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the `--wire` row"
   - file:///github/externals/vscode/src/vs/platform/agentHost/common/ahpJsonlLogger.ts - the line shape, the field names, 75 MiB and five files, 1 MiB lines and 16 KiB strings
 ---
 
@@ -53,7 +53,7 @@ pnpm wire -- <file> -> framesIn -> the checker, which [changes] ignores _ahpLog
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [The traffic log is the daemon's --wire capture, written in the shape VS Code writes](../../../../docs/DAEMON.md) | Softov, 2026-09-26, accepted |
+| 1 | [The traffic log is the daemon's --wire capture, written in the shape VS Code writes](../../../../docs/server/REFERENCE.md) | Softov, 2026-09-26, accepted |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ pnpm wire -- <file> -> framesIn -> the checker, which [changes] ignores _ahpLog
 - **Data flow** - the tap builds the line from the frame and the meta, and a small writer in `packages/server` appends it, rolls the file and caps the line.
 - **Event flow** - none new.
 - **State flow** - the writer holds the current size and file index for the life of the daemon.
-- **Layer responsibilities** - `packages/server`: the tap and the writer · `tools/wire.mjs`: reading both shapes · `docs/DAEMON.md`: the flag.
+- **Layer responsibilities** - `packages/server`: the tap and the writer · `tools/wire.mjs`: reading both shapes · `docs/server/REFERENCE.md`: the flag.
 - **Source-of-truth files** - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts)
 
 ## Tasks
@@ -98,4 +98,4 @@ pnpm wire -- <file> -> framesIn -> the checker, which [changes] ignores _ahpLog
 - [x] `pnpm wire -- <file>` passes on a new capture and on `test/fixtures/wire.jsonl`.
 - [x] A capture past the cap rolls, and a sixth file is never kept.
 - [x] The capture file is `0600`.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/DAEMON.md`, `plans/index.md` updated.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/server/REFERENCE.md`, `plans/index.md` updated.

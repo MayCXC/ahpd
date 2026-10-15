@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/issuers.ts#L89-L115](../../../../packages/sdk/src/issuers.ts#L89-L115) - `isIssuerUrl` and the discovered endpoint's check"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - `namedIssuer`"
   - "[code://scripts/dev-issuer.mjs](../../../../scripts/dev-issuer.mjs) - the throwaway issuer this exists to make usable"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - where an operator reads how to try one"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - where an operator reads how to try one"
 ---
 
 ## Goal
@@ -28,7 +28,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "startsWith\\('https" packages/sdk/src packages/server/src` - two places enforced https, `namedIssuer` and the discovered `userinfo` endpoint, so both move together.
-- `grep -n "issuer" docs/DAEMON.md docs/USERS.md` - the option is documented in both, and neither said what an operator should do to try one.
+- `grep -n "issuer" docs/server/REFERENCE.md docs/sdk/USERS.md` - the option is documented in both, and neither said what an operator should do to try one.
 
 ### Gaps
 
@@ -40,7 +40,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An issuer may be plain http on loopback, and nowhere else](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "how I can ran a issuer?", after asking for the loopback exception. |
+| 1 | [An issuer may be plain http on loopback, and nowhere else](../../../../docs/sdk/AUTHENTICATION.md) | The user, 2026-09-23: "how I can ran a issuer?", after asking for the loopback exception. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -73,4 +73,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] A remote http issuer is refused by `namedIssuer`, and a discovered remote http `userinfo` is refused.
 - [x] `http://127.0.0.1:9310`, `http://localhost:9310` and `http://[::1]:9310` are accepted.
 - [x] By hand: `scripts/dev-issuer.mjs` plus a daemon on `--issuer http://127.0.0.1:9310`, and a `guest` signing in with the token `ana`.
-- [x] `plans/index.md`, `docs/USERS.md`, `docs/DAEMON.md` and `HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md`, `docs/server/REFERENCE.md` and `HANDOFF.md` updated.

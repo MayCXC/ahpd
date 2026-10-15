@@ -12,7 +12,7 @@ creates: []
 decisions:
 refs:
   - code://.project/ideas/plugins.md#L150-L170 - the shape this plan implements
-  - code://docs/PLUGINS.md - `on` is the one method that is not a `register*`
+  - code://docs/plugins/PLUGINS.md - `on` is the one method that is not a `register*`
   - code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md - the loader this plan's handlers fold through
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, which gains `events`
   - code://packages/sdk/src/types/plugin.ts - `PluginHost`, which gains `on`
@@ -63,12 +63,12 @@ plugin apply -> host.on('session_start', handler)
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A host event is observed and awaited, and a handler cannot answer it](../../../../docs/PLUGINS.md) | Softov, asked 2026-09-20: "the plugin need to enable events.. like pi.on(\"session_start\", (_event, ctx) => {})" |
+| 1 | [A host event is observed and awaited, and a handler cannot answer it](../../../../docs/plugins/PLUGINS.md) | Softov, asked 2026-09-20: "the plugin need to enable events.. like pi.on(\"session_start\", (_event, ctx) => {})" |
 
 | What | Source | Task |
 | --- | --- | --- |
 | The option on `HostOptions` is called `events`, not `hooks` | Softov, asked 2026-09-20: "Plan 02: name the option events - events" | 01 |
-| `on` is the one method not named `register*`, because it adds no contribution | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../../docs/PLUGINS.md) | 01 |
+| `on` is the one method not named `register*`, because it adds no contribution | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../../docs/plugins/PLUGINS.md) | 01 |
 | The handler's second argument is `PluginContext`, the same read-only context `apply` is handed | decision 1, and `ideas/plugins.md` | 01 |
 | `onEvent` stays the embedder's line writer and `log` is also an event, both called from one place rather than one replacing the other | decision 1, Consequences | 01 |
 | Handlers run in configuration order, which is plugin order, and a throwing handler is reported rather than fatal | decision 1 | 03 |

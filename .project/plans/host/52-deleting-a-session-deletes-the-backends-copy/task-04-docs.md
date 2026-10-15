@@ -4,16 +4,16 @@ status: done
 depends: [task-02-claude-deletes-its-transcript.md, task-03-pi-cofold-and-acp-delete-theirs.md]
 layer: "docs"
 refs:
-  - "[code://docs/AHP.md#L74](../../../../docs/AHP.md#L74) - the `disposeSession` row"
+  - "[code://docs/sdk/AHP.md#L74](../../../../docs/sdk/AHP.md#L74) - the `disposeSession` row"
 ---
 
 ## Objective
 
-`docs/AHP.md`'s `disposeSession` row says the backend's own copy is deleted, that a listed row can be deleted, and which agents cannot.
+`docs/sdk/AHP.md`'s `disposeSession` row says the backend's own copy is deleted, that a listed row can be deleted, and which agents cannot.
 
 ## Files
 
-- `UPDATE: docs/AHP.md:74`.
+- `UPDATE: docs/sdk/AHP.md:74`.
 
 ## Steps
 

@@ -13,7 +13,7 @@ refs:
   - "[code://tools/wire.mjs](../../../../tools/wire.mjs) - routes a frame to its declaration"
   - "[code://packages/sdk/src/rpc.ts#L220](../../../../packages/sdk/src/rpc.ts#L220) - `result ?? {}`, which turns every `null` into `{}`"
   - "[code://packages/server/src/rootconfig.ts#L156-L201](../../../../packages/server/src/rootconfig.ts#L156-L201) - the root config schema a `config:read` connection reads"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md) - the protocol surface, row by row, and where this host departs"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - the protocol surface, row by row, and where this host departs"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - `CommandMap` and `ServerNotificationMap` (`src/types/common/messages.ts:162-194`, `:247-257`), `ConfigPropertySchema` (`src/types/common/state.ts:159-198`)"
   - "file:///home/softov/.local/cache/tmp/claude-1000/-home-softov/f22339a5-d379-4c13-91e4-d62f169fefc8/scratchpad/proto-audit.test.ts - the scratch audit these plans come from, with `audit-report.txt` beside it; scratch, so it may be gone"
 ---
@@ -22,7 +22,7 @@ refs:
 
 Every frame ahpd sends is one AHP 1.0.0 declares. Request results are the declared shapes, `null` included. Actions carry only declared fields. The root config schema is one a client can read. Every `_meta` key ahpd invents says it is ahpd's.
 The wire test is what proves it, so extend it first. Every request and result goes by `CommandMap`, and every notification by `ServerNotificationMap`. It runs over a host with a users directory, a signed-in person on a team, and an automation with an owner and its run. The host also holds the daemon's root config with a plugin's options.
-What ahpd keeps on purpose for VS Code parity stays, and is listed by name in the test and in `docs/AHP.md`.
+What ahpd keeps on purpose for VS Code parity stays, and is listed by name in the test and in `docs/sdk/AHP.md`.
 
 ## Reconnaissance
 

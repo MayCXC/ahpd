@@ -51,10 +51,10 @@ a sqlite plugin -> registerRecords(store, 'replace') -> every plugin's collectio
 | --- | --- | --- |
 | 1 | [A plugin keeps its records in a record store the host gives it](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | Softov, 2026-10-11 |
 | 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../rules/the-sdk-depends-only-on-the-protocol.md) | Softov, 2026-10-11 |
-| 3 | [A plugin gets parseYaml and stringifyYaml from the host](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
-| 4 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 3 | [A plugin gets parseYaml and stringifyYaml from the host](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
+| 4 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 | 5 | [A bot record stays in the configuration folder, apart from its workspace](../../../decisions/a-bot-record-stays-in-config.md) | Softov, 2026-10-10 |
-| 6 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 6 | [The daemon reloads a bot or an automation file that a person edits](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 
 The child plans hold the second table for their own tasks.
 

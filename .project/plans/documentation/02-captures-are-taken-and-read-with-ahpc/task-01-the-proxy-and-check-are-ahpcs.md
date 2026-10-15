@@ -17,7 +17,7 @@ refs:
 - `DELETE: scripts/tee.mjs`, `tools/validate.mjs`.
 - `UPDATE: package.json` - the `wire` script removed.
 - `UPDATE: DEVELOPER.md:39-53` - the recording paragraph names the line shape `--wire` writes now (the message with `_ahpLog`) and `ahpc wire proxy`; the `pnpm wire` row becomes `ahpc wire check <capture>`.
-- `UPDATE: docs/AHP.md:871`, `docs/DAEMON.md:279`, `README.md:443`, `UPSTREAM.md` - the same names.
+- `UPDATE: docs/sdk/AHP.md:871`, `docs/server/REFERENCE.md:279`, `README.md:443`, `UPSTREAM.md` - the same names.
 - `UPDATE: tools/wire.mjs` - the comment that names `tools/validate.mjs`.
 
 ## Steps

@@ -25,7 +25,7 @@ refs:
   - "[code://packages/sdk/src/people.ts#L236-L268](../../../../packages/sdk/src/people.ts#L236-L268) - the `role:` scheme, which writes a role's grants"
   - "[code://packages/server/src/commands/user.ts#L34-L41](../../../../packages/server/src/commands/user.ts#L34-L41) - `bounded`, which lets a person hand out only grants they hold"
   - "[code://packages/sdk/test/users-gate.test.ts#L140-L168](../../../../packages/sdk/test/users-gate.test.ts#L140-L168) - the staleness test: every served method is in `NEEDS` or `UNGATED`"
-  - "[code://docs/USERS.md#L356-L401](../../../../docs/USERS.md#L356-L401) - the grants table a person reads"
+  - "[code://docs/sdk/USERS.md#L356-L401](../../../../docs/sdk/USERS.md#L356-L401) - the grants table a person reads"
   - file:///github/ahpapp/.project/plans/people/01-people-live-on-a-host-screen/plan.md - row "A role's grants are edited as subject plus read, write or `*` ... (defaulted: ahpd does not advertise its subject list)", the reader of this advertisement
   - npm://@microsoft/agent-host-protocol@1.0.0 - `CommandMap` (`src/types/common/messages.ts:162-194`, `moveChat` new) and `IS_CLIENT_DISPATCHABLE` (`src/types/action-origin.generated.ts:462`, 47 client actions, `chat/isReadChanged` new)
 ---
@@ -65,7 +65,7 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 
 | Decision | Source |
 | --- | --- |
-| [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/USERS.md) | Softov, 2026-10-03, "Per-operation grants" |
+| [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/sdk/USERS.md) | Softov, 2026-10-03, "Per-operation grants" |
 
 | What | Source | Task |
 | --- | --- | --- |

@@ -49,7 +49,7 @@ Every finding was read in the code at `e1c4ccc` before its task was written; whe
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../../docs/HOST.md) | Softov, 2026-10-06, "A host admin grant"; the grant's name defaulted to match `ahpd restart` (p1) |
+| 1 | [A client's `shutdown` needs `config:change`, and the root connection always may](../../../../docs/sdk/HOST.md) | Softov, 2026-10-06, "A host admin grant"; the grant's name defaulted to match `ahpd restart` (p1) |
 | 2 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) | Softov, 2026-10-06, "Allowlist writable"; the list defaulted from what git writes (p2) |
 | 3 | [On a host with a users directory, no dev container is made until `devcontainer.folders` is set](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) | Softov, 2026-10-06, "Required with users" (p5) |
 | 4 | The proxy answers a provider's 401 or 403 with its own error, and the provider's words go to the log | Softov, 2026-10-06, "The proxy's own error"; the status defaulted to 502 (p1) |

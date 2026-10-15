@@ -47,8 +47,8 @@ ahpd vault set|delete|list -> the daemon's vault (served) or the file itself (at
 
 | Decision | Source |
 | --- | --- |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | Softov, 2026-10-02 and 2026-10-03 |
-| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | Softov, 2026-10-02 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-02 and 2026-10-03 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -86,4 +86,4 @@ Child plans, each scoped to one package or two.
 - [x] A disposable machine made for a person's session has their `user:` secret in its environment, and another person's session is refused it.
 - [x] A daemon says `vault <path>` at start, and a plugin naming a secret the vault does not hold is skipped with a line that says so.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/DAEMON.md`, `docs/PLUGINS.md`, `docs/COMPUTER.md` and `plans/index.md` updated.
+- [x] `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`, `docs/plugins/COMPUTERS.md` and `plans/index.md` updated.

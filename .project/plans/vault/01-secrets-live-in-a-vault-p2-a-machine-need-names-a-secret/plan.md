@@ -58,8 +58,8 @@ form write (owner) -> provider.write -> revealed(..., { owner }) -> manifestOf
 
 | Decision | Source |
 | --- | --- |
-| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | Softov, 2026-10-02 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | Softov, 2026-10-02; the owner a `user:` secret is matched against |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-02 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02; the owner a `user:` secret is matched against |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -94,4 +94,4 @@ form write (owner) -> provider.write -> revealed(..., { owner }) -> manifestOf
 - [x] A need naming a secret the vault does not hold refuses the machine and says so.
 - [x] Root config shows the reference, not `<set>` and not the value.
 - [x] `pnpm test`, `pnpm typecheck` green.
-- [x] `docs/COMPUTER.md` and `plans/index.md` updated.
+- [x] `docs/plugins/COMPUTERS.md` and `plans/index.md` updated.

@@ -47,10 +47,10 @@ root/configChanged { paths: [...] } -> dispatchNeeds: config:write -> rootConfig
 
 | Decision | Task |
 | --- | --- |
-| [A plugin's configuration travels in root config, not in customizations](../../../../docs/HOST.md) | 01, 03 |
-| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/HOST.md) | 01, 04 |
-| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../../docs/HOST.md) | 02, 05 |
-| [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/DAEMON.md) | 03, 04 |
+| [A plugin's configuration travels in root config, not in customizations](../../../../docs/sdk/HOST.md) | 01, 03 |
+| [Daemon and plugin keys reach only connections with config:read, and a write-only value never leaves the host](../../../../docs/sdk/HOST.md) | 01, 04 |
+| [A configuration change applies live where the key can, and otherwise on `ahpd restart`](../../../../docs/sdk/HOST.md) | 02, 05 |
+| [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/server/REFERENCE.md) | 03, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -61,7 +61,7 @@ root/configChanged { paths: [...] } -> dispatchNeeds: config:write -> rootConfig
 | Root config shows the file's value; a start flag that overrides it is said in the key's description | (defaulted: the file is what a form edits) | 02 |
 | A write is checked with `checkConfig` and the plugin's schema before `config.json` is touched, and a refusal names the key | (defaulted: a bad write must not stop the next start) | 02, 03 |
 | Our plugins mark their credentials `writeOnly`, wherever in their options the credential sits | the decision above | 04 |
-| A plugin loaded once is `plugins.<name>`; a repeated name is keyed `plugins.<name>#<provider>`, and an entry of it with no provider is refused at start | [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/DAEMON.md) | 03 |
+| A plugin loaded once is `plugins.<name>`; a repeated name is keyed `plugins.<name>#<provider>`, and an entry of it with no provider is refused at start | [A plugin loaded more than once is keyed by its provider in root config](../../../../docs/server/REFERENCE.md) | 03 |
 
 ## Proposed architecture
 

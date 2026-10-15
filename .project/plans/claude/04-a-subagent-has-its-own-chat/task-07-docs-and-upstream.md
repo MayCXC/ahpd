@@ -13,7 +13,7 @@ The docs say a subagent is its own chat, and `UPSTREAM.md` records the parity.
 
 ## Files
 
-- `UPDATE: packages/agent-claude/README.md`, `docs/PLUGINS.md` (the `Start.subagent` seam), `UPSTREAM.md`, `.project/plans/index.md`.
+- `UPDATE: packages/agent-claude/README.md`, `docs/plugins/PLUGINS.md` (the `Start.subagent` seam), `UPSTREAM.md`, `.project/plans/index.md`.
 
 ## Steps
 
@@ -26,7 +26,7 @@ The docs say a subagent is its own chat, and `UPSTREAM.md` records the parity.
 
 ## Resume
 
-Built. `packages/agent-claude/README.md` has one paragraph on the subagent chat and a `subagentsOf` row in the exports table; `docs/PLUGINS.md` has "A backend's worker chats", the `Start.subagent` seam and what it hands back; `UPSTREAM.md` has the ticked subagent line under "What a client is told about a session".
+Built. `packages/agent-claude/README.md` has one paragraph on the subagent chat and a `subagentsOf` row in the exports table; `docs/plugins/PLUGINS.md` has "A backend's worker chats", the `Start.subagent` seam and what it hands back; `UPSTREAM.md` has the ticked subagent line under "What a client is told about a session".
 
 `.project/plans/index.md` is kept by the main session, which lists this plan there.
 

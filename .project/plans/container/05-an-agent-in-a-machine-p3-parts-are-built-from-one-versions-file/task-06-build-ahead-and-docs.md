@@ -5,17 +5,17 @@ depends: [task-03-built-on-first-use.md, task-04-the-joined-image.md]
 layer: "computer, docs"
 refs:
   - "[code://scripts/computer.mjs](../../../../scripts/computer.mjs) - gains a `parts` verb"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - gains a Parts section"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - gains a Parts section"
 ---
 
 ## Objective
 
-`node scripts/computer.mjs parts [<id>...|--all|--joined]` builds ahead, and `docs/COMPUTER.md` explains parts, the versions file and the joined image.
+`node scripts/computer.mjs parts [<id>...|--all|--joined]` builds ahead, and `docs/plugins/COMPUTERS.md` explains parts, the versions file and the joined image.
 
 ## Files
 
 - `UPDATE: scripts/computer.mjs` - the verb, calling `parts.ts`.
-- `UPDATE: docs/COMPUTER.md` - a Parts section.
+- `UPDATE: docs/plugins/COMPUTERS.md` - a Parts section.
 
 ## Steps
 

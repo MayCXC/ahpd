@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L556-L599](../../../../packages/sdk/src/host.ts#L556-L599) - `emit` is the one sequence number, `dispatch` sends through the merger"
   - "[code://packages/sdk/src/types/host.ts#L366](../../../../packages/sdk/src/types/host.ts#L366) - `deltaWindowMs`"
   - "[code://packages/server/src/commands/options.ts#L417](../../../../packages/server/src/commands/options.ts#L417) - the flag, the file's schema and the range check"
-  - "[code://docs/DAEMON.md#L525](../../../../docs/DAEMON.md#L525) - the key, its default and its range"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the key, its default and its range"
 ---
 
 A streaming turn now sends one merged action per part per window instead of one per token.
@@ -27,7 +27,7 @@ What a client draws is the text it would have drawn anyway.
 - [`code://packages/sdk/src/types/host.ts#L366`](../../../../packages/sdk/src/types/host.ts#L366) - `deltaWindowMs?: number` on `HostOptions`.
 - [`code://packages/server/src/config.ts#L183`](../../../../packages/server/src/config.ts#L183), [`code://packages/server/src/commands/options.ts#L67`](../../../../packages/server/src/commands/options.ts#L67), [`code://packages/server/src/commands/options.ts#L417`](../../../../packages/server/src/commands/options.ts#L417), [`code://packages/server/src/commands/options.ts#L879`](../../../../packages/server/src/commands/options.ts#L879) - the daemon's key. It is a field in `serverFields`, so it is the flag `--delta-window-ms`, the key `config.json` may hold and a range check of 0 to 1000. `optionsFrom` leaves an absent value absent, so the host's own 75 is the one place the default is held.
 - [`code://packages/server/src/commands/run.ts#L593`](../../../../packages/server/src/commands/run.ts#L593) - the option reaches `createHost` when it is set.
-- [`code://docs/DAEMON.md#L525`](../../../../docs/DAEMON.md#L525) - what the key does, its default and its range.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - what the key does, its default and its range.
 
 ## Verified
 

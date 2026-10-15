@@ -7,8 +7,8 @@ refs:
   - code://test/computer-plugin.test.ts
   - code://test/fixtures/docker.mjs
   - code://.github/workflows/release.yml
-  - code://docs/PLUGINS.md
-  - code://docs/COMPUTER.md
+  - code://docs/plugins/PLUGINS.md
+  - code://docs/plugins/COMPUTERS.md
   - code://packages/sdk/src/types/index.ts
 ---
 
@@ -25,7 +25,7 @@ The scheme, the fixture that proved it and the operator's script are now one sto
 - `code://packages/computer/package.json` - the manifest, the `ahpd` options block and the peer range.
 - `code://packages/sdk/src/types/index.ts` - `HostTool` and `ToolCall` exported, which `PluginHost.registerTool` needed and the public surface lacked.
 - `code://.github/workflows/release.yml` - a sixth name in the tag check, the staging loop, the rehearsal loop and the printed list.
-- `code://docs/PLUGINS.md`, `code://docs/COMPUTER.md` - the worked example, and the package beside the script.
+- `code://docs/plugins/PLUGINS.md`, `code://docs/plugins/COMPUTERS.md` - the worked example, and the package beside the script.
 
 ## Verified
 

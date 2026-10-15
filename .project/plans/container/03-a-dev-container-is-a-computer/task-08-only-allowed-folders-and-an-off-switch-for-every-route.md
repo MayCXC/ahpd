@@ -57,7 +57,7 @@ Notes and open questions:
 - The allowlist is `devcontainer.folders`, a list of absolute paths, compared with `realpathSync` on both sides. Patterns were not used: `patternOf`/`allowedBy` are an image reference grammar and would read `/srv/app` as a Hub repository, and no task asks for wildcards in a folder.
 - A folder in the list that is not there resolves to itself, so an operator may list a path before the repository is cloned.
 - The task says the allowlist is "the operator's, per plugin; policy/01's `computer:` rows are the person's, per principal" and both apply. Nothing here changes policy/01's check, as the task asks.
-- `docs/CONTAINERS.md` and `docs/COMPUTER.md` are not touched: the decision's Consequences require them to say what the list is and what `false` turns off, but the task's Files name neither, and task 06 (the docs task) depends on 18. This is a gap to close with task 06.
+- `docs/plugins/CONTAINERS.md` and `docs/plugins/COMPUTERS.md` are not touched: the decision's Consequences require them to say what the list is and what `false` turns off, but the task's Files name neither, and task 06 (the docs task) depends on 18. This is a gap to close with task 06.
 - `pnpm exec tsc --noEmit`, `pnpm boundary` and `pnpm test` green after the change (2491 tests).
 
 ### The review of 2026-10-03

@@ -47,7 +47,7 @@ config plugins[] -> server loadPlugins -> agent-claude apply -> optionsOf (prese
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |

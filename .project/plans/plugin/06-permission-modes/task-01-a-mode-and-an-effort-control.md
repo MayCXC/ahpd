@@ -28,7 +28,7 @@ A facio backend advertises `permissionMode` and `effortLevel`, a session that pi
 - `UPDATE: packages/agent-cofold/src/agent.ts` - the two schema properties, and the effort in `modelOf`.
 - `UPDATE: packages/agent-cofold/src/session.ts` - the policy from the mode in `agentOf`.
 - `CREATE: test/agent-cofold-modes.test.ts` - the cases below.
-- `UPDATE: docs/PLUGINS.md` - what the two settings are and what each value means.
+- `UPDATE: docs/plugins/PLUGINS.md` - what the two settings are and what each value means.
 
 ## Steps
 
@@ -37,7 +37,7 @@ A facio backend advertises `permissionMode` and `effortLevel`, a session that pi
 3. In `packages/agent-cofold/src/agent.ts`, add `permissionMode` to the schema when `options.policy` is undefined, with the six values, the Claude labels and a one-line description of each in facio's words, and `effortLevel` when `options.adapter` is undefined, with `off`/`low`/`medium`/`high`.
 4. Read `settings.effortLevel` in `modelOf` and pass `params: { reasoning: { effort } }` with `features: { reasoning: true }` for a level that is not `off`, and nothing at all for `off` or an unknown value.
 5. In `packages/agent-cofold/src/session.ts`, build the policy in `agentOf` from `values.permissionMode` when the plugin passed none, with `inside` resolving under the session's working directory and `isEdit` true for a tool that declares `writes`.
-6. Name both settings in `docs/PLUGINS.md` under the session settings, with the six modes and four levels.
+6. Name both settings in `docs/plugins/PLUGINS.md` under the session settings, with the six modes and four levels.
 
 ## Validation
 

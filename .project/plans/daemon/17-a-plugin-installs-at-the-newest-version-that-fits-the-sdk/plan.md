@@ -35,7 +35,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `npm view @ahpd/web versions peerDependencies` - `0.0.0-stage` and `0.1.0`; `@ahpd/sdk: >=0.9`.
 - `rg -n "pinned\(" packages/server/src` - `refuseNonPlugins`, `installPlugins`, `updatePlugins` and `daemonsSdk`.
-- `rg -n "daemon's version" docs packages/server/README.md packages/server/src/commands/plugin.ts` - `docs/DAEMON.md` L55-L75, `packages/server/README.md` L34 and L67, `plugin update`'s description.
+- `rg -n "daemon's version" docs packages/server/README.md packages/server/src/commands/plugin.ts` - `docs/server/REFERENCE.md` L55-L75, `packages/server/README.md` L34 and L67, `plugin update`'s description.
 - `rg -ln "daemon's version" .project/decisions` - no accepted decision holds the plugin pin; daemon 09's plan defaulted it from `pinned`.
 
 ### Runtime path

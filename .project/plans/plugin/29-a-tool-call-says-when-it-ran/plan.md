@@ -38,7 +38,7 @@ harness transcript on disk -> plugin restores the turns -> the same _meta on eac
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's start and end are stamped by the plugin that runs it, as _meta ahpd.startedAt, ahpd.endedAt and ahpd.durationMs](../../../../docs/AHP.md) | Softov, 2026-10-03 |
+| [A tool call's start and end are stamped by the plugin that runs it, as _meta ahpd.startedAt, ahpd.endedAt and ahpd.durationMs](../../../../docs/sdk/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Plan |
 | --- | --- | --- |

@@ -4,7 +4,7 @@ status: todo
 depends: [task-03-the-code-arrives-by-clone.md, task-04-sessions-there-run-nested.md, task-07-a-profile-may-clone-from-origin.md]
 layer: "computer (by hand)"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the image with ahpd installed"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the image with ahpd installed"
 ---
 
 ## Objective

@@ -53,7 +53,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | The traffic includes a users directory, a signed-in person on a team, an automation with an owner and its run, and the daemon's root config with a plugin's options | the request, 2026-10-03, item 8 | 03 |
 | The test sends the protocol's param names | AHP 1.0.0 `CompletionsParams`, `SessionConfigCompletionsParams`, `CreateTerminalParams` | 03 |
 | The test lands green with today's defects in a known list, each line naming the plan that removes it, and fails on any defect not in the list or any listed one that no longer occurs | (defaulted: the fixes land one by one and each must be proven by its own line leaving) | 03 |
-| The deliberate departures are a list in the test, and each one is named in `docs/AHP.md` | the request, 2026-10-03, item 6 | 03 |
+| The deliberate departures are a list in the test, and each one is named in `docs/sdk/AHP.md` | the request, 2026-10-03, item 6 | 03 |
 | `moveChat` is in `CommandMap` and not served; it needs no `DEPARTURES` entry, which lists what ahpd sends or serves outside the maps | (defaulted: a method nobody calls is not traffic, and its absence is `UPSTREAM.md`'s backlog, not a departure) | 03 |
 | The strict schema is rebuilt when the installed package changes by host/44 p1 task 03, not here | the request, 2026-10-03: "the stale-schema guard is host/44 p1's (do not duplicate)" | - |
 | Every `_meta` key is either `ahpd.`-prefixed or one of the reference's own keys at the place the reference reads it; today's unprefixed ones are a pending list p4 empties | Softov, 2026-10-03, "Rename all + clients" | 04 |

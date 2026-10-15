@@ -14,7 +14,7 @@ A dev container now gets its npm-named backends the same way, so `"plugins": ["@
 - [`code://packages/server/src/install.ts`](../../../../packages/server/src/install.ts) - `installPlugins` and `removePlugins`, an `@ahpd/` name pinned to the daemon's version, and `plugins` edited by package name without the version or tag.
 - [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts) - `plugin install|remove`, with `--config-file`, `--no-enable` and `--keep`.
 - [`code://packages/computer/src/devcontainer.ts`](../../../../packages/computer/src/devcontainer.ts) - `pluginInstallLine`: installs only what the container's `~/.config/ahpd/node_modules` lacks, with the `host` command; the server install passes `--allow-scripts=node-pty`.
-- [`code://docs/CONTAINERS.md`](../../../../docs/CONTAINERS.md), [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md), the README and the plugin READMEs - one install command.
+- [`code://docs/plugins/CONTAINERS.md`](../../../../docs/plugins/CONTAINERS.md), [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md), the README and the plugin READMEs - one install command.
 
 ## Verified
 
@@ -25,7 +25,7 @@ A dev container now gets its npm-named backends the same way, so `"plugins": ["@
 
 ## Departures from the plan
 
-- Review fixes made after dsh's implementation: the version is stripped from `plugins`, the container uses the `host` command instead of `ahpd`, an installed package is skipped (task 02 step 4, which was missing), and the checkout-path example is back in `docs/CONTAINERS.md`.
+- Review fixes made after dsh's implementation: the version is stripped from `plugins`, the container uses the `host` command instead of `ahpd`, an installed package is skipped (task 02 step 4, which was missing), and the checkout-path example is back in `docs/plugins/CONTAINERS.md`.
 - No `--allow-scripts` on the configuration-directory install, because npm 12 refuses it with `--prefix`.
 
 ## Left for later

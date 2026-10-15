@@ -49,8 +49,8 @@ users file changes -> Users.watch -> refresh the four people channels
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
-| 2 | [Each people scheme has its own channel](../../../../docs/USERS.md) | Softov, 2026-10-11 |
-| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
+| 2 | [Each people scheme has its own channel](../../../../docs/sdk/USERS.md) | Softov, 2026-10-11 |
+| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
 
 | What | Source | Task |
 | --- | --- | --- |

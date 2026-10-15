@@ -19,7 +19,7 @@ An operator writes `"issuer": "github"` or an issuer URL, or passes `--issuer`, 
 - `UPDATE: packages/server/src/config.ts` - the `issuer` key, and `namedIssuer(value)` answering `github`, an https issuer, or nothing.
 - `UPDATE: packages/server/src/main.ts` - `Options.issuer`, the `--issuer` flag, the configuration merge, the record composed with the issuer, and the help text.
 - `UPDATE: test/daemon.test.ts` - `namedIssuer`, including the values it refuses.
-- `UPDATE: docs/DAEMON.md` - the `issuer` key and what each form means.
+- `UPDATE: docs/server/REFERENCE.md` - the `issuer` key and what each form means.
 
 ## Steps
 

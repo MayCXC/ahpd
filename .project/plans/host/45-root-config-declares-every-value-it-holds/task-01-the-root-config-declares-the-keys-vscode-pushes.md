@@ -19,7 +19,7 @@ Root state's `config.schema.properties` holds the 43 keys below beside the host'
 - `CREATE: packages/sdk/src/vscoderootconfig.ts` - `vscodeRootProperties`, one entry per key below, each with a comment naming its upstream file and line.
 - `UPDATE: packages/sdk/src/host/root.ts:121-142` - `ROOT_CONFIG_SCHEMA.properties` spreads `vscodeRootProperties` before the host's own keys, so the host's own win a clash (there is none today); task 04 takes `artifactToolsCompactPrompts` and `deferredTitleGeneration` out.
 - `UPDATE: packages/sdk/test/root-config.test.ts` - the schema cases.
-- `UPDATE: docs/AHP.md` - one paragraph: the root config declares what VS Code pushes, ahpd acts on `defaultShell` and the daemon's keys, and the rest are declared so a client can draw them.
+- `UPDATE: docs/sdk/AHP.md` - one paragraph: the root config declares what VS Code pushes, ahpd acts on `defaultShell` and the daemon's keys, and the rest are declared so a client can draw them.
 
 ## Steps
 
@@ -78,5 +78,5 @@ Not declared: `byokModelsEnabled`, `runtimePath`, `skillCharBudget` (scope `Loca
 - `root.ts`: `ROOT_CONFIG_SCHEMA.properties` spreads `vscodeRootProperties` first, then `defaultShell` and `workspaceTrust`. The hand-written `globalAutoApproveEnabled` that host/70 task 05 added is removed. This task's table gives that key an upstream line, and the plan's decision copies each property from the checkpoint as written. Upstream's property is therefore the one that goes out, and the host's comment about `trust.ts` reading it moved beside the module's entry. This is the move host/66 p1 made for `workspaceTrust`. It makes the parenthetical in the Files line ("the host's own win a clash (there is none today)") true again.
 - The `artifactTools` description keeps upstream's two em dashes. It is a copied literal that says for a client what VS Code's own host says for the same key, not prose written for Softov.
 - `root-config.test.ts`: a new case, "declares every key VS Code pushes, as VS Code declares it", lists all 43 keys. It reads `telemetryLevel`, `agentMerge.mergeMethod`, `showExternalSessions` and the resolved 20-pattern default. It builds its host with `served(false)`, so no daemon port is there and `config.values` is `{}`. The three key-list assertions now read `PUSHED_BY_VSCODE`, `HOST_OWN` and `DAEMON_OWN`, which makes task 04's removal a one-line change there. The `globalAutoApproveEnabled` case expects upstream's property.
-- `docs/AHP.md`: the paragraph under the `root/*` table. The `root/configChanged` row above it still says everything pushed is kept, which task 02 makes untrue and moves.
-- `docs/HOST.md` is not in this task's Files and was stale at this point. Its Root config section said the host's own schema is five keys and listed the two keys task 04 removes. Task 04 corrected it, and says so there.
+- `docs/sdk/AHP.md`: the paragraph under the `root/*` table. The `root/configChanged` row above it still says everything pushed is kept, which task 02 makes untrue and moves.
+- `docs/sdk/HOST.md` is not in this task's Files and was stale at this point. Its Root config section said the host's own schema is five keys and listed the two keys task 04 removes. Task 04 corrected it, and says so there.

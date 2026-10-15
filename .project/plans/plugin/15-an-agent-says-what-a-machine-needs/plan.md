@@ -25,7 +25,7 @@ refs:
   - "[code://packages/agent-claude/src/claude.ts#L373-L398](../../../../packages/agent-claude/src/claude.ts#L373-L398) - Claude's `machine()`, the pattern cofold copies"
   - "[code://packages/agent-cofold/src/agent.ts#L553-L572](../../../../packages/agent-cofold/src/agent.ts#L553-L572) - cofold's `machine()`, which mounts at the host's own path"
   - "[code://packages/sdk/src/host.ts#L8676-L8692](../../../../packages/sdk/src/host.ts#L8676-L8692) - `createSession`: the policy check, then `placedIn`"
-  - "[code://docs/COMPUTER.md#L171-L224](../../../../docs/COMPUTER.md#L171-L224) - Claude in a machine and profiles"
+  - "[code://docs/plugins/COMPUTERS.md#L171-L224](../../../../docs/plugins/COMPUTERS.md#L171-L224) - Claude in a machine and profiles"
   - "git://7552054:.project/ideas/an-agent-says-what-a-machine-needs.md - the idea, with what Softov settled"
 ---
 
@@ -62,7 +62,7 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 | Decision | Source | Task |
 | --- | --- | --- |
 | An agent declares what a machine needs through a machine() method | Softov, 2026-09-26 | 01, 05, 06 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | Softov, 2026-09-26 | 02, 03, 04 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-09-26 | 02, 03, 04 |
 | [Cofold's configuration reaches a machine at a fixed target, named by a path variable](../../../decisions/cofold-config-reaches-a-machine-by-a-path-variable.md) | Softov, 2026-09-26 and 2026-10-03 | 06 |
 | A session on a machine not prepared for its agent fails at creation | Softov, 2026-09-26 | 11 |
 | [A shared target is refused at create only when what lands there differs](../../container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md) | Softov, 2026-09-26 and 2026-10-03 | 09 |
@@ -128,4 +128,4 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 - [x] A cofold session in a machine whose image runs as another user finds its configuration at `/ahpd/cofold/cofold/config.json`.
 - [x] `createSession`, a pre-turn restart and an automation start onto a machine not prepared for the agent fail at creation with the sentence, and a machine refused by policy answers the policy's sentence instead.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/COMPUTER.md`, `docs/PLUGINS.md`, `plans/index.md` updated.
+- [x] `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md`, `plans/index.md` updated.

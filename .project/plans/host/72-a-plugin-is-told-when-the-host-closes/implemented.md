@@ -11,8 +11,8 @@ refs:
   - "[code://packages/computer/src/devcontainer.ts#L1168](../../../../packages/computer/src/devcontainer.ts#L1168) - the launcher's `close`, which ends the nested hosts"
   - "[code://packages/computer/test/support/closing.ts](../../../../packages/computer/test/support/closing.ts) - the cleanup every computer test closes through"
   - "[code://packages/sdk/test/host-close.test.ts](../../../../packages/sdk/test/host-close.test.ts) - the order `close` runs in, and the leave it waits for"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - a plugin registers what stops with the host"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - what a machine does when ahpd stops"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - a plugin registers what stops with the host"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - what a machine does when ahpd stops"
 ---
 
 A host that closes now tells every plugin, and a plugin stops what it started.
@@ -33,7 +33,7 @@ The computer tests close every host, load and launcher they make before they rem
 - [`code://packages/computer/src/devcontainer.ts#L1168`](../../../../packages/computer/src/devcontainer.ts#L1168) - the launcher's `close` ends every nested host child and waits for each to go.
 - [`code://packages/computer/test/support/closing.ts`](../../../../packages/computer/test/support/closing.ts) - `keeping(load, host?)`, `keepingPort(port)` and `closeAll()`. `closeAll` closes every host, then every hostless load through its own closers, then every launcher, once each.
 - Eleven computer test files register through `keeping` and `await closeAll()` in an async `afterEach`, before they remove their folders. `computer-disposable.test.ts` no longer retries its removal: `maxRetries` and `retryDelay` are gone, so a writer that is still alive fails the test instead of being hidden.
-- [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) - a plugin registers what stops with the host, written beside the other `register*` functions. [`code://docs/COMPUTER.md`](../../../../docs/COMPUTER.md) - what the computer plugin stops. It says that stopping the daemon ends the waiting rather than the machines.
+- [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) - a plugin registers what stops with the host, written beside the other `register*` functions. [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md) - what the computer plugin stops. It says that stopping the daemon ends the waiting rather than the machines.
 
 ## Verified
 

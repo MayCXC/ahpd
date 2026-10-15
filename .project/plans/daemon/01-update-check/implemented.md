@@ -11,7 +11,7 @@ date: 2026-09-18
 - `packages/server/src/version.ts`: `manifest()` answering `{ name, version }`; `version()` wraps it.
 - `packages/server/src/main.ts`: `--no-update-check` and its usage text; the key under the flag; the daemon's startup block prints `updateLine()` and schedules `refreshUpdate` when stale and every six hours, `unref()`ed; `start` and `status` print the line from the file.
 - `test/update.test.ts`: 41 cases, no network, a `node:http` server and a temporary `XDG_CONFIG_HOME`; two of them run `status` as a process, since `main.ts` cannot be imported.
-- `docs/DAEMON.md`, `README.md`: the flag, the key, `NO_UPDATE_NOTIFIER`, `CI`, `npm_config_registry`, the file, the six hours.
+- `docs/server/REFERENCE.md`, `README.md`: the flag, the key, `NO_UPDATE_NOTIFIER`, `CI`, `npm_config_registry`, the file, the six hours.
 
 ## What was verified
 

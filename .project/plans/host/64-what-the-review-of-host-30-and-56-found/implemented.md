@@ -12,7 +12,7 @@ refs:
   - "[code://packages/server/src/main.ts](../../../../packages/server/src/main.ts) - the check mode"
   - "[code://packages/agent-claude/src/options.ts](../../../../packages/agent-claude/src/options.ts) - `storedSandbox`"
   - "[code://packages/agent-claude/src/session.ts](../../../../packages/agent-claude/src/session.ts) - the values a session runs on"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - what a restart checks"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - what a restart checks"
 ---
 
 Every bug the 2026-10-06 review of host/30, host/56, daemon/13 and claude/10 confirmed is fixed, each with a case that failed before the fix. A running session is never announced removed by a refresh, a deleted one leaves the held catalogue, a request cannot skip its gate with a channel of the wrong type, a session's turns are sent only on its own channel, an unforced restart ends no turn and leaves a daemon running when its recorded line cannot run, and a session stored with the sandbox on keeps it whatever its preset says.
@@ -28,7 +28,7 @@ Every bug the 2026-10-06 review of host/30, host/56, daemon/13 and claude/10 con
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `optionsOfLine(argv, strict)` reads the recorded line with `permissive: false` in check mode, and the check is part of the line's read, so a line this code does not take refuses the restart with `Its line cannot run now, so it was not stopped:`.
 - [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts) - the check mode itself, reached by `AHPD_CHECK_LINE=1` rather than by a word, since the line it parses was written by another ahpd.
 - [`code://packages/agent-claude/src/options.ts`](../../../../packages/agent-claude/src/options.ts), [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - `storedSandbox(settings)` is spread over the preset where a session's values are built: a stored `sandboxEnabled` of `'on'` or `true` turns the CLI's sandbox on, and `'off'`, `'default'`, `false` or none leaves the preset in charge.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - what a restart checks before anything goes down, what it costs, and that a successor inherits the old daemon's environment and working directory.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - what a restart checks before anything goes down, what it costs, and that a successor inherits the old daemon's environment and working directory.
 
 ## Verified
 

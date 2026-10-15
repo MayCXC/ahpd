@@ -64,7 +64,7 @@ running -> state.config.schema.computer                -> [new] sessionMutable: 
 
 | Decision | Task |
 | --- | --- |
-| [A session that has not started takes a fixed key by restarting](../../../../docs/SESSIONS.md) | 01 |
+| [A session that has not started takes a fixed key by restarting](../../../../docs/sdk/SESSIONS.md) | 01 |
 | A fixed key is shown read-only once the session runs | 02 |
 
 | What | Source | Task |

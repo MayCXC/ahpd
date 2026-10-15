@@ -55,7 +55,7 @@ a command -> the gate -> capabilityFor(method, params) -> file:read or computer:
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A grant is a subject and a verb](../../../../docs/USERS.md) | The user, 2026-09-23: "I cannot have something like automation:write, automation:read, *:read, *:write?", then "verbs after", and "follow conventions". |
+| 1 | [A grant is a subject and a verb](../../../../docs/sdk/USERS.md) | The user, 2026-09-23: "I cannot have something like automation:write, automation:read, *:read, *:write?", then "verbs after", and "follow conventions". |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ a command -> the gate -> capabilityFor(method, params) -> file:read or computer:
 - **Data flow** - a role holds a list of `<subject>:<verb>` strings. `Principal.can` matches a needed grant exactly, or through `*:*`, `*:<verb>` or `<subject>:*`. The gate asks by subject and verb, which `NEEDS` says per method and `capabilityFor` turns into a scheme for resource methods.
 - **Event flow** - unchanged. A refusal is still `-32007` for nobody and `-32009` for a role, and the message names the grant that was missing.
 - **State flow** - unchanged. Roles are read from the file per question, as `host/10` made them.
-- **Layer responsibilities** - packages/sdk: the grammar, the matcher, the built-ins, the file reader's grant check, and the three maps in the host · packages/server: the `guest` default and the resolved grants in `user list` · docs: `docs/USERS.md` · test: the matrix and the wildcards.
+- **Layer responsibilities** - packages/sdk: the grammar, the matcher, the built-ins, the file reader's grant check, and the three maps in the host · packages/server: the `guest` default and the resolved grants in `user list` · docs: `docs/sdk/USERS.md` · test: the matrix and the wildcards.
 - **Source-of-truth files** - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
 
 ## Tasks
@@ -104,4 +104,4 @@ a command -> the gate -> capabilityFor(method, params) -> file:read or computer:
 - [x] `member` keeps everything it had, in the new spelling.
 - [x] `*:read`, `session:*` and `*:*` each do what they say, and `file:write` still confers no scheme.
 - [x] An unknown role is refused by `user add`, and `user list` prints resolved grants.
-- [x] `plans/index.md`, `docs/USERS.md` and `HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md` and `HANDOFF.md` updated.

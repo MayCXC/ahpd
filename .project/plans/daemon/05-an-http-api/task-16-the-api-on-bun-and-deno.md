@@ -12,7 +12,7 @@ refs:
   - "[code://packages/sdk/src/listen.ts#L333-L373](../../../../packages/sdk/src/listen.ts#L333-L373) - `serveRequests`, a handler on a port of its own on each runtime"
   - "[code://packages/server/src/http.ts#L87-L191](../../../../packages/server/src/http.ts#L87-L191) - `apiHandler`, `withoutApi`, `guarded`, `plainRequests`, `listenApi` and `pathOf`"
   - "[code://packages/server/src/commands/run.ts#L468](../../../../packages/server/src/commands/run.ts#L468) - the handler passed on every runtime"
-  - "[code://docs/DAEMON.md#L389-L390](../../../../docs/DAEMON.md#L389-L390) - the docs that say the API is served on all three"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the docs that say the API is served on all three"
 ---
 
 ## Objective
@@ -28,7 +28,7 @@ A daemon with `http` on starts and serves `/api` on Node, Bun and Deno, on its o
 - `UPDATE: packages/sdk/src/listen.ts:284-293` - on Node the plain server carries the handler through `toNodeListener`.
 - `UPDATE: packages/server/src/http.ts` - `apiHandler` and `withoutApi` are `Request` handlers; `pathOf` reads `new URL(request.url).pathname`; `listenApi` serves the handler on its own port through `listen`'s runtime paths, not `node:http` directly.
 - `UPDATE: packages/server/src/commands/run.ts:182-184, 474-476` - no refusal, and the handler is passed on every runtime.
-- `UPDATE: docs/DAEMON.md:389-391` - the API is served on all three.
+- `UPDATE: docs/server/REFERENCE.md:389-391` - the API is served on all three.
 - `UPDATE: packages/server/test/server-http.test.ts` - the cases call the handlers with a `Request` where no socket is needed.
 
 ## Steps
@@ -37,7 +37,7 @@ A daemon with `http` on starts and serves `/api` on Node, Bun and Deno, on its o
 2. Make `ListenOptions.request` the fetch shape and route plain requests to it on all three runtimes, keeping the upgrade and its sign-in first.
 3. Rebase task 07's guard onto the `Request` shape: on Bun and Deno the runtime builds the `Request`, so a bad `Host` never reaches the handler; on Node the adapter answers it 400.
 4. `http.port`'s own listener goes through the same runtime paths, so it is served on Bun and Deno too.
-5. Run the daemon with `http: true` on each runtime from the built output, as `docs/DAEMON.md` says Deno is run.
+5. Run the daemon with `http: true` on each runtime from the built output, as `docs/server/REFERENCE.md` says Deno is run.
 
 ## Validation
 
@@ -54,7 +54,7 @@ On Bun and Deno a request that is not a WebSocket upgrade goes to `options.reque
 `@ahpd/sdk` names `@cofold/remote` as an optional dependency and imports it only on Node for a listener that serves plain requests, the way it imports `ws`.
 `serveRequests` in `packages/sdk/src/listen.ts` serves a `Request` handler on a port of its own on all three runtimes, and `listenApi` uses it for `http.port`.
 `apiHandler` and `withoutApi` are `Request` handlers, `foreign` reads `Host` and `Origin` from `Headers`, `pathOf` reads `new URL(request.url).pathname`, and `authorizeOverHttp` reads the bearer with `headers.get`.
-`run.ts` no longer refuses `http` off Node and passes the handler on every runtime, and `docs/DAEMON.md` says the API is served on all three and how.
+`run.ts` no longer refuses `http` off Node and passes the handler on every runtime, and `docs/server/REFERENCE.md` says the API is served on all three and how.
 Two cases in `server-http.test.ts` call the handlers with a `Request` and no socket: `apiHandler` answers `GET /api/user/list` for the deployment token and 401 without it, and `withoutApi` answers 404 for `/api/x` and 426 for `/`; both failed first with "Cannot read properties of undefined (reading 'headersSent')".
 By hand from `packages/server/dist/main.js` with `http: true`, a connection token and a users file, on `node`, `bun` and `deno run -A`: the daemon started, `curl` with the token on `/api/status` answered 200 and 401 without it, `ahpd --remote <url> --token <token> user list` listed the person, `Host: a b` and `%E0%A4%A` answered 400, a foreign `Host` 403, and the WebSocket still opened.
 The same with `http: { "port": <other> }` on all three: the API answered on its own port, and the daemon's port answered 404 for `/api/status` and 426 for `/`.

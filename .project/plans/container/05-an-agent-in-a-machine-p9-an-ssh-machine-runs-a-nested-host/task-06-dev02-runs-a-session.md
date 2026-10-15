@@ -4,7 +4,7 @@ status: todo
 depends: [task-04-the-ssh-fixture-and-tests.md]
 layer: "computer (by hand)"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - how ahpd and a plugin are installed"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - how ahpd and a plugin are installed"
 ---
 
 ## Objective

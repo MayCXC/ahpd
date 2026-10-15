@@ -17,7 +17,7 @@ The host archives an inactive session whose pull requests are merged, and later 
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - `shelve` keeps the tree of a session that the host archived unless the tree is clean and its branch is pushed.
 - [`code://packages/sdk/src/repo/worktrees.ts`](../../../../packages/sdk/src/repo/worktrees.ts) - `pushed` compares the branch with its upstream.
 - [`code://packages/sdk/src/repo/github.ts`](../../../../packages/sdk/src/repo/github.ts) - `byUrl` reads one pull request by its URL, through the API or `gh`.
-- The daemon key `pullRequestLookup`, `url` or `branch`, applies with no restart. `docs/HOST.md` lists it.
+- The daemon key `pullRequestLookup`, `url` or `branch`, applies with no restart. `docs/sdk/HOST.md` lists it.
 
 ## Verified
 

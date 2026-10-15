@@ -10,8 +10,8 @@ refs:
   - code://packages/server/src/main.ts
   - code://test/users-issuer.test.ts
   - code://test/daemon.test.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
   - code://.project/research/a-host-level-protected-resource.md
 ---
 
@@ -26,7 +26,7 @@ A deployment that mints secrets keeps working exactly as it did, because the loc
 - `code://packages/sdk/src/users.ts` - `FileUserOptions.issuer`, the branch in `verify` that asks it only when no local hash matched, and `signInRecord(resource, issuer?)` carrying `authorization_servers` and `scopes_supported`.
 - `code://packages/server/src/config.ts` - the `issuer` key and `namedIssuer`, which accepts `github` or an https URL and nothing else.
 - `code://packages/server/src/main.ts` - `--issuer`, the configuration merge, the issuer built once beside the directory, the record composed with it, and a startup line that names it.
-- `code://docs/USERS.md`, `code://docs/DAEMON.md` - the issuer, the record it produces, the key and the flag.
+- `code://docs/sdk/USERS.md`, `code://docs/server/REFERENCE.md` - the issuer, the record it produces, the key and the flag.
 - `code://.project/research/a-host-level-protected-resource.md` - the protocol gap behind advertising a host-wide login on every agent.
 
 ## Verified

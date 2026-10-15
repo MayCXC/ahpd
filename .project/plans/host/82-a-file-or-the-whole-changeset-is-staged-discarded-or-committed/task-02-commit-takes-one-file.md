@@ -18,7 +18,7 @@ On one file it commits that path only, and other staged files stay staged.
 - `UPDATE: packages/sdk/src/changes.ts:227-256` - `scopes: ['changeset', 'resource']`; the confirmation names the message, then what the whole changeset takes.
 - `UPDATE: packages/sdk/src/changes.ts:1328-1364` - with a resource target, commit that path only.
 - `UPDATE: packages/sdk/test/commit.test.ts` - one file, with another file staged and a third unstaged.
-- `UPDATE: docs/AHP.md:697-710` - commit takes a file or the whole changeset.
+- `UPDATE: docs/sdk/AHP.md:697-710` - commit takes a file or the whole changeset.
 
 ## Steps
 

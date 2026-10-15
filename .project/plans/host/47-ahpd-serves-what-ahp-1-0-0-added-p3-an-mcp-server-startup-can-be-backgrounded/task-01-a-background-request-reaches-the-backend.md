@@ -11,7 +11,7 @@ refs:
   - "[code://packages/sdk/test/nested-proxy.test.ts](../../../../packages/sdk/test/nested-proxy.test.ts) - an inner host behind a nested one"
   - "[code://packages/sdk/test/users-gate.test.ts](../../../../packages/sdk/test/users-gate.test.ts) - the dispatch gate's cases"
   - "[code://packages/agent-claude/test/customizations.test.ts](../../../../packages/agent-claude/test/customizations.test.ts) - the Claude backend's MCP rows"
-  - "[code://docs/AHP.md#L202](../../../../docs/AHP.md#L202) - the `session/mcpServerStartRequested` row the new one goes under"
+  - "[code://docs/sdk/AHP.md#L202](../../../../docs/sdk/AHP.md#L202) - the `session/mcpServerStartRequested` row the new one goes under"
 ---
 
 ## Objective
@@ -24,7 +24,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/chatactions.ts:890-899` - a `session/mcpServerBackgroundRequested` case: `void session.backgroundMcpServerStartup?.(id)`, with no `no(...)` on `false` or absence.
 - `UPDATE: packages/sdk/src/nested.ts:498-505` - `backgroundMcpServerStartup` delivers the action to the inner host and answers `true`.
 - `UPDATE: packages/sdk/test/host-harness.test.ts`, `packages/sdk/test/nested-proxy.test.ts`, `packages/sdk/test/users-gate.test.ts`, `packages/agent-claude/test/customizations.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - a `session/mcpServerBackgroundRequested` row: client, served, a no-op on every backend but a nested host, as on VS Code's Claude backend.
+- `UPDATE: docs/sdk/AHP.md` - a `session/mcpServerBackgroundRequested` row: client, served, a no-op on every backend but a nested host, as on VS Code's Claude backend.
 
 ## Steps
 
@@ -48,7 +48,7 @@ Implemented as the steps say. The action is served: the host hands it to the ses
 - `backgroundMcpServerStartup?(id: string): Promise<boolean>` on `Session` in `packages/sdk/src/types/session.ts`, after `stopMcpServer`, documented as VS Code's own name for the seam and as optional rather than refused.
 - `packages/sdk/src/host/chatactions.ts`: a `session/mcpServerBackgroundRequested` case beside the start and stop cases, `void session.backgroundMcpServerStartup?.(String(action.id ?? ''))`, with no `no(...)` on `false` and none on absence. Nothing is emitted from here, so a backend that cannot background leaves every other client's view of the server alone.
 - `packages/sdk/src/nested.ts`: `backgroundMcpServerStartup` delivers `session/mcpServerBackgroundRequested` to the inner host and answers `true`. It does not wait for the inner answer. Whether the server was blocking is the inner session's own state, and the answer is the same action either way.
-- `docs/AHP.md`: the `session/*` heading is 29 of 29, and the new row sits under `session/mcpServerStopRequested`. The row is `client`, served, and names the Claude backend as the reason it is a no-op there.
+- `docs/sdk/AHP.md`: the `session/*` heading is 29 of 29, and the new row sits under `session/mcpServerStopRequested`. The row is `client`, served, and names the Claude backend as the reason it is a no-op there.
 
 Tests written:
 

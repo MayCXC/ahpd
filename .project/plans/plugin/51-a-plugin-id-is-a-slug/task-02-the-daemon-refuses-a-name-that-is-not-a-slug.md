@@ -23,8 +23,8 @@ A provisional id is not checked.
 - `UPDATE: packages/server/test/fixtures/plugin-route/index.ts:8-16` - the fixture exports `plugin-route`.
 - `UPDATE: packages/server/test/plugin-route.test.ts:32-217` - the prefix is `/plugins/plugin-route`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:863` - `Plugin.name` says that the id is a slug.
-- `UPDATE: docs/PLUGINS.md:39-47` - the id section says that a `name` that is not a slug is refused.
-- `UPDATE: docs/PLUGINS.md:190-204` - the route example uses a slug id, such as `/plugins/webhooks/`.
+- `UPDATE: docs/plugins/PLUGINS.md:39-47` - the id section says that a `name` that is not a slug is refused.
+- `UPDATE: docs/plugins/PLUGINS.md:190-204` - the route example uses a slug id, such as `/plugins/webhooks/`.
 
 ## Steps
 
@@ -34,7 +34,7 @@ A provisional id is not checked.
 4. In `loadOne`, read the module's `name` after `checkShape`.
 5. When `name` is a non-empty string and `isRecordSlug` refuses it, return the problem line and do not call `apply`.
 6. Change the route fixture to `plugin-route`, and its test to `/plugins/plugin-route`.
-7. Change the doc comment of `Plugin.name` and the id section of `docs/PLUGINS.md`.
+7. Change the doc comment of `Plugin.name` and the id section of `docs/plugins/PLUGINS.md`.
 8. Run the gates.
 
 ## Validation

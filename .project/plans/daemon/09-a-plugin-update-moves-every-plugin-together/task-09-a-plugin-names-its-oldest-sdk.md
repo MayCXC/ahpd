@@ -23,5 +23,5 @@ The six plugins' `peerDependencies["@ahpd/sdk"]` is `">=0.8"` instead of `"^0.8"
 ## Resume
 
 Implemented 2026-09-29, in the `fixes-0-8-1` worktree: `peerDependencies["@ahpd/sdk"]` is `">=0.8"` in `agent-acp`, `agent-claude`, `agent-cofold`, `agent-pi`, `computer` and `tunnel-devtunnel`. `pnpm install --no-frozen-lockfile` answered "Already up to date" and left `pnpm-lock.yaml` unchanged; it records no workspace peer ranges.
-Failing first: the six `declares @ahpd/<name> as taking any sdk from 0.8 on` cases in `packages/server/test/plugin-compat.test.ts` read `^0.8`. The loader cases beside them (`>=0.8` loads on 0.9; `>=0.9` is refused on 0.8 with `plugin oldest-sdk needs @ahpd/sdk >=0.9, this is 0.8.0`) passed before and after: `compat.ts` already reads `>=`. `docs/PLUGINS.md` still shows `"^0.8"` in its example manifest; that is task 04's.
+Failing first: the six `declares @ahpd/<name> as taking any sdk from 0.8 on` cases in `packages/server/test/plugin-compat.test.ts` read `^0.8`. The loader cases beside them (`>=0.8` loads on 0.9; `>=0.9` is refused on 0.8 with `plugin oldest-sdk needs @ahpd/sdk >=0.9, this is 0.8.0`) passed before and after: `compat.ts` already reads `>=`. `docs/plugins/PLUGINS.md` still shows `"^0.8"` in its example manifest; that is task 04's.
 

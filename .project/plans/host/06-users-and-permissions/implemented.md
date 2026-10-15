@@ -12,7 +12,7 @@ refs:
   - code://test/users.test.ts
   - code://test/users-host.test.ts
   - code://test/users-gate.test.ts
-  - code://docs/USERS.md
+  - code://docs/sdk/USERS.md
 ---
 
 A person signs in to a running `ahpd` through the protocol's own `authenticate`, against a resource the host advertises for itself, and the roles on their record decide what they may do.
@@ -25,7 +25,7 @@ A daemon with no `users` configured advertises nothing new, refuses nothing, and
 - `code://packages/sdk/src/types/host.ts` - `HostOptions.users`, and `Connection.principal`/`principalUntil` beside `tokens`.
 - `code://packages/sdk/src/host.ts` - `resourcesOf` appends the login record, `lent` skips it, `authenticate` verifies it, `expire` detaches it, the gate at the dispatch boundary with `NEEDS`, `UNGATED` and `capabilityFor`, and the second gate at the top of `applyDispatch` with `dispatchNeeds` for the half that arrives as a notification.
 - `code://packages/server/src/config.ts`, `code://packages/server/src/main.ts` - the `users` config key, the `--users` flag, the `user` verb with `add`, `rm`, `list` and `token`, and the port wired into the host literal.
-- `code://docs/USERS.md` - the two secrets, the three shapes, the roles and what a client is told; `docs/AHP.md`, `docs/LIBRARY.md` and `README.md` moved with it.
+- `code://docs/sdk/USERS.md` - the two secrets, the three shapes, the roles and what a client is told; `docs/sdk/AHP.md`, `docs/sdk/LIBRARY.md` and `README.md` moved with it.
 
 ## Verified
 
@@ -51,7 +51,7 @@ A daemon with no `users` configured advertises nothing new, refuses nothing, and
 
 The wire did not move, and that was the finding. Splitting the echo per connection fails twice over: `test/conformance.test.ts` pins one `root/configChanged` echo per dispatch, and `serverSeq` and the replay buffer are one per host, so a per-connection action would be replayed to whoever reconnects next. Everything therefore still lands in `rootConfig` and is echoed whole; what moved is who acts on a key. `rootState` drops the `PER_CONNECTION` keys from the host's half of `values` and puts the connection's own over the top, so a connection reads back its own or nothing.
 
-What is left is cosmetic and recorded in `docs/USERS.md`: a live echo carries another person's shell past a watching client. A snapshot corrects it, and nothing on the host opens a shell with the shared copy.
+What is left is cosmetic and recorded in `docs/sdk/USERS.md`: a live echo carries another person's shell past a watching client. A snapshot corrects it, and nothing on the host opens a shell with the shared copy.
 
 ## Left for later
 

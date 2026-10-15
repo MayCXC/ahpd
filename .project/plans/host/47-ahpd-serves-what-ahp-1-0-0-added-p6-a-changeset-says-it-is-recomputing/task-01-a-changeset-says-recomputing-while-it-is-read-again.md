@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/host/changesets.ts#L219-L257](../../../../packages/sdk/src/host/changesets.ts#L219-L257) - `told`"
   - "[code://packages/sdk/src/host/changesets.ts#L268-L282](../../../../packages/sdk/src/host/changesets.ts#L268-L282) - `contentMoved`, where the mark goes"
   - "[code://packages/sdk/test/changes-refresh.test.ts#L168-L183](../../../../packages/sdk/test/changes-refresh.test.ts#L168-L183) - `re-reads a changeset when git is changed outside the host`, the case the new ones copy"
-  - "[code://docs/AHP.md#L266](../../../../docs/AHP.md#L266) - the `changeset/statusChanged` row"
+  - "[code://docs/sdk/AHP.md#L266](../../../../docs/sdk/AHP.md#L266) - the `changeset/statusChanged` row"
 ---
 
 ## Objective
@@ -19,7 +19,7 @@ When `contentMoved` re-reads a changeset whose watchers were last told `ready` o
 
 - `UPDATE: packages/sdk/src/host/changesets.ts:268-282` - in `contentMoved`, before `options.changes?.state(...)`: when `shown.get(channel)` exists and its status is neither `computing` nor `recomputing`, dispatch `{ type: 'changeset/statusChanged', status: 'recomputing' }` and record `recomputing` in `shown`, remembering the previous status; after the read, `told` as today, or, when the read gave nothing or threw, dispatch the previous status and record it.
 - `UPDATE: packages/sdk/test/changes-refresh.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md:266` - the row says `recomputing` is sent before a re-read and `ready` after.
+- `UPDATE: docs/sdk/AHP.md:266` - the row says `recomputing` is sent before a re-read and `ready` after.
 
 ## Steps
 
@@ -37,5 +37,5 @@ When `contentMoved` re-reads a changeset whose watchers were last told `ready` o
 - The read then goes through `told` as before, so `ready` and any file action follow.
 - A read that answers nothing, or throws, dispatches the status from before the mark and records it again, in a `finally`. The failure goes on to `refreshWatched`'s catch.
 - Four cases in `packages/sdk/test/changes-refresh.test.ts`: an unchanged re-read, one that finds a file, one whose read throws, and a channel nobody watches.
-- The `changeset/statusChanged` row in `docs/AHP.md` says when each status is sent.
+- The `changeset/statusChanged` row in `docs/sdk/AHP.md` says when each status is sent.
 - Found that the plan did not know: one expectation in `packages/sdk/test/operations.test.ts` had to change. That case now sees `recomputing` then `computing`, because the operation path also re-reads through `contentMoved`.

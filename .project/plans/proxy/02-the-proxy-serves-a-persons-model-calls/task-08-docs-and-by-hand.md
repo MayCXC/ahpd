@@ -4,21 +4,21 @@ status: done
 depends: [task-05-a-call-ends-when-either-side-does.md, task-06-policy-and-usage.md, task-07-the-models-list.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the HTTP API section, where `/v1` is named beside `/api`"
-  - "[code://docs/POLICY.md](../../../../docs/POLICY.md) - \"What is checked, and where\", which gains the proxy call"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the HTTP API section, where `/v1` is named beside `/api`"
+  - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - \"What is checked, and where\", which gains the proxy call"
   - "[code://.project/plans/proxy/00-proxy.md](../00-proxy.md) - the domain reference, whose runtime path and gaps change"
 ---
 
 ## Objective
 
-`docs/PROXY.md` says how to point a tool at the proxy, what it routes by and what a refusal means, and Softov's own config answers a real call through `openrouter` and through his local LM Studio.
+`docs/server/PROXY.md` says how to point a tool at the proxy, what it routes by and what a refusal means, and Softov's own config answers a real call through `openrouter` and through his local LM Studio.
 
 ## Files
 
-- `CREATE: docs/PROXY.md` - base URLs per dialect, the credential, `X-AHP-Scope`, routing, the refusals, `/v1/models`, what is recorded, `proxy.sessionCalls`, what is not done yet. It says a session whose harness calls the proxy is recorded twice, once by the session meter (`source: 'agent'`) and once here (`source: 'proxy'`), linked by session and turn, and that `"proxy": { "sessionCalls": "skip" }` turns the proxy's half off.
-- `UPDATE: docs/DAEMON.md` - `/v1` beside `/api`, one line and a link.
-- `UPDATE: docs/POLICY.md` - a row for a proxy call in "What is checked, and where".
-- `UPDATE: docs/USERS.md` - the `proxy` subject, `proxy:read` and `proxy:write`, and that `member` holds both.
+- `CREATE: docs/server/PROXY.md` - base URLs per dialect, the credential, `X-AHP-Scope`, routing, the refusals, `/v1/models`, what is recorded, `proxy.sessionCalls`, what is not done yet. It says a session whose harness calls the proxy is recorded twice, once by the session meter (`source: 'agent'`) and once here (`source: 'proxy'`), linked by session and turn, and that `"proxy": { "sessionCalls": "skip" }` turns the proxy's half off.
+- `UPDATE: docs/server/REFERENCE.md` - `/v1` beside `/api`, one line and a link.
+- `UPDATE: docs/sdk/POLICY.md` - a row for a proxy call in "What is checked, and where".
+- `UPDATE: docs/sdk/USERS.md` - the `proxy` subject, `proxy:read` and `proxy:write`, and that `member` holds both.
 - `UPDATE: .project/plans/proxy/00-proxy.md` - the listener in the runtime path, tests and gaps.
 
 ## Steps
@@ -32,12 +32,12 @@ refs:
 
 ## Validation
 
-- Every name, path and refusal sentence in `docs/PROXY.md` matches the code.
+- Every name, path and refusal sentence in `docs/server/PROXY.md` matches the code.
 - Steps 2 to 6 answered as written, recorded in this task's Resume with the date.
 
 ## Resume
 
 Implemented 2026-10-06, by-hand steps left for Softov.
-`docs/PROXY.md` written; `docs/DAEMON.md`, `docs/POLICY.md`, `docs/USERS.md` and `00-proxy.md` updated.
+`docs/server/PROXY.md` written; `docs/server/REFERENCE.md`, `docs/sdk/POLICY.md`, `docs/sdk/USERS.md` and `00-proxy.md` updated.
 Steps 1 to 6 were not run: they need Softov's daemon restarted in his terminal with his keys.
 Until they are, the plan's first three checklist lines are open.

@@ -14,7 +14,7 @@ A session records its owner across restarts (`user:<id>`, or `root:<host>` for a
 - `SessionStore.owner` / `setOwner`, kept in the session file; `HostOptions.hostName`, set by the daemon from the machine's hostname.
 - In `host.ts`: the owner written when a session opens, a session a tool opens keeps its parent's owner, the sender held per turn (a queued message's sender follows it to the turn it becomes), and a scope change resolved against the session's owner.
 - `Automation.owner`, `AutomationRun.owner` and `StartSession.owner`, kept by both automation stores; an automation's first turn is sent by its owner.
-- `turn_start` and `turn_end` carry `sender` when the host knows it; `docs/PLUGINS.md` says so.
+- `turn_start` and `turn_end` carry `sender` when the host knows it; `docs/plugins/PLUGINS.md` says so.
 
 ## Verified
 

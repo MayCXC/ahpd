@@ -9,7 +9,7 @@ refs:
   - code://packages/agent-cofold/src/config.ts#L111-L115 - `splitModel`, the rule a listed id satisfies
   - code://packages/agent-claude/src/probe.ts#L50-L120 - the backend whose probe already offers every model
   - https://openrouter.ai/docs/api-reference/list-available-models - `GET /api/v1/models` and its `id`/`name`
-  - code://docs/PLUGINS.md - why a listed id carries the provider prefix
+  - code://docs/plugins/PLUGINS.md - why a listed id carries the provider prefix
   - code://test/agent-cofold-models.test.ts - the cases
 ---
 
@@ -22,7 +22,7 @@ When the endpoint cannot be asked, the offered list is the configured model alon
 
 - `UPDATE: packages/agent-cofold/src/agent.ts` - `connectionOf` extracted from `modelOf`, `listModels`, the per-endpoint catalogue cache, `probe` reading it, and the catalogue handed to `facioSession`.
 - `UPDATE: packages/agent-cofold/src/session.ts` - `models()` answering the catalogue for the session's connection, falling back to the configured id.
-- `UPDATE: docs/PLUGINS.md` - the list is the endpoint's; the configured `model` is the default.
+- `UPDATE: docs/plugins/PLUGINS.md` - the list is the endpoint's; the configured `model` is the default.
 - `CREATE: test/agent-cofold-models.test.ts` - the cases below.
 
 ## Steps
@@ -32,7 +32,7 @@ When the endpoint cannot be asked, the offered list is the configured model alon
 3. `listModels(connection)`: `GET <baseUrl>/models` with the key and headers, bounded by `AbortSignal.timeout`, answering `[{ id: '<prefix>/<id>', name }]` and `[]` for anything that fails or is not shaped like the OpenAI-compatible list.
 4. Cache the list by endpoint and key for the life of the backend, never caching an empty answer; have `probe` await the configured connection's catalogue, prepend the configured model when the list does not carry it, and skip the call entirely when `options.adapter` is set.
 5. Hand the cache to `facioSession` and answer `models()` from it for the session's current settings and credentials, falling back to the configured id when it is not there yet.
-6. Name the behaviour in `docs/PLUGINS.md` beside the harness configuration.
+6. Name the behaviour in `docs/plugins/PLUGINS.md` beside the harness configuration.
 
 ## Validation
 

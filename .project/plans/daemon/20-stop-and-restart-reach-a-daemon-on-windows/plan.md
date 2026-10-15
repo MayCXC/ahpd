@@ -17,7 +17,7 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L1097-L1105](../../../../packages/server/src/commands/run.ts#L1097-L1105) - the restart, on `SIGHUP` and `SIGUSR2`, only in a detached daemon"
   - "[code://packages/server/src/commands/restart.ts#L383-L418](../../../../packages/server/src/commands/restart.ts#L383-L418) - `AtTerminal` and `realTerminal`, the seam that sends the signal"
   - "[code://packages/server/src/commands/stop.ts](../../../../packages/server/src/commands/stop.ts) - `ahpd stop` and its `Stopped` line"
-  - "[code://docs/DAEMON.md#L225-L245](../../../../docs/DAEMON.md#L225-L245) - how a restart reaches the daemon, in the docs"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - how a restart reaches the daemon, in the docs"
 ---
 
 ## Goal
@@ -57,7 +57,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [On Windows, `ahpd stop` and `ahpd restart` reach a daemon through a named pipe with a key](../../../../docs/DAEMON.md) | Softov, 2026-10-11 | 01, 02, 03 |
+| [On Windows, `ahpd stop` and `ahpd restart` reach a daemon through a named pipe with a key](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-11 | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -71,7 +71,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 | A pipe that does not answer reads as the `ESRCH` case: the daemon is gone | (defaulted: the meaning `unsignalled` gives today) | 03 |
 | `STOP_WAIT_MS` is 30 seconds; after it, `stop` sends `SIGKILL` and prints `Killed <url> (pid <n>): it did not stop within 30 seconds.` | (defaulted: a shutdown awaits plugin `stopping` handlers, which can take seconds) | 04 |
 | `ahpd stop` forgets the record only after the process is gone | (defaulted: the record is how a second `stop` finds it) | 04 |
-| `ahpd stop` waits for the daemon to exit, then kills it, so the line it prints is true only once the process is gone | docs/DAEMON.md already says stop waits; the fix makes the printed line match | 04 |
+| `ahpd stop` waits for the daemon to exit, then kills it, so the line it prints is true only once the process is gone | docs/server/REFERENCE.md already says stop waits; the fix makes the printed line match | 04 |
 | A restart through the control pipe logs `restart refused (control pipe): ...` and `restart: stopping (control pipe)`, and a signal on Unix keeps its name | Softov, 2026-10-14, to "On Windows, a restart asked through the control pipe logs `restart refused (SIGHUP)` and `restart: stopping (SIGUSR2)`, though no signal was sent. What should the log say?": "Name the pipe" | 06 |
 | A forced restart through the control pipe logs `(control pipe, forced)`, so a terminal reads only its own kind of answer | (defaulted: the review of task 06, 2026-10-14: the two signals keep the kinds apart, and the pipe must too) | 06 |
 
@@ -106,7 +106,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 02: `controlServer(control, handlers, log)` in `packages/server/src/control.ts` answers one JSON line per connection, and `runForeground` starts it from `AHPD_CONTROL` and closes it in the way down.
   Task 03: `deliver(record, signal, platform)` sends the request on win32 and the signal elsewhere, `stop` awaits it, and `realTerminal.signal` calls it.
   Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
-  Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
+  Task 05: `docs/server/REFERENCE.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
   Task 06, implemented 2026-10-14: a restart through the control pipe names the pipe in its two log lines. A forced one adds `forced`, and a signal keeps its name.
 - **Next action:** the checks on Windows in [windows-checks.md](../../../pending/windows-checks.md). Task 06 is reviewed and merged. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
 - **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. During a turn, `ahpd restart` exits 1 with the turn named, and the pid stays the same. `ahpd restart --force` restarts from the recorded line in about 3 seconds, and the client reconnects. `ahpd stop` during a turn logs `stopping` and `stopped`, removes `daemon.json`, and `ahpd status --json` prints `{"running":false}`.

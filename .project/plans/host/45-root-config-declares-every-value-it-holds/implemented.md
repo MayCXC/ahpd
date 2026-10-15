@@ -32,7 +32,7 @@ The compact artifact wording and the two title keys are gone, and every session 
 
 - host/70 task 05's own `globalAutoApproveEnabled` property is replaced by upstream's.
 - `conformance.test.ts` pushes `telemetryLevel` where it pushed `githubEnterpriseUri`.
-- `docs/HOST.md`, `gate.ts` and `types/host.ts` were rewritten where they named the removed keys; no task's Files named them.
+- `docs/sdk/HOST.md`, `gate.ts` and `types/host.ts` were rewritten where they named the removed keys; no task's Files named them.
 
 ## Left for later
 

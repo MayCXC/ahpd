@@ -4,7 +4,7 @@ status: done
 depends: [task-07-the-listener-survives-a-malformed-request.md, task-12-http-host.md]
 layer: "server"
 refs:
-  - "[The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) - what this task applies, and the daemon's own origins"
+  - "[The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md) - what this task applies, and the daemon's own origins"
   - "[code://packages/server/src/http.ts#L34-L107](../../../../packages/server/src/http.ts#L34-L107) - `ApiOrigins`, `foreign` and `apiHandler`, where every API request enters"
   - "[code://packages/server/src/commands/run.ts#L51-L75](../../../../packages/server/src/commands/run.ts#L51-L75) - `apiOrigins`, the names and the resource host"
   - "[code://packages/server/src/commands/run.ts#L229-L235](../../../../packages/server/src/commands/run.ts#L229-L235) and [#L481](../../../../packages/server/src/commands/run.ts#L481) - the lazily read bound port"
@@ -24,7 +24,7 @@ A request with a body whose `content-type` is not `application/json` is answered
 
 ## Steps
 
-1. The check and its 403 sentence in `http.ts`, applied to every path under `/api` ([The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md)).
+1. The check and its 403 sentence in `http.ts`, applied to every path under `/api` ([The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md)).
 2. The 415 for a non-JSON body in the same place; `serve()` does it now, so ahpd's own check is the Origin and Host one.
 
 ## Validation

@@ -24,7 +24,7 @@ A signed-in person reads their own, their teams' and their projects' pools witho
 - `UPDATE: packages/sdk/src/scopes.ts:100-113` - `poolsFor(principal)`, the pools a person may see, beside `namesOf`.
 - `UPDATE: packages/sdk/src/users.ts:40` - `SUBJECTS`, where `usage` joins the four host/36 puts there.
 - `UPDATE: packages/sdk/src/index.ts:53-58` - the two new exports.
-- `UPDATE: packages/sdk/src/types/resources.ts:234-249` - `ResourceProvider` gains `authorize?(uri, reader)`, and `list`/`read` receive the reader ([A scheme provider may let a read through that its grant would refuse](../../../../docs/RESOURCES.md)).
+- `UPDATE: packages/sdk/src/types/resources.ts:234-249` - `ResourceProvider` gains `authorize?(uri, reader)`, and `list`/`read` receive the reader ([A scheme provider may let a read through that its grant would refuse](../../../../docs/sdk/RESOURCES.md)).
 - `UPDATE: packages/sdk/src/host.ts:6766-6817` - `capabilityFor`, and `admit` at `:6826-6855` with the one gate at `:10522`: a read whose provider's `authorize` answers `true` needs no `<scheme>:read`; `resourceList` and `resourceRead` pass the connection's principal.
 - `UPDATE: packages/sdk/src/host.ts:7626-7643` - `resourceList` and `resourceRead`, which hand the provider nothing about who asked.
 - `UPDATE: packages/server/src/commands/run.ts:263-384` - the daemon registers the provider beside the store it already builds.

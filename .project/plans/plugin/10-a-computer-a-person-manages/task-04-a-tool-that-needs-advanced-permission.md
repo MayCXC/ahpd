@@ -28,7 +28,7 @@ refs:
 - `UPDATE: packages/server/src/main.ts` - `Options.advancedTools` false, `--advanced-tools`, the file merge, the usage line, and one startup line.
 - `UPDATE: test/host.test.ts` - a marked tool absent without the permission and present with it; an unmarked tool present either way.
 - `UPDATE: test/daemon.test.ts` - the key and the flag.
-- `UPDATE: packages/sdk/README.md`, `docs/PLUGINS.md`, `docs/DAEMON.md` - the field, the key and the contract.
+- `UPDATE: packages/sdk/README.md`, `docs/plugins/PLUGINS.md`, `docs/server/REFERENCE.md` - the field, the key and the contract.
 
 ## Steps
 

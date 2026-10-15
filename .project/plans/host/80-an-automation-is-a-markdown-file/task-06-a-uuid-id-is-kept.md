@@ -19,8 +19,8 @@ An automation that a client names with a UUID is kept as a file, and a plugin ca
 - `UPDATE: packages/server/src/records.ts:26` - add `automations` to `RESERVED_COLLECTIONS`.
 - `UPDATE: packages/server/test/automation-files.test.ts` - a UUID row converts, and a UUID automation is created, saved and read back.
 - `UPDATE: packages/server/test/records.test.ts` - a plugin that opens `automations` is refused, and `bots` still opens.
-- `UPDATE: docs/AUTOMATIONS.md` - the rule for the file name.
-- `UPDATE: docs/PLUGINS.md` - the sentence naming the collections the store refuses, which `automations` is now one of.
+- `UPDATE: docs/sdk/AUTOMATIONS.md` - the rule for the file name.
+- `UPDATE: docs/plugins/PLUGINS.md` - the sentence naming the collections the store refuses, which `automations` is now one of.
 
 ## Steps
 
@@ -30,7 +30,7 @@ An automation that a client names with a UUID is kept as a file, and a plugin ca
 4. Keep a conversion case that leaves a row behind, for an id with an upper-case letter.
 5. Add a case that creates, saves, reloads and lists an automation named `ahp-automation:/<uuid>`.
 6. Add `automations` to `RESERVED_COLLECTIONS`, and add a case for it in the records tests.
-7. Write the file name rule in the automation file section of `docs/AUTOMATIONS.md`.
+7. Write the file name rule in the automation file section of `docs/sdk/AUTOMATIONS.md`.
 
 ## Validation
 
@@ -50,8 +50,8 @@ Files changed, uncommitted:
 - `UPDATE: packages/server/src/records.ts` - `automations` in `RESERVED_COLLECTIONS`, and the comment about `bots`.
 - `UPDATE: packages/server/test/automation-files.test.ts` - the refusal case adds a sixty-five character id; a new case keeps an automation a client named with a UUID, written, listed and read back; the conversion case is now two, `gives a row a UUID names a file of its own` and `leaves behind a row whose id could not name a file`, the latter with an upper-case id.
 - `UPDATE: packages/server/test/records.test.ts` - `automations` is refused as a collection and `bots` still opens.
-- `UPDATE: docs/AUTOMATIONS.md` - the sentence giving the file name rule.
-- `UPDATE: docs/PLUGINS.md` - the list of collections the store refuses, which said `sessions`, `usage`, `agentPlugins` or `node_modules`.
+- `UPDATE: docs/sdk/AUTOMATIONS.md` - the sentence giving the file name rule.
+- `UPDATE: docs/plugins/PLUGINS.md` - the list of collections the store refuses, which said `sessions`, `usage`, `agentPlugins` or `node_modules`.
 - `CREATE: .project/plans/host/80-an-automation-is-a-markdown-file/task-06-a-uuid-id-is-kept.md` - this task, written by Softov before the build and still untracked in git, so a commit per task has to add it.
 
 `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server --maxWorkers=2 --testTimeout=10000` pass - 188 files, 3680 cases.

@@ -4,7 +4,7 @@ date: 2026-10-09
 refs:
   - "[code://packages/sdk/src/changes.ts#L1078-L1086](../../../../packages/sdk/src/changes.ts#L1078-L1086) - the `commit` branch reads `ahpd.commit`, then `ahp.commit`"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the three cases over the two key names"
-  - "[code://docs/AHP.md#L679](../../../../docs/AHP.md#L679) - the key is `ahpd.commit`, and `ahp.commit` is read while a client sends it"
+  - "[code://docs/sdk/AHP.md#L679](../../../../docs/sdk/AHP.md#L679) - the key is `ahpd.commit`, and `ahp.commit` is read while a client sends it"
   - "[code://packages/sdk/test/wire.test.ts#L243-L273](../../../../packages/sdk/test/wire.test.ts#L243-L273) - `PREFIXED` already allows `ahpd.`, so the census is unchanged"
   - "file:///github/ahpapp/src/changeset-ops.ts - line 207, the only sender of `ahp.commit`, which task 05 waits on"
   - "[code://packages/sdk/src/host/facts.ts](../../../../packages/sdk/src/host/facts.ts) - `ahpd.owner`"
@@ -19,7 +19,7 @@ Task 01 of plan 43 p4. A `commit` invocation now takes its message from `_meta['
 
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `invoke`'s `commit` branch takes `meta['ahpd.commit']`, falling back to `meta['ahp.commit']` only when the new key is absent, through one `sent` binding the two reads share. The comment beside it says what `ahp.commit` was and names task 05 as the task that drops the fallback. Nothing else in the branch changed, and no other `_meta` key was touched.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - `the key a commit message arrives under`, three cases on a real repository: the message under `ahpd.commit` is the commit's subject; the same message under `ahp.commit` still is; and with both sent, `ahpd.commit` wins.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the `commit` paragraph names `_meta['ahpd.commit']` and says `ahp.commit` is read in its place while a client still sends it, and goes when none does.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the `commit` paragraph names `_meta['ahpd.commit']` and says `ahp.commit` is read in its place while a client still sends it, and goes when none does.
 
 ## Verified
 
@@ -48,7 +48,7 @@ Implemented 2026-10-09 in the `build/agents/6dac4670` worktree, not committed. E
 - Task 03: `packages/agent-claude/src/session.ts` sends `ahpd.model` on the state. `packages/agent-claude/src/session/customizations.ts` sends a skill's hint as `ahpd.argumentHint`. `packages/sdk/src/host/sessionmethods.ts` gains `hintOf`, which reads a prompt's `argumentHint` and then a skill's `_meta['ahpd.argumentHint']`. The completion item still sends the bare `argumentHint`.
 - Task 04: `cacheWriteTokens`, `reasoningTokens`, `cost` and `context` are `ahpd.*` in agent-claude (`session/parts.ts`, `session/query.ts`), agent-acp (`mapping.ts`, `session/turn.ts`), agent-pi (`mapping.ts`) and agent-cofold (`mapping.ts`, `transcript.ts`), live and restored. The readers moved in the same change. These are `packages/sdk/src/meter.ts` (`costOf`, `usedBy`, and `addition`, whose output it reads back), pi's `addUsage` running sum, and acp's `context` read-back in `session/turn.ts`. No numeric `_meta.cost` is sent.
 - `packages/sdk/test/wire.test.ts`: `PENDING` is empty. `REFERENCE` is unchanged.
-- `docs/AHP.md` names every new key: sender, owner, staging, the `chat/usage` row with the four usage keys, the skill hint and the Claude model. `docs/LIBRARY.md` names owner and sender.
+- `docs/sdk/AHP.md` names every new key: sender, owner, staging, the `chat/usage` row with the four usage keys, the skill hint and the Claude model. `docs/sdk/LIBRARY.md` names owner and sender.
 
 ### Verified
 
@@ -62,7 +62,7 @@ Implemented 2026-10-09 in the `build/agents/6dac4670` worktree, not committed. E
 
 - The live slash menu never read a skill's hint before: `own` read only `entry.argumentHint`, which only a prompt carries. `hintOf` is a new read, not a moved one.
 - The plan says `REFERENCE` allows a completion item's `argumentHint`, but it does not. It is not added, because the census requires each `REFERENCE` entry in the traffic, and the wire test sends no completion with a hint. The first full run failed on exactly that entry.
-- `docs/AHP.md` did not describe the usage keys, the model or the skill hint. They are added. `docs/LIBRARY.md`, not in the plan, also named owner and sender.
+- `docs/sdk/AHP.md` did not describe the usage keys, the model or the skill hint. They are added. `docs/sdk/LIBRARY.md`, not in the plan, also named owner and sender.
 - The timing keys were already `ahpd.` (plugin/29 is built), so nothing changed for them.
 
 ### Left for later
@@ -78,7 +78,7 @@ Merged 2026-10-09. It needed no client release: ahpapp has no releases, and the 
 - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `invoke`'s `commit` branch reads `_meta['ahpd.commit']` alone. The `ahp.commit` fallback and the comment that carried its history are gone.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - the four cases that sent `ahp.commit` send `ahpd.commit`, and `the key a commit message arrives under` changes: a message under the old name is ignored, so the commit keeps `Changes from an agent session`, and the both-names case reads `ahpd.commit`.
 - [`code://packages/sdk/test/wire.test.ts`](../../../../packages/sdk/test/wire.test.ts) - `PENDING` is removed, so `announced` is `PREFIXED` or `REFERENCE` and the both-ways check is `REFERENCE` alone. A bare invented key is a stray at every place, not only where no task claimed it.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the `commit` paragraph no longer says `ahp.commit` is read, and the introduction states the convention once: this host's own `_meta` keys are `ahpd.<name>`, and a key the protocol or the reference client defines keeps its spelling.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the `commit` paragraph no longer says `ahp.commit` is read, and the introduction states the convention once: this host's own `_meta` keys are `ahpd.<name>`, and a key the protocol or the reference client defines keeps its spelling.
 
 ### Verified
 
@@ -89,4 +89,4 @@ Merged 2026-10-09. It needed no client release: ahpapp has no releases, and the 
 ### Departures from the plan
 
 - None. The read site is one line shorter than the plan's line 1068 because the fallback's comment went with it.
-- `docs/AHP.md` gained the convention paragraph in the introduction, beside the sentence about what was read off the source, rather than inside a section about one key.
+- `docs/sdk/AHP.md` gained the convention paragraph in the introduction, beside the sentence about what was read off the source, rather than inside a section about one key.

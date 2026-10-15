@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/host/root.ts#L326](../../packages/sdk/src/host/root.ts#L326) - root `terminals`, sent only when one is open"
   - "[code://packages/sdk/src/host/snapshots.ts#L88-L100](../../packages/sdk/src/host/snapshots.ts#L88-L100) - the annotations channel, served though no backend offers the `addComment` tool"
   - "[code://UPSTREAM.md](../../UPSTREAM.md) - Pass 5, whose unticked boxes several rows below point at"
-  - "[code://docs/AHP.md](../../docs/AHP.md) - what ahpd says it serves, method by method and action by action"
+  - "[code://docs/sdk/AHP.md](../../docs/sdk/AHP.md) - what ahpd says it serves, method by method and action by action"
 ---
 
 ## Question
@@ -84,7 +84,7 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 | `defaultShell` | declared | declared | - | Same. |
 | `permissions` (`sessionMutable`, `{ allow, deny }`) | declared at root | session config only | host/45 task 01 leaves it out | The root default the session key inherits. |
 | `customizations` ("Plugins") | declared, `[]` | absent | not covered; [host/49](../plans/host/49-a-session-loads-a-clients-plugins/plan.md) is the per-session client half | Plugins configured on the host and offered to remote sessions. |
-| `sandbox` | declared, `{ enabled: 'off', ... }` | absent | host/45 task 01 leaves it out | ahpd's sandbox is a Claude preset field ([`code://docs/AHP.md`](../../docs/AHP.md) "sandboxEnabled"). |
+| `sandbox` | declared, `{ enabled: 'off', ... }` | absent | host/45 task 01 leaves it out | ahpd's sandbox is a Claude preset field ([`code://docs/sdk/AHP.md`](../../docs/sdk/AHP.md) "sandboxEnabled"). |
 | `allowSignedOutWhenUsable`, `githubEnterpriseUri` | declared, unset | absent | not covered | Not pushed by 1.140's client. |
 | Copilot SDK keys: `enableCustomTerminalTool`, `enableShellInitScript`, `copilotSdkLogLevel`, `rubberDuck`, `claudeAdvisor`, `tgrep`, `opus48Prompt`, `toolSearchEnabled`, `toolSearchDeferThreshold`, `hydraFusion`, `autoModeTierOverride`, `claudeDefaultReasoningEffort`, `modelCapabilityOverrides` | declared, unset | absent | host/45 task 01 leaves them out | Copilot runtime switches; no ahpd backend reads them. |
 | `byokModelsEnabled`, `runtimePath`, `skillCharBudget` | declared | absent | host/45 task 01 leaves them out | Scope `Local`, never sent to a remote host. |
@@ -117,7 +117,7 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 | `mode` (`sessionMutable`) | `interactive`, `plan`, `autopilot` (Copilot, `ahp-session:`); `interactive`, `plan` (Codex) | absent | [decision](../plans/plugin/06-permission-modes/plan.md) | ahpd folds plan mode into `permissionMode`; the window's Agent Mode picker draws nothing for ahpd. |
 | `autoApprove` (`sessionMutable`) | `default`, `assisted`, `autoApprove` | absent; `permissionMode` (`default`, `acceptEdits`, `plan`, `auto`, `bypassPermissions`, `dontAsk`) | [decision](../plans/plugin/06-permission-modes/plan.md) | Both are titled "Approvals". |
 | `codex.permissionsPreset` | Codex only | absent | - | Codex only. |
-| `sandboxEnabled` | Copilot and `ahp-session:` | absent | UPSTREAM.md Pass 4 (ticked) | A Claude preset field instead ([`code://docs/AHP.md`](../../docs/AHP.md)). |
+| `sandboxEnabled` | Copilot and `ahp-session:` | absent | UPSTREAM.md Pass 4 (ticked) | A Claude preset field instead ([`code://docs/sdk/AHP.md`](../../docs/sdk/AHP.md)). |
 | `shellInitScripts` (`readOnly`, `sessionMutable`) | yes | yes on Claude | UPSTREAM.md Pass 4 (ticked) | Same. |
 | `permissions` (`sessionMutable`) | yes | yes on Claude | - | Same. |
 | `isolation` | `readOnly`, `folder` only | writable after the first turn, `folder` or `worktree` | [host/18](../plans/host/18-a-provisional-session-takes-any-key/plan.md) | ahpd moves a running session's folder by restarting it; `branch` is writable on a worktree session too. |
@@ -158,7 +158,7 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 
 | Item | VS Code host | ahpd | Covered by | Note |
 | --- | --- | --- | --- | --- |
-| `session/metaChanged`, `session/chatUpdated`, `session/activeClientSet`, `session/customizationsChanged`, `session/customizationUpdated` | host sent | served | [`code://docs/AHP.md`](../../docs/AHP.md) | Same. |
+| `session/metaChanged`, `session/chatUpdated`, `session/activeClientSet`, `session/customizationsChanged`, `session/customizationUpdated` | host sent | served | [`code://docs/sdk/AHP.md`](../../docs/sdk/AHP.md) | Same. |
 | `changeset/contentChanged`, `changeset/statusChanged` | host sent | served | - | Same. |
 | `root/terminalsChanged`, `terminal/resized`, `terminal/data`, `terminal/titleChanged` | host sent | served | - | Same. |
 | `resourceWatch/changed` | host sent, 684 in the sample | served | - | Same. |

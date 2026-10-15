@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-A session in a folder below a repository's root gets the root mounted only where its profile says `sessionRepository: true`, beside `sessionFolder`, as [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) gates the folder.
+A session in a folder below a repository's root gets the root mounted only where its profile says `sessionRepository: true`, beside `sessionFolder`, as [A session's folder reaches a machine only where its profile allows it](../../../../docs/plugins/COMPUTERS.md) gates the folder.
 Without it the folder alone is mounted, with no git directory, and the log says the profile does not allow the repository.
 
 ## Files
@@ -19,7 +19,7 @@ Without it the folder alone is mounted, with no git directory, and the log says 
 - `UPDATE: packages/computer/src/plugin.ts:195-226` - read `sessionRepository: true` as `sessionFolder` is read, and add it to the profile schema beside it.
 - `UPDATE: packages/computer/src/plugin.ts:1300-1302` - `withGit` passes `repository` and a git directory outside the folder only where `sessionRepository` is true; today `sessionFolder: true` lets the folder in and the root comes with it, so a session folder `~/scratch` inside a dotfiles repository at `$HOME` mounts all of `$HOME` read-write.
 - `UPDATE: packages/computer/src/runtime.ts:1114-1115,2086-2088` - unchanged if `repository` only arrives where allowed.
-- `UPDATE: docs/COMPUTER.md:433-435` - a `sessionRepository` row beside `sessionFolder`'s, and the sentence on a folder below the root.
+- `UPDATE: docs/plugins/COMPUTERS.md:433-435` - a `sessionRepository` row beside `sessionFolder`'s, and the sentence on a folder below the root.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts` - the case below.
 
 ## Steps

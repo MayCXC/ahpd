@@ -7,8 +7,8 @@ depends:
   - task-03-not-a-permission-error.md
 layer: docs
 refs:
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the provider contract a plugin author reads"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the worked example"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the provider contract a plugin author reads"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the worked example"
   - "[code://packages/sdk/README.md](../../../../packages/sdk/README.md) - the ports and the types"
   - "[code://.project/plans/index.md](../../index.md) - the row this plan's status moves with"
   - "[code://.project/working/HANDOFF.md](../../../working/HANDOFF.md) - the pending list"
@@ -20,17 +20,17 @@ A plugin author reads what `describe()` is for and what the host does with it, a
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md` - `describe()` in the provider section, and the `_meta` key in a short "what a client is told" subsection.
-- `UPDATE: docs/COMPUTER.md` - the advertisement as the way a client learns there are computers, with the key and its shape.
+- `UPDATE: docs/plugins/PLUGINS.md` - `describe()` in the provider section, and the `_meta` key in a short "what a client is told" subsection.
+- `UPDATE: docs/plugins/COMPUTERS.md` - the advertisement as the way a client learns there are computers, with the key and its shape.
 - `UPDATE: packages/sdk/README.md` - `SchemeDescription` and the optional method in the provider line.
 - `UPDATE: .project/plans/index.md` - the row, built when it is built.
 - `UPDATE: .project/working/HANDOFF.md` - the pending list and the recent-things paragraph.
 
 ## Steps
 
-1. Say in `docs/PLUGINS.md` that `describe()` is a claim about the scheme, that the host supplies `root` and `operations` from what the provider implements, and that a provider without it is advertised by those alone.
+1. Say in `docs/plugins/PLUGINS.md` that `describe()` is a claim about the scheme, that the host supplies `root` and `operations` from what the provider implements, and that a provider without it is advertised by those alone.
 2. Document the `ahpd.resourceProviders` shape with one example, including that the key is absent when no provider is registered and that a client must ignore a key it does not know.
-3. Point `docs/COMPUTER.md` at the key as what a client reads before it draws a create form, next to the resource commands it already documents.
+3. Point `docs/plugins/COMPUTERS.md` at the key as what a client reads before it draws a create form, next to the resource commands it already documents.
 4. Keep every page to links for the parts another page owns.
 
 ## Validation

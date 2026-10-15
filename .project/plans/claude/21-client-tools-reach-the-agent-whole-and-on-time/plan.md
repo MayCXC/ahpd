@@ -10,7 +10,7 @@ refs:
   - "[code://packages/agent-claude/src/session/clienttools.ts#L435-L446](../../../../packages/agent-claude/src/session/clienttools.ts#L435-L446) - `setTools`, which keeps the new list before the SDK has taken it"
   - "[code://packages/agent-claude/src/session/clienttools.ts#L337-L346](../../../../packages/agent-claude/src/session/clienttools.ts#L337-L346) - `openCall`, which drops a call whose tool is no longer on offer"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L817-L852](../../../../packages/sdk/src/host/sessionmethods.ts#L817-L852) - the creator's presence, recorded after `openSession`"
-  - "[code://docs/AHP.md#L443-L452](../../../../docs/AHP.md#L443-L452) - the input request table, which names two kinds of four"
+  - "[code://docs/sdk/AHP.md#L443-L452](../../../../docs/sdk/AHP.md#L443-L452) - the input request table, which names two kinds of four"
   - npm://zod@^4.4.3 - `z.fromJSONSchema` reads a JSON Schema into zod
 ---
 
@@ -41,7 +41,7 @@ session/create with activeClient -> openSession -> boundTools -> setTools -> set
 - A tool list that `setMcpServers` refused is "no change" when it comes again, so it is never sent.
 - The first `boundTools` of a new session has no creator, so its client tools miss the first turn.
 - A handler that the CLI started for a client that then left waits until the turn is stopped.
-- `docs/AHP.md` names two input request kinds, and the host serves four.
+- `docs/sdk/AHP.md` names two input request kinds, and the host serves four.
 
 ## Decisions locked in
 

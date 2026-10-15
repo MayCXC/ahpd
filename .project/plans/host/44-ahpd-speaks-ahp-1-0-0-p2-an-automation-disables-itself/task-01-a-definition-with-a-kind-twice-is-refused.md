@@ -18,7 +18,7 @@ An `automation/createRequested` whose `definition.disableConditions`, or an `aut
 - `UPDATE: packages/sdk/src/automations.ts` - an exported pure `disableConditionsProblem(value: unknown): string | undefined`: absent is fine; otherwise an array of `{ kind: 'afterRuns', max }` with `max` a positive integer or `{ kind: 'afterDate', date }` with `date` an ISO 8601 timestamp `Date.parse` reads, each kind at most once.
 - `UPDATE: packages/sdk/src/host/actions.ts:403-423` - call it on the definition or the changes before the store, and `no(...)` with its sentence.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - the automation rows say conditions are checked and a duplicate kind is refused.
+- `UPDATE: docs/sdk/AHP.md` - the automation rows say conditions are checked and a duplicate kind is refused.
 
 ## Steps
 
@@ -35,6 +35,6 @@ An `automation/createRequested` whose `definition.disableConditions`, or an `aut
 
 **Implemented.** `disableConditionsProblem(value: unknown): string | undefined` is exported from `packages/sdk/src/automations.ts` beside the store, and `disableConditionsOf(value)` with it - the same conditions read into the two numbers a store acts on, which task 02 uses. `packages/sdk/src/host/actions.ts` calls the first on the definition a create carries or the `changes` a patch carries, before the store, and answers with its sentence through `no(...)`.
 
-The two `docs/AHP.md` rows in the automation table say the conditions are checked and a kind named twice is refused.
+The two `docs/sdk/AHP.md` rows in the automation table say the conditions are checked and a kind named twice is refused.
 
 **Departure 1.** The import of `disableConditionsProblem` was added to the top of `packages/sdk/src/host/actions.ts`, outside the `#L403-L423` the plan names. The named region is the create/update block, and the refusal itself is inside it; a file that uses a module has to import it above.

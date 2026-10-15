@@ -4,16 +4,16 @@ status: done
 depends: [task-01-plugin-config-enable-and-disable.md, task-02-plugin-option.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the plugin commands and the flags"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the plugin commands and the flags"
 ---
 
 ## Objective
 
-`docs/DAEMON.md` has `plugin config`, `enable`, `disable` and `--plugin-option`, with one example each.
+`docs/server/REFERENCE.md` has `plugin config`, `enable`, `disable` and `--plugin-option`, with one example each.
 
 ## Files
 
-- `UPDATE: docs/DAEMON.md`.
+- `UPDATE: docs/server/REFERENCE.md`.
 
 ## Steps
 
@@ -25,7 +25,7 @@ refs:
 
 ## Resume
 
-- `docs/DAEMON.md`: the commands block has `plugin config`, `enable` and `disable`; the options table has `--plugin-option`; the `--plugin` section has one example of each command and of the flag, how a value is read and checked, and the shell history risk; the configuration section names `pluginOptions` among the typed-only keys and says why the flag has no key; the HTTP section has the three commands in the grants table and their routes, with the `writeOnly` answer.
+- `docs/server/REFERENCE.md`: the commands block has `plugin config`, `enable` and `disable`; the options table has `--plugin-option`; the `--plugin` section has one example of each command and of the flag, how a value is read and checked, and the shell history risk; the configuration section names `pluginOptions` among the typed-only keys and says why the flag has no key; the HTTP section has the three commands in the grants table and their routes, with the `writeOnly` answer.
 - Read against the code: the two `plugin config` routes, `/plugin/config` and `/plugin/config/set`, follow task 01's split into two declarations.
 - New prose is one line per paragraph; the paragraph edited in the configuration section keeps the file's existing wrap, and the commands block keeps its columns.
 - After the review of 2026-09-30: the `--plugin-option` paragraph says a plugin switched off with `enabled: false` is refused, and the `plugin config` paragraph says an `--unset` of an option not set leaves the file as it is.

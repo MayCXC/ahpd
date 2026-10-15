@@ -9,7 +9,7 @@ refs:
   - code://packages/sdk/src/host.ts#L5406 - the `offered.writes === true` gate, deleted
   - code://test/operations.test.ts#L163-L172 - the refusal case, replaced
   - code://test/operations.test.ts#L199-L204 - the case that opens by requesting a grant, simplified
-  - code://docs/AHP.md#L87 - the `invokeChangesetOperation` row that owns "the write gate"
+  - code://docs/sdk/AHP.md#L87 - the `invokeChangesetOperation` row that owns "the write gate"
 ---
 
 ## Objective
@@ -22,14 +22,14 @@ A changeset operation that writes runs for a connected client with no `resourceR
 - `UPDATE: packages/sdk/src/host.ts:5354-5363` - the comment above `invokeChangesetOperation` names three gates instead of four.
 - `UPDATE: test/operations.test.ts:163-172` - the refusal case becomes one where the same `commit` runs.
 - `UPDATE: test/operations.test.ts:199-204` - the `resourceRequest` call that opened the case goes, since nothing needs it.
-- `UPDATE: docs/AHP.md:87` - the row drops "and the write gate".
+- `UPDATE: docs/sdk/AHP.md:87` - the row drops "and the write gate".
 
 ## Steps
 
 1. Remove the `needsWrite` call at `:5406` and the `offered.writes` test that guards it.
 2. Rewrite the comment above `invokeChangesetOperation` so the three remaining gates are named: the offered id, the target kind, and the session not being mid-turn.
 3. Update the two `test/operations.test.ts` cases, and leave `resourceRequest`'s own cases at `:183-197` in place.
-4. Update `docs/AHP.md`'s row.
+4. Update `docs/sdk/AHP.md`'s row.
 5. Run `pnpm test`, `pnpm typecheck` and `pnpm boundary`.
 
 ## Validation

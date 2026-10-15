@@ -4,16 +4,16 @@ status: todo
 depends: [task-02-the-inner-host-gets-the-proxy-and-the-token.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the operator's page"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the operator's page"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` says that no key leaves this host, what a remote machine gets instead, and what the refusal means.
+`docs/plugins/COMPUTERS.md` says that no key leaves this host, what a remote machine gets instead, and what the refusal means.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`.
+- `UPDATE: docs/plugins/COMPUTERS.md`.
 
 ## Steps
 

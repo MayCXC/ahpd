@@ -4,16 +4,16 @@ status: done
 depends: [task-05-a-dev-container-gets-its-parts-by-volume.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - Profiles and the Parts section p3 added"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - Profiles and the Parts section p3 added"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` documents `parts` on a profile, the part need, the two routes and the `ahpd.parts` label.
+`docs/plugins/COMPUTERS.md` documents `parts` on a profile, the part need, the two routes and the `ahpd.parts` label.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`.
+- `UPDATE: docs/plugins/COMPUTERS.md`.
 
 ## Steps
 
@@ -25,5 +25,5 @@ refs:
 
 ## Resume
 
-- Written 2026-10-05: `docs/COMPUTER.md` Profiles gains `parts`, and Parts gains "Parts in a machine": the part need, the two routes as a table, the `imageMounts` option, the probe, the volume and its marker, the dev container route, the `ahpd.parts` label and `PATH`, and what a failed build leaves. Read against the code.
+- Written 2026-10-05: `docs/plugins/COMPUTERS.md` Profiles gains `parts`, and Parts gains "Parts in a machine": the part need, the two routes as a table, the `imageMounts` option, the probe, the volume and its marker, the dev container route, the `ahpd.parts` label and `PATH`, and what a failed build leaves. Read against the code.
 - `plans/index.md` is not touched by this build.

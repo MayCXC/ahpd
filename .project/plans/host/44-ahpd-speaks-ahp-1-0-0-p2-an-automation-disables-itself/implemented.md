@@ -18,7 +18,7 @@ A switched-off automation still offers `run`, and a manual run is neither refuse
 - [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - `runCount` is saved beside the definition; `rearm` switches off an automation whose date has passed, and `catchUp` skips it.
 - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts) - `automation/createRequested` and `automation/updateRequested` refuse a definition with a bad condition.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `runAutomation` answers `-32001` only when there is no automation.
-- `docs/AHP.md` and `docs/AUTOMATIONS.md` - the automation rows say a switched-off automation runs by hand.
+- `docs/sdk/AHP.md` and `docs/sdk/AUTOMATIONS.md` - the automation rows say a switched-off automation runs by hand.
 
 ## Verified
 
@@ -30,7 +30,7 @@ A switched-off automation still offers `run`, and a manual run is neither refuse
 - The `afterDate` test uses 2030-01-01 rather than a date on the test clock, because the memory store reads the real time.
 - `rearm` cancels the timer before and after the switch-off pass, so one timer is armed at a time.
 - The test for a refused removal is retitled, because a switched-off automation now offers `remove` in both stores.
-- `docs/AUTOMATIONS.md` was corrected in the review, though no task named it.
+- `docs/sdk/AUTOMATIONS.md` was corrected in the review, though no task named it.
 
 ## Left for later
 

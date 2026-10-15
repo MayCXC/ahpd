@@ -22,7 +22,7 @@ A restart starts with that `argv` again, and the flag wins over the file.
 - `UPDATE: packages/server/src/commands/plugin.ts:28-59` - `overridden`, the line, and `recordedOverride`, the recorded flag it names.
 - `UPDATE: packages/server/src/commands/plugin.ts:317-336` - after the write, read `running()?.argv` and say the override line before the restart line, and carry the flag in the answer.
 - `UPDATE: packages/server/test/plugin-config.test.ts` - the cases below.
-- `UPDATE: docs/DAEMON.md:467-469` - the override line beside the restart line.
+- `UPDATE: docs/server/REFERENCE.md:467-469` - the override line beside the restart line.
 
 ## Steps
 
@@ -47,5 +47,5 @@ A restart starts with that `argv` again, and the flag wins over the file.
 - The line names the flag up to its `=` and never its value, by Softov's answer in the plan.
 - Served, the answer carries `overriddenBy` and `words`, and both are absent when nothing overrides.
 - `plugin-config.test.ts` covers both spellings, an unset, another key, another plugin, no `argv`, no record and the served answer.
-- `docs/DAEMON.md` says the line beside the restart line.
+- `docs/server/REFERENCE.md` says the line beside the restart line.
 - The review gates on main `d20a6b3` pass 4672 tests in 264 files.

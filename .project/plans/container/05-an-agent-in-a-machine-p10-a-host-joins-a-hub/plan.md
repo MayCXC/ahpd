@@ -65,8 +65,8 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | --- | --- |
 | Any ahpd can be the hub other hosts join | 01, 02 |
 | [The nested host speaks AHP over stdio, so the relay is a pipe](../../../decisions/a-nested-host-speaks-stdio.md) | 02 |
-| [A grant is a subject and a verb](../../../../docs/USERS.md) | 03 |
-| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/USERS.md) | 03 |
+| [A grant is a subject and a verb](../../../../docs/sdk/USERS.md) | 03 |
+| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/sdk/USERS.md) | 03 |
 | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 
@@ -126,4 +126,4 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 - [ ] A connected node's up time is written as stretches charged to the host.
 - [ ] `ahpd restart` on the hub, then the node reconnects, and the session continues its conversation.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/COMPUTER.md`, `docs/DAEMON.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `docs/server/REFERENCE.md`, `plans/index.md` updated.

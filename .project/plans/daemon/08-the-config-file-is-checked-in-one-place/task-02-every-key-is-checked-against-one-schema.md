@@ -7,7 +7,7 @@ refs:
   - "[code://packages/server/src/commands/options.ts#L111-L205](../../../../packages/server/src/commands/options.ts#L111-L205) - `serverFields`, the schemas the check uses"
   - "[code://packages/server/src/commands/options.ts#L262-L303](../../../../packages/server/src/commands/options.ts#L262-L303) - `said`, `under`, `isOneOf`, `httpOf`, which go"
   - "[code://packages/server/src/config.ts#L28-L130](../../../../packages/server/src/config.ts#L28-L130) - `Config`, which becomes the schema's type"
-  - "[code://docs/HOST.md](../../../../docs/HOST.md) - `http.host` without `http.port` stays refused"
+  - "[code://docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - `http.host` without `http.port` stays refused"
 ---
 
 ## Objective
@@ -19,7 +19,7 @@ The merged configuration is checked once against an object schema made of `serve
 - `UPDATE: packages/server/src/commands/options.ts:111-205` - `http` joins `serverFields` as an object field with `port` (integer 0-65535) and `host` (non-empty string), and no CLI spelling.
 - `UPDATE: packages/server/src/commands/options.ts:262-388` - a `configSchema` built from the fields; `optionsFrom` checks the file values with `check` from `@cofold/commands`, labelling with `sourceOf(key)`, then folds flags over file over defaults with no per-key type tests. `said`, `isOneOf` and `httpOf` are removed; the `http.host`-needs-`http.port` rule stays as the one cross-key check.
 - `UPDATE: packages/server/src/config.ts:28-130` - `Config` is the schema's type, or checked against it in a type test.
-- `UPDATE: docs/DAEMON.md` - what a wrong value and an unknown key do.
+- `UPDATE: docs/server/REFERENCE.md` - what a wrong value and an unknown key do.
 
 ## Steps
 
@@ -42,5 +42,5 @@ The merged configuration is checked once against an object schema made of `serve
 - **Tests:** `config-check.test.ts`, 23 cases: integer, string, enum, boolean, string list, `http.port` range, `http` type, `http.host`, `http.host` without `http.port`, three `plugins` entry shapes, `updateCheck` as a string; unknown key warned with the rest read, a flag-only key warned, `constructor` as a key; a valid file of every key; `http` true/false; flag over file; defaults; the schema built from the flags; `http` not a flag; the `Config` type test; and two processes, one starting with `"plugin": []` and its warning on stderr, one exiting 2 on `"port": "8080"`.
 - **Failed first, for the right reason:** with `configSchema` and `flagFields` stubbed as empty exports, 20 of 23 failed: each wrong value was accepted (`{"port":"8080"} was accepted`), the `http` sentences had no file, `warnings` was `undefined`, a typed `trustToken: false` lost to the file's `true`, and the daemon exited 0 on `"port": "8080"`. The three that passed guard existing behaviour: `http.host` without `http.port`, `http` true/false, and the type test (runtime no-op; its tsc half is the check above).
 - **Not done here:** the `$AHPD_CONFIG` case in Validation needs task 01. `user.ts` and `ahpd config` still read the file unchecked; `ahpd config` prints it as it stands.
-- **Docs:** [`docs/DAEMON.md`](../../../../docs/DAEMON.md) Configuration says what a wrong value and an unknown key do, and that the three flag-only keys warn.
+- **Docs:** [`docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) Configuration says what a wrong value and an unknown key do, and that the three flag-only keys warn.
 - **Gates:** `pnpm typecheck` clean; `pnpm boundary` clean (8 packages, none undeclared); full `pnpm test` 117 files, 1691 tests passed. The first full run had one failure, `packages/sdk/test/changes-refresh.test.ts > re-reads a changeset when git is changed outside the host`, which passed 3 of 3 alone and on the second full run.

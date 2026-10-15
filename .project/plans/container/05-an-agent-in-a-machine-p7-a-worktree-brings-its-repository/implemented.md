@@ -29,7 +29,7 @@ The session's own `index.lock` is removed once the container is gone, and every 
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) and [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - `Profile.gitGuard`, its schema enum, its check refusing any other value by name, and `profilesOf`; `withGit`, giving the git directory, the root, the guard and the host user only where the folder reaches the machine; `--user` from the label on the Docker answer of `how`.
 - [`code://packages/computer/src/devcontainer.ts`](../../../../packages/computer/src/devcontainer.ts) - `reachOf` puts `ahpd.user` first, so the probe, `how`, `exec` and the relay run as that user.
 - `test/fixtures/docker.mjs` reads `--user` on `exec`; `test/fixtures/devcontainer.mjs` mounts a `workspaceMount`'s own source.
-- `docs/COMPUTER.md` - `gitGuard` in the Profiles table, a paragraph under Disposable machines, and under Security the mounted git directory and a note to review a session's changes before running git on them.
+- `docs/plugins/COMPUTERS.md` - `gitGuard` in the Profiles table, a paragraph under Disposable machines, and under Security the mounted git directory and a note to review a session's changes before running git on them.
 
 ## Verified
 

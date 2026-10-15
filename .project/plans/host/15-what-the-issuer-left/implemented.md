@@ -9,8 +9,8 @@ refs:
   - code://packages/server/src/main.ts
   - code://scripts/dev-issuer.mjs
   - code://test/users-issuer.test.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
 ---
 
 Two gaps the issuer feature left are closed. A record's provider is set from the command line instead of by editing the file, and a person's roles can come from a claim the issuer answers with, with every grant still written in this host's file.
@@ -22,7 +22,7 @@ Two gaps the issuer feature left are closed. A record's provider is set from the
 - `code://packages/sdk/src/users.ts` - `rolesFromClaim`, which resolves a claim's values against the roles this file defines and the built-ins and reports one that names nothing; `principalOf`, which adds the claim's roles to the record's own and stamps their grants once while the record's roles are still resolved on every command; `add` taking an optional issuer and refusing a name nothing can resolve.
 - `code://packages/server/src/main.ts` - `user add --issuer <name>`, named in the confirmation and the usage line, and `rolesFrom` printed by `user list`.
 - `code://scripts/dev-issuer.mjs` - `Bearer ana|eng,ops` answers `sub: ana` with `groups: [eng, ops]`, so the whole claim path is tryable without an identity provider.
-- `code://docs/USERS.md` - the field, the claim-values-are-roles rule, the two clocks, and how to try it with the dev issuer.
+- `code://docs/sdk/USERS.md` - the field, the claim-values-are-roles rule, the two clocks, and how to try it with the dev issuer.
 
 ## Verified
 

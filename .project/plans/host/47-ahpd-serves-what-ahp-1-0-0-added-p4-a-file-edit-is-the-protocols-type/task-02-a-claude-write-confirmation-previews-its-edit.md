@@ -29,7 +29,7 @@ When the Claude backend asks a person to approve `Write`, `Edit` or `MultiEdit`,
 - `UPDATE: packages/agent-claude/src/claude.ts`, `packages/agent-claude/src/session.ts` - pass the seams through; before `chat/toolCallReady` for those three tools, ask for the preview and put `{ items: [edit] }` on the action and on the call as `edits`; settle on confirm, deny, cancel and turn end.
 - `CREATE: packages/agent-claude/test/agent-claude-edit-preview.test.ts` - the backend cases, on the fake SDK feed from `agent-claude-subagent.test.ts`.
 - `UPDATE: packages/sdk/test/changes-uris.test.ts` - the port cases, in a temp directory.
-- `UPDATE: docs/AHP.md` - the `chat/toolCallReady` row says a Claude write carries `edits`.
+- `UPDATE: docs/sdk/AHP.md` - the `chat/toolCallReady` row says a Claude write carries `edits`.
 
 ## Steps
 

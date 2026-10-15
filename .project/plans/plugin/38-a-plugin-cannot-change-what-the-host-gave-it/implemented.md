@@ -6,8 +6,8 @@ refs:
   - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts)"
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts)"
   - "[code://packages/sdk/test/plugin-boundary.test.ts](../../../../packages/sdk/test/plugin-boundary.test.ts)"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md)"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md)"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md)"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md)"
   - "[code://.project/plans/plugin/38-a-plugin-cannot-change-what-the-host-gave-it/plan.md](plan.md)"
 ---
 
@@ -26,7 +26,7 @@ Softov read the diff and found three places where the promise held on paper and 
 - [`code://packages/sdk/src/host/sessionconfig.ts`](../../../../packages/sdk/src/host/sessionconfig.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts), [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - the schema answers and the `HostRecording` surface the two above are written against.
 - [`code://packages/sdk/test/plugin-boundary.test.ts`](../../../../packages/sdk/test/plugin-boundary.test.ts) - new, 24 cases. One per crossing, each trying the write and checking the host is unchanged: a principal at `read`, `write`, `remove` and `authorize`, the directory's own principal and its `roles`, and the one an embedder hands `accept`; a `Start`'s schema, tool definitions, MCP servers and store; a tool's turns; a registered agent, tool, session-config schema and trigger type; a backend written as a class and the fire of a type its plugin lost; a late registration; the frozen context; two listeners and one event; the fold keeping the base's getter.
 - [`code://packages/server/test/plugin-load.test.ts`](../../../../packages/server/test/plugin-load.test.ts), [`code://packages/server/test/server-root-config.test.ts`](../../../../packages/server/test/server-root-config.test.ts) - the loader half: a frozen context with the plugin's own `paths`, a `secretAtUse` node the plugin writes into, a late `registerTool`, and a masked option read from the copy the host took rather than the schema the plugin holds. Three fixtures were added: `plugin-push`, `plugin-later` and `plugin-after`.
-- [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) - "Everything you are handed is read-only", at the end of the contract: what is frozen, that registration ends when `apply` returns, and that a plugin is trusted code rather than sandboxed. Task 06.
+- [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) - "Everything you are handed is read-only", at the end of the contract: what is frozen, that registration ends when `apply` returns, and that a plugin is trusted code rather than sandboxed. Task 06.
 
 ## Verified
 
@@ -50,7 +50,7 @@ Three findings from Softov's read of the diff. Each was written as a case that f
 - **A frozen `host` object in the sdk, beyond task 04's file list.** `PluginHost` extends `PluginContext`, so the object a plugin registers through is the context it reads: the server's frozen literal covers only the object listeners capture, and `pluginHost` spreads it into the plugin's own `host`. That object is frozen where it is built.
 - **`fired`'s owner check is inside the door, not on the firing side.** A plugin's `fireTrigger` only accepts names in its own kept entry, so the check the task asked for is unreachable through the public API; it is kept because a type is the host's to arbitrate, and it is written where the host looks a type up.
 - **`sessionOwner` needed no freezing.** It answers an `Owner`, which is a string type, so there is no value a plugin could write to. The writable principal was the one handed to a resource provider's `read`, `write` and `remove`, and that is task 01's work.
-- **The options `apply` receives are a copy, not a frozen one.** A `secretAtUse` node inside them is frozen, and the rest is the plugin's own fresh tree, so a write there changes nothing the daemon holds but does not throw. `docs/PLUGINS.md` says it that way rather than overstating the promise.
+- **The options `apply` receives are a copy, not a frozen one.** A `secretAtUse` node inside them is frozen, and the rest is the plugin's own fresh tree, so a write there changes nothing the daemon holds but does not throw. `docs/plugins/PLUGINS.md` says it that way rather than overstating the promise.
 - **`as Bag` on a contract type does not typecheck.** Eleven casts written in tasks 02 to 04 reached past a typed value (`PluginHost`, `Agent`, `McpServer`) to write to it; the root `tsconfig.json` includes the tests, so `pnpm typecheck` failed on all of them. They now go through one documented helper, `bag(one)`, which casts through `unknown`.
 
 ## Left for later

@@ -9,7 +9,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L3750-L3765](../../packages/sdk/src/host.ts#L3750-L3765) - `rootState`, the four keys an unauthenticated connection can already read"
   - "[code://packages/sdk/src/host.ts#L4435-L4445](../../packages/sdk/src/host.ts#L4435-L4445) - `initialize` answering `initialSubscriptions` inline, so the root snapshot ships in the handshake"
   - npm://@microsoft/agent-host-protocol@0.9.0 - `AhpErrorCodes.AuthRequired` (-32007) and `PermissionDenied` (-32009), and the optional `request` on `PermissionDeniedErrorData`
-  - "[code://docs/HOST.md](../../docs/HOST.md) - the gate removed in `host/04`, which this must not reinstate"
+  - "[code://docs/sdk/HOST.md](../../docs/sdk/HOST.md) - the gate removed in `host/04`, which this must not reinstate"
 ---
 
 ## Context

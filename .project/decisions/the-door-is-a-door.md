@@ -10,7 +10,7 @@ refs:
   - "[code://packages/sdk/src/users.ts#L130-L155](../../packages/sdk/src/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
   - "[code://packages/server/src/main.ts#L810-L830](../../packages/server/src/main.ts#L810-L830) - the daemon's `identify`, which hands the record over only when it is trusted"
   - "[code://packages/server/src/config.ts#L60-L72](../../packages/server/src/config.ts#L60-L72) - the `trustToken` key, off unless it is written"
-  - "[code://docs/USERS.md](../../docs/USERS.md) - the two layers, which this makes true rather than nominal"
+  - "[code://docs/sdk/USERS.md](../../docs/sdk/USERS.md) - the two layers, which this makes true rather than nominal"
 ---
 
 ## Context
@@ -19,7 +19,7 @@ Decision `the-door-is-a-door` gave a person's connection token two meanings at o
 That was written to get the operator's own key working and it carried the person's token along with it.
 
 It also made the door the authorization. A token in a query string ends up in a proxy log, a shell history and a screenshot, and a leaked personal token was an authenticated person for the life of the connection, with nothing asked at `authenticate` and nothing to revoke but the record.
-The two layers documented in [USERS.md](../../docs/USERS.md) - the door decides whether a socket exists, `authenticate` decides who is on it - were only nominal for a personal token.
+The two layers documented in [USERS.md](../../docs/sdk/USERS.md) - the door decides whether a socket exists, `authenticate` decides who is on it - were only nominal for a personal token.
 
 The user asked for the inversion on 2026-09-23: "Can we invert.. better security right?", and confirmed the exemption with "the deployment token exempt: yes", which is what keeps the operator's key as it was.
 

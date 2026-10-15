@@ -15,7 +15,7 @@ A bot's session opens with its template, filled with its name, its instructions 
 - [`code://packages/sdk/src/host/preamble.ts`](../../../../packages/sdk/src/host/preamble.ts) - `preambleOf` and `withPreamble`, which ask every plugin and put the text before the first turn's context.
 - [`code://packages/sdk/src/host/sessionmethods.ts`](../../../../packages/sdk/src/host/sessionmethods.ts) - `createChat` asks the preambles, except for a fork.
 - `registerChatPreamble` on the plugin host, and the `templates` record collection with a default template.
-- `docs/BOTS.md` has the template, its words and the `lastChats` option.
+- `docs/plugins/BOTS.md` has the template, its words and the `lastChats` option.
 
 ## Verified
 

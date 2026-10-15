@@ -11,7 +11,7 @@ refs:
   - "[code://packages/computer/src/tools.ts](../../../../packages/computer/src/tools.ts) - `request_disposable_computer`, which builds a machine without a manifest and needs the same refusal"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - where the option is read, beside `mounts` and `profiles`"
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - the three places `profiles` is threaded, which this follows"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - \"What a body may not say\", where this belongs"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - \"What a body may not say\", where this belongs"
 ---
 
 ## Goal
@@ -57,7 +57,7 @@ A digest reference matches on its repository, so `node@sha256:...` satisfies `no
 | 04 Refuse in `manifestOf` | done | Beside the dash check, with the allowed set in the sentence. |
 | 05 Refuse in `tools.ts` | done | `request_disposable_computer` builds a machine with no manifest, so it never sees 04. The dash check had this exact hole. |
 | 06 Publish the set as an `enum` | done | Only where every entry is literal: a set with a wildcard in it is not a list of choices, and a client drawing a picker from `node:*` would offer that string. The app needs no change either way - `manifestFields` reads `enum`, and `app/computers.tsx` already draws a picker for more than one value. |
-| 07 Docs | done | Under "What a body may not say" in `docs/COMPUTER.md`, beside the dash paragraph. |
+| 07 Docs | done | Under "What a body may not say" in `docs/plugins/COMPUTERS.md`, beside the dash paragraph. |
 
 ## Verification
 

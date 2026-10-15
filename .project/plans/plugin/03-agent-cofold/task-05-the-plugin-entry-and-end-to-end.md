@@ -10,9 +10,9 @@ refs:
   - code://packages/sdk/src/types/plugin.ts - `Plugin` and `PluginHost`, which `apply` implements
   - code://packages/server/src/plugins.ts - `loadPlugins`, which resolves, manifest-checks and imports this package
   - code://packages/server/src/main.ts#L539-L545 - where the daemon folds what a plugin contributed
-  - code://docs/PLUGINS.md - the `ahpd` key and the peer range
+  - code://docs/plugins/PLUGINS.md - the `ahpd` key and the peer range
   - code://test/plugin-end-to-end.test.ts - the spec-to-served-backend shape this test follows
-  - code://docs/PLUGINS.md - the author's guide this package is the first real example of
+  - code://docs/plugins/PLUGINS.md - the author's guide this package is the first real example of
 ---
 
 ## Objective
@@ -25,7 +25,7 @@ refs:
 - `UPDATE: packages/agent-cofold/package.json` - the `ahpd` key and the entry the loader imports.
 - `UPDATE: packages/agent-cofold/src/index.ts` - export `apply` and `name` beside `facioAgent`.
 - `CREATE: test/agent-cofold-plugin.test.ts` - the loader path and the served session.
-- `UPDATE: docs/PLUGINS.md` - the package as the worked example, and the session config it takes.
+- `UPDATE: docs/plugins/PLUGINS.md` - the package as the worked example, and the session config it takes.
 
 ## Steps
 
@@ -36,7 +36,7 @@ refs:
 5. Write the end-to-end test the way `test/plugin-end-to-end.test.ts` writes its own: `loadPlugins` over a path spec, `createHost` on the folded options, a fake peer, a session on provider `facio`, and one turn answered by a stub model adapter passed through the plugin's options, because a test does not call a real endpoint.
 6. Assert the manifest path: `test/plugin-list.test.ts`'s machinery is not reused, but a case here loads the package by path and reads its title from the `ahpd` key, so the key is exercised for real.
 7. Add a case for two providers: two specs of the package with different `options.provider` and different stub models, folded over one base, both listed on the root channel and each answering its own turn.
-8. Update `docs/PLUGINS.md` with the package and its config, and note that the API key belongs in the daemon's environment rather than in the session config a client sends.
+8. Update `docs/plugins/PLUGINS.md` with the package and its config, and note that the API key belongs in the daemon's environment rather than in the session config a client sends.
 9. By hand, once: build, start the daemon with `--plugin ./packages/agent-cofold` and a configured endpoint, create a session, and watch one turn answer.
 10. Pin the resume shape task 04 left open: a paused run reopened with `start.resume` is replayed through the mapping while the host also seeds `transcript(id)`, so the same open turn can reach a client twice. Decide and implement which side gives way - the seed omits the open turn, or the replay emits only the session-level request and not the turn's chat actions - and assert it in the end-to-end test with a client that subscribes after the resume and counts the turn once.
 
@@ -55,7 +55,7 @@ refs:
 ## Resume
 
 Done 2026-09-20.
-`plugin.ts` exports `name`, `title` and `apply(host: PluginHost, options)`; `index.ts` re-exports them so the module the manifest names is the plugin, with no default export; `docs/PLUGINS.md` gains the package as the worked example, its options and its session settings, and the warning that a long-lived key belongs in the daemon's environment.
+`plugin.ts` exports `name`, `title` and `apply(host: PluginHost, options)`; `index.ts` re-exports them so the module the manifest names is the plugin, with no default export; `docs/plugins/PLUGINS.md` gains the package as the worked example, its options and its session settings, and the warning that a long-lived key belongs in the daemon's environment.
 `test/agent-cofold-plugin.test.ts` is five cases: the loader loads the source file spec, folds it and serves one turn to `chat/turnComplete`; `describePlugin` answers `ready` for the package directory with the manifest's name and title without importing; two specs with two providers do not collide; an incompatible peer range is refused; and a paused run resumed through `start.resume` is answered, continues, and is seen once by a client that subscribes after the resume.
 Verified: `pnpm test` 763 passed over 53 files, `pnpm typecheck` green, `pnpm boundary` green, `pnpm build` four packages.
 By hand: a real daemon started from a `config.json` naming the package with a `store` option loaded `@ahpd/agent-cofold`, offered `claude, facio` on the root channel, and answered a session on `facio` through a local OpenAI-compatible endpoint with `hello from facio` as streamed `chat/delta` and then `chat/turnComplete`.

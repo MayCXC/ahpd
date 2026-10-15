@@ -6,7 +6,7 @@ layer: "scripts"
 refs:
   - "[code://scripts/dev.mjs](../../../../scripts/dev.mjs) - registers the resolver with `register`, on its own thread"
   - "[code://scripts/dev-hooks.mjs](../../../../scripts/dev-hooks.mjs) - the async `resolve` hook"
-  - "[code://docs/DAEMON.md#L549](../../../../docs/DAEMON.md#L549) - the docs name `register`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the docs name `register`"
   - "[code://package.json#L47-L49](../../../../package.json#L47-L49) - `engines.node` is `>=22`"
   - https://nodejs.org/api/module.html#moduleregisterhooksoptions - `module.registerHooks`, synchronous in-thread hooks, from Node 22.15 and 23.5
 ---
@@ -19,7 +19,7 @@ Run from source with `scripts/dev.mjs`, importing pi blocks the process for abou
 
 - `UPDATE: scripts/dev.mjs` - registers the resolver with `module.registerHooks` when Node has it, and with `register` otherwise.
 - `UPDATE: scripts/dev-hooks.mjs` - the resolve rule is one function usable by both: synchronous for `registerHooks`, and the async export `register` loads.
-- `UPDATE: docs/DAEMON.md:549` - names both.
+- `UPDATE: docs/server/REFERENCE.md:549` - names both.
 
 ## Steps
 
@@ -38,7 +38,7 @@ Run from source with `scripts/dev.mjs`, importing pi blocks the process for abou
 Implemented 2026-09-28.
 `scripts/dev-hooks.mjs` keeps the resolve rule in one function, `rewrite`, and exports it as `resolveSync` for `registerHooks` and as the async `resolve` that `register` loads.
 `scripts/dev.mjs` calls `module.registerHooks` when Node has it and `module.register` otherwise.
-`docs/DAEMON.md` names both and says what the fallback costs.
+`docs/server/REFERENCE.md` names both and says what the fallback costs.
 Timed on Node 24.19 from `packages/agent-pi`: `import('@earendil-works/pi-coding-agent')` took 4577, 4791 and 4737 ms under `register`, 1381, 1557 and 1543 ms under `registerHooks`, and 1514 and 1582 ms with no hooks.
 A dev daemon with only agent-pi configured logged `plugin @ahpd/agent-pi ... in 4271 ms` before and `in 1065 ms` after.
 The fallback was checked by a preload that deletes `registerHooks` from `node:module` and wraps `register`, then imports `scripts/dev.mjs`: it called `register('./dev-hooks.mjs')`, `packages/agent-pi/src/index.ts` loaded through the rewrite, which fails with `ERR_MODULE_NOT_FOUND` without hooks, and pi's import took 5176 ms, the threaded cost.

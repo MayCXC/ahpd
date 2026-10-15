@@ -65,9 +65,9 @@ a session -> createSession({ computer: 'computer://<name>' })  -> schema has the
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A computer is an object a person manages, and a session runs in one](../../../../docs/COMPUTER.md) | The user, 2026-09-23: "The intent is to create a computer and run a agent inside it", and "A resource write seens to be the correct approach." |
-| 2 | [A tool says when it needs advanced permission, and the host says whether it has it](../../../../docs/TOOLS.md) | The user, 2026-09-23: "A plugin tool could enforce to be off unless defined.. something like, `advancedPermission: true` on the tool. some important tools.. not all.." |
-| 3 | [A plugin may contribute a session config key](../../../../docs/PLUGINS.md) | The user, 2026-09-23: "For plugin contribution its a good thing. So it will show on session before creating its that the idea?" |
+| 1 | [A computer is an object a person manages, and a session runs in one](../../../../docs/plugins/COMPUTERS.md) | The user, 2026-09-23: "The intent is to create a computer and run a agent inside it", and "A resource write seens to be the correct approach." |
+| 2 | [A tool says when it needs advanced permission, and the host says whether it has it](../../../../docs/sdk/TOOLS.md) | The user, 2026-09-23: "A plugin tool could enforce to be off unless defined.. something like, `advancedPermission: true` on the tool. some important tools.. not all.." |
+| 3 | [A plugin may contribute a session config key](../../../../docs/plugins/PLUGINS.md) | The user, 2026-09-23: "For plugin contribution its a good thing. So it will show on session before creating its that the idea?" |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -119,4 +119,4 @@ a session -> createSession({ computer: 'computer://<name>' })  -> schema has the
 - [x] With `advancedTools` unset a session reports no computer tool and a call does not run; with it set the three are offered beside the reference twelve.
 - [x] A plugin can contribute a session key, and a key a backend already declares is refused at the plugin boundary.
 - [x] A session created with `computer` reads it back, and the backend sees it in `Start.settings`.
-- [x] `plans/index.md`, `docs/COMPUTER.md`, `docs/USERS.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/plugins/COMPUTERS.md`, `docs/sdk/USERS.md` and `working/HANDOFF.md` updated.

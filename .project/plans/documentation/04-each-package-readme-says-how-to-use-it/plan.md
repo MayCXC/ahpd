@@ -17,8 +17,8 @@ refs:
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - `optionsSchema`"
   - "[code://packages/tunnel-devtunnel/src/plugin.ts](../../../../packages/tunnel-devtunnel/src/plugin.ts) - `optionsSchema`"
   - "[code://packages/sdk/README.md](../../../../packages/sdk/README.md) - the library's README, with `Use` and `Options`"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - `optionsSchema` is what a load checks; `ahpd.options` in `package.json` names only the required options"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the commands, the flags and the configuration file in full"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - `optionsSchema` is what a load checks; `ahpd.options` in `package.json` names only the required options"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the commands, the flags and the configuration file in full"
 ---
 
 ## Goal
@@ -36,7 +36,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `grep -n "^#" packages/*/README.md` - every package has an `Options` section, except `agent-claude`, where it is inside `In the daemon`.
   The order of sections differs from one package to the next.
 - `rg -ln "export const optionsSchema" packages/*/src` - all seven plugin packages export one, in `src/plugin.ts`.
-- `node -e` over each `package.json` `ahpd.options` - the keys there are not the full list, which is correct: `docs/PLUGINS.md` says that field names the required options only.
+- `node -e` over each `package.json` `ahpd.options` - the keys there are not the full list, which is correct: `docs/plugins/PLUGINS.md` says that field names the required options only.
 - `ls packages/server/src/commands/` - `authorize`, `configure`, `proxy`, `registry`, `restart`, `run`, `scopes`, `served`, `teams`, `usage`, `user` and `vault` are absent from the server README's `Commands` block.
 
 ### Gaps
@@ -53,9 +53,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A plugin README has these sections in this order: one paragraph on what it is, `In the daemon`, `Options`, `Commands`, `In your own host`, the package's own sections, `Documentation`, `License` | (defaulted: `agent-claude`'s headings, with `Options` lifted out to its own section) | 02, 03 |
 | `In the daemon` shows the install command and a complete `config.json` block with the options a person sets most often | (defaulted) | 02, 03 |
 | `Options` is a table of option, default and what it does, one row for each property of `optionsSchema`; a nested object gets its own table under the parent's name | (defaulted: `agent-acp`'s `presets.<id>` table) | 02, 03 |
-| The option list comes from `optionsSchema`; where a README and the code disagree, the code wins and the README is corrected | (defaulted: `docs/PLUGINS.md` says the load checks `optionsSchema`) | 02, 03 |
+| The option list comes from `optionsSchema`; where a README and the code disagree, the code wins and the README is corrected | (defaulted: `docs/plugins/PLUGINS.md` says the load checks `optionsSchema`) | 02, 03 |
 | `Commands` lists the ahpd commands that act on the package: `plugin install`, `plugin update`, `plugin list`, and `vault` where an option takes `$secret` | (defaulted: plugins add no commands of their own) | 02, 03 |
-| The server README lists every command and every global flag, one line each, and links `docs/DAEMON.md` for the detail | (defaulted) | 01 |
+| The server README lists every command and every global flag, one line each, and links `docs/server/REFERENCE.md` for the detail | (defaulted) | 01 |
 | A long explanation stays in `docs/`; the README row gives one sentence and links it | (defaulted: documentation/03 gave each area one doc) | 01-04 |
 | No test checks the README rows against `optionsSchema` in this plan | Softov, 2026-10-09, asked "should a test check that every optionsSchema property has a row in its package README?" and answered "No, not now" | - |
 | `packages/bot` and `packages/agent-cofold` get a copy of the root `LICENSE` | Softov, 2026-10-09, asked "Should they get one?" and answered "Yes, copy the root one" | 02, 03 |

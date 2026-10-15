@@ -12,7 +12,7 @@ refs:
   - "[code://packages/sdk/src/host/history.ts#L364](../../../../packages/sdk/src/host/history.ts#L364) - `past`, a caller"
   - "[code://packages/sdk/src/host/snapshots.ts#L391](../../../../packages/sdk/src/host/snapshots.ts#L391) - a subscribe, a caller"
   - "[code://packages/sdk/src/host/sleep.ts#L279-L301](../../../../packages/sdk/src/host/sleep.ts#L279-L301) - the sleep restore, a caller"
-  - "[code://docs/AGENT.md#L84](../../../../docs/AGENT.md#L84) - the `Agent` table"
+  - "[code://docs/sdk/AGENT.md#L84](../../../../docs/sdk/AGENT.md#L84) - the `Agent` table"
 ---
 
 ## Objective
@@ -29,7 +29,7 @@ The session record keeps the session's working folder, and the host gives it to 
 - `UPDATE: packages/sdk/src/host/history.ts:364` - `past` passes the folder to `transcript`.
 - `UPDATE: packages/sdk/src/host/snapshots.ts:391` - the subscribe passes the folder to `transcript` and `subagents`.
 - `UPDATE: packages/sdk/src/host/sleep.ts:279-301` - the sleep restore passes the folder.
-- `UPDATE: docs/AGENT.md:84` - the table names the `at` argument.
+- `UPDATE: docs/sdk/AGENT.md:84` - the table names the `at` argument.
 - `UPDATE: packages/sdk/test/host-past-open.test.ts` - the cases below.
 
 ## Steps
@@ -40,7 +40,7 @@ The session record keeps the session's working folder, and the host gives it to 
 4. Record the folder when a listing or a `find` gives a row with `workingDirectory` and the record has none.
 5. Add the optional `at` argument to `find`, `transcript` and `subagents` in `Agent`.
 6. Pass `{ workingDirectory }` from the record at each caller in the Files list.
-7. Name the argument in the `Agent` table of `docs/AGENT.md`.
+7. Name the argument in the `Agent` table of `docs/sdk/AGENT.md`.
 8. Add the test cases below.
 
 ## Validation
@@ -67,7 +67,7 @@ The session record keeps the session's working folder, and the host gives it to 
 - `History.sessionAt(id)` reads the record, and `findOf`, `past` and `restoredSubagents` pass it.
 - The peer chat read in `snapshots.ts` passes the folder of the session.
 - The sleep restore passes the folder of the record, or else the folder of the listed row.
-- `docs/AGENT.md` names `at` in the table, adds the `subagents` row, and has one paragraph about `at`.
+- `docs/sdk/AGENT.md` names `at` in the table, adds the `subagents` row, and has one paragraph about `at`.
 
 ### Validation
 

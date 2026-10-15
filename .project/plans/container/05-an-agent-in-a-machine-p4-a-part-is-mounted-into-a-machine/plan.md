@@ -57,7 +57,7 @@ agent.machine() { codex: { part: 'codex' } } + profile.parts
 
 | Decision | Task |
 | --- | --- |
-| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/COMPUTER.md) | 03, 04 |
+| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/plugins/COMPUTERS.md) | 03, 04 |
 | A shared target is refused at create only when what lands there differs | 02 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | 05 |
 
@@ -109,4 +109,4 @@ agent.machine() { codex: { part: 'codex' } } + profile.parts
 - [x] A session on a long-lived machine without its part is refused with the part named.
 - [x] A part whose build fails leaves the machine made without it, and only sessions needing it are refused.
 - [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [x] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [x] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

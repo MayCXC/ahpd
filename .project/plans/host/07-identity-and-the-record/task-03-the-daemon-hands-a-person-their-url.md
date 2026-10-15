@@ -22,7 +22,7 @@ The daemon builds its directory once, hands it to the host and to the listener, 
 - `UPDATE: packages/server/src/main.ts:663-666` - pass `identify: (token) => users?.verify(token)` when a directory is configured.
 - `UPDATE: packages/server/src/main.ts:388-454` - `ahpd user token <id> --url` prints `ws://<host>:<port>?tkn=<secret>`; without the flag it prints the secret alone, exactly as it does now.
 - `UPDATE: test/daemon.test.ts` - the URL form and the wiring.
-- `UPDATE: docs/DAEMON.md` - the `resource` key, and that a personal token is answered at the door.
+- `UPDATE: docs/server/REFERENCE.md` - the `resource` key, and that a personal token is answered at the door.
 
 ## Steps
 

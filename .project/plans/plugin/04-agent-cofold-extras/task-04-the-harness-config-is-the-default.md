@@ -22,7 +22,7 @@ refs:
 - `UPDATE: packages/agent-cofold/src/session.ts` - the instructions fall back to the harness's, and the model factory is given the config.
 - `UPDATE: packages/agent-cofold/src/index.ts` - export the config helpers.
 - `CREATE: test/agent-cofold-config.test.ts` - the cases below.
-- `UPDATE: docs/PLUGINS.md` - where the model and the key come from, and the precedence.
+- `UPDATE: docs/plugins/PLUGINS.md` - where the model and the key come from, and the precedence.
 
 ## Steps
 
@@ -42,6 +42,6 @@ refs:
 ## Resume
 
 Done 2026-09-20.
-`config.ts` holds `harnessConfig`, `harnessConfigPath` and `splitModel`; `agent.ts` reads the file once per backend and uses it for `modelOf`, `resourceOf`, `defaults` and `probe`; `session.ts` falls back to its instructions and passes it to the model factory; `index.ts` exports it; `docs/PLUGINS.md` gained a "The harness configuration is the default" section with the precedence.
+`config.ts` holds `harnessConfig`, `harnessConfigPath` and `splitModel`; `agent.ts` reads the file once per backend and uses it for `modelOf`, `resourceOf`, `defaults` and `probe`; `session.ts` falls back to its instructions and passes it to the model factory; `index.ts` exports it; `docs/plugins/PLUGINS.md` gained a "The harness configuration is the default" section with the precedence.
 Verified: the seven facio test files 51 passed, `pnpm typecheck` green.
 By hand, through the daemon on the harness configuration alone: provider `facio` was registered, a session ran a turn that streamed `harness config works` and completed, the endpoint received `Bearer harness-key` for `test-model`, and after a restart the session was listed and its transcript read back - so the config path is exercised from `config.json` to a served conversation and not only through `modelOf`.

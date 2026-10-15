@@ -19,7 +19,7 @@ It creates, starts, stops, restarts and removes a machine with typed commands.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - the plugin registers the channel and the five commands, and refreshes from the `made` wrapper and once after the startup listing.
 - [`code://packages/sdk/src/recordschannel.ts`](../../../../packages/sdk/src/recordschannel.ts) - `recordsChannel` reads nothing while nobody is subscribed.
 - `ownerOfPrincipal` is exported from `@ahpd/sdk`.
-- `docs/COMPUTER.md` has a section on the channel and the commands, after `## State`.
+- `docs/plugins/COMPUTERS.md` has a section on the channel and the commands, after `## State`.
 
 ## Verified
 

@@ -17,7 +17,7 @@ A person can edit a bot file, and the provider, its watchers and the catalogue s
 - [`code://packages/bot/src/store.ts`](../../../../packages/bot/src/store.ts) - `botStore(bots, graves, onProblem)`, with a cache that `ready()` loads once, a tombstone per deleted slug, and a watch on `bots`. A hand edit that changes the owner or the workspace is refused, and a write that changes nothing is skipped.
 - [`code://packages/bot/src/plugin.ts`](../../../../packages/bot/src/plugin.ts) - `host.records('bots', {body: 'instructions'})` and `host.records('bots-gone')`.
 - [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts) and [`code://packages/bot/src/catalogue.ts`](../../../../packages/bot/src/catalogue.ts) - wait for `ready()`, and update on `onChange`.
-- `docs/BOTS.md` and `packages/bot/README.md` describe the file, the conversion and the rules for a hand edit.
+- `docs/plugins/BOTS.md` and `packages/bot/README.md` describe the file, the conversion and the rules for a hand edit.
 
 ## Verified
 

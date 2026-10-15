@@ -6,7 +6,7 @@ refs:
   - code://packages/sdk/src/users.ts
   - code://packages/sdk/src/host.ts
   - code://test/users-gate.test.ts
-  - code://docs/USERS.md
+  - code://docs/sdk/USERS.md
 ---
 
 Editing the user file now takes effect on the next command. A person who has been removed is refused `-32007` and told to sign in again, and a person whose roles changed may do what the file says now, both without reconnecting.

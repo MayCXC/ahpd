@@ -12,7 +12,7 @@ refs:
   - "[code://packages/sdk/src/wakemessage.ts#L18-L74](../../../../packages/sdk/src/wakemessage.ts#L18-L74) - `WakeFacts`, `WAKE_PLACEHOLDERS` and `wakeMessage`, whose `\\w+` pattern does not match `{{event.<field>}}`"
   - "[code://packages/sdk/test/plugin-triggers.test.ts#L116-L132](../../../../packages/sdk/test/plugin-triggers.test.ts#L116-L132) - the case where a plugin fires its event, to extend"
   - "[code://packages/sdk/test/automation-wake.test.ts#L217](../../../../packages/sdk/test/automation-wake.test.ts#L217) - the case that fills the placeholders, to extend"
-  - "[code://docs/AUTOMATIONS.md#L142-L167](../../../../docs/AUTOMATIONS.md#L142-L167) - the placeholder table of a run's message"
+  - "[code://docs/sdk/AUTOMATIONS.md#L142-L167](../../../../docs/sdk/AUTOMATIONS.md#L142-L167) - the placeholder table of a run's message"
 ---
 
 ## Objective
@@ -32,8 +32,8 @@ A run's message can name each field as `{{event.<field>}}`, which the wake fille
 - `UPDATE: packages/webhook/src/plugin.ts` - register the `webhook` trigger type and build the automation seam over `host.fireTrigger`.
 - `UPDATE: packages/webhook/src/route.ts` - give the automation target its handler.
 - `CREATE: packages/webhook/test/webhook-automation.test.ts` - cases for the automation target, over a stub fire.
-- `UPDATE: docs/AUTOMATIONS.md:142-167` - add `{{event.<field>}}` to the placeholder table and its rules.
-- `UPDATE: docs/WEBHOOKS.md` - the automation call, the trigger type, and a message that names a field.
+- `UPDATE: docs/sdk/AUTOMATIONS.md:142-167` - add `{{event.<field>}}` to the placeholder table and its rules.
+- `UPDATE: docs/plugins/WEBHOOKS.md` - the automation call, the trigger type, and a message that names a field.
 
 ## Steps
 
@@ -60,8 +60,8 @@ A run's message can name each field as `{{event.<field>}}`, which the wake fille
 21. Let the endpoint id win over a body field named `endpoint`, so that a caller cannot reach another endpoint's automations.
 22. Answer 202 after the fire, because a fire has no answer.
 23. See the webhook cases pass.
-24. Add `{{event.<field>}}` to the table in `docs/AUTOMATIONS.md`, and change "one of the six" to match.
-25. Write the automation section of `docs/WEBHOOKS.md`.
+24. Add `{{event.<field>}}` to the table in `docs/sdk/AUTOMATIONS.md`, and change "one of the six" to match.
+25. Write the automation section of `docs/plugins/WEBHOOKS.md`.
 26. Say there that the run's origin keeps the body, so the body must carry no secret.
 27. Run the gates.
 

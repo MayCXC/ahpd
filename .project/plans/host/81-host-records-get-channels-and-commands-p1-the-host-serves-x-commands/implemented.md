@@ -25,7 +25,7 @@ A client finds each served command in `_meta['ahpd.methods']`.
 - [`code://packages/sdk/src/host/admission.ts`](../../../../packages/sdk/src/host/admission.ts) - a served method needs its grant, or a yes from its `authorize`.
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - `advertisedMethods`, which the handshake and the root state send as `ahpd.methods`.
 - [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts) - `ownIn`, which reads a table by its own keys only.
-- `docs/PLUGINS.md` has a section "A command of your own", and `00-plugin.md` marks `registerMethod` as built.
+- `docs/plugins/PLUGINS.md` has a section "A command of your own", and `00-plugin.md` marks `registerMethod` as built.
 
 ## Verified
 

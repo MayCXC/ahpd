@@ -23,7 +23,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4525-L4526](../../../../packages/sdk/src/host.ts#L4525-L4526) - `principalFor`, the person an owner names when this process met them"
   - "[code://packages/sdk/src/host.ts#L4221](../../../../packages/sdk/src/host.ts#L4221) - `kept.prune`, where a stored session goes after a full listing"
   - "[code://packages/computer/src/runtime.ts#L389-L423](../../../../packages/computer/src/runtime.ts#L389-L423) - the label constants"
-  - "[code://docs/COMPUTER.md#L226-L256](../../../../docs/COMPUTER.md#L226-L256) - the disposable section"
+  - "[code://docs/plugins/COMPUTERS.md#L226-L256](../../../../docs/plugins/COMPUTERS.md#L226-L256) - the disposable section"
   - "git://7552054:.project/ideas/an-agent-says-what-a-machine-needs.md - \"Disposable machines\", as Softov settled them"
 ---
 
@@ -60,12 +60,12 @@ another session names an alone machine -> [new] refused
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | Softov, 2026-09-26 | 02 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-09-26 | 02 |
 | A disposableAlone machine refuses every session but the one that made it | Softov, 2026-09-26 | 08 |
 | A machine made for a session counts against max and needs computer:write | Softov, 2026-09-26 | 09 |
-| [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | Softov, 2026-09-26 | 10 |
+| [A session's folder reaches a machine only where its profile allows it](../../../../docs/plugins/COMPUTERS.md) | Softov, 2026-09-26 | 10 |
 | A daemon adopts only the disposable machines whose session it keeps | Softov, 2026-09-26 | 07 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 07 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 07 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -131,4 +131,4 @@ another session names an alone machine -> [new] refused
 - [x] A `policy/01` computer refusal holds on a pre-turn restart that picks a source and on an automation's start, as on `createSession`.
 - [x] An adopted leftover goes `disposableDelay` after its session is pruned from the store.
 - [x] A profile without `sessionFolder` makes a machine with no session folder.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/COMPUTER.md` updated. (`plans/index.md` was left alone, as the work's own rules say.)
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/COMPUTERS.md` updated. (`plans/index.md` was left alone, as the work's own rules say.)

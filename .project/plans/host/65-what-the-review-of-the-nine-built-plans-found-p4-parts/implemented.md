@@ -12,7 +12,7 @@ refs:
   - "[code://scripts/parts-bump.mjs#L74-L138](../../../../scripts/parts-bump.mjs#L74-L138) - `newerThan` and `bumpOf`, where every value is checked before it is proposed"
   - "[code://packages/computer/test/computer-parts-build.test.ts](../../../../packages/computer/test/computer-parts-build.test.ts) - the build cases for tasks 01, 02 and 03"
   - "[code://packages/computer/test/parts-bump.test.ts](../../../../packages/computer/test/parts-bump.test.ts) - the four cases for task 04"
-  - "[code://docs/COMPUTER.md#L600](../../../../docs/COMPUTER.md#L600) - the paragraph that said the tag is the version alone"
+  - "[code://docs/plugins/COMPUTERS.md#L600](../../../../docs/plugins/COMPUTERS.md#L600) - the paragraph that said the tag is the version alone"
 ---
 
 An image is reused only when it stands for what its tag says. The joined image's tag now folds in the ids of the parts it actually holds, so an `ahpd-agents` image built while one part failed is not the image the next run finds when that part builds. A part's tag and the joined tag carry a short hash of the Dockerfile text that writes them, so an ahpd upgrade that changes how an image is written is a different image at the same versions. And the bump of the versions file no longer proposes a prerelease, and checks every version, url and sum the way `readParts` does before it writes any of them, so a value the feed has that the file cannot hold is a part skipped by name rather than a file the next start refuses whole.
@@ -26,7 +26,7 @@ A checkout can now build its own ahpd part at all: the pack is read at the path 
 - [`code://packages/computer/src/parts.ts`](../../../../packages/computer/src/parts.ts) - `packOf` reads the tarball at `resolve(into, file)`, which is the absolute path `pnpm pack` prints and a relative one read against the pack destination; `packedOf` removes its scratch directory in a `finally`; `ahpdSourceOf` keeps the pack's promise in `answered` and clears it in a `catch` when it is still that same promise, so a refusal is answered once and not remembered.
 - [`code://packages/computer/test/computer-parts-build.test.ts`](../../../../packages/computer/test/computer-parts-build.test.ts) - three cases over a `pnpm` of the test's own, first on `PATH`: a shell script that writes a tarball into the `--pack-destination` it is given and prints its absolute path as its last line, with a switch that makes it refuse once.
 - [`code://packages/computer/test/parts-bump.test.ts`](../../../../packages/computer/test/parts-bump.test.ts) - four cases over a copy of the script in a directory of its own, so a case writes a parts file of its own rather than the shipped one.
-- [`code://docs/COMPUTER.md`](../../../../docs/COMPUTER.md) - the paragraph that said a tag is the versions and nothing else now names the Dockerfile's hash.
+- [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md) - the paragraph that said a tag is the versions and nothing else now names the Dockerfile's hash.
 
 ## Verified
 

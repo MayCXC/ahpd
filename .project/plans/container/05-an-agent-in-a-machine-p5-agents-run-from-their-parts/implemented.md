@@ -12,7 +12,7 @@ refs:
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - part fallbacks, their clash check, and the owners of each vault-filled variable"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - the fallback at create, and vault-filled values scoped per agent"
   - "[code://packages/computer/src/secrets.ts](../../../../packages/computer/src/secrets.ts) - `VaultRead` and `scopedTo`"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the docs"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the docs"
 ---
 
 Claude, each shipped ACP preset, and the nested `ahpd` that cofold and pi run in come from their parts, so a machine made from any glibc image runs them with nothing of this host's binaries mounted.
@@ -36,7 +36,7 @@ A Claude variant's CLI in a machine gets its own `env` and nothing of the daemon
 - [`code://packages/sdk/src/types/host.ts`](../../../../packages/sdk/src/types/host.ts) - `ToolCall.provider`, filled by [`tooling.ts`](../../../../packages/sdk/src/host/tooling.ts) from the agent a session's tools were bound for in [`spawn.ts`](../../../../packages/sdk/src/host/spawn.ts); [`tools.ts`](../../../../packages/computer/src/tools.ts) hands it to `exec`, and the plugin's `exec` in [`plugin.ts`](../../../../packages/computer/src/plugin.ts) gives `computer_exec` only that agent's vault-filled values, every agent's for a caller with none (Softov, 2026-10-06: "Scope to the calling agent").
 - [`code://packages/computer/images/versions.json`](../../../../packages/computer/images/versions.json) - the `amp` part requires `node` and installs `@ampcode/cli@0.0.1791273659-g33d612`, with `amp` in its `bin` beside `amp-acp`; [`parts.ts`](../../../../packages/computer/src/parts.ts) lets an archive part carry npm packages, each with its own version, installed before the download, and writes a bin found in `node_modules/.bin` as an npm part's (Softov, 2026-10-06: "Fix in p5").
 - [`code://packages/agent-acp/src/presets.ts#L171-L174`](../../../../packages/agent-acp/src/presets.ts#L171-L174) - the shipped Cursor preset runs `cursor-agent`, the one name the cursor part ships and Cursor's installer puts on the host (Softov, 2026-10-06: "Preset runs cursor-agent").
-- `docs/COMPUTER.md` and the READMEs of `@ahpd/agent-claude`, `@ahpd/agent-acp`, `@ahpd/agent-cofold`, `@ahpd/agent-pi` and `@ahpd/computer` (task 08).
+- `docs/plugins/COMPUTERS.md` and the READMEs of `@ahpd/agent-claude`, `@ahpd/agent-acp`, `@ahpd/agent-cofold`, `@ahpd/agent-pi` and `@ahpd/computer` (task 08).
 
 ## Verified
 

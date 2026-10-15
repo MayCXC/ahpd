@@ -10,8 +10,8 @@ refs:
   - "[code://packages/sdk/src/host.ts#L5733-L5748](../../../../packages/sdk/src/host.ts#L5733-L5748) - `advertisedSchemes`, where a scheme is announced on the handshake with what it implements"
   - "[code://packages/sdk/src/types/resources.ts](../../../../packages/sdk/src/types/resources.ts) - `ResourceProvider` and `SchemeDescription`, the interface the four providers narrow"
   - "code://packages/sdk/src/policies.ts - the `Policies` port and its validation, written by task 01, which this scheme is another door onto"
-  - "[code://docs/USERS.md#L354-L398](../../../../docs/USERS.md#L354-L398) - the subject and verb table, where `policy` is a row"
-  - "[code://docs/USERS.md#L439-L474](../../../../docs/USERS.md#L439-L474) - \"People as resources\", the section that says how a scheme of this host's own behaves"
+  - "[code://docs/sdk/USERS.md#L354-L398](../../../../docs/sdk/USERS.md#L354-L398) - the subject and verb table, where `policy` is a row"
+  - "[code://docs/sdk/USERS.md#L439-L474](../../../../docs/sdk/USERS.md#L439-L474) - \"People as resources\", the section that says how a scheme of this host's own behaves"
   - "file:///github/ahp-review/prospect/ahp-user-rules.md - the row a client writes, and the store `policies.json` holds"
 ---
 
@@ -25,7 +25,7 @@ Nothing in this task decides anything: a policy written here is stored and read 
 - `CREATE: packages/sdk/src/policy.ts` - `policyProviders(store: Policies): Record<string, PolicyProvider>`, written as `peopleProviders` is: one `Records` seam over the port, the same `split` and `absent` and the same `list` / `resolve` / `read` / `write` / `remove`, with the scheme's own `title`, `description` and `manifest` so a client can draw the screen before it has asked for anything. The name is the pair `users.ts` and `people.ts` make, with `policies.ts` and `policy.ts` beside them.
 - `UPDATE: packages/sdk/src/users.ts:40-46` - `'policy'` in `SUBJECTS`, beside `user`, `team`, `project` and `role`.
 - `UPDATE: packages/sdk/src/index.ts:53-67` - `policyProviders` and the `PolicyProvider` type.
-- `UPDATE: docs/USERS.md:363-375` - the `policy` row of the subject and verb table; `UPDATE: docs/USERS.md:439-474` - a short section beside \"People as resources\" saying that `policy://<id>` is one row and what its body carries.
+- `UPDATE: docs/sdk/USERS.md:363-375` - the `policy` row of the subject and verb table; `UPDATE: docs/sdk/USERS.md:439-474` - a short section beside \"People as resources\" saying that `policy://<id>` is one row and what its body carries.
 
 ## Steps
 

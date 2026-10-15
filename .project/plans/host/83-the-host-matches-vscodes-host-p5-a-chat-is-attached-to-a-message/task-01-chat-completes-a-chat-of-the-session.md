@@ -18,8 +18,8 @@ Each item inserts `#chat:<title> ` and carries a `chat` attachment pinned to the
 
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:443-496` - `#chat:` and `#ch` answer chat items before the file items.
 - `UPDATE: packages/sdk/test/host-files.test.ts` - the completion cases below.
-- `UPDATE: docs/AHP.md` - `#chat:` in the `completions` row.
-- `UPDATE: docs/CHATS.md` - `#chat:` in the chat commands table.
+- `UPDATE: docs/sdk/AHP.md` - `#chat:` in the `completions` row.
+- `UPDATE: docs/sdk/CHATS.md` - `#chat:` in the chat commands table.
 
 ## Steps
 
@@ -34,7 +34,7 @@ Each item inserts `#chat:<title> ` and carries a `chat` attachment pinned to the
 9. Give each item `insertText` `#chat:<title> `, the token's range, and the attachment `{ type: 'chat', resource, label: <title> }`.
 10. Add `endTurn` to the attachment with the id of the last completed turn of that chat, when it has one.
 11. Keep the file items for a `#` token that cannot become `#chat:`.
-12. Write `#chat:` in the `completions` row of `docs/AHP.md` and in the table of `docs/CHATS.md`.
+12. Write `#chat:` in the `completions` row of `docs/sdk/AHP.md` and in the table of `docs/sdk/CHATS.md`.
 
 ## Validation
 
@@ -60,8 +60,8 @@ Built, and then reviewed and fixed once: a hash still on its way to `chat:` offe
   - `resource` is respelled into the spelling this connection knows the session by (`spellingOf`/`respell`, both now destructured), because the default chat's URI is derived from the session URI: a client that opened `ahp-session:/x` was told `ahp-chat://default/<base64url(ahp-session:/x)>`, and handing it the host's held spelling would name a chat it cannot open. A peer chat is the client's own name and comes back unchanged.
   - `CHAT_MOST` and `CHAT_PREFIX` sit with `PAGE_CAP`/`PAGE_MOST`; `oneLine` (VS Code's `sanitizeChatTitle`) and `chatFilter` sit with the other local helpers before the methods object.
 - `packages/sdk/test/host-files.test.ts` - five new cases and one reshaped, in `completing a hash sign`: the files beside the chats while the hash is still becoming one, the session's other chats with the current one left out (from a session channel and from a peer channel), the filter and its case blindness, a worker from `start.subagent` not offered, the pinning of `endTurn` and the chat that has none, and the reshaped `answers nothing for #chat:` - now asked on a channel with no session behind it, which is the case that still has an answer. Helpers: `holding` (a host whose backend's starts are kept, so a worker can be opened on one), `chatty` (a session with three chats, each titled by its first message), `spoken` (one finished turn under a named id) and `completing`. A `Start` type import.
-- `docs/AHP.md` - the `completions` row: `#chat:`, the filter, the cap of twenty, the `chat` attachment and its `endTurn`, the two exclusions, the spelling a resource comes back in, and that a `#` still on its way to `#chat:` - `#`, `#ch`, `#chat` - is answered with the chats and the files both while a word that already says `chat:` is answered with chats alone.
-- `docs/CHATS.md` - the `completions` row of the commands table now names the `#` rather than `#chat:`, since a bare one is answered too.
+- `docs/sdk/AHP.md` - the `completions` row: `#chat:`, the filter, the cap of twenty, the `chat` attachment and its `endTurn`, the two exclusions, the spelling a resource comes back in, and that a `#` still on its way to `#chat:` - `#`, `#ch`, `#chat` - is answered with the chats and the files both while a word that already says `chat:` is answered with chats alone.
+- `docs/sdk/CHATS.md` - the `completions` row of the commands table now names the `#` rather than `#chat:`, since a bare one is answered too.
 
 ### Decisions, as read from the plan
 

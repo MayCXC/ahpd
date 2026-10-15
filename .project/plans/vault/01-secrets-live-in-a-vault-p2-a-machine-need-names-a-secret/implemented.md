@@ -15,7 +15,7 @@ A machine need's value in the computer plugin's `needs` or a profile's `needs` m
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - `needs` and each profile's `needs` are `secretAtUse` strings; the dev container and disposable routes read for the session's owner and team.
 - [`code://packages/computer/src/provider.ts`](../../../../packages/computer/src/provider.ts) - the form route reads the picked profile's needs for the writer, a refusal answered `-32602`.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - `pickedOf`, so only the picked profile is read.
-- `docs/COMPUTER.md` - naming a secret under `## Profiles`.
+- `docs/plugins/COMPUTERS.md` - naming a secret under `## Profiles`.
 
 ## Verified
 

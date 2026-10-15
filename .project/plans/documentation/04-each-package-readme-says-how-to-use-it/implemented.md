@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/README.md](../../../../packages/sdk/README.md)"
 ---
 
-Each package README now has the same sections in the same order. Each plugin README shows a complete `config.json` block and a table row for each option, with its default from the code. It also lists the ahpd commands for the package and shows how to load the plugin in your own host. The server README links each command and flag to `docs/DAEMON.md`. The sdk README has one row for each `HostOptions` property.
+Each package README now has the same sections in the same order. Each plugin README shows a complete `config.json` block and a table row for each option, with its default from the code. It also lists the ahpd commands for the package and shows how to load the plugin in your own host. The server README links each command and flag to `docs/server/REFERENCE.md`. The sdk README has one row for each `HostOptions` property.
 
 ## What was built
 

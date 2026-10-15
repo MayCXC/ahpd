@@ -20,7 +20,7 @@ The verbs and `--plugin-option` still take the spec as written.
 - [`code://packages/server/src/install.ts`](../../../../packages/server/src/install.ts), [`code://packages/server/src/commands/configure.ts`](../../../../packages/server/src/commands/configure.ts) and [`code://packages/server/src/commands/plugin.ts`](../../../../packages/server/src/commands/plugin.ts) - each lookup finds a plugin by its id or by its spec.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `namedOptionsFrom`, which `run.ts` and `start.ts` call in place of `optionsFrom`.
 - `computer`, `bot`, `push` and `tunnel-devtunnel` export their package name, so every first-party id is its package name, as Softov chose.
-- `docs/PLUGINS.md` has a section on the id; `docs/DAEMON.md`, `docs/HOST.md`, `docs/TOOLS.md` and `packages/server/README.md` name a plugin by its id.
+- `docs/plugins/PLUGINS.md` has a section on the id; `docs/server/REFERENCE.md`, `docs/sdk/HOST.md`, `docs/sdk/TOOLS.md` and `packages/server/README.md` name a plugin by its id.
 
 ## Verified
 

@@ -18,7 +18,7 @@ Without the option any image is allowed, as before.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - reads `images`, checks every pattern at load, and passes the set on.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - the set is the option plus the default image plus every profile's image; `manifestOf` refuses beside the dash check; the schema publishes an `enum` only when every entry is a plain name.
 - [`code://packages/computer/src/tools.ts`](../../../../packages/computer/src/tools.ts) - `request_disposable_computer` applies the same refusal, since it builds a machine without a manifest.
-- [`code://docs/COMPUTER.md`](../../../../docs/COMPUTER.md) - "Allowed images" under Security, with the pattern table.
+- [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md) - "Allowed images" under Security, with the pattern table.
 
 ## Verified
 
@@ -31,7 +31,7 @@ Without the option any image is allowed, as before.
 ## Departures from the plan
 
 - None in behaviour. The plan predates the current format: its decisions are in its own table rather than decision files, and its tasks are rows rather than task files. The code cites the plan's slug for decision 1.
-- The docs landed under "What a body may not say"; that section is now "Security" after the 2026-09-25 rewrite of `docs/COMPUTER.md`.
+- The docs landed under "What a body may not say"; that section is now "Security" after the 2026-09-25 rewrite of `docs/plugins/COMPUTERS.md`.
 
 ## Left for later
 

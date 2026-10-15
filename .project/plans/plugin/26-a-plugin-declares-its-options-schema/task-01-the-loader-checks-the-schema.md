@@ -16,7 +16,7 @@ A plugin module may export `optionsSchema`, a JSON Schema object. The loader che
 
 - `UPDATE: packages/sdk/src/types/plugin.ts:210-230` - `optionsSchema?: Record<string, unknown>` on `Plugin`, documented as JSON Schema for the options `apply` receives.
 - `UPDATE: packages/server/src/plugins.ts:408-434` - read and check `optionsSchema` with `check` from `@cofold/commands`.
-- `UPDATE: docs/PLUGINS.md` - the export, with an example.
+- `UPDATE: docs/plugins/PLUGINS.md` - the export, with an example.
 
 ## Steps
 
@@ -34,5 +34,5 @@ A plugin module may export `optionsSchema`, a JSON Schema object. The loader che
 - **Only configured keys are warned about:** a key that comes only from the plugin's `defaults` is the plugin's own, so it is not warned about. `@ahpd/computer` keeps `disposableDelay` and `host` in `defaults` as constants, which is how this surfaced.
 - **Tests:** [`code://packages/server/test/plugin-options.test.ts`](../../../../packages/server/test/plugin-options.test.ts), 8 cases over two new fixtures, `plugin-schema` (required `command` with no default, required `greeting` with one, bounded `retries`, a default `internal` the schema does not name) and `plugin-unchecked` (no schema): options that pass reach `apply` with defaults under them; a wrong type is reported and skipped with `plugin-hello` still loaded; a bound; a missing required key; a default not warned about; a default satisfying `required`; an unknown key warned and passed; no schema loaded unchecked.
 - **Failed first, for the right reason:** before the loader change the wrong type, the bound, the missing key and the unknown key each loaded with `problems` `[]`. The default-not-warned case was added after the computer suite showed the warning on defaults: it failed with the `internal` warning, as did the three cases whose fixture gained `internal`, and passed once the warning read only the spec's own keys. The pass, default-satisfies-required and no-schema cases guard behaviour that already held.
-- **Docs:** [`docs/PLUGINS.md`](../../../../docs/PLUGINS.md) gains `optionsSchema` in the contract block, a `### Declaring the options` section with an example and both sentences, the failure bullet, and the `ahpd.options` manifest row now says a load uses `optionsSchema`. The main tree's uncommitted ACP edit in the same file still applies over this (`git apply --check` clean).
+- **Docs:** [`docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) gains `optionsSchema` in the contract block, a `### Declaring the options` section with an example and both sentences, the failure bullet, and the `ahpd.options` manifest row now says a load uses `optionsSchema`. The main tree's uncommitted ACP edit in the same file still applies over this (`git apply --check` clean).
 - **Gates:** `pnpm typecheck` clean; `pnpm boundary` clean (8 packages, none undeclared); full `pnpm test` 117 files, 1691 tests passed. The first full run had one failure, `packages/sdk/test/changes-refresh.test.ts > re-reads a changeset when git is changed outside the host`, which passed 3 of 3 alone and on the second full run.

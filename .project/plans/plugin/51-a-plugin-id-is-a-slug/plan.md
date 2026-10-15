@@ -22,7 +22,7 @@ refs:
   - "[code://packages/server/src/plugins.ts#L1231-L1292](../../../../packages/server/src/plugins.ts#L1231-L1292) - `describePlugin`, the row `ahpd plugin list` shows"
   - "[code://packages/sdk/src/triggers.ts#L192-L193](../../../../packages/sdk/src/triggers.ts#L192-L193) - a trigger's `owners` filter, compared with a session's owner"
   - "[code://packages/webhook/src/route.ts#L8-L11](../../../../packages/webhook/src/route.ts#L8-L11) - `NAME` and `PREFIX`, the webhook's id and route"
-  - "[code://docs/PLUGINS.md#L39-L47](../../../../docs/PLUGINS.md#L39-L47) - the section on the id"
+  - "[code://docs/plugins/PLUGINS.md#L39-L47](../../../../docs/plugins/PLUGINS.md#L39-L47) - the section on the id"
   - https://github.com/softov/ahpw/blob/main/plugin/index.ts - ahpw exports `ahpd-web` and serves `/plugins/ahpd-web/`
 ---
 
@@ -43,7 +43,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "export const name" packages/*/src` - nine first-party plugins export `@ahpd/<name>`; the webhook exports it through `NAME` in `route.ts`.
-- `rg -n "plugin:@ahpd|%40ahpd|plugins\.@ahpd" packages docs` - the webhook route and its tests, `docs/WEBHOOKS.md`, the route fixture `@ahpd/plugin-route` and its test, and one root config test.
+- `rg -n "plugin:@ahpd|%40ahpd|plugins\.@ahpd" packages docs` - the webhook route and its tests, `docs/plugins/WEBHOOKS.md`, the route fixture `@ahpd/plugin-route` and its test, and one root config test.
 - `rg -n "ownerOf\(" packages/sdk/src packages/server/src` - sessions, wake senders and scheduled automations read a saved owner through `ownerOf` in `values.ts`; usage reads its lines in `entriesIn`.
 - `rg -n "@ahpd/(agent-|bot|push|computer|webhook|tunnel)|plugins\.@ahpd|%40ahpd|ahpd-web|plugin:@ahpd" /github/ahpapp/src /github/ahpc/src` - nothing. The one `@ahpd/` string in ahpapp is the install line `npm i -g @ahpd/server` in `HostForm.tsx`, a package name.
 - `rg -n "ahpd-web|/plugins/" /github/ahpw` - the id and prefix in `plugin/index.ts`, the comment in `vite.config.ts`, `README.md:55`, `plugin/index.test.ts` and `plugin/static.test.ts`. The `ahpd-web.` keys in `localStorage` are an app prefix and stay.

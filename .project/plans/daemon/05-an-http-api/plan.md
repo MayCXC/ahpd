@@ -53,23 +53,23 @@ ahpd --remote URL plugin list -> [new] manifest from URL/api/cli-manifest -> com
 | Decision | Task |
 | --- | --- |
 | An HTTP API is served by @cofold/remote, and ahpd mounts it | 01, 02 |
-| [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](../../../../docs/DAEMON.md) | 02 |
+| [The HTTP API is off by default, and on the daemon's own port under /api unless http.port is set](../../../../docs/server/REFERENCE.md) | 02 |
 | [ahpd's commands are declared once, with @cofold/commands](../04-commands-declared-once/plan.md) | 03 |
-| [A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../../docs/HOST.md) | 10 |
-| [`status` and `plugin list` need config:read](../../../../docs/HOST.md) | 09 |
-| [Installing or removing a plugin over HTTP needs the deployment token](../../../../docs/AUTHENTICATION.md) | 09 |
-| [The config command hides the connection token over HTTP](../../../../docs/HOST.md) (superseded) | 09 |
-| [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md) (superseded) | 20 |
-| [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/HOST.md) | 20, 24, 31 |
-| [The user commands need users:write](../../../../docs/USERS.md) | 09, 17 |
-| [http.host binds the API's own listener](../../../../docs/HOST.md) | 12 |
-| [`--remote` needs a token](../../../../docs/DAEMON.md) | 13 |
-| [`--remote` to plain http on a host that is not loopback sends the token, with a warning](../../../../docs/DAEMON.md) | 13 |
-| [`--remote` reads its token from a file too, with --token-file](../../../../docs/DAEMON.md) | 13 |
+| [A daemon with neither a connection token nor a user directory refuses to start with the HTTP API on](../../../../docs/sdk/HOST.md) | 10 |
+| [`status` and `plugin list` need config:read](../../../../docs/sdk/HOST.md) | 09 |
+| [Installing or removing a plugin over HTTP needs the deployment token](../../../../docs/sdk/AUTHENTICATION.md) | 09 |
+| [The config command hides the connection token over HTTP](../../../../docs/sdk/HOST.md) (superseded) | 09 |
+| [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/sdk/HOST.md) (superseded) | 20 |
+| [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/sdk/HOST.md) | 20, 24, 31 |
+| [The user commands need users:write](../../../../docs/sdk/USERS.md) | 09, 17 |
+| [http.host binds the API's own listener](../../../../docs/sdk/HOST.md) | 12 |
+| [`--remote` needs a token](../../../../docs/server/REFERENCE.md) | 13 |
+| [`--remote` to plain http on a host that is not loopback sends the token, with a warning](../../../../docs/server/REFERENCE.md) | 13 |
+| [`--remote` reads its token from a file too, with --token-file](../../../../docs/server/REFERENCE.md) | 13 |
 | cofold's serve() takes a Request and answers a Response, and Node gets an adapter | 15, 16 |
 | [The SDK mounts the Node listener the server adapts, and depends on no cofold package](../../../rules/the-sdk-depends-only-on-the-protocol.md) | 35 |
-| [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) | 06, 11, 18 |
-| [A user command gives, mints for and removes only what its caller holds](../../../../docs/AUTHENTICATION.md) | 17 |
+| [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md) | 06, 11, 18 |
+| [A user command gives, mints for and removes only what its caller holds](../../../../docs/sdk/AUTHENTICATION.md) | 17 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -88,7 +88,7 @@ ahpd --remote URL plugin list -> [new] manifest from URL/api/cli-manifest -> com
 | Tasks 28 to 31 go in this plan. | Softov, 2026-09-27, asked where the four new tasks go: "daemon/05". | 28-31 |
 | The comment on `urlHost` says what it is, not why it moved. | Softov, 2026-09-27, asked which review findings become fix tasks: "urlHost comment narrates". | 32 |
 | A `--remote` token is trimmed from `--token` and `AHPD_TOKEN` as it is from a file. | Softov, 2026-09-27, asked which earlier findings become tasks: "tokenFor trims every source". | 33 |
-| `docs/DAEMON.md`'s long `--remote` line is wrapped, and the flag row names the update check as declared. | Softov, 2026-09-27, asked which earlier findings become tasks: "DAEMON.md long line and wording". | 34 |
+| `docs/server/REFERENCE.md`'s long `--remote` line is wrapped, and the flag row names the update check as declared. | Softov, 2026-09-27, asked which earlier findings become tasks: "DAEMON.md long line and wording". | 34 |
 | The exported `RequestHandler` type keeps its name with the fetch shape. | Softov, 2026-09-27, asked whether the type keeps its name in 0.4.0: "Keep RequestHandler". | 15 |
 | cofold's CI `runtimes` job runs the clerver server on Node, Bun and Deno. | Softov, 2026-09-27, asked whether to add the round trip the Validation names: "Add clerver to runtimes". | 15 |
 | `node-pty` is declared by `@ahpd/server`, which imports it, and not by the SDK. | Softov, 2026-09-28, asked whether to move it: "Move it, with task 35". | 35 |
@@ -175,5 +175,5 @@ ahpd --remote URL plugin list -> [new] manifest from URL/api/cli-manifest -> com
 - [x] The bind, sentence, cache and plugin-list cases fail when their behaviour breaks, and the cache is 0700 even when it existed (task 19).
 - [x] A served config never shows another file's contents, and masks every plugin option value (task 20).
 - [x] A served plugin install does not hold the daemon, and npm's stderr streams (task 21).
-- [x] `docs/DAEMON.md` and `docs/USERS.md` match the served fields and the `users` grants, and the refs in tasks 07 to 21 are current (task 22).
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/DAEMON.md`, `plans/index.md` updated.
+- [x] `docs/server/REFERENCE.md` and `docs/sdk/USERS.md` match the served fields and the `users` grants, and the refs in tasks 07 to 21 are current (task 22).
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/server/REFERENCE.md`, `plans/index.md` updated.

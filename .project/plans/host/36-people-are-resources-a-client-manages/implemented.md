@@ -14,7 +14,7 @@ A host with a users directory serves `user://`, `team://`, `project://` and `rol
 - `Users` gains `roles`, `addRole` and `removeRole` (refused while a record names the role), and `add` takes `rolesFrom`.
 - [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts) - `peopleProviders(users)`, one provider per scheme with `describe()`; reads and lists never carry a token.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `ownRecord` lets a person read `user://<self>` without `user:read`.
-- The daemon registers the four when it has a directory; the `user`, `team` and `project` commands move to the new subjects; `docs/USERS.md` and `docs/DAEMON.md` say so.
+- The daemon registers the four when it has a directory; the `user`, `team` and `project` commands move to the new subjects; `docs/sdk/USERS.md` and `docs/server/REFERENCE.md` say so.
 
 ## Verified
 

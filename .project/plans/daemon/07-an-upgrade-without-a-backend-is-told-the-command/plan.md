@@ -13,7 +13,7 @@ decisions: []
 refs:
   - "[code://packages/server/src/commands/run.ts#L396-L410](../../../../packages/server/src/commands/run.ts#L396-L410) - the refusal, which names `npm i` in the configuration directory"
   - "[code://packages/server/test/daemon-backend.test.ts#L58-L90](../../../../packages/server/test/daemon-backend.test.ts#L58-L90) - the case that pins the sentence"
-  - "[code://docs/DAEMON.md#L22-L46](../../../../docs/DAEMON.md#L22-L46) - \"It has no backend of its own\", whose quoted sentence is older than the code's"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - \"It has no backend of its own\", whose quoted sentence is older than the code's"
   - npm://@ahpd/server@0.6.3 - Claude built in, so its configuration names no plugin
 ---
 
@@ -33,14 +33,14 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Gaps
 
 - The refusal names `npm i` and not `ahpd plugin install`.
-- `docs/DAEMON.md` quotes an older sentence and says nothing about 0.6.
+- `docs/server/REFERENCE.md` quotes an older sentence and says nothing about 0.6.
 
 ## Decisions locked in
 
 | What | Source | Task |
 | --- | --- | --- |
 | The refusal names `ahpd plugin install @ahpd/agent-claude` first, and `npm i` as the other way. | Softov, 2026-09-28, asked whether the message should name `ahpd plugin install` before tagging 0.8.0: "Fix it before the tag (Recommended)". | 01 |
-| `docs/DAEMON.md` quotes the sentence as the code says it and has one note for an upgrade from 0.6. | the same answer | 01 |
+| `docs/server/REFERENCE.md` quotes the sentence as the code says it and has one note for an upgrade from 0.6. | the same answer | 01 |
 
 ## Tasks
 

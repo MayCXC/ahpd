@@ -73,7 +73,7 @@ model calls edit_file -> beforeTool [new] onFileEdit(before) -> policy asks or a
 | The capabilities are built here from `@cofold/tools`, not imported from papo | papo is a CLI, not a library this plugin depends on | 01 |
 | A host tool that shares a capability tool's name keeps it, and the capability's tool is left out | cofold fails a run two contributors give one name to | 01 |
 | A session whose store is in memory gets no memory capability | there is no directory to keep memory files in | 01 |
-| The new section of `docs/PLUGINS.md` and the package README are not hard-wrapped | Softov's rule for docs | 10 |
+| The new section of `docs/plugins/PLUGINS.md` and the package README are not hard-wrapped | Softov's rule for docs | 10 |
 | A `shell_exec` call's `toolInput` is the bare command on every action and part that carries one; it still runs in cofold's own process. | Softov, 2026-09-26: "Bare command, like Claude". | 11 |
 | `searchOf` keeps the configured order and `searchProviders` builds the array in it. | Softov, 2026-09-26: "Configured order". | 12, 10 |
 | Both checks resolve symlinks with `realpath` before comparing, a path that does not exist yet judged by its nearest existing ancestor; replaced for ahpd's check by the `resolveWithin` row below. | Softov, 2026-09-26: "yes, both". | 06, 07 |
@@ -143,5 +143,5 @@ model calls edit_file -> beforeTool [new] onFileEdit(before) -> policy asks or a
 - [x] `@cofold/tools` is at 0.1.x with a `^0.1` peer range, and `@ahpd/agent-cofold` takes `^0.1` (tasks 06, 08).
 - [x] A session opened with no working directory still has `shell_exec` and the files tools (task 09).
 - [x] `pnpm test`, `pnpm typecheck` and `pnpm boundary` green in ahpd; cofold's own run is in [deferred.md](deferred.md).
-- [x] `docs/PLUGINS.md` says what confines the tools and that search follows the configured order, and `packages/agent-cofold/README.md` exists (task 10).
+- [x] `docs/plugins/PLUGINS.md` says what confines the tools and that search follows the configured order, and `packages/agent-cofold/README.md` exists (task 10).
 - [x] `plans/index.md` updated.

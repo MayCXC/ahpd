@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/types/users.ts#L64-L84](../../../../packages/sdk/src/types/users.ts#L64-L84) - `Principal`, unchanged by this plan"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the `issuer` key and `signInIdentifier`, which the record composes with"
   - "[code://packages/server/src/main.ts#L542-L590](../../../../packages/server/src/main.ts#L542-L590) - where the directory is built and the record passed to it"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the three ways in, which gain a fourth thing to say: where the credential came from"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the three ways in, which gain a fourth thing to say: where the credential came from"
   - https://www.rfc-editor.org/rfc/rfc8414 - issuer identifiers and the well-known metadata document an OpenID Connect issuer publishes
   - "[file:///github/externals/vscode/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostAuth.ts#L362-L395](file:///github/externals/vscode/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostAuth.ts#L362-L395) - the client that resolves a provider from `authorization_servers`, which is what an issuer makes work"
 ---
@@ -60,8 +60,8 @@ client -> authenticate(resource, token)   -> Users.verify
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [An issuer answers for a subject, and the directory still decides what they may do](../../../../docs/AUTHENTICATION.md) | `(defaulted: roles live in one file, and an issuer that returned a principal would put a second role table somewhere else.)` |
-| 2 | [The issuer option names an OpenID Connect issuer by URL, with GitHub as a preset](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "A issuer options seems more concise", and "the issuer its spec... need to be done". |
+| 1 | [An issuer answers for a subject, and the directory still decides what they may do](../../../../docs/sdk/AUTHENTICATION.md) | `(defaulted: roles live in one file, and an issuer that returned a principal would put a second role table somewhere else.)` |
+| 2 | [The issuer option names an OpenID Connect issuer by URL, with GitHub as a preset](../../../../docs/sdk/AUTHENTICATION.md) | The user, 2026-09-23: "A issuer options seems more concise", and "the issuer its spec... need to be done". |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -77,7 +77,7 @@ client -> authenticate(resource, token)   -> Users.verify
 - **Data flow** - `fileUsers` gains an `issuer`. `verify(token)` compares the local hashes, and when none matched it asks `issuer.subject(token)` for a subject and looks that up as a record's `id`. The record's roles are resolved the way they always were.
 - **Event flow** - unchanged. The principal is attached by `authenticate`, expires by its timer, and is raised as `auth/required` exactly as before.
 - **State flow** - the advertised record gains `authorization_servers` and `scopes_supported` when an issuer is configured. OpenID Connect metadata is discovered once and cached on success.
-- **Layer responsibilities** - packages/sdk: the `Issuer` type, `githubIssuer` and `oidcIssuer`, and the branch in `fileUsers.verify` · packages/server: the `issuer` key, the `--issuer` flag and the record · test/: the verifier against a fake fetch · docs: `docs/USERS.md` and `docs/DAEMON.md`.
+- **Layer responsibilities** - packages/sdk: the `Issuer` type, `githubIssuer` and `oidcIssuer`, and the branch in `fileUsers.verify` · packages/server: the `issuer` key, the `--issuer` flag and the record · test/: the verifier against a fake fetch · docs: `docs/sdk/USERS.md` and `docs/server/REFERENCE.md`.
 - **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts).
 
 ## Tasks
@@ -102,7 +102,7 @@ client -> authenticate(resource, token)   -> Users.verify
 - **Open questions:**
   1. Which issuer does a deployment name first? - answered by decision 2: `github` is a preset and a URL is an OpenID Connect issuer.
   2. Does an issuer replace the local secrets? - answered by decision 1: it joins them, and the local hash is tried first, so the issuer is never asked for a minted secret.
-- **Watch out for:** `verify` is also reached by the connection-token path, and the door calls it before the socket exists. The issuer therefore never answers at the door for a record with no local secret, which is a real limit rather than an oversight; it is in `deferred.md` and in `docs/USERS.md`.
+- **Watch out for:** `verify` is also reached by the connection-token path, and the door calls it before the socket exists. The issuer therefore never answers at the door for a record with no local secret, which is a real limit rather than an oversight; it is in `deferred.md` and in `docs/sdk/USERS.md`.
 
 ## Final verification checklist
 

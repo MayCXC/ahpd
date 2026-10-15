@@ -25,7 +25,7 @@ A usage read by pool name reads the name through `currentOwner`, so a read of `p
 - `UPDATE: packages/sdk/test/usage-methods.test.ts` - `totals`, `range` and `records` with the pool `plugin:@ahpd/bot`.
 - `UPDATE: packages/server/src/plugins.ts:1252-1279` - `describePlugin` checks the id after the range check, and on the path with no manifest.
 - `UPDATE: packages/sdk/src/usage.ts` - `split`, `poolParam` and the `authorize` of `onePool` read the pool through `currentOwner`.
-- `UPDATE: docs/PLUGINS.md` - the `error` state names an id that is not a slug.
+- `UPDATE: docs/plugins/PLUGINS.md` - the `error` state names an id that is not a slug.
 - `UPDATE: plan.md` - the `routePrefix` row, and the answer rows of this task.
 
 ## Steps

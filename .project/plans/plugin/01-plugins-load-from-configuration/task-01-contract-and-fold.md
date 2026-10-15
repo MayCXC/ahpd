@@ -12,7 +12,7 @@ refs:
   - code://packages/sdk/src/index.ts - where the contract, the fold and `sdkVersion()` join the exports, beside `createHost` and the ports
   - code://packages/server/src/version.ts#L20-L37 - the walk up to the nearest manifest that `sdkVersion()` mirrors
   - code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md - why this is not a package of its own
-  - code://docs/PLUGINS.md - the closed set of kinds and the `register*` naming this task makes literal
+  - code://docs/plugins/PLUGINS.md - the closed set of kinds and the `register*` naming this task makes literal
   - code://.project/plans/plugin/00-plugin.md - the table these kinds are the rows of
   - code://test/example.test.ts#L1-L30 - the fake `Agent` the fold test builds a base from
 ---

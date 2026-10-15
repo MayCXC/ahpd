@@ -4,7 +4,7 @@ date: 2026-10-11
 refs:
   - git://c6bd1fdf
   - "[code://packages/agent-claude/src/session/clienttools.ts](../../../../packages/agent-claude/src/session/clienttools.ts)"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md)"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md)"
 ---
 
 A client's tool reaches Claude with its whole JSON Schema. A tool list that the SDK refused is sent again when it comes back. A handler that waits on a client that left gets a refusal at once, and does not wait until the turn stops.
@@ -14,7 +14,7 @@ A client's tool reaches Claude with its whole JSON Schema. A tool list that the 
 - [`code://packages/agent-claude/src/session/clienttools.ts`](../../../../packages/agent-claude/src/session/clienttools.ts) - `shaped()` reads each property with `z.fromJSONSchema`, keeps its description, and falls back to a string when zod refuses it.
 - The same file - `setTools` keeps the new list only after `setMcpServers` takes it.
 - The same file - `clientGone` and `refuseJoins` end each join that waits on a tool of the client that left. `openCall` does the same for a call whose tool nothing offers.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the input request table names all four kinds.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the input request table names all four kinds.
 
 ## Verified
 

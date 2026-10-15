@@ -8,7 +8,7 @@ date: 2026-10-02
 ## What was built
 
 - `packages/server/src/rootconfig.ts` - the key, merged by entry and replaced on a type change, checked before it is live; `commands/run.ts` - the live holder; `packages/sdk/src/toolserver.ts` - the endpoint; `packages/agent-acp/src/session.ts` - `serversFor`.
-- Root config, tool server and ACP tests; `docs/DAEMON.md`, `docs/PLUGINS.md`.
+- Root config, tool server and ACP tests; `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`.
 
 ## Verified
 

@@ -14,7 +14,7 @@ A session from this host shows its pull request in VS Code 1.140's Sessions wind
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `metaOf` publishes the GitHub state under `_meta.githubData`, keyed by the working directory's `file://` URI named in `_meta.workingDirectoryKeys`, and still under `_meta.github`; `worktreeIncludeFiles` is an array that still reads a comma-separated string, on creation and from a stored session; `worktreeSymlinkFolders` is a read-only array; the host's own config paths carry a list for the two pattern keys.
 - [`code://packages/sdk/src/worktrees.ts`](../../../../packages/sdk/src/worktrees.ts) - the symlink pass before the include copy: ignored folders found with `ls-files` and matched with `check-ignore --no-index` against a temporary excludes file, each linked with the reference's checks, best effort as a whole.
 - [`code://packages/sdk/src/types/worktrees.ts`](../../../../packages/sdk/src/types/worktrees.ts) - `symlink` beside `include`.
-- `docs/AHP.md` - the pull request row and the worktree properties.
+- `docs/sdk/AHP.md` - the pull request row and the worktree properties.
 
 ## Verified
 

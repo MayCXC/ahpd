@@ -17,7 +17,7 @@ A plugin registers one route with `registerRoute(handler)`, and the daemon serve
 - [`code://packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `checkRoute`, and a second `registerRoute` refused.
 - [`code://packages/server/src/http.ts`](../../../../packages/server/src/http.ts) - `pluginRoutes`, mounted through `guarded`, with the Host check alone, shared with the API as `hostRefusal`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `announcedNames`, which adds the host of each `scheme://` URL a plugin says to the names a route answers to.
-- `docs/PLUGINS.md` and `00-plugin.md` gain the route kind.
+- `docs/plugins/PLUGINS.md` and `00-plugin.md` gain the route kind.
 
 ## Verified
 

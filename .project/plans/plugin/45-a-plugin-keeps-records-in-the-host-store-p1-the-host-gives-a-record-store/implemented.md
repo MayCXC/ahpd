@@ -25,7 +25,7 @@ A plugin reads and writes YAML with `parseYaml` and `stringifyYaml` on its conte
 - [`code://packages/server/src/records.ts`](../../../../packages/server/src/records.ts) - `fileRecords`, `recordFile` and `readRecordFile`, with a folder watch and the one-time conversion of `<id>.json`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `fileRecords` is the daemon's `records` port.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - each plugin host gets the record store, one shared `collections` map and the `@cofold/yaml` functions.
-- `docs/PLUGINS.md` has the sections "Keeping records" and "Reading and writing YAML", and `docs/DAEMON.md` has "Plugin records".
+- `docs/plugins/PLUGINS.md` has the sections "Keeping records" and "Reading and writing YAML", and `docs/server/REFERENCE.md` has "Plugin records".
 - `00-plugin.md` lists `registerRecords` in the port row.
 
 ## Verified

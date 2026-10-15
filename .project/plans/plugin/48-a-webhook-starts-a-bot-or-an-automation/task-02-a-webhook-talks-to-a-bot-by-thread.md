@@ -30,7 +30,7 @@ The endpoint's reply mode decides the answer: a callback at turn end by default,
 - `CREATE: packages/webhook/test/webhook-bot.test.ts` - cases for the thread map and the three reply modes, over stub seams.
 - `UPDATE: packages/webhook/test/webhook-record.test.ts` - cases for `callbackPrefix` and `syncTimeoutSeconds`.
 - `CREATE: packages/server/test/webhook-bot.test.ts` - one end-to-end case: a daemon loads `@ahpd/webhook` and a bot, and a call gets the turn's text back.
-- `UPDATE: docs/WEBHOOKS.md` - the two call shapes, the thread, the three reply modes, the callback prefix, the timeout option, and the grants to give the plugin.
+- `UPDATE: docs/plugins/WEBHOOKS.md` - the two call shapes, the thread, the three reply modes, the callback prefix, the timeout option, and the grants to give the plugin.
 
 ## Steps
 
@@ -65,7 +65,7 @@ The endpoint's reply mode decides the answer: a callback at turn end by default,
 29. Keep the turn running after that answer.
 30. See the reply cases pass.
 31. Write the end-to-end case in `packages/server/test/webhook-bot.test.ts`, and see it pass.
-32. Write the bot section of `docs/WEBHOOKS.md`, with every grant the end-to-end case gives the plugin.
+32. Write the bot section of `docs/plugins/WEBHOOKS.md`, with every grant the end-to-end case gives the plugin.
 33. Run the gates.
 
 ## Validation
@@ -107,7 +107,7 @@ How the parts work:
 - The lookups of one thread run one after another, so two first calls make one chat.
 - The wait for a turn's end is made before the turn is sent, and `turnEnds()` matches each `turn_end` by chat and turn id.
 - At the turn's end, the plugin subscribes to the chat and joins the turn's `markdown` parts from the snapshot.
-- The end-to-end case runs with a users directory. It needs exactly `bot:get`, `session:read` and `session:write`, and `docs/WEBHOOKS.md` lists them.
+- The end-to-end case runs with a users directory. It needs exactly `bot:get`, `session:read` and `session:write`, and `docs/plugins/WEBHOOKS.md` lists them.
 
 Where the build departs from the plan:
 

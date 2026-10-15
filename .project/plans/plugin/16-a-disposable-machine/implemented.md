@@ -12,7 +12,7 @@ title: A disposable machine is made for a session and goes after it - implemente
 - `inMachine` (`packages/sdk/src/host.ts`) runs `enter` and `leave` inside a promise and logs a rejection or a synchronous throw.
 - The machine listing matches `inspect` rows by name and drops a machine that vanished between `ps` and `inspect`.
 - The session folder reaches a machine only where its profile says `sessionFolder`.
-- `docs/COMPUTER.md` covers disposable machines, adoption and the create turn.
+- `docs/plugins/COMPUTERS.md` covers disposable machines, adoption and the create turn.
 
 ## Verified
 

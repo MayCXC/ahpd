@@ -9,7 +9,7 @@ refs:
   - code://packages/server/src/main.ts
   - code://test/users.test.ts
   - code://test/users-gate.test.ts
-  - code://docs/USERS.md
+  - code://docs/sdk/USERS.md
 ---
 
 Permission is a subject and a verb, so a role can grant looking without granting doing. `guest` - the default for a new person - lists the sessions and the automations and can do nothing about either, and `admin` is `*:*`, which reaches a plugin's scheme where before even an admin had to name it.
@@ -20,7 +20,7 @@ Permission is a subject and a verb, so a role can grant looking without granting
 - `code://packages/sdk/src/users.ts` - `isGrant`, `holds` (exact, `*:*`, `*:<verb>`, `<subject>:*`), the built-ins `admin`/`member`/`guest`, the once-only report for a malformed grant and for a role nothing defines, the role-name refusal in `add`, and the grants in `list`.
 - `code://packages/sdk/src/host.ts` - `NEEDS` by pair, `dispatchNeeds` as writes, and `capabilityFor` scoping only the `file` subject by the request's URI scheme.
 - `code://packages/server/src/main.ts` - `guest` as the default, the refusal said as the verb's own, and `user list` printing `id (roles) grants`.
-- `code://docs/USERS.md` - the grammar, the subject and verb table, the built-ins, the wildcard rule and the `user list` output.
+- `code://docs/sdk/USERS.md` - the grammar, the subject and verb table, the built-ins, the wildcard rule and the `user list` output.
 
 ## Verified
 

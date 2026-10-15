@@ -70,7 +70,7 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 | [One computer: provider, the runtime named for what makes the machine](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | 01 |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 04 |
 | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 04 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | 01 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | 01 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -114,7 +114,7 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 ## Risks and tradeoffs
 
 - `ssh://` Docker connections are slow to open - each verb is one `docker` run; a listing across several Dockers runs them in parallel and bounds each.
-- The nested host needs ahpd inside the image - the test image installs it as `docs/COMPUTER.md` shows; p5's ahpd part replaces that once built, and a part image must then be built on the Docker that mounts it.
+- The nested host needs ahpd inside the image - the test image installs it as `docs/plugins/COMPUTERS.md` shows; p5's ahpd part replaces that once built, and a part image must then be built on the Docker that mounts it.
 - A Docker that is down makes its profile's machines unlisted - the listing says which Docker did not answer rather than failing the whole listing.
 
 ## Resume state
@@ -131,4 +131,4 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 - [ ] A local profile and a dev02 profile list their machines side by side with distinct ids, and both are metered.
 - [ ] A profile on another Docker with a bind mount is refused with a sentence.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

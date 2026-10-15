@@ -12,7 +12,7 @@ refs:
 ## Objective
 
 `computer://box` written with a devcontainer body lists as `box`, and is inspected, reached and removed by that name.
-This applies [The name a create gives a dev container is kept as a label on the container](../../../../docs/CONTAINERS.md): for now the name is `--label ahpd.name=<name>` in the override config's `runArgs`, not an `--id-label`, which would give the folder a second container.
+This applies [The name a create gives a dev container is kept as a label on the container](../../../../docs/plugins/CONTAINERS.md): for now the name is `--label ahpd.name=<name>` in the override config's `runArgs`, not an `--id-label`, which would give the folder a second container.
 
 ## Files
 

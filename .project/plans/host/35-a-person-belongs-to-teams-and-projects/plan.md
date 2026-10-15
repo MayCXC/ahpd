@@ -40,8 +40,8 @@ AHP: session picker `scope` (fixed after the first turn) -> scopeFor ; proxy: he
 
 | Decision | Source |
 | --- | --- |
-| [Teams and projects are memberships in the users file, written team:project](../../../../docs/USERS.md) | Softov, 2026-10-01 |
-| [A request that names no team and project uses the person's primary](../../../../docs/PROXY.md) | Softov, 2026-10-01 |
+| [Teams and projects are memberships in the users file, written team:project](../../../../docs/sdk/USERS.md) | Softov, 2026-10-01 |
+| [A request that names no team and project uses the person's primary](../../../../docs/server/PROXY.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

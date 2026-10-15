@@ -21,7 +21,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/gate.ts:79-80` - `moveChat: 'session:write'` in `NEEDS` (`chat:move` once host/46 lands).
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts` - a `moveChat` handler beside `createChat`; the reorder writes host/50's chat list in the new order.
 - `UPDATE: packages/sdk/test/host-chats.test.ts` - the cases below, in `more than one chat in a session`.
-- `UPDATE: docs/AHP.md` - the `moveChat` and `session/chatsReordered` rows.
+- `UPDATE: docs/sdk/AHP.md` - the `moveChat` and `session/chatsReordered` rows.
 
 ## Steps
 

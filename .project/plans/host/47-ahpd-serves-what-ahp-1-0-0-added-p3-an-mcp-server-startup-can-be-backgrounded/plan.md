@@ -74,7 +74,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** task 01 implemented 2026-10-09, awaiting review. The action is served, the nested forward is in, the Claude backend still reports no `blocking`, the `docs/AHP.md` row is written, and the gates pass. The protocol's own three cases for the action left `HOST_REFUSED` and now replay with no difference.
+- **Done so far:** task 01 implemented 2026-10-09, awaiting review. The action is served, the nested forward is in, the Claude backend still reports no `blocking`, the `docs/sdk/AHP.md` row is written, and the gates pass. The protocol's own three cases for the action left `HOST_REFUSED` and now replay with no difference.
 - **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** the host must not dispatch the action itself; on a backend that cannot background, an echo would tell every other client the server stopped blocking when it did not. Nothing in `chatactions.ts` emits for this case, and the action only comes back from a backend that took the request.

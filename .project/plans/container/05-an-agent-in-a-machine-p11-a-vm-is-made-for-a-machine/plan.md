@@ -63,17 +63,17 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 | Decision | Task |
 | --- | --- |
 | One computer: provider, the runtime named for what makes the machine | 03, 06 |
-| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md) | 03, 04 |
+| [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | 03, 04 |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 02 |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | 06 |
-| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | 06 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | 06 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | 06 |
 
 | What | Source | Task |
 | --- | --- | --- |
 | The runtime values are `libvirt` and `proxmox` | Softov, 2026-10-02, asked "How is a hypervisor named in a computer profile?": "One runtime per maker" | 03, 06 |
 | libvirt first, on dev02; Proxmox second, on a Proxmox node named when tested | Softov, 2026-10-02, asked "Which VM maker comes first?": "libvirt first on dev02" | 01, 03, 06 |
 | A made VM is reached as p9's ssh machine | the VM is a box with ahpd on it, which is what p9 reaches | 02 |
-| A VM records its owner in its own metadata: libvirt `<metadata>`, Proxmox tags and notes | [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/USAGE.md), "The owner is stored with the machine" | 03, 06 |
+| A VM records its owner in its own metadata: libvirt `<metadata>`, Proxmox tags and notes | [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md), "The owner is stored with the machine" | 03, 06 |
 | Up time is metered by the plugin's wrapper, as for a container | usage/03 | 04 |
 | The template is built from `versions.json`, tagged with its hash, and rebuilt when the hash moves | p3's `hashOf` | 05 |
 | Start, stop, suspend and resume are offered where the runtime declares them | the `capabilities` resource is where a client learns what a runtime does | 04 |
@@ -130,4 +130,4 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 - [ ] Suspend and resume from the `state` leaf work on libvirt.
 - [ ] The same on a Proxmox node.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

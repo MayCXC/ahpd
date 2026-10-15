@@ -8,13 +8,13 @@ refs:
   - "[code://packages/computer/src/plugin.ts#L109-L141](../../../../packages/computer/src/plugin.ts#L109-L141) - `profilesOf`, where a profile's fields are read from the plugin options"
   - "[code://packages/computer/src/manifest.ts#L34-L94](../../../../packages/computer/src/manifest.ts#L34-L94) - `Profile`"
   - "[code://packages/computer/src/runtime.ts#L728-L730](../../../../packages/computer/src/runtime.ts#L728-L730) - the folder mounted read-write at the same path"
-  - "[code://docs/COMPUTER.md#L246-L250](../../../../docs/COMPUTER.md#L246-L250) - the disposable fields table"
+  - "[code://docs/plugins/COMPUTERS.md#L246-L250](../../../../docs/plugins/COMPUTERS.md#L246-L250) - the disposable fields table"
 ---
 
 ## Objective
 
 A machine made for a session from a disposable profile mounts the session's folder only when its profile says `sessionFolder: true`.
-This applies [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md).
+This applies [A session's folder reaches a machine only where its profile allows it](../../../../docs/plugins/COMPUTERS.md).
 A `devcontainer://<folder>` source is the folder itself, chosen by the person, and the CLI mounts it as its workspace, so it is not this flag's.
 
 ## Files
@@ -22,8 +22,8 @@ A `devcontainer://<folder>` source is the folder itself, chosen by the person, a
 - `UPDATE: packages/computer/src/manifest.ts:34-94` - `Profile.sessionFolder?: boolean`, documented.
 - `UPDATE: packages/computer/src/plugin.ts:109-141` - `profilesOf` reads `sessionFolder: true`.
 - `UPDATE: packages/computer/src/plugin.ts:734-740` - the session's folder is written into `chosen` only when the profile has the flag; the comment says so.
-- `UPDATE: docs/COMPUTER.md:246-250` - a `sessionFolder` row in the table: what it mounts, read-write at the same path, and that without it Claude's history in the machine is not this host's.
-- `UPDATE: docs/COMPUTER.md:226-245` - the `scratch` example sets `sessionFolder: true`, so it keeps doing what the section describes.
+- `UPDATE: docs/plugins/COMPUTERS.md:246-250` - a `sessionFolder` row in the table: what it mounts, read-write at the same path, and that without it Claude's history in the machine is not this host's.
+- `UPDATE: docs/plugins/COMPUTERS.md:226-245` - the `scratch` example sets `sessionFolder: true`, so it keeps doing what the section describes.
 - `UPDATE: packages/computer/test/computer-disposable.test.ts` - the cases below.
 
 ## Steps

@@ -36,7 +36,7 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [A start at a terminal in a folder the daemon does not serve asks to trust it, and `--no-cwd` neither serves nor asks](../../../../docs/DAEMON.md) | 02, 04 |
+| [A start at a terminal in a folder the daemon does not serve asks to trust it, and `--no-cwd` neither serves nor asks](../../../../docs/server/REFERENCE.md) | 02, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |

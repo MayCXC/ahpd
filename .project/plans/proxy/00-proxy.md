@@ -6,7 +6,7 @@ revalidated: 2026-10-06
 
 The proxy forwards model calls from people's own tools (Claude Code, scripts) to a model provider, under their ahpd identity, so the calls can be routed, recorded and limited.
 It is not an agent: it holds no session and runs nothing.
-It is served under `/v1` beside `/api` while `http` is on, in each caller's dialect, streamed back unchanged; see [`docs/PROXY.md`](../../../docs/PROXY.md).
+It is served under `/v1` beside `/api` while `http` is on, in each caller's dialect, streamed back unchanged; see [`docs/server/PROXY.md`](../../../docs/server/PROXY.md).
 
 ## Packages
 

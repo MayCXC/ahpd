@@ -26,7 +26,7 @@ Two agents asking for one env value or one state directory get it once, and two 
 - [`code://packages/computer/src/parts.ts`](../../../../packages/computer/src/parts.ts) - a tar path over 100 bytes split into the ustar prefix, a uid, gid and directory type on an entry, and `firstFileOf` for what `docker cp ... -` writes.
 - [`code://packages/agent-claude/src/claude.ts`](../../../../packages/agent-claude/src/claude.ts) and its `plugin.ts` - `computerConfigDir` defaults to `/ahpd/<provider>`.
 - `test/fixtures/docker.mjs` - volume contents kept across containers, a copy in and out by content, `run --rm` and `exec` answering `id`, `cp -a` recording each entry's owner, an entry landing in the volume its path falls in, and an image's `Config.User`.
-- `docs/COMPUTER.md` and `packages/agent-claude/README.md`.
+- `docs/plugins/COMPUTERS.md` and `packages/agent-claude/README.md`.
 
 ## Verified
 

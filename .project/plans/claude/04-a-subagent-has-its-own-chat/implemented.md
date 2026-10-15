@@ -19,7 +19,7 @@ A permission or a question asked inside a subagent is asked on its chat, and an 
 - [`code://packages/sdk/src/calllinks.ts`](../../../../packages/sdk/src/calllinks.ts) - each chat's open turn and the content of spawning calls only, forgotten with the worker chat or the session.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - `forwardSubagentText: true`; a `Scope` per spawning call; frames routed by `parent_tool_use_id`; `subagentDescription` and `subagentAgentName` on the call's `_meta`; a foreground worker ends on its result or notification, a background one on its notification, once; a cancel ends the workers of that turn; an ask is drawn on the worker's chat through `toolUseID` and `agentID`.
 - [`code://packages/agent-claude/src/transcript.ts`](../../../../packages/agent-claude/src/transcript.ts) - `subagentsOf` reads `subagents/agent-<id>.meta.json`, falls back to the `agentId:` line in the spawning result, and links a nested worker from its parent worker.
-- [`code://packages/agent-claude/README.md`](../../../../packages/agent-claude/README.md), [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) and [`code://UPSTREAM.md`](../../../../UPSTREAM.md) - the worker chat, the seam, and the upstream line.
+- [`code://packages/agent-claude/README.md`](../../../../packages/agent-claude/README.md), [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) and [`code://UPSTREAM.md`](../../../../UPSTREAM.md) - the worker chat, the seam, and the upstream line.
 
 ## Verified
 

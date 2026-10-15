@@ -4,16 +4,16 @@ status: done
 depends: [task-01-a-spec-may-sign-in.md, task-02-auth-required-is-its-own-error.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the ACP section"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the ACP section"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` shows `authenticate` with Codex's `api-key` as the example, and what `authRequired` means.
+`docs/plugins/PLUGINS.md` shows `authenticate` with Codex's `api-key` as the example, and what `authRequired` means.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md`.
+- `UPDATE: docs/plugins/PLUGINS.md`.
 
 ## Steps
 

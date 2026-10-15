@@ -1,14 +1,14 @@
 ---
 title: The docs are a site on GitHub Pages, in server, sdk and plugins folders
 domain: documentation
-status: planned
+status: built
 priority: medium
 created: 2026-10-14
 revalidated: 2026-10-14
 refs:
   - "[code://docs/README.md](../../../../docs/README.md) - the index of the 21 area files; it stays at the root of `docs/` and lists the three folders"
-  - "[code://docs/AGENT.md](../../../../docs/AGENT.md) - links into `../packages/` and `../examples/`, which are outside `docs/`"
-  - "[code://packages/bot/test/bot-docs.test.ts#L16](../../../../packages/bot/test/bot-docs.test.ts#L16) - reads `docs/BOTS.md` from disk, so the move changes this path"
+  - "[code://docs/sdk/AGENT.md](../../../../docs/sdk/AGENT.md) - links into `../packages/` and `../examples/`, which are outside `docs/`"
+  - "[code://packages/bot/test/bot-docs.test.ts#L16](../../../../packages/bot/test/bot-docs.test.ts#L16) - reads `docs/plugins/BOTS.md` from disk, which was `docs/BOTS.md` before the move"
   - "[code://README.md](../../../../README.md) - links to the area files by path"
   - "[code://package.json](../../../../package.json) - the workspace root, where the scripts and the dev dependency go"
   - "[code://.github/workflows/ci.yml](../../../../.github/workflows/ci.yml) - the pnpm and Node setup the deploy workflow copies"
@@ -69,9 +69,15 @@ push to main -> deploy-docs.yml -> pnpm docs:build -> docs/.vitepress/dist -> Pa
 | VitePress, as in the protocol's docs, with its light and dark themes and its local search | Softov, 2026-10-14: "something like doc from /github/agent-host-protocol", "dark and light theme", "search" | 02 |
 | The docs split into `docs/server/`, `docs/sdk/` and `docs/plugins/`, and the files move on disk | Softov, 2026-10-14: "folder server and folder sdk? ... and folder for plugins?"; question "How should the split be done?": "Move the files" | 01 |
 | `plugins/` has the guide to writing a plugin and one page per shipped plugin, which includes the package README | Softov, 2026-10-14, question "What goes in the plugins section?" | 01, 02 |
-| `server/`: AHP, AUTHENTICATION, AUTOMATIONS, CHATS, CONTAINERS, DAEMON, HOST, POLICY, PROXY, RESOURCES, SESSIONS, TERMINALS, TOOLS, USAGE, USERS | `(defaulted: the host is what the daemon serves; an sdk page links to these)` | 01 |
-| `sdk/`: AGENT, LIBRARY | `(defaulted: the two pages written for a person who codes against @ahpd/sdk)` | 01 |
-| `plugins/`: PLUGINS, BOTS, COMPUTER, WEBHOOKS, and a page per plugin package | `(defaulted: BOTS, COMPUTER and WEBHOOKS each describe one plugin package)` | 01 |
+| A page goes to the folder of the package that defines its subject: `sdk/` for a person who codes, `server/` for a person who runs the daemon, with its CLI and MCP | Softov, 2026-10-15, to "Where do the host pages go?" - "I want doc where its defined, in the sdk for who codes, and on server for who uses" | 01 |
+| `sdk/`: AHP, AGENT, LIBRARY, HOST, SESSIONS, CHATS, RESOURCES, TOOLS, TERMINALS, AUTOMATIONS, POLICY, USAGE, USERS, AUTHENTICATION | Softov, 2026-10-15, to "Sorted by where each subject is defined in code, the docs split like this. Use this split?" - "Use this split" | 01 |
+| `server/`: DAEMON, PROXY, and the CLI pages split out of USERS, AUTHENTICATION and USAGE | Softov, 2026-10-15, the same answer | 01 |
+| `plugins/`: PLUGINS, BOTS, COMPUTER, CONTAINERS, WEBHOOKS, and a page per plugin package | Softov, 2026-10-15, the same answer; `@ahpd/computer` defines containers | 01 |
+| The `ahpd` CLI sections of USERS, AUTHENTICATION and USAGE move to `server/` pages of the same name, and each links to its `sdk/` page | Softov, 2026-10-15, to "Where do those CLI parts go?" - "Split into server pages" | 01 |
+| The topic page is `docs/plugins/COMPUTERS.md`, and the package page stays `docs/plugins/computer.md`, because VitePress keys pages without case and the two names collide | Softov, 2026-10-15, to "computer.md and COMPUTER.md collide in VitePress. Which name changes?" | 01, 02 |
+| `docs/server/USERS.md` keeps the whole "Turning it on" section, and `docs/sdk/USERS.md` links to it | Softov, 2026-10-15, to "How much of USERS goes to the server page?" | 01 |
+| The site takes the ahpw palette: scena's dark slate and its teal accent `#4ec9b0`, with the darker `#0c7061` in the light theme | Softov, 2026-10-15, to "Which dark palette should the docs site use?" - "ahpw slate + teal" | 02 |
+| The home page tagline is the `description` in `package.json`, and the three folders are its features, for Softov to rewrite | Softov, 2026-10-15, to "What does the home page say?" | 02 |
 | `docs/README.md` stays at the root of `docs/` and lists the files by folder | `(defaulted: GitHub shows it when a reader opens docs/)` | 01 |
 | A page per plugin is `docs/plugins/<package>.md`, named by its folder under `packages/` | `(defaulted: one name per plugin, the one the repository already uses)` | 01 |
 | Every path to a moved file is rewritten, in code, READMEs and `.project/`, except `CHANGELOG.md` | `(defaulted: a ref says where something is, so it must stay true; a changelog entry records the past)` | 01 |
@@ -81,7 +87,7 @@ push to main -> deploy-docs.yml -> pnpm docs:build -> docs/.vitepress/dist -> Pa
 | `docs/index.md` is a new home page; `docs/README.md` is the "All documents" page | `(defaulted: front matter in README.md would show as a table on GitHub)` | 02 |
 | The sidebar has one group per folder, and the URL follows the folder | `(defaulted: the site and GitHub show one structure)` | 02 |
 | URLs keep the upper-case file names, with `cleanUrls` | `(defaulted: no rewrite map to keep in step with the files)` | 02 |
-| The theme is VitePress's default theme, with the brand colour in `custom.css` | `(defaulted: one variable to change)` | 02 |
+| The theme is VitePress's default theme, with the palette in `custom.css` | `(defaulted: one variable to change)` | 02 |
 | A push to `main` that touches `docs/` or a plugin README deploys, and the workflow also runs by hand | `(defaulted: as the protocol's deploy.yml, narrowed by path)` | 03 |
 
 ## Proposed architecture
@@ -96,9 +102,9 @@ push to main -> deploy-docs.yml -> pnpm docs:build -> docs/.vitepress/dist -> Pa
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The docs live in server, sdk and plugins folders](task-01-the-docs-live-in-server-sdk-and-plugins-folders.md) | todo | - |
-| [02 - The docs build as a VitePress site](task-02-the-docs-build-as-a-vitepress-site.md) | todo | 01 |
-| [03 - A push to main publishes the site](task-03-a-push-to-main-publishes-the-site.md) | todo | 02 |
+| [01 - The docs live in server, sdk and plugins folders](task-01-the-docs-live-in-server-sdk-and-plugins-folders.md) | done | - |
+| [02 - The docs build as a VitePress site](task-02-the-docs-build-as-a-vitepress-site.md) | done | 01 |
+| [03 - A push to main publishes the site](task-03-a-push-to-main-publishes-the-site.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -112,21 +118,18 @@ push to main -> deploy-docs.yml -> pnpm docs:build -> docs/.vitepress/dist -> Pa
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-docs-live-in-server-sdk-and-plugins-folders.md](task-01-the-docs-live-in-server-sdk-and-plugins-folders.md).
-- **Open questions:**
-  1. The host pages, such as SESSIONS and RESOURCES, are for an sdk reader too - proposed: they stay in `server/`, and `sdk/LIBRARY.md` links to them.
-  2. The brand colour - proposed: the blue of the ahpapp app, `#2f81f7`.
-  3. The home page copy - proposed: the `description` in `package.json` as the tagline, and the three folders as the features, for Softov to rewrite.
+- **Done so far:** built on 2026-10-15. See [implemented.md](implemented.md).
+- **Next action:** set the Pages source to GitHub Actions before the first run of `deploy-docs.yml`.
+- **Open questions:** none.
 - **Watch out for:** do not add front matter to a page in `docs/` or to a package README, because GitHub renders it as a table.
 
 ## Final verification checklist
 
-- [ ] No path to an old `docs/<NAME>.md` location is left outside `CHANGELOG.md`.
-- [ ] `pnpm test:unit` passes, `bot-docs.test.ts` included.
-- [ ] `pnpm docs:build` passes with no dead link.
-- [ ] The built site has a working theme toggle and a search box that finds a word from `docs/server/POLICY.md`.
+- [x] No path to an old `docs/<NAME>.md` location is left outside `CHANGELOG.md`.
+- [x] `pnpm test:unit` passes, `bot-docs.test.ts` included.
+- [x] `pnpm docs:build` passes with no dead link.
+- [ ] The built site has a working theme toggle and a search box that finds a word from `docs/sdk/POLICY.md`.
 - [ ] `DOCS_BASE=/ pnpm docs:build` builds a site whose links work from the root.
 - [ ] The workflow run on `main` deploys and `https://softov.github.io/ahpd/` answers.
 - [ ] `00-documentation.md` names the folders and the site.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

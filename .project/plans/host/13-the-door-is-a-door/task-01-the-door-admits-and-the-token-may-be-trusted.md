@@ -24,7 +24,7 @@ A personal connection token no longer arrives as a person: `identify` says wheth
 - `UPDATE: packages/server/src/config.ts` - the `trustToken` key.
 - `UPDATE: packages/server/src/main.ts` - `--trust-token`, the file merging under `--trust-token`, `user list` printing `trusted` or `sign-in`, and an `identify` that hands the record over only when it is trusted.
 - `UPDATE: test/listen-identity.test.ts`, `test/users-gate.test.ts`, `test/users-host.test.ts`, `test/users-issuer.test.ts`, `test/users.test.ts`, `test/daemon.test.ts` - the arrival shape, the default refusal, the opt-out in both places, and root.
-- `UPDATE: docs/USERS.md`, `docs/DAEMON.md` - the two layers, the `trustToken` example, the flag, and the shapes.
+- `UPDATE: docs/sdk/USERS.md`, `docs/server/REFERENCE.md` - the two layers, the `trustToken` example, the flag, and the shapes.
 
 ## Steps
 

@@ -70,14 +70,14 @@ session start -> placedIn(folder = worktree, owner, team, project) -> the varian
 
 | Decision | Plans |
 | --- | --- |
-| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/COMPUTER.md) | p4 |
+| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/plugins/COMPUTERS.md) | p4 |
 | A nested host is used only for a backend that runs nested and for a machine on another host | p5, p8, p9, p10 |
 | [Any ahpd can be the hub other hosts join](../05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | p10 |
-| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/COMPUTER.md) | p3 |
+| [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/plugins/COMPUTERS.md) | p3 |
 | [Every agent CLI is pinned in one versions file, and none updates itself](../05-an-agent-in-a-machine-p3-parts-are-built-from-one-versions-file/plan.md) | p3 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | p1, p4 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | p2, p5, p6 |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | p1, p2 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | p2, p5, p6 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | p1, p2 |
 
 | What | Source | Plans |
 | --- | --- | --- |
@@ -139,4 +139,4 @@ Child plans, each scoped to one package or two.
 - [ ] A second disposable machine of the same profile starts without building or copying anything.
 - [ ] A session with worktree isolation commits inside its machine.
 - [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/COMPUTER.md`, `docs/PLUGINS.md` and `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md` and `plans/index.md` updated.

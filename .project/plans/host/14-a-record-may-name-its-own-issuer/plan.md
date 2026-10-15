@@ -45,7 +45,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record may name its own issuer, and the host's issuer is the default](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "ok do the pending 3. So I can test better...", naming what `HANDOFF.md` listed as "an issuer per record with the host's `issuer` as the default". |
+| 1 | [A record may name its own issuer, and the host's issuer is the default](../../../../docs/sdk/AUTHENTICATION.md) | The user, 2026-09-23: "ok do the pending 3. So I can test better...", naming what `HANDOFF.md` listed as "an issuer per record with the host's `issuer` as the default". |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -86,4 +86,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] `test/users-issuer.test.ts` - a record's own issuer answers for it, the host default answers for the records that name none, the host default cannot stand in for a record that names its own, the advertised record lists both providers with the union of scopes, and a bad name is reported once.
 - [x] The existing issuer cases still pass with `issuer: 'github'` and an injected `issuerFor`.
 - [x] By hand: two dev issuers, one record naming each and one falling back to the host default. See [implemented.md](implemented.md).
-- [x] `plans/index.md`, `docs/USERS.md`, `docs/DAEMON.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md`, `docs/server/REFERENCE.md` and `working/HANDOFF.md` updated.

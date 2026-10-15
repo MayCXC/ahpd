@@ -21,7 +21,7 @@ refs:
   - "[code://packages/agent-cofold/src/session.ts#L213-L220](../../../../packages/agent-cofold/src/session.ts#L213-L220) - a fork copies `throughMessageId: forkAt`"
   - "[code://test/host.test.ts#L5459-L5480](../../../../test/host.test.ts#L5459-L5480) - the host fork test, which expects the prompt's id as the cut"
   - "[code://test/agent-cofold-fork.test.ts#L144-L160](../../../../test/agent-cofold-fork.test.ts#L144-L160) - the cofold fork test, which expects the chosen turn's question and not its answer"
-  - "[code://docs/AHP.md#L77](../../../../docs/AHP.md#L77) - the `createChat` row, which already says the turns are carried through"
+  - "[code://docs/sdk/AHP.md#L77](../../../../docs/sdk/AHP.md#L77) - the `createChat` row, which already says the turns are carried through"
   - "npm://@microsoft/agent-host-protocol@^0.9.0 - `ForkChatSource.turnId` in `dist/types/channels-chat/commands.d.ts` says \"Content through this turn is copied into the new chat's visible `turns`\""
 ---
 
@@ -38,7 +38,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "chats:|forkPoint|forkAt" packages/*/src` - Claude and cofold implement a fork today; ACP does not yet, and pi does not.
 - `rg -n "forkPoint|forkAt" test/*.ts` - `test/host.test.ts` for Claude through the host, `test/agent-cofold-fork.test.ts` for cofold.
-- `rg -n -i "fork" docs/*.md packages/*/README.md` - `docs/AHP.md:77` already says the turns are carried through; nothing says a fork re-asks.
+- `rg -n -i "fork" docs/*.md packages/*/README.md` - `docs/sdk/AHP.md:77` already says the turns are carried through; nothing says a fork re-asks.
 
 ### Runtime path
 

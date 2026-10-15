@@ -24,7 +24,7 @@ A forwarded `ahpd paths add` names the start folder when the daemon wrote it, in
 - `UPDATE: packages/server/src/commands/run.ts:407-416` - the daemon's `running()` gives `options.startFolder`.
 - `UPDATE: packages/server/src/commands/paths.ts:51-315` - the add answers `startFolder` when it wrote it, and `forward` says it in the words of the file write.
 - `UPDATE: packages/server/test/server-paths.test.ts` - status cases at the terminal and served, and the start folder in the add answers and the forwarded line.
-- `UPDATE: docs/DAEMON.md:218` - one sentence on how `ahpd status` shows the start folder.
+- `UPDATE: docs/server/REFERENCE.md:218` - one sentence on how `ahpd status` shows the start folder.
 
 ## Steps
 
@@ -39,7 +39,7 @@ A forwarded `ahpd paths add` names the start folder when the daemon wrote it, in
 9. In `paths.ts`, build the add line in one function that takes the start folder and the place.
 10. Answer `startFolder` from the add when it wrote the start folder.
 11. In `forward`, read `startFolder` from the answer, say it with the same function, and pass it on.
-12. Add the sentence to `docs/DAEMON.md`, in the paragraph's own style.
+12. Add the sentence to `docs/server/REFERENCE.md`, in the paragraph's own style.
 13. Run the cases again and see them pass.
 
 ## Validation
@@ -58,7 +58,7 @@ File by file:
 - `packages/server/src/commands/served.ts` and `run.ts` - step 7. `ServedRunning.startFolder` is the daemon's `options.startFolder`, absent when the daemon names its folders.
 - `packages/server/src/commands/status.ts` - step 8. The text has `start folder <folder>` after the `sessions in` line, and the output has `startFolder` only when the record or the daemon has it.
 - `packages/server/src/commands/paths.ts` - steps 9 to 11. `addedLine(folder, start, where)` builds the add line for the file write and for the forward. The add answers `startFolder` when it wrote the start folder. `forward` reads that key, says the line with `on the running daemon`, and passes the key on.
-- `docs/DAEMON.md` - step 12. One sentence at the end of the start folder paragraph. The file has no list of the status fields.
+- `docs/server/REFERENCE.md` - step 12. One sentence at the end of the start folder paragraph. The file has no list of the status fields.
 - Tests - steps 1 to 5. Four status cases in a new `describe` in `server-paths.test.ts`, two at the terminal and two served. The served add case and the forwarded add case now expect `startFolder`, and the forwarded case checks the line. Four cases failed before step 7, and the two cases with no start folder passed before and after.
 
 What the plan did not know:

@@ -16,7 +16,7 @@ A pi session lists its models before any turn and after a restart, a pi session 
 - [`code://packages/agent-pi/src/backend.ts`](../../../../packages/agent-pi/src/backend.ts) - `runtimeModels` from pi's `ModelRuntime` for the probe; `resumeOrCreate` creates a new session under the client's UUID and a fork under a fresh one.
 - [`code://packages/agent-pi/src/replay.ts`](../../../../packages/agent-pi/src/replay.ts) - `replayEntries` raises a file's entries through the live `mapEvent`, turns keep their entry ids, and a turn ends `error`, `cancelled` or `complete` as its last answer did.
 - [`code://packages/agent-pi/src/session.ts`](../../../../packages/agent-pi/src/session.ts) - a resumed session's record starts with the replayed turns, and its truncation points are seeded from them.
-- [`code://scripts/dev.mjs`](../../../../scripts/dev.mjs) and [`code://scripts/dev-hooks.mjs`](../../../../scripts/dev-hooks.mjs) - `module.registerHooks` when Node has it, `module.register` otherwise; [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) says what the fallback costs.
+- [`code://scripts/dev.mjs`](../../../../scripts/dev.mjs) and [`code://scripts/dev-hooks.mjs`](../../../../scripts/dev-hooks.mjs) - `module.registerHooks` when Node has it, `module.register` otherwise; [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) says what the fallback costs.
 
 ## Verified
 

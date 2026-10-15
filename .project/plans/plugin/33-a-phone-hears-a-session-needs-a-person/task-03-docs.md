@@ -5,7 +5,7 @@ depends:
   - task-02-a-waiting-session-is-sent.md
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md#L373-L432](../../../../docs/PLUGINS.md#L373-L432) - the Events section, which gains a consumer"
+  - "[code://docs/plugins/PLUGINS.md#L373-L432](../../../../docs/plugins/PLUGINS.md#L373-L432) - the Events section, which gains a consumer"
 ---
 
 ## Objective
@@ -15,12 +15,12 @@ A person can install `@ahpd/push`, and a client author knows how to register a d
 ## Files
 
 - `CREATE: packages/push/README.md` - install, options, what a notification says, that a device hears only the sessions its client created or opened, where devices are kept.
-- `UPDATE: docs/PLUGINS.md` - one line under Events naming `@ahpd/push` as a consumer of `input_needed_set`, and the `push:` scheme beside `computer:`.
+- `UPDATE: docs/plugins/PLUGINS.md` - one line under Events naming `@ahpd/push` as a consumer of `input_needed_set`, and the `push:` scheme beside `computer:`.
 
 ## Steps
 
 1. Write the README from the package's real options.
-2. Add the lines to `docs/PLUGINS.md`.
+2. Add the lines to `docs/plugins/PLUGINS.md`.
 
 ## Validation
 
@@ -28,7 +28,7 @@ A person can install `@ahpd/push`, and a client author knows how to register a d
 
 ## Resume
 
-- **Done:** implemented 2026-10-09. `packages/push/README.md` is written from the package's real options: the badges and the two halves, `ahpd plugin install @ahpd/push`, a configuration entry with both options set, an options table (`title`, default the daemon's name; `accessToken`, none), the `push:` scheme as a table of the five commands with their refusals, what a notification says, which sessions a device hears, and where the devices are kept. `docs/PLUGINS.md` gains two paragraphs - one under Events naming `@ahpd/push` as a consumer of `input_needed_set` and `input_needed_removed`, and one in the third worked example putting `push:` beside `computer:` as a scheme that exists to be written to.
+- **Done:** implemented 2026-10-09. `packages/push/README.md` is written from the package's real options: the badges and the two halves, `ahpd plugin install @ahpd/push`, a configuration entry with both options set, an options table (`title`, default the daemon's name; `accessToken`, none), the `push:` scheme as a table of the five commands with their refusals, what a notification says, which sessions a device hears, and where the devices are kept. `docs/plugins/PLUGINS.md` gains two paragraphs - one under Events naming `@ahpd/push` as a consumer of `input_needed_set` and `input_needed_removed`, and one in the third worked example putting `push:` beside `computer:` as a scheme that exists to be written to.
 - **Beyond the task's Files:** `packages/push/src/provider.ts` - the two descriptions of `lang` said it is "the language a notification is worded in", which is not true: the sender words every notification in English and nothing reads `lang`. Both now say the language is kept with the device and notifications are worded in English. A schema description that a README must contradict is a description that is wrong, so correcting it is part of writing the documentation honestly. No behaviour changed.
 - **Validation:** every option the README names is in `plugin.ts` - `title` and `accessToken`, and nothing else is named.
 - **Gates:** documentation only, so no gate covers it beyond the full run; the README names no option that `optionsSchema` does not declare.

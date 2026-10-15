@@ -59,7 +59,7 @@ VS Code -> _ensureRequiredAuthentication -> required !== false -> "Authenticatio
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A connection that is already authorized is told the host's sign-in is not required](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-25, after VS Code refused on the deployment token: "Real fix: tell a token (root) connection that the users resource is required: false." |
+| 1 | [A connection that is already authorized is told the host's sign-in is not required](../../../../docs/sdk/AUTHENTICATION.md) | The user, 2026-09-25, after VS Code refused on the deployment token: "Real fix: tell a token (root) connection that the users resource is required: false." |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -102,4 +102,4 @@ VS Code -> _ensureRequiredAuthentication -> required !== false -> "Authenticatio
 - [x] A root connection and a personal-token connection read different `required` from the same host, in the snapshot, live `root/agentsChanged` and replay.
 - [x] `test/conformance.test.ts` unchanged and green.
 - [x] VS Code on the deployment token creates a session on a host with `users` set and the issuer down.
-- [x] `plans/index.md`, `docs/USERS.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md` and `working/HANDOFF.md` updated.

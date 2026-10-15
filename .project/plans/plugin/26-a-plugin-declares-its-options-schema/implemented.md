@@ -16,7 +16,7 @@ Every plugin in this repository declares its schema, and their hand-written type
 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `optionsSchema?: Record<string, unknown>`, plain JSON Schema, with no `@cofold/*` import in the SDK.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - the check with `@cofold/commands`' `check`, labelled `plugins.<name>.options`; only keys the configuration named are warned about.
 - `optionsSchema` in agent-acp, agent-claude, agent-cofold, agent-pi, computer and tunnel-devtunnel, re-exported from each `index.ts`.
-- [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) - the export, with an example.
+- [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) - the export, with an example.
 
 ## Verified
 

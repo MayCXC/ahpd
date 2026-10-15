@@ -8,8 +8,8 @@ refs:
   - code://scripts/dev-issuer.mjs
   - code://test/users-issuer.test.ts
   - code://test/daemon.test.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
 ---
 
 A local issuer over plain http now works, so an operator can name one on the same machine without a certificate. A remote issuer still needs TLS, and a discovered `userinfo` endpoint is checked again so an issuer cannot name a remote http one and have a token sent to it.
@@ -19,8 +19,8 @@ A local issuer over plain http now works, so an operator can name one on the sam
 - `code://packages/sdk/src/issuers.ts` - `loopbackUrl` and `isIssuerUrl`, and the discovered endpoint checked by the latter.
 - `code://packages/server/src/config.ts` - `namedIssuer` accepts what `isIssuerUrl` accepts.
 - `code://scripts/dev-issuer.mjs` - an issuer in one file: discovery, and a userinfo that answers any bearer token as its own subject. Binds loopback, verifies nothing, documented as a test double.
-- `code://docs/USERS.md` - what an issuer must publish, the loopback rule, the self-signed case, and the three ways to try one.
-- `code://docs/DAEMON.md` - the same rule at the `issuer` key.
+- `code://docs/sdk/USERS.md` - what an issuer must publish, the loopback rule, the self-signed case, and the three ways to try one.
+- `code://docs/server/REFERENCE.md` - the same rule at the `issuer` key.
 
 ## Verified
 

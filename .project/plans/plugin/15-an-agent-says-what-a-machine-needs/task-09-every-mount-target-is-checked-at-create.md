@@ -9,8 +9,8 @@ refs:
   - "[code://packages/computer/src/runtime.ts#L666-L674](../../../../packages/computer/src/runtime.ts#L666-L674) - the dev container route, where mounts and copy-ins both become `--mount` binds"
   - "[code://packages/computer/src/runtime.ts#L726-L730](../../../../packages/computer/src/runtime.ts#L726-L730) - the Docker route's `-v` flags and the same-path session folder"
   - "[code://packages/computer/test/fixtures/docker.mjs#L192](../../../../packages/computer/test/fixtures/docker.mjs#L192) - the fake takes every `-v`, duplicates included"
-  - "[code://docs/COMPUTER.md#L220](../../../../docs/COMPUTER.md#L220) - \"a later one wins for the same target\", which Docker does not do"
-  - "[code://docs/COMPUTER.md#L237](../../../../docs/COMPUTER.md#L237) - the `scratch` example mounts `/ahpd/claude`, where Claude's config need lands"
+  - "[code://docs/plugins/COMPUTERS.md#L220](../../../../docs/plugins/COMPUTERS.md#L220) - \"a later one wins for the same target\", which Docker does not do"
+  - "[code://docs/plugins/COMPUTERS.md#L237](../../../../docs/plugins/COMPUTERS.md#L237) - the `scratch` example mounts `/ahpd/claude`, where Claude's config need lands"
 ---
 
 ## Objective
@@ -24,8 +24,8 @@ Today the docs' own `scratch` example mounts `/srv/claude-home:/ahpd/claude`, a 
 - `UPDATE: packages/computer/test/fixtures/docker.mjs:192` - first: `create` and `run` refuse two `-v` with one target, with Docker's own wording.
 - `UPDATE: packages/computer/src/manifest.ts:594-621` - one check over every mount the machine will carry, each with its origin: the plugin's `mounts`, the profile's, the body's, each need mount, each copy-in when the machine is a dev container (the CLI route binds them), and the folder (the session's or the profile's, at its own path, on the Docker route).
 - `UPDATE: packages/computer/src/manifest.ts:109-116`, `:616-620` - the "later entry wins" and "widest first, so the narrower statement wins" comments say what the order is and that a shared target is refused.
-- `UPDATE: docs/COMPUTER.md:220` - a shared target is refused, with both named.
-- `UPDATE: docs/COMPUTER.md:237` - the `scratch` example stops colliding: it drops the mount and points the need instead (`"needs": { "claudeConfigDirectory": "/srv/claude-home" }`).
+- `UPDATE: docs/plugins/COMPUTERS.md:220` - a shared target is refused, with both named.
+- `UPDATE: docs/plugins/COMPUTERS.md:237` - the `scratch` example stops colliding: it drops the mount and points the need instead (`"needs": { "claudeConfigDirectory": "/srv/claude-home" }`).
 - `UPDATE: packages/computer/test/computer-needs.test.ts` - the cases below.
 
 ## Steps

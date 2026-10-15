@@ -20,7 +20,7 @@ Each has a `put` and a `remove` command, with the same rules as a resource write
 - [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts) - `peopleChannels`, the four people channels, their commands and their providers on one refresh.
 - [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - `policyChannels`, the policy channel, its commands and its provider.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `peopleChannels` and `policyChannels` replace `peopleProviders` and `policyProviders`, and `servedRecords` serves them by `ahpd`.
-- `docs/USERS.md` has a section "People as channels and commands", and `docs/POLICY.md` has "The channel and its commands".
+- `docs/sdk/USERS.md` has a section "People as channels and commands", and `docs/sdk/POLICY.md` has "The channel and its commands".
 
 ## Verified
 

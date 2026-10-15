@@ -23,7 +23,7 @@ A record with `rolesFrom` gets the roles the named claim carries, added to its o
 - `UPDATE: packages/sdk/src/index.ts` - export `IssuerAnswer`.
 - `UPDATE: scripts/dev-issuer.mjs` - `Bearer ana|eng,ops` answers `groups`.
 - `UPDATE: test/users-issuer.test.ts` - the claim cases, and every call site moved to `who`.
-- `UPDATE: docs/USERS.md`, `docs/DAEMON.md` - the field and the two clocks.
+- `UPDATE: docs/sdk/USERS.md`, `docs/server/REFERENCE.md` - the field and the two clocks.
 
 ## Steps
 

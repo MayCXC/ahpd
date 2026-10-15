@@ -16,7 +16,7 @@ refs:
   - code://test/container-relay.test.ts
   - code://test/fixtures/devcontainer.mjs
   - code://test/fixtures/container-host.mjs
-  - code://docs/CONTAINERS.md
+  - code://docs/plugins/CONTAINERS.md
 ---
 
 A workspace with a `devcontainer.json` runs its session inside that container, and a whole `ahpd` runs in there with this host carrying its frames. The reference client's own flow drives it through `vscode/devContainers/*`, which this host now serves name for name under `_meta['vscode.devContainers']`, gated as `container:write`.
@@ -30,7 +30,7 @@ A workspace with a `devcontainer.json` runs its session inside that container, a
 - `code://packages/computer/src/devcontainer.ts` - the launcher: `devcontainer up`, the CLI's JSON read off whichever line carries it, the host inside probed and installed, the configuration written owner-only, and the stdio process whose lines are frames or output.
 - `code://packages/computer/src/plugin.ts` - the launcher registered from the plugin's `devcontainer` option, on unless it says `false`.
 - `code://packages/server/src/main.ts` - `--stdio`, refused for `ahpd start`, and the startup lines moved to stderr so stdout is the wire; `stamp` moved to stderr with them, which changes nothing for a detached daemon because both streams land in the same log.
-- `code://docs/CONTAINERS.md` - the operator's page, and `--stdio` in `docs/DAEMON.md` and `registerContainers` in `docs/PLUGINS.md`.
+- `code://docs/plugins/CONTAINERS.md` - the operator's page, and `--stdio` in `docs/server/REFERENCE.md` and `registerContainers` in `docs/plugins/PLUGINS.md`.
 
 ## Verified
 

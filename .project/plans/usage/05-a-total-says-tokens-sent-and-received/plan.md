@@ -29,7 +29,7 @@ The sum they have today stays.
 ### Searches performed
 
 - 2026-10-07: every model record carries `input`, `output` and `cache`. `measured` adds the four into `tokens`, so the totals lose the split.
-- `tokens` is read by the policy limits (`docs/POLICY.md`) and by ahpapp. It stays as it is.
+- `tokens` is read by the policy limits (`docs/sdk/POLICY.md`) and by ahpapp. It stays as it is.
 
 ### Runtime path
 

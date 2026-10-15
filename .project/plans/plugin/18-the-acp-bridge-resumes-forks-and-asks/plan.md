@@ -84,7 +84,7 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 - **Data flow** - `open` chooses the ACP call from the handshake and `Start`; an elicitation's form becomes the input request's questions, and the answers become the elicitation's content.
 - **Event flow** - an elicitation is an input request on the chat, so `session/inputNeededSet` follows as it does for a permission.
 - **State flow** - a fork's new ACP session id replaces the old one on the forked session; nothing else is kept.
-- **Layer responsibilities** - `packages/agent-acp/src/session.ts`: the choice of call, the fork and the request · `packages/agent-acp/src/connection.ts`: the new handler and the advertised capability · `docs/PLUGINS.md`: what the bridge asks and answers.
+- **Layer responsibilities** - `packages/agent-acp/src/session.ts`: the choice of call, the fork and the request · `packages/agent-acp/src/connection.ts`: the new handler and the advertised capability · `docs/plugins/PLUGINS.md`: what the bridge asks and answers.
 - **Source-of-truth files** - [`code://packages/agent-acp/src/session.ts`](../../../../packages/agent-acp/src/session.ts)
 
 ## Tasks
@@ -122,4 +122,4 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 - [x] A fork of the last turn creates a new ACP session; a fork of an earlier turn is not offered.
 - [x] Against a server that does not advertise `session.fork`, the agent still declares `chats.fork` and no turn has a fork point.
 - [x] An `elicitation/create` with a form appears as an input request, and the answer reaches the server.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/PLUGINS.md`, `plans/index.md` updated.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/PLUGINS.md`, `plans/index.md` updated.

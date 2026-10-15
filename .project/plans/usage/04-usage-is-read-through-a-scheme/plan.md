@@ -46,8 +46,8 @@ meters -> Usage.record -> fileUsage (monthly JSONL, per-day totals) -> Usage.tot
 
 | What | Source | Task |
 | --- | --- | --- |
-| [A `usage:` scheme, totals and records, own pools readable without a grant](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
-| [A scheme provider may let a read through with `authorize?(uri, reader)`](../../../../docs/RESOURCES.md) | Softov, 2026-10-02 | 02 |
+| [A `usage:` scheme, totals and records, own pools readable without a grant](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [A scheme provider may let a read through with `authorize?(uri, reader)`](../../../../docs/sdk/RESOURCES.md) | Softov, 2026-10-02 | 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

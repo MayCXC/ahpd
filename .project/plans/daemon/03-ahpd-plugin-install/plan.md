@@ -57,7 +57,7 @@ devcontainer up -> npm i -g @ahpd/server@<v> -> ahpd plugin install <npm-named d
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [ahpd plugin install installs the package and names it in the configuration](../../../../docs/DAEMON.md) | The user, 2026-09-25: "its there a way to make a install using ahpd? `ahpd plugin install`" |
+| 1 | [ahpd plugin install installs the package and names it in the configuration](../../../../docs/server/REFERENCE.md) | The user, 2026-09-25: "its there a way to make a install using ahpd? `ahpd plugin install`" |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -103,4 +103,4 @@ devcontainer up -> npm i -g @ahpd/server@<v> -> ahpd plugin install <npm-named d
 - [x] `pnpm test`, `pnpm typecheck` and `pnpm boundary` green.
 - [x] By hand: `ahpd plugin install @ahpd/agent-claude` in a clean `XDG_CONFIG_HOME`, then `ahpd plugin list` shows it loadable and `ahpd` starts with it.
 - [ ] By hand: a dev container session with `"plugins": ["@ahpd/agent-cofold"]` starts with no mounted checkout.
-- [x] `plans/index.md`, `README.md`, `docs/DAEMON.md`, `docs/CONTAINERS.md`, `packages/server/README.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `README.md`, `docs/server/REFERENCE.md`, `docs/plugins/CONTAINERS.md`, `packages/server/README.md` and `working/HANDOFF.md` updated.

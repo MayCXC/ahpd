@@ -66,7 +66,7 @@ provider answer -> usageReader (tokens, and now cost) -> record: cost from price
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/USAGE.md) | Softov, 2026-10-07 |
+| 1 | [A record keeps the provider's cost beside the cost it charges, and a configured price is what it charges](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -116,5 +116,5 @@ provider answer -> usageReader (tokens, and now cost) -> record: cost from price
 - [x] A test for each row of the rule: provider only, price only, both, neither.
 - [x] A test: a price with no `input` and a call with input tokens gives no `cost`.
 - [x] `node tools/schema.mjs`, `pnpm build`, `pnpm typecheck`, `pnpm boundary` and `npx vitest run` pass.
-- [x] `docs/PROXY.md` says what a record's two costs are.
+- [x] `docs/server/PROXY.md` says what a record's two costs are.
 - [x] `plans/index.md` updated.

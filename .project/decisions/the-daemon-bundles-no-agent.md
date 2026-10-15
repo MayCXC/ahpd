@@ -7,7 +7,7 @@ refs:
   - code://packages/agent-claude/src/plugin.ts - the entry that makes the Claude package loadable
   - code://packages/server/src/plugins.ts - the loader that resolves a named package and folds what it registers
   - code://.project/decisions/agent-package-only-when-it-brings-a-runtime.md - which backends are packages at all
-  - code://docs/PLUGINS.md - what an operator reads to name one
+  - code://docs/plugins/PLUGINS.md - what an operator reads to name one
 ---
 
 ## Context

@@ -28,7 +28,7 @@ The sdk's tool code is one folder, `packages/sdk/src/tools/`, where six files sa
 ## Departures from the plan
 
 - The reconnaissance named one importer by path outside the sdk. There are fifteen: seven agent-acp tests, three agent-pi tests and four agent-cofold tests, beside one agent-acp test with a second import. All fifteen now name `sdk/src/tools/`.
-- The plan's Files list named `UPSTREAM.md` and the `.project` files. Three more docs named an old path and were repointed: `docs/AHP.md`, `packages/sdk/README.md` and a comment in `packages/sdk/test/host-tools.test.ts`.
+- The plan's Files list named `UPSTREAM.md` and the `.project` files. Three more docs named an old path and were repointed: `docs/sdk/AHP.md`, `packages/sdk/README.md` and a comment in `packages/sdk/test/host-tools.test.ts`.
 - `.project/review/2026-09-19-upstream-pass-4.md` and the two superseded decisions keep the old paths. They are dated records, like a built plan.
 
 ## Left for later

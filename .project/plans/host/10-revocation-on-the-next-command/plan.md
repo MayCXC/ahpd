@@ -15,7 +15,7 @@ refs:
   - "[code://packages/sdk/src/types/users.ts#L34-L60](../../../../packages/sdk/src/types/users.ts#L34-L60) - `Principal`, which gains `standing`"
   - "[code://packages/sdk/src/host.ts#L7553-L7580](../../../../packages/sdk/src/host.ts#L7553-L7580) - the command gate"
   - "[code://packages/sdk/src/host.ts#L6346-L6365](../../../../packages/sdk/src/host.ts#L6346-L6365) - the dispatch gate"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the prose that already claimed this"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the prose that already claimed this"
 ---
 
 ## Goal
@@ -92,4 +92,4 @@ any command -> the gate -> connection.principal.standing()  false -> -32007
 - [x] A removed person is refused `-32007` on the next command and not on the next connection.
 - [x] A changed role is in force on the next command.
 - [x] A directory with no file is unaffected, and root is unaffected.
-- [x] `plans/index.md`, `docs/USERS.md` and `HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md` and `HANDOFF.md` updated.

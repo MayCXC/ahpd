@@ -26,7 +26,7 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L895-L912](../../../../packages/server/src/commands/run.ts#L895-L912) - `down`, which awaits the plugins' `stopping` before closing the listeners"
   - "[code://packages/server/src/commands/restart.ts#L231-L246](../../../../packages/server/src/commands/restart.ts#L231-L246) - `checkedRestart`, the turn check"
   - "[code://packages/server/src/commands/run.ts#L951-L955](../../../../packages/server/src/commands/run.ts#L951-L955) - `optionsOfLine`, which reads the recorded line with this process's code and `permissive: true`"
-  - "[code://docs/DAEMON.md#L199-L226](../../../../docs/DAEMON.md#L199-L226) - `ahpd restart`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - `ahpd restart`"
   - "[code://packages/agent-claude/src/session.ts#L73](../../../../packages/agent-claude/src/session.ts#L73) - a session's values: defaults and preset"
   - "[code://packages/agent-claude/src/options.ts#L46-L54](../../../../packages/agent-claude/src/options.ts#L46-L54) - `sandbox`'s query shape"
 ---
@@ -53,7 +53,7 @@ The review's probes reproduced tasks 01, 02 and 03; their cases are the first te
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A session stored with the sandbox on keeps it on, whatever its preset says](../../../../docs/AHP.md) | Softov, 2026-10-06, "Honour the stored value" |
+| 1 | [A session stored with the sandbox on keeps it on, whatever its preset says](../../../../docs/sdk/AHP.md) | Softov, 2026-10-06, "Honour the stored value" |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -89,7 +89,7 @@ The review's probes reproduced tasks 01, 02 and 03; their cases are the first te
 
 - **Done so far:** tasks 01-07 implemented 2026-10-06, each with a case that failed before the fix. Task 07 stopped on a fork - the value a store actually holds - which Softov answered on 2026-10-06: a stored `'on'` or `true`, so both the decision and the task now read that.
 - **Next action:** Softov's review, which sets the tasks to `done`.
-- **Open questions:** none. The one task 07 stopped on is answered and recorded in [the decision](../../../../docs/AHP.md).
+- **Open questions:** none. The one task 07 stopped on is answered and recorded in [the decision](../../../../docs/sdk/AHP.md).
 - **Watch out for:** every task starts with a test that fails on `main`; a fix with no failing test first is not done.
 
 ## Final verification checklist

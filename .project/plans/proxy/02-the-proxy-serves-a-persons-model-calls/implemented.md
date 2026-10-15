@@ -24,7 +24,7 @@ Every refusal is the dialect's own error body, `GET /v1/models` lists the names 
 - [`code://packages/server/src/http.ts`](../../../../packages/server/src/http.ts) - the guards exported, and `/v1` 404 while the API is off.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `/v1` in front of `/api` on the daemon's port or `http.port`.
 - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - the `proxy` subject, and `proxy:read` and `proxy:write` on `member`.
-- `docs/PROXY.md`, and `docs/DAEMON.md`, `docs/POLICY.md`, `docs/USERS.md`, `plans/proxy/00-proxy.md`.
+- `docs/server/PROXY.md`, and `docs/server/REFERENCE.md`, `docs/sdk/POLICY.md`, `docs/sdk/USERS.md`, `plans/proxy/00-proxy.md`.
 
 ## Verified
 

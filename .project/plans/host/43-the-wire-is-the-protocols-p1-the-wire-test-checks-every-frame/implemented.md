@@ -45,4 +45,4 @@ A wire test that checked snapshots and actions now checks every frame ahpd sends
 ## Left for later
 
 - The `KNOWN` list in `packages/sdk/test/wire.test.ts` and the `PENDING` list of unprefixed `_meta` keys both stand until p2, p3 and p4 empty them. Every line names the plan that removes it.
-- `getNetworkDiagnosticsInfo`, `getManagedSettingsDiagnostics`, `diagnosticsFetch`, the `vscode/*` requests and the `vscode/devContainers/*` notifications stay, as deliberate departures, each with the `docs/AHP.md` heading that records it.
+- `getNetworkDiagnosticsInfo`, `getManagedSettingsDiagnostics`, `diagnosticsFetch`, the `vscode/*` requests and the `vscode/devContainers/*` notifications stay, as deliberate departures, each with the `docs/sdk/AHP.md` heading that records it.

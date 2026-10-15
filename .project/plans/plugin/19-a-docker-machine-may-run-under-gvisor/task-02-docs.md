@@ -4,18 +4,18 @@ status: done
 depends: [task-01-a-profile-names-the-oci-runtime.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md#L206-L263](../../../../docs/COMPUTER.md#L206-L263) - the Profiles section"
-  - "[code://docs/COMPUTER.md#L315](../../../../docs/COMPUTER.md#L315) - the Security section"
+  - "[code://docs/plugins/COMPUTERS.md#L206-L263](../../../../docs/plugins/COMPUTERS.md#L206-L263) - the Profiles section"
+  - "[code://docs/plugins/COMPUTERS.md#L315](../../../../docs/plugins/COMPUTERS.md#L315) - the Security section"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` says a profile may name `ociRuntime`, that `runsc` is gVisor, and that a client cannot change it.
+`docs/plugins/COMPUTERS.md` says a profile may name `ociRuntime`, that `runsc` is gVisor, and that a client cannot change it.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md:206-263` - the field, with a one-line example.
-- `UPDATE: docs/COMPUTER.md:315` - one line in Security on what gVisor adds.
+- `UPDATE: docs/plugins/COMPUTERS.md:206-263` - the field, with a one-line example.
+- `UPDATE: docs/plugins/COMPUTERS.md:315` - one line in Security on what gVisor adds.
 
 ## Steps
 
@@ -43,13 +43,13 @@ Validation, read against the code by hand:
 
 - `packages/computer/src/runtime.ts:3289` pushes `--runtime=<value>` only when the field is set, which is the "absent means none" sentence.
 - `packages/computer/src/manifest.ts:923-928` refuses a body that names the field, and lines 937-939 refuse a dev container machine from a profile that names it.
-- The value is passed as given, so a runtime the host does not have is Docker's own refusal, as [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/COMPUTER.md) says.
+- The value is passed as given, so a runtime the host does not have is Docker's own refusal, as [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/plugins/COMPUTERS.md) says.
 
 Gates at this state: `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass, and the suite passes 4728 of 4730 cases. Two cases timed out under load, in `agent-acp-ports.test.ts` and `computer-plugin.test.ts`; both pass when their own files run alone, 42 cases.
 
 Files this task changed, so the work can be committed on its own:
 
-- `docs/COMPUTER.md`
+- `docs/plugins/COMPUTERS.md`
 - `.project/plans/plugin/19-a-docker-machine-may-run-under-gvisor/plan.md`
 - `.project/plans/plugin/19-a-docker-machine-may-run-under-gvisor/task-02-docs.md`
 - `.project/plans/index.md`

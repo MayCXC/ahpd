@@ -12,7 +12,7 @@ A plugin subscribes to `input_needed_set` and `input_needed_removed` and is call
 
 - [`code://packages/sdk/src/types/events.ts`](../../../../packages/sdk/src/types/events.ts) - the two names, `InputNeededSetEvent` and `InputNeededRemovedEvent`, and the rewritten rule above `EventName`.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - the two `fire` calls in `emit`, after dispatch, skipped when the id (or the set's chat) is missing.
-- `docs/PLUGINS.md` - both events in the table, the line on events that repeat an action, and the `@ahpd/<name>` naming convention.
+- `docs/plugins/PLUGINS.md` - both events in the table, the line on events that repeat an action, and the `@ahpd/<name>` naming convention.
 
 ## Verified
 

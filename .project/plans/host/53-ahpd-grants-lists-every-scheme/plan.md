@@ -18,9 +18,9 @@ refs:
   - "[code://packages/sdk/src/host/handshake.ts#L268](../../../../packages/sdk/src/host/handshake.ts#L268) - `ahpd.grants` on `initialize`"
   - "[code://packages/sdk/src/host/root.ts#L253](../../../../packages/sdk/src/host/root.ts#L253) - `ahpd.grants` on root state"
   - "[code://packages/sdk/test/users-host.test.ts#L338-L360](../../../../packages/sdk/test/users-host.test.ts#L338-L360) - the test that reads `ahpd.grants` off the handshake"
-  - "[code://docs/USERS.md#L369](../../../../docs/USERS.md#L369) - the grants table the advertisement mirrors"
-  - "[code://docs/USERS.md#L517](../../../../docs/USERS.md#L517) - says a client reads a scheme's groups from `ahpd.grants.file`"
-  - "[code://docs/PLUGINS.md#L308](../../../../docs/PLUGINS.md#L308) - the same, for a plugin's scheme"
+  - "[code://docs/sdk/USERS.md#L369](../../../../docs/sdk/USERS.md#L369) - the grants table the advertisement mirrors"
+  - "[code://docs/sdk/USERS.md#L517](../../../../docs/sdk/USERS.md#L517) - says a client reads a scheme's groups from `ahpd.grants.file`"
+  - "[code://docs/plugins/PLUGINS.md#L308](../../../../docs/plugins/PLUGINS.md#L308) - the same, for a plugin's scheme"
   - file:///github/ahpapp/.project/plans/people/01-people-live-on-a-host-screen/plan.md - the role editor that reads this key
 ---
 
@@ -51,7 +51,7 @@ resourceProviders (users directory, plugins) -> advertisedGrants -> initialize _
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A grant names an operation, and read and write are its groups](../../../../docs/USERS.md) | a scheme's groups are `RESOURCE`'s |
+| 1 | [A grant names an operation, and read and write are its groups](../../../../docs/sdk/USERS.md) | a scheme's groups are `RESOURCE`'s |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -87,7 +87,7 @@ resourceProviders (users directory, plugins) -> advertisedGrants -> initialize _
 - **Done so far:** tasks 01 and 02, built 2026-10-04 and merged in `3025b42`. `schemeOperations` is at module scope in `root.ts`, and `advertisedSchemes` and the new `schemeGrants` both read it. `advertisedGrants` holds the eight of `OPERATIONS` plus one entry per registered scheme. The descriptions pass through without the `chat` and `file` suffixes.
 - **Next action:** none. Every task was reviewed against main on 2026-10-10 and is `done`; the work is in `3025b42`.
 - **Open questions:** none.
-- **Watch out for:** ahpapp's people/01 role editor reads this key; tell its session the schemes moved in once this lands. `docs/COMPUTER.md` was changed as well as the two files task 02 names, because it sent a client to the `file` entry for a scheme's groups too.
+- **Watch out for:** ahpapp's people/01 role editor reads this key; tell its session the schemes moved in once this lands. `docs/plugins/COMPUTERS.md` was changed as well as the two files task 02 names, because it sent a client to the `file` entry for a scheme's groups too.
 
 ## Final verification checklist
 

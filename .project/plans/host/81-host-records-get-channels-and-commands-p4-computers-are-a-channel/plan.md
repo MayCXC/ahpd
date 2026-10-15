@@ -46,9 +46,9 @@ x-ahpd/computers/stop { name } -> served method -> computer:put -> runtime.stop 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
-| 2 | [A plugin serves an x- command with registerMethod](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
-| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
-| 4 | [The computer is an object a person manages](../../../../docs/COMPUTER.md) | the scheme stays as it is |
+| 2 | [A plugin serves an x- command with registerMethod](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
+| 3 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
+| 4 | [The computer is an object a person manages](../../../../docs/plugins/COMPUTERS.md) | the scheme stays as it is |
 
 | What | Source | Task |
 | --- | --- | --- |

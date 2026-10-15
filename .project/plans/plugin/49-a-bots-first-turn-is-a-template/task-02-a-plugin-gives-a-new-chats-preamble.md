@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/host/sessionmethods.ts#L1042-L1160](../../../../packages/sdk/src/host/sessionmethods.ts#L1042-L1160) - `createChat`: a fork or side chat, `session/chatAdded`, then `initialMessage`"
   - "[code://packages/sdk/src/host/tooling.ts#L1438-L1463](../../../../packages/sdk/src/host/tooling.ts#L1438-L1463) - the `createChat` tool, which begins the chat's first turn with its prompt"
   - "[code://packages/sdk/src/types/agent.ts#L353-L354](../../../../packages/sdk/src/types/agent.ts#L353-L354) - `context`, the text a first turn carries to a backend without showing it"
-  - "[code://docs/PLUGINS.md#L156-L181](../../../../docs/PLUGINS.md#L156-L181) - the table of what a plugin can register"
+  - "[code://docs/plugins/PLUGINS.md#L156-L181](../../../../docs/plugins/PLUGINS.md#L156-L181) - the table of what a plugin can register"
 ---
 
 ## Objective
@@ -57,8 +57,8 @@ export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
 - `UPDATE: packages/sdk/src/index.ts` - export the `OpenedChat` and `ChatPreamble` types.
 - `CREATE: packages/sdk/test/chat-preamble.test.ts` - cases for the hook in each place the host asks it, and where it does not.
 - `UPDATE: packages/sdk/test/plugin-fold.test.ts` - a case for the fold of `chatPreambles`.
-- `UPDATE: docs/PLUGINS.md:181` - add the `registerChatPreamble(preamble)` row to the table.
-- `UPDATE: docs/PLUGINS.md:639` - add a section `### A new chat's preamble` before `### Keeping records`.
+- `UPDATE: docs/plugins/PLUGINS.md:181` - add the `registerChatPreamble(preamble)` row to the table.
+- `UPDATE: docs/plugins/PLUGINS.md:639` - add a section `### A new chat's preamble` before `### Keeping records`.
 
 ## Steps
 
@@ -81,7 +81,7 @@ export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
 17. Leave `changesets.ts` and `spawn.ts` as they are: the host never asks the hook for a changeset or subagent chat.
 18. Export the two types from `packages/sdk/src/index.ts`.
 19. Run `pnpm exec vitest run packages/sdk`, and see every case pass.
-20. Add the row and the section to `docs/PLUGINS.md`.
+20. Add the row and the section to `docs/plugins/PLUGINS.md`.
 21. Say there which chats the host asks for, and that the text is hidden context before `initialMessage`.
 22. Say there that a chat with no `initialMessage` gets the text with the person's first message.
 23. Run every gate in *Validation*.
@@ -103,7 +103,7 @@ export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
 - `pnpm -s boundary` passes.
 - `pnpm -s schema` passes.
 - `pnpm exec vitest run packages/sdk` passes.
-- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/PLUGINS.md` reports nothing on the lines this task wrote.
+- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/plugins/PLUGINS.md` reports nothing on the lines this task wrote.
 
 ## Resume
 

@@ -7,7 +7,7 @@ refs:
   - "[code://packages/agent-cofold/src/tools.ts](../../../../packages/agent-cofold/src/tools.ts) - the tool calls drawn, and `toolInputOf`"
   - "[code://packages/agent-cofold/src/mapping.ts](../../../../packages/agent-cofold/src/mapping.ts) - the approval request and the approved call"
   - "[code://packages/agent-cofold/src/agent.ts](../../../../packages/agent-cofold/src/agent.ts) - the sentence a turn with no model fails with"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) and [code://packages/agent-cofold/README.md](../../../../packages/agent-cofold/README.md) - what the tools are and what confines them"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) and [code://packages/agent-cofold/README.md](../../../../packages/agent-cofold/README.md) - what the tools are and what confines them"
 ---
 
 A cofold session reads, searches, edits and writes files, runs a command, fetches and searches the web, and keeps memory, with cofold running each tool in its own process.
@@ -21,7 +21,7 @@ ahpd draws each call, asks for what the permission mode says to ask, reports the
 - [`code://packages/agent-cofold/src/mapping.ts`](../../../../packages/agent-cofold/src/mapping.ts) - the approval request and the approved call carry the same tool input on the part and the action.
 - [`code://packages/agent-cofold/src/agent.ts`](../../../../packages/agent-cofold/src/agent.ts) - a turn with no model says the backend has no default and to add `"model"` as `"<provider>/<model>"` to the cofold configuration file, naming its path.
 - [`code://packages/agent-cofold/package.json`](../../../../packages/agent-cofold/package.json) - `@cofold/agents`, `@cofold/model-openai-compat`, `@cofold/store-file` and `@cofold/tools` at `^0.1.1`, and `README.md` in `files`; `@cofold/tools` 0.1.1 follows a dangling link's target one name at a time.
-- [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md) and [`code://packages/agent-cofold/README.md`](../../../../packages/agent-cofold/README.md) - what confines the tools, that a read outside the workspace asks in `default` and runs in `auto`, that search follows the configured order, and that a session with no working directory uses the daemon's own.
+- [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) and [`code://packages/agent-cofold/README.md`](../../../../packages/agent-cofold/README.md) - what confines the tools, that a read outside the workspace asks in `default` and runs in `auto`, that search follows the configured order, and that a session with no working directory uses the daemon's own.
 
 ## Verified
 

@@ -32,7 +32,7 @@ Every chat the store records for a session is rebuilt when the session is resume
 - `UPDATE: packages/sdk/src/host/actions.ts` - the `closedChats` key applied to a host that is already running.
 - `UPDATE: packages/server/src/rootconfig.ts`, `packages/server/src/commands/options.ts`, `packages/server/src/commands/run.ts` - the daemon key, its values and what a start announces.
 - `UPDATE: packages/sdk/test/host-chats.test.ts`, `packages/sdk/test/sessions.test.ts`, `packages/server/test/server-root-config.test.ts`, `packages/server/test/config-check.test.ts` - the cases below.
-- `UPDATE: docs/HOST.md`, `docs/DAEMON.md`, `docs/CHATS.md`, `docs/PLUGINS.md` - the daemon key and what closing a chat does.
+- `UPDATE: docs/sdk/HOST.md`, `docs/server/REFERENCE.md`, `docs/sdk/CHATS.md`, `docs/plugins/PLUGINS.md` - the daemon key and what closing a chat does.
 
 ## Steps
 
@@ -97,6 +97,6 @@ A resume starts the chat the record marks default, not the URI the session is na
 Disposing the first chat moves `default` to a peer chat, and the old resume spawned the closed conversation.
 `snapshots.ts` reads the same mark for the chat it serves read-only.
 Closing a chat keeps its conversation hidden by default.
-It is deleted only under the daemon key `closedChats` - decisions [A closed chat's conversation is hidden by default, and deleted only when the daemon is told to](../../../../docs/CHATS.md) and [What closing a chat does is a daemon key in root config](../../../../docs/CHATS.md).
+It is deleted only under the daemon key `closedChats` - decisions [A closed chat's conversation is hidden by default, and deleted only when the daemon is told to](../../../../docs/sdk/CHATS.md) and [What closing a chat does is a daemon key in root config](../../../../docs/sdk/CHATS.md).
 Disposing a session deletes each recorded chat's conversation through the same `deleted` call the session's own id goes through.
 `sessionFor` answers a session URI rather than a bare id, so a session that is not held here is still spelt the way this host names it.

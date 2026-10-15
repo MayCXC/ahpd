@@ -42,5 +42,5 @@ Implemented 2026-10-06.
 `callerOf`, `SessionCaller` and `ProxyCaller` in `packages/server/src/proxy/caller.ts`; `ProxyOptions.whose` in `listener.ts`; `proxy` in `SUBJECTS` and `proxy:read`, `proxy:write` on `member`; `same` exported from `authorize.ts`.
 The body is read only after the caller is known, so an unauthenticated request never has its body read.
 A person in no team on a host that names teams is refused 403 with `scopeFor`'s sentence, as a session is.
-`docs/USERS.md` gained the `proxy` row here, since `users.test.ts` holds every subject to a row.
+`docs/sdk/USERS.md` gained the `proxy` row here, since `users.test.ts` holds every subject to a row.
 Tests: `proxy-listener.test.ts` second describe, `users.test.ts`.

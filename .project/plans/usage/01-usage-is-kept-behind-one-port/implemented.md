@@ -29,4 +29,4 @@ The host has a `usage` port that keeps model use and computer time and answers a
 ## Left for later
 
 - Nothing writes records yet: the agent meter and the proxy listener do.
-- `docs/PLUGINS.md` does not list `registerUsage` yet.
+- `docs/plugins/PLUGINS.md` does not list `registerUsage` yet.

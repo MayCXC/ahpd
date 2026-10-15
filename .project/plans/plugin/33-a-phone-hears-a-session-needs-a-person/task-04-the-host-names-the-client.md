@@ -17,7 +17,7 @@ A plugin can tell which client created or opened a session, and which client wro
 - `UPDATE: packages/sdk/src/types/events.ts` - `SessionStartEvent` gains `client?: string`, the id of the client that created the session; a new `session_opened` event names `session` and `client` when a client subscribes to a session channel.
 - `UPDATE: packages/sdk/src/types/resources.ts` - `write` gains `client?: string` after `owner`.
 - `UPDATE:` the host files that emit `session_start`, handle a session subscribe and call a provider's `write`, to pass the client id.
-- `UPDATE: docs/PLUGINS.md` - the Events section names the new field and event.
+- `UPDATE: docs/plugins/PLUGINS.md` - the Events section names the new field and event.
 
 ## Steps
 
@@ -33,7 +33,7 @@ A plugin can tell which client created or opened a session, and which client wro
 
 ## Resume
 
-- **Done:** implemented 2026-10-09. `SessionStartEvent` gained `client?: string` and a new `SessionOpenedEvent` (`session`, `client`) joins `EventName` and `HostEvent`; `ResourceStore.write` and `ResourceProvider.write` gained `client?: string` after `owner`. The host names the client: `openSession` fires `session_start` with the sender's client id, `routing.ts` gained `openedBy(channel, client)` which fires `session_opened` once per `(session, client)`, and `handshake.ts` (both `initialize` and `reconnect`) and `sessionmethods.ts` (subscribe) call it; `resourcemethods.ts` passes `connection.clientId` to a provider's `write`. `docs/PLUGINS.md` names the new field and event.
+- **Done:** implemented 2026-10-09. `SessionStartEvent` gained `client?: string` and a new `SessionOpenedEvent` (`session`, `client`) joins `EventName` and `HostEvent`; `ResourceStore.write` and `ResourceProvider.write` gained `client?: string` after `owner`. The host names the client: `openSession` fires `session_start` with the sender's client id, `routing.ts` gained `openedBy(channel, client)` which fires `session_opened` once per `(session, client)`, and `handshake.ts` (both `initialize` and `reconnect`) and `sessionmethods.ts` (subscribe) call it; `resourcemethods.ts` passes `connection.clientId` to a provider's `write`. `docs/plugins/PLUGINS.md` names the new field and event.
 - **Tests:** `packages/sdk/test/plugin-events-fire.test.ts` gained `session_opened` in `EVENT_NAMES`, a test that a second client's subscribe fires `session_opened` with the second id, one that an automation's session carries no `client`, and one that a provider's `write` is handed the writing client. The third failed first, as intended.
 - **Gates:** `npx tsc -p tsconfig.json --noEmit` and `pnpm boundary` pass; `packages/sdk` is 129 files and 2601 tests, all passing (schema generated first with `node tools/schema.mjs`, else five tests fail ENOENT).
 - **Next action:** [task-01-a-device-registers-under-push.md](task-01-a-device-registers-under-push.md).

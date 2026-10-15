@@ -32,8 +32,8 @@ The daemon key `pullRequestLookup` picks how the pass learns the state of a pull
 - `UPDATE: packages/server/src/commands/run.ts:690` - pass the key to the host.
 - `UPDATE: packages/server/src/rootconfig.ts:32-40` - add the key to `DAEMON_KEYS` and to `LIVE`.
 - `UPDATE: packages/server/src/main.ts:264` - add the key to the list in the help text.
-- `UPDATE: docs/HOST.md:75` - a table row after `closedChats`.
-- `UPDATE: docs/HOST.md:138-142` - add the key to the daemon keys and to the keys that apply at once.
+- `UPDATE: docs/sdk/HOST.md:75` - a table row after `closedChats`.
+- `UPDATE: docs/sdk/HOST.md:138-142` - add the key to the daemon keys and to the keys that apply at once.
 - `UPDATE: packages/sdk/test/host-merged.test.ts` - the pass cases in Validation.
 - `UPDATE: packages/sdk/test/github.test.ts` - the `byUrl` cases, beside the `forBranch` cases.
 - `UPDATE: packages/server/test/server-root-config.test.ts` - the schema and the live push.
@@ -51,7 +51,7 @@ The daemon key `pullRequestLookup` picks how the pass learns the state of a pull
 8. Under `branch`, ask `forBranch` as task 01 does.
 9. Add the key to the server configuration, the flags, the root config and the help text.
 10. Apply a push of the key at once, as `actions.ts` applies a push of `closedChats`.
-11. Write the key in `docs/HOST.md`.
+11. Write the key in `docs/sdk/HOST.md`.
 
 ## Validation
 
@@ -74,7 +74,7 @@ The daemon key `pullRequestLookup` picks how the pass learns the state of a pull
 - Under `url`, the pass asks `byUrl` for the session's taken-over URLs and the folder's recorded `pullRequestUrls`, without duplicates.
 - Under `url` with a port that has no `byUrl`, the pass asks by branch and logs that once.
 - The server has the key in `Config`, the options, the field schema with `enum: ['url', 'branch']`, `run.ts`, `DAEMON_KEYS`, `LIVE` and the help text.
-- `docs/HOST.md` lists the key in the table, in the daemon keys and in the keys that apply at once.
+- `docs/sdk/HOST.md` lists the key in the table, in the daemon keys and in the keys that apply at once.
 
 ### Validation
 

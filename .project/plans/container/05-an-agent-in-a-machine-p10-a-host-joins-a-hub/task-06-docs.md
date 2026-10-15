@@ -4,8 +4,8 @@ status: todo
 depends: [task-05-a-restart-leaves-node-sessions-to-resume.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the operator's page"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the daemon's commands"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the operator's page"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the daemon's commands"
 ---
 
 ## Objective
@@ -14,7 +14,7 @@ The docs say how to add a node, run `ahpd join`, what the node trusts the hub wi
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`, `docs/DAEMON.md`, `docs/USERS.md` (the `node` subject).
+- `UPDATE: docs/plugins/COMPUTERS.md`, `docs/server/REFERENCE.md`, `docs/sdk/USERS.md` (the `node` subject).
 
 ## Steps
 

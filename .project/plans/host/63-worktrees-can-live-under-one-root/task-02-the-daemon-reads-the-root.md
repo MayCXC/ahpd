@@ -6,8 +6,8 @@ layer: "server"
 refs:
   - "[code://packages/server/src/commands/options.ts#L277-L330](../../../../packages/server/src/commands/options.ts#L277-L330) - `serverFields`, where `paths` is the shape to copy"
   - "[code://packages/server/src/commands/run.ts#L460-L490](../../../../packages/server/src/commands/run.ts#L460-L490) - the `createHost` call"
-  - "[code://docs/DAEMON.md#L261-L265](../../../../docs/DAEMON.md#L261-L265) - the flag table"
-  - "[code://docs/AHP.md#L697-L720](../../../../docs/AHP.md#L697-L720) - what a new tree is, where its location is said"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the flag table"
+  - "[code://docs/sdk/AHP.md#L697-L720](../../../../docs/sdk/AHP.md#L697-L720) - what a new tree is, where its location is said"
 ---
 
 ## Objective
@@ -18,8 +18,8 @@ refs:
 
 - `UPDATE: packages/server/src/commands/options.ts:277-330` - the `worktreesRoot` field.
 - `UPDATE: packages/server/src/commands/run.ts:482` - `worktreesRoot` handed to `createHost` when set.
-- `UPDATE: docs/DAEMON.md:261-265` - the flag row and the config key.
-- `UPDATE: docs/AHP.md:697-720` - where a tree is made.
+- `UPDATE: docs/server/REFERENCE.md:261-265` - the flag row and the config key.
+- `UPDATE: docs/sdk/AHP.md:697-720` - where a tree is made.
 - `UPDATE: packages/server/test/` - the options test that covers `paths`.
 
 ## Steps
@@ -27,7 +27,7 @@ refs:
 1. `serverFields.worktreesRoot`: `type: 'string'`, `cli: { value: 'DIR' }`, description "Keep every session worktree under this folder, as <dir>/<repo>/<name>. Default: <repo>.worktrees beside each repository."
 2. Resolve it to an absolute path the way `paths` is resolved, the file's value against the file's folder and the flag's against the working directory.
 3. `run.ts` spreads `worktreesRoot` into the `createHost` options only when it is set.
-4. `docs/DAEMON.md` gains the flag row. `docs/AHP.md` says a new tree is made at `<repo>.worktrees/<name>`, the reference's location, or under `--worktrees-root` when the daemon was given one, and that VS Code's host finds a tree only at the default.
+4. `docs/server/REFERENCE.md` gains the flag row. `docs/sdk/AHP.md` says a new tree is made at `<repo>.worktrees/<name>`, the reference's location, or under `--worktrees-root` when the daemon was given one, and that VS Code's host finds a tree only at the default.
 
 ## Validation
 
@@ -43,7 +43,7 @@ Implemented 2026-10-06.
 - `Options.worktreesRoot?: string` after `noCwd`, and `optionsFrom` answers `resolve(given('worktreesRoot'))` when the fold named one: absolute already when it came from a file, and the working directory when it was typed.
 - `Config.worktreesRoot?: string` in `config.ts`, and `anchored` takes it with `users` and `connectionTokenFile`, so a relative value in a file is made absolute against the folder of the file that set it rather than against the working directory.
 - `run.ts` spreads it into the `base` `HostOptions` only when it is set, beside `gitWorktrees()`.
-- `docs/DAEMON.md`: the flag row after `--no-cwd`, `worktreesRoot` in the sentence about which keys a relative path is anchored against, and the key named in the list of what root config does not carry. `docs/AHP.md`: where a tree is made, in the first paragraph of "Worktrees the window manages".
+- `docs/server/REFERENCE.md`: the flag row after `--no-cwd`, `worktreesRoot` in the sentence about which keys a relative path is anchored against, and the key named in the list of what root config does not carry. `docs/sdk/AHP.md`: where a tree is made, in the first paragraph of "Worktrees the window manages".
 
 Test first: three cases in `packages/server/test/config-layers.test.ts`, in its `a relative path` block. Two of them failed first on the unchanged code - `worktreesRoot` from a file answered `undefined`, and one typed on the line answered `undefined` - because there was no such key at all. The third, that absent stays absent, has nothing to fail against until the key exists; it is a guard on the resolution not inventing one, and it passes either way.
 

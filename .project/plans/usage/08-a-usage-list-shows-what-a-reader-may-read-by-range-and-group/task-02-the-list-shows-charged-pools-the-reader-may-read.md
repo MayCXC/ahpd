@@ -15,7 +15,7 @@ A listing of `usage://` answers `store.pools()` filtered by `mayRead`, for every
 
 - `UPDATE: packages/sdk/src/usage.ts:542-543` - `visible` filters `store.pools()` by `mayRead`.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the listing cases.
-- `UPDATE: docs/USAGE.md` - a listing names the charged pools the reader may read.
+- `UPDATE: docs/sdk/USAGE.md` - a listing names the charged pools the reader may read.
 
 ## Steps
 
@@ -23,7 +23,7 @@ A listing of `usage://` answers `store.pools()` filtered by `mayRead`, for every
 2. Write a test: records in `user:soft`, `team:backend`, `project:backend:ahpapp` and `root:x`.
 3. In that test, `soft` lists the first three and root lists all four.
 4. Write a test: a pool `soft` may read with no records is not listed.
-5. Update the listing paragraph in `docs/USAGE.md`.
+5. Update the listing paragraph in `docs/sdk/USAGE.md`.
 
 ## Validation
 
@@ -35,4 +35,4 @@ A listing of `usage://` answers `store.pools()` filtered by `mayRead`, for every
 - `packages/sdk/test/usage-scheme.test.ts`: a test with records in `user:soft`, `team:backend`, `project:backend:ahpapp` and `root:x`, where `soft` lists the first three and root lists all four.
 - The same test checks that `project:testing:ahpc`, which `soft` may read and which has no records, is not listed.
 - The existing case that listed an uncharged `user:ana` now expects only the charged pool.
-- `docs/USAGE.md`: the `usage://` row and a paragraph on the listing.
+- `docs/sdk/USAGE.md`: the `usage://` row and a paragraph on the listing.

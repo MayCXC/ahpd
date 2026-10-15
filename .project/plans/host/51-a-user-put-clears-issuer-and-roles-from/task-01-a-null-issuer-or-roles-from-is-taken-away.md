@@ -18,7 +18,7 @@ A `user://<id>` put with `issuer: null` or `rolesFrom: null` leaves the record w
 - `UPDATE: packages/sdk/src/users.ts:714-800` - `add` checks `knows(issuer)` only for a string, sets each field only for a string, and deletes `held.issuer` / `held.rolesFrom` on `null`, beside the `primary === null` delete.
 - `UPDATE: packages/sdk/src/people.ts:158-191` - the `issuer` and `rolesFrom` manifest entries get `nullable: true` and a sentence saying `null` takes it away; `put` reads `body.issuer === null ? null : textOf(body, 'issuer')`, and the same for `rolesFrom`, as `primary` does.
 - `UPDATE: packages/sdk/test/people.test.ts` - the cases below.
-- `UPDATE: docs/USERS.md` - the `user` scheme's write says `null` clears `issuer`, `rolesFrom` and `primary`.
+- `UPDATE: docs/sdk/USERS.md` - the `user` scheme's write says `null` clears `issuer`, `rolesFrom` and `primary`.
 
 ## Steps
 

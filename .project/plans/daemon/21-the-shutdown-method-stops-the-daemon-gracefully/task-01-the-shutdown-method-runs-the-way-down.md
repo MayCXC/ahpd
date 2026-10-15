@@ -72,7 +72,7 @@ Where the plan and the code agree:
 
 Seen, and not this task's:
 
-- `docs/AHP.md:850` already says "`shutdown` answers `{}` and then stops the daemon the way `ahpd stop` does". That sentence was untrue on Windows before this change and is true now. The task's Files list does not name it, so it is unchanged, and no doc contradicts the new behaviour.
+- `docs/sdk/AHP.md:850` already says "`shutdown` answers `{}` and then stops the daemon the way `ahpd stop` does". That sentence was untrue on Windows before this change and is true now. The task's Files list does not name it, so it is unchanged, and no doc contradicts the new behaviour.
 - `run.ts:1151`, the `stop` a restart gives a successor it started, still sends `SIGTERM` and is still a hard kill on Windows. That is the plan's second risk and is left alone.
 
 Validation:

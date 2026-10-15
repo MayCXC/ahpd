@@ -19,7 +19,7 @@ refs:
   - "[code://packages/server/src/commands/options.ts#L589](../../../../packages/server/src/commands/options.ts#L589) - where a setting is read out of the configuration into an option"
   - "[code://packages/server/src/commands/run.ts#L304-L375](../../../../packages/server/src/commands/run.ts#L304-L375) - where the daemon serves the people schemes and hands the host its usage store"
   - "[code://packages/sdk/src/computers.ts#L69-L84](../../../../packages/sdk/src/computers.ts#L69-L84) - `openComputer`, which answers a machine's id and is the only place one is made for a session"
-  - "[code://docs/DAEMON.md#L419-L427](../../../../docs/DAEMON.md#L419-L427) - the settings list a `policies` key joins"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the settings list a `policies` key joins"
   - "[code://README.md#L393-L404](../../../../README.md#L393-L404) - the document table, where the new document is a row"
   - "file:///github/ahp-review/prospect/ahp-user-rules.md - \"What gets checked, when\", and the examples 15, 16, 19, 21, 22, 26 and 27 the plan's checklist names"
 ---
@@ -38,7 +38,7 @@ The checks run at a session's creation and at each turn's start, over the three 
 - `UPDATE: packages/server/src/commands/options.ts:56-76`, `:222-276`, `:589` - the `policiesCheck` option, the `policies` field in the schema and in `FILE_ONLY`, and the read that defaults it off.
 - `UPDATE: packages/server/src/commands/run.ts:304-375` - `policies: filePolicies({ file: policiesPath() })`, `policiesCheck`, and `policy:` added to the same `resourceProviders` map the people schemes are given through, not in a second spread.
 - `CREATE: packages/sdk/test/policy-checks.test.ts`, `CREATE: packages/server/test/policy-option.test.ts`.
-- `CREATE: docs/POLICY.md` - the row, the scheme, the switch, what is checked where, and what this plan does not yet enforce; `UPDATE: docs/DAEMON.md:419-427` the configuration key; `UPDATE: README.md:393-404` the row in the document table.
+- `CREATE: docs/sdk/POLICY.md` - the row, the scheme, the switch, what is checked where, and what this plan does not yet enforce; `UPDATE: docs/server/REFERENCE.md:419-427` the configuration key; `UPDATE: README.md:393-404` the row in the document table.
 
 ## Steps
 
@@ -60,4 +60,4 @@ The checks run at a session's creation and at each turn's start, over the three 
 - `packages/server/test/policy-option.test.ts`: `policies: { "check": true }` in a configuration file is accepted and reaches the host, a file with no `policies` is off, `policies: { "check": "yes" }` refuses the start the way a wrong `usage.per` does, and a daemon switched on with an empty store writes the line from step 10. A policy written through `policy://` by a client holding `policy:write` is in `policies.json` and is read back by a second daemon over the same configuration directory.
 - `pnpm exec vitest run packages/sdk/test/policy-checks.test.ts packages/server/test/policy-option.test.ts`
 - `pnpm test`, `pnpm typecheck`, `pnpm boundary`
-- By hand: nothing here reads a `limit`, a `pool` or a `cap`, and the `usage` port is asked nothing by the checks. A policy that is stored with a limit it has already spent still allows, which is policy/02's work and is said as such in `docs/POLICY.md`.
+- By hand: nothing here reads a `limit`, a `pool` or a `cap`, and the `usage` port is asked nothing by the checks. A policy that is stored with a limit it has already spent still allows, which is policy/02's work and is said as such in `docs/sdk/POLICY.md`.

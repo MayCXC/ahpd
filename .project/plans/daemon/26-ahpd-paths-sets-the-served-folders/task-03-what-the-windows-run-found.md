@@ -28,11 +28,11 @@ Otherwise they write `config.json` and say `Restart the daemon to apply the chan
 - `UPDATE: packages/server/test/server-paths.test.ts` - cases for the record, the forward, the fallback, and `remove` with no question.
 - `UPDATE: packages/server/test/server-commands.test.ts` - the effect of `paths.remove` is `change`.
 - `UPDATE: packages/server/test/daemon.test.ts` - cases for `api` in `recordOf` and for `rewritePaths`.
-- `UPDATE: docs/DAEMON.md:163-200` - the `## Commands` block lists `paths list`, `paths add` and `paths remove`, with one paragraph on the forward.
+- `UPDATE: docs/server/REFERENCE.md:163-200` - the `## Commands` block lists `paths list`, `paths add` and `paths remove`, with one paragraph on the forward.
 
 ## Steps
 
-1. Read what `docs/DAEMON.md` says about the served folders and about a change forwarded to a running daemon.
+1. Read what `docs/server/REFERENCE.md` says about the served folders and about a change forwarded to a running daemon.
 2. Add a `daemon.test.ts` case: `recordOf` reads `api` as `http://127.0.0.1:9187` from `http on http://127.0.0.1:9187/api`.
 3. Add a `daemon.test.ts` case: `recordOf` has no `api` when the announcement has no `http on` line.
 4. Add a `daemon.test.ts` case: `rewritePaths` changes `paths` and keeps every other field, with mode 0600.
@@ -58,7 +58,7 @@ Otherwise they write `config.json` and say `Restart the daemon to apply the chan
 24. Set `effect: 'change'` on `paths.remove`, and keep `resource: { kind: 'folder', key: 'folder' }`.
 25. Change `restartLine` to `Restart the daemon to apply the change: ahpd restart.`
 26. Change the `paths.remove` effect in `server-commands.test.ts` to `change`.
-27. Add the three `paths` verbs to the `## Commands` block of `docs/DAEMON.md`, and one paragraph on the forward.
+27. Add the three `paths` verbs to the `## Commands` block of `docs/server/REFERENCE.md`, and one paragraph on the forward.
 28. Run the cases again and see them pass.
 
 ## Validation
@@ -80,13 +80,13 @@ File by file:
 - `packages/server/test/daemon.test.ts` - steps 2 to 5. Two `recordOf` cases, one that `api` is the origin with the `/api` off it and one that a record of a daemon serving none has no `api`; two `rewritePaths` cases, one that the folders change and every other field and the 0600 mode stay, one that a record naming another pid is left byte for byte.
 - `packages/server/test/server-paths.test.ts` - steps 6 to 14. The `listening` helper mounts the handler `apiHandler` builds over `servedRegistry` on a real port and keeps every request, and `record` writes the `api` a case names. Six terminal cases: the change is sent with the token the record carries, the folder sent is the one resolved, a refusal is the daemon's own sentence and nothing is written, a daemon serving no `api` writes the file and says the restart line, a daemon that does not answer does the same, and `--config-file` writes the file it names and sends nothing. One case that `paths remove` of a folder not in `paths` stops at once with no question, and one served case that the record is rewritten, so a terminal reading it lists the folder too. The case at old line 196 now expects the restart sentence alone. Two more from the review: a record naming `http://0.0.0.0:<port>` reaches a daemon listening on the loopback, and `reachable` maps the three wildcard shapes and leaves a name, a loopback and an IPv6 loopback alone.
 - `packages/server/test/server-commands.test.ts` - step 26. The pinned manifest row is `['paths.remove', 'change', { kind: 'folder', key: 'folder' }]`.
-- `docs/DAEMON.md` - step 27. `paths list`, `paths add <folder>` and `paths remove <folder>` are in the `## Commands` block, with one paragraph under it on the forward and its fallbacks.
+- `docs/server/REFERENCE.md` - step 27. `paths list`, `paths add <folder>` and `paths remove <folder>` are in the `## Commands` block, with one paragraph under it on the forward and its fallbacks.
 
 Review of 2026-10-14, kept at implemented:
 
 - A wildcard bind is sent to the loopback. A daemon bound to every address announces `0.0.0.0`, `::`, or nothing at all, and `0.0.0.0` names no one machine: on Windows a fetch to it fails, and on Linux, where it does connect, the `Host` it sends is not one the API answers to, so the daemon refused the change and the run fell back to the file and a restart line. `reachable(api)` sends those three shapes to `127.0.0.1` or `[::1]` at the same port, the way `personalUrl` in `config.ts` stands a machine's own name in for a wildcard. It is pure and exported, so every shape is testable without a socket, and the case that reaches a real listener through a record naming `0.0.0.0` fails with `This API does not answer to 0.0.0.0:<port>` when `forward` sends to the record's address as written.
 - `API_SUFFIX` in `daemon.ts` is read by `apiOf` rather than being a declaration nothing uses.
-- The two verb descriptions and `docs/DAEMON.md` said the change goes to "a daemon running that serves this terminal's own file". Nothing checks that: what is checked is that no `--config-file` was given and that the record names a daemon with an `api`. Both say that now, and the paragraph names the wildcard case too.
+- The two verb descriptions and `docs/server/REFERENCE.md` said the change goes to "a daemon running that serves this terminal's own file". Nothing checks that: what is checked is that no `--config-file` was given and that the record names a daemon with an `api`. Both say that now, and the paragraph names the wildcard case too.
 
 Judgement calls the plan does not decide:
 
@@ -96,7 +96,7 @@ Judgement calls the plan does not decide:
 
 What the plan did not know:
 
-- Step 1 first named two decisions that were already gone from the worktree. Their content is in `docs/DAEMON.md`, which the step's own prose goes on to describe.
+- Step 1 first named two decisions that were already gone from the worktree. Their content is in `docs/server/REFERENCE.md`, which the step's own prose goes on to describe.
 - The older case `writes the file and says that a restart applies the change, when a daemon is recorded` is now the no-`api` case, because the record it writes carries none. It is the shape a daemon without `http` leaves.
 - `packages/sdk/test/fixtures/wire.jsonl` is rewritten by the suite on every run and is left dirty. `git restore packages/sdk/test/fixtures/wire.jsonl` is denied in this mode, so Softov has to run it before a commit.
 

@@ -20,7 +20,7 @@ The daemon can serve a connection over its own stdin and stdout: newline-delimit
 
 - `UPDATE: packages/sdk/src/listen.ts` - an `overStdio(options, onConnect)` beside `listen()`, returning the same `{ host, port, guarded, close }` shape with `host: 'stdio'` and `port: 0`, built from a line reader rather than a socket.
 - `UPDATE: packages/server/src/main.ts` - `--stdio`, which chooses it instead of `listen`, and the startup line that says so in its own words rather than pretending a port exists.
-- `UPDATE: docs/DAEMON.md` - one paragraph: what stdio mode is for, and that it binds nothing.
+- `UPDATE: docs/server/REFERENCE.md` - one paragraph: what stdio mode is for, and that it binds nothing.
 - `CREATE: test/stdio.test.ts` - the transport's cases, driven against a real host over pipes.
 
 ## Steps

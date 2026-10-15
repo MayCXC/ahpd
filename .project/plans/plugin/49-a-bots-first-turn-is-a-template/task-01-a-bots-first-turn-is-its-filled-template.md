@@ -14,11 +14,11 @@ refs:
   - "[code://packages/bot/src/provider.ts#L490-L530](../../../../packages/bot/src/provider.ts#L490-L530) - the write: `checkRecord`, the record it builds, and the make that starts a bot's session with `sessionFor`"
   - "[code://packages/bot/src/plugin.ts#L27-L60](../../../../packages/bot/src/plugin.ts#L27-L60) - `defaults`, `optionsSchema` and `apply`, where the plugin opens its collections"
   - "[code://packages/sdk/src/types/records.ts#L40-L60](../../../../packages/sdk/src/types/records.ts#L40-L60) - `CollectionOptions.body` and `RecordCollection.get`, which read a template"
-  - "[code://docs/BOTS.md#L174-L184](../../../../docs/BOTS.md#L174-L184) - the plugin's options and where its records are kept"
+  - "[code://docs/plugins/BOTS.md#L174-L184](../../../../docs/plugins/BOTS.md#L174-L184) - the plugin's options and where its records are kept"
   - "[code://packages/bot/test/bot-provider.test.ts#L255-L264](../../../../packages/bot/test/bot-provider.test.ts#L255-L264) - the make form's fields, which gain `template`"
   - "[code://packages/bot/test/bot-provider.test.ts#L768-L779](../../../../packages/bot/test/bot-provider.test.ts#L768-L779) - the case that expects the bare instructions as the first turn"
   - "[code://packages/bot/test/bot-provider.test.ts#L821-L832](../../../../packages/bot/test/bot-provider.test.ts#L821-L832) - the case that expects a silent session for a bot with no instructions"
-  - "[code://docs/BOTS.md#L9-L26](../../../../docs/BOTS.md#L9-L26) - the record table, which gains `template`"
+  - "[code://docs/plugins/BOTS.md#L9-L26](../../../../docs/plugins/BOTS.md#L9-L26) - the record table, which gains `template`"
   - "[code://packages/bot/README.md#L83](../../../../packages/bot/README.md#L83) - the list of fields a body may carry"
 ---
 
@@ -61,9 +61,9 @@ You are {{name}}. {{description}}
 - `UPDATE: packages/bot/test/bot-provider.test.ts` - add cases for a write whose template does not exist and a write whose template does.
 - `UPDATE: packages/bot/test/bot-provider.test.ts:768-779` - expect the filled default template as the first turn, with the model on it.
 - `UPDATE: packages/bot/test/bot-provider.test.ts:821-832` - expect a first turn for a bot with no instructions too, filled from the default template.
-- `UPDATE: docs/BOTS.md:9-26` - add the `template` row, and say that `instructions` goes into the template.
-- `UPDATE: docs/BOTS.md:80-90` - add a section on the first turn, with the default template, a template file and the four words.
-- `UPDATE: docs/BOTS.md:174-184` - add the `lastChats` option, and say that templates are kept in `<configDir>/templates/`.
+- `UPDATE: docs/plugins/BOTS.md:9-26` - add the `template` row, and say that `instructions` goes into the template.
+- `UPDATE: docs/plugins/BOTS.md:80-90` - add a section on the first turn, with the default template, a template file and the four words.
+- `UPDATE: docs/plugins/BOTS.md:174-184` - add the `lastChats` option, and say that templates are kept in `<configDir>/templates/`.
 - `UPDATE: packages/bot/README.md:83` - add `template` to the fields a body may carry.
 - `UPDATE: packages/bot/README.md:112` - say that the first turn is the filled template.
 
@@ -99,11 +99,11 @@ You are {{name}}. {{description}}
 28. In the make at `provider.ts:527-530`, fill the template with no chats, then pass the text to `sessionFor`.
 29. Update the doc comment on `sessionFor`: the first turn is the filled template, and a bot never opens silent.
 30. Run `pnpm exec vitest run packages/bot packages/sdk`, and see every case pass.
-31. Add the `template` row to the record table in `docs/BOTS.md`, and change the `instructions` row.
-32. Add the section `## The first turn` to `docs/BOTS.md`, after `## The session`, with the default template and the four words.
+31. Add the `template` row to the record table in `docs/plugins/BOTS.md`, and change the `instructions` row.
+32. Add the section `## The first turn` to `docs/plugins/BOTS.md`, after `## The session`, with the default template and the four words.
 33. In that section, show a template file with its `title`, and say that a missing template refuses the write.
 34. Say there that the filler keeps an unknown word as written.
-35. Add `lastChats` to the options table in `docs/BOTS.md`, and name `<configDir>/templates/` beside the other collections.
+35. Add `lastChats` to the options table in `docs/plugins/BOTS.md`, and name `<configDir>/templates/` beside the other collections.
 36. Update `packages/bot/README.md` at lines 83 and 112 to match.
 37. Run every gate in *Validation*.
 
@@ -127,7 +127,7 @@ You are {{name}}. {{description}}
 - `pnpm -s boundary` passes.
 - `pnpm -s schema` passes.
 - `pnpm exec vitest run packages/bot packages/sdk` passes.
-- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/BOTS.md` reports nothing on the lines this task wrote.
+- `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs docs/plugins/BOTS.md` reports nothing on the lines this task wrote.
 
 ## Resume
 

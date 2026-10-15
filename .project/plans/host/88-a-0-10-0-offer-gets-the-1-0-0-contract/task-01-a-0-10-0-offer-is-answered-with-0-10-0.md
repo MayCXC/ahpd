@@ -40,7 +40,7 @@ The refusal lists `0.10.0`, and no canvas action reaches the client.
 
 ## Resume
 
-Built in `packages/sdk`, with the docs in `docs/AHP.md`.
+Built in `packages/sdk`, with the docs in `docs/sdk/AHP.md`.
 
 What changed, file by file:
 
@@ -52,7 +52,7 @@ What changed, file by file:
 - `test/host-handshake.test.ts` also has the canvas case. A client on `0.10.0` runs a turn to `chat/turnComplete` and gets no action whose type names a canvas.
 - `test/ahp-test-cases.test.ts` runs every row of the package's version table against `negotiateProtocolVersion`, as VS Code does at 51ec2ee42fd.
 - The same test sends each row that does not offer `0.10.0` through the host too. It checks the answer, `-32602` for a malformed entry, and `-32005` with the three versions.
-- `docs/AHP.md` says the host speaks `0.10.0`, and which versions a refusal lists.
+- `docs/sdk/AHP.md` says the host speaks `0.10.0`, and which versions a refusal lists.
 
 What the plan did not know:
 

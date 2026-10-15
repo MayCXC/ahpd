@@ -80,8 +80,8 @@ tool -> POST /v1/chat/completions | /v1/messages on the API's listener
 
 | Decision | Source |
 | --- | --- |
-| [The proxy answers under /v1 on the listener that carries /api, and only while http is on](../../../../docs/PROXY.md) | defaulted |
-| [GET /v1/models answers in the dialect the caller sent](../../../../docs/PROXY.md) | defaulted |
+| [The proxy answers under /v1 on the listener that carries /api, and only while http is on](../../../../docs/server/PROXY.md) | defaulted |
+| [GET /v1/models answers in the dialect the caller sent](../../../../docs/server/PROXY.md) | defaulted |
 | [A model is named by its maker, and where it runs is a provider](../01-the-proxy-knows-its-providers-and-models/plan.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
@@ -100,7 +100,7 @@ tool -> POST /v1/chat/completions | /v1/messages on the API's listener
 | An entry whose key variable is unset is passed over like one that does not serve the name; with none left, the refusal names each provider and variable passed over | (defaulted: known before the call is made, so nothing is spent finding it out) | 03 |
 | The provider has 120 s to send its status and headers, then 300 s between chunks; no limit on the whole call | (defaulted: a local model loading its weights is slow to start, and a long answer is not a hung one) | 05 |
 | A client that hangs up aborts the upstream call | `npm://@cofold/remote@0.4.0`: `toNodeListener` aborts `request.signal` on hang-up | 05 |
-| With `policies.check` on, each entry is checked as kind `model` with `{ model, proxy }`, and route takes the first allowed; root and a host with no users directory are not checked | policy/01's deferred row "the `model` kind ... proxy/02"; `docs/POLICY.md`, "Never checked" | 06 |
+| With `policies.check` on, each entry is checked as kind `model` with `{ model, proxy }`, and route takes the first allowed; root and a host with no users directory are not checked | policy/01's deferred row "the `model` kind ... proxy/02"; `docs/sdk/POLICY.md`, "Never checked" | 06 |
 | A call writes one `ModelUse` with `source: 'proxy'`, the model name, the provider, the tokens the answer reported, the owner, the scope and the pools `poolsOf` gives; cost from the entry's `price` when it has one, `from: 'price'` | usage/01 "the proxy listener writes to this port"; [`code://packages/sdk/src/meter.ts#L167-L171`](../../../../packages/sdk/src/meter.ts#L167-L171) | 06 |
 | `GET /v1/models` lists the names the caller may use: a name with at least one entry its policy allows | (defaulted: the list is what a call would accept) | 07 |
 | A person needs a grant of a new `proxy` subject to call: `proxy:write` to call, `proxy:read` to list; the built-in `member` gets both | Softov, 2026-10-06, asked "what grant does calling need?": "New `proxy` subject" | 02, 07 |
@@ -108,7 +108,7 @@ tool -> POST /v1/chat/completions | /v1/messages on the API's listener
 | A call made with a session's token is checked as kind `model` and recorded with `source: 'proxy'`, linked to the session, chat and turn the token answers; `proxy.sessionCalls: "record" \| "skip"` (default `record`) turns both off for session calls, and the docs say the session meter and the proxy can count the same tokens twice | Softov, 2026-10-06, asked "is a session-token call checked and recorded by the proxy?": "check and record, with configurable default to check and record. Since a session is a harness and a harness code inside it could decide to call a proxy ... best to match the two and see it and disable, than not seeing none or seeing no cost" | 02, 06, 08 |
 | `/v1` accepts `Host` as the daemon's names or `127.0.0.1`, `localhost` and `[::1]` at any port, since a `-R` forward lands on a loopback port that is not the daemon's and a rebinding page sends its own name; `Origin` is held as the API holds it | (defaulted: container/05 p12's forward; Softov kept the proposal, 2026-10-06) | 01 |
 | A provider that fails mid-answer errors the caller's stream, so the caller's connection is cut and its client sees a transport error rather than a short body that looks whole; a stall the proxy reports and a caller's own hang-up still end the stream cleanly | Softov, 2026-10-06, review of the proxy/02 build | 05 |
-| `openai-organization`, `openai-project` and `anthropic-organization-id` are not sent upstream and not returned; `x-ratelimit-*` and `anthropic-ratelimit-*` are not returned; `retry-after` and `retry-after-ms` are returned, since they say only when the answer may be retried; the list is in `docs/PROXY.md` | Softov, 2026-10-06, review of the proxy/02 build | 04 |
+| `openai-organization`, `openai-project` and `anthropic-organization-id` are not sent upstream and not returned; `x-ratelimit-*` and `anthropic-ratelimit-*` are not returned; `retry-after` and `retry-after-ms` are returned, since they say only when the answer may be retried; the list is in `docs/server/PROXY.md` | Softov, 2026-10-06, review of the proxy/02 build | 04 |
 | A header the caller's `Connection` header names is hop-by-hop and not sent upstream, nor one the provider's names returned (RFC 9110 7.6.1) | Softov, 2026-10-06, review of the proxy/02 build | 04 |
 | A provider that sends no headers within the timeout is answered 504 in the dialect's error body and the next entry is not tried, since it may be doing the work; fallback is only for a refusal or an unreachable provider before any byte | Softov, 2026-10-06, review of the proxy/02 build | 05 |
 | A caller who hung up between two attempts starts no further upstream call: `request.signal` is checked before each attempt | Softov, 2026-10-06, review of the proxy/02 build | 05 |
@@ -158,5 +158,5 @@ tool -> POST /v1/chat/completions | /v1/messages on the API's listener
 - [ ] Every refusal in tasks 01 to 07 parses with the dialect's SDK error type.
 - [ ] A marker key is in no log line, refusal or usage record; a caller's token is in no upstream request.
 - [ ] `pnpm exec tsc --noEmit`, `pnpm test`, `pnpm boundary` green.
-- [ ] `docs/PROXY.md` written; `docs/DAEMON.md`, `docs/POLICY.md` and `plans/proxy/00-proxy.md` updated.
+- [ ] `docs/server/PROXY.md` written; `docs/server/REFERENCE.md`, `docs/sdk/POLICY.md` and `plans/proxy/00-proxy.md` updated.
 - [ ] `plans/index.md` updated.

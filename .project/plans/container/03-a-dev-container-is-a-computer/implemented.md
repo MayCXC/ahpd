@@ -17,7 +17,7 @@ A dev container is a computer like any other: it is made from a folder's `devcon
 - [`code://packages/computer/src/owners.ts`](../../../../packages/computer/src/owners.ts) - the `computers.json` entry keyed by machine id, holding the owner, the probe and the adopted mark, forgotten with the machine.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - the `devcontainer` source in the form, the folder allowlist and the `devcontainer: false` switch on every route, the picker row, and adoption recorded and metered.
 - `test/fixtures/devcontainer.mjs` and `test/fixtures/docker.mjs` - fakes that refuse what the real CLI and Docker refuse, give a container distinct id, name and label, and drop `readOnly` from an object mount.
-- `docs/CONTAINERS.md`, `docs/COMPUTER.md`, `packages/computer/README.md`, `00-container.md`.
+- `docs/plugins/CONTAINERS.md`, `docs/plugins/COMPUTERS.md`, `packages/computer/README.md`, `00-container.md`.
 
 ## Verified
 

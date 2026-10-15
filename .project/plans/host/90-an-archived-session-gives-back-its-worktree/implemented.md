@@ -18,7 +18,7 @@ The worktree record is in the session store, so it outlives the daemon.
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - `shelve` and `restore`, chained per session. `offBranch` keeps a tree whose `HEAD` is detached or on another branch, on archive and on delete.
 - [`code://packages/sdk/src/host/sleep.ts`](../../../../packages/sdk/src/host/sleep.ts) - an archived session is shelved after it stops, and a wake restores the tree first.
 - [`code://packages/sdk/src/repo/worktrees.ts`](../../../../packages/sdk/src/repo/worktrees.ts) - `head`, `commit`, and the linked folders in `dirty` and `remove`.
-- The daemon key `archiveDirtyWorktree`, `keep` or `commit`, applies with no restart. `docs/HOST.md` lists it.
+- The daemon key `archiveDirtyWorktree`, `keep` or `commit`, applies with no restart. `docs/sdk/HOST.md` lists it.
 
 ## Verified
 

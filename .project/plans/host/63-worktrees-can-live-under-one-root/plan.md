@@ -13,8 +13,8 @@ refs:
   - "[code://packages/sdk/src/host.ts#L27](../../../../packages/sdk/src/host.ts#L27) - imports `worktreesOf` and `worktreeFor` and uses neither"
   - "[code://packages/server/src/commands/options.ts#L277-L330](../../../../packages/server/src/commands/options.ts#L277-L330) - `serverFields`, where `paths` shows the shape of a directory option"
   - "[code://packages/server/src/commands/run.ts#L460-L490](../../../../packages/server/src/commands/run.ts#L460-L490) - the `createHost` call that hands in `gitWorktrees()`"
-  - "[code://docs/DAEMON.md#L261-L265](../../../../docs/DAEMON.md#L261-L265) - the flag table"
-  - "[code://docs/AHP.md#L697-L720](../../../../docs/AHP.md#L697-L720) - `### Worktrees the window manages`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the flag table"
+  - "[code://docs/sdk/AHP.md#L697-L720](../../../../docs/sdk/AHP.md#L697-L720) - `### Worktrees the window manages`"
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/common/worktreePaths.ts#L11-L20 - the reference's fixed `<repo>.worktrees`
 ---
 
@@ -47,7 +47,7 @@ ahpd config / --worktrees-root -> run.ts createHost({ worktreesRoot }) -> lifecy
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [Worktrees can live under one root, as an option beside the reference's default](../../../../docs/HOST.md) | Softov, 2026-10-06, "Plan an option" |
+| 1 | [Worktrees can live under one root, as an option beside the reference's default](../../../../docs/sdk/HOST.md) | Softov, 2026-10-06, "Plan an option" |
 
 | What | Source | Task |
 | --- | --- | --- |

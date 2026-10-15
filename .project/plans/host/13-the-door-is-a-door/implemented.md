@@ -8,11 +8,11 @@ refs:
   - code://packages/sdk/src/types/users.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
 ---
 
-A person's connection token now opens a socket and names nobody, so `authenticate` is what authorizes, which is what the two layers described in `docs/USERS.md` always claimed. The deployment's token is unchanged: a socket on it is the host. `trustToken` is the way back, off by default, in the configuration for everybody and on a record for one person.
+A person's connection token now opens a socket and names nobody, so `authenticate` is what authorizes, which is what the two layers described in `docs/sdk/USERS.md` always claimed. The deployment's token is unchanged: a socket on it is the host. `trustToken` is the way back, off by default, in the configuration for everybody and on a record for one person.
 
 ## What was built
 
@@ -22,8 +22,8 @@ A person's connection token now opens a socket and names nobody, so `authenticat
 - `code://packages/sdk/src/types/users.ts` - the three fields above, with the reason `trusted` is stamped once per connection.
 - `code://packages/server/src/config.ts` - the `trustToken` key.
 - `code://packages/server/src/main.ts` - `--trust-token`, merged with the file, and an `identify` that answers `{ principal }` only for a trusted record so an untrusted token arrives as nobody.
-- `code://docs/USERS.md` - the door and the authorization as two layers, the `trustToken` example, and the three shapes.
-- `code://docs/DAEMON.md` - the `users` paragraph and the `trustToken` key; the stale passage claiming a personal token "arrives as them" is corrected.
+- `code://docs/sdk/USERS.md` - the door and the authorization as two layers, the `trustToken` example, and the three shapes.
+- `code://docs/server/REFERENCE.md` - the `users` paragraph and the `trustToken` key; the stale passage claiming a personal token "arrives as them" is corrected.
 
 ## Verified
 

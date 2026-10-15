@@ -17,7 +17,7 @@ Every machine the computer plugin makes, a reopen-in-container relay's included,
 - [`code://packages/computer/src/owners.ts`](../../../../packages/computer/src/owners.ts) - `computers.json` in the config folder, the owner of a machine the Dev Container CLI made, written at create or relay connect (the first creator pays) and removed with the machine.
 - `PluginHost.recordUsage`, resolved against the folded host's `usage` port when called, and `PluginContext.hostName` and `configDir`.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - the runtime wrapped so run, start, restart, stop and remove open and close stretches, the relay's `connect` wrapped to record its owner and open one, running machines opened at start, open stretches closed on `stopping`.
-- `docs/PLUGINS.md` - `recordUsage`, `registerUsage`, `hostName`, `configDir`.
+- `docs/plugins/PLUGINS.md` - `recordUsage`, `registerUsage`, `hostName`, `configDir`.
 
 ## Verified
 

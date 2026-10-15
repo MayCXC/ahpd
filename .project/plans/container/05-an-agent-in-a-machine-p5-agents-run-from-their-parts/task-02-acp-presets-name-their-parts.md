@@ -5,7 +5,7 @@ depends: []
 layer: "agent-acp"
 refs:
   - "[code://.project/plans/container/05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs/task-01-a-spec-declares-what-its-machine-needs.md](../05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs/task-01-a-spec-declares-what-its-machine-needs.md) - the `machine` block a preset fills"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - each preset is an agent of its own"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - each preset is an agent of its own"
 ---
 
 ## Objective

@@ -72,13 +72,13 @@ vscode/devContainers/connect  -> find the computer for F or make it -> [new] pro
 
 | Decision | Task |
 | --- | --- |
-| [A dev container is a computer, made from its devcontainer.json](../../../../docs/CONTAINERS.md) | 01, 03, 04, 05 |
+| [A dev container is a computer, made from its devcontainer.json](../../../../docs/plugins/CONTAINERS.md) | 01, 03, 04, 05 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | 01, 17, 18 |
-| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/PLUGINS.md) | 04, 09 |
+| [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/plugins/PLUGINS.md) | 04, 09 |
 | [A dev container is made only from a folder the operator allows, and devcontainer false turns every route off](../../../decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md) | 08 |
 | A devcontainer source may name any allowed folder, not only the session's own | 08 |
 | [A machine made for a session counts against max and needs computer:write](../../plugin/16-a-disposable-machine/plan.md) | 12 |
-| [The name a create gives a dev container is kept as a label on the container](../../../../docs/CONTAINERS.md) | 10 |
+| [The name a create gives a dev container is kept as a label on the container](../../../../docs/plugins/CONTAINERS.md) | 10 |
 | [A machine the Dev Container CLI made keeps its owner in a file beside the config, not on the container](../../../decisions/a-dev-container-owner-is-kept-beside-the-config.md) | 10, 11 |
 
 | What | Source | Task |
@@ -150,4 +150,4 @@ Every unticked line here needs a real Docker daemon and the full daemon, and is 
 - [ ] A container made by container/01's connect is reused, not duplicated.
 - [ ] A need's variable is seen by a `computer_exec` run after the create, and the override config is 0600 while it exists; keeping a vault-named value out of it is `container/05-p1` task 02.
 - [ ] A dev container carries `ahpd.name` and `ahpd.agents` as plain labels and exactly the two id labels.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/CONTAINERS.md`, `docs/COMPUTER.md`, `00-container.md`, `plans/index.md` updated.
+- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/CONTAINERS.md`, `docs/plugins/COMPUTERS.md`, `00-container.md`, `plans/index.md` updated.

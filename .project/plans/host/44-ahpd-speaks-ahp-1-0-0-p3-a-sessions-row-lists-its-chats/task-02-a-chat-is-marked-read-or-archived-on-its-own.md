@@ -26,7 +26,7 @@ A client's `chat/isReadChanged` or `chat/isArchivedChanged` sets or clears that 
 - `UPDATE: packages/sdk/src/sessions.ts` - the memory store's map, the file store's row field, both forgotten with the session.
 - `UPDATE: packages/sdk/src/host/chatactions.ts` - a handler beside `actions.ts:511` for the two chat actions on a chat channel: compare, store, dispatch the action on the chat channel, `session/chatUpdated` with the new `status`, `summaryMoved`; `chat/isArchivedChanged` whose chat is the session's `defaultChat` goes through the session's path instead (`kept.flags` / `kept.setFlags` on the session's `IsArchived`, `session/isArchivedChanged` dispatched on the session channel, `summaryMoved`, and nothing on the chat channel, whose reducer would set the chat's bit), shared with the `session/isArchivedChanged` branch rather than copied; `chatSummary`, `subagentSummary`, the restored workers' rows and a chat's state OR the chat's flags into `status`.
 - `UPDATE: packages/sdk/test/host-snapshots.test.ts`, `packages/sdk/test/sessions.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - two rows in the chat actions table.
+- `UPDATE: docs/sdk/AHP.md` - two rows in the chat actions table.
 
 ## Steps
 
@@ -70,7 +70,7 @@ A client's `chat/isReadChanged` or `chat/isArchivedChanged` sets or clears that 
 - The counts that guard those lists move with them.
 - One of the four is driven on the default chat, where archiving is the session's, so its `status` joins `HOST_OWNS`.
 - The reason is written beside it.
-- **Departure 3.** `docs/AHP.md`: besides the two rows the Files list names, the `chat/*` heading moves to `33 of 34`.
+- **Departure 3.** `docs/sdk/AHP.md`: besides the two rows the Files list names, the `chat/*` heading moves to `33 of 34`.
 - The `## State actions` total said `95 of the 96` while its own tables summed to `98 of the 99`. It now says `99 of the 100`.
 - **Departure 4.** `README.md` is not in the Files list either. Its coverage line carried the same stale state-action total.
 - Moving one of the two without the other leaves the documents disagreeing, so the README now says `99 of 100` too.

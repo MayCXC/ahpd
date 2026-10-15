@@ -21,7 +21,7 @@ A part's tag and the joined image's tag change when the Dockerfile text that bui
 - `UPDATE: packages/computer/src/parts.ts:732-751,938-966` - `ensurePart` writes the Dockerfile once, for the tag and for the build; `ensureJoined` does the same for the joined image.
 - `UPDATE: packages/computer/test/computer-parts-build.test.ts` - the case below.
 - `UPDATE: packages/computer/test/computer-parts.test.ts`, `packages/computer/test/computer-needs.test.ts` - the tags and labels they spell are derived now.
-- `UPDATE: docs/COMPUTER.md:600` - the paragraph saying the tag is the version alone.
+- `UPDATE: docs/plugins/COMPUTERS.md:600` - the paragraph saying the tag is the version alone.
 
 ## Steps
 
@@ -41,4 +41,4 @@ Two consequences the task did not name, both in the same change. `nodeTag` write
 
 The failing case was seen first: `expected 2, received 1`, the second run building nothing. Fallout the change caused and the tests were updated for: the literals in `computer-parts-build.test.ts` (`tagFor`), `computer-parts.test.ts` (`nodeTag`, and the tag cases now assert both the bare tag and the Dockerfile-bearing one), and `computer-needs.test.ts` (`versionOf`, which replaces `pinnedOf` for what a tag says after its name). Gates: `npx tsc -b` clean, `npm run boundary` clean, `npx vitest run packages/computer` 19 files and 331 tests passed. Two cases in `computer-disposable.test.ts` and `computer-uptime.test.ts` failed once under the whole-package load and passed alone and on the next full run; neither reads a part tag.
 
-`docs/COMPUTER.md:600` said the tag is the version and nothing else, which is what this task changes, so the sentence now names the Dockerfile's hash too.
+`docs/plugins/COMPUTERS.md:600` said the tag is the version and nothing else, which is what this task changes, so the sentence now names the Dockerfile's hash too.

@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/worktrees.ts#L87-L114](../../../../packages/sdk/src/worktrees.ts#L87-L114) - `create`, whose include loop is the thing the value reaches"
   - "[code://packages/sdk/test/worktrees.test.ts#L210-L232](../../../../packages/sdk/test/worktrees.test.ts#L210-L232) - `brings along the files a checkout leaves behind`, the one case that sends the key as a string"
   - "[code://packages/sdk/test/worktrees.test.ts#L278-L306](../../../../packages/sdk/test/worktrees.test.ts#L278-L306) - the case that asserts the key is offered on a session created with no config"
-  - "[code://docs/AHP.md#L689-L709](../../../../docs/AHP.md#L689-L709) - `### Worktrees the window manages`, which says what a tree is given and does not yet say what is put in it"
+  - "[code://docs/sdk/AHP.md#L689-L709](../../../../docs/sdk/AHP.md#L689-L709) - `### Worktrees the window manages`, which says what a tree is given and does not yet say what is put in it"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/shared/worktreeIsolation.ts - both properties declared `type: 'array'` of string items with `items: { type: 'string' }`, and read at 1013-1016 as an array only"
 ---
 
@@ -33,7 +33,7 @@ The key stays editable rather than `readOnly`, because a person types it here an
 - `UPDATE: packages/sdk/src/host.ts:9878-9883` - the `takes a string` refusal, so a list of patterns is a value and not a mistake.
 - `UPDATE: packages/sdk/test/worktrees.test.ts:210-232` - the existing string case, kept and joined by a list case.
 - `UPDATE: packages/sdk/test/worktrees.test.ts:278-306` - the case that asserts the key is offered, extended with the type and the absence of `readOnly`.
-- `UPDATE: docs/AHP.md:689-709` - what a new tree is given, under `### Worktrees the window manages`.
+- `UPDATE: docs/sdk/AHP.md:689-709` - what a new tree is given, under `### Worktrees the window manages`.
 
 ## Steps
 
@@ -45,7 +45,7 @@ The key stays editable rather than `readOnly`, because a person types it here an
 6. `mineOf` at 4608 keeps a value that is a `string[]` as well as a string.
 7. `mergedConfig` and `hostSchema` take `mine: Record<string, unknown>` instead of `Record<string, string>`, and nothing else about them changes. `hostSchema` filters on `value !== undefined && value !== ''` at 4258, and an empty array is neither, which is what keeps a default of `[]` from being dropped from a property row.
 8. The refusal at 9878-9883 stops being "not a string" for the two worktree pattern keys, and stays a refusal for the rest. `isolation`, `branch` and the three branch rows are still strings, and a list sent for one of them is still a mistake worth saying so about.
-9. `docs/AHP.md`, `### Worktrees the window manages`: say what a new tree is given, which the section does not say at all today. `worktreeIncludeFiles` is a list of `.gitignore` patterns for the git-ignored files copied in after the checkout, a comma-separated string is read as one, and the copy is best effort - a pattern that matches nothing is the ordinary case and does not stop the session. The count of worktree properties in the `resolveSessionConfig` row at 85 is untouched by this task and changes in task 03.
+9. `docs/sdk/AHP.md`, `### Worktrees the window manages`: say what a new tree is given, which the section does not say at all today. `worktreeIncludeFiles` is a list of `.gitignore` patterns for the git-ignored files copied in after the checkout, a comma-separated string is read as one, and the copy is best effort - a pattern that matches nothing is the ordinary case and does not stop the session. The count of worktree properties in the `resolveSessionConfig` row at 85 is untouched by this task and changes in task 03.
 
 ## Validation
 

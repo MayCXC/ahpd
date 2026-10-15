@@ -14,10 +14,10 @@ refs:
 
 When the host starts or restarts a backend, it hands it whether each session folder is trusted.
 The trust comes from the connection that sent the turn that starts or restarts it.
-On a host with people that connection must also own the session ([the sender's decision](../../../../docs/AUTHENTICATION.md)).
-A session in a worktree reads the trust of the repository it was cut from ([the worktree decision](../../../../docs/SESSIONS.md)).
+On a host with people that connection must also own the session ([the sender's decision](../../../../docs/sdk/AUTHENTICATION.md)).
+A session in a worktree reads the trust of the repository it was cut from ([the worktree decision](../../../../docs/sdk/SESSIONS.md)).
 No window is asked about the worktree.
-With no value, or with no connection (an automation), every folder is untrusted ([the decision](../../../../docs/AUTHENTICATION.md)).
+With no value, or with no connection (an automation), every folder is untrusted ([the decision](../../../../docs/sdk/AUTHENTICATION.md)).
 
 ## Files
 

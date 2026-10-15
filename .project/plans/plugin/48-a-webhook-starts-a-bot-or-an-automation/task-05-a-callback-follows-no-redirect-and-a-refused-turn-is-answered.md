@@ -10,7 +10,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L1340-L1351](../../../../packages/sdk/src/host.ts#L1340-L1351) - `dispatchAction` is a notification, so a refusal never comes back as an RPC error"
   - "[code://packages/sdk/src/types/plugin.ts#L144-L174](../../../../packages/sdk/src/types/plugin.ts#L144-L174) - `PluginPeer.onMessage`, where the plugin hears the echo"
   - "[code://packages/webhook/test/webhook-bot.test.ts](../../../../packages/webhook/test/webhook-bot.test.ts) - the bot cases to extend"
-  - "[code://docs/WEBHOOKS.md#L88](../../../../docs/WEBHOOKS.md#L88) - the callback prefix paragraph, where the redirect line goes"
+  - "[code://docs/plugins/WEBHOOKS.md#L88](../../../../docs/plugins/WEBHOOKS.md#L88) - the callback prefix paragraph, where the redirect line goes"
 ---
 
 ## Objective
@@ -24,8 +24,8 @@ A turn that the host refuses gets an error answer to the caller, instead of a 20
 - `UPDATE: packages/webhook/src/bot.ts:32` - `send` gives the refusal reason, or `undefined` when the host took the turn.
 - `UPDATE: packages/webhook/src/bot.ts:176-181` - a refused turn answers 409 with the reason, and its end is not awaited.
 - `UPDATE: packages/webhook/test/webhook-bot.test.ts` - the cases below.
-- `UPDATE: docs/WEBHOOKS.md:88` - one line that says a callback redirect is a failed callback.
-- `UPDATE: docs/WEBHOOKS.md:103` - the 409 row names a turn the host refused.
+- `UPDATE: docs/plugins/WEBHOOKS.md:88` - one line that says a callback redirect is a failed callback.
+- `UPDATE: docs/plugins/WEBHOOKS.md:103` - the 409 row names a turn the host refused.
 
 ## Steps
 
@@ -38,7 +38,7 @@ A turn that the host refuses gets an error answer to the caller, instead of a 20
 7. In `bot.ts`, answer 409 `{ message }` with the reason when `send` gives one, and report a problem line.
 8. Drop the wait for the turn's end when `send` gives a reason, so no waiter stays.
 9. Add the test cases below.
-10. Add the redirect line and the 409 words to `docs/WEBHOOKS.md`.
+10. Add the redirect line and the 409 words to `docs/plugins/WEBHOOKS.md`.
 
 ## Validation
 
@@ -66,7 +66,7 @@ A turn that the host refuses gets an error answer to the caller, instead of a 20
 - `BotSeams.send` gives the refusal reason or `undefined`, and the new seam `BotSeams.forget` drops the wait for a turn end.
 - `turnEnds` has `forget`, which removes the waiter of one turn.
 - A refused turn answers 409 `{ message }`, reports a problem line, and forgets its end wait before any callback or sync wait.
-- `docs/WEBHOOKS.md` has the redirect line and the refused turn in the 409 row.
+- `docs/plugins/WEBHOOKS.md` has the redirect line and the refused turn in the 409 row.
 
 ### Validation
 

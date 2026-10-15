@@ -42,9 +42,9 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [Host records get typed channels and commands beside their resource schemes](../81-host-records-get-channels-and-commands/plan.md) | Softov, 2026-10-11 |
-| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/PLUGINS.md) | Softov, 2026-10-11 |
-| 3 | [Usage is read through a usage scheme](../../../../docs/USAGE.md) | Softov, 2026-10-02; the scheme stays |
-| 4 | [Usage lists the charged pools a reader may read](../../../../docs/USAGE.md) | Softov; `pools` answers the same list |
+| 2 | [An x- command is named x-ahpd/<domain>/<verb>](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
+| 3 | [Usage is read through a usage scheme](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02; the scheme stays |
+| 4 | [Usage lists the charged pools a reader may read](../../../../docs/sdk/USAGE.md) | Softov; `pools` answers the same list |
 
 | What | Source | Task |
 | --- | --- | --- |

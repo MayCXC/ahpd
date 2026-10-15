@@ -17,7 +17,7 @@ refs:
 - `UPDATE: packages/sdk/src/host.ts` - `dispatchNeeds(channel, action)` returns `Grant | undefined`; the gate asks for a principal always and for the grant only when there is one.
 - `UPDATE: packages/sdk/src/users.ts` - `config` in `SUBJECTS`.
 - `UPDATE: test/users-gate.test.ts` - classification and behaviour cases.
-- `UPDATE: docs/USERS.md` - the `config` subject and the root rule.
+- `UPDATE: docs/sdk/USERS.md` - the `config` subject and the root rule.
 
 ## Steps
 

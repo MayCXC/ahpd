@@ -25,7 +25,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/automations.ts:319-324` - answers `{}`; a cursor the store does not recognise is `-32602`.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the paging tests read the entry.
 - `UPDATE: packages/sdk/test/wire.test.ts` - the `FetchAutomationRunsResult` line leaves `KNOWN`.
-- `UPDATE: docs/AHP.md` - the `fetchAutomationRuns` row says what is acknowledged and where the page arrives.
+- `UPDATE: docs/sdk/AHP.md` - the `fetchAutomationRuns` row says what is acknowledged and where the page arrives.
 
 ## Steps
 

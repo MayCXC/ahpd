@@ -20,7 +20,7 @@ The host has a `vault` port, filled by the daemon with one plain `vault.json` (m
 - [`code://packages/server/src/commands/vault.ts`](../../../../packages/server/src/commands/vault.ts) - `ahpd vault` at the terminal (value from piped stdin only) and served (`POST /api/vault/set|delete/<name>`, `GET /api/vault/list`), with the grants of the plan.
 - `commands/run.ts`, `served.ts`, `config.ts` - the daemon builds the file vault beside the usage store and says `vault <path>` or `vault from a plugin` at start.
 - `commands/config.ts`, `rootconfig.ts`, `commands/plugin.ts` - a reference is answered as written and checked with `scopeOf` where it is written.
-- `docs/DAEMON.md` `## The vault`, `docs/PLUGINS.md` naming and reading a secret.
+- `docs/server/REFERENCE.md` `## The vault`, `docs/plugins/PLUGINS.md` naming and reading a secret.
 
 ## Verified
 

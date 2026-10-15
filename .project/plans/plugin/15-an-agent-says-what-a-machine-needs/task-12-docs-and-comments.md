@@ -4,8 +4,8 @@ status: done
 depends: [task-06-cofold-declares.md, task-09-every-mount-target-is-checked-at-create.md, task-10-a-path-a-machine-is-made-with-is-absolute-and-there.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md#L171-L224](../../../../docs/COMPUTER.md#L171-L224) - the needs table, which has no cofold row, and the profile rules"
-  - "[code://docs/PLUGINS.md#L88-L113](../../../../docs/PLUGINS.md#L88-L113) - what a plugin can register; nothing tells an author about `machine()` or `machineNeeds`"
+  - "[code://docs/plugins/COMPUTERS.md#L171-L224](../../../../docs/plugins/COMPUTERS.md#L171-L224) - the needs table, which has no cofold row, and the profile rules"
+  - "[code://docs/plugins/PLUGINS.md#L88-L113](../../../../docs/plugins/PLUGINS.md#L88-L113) - what a plugin can register; nothing tells an author about `machine()` or `machineNeeds`"
   - "[code://packages/agent-claude/src/claude.ts#L15-L24](../../../../packages/agent-claude/src/claude.ts#L15-L24) - `claudeExecutablePath`'s comment, which narrates what the docs once pinned"
   - "[code://packages/agent-claude/src/claude.ts#L87-L96](../../../../packages/agent-claude/src/claude.ts#L87-L96) - `computerConfigDir`'s comment, which says nothing here mounts the directory, while `machine()` declares it"
   - "[code://packages/agent-claude/src/claude.ts#L362-L372](../../../../packages/agent-claude/src/claude.ts#L362-L372) - `machine()`'s comment, \"the same host paths the computer docs used to list\""
@@ -17,12 +17,12 @@ refs:
 
 ## Objective
 
-`docs/COMPUTER.md` lists cofold's needs beside Claude's and says what is refused at create, `docs/PLUGINS.md` tells a plugin author how to declare `machine()` and what the host does with it, and the comments in this plan's code say what each declaration is.
+`docs/plugins/COMPUTERS.md` lists cofold's needs beside Claude's and says what is refused at create, `docs/plugins/PLUGINS.md` tells a plugin author how to declare `machine()` and what the host does with it, and the comments in this plan's code say what each declaration is.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md:171-224` - a cofold table beside Claude's (`cofoldConfig` to `/ahpd/cofold/cofold/config.json`, `XDG_CONFIG_HOME=/ahpd/cofold`, `computerConfigDir` on `@ahpd/agent-cofold`, from task 06); the profile rules say a relative or missing mount source is refused (task 10).
-- `UPDATE: docs/PLUGINS.md` - a short section after "What you can register" on `Agent.machine()`: the four need shapes, how a value is resolved (profile, plugin option, default), that it is read at create and never at load, and that a need value may be a credential and is never printed. One sentence per line, which is the style of the section it sits beside.
+- `UPDATE: docs/plugins/COMPUTERS.md:171-224` - a cofold table beside Claude's (`cofoldConfig` to `/ahpd/cofold/cofold/config.json`, `XDG_CONFIG_HOME=/ahpd/cofold`, `computerConfigDir` on `@ahpd/agent-cofold`, from task 06); the profile rules say a relative or missing mount source is refused (task 10).
+- `UPDATE: docs/plugins/PLUGINS.md` - a short section after "What you can register" on `Agent.machine()`: the four need shapes, how a value is resolved (profile, plugin option, default), that it is read at create and never at load, and that a need value may be a credential and is never printed. One sentence per line, which is the style of the section it sits beside.
 - `UPDATE: packages/agent-claude/src/claude.ts:15-24` - the comment says what `claudeExecutablePath` answers and why it follows the link, with no history.
 - `UPDATE: packages/agent-claude/src/claude.ts:87-96` - `computerConfigDir` says it is where the configuration needs land inside a machine and what `CLAUDE_CONFIG_DIR` is set to, and that `false` leaves the image's own.
 - `UPDATE: packages/agent-claude/src/claude.ts:362-372` - `machine()`'s comment without "used to".
@@ -32,7 +32,7 @@ refs:
 
 ## Steps
 
-1. Write the docs in each file's own style: `docs/COMPUTER.md` is one paragraph per line and `docs/PLUGINS.md` is one sentence per line; do not reflow text around what changes.
+1. Write the docs in each file's own style: `docs/plugins/COMPUTERS.md` is one paragraph per line and `docs/plugins/PLUGINS.md` is one sentence per line; do not reflow text around what changes.
 2. Remove history from comments; what was, and why, belongs in the decisions.
 
 ## Validation

@@ -24,16 +24,16 @@ One plugin serves both kinds of endpoint, a bot and an automation, and this task
 - `CREATE: packages/webhook/package.json` - a copy of the `@ahpd/push` manifest, with the name `@ahpd/webhook`, the title `Webhook`, and the peer range `>=0.11 <1`, because `records()` arrived in 0.11.0.
 - `CREATE: packages/webhook/tsconfig.json` - the same file as `packages/push/tsconfig.json`.
 - `CREATE: packages/webhook/LICENSE` - the MIT license of the sibling packages.
-- `CREATE: packages/webhook/README.md` - what the plugin does, and a link to `docs/WEBHOOKS.md`.
+- `CREATE: packages/webhook/README.md` - what the plugin does, and a link to `docs/plugins/WEBHOOKS.md`.
 - `CREATE: packages/webhook/src/index.ts` - re-exports `name`, `title`, `defaults`, `optionsSchema` and `apply`, as `packages/bot/src/index.ts` does.
 - `CREATE: packages/webhook/src/plugin.ts` - `apply`: opens the `webhooks` collection, registers the route, and builds the seams from `host`.
 - `CREATE: packages/webhook/src/record.ts` - the endpoint record and its check.
 - `CREATE: packages/webhook/src/route.ts` - `webhookRoute(seams)`, the handler that finds the endpoint and checks the bearer.
 - `CREATE: packages/webhook/test/webhook-record.test.ts` - cases for the endpoint check.
 - `CREATE: packages/webhook/test/webhook-route.test.ts` - cases for the route.
-- `CREATE: docs/WEBHOOKS.md` - the endpoint record, the route path, the bearer, and an example file, in the shape of `docs/BOTS.md`.
+- `CREATE: docs/plugins/WEBHOOKS.md` - the endpoint record, the route path, the bearer, and an example file, in the shape of `docs/plugins/BOTS.md`.
 - `UPDATE: docs/README.md:27` - add a `WEBHOOKS.md` row after the `USERS.md` row, in name order.
-- `UPDATE: docs/PLUGINS.md:183-205` - name `@ahpd/webhook` as a plugin that authenticates its own caller.
+- `UPDATE: docs/plugins/PLUGINS.md:183-205` - name `@ahpd/webhook` as a plugin that authenticates its own caller.
 - `UPDATE: package.json:15` - add `tsc -p packages/webhook` to the `build` script.
 - `UPDATE: .github/workflows/release.yml:20` - add `webhook` to `PUBLISHED`.
 - `UPDATE: README.md:16` - add the `@ahpd/webhook` badge after the `@ahpd/bot` badge.
@@ -63,7 +63,7 @@ One plugin serves both kinds of endpoint, a bot and an automation, and this task
 19. Create `package.json`, `tsconfig.json`, `LICENSE`, `README.md` and `index.ts` from the `@ahpd/push` shape.
 20. Add the package to the root build, `PUBLISHED`, the README badge and the README table.
 21. Run `pnpm install` so that the lockfile holds the new package.
-22. Write `docs/WEBHOOKS.md` and its row in `docs/README.md`.
+22. Write `docs/plugins/WEBHOOKS.md` and its row in `docs/README.md`.
 23. Run the gates.
 
 ## Validation

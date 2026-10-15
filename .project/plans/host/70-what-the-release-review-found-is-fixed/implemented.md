@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host/gate.ts](../../../../packages/sdk/src/host/gate.ts) - `dispatchNeeds`"
   - "[code://packages/sdk/src/host/root.ts](../../../../packages/sdk/src/host/root.ts) - `ROOT_CONFIG_SCHEMA`"
   - "[code://packages/agent-claude/src/session.ts](../../../../packages/agent-claude/src/session.ts) - the order of the values a session is built from"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - grants, trusted folders and the per-connection keys"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - grants, trusted folders and the per-connection keys"
 ---
 
 ahpd 0.10.0 now ships without the defects a release review of everything since v0.9.0 found.
@@ -30,7 +30,7 @@ The docs describe 0.10.0 rather than 0.9.
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - a session that leaves its machine drops its nested record, so a daemon started after the move reads its history from the backend. `restartChat` closes the chat it replaces with `removing` false, as the whole-session restart does.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - the stored sandbox is spread over the preset only when the preset does not say `off`, so a variant built to run unsandboxed does.
 - [`code://packages/sdk/src/sessiontools.ts`](../../../../packages/sdk/src/sessiontools.ts) - both answers `set_workspace` gives name the folder with `uriOf`, so a `#` or a `?` in a path is escaped.
-- [`code://docs/USERS.md`](../../../../docs/USERS.md), [`code://docs/AHP.md`](../../../../docs/AHP.md), [`code://docs/PLUGINS.md`](../../../../docs/PLUGINS.md), [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md), [`code://docs/COMPUTER.md`](../../../../docs/COMPUTER.md), and the Claude, pi and ACP READMEs - the docs describe 0.10.0 rather than 0.9. `docs/USERS.md` gained a "Trusted folders" section. `docs/AHP.md` names the two per-connection keys and the sandbox rules. `docs/PLUGINS.md` gained `gitDir`, the two further machine need kinds, and the MCP tools endpoint that runs a client's tool and streams list changes. Its ACP preset table gained `honoursTrust` and `toolsChanged`. `docs/DAEMON.md` gained `--client-tool-timeout-ms`. `docs/COMPUTER.md` gained what a removal does with a stopped machine and with work it cannot bring out.
+- [`code://docs/sdk/USERS.md`](../../../../docs/sdk/USERS.md), [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md), [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md), [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md), [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md), and the Claude, pi and ACP READMEs - the docs describe 0.10.0 rather than 0.9. `docs/sdk/USERS.md` gained a "Trusted folders" section. `docs/sdk/AHP.md` names the two per-connection keys and the sandbox rules. `docs/plugins/PLUGINS.md` gained `gitDir`, the two further machine need kinds, and the MCP tools endpoint that runs a client's tool and streams list changes. Its ACP preset table gained `honoursTrust` and `toolsChanged`. `docs/server/REFERENCE.md` gained `--client-tool-timeout-ms`. `docs/plugins/COMPUTERS.md` gained what a removal does with a stopped machine and with work it cannot bring out.
 
 ## Verified
 
@@ -42,7 +42,7 @@ The docs describe 0.10.0 rather than 0.9.
 
 ## Departures from the plan
 
-- task 08's line for `docs/PROXY.md:105-119` and `docs/POLICY.md:85` said session calls are not wired yet. Read against `chargedAs` in `packages/server/src/proxy/listener.ts`, both already describe `proxy.sessionCalls` as it is, so nothing was corrected there.
+- task 08's line for `docs/server/PROXY.md:105-119` and `docs/sdk/POLICY.md:85` said session calls are not wired yet. Read against `chargedAs` in `packages/server/src/proxy/listener.ts`, both already describe `proxy.sessionCalls` as it is, so nothing was corrected there.
 - task 07's change reversed the premise of a case in `packages/sdk/test/host-sessionconfig.test.ts`, which still asked for a stored sandbox on over a preset that says off. The full gates found it, and the case now asks for the preset's answer in both spellings. Its other half, a session with no preset keeping its stored on, is unchanged.
 - The helper in `packages/agent-claude/test/agent-claude-declarations.test.ts` passed `settings: undefined`, which `exactOptionalPropertyTypes` refuses. It now spreads the member only when it is there.
 

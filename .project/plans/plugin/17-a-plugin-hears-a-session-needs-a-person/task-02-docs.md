@@ -4,16 +4,16 @@ status: done
 depends: [task-01-the-host-raises-input-needed.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md#L241-L290](../../../../docs/PLUGINS.md#L241-L290) - the Events section and its table"
+  - "[code://docs/plugins/PLUGINS.md#L241-L290](../../../../docs/plugins/PLUGINS.md#L241-L290) - the Events section and its table"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` lists `input_needed_set` and `input_needed_removed` with their payloads, like every other event.
+`docs/plugins/PLUGINS.md` lists `input_needed_set` and `input_needed_removed` with their payloads, like every other event.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md:241-290` - two rows in the events table, and the sentence about which events repeat a client's action.
+- `UPDATE: docs/plugins/PLUGINS.md:241-290` - two rows in the events table, and the sentence about which events repeat a client's action.
 
 ## Steps
 

@@ -39,9 +39,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Decision | Source |
 | --- | --- |
-| [Model use and computer time are two record types behind one usage port](../../../../docs/USAGE.md) | Softov, 2026-10-01 |
+| [Model use and computer time are two record types behind one usage port](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-01 |
 | The usage store answers a pool's live total, not only appends | Softov, 2026-10-01 |
-| [Work is owned by a typed reference, user, team or project](../../../../docs/SESSIONS.md) | Softov, 2026-10-01 |
+| [Work is owned by a typed reference, user, team or project](../../../../docs/sdk/SESSIONS.md) | Softov, 2026-10-01 |
 
 | What | Source | Task |
 | --- | --- | --- |

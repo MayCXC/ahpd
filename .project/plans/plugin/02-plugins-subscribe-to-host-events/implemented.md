@@ -31,7 +31,7 @@ The event set is closed and written down in one file, and a per-token delta is d
 - `test/plugin-events-fire.test.ts` - 11 tests, one per event plus the delta case: a paced turn that streamed several deltas fired `message`, `turn_start` and `turn_end` exactly once each, a cancelled turn ended with `cancelled`, a host tool that threw still fired `tool_call` with its failure, and `log` matched `onEvent` line for line.
 - `test/plugin-events-order.test.ts` - 6 tests: configuration order, an asynchronous handler awaited before the next, a throwing handler reported once against its plugin with the next still running, the action not rejecting, a `log` handler that logs raising no second event, and an event with no listeners doing nothing.
 - `pnpm test` green: 48 files, 731 tests; `pnpm typecheck` and `pnpm boundary` green.
-- `docs/PLUGINS.md` gained the `on` surface and the event table, and the daemon's own docs link to it.
+- `docs/plugins/PLUGINS.md` gained the `on` surface and the event table, and the daemon's own docs link to it.
 
 ## Departures from the plan
 

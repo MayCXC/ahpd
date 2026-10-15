@@ -88,7 +88,7 @@ No decision file: neither item forks on a choice where both options work.
 - **Data flow** - `artifactTools()` marks `deferLoading`; `createHost` keeps it on `HostTool`; `boundTools()` copies it to `BoundTool`; `contributed()` turns a defined `deferLoading` into `_meta['anthropic/alwaysLoad'] = !deferLoading` on the raw SDK tool. The published `ToolDefinition` never carries it.
 - **Event flow** - none for the load policy, which is settled when the session is built. For customizations, `describe()` reads the SDK's answered lists once at the handshake and emits `session/customizationsChanged`.
 - **State flow** - none; both are declarations rebuilt for each session from what the SDK answers.
-- **Layer responsibilities** - packages/sdk: the field and its pass-through, and which artifact tool is eager · packages/agent-claude: the SDK translation in `contributed()` and the customization projection in `customizationsOf()` · docs/AGENT.md: what a customization container promises if the projection changes.
+- **Layer responsibilities** - packages/sdk: the field and its pass-through, and which artifact tool is eager · packages/agent-claude: the SDK translation in `contributed()` and the customization projection in `customizationsOf()` · docs/sdk/AGENT.md: what a customization container promises if the projection changes.
 - **Source-of-truth files** - `code://packages/sdk/src/artifacttools.ts`, `code://packages/agent-claude/src/session.ts`.
 
 ## Tasks

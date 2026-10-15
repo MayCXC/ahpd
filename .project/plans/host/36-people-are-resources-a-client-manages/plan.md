@@ -41,8 +41,8 @@ client resourceList/Read/Write/Delete user://, team://, project://, role://
 
 | Decision | Source |
 | --- | --- |
-| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/USERS.md) | Softov, 2026-10-01 |
-| [An existing `users:*` grant is `user:*` only, said once at start per role](../../../../docs/USERS.md) | Softov, 2026-10-02 |
+| [Users, teams, projects and roles are resource schemes, each with its own grant subject](../../../../docs/sdk/USERS.md) | Softov, 2026-10-01 |
+| [An existing `users:*` grant is `user:*` only, said once at start per role](../../../../docs/sdk/USERS.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

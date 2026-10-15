@@ -51,8 +51,8 @@ session offered tools -> forSession(session) -> connections of the bot or the se
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin may contribute a session config key](../../../../docs/PLUGINS.md) | The decision file |
-| 2 | [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | The decision file |
+| 1 | [A plugin may contribute a session config key](../../../../docs/plugins/PLUGINS.md) | The decision file |
+| 2 | [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | The decision file |
 
 | What | Source | Task |
 | --- | --- | --- |

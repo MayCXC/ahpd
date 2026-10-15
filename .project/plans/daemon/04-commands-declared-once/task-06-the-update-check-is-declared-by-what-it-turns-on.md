@@ -64,5 +64,5 @@ Decided 2026-09-26: Softov chose option 2, recorded in [A boolean flag nobody ty
 - Seen to fail first: the new `optionsFrom` case (`updateCheck: false` answered `true`) and `DAEMON_FLAGS` (`--update-check` missing).
   The rewritten CLI case passed on the old declaration too, because `--no-update-check` was always right from the terminal, and what was inverted was the JSON and HTTP meaning, which the `optionsFrom` case pins.
   With `CI` removed, its first assertion is the one that fails if the update line can never print.
-- Not touched: `docs/DAEMON.md` still lists the flag as `--no-update-check` in its table and heading, which stays a valid spelling; it is not in this task's Files.
+- Not touched: `docs/server/REFERENCE.md` still lists the flag as `--no-update-check` in its table and heading, which stays a valid spelling; it is not in this task's Files.
 - `vitest run` on the two files green (54 tests); `pnpm typecheck`, `pnpm boundary` and `pnpm test` (102 files, 1349 tests) green.

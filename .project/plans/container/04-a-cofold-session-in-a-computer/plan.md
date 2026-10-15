@@ -132,5 +132,5 @@ process exits                    -> [new] the session ends with the stderr tail 
 - [ ] A nested session resumed after the outer daemon restarts shows its earlier turns.
 - [ ] A session in a folder mounted at another path inside the machine works in the inside path.
 - [ ] A cofold registered under another provider name runs nested with `@ahpd/agent-cofold` loaded inside, and the machine's cofold configuration is the one it uses.
-- [x] The image built from `docs/COMPUTER.md`'s example starts `ahpd --stdio --plugin @ahpd/agent-cofold`.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/COMPUTER.md`, `plans/index.md` updated.
+- [x] The image built from `docs/plugins/COMPUTERS.md`'s example starts `ahpd --stdio --plugin @ahpd/agent-cofold`.
+- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

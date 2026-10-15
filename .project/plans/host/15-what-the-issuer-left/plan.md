@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/issuers.ts#L60-L72](../../../../packages/sdk/src/issuers.ts#L60-L72) - `answer`, which keeps the claims"
   - "[code://packages/server/src/main.ts](../../../../packages/server/src/main.ts) - `user add --issuer`, and the flag parsing it joins"
   - "[code://scripts/dev-issuer.mjs](../../../../scripts/dev-issuer.mjs) - the claim a test can read"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the operator's side"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the operator's side"
 ---
 
 ## Goal
@@ -43,7 +43,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A claim names the roles, and this file defines them](../../../../docs/AUTHENTICATION.md) | The user, 2026-09-23: "c now, then b", choosing the roles-from-claims option after the deferred item named "a claim mapping" as what it needs. |
+| 1 | [A claim names the roles, and this file defines them](../../../../docs/sdk/AUTHENTICATION.md) | The user, 2026-09-23: "c now, then b", choosing the roles-from-claims option after the deferred item named "a claim mapping" as what it needs. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -82,4 +82,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] `pnpm test`, `pnpm typecheck` and `pnpm boundary` green.
 - [x] `test/users-issuer.test.ts` - `add` with an issuer sets it, refuses an unresolvable one, and leaves the provider alone without the option; a claim's roles are added to the record's; a value that names nothing is reported once and dropped; an absent claim contributes nothing; a claim of one string is read; the file's roles stay live and the claim's are stamped.
 - [x] `scripts/dev-issuer.mjs` answers `groups` for `Bearer ana|eng,ops`.
-- [x] `plans/index.md`, `docs/USERS.md`, `docs/DAEMON.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/sdk/USERS.md`, `docs/server/REFERENCE.md` and `working/HANDOFF.md` updated.

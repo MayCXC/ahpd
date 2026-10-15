@@ -45,4 +45,4 @@ A Claude session in a folder the host did not vouch for is built with `settingSo
 ## Left for later
 
 - none. Nothing this plan named is left; there is no `deferred.md`.
-- A host with no people directory used to trust nothing, so both backends here loaded no project files there whatever a window pushed. The review of 2026-10-06 settled it: on such a host the sender's push decides ([the decision](../../../../docs/AUTHENTICATION.md)). That is where trust is read rather than where it is used. This plan's code is the same either way, and both backends read the host's answer unchanged.
+- A host with no people directory used to trust nothing, so both backends here loaded no project files there whatever a window pushed. The review of 2026-10-06 settled it: on such a host the sender's push decides ([the decision](../../../../docs/sdk/AUTHENTICATION.md)). That is where trust is read rather than where it is used. This plan's code is the same either way, and both backends read the host's answer unchanged.

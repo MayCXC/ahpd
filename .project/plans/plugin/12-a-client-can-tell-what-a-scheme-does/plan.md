@@ -50,8 +50,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/RESOURCES.md) | The user, 2026-09-23: "I liked the _meta suggestion... if its the only way", after the reading showed no typed host field exists and adding one is an upstream change. |
-| 2 | [A scheme nobody serves is not a permission error](../../../../docs/RESOURCES.md) | The user, 2026-09-23: "-32009 is a permission gate? If does not exists its not -32008?", which is the question this answers. |
+| 1 | [A resource scheme is advertised in `_meta`, and a client reads it there](../../../../docs/sdk/RESOURCES.md) | The user, 2026-09-23: "I liked the _meta suggestion... if its the only way", after the reading showed no typed host field exists and adding one is an upstream change. |
+| 2 | [A scheme nobody serves is not a permission error](../../../../docs/sdk/RESOURCES.md) | The user, 2026-09-23: "-32009 is a permission gate? If does not exists its not -32008?", which is the question this answers. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -98,4 +98,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] With a host that has no computer plugin, the map is absent and `resourceList` on `computer://` answers `-32601` with the sentence naming the scheme.
 - [x] A provider that implements no `write` advertises no `write` operation.
 - [x] `test/uri-resources.test.ts` asserts `-32601` for an unregistered scheme with the same message.
-- [x] `plans/index.md`, `docs/PLUGINS.md`, `docs/COMPUTER.md`, `packages/sdk/README.md` and `working/HANDOFF.md` updated.
+- [x] `plans/index.md`, `docs/plugins/PLUGINS.md`, `docs/plugins/COMPUTERS.md`, `packages/sdk/README.md` and `working/HANDOFF.md` updated.

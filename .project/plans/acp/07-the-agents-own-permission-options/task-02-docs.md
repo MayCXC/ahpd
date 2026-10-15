@@ -4,16 +4,16 @@ status: dropped
 depends: [task-02-the-agent-options-are-offered-and-answered.md]
 layer: "docs"
 refs:
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - the ACP section"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the ACP section"
 ---
 
 ## Objective
 
-`docs/PLUGINS.md` says an ACP agent's permission options are shown as they are.
+`docs/plugins/PLUGINS.md` says an ACP agent's permission options are shown as they are.
 
 ## Files
 
-- `UPDATE: docs/PLUGINS.md`.
+- `UPDATE: docs/plugins/PLUGINS.md`.
 
 ## Steps
 

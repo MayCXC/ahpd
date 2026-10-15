@@ -25,7 +25,7 @@ A signal on Linux and macOS keeps its name in both lines, and the terminal reads
 - `UPDATE: packages/server/src/commands/run.ts:1240-1260` - the control pipe handlers answer with `piped` true.
 - `UPDATE: packages/server/test/server-restart.test.ts` - cases for the two lines of a pipe request, for a terminal that reads them, and for a terminal that ignores the other kind.
 - `UPDATE: packages/server/test/control.test.ts` - the handlers pass `piped`, and the cases expect the pipe name.
-- `UPDATE: docs/DAEMON.md:246` - one sentence on what the two lines say on Windows.
+- `UPDATE: docs/server/REFERENCE.md:246` - one sentence on what the two lines say on Windows.
 
 ## Steps
 
@@ -38,7 +38,7 @@ A signal on Linux and macOS keeps its name in both lines, and the terminal reads
 7. Add `CONTROL_PIPE`, `FORCED_PIPE` and `cameBy` in `restart.ts`, and give `answerRestartSignal` a `piped` parameter.
 8. Add `piped` to `AtTerminal`, set it from `throughPipe()` in `realTerminal`, and read it in `restartAtTerminal`.
 9. In `run.ts`, bind the control pipe handlers with `piped` true.
-10. Add the sentence to `docs/DAEMON.md`.
+10. Add the sentence to `docs/server/REFERENCE.md`.
 11. Run the cases again and see them pass.
 
 ## Validation
@@ -57,7 +57,7 @@ File by file:
 - `packages/server/src/daemon.ts` - step 6. `throughPipe(platform)` is true on win32, and `deliver` sends the request through the pipe when it is true.
 - `packages/server/src/commands/restart.ts` - steps 7 and 8. `cameBy(piped, forced)` gives `control pipe` or `control pipe, forced` for a pipe request, and the signal name otherwise. `answerRestartSignal(forced, facts, piped)` and `restartAtTerminal` both use it. `AtTerminal.piped` tells `restartAtTerminal` which lines to read, and `realTerminal` sets it from `throughPipe()`.
 - `packages/server/src/commands/run.ts` - step 9. The `process.on` handlers answer with `piped` false, and the control pipe handlers with `piped` true.
-- `docs/DAEMON.md` - step 10. One sentence after the sentence on the signal names, with both pipe names.
+- `docs/server/REFERENCE.md` - step 10. One sentence after the sentence on the signal names, with both pipe names.
 - Tests - steps 1 to 4. One daemon case and two terminal cases in `server-restart.test.ts`, and the two control cases in `control.test.ts` changed. The cases that check the pipe names failed before step 6. The case for the other kind passes for signals before and after, and failed for the pipe until `FORCED_PIPE`.
 
 What the plan did not know:

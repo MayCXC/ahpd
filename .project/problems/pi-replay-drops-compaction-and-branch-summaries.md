@@ -25,4 +25,4 @@ none
 
 ## Fix
 
-Candidates, none chosen: show one compaction notice in the turn it falls in and keep every message, as [A compacted session keeps its history and shows a notice](../../docs/CHATS.md) settles for cofold; or show the summary text itself.
+Candidates, none chosen: show one compaction notice in the turn it falls in and keep every message, as [A compacted session keeps its history and shows a notice](../../docs/sdk/CHATS.md) settles for cofold; or show the summary text itself.

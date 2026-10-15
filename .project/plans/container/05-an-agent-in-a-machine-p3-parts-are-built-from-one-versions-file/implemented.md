@@ -14,7 +14,7 @@ Every agent CLI is pinned in `packages/computer/images/versions.json`, each part
 - [`code://packages/computer/images/versions.json`](../../../../packages/computer/images/versions.json) - the versions file, with a url and sha256 per platform for an archive part.
 - [`code://packages/computer/src/parts.ts`](../../../../packages/computer/src/parts.ts) - a part image per kind, built once when first asked for, one build for two sessions asking at once, and the joined image; from a checkout the ahpd part's tag covers the packed tarballs.
 - `.github/workflows/parts-bump.yml` and `scripts/parts-bump.mjs` - the bump job.
-- `docs/COMPUTER.md` - the parts, the versions file and building ahead.
+- `docs/plugins/COMPUTERS.md` - the parts, the versions file and building ahead.
 
 ## Verified
 

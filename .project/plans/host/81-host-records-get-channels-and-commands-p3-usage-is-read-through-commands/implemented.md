@@ -16,7 +16,7 @@ Each command answers what the matching `usage:` read answers, for the same reade
 - [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `bounds` and `keysFrom` hold the refusal sentences that `rangeOf` and `keysAsked` had.
 - [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `usageMethods(provider)`, the commands `pools`, `totals`, `range`, `records` and `groups`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the daemon adds the five commands to `base.methods` by `ahpd`.
-- `docs/USAGE.md` has a section "Reading usage by command".
+- `docs/sdk/USAGE.md` has a section "Reading usage by command".
 
 ## Verified
 

@@ -25,7 +25,7 @@ An agent can say it needs a part, a profile can name the parts its machines carr
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - parts built before every machine is made, an unknown profile part dropped at load, the `imageMounts` option, and `partsMissing`.
 - [`code://packages/computer/src/devcontainer.ts`](../../../../packages/computer/src/devcontainer.ts) - `reachOf` puts the label's parts in front of the probed `PATH`.
 - `test/fixtures/docker.mjs` and `test/fixtures/devcontainer.mjs` - image mounts taken or refused, `pull`, named volumes filled at create, `cp` in and out of a volume, and an image mount in `runArgs`.
-- `docs/COMPUTER.md` - `parts` in Profiles, and "Parts in a machine".
+- `docs/plugins/COMPUTERS.md` - `parts` in Profiles, and "Parts in a machine".
 
 ## Verified
 

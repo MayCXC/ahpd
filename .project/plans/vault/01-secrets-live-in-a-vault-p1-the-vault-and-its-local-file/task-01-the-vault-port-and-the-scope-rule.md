@@ -45,7 +45,7 @@ A plugin reads a secret at use time through `host.secret(name, work)`, the way i
 3. `readSecret(vault, name, work)` checks the scope first: `host:` always; `team:<t>/` only when `work.team === t`; `user:<id>/` only when `work.owner === 'user:<id>'`. Out of scope throws `<name> is not a secret this work may read`.
 4. Then: a name the vault does not hold throws `the vault holds no <name>`; otherwise the value.
 5. `secret` on the plugin host reads the live port, as `recordUsage` does, and goes through `readSecret`; no port at all throws `<name> cannot be read: this host has no vault`.
-6. Comments say what each declaration is; the port's comment names [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) as the `usage` port names its decision.
+6. Comments say what each declaration is; the port's comment names [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) as the `usage` port names its decision.
 
 ## Validation
 

@@ -14,8 +14,8 @@ refs:
   - code://test/users.test.ts
   - code://test/users-gate.test.ts
   - code://test/daemon.test.ts
-  - code://docs/USERS.md
-  - code://docs/DAEMON.md
+  - code://docs/sdk/USERS.md
+  - code://docs/server/REFERENCE.md
   - code://.project/research/client-auth-and-the-reference-client.md
 ---
 
@@ -33,8 +33,8 @@ Superseded in part by [host 13](../13-the-door-is-a-door/plan.md): the door no l
 - `code://packages/sdk/src/types/host.ts`, `code://packages/sdk/src/host.ts` - `Host.accept(peer, principal?)`, which writes the principal onto the `Connection` before any handler can run.
 - `code://packages/server/src/config.ts` - the `resource` key, `signInIdentifier` and `isIdentifier`, and `personalUrl`, which composes the URL a person pastes.
 - `code://packages/server/src/main.ts` - the directory built once and handed to both doors, `identify` wired to `users.verify`, `--resource` and `--users` documented, a `sign-in <url>` startup line, and `ahpd user token <id> --url`.
-- `code://docs/USERS.md` - three ways in, the record and what each field means, the honest revocation sentence, and what each client can do.
-- `code://docs/DAEMON.md` - the `users` and `resource` keys.
+- `code://docs/sdk/USERS.md` - three ways in, the record and what each field means, the honest revocation sentence, and what each client can do.
+- `code://docs/server/REFERENCE.md` - the `users` and `resource` keys.
 - `code://.project/research/client-auth-and-the-reference-client.md` - what the reference client does with `authorization_servers`, the RFC 8414 dynamic-provider path it has for MCP servers only, and why a host-level login has no home in the protocol.
 
 ## Verified

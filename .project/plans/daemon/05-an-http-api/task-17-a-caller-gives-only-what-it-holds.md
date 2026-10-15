@@ -13,7 +13,7 @@ refs:
 
 ## Objective
 
-Over HTTP, a caller holding `users:write` but not `*:*` cannot give a role, mint a token for a person, or remove a person, when that role or person holds a grant the caller lacks, per [A user command gives, mints for and removes only what its caller holds](../../../../docs/AUTHENTICATION.md).
+Over HTTP, a caller holding `users:write` but not `*:*` cannot give a role, mint a token for a person, or remove a person, when that role or person holds a grant the caller lacks, per [A user command gives, mints for and removes only what its caller holds](../../../../docs/sdk/AUTHENTICATION.md).
 
 ## Files
 

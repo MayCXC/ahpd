@@ -42,7 +42,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | --- | --- |
 | ahpd's commands are declared once, with @cofold/commands | 02, 03, 14 |
 | A daemon flag is declared by what it turns on, and --no-X turns it off | 06 |
-| [ahpd keeps cofold's strict refusals, and a verb with no sub-command names its sub-commands](../../../../docs/DAEMON.md) | 15 |
+| [ahpd keeps cofold's strict refusals, and a verb with no sub-command names its sub-commands](../../../../docs/server/REFERENCE.md) | 15 |
 | A boolean flag nobody typed stays absent in cofold's canonical input | 17, 06 |
 
 | What | Source | Task |
@@ -124,4 +124,4 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - [x] The bind cases fail when `--host` or the file's `host` is dropped, a conflict is pinned at 409, and no case reads a personal configuration (task 19).
 - [x] `refuse` is gone, and the group hint is one `ahpd: ` line and exit 2 with or without `--json` (task 20).
 - [x] Every ref in tasks 05 to 20 names the lines it describes (task 21).
-- [x] `docs/DAEMON.md`, `plans/index.md` updated.
+- [x] `docs/server/REFERENCE.md`, `plans/index.md` updated.

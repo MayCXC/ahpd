@@ -7,7 +7,7 @@ refs:
   - "[code://packages/computer/src/plugin.ts#L443-L454](../../../../packages/computer/src/plugin.ts#L443-L454) - `devcontainer.folders`, absent allows any"
   - "[code://packages/computer/src/plugin.ts#L481-L490](../../../../packages/computer/src/plugin.ts#L481-L490) - `folderFor`"
   - "[code://packages/sdk/src/types/plugin.ts#L95-L117](../../../../packages/sdk/src/types/plugin.ts#L95-L117) - the plugin context"
-  - "[code://docs/COMPUTER.md#L537-L547](../../../../docs/COMPUTER.md#L537-L547) - allowed folders"
+  - "[code://docs/plugins/COMPUTERS.md#L537-L547](../../../../docs/plugins/COMPUTERS.md#L537-L547) - allowed folders"
   - "[code://packages/computer/test/computer-devcontainer.test.ts](../../../../packages/computer/test/computer-devcontainer.test.ts) - the folder cases"
 ---
 
@@ -20,7 +20,7 @@ On a host with a users directory and no `devcontainer.folders`, `folderFor` refu
 - `UPDATE: packages/sdk/src/types/plugin.ts:95-117` - a read-only field saying whether the host has a users directory; today a plugin cannot tell.
 - `UPDATE: packages/server/src/commands/run.ts` - sets it from `options.users`.
 - `UPDATE: packages/computer/src/plugin.ts:481-490` - the refusal; today `containerFolders === undefined` returns the folder, so on a shared host anybody with `computer:write` builds a `devcontainer.json` asking for `--privileged`.
-- `UPDATE: docs/COMPUTER.md:537-547` - the rule.
+- `UPDATE: docs/plugins/COMPUTERS.md:537-547` - the rule.
 - `UPDATE: packages/computer/test/computer-devcontainer.test.ts` - the cases below.
 
 ## Steps

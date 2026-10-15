@@ -11,7 +11,7 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L924-L929](../../../../packages/server/src/commands/run.ts#L924-L929) - `pluginRoutes`, mounted on the daemon's listener with its Host authorities"
   - "[code://packages/server/src/http.ts#L276-L282](../../../../packages/server/src/http.ts#L276-L282) - `listenApi`, a listener for one handler"
   - "[code://packages/server/test/plugin-route.test.ts](../../../../packages/server/test/plugin-route.test.ts) - the route cases to extend"
-  - "[code://docs/HOST.md#L83](../../../../docs/HOST.md#L83) - the `http` row of the configuration keys"
+  - "[code://docs/sdk/HOST.md#L83](../../../../docs/sdk/HOST.md#L83) - the `http` row of the configuration keys"
 ---
 
 ## Objective
@@ -35,9 +35,9 @@ With no `routes.port`, the routes stay on the daemon port, which is the default 
 - `UPDATE: packages/server/src/commands/run.ts:1158` - close the routes listener at shutdown.
 - `UPDATE: packages/server/test/plugin-route.test.ts` - cases for a route on its own port.
 - `UPDATE: packages/server/test/server-root-config.test.ts:71` - add `routes` to the list of daemon keys.
-- `UPDATE: docs/HOST.md:83` - add a `routes` row after the `http` row.
-- `UPDATE: docs/PLUGINS.md:183-205` - say that `routes.port` moves every route to a listener of its own.
-- `UPDATE: docs/WEBHOOKS.md` - say how to put the webhooks on a public port.
+- `UPDATE: docs/sdk/HOST.md:83` - add a `routes` row after the `http` row.
+- `UPDATE: docs/plugins/PLUGINS.md:183-205` - say that `routes.port` moves every route to a listener of its own.
+- `UPDATE: docs/plugins/WEBHOOKS.md` - say how to put the webhooks on a public port.
 
 ## Steps
 
@@ -56,7 +56,7 @@ With no `routes.port`, the routes stay on the daemon port, which is the default 
 13. On the daemon's listener, answer 404 to `/plugins/*` when the routes have a port of their own.
 14. Close the routes listener at shutdown, beside `apiListener`.
 15. See the listener cases pass.
-16. Write the `routes` row in `docs/HOST.md`, and the notes in `docs/PLUGINS.md` and `docs/WEBHOOKS.md`.
+16. Write the `routes` row in `docs/sdk/HOST.md`, and the notes in `docs/plugins/PLUGINS.md` and `docs/plugins/WEBHOOKS.md`.
 17. Run the gates.
 
 ## Validation

@@ -21,7 +21,7 @@ The loader checks every fallback id against the slug rule. When the id is still 
 - `UPDATE: packages/server/src/plugins.ts:93-101` - `unscoped`, and `provisionalOf` reads through it.
 - `UPDATE: packages/server/src/plugins.ts:789-792` - `loadOne` checks the id, exported or fallback.
 - `UPDATE: packages/sdk/src/types/plugin.ts:863-869` - `Plugin.name` names the fallback and its scope rule.
-- `UPDATE: docs/PLUGINS.md` - the id section, the vault example, the route section and the listing example.
+- `UPDATE: docs/plugins/PLUGINS.md` - the id section, the vault example, the route section and the listing example.
 
 ## Steps
 

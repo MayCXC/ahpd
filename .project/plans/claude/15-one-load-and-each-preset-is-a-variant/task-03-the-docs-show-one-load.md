@@ -5,7 +5,7 @@ depends: [task-01-each-preset-registers-its-own-agent.md, task-02-a-plugin-is-lo
 layer: "docs"
 refs:
   - "[code://packages/agent-claude/README.md](../../../../packages/agent-claude/README.md) - presets as a session choice, and the second load for OpenRouter"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the plugin examples"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the plugin examples"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The README and DAEMON.md describe presets as variants: the built-in `claude`, `f
 ## Files
 
 - `UPDATE: packages/agent-claude/README.md` - the options table and the preset and OpenRouter sections.
-- `UPDATE: docs/DAEMON.md` - any example that loads a plugin twice.
+- `UPDATE: docs/server/REFERENCE.md` - any example that loads a plugin twice.
 
 ## Steps
 
@@ -24,6 +24,6 @@ The README and DAEMON.md describe presets as variants: the built-in `claude`, `f
 
 ## Validation
 
-- `rg -n "keepCliModels|displayName|preset" packages/agent-claude/README.md docs/DAEMON.md` shows only the new shape.
+- `rg -n "keepCliModels|displayName|preset" packages/agent-claude/README.md docs/server/REFERENCE.md` shows only the new shape.
 
 ## Resume

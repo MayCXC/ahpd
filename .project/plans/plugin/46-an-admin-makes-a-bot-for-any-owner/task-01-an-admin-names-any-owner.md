@@ -18,7 +18,7 @@ The bot manifest's `owner` property names this host's own owner as a `const`.
 - `UPDATE: packages/bot/src/provider.ts:281-307` - `ownerFor` lets a `*:*` reader name any owner, and refuses a `root:` that is not this host.
 - `UPDATE: packages/bot/src/provider.ts:161-184` - the manifest is built with `hostName`; `owner` gains `anyOf` with a `const` of `root:<hostName>`.
 - `UPDATE: packages/bot/test/bot-provider.test.ts` - the admin cases below.
-- `UPDATE: docs/BOTS.md` - the owner rule and the host owner, if the page lists the owner rules.
+- `UPDATE: docs/plugins/BOTS.md` - the owner rule and the host owner, if the page lists the owner rules.
 
 ## Steps
 
@@ -28,7 +28,7 @@ The bot manifest's `owner` property names this host's own owner as a `const`.
 4. Move `MANIFEST` into a function of `hostName`, and call it from the scheme description.
 5. Give the `owner` property an `anyOf` of a string and `{ const: "root:<hostName>", title: "This host" }`.
 6. Add the owner rules for an admin to the scheme's `owner` description in one short sentence.
-7. Update the owner rules in `docs/BOTS.md`.
+7. Update the owner rules in `docs/plugins/BOTS.md`.
 
 ## Validation
 

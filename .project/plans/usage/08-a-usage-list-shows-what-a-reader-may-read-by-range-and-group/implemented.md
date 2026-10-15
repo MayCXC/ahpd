@@ -16,7 +16,7 @@ A reader without `usage:read` now sees the pools that were charged and that they
 - [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - the list is the charged pools filtered by `mayRead`. A pool body carries `kind` and `name`. The `range` leaf takes `from` and `until`. `usage://groups?by=&from=&until=` returns `[{keys, names, total}]`, and the store's `groups` keeps a record when any of its pools is readable.
 - [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts) - `UsageKey`, `UsageGroup`, and `groups` on the port.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - wires the team and project titles into the provider.
-- `docs/USAGE.md` and `docs/HOST.md` describe the list rule, the `range` leaf and `usage://groups`.
+- `docs/sdk/USAGE.md` and `docs/sdk/HOST.md` describe the list rule, the `range` leaf and `usage://groups`.
 
 ## Verified
 

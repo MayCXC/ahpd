@@ -21,7 +21,7 @@ refs:
   - code://test/agent-acp-plugin.test.ts
   - code://test/fixtures/acp-server.mjs
   - code://scripts/acp-smoke.mts
-  - code://docs/PLUGINS.md
+  - code://docs/plugins/PLUGINS.md
   - npm://@agentclientprotocol/sdk@^1.4.0
 ---
 

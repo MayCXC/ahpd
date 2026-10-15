@@ -28,7 +28,7 @@ refs:
   - "[code://packages/sdk/test/users-gate.test.ts#L1169-L1175](../../../../packages/sdk/test/users-gate.test.ts#L1169-L1175) - `finds a session a backend wrote to disk after the last listing`"
   - "[code://packages/sdk/test/users-gate.test.ts#L1215-L1229](../../../../packages/sdk/test/users-gate.test.ts#L1215-L1229) - `reads the catalogue once for a run of subscribes to sessions nobody has`, which pins the throttle"
   - "[code://packages/sdk/test/host-past-open.test.ts#L139-L152](../../../../packages/sdk/test/host-past-open.test.ts#L139-L152) - the `find`-less fallback, as host 56 left it"
-  - "[code://docs/AGENT.md#L84](../../../../docs/AGENT.md#L84) - the `Agent` table, where `find(id)` is not listed"
+  - "[code://docs/sdk/AGENT.md#L84](../../../../docs/sdk/AGENT.md#L84) - the `Agent` table, where `find(id)` is not listed"
   - npm://@earendil-works/pi-coding-agent@0.87.1 - `SessionManager.findById(cwd, id, sessionDir)` reads each file's header in one project folder and answers a path; `buildSessionInfo`, which `list` uses, is not exported
   - npm://@cofold/store-file@0.1.1 - `sessions.get({ sessionId })` reads one `session.json`, looked up on disk on each miss
   - npm://@agentclientprotocol/sdk@1.6.0 - `session/list` filters by `cwd` and `cursor` only; `session/load` replays a session and answers no row; `session/resume` answers modes and config only
@@ -68,7 +68,7 @@ subscribe to a session the host is not running -> past(id)
 - pi, cofold and ACP have no `find`, so with any of them loaded a missing id costs a listing of every agent.
 - `LISTING_FRESH` makes a second missing id inside two seconds answer from the old listing, so a session written to disk between two subscribes is refused.
 - `someCannotSay` counts an agent with neither `list` nor `find`, which a listing cannot help.
-- `docs/AGENT.md` does not tell a third-party backend that `find(id)` exists.
+- `docs/sdk/AGENT.md` does not tell a third-party backend that `find(id)` exists.
 - ACP has no call that answers one session's row: `session/list` cannot filter by id, `session/load` replays the conversation and answers modes and config, and `session/resume` answers the same.
 
 ## Decisions locked in

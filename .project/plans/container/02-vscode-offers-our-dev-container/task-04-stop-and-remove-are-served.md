@@ -21,7 +21,7 @@ refs:
 
 ahpd serves `vscode/devContainers/stop` and `vscode/devContainers/remove` under VS Code's own names: each takes `{ workspaceFolder }`, ends the asking connection's relays to that folder's computer, stops or removes the computer, and answers `true`; it answers `true` when the folder has no computer, and `false` when another connection still has a relay to it, as VS Code's reference host does.
 After container/03 that computer is a shared computer that ahpd sessions are placed on, so it also answers `false` while any session is placed on it.
-Each method needs `container:stop` or `container:remove` and `computer:write` beside it, and no owner check - [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
+Each method needs `container:stop` or `container:remove` and `computer:write` beside it, and no owner check - [Stopping a dev container needs the computer's grant](../../../../docs/plugins/CONTAINERS.md).
 
 ## Files
 
@@ -38,10 +38,10 @@ Each method needs `container:stop` or `container:remove` and `computer:write` be
 - `UPDATE: packages/computer/test/computer-devcontainer.test.ts` - the computer cases below: a stop after a relay, a remove with its record, and a session's hold on the folder.
 - `UPDATE: packages/sdk/test/users-gate-tables.test.ts:9` - `SERVED` raised to 49, one per method the two handlers add.
 - `UPDATE: packages/sdk/test/wire.test.ts:674-675` - both methods in `DEPARTURES`, which the document check reads back.
-- `UPDATE: docs/USERS.md:138` - the `container` row lists all five operations.
-- `UPDATE: docs/CONTAINERS.md:110-132` - the surface table gains both methods with their grants and answers.
-- `UPDATE: docs/AHP.md:864-865` - both methods in "What is served outside the protocol".
-- `CREATE: .project/../../../../docs/CONTAINERS.md` - the decision both grants come from.
+- `UPDATE: docs/sdk/USERS.md:138` - the `container` row lists all five operations.
+- `UPDATE: docs/plugins/CONTAINERS.md:110-132` - the surface table gains both methods with their grants and answers.
+- `UPDATE: docs/sdk/AHP.md:864-865` - both methods in "What is served outside the protocol".
+- `CREATE: .project/../../../../docs/plugins/CONTAINERS.md` - the decision both grants come from.
 
 ## Steps
 
@@ -49,7 +49,7 @@ Each method needs `container:stop` or `container:remove` and `computer:write` be
 2. `remove` removes the container and never the folder or its `devcontainer.json`.
 3. VS Code asks its client for workspace trust before either; here the grant is the gate, and nothing asks the client.
 4. Build after container/03 and plugin/16 have landed: the computer a folder is, and the sessions placed on it, come from container/03, and the `computer:write` gate and the machine's owner from plugin/16.
-5. Ask for `container:stop` or `container:remove` and `computer:write` beside it, with no owner check: [Stopping a dev container needs the computer's grant](../../../../docs/CONTAINERS.md).
+5. Ask for `container:stop` or `container:remove` and `computer:write` beside it, with no owner check: [Stopping a dev container needs the computer's grant](../../../../docs/plugins/CONTAINERS.md).
 
 ## Validation
 

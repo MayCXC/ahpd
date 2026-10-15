@@ -79,6 +79,6 @@ No decision records of its own; the choices below are scope.
 ## Final verification checklist
 
 - [x] `{ "name": "@ahpd/agent-acp", "options": { "command": 3 } }` is reported naming the plugin and `command`, and the daemon starts with its other backends.
-- [x] `docs/PLUGINS.md` documents `optionsSchema`.
+- [x] `docs/plugins/PLUGINS.md` documents `optionsSchema`.
 - [x] `pnpm typecheck`, `pnpm boundary` and the full `pnpm test` clean.
 - [x] `plans/index.md` updated.

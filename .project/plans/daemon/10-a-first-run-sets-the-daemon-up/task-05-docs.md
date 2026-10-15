@@ -4,17 +4,17 @@ status: done
 depends: [task-02-ahpd-configure.md, task-03-a-start-with-no-configuration-offers-configure.md, task-04-a-start-in-an-unserved-folder-asks.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - start, stop and the configuration"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - start, stop and the configuration"
   - "[code://README.md](../../../../README.md) - the quick start"
 ---
 
 ## Objective
 
-The quick start is `npm i -g @ahpd/server` then `ahpd configure`; `docs/DAEMON.md` documents configure, the trust question and `--no-cwd`.
+The quick start is `npm i -g @ahpd/server` then `ahpd configure`; `docs/server/REFERENCE.md` documents configure, the trust question and `--no-cwd`.
 
 ## Files
 
-- `UPDATE: README.md`, `docs/DAEMON.md`.
+- `UPDATE: README.md`, `docs/server/REFERENCE.md`.
 
 ## Steps
 

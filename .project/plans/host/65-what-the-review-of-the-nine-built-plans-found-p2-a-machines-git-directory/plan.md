@@ -23,8 +23,8 @@ refs:
   - "[code://packages/sdk/src/host/machines.ts#L172-L187](../../../../packages/sdk/src/host/machines.ts#L172-L187) - `repositoryOf`: the git directory as git answers it, the root dropped when the folder is it through a realpath"
   - "[code://packages/sdk/src/repo/worktrees.ts#L75-L94](../../../../packages/sdk/src/repo/worktrees.ts#L75-L94) - `gitDir`, `rev-parse --git-common-dir --show-toplevel`"
   - "[code://packages/computer/test/computer-disposable.test.ts#L1366-L1515](../../../../packages/computer/test/computer-disposable.test.ts#L1366-L1515) - the git directory cases to extend"
-  - "[code://docs/COMPUTER.md#L435](../../../../docs/COMPUTER.md#L435) - a worktree brings its repository"
-  - "[code://docs/COMPUTER.md#L580](../../../../docs/COMPUTER.md#L580) - a mounted git directory"
+  - "[code://docs/plugins/COMPUTERS.md#L435](../../../../docs/plugins/COMPUTERS.md#L435) - a worktree brings its repository"
+  - "[code://docs/plugins/COMPUTERS.md#L580](../../../../docs/plugins/COMPUTERS.md#L580) - a mounted git directory"
   - https://git-scm.com/docs/gitrepository-layout - per-worktree and shared files
 ---
 
@@ -64,7 +64,7 @@ placedIn -> repositoryOf(folder) -> worktrees.gitDir -> { gitDir, repository? }
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [A machine's git directory is read-only, except the objects, refs and logs a commit writes and the session's own worktree entry](../../../decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md) | Softov, 2026-10-06, "Allowlist writable"; for a main checkout "Also allow the root index" and "Writable root, pinned files" |
-| 2 | [A session's folder reaches a machine only where its profile allows it](../../../../docs/COMPUTER.md) | Softov, 2026-09-26, the gate task 04 extends to the repository root |
+| 2 | [A session's folder reaches a machine only where its profile allows it](../../../../docs/plugins/COMPUTERS.md) | Softov, 2026-09-26, the gate task 04 extends to the repository root |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -105,5 +105,5 @@ placedIn -> repositoryOf(folder) -> worktrees.gitDir -> { gitDir, repository? }
 
 - [x] Each task's case fails on the code before it and passes after.
 - [x] By hand, a disposable session with `isolation: worktree` commits in its machine, and `echo x > <gitDir>/commondir` in the machine fails - as `computer-git-guard.test.ts` against real Docker rather than typed at a prompt; see implemented.md.
-- [x] `docs/COMPUTER.md` says what is writable.
+- [x] `docs/plugins/COMPUTERS.md` says what is writable.
 - [x] `plans/index.md` updated.

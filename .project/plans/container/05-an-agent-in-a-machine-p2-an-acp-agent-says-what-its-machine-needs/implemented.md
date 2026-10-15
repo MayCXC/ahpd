@@ -23,7 +23,7 @@ An ACP preset can write `machine: { env, copy }`, and the variant it registers a
 - [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) - an `EnvNeed` default may be a `SecretRef`.
 - [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts) - `resolveNeeds` refuses a secret default nothing read.
 - [`code://packages/computer/src/secrets.ts`](../../../../packages/computer/src/secrets.ts) - `withDefaults`, used at the form, disposable and dev container creates in `provider.ts` and `plugin.ts`; `namedAgain` falls back to the agent's default after a restart.
-- `docs/PLUGINS.md`, `docs/COMPUTER.md`, `packages/agent-acp/README.md`.
+- `docs/plugins/PLUGINS.md`, `docs/plugins/COMPUTERS.md`, `packages/agent-acp/README.md`.
 
 ## Verified
 

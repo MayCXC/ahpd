@@ -5,11 +5,11 @@ refs:
   - "[code://packages/server/src/install.ts#L498-L585](../../../../packages/server/src/install.ts#L498-L585) - `updatePlugins` and its `force`"
   - "[code://packages/server/src/commands/plugin.ts#L142-L181](../../../../packages/server/src/commands/plugin.ts#L142-L181) - the `plugin.update` action"
   - "[code://packages/server/test/plugin-install.test.ts](../../../../packages/server/test/plugin-install.test.ts) - the `updatePlugins` cases"
-  - "[code://docs/DAEMON.md#L69-L78](../../../../docs/DAEMON.md#L69-L78) - the upgrade paragraph"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md)"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the upgrade paragraph"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md)"
 ---
 
-The plan's last two open tasks are implemented, and every task in it is now implemented or dropped: `ahpd plugin update` takes `--force`, and `docs/DAEMON.md` says what a failed update does.
+The plan's last two open tasks are implemented, and every task in it is now implemented or dropped: `ahpd plugin update` takes `--force`, and `docs/server/REFERENCE.md` says what a failed update does.
 A `plugin update` whose npm call fails says so once at the terminal, names `--force`, and leaves everything where it was; with `--force` each package is its own npm call, so the ones npm can install move and the ones it refuses are named in the line that ends the command.
 Nothing is committed: Softov reads the diff first.
 
@@ -20,7 +20,7 @@ Nothing is committed: Softov reads the diff first.
 - [`code://packages/server/test/plugin-install.test.ts`](../../../../packages/server/test/plugin-install.test.ts) - the fake runner can answer by the last argument as well as by the verb, so one package of a `--force` update can fail where the others land; `fails an update with npm's reason, once, and names --force` carries the new one-call line, and `moves the others, and names the one npm cannot install, with --force` and `moves every package in its own npm call with --force, and fails none of them` are the new cases.
 - [`code://packages/server/test/server-cli.test.ts`](../../../../packages/server/test/server-cli.test.ts) - `update --force installs each package in its own npm call` reads the fake npm's log and finds one call per package, which is what an undeclared flag would have made exit 2 instead.
 - [`code://packages/server/test/server-http.test.ts`](../../../../packages/server/test/server-http.test.ts) - the `plugin update` case gained a second registry dependency and a `force: true` body, whose last two npm calls name one package each.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the upgrade paragraph says one package npm cannot install fails that whole call, that the failure says to rerun with `--force`, and that `--force` gives each package its own `npm install` so the ones npm can install move and the one it cannot is named; the command list says the same in one clause on the `update all` row. The file's own wrapping is kept and there is no em dash.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the upgrade paragraph says one package npm cannot install fails that whole call, that the failure says to rerun with `--force`, and that `--force` gives each package its own `npm install` so the ones npm can install move and the one it cannot is named; the command list says the same in one clause on the `update all` row. The file's own wrapping is kept and there is no em dash.
 
 ## Verified
 

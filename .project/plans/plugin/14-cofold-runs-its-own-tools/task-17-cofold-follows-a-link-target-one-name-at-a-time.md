@@ -6,7 +6,7 @@ layer: "cofold tools"
 refs:
   - file:///github/cofold/packages/tools/src/paths.ts - `realPath`, which follows a link with `resolve(dirname(path), target)` and so collapses `..` before the kernel would
   - "[code://packages/agent-cofold/test/agent-cofold-tools.test.ts#L552-L602](../../../../packages/agent-cofold/test/agent-cofold-tools.test.ts#L552-L602) - `ROWS`, the mode table"
-  - "[code://docs/PLUGINS.md#L411](../../../../docs/PLUGINS.md#L411) - the symlink sentences, which name the shape this task catches"
+  - "[code://docs/plugins/PLUGINS.md#L411](../../../../docs/plugins/PLUGINS.md#L411) - the symlink sentences, which name the shape this task catches"
 ---
 
 ## Objective

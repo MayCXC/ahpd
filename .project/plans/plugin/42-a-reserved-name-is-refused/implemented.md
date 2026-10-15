@@ -16,7 +16,7 @@ A harness and a scheme cannot share one name.
 - [`code://packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `reservedName`, which answers why a name is reserved. It covers the prefixes `ahp-`, `ahpd-` and `x-`, the names `file` and `automations`, every entry in `SUBJECTS`, and six schemes a client opens itself.
 - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `registerAgent` and `registerResourceProvider` throw for a reserved name. The fold drops a harness that a scheme holds, and a scheme that a harness holds, with one problem line. `reservedScheme` is gone.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `createHost` throws for a daemon agent with a reserved name.
-- `docs/PLUGINS.md` has a section "Reserved names", and the two rows in `00-plugin.md` name the check.
+- `docs/plugins/PLUGINS.md` has a section "Reserved names", and the two rows in `00-plugin.md` name the check.
 
 ## Verified
 

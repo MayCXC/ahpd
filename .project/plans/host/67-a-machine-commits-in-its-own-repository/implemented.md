@@ -7,7 +7,7 @@ refs:
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - the two routes, the seed, `bringBack`, `follow` and `remove`"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - `gitGuard`, `sessionTree`, `withGit` and the machines a daemon before this one left"
   - "[code://packages/sdk/src/types/computers.ts](../../../../packages/sdk/src/types/computers.ts) - `bringBack` and `follow` on `ComputerPort`"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - what a machine commits into, and what does not work in one"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - what a machine commits into, and what does not work in one"
 ---
 
 A session's machine now commits in a git repository of its own, and ahpd fetches that work back into this host's repository.
@@ -23,7 +23,7 @@ A profile says how the tree reaches a machine - `sessionTree: "shared"`, the def
 - [`code://packages/sdk/src/types/computers.ts`](../../../../packages/sdk/src/types/computers.ts) - `ComputerPort.bringBack(id)` and `ComputerPort.follow(id)`, both optional, with `BroughtBack` answering whether the branch moved and where the work waits.
 - [`code://packages/sdk/src/host/machines.ts`](../../../../packages/sdk/src/host/machines.ts), [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts), [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts), [`code://packages/sdk/src/host/resourcemethods.ts`](../../../../packages/sdk/src/host/resourcemethods.ts) - the moments. The work comes back when a turn ends or is cancelled (before the facts are re-read), before a changeset operation runs (refusing with `-32011` where it waits), when a session leaves its machine, and in `remove`; the host's branch is handed over before a turn starts and after an operation that moved it. Every failure is a log line, never a failed turn.
 - [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts) - `gitArgv` exported, so the computer package runs git the hardened way.
-- [`code://docs/COMPUTER.md`](../../../../docs/COMPUTER.md) - the `gitGuard` row, a `sessionTree` row, the fetch and follow paragraphs, what does not work in a machine, the `copy` layout, and the security note: nothing of the host's git directory is writable in a `fetch` machine.
+- [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md) - the `gitGuard` row, a `sessionTree` row, the fetch and follow paragraphs, what does not work in a machine, the `copy` layout, and the security note: nothing of the host's git directory is writable in a `fetch` machine.
 
 ## Verified
 
@@ -49,7 +49,7 @@ Five defects were found in the built plan and all five are fixed, every task sta
 - A branch the host did not have never landed: `rev-parse` without `--verify` answered the ref's own name, so `old` was never empty and the move was refused as a branch that had moved on. Every read of the host's refs is `rev-parse --verify --quiet`, and a branch the host has none of is made at the machine's commit with no ancestry check.
 - Only the branch the machine was on came back: every branch it holds now goes through `bringBackBranch` under a hidden ref of its own, and `follow` re-points a branch of the machine's only where the host's commit leads on from it.
 - The suites wrote `computers.gitfile` into this checkout by handing the loader the repository as its state directory; each now uses a temporary directory of its own, `tools/test-tmpdir.ts` fails a run that leaves the file at the root, and the two strays an earlier run left are gone.
-- [`code://docs/COMPUTER.md#L440`](../../../../docs/COMPUTER.md#L440) still described a commit brought back onto one branch; it and the `follow` paragraph are corrected to what the code does.
+- [`code://docs/plugins/COMPUTERS.md#L440`](../../../../docs/plugins/COMPUTERS.md#L440) still described a commit brought back onto one branch; it and the `follow` paragraph are corrected to what the code does.
 
 ## Left for later
 

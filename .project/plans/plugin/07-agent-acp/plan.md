@@ -94,7 +94,7 @@ ahpd --plugin @ahpd/agent-acp
 - **Data flow** - an options object becomes an `Agent`; a session spawns the configured command and speaks ACP over its stdio; each `session/update` becomes the chat action a client already knows, and each client answer becomes the ACP reply or notification the server is waiting for.
 - **Event flow** - none of AHP's own; this package subscribes to nothing. It is the consumer of a server's notifications and the producer of `chat/*` actions, which is what a backend is.
 - **State flow** - the ACP session id is the backend's own id for the session, and the bridge keeps only what the server does not: the turns it watched and the pending permission requests. A `loadSession` replays updates, so the host's transcript for a session this process never watched is answered empty rather than invented.
-- **Layer responsibilities** - `packages/agent-acp`: the `Agent`, the `Session`, the ACP connection, the update mapping, the config schema and the plugin entry · `packages/sdk`: gains `resources` and `terminals` on `Start` · `docs/PLUGINS.md`: a second worked example and the `--acp` commands.
+- **Layer responsibilities** - `packages/agent-acp`: the `Agent`, the `Session`, the ACP connection, the update mapping, the config schema and the plugin entry · `packages/sdk`: gains `resources` and `terminals` on `Start` · `docs/plugins/PLUGINS.md`: a second worked example and the `--acp` commands.
 - **Source-of-truth files** - `code://packages/agent-acp/src/agent.ts`, `code://packages/agent-acp/src/session.ts`, `code://packages/agent-acp/src/connection.ts`, `code://packages/agent-acp/src/mapping.ts`, `code://packages/agent-acp/src/plugin.ts`.
 
 ## Tasks
@@ -127,5 +127,5 @@ ahpd --plugin @ahpd/agent-acp
 - [x] `pnpm test` green, with a mapped turn, a permission answered, a cancelled turn, a `!command` in the host's shell and a catalogue read in it: 63 files, 849 tests.
 - [x] `pnpm typecheck` and `pnpm boundary` green, with `packages/agent-acp` declaring what it imports.
 - [x] By hand: `scripts/acp-smoke.mts` drove one real turn against `copilot --acp` (GitHub Copilot CLI 1.0.87) through a host built from this package - provider `copilot`, its three modes mapped into `permissionMode`, `PONG` streamed for a one-word prompt, and no error. It was not the daemon binary and not `@deepseek-ai/dsh-acp`; the script is manual because it needs a signed-in Copilot and spends a model call.
-- [x] `docs/PLUGINS.md` names the package, its options and the commands it is known to work with.
+- [x] `docs/plugins/PLUGINS.md` names the package, its options and the commands it is known to work with.
 - [x] `plans/index.md`, `plans/plugin/00-plugin.md` and `plugin/01`'s deferred row updated.

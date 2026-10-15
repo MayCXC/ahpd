@@ -17,7 +17,7 @@ A `root/configChanged` that carries `workspaceTrust` needs `trust:write`, and th
 - `UPDATE: packages/sdk/src/users.ts:23-62` - `trust` joins `SUBJECTS`, and `member` gains `trust:write`.
 - `UPDATE: packages/sdk/src/host/gate.ts:271-280` - ask for `trust:write` when the config has `workspaceTrust`.
 - `UPDATE: packages/sdk/test/users-gate-dispatch.test.ts` - the cases below, beside the root config pushes.
-- `UPDATE: docs/USERS.md:390-403` - the `trust` row, which the page's own test asks for.
+- `UPDATE: docs/sdk/USERS.md:390-403` - the `trust` row, which the page's own test asks for.
 
 ## Steps
 
@@ -41,5 +41,5 @@ A `root/configChanged` that carries `workspaceTrust` needs `trust:write`, and th
 - `users.ts`: `trust` is the last entry of `SUBJECTS`, with the decision named beside it, and `member` holds `trust:write` after `proxy:write`. A role this install writes may name `trust:write` as it may name any other grant.
 - `gate.ts`: `dispatchNeeds` reads the config's keys once. A key that is not per connection is still `config:change`; a per-connection config that carries `workspaceTrust` is `trust:write`; `defaultShell` alone is still `undefined`. The comment above it says which key is not the person's own to push.
 - `users-gate-dispatch.test.ts`: the five cases. The two refusals fail without the fix. The other three hold it in place. A shell preference is still pushed with no grant, and a host with no people directory still refuses nothing.
-- `docs/USERS.md`: the `trust` row in the second grants table, which `users.test.ts` asks for the moment `trust` is a subject. The lead-in says it is one grant and no scheme. The member row, the sample `user list` and the trust section are task 08's.
+- `docs/sdk/USERS.md`: the `trust` row in the second grants table, which `users.test.ts` asks for the moment `trust` is a subject. The lead-in says it is one grant and no scheme. The member row, the sample `user list` and the trust section are task 08's.
 - **Found and left alone:** the gate asks `trust:write` and `ahpd.grants` carries no `trust`, because the plan adds the subject to `SUBJECTS` and not to `OPERATIONS`. A role editor drawn from that map offers no `trust` line, so a role is given the grant by hand. Recorded as a defaulted row in the plan.

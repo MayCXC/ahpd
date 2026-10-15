@@ -20,14 +20,14 @@ A `users:write` caller cannot re-add a person whose current roles hold a grant t
 - `UPDATE: packages/server/src/commands/user.ts:119-145` - `user add` bounds the person's current grants too.
 - `UPDATE: packages/sdk/src/users.ts:317-335,494-516` - own-key lookups.
 - `UPDATE: packages/server/test/server-http.test.ts`, `packages/sdk/test/users.test.ts` - the cases below.
-- `UPDATE: docs/USERS.md` - the `users` row says a role an issuer grants at sign-in is not in the file, so `user rm` does not see it.
+- `UPDATE: docs/sdk/USERS.md` - the `users` row says a role an issuer grants at sign-in is not in the file, so `user rm` does not see it.
 
 ## Steps
 
 1. In `user add`, when `grantsOfPerson(id)` answers, bound it as well as the roles being given.
 2. `bounded` returns early only on the `cli` surface or for `ROOT`; a served call with no actor is refused 401 with the sentence `checkScopes` gives.
 3. `grantsOf` and `add`'s unknown-role check use `Object.hasOwn` on `file.roles` and `BUILT_IN`.
-4. Say in `docs/USERS.md` that the bound counts the roles in the users file, and a role an issuer's claim grants at sign-in is not among them.
+4. Say in `docs/sdk/USERS.md` that the bound counts the roles in the users file, and a role an issuer's claim grants at sign-in is not among them.
 
 ## Validation
 
@@ -44,6 +44,6 @@ Implemented 2026-09-27. Tests first, each seen to fail:
 - `users.test.ts`: `add('x', ['constructor'])` resolved rather than rejecting, not the TypeError this Validation predicted: `BUILT_IN['constructor']` is `Object`, so the unknown-role check passed it; the TypeError would come later, when `grantsOf` iterates it. It now rejects with `no role called constructor`, and `grantsOfRoles(['__proto__'])` and `grantsOfRoles(['constructor', 'toString'])` are empty.
 - `server-commands.test.ts`: the registry's own hook already refuses a served call with no actor, so a case through `cliRegistry()` passes before and after. The case builds a registry whose `authorize` hook lets everything through and declares only `user`; `user.add` on the `remote` surface with no actor resolved and added `eve`, and now rejects with status 401. (A registry built with no hook at all refuses a scoped command itself, with cofold's `AuthorizationError`.)
 
-`bounded` returns early only on the `cli` surface or for root, and refuses a served call with no actor with `SIGN_IN`. `user add` bounds the person's current grants beside the roles given. `users.ts` reads roles through `roleIn`, which answers only a table's own keys. `docs/USERS.md`'s `users` row says re-adding counts the held roles and that an issuer's sign-in roles are not in the file.
+`bounded` returns early only on the `cli` surface or for root, and refuses a served call with no actor with `SIGN_IN`. `user add` bounds the person's current grants beside the roles given. `users.ts` reads roles through `roleIn`, which answers only a table's own keys. `docs/sdk/USERS.md`'s `users` row says re-adding counts the held roles and that an issuer's sign-in roles are not in the file.
 
 Not changed, and outside this task: a users file whose `roles` has a key `__proto__` is read into a plain object, so that role sets the object's prototype rather than becoming a role, and `roleIn` then answers nothing for it.

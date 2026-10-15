@@ -31,7 +31,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "apiOrigins\(" packages/server/src` - three calls in `run.ts`: the API listener, a second listener, and the plugin routes with `announcedNames`.
 - `rg -n "hostRefusal" packages/server/src/http.ts` - one check for the API and one for a plugin route at L200.
-- `rg -n "resource" docs/HOST.md docs/DAEMON.md packages/server/README.md` - the key table in HOST.md, the flag tables, and the guard paragraph in DAEMON.md L706-L712.
+- `rg -n "resource" docs/sdk/HOST.md docs/server/REFERENCE.md packages/server/README.md` - the key table in HOST.md, the flag tables, and the guard paragraph in DAEMON.md L706-L712.
 
 ### Runtime path
 
@@ -48,7 +48,7 @@ browser -> GET http://203.0.113.1:37537/plugins/ahpd-web/ (Host: 203.0.113.1:375
 
 | Decision | Source | Task |
 | --- | --- | --- |
-| [A deployment names the extra origins the daemon answers to in `origins`, apart from `resource`](../../../../docs/DAEMON.md) | Softov, 2026-10-10 | 01, 02 |
+| [A deployment names the extra origins the daemon answers to in `origins`, apart from `resource`](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-10 | 01, 02 |
 
 | What | Source | Task |
 | --- | --- | --- |

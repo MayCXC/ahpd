@@ -15,7 +15,7 @@ On Windows, `ahpd stop` and `ahpd restart` reach a detached daemon through a nam
 - [`code://packages/server/src/daemon.ts`](../../../../packages/server/src/daemon.ts) - `control` on `Running`, `controlFor`, `deliver`, and `stop`, which waits, kills and then forgets.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the child reads `AHPD_CONTROL` and starts the control server in a detached daemon.
 - [`code://packages/server/src/commands/restart.ts`](../../../../packages/server/src/commands/restart.ts) - `realTerminal.signal` sends through `deliver`.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the pipe, the key and the wait.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the pipe, the key and the wait.
 
 ## Verified
 

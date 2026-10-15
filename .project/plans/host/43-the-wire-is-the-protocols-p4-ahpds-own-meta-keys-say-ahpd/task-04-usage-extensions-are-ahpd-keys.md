@@ -30,7 +30,7 @@ Every backend's usage carries `_meta['ahpd.cacheWriteTokens']`, `['ahpd.reasonin
 - `UPDATE: packages/sdk/src/meter.ts:99-147` - `metaOf(usage)['ahpd.cost']` and `['ahpd.cacheWriteTokens']`; the meter's own output fields keep their names.
 - `UPDATE: packages/agent-*/test/agent-*-usage.test.ts`, `packages/sdk/test/usage-meter.test.ts`, `packages/agent-pi/test/agent-pi.test.ts` - the new keys, and p1's `metaKeys` census over every usage they produce.
 - `UPDATE: packages/sdk/test/wire.test.ts` - `cacheWriteTokens` and `cost` leave `PENDING`; its claude result has cache writes and a cost.
-- `UPDATE: docs/AHP.md` - wherever usage's `_meta` is described.
+- `UPDATE: docs/sdk/AHP.md` - wherever usage's `_meta` is described.
 
 ## Steps
 

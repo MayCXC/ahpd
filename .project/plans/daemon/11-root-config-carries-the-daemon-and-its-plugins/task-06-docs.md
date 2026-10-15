@@ -4,17 +4,17 @@ status: done
 depends: [task-04-a-write-only-value-is-never-answered.md, task-05-advanced-tools-and-wire-apply-live.md]
 layer: "docs"
 refs:
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the daemon's configuration"
-  - "[code://docs/PLUGINS.md](../../../../docs/PLUGINS.md) - `optionsSchema`, which gains `writeOnly`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the daemon's configuration"
+  - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - `optionsSchema`, which gains `writeOnly`"
 ---
 
 ## Objective
 
-`docs/DAEMON.md` lists the keys root config carries, who sees them, which apply live and `ahpd.restartNeeded`; `docs/PLUGINS.md` says to mark a credential `writeOnly`.
+`docs/server/REFERENCE.md` lists the keys root config carries, who sees them, which apply live and `ahpd.restartNeeded`; `docs/plugins/PLUGINS.md` says to mark a credential `writeOnly`.
 
 ## Files
 
-- `UPDATE: docs/DAEMON.md`, `docs/PLUGINS.md`.
+- `UPDATE: docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`.
 
 ## Steps
 

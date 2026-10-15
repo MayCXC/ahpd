@@ -25,7 +25,7 @@ refs:
 - `UPDATE: packages/sdk/src/host/admission.ts:35-104` - `capabilityFor` answers `subscribe` and `completions` with operations; `createChat` with `source.kind: 'fork'` asks `chat:fork`.
 - `UPDATE: packages/sdk/src/host/actions.ts:100-125` - the gate asks `ACTION_NEEDS[action.type]`.
 - `UPDATE: packages/sdk/test/users-gate.test.ts` - the staleness test and the matrix below.
-- Comments citing [A grant is a subject and a verb](../../../../docs/USERS.md) cite [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/USERS.md).
+- Comments citing [A grant is a subject and a verb](../../../../docs/sdk/USERS.md) cite [A grant names a subject and one of its operations, and read and write are groups of those operations](../../../../docs/sdk/USERS.md).
 
 ## Steps
 
@@ -100,7 +100,7 @@ Ungated, as today: `initialize`, `reconnect`, `ping`, `authenticate`, `unsubscri
 ## Validation
 
 - `packages/sdk/test/users-gate.test.ts`, staleness: every served method is in `NEEDS` or `UNGATED`, and every action type `IS_CLIENT_DISPATCHABLE` marks `true` has a row in `ACTION_NEEDS`; the check fails on a made-up action type.
-- The same file, matrix: for `admin`, `member`, `guest` and the `operators` role in `docs/USERS.md`, every method and every action is allowed or refused exactly as on `main` before this task (record the answers from `main` into the test first).
+- The same file, matrix: for `admin`, `member`, `guest` and the `operators` role in `docs/sdk/USERS.md`, every method and every action is allowed or refused exactly as on `main` before this task (record the answers from `main` into the test first).
 - The same file: a role of `['session:read', 'chat:send']` can dispatch `chat/turnStarted` and is refused `disposeSession` with `may not session:dispose`; a role of `['automation:read', 'automation:update']` can dispatch `automation/updateRequested` and is refused `runAutomation`; `['session:write']` may fork a chat; a role of `['user:get']` can `resourceRead` a `user://` record and is refused `resourceList` on `user://`, while `['user:read']` can do both.
 - `pnpm test` passes.
 

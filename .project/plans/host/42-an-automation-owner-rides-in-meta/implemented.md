@@ -8,7 +8,7 @@ title: An automation's owner rides in _meta - implemented
 - `entry()` (`packages/sdk/src/automations.ts`) and `runState()` (`packages/sdk/src/host.ts`) put the owner in `_meta['ahpd.owner']`.
 - The host's gates read the owner from `StartSession.owner`, off the stored record, unchanged.
 - `scheduled.ts` persists the owner read back from the entry's `_meta`.
-- `docs/AHP.md` says a client reads `_meta['ahpd.owner']`.
+- `docs/sdk/AHP.md` says a client reads `_meta['ahpd.owner']`.
 
 ## Verified
 

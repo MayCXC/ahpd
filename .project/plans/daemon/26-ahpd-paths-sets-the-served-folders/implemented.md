@@ -14,7 +14,7 @@ refs:
 - [`code://packages/server/src/commands/paths.ts`](../../../../packages/server/src/commands/paths.ts) - the three verbs, served and at the terminal, and `addedLine` for both add sentences.
 - [`code://packages/server/src/daemon.ts`](../../../../packages/server/src/daemon.ts) - `startFolder` on the record, and the served change written to `daemon.json`.
 - [`code://packages/server/src/commands/status.ts`](../../../../packages/server/src/commands/status.ts) - `startFolder` in `status`, `status --json` and `GET /status`.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the verbs, the start folder and the forwarded add.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the verbs, the start folder and the forwarded add.
 
 ## Verified
 

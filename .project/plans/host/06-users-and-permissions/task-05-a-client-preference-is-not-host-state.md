@@ -11,7 +11,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L5193](../../../../packages/sdk/src/host.ts#L5193) - `createTerminal`, the client path, which reads it"
   - "[code://packages/sdk/src/host.ts#L6396-L6420](../../../../packages/sdk/src/host.ts#L6396-L6420) - the `root/configChanged` branch and the narrow `defaultShell` rule this task replaces"
   - "[code://packages/sdk/src/types/host.ts#L405-L441](../../../../packages/sdk/src/types/host.ts#L405-L441) - `Connection`, where a per-connection config would live beside `principal`"
-  - "[code://docs/USERS.md](../../../../docs/USERS.md) - the two paragraphs that describe the narrow rule and would describe this instead"
+  - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the two paragraphs that describe the narrow rule and would describe this instead"
 ---
 
 ## Objective
@@ -34,7 +34,7 @@ That closes the escalation and leaves the correctness bug: two people on one dae
 - `UPDATE: packages/sdk/src/host.ts:3415,5193` - both read the asking connection's `defaultShell`, falling back to the host's.
 - `UPDATE: packages/sdk/src/host.ts:3490` - the backend factory, which has a session and no connection: it reads the session owner's preference. This is the one that needs a decision, below.
 - `UPDATE: test/users-gate.test.ts` - the narrow-rule cases become per-connection cases.
-- `UPDATE: docs/USERS.md` - the `defaultShell` paragraph.
+- `UPDATE: docs/sdk/USERS.md` - the `defaultShell` paragraph.
 
 ## Steps
 
@@ -68,4 +68,4 @@ Done 2026-09-23.
 `Connection.config` holds the `PER_CONNECTION` keys (`defaultShell` today); `createTerminal` reads that connection's, and `commanded` and the backend factory read nothing and take the daemon's own shell. The narrow rule that setting `defaultShell` needed `terminal` is gone, because a preference nobody else reads cannot aim anybody else's shell.
 Answered, the open question: the host's default only (the user, 2026-09-23), chosen over the session's owner because a session records no creator today and adding one would change the session store format.
 Found, and it changed the design: splitting the *echo* per connection does not work. `test/conformance.test.ts` pins one `root/configChanged` echo per dispatch, and `serverSeq` and the replay buffer are one per host, so a per-connection action would be replayed to whoever reconnects next. The wire is therefore untouched - everything still lands in `rootConfig` and is echoed whole - and what moved is who *acts* on a key. `rootState` then drops the `PER_CONNECTION` keys from the host's half of `values` and puts the connection's own over the top, so a snapshot reads back its own or nothing.
-Left: a live echo still carries another person's shell past a watching client, which a snapshot corrects and which nothing on the host reads. Recorded in `docs/USERS.md`.
+Left: a live echo still carries another person's shell past a watching client, which a snapshot corrects and which nothing on the host reads. Recorded in `docs/sdk/USERS.md`.

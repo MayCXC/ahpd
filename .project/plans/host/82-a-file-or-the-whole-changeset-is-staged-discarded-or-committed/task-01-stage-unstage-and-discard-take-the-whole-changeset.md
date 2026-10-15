@@ -18,7 +18,7 @@ A call with no target acts on every change in the changeset's directory.
 - `UPDATE: packages/sdk/src/changes.ts:258-285` - `scopes: ['resource', 'changeset']` on the three; the discard confirmation becomes "Discard these changes? This cannot be undone."
 - `UPDATE: packages/sdk/src/changes.ts:1366-1432` - with no target, the path is `.`, and a folder is allowed for discard.
 - `UPDATE: packages/sdk/test/commit.test.ts` - each of the three with no target, over a real repository.
-- `UPDATE: docs/AHP.md:697-710` - the three take a file or the whole changeset.
+- `UPDATE: docs/sdk/AHP.md:697-710` - the three take a file or the whole changeset.
 
 ## Steps
 

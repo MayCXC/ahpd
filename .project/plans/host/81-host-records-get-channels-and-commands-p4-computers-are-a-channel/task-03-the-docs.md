@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-computer-commands.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the `computer:` scheme"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the `computer:` scheme"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md` - a section on the channel and the five commands.
+- `UPDATE: docs/plugins/COMPUTERS.md` - a section on the channel and the five commands.
 
 ## Steps
 

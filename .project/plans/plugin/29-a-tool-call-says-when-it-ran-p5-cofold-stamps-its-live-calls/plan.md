@@ -29,7 +29,7 @@ Restored, a call keeps its `toolKind` beside its times, and the times it already
 
 | Decision | Source |
 | --- | --- |
-| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/AHP.md) | Softov, 2026-10-03 |
+| [A tool call's times are stamped by its plugin, as ahpd keys](../../../../docs/sdk/AHP.md) | Softov, 2026-10-03 |
 
 | What | Source | Task |
 | --- | --- | --- |

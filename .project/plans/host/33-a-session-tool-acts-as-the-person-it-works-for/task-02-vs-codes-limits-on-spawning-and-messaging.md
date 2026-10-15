@@ -23,7 +23,7 @@ Each refusal uses VS Code's words.
 - `UPDATE: packages/sdk/src/types/sessions.ts:144-218` - the store answers a session's root through its parent links.
 - `UPDATE: packages/sdk/src/sessions.ts:309-348` - `memorySessions` and `fileSessions` answer the root and the depth from `Row.parent`.
 - `UPDATE: packages/sdk/test/sessiontools.test.ts` - the limit cases below.
-- `UPDATE: docs/TOOLS.md` - the limits and their words.
+- `UPDATE: docs/sdk/TOOLS.md` - the limits and their words.
 
 ## Steps
 
@@ -39,7 +39,7 @@ Each refusal uses VS Code's words.
 10. Before `send`, refuse at 100 with: `Refusing to send more than 100 messages from server tools in this session tree.`
 11. Find the root of a chat from its session, so that a new chat counts in its session's tree.
 12. Increment each counter only after its action succeeds, as VS Code does.
-13. Write the limits and their words in `docs/TOOLS.md`.
+13. Write the limits and their words in `docs/sdk/TOOLS.md`.
 
 ## Validation
 
@@ -63,7 +63,7 @@ File by file:
 - `packages/sdk/src/types/sessions.ts` - `SessionStore` gains `rootOf?(id): string` and `depthOf?(id): number`, beside `parent?`/`setParent?` and documented the same way. Steps 3 and 4.
 - `packages/sdk/src/sessions.ts` - `Held` gains both, `memorySessions` answers them from one `treeOf` walk up the `parent` links, and `fileSessions` passes the inner store's answers through. Steps 3 and 4.
 - `packages/sdk/test/sessiontools.test.ts` - a new describe, `VS Code's limits on spawning and messaging`, with six cases. A chain stops at depth 3 in the reference host's words. The 51st session in one tree is refused, while a second tree still makes one. The 51st chat is refused by either tool that makes one, and so is the 101st message. A send that failed is not counted. An agent that sends to two independent sessions is refused the 101st message in total, which is the review's case. 23 cases before, 29 after. These are the cases the Validation asks for. They run in the file's own style: no users directory, so no grant is asked and only the limits are under test.
-- `docs/TOOLS.md` - a `Limits` section after `Grants`, holding a table of the four bounds and the refusal each answers with. The paragraphs after it cover depth, what a tree is, and which tree a count is spent in. Then that a count is taken once the thing it counts has happened, and that clients are unbounded. The last says the counters are in memory, as the reference host's are. Step 13.
+- `docs/sdk/TOOLS.md` - a `Limits` section after `Grants`, holding a table of the four bounds and the refusal each answers with. The paragraphs after it cover depth, what a tree is, and which tree a count is spent in. Then that a count is taken once the thing it counts has happened, and that clients are unbounded. The last says the counters are in memory, as the reference host's are. Step 13.
 
 Judgement calls the plan does not decide, each visible in the file it is made in:
 
@@ -78,7 +78,7 @@ Validation:
 - Vitest: `packages/sdk` 144 files and 2823 tests pass (2817 before, the six cases above added). `packages/server` 49 files and 957 tests pass. `packages/agent-claude` 32 files and 295 tests pass. `packages/agent-acp` 15 files and 246 tests pass. Run with `--maxWorkers=2 --testTimeout=10000`, and `pnpm -s schema` first.
 - The sdk suite flaked on this box while these runs were made. Of four full runs, two passed clean and two lost one test. Both times it was `packages/sdk/test/nested-proxy.test.ts`, once `a nested session whose profile says record is deleted here, and its copy inside stays`. That file passes on its own, 49 tests in 12.2s with two of them at 4.0s and 4.1s. So it is the ten-second budget under contention and not this task's work. Nothing in it touches the limits.
 - Mutating the depth guard to `depth >= MAX_SPAWN_DEPTH + 99` makes the chain case fail on `New session created (...)` where the recursion words were expected; restored, it passes. Counting a message before the send rather than after it makes the failed-send case refuse the 51st of the hundred successful sends; restored, it passes. Charging a message to the target session again, `treeOf(idOf(at))`, makes the two-target case answer `Message queued` where the refusal was expected; restored, it passes. Nothing else changed.
-- `node .agents/skills/do-spec/scripts/lint-prose.mjs docs/TOOLS.md` reports 42 long sentences, 36 of them on lines this task did not touch. The file is not lint-clean before or after, and the new lines match its style. The plan directory itself lints clean.
+- `node .agents/skills/do-spec/scripts/lint-prose.mjs docs/sdk/TOOLS.md` reports 42 long sentences, 36 of them on lines this task did not touch. The file is not lint-clean before or after, and the new lines match its style. The plan directory itself lints clean.
 
 Left:
 

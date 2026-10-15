@@ -21,7 +21,7 @@ The daemon reads the user file and the file `$AHPD_CONFIG` names, merged in that
 - `UPDATE: packages/server/src/commands/options.ts:312-360` - `optionsFrom` reads the merged values.
 - `UPDATE: packages/server/src/commands/user.ts:67`, `packages/server/src/commands/config.ts:85-95` - the same reader; `ahpd config` lists every file read and, per key, where it came from.
 - `UPDATE: packages/server/src/commands/run.ts` - the startup names each file read.
-- `UPDATE: docs/DAEMON.md` - the layers, their order, and `$AHPD_CONFIG`.
+- `UPDATE: docs/server/REFERENCE.md` - the layers, their order, and `$AHPD_CONFIG`.
 
 ## Steps
 
@@ -47,5 +47,5 @@ The daemon reads the user file and the file `$AHPD_CONFIG` names, merged in that
   - wrong values and unknown keys: a wrong value in the `$AHPD_CONFIG` file names that file (the case task 02 left); a wrong value in the user file names the user file under a `$AHPD_CONFIG` that set another key; an unknown key names the file holding it.
   - processes: `ahpd config --json` run in a directory holding `ahpd.json` and `.ahpd.json` reads only the user file; `ahpd config` prints both files and the file that set `port`; a `--stdio` run's startup says `config <user>, <env>`.
 - **Failed first, for the right reason:** 12 of 14 failed against the one-file reader. `files`/`configFiles` were `undefined`, `$AHPD_CONFIG` was not read (port 1111, not 2222; a missing one did not throw; its wrong value was accepted), relative paths stayed relative, `ahpd config` printed one path, and the startup had no `config` line. The project-file case failed on the missing `files` field; the old reader never read a project file either, so it is a guard. Two passed as guards: typed paths left alone, and the user-file wrong value (the stub already named the user path).
-- **Docs:** [`docs/DAEMON.md`](../../../../docs/DAEMON.md) Configuration says the two layers and their order, that `$AHPD_CONFIG` must exist, how objects merge and lists replace, that no working-directory file is read, that `--config-file` reads that file alone, how relative paths resolve, the `config` startup line, and what `ahpd config` prints.
+- **Docs:** [`docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) Configuration says the two layers and their order, that `$AHPD_CONFIG` must exist, how objects merge and lists replace, that no working-directory file is read, that `--config-file` reads that file alone, how relative paths resolve, the `config` startup line, and what `ahpd config` prints.
 - **Gates:** `pnpm typecheck` clean; `pnpm boundary` clean (8 packages, `@ahpd/server` 7 declared, none undeclared). Full `pnpm test`, 118 files, 1705 tests: the last two runs each had one failure, the known flake `packages/agent-acp/test/agent-acp-ports.test.ts > advertises exactly the ports it was given, and nothing more`, which passed 3 of 3 alone. An earlier run also hit the other known flake, `agent-cofold-tools.test.ts`, which passed alone.

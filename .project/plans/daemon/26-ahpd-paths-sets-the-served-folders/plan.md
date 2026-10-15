@@ -47,8 +47,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Decision | Source |
 | --- | --- |
-| [`ahpd paths list`, `add` and `remove` change the served folders, and none of them asks](../../../../docs/DAEMON.md) | Softov, 2026-10-14 |
-| [`ahpd paths add` and `remove` at the terminal reach a running daemon by themselves](../../../../docs/DAEMON.md) | Softov, 2026-10-14 |
+| [`ahpd paths list`, `add` and `remove` change the served folders, and none of them asks](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-14 |
+| [`ahpd paths add` and `remove` at the terminal reach a running daemon by themselves](../../../../docs/server/REFERENCE.md) | Softov, 2026-10-14 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -93,7 +93,7 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
   On Linux, 2026-10-15, at `3cf1dc13`, with a config folder of its own: on a fresh folder, `ahpd paths add` writes only that folder.
   Then `ahpd start` serves it. Removing the last folder is refused, and removing a folder not listed exits 2 with no question.
 - **Open questions:** none.
-- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb, the three `paths` verbs included.
+- **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/server/REFERENCE.md`'s `## Commands` block lists every verb, the three `paths` verbs included.
 
 ## Final verification checklist
 

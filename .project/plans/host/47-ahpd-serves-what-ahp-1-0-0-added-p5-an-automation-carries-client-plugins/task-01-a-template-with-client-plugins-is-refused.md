@@ -17,7 +17,7 @@ An `automation/createRequested` whose `definition.session.customizations`, or an
 
 - `UPDATE: packages/sdk/src/host/actions.ts:403-423` - the check before `store.create` and `store.update`.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - the automation rows: client plugins on a template are refused, and `customizations` is not advertised.
+- `UPDATE: docs/sdk/AHP.md` - the automation rows: client plugins on a template are refused, and `customizations` is not advertised.
 
 ## Steps
 
@@ -33,6 +33,6 @@ An `automation/createRequested` whose `definition.session.customizations`, or an
 
 - **Status:** implemented, awaiting review.
 - **Done:** [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts) refuses a create or a patch whose `session.customizations` is a non-empty array. The refusal is `This host does not load client plugins, so an automation cannot carry them`. It comes before `store.create` and `store.update`, and sits after host/44 p2's `disableConditionsProblem` check at the same place, so both hold and neither reaches the store.
-- **Files:** `docs/AHP.md` carries the refusal on `automation/createRequested` and `automation/updateRequested`. The `initialize` row now says the advertised `automations` holds `create` and `schedules` and no `customizations`.
+- **Files:** `docs/sdk/AHP.md` carries the refusal on `automation/createRequested` and `automation/updateRequested`. The `initialize` row now says the advertised `automations` holds `create` and `schedules` and no `customizations`.
 - **Tests:** `packages/sdk/test/automations.test.ts` gained the `a template that names client plugins` block. A create carrying one is refused, no `automation/set` goes out, and the catalogue stays empty. A patch adding one is refused, and the entry keeps no `customizations`. An empty list and an absent one are both accepted. The `initialize` result's `automations` is `{ create: {}, schedules: {} }`, with no `customizations` key.
 - **Watch out for:** the check reads `session.customizations` off whatever the action carried. A patch that names no `session` is a patch about something else and passes, as a patch should.

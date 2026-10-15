@@ -16,7 +16,7 @@ Every kind after those waits, and the whole list is in [deferred.md](01-plugins-
 - `code://packages/agent-claude`, `code://packages/agent-cofold` and `code://packages/agent-acp` - the backends that ship, and the worked examples of a package the host knows nothing about: one over a harness library, one over a protocol, and one over a protocol spoken to a subprocess.
 - `code://packages/computer` - the first package to serve a host-owned URI scheme, so the resource-provider kind has a consumer that is not a test fixture.
 
-A plugin package from this repository is `@ahpd/<name>`, and an agent backend is `@ahpd/agent-<name>` ([decision](../../../docs/PLUGINS.md)).
+A plugin package from this repository is `@ahpd/<name>`, and an agent backend is `@ahpd/agent-<name>` ([decision](../../../docs/plugins/PLUGINS.md)).
 Its id is the `<name>` without the scope, a slug, as [plan 51](51-a-plugin-id-is-a-slug/plan.md) says: `@ahpd/bot` is the plugin `bot`.
 
 ## Contracts
@@ -25,14 +25,14 @@ Its id is the `<name>` without the scope, a slug, as [plan 51](51-a-plugin-id-is
 - `code://packages/sdk/src/types/host.ts#L279-L332` - `HostTool`, what a plugin contributes to every session's model.
 - `code://packages/sdk/src/types/agent.ts#L158-L300` - `Agent`, what a harness plugin implements, and `types/session.ts#L160` for the `Session` it returns.
 - `code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md` - what a plugin is allowed to contribute and what it is not.
-- `code://docs/PLUGINS.md` - where a plugin declares its entry and its title.
+- `code://docs/plugins/PLUGINS.md` - where a plugin declares its entry and its title.
 - `code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md` - where the contract lives, and why it is not a package of its own.
-- `code://docs/PLUGINS.md` - why the set below is closed and one method per kind.
+- `code://docs/plugins/PLUGINS.md` - why the set below is closed and one method per kind.
 
 ## Registration kinds
 
 The whole of what a plugin may register, one method each, and the plan each kind belongs to.
-This is the list [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../docs/PLUGINS.md) closes; nothing registers anything that is not a row here.
+This is the list [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../docs/plugins/PLUGINS.md) closes; nothing registers anything that is not a row here.
 
 | Kind | `PluginHost` method | Operation | Lands in | Status |
 | --- | --- | --- | --- | --- |
@@ -81,7 +81,7 @@ ahpd [flags] -> main.ts parses config.json under the flags -> createHost(literal
 ## Known gaps
 
 - Customizations, MCP servers, hooks-as-data, a plugin configuration key, `needs` and `provides`, an installer, hot reload and reading the port beneath all wait on an SDK option or a later plan; the whole list is [deferred.md](01-plugins-load-from-configuration/deferred.md).
-- [03 - An agent backend over cofold](03-agent-cofold/plan.md) is built: `@ahpd/agent-cofold` is the first real consumer of this mechanism, one installed package that runs a harness and serves every model it can reach, and it is also the worked example in [docs/PLUGINS.md](../../../docs/PLUGINS.md).
+- [03 - An agent backend over cofold](03-agent-cofold/plan.md) is built: `@ahpd/agent-cofold` is the first real consumer of this mechanism, one installed package that runs a harness and serves every model it can reach, and it is also the worked example in [docs/plugins/PLUGINS.md](../../../docs/plugins/PLUGINS.md).
 - [04 - The cofold extras](04-agent-cofold-extras/plan.md) is built: a host tool says what running it does, a cofold conversation forks and rewinds, and a tool a client runs is offered and waited for.
 - [07 - The ACP bridge](07-agent-acp/plan.md) is built: `@ahpd/agent-acp` speaks the Agent Client Protocol to any server, so `copilot --acp`, `codex-acp`, `gemini --experimental-acp` and `@deepseek-ai/dsh-acp` are configuration lines, and the file, shell and permission requests a server makes back are answered through the host's own ports; the decision [agent-package-only-when-it-brings-a-runtime](../../decisions/agent-package-only-when-it-brings-a-runtime.md) is why a model or an endpoint is not a package of its own.
 - The next plans, in order:

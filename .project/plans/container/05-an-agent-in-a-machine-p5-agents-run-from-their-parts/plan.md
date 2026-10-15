@@ -76,8 +76,8 @@ claude / presets / cofold / pi -> [new] a state need with seeds, host mounts mar
 | Decision | Task |
 | --- | --- |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 03, 06 |
-| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/COMPUTER.md) | 01, 02, 03 |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 02, 04, 09 |
+| [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/plugins/COMPUTERS.md) | 01, 02, 03 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 02, 04, 09 |
 | [Cofold's configuration reaches a machine at a fixed target, named by a path variable](../../../decisions/cofold-config-reaches-a-machine-by-a-path-variable.md) | 05 |
 
 | What | Source | Task |
@@ -151,4 +151,4 @@ claude / presets / cofold / pi -> [new] a state need with seeds, host mounts mar
 - [ ] A cofold session in a machine made from `debian:bookworm-slim` answers a turn.
 - [ ] A pi session in a machine made from `debian:bookworm-slim` answers a turn, with its settings from the state volume and its key by name.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

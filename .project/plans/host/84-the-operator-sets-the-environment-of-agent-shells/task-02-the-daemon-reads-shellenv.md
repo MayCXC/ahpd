@@ -8,7 +8,7 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L556](../../../../packages/server/src/commands/run.ts#L556) - `shellTerminals`"
   - "[code://packages/server/src/commands/run.ts#L652](../../../../packages/server/src/commands/run.ts#L652) - where `clientToolTimeoutMs` goes to the host"
   - "[code://packages/sdk/src/host/spawn.ts#L589](../../../../packages/sdk/src/host/spawn.ts#L589) - where the host puts `clientToolTimeoutMs` on `Start`"
-  - "[code://docs/HOST.md#L56-L70](../../../../docs/HOST.md#L56-L70) - the configuration keys"
+  - "[code://docs/sdk/HOST.md#L56-L70](../../../../docs/sdk/HOST.md#L56-L70) - the configuration keys"
 ---
 
 ## Objective
@@ -25,7 +25,7 @@ It gives the map to its terminals, and to each backend on `Start`.
 - `UPDATE: packages/sdk/src/types/host.ts:416` - `shellEnv` in the host options.
 - `UPDATE: packages/sdk/src/types/agent.ts:287` - `shellEnv` on `Start`.
 - `UPDATE: packages/sdk/src/host/spawn.ts:589` - put `shellEnv` on `Start`.
-- `UPDATE: docs/HOST.md:56-70` - a row for `shellEnv`, with the `XDG_CONFIG_HOME` example.
+- `UPDATE: docs/sdk/HOST.md:56-70` - a row for `shellEnv`, with the `XDG_CONFIG_HOME` example.
 - `UPDATE: packages/server/test/config-check.test.ts` - the cases below.
 
 ## Steps
@@ -36,7 +36,7 @@ It gives the map to its terminals, and to each backend on `Start`.
 4. Do not add a flag, because a map is not a flag.
 5. Pass `shellEnv` to `shellTerminals` in `run.ts`.
 6. Pass `shellEnv` to the host options, and from there to `Start`, as `clientToolTimeoutMs` goes.
-7. Add the row to `docs/HOST.md`, and say that a client uses `shellInitScripts` for one session.
+7. Add the row to `docs/sdk/HOST.md`, and say that a client uses `shellInitScripts` for one session.
 
 ## Validation
 
@@ -55,7 +55,7 @@ Files changed:
 - `packages/sdk/src/types/host.ts` - `HostOptions.shellEnv`.
 - `packages/sdk/src/types/agent.ts` - `Start.shellEnv`, absent when the operator named none.
 - `packages/sdk/src/host/spawn.ts` - `shellEnv` onto `Start`, as a frozen copy.
-- `docs/HOST.md` - the row and the paragraph, with the `XDG_CONFIG_HOME` example and the `shellInitScripts` sentence.
+- `docs/sdk/HOST.md` - the row and the paragraph, with the `XDG_CONFIG_HOME` example and the `shellInitScripts` sentence.
 - `packages/server/test/config-check.test.ts` - the six cases.
 
 Two things went past the Files section: `commands/options.ts`, which is where the key, its missing flag and the fold live, and which the list did not name; and the one-line refusal in `checkConfig`, beside the `proxy` one, because `shellEnvProblems` alone answers a list rather than stopping the start.

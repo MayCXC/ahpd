@@ -22,7 +22,7 @@ refs:
   - "[code://packages/agent-acp/src/connection.ts#L108](../../../../packages/agent-acp/src/connection.ts#L108) - the child's environment, the daemon's with the spec's `env` over it"
   - "[code://packages/sdk/src/types/plugin.ts#L180](../../../../packages/sdk/src/types/plugin.ts#L180) - `secret(name, work?)`, how a plugin reads a `secretAtUse` value"
   - "[code://packages/computer/src/plugin.ts#L57-L61](../../../../packages/computer/src/plugin.ts#L57-L61) - `needValue`, the `secretAtUse` pattern"
-  - "[code://docs/PLUGINS.md#L750-L799](../../../../docs/PLUGINS.md#L750-L799) - the ACP section, which says two specs are two backends and still shows `--experimental-acp`"
+  - "[code://docs/plugins/PLUGINS.md#L750-L799](../../../../docs/plugins/PLUGINS.md#L750-L799) - the ACP section, which says two specs are two backends and still shows `--experimental-acp`"
   - "[code://packages/agent-acp/README.md](../../../../packages/agent-acp/README.md) - the same two-spec example and the deprecated Gemini flag"
   - https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json - the launch commands the table was checked against
 ---
@@ -54,7 +54,7 @@ config plugins[] -> server loadPlugins (one per name) -> agent-acp apply -> opti
 
 | Decision | Task |
 | --- | --- |
-| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/DAEMON.md) | 01 |
+| [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | 01 |
 | [A new `@ahpd/agent-*` package exists only when the target brings its own agent runtime](../../../decisions/agent-package-only-when-it-brings-a-runtime.md) | 01 |
 
 | What | Source | Task |

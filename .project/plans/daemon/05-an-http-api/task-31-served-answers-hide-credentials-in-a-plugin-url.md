@@ -12,15 +12,15 @@ refs:
 
 ## Objective
 
-`GET /api/config` and `GET /api/plugin/list` never answer the user and password of a plugin spec written as a URL (`git+https://user:pat@host/repo`), per [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/HOST.md); the terminal's `ahpd config` and `ahpd plugin list` keep printing the file.
+`GET /api/config` and `GET /api/plugin/list` never answer the user and password of a plugin spec written as a URL (`git+https://user:pat@host/repo`), per [Served answers hide the connection token, every plugin option value, and the credentials in a plugin spec's URL](../../../../docs/sdk/HOST.md); the terminal's `ahpd config` and `ahpd plugin list` keep printing the file.
 
 ## Files
 
 - `UPDATE: packages/server/src/commands/config.ts:24-44` - the served mask also replaces a URL's userinfo.
-  The comment on `withoutOptionValues` names [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md), which this one supersedes; it names the new one.
+  The comment on `withoutOptionValues` names [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/sdk/HOST.md), which this one supersedes; it names the new one.
 - `UPDATE: packages/server/src/commands/plugin.ts:36-43` - every field of a served row, `problem` included.
 - `UPDATE: packages/server/test/server-http.test.ts` - the cases below.
-- `UPDATE: docs/DAEMON.md` - the served answers mask a URL's credentials as they mask option values.
+- `UPDATE: docs/server/REFERENCE.md` - the served answers mask a URL's credentials as they mask option values.
 
 ## Steps
 
@@ -39,6 +39,6 @@ refs:
 
 Implemented 2026-09-27. The case was written first and seen to fail: `/api/config` carried `PAT12345`.
 
-`withoutUserinfoIn` replaces any URL's userinfo in a sentence, `withoutUserinfo` applies it to a spec's string or `name`, and `withoutSpecSecrets` composes it with `withoutOptionValues`. `withoutSecrets` uses it for every plugin entry, and a served `plugin list` uses it for the spec and for every other string field that may quote it: `url`, `path`, `name`, `title` and `problem`. The comment on `withoutOptionValues` names the decision that supersedes the old one, and `docs/DAEMON.md` says so.
+`withoutUserinfoIn` replaces any URL's userinfo in a sentence, `withoutUserinfo` applies it to a spec's string or `name`, and `withoutSpecSecrets` composes it with `withoutOptionValues`. `withoutSecrets` uses it for every plugin entry, and a served `plugin list` uses it for the spec and for every other string field that may quote it: `url`, `path`, `name`, `title` and `problem`. The comment on `withoutOptionValues` names the decision that supersedes the old one, and `docs/server/REFERENCE.md` says so.
 
 `node_modules/.bin/vitest run packages/server/test/server-http.test.ts`: 53 passed. `pnpm typecheck`, `pnpm boundary` and `pnpm test`: 103 files, 1363 tests passed. One `agent-cofold` case flaked under load and passes on its own.

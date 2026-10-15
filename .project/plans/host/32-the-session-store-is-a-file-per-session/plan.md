@@ -40,7 +40,7 @@ The files read are the `refs` above.
 
 | Decision | Task |
 | --- | --- |
-| [The session store is one file per session, and rows whose session is gone are pruned](../../../../docs/SESSIONS.md) | 01, 02, 03 |
+| [The session store is one file per session, and rows whose session is gone are pruned](../../../../docs/sdk/SESSIONS.md) | 01, 02, 03 |
 
 | What | Source | Task |
 | --- | --- | --- |

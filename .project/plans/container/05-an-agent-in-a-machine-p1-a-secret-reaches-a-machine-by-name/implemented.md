@@ -23,7 +23,7 @@ A value given to a machine reaches `docker run` and `docker exec` as `-e NAME` w
 - [`code://packages/computer/src/secrets.ts`](../../../../packages/computer/src/secrets.ts) - `revealed` answers which needs came from the vault and from which secret; `madeAgain` reads recorded needs again; `namedAgain` reads from the agents' needs for a machine with none recorded.
 - [`code://packages/computer/src/owners.ts`](../../../../packages/computer/src/owners.ts) - an entry's `needs`, written at create as need, variable and secret name.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - `Profile.secretUnreadable` and the vault-named needs on the spec.
-- `docs/COMPUTER.md` Profiles and Security, `docs/CONTAINERS.md`.
+- `docs/plugins/COMPUTERS.md` Profiles and Security, `docs/plugins/CONTAINERS.md`.
 
 ## Verified
 

@@ -1,6 +1,6 @@
 ---
 title: A push to main publishes the site
-status: todo
+status: done
 depends:
   - task-02-the-docs-build-as-a-vitepress-site.md
 layer: "docs"
@@ -39,6 +39,25 @@ The workflow also runs by hand.
 - Run `actionlint .github/workflows/deploy-docs.yml`, and expect no finding.
 - Softov sets Settings, Pages, Source to "GitHub Actions" before the first run.
 - After the merge, the run on `main` is green and `https://softov.github.io/ahpd/` shows the home page.
-- On the live site, a search and the theme toggle work, and `/ahpd/server/SESSIONS` loads directly.
+- On the live site, a search and the theme toggle work, and `/ahpd/sdk/SESSIONS` loads directly.
 
 ## Resume
+
+### Built
+
+- `.github/workflows/deploy-docs.yml` runs on a push to `main` that changes `docs/**`, a package README or the workflow, and on `workflow_dispatch`.
+- The `build` job copies the checkout, pnpm and Node steps from `ci.yml`, with `fetch-depth: 0`, then runs `pnpm docs:build` and uploads `docs/.vitepress/dist`.
+- The `deploy` job runs `actions/deploy-pages` in the `github-pages` environment, after `build`.
+- The action versions are tags, as `ci.yml` has them.
+- The comment at the top says that the move to a subdomain sets `DOCS_BASE: /` and adds `docs/public/CNAME`.
+- `00-documentation.md` names the workflow and the address.
+
+### Validation
+
+- The workflow file parses as YAML, with the jobs `build` and `deploy`.
+- `actionlint` is not installed, so it did not run.
+- Nothing ran against GitHub: the Pages source, the first run and the live site wait for the merge.
+
+### Seen and not done
+
+- Softov sets Settings, Pages, Source to "GitHub Actions" before the first run.

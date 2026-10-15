@@ -64,7 +64,7 @@ a client's effort choice -> settings.effortLevel -> modelOf -> openaiCompat({ pa
 - **Data flow** - a session setting becomes the run's policy through `policyOf`, and the model request's reasoning through `params.reasoning`; both are rebuilt per turn, because `agentOf` is.
 - **Event flow** - none of its own: a mode that asks shows the approval entry the harness already sends, and one that refuses shows the denial the model already reads.
 - **State flow** - `permissionMode` is a session-scope setting and `effortLevel` a chat-scope one, both merged into `settings` by `setConfig` and carried into the next turn.
-- **Layer responsibilities** - `/github/cofold` (`@facio/agents`): `PermissionMode`, `policyOf` and the `inside`/`isEdit` seam · `@facio/papo`: unchanged behaviour, importing the mapping · `packages/agent-cofold`: the two schema properties, the policy per turn, the model params · `docs/PLUGINS.md`: the two settings and what each value means.
+- **Layer responsibilities** - `/github/cofold` (`@facio/agents`): `PermissionMode`, `policyOf` and the `inside`/`isEdit` seam · `@facio/papo`: unchanged behaviour, importing the mapping · `packages/agent-cofold`: the two schema properties, the policy per turn, the model params · `docs/plugins/PLUGINS.md`: the two settings and what each value means.
 - **Source-of-truth files** - `file:///github/cofold/packages/agents/src/policy/modes.ts`, `code://packages/agent-cofold/src/agent.ts`, `code://packages/agent-cofold/src/session.ts`.
 
 ## Tasks
@@ -92,5 +92,5 @@ a client's effort choice -> settings.effortLevel -> modelOf -> openaiCompat({ pa
 - [x] `pnpm test` green in both repositories, with each of the six modes asserted and the effort reaching the wire body: facio's `packages/agents` 214 passed, ahpd's nine facio files 67 passed and the full suite 798 passed.
 - [x] `pnpm typecheck` and `pnpm boundary` green: boundary green, typecheck clean apart from another session's in-progress `test/agent-cofold-turn.test.ts`.
 - [x] The window would draw both controls: the keys, labels and scopes present in the schema.
-- [x] `docs/PLUGINS.md` names the mode and the effort setting.
+- [x] `docs/plugins/PLUGINS.md` names the mode and the effort setting.
 - [x] `plans/index.md` updated.

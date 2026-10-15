@@ -18,7 +18,7 @@ A backend without such choices keeps plain approve and deny.
 - [`code://packages/agent-acp/src/mapping.ts`](../../../../packages/agent-acp/src/mapping.ts) - the server's `PermissionOption`s as `ConfirmationOption`s, and the picked one sent back.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - `allow-once`, `allow-always` and `deny` when the SDK suggests permissions, with `updatedPermissions` only on `allow-always`.
 - [`code://packages/agent-cofold/src/mapping.ts`](../../../../packages/agent-cofold/src/mapping.ts) - `allow-session`, sent as `alwaysApprove`.
-- `docs/PLUGINS.md`, `docs/AGENT.md`, `UPSTREAM.md` and the three backend READMEs.
+- `docs/plugins/PLUGINS.md`, `docs/sdk/AGENT.md`, `UPSTREAM.md` and the three backend READMEs.
 
 ## Verified
 

@@ -21,7 +21,7 @@ refs:
   - code://test/host.test.ts#L3375-L3395 - the host case that pins the refusal and its `data.request`
   - code://test/operations.test.ts#L163-L197 - the changeset refusal and the `resourceRequest` cases beside it
   - code://test/clients.test.ts#L200-L241 - the client-owned refusal, which is the owner's and stays
-  - code://docs/AHP.md#L87-L96 - the three rows that describe the gate
+  - code://docs/sdk/AHP.md#L87-L96 - the three rows that describe the gate
   - code://README.md#L248 - the Resources row that says writes are behind `resourceRequest`
   - file:///github/externals/vscode/src/vs/platform/agentHost/node/protocolServerHandler.ts#L1644-L1743 - the reference host, which serves `resourceWrite` and enforces no grant
   - file:///github/externals/vscode/src/vs/platform/agentHost/common/agentHostFileSystemProvider.ts#L491-L560 - the client's save, and the ask it never makes
@@ -43,7 +43,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -n "connection.grants" packages/sdk/src` - written by `resourceRequest` at `:5349` and read only inside `mayWrite`; nothing else reads a grant.
 - `rg -n "resourceRequest" /github/externals/vscode/src/vs/platform/agentHost` - `requestResourceAccess` has no production caller there, and the reference host's own handler enforces nothing.
 - `rg -n "32009|refused" test/writes.test.ts test/host.test.ts test/operations.test.ts` - the cases that pin the gate, listed in the refs.
-- `rg -n "resourceRequest" docs README.md` - three rows in `docs/AHP.md` and the Resources row in `README.md`.
+- `rg -n "resourceRequest" docs README.md` - three rows in `docs/sdk/AHP.md` and the Resources row in `README.md`.
 
 ### Runtime path
 
@@ -67,7 +67,7 @@ invokeChangesetOperation with offered.writes === true
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A client that may connect may write a file it may read](../../../../docs/HOST.md) | The user chose "Plan it first" on 2026-09-22, so this file is the proposal under review. |
+| 1 | [A client that may connect may write a file it may read](../../../../docs/sdk/HOST.md) | The user chose "Plan it first" on 2026-09-22, so this file is the proposal under review. |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -82,7 +82,7 @@ invokeChangesetOperation with offered.writes === true
 - **Data flow** - unchanged: each handler calls the store directly, as it does today once `needsWrite` returns.
 - **Event flow** - unchanged: `resource_write` still fires after a write, and `resourceRequest` still writes its log line.
 - **State flow** - `grants` leaves the connection shape at `host.ts:4298`; auth tokens and their `expiring` timers at `:4325-L4373` are untouched and unrelated.
-- **Layer responsibilities** - packages/sdk: the gate, its callers and its comments · test/: the cases that pinned it, plus the client-owned relay that stays · docs: three rows in `docs/AHP.md` and one in `README.md`.
+- **Layer responsibilities** - packages/sdk: the gate, its callers and its comments · test/: the cases that pinned it, plus the client-owned relay that stays · docs: three rows in `docs/sdk/AHP.md` and one in `README.md`.
 - **Source-of-truth files** - `code://packages/sdk/src/host.ts`.
 
 ## Tasks

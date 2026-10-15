@@ -34,8 +34,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Decision | Task |
 | --- | --- |
 | [An ACP backend reaches files and a shell through Start](../../plugin/07-agent-acp/plan.md) | 02 |
-| [The host's MCP servers are the root config key `mcpServers`, as in VS Code](../../../../docs/TOOLS.md) | 01, 02 |
-| [The host's tools are an MCP server the host serves, and each agent plugin says whether its sessions take it](../../../../docs/TOOLS.md) | 03, 04 |
+| [The host's MCP servers are the root config key `mcpServers`, as in VS Code](../../../../docs/sdk/TOOLS.md) | 01, 02 |
+| [The host's tools are an MCP server the host serves, and each agent plugin says whether its sessions take it](../../../../docs/sdk/TOOLS.md) | 03, 04 |
 
 | What | Source | Task |
 | --- | --- | --- |

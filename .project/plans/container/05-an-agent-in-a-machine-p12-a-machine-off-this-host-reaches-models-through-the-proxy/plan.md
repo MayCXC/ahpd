@@ -64,8 +64,8 @@ session disposed -> token dropped
 | Decision | Task |
 | --- | --- |
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 02 |
-| [A secret is named in the host's, a team's or a person's scope](../../../../docs/DAEMON.md) | 03 |
-| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/DAEMON.md) | 03 |
+| [A secret is named in the host's, a team's or a person's scope](../../../../docs/server/REFERENCE.md) | 03 |
+| [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | 03 |
 | A nested host gets its machine's profile, and per session only the proxy token and URL | 02 |
 
 | What | Source | Task |
@@ -116,4 +116,4 @@ session disposed -> token dropped
 - [ ] Disposing the session makes the token refused by the proxy.
 - [ ] A remote ahpd with its own key or Claude subscription still runs a session.
 - [ ] `pnpm test`, `pnpm typecheck` green.
-- [ ] `docs/COMPUTER.md`, `plans/index.md` updated.
+- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

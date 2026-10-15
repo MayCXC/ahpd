@@ -39,9 +39,9 @@ What each ahpd backend loads from a project folder, checked in the code and the 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A folder is untrusted until a client has pushed workspaceTrust saying otherwise](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-06, "Untrusted, as VS Code" |
-| 2 | [The sender's push decides a folder's trust on a host with no people](../../../../docs/AUTHENTICATION.md) | Softov, 2026-10-06, "The sender's push" |
-| 3 | [A worktree the host made is trusted when its repository is](../../../../docs/SESSIONS.md) | Softov, 2026-10-06, "Inherit from its repository" |
+| 1 | [A folder is untrusted until a client has pushed workspaceTrust saying otherwise](../../../../docs/sdk/AUTHENTICATION.md) | Softov, 2026-10-06, "Untrusted, as VS Code" |
+| 2 | [The sender's push decides a folder's trust on a host with no people](../../../../docs/sdk/AUTHENTICATION.md) | Softov, 2026-10-06, "The sender's push" |
+| 3 | [A worktree the host made is trusted when its repository is](../../../../docs/sdk/SESSIONS.md) | Softov, 2026-10-06, "Inherit from its repository" |
 
 | What | Source | Task |
 | --- | --- | --- |

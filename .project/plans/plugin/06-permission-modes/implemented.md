@@ -10,7 +10,7 @@ refs:
   - file:///github/cofold/packages/agents/src/types/policy.ts
   - file:///github/cofold/packages/papo/src/agent.ts
   - code://test/agent-cofold-modes.test.ts
-  - code://docs/PLUGINS.md
+  - code://docs/plugins/PLUGINS.md
 ---
 
 A facio session now shows the two controls a Claude session shows: an approvals mode and a thinking level, and both arrive where they are supposed to.
@@ -24,7 +24,7 @@ The mapping a mode stands for now lives in the harness rather than in the termin
 - `file:///github/cofold/packages/papo/src/agent.ts` - the local mapping deleted, the core's called with papo's own edit set and `resolveWithin`; `src/index.ts` re-exports `policyOf` so its surface does not move.
 - `code://packages/agent-cofold/src/agent.ts` - `permissionMode` in the schema when no `policy` was configured, `effortLevel` when no `adapter` was, and `modelOf` turning a level into `params.reasoning.effort` with `features.reasoning: true`.
 - `code://packages/agent-cofold/src/session.ts` - `agentOf` builds the turn's policy from `permissionMode`, with an edit being a tool that declares `writes` and the workspace boundary resolved under the session's directory.
-- `code://docs/PLUGINS.md` - the two session settings, the six modes and the four levels.
+- `code://docs/plugins/PLUGINS.md` - the two session settings, the six modes and the four levels.
 
 ## Verified
 

@@ -33,7 +33,7 @@ A disabled automation, whatever disabled it, still offers `run` and still runs b
 - `UPDATE: packages/sdk/src/scheduled.ts` - `Saved` gains `runCount?`; `save()` writes the entry's, `load()` passes it to `inner.create`; `rearm()` and `catchUp()` treat an automation whose `afterDate` has passed as due for nothing, and switch it off through `inner.update` with `enabled: false`.
 - `UPDATE: packages/sdk/src/host/automations.ts:303` - the `runAutomation` refusal says only that there is no automation at that resource, since a disabled one now runs.
 - `UPDATE: packages/sdk/test/automations.test.ts`, `packages/sdk/test/scheduled.test.ts` - the cases below.
-- `UPDATE: docs/AHP.md` - `disableConditions` and `runCount` move to served; the `runAutomation` row says a disabled automation runs by hand, as the protocol has it.
+- `UPDATE: docs/sdk/AHP.md` - `disableConditions` and `runCount` move to served; the `runAutomation` row says a disabled automation runs by hand, as the protocol has it.
 
 ## Steps
 
@@ -55,7 +55,7 @@ A disabled automation, whatever disabled it, still offers `run` and still runs b
 
 `runCount` is written to the scheduled store's file beside the definition, read back through `inner.create`, and the store switches off an automation whose date has gone by in `rearm()` and skips it in `catchUp()`. `packages/sdk/src/host/automations.ts` refuses `runAutomation` with `No automation at <resource>`, and its doc comment says `enabled` is not what a press is held to.
 
-**Departure 1.** `docs/AHP.md` is left as the automation rows and one new paragraph; `docs/AUTOMATIONS.md:113` ("`run` is left out of an automation that is switched off") and `:203` ("Refused when there is no such automation or it is switched off") are now stale. Neither file is named by any task in this plan.
+**Departure 1.** `docs/sdk/AHP.md` is left as the automation rows and one new paragraph; `docs/sdk/AUTOMATIONS.md:113` ("`run` is left out of an automation that is switched off") and `:203` ("Refused when there is no such automation or it is switched off") are now stale. Neither file is named by any task in this plan.
 
 **Departure 2.** The `afterDate` test in `scheduled.test.ts` uses a date the real clock has not passed (2030-01-01), not one a minute ahead of the test clock: `memoryAutomations` holds no clock to inject, so its half of the comparison is against the real time, and a date in the test clock's own past is refused there before the scheduled store's arming is reached. The store underneath and the clock agree in a daemon.
 

@@ -29,7 +29,7 @@ refs:
   - "[code://packages/agent-claude/src/session/query.ts#L332-L360](../../../../packages/agent-claude/src/session/query.ts#L332-L360) - the sibling: a live compaction is a `systemNotification` saying the tokens before and after, and the history stays"
   - "[code://packages/agent-pi/src/models.ts#L95-L109](../../../../packages/agent-pi/src/models.ts#L95-L109) - the sibling: an offered row carries `maxContextWindow` and `maxOutputTokens` when the model has them"
   - "[code://packages/agent-cofold/README.md#L58-L76](../../../../packages/agent-cofold/README.md#L58-L76) - the package's options table"
-  - "[code://docs/PLUGINS.md#L616-L630](../../../../docs/PLUGINS.md#L616-L630) - the cofold options table in the plugin guide"
+  - "[code://docs/plugins/PLUGINS.md#L616-L630](../../../../docs/plugins/PLUGINS.md#L616-L630) - the cofold options table in the plugin guide"
   - "[code://packages/agent-cofold/test/agent-cofold-models.test.ts](../../../../packages/agent-cofold/test/agent-cofold-models.test.ts) - the catalogue cases, which stub `globalThis.fetch`"
   - "[code://packages/agent-cofold/test/agent-cofold-usage.test.ts](../../../../packages/agent-cofold/test/agent-cofold-usage.test.ts) - the usage and cost cases"
   - "[code://packages/agent-cofold/test/agent-cofold-approval.test.ts#L159-L172](../../../../packages/agent-cofold/test/agent-cofold-approval.test.ts#L159-L172) - a host tool named `ask_user` that pauses for input, the clash case"
@@ -60,7 +60,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -n "maxContextWindow" packages/*/src` - pi sets it on an offered row (`models.ts:104`); cofold does not.
 - `rg -n "slice\(0, (60|200)\)" packages/agent-cofold/src` - the two titles, `agent.ts:110` and `turns.ts:50`; host 61 task 02 already owns the rule.
 - `.project` searched for every `code://` path above: plugin 05 built the catalogue, plugin 32 p3 sends `_meta.cost`, host 57 task 02 and host 61 task 02 touch `titleOf`, host 62 p3 task 02 touches `turnagent.ts` 115-150 and 229-285.
-- `rg -li "compact" .project/decisions` - no decision on keeping or hiding a compacted history, so [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md) is new.
+- `rg -li "compact" .project/decisions` - no decision on keeping or hiding a compacted history, so [A compacted session keeps its history and shows a notice](../../../../docs/sdk/CHATS.md) is new.
 
 ### Runtime path
 
@@ -85,8 +85,8 @@ transcript() -> turnsOf -> every message kept; a summary message -> the same com
 
 | Decision | Tasks |
 | --- | --- |
-| [A listed model is selected by the reference the harness already writes](../../../../docs/PLUGINS.md) | 01, 02 |
-| [A compacted session keeps its history and shows a notice](../../../../docs/CHATS.md) | 04, 06 |
+| [A listed model is selected by the reference the harness already writes](../../../../docs/plugins/PLUGINS.md) | 01, 02 |
+| [A compacted session keeps its history and shows a notice](../../../../docs/sdk/CHATS.md) | 04, 06 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -140,7 +140,7 @@ transcript() -> turnsOf -> every message kept; a summary message -> the same com
 - [x] A turn on a priced listed model ends with `chat/usage` carrying `_meta.cost` - `agent-cofold-usage.test.ts`, "prices a real endpoint's turn from the price its catalogue published"; a listed model with no price ends with none, "sends no cost for a listed model the endpoint published no price for".
 - [x] An endpoint that refuses, answers garbage or hangs past 5 s still offers the configured model alone - `agent-cofold-models.test.ts`, the existing refusal and wrong-shape cases, and "offers the configured model alone when the endpoint never answers".
 - [x] A session over the compaction point compacts; live it shows one notice and no summary text; reopened it shows every earlier turn and the same notice in the same place - `agent-cofold-compact.test.ts`, "says a compaction as one notice rather than as the model's answer" and "summarizes a history past the point, and leaves it in the conversation"; `agent-cofold-store.test.ts`, "reads a compacted session's summary as the notice the live turn sent".
-- [x] `autoCompactTokens` is in `optionsSchema`, the README options table and `docs/PLUGINS.md`, and a value above the cap is capped - `agent-cofold-compact.test.ts`, "caps a configured point at 80% of the window" and "holds a session with no catalogue at cofold's own default, capped"; `agent-cofold-plugin.test.ts`, "refuses an autoCompactTokens the loader's options check rejects".
+- [x] `autoCompactTokens` is in `optionsSchema`, the README options table and `docs/plugins/PLUGINS.md`, and a value above the cap is capped - `agent-cofold-compact.test.ts`, "caps a configured point at 80% of the window" and "holds a session with no catalogue at cofold's own default, capped"; `agent-cofold-plugin.test.ts`, "refuses an autoCompactTokens the loader's options check rejects".
 - [x] A model's `ask_user` call raises a `chatInput` entry and the person's answer reaches the run; a host tool named `ask_user` still wins the name - `agent-cofold-approval.test.ts`, "raises a chatInput entry for cofold's own ask tool and answers it back" and "leaves cofold's ask tool out when a host tool already answers to that name".
 - [x] `pnpm exec tsc --noEmit`, `pnpm boundary`, `pnpm test`, `pnpm build` pass - 217 files, 3079 tests.
 - [x] `plans/index.md` updated.

@@ -6,7 +6,7 @@ refs:
   - "[code://packages/sdk/src/host/sessionmethods.ts](../../../../packages/sdk/src/host/sessionmethods.ts) - the `moveChat` handler and `movedTo`"
   - "[code://packages/sdk/src/host/catalogue.ts](../../../../packages/sdk/src/host/catalogue.ts) - `movable`, `chatsReordered` and the catalogue rows a move sends"
   - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - `moveChat` on both stores"
-  - "[code://docs/AHP.md](../../../../docs/AHP.md) - the `moveChat` row"
+  - "[code://docs/sdk/AHP.md](../../../../docs/sdk/AHP.md) - the `moveChat` row"
 ---
 
 `moveChat` is served. A chat that advertises `movable` is put earlier or later among its session's chats. It is moved into another session of the same agent provider on the same machine, or out into a session of its own. It keeps its URI, its turns and its own folders. Five moves are refused, each with a sentence naming why and with nothing changed. Into a session of another provider. Into a session on another computer. The default chat. A chat that runs a turn. A chat whose backend cannot take the conversation back by its own id.
@@ -21,7 +21,7 @@ refs:
 - A `newSession` destination allocates a session named after the chat's backend id. It takes the source's provider and config and the chat's folders. The moved chat is its non-movable default chat, under the URI it already had.
 - [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `moveChat(from, to, uri, turns)`. It moves the chat's entry in the stored chat list, its title and the senders of the turns it owns. One write per row, on the file store and in memory.
 - [`code://packages/sdk/src/host/admission.ts`](../../../../packages/sdk/src/host/admission.ts) - a move into another session asks `session:write` on it. The chat's own move asks `chat:move`, and a `newSession` destination asks `session:create`.
-- `docs/AHP.md`: the `moveChat` row says what a move does and what it refuses.
+- `docs/sdk/AHP.md`: the `moveChat` row says what a move does and what it refuses.
 
 ## Verified
 

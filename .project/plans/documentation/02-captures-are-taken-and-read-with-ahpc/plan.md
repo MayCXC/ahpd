@@ -15,8 +15,8 @@ refs:
   - "[code://tools/validate.mjs](../../../../tools/validate.mjs) - the capture check being removed; `tools/wire.mjs`, the test census, stays"
   - "[code://package.json#L28](../../../../package.json#L28) - `\"wire\": \"node tools/validate.mjs\"`"
   - "[code://DEVELOPER.md#L39-L53](../../../../DEVELOPER.md#L39-L53) - the recording paragraph and the `pnpm wire` row; the paragraph still names ahpc's old `{ at, from, peer, frame }` shape"
-  - "[code://docs/AHP.md#L871](../../../../docs/AHP.md#L871) - `pnpm wire` and `scripts/tee.mjs`"
-  - "[code://docs/DAEMON.md#L279](../../../../docs/DAEMON.md#L279) - `--wire`, which ends with `pnpm wire -- <file>`"
+  - "[code://docs/sdk/AHP.md#L871](../../../../docs/sdk/AHP.md#L871) - `pnpm wire` and `scripts/tee.mjs`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - `--wire`, which ends with `pnpm wire -- <file>`"
   - "[code://README.md#L443](../../../../README.md#L443) - `pnpm wire` over the fixture"
   - "file:///github/ahpc/.project/decisions/ahpds-capture-scripts-stay-in-ahpd.md - the decision that keeps the scripts in ahpd"
   - "file:///github/ahpc/.project/plans/cli/02-the-wire-is-proxied-and-analysed/plan.md - `ahpc wire proxy`, `check`, `stats`, `channel`, `diff`"
@@ -30,7 +30,7 @@ ahpd's docs send a person to `ahpc wire proxy` to record a client and to `ahpc w
 
 ### Searches performed
 
-- `rg -ln "validate.mjs|tee.mjs"` outside `.project/`: `tools/wire.mjs` (a comment), `DEVELOPER.md`, `docs/AHP.md`, `package.json`, `UPSTREAM.md`.
+- `rg -ln "validate.mjs|tee.mjs"` outside `.project/`: `tools/wire.mjs` (a comment), `DEVELOPER.md`, `docs/sdk/AHP.md`, `package.json`, `UPSTREAM.md`.
 - host/43 p1 task 02 changes `tools/validate.mjs` to pair a request with its answer; ahpc cli/02 task 03 ports the checker after that lands.
 
 ## Decisions locked in

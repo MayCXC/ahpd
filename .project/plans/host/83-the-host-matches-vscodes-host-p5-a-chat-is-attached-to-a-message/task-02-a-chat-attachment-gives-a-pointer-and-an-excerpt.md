@@ -27,7 +27,7 @@ The turn keeps the `chat` attachment as the client sent it.
 - `UPDATE: packages/sdk/src/host/chatactions.ts:331` - the four callers pass the channel and the connection.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:107` - the context type of `messageAttachments`.
 - `CREATE: packages/sdk/test/host-chat-attachment.test.ts` - the cases below.
-- `UPDATE: docs/HOST.md` - what an agent gets for a chat attachment.
+- `UPDATE: docs/sdk/HOST.md` - what an agent gets for a chat attachment.
 
 ## Steps
 
@@ -44,7 +44,7 @@ The turn keeps the `chat` attachment as the client sent it.
 11. Replace each `chat` attachment with `{ type: 'simple', label, modelRepresentation }` in the list given to the backend.
 12. Keep the `chat` attachment in the turn's own state, so a client still draws its label.
 13. Do not resolve a `chat` attachment found inside the transcript.
-14. Write in `docs/HOST.md` what an agent gets for a chat attachment.
+14. Write in `docs/sdk/HOST.md` what an agent gets for a chat attachment.
 
 ## Validation
 
@@ -70,7 +70,7 @@ Built. A `chat` attachment becomes a pointer before it reaches a backend, and th
 - `packages/sdk/src/host/spawn.ts` - `asSentChat(state)` and its three helpers, and `asSent(action)` on the emitter (`:180`, `:197`, `:217`, called at the two dispatch sites). This is step 12, and it is the `_meta`/`withSender` split again: a fact the host added is put back on both roads out, once for the wire and once for a read.
 - `packages/sdk/src/host/snapshots.ts:334` - the live chat state is served through `ctx.asSentChat(state)`, so a subscriber reads the message it sent rather than the pointer.
 - `packages/sdk/test/host-chat-attachment.test.ts` (created) - the seven bullets below plus one more (a pin that is not in the transcript), eight cases. `opened()` builds a host, creates `ahp-session:/live`, reads the session's own chat out of the snapshot rather than writing its URI down, subscribes to that chat and then creates a second chat to attach. `sent()` dispatches a message and returns the blocks the backend was handed, with the turn left running.
-- `docs/CHATS.md` - one paragraph in **Attachments**, "what an agent gets for a chat attachment" (step 14).
+- `docs/sdk/CHATS.md` - one paragraph in **Attachments**, "what an agent gets for a chat attachment" (step 14).
 
 ### Decisions, as read from the plan
 
@@ -84,7 +84,7 @@ Built. A `chat` attachment becomes a pointer before it reaches a backend, and th
 Reported rather than guessed, as task 01 did:
 
 - **`messageAttachments` takes only the sender, not the channel.** Step 4 and the Files row say "the channel and the sending connection"; the channel is not needed. The chat is found from the attachment's own `resource` through `chatOf`/`byChat`, the link needs only the session and its provider, and the read grant is asked by subject, not by session - so a channel parameter would have been carried and never read. Not written rather than written dead.
-- **The documentation went into `docs/CHATS.md`, not `docs/HOST.md`.** Step 14 and the Files row name HOST.md, which is the page for the host process - what it announces, what it serves, and every setting it reads - and has no prose about messages at all. Attachments are documented in CHATS.md's **Attachments** section, beside the four kinds that are carried rather than resolved, and that is where the paragraph went. Nothing was written in HOST.md.
+- **The documentation went into `docs/sdk/CHATS.md`, not `docs/sdk/HOST.md`.** Step 14 and the Files row name HOST.md, which is the page for the host process - what it announces, what it serves, and every setting it reads - and has no prose about messages at all. Attachments are documented in CHATS.md's **Attachments** section, beside the four kinds that are carried rather than resolved, and that is where the paragraph went. Nothing was written in HOST.md.
 
 ### Seen, and not this task's
 

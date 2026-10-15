@@ -19,7 +19,7 @@ refs:
   - code://packages/server/src/config.ts#L50-L57 - `configDir()`, the directory a bare spec resolves from and where the install happens
   - code://packages/server/src/version.ts#L20-L37 - `manifest()`, the walk up to a nearest `package.json` the manifest reader mirrors
   - code://packages/server/src/update.ts#L28-L68 - `parse` and `newer`, the version comparison a plugin's range is checked with rather than a semver package
-  - code://docs/PLUGINS.md - the manifest check a path spec gets before its code is imported
+  - code://docs/plugins/PLUGINS.md - the manifest check a path spec gets before its code is imported
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, the surface a plugin contributes to and the fold consumes
   - code://packages/sdk/src/types/agent.ts#L158-L300 - `Agent`, whose `provider` is the field a collision refuses over
   - code://packages/sdk/src/index.ts - where `createHost` and the ports are exported, and where the contract and the fold join them
@@ -87,10 +87,10 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | A plugin contributes the host's own options, and there is no service container | Softov, asked 2026-09-20: "A plugin does not register only agents. it could be used to register more things. like resources, store, config, options, hook to sessions, etc." |
-| 2 | [The plugin manifest is an `ahpd` key in package.json, and the module is still the contract](../../../../docs/PLUGINS.md) | Softov, asked 2026-09-20: "Can we use a manifest.json or the package.json as manifest for the plugin?" |
+| 2 | [The plugin manifest is an `ahpd` key in package.json, and the module is still the contract](../../../../docs/plugins/PLUGINS.md) | Softov, asked 2026-09-20: "Can we use a manifest.json or the package.json as manifest for the plugin?" |
 | 3 | The plugin contract lives in `@ahpd/sdk`, and only the loader is machine-touching | Softov, asked 2026-09-20: "instead a new package. packages/plugin, would not be better to insert plugin data inside sdk?" |
-| 4 | [A plugin registers from a closed set of kinds, one method each](../../../../docs/PLUGINS.md) | Softov, asked 2026-09-20: "I cant find where is the kinds of registration ... what a plugin can register ... agents, skills, tools, '/' commands, hooks, and what more?" |
-| 5 | [A plugin loaded from a path is checked against its own manifest before its code is imported](../../../../docs/PLUGINS.md) | Softov, asked 2026-09-20: "--plugin ./some/dir need to validate plugin manifest.json." |
+| 4 | [A plugin registers from a closed set of kinds, one method each](../../../../docs/plugins/PLUGINS.md) | Softov, asked 2026-09-20: "I cant find where is the kinds of registration ... what a plugin can register ... agents, skills, tools, '/' commands, hooks, and what more?" |
+| 5 | [A plugin loaded from a path is checked against its own manifest before its code is imported](../../../../docs/plugins/PLUGINS.md) | Softov, asked 2026-09-20: "--plugin ./some/dir need to validate plugin manifest.json." |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -152,5 +152,5 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 - [x] By hand: `ahpd --plugin <fixture>` serves the contributed backend, and `ahpd` with no plugins serves exactly what it does today.
 - [x] By hand: a spec that does not resolve, a module that throws and a duplicate `provider` each say what happened without the daemon dying, except the collision, which refuses.
 - [x] By hand: `--plugin ./fixture` with a `@ahpd/sdk` range the daemon does not satisfy is refused before its entry runs, and `ahpd plugin list` reports it as `incompatible`.
-- [x] `docs/DAEMON.md` and the README name the `plugins` key and the two flags.
+- [x] `docs/server/REFERENCE.md` and the README name the `plugins` key and the two flags.
 - [x] `plans/index.md` and `plans/daemon/00-daemon.md` updated.

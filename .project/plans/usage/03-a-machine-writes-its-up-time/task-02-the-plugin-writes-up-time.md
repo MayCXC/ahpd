@@ -12,13 +12,13 @@ refs:
 
 The plugin API gains a way to write a usage record that goes to the host's `usage` port, or nowhere when there is none, shaped like the API's other host-provided members.
 The computer plugin keeps an open stretch per running machine: opened when it starts (or, at daemon start, for each machine already running), closed when it stops, is removed, or the plugin is stopped.
-Closing writes `{ kind: 'computer', source: 'computer', at: <stretch start>, seconds, computer: <id>, owner, team, project, pools }`, with `owner` from the machine's label or `root:<host>`, and pools as [Usage is charged to the owner's, the team's and the project's pool](../../../../docs/USAGE.md) says.
+Closing writes `{ kind: 'computer', source: 'computer', at: <stretch start>, seconds, computer: <id>, owner, team, project, pools }`, with `owner` from the machine's label or `root:<host>`, and pools as [Usage is charged to the owner's, the team's and the project's pool](../../../../docs/sdk/USAGE.md) says.
 
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts`, `packages/sdk/src/plugins.ts` - the recorder.
 - `UPDATE: packages/computer/src/plugin.ts` (and the runtimes) - the stretches.
-- `UPDATE: docs/PLUGINS.md` - the recorder, and `registerUsage` which is not listed yet.
+- `UPDATE: docs/plugins/PLUGINS.md` - the recorder, and `registerUsage` which is not listed yet.
 - `UPDATE: .project/plans/usage/00-usage.md` - the runtime path.
 
 ## Validation

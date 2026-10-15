@@ -5,7 +5,7 @@ title: Computers in ahpd
 # Computers in ahpd
 
 This file shows where an agent runs, where its code comes from, and where the plans leave a gap.
-It comes from `docs/COMPUTER.md` and the container/05 plans p1 to p12, on 2026-10-13.
+It comes from `docs/plugins/COMPUTERS.md` and the container/05 plans p1 to p12, on 2026-10-13.
 
 ## The words
 

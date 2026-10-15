@@ -4,16 +4,16 @@ status: done
 depends: [task-03-it-goes-after-the-last-session.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md#L226-L256](../../../../docs/COMPUTER.md#L226-L256) - the disposable section"
+  - "[code://docs/plugins/COMPUTERS.md#L226-L256](../../../../docs/plugins/COMPUTERS.md#L226-L256) - the disposable section"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` documents the three fields with an example.
+`docs/plugins/COMPUTERS.md` documents the three fields with an example.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`
+- `UPDATE: docs/plugins/COMPUTERS.md`
 
 ## Steps
 

@@ -56,11 +56,11 @@ client resourceRead bot:/motion -> bot provider read -> record JSON
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | Bot records live in a bot plugin, the way computers do | Softov, 2026-10-07 |
-| 2 | [A bot gets its session by a link to one its owner has, or a new one at make](../../../../docs/BOTS.md) | Softov, 2026-10-07 |
-| 3 | [A plugin starts a session as a named owner](../../../../docs/PLUGINS.md) | defaulted |
-| 4 | [A computer is an object a person manages](../../../../docs/COMPUTER.md) | a bot is made, edited and deleted the same way |
-| 5 | [A scheme provider may authorize a read itself](../../../../docs/RESOURCES.md) | an owner reads their own bot without `bot:get` |
-| 6 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/BOTS.md) | Softov, 2026-10-07 |
+| 2 | [A bot gets its session by a link to one its owner has, or a new one at make](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-07 |
+| 3 | [A plugin starts a session as a named owner](../../../../docs/plugins/PLUGINS.md) | defaulted |
+| 4 | [A computer is an object a person manages](../../../../docs/plugins/COMPUTERS.md) | a bot is made, edited and deleted the same way |
+| 5 | [A scheme provider may authorize a read itself](../../../../docs/sdk/RESOURCES.md) | an owner reads their own bot without `bot:get` |
+| 6 | [A bot owns one folder, and every session the host starts for it runs there](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-07 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -107,7 +107,7 @@ client resourceRead bot:/motion -> bot provider read -> record JSON
 ## Resume state
 
 - **Done so far:** task 01 and task 03, merged 2026-10-08 (1a3ee7a). `packages/bot` is a new plugin package, `@ahpd/bot`. Its provider serves `bot:` records, keeps one JSON file per bot under its `root`, and leaves a tombstone file for each deleted slug. A make with no `workspace` gets the folder `<root>/<slug>`, and an owner reads their own bot without holding `bot:get`. A write naming a `team:` or `project:` owner is checked against the writer's memberships, with the read road's `covers` rule. Both roads that change a bot ask who the writer is. An edit and a delete are for the owner, a member of its team or project, an admin (`*:*`) and the host. A holder of the grant that makes a bot touches no other. That took one host change: `write` and `remove` now take the reader their provider needs, as `read` already did. In the sdk, a plugin's `startSession` and the `pluginStarts` live binding are in. The steps a run takes to start a session moved into one `beginSession` that both roads call.
-- **Built since:** tasks 02, 04 and 05, in that order, merged 2026-10-08 (6fb1289). A bot's `session` is written now: a body may link one, kept only where this host has it and it belongs to the bot's owner (`-32602` where the host has none, `-32009` where it is somebody else's), set to `null` to unlink, and left alone by a write that does not mention it. A make with no `session` gets one, built by `packages/bot/src/start.ts` and started through `host.startSession` as the bot's owner, in the bot's folder, before the record is saved. The docs are in `docs/BOTS.md`, with the `bot:` scheme named in RESOURCES.md and `startSession`/`sessionKept`/`sessionOwner` in PLUGINS.md.
+- **Built since:** tasks 02, 04 and 05, in that order, merged 2026-10-08 (6fb1289). A bot's `session` is written now: a body may link one, kept only where this host has it and it belongs to the bot's owner (`-32602` where the host has none, `-32009` where it is somebody else's), set to `null` to unlink, and left alone by a write that does not mention it. A make with no `session` gets one, built by `packages/bot/src/start.ts` and started through `host.startSession` as the bot's owner, in the bot's folder, before the record is saved. The docs are in `docs/plugins/BOTS.md`, with the `bot:` scheme named in RESOURCES.md and `startSession`/`sessionKept`/`sessionOwner` in PLUGINS.md.
 - **sdk additions beyond the tasks' file lists:** `PluginHost.sessionOwner(uri)` (mirrors `sessionKept`), `SessionRequest.model` and `SessionRequest.title`, `StartSession.title`, and `SessionRequest.prompt` becoming optional - absent is a session that opens silent, present-and-blank is still refused. `beginIn` returns without firing a turn when the text is blank, and `beginSession` passes the title to `openSession`.
 - **Outside the tasks' file lists:** the scheme's make form (`MANIFEST` in `packages/bot/src/provider.ts`) gained `session` and `owner`, since a body may carry either and a form a client cannot fill in is a form that lies; and the root README's package table and badge block gained `@ahpd/bot`, which task 01 did not add.
 - **Next action:** none - the plan is built.

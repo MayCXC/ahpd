@@ -4,7 +4,7 @@ status: done
 depends: [task-02-a-part-image-per-kind.md]
 layer: "computer"
 refs:
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - what it holds, and that it is the default image"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - what it holds, and that it is the default image"
   - "[code://packages/computer/src/plugin.ts#L267](../../../../packages/computer/src/plugin.ts#L267) - the image a machine falls back to"
   - "[code://packages/computer/src/plugin.ts#L38](../../../../packages/computer/src/plugin.ts#L38) - `defaults.image`"
 ---

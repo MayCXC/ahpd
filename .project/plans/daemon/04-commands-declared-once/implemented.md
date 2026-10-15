@@ -18,7 +18,7 @@ Nothing a person typed before changed meaning.
 - [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts) - the hand-written parser is gone; a bare verb names its sub-commands and fails as `ahpd: <sentence>` with exit 2, and `refuse` is gone in favour of `stop`.
 - [`code://packages/server/src/commands/start.ts`](../../../../packages/server/src/commands/start.ts) - `start` forwards every option wherever it is typed, and finds the `start` that is the word.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `updateCheck` declared as `--update-check`, negatable, folded as the typed boolean else `file.updateCheck !== false`.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the declarations as the source of help, completion and `--json`, and the output and completion flags.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the declarations as the source of help, completion and `--json`, and the output and completion flags.
 
 ## Verified
 

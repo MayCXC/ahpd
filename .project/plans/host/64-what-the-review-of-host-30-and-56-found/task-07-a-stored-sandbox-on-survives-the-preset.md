@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-A resumed Claude session whose stored config holds `sandboxEnabled: 'on'` (or `true`) runs with the CLI's sandbox on, as [A session stored with the sandbox on keeps it on, whatever its preset says](../../../../docs/AHP.md) says; a stored `'off'`, `'default'`, `false` or none leaves the preset in charge.
+A resumed Claude session whose stored config holds `sandboxEnabled: 'on'` (or `true`) runs with the CLI's sandbox on, as [A session stored with the sandbox on keeps it on, whatever its preset says](../../../../docs/sdk/AHP.md) says; a stored `'off'`, `'default'`, `false` or none leaves the preset in charge.
 
 ## Files
 

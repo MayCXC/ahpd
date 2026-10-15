@@ -29,7 +29,7 @@ A file that already names `paths` is changed as before.
 - `UPDATE: packages/server/test/daemon.test.ts` - cases for `startFolder` in `recordOf`.
 - `UPDATE: packages/server/test/config-check.test.ts` - a case for `startFolder` in `optionsFrom`.
 - `UPDATE: packages/server/test/server-cli-start.test.ts` - a start with no `paths`, then a `paths add` at the terminal.
-- `UPDATE: docs/DAEMON.md:176-218` - the `paths add` line, and a paragraph on the start folder under the block.
+- `UPDATE: docs/server/REFERENCE.md:176-218` - the `paths add` line, and a paragraph on the start folder under the block.
 
 ## Steps
 
@@ -52,7 +52,7 @@ A file that already names `paths` is changed as before.
 17. In `paths.ts`, read the start folder from `options.startFolder` when served, and from `running()` at the terminal without `--config-file`.
 18. When the file names no `paths`, put the start folder first before the add checks the new folder.
 19. Say the start folder in the line the add prints.
-20. Update `docs/DAEMON.md`, in the file's own wrap style.
+20. Update `docs/server/REFERENCE.md`, in the file's own wrap style.
 21. Run the cases again and see them pass.
 
 ## Validation
@@ -72,7 +72,7 @@ File by file:
 - `packages/server/src/commands/run.ts` - step 15. The announcement has a `start folder <folder>` line when `options.startFolder` is set, after the `plugins` line.
 - `packages/server/src/daemon.ts` - step 16. `Running.startFolder`, read by `recordOf` from the `start folder` line. `rewritePaths` keeps it, because it spreads the record.
 - `packages/server/src/commands/paths.ts` - steps 17 to 19. `startFolderOf(named)` answers `served.options.startFolder` when served. At the terminal it answers `running()?.startFolder` when no `--config-file` is given. An add to a file with no `paths` starts from `[start]`, so the `same` and `under` checks see the start folder. The line reads `Added <start>, the folder the daemon was started in, and <folder> to "paths" in <file>.` The `add` description says it too.
-- `docs/DAEMON.md` - step 20. The `paths add` line in the `## Commands` block, in the block's wrap. One unwrapped paragraph after the forward paragraph, which is the style of that paragraph.
+- `docs/server/REFERENCE.md` - step 20. The `paths add` line in the `## Commands` block, in the block's wrap. One unwrapped paragraph after the forward paragraph, which is the style of that paragraph.
 - Tests - steps 1 to 12. One case in `config-check.test.ts` and one in `daemon.test.ts`. Four served and four terminal cases in `server-paths.test.ts`, and one in `server-cli-start.test.ts` with a real detached daemon. Eight of the unit cases failed before step 14. The two cases for a file that names `paths` passed before and after, because they hold the old behaviour.
 
 What the plan did not know:

@@ -10,7 +10,7 @@ refs:
 
 ## Objective
 
-`GET /api/plugin/list`, which needs only `config:read`, never answers a plugin option value, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/HOST.md); the terminal's `ahpd plugin list` keeps printing them.
+`GET /api/plugin/list`, which needs only `config:read`, never answers a plugin option value, per [The config command hides the connection token and every plugin option value over HTTP](../../../../docs/sdk/HOST.md); the terminal's `ahpd plugin list` keeps printing them.
 
 ## Files
 
@@ -30,4 +30,4 @@ refs:
 
 ## Resume
 
-Implemented 2026-09-27. The case was written first: a person holding only `config:read` asked `GET /api/plugin/list` of a daemon whose file names a plugin with `options: { apiKey: 'SECRETKEY1' }`, and the body carried `SECRETKEY1`. `config.ts` exports `withoutOptionValues`, which `withoutSecrets` now maps over the plugins, and a served `plugin list` puts each row's `spec` through it; the terminal's listing is unchanged. The case passes with `apiKey: '<set>'`, and `server-http.test.ts` is green (50). `docs/DAEMON.md` says `GET /api/plugin/list` masks the options as `config` does.
+Implemented 2026-09-27. The case was written first: a person holding only `config:read` asked `GET /api/plugin/list` of a daemon whose file names a plugin with `options: { apiKey: 'SECRETKEY1' }`, and the body carried `SECRETKEY1`. `config.ts` exports `withoutOptionValues`, which `withoutSecrets` now maps over the plugins, and a served `plugin list` puts each row's `spec` through it; the terminal's listing is unchanged. The case passes with `apiKey: '<set>'`, and `server-http.test.ts` is green (50). `docs/server/REFERENCE.md` says `GET /api/plugin/list` masks the options as `config` does.

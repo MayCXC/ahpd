@@ -28,8 +28,8 @@ Each machine the computer plugin makes carries its creator as its owner, and eve
 
 | What | Source | Task |
 | --- | --- | --- |
-| [The creator owns a machine and pays for its up time](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
-| [Pools are owner, team and project](../../../../docs/USAGE.md) | Softov, 2026-10-02 | 02 |
+| [The creator owns a machine and pays for its up time](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 01, 02 |
+| [Pools are owner, team and project](../../../../docs/sdk/USAGE.md) | Softov, 2026-10-02 | 02 |
 | [A CLI-made machine's owner is kept in `computers.json` beside the config](../../../decisions/a-dev-container-owner-is-kept-beside-the-config.md) | Softov, 2026-10-02 | 01 |
 | A relay container is owned by who connected, and metered | Softov, 2026-10-02 | 01, 02 |
 

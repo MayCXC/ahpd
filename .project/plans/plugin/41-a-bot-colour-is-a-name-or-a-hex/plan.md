@@ -14,7 +14,7 @@ refs:
   - "[code://packages/bot/src/record.ts#L220](../../../../packages/bot/src/record.ts#L220) - where a write's `color` is checked"
   - "[code://packages/bot/test/bot-record.test.ts#L78-L86](../../../../packages/bot/test/bot-record.test.ts#L78-L86) - the record test that refuses a colour outside the list"
   - "[code://packages/bot/test/bot-provider.test.ts#L258-L268](../../../../packages/bot/test/bot-provider.test.ts#L258-L268) - the provider test that refuses a colour outside the list"
-  - "[code://docs/BOTS.md#L39-L43](../../../../docs/BOTS.md#L39-L43) - the bodies and colours a bot is drawn in"
+  - "[code://docs/plugins/BOTS.md#L39-L43](../../../../docs/plugins/BOTS.md#L39-L43) - the bodies and colours a bot is drawn in"
   - "[code://packages/bot/README.md#L80-L82](../../../../packages/bot/README.md#L80-L82) - the package README on the colours"
 ---
 
@@ -30,7 +30,7 @@ A bot made with a name keeps its name.
 
 - `rg -n "color" packages/bot/src` - `color` is checked in one place, `checkRecord`, with `among` and `BOT_COLORS`.
 - `rg -n "BOT_COLORS|BotColor" packages --glob '!**/node_modules/**'` - only `packages/bot` uses them.
-- `rg -n "colou?r" docs/BOTS.md packages/bot/README.md` - both documents name the eleven colours and nothing else.
+- `rg -n "colou?r" docs/plugins/BOTS.md packages/bot/README.md` - both documents name the eleven colours and nothing else.
 
 ### Runtime path
 
@@ -47,7 +47,7 @@ client resourceRead bot://motion -> record JSON -> client draws the name or the 
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A bot's colour is one of the eleven names or a hex colour](../../../../docs/BOTS.md) | Softov, 2026-10-10 |
+| 1 | [A bot's colour is one of the eleven names or a hex colour](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -88,5 +88,5 @@ client resourceRead bot://motion -> record JSON -> client draws the name or the 
 
 - [x] `pnpm vitest run packages/bot` passes.
 - [x] `pnpm -r typecheck` passes, or the repository's own typecheck script.
-- [x] `docs/BOTS.md` and `packages/bot/README.md` name the hex colour.
+- [x] `docs/plugins/BOTS.md` and `packages/bot/README.md` name the hex colour.
 - [x] `plans/index.md` updated.

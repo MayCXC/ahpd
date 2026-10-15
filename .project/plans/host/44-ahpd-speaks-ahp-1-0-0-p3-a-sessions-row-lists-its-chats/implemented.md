@@ -18,7 +18,7 @@ Archiving a session's default chat archives the session.
 - [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `chatFlags` and `setChatFlags` in the memory and file stores, so the bits survive a restart.
 - [`code://packages/sdk/src/host/snapshots.ts`](../../../../packages/sdk/src/host/snapshots.ts) - every chat status it builds carries that chat's bits.
 - `spawn.ts`, `tooling.ts` and `sessionmethods.ts` call `summaryMoved` where a chat is added or removed.
-- `docs/AHP.md` and `README.md` - the two row notifications and the two chat actions, and the state-action total `99 of 100`.
+- `docs/sdk/AHP.md` and `README.md` - the two row notifications and the two chat actions, and the state-action total `99 of 100`.
 
 ## Verified
 

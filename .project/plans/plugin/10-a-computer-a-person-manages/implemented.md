@@ -14,7 +14,7 @@ refs:
   - code://packages/sdk/src/host.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
-  - code://docs/COMPUTER.md
+  - code://docs/plugins/COMPUTERS.md
 ---
 
 A person makes a computer with a resource write and destroys it with a resource delete, using the `computer:write` grant the host already derives from the scheme. A session names the computer it runs in through a key the plugin contributes, a tool that declares it needs advanced permission is absent until the daemon permits it, and the reference host's own twelve tools are untouched.
@@ -32,7 +32,7 @@ A person makes a computer with a resource write and destroys it with a resource 
 - `code://packages/sdk/src/host.ts` - one `permitted()` filter over the offered tools, and `sessionSchema`/`contributedDefaults` merging a contributed setting into the schema and the values a backend sees.
 - `code://packages/sdk/src/validate.ts` - the `computers` port in the member and method tables.
 - `code://packages/server/src/config.ts`, `code://packages/server/src/main.ts` - the `advancedTools` key, `--advanced-tools`, and a startup line.
-- `code://docs/COMPUTER.md`, `code://docs/DAEMON.md`, `code://docs/PLUGINS.md`, `code://docs/USERS.md` - the lifecycle, the setting, the key and the two registrations.
+- `code://docs/plugins/COMPUTERS.md`, `code://docs/server/REFERENCE.md`, `code://docs/plugins/PLUGINS.md`, `code://docs/sdk/USERS.md` - the lifecycle, the setting, the key and the two registrations.
 
 ## Verified
 

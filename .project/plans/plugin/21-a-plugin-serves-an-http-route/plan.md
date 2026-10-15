@@ -23,7 +23,7 @@ refs:
   - "[code://.project/plans/daemon/05-an-http-api/task-15-serve-takes-a-request.md](../../daemon/05-an-http-api/task-15-serve-takes-a-request.md) - `Request` in, `Response` out; done"
   - "[code://.project/plans/daemon/05-an-http-api/task-16-the-api-on-bun-and-deno.md](../../daemon/05-an-http-api/task-16-the-api-on-bun-and-deno.md) - the same on Bun and Deno; done"
   - "[code://.project/plans/daemon/05-an-http-api/task-11-origin-and-host-are-checked.md](../../daemon/05-an-http-api/task-11-origin-and-host-are-checked.md) - the Host check a route shares"
-  - "[code://docs/PLUGINS.md#L358-L371](../../../../docs/PLUGINS.md#L358-L371) - \"HTTP routes are not, because there is no HTTP server\""
+  - "[code://docs/plugins/PLUGINS.md#L358-L371](../../../../docs/plugins/PLUGINS.md#L358-L371) - \"HTTP routes are not, because there is no HTTP server\""
 ---
 
 ## Goal
@@ -56,9 +56,9 @@ listener: plainRequests(daemonRequest) -> tools servers -> [new] /plugins/<encod
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../../docs/PLUGINS.md) | a route is a new row in that set |
+| 1 | [A plugin registers from a closed set of kinds, one register method each, and every registration is checked](../../../../docs/plugins/PLUGINS.md) | a route is a new row in that set |
 | 2 | [cofold's serve() takes a Request and answers a Response, and Node gets an adapter](../../daemon/05-an-http-api/plan.md) | the handler shape a route shares |
-| 3 | [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/DAEMON.md) | the guards, of which a route takes only Host |
+| 3 | [The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md) | the guards, of which a route takes only Host |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -71,14 +71,14 @@ listener: plainRequests(daemonRequest) -> tools servers -> [new] /plugins/<encod
 | Routes are served whenever a plugin registers one, with `http` on or off | Softov, 2026-09-26 | 02 |
 | What a route does on the host goes through its plugin's connection, so the plugin's grants apply; this plan is built before plan 20, and a route gains the connection when plan 20 lands | [plan 20](../20-a-plugin-is-a-client-of-its-own-host/plan.md), Softov, 2026-10-04 | - |
 | Builds on daemon 05 tasks 15 and 16, done, so a route runs on Node, Bun and Deno | Softov, 2026-09-26 | 02 |
-| The registration kinds table, the "not a kind" line and `docs/PLUGINS.md` gain the route | decision 1 | 03 |
+| The registration kinds table, the "not a kind" line and `docs/plugins/PLUGINS.md` gain the route | decision 1 | 03 |
 
 ## Proposed architecture
 
 - **Data flow** - the request's path below `/plugins/<name>` reaches the handler unchanged; its `Response` goes back as it is.
 - **Event flow** - none.
 - **State flow** - none; a route holds what its plugin holds.
-- **Layer responsibilities** - `packages/sdk`: the kind, its check and its fold · `packages/server/src/commands/run.ts`: the prefix in `daemonRequest` and the Host check · `docs/PLUGINS.md` and `00-plugin.md`: the kind.
+- **Layer responsibilities** - `packages/sdk`: the kind, its check and its fold · `packages/server/src/commands/run.ts`: the prefix in `daemonRequest` and the Host check · `docs/plugins/PLUGINS.md` and `00-plugin.md`: the kind.
 - **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts)
 
 ## Tasks
@@ -106,4 +106,4 @@ listener: plainRequests(daemonRequest) -> tools servers -> [new] /plugins/<encod
 - [x] A fixture plugin's route answers `POST /plugins/<name>/hook` with `http` off and with it on.
 - [x] The Host rule the open question settles holds; a request with no `Origin` and a non-JSON body reaches the route.
 - [x] `/api` is unchanged.
-- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/PLUGINS.md`, `00-plugin.md`, `plans/index.md` updated.
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green; `docs/plugins/PLUGINS.md`, `00-plugin.md`, `plans/index.md` updated.

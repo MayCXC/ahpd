@@ -13,7 +13,7 @@ Setting your own `defaultShell` needs only a sign-in.
 
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `dispatchNeeds(channel, action)`, and the gate asking for a grant only when one is needed.
 - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `config` in `SUBJECTS`.
-- [`code://docs/USERS.md`](../../../../docs/USERS.md) - the `config` row and the root rule.
+- [`code://docs/sdk/USERS.md`](../../../../docs/sdk/USERS.md) - the `config` row and the root rule.
 
 ## Verified
 

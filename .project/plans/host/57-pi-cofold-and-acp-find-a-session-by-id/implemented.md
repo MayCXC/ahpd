@@ -6,7 +6,7 @@ refs:
   - "[code://packages/agent-cofold/src/agent.ts](../../../../packages/agent-cofold/src/agent.ts) - `recordRow` and `find`"
   - "[code://packages/agent-acp/src/catalog.ts](../../../../packages/agent-acp/src/catalog.ts) - `findListed`"
   - "[code://packages/sdk/src/host/history.ts](../../../../packages/sdk/src/host/history.ts) - `past`, `relist`, `someCannotSay` without the throttle"
-  - "[code://docs/AGENT.md](../../../../docs/AGENT.md) - the `find(id)` row"
+  - "[code://docs/sdk/AGENT.md](../../../../docs/sdk/AGENT.md) - the `find(id)` row"
 ---
 
 Every bundled backend now answers `find(id)`, so opening a session the host is not holding asks the backend that may have it rather than listing the machine, and the two-second window that used to bound that listing is gone.
@@ -17,7 +17,7 @@ Every bundled backend now answers `find(id)`, so opening a session the host is n
 - [`code://packages/agent-cofold/src/agent.ts`](../../../../packages/agent-cofold/src/agent.ts) - `recordRow(record)` is the per-record mapping `list` and `find` share, and `find` reads one record with `store.sessions.get` and never calls `store.sessions.list`.
 - [`code://packages/agent-acp/src/catalog.ts`](../../../../packages/agent-acp/src/catalog.ts) - `findListed` answers the row `catalogueOf` answers, which is the server's own row when the server lists and the watched record when it cannot, and reuses `catalogueOf` whole to get it. `rowsForFind` shares one read between the finds that ask during it and keeps its answer for the next two seconds (`FIND_FRESH`), a failed start included. ACP 1.6.0 has no call that describes one session, so a listing is the only way to a row; it is one server rather than every agent. `find` is a plain property on the agent, not a getter, because it does not depend on the handshake.
 - [`code://packages/sdk/src/host/history.ts`](../../../../packages/sdk/src/host/history.ts) - `LISTING_FRESH` and `pastAt` are deleted, with the `Date.now()` condition they guarded. `relist(asked)` joins a refresh numbered above the `asked` its caller read and otherwise waits one out and starts its own; `past` reads that count once, before it asks anybody anything. `someCannotSay` now counts an agent with `list` and no `find`.
-- [`code://docs/AGENT.md`](../../../../docs/AGENT.md) - the `find(id)` row and a paragraph saying what it is for and what leaving it out costs.
+- [`code://docs/sdk/AGENT.md`](../../../../docs/sdk/AGENT.md) - the `find(id)` row and a paragraph saying what it is for and what leaving it out costs.
 
 ## Verified
 

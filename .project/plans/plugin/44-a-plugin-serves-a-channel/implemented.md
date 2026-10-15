@@ -26,7 +26,7 @@ A subscriber gets `added` and `removed` when a membership change gives or takes 
 - Task 04 - `host/root.ts` and `host/handshake.ts` - `_meta['ahpd.channels']` on `initialize` and in root state, one entry `{ scheme, title, description?, grant }` per channel. It is absent when no plugin serves a channel.
 - Task 05 - [`code://packages/bot/src/catalogue.ts`](../../../../packages/bot/src/catalogue.ts) - the channel and the slugs sent to each client. It publishes a make, an edit and a delete, and the difference on `users_changed`. The payloads are the ones given for ahpapp: snapshot `{ bots: BotRecord[] }`, `added { bot }`, `changed { bot }`, `removed { id }`.
 - Task 05 - [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts) - `write` and `remove` tell the catalogue after the store changes. `mayRead` is exported. [`code://packages/bot/src/plugin.ts`](../../../../packages/bot/src/plugin.ts) registers the channel and listens to `users_changed`.
-- Task 06 - `docs/PLUGINS.md` has a section "A channel of your own", a table row, and `users_changed` in the event table. `docs/BOTS.md` has a section "The catalogue". `packages/bot/README.md` has a section on the catalogue. `00-plugin.md` has a `channel` row.
+- Task 06 - `docs/plugins/PLUGINS.md` has a section "A channel of your own", a table row, and `users_changed` in the event table. `docs/plugins/BOTS.md` has a section "The catalogue". `packages/bot/README.md` has a section on the catalogue. `00-plugin.md` has a `channel` row.
 
 ## Verified
 

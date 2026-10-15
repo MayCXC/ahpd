@@ -5,9 +5,9 @@ depends: [task-01-install-and-remove.md, task-02-the-container-installs-its-back
 layer: "docs"
 refs:
   - "[code://README.md](../../../../README.md) - the global install block"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the install and backend sections"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the install and backend sections"
   - "[code://packages/server/README.md](../../../../packages/server/README.md) - what npm shows for the server"
-  - "[code://docs/CONTAINERS.md](../../../../docs/CONTAINERS.md) - the two workarounds for the container gap"
+  - "[code://docs/plugins/CONTAINERS.md](../../../../docs/plugins/CONTAINERS.md) - the two workarounds for the container gap"
 ---
 
 ## Objective
@@ -16,9 +16,9 @@ Every install block shows `ahpd plugin install`, and the container gap is gone f
 
 ## Files
 
-- `UPDATE: README.md`, `docs/DAEMON.md`, `packages/server/README.md` - replace `cd ~/.config/ahpd && npm i ...` plus the `plugins` edit with `ahpd plugin install ...`; keep one line saying where it installs and that `npm i -g` of a plugin is not seen.
-- `UPDATE: docs/PLUGINS.md`, `packages/agent-claude/README.md`, `packages/agent-pi/README.md` - the same replacement for the other install blocks the validation `grep` covers.
-- `UPDATE: docs/CONTAINERS.md` - drop the workarounds; say npm-named plugins are installed in the container.
+- `UPDATE: README.md`, `docs/server/REFERENCE.md`, `packages/server/README.md` - replace `cd ~/.config/ahpd && npm i ...` plus the `plugins` edit with `ahpd plugin install ...`; keep one line saying where it installs and that `npm i -g` of a plugin is not seen.
+- `UPDATE: docs/plugins/PLUGINS.md`, `packages/agent-claude/README.md`, `packages/agent-pi/README.md` - the same replacement for the other install blocks the validation `grep` covers.
+- `UPDATE: docs/plugins/CONTAINERS.md` - drop the workarounds; say npm-named plugins are installed in the container.
 - `UPDATE: .project/working/HANDOFF.md` - close open-work item 1.
 - `CREATE: implemented.md` in this plan's folder.
 

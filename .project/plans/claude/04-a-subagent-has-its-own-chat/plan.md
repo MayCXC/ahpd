@@ -71,7 +71,7 @@ tool_result for the call (foreground) or task_notification (background) -> [new]
 | A backend opens a subagent chat through the host | 02, 03 |
 | [A subagent chat is restored from the CLI's own meta file](../../../decisions/subagent-chats-are-restored-from-the-cli-meta-file.md) | 06, 12, 13 |
 | A restored worker whose spawning call was compacted out is listed anyway | 06 |
-| [A spawning call carries the reference's subagent _meta, under its names](../../../../docs/AHP.md) | 10 |
+| [A spawning call carries the reference's subagent _meta, under its names](../../../../docs/sdk/AHP.md) | 10 |
 
 | What | Source | Task |
 | --- | --- | --- |

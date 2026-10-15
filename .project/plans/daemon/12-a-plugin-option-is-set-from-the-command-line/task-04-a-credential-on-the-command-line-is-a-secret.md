@@ -4,7 +4,7 @@ status: done
 depends: [task-03-docs.md]
 layer: "server"
 refs:
-  - "[code://docs/DAEMON.md#L440-L449](../../../../docs/DAEMON.md#L440-L449) - the `--plugin-option` paragraph, which says a credential is better set with `plugin config`"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the `--plugin-option` paragraph, which says a credential is better set with `plugin config`"
   - "[code://packages/server/src/daemon.ts#L25-L29](../../../../packages/server/src/daemon.ts#L25-L29) - `argv` in the daemon record, which keeps every typed flag"
   - "[code://packages/server/src/plugins.ts#L540](../../../../packages/server/src/plugins.ts#L540) - every `{ \"$secret\": \"<name>\" }` in an option is read at load"
   - "[code://packages/server/src/commands/options.ts#L680-L720](../../../../packages/server/src/commands/options.ts#L680-L720) - the `--plugin-option` fold, which found the plugin by the last dot and set one top-level key"
@@ -13,14 +13,14 @@ refs:
 
 ## Objective
 
-`docs/DAEMON.md` says a credential given with `--plugin-option` or `plugin config` is written as `{"$secret":"<name>"}`, with the value kept in the vault, because a plain value lands in the shell's history, in `daemon.json`'s `argv` for a restart, or in `config.json`.
+`docs/server/REFERENCE.md` says a credential given with `--plugin-option` or `plugin config` is written as `{"$secret":"<name>"}`, with the value kept in the vault, because a plain value lands in the shell's history, in `daemon.json`'s `argv` for a restart, or in `config.json`.
 
 And everything after the plugin in `--plugin-option` is a key path set deep into the entry's options, so `@ahpd/agent-claude.presets.x.model=...` changes one preset's model for the run and leaves the others, where a typed `presets` replaced every one of them.
 
 ## Files
 
-- `UPDATE: docs/DAEMON.md:449` - the sentence that says a credential is better set with `plugin config`.
-- `UPDATE: docs/DAEMON.md:282,440-448` - the `--plugin-option` row of the options table and the paragraph, which spelled the key as one dot.
+- `UPDATE: docs/server/REFERENCE.md:449` - the sentence that says a credential is better set with `plugin config`.
+- `UPDATE: docs/server/REFERENCE.md:282,440-448` - the `--plugin-option` row of the options table and the paragraph, which spelled the key as one dot.
 - `UPDATE: packages/server/src/commands/options.ts:378` - `serverFields.pluginOptions`, the description and the flag's value spelling.
 - `UPDATE: packages/server/src/commands/options.ts:205` - `setAt`, which sets a value at a key path in a copy.
 - `UPDATE: packages/server/src/commands/options.ts:680-720` - the `--plugin-option` fold: the plugin is the longest name this run loads that the text starts with, and the rest is the key path.
@@ -43,4 +43,4 @@ And everything after the plugin in `--plugin-option` is a key path set deep into
 
 ## Resume
 
-Built. `docs/DAEMON.md` and `options.ts` changed, the tests cover it, and the gates are in the plan's Resume state.
+Built. `docs/server/REFERENCE.md` and `options.ts` changed, the tests cover it, and the gates are in the plan's Resume state.

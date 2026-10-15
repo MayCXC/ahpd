@@ -17,7 +17,7 @@ An agent declares what a machine needs, a profile names the agents it prepares f
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - needs applied to `docker run`, flags emitted once each, labels read as `{{json .Labels}}` so a value with a tab or newline is read whole, and a failed command printed without any `-e` value (tasks 03, 08, 09).
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `admitted`: the policy check then the agents-label check, on create, the pre-turn change and an automation's start; a refusal announces and stores nothing and undoes a scope charge; an automation acts as its owner, refused until that owner has signed in (tasks 04, 11).
 - `packages/agent-claude`, [`code://packages/agent-cofold/src/agent.ts`](../../../../packages/agent-cofold/src/agent.ts) - Claude and cofold declare their needs; cofold's configuration is mounted at `<computerConfigDir>/cofold/config.json` and named by `COFOLD_CONFIG` (tasks 05, 06).
-- `docs/COMPUTER.md`, `docs/PLUGINS.md` (tasks 07, 12).
+- `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md` (tasks 07, 12).
 
 ## Verified
 

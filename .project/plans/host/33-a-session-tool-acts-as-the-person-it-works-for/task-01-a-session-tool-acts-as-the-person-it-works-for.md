@@ -36,7 +36,7 @@ A turn with no person gets no session tool that writes.
 - `UPDATE: packages/sdk/src/sessions.ts:247-264` - `wakeOf` and `chatsOf` keep the wake's `sender` through a reload.
 - `UPDATE: packages/sdk/test/sessiontools.test.ts` - the grant cases below.
 - `UPDATE: packages/sdk/test/session-delete-owner.test.ts` - its delete cases run inside a turn now, because a call with no turn is nobody's.
-- `UPDATE: docs/TOOLS.md` - what each session tool needs under a users directory.
+- `UPDATE: docs/sdk/TOOLS.md` - what each session tool needs under a users directory.
 
 ## Steps
 
@@ -58,7 +58,7 @@ A turn with no person gets no session tool that writes.
 16. In `wakes.ts`, record the stored owner in `senders` for the turn the wake begins.
 17. Make `remove` ask `mayDispose` as the turn's person, not as the calling session's owner.
 18. Leave `schedule_wakeup` without a check, because it acts only on the calling chat.
-19. Write each tool's grant in `docs/TOOLS.md`, one line per tool.
+19. Write each tool's grant in `docs/sdk/TOOLS.md`, one line per tool.
 
 ## Validation
 
@@ -84,7 +84,7 @@ File by file:
 - `packages/sdk/src/sessions.ts` - `wakeOf` reads `sender` back through `ownerOf`. It keeps the person only where the file wrote one, so a wake from before there was a person keeps none. `chatsOf` needs no change of its own: it keeps the wake through `wakeOf`, so the sender comes back with it. The reload case is what proves the pair - dropping `sender` in `wakeOf` alone makes it fail.
 - `packages/sdk/test/sessiontools.test.ts` - six cases in `what a session tool asks of the turn it runs in`, over one reader and one member. The reader is listed the member's session and refused `create_session` with `reader may not session:write here`. A member's `create_session` makes a child whose turn lists three sessions, may create in them, and may not delete another person's. A turn nobody sent reads and is refused each writing tool with `this turn may not session:write here`. A call with no turn running is refused the same way and still lists, which is the case a backgrounded subagent or shell would reach. A member's wake begins a turn carrying the member, after a reload of the store through `fileSessions`. A host with no users directory answers every tool as before, wake included. 17 cases before, 23 after, with `beforeEach(resetSdk)` rather than `beforeAll`, because the fake's queries accumulate.
 - `packages/sdk/test/session-delete-owner.test.ts` - its three tool cases now run inside a turn. Cases 6 and 7 say a turn has begun with `saying(...)` against the session channel. The backend is paced at 40ms a word, so the turn is still running when the tool is called. The fixture principal's hand-rolled `can` gained the chat-in-session inheritance the real `holds` has, without which `chat/turnStarted` was refused and no turn began. Case 8, once a stranger owner reached through the record, now asserts `this turn may not session:write here`. A call with no turn is nobody's, and the record's owner is never consulted.
-- `docs/TOOLS.md` - the Grants section rewritten. It has a table of each session tool's grant, a paragraph on a turn nobody sent, and one on turns a tool or wake begins. The `member` and `guest` sentences are corrected: `member` holds `session:read` and `session:write`, `guest` holds `session:read` and never sends a turn. The `delete_session` sentence above it changed too.
+- `docs/sdk/TOOLS.md` - the Grants section rewritten. It has a table of each session tool's grant, a paragraph on a turn nobody sent, and one on turns a tool or wake begins. The `member` and `guest` sentences are corrected: `member` holds `session:read` and `session:write`, `guest` holds `session:read` and never sends a turn. The `delete_session` sentence above it changed too.
 
 Judgement calls the plan does not decide, each visible in the file it is made in:
 
@@ -98,7 +98,7 @@ Validation:
 - `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` all exit 0.
 - Vitest: `packages/sdk` 144 files and 2817 tests pass. `packages/server` 49 files and 957 tests pass. `packages/agent-claude` 32 files and 295 tests pass. `packages/agent-acp` 15 files and 246 tests pass. Run with `--maxWorkers=2 --testTimeout=10000`, and `pnpm -s schema` first.
 - Mutating `personOf` to answer `undefined` for a call with no running turn makes the new case fail with `Invalid send_message input: refusing this turn may not session:write here`; restored, it passes. Mutating `wakeOf` to drop `sender` makes the wake case fail with `this turn may not session:write here`; restored, it passes. Nothing else changed.
-- `node .agents/skills/do-spec/scripts/lint-prose.mjs docs/TOOLS.md` reports 35 long sentences, 32 of them on lines this task did not touch. The file is not lint-clean before or after, and the new lines match its style. The plan directory itself lints clean. Nothing outside the lines above changed.
+- `node .agents/skills/do-spec/scripts/lint-prose.mjs docs/sdk/TOOLS.md` reports 35 long sentences, 32 of them on lines this task did not touch. The file is not lint-clean before or after, and the new lines match its style. The plan directory itself lints clean. Nothing outside the lines above changed.
 
 Left:
 

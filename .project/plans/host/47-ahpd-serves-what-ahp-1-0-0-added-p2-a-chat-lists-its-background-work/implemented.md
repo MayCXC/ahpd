@@ -18,7 +18,7 @@ The worker chat itself still opens when claude/17 says.
 - [`code://packages/agent-claude/src/session/query.ts`](../../../../packages/agent-claude/src/session/query.ts) - reads `task_started`, `background_tasks_changed` and a terminal `task_notification`.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - the lead chat's list in `chatState()`, cleared at close.
 - [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts) - exports `subagentChatUri`.
-- [`code://docs/AHP.md`](../../../../docs/AHP.md) - the two action rows.
+- [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the two action rows.
 
 ## Verified
 

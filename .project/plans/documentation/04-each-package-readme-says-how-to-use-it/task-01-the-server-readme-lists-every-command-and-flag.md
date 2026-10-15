@@ -6,7 +6,7 @@ layer: "docs"
 refs:
   - "[code://packages/server/README.md](../../../../packages/server/README.md) - its `Commands` block lists 9 commands"
   - "[code://packages/server/src/commands/options.ts](../../../../packages/server/src/commands/options.ts) - the flags, `programGlobals` among them"
-  - "[code://docs/DAEMON.md](../../../../docs/DAEMON.md) - the detail each line links to"
+  - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the detail each line links to"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The server README's `Commands` block has one line for each command the daemon ru
 
 ## Files
 
-- `UPDATE: packages/server/README.md` - complete the `Commands` block and the `Options` table, and link `docs/DAEMON.md`.
+- `UPDATE: packages/server/README.md` - complete the `Commands` block and the `Options` table, and link `docs/server/REFERENCE.md`.
 
 ## Steps
 
@@ -23,7 +23,7 @@ The server README's `Commands` block has one line for each command the daemon ru
 2. Write one line for each command and subcommand in the `Commands` block, with what it does.
 3. List the flags from `programGlobals` and the other `OptionSpec` lists in `options.ts`.
 4. Write one row for each flag in the `Options` table, with its default.
-5. Link the `docs/DAEMON.md` section for each command that has one.
+5. Link the `docs/server/REFERENCE.md` section for each command that has one.
 
 ## Validation
 

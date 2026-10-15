@@ -21,7 +21,7 @@ A request signs in with `Authorization: Bearer` the way a WebSocket connection d
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) and [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts) - `--remote`, `--token`, `--token-file` and `AHPD_TOKEN`, a per-user 0700 manifest cache, the cleartext warning, and a daemon with no token and no users refusing to start with `http` on.
 - [`code://packages/sdk/src/listen.ts`](../../../../packages/sdk/src/listen.ts) - `ListenOptions.request` is a fetch-style handler; on Node `listen` and `serveRequests` mount the `nodeRequest` they are handed, and `@ahpd/sdk` depends on no `@cofold/*` package.
 - `node-pty` is `@ahpd/server`'s optional dependency, where `pty.ts` imports it.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) and [`code://docs/USERS.md`](../../../../docs/USERS.md) - the API, its grants and guards, `--remote`, and the three runtimes.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) and [`code://docs/sdk/USERS.md`](../../../../docs/sdk/USERS.md) - the API, its grants and guards, `--remote`, and the three runtimes.
 
 ## Verified
 

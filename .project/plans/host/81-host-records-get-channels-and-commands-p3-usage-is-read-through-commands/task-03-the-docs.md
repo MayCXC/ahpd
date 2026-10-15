@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-usage-commands.md]
 layer: "docs"
 refs:
-  - "[code://docs/USAGE.md](../../../../docs/USAGE.md) - the `usage:` scheme"
+  - "[code://docs/sdk/USAGE.md](../../../../docs/sdk/USAGE.md) - the `usage:` scheme"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `UPDATE: docs/USAGE.md` - a section on the five commands.
+- `UPDATE: docs/sdk/USAGE.md` - a section on the five commands.
 
 ## Steps
 

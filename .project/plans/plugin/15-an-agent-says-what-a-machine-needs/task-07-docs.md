@@ -4,16 +4,16 @@ status: done
 depends: [task-04-agents-kept-to-their-machines.md, task-05-claude-declares.md, task-06-cofold-declares.md]
 layer: "docs"
 refs:
-  - "[code://docs/COMPUTER.md#L171-L224](../../../../docs/COMPUTER.md#L171-L224) - Claude in a machine and profiles"
+  - "[code://docs/plugins/COMPUTERS.md#L171-L224](../../../../docs/plugins/COMPUTERS.md#L171-L224) - Claude in a machine and profiles"
 ---
 
 ## Objective
 
-`docs/COMPUTER.md` shows a profile with `agents` instead of mounts, what each agent needs, how to override a need, and the shared-folder warning.
+`docs/plugins/COMPUTERS.md` shows a profile with `agents` instead of mounts, what each agent needs, how to override a need, and the shared-folder warning.
 
 ## Files
 
-- `UPDATE: docs/COMPUTER.md`
+- `UPDATE: docs/plugins/COMPUTERS.md`
 
 ## Steps
 

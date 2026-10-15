@@ -23,7 +23,7 @@ Each endpoint has its own secret, and routes can listen on a public port of thei
 - [`code://packages/sdk/src/wakemessage.ts`](../../../../packages/sdk/src/wakemessage.ts) - `{{event.<field>}}` in a run's prompt.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `fired` matches a trigger's `config` against the keys of the fire's data.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - the `routes` setting, a listener for public routes only.
-- [`code://docs/WEBHOOKS.md`](../../../../docs/WEBHOOKS.md) - the operator guide.
+- [`code://docs/plugins/WEBHOOKS.md`](../../../../docs/plugins/WEBHOOKS.md) - the operator guide.
 
 ## Verified
 

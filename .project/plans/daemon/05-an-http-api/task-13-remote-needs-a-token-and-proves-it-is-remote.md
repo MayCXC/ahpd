@@ -4,9 +4,9 @@ status: done
 depends: [task-08-served-commands-act-on-the-daemons-own-options.md]
 layer: "server"
 refs:
-  - "[../../../../docs/DAEMON.md](../../../../docs/DAEMON.md) - the refusal"
-  - "[../../../../docs/DAEMON.md](../../../../docs/DAEMON.md) - `--token-file`"
-  - "[../../../../docs/DAEMON.md](../../../../docs/DAEMON.md) - the cleartext warning"
+  - "[../../../../docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the refusal"
+  - "[../../../../docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - `--token-file`"
+  - "[../../../../docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the cleartext warning"
   - "[code://packages/server/src/main.ts#L37-L110](../../../../packages/server/src/main.ts#L37-L110) - `ON_MACHINE`, `tokenFor` and `warnCleartext`, read before the program exists"
   - "[code://packages/server/src/commands/options.ts#L106](../../../../packages/server/src/commands/options.ts#L106) - the `--token-file` global"
   - "[code://packages/server/src/commands/registry.ts#L59-L75](../../../../packages/server/src/commands/registry.ts#L59-L75) - `remoteCache`, per user and owner-only"
@@ -24,7 +24,7 @@ The `--remote` tests pass only when the daemon answered.
 
 ## Files
 
-- `UPDATE: packages/server/src/main.ts:37-110` - `--token-file` read beside `--token`, refused together, a missing or empty file refused, `AHPD_TOKEN` only when neither flag is given (["`--remote` reads its token from a file too, with --token-file"](../../../../docs/DAEMON.md)); a `--remote` with no token refused with a sentence naming all three (["`--remote` needs a token"](../../../../docs/DAEMON.md)); the cleartext warning.
+- `UPDATE: packages/server/src/main.ts:37-110` - `--token-file` read beside `--token`, refused together, a missing or empty file refused, `AHPD_TOKEN` only when neither flag is given (["`--remote` reads its token from a file too, with --token-file"](../../../../docs/server/REFERENCE.md)); a `--remote` with no token refused with a sentence naming all three (["`--remote` needs a token"](../../../../docs/server/REFERENCE.md)); the cleartext warning.
 - `UPDATE: packages/server/src/commands/options.ts:106` - the `--token-file` global beside `--token`, so help and completion show it.
 - `UPDATE: packages/server/src/commands/registry.ts:59-75` - `remoteCache` moves to `$XDG_CACHE_HOME/ahpd/remote` (default `~/.cache/ahpd/remote`), created with mode 0700 before `loadManifest` writes to it.
 - `UPDATE: packages/server/test/server-http.test.ts:141-169, 718-816` - the client gets its own `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`, and the seven cases.
@@ -32,7 +32,7 @@ The `--remote` tests pass only when the daemon answered.
 ## Steps
 
 1. The token's sources and the refusal in `main.ts`, before `remoteRegistry`.
-2. The warning: an `http:` URL whose host is not `127.0.0.1`, `[::1]` or `localhost` (the line `loopbackUrl` in `packages/sdk/src/issuers.ts` draws) writes one line on stderr that the token travels in cleartext, then proceeds (["`--remote` to plain http on a host that is not loopback sends the token, with a warning"](../../../../docs/DAEMON.md)).
+2. The warning: an `http:` URL whose host is not `127.0.0.1`, `[::1]` or `localhost` (the line `loopbackUrl` in `packages/sdk/src/issuers.ts` draws) writes one line on stderr that the token travels in cleartext, then proceeds (["`--remote` to plain http on a host that is not loopback sends the token, with a warning"](../../../../docs/server/REFERENCE.md)).
 3. The cache directory, with its mode.
 4. The test client gets its own `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`, with no configuration and no `daemon.json`, and `recordFor` goes (task 08 made it unnecessary).
 

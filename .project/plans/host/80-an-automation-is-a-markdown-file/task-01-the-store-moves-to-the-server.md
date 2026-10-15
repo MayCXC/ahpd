@@ -24,7 +24,7 @@ The sdk exports `memoryAutomations` and the port, and no clock store.
 - `UPDATE: packages/sdk/test/trigger-types.test.ts` - move the cases that need the clock to the server test, or use `memoryAutomations`.
 - `UPDATE: packages/sdk/test/host-close.test.ts` - the same.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the same.
-- `UPDATE: docs/LIBRARY.md:48-81` - show `memoryAutomations`, and say that the clock store is the daemon's.
+- `UPDATE: docs/sdk/LIBRARY.md:48-81` - show `memoryAutomations`, and say that the clock store is the daemon's.
 
 ## Steps
 
@@ -33,7 +33,7 @@ The sdk exports `memoryAutomations` and the port, and no clock store.
 3. Remove the two exports from `packages/sdk/src/index.ts`.
 4. Change each sdk test that uses the clock store to use `memoryAutomations`, or move the case to the server.
 5. Import the store in `run.ts` from the server.
-6. Change `docs/LIBRARY.md`.
+6. Change `docs/sdk/LIBRARY.md`.
 
 ## Validation
 
@@ -43,4 +43,4 @@ The sdk exports `memoryAutomations` and the port, and no clock store.
 
 ## Resume
 
-Implemented 2026-10-11. `scheduledAutomations` and `ScheduledOptions` are in `packages/server/src/scheduled.ts`, and `run.ts` imports the store from `../scheduled.js`. The store imports from `@ahpd/sdk`, so the sdk now also exports `disableConditionsOf`, `parseCron`, `nextOccurrence`, and the types `Cron` and `AutomationEntry`. The two clock cases of `host-close.test.ts` and the clock case of `trigger-types.test.ts` are now in `packages/server/test/scheduled.test.ts`, so the number of cases is the same. `docs/LIBRARY.md`, `README.md` and `packages/sdk/README.md` show `memoryAutomations`, and they say that the clock store is the daemon's.
+Implemented 2026-10-11. `scheduledAutomations` and `ScheduledOptions` are in `packages/server/src/scheduled.ts`, and `run.ts` imports the store from `../scheduled.js`. The store imports from `@ahpd/sdk`, so the sdk now also exports `disableConditionsOf`, `parseCron`, `nextOccurrence`, and the types `Cron` and `AutomationEntry`. The two clock cases of `host-close.test.ts` and the clock case of `trigger-types.test.ts` are now in `packages/server/test/scheduled.test.ts`, so the number of cases is the same. `docs/sdk/LIBRARY.md`, `README.md` and `packages/sdk/README.md` show `memoryAutomations`, and they say that the clock store is the daemon's.

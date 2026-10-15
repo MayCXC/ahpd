@@ -25,7 +25,7 @@ refs:
   - code://packages/server/src/main.ts#L451-L460 - the daemon's startup lines, where the notice is one more line
   - code://packages/sdk/src/github.ts#L41 - a `fetch` in this repository, for the shape of a request
   - code://packages/agent-claude/src/mcp.ts#L69 - a `fetch` with `AbortSignal.timeout`, the pattern for a bounded request
-  - code://docs/DAEMON.md - the CLI, the configuration keys and the runtimes; gains the flag, the key and the environment variables
+  - code://docs/server/REFERENCE.md - the CLI, the configuration keys and the runtimes; gains the flag, the key and the environment variables
   - https://registry.npmjs.org/-/package/@ahpd/server/dist-tags - the endpoint; `{"latest":"0.5.0"}` on 2026-09-18
 ---
 
@@ -72,7 +72,7 @@ ahpd --version -> untouched
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | The update check reads npm's dist-tags endpoint and nothing larger | Softov, ROADMAP.md, 2026-09-06 |
-| 2 | [The answer is read from a file, and only the long-lived process refreshes it](../../../../docs/DAEMON.md) | Softov, ROADMAP.md, 2026-09-06 |
+| 2 | [The answer is read from a file, and only the long-lived process refreshes it](../../../../docs/server/REFERENCE.md) | Softov, ROADMAP.md, 2026-09-06 |
 | 5 | [ahpd and ahpc share no package, and carry deliberate copies instead](../../../decisions/ahpd-and-ahpc-share-no-package.md) | Softov, ROADMAP.md "Deliberate duplication", 2026-09-06 |
 
 | What | Source | Task |
@@ -94,7 +94,7 @@ ahpd --version -> untouched
 - **Data flow** - `update.ts` owns three things: `newer(latest, current)`, `readUpdate()` from the file, and `refreshUpdate({ name, registry, at })` which fetches and writes. `main.ts` decides whether the check is on and calls them; nothing else imports `update.ts`.
 - **Event flow** - the daemon calls `refreshUpdate` once at start when stale and on a six-hour `setInterval` that is `unref()`ed. Nothing awaits it. Nothing is emitted; the next reader of the file sees the result.
 - **State flow** - `update.json` is the only state, written whole on each successful fetch. There is no in-memory copy: the startup line reads the file once, before the first refresh, so a fresh install says nothing on its first run.
-- **Layer responsibilities** - `packages/server/src/update.ts`: the check · `packages/server/src/config.ts`: `updatePath()` and the `updateCheck` key · `packages/server/src/main.ts`: the gates, the flag, the lines · `docs/DAEMON.md`: what a person reads.
+- **Layer responsibilities** - `packages/server/src/update.ts`: the check · `packages/server/src/config.ts`: `updatePath()` and the `updateCheck` key · `packages/server/src/main.ts`: the gates, the flag, the lines · `docs/server/REFERENCE.md`: what a person reads.
 - **Source-of-truth files** - `code://packages/server/src/update.ts`, `code://packages/server/src/config.ts`.
 
 ## Tasks
@@ -125,5 +125,5 @@ ahpd --version -> untouched
 - [x] `pnpm boundary` and `pnpm typecheck` green.
 - [x] By hand: a daemon started with `npm_config_registry` at a fake server that answers `9.9.9` prints the line on its second start and `ahpd status` repeats it.
 - [x] By hand: `CI=1 ahpd` prints no line and writes no file.
-- [x] `docs/DAEMON.md` names the flag, the key and both environment variables.
+- [x] `docs/server/REFERENCE.md` names the flag, the key and both environment variables.
 - [x] `plans/index.md` updated.

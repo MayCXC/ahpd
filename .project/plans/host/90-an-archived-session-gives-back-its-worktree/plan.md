@@ -110,7 +110,7 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 - [x] A test: under `keep`, archiving a dirty session keeps the tree.
 - [x] A test: under `commit`, archiving a dirty session commits the changes on the branch and removes the tree.
 - [x] A test: the key is in the root config schema, and a push of it applies with no restart.
-- [x] `docs/HOST.md` lists `archiveDirtyWorktree`.
+- [x] `docs/sdk/HOST.md` lists `archiveDirtyWorktree`.
 - [x] A test: unarchiving puts the tree back on the branch, with the symlinks.
 - [x] A test: archive then unarchive at once leaves the tree in place.
 - [x] The gates pass: typecheck, boundary, schema and vitest.

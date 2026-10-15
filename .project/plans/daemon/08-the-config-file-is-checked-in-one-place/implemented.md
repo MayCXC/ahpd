@@ -17,7 +17,7 @@ Every key is checked against one schema built from the flag fields: a wrong valu
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - `loadConfig(named?)` returns the merged values, the files read and `sourceOf`; relative `paths`, `users` and `connectionTokenFile` resolve against the directory of the file that set them.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `http` is a field with no flag, `flagFields` is what commands take, `configSchema` is the file's schema, `checkConfig` refuses or warns, and `optionsFrom` folds flag over file over default with no per-key type tests.
 - [`code://packages/server/src/commands/config.ts`](../../../../packages/server/src/commands/config.ts) - `ahpd config` lists every file read and which file set each key; the startup block has a `config` line.
-- [`code://docs/DAEMON.md`](../../../../docs/DAEMON.md) - the layers, their order, `$AHPD_CONFIG`, relative paths, and what a wrong value and an unknown key do.
+- [`code://docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - the layers, their order, `$AHPD_CONFIG`, relative paths, and what a wrong value and an unknown key do.
 
 ## Verified
 
@@ -27,7 +27,7 @@ Every key is checked against one schema built from the flag fields: a wrong valu
 
 ## Departures from the plan
 
-- The project file: the plan first read `ahpd.json`, then [the daemon reads no project config file](../../../../docs/DAEMON.md) superseded that before building.
+- The project file: the plan first read `ahpd.json`, then [the daemon reads no project config file](../../../../docs/server/REFERENCE.md) superseded that before building.
 - A relative plugin spec keeps the loader's rule, the working directory and then the configuration directory, after anchoring it to the file's directory broke `./packages/...` entries in Softov's user file (`d0e9714`).
 - A typed flag now beats the file for booleans too, and `stdio`, `configFile` and `noPlugins` in a file are warned about as unknown keys.
 

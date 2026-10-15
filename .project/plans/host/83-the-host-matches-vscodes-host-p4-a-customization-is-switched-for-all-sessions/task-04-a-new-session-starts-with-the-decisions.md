@@ -20,7 +20,7 @@ A customization that is off there is switched off when the session starts.
 - `UPDATE: packages/sdk/src/host.ts:659-683` - add the store's entries to each customization in `laid`.
 - `UPDATE: packages/sdk/src/host/tooling.ts:276-300` - read the store's entries in `decisionsOf`.
 - `UPDATE: packages/sdk/test/host-tools.test.ts` - the cases below, beside the toggle tests.
-- `UPDATE: docs/AHP.md:220` - say that the global and folder entries are kept and reach every session.
+- `UPDATE: docs/sdk/AHP.md:220` - say that the global and folder entries are kept and reach every session.
 
 ## Steps
 
@@ -74,6 +74,6 @@ A customization that is off there is switched off when the session starts.
   - `packages/sdk/src/host/tooling.ts` (`entriesFor`, `withEntries`, `told`, `tellOff`, `forgetTold`, `decisionsOf`, `partDecisions`, `enabledOf`, `partOff`, `toggleClientPlugin`, and the three new members of the `Tooling` interface)
   - `packages/sdk/src/host/spawn.ts` (`ctx.forgetTold(uri)`, after the session is recorded)
   - `packages/sdk/test/host-tools.test.ts` (`backendSessions` with four cases, and `reporting` with one)
-  - `docs/AHP.md` (the `session/customizationsChanged` row, line 219)
+  - `docs/sdk/AHP.md` (the `session/customizationsChanged` row, line 219)
 - **Uncommitted work outside this task:** the run of the sdk and server suites rewrote `packages/sdk/test/fixtures/wire.jsonl` (33 lines, the endpoint line and the `ahpd.` `_meta` lines).
   Every restore command is denied in this preset, so the file waits for Softov: `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

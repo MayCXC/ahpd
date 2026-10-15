@@ -9,7 +9,7 @@ refs:
   - code://packages/server/src/main.ts
   - code://test/users-gate.test.ts
   - code://test/listen-identity.test.ts
-  - code://docs/USERS.md
+  - code://docs/sdk/USERS.md
 ---
 
 The deployment's connection token is the host's key and now behaves like one: a socket on it is the host, every gated command is served with no sign-in, and it stays that way when somebody signs in or out on that connection.

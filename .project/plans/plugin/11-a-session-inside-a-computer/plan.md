@@ -20,7 +20,7 @@ refs:
   - "[code://packages/sdk/src/types/agent.ts#L92-L141](../../../../packages/sdk/src/types/agent.ts#L92-L141) - `Start`, which carries the ports"
   - "[code://packages/sdk/src/types/plugin.ts#L101-L140](../../../../packages/sdk/src/types/plugin.ts#L101-L140) - `register*`, where `registerComputers` goes"
   - "git://7552054:.project/ideas/dev-container-sessions.md - the reference host's own answer to a session in a container"
-  - "[code://docs/COMPUTER.md](../../../../docs/COMPUTER.md) - the operator's page"
+  - "[code://docs/plugins/COMPUTERS.md](../../../../docs/plugins/COMPUTERS.md) - the operator's page"
 ---
 
 ## Goal
@@ -63,7 +63,7 @@ createSession({ computer: 'computer://box' })
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | A backend reaches a machine through a port the host carries | The user, 2026-09-23: "Include ACP-inside-a-computer in this step", and no backend may depend on one machine plugin. |
-| 2 | [A computer is an object a person manages, and a session runs in one](../../../../docs/COMPUTER.md) | The user, 2026-09-23: "restricted.. sandboxed.. private. On the same computer... or just fire/run/die a computer per session." |
+| 2 | [A computer is an object a person manages, and a session runs in one](../../../../docs/plugins/COMPUTERS.md) | The user, 2026-09-23: "restricted.. sandboxed.. private. On the same computer... or just fire/run/die a computer per session." |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -111,5 +111,5 @@ createSession({ computer: 'computer://box' })
 - [x] A manifest with mounts and a working directory reaches `docker run` with `-v` and the machine's `exec` works in that directory, against the fixture runtime.
 - [x] `Start.computers.how` answers the descriptor for a machine, and a machine that is not there answers a sentence.
 - [x] The ACP backend spawns the descriptor's command when the session names a computer, and refuses when it cannot.
-- [x] By hand: a machine from an image with the ACP server, a session created with `computer`, and the server answering inside the machine. Named in `docs/COMPUTER.md`.
-- [x] `plans/index.md`, `docs/COMPUTER.md`, `docs/PLUGINS.md` and `working/HANDOFF.md` updated.
+- [x] By hand: a machine from an image with the ACP server, a session created with `computer`, and the server answering inside the machine. Named in `docs/plugins/COMPUTERS.md`.
+- [x] `plans/index.md`, `docs/plugins/COMPUTERS.md`, `docs/plugins/PLUGINS.md` and `working/HANDOFF.md` updated.

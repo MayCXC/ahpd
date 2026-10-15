@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/test/users-gate.test.ts#L1169-L1175](../../../../packages/sdk/test/users-gate.test.ts#L1169-L1175) - `finds a session a backend wrote to disk after the last listing`"
   - "[code://packages/sdk/test/users-gate.test.ts#L1215-L1229](../../../../packages/sdk/test/users-gate.test.ts#L1215-L1229) - `reads the catalogue once for a run of subscribes to sessions nobody has`"
   - "[code://packages/sdk/test/host-past-open.test.ts#L139-L152](../../../../packages/sdk/test/host-past-open.test.ts#L139-L152) - the `find`-less fallback test host 56 wrote"
-  - "[code://docs/AGENT.md#L84](../../../../docs/AGENT.md#L84) - the `Agent` table"
+  - "[code://docs/sdk/AGENT.md#L84](../../../../docs/sdk/AGENT.md#L84) - the `Agent` table"
 ---
 
 ## Objective
@@ -29,7 +29,7 @@ With every bundled agent answering `find`, `past` never lists for them; a third-
 - `UPDATE: packages/sdk/src/host/history.ts:218-225` - `someCannotSay` counts an agent with `list` and no `find`.
 - `UPDATE: packages/sdk/src/host/history.ts:265-278` - the fallback runs whenever the row is still missing and `someCannotSay()`, with `relist` given the `started` count read when `past` began.
 - `UPDATE: packages/sdk/test/users-gate.test.ts:1169-1175, 1215-1229` - the two tests below; in `users-gate-sessions.test.ts` instead if host 55 has landed.
-- `UPDATE: docs/AGENT.md:84` - a `find(id)` row after `list()`: one session's row without listing the rest, and without it a missing id costs a listing; the file is hard-wrapped, so the row matches it.
+- `UPDATE: docs/sdk/AGENT.md:84` - a `find(id)` row after `list()`: one session's row without listing the rest, and without it a missing id costs a listing; the file is hard-wrapped, so the row matches it.
 
 ## Steps
 
@@ -38,7 +38,7 @@ With every bundled agent answering `find`, `past` never lists for them; a third-
 3. Add `started` and make `relist` take the count its caller read before it asked anyone anything; a refresh numbered above it began after the ask, so it is joined, and one at or below it is waited out and followed by a new one.
 4. Narrow `someCannotSay` to agents with `list` and no `find`.
 5. Rewrite the comments on `relist` and the fallback to say what they are now, with no mention of the window that went.
-6. Add the `find(id)` row to `docs/AGENT.md`.
+6. Add the `find(id)` row to `docs/sdk/AGENT.md`.
 
 How this stays safe for a session written to disk after the last listing:
 
@@ -59,7 +59,7 @@ How this stays safe for a session written to disk after the last listing:
 
 ## Resume
 
-- **Done:** implemented 2026-10-06, uncommitted. `LISTING_FRESH` and `pastAt` are gone from `packages/sdk/src/host/history.ts`, and with them the `Date.now()` condition in `past`. `relist(asked)` joins a running refresh numbered above the `asked` its caller read (`passes`, read at the top of `past` as `askedPass`) and otherwise waits it out and starts one of its own. `someCannotSay` now counts an agent with `list` and no `find`. The `find(id)` row and a short paragraph are in `docs/AGENT.md`. `users-gate-sessions.test.ts` has the rewritten sharing test and two new find tests, `listingOne` gained `holdNextList`, and `host-past-open.test.ts` gained the five-opens guard.
+- **Done:** implemented 2026-10-06, uncommitted. `LISTING_FRESH` and `pastAt` are gone from `packages/sdk/src/host/history.ts`, and with them the `Date.now()` condition in `past`. `relist(asked)` joins a running refresh numbered above the `asked` its caller read (`passes`, read at the top of `past` as `askedPass`) and otherwise waits it out and starts one of its own. `someCannotSay` now counts an agent with `list` and no `find`. The `find(id)` row and a short paragraph are in `docs/sdk/AGENT.md`. `users-gate-sessions.test.ts` has the rewritten sharing test and two new find tests, `listingOne` gained `holdNextList`, and `host-past-open.test.ts` gained the five-opens guard.
 - **Gates:** `npx tsc -b` passes; `pnpm boundary` passes (8 packages, none undeclared); `node tools/schema.mjs && npx vitest run packages/sdk` passes, 106 files, 1502 tests; `npx vitest run packages/agent-pi packages/agent-cofold packages/agent-acp` passes, 40 files, 537 tests. `rg -n "LISTING_FRESH|pastAt" packages` finds nothing. The two new `finds a session ...` tests were seen failing first, both with `-32001` from the throttle.
 - **Next action:** none; the plan is built and waits for review.
 - **Open questions:** none.
