@@ -14,7 +14,7 @@ import { optionsSchema } from '../src/plugin.js';
  */
 
 const REPO = join(import.meta.dirname, '../../..');
-const NAME = '@ahpd/agent-claude';
+const NAME = 'agent-claude';
 const SOURCE = './packages/agent-claude/src/index.ts';
 
 /** The properties a preset declares. */

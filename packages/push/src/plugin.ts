@@ -25,7 +25,7 @@ import type { InputNeededSetEvent, Plugin, TurnEndEvent } from '@ahpd/sdk';
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
-export const name = '@ahpd/push';
+export const name = 'push';
 
 /** What a listing prints. */
 export const title = 'Push';

@@ -20,7 +20,7 @@ import { sharedCatalogue as oneListing } from './catalog.js';
 import { extraArgs, outputStyle, presetSchema, sandbox, thinking } from './options.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
-export const name = '@ahpd/agent-claude';
+export const name = 'agent-claude';
 
 /**
  * What a listing prints for this package.

@@ -145,7 +145,7 @@ it('skips a seed whose host source is absent with a line, and seeds the rest', a
   expect(held(state).copiedIn).toEqual([['settings.json', '.ahpd-seed.json']]);
   expect(held(state).machines.map((one) => one.name)).toEqual(['one']);
   expect(lines.filter((one) => one.includes(gone))).toEqual([
-    `@ahpd/computer: one seeds ${VOLUME} without ${gone}, which is not on this host`,
+    `computer: one seeds ${VOLUME} without ${gone}, which is not on this host`,
   ]);
 
   // Seeded once it appears.
@@ -192,8 +192,8 @@ it('never follows a link inside a seeded directory, and says so once', async () 
   await make('one');
   expect(held(state).copiedIn).toEqual([['skills/SKILL.md', '.ahpd-seed.json']]);
   expect(lines.filter((one) => one.includes('link'))).toEqual([
-    `@ahpd/computer: one seeds ${VOLUME} without ${join(skills, 'loop')}, a link it does not follow`,
-    `@ahpd/computer: one seeds ${VOLUME} without ${join(skills, 'outside')}, a link it does not follow`,
+    `computer: one seeds ${VOLUME} without ${join(skills, 'loop')}, a link it does not follow`,
+    `computer: one seeds ${VOLUME} without ${join(skills, 'outside')}, a link it does not follow`,
   ]);
 });
 

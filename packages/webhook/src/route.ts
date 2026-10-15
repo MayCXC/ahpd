@@ -5,9 +5,9 @@ import type { Endpoint } from './record.js';
 import type { Route, StoredRecord } from '@ahpd/sdk';
 
 /** The plugin's id, which is also the prefix its route is served under. */
-export const NAME = '@ahpd/webhook';
+export const NAME = 'webhook';
 
-/** The path every endpoint is under, as the listener passes it: `/plugins/%40ahpd/webhook/`. */
+/** The path every endpoint is under, as the listener passes it: `/plugins/webhook/`. */
 export const PREFIX = routePrefix(NAME);
 
 /** What one target does with a call that passed the bearer check. */
@@ -48,7 +48,7 @@ const same = (given: string, kept: string): boolean => {
 };
 
 /**
- * The one route the plugin serves: `POST /plugins/%40ahpd/webhook/<endpoint>`.
+ * The one route the plugin serves: `POST /plugins/webhook/<endpoint>`.
  *
  * The route finds the endpoint, checks the bearer against the vault secret
  * that the endpoint names, and passes the call to the endpoint's target. The

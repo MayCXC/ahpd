@@ -10,7 +10,7 @@ import { checkEndpoint } from '../src/record.js';
  * the call is answered with.
  */
 
-const URL_OF = 'http://127.0.0.1:1/plugins/%40ahpd/webhook/deploys';
+const URL_OF = 'http://127.0.0.1:1/plugins/webhook/deploys';
 
 const endpoint = checkEndpoint({ id: 'deploys', automation: true, secret: 'host:deploys-hook' });
 

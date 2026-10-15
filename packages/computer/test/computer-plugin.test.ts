@@ -83,7 +83,7 @@ it('serves computer: through the host and offers the three tools', async () => {
   });
 
   expect(problems).toEqual([]);
-  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/computer']);
+  expect(loaded.map((one) => one.name)).toEqual(['computer']);
   expect(Object.keys(options.resourceProviders ?? {})).toEqual(['computer']);
   const tools = options.tools ?? [];
   expect(tools.map((one) => one.definition.name)).toEqual([

@@ -16,7 +16,7 @@ import { optionsSchema } from '../src/plugin.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-pi/src/index.ts';
-const NAME = '@ahpd/agent-pi';
+const NAME = 'agent-pi';
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = {};

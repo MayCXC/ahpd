@@ -181,7 +181,7 @@ it('fails a load whose presets leave nothing to register, naming what it skipped
   expect(skippedOf(problems)).toHaveLength(2);
   expect(othersOf(problems)).toHaveLength(1);
   expect(othersOf(problems)[0]).toMatch(
-    /^plugin @ahpd\/agent-acp failed in \d+ ms: presets names no preset left to register an agent for: nope, nothing$/u,
+    /^plugin agent-acp failed in \d+ ms: presets names no preset left to register an agent for: nope, nothing$/u,
   );
 });
 
@@ -196,7 +196,7 @@ it('refuses an absent or empty presets rather than serving nothing', async () =>
   const empty = await load({ presets: {} });
   expect(empty.loaded).toEqual([]);
   expect(othersOf(empty.problems)[0]).toMatch(
-    /^plugin @ahpd\/agent-acp failed in \d+ ms: presets names no preset left to register an agent for$/u,
+    /^plugin agent-acp failed in \d+ ms: presets names no preset left to register an agent for$/u,
   );
   // Called directly, which is how an embedder reaches it, the empty map is the
   // load's own refusal rather than the schema's.

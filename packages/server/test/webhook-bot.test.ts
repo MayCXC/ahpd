@@ -125,9 +125,9 @@ it('answers a sync call with the text of the bot turn', async () => {
   const webhooks = await records.collection('webhooks');
   await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'sync', syncTimeoutSeconds: 10 });
 
-  const route = routes['@ahpd/webhook'];
+  const route = routes['webhook'];
   expect(route).toBeDefined();
-  const call = (text: string) => route!(new Request('http://127.0.0.1:1/plugins/%40ahpd/webhook/ci', {
+  const call = (text: string) => route!(new Request('http://127.0.0.1:1/plugins/webhook/ci', {
     method: 'POST',
     headers: { authorization: 'Bearer right-token', 'content-type': 'application/json' },
     body: JSON.stringify({ thread: 'pr-12', text }),
@@ -156,7 +156,7 @@ it('answers 409 when the plugin may not read the bot', async () => {
   const webhooks = await records.collection('webhooks');
   await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
 
-  const answer = await routes['@ahpd/webhook']!(new Request('http://127.0.0.1:1/plugins/%40ahpd/webhook/ci?thread=pr-12', {
+  const answer = await routes['webhook']!(new Request('http://127.0.0.1:1/plugins/webhook/ci?thread=pr-12', {
     method: 'POST',
     headers: { authorization: 'Bearer right-token' },
     body: 'hello',
@@ -177,12 +177,12 @@ it('answers 409 and names the grant when the plugin may not make a chat', async 
   const webhooks = await records.collection('webhooks');
   await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
 
-  const answer = await routes['@ahpd/webhook']!(new Request('http://127.0.0.1:1/plugins/%40ahpd/webhook/ci?thread=pr-12', {
+  const answer = await routes['webhook']!(new Request('http://127.0.0.1:1/plugins/webhook/ci?thread=pr-12', {
     method: 'POST',
     headers: { authorization: 'Bearer right-token' },
     body: 'hello',
   }));
   expect(answer.status).toBe(409);
-  expect(lines.some((line) => line.includes('@ahpd/webhook') && line.includes('session:write'))).toBe(true);
+  expect(lines.some((line) => line.startsWith('webhook: ') && line.includes('session:write'))).toBe(true);
   expect(await (await records.collection('webhook-threads')).list()).toEqual([]);
 });

@@ -13,7 +13,7 @@ import type { RecordCollection } from '../../sdk/src/types/records.js';
  * reached with which endpoint.
  */
 
-const PREFIX = 'http://127.0.0.1:1/plugins/%40ahpd/webhook';
+const PREFIX = 'http://127.0.0.1:1/plugins/webhook';
 
 /** The vault this case reads from: one name, one value. */
 const VAULT: Record<string, string> = { 'host:ci-hook': 'right-token' };

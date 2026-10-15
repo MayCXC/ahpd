@@ -29,10 +29,10 @@ A record that fails the check is no endpoint. A call to it answers 404, and the 
 
 ## The call
 
-An endpoint's URL is `/plugins/%40ahpd/webhook/<id>` on the daemon's port. A call is a `POST` with the endpoint's secret as a bearer token:
+An endpoint's URL is `/plugins/webhook/<id>` on the daemon's port. A call is a `POST` with the endpoint's secret as a bearer token:
 
 ```bash
-curl -X POST http://127.0.0.1:37537/plugins/%40ahpd/webhook/ci \
+curl -X POST http://127.0.0.1:37537/plugins/webhook/ci \
   -H "Authorization: Bearer $CI_HOOK_TOKEN" \
   -H 'content-type: application/json' \
   -d '{ "thread": "pr-42", "text": "Review this pull request.", "callback": "https://ci.example.com/hooks/pr-42" }'
@@ -69,7 +69,7 @@ A call to a bot endpoint sends its text as a turn in one chat of the bot's sessi
 The call is one of two shapes:
 
 - A JSON body `{ "thread": "...", "text": "...", "callback": "..." }`.
-- Any other body, which is the text as it came. The `thread` and `callback` come from the query: `/plugins/%40ahpd/webhook/ci?thread=pr-42`.
+- Any other body, which is the text as it came. The `thread` and `callback` come from the query: `/plugins/webhook/ci?thread=pr-42`.
 
 A JSON body that has no string `text` is the second shape, so the whole body is the text.
 
@@ -104,7 +104,7 @@ A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugi
 
 ### The grants
 
-On a host with a users directory, the plugin acts as `plugin:@ahpd/webhook`, with the grants of its entry:
+On a host with a users directory, the plugin acts as `plugin:webhook`, with the grants of its entry:
 
 | Grant | What it is for |
 | --- | --- |

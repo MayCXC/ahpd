@@ -17,7 +17,7 @@ import { loadPi } from './pi.js';
 import type { PiOptions } from './types.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
-export const name = '@ahpd/agent-pi';
+export const name = 'agent-pi';
 
 /**
  * What a listing prints for this package.

@@ -1,6 +1,6 @@
 ---
 title: ahpd's plugins export slugs
-status: todo
+status: implemented
 depends: []
 layer: "plugin packages, docs"
 refs:
@@ -64,3 +64,9 @@ The docs name each plugin by its new id.
 
 ## Resume
 
+- **Done:** 2026-10-14. Each first-party plugin exports its slug, and the webhook is served under `/plugins/webhook/`.
+- **Also changed:** the tests that assert an id, a problem line or a root config key. They are in agent-acp, agent-claude, agent-cofold, agent-pi, bot, computer, push and tunnel-devtunnel. A spec written as `@ahpd/<x>` stays in each test.
+- **Departure:** two cofold tests keep `@ahpd/agent-cofold` as the id, because their module exports no `name`, so the id is the manifest's name.
+- **Departure:** the server `webhook-bot.test.ts` 409 case checks for a line that starts with `webhook: `, because the old check matched the id inside the line.
+- **Left for task 02:** the route section of `docs/PLUGINS.md` at lines 190-204 still names `/plugins/%40acme/webhooks/`.
+- **Gates:** typecheck, boundary and schema pass. The test gate passes with 5078 tests, and agent-cofold, agent-pi and tunnel-devtunnel pass with 444 tests.

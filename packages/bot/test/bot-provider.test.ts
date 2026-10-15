@@ -896,7 +896,7 @@ it('lets an edit pass when the bot\'s template was removed, and its next chat ge
   got(await call(soft, 'subscribe', { channel: session }));
   got(await call(soft, 'createChat', { channel: session, chat: 'ahp-chat:/next' }));
   expect(contexts.get('ahp-chat:/next')).toMatch(/^You are Calm\. /);
-  expect(reported).toEqual(['@ahpd/bot: bot motion: the template short does not exist, so the new chat got the default one']);
+  expect(reported).toEqual(['bot: bot motion: the template short does not exist, so the new chat got the default one']);
 });
 
 it('refuses a make that names a template that does not exist', async () => {

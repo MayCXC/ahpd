@@ -21,7 +21,7 @@ is [packages/server/src/plugins.ts](../packages/server/src/plugins.ts).
 A plugin is a module with named exports, in the same idiom as an `Agent`:
 
 ```ts
-export const name = '@acme/agent-mine';       // optional, the plugin's id
+export const name = 'agent-mine';             // optional, the plugin's id
 export const title = 'Mine';                  // optional, what a listing prints
 export const defaults = { model: 'fast' };    // optional, under the configuration's values
 export const optionsSchema = { /* ... */ };   // optional, a JSON Schema the options are checked against
@@ -38,13 +38,13 @@ process.
 
 ### The id
 
-A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written.
+A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
 
 ```json
 { "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
 ```
 
-When `./plugins/mine` exports `name = '@acme/agent-mine'`, its root config key is `plugins.@acme/agent-mine` and `ahpd plugin config @acme/agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on.
+When `./plugins/mine` exports `name = 'agent-mine'`, its root config key is `plugins.agent-mine` and `ahpd plugin config agent-mine` reads its options. Two specs with one id are reported, naming both, and only the first loads. The daemon imports every module it names to read its id, a module turned off with `enabled: false` too, and calls `apply` only on one that is on.
 
 ### Declaring the options
 
@@ -69,7 +69,7 @@ export function apply(host: PluginHost, options: Record<string, unknown>): void 
 }
 ```
 
-Options that fail the schema are reported and the plugin is skipped, like any other plugin failure: `{ "name": "@acme/agent-mine", "options": { "command": 3 } }` logs `plugin @acme/agent-mine skipped: plugins.@acme/agent-mine.options.command must be text`, and the daemon starts with its other plugins. An option key the schema does not name is logged as `plugin @acme/agent-mine: plugins.@acme/agent-mine.options.extra is not an option @acme/agent-mine knows; passed through` and still reaches `apply`. A plugin that exports no `optionsSchema` gets its options unchecked. The schema is plain data and needs no import: `@ahpd/sdk` types it as `Record<string, unknown>`.
+Options that fail the schema are reported and the plugin is skipped, like any other plugin failure: `{ "name": "@acme/agent-mine", "options": { "command": 3 } }` logs `plugin agent-mine skipped: plugins.agent-mine.options.command must be text` when the module exports `name = 'agent-mine'`, and the daemon starts with its other plugins. An option key the schema does not name is logged as `plugin agent-mine: plugins.agent-mine.options.extra is not an option agent-mine knows; passed through` and still reaches `apply`. A plugin that exports no `optionsSchema` gets its options unchecked. The schema is plain data and needs no import: `@ahpd/sdk` types it as `Record<string, unknown>`.
 
 ### Marking a credential
 

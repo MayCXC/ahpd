@@ -145,7 +145,7 @@ it('loads the package from its source file and serves a turn through the stub mo
 
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
-  expect(loaded[0]?.name).toBe('@ahpd/agent-cofold');
+  expect(loaded[0]?.name).toBe('agent-cofold');
   // The module exports no title, so this is the manifest's `ahpd.title`.
   expect(loaded[0]?.title).toBe('Cofold');
 
@@ -208,9 +208,9 @@ it('contributes one backend, and refuses a second spec of the same name', async 
   // A plugin is loaded once and its options are what make its variants, which
   // this package takes in a later plan. Until then a second spec of one name is
   // refused.
-  expect(problems).toEqual([`plugin @ahpd/agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
+  expect(problems).toEqual([`plugin agent-cofold is named 2 times, by ${SOURCE} and ${SOURCE}; write it once and use its options for variants`]);
   expect(loaded).toHaveLength(1);
-  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/agent-cofold']);
+  expect(loaded.map((one) => one.name)).toEqual(['agent-cofold']);
 
   const host = createHost(options);
   const p = peer();

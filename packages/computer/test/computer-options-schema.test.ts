@@ -18,7 +18,7 @@ import { optionsSchema, profilesOf } from '../src/plugin.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/computer/src/index.ts';
-const NAME = '@ahpd/computer';
+const NAME = 'computer';
 
 /** A profile that writes every field `profilesOf` reads, each with a value it keeps. */
 const EVERY_FIELD: Record<string, unknown> = {

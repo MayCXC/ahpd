@@ -22,7 +22,7 @@ import { cofoldAgent } from './agent.js';
 import type { CofoldOptions } from './agent.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
-export const name = '@ahpd/agent-cofold';
+export const name = 'agent-cofold';
 
 /**
  * What a listing prints for this package.

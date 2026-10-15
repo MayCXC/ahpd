@@ -21,7 +21,7 @@ import { presets as shipped } from './presets.js';
 import type { AcpMachine, AcpOptions } from './types.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
-export const name = '@ahpd/agent-acp';
+export const name = 'agent-acp';
 
 /**
  * What a listing prints for this package.

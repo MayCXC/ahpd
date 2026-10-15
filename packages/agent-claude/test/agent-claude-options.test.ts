@@ -19,7 +19,7 @@ import { resolveNeeds } from '../../sdk/src/machine.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-claude/src/index.ts';
-const NAME = '@ahpd/agent-claude';
+const NAME = 'agent-claude';
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = {};

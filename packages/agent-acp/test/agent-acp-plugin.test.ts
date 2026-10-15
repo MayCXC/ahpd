@@ -141,7 +141,7 @@ it('loads the package from its source file and serves a turn through the server 
 
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
-  expect(loaded[0]?.name).toBe('@ahpd/agent-acp');
+  expect(loaded[0]?.name).toBe('agent-acp');
   expect(loaded[0]?.title).toBe('ACP');
 
   const host = createHost(options);
@@ -205,7 +205,7 @@ it('contributes one backend per preset, from one load', async () => {
   // of one name.
   expect(problems).toEqual([]);
   expect(loaded).toHaveLength(1);
-  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/agent-acp']);
+  expect(loaded.map((one) => one.name)).toEqual(['agent-acp']);
 
   const host = createHost(options);
   const p = peer();
@@ -233,7 +233,7 @@ it('skips a preset with nothing to spawn, and loads the others', async () => {
   // `command` is the one thing this package cannot default, and a preset with
   // nothing to run is worth a line at load rather than a failure on the first
   // turn.
-  expect(loaded.map((one) => one.name)).toEqual(['@ahpd/agent-acp']);
+  expect(loaded.map((one) => one.name)).toEqual(['agent-acp']);
   expect(problems).toHaveLength(1);
   expect(problems[0]).toContain('options.presets.nope');
 

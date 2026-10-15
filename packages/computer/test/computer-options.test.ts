@@ -18,7 +18,7 @@ import { optionsSchema } from '../src/plugin.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/computer/src/index.ts';
-const NAME = '@ahpd/computer';
+const NAME = 'computer';
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = {};

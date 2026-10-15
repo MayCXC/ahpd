@@ -478,7 +478,7 @@ describe('one Claude entry', () => {
   it('is keyed by its name, with its own options under it', async () => {
     const root = await withPlugins([{ name: CLAUDE, options: { presets: { work: { thinking: 'disabled' } } } }], undefined, repo);
     const values = await root.values() as Record<string, { options: Record<string, unknown> }>;
-    expect(Object.keys(values)).toEqual(['plugins.@ahpd/agent-claude']);
+    expect(Object.keys(values)).toEqual(['plugins.agent-claude']);
     expect(values[`plugins.${pluginIdOf(CLAUDE)}`]?.options).toEqual({ presets: { work: { thinking: 'disabled' } } });
   });
 

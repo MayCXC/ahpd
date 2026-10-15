@@ -478,11 +478,11 @@ The plugin is named by its [id](PLUGINS.md#the-id), or as `plugins` names it, an
 One module is named once. Two entries with one id are reported and the second is skipped, since a plugin's options are what make its variants and root config keys one entry under `plugins.<id>`.
 
 ```bash
-ahpd plugin config @ahpd/agent-claude                       # every option it sets
-ahpd plugin config @ahpd/agent-claude workerStop session    # set one
-ahpd plugin config unset @ahpd/agent-claude workerStop      # take one away
-ahpd plugin disable @ahpd/agent-cofold
-ahpd plugin enable @ahpd/agent-cofold
+ahpd plugin config agent-claude                       # every option it sets
+ahpd plugin config agent-claude workerStop session    # set one
+ahpd plugin config unset agent-claude workerStop      # take one away
+ahpd plugin disable agent-cofold
+ahpd plugin enable agent-cofold
 ```
 
 A value is JSON when it parses and text otherwise, so `3` is a number and `session` is a string.
@@ -499,8 +499,8 @@ The flag is named up to its `=`, as a refusal about one is, and never the value 
 `--plugin-option` sets one option for one run, over the file's:
 
 ```bash
-ahpd --plugin-option @ahpd/agent-claude.workerStop=session
-ahpd --plugin-option @ahpd/agent-claude.presets.x.model=haiku
+ahpd --plugin-option agent-claude.workerStop=session
+ahpd --plugin-option agent-claude.presets.x.model=haiku
 ```
 
 It is repeated for each option, and its value is read the same way as `plugin config`'s.
@@ -510,8 +510,8 @@ It must name a plugin this run loads, the file's or a typed `--plugin`, and not 
 A plain value is written down twice over: it lands in the shell's history, and a flag's lands again in the daemon record's `argv`, which `ahpd restart` starts from. A credential is given as a `$secret` reference instead, and the value stays in the [vault](#the-vault):
 
 ```bash
-ahpd --plugin-option '@ahpd/orders.apiKey={"$secret":"host:stripe"}'
-ahpd plugin config @ahpd/orders apiKey '{"$secret":"host:stripe"}'
+ahpd --plugin-option 'orders.apiKey={"$secret":"host:stripe"}'
+ahpd plugin config orders apiKey '{"$secret":"host:stripe"}'
 ```
 
 The first leaves only the reference in the record a restart reads, and the second only the reference in `config.json`; neither holds the credential itself.

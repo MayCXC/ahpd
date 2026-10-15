@@ -14,7 +14,7 @@ import type { Endpoint } from '../src/record.js';
  * answers and posts.
  */
 
-const URL_OF = 'http://127.0.0.1:1/plugins/%40ahpd/webhook/ci';
+const URL_OF = 'http://127.0.0.1:1/plugins/webhook/ci';
 
 /** One turn the target sent, in the order it sent them. */
 interface Sent { chat: string; turn: string; text: string }

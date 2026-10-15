@@ -16,7 +16,7 @@ import { optionsSchema } from '../src/plugin.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const SOURCE = './packages/agent-acp/src/index.ts';
-const NAME = '@ahpd/agent-acp';
+const NAME = 'agent-acp';
 
 /** Options that pass, which each case spoils one key of. */
 const VALID: Record<string, unknown> = { presets: { node: { command: 'node' } } };

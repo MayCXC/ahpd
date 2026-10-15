@@ -39,7 +39,7 @@ import type { GitGuard, SessionTree } from './gitdir.js';
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
-export const name = '@ahpd/computer';
+export const name = 'computer';
 
 /** What a listing prints. */
 export const title = 'Computer';

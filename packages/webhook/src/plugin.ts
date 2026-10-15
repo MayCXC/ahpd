@@ -9,7 +9,7 @@ import type { BotSeams } from './bot.js';
 /**
  * The package as a plugin.
  *
- * One route, `/plugins/%40ahpd/webhook/<endpoint>`, and the endpoints it
+ * One route, `/plugins/webhook/<endpoint>`, and the endpoints it
  * serves in the `webhooks` collection. Each endpoint names its own vault
  * secret, and a call passes only with that secret as its bearer token.
  *

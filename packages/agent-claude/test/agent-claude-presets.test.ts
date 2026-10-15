@@ -50,7 +50,7 @@ const sdk = vi.hoisted(() => ({ options: [] as Record<string, unknown>[] }));
 const { createSession } = await import('../src/session.js');
 
 const REPO = join(import.meta.dirname, '../../..');
-const NAME = '@ahpd/agent-claude';
+const NAME = 'agent-claude';
 const SOURCE = './packages/agent-claude/src/index.ts';
 
 const settle = async (times = 8): Promise<void> => {

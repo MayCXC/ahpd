@@ -31,7 +31,7 @@ callbackPrefix: https://ci.example.com/hooks/
 ---
 ```
 
-Kept as `<configDir>/webhooks/ci.md`, this endpoint answers `POST /plugins/%40ahpd/webhook/ci` with `Authorization: Bearer <the value of host:ci-hook>`.
+Kept as `<configDir>/webhooks/ci.md`, this endpoint answers `POST /plugins/webhook/ci` with `Authorization: Bearer <the value of host:ci-hook>`.
 
 [WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/WEBHOOKS.md) describes the record, the call and the answers.
 

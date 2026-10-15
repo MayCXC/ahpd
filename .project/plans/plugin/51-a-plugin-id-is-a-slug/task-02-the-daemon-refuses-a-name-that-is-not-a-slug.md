@@ -24,6 +24,7 @@ A provisional id is not checked.
 - `UPDATE: packages/server/test/plugin-route.test.ts:32-217` - the prefix is `/plugins/plugin-route`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:863` - `Plugin.name` says that the id is a slug.
 - `UPDATE: docs/PLUGINS.md:39-47` - the id section says that a `name` that is not a slug is refused.
+- `UPDATE: docs/PLUGINS.md:190-204` - the route example uses a slug id, such as `/plugins/webhooks/`.
 
 ## Steps
 
