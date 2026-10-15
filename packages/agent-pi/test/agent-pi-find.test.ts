@@ -146,3 +146,47 @@ it('never lists a project folder to answer one id', async () => {
   expect(answered?.id).toBe(disk.id);
   expect(listing).not.toHaveBeenCalled();
 });
+
+it('finds and reads a session in the folder the host recorded, outside the directories it serves', async () => {
+  const sessionDir = join(root, 'pi');
+  const disk = await sessionOnDisk(sessionDir);
+  const served = join(root, 'served');
+  mkdirSync(served);
+  const agent = piAgent({ sessionDir }, [served]);
+
+  expect(await agent.find?.(disk.id)).toBeUndefined();
+  expect(await agent.transcript?.(disk.id)).toBeUndefined();
+  expect((await agent.find?.(disk.id, { workingDirectory: root }))?.id).toBe(disk.id);
+  expect(await agent.transcript?.(disk.id, { workingDirectory: root }))
+    .toEqual(await piAgent({ sessionDir }, [root]).transcript?.(disk.id));
+  expect(await agent.transcript?.(disk.id, { workingDirectory: root })).not.toHaveLength(0);
+});
+
+it('asks a recorded folder that is one of the served directories once', async () => {
+  const sessionDir = join(root, 'pi');
+  await sessionOnDisk(sessionDir);
+  const { SessionManager } = await loadPi();
+  const lookup = vi.spyOn(SessionManager, 'findById');
+  try {
+    expect(await piAgent({ sessionDir }, [root]).find?.('no-such-session', { workingDirectory: `${root}/` })).toBeUndefined();
+    expect(lookup).toHaveBeenCalledTimes(1);
+  }
+  finally { lookup.mockRestore(); }
+});
+
+it('falls back to the served directories for a recorded folder that is gone, and never asks pi about it', async () => {
+  const sessionDir = join(root, 'pi');
+  const disk = await sessionOnDisk(sessionDir);
+  const gone = join(root, 'gone');
+  const agent = piAgent({ sessionDir }, [root]);
+  const { SessionManager } = await loadPi();
+  const lookup = vi.spyOn(SessionManager, 'findById');
+  try {
+    expect((await agent.find?.(disk.id, { workingDirectory: gone }))?.id).toBe(disk.id);
+    expect(await agent.transcript?.(disk.id, { workingDirectory: gone })).toEqual(await agent.transcript?.(disk.id));
+    expect(lookup.mock.calls.map(([directory]) => directory)).not.toContain(gone);
+  }
+  finally { lookup.mockRestore(); }
+  expect(await agent.transcript?.(disk.id)).not.toHaveLength(0);
+  expect(existsSync(gone)).toBe(false);
+});

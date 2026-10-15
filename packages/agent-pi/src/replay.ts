@@ -12,7 +12,8 @@
 
 import type { AgentSessionEvent, SessionEntry } from '@earendil-works/pi-coding-agent';
 import type { AssistantMessage } from '@earendil-works/pi-ai';
-import type { Bag } from '@ahpd/sdk';
+import type { Bag, SessionAt } from '@ahpd/sdk';
+import { lookupDirectories } from './catalog.js';
 import { mapEvent, readyRow, usageOf } from './mapping.js';
 import { loadPi } from './pi.js';
 import type { PiOptions, PiTurn, WatchedTurn } from './types.js';
@@ -196,18 +197,19 @@ export function replayEntries(entries: readonly SessionEntry[]): Replayed {
 /**
  * One session of pi's, rebuilt from its file, or nothing.
  *
- * Looked for in each directory in turn, since pi keeps a session under the
- * directory it ran in. Nothing for an id no directory has, and nothing for a
- * file pi cannot open, which the host reads as a failed read rather than as an
- * empty session.
+ * Looked for in the folder the host recorded for it, then in each directory in
+ * turn, since pi keeps a session under the directory it ran in. Nothing for an
+ * id no directory has, and nothing for a file pi cannot open, which the host
+ * reads as a failed read rather than as an empty session.
  */
 export async function replayed(
   options: PiOptions,
   id: string,
   directories: readonly string[],
+  at?: SessionAt,
 ): Promise<Replayed | undefined> {
   const { SessionManager } = await loadPi();
-  for (const directory of directories) {
+  for (const directory of lookupDirectories(directories, at)) {
     let file: string | undefined;
     try { file = SessionManager.findById(directory, id, options.sessionDir); }
     catch { continue; }

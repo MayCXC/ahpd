@@ -12,11 +12,11 @@
  * that produced it was closed.
  */
 
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { isAbsolute, join, relative, resolve } from 'node:path';
 import type { FileEntry } from '@earendil-works/pi-coding-agent';
 import { titleFrom, uriOf } from '@ahpd/sdk';
-import type { Bag, Listed } from '@ahpd/sdk';
+import type { Bag, Listed, SessionAt } from '@ahpd/sdk';
 import { loadedPi, loadPi } from './pi.js';
 import { UNTITLED } from './types.js';
 import type { PiOptions, WatchedSession } from './types.js';
@@ -277,6 +277,29 @@ function rowOfFile(entries: readonly FileEntry[], directory: string, id: string)
 }
 
 /**
+ * The directories one session is looked for in, in order.
+ *
+ * The folder the host recorded for the session comes first, then each
+ * configured path. The recorded folder is left out when it is already one of
+ * the paths, and when it is not a directory on this machine: pi's lookup makes
+ * its default session folder for the directory it is given, and a folder that
+ * is gone is no reason to make one.
+ *
+ * Only the session by its id is looked for in the recorded folder, as in each
+ * path, so a folder a client chose names no other file to read.
+ */
+export function lookupDirectories(directories: readonly string[], at?: SessionAt): readonly string[] {
+  const given = at?.workingDirectory;
+  if (given === undefined || given === '') return directories;
+  const folder = resolve(given);
+  if (directories.some((one) => resolve(one) === folder)) return directories;
+  let exists = false;
+  try { exists = statSync(folder).isDirectory(); }
+  catch { exists = false; }
+  return exists ? [folder, ...directories] : directories;
+}
+
+/**
  * One session's own row, read without listing the project folder it is in.
  *
  * What a client opening a row the host does not hold costs without this: a link
@@ -296,11 +319,12 @@ export async function findSession(
   provider: string,
   id: string,
   directories: readonly string[],
+  at?: SessionAt,
 ): Promise<Listed | undefined> {
   const watching = watchedSession(provider, id);
   if (watching !== undefined) return watchedRow(watching);
   const { SessionManager, parseSessionEntries } = await loadPi();
-  for (const directory of directories) {
+  for (const directory of lookupDirectories(directories, at)) {
     let file: string | undefined;
     // A directory pi has never been run in has no session store, which is the
     // same nothing as one that does not have this session. With no

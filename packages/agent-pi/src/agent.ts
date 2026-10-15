@@ -138,17 +138,19 @@ export function piAgent(
      * One session's row, read from its own file rather than by listing the
      * folder it is in: what a client opening a row the host does not hold
      * costs, which `list` pays by reading every transcript in the directory.
+     * The session's recorded folder is asked before the configured paths.
      */
-    find: (id): Promise<Listed | undefined> => findSession(options, provider, id, paths),
+    find: (id, at): Promise<Listed | undefined> => findSession(options, provider, id, paths, at),
 
     /*
      * What this process watched of the session, or else the session rebuilt
-     * from pi's own file; nothing for an id neither has.
+     * from pi's own file, looked for in the session's recorded folder before
+     * the configured paths; nothing for an id neither has.
      */
-    transcript: async (id) => {
+    transcript: async (id, at) => {
       const found = watchedSession(provider, id);
       if (found !== undefined) return turnsOf(found);
-      const rebuilt = await replayed(options, id, paths);
+      const rebuilt = await replayed(options, id, paths, at);
       return rebuilt === undefined ? undefined : turnsOf(rebuilt);
     },
 
