@@ -742,9 +742,7 @@ when that is a specific one (an IPv6 one in brackets), and the host of
 `resource` when a deployment names it, with the port it names if it names one,
 and the host of each entry in `origins` - and when its `Origin`, if a browser
 sends one, is one of them too. A deployment that a browser reaches by another
-address or name puts that origin in `origins`
-the extra origins the daemon answers to in `origins`, apart from
-`resource`. A body
+address or name puts that origin in `origins`. A body
 is served only when its `content-type` is `application/json`; anything else is
 answered 415. That keeps a page on another site, or one that rebinds its own
 name to loopback, from driving the API.
