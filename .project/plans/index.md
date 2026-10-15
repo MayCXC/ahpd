@@ -193,7 +193,7 @@ Reference: [00-host.md](host/00-host.md)
 | [89 - Chat and session read state stay in step](host/89-chat-and-session-read-state-stay-in-step/plan.md) | high | planned 2026-10-14 | - | - |
 | [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | planned 2026-10-14 | - | 91 |
 | [91 - Merged sessions archive and delete themselves](host/91-merged-sessions-archive-and-delete-themselves/plan.md) | medium | planned 2026-10-14 | 90 | - |
-| [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | active 2026-10-15; task 01 done | 57 | - |
+| [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
 
 Next free number in `host`: `93`.
 
@@ -314,7 +314,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [45 p2 - The bot keeps its records in the record store](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | medium | built 2026-10-11 ([implemented.md](plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/implemented.md)); released in 0.11.0; awaiting review | 45 p1 | - |
 | [46 - An admin makes a bot for any owner, and the manifest names the host owner](plugin/46-an-admin-makes-a-bot-for-any-owner/plan.md) | high | built 2026-10-11 ([implemented.md](plugin/46-an-admin-makes-a-bot-for-any-owner/implemented.md)) | plugin 37 | ahpapp bot owner picker |
 | [47 - A bot runs in a machine](plugin/47-a-bot-runs-in-a-machine/plan.md) | high | draft 2026-10-13; tasks not written | plugin 37 | container/05 p8 question |
-| [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | active 2026-10-15; tasks 01-04 implemented, task 05 done; closes after host 92 | plugin 21, 37, 45 p1 | issue and chat initiators |
+| [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | built 2026-10-15 | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
 | [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-07 implemented and reviewed | daemon 19 | ahpw `/plugins/web/` |

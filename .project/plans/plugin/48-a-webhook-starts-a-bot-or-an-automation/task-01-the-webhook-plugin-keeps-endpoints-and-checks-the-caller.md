@@ -1,6 +1,6 @@
 ---
 title: The webhook plugin keeps endpoints and checks the caller
-status: implemented
+status: done
 depends: []
 layer: "packages/webhook"
 refs:

@@ -1,7 +1,7 @@
 ---
 title: A session keeps its working folder, and the backends find it there after a restart
 domain: host
-status: planned
+status: built
 priority: high
 created: 2026-10-15
 revalidated: 2026-10-15
@@ -88,8 +88,8 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-15, from the plugin/48 review. Task 01 is done, 2026-10-15.
-- **Next action:** [task-02-claude-looks-in-the-folder-first.md](task-02-claude-looks-in-the-folder-first.md) and [task-03-pi-looks-in-the-folder-first.md](task-03-pi-looks-in-the-folder-first.md).
+- **Done so far:** the plan, 2026-10-15, from the plugin/48 review. Tasks 01, 02 and 03 are done, and the plan is built, 2026-10-15.
+- **Next action:** none. The cases that wait are in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:**
   - plugin/48 closes after this plan, because a webhook thread's chat lives in a bot session under `~/.bots`.
@@ -98,8 +98,8 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 
 ## Final verification checklist
 
-- [ ] A bot session under `~/.bots` opens after a restart on a test daemon.
-- [ ] A session in a subfolder of a configured path opens after a restart.
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
-- [ ] Vitest on `packages/sdk`, `packages/server`, `packages/agent-claude`, `packages/agent-acp` and `packages/agent-pi` passes.
-- [ ] `plans/index.md` updated.
+- [x] A bot session under `~/.bots` opens after a restart on a test daemon.
+- [x] A session in a subfolder of a configured path opens after a restart.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
+- [x] Vitest on `packages/sdk`, `packages/server`, `packages/agent-claude`, `packages/agent-acp` and `packages/agent-pi` passes.
+- [x] `plans/index.md` updated.

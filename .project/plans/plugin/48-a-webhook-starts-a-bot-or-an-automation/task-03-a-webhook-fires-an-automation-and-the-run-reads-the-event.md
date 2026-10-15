@@ -1,6 +1,6 @@
 ---
 title: A webhook fires an automation, and the run reads the event
-status: implemented
+status: done
 depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
 layer: "packages/sdk, packages/webhook"
 refs:

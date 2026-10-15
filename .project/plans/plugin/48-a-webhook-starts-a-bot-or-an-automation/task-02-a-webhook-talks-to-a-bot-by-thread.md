@@ -1,6 +1,6 @@
 ---
 title: A webhook talks to a bot by thread
-status: implemented
+status: done
 depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
 layer: "packages/webhook"
 refs:

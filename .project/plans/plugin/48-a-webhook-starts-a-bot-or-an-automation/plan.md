@@ -1,7 +1,7 @@
 ---
 title: A webhook talks to a bot or fires an automation
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-13
 revalidated: 2026-10-14
@@ -85,10 +85,10 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | implemented | - |
-| [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | implemented | 01 |
-| [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | implemented | 01 |
-| [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | implemented | 01 |
+| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | done | - |
+| [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | done | 01 |
+| [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | done | 01 |
+| [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | done | 01 |
 | [05 - A callback follows no redirect, and a refused turn is answered](task-05-a-callback-follows-no-redirect-and-a-refused-turn-is-answered.md) | done | 02 |
 
 ## Risks and tradeoffs
@@ -99,8 +99,8 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13, and its four tasks with the answers, 2026-10-14. All four tasks are implemented, 2026-10-14. The review of 2026-10-15 added task 05, which is done, 2026-10-15.
-- **Next action:** close the plan after [host/92](../../host/92-a-session-keeps-its-working-folder/plan.md) lands, because a thread's chat is lost after a restart until then.
+- **Done so far:** the plan, 2026-10-13, and its four tasks with the answers, 2026-10-14. All four tasks are implemented, 2026-10-14. The review of 2026-10-15 added task 05, which is done, 2026-10-15. The plan is built, 2026-10-15, after host/92.
+- **Next action:** none. The items that wait are in [deferred.md](deferred.md).
 - **Open questions:** none. Softov answered the three planning questions and the build questions of tasks 02 and 03 on 2026-10-14.
 - **Watch out for:**
   - The plugin acts as `plugin:@ahpd/webhook`, and its route is `/plugins/%40ahpd/webhook/<endpoint>`, because a plugin's id is its package name. It needs the grants that the operator gives it to read a bot, create a chat and send a turn.
@@ -110,6 +110,6 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 ## Final verification checklist
 
-- [ ] `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes.
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm exec vitest run packages/webhook packages/sdk packages/server` passes.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
+- [x] `plans/index.md` updated.
