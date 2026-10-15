@@ -93,19 +93,19 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | implemented | 01 |
 | [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | implemented | 01 |
 | [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | implemented | 02 |
+| [06 - A hand-written old owner reads as the new one](task-06-a-hand-written-old-owner-reads-as-the-new-one.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
 - A URL that an operator gave a caller, such as `/plugins/%40ahpd/webhook/ci` or `/plugins/ahpd-web/`, stops answering - the 0.12.0 release notes name the new paths.
-- `ownerOf` does not read `plugin:@ahpd/<x>` in a grant, a policy or a usage rule that a person wrote - the release notes say to write `plugin:<x>`.
 - A third-party plugin that exports a scoped name, such as `@acme/x`, stops loading - the problem line names the slug rule.
 - A fallback id that is not a slug, such as the file name `My_Plugin`, stops its plugin from loading. The problem line names the slug rule.
 - No client hardcodes a plugin id. A search of `/github/ahpapp/src` and `/github/ahpc/src` looked for `@ahpd/` ids, `plugins.@ahpd`, `%40ahpd`, `ahpd-web` and `plugin:@ahpd`. It finds only `npm i -g @ahpd/server` in `ahpapp/src/components/HostForm.tsx:56`, which is a package name.
 
 ## Resume state
 
-- **Done so far:** the plan and tasks 01 to 05, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
-- **Next action:** write and build task 06, from the answer on hand-written owners.
+- **Done so far:** the plan and tasks 01 to 06, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
+- **Next action:** review tasks 05 and 06.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 
