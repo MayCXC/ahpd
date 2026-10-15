@@ -17,6 +17,7 @@ Every kind after those waits, and the whole list is in [deferred.md](01-plugins-
 - `code://packages/computer` - the first package to serve a host-owned URI scheme, so the resource-provider kind has a consumer that is not a test fixture.
 
 A plugin package from this repository is `@ahpd/<name>`, and an agent backend is `@ahpd/agent-<name>` ([decision](../../../docs/PLUGINS.md)).
+Its id is the `<name>` without the scope, a slug, as [plan 51](51-a-plugin-id-is-a-slug/plan.md) says: `@ahpd/bot` is the plugin `bot`.
 
 ## Contracts
 
