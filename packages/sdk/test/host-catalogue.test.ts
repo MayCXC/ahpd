@@ -409,6 +409,183 @@ describe('the flags a client sets', () => {
   });
 });
 
+describe('a session and its chats, read together', () => {
+  type Client = Awaited<ReturnType<typeof running>>['client'];
+  const second = 'ahp-chat:/second';
+
+  /** Send one action on one channel, as a client does. */
+  const send = async (client: Client, channel: string, action: Record<string, unknown>) => {
+    client.handle({ method: 'dispatchAction', params: { channel, action } });
+    await settle();
+  };
+
+  /** Whether the state a client opening `channel` now gets says it is read. */
+  const isRead = async (client: Client, channel: string): Promise<boolean> => {
+    const opened = await client.handle({ method: 'subscribe', params: { channel } }) as {
+      snapshot: { state: { status: number } };
+    };
+    return (opened.snapshot.state.status & Status.IsRead) !== 0;
+  };
+
+  /** A live session with a second chat, both subscribed. */
+  const twoChats = async () => {
+    const started = await running();
+    await started.client.handle({ method: 'createChat', params: { channel: started.uri, chat: second } });
+    await started.client.handle({ method: 'subscribe', params: { channel: second } });
+    return started;
+  };
+
+  const chatRead = (on: boolean) => ({ type: 'chat/isReadChanged', isRead: on });
+  const sessionRead = (on: boolean) => ({ type: 'session/isReadChanged', isRead: on });
+
+  it('starts a new session and a new chat read', async () => {
+    const { client, peer: p, uri } = await running();
+    // Nothing has been said in either yet, so there is nothing in them to read.
+    const added = p.notes.find((n) => n.method === 'root/sessionAdded')?.params as { summary: { status: number } };
+    expect(added.summary.status & Status.IsRead).toBe(Status.IsRead);
+    await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
+    const chat = actions(p, uri).find((e) => e.action.type === 'session/chatAdded')?.action.summary as { status: number };
+    expect(chat.status & Status.IsRead).toBe(Status.IsRead);
+  });
+
+  it('makes a read session unread when one of its chats turns unread', async () => {
+    const { client, peer: p, uri, chatUri } = await twoChats();
+    p.notes.length = 0;
+    await send(client, second, chatRead(false));
+    expect(await isRead(client, uri)).toBe(false);
+    expect(actions(p, uri).filter((e) => e.action.type === 'session/isReadChanged').map((e) => e.action.isRead))
+      .toEqual([false]);
+    // The other chat has not changed: what is new is in the chat that said so.
+    expect(await isRead(client, chatUri)).toBe(true);
+  });
+
+  it('makes the session read when its last unread chat is read, and not before', async () => {
+    const { client, uri, chatUri } = await twoChats();
+    await send(client, second, chatRead(false));
+    await send(client, chatUri, chatRead(false));
+
+    await send(client, second, chatRead(true));
+    // One chat is still unread, so the session is too.
+    expect(await isRead(client, uri)).toBe(false);
+    await send(client, chatUri, chatRead(true));
+    expect(await isRead(client, uri)).toBe(true);
+  });
+
+  it('marks the one chat unread when a session with one chat is marked unread', async () => {
+    const { client, peer: p, uri, chatUri } = await running();
+    p.notes.length = 0;
+    await send(client, uri, sessionRead(false));
+    // With one chat, that chat is the only place the unread conversation can be.
+    expect(await isRead(client, chatUri)).toBe(false);
+    expect(actions(p, chatUri).some((e) => e.action.type === 'chat/isReadChanged' && e.action.isRead === false))
+      .toBe(true);
+  });
+
+  it('leaves each chat as it is when a session with two chats is marked unread', async () => {
+    const { client, uri, chatUri } = await twoChats();
+    await send(client, uri, sessionRead(false));
+    // Which of two chats is new is not the session's to say.
+    expect(await isRead(client, chatUri)).toBe(true);
+    expect(await isRead(client, second)).toBe(true);
+  });
+
+  it('marks every chat read when the session is marked read, and says each once', async () => {
+    const { client, peer: p, uri, chatUri } = await twoChats();
+    await send(client, second, chatRead(false));
+    await send(client, chatUri, chatRead(false));
+    p.notes.length = 0;
+
+    await send(client, uri, sessionRead(true));
+    expect(await isRead(client, chatUri)).toBe(true);
+    expect(await isRead(client, second)).toBe(true);
+    const updated = actions(p, uri).filter((e) => e.action.type === 'session/chatUpdated').map((e) => e.action.chat);
+    expect(updated.sort()).toEqual([chatUri, second].sort());
+
+    // Said again, nothing moved, so nothing is sent.
+    const said = p.notes.length;
+    await send(client, uri, sessionRead(true));
+    expect(p.notes.length).toBe(said);
+  });
+
+  it('marks a chat and its session unread when a turn starts, as a client reduces it', async () => {
+    const { client, peer: p, uri, chatUri } = await running();
+    await send(client, chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+
+    expect(await isRead(client, chatUri)).toBe(false);
+    expect(await isRead(client, uri)).toBe(false);
+    // After the turn's start, which is where a client's reducer clears it.
+    const types = actions(p, chatUri).map((e) => e.action.type);
+    expect(types.indexOf('chat/turnStarted')).toBeLessThan(types.indexOf('chat/isReadChanged'));
+  });
+
+  it('keeps a chat marked read while its turn runs, and marks it unread when the turn completes', async () => {
+    const { client, peer: p, uri, chatUri } = await running();
+    await send(client, chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+    await send(client, chatUri, chatRead(true));
+    expect(await isRead(client, chatUri)).toBe(true);
+    expect(await isRead(client, uri)).toBe(true);
+
+    await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 4 });
+    expect(await isRead(client, chatUri)).toBe(false);
+    expect(await isRead(client, uri)).toBe(false);
+    // After the ending, so a client applies the turn's end before the bit.
+    const types = actions(p, chatUri).map((e) => e.action.type);
+    expect(types.indexOf('chat/turnComplete')).toBeLessThan(types.lastIndexOf('chat/isReadChanged'));
+  });
+
+  it('marks a chat and its session unread when a turn fails', async () => {
+    const { client, uri, chatUri } = await running();
+    await send(client, chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+    await emit({ type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['no'], duration_ms: 4 });
+
+    expect(await isRead(client, chatUri)).toBe(false);
+    expect(await isRead(client, uri)).toBe(false);
+  });
+
+  it('marks a chat and its session unread when a turn is cancelled', async () => {
+    const { client, peer: p, uri, chatUri } = await running();
+    await send(client, chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+    await send(client, chatUri, { type: 'chat/turnCancelled', turnId: 't1' });
+
+    expect(actions(p, chatUri).some((e) => e.action.type === 'chat/turnCancelled')).toBe(true);
+    expect(await isRead(client, chatUri)).toBe(false);
+    expect(await isRead(client, uri)).toBe(false);
+  });
+
+  it('marks an unread chat read when it is archived, after the archive', async () => {
+    const { client, peer: p, uri, chatUri } = await twoChats();
+    await send(client, chatUri, chatRead(false));
+    await send(client, second, chatRead(false));
+    p.notes.length = 0;
+
+    await send(client, second, { type: 'chat/isArchivedChanged', isArchived: true });
+    expect(actions(p, second).map((e) => e.action.type)).toEqual(['chat/isArchivedChanged', 'chat/isReadChanged']);
+    expect(await isRead(client, second)).toBe(true);
+    // The default chat is still unread, so the session is too.
+    expect(await isRead(client, uri)).toBe(false);
+  });
+
+  it('makes the session read when the last unread chat is archived', async () => {
+    const { client, uri } = await twoChats();
+    await send(client, second, chatRead(false));
+    expect(await isRead(client, uri)).toBe(false);
+
+    await send(client, second, { type: 'chat/isArchivedChanged', isArchived: true });
+    expect(await isRead(client, uri)).toBe(true);
+  });
+
+  it('changes no read bit when a chat is taken out of the archive', async () => {
+    const { client, peer: p } = await twoChats();
+    await send(client, second, { type: 'chat/isArchivedChanged', isArchived: true });
+    await send(client, second, chatRead(false));
+    p.notes.length = 0;
+
+    await send(client, second, { type: 'chat/isArchivedChanged', isArchived: false });
+    expect(actions(p, second).map((e) => e.action.type)).toEqual(['chat/isArchivedChanged']);
+    expect(await isRead(client, second)).toBe(false);
+  });
+});
+
 describe('a session read from its transcript', () => {
   it('rebuilds a tool call in a shape a client can draw', async () => {
     sdk.sessions.push({ sessionId: 'old', summary: 'Older', lastModified: 1, cwd: '/home/softov' });
@@ -615,7 +792,7 @@ describe("a row lists the session's chats", () => {
     // sessions with no subscription to either reads.
     expect(chatsOf(p, 'claude:/live').find((one) => one.resource === second)?.status).toBe(status);
     expect(chatsOf(p, 'claude:/live').find((one) => one.resource === rowOf(p, 'claude:/live')?.defaultChat)?.status)
-      .toBe(Status.Idle);
+      .toBe(Status.Idle | Status.IsRead);
   });
 
   it('says the row again when a chat opens and when one closes', async () => {

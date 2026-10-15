@@ -1,6 +1,6 @@
 ---
 title: An archived chat is read
-status: todo
+status: implemented
 depends: [task-01-session-and-chat-read-bits-move-together.md]
 layer: "sdk"
 refs:
@@ -32,4 +32,21 @@ A chat that is not the default chat is marked read when it is archived.
 
 ## Resume
 
-Not started.
+### Built
+
+- The chat handler marks a chat read through `chatFlag` when its archive bit moves to on.
+- `sessionFollows` then makes the session read when no counted chat stays unread.
+- The default chat case is as it was, because it archives the session.
+- Unarchive changes no read bit.
+
+### Validation
+
+- `host-catalogue.test.ts` tests that archiving an unread peer sends `chat/isArchivedChanged` and then `chat/isReadChanged`.
+- It tests that archiving the last unread chat makes the session read.
+- It tests that unarchiving sends only `chat/isArchivedChanged` and leaves the chat unread.
+- `host-snapshots.test.ts` archive tests now expect `IsRead` in the chat and session status.
+- The gates pass with the counts in task 01.
+
+### Seen and not done
+
+- Nothing.

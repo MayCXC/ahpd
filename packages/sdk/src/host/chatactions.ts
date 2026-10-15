@@ -234,6 +234,9 @@ export function chatAction(
     // catalogue and wake every client for a message that said nothing.
     if (!chatFlag(ctx, flagSession, channel, bitOf, on, action)) return;
     if (bitOf === Status.IsRead) sessionFollows(ctx, flagSession, channel);
+    // A chat filed away is read: nobody is going to come back to it for what
+    // is new in it. Taking one back out leaves its read bit as it is.
+    else if (on && chatFlag(ctx, flagSession, channel, Status.IsRead, true)) sessionFollows(ctx, flagSession, channel);
     return;
   }
   /*
