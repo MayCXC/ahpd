@@ -239,8 +239,9 @@ Reference: [00-documentation.md](documentation/00-documentation.md)
 | [02 - Captures are taken and read with ahpc, and ahpd keeps no proxy or capture check](documentation/02-captures-are-taken-and-read-with-ahpc/plan.md) | medium | dropped 2026-10-11 ([deferred.md](documentation/02-captures-are-taken-and-read-with-ahpc/deferred.md)) | - | - |
 | [03 - Each area of the host has one doc](documentation/03-each-area-of-the-host-has-one-doc/plan.md) | medium | built 2026-10-08 ([implemented.md](documentation/03-each-area-of-the-host-has-one-doc/implemented.md)); reviewed and merged 2026-10-08 (210143a) | - | - |
 | [04 - Each package's README says how to use it, how to configure it and what each option does](documentation/04-each-package-readme-says-how-to-use-it/plan.md) | medium | built 2026-10-09 ([implemented.md](documentation/04-each-package-readme-says-how-to-use-it/implemented.md)); 7356624 | - | - |
+| [05 - The docs are a site on GitHub Pages, in server, sdk and plugins folders](documentation/05-the-docs-are-a-site-on-github-pages/plan.md) | medium | planned | - | the same site in ahpc, which copies its shape |
 
-Next free number in `documentation`: `05`.
+Next free number in `documentation`: `06`.
 
 ## plugin
 
