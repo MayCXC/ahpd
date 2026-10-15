@@ -90,9 +90,15 @@ const unimportedId = (spec: PluginSpec, where: { configDir: string; cwd: string 
   }
 };
 
+/** A fallback id with its scope joined by a dash: `@scope/name` is `scope-name`. */
+const unscoped = (id: string): string => {
+  const scoped = /^@([^/]+)\/([^/]+)$/.exec(id);
+  return scoped === null ? id : `${scoped[1]}-${scoped[2]}`;
+};
+
 /** What a located plugin is called until its module says. */
 const provisionalOf = (spec: PluginSpec, found: Located): string =>
-  found.manifest?.name ?? (found.manifest === undefined && found.target !== undefined ? fileNameOf(found.target) : nameOf(spec));
+  unscoped(found.manifest?.name ?? (found.manifest === undefined && found.target !== undefined ? fileNameOf(found.target) : nameOf(spec)));
 
 /** Whether the spec carries a scheme of its own, which this daemon does not second-guess. */
 export const hasScheme = (spec: string): boolean => /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(spec);
@@ -780,10 +786,9 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   if (wrong !== undefined) return { problems: [...problems, wrong] };
 
   const held = module as Record<string, unknown>;
-  // A name the module exports is its id, and an id is a slug; a provisional id
-  // is not held to that, because the contract lets a module export no name.
-  if (typeof held.name === 'string' && held.name.trim() !== '' && !isRecordSlug(held.name)) {
-    return { problems: [...problems, `plugin ${held.name} skipped: its name is not a slug: ${RECORD_SLUG}`] };
+  // An id is a slug, whether the module exports it or it is the fallback.
+  if (!isRecordSlug(ready.id)) {
+    return { problems: [...problems, `plugin ${ready.id} skipped: its name is not a slug: ${RECORD_SLUG}`] };
   }
   const apply = held.apply as Plugin['apply'];
   // The module wins for shape and its `name` wins for the listing; the

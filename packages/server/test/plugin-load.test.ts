@@ -341,14 +341,47 @@ describe('a plugin id', () => {
     }
   });
 
-  it('is the manifest name when the module exports none, slug or not', async () => {
+  it('is the manifest name with its scope joined by a dash when the module exports none', async () => {
     const root = mkdtempSync(join(tmpdir(), 'ahpd-manifest-id-'));
     try {
       writeFileSync(join(root, 'package.json'), JSON.stringify({ name: '@acme/y', type: 'module', exports: { '.': './entry.js' }, ahpd: { entry: './entry.js' } }));
       writeFileSync(join(root, 'entry.js'), 'export function apply() {}\n');
       const { loaded, problems } = await load([root]);
       expect(problems).toEqual([]);
-      expect(loaded.map((one) => one.name)).toEqual(['@acme/y']);
+      expect(loaded.map((one) => one.name)).toEqual(['acme-y']);
+      expect(pluginIdOf(root)).toBe('acme-y');
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a manifest name that is still not a slug, and never applies it', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-manifest-long-'));
+    const long = `@acme/${'x'.repeat(40)}`;
+    try {
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: long, type: 'module', exports: { '.': './entry.js' }, ahpd: { entry: './entry.js' } }));
+      writeFileSync(join(root, 'entry.js'), "export function apply() { throw new Error('applied'); }\n");
+      const { loaded, problems } = await load([root]);
+      expect(problems).toEqual([
+        `plugin acme-${'x'.repeat(40)} skipped: its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter`,
+      ]);
+      expect(loaded).toEqual([]);
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses a file name that is not a slug, when the module exports no name', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-file-id-'));
+    try {
+      writeFileSync(join(root, 'My_Plugin.js'), 'export function apply() {}\n');
+      const { loaded, problems } = await load([join(root, 'My_Plugin.js')]);
+      expect(problems).toEqual([
+        'plugin My_Plugin skipped: its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter',
+      ]);
+      expect(loaded).toEqual([]);
     }
     finally {
       rmSync(root, { recursive: true, force: true });

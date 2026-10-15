@@ -68,8 +68,9 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | Every plugin id is a bare slug, `^[a-z][a-z0-9-]{0,39}$`, the rule of `isRecordSlug`. The npm package names stay `@ahpd/...`. The ids are `agent-acp`, `agent-claude`, `agent-cofold`, `agent-pi`, `bot`, `computer`, `push`, `tunnel-devtunnel`, `webhook`, and ahpw's `web` | Softov, 2026-10-14, asked "Which form should a plugin id take?": "computer" | 01, 04 |
 | The change ships in 0.12.0 | Softov, 2026-10-14, asked "Does it go into 0.12.0?": "Yes, in 0.12.0" | 01, 02, 03, 04 |
 | A plugin whose exported `name` is not a slug is skipped at load, with a problem line | Softov, 2026-10-14, asked "Should the daemon refuse a third-party plugin whose id is not a slug?": "Refuse at load" | 02 |
-| A provisional id, which is the manifest's `name`, the file name or the spec of a module that exports no `name`, is not checked, and the plugin loads under it | (defaulted: only an exported `name` was asked about; a refusal here would refuse a module that the contract lets omit `name`) | 02 |
+| A fallback id `@scope/name` becomes `scope-name`. Every fallback id, from the manifest's `name`, the file name or the spec, is checked against the slug rule, and a plugin whose id is still not a slug is skipped with the same problem line | Softov, 2026-10-14, asked "A plugin exports no `name`, and its package is `@acme/y`. Which id should the daemon give it?": "acme-y" | 05 |
 | An owner `plugin:@ahpd/<x>` reads as `plugin:<x>`, and `plugin:ahpd-web` reads as `plugin:web`, when the host reads saved sessions, wake senders, automations and usage. Nothing on disk is rewritten | Softov, 2026-10-14, asked "Sessions, automations and usage saved under an old owner such as plugin:@ahpd/webhook: what happens to them?": "Read the old name as the new" | 03 |
+| A grant, a policy, a usage rule or any other configuration a person writes reads `plugin:@ahpd/<x>` as `plugin:<x>`, through `currentOwner`. Nothing on disk is rewritten | Softov, 2026-10-14, asked "Grants, policies and usage rules that a person wrote by hand with `plugin:@ahpd/<x>` are not read as `plugin:<x>`. What should happen?": "Read them as the new name" | 06 |
 | Root config keeps flat `plugins.<id>` keys, so a key reads `plugins.agent-claude` | Softov, 2026-10-14, "Keep flat keys" | 01 |
 | `config.json` keys its entries by spec, so it needs no migration, and a spec such as `@ahpd/bot` still names its plugin in a verb and in `--plugin-option` | [code://packages/server/src/plugins.ts#L79](../../../../packages/server/src/plugins.ts#L79) | - |
 | `routePrefix` still encodes each segment, because a provisional id may hold `@` and `/` | [code://packages/sdk/src/plugins.ts#L138-L139](../../../../packages/sdk/src/plugins.ts#L138-L139) | - |
@@ -91,19 +92,20 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | [02 - The daemon refuses a plugin whose name is not a slug](task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md) | implemented | 01 |
 | [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | implemented | 01 |
 | [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | implemented | 01 |
+| [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
 - A URL that an operator gave a caller, such as `/plugins/%40ahpd/webhook/ci` or `/plugins/ahpd-web/`, stops answering - the 0.12.0 release notes name the new paths.
 - `ownerOf` does not read `plugin:@ahpd/<x>` in a grant, a policy or a usage rule that a person wrote - the release notes say to write `plugin:<x>`.
 - A third-party plugin that exports a scoped name, such as `@acme/x`, stops loading - the problem line names the slug rule.
-- A module that exports no `name` can still have an id that is not a slug - see the defaulted row in the answers table.
+- A fallback id that is not a slug, such as the file name `My_Plugin`, stops its plugin from loading. The problem line names the slug rule.
 - No client hardcodes a plugin id. A search of `/github/ahpapp/src` and `/github/ahpc/src` looked for `@ahpd/` ids, `plugins.@ahpd`, `%40ahpd`, `ahpd-web` and `plugin:@ahpd`. It finds only `npm i -g @ahpd/server` in `ahpapp/src/components/HostForm.tsx:56`, which is a package name.
 
 ## Resume state
 
-- **Done so far:** the plan and tasks 01 to 04, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
-- **Next action:** review the four tasks.
+- **Done so far:** the plan and tasks 01 to 05, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
+- **Next action:** write and build task 06, from the answer on hand-written owners.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 

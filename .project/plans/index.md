@@ -315,7 +315,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | active 2026-10-14; tasks 01-04 implemented | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | active 2026-10-14; tasks 01-03 implemented | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
-| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-04 implemented, awaiting review | daemon 19 | ahpw `/plugins/web/` |
+| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-05 implemented, 06 todo | daemon 19 | ahpw `/plugins/web/` |
 
 Next free number in `plugin`: `52`.
 

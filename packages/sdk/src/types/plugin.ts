@@ -863,7 +863,9 @@ export interface Plugin {
   /**
    * The plugin's id, unique among the plugins a daemon loads: lowercase
    * letters, digits and dashes, one to forty of them, starting with a letter.
-   * The daemon skips a plugin whose exported `name` is not one.
+   * A module that exports no `name` takes the manifest's name, its file name
+   * or its spec, with a scope joined by a dash: `@acme/y` is `acme-y`. The
+   * daemon skips a plugin whose id is not a slug.
    */
   name: string;
   /** What a listing prints instead of the id. */

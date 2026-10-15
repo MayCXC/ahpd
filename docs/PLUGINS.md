@@ -38,9 +38,9 @@ process.
 
 ### The id
 
-A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
+A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. A scoped fallback has its scope joined by a dash: the manifest name `@acme/agent-mine` is the id `acme-agent-mine`. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
 
-A `name` the module exports is a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter. A module that exports any other `name`, such as `@acme/agent-mine`, is skipped with `plugin @acme/agent-mine skipped: its name is not a slug`, and its `apply` is never called. An id taken from the manifest, the file name or the spec is not checked.
+A `name` the module exports is a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter. A module that exports any other `name`, such as `@acme/agent-mine`, is skipped with `plugin @acme/agent-mine skipped: its name is not a slug`, and its `apply` is never called. A fallback id is held to the same rule, so a file named `My_Plugin.js` that exports no `name` is skipped with `plugin My_Plugin skipped: its name is not a slug`.
 
 ```json
 { "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
@@ -110,7 +110,7 @@ A name is `host:<name>`, `team:<team>/<name>` or `user:<id>/<name>`, and anythin
 At load the name is read against the host's own scope rule: a `team:` or `user:` name is refused there, because a plugin load belongs to no team and to no person. So an option named at load is a `host:` one, and a plugin whose options cannot all be read is skipped with one line naming the option, the name and why, exactly as a schema failure is:
 
 ```
-plugin @acme/plugin-orders skipped: plugins.@acme/plugin-orders.options.apiKey names host:stripe: the vault holds no host:stripe
+plugin acme-plugin-orders skipped: plugins.acme-plugin-orders.options.apiKey names host:stripe: the vault holds no host:stripe
 ```
 
 A reference is answered as written wherever your options are shown - root config, `ahpd config`, `ahpd plugin list` - even when the option also says `writeOnly`, because a name is not a secret and `<set>` would say only that there is one. A plain text value under the same option is still answered `<set>`. The two together are what you want on an option: the name visible, the value never.
@@ -201,7 +201,7 @@ export const apply: Plugin['apply'] = (host) => {
 
 `@ahpd/webhook` is a plugin that does this: each endpoint names a vault secret, and a call passes only with that secret as its bearer token - [WEBHOOKS.md](WEBHOOKS.md).
 
-One route per plugin, and the prefix is your plugin's id: a plugin that exports `name = 'webhooks'` is served under `/plugins/webhooks/`. A module that exports no `name` may have an id with `@` or `/`, such as the manifest name `@acme/webhooks`, and then each `/`-separated segment is percent-encoded: `/plugins/%40acme/webhooks/`.
+One route per plugin, and the prefix is your plugin's id: a plugin that exports `name = 'webhooks'` is served under `/plugins/webhooks/`, and one that exports no `name` from the package `@acme/webhooks` is served under `/plugins/acme-webhooks/`.
 
 The path reaches your handler whole, prefix and all, so `new URL(request.url).pathname` is the path you wrote the webhook for. The prefix is matched by whole segments: `/plugins/webhooksy/hook` reaches nothing, rather than being the start of yours.
 
@@ -911,7 +911,7 @@ here the way the connection token is the port's.
 
 ```
 $ ahpd plugin list
-ready @acme/agent-mine -> /home/you/.config/ahpd/node_modules/@acme/agent-mine/dist/index.js (@acme/agent-mine, Mine)
+ready agent-mine (@acme/agent-mine) -> /home/you/.config/ahpd/node_modules/@acme/agent-mine/dist/index.js (@acme/agent-mine, Mine)
 ready my-plugin (./my-plugin) -> /work/my-plugin/index.ts (my-plugin)
 missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone and /home/you/.config/ahpd/gone.
 ```

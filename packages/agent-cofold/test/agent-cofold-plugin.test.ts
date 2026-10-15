@@ -190,8 +190,9 @@ it('lists a manifest, and its title, with the package name as its id', async () 
   const row = await describePlugin(dir, { configDir: REPO, cwd: REPO });
 
   expect(row.state).toBe('ready');
-  // The entry exports no name, so the key is the package's own name.
-  expect(row.name).toBe('@ahpd/agent-cofold');
+  // The entry exports no name, so the key is the package's own name, its scope
+  // joined by a dash.
+  expect(row.name).toBe('ahpd-agent-cofold');
   expect(row.module).toBe('@ahpd/agent-cofold');
   expect(row.title).toBe('Cofold');
   expect(row.path).toBe(join(dir, 'entry.js'));
