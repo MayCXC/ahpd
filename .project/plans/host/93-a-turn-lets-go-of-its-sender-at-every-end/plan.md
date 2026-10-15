@@ -1,16 +1,16 @@
 ---
 title: A turn lets go of its sender at every end
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-15
 revalidated: 2026-10-15
 refs:
-  - "[code://packages/sdk/src/host/owners.ts#L96-L114](../../../../packages/sdk/src/host/owners.ts#L96-L114) - `senders` and `sentBy`, the two maps by turn id"
-  - "[code://packages/sdk/src/host/spawn.ts#L759-L766](../../../../packages/sdk/src/host/spawn.ts#L759-L766) - a queued message's entry is copied to its turn, and the queued id stays"
-  - "[code://packages/sdk/src/host/spawn.ts#L810-L815](../../../../packages/sdk/src/host/spawn.ts#L810-L815) - the release, on `chat/turnComplete` and `chat/turnCancelled` only"
-  - "[code://packages/sdk/src/host/lifecycle.ts#L1041-L1058](../../../../packages/sdk/src/host/lifecycle.ts#L1041-L1058) - the entry is written before the command refusal returns"
-  - "[code://packages/sdk/src/host/chatactions.ts#L1272-L1274](../../../../packages/sdk/src/host/chatactions.ts#L1272-L1274) - `chat/pendingMessageRemoved`, which unqueues and keeps the entry"
+  - "[code://packages/sdk/src/host/owners.ts#L96-L135](../../../../packages/sdk/src/host/owners.ts#L96-L135) - `senders` and `sentBy`, the two maps by turn id, and `forgetSender` and `forgetSendersIn`"
+  - "[code://packages/sdk/src/host/spawn.ts#L774-L786](../../../../packages/sdk/src/host/spawn.ts#L774-L786) - a queued message's entry is copied to its turn, and the queued id is deleted"
+  - "[code://packages/sdk/src/host/spawn.ts#L829-L834](../../../../packages/sdk/src/host/spawn.ts#L829-L834) - the release, on `chat/turnComplete`, `chat/turnCancelled` and `chat/error`"
+  - "[code://packages/sdk/src/host/lifecycle.ts#L1228-L1251](../../../../packages/sdk/src/host/lifecycle.ts#L1228-L1251) - the entry is written before the command refusal, and the refusal deletes it"
+  - "[code://packages/sdk/src/host/chatactions.ts#L1355-L1359](../../../../packages/sdk/src/host/chatactions.ts#L1355-L1359) - `chat/pendingMessageRemoved`, which unqueues and deletes the entry"
   - "[code://packages/sdk/src/host/wakes.ts#L110-L113](../../../../packages/sdk/src/host/wakes.ts#L110-L113) - a wake deletes its entry when the begin fails, the pattern to mirror"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - the chat reducer ends a turn on `chat/error` too"
 ---
@@ -59,7 +59,7 @@ queued message -> senders.set(queuedId) -> chat/turnStarted { queuedMessageId } 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Every end of a turn deletes its sender](task-01-every-end-of-a-turn-deletes-its-sender.md) | todo | - |
+| [01 - Every end of a turn deletes its sender](task-01-every-end-of-a-turn-deletes-its-sender.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -68,12 +68,12 @@ queued message -> senders.set(queuedId) -> chat/turnStarted { queuedMessageId } 
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-15, from the handoff's small fixes.
-- **Next action:** build task 01 after host/89 merges.
+- **Done so far:** built 2026-10-15, see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** a session disposed with a turn running. Check that the backend sends a turn end, and add the delete to the dispose if it does not.
+- **Watch out for:** a closed backend sends no turn end. A dispose deletes the entries of the chat's running turn and queued messages before it closes the chat.
 
 ## Final verification checklist
 
-- [ ] Vitest on `packages/sdk` and `packages/server` passes.
-- [ ] `plans/index.md` updated.
+- [x] Vitest on `packages/sdk` and `packages/server` passes.
+- [x] `plans/index.md` updated.
