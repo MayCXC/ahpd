@@ -24,12 +24,13 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 In the configuration file, with every option set:
 
 ```json
-{ "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
+{ "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots", "lastChats": 20 } }] }
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
+| `lastChats` | `10` | How many chats a template lists for `{{chats}}` |
 
 A bot is a record of the host's record store, so the daemon keeps each one as a file beside its own configuration: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter and `instructions` as the Markdown body, with the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported and skipped, and every other bot is kept.
 
