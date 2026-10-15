@@ -198,6 +198,7 @@ Reference: [00-host.md](host/00-host.md)
 | [91 - Merged sessions archive and delete themselves](host/91-merged-sessions-archive-and-delete-themselves/plan.md) | medium | built 2026-10-15 ([implemented.md](host/91-merged-sessions-archive-and-delete-themselves/implemented.md)) | 90 | - |
 | [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
 | [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | built 2026-10-15 ([implemented.md](host/93-a-turn-lets-go-of-its-sender-at-every-end/implemented.md)) | - | - |
+| [94 - VS Code lists ahpd's automations](host/94-vscode-lists-ahpds-automations/plan.md) | high | built 2026-10-15 ([implemented.md](host/94-vscode-lists-ahpds-automations/implemented.md)) | - | - |
 
 Next free number in `host`: `94`.
 
