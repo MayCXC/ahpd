@@ -131,11 +131,20 @@ const usageOf = (usage: Usage, model: string | undefined, cost?: number): Bag =>
  * two hosts should read one sentence for one thing. The numbers are cofold's
  * own estimate of the history before the summary and after it, and a call with
  * neither says the compaction happened rather than nothing about it.
+ *
+ * `asked` is for a compaction a runtime command ran, such as a typed
+ * `/compact`: the person asked for it, so the sentence does not call it
+ * automatic.
  */
-export const compactionNotice = (tokens?: { before: number; after: number }): string =>
-  tokens === undefined
-    ? 'Context compacted automatically.'
-    : `Context compacted automatically: ${String(tokens.before)} tokens to ${String(tokens.after)}.`;
+export const compactionNotice = (
+  tokens?: { before: number; after: number },
+  { asked = false }: { asked?: boolean } = {},
+): string => {
+  const said = asked ? 'Context compacted' : 'Context compacted automatically';
+  return tokens === undefined
+    ? `${said}.`
+    : `${said}: ${String(tokens.before)} tokens to ${String(tokens.after)}.`;
+};
 
 /** The part that ends a turn which failed, in the shape `chat/error` carries. */
 const failurePart = (message: string): Bag => ({
@@ -255,6 +264,8 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
   let compactions = 0;
   /** How many notices runtime commands added to this turn, which numbers the parts. */
   let commands = 0;
+  /** Whether a runtime command started this turn, which words its compaction as asked for. */
+  let commanded = false;
 
   /** Write what the last step's reply was held for, if anything. */
   const flush = (): Bag[] => {
@@ -418,7 +429,10 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
           const part: Bag = {
             id: `${turnId}:compact:${compactions}`,
             kind: 'systemNotification',
-            content: compactionNotice({ before: event.estimatedTokens, after: event.afterTokens }),
+            content: compactionNotice(
+              { before: event.estimatedTokens, after: event.afterTokens },
+              { asked: commanded },
+            ),
           };
           parts.push(part);
           return only([{ type: 'chat/responsePart', turnId, part: { ...part } }]);
@@ -426,14 +440,17 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
         /*
          * A slash command the run took as its own rather than as a prompt.
          * The line the person typed is already the turn's message, so the
-         * start says nothing. What the command returned is a notice in the
-         * turn, as the transcript reads it back; a command that returned
-         * nothing leaves the turn with no part.
+         * start says nothing on the wire. What the command returned is a
+         * notice in the turn, as the transcript reads it back; a command that
+         * returned nothing leaves the turn with no part, and so does one whose
+         * turn already drew a compaction notice, which says what `/compact`'s
+         * own output would say again.
          */
         case 'command.started':
+          commanded = true;
           return only([]);
         case 'command.finished': {
-          if (event.output === undefined || event.output === '') return only([]);
+          if (event.output === undefined || event.output === '' || compactions > 0) return only([]);
           commands += 1;
           const part: Bag = { id: `${turnId}:command:${commands}`, kind: 'systemNotification', content: event.output };
           parts.push(part);

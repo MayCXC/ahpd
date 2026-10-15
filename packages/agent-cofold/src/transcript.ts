@@ -183,6 +183,10 @@ interface Building {
   usage: WireUsage | undefined;
   state: WireState;
   duration: number | undefined;
+  /** Whether a runtime command's typed line began this turn, which words its compaction as asked for. */
+  commanded: boolean;
+  /** Whether this turn holds a compaction notice, which stands for the command's own output. */
+  compacted: boolean;
 }
 
 /**
@@ -302,6 +306,8 @@ export async function turnsOf(store: Store, sessionId: string): Promise<Transcri
       usage: usage.get(message.id),
       state: ending.get(message.id) ?? 'complete',
       duration: duration.get(message.id),
+      commanded: message.source === 'command',
+      compacted: false,
     };
   };
 
@@ -335,14 +341,23 @@ export async function turnsOf(store: Store, sessionId: string): Promise<Transcri
      * happened is the same one the live turn sent. Every message it stands for
      * stays a turn of its own - `summarizes` says what a request no longer
      * carries, not what the conversation has lost.
+     *
+     * A summary in a turn a runtime command began is worded as asked for, and
+     * that command's notice is left out of a turn that already holds the
+     * compaction's, as the live turn drew them.
      */
     if (message.role === 'user' || message.role === 'system') {
       // A harness message before anything was asked opens the turn, and the
       // notification below carries its words: the message text stays empty so
       // the same sentence is not in two places.
       if (open === undefined) begin({ ...message, parts: [] }, 'agent');
-      const said = message.source === 'summary' ? compactionNotice(compacted.get(message.id)) : textOf(message);
-      if (said !== '' && open !== undefined) open.parts.push({ kind: 'systemNotification', content: said });
+      const live = open;
+      if (live === undefined) continue;
+      if (message.source === 'notice' && live.compacted) continue;
+      const summary = message.source === 'summary';
+      const said = summary ? compactionNotice(compacted.get(message.id), { asked: live.commanded }) : textOf(message);
+      if (summary) live.compacted = true;
+      if (said !== '') live.parts.push({ kind: 'systemNotification', content: said });
       continue;
     }
 
