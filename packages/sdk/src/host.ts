@@ -899,7 +899,7 @@ export function createHost(options: HostOptions): Host {
     madeFrom, origins, births, moves, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
     logs, detached, refuse,
     serverSeq: 0,
-    closed: false, refusing: undefined, bareSessions: new Set<string>(), described, links,
+    closed: false, refusing: undefined, bareSessions: new Set<string>(), commandTurns: new Map<string, boolean>(), described, links,
     watches, marksOf, resumedSessions, activeClientsOf, drafts,
     restartNeeded: false,
     dispatch,

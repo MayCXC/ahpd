@@ -11,6 +11,7 @@ import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../tools/clientcalls.js';
 import { asSentAttachment } from './chatattachment.js';
 import { chatUriFor, subagentChatUri } from './channels.js';
 import { CLOSING } from './common.js';
+import { chatFlag, sessionFollows, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
 import type { Bag } from '../types/common.js';
 import type { Agent } from '../types/agent.js';
@@ -79,6 +80,13 @@ export interface Spawn {
     sender?: Connection,
   ): Session;
 }
+
+/**
+ * Whether an action is one the protocol's chat reducer clears a chat's read
+ * bit on: a turn that starts or is resumed, and a question put to a person.
+ */
+const clearsRead = (type: unknown): boolean =>
+  type === 'chat/turnStarted' || type === 'chat/turnResume' || type === 'chat/inputRequested';
 
 /**
  * The host's store, as one session's backend is handed it.
@@ -288,6 +296,9 @@ export function createSpawn(ctx: HostContext): Spawn {
     const was = { status: ref.state.status };
     absorb(ref, action);
     dispatch(uri, action);
+    // Unread where the protocol's chat reducer makes it so. A worker is not
+    // counted toward its session, so the session's bit stays where it is.
+    if (clearsRead(String(action.type)) && sessions.has(ref.session)) chatFlag(ctx, ref.session, uri, Status.IsRead, false);
     const summary = subagentSummary(uri, ref);
     const now = JSON.stringify(summary);
     if (describedSub.get(uri) === now) return;
@@ -357,6 +368,7 @@ export function createSpawn(ctx: HostContext): Spawn {
         },
       };
       subagents.set(uri, ref);
+      startsRead(ctx, session, uri);
       dispatch(session, { type: 'session/chatAdded', summary: subagentSummary(uri, ref) });
       // The session's row is where a client listing sessions reads its chats,
       // so a chat that has just appeared is said there too.
@@ -415,6 +427,9 @@ export function createSpawn(ctx: HostContext): Spawn {
             part: { kind: 'error', error: { errorType: 'turnFailed', message: why ?? 'The subagent failed' } },
           });
         }
+        // Something new to read in the worker's chat. A worker is not counted
+        // toward its session, so the session's bit stays where it is.
+        if (sessions.has(held.session)) chatFlag(ctx, held.session, uri, Status.IsRead, false);
       },
     };
   };
@@ -764,6 +779,8 @@ export function createSpawn(ctx: HostContext): Spawn {
           // connection that queued it.
           const queuedBy = sentBy.get(action.queuedMessageId);
           if (queuedBy !== undefined) sentBy.set(turn, queuedBy);
+          // And a command waiting its turn is a command turn once it runs.
+          if (ctx.commandTurns.delete(action.queuedMessageId)) ctx.commandTurns.set(turn, false);
         }
         const sender = senderOf(turn);
         /*
@@ -936,6 +953,31 @@ export function createSpawn(ctx: HostContext): Spawn {
               operationsMoved(uri);
             }
           }
+        }
+        /*
+         * The chat's read bit, and its session's when the chat is one the
+         * session counts.
+         *
+         * Cleared where the protocol's chat reducer clears it, so the bit kept
+         * here is the one a client reduces. Cleared again when a turn ends,
+         * because a client may have marked the chat read while it ran. After
+         * the action and the chat's row, so a client applies those first.
+         *
+         * A `!` command turn ran what the person typed, which is nothing new
+         * to them, so its end puts back the bit its chat had when it started.
+         * A chat its session no longer holds is left as it is: there is no
+         * row left to mark.
+         */
+        if (moved !== undefined && clearsRead(action.type)) {
+          if (action.type === 'chat/turnStarted' && ctx.commandTurns.has(turn)) {
+            ctx.commandTurns.set(turn, (ctx.kept.chatFlags(idOf(uri), chatUri) & Status.IsRead) !== 0);
+          }
+          if (chatFlag(ctx, uri, chatUri, Status.IsRead, false)) sessionFollows(ctx, uri, chatUri);
+        }
+        if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
+          const wasRead = ctx.commandTurns.get(turn) === true;
+          ctx.commandTurns.delete(turn);
+          if (moved !== undefined && chatFlag(ctx, uri, chatUri, Status.IsRead, wasRead)) sessionFollows(ctx, uri, chatUri);
         }
         // A turn starting or finishing moves the catalogue too, and a client
         // watching only the list is the one that most needs telling.

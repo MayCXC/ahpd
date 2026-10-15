@@ -62,8 +62,14 @@ const actions = (p: ReturnType<typeof peer>, channel: string) => p.notes
   .map((n) => n.params as { channel: string; action: Record<string, unknown> })
   .filter((e) => e.channel === channel);
 
+/**
+ * The types of the actions on one channel, in order.
+ *
+ * Without `chat/isReadChanged`, which the host sends after a turn's ending and
+ * which says what a person has seen rather than what the turn did.
+ */
 const types = (p: ReturnType<typeof peer>, channel: string): string[] =>
-  actions(p, channel).map((e) => String(e.action.type));
+  actions(p, channel).map((e) => String(e.action.type)).filter((type) => type !== 'chat/isReadChanged');
 
 /** One backend the daemon would have had anyway, so the plugin's is provably extra. */
 const base = (): HostOptions => ({

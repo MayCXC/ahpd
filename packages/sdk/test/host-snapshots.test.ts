@@ -543,13 +543,19 @@ describe('the fields a client reads by name', () => {
     (catalogue(p).filter((n) => n.method === 'root/sessionSummaryChanged').at(-1)?.params.changes as
       { status?: number } | undefined)?.status;
 
-  it("marks one chat read without moving the session or its other chats", async () => {
+  it("marks one chat read without moving its other chats", async () => {
     const { client, peer: p, uri } = await running();
     const second = 'ahp-chat:/second';
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
     // Subscribed, because a notification goes to the connections watching a
     // channel and to no others - a client opens the chat it is about to read.
     await client.handle({ method: 'subscribe', params: { channel: second } });
+    // A new chat starts read, so it is marked unread first for the read to move.
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: second, action: { type: 'chat/isReadChanged', isRead: false } },
+    });
+    await settle();
     p.notes.length = 0;
 
     client.handle({
@@ -570,10 +576,9 @@ describe('the fields a client reads by name', () => {
     // The row a client lists says it too, and says it about that chat alone.
     expect(statusOf(p, 'claude:/live', second)).toBe(Status.Idle | Status.IsRead);
     const others = chatsOf(p, 'claude:/live').filter((one) => one.resource !== second);
-    expect(others.map((one) => one.status)).toEqual(others.map(() => Status.Idle));
-    // A chat marked read is not the session being read, and the session's own
-    // status is the session's.
-    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle);
+    expect(others.map((one) => one.status)).toEqual(others.map(() => Status.Idle | Status.IsRead));
+    // Every chat is read again, so the session is read with them.
+    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle | Status.IsRead);
     // A client opening the chat afterwards gets the bit in its state, so a
     // restart of the client is not a chat that forgot it was read.
     const state = (await client.handle({ method: 'subscribe', params: { channel: second } }) as {
@@ -649,14 +654,14 @@ describe('the fields a client reads by name', () => {
 
     archive(true);
     await settle();
-    expect(statusOf(p, 'claude:/live', second)).toBe(Status.Idle | Status.IsArchived);
+    expect(statusOf(p, 'claude:/live', second)).toBe(Status.Idle | Status.IsRead | Status.IsArchived);
     // The session is not archived with it. One chat put away is a chat, and a
     // session that went with it would take the other chats off the list too.
-    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle);
+    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle | Status.IsRead);
 
     archive(false);
     await settle();
-    expect(statusOf(p, 'claude:/live', second)).toBe(Status.Idle);
+    expect(statusOf(p, 'claude:/live', second)).toBe(Status.Idle | Status.IsRead);
   });
 
   it('takes archiving the default chat as archiving the session', async () => {
@@ -677,7 +682,7 @@ describe('the fields a client reads by name', () => {
     // chat action here would be a chat a client hides while the session it
     // names says it is still there.
     expect(actions(p, chatUri).some((e) => e.action.type === 'chat/isArchivedChanged')).toBe(false);
-    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle | Status.IsArchived);
+    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle | Status.IsRead | Status.IsArchived);
     // The chat's own entry carries no archive bit: the session is what is
     // archived, and an entry repeating it says one thing twice.
     const chats = chatsOf(p, 'claude:/live');
@@ -690,27 +695,29 @@ describe('the fields a client reads by name', () => {
       params: { channel: chatUri, action: { type: 'chat/isArchivedChanged', isArchived: false } },
     });
     await settle();
-    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle);
+    expect(sessionStatus(p, 'claude:/live')).toBe(Status.Idle | Status.IsRead);
   });
 
-  it('keeps a chat read while a turn runs in it', async () => {
+  it('marks a chat unread when a turn starts in it, and keeps it read when a client says so', async () => {
     const { client, peer: p, uri } = await running();
     const second = 'ahp-chat:/second';
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
-    client.handle({
-      method: 'dispatchAction',
-      params: { channel: second, action: { type: 'chat/isReadChanged', isRead: true } },
-    });
-    await settle();
 
     client.handle({
       method: 'dispatchAction',
       params: { channel: second, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'go' } } },
     });
     await settle();
+    // Unread, as the protocol's chat reducer makes it on a turn's start.
+    expect(statusOf(p, 'claude:/live', second)).toBe(Status.InProgress);
 
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: second, action: { type: 'chat/isReadChanged', isRead: true } },
+    });
+    await settle();
     // Both bits, because they are different facts about one chat: work is
-    // happening in it, and the person has already read what came before.
+    // happening in it, and the person has read what it said so far.
     expect(statusOf(p, 'claude:/live', second)).toBe(Status.InProgress | Status.IsRead);
   });
 });

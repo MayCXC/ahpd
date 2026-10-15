@@ -99,6 +99,24 @@ describe('a command typed into the conversation', () => {
     expect(kept.at(-1)?.responseParts[0]?.toolCall?.status).toBe('completed');
   });
 
+  it('leaves the chat and the session read', async () => {
+    const { client, peer: p, uri, chatUri } = await shelled();
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: '!echo read' } } },
+    });
+    const said = await ended(p, chatUri);
+    // Unread while it runs, as a client reduces the turn's start, and read
+    // again at its end: somebody who ran a command watched it run.
+    expect(said.filter((one) => one.type === 'chat/isReadChanged').map((one) => one.isRead)).toEqual([false, true]);
+    for (const channel of [uri, chatUri]) {
+      const state = (await client.handle({ method: 'subscribe', params: { channel } }) as {
+        snapshot: { state: { status: number } };
+      }).snapshot.state;
+      expect(state.status & 32).toBe(32);
+    }
+  });
+
   it('says a command failed when it did', async () => {
     const { client, peer: p, chatUri } = await shelled();
     client.handle({

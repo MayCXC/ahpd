@@ -1057,6 +1057,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
         return undefined;
       }
       if (!session.ran) return `${provider} cannot run a command in a turn; use a terminal instead`;
+      ctx.commandTurns.set(queuedAs ?? turnId, false);
       const first = session.workingDirectories()[0];
       const where = first === undefined ? options.path : localPath(first);
       session.ran(turnId, command, (toolCallId) => ctx.commanded(command, where, {

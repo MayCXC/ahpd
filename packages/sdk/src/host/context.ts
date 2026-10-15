@@ -115,6 +115,15 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
    * Empty for every host that never opens one.
    */
   bareSessions: Set<string>;
+  /**
+   * The turns that run a `!` command, by turn id while they run, each with
+   * whether its chat was read when the turn started.
+   *
+   * Held under the queued message's id while one waits, and moved to the turn
+   * id when it starts. A command turn ran what the person typed, so its end
+   * puts the chat's read bit back as it was.
+   */
+  commandTurns: Map<string, boolean>;
   /** What each chat's summary last said, so an unchanged one is not re-sent. */
   described: Map<string, string>;
   /** The side index a worker's link is written from, fed from `dispatch`. */
