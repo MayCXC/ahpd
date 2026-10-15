@@ -1,6 +1,6 @@
 ---
 title: An inactive merged session is archived
-status: todo
+status: done
 depends: []
 layer: "sdk"
 refs:
@@ -60,4 +60,31 @@ The automatic archive removes the tree only when it is clean and pushed, and it 
 
 ## Resume
 
-Not started.
+### Built
+
+- `host/merged.ts` runs a pass at start, every hour and at each push of either key, on `options.now` and `options.timer`.
+- A key counts only as a positive whole number.
+- The pass does nothing when both keys are off or the host has no GitHub port.
+- The pass skips an archived session, a running or restarting session, and a session that is not idle for the archive days.
+- The related pull requests leave out each baseline URL that the session did not take over.
+- The pass checks the row again, stores `autoArchivedAt` as an ISO time, and archives through `sessionFlag`.
+- The memory store and the file store keep `autoArchivedAt`, and the file store ignores a value that is not a time.
+- An unarchive clears `autoArchivedAt`.
+- The `Worktrees` port has the optional `pushed`, and `gitWorktrees` asks `git rev-parse @{u}` and `git rev-list @{u}..HEAD`.
+- `shelve` keeps the tree of an auto-archived session that is dirty or not pushed, and logs why.
+- `shelve` also keeps that tree when the port has no `pushed`.
+
+### Validation
+
+- `host-merged.test.ts` has the ten task 01 cases.
+- These cases use a fake clock, a fake GitHub port and real git with a bare remote.
+- `sessions.test.ts` reads `autoArchivedAt` back after a file store reopen, and ignores two values that are not a time.
+- The pass cases fail when the pass returns at once.
+- The three kept-tree cases fail without the stricter `shelve` path.
+- The unarchive case fails when the unarchive keeps the time.
+- The store case fails when the file store does not write the time.
+
+### Seen and not done
+
+- The pass does not ask GitHub again at the archive check, so a pull request that opens during the check is not seen.
+- A session that a person archives while the pass waits on GitHub keeps its manual archive, because the check sees the flag.

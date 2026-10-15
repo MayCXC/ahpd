@@ -1,6 +1,6 @@
 ---
 title: An auto-archived merged session is deleted
-status: todo
+status: done
 depends: [task-01-an-inactive-merged-session-is-archived.md]
 layer: "sdk"
 refs:
@@ -38,4 +38,21 @@ The pass deletes a session it archived, once the delete days have passed and its
 
 ## Resume
 
-Not started.
+### Built
+
+- The pass takes as a delete candidate only an archived session whose `autoArchivedAt` is at or before now less the delete days.
+- It asks for the related pull requests again and skips the session unless they are complete.
+- It skips the session while its stored worktree path exists on disk.
+- It checks again that the session is archived, has no running turn and has the same stored time.
+- It deletes through `removeSession` with no acting principal, and logs the time and the pull requests.
+
+### Validation
+
+- `host-merged.test.ts` deletes a session 31 days after the archive with the key at 30, and both clients get `root/sessionRemoved`.
+- `host-merged.test.ts` keeps a session archived by hand, and a session with a dirty tree on disk.
+- `host-merged.test.ts` keeps a session archived again by hand, and every session with the key at `0`.
+
+### Seen and not done
+
+- The check before the delete does not read `modifiedAt` again, so a session with new activity and no running turn is still deleted.
+- An auto-archived session whose tree stays on disk is never deleted, as the plan risks say.

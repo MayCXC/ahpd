@@ -1,6 +1,6 @@
 ---
 title: A daemon key picks how a pull request is looked up
-status: todo
+status: done
 depends: [task-01-an-inactive-merged-session-is-archived.md]
 layer: "sdk, server"
 refs:
@@ -66,4 +66,28 @@ The daemon key `pullRequestLookup` picks how the pass learns the state of a pull
 
 ## Resume
 
-Not started.
+### Built
+
+- The `PullRequests` port has the optional `byUrl`, and `githubPullRequests` asks the API `pulls/<number>` with a token, else `gh pr view`.
+- `byUrl` answers `undefined` for a 404 and for a page that is not a GitHub pull request, and throws for every other refusal.
+- The host option and the context field `pullRequestLookup` default to `url`, and a push of the daemon key changes the context field.
+- Under `url`, the pass asks `byUrl` for the session's taken-over URLs and the folder's recorded `pullRequestUrls`, without duplicates.
+- Under `url` with a port that has no `byUrl`, the pass asks by branch and logs that once.
+- The server has the key in `Config`, the options, the field schema with `enum: ['url', 'branch']`, `run.ts`, `DAEMON_KEYS`, `LIVE` and the help text.
+- `docs/HOST.md` lists the key in the table, in the daemon keys and in the keys that apply at once.
+
+### Validation
+
+- `host-merged.test.ts` has the four task 03 cases: `url`, `branch`, a port with no `byUrl`, and a push of the key.
+- `github.test.ts` reads a merged, an open and a closed pull request by API.
+- `github.test.ts` also checks a 404, a refusal and a `gh` answer.
+- `server-root-config.test.ts` checks the key in the key list, its enum, and that a push needs no restart.
+- `config-check.test.ts` checks the default `pullRequestLookup: 'url'`.
+- The `github.test.ts` cases fail when the port has no `byUrl`, and the push case fails without the `actions.ts` change.
+
+### Seen and not done
+
+- Under `url`, the pass also asks for the URLs that the session took over.
+- Thus a session's own pull request counts before the folder's facts are read.
+- After a restart, the folder's `pullRequestUrls` are unknown until the facts are read again, so under `url` only the taken-over URLs are asked.
+- The server start banner does not print the key, because `url` is the default and `branch` changes no behaviour a person must know at start.

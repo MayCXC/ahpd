@@ -1,7 +1,7 @@
 ---
 title: Merged sessions archive and delete themselves
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -88,9 +88,9 @@ window root/configChanged { autoArchiveMergedSessionsAfterDays: 7 } -> actions.t
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An inactive merged session is archived](task-01-an-inactive-merged-session-is-archived.md) | todo | host/90 |
-| [02 - An auto-archived merged session is deleted](task-02-an-auto-archived-merged-session-is-deleted.md) | todo | 01 |
-| [03 - A daemon key picks how a pull request is looked up](task-03-a-daemon-key-picks-how-a-pull-request-is-looked-up.md) | todo | 01 |
+| [01 - An inactive merged session is archived](task-01-an-inactive-merged-session-is-archived.md) | done | host/90 |
+| [02 - An auto-archived merged session is deleted](task-02-an-auto-archived-merged-session-is-deleted.md) | done | 01 |
+| [03 - A daemon key picks how a pull request is looked up](task-03-a-daemon-key-picks-how-a-pull-request-is-looked-up.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -102,20 +102,20 @@ window root/configChanged { autoArchiveMergedSessionsAfterDays: 7 } -> actions.t
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-an-inactive-merged-session-is-archived.md](task-01-an-inactive-merged-session-is-archived.md), after host/90 task 01.
+- **Done so far:** built 2026-10-15, see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** a session archived by hand has no stored time. It must never become a delete candidate.
 
 ## Final verification checklist
 
-- [ ] A test: a merged, inactive session is archived and gets a stored time.
-- [ ] A test: an automatic archive keeps a dirty tree under `commit`, and keeps a clean tree whose branch is not pushed.
-- [ ] A test: `pullRequestLookup` at `url` and at `branch` each find a merged pull request.
-- [ ] A test: an open pull request, a running turn or a recent `modifiedAt` keeps the session.
-- [ ] A test: an auto-archived session is deleted after the delete days.
-- [ ] A test: a session archived by hand is never deleted.
-- [ ] A test: `0`, a negative number and a fraction turn each action off.
-- [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `docs/HOST.md` lists `pullRequestLookup`.
-- [ ] `plans/index.md` updated.
+- [x] A test: a merged, inactive session is archived and gets a stored time.
+- [x] A test: an automatic archive keeps a dirty tree under `commit`, and keeps a clean tree whose branch is not pushed.
+- [x] A test: `pullRequestLookup` at `url` and at `branch` each find a merged pull request.
+- [x] A test: an open pull request, a running turn or a recent `modifiedAt` keeps the session.
+- [x] A test: an auto-archived session is deleted after the delete days.
+- [x] A test: a session archived by hand is never deleted.
+- [x] A test: `0`, a negative number and a fraction turn each action off.
+- [x] The gates pass: typecheck, boundary, schema and vitest.
+- [x] `docs/HOST.md` lists `pullRequestLookup`.
+- [x] `plans/index.md` updated.
