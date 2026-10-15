@@ -327,6 +327,20 @@ it('names every pool the folder holds, sorted and once, across both kinds and tw
   expect(await usage.pools()).toEqual(['root:box', 'team:backend', 'user:maria']);
 });
 
+it('reads an owner and a pool saved under a first-party plugin\'s old name as its id', async () => {
+  const usage = fileUsage({ folder });
+  await usage.record(modelUse('2026-10-04T10:00:00.000Z', ['plugin:bot'], { input: 10 }, { owner: 'plugin:bot' }));
+  // A line an older version wrote, before the plugin's id was a slug.
+  const old = modelUse('2026-10-05T10:00:00.000Z', ['plugin:@ahpd/bot'], { input: 20 }, { owner: 'plugin:@ahpd/bot' });
+  writeFileSync(join(folder, '2026-10-model.jsonl'), `${JSON.stringify(old)}\n`, { flag: 'a' });
+
+  const rebuilt = fileUsage({ folder });
+  expect(await rebuilt.pools()).toEqual(['plugin:bot']);
+  expect(await rebuilt.total('plugin:bot', month.from, month.until)).toEqual({ tokens: 30, input: 30, calls: 2 });
+  const found = await rebuilt.records('plugin:bot', month.from, month.until);
+  expect(found.map((one) => one.owner)).toEqual(['plugin:bot', 'plugin:bot']);
+});
+
 it('answers no pools for a folder holding no usage files', async () => {
   const usage = fileUsage({ folder });
   writeFileSync(join(folder, 'notes.txt'), 'not a usage file\n');

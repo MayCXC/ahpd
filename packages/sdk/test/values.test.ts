@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bag, isRecord, ownerOf, ownerOfPrincipal, reason, str, strings } from '../src/values.js';
+import { bag, currentOwner, isRecord, ownerOf, ownerOfPrincipal, reason, str, strings } from '../src/values.js';
 
 /*
  * The readers every package had its own copy of.
@@ -95,6 +95,24 @@ describe('ownerOf', () => {
     expect(ownerOf('a')).toBeUndefined();
     expect(ownerOf(3)).toBeUndefined();
     expect(ownerOf(undefined)).toBeUndefined();
+  });
+});
+
+describe('currentOwner', () => {
+  it('reads a first-party plugin\'s old name as its id', () => {
+    expect(currentOwner('plugin:@ahpd/webhook')).toBe('plugin:webhook');
+    expect(currentOwner('plugin:ahpd-web')).toBe('plugin:web');
+  });
+
+  it('keeps every other owner as it is', () => {
+    expect(currentOwner('plugin:@acme/x')).toBe('plugin:@acme/x');
+    expect(currentOwner('plugin:bot')).toBe('plugin:bot');
+    expect(currentOwner('user:@ahpd/x')).toBe('user:@ahpd/x');
+    expect(currentOwner('plugin:@ahpd/a/b')).toBe('plugin:@ahpd/a/b');
+  });
+
+  it('is what ownerOf answers for a typed reference', () => {
+    expect(ownerOf('plugin:@ahpd/bot')).toBe('plugin:bot');
   });
 });
 

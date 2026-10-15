@@ -13,6 +13,7 @@ import { refusalReason } from './host.js';
 import { absentResource, asFile, EPOCH, splitResource, type At as Split } from './records.js';
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { mayRead, membership } from './scopes.js';
+import { currentOwner } from './values.js';
 import type { Entry, Metadata, Read, ResourceProvider, SchemeDescription } from './types/resources.js';
 import type { PluginMethod } from './types/plugin.js';
 import type { Grant, Named, Principal } from './types/users.js';
@@ -260,7 +261,10 @@ export function fileUsage(options: FileUsageOptions): Usage {
         told(`Skipping line ${String(index + 1)} of usage file ${name}: it names no day.`);
         continue;
       }
-      placed.push({ entry, day });
+      // An owner or a pool saved under a first-party plugin's old name is read as its id.
+      const pools = entry.pools.map((pool) => (typeof pool === 'string' ? currentOwner(pool) : pool));
+      const owner = typeof entry.owner === 'string' ? { owner: currentOwner(entry.owner) as typeof entry.owner } : {};
+      placed.push({ entry: { ...entry, ...owner, pools }, day });
     }
     return placed;
   };

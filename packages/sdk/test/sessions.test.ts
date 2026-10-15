@@ -965,6 +965,15 @@ it('reads a row that names no owner as one nobody owns', () => {
   expect(store.sender('d', 't3')).toBe('user:bo');
 });
 
+it('reads an owner and a sender saved under a first-party plugin\'s old name as its id', () => {
+  const dir = join(root, 'sessions');
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(join(dir, 'a.json'), JSON.stringify({ version: 1, id: 'a', owner: 'plugin:@ahpd/bot', senders: { t1: 'plugin:@ahpd/webhook' } }));
+  const store = fileSessions({ dir });
+  expect(store.owner('a')).toBe('plugin:bot');
+  expect(store.sender('a', 't1')).toBe('plugin:webhook');
+});
+
 it('records no owner on a host with no directory to name somebody in', async () => {
   const store = memorySessions();
   await running(store);

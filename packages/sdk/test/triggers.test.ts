@@ -93,6 +93,13 @@ it('matches only the sessions a rule filters to', () => {
   expect(matches).toHaveLength(1);
 });
 
+it('reads an owner a rule saved under a first-party plugin\'s old name as its id', () => {
+  const { made, matches } = area();
+  made.add('mine', { on: 'turnFailed', filter: { owners: ['plugin:@ahpd/webhook'] } });
+  made.feed(event('turnFailed', { owner: 'plugin:webhook' }));
+  expect(matches).toHaveLength(1);
+});
+
 it('matches three tool failures in a row, and not three with a success between', () => {
   const { made, matches } = area();
   made.add('triage', { on: 'toolFailed', count: { n: 3, consecutive: true } });

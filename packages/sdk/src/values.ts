@@ -31,6 +31,19 @@ export const reason = (error: unknown): string => (error instanceof Error ? erro
 /** The schemes a typed reference is spelt with, and an id after the colon. */
 const TYPED = /^(?:user|team|project|root|plugin):.+$/;
 
+/** A first-party plugin's owner under its package name, and the id it is now. */
+const SCOPED = /^plugin:@ahpd\/([a-z][a-z0-9-]{0,39})$/;
+
+/**
+ * An owner as the host reads it: `plugin:@ahpd/<id>` is `plugin:<id>`, and
+ * `plugin:ahpd-web` is `plugin:web`. Every other string is answered as it is.
+ */
+export const currentOwner = (owner: string): string => {
+  if (owner === 'plugin:ahpd-web') return 'plugin:web';
+  const scoped = SCOPED.exec(owner);
+  return scoped === null ? owner : `plugin:${scoped[1]}`;
+};
+
 /**
  * A typed reference as a file wrote it, or nothing when it is not one.
  *
@@ -38,7 +51,7 @@ const TYPED = /^(?:user|team|project|root|plugin):.+$/;
  * one naming something which is not one, is a row nobody owns.
  */
 export const ownerOf = (value: unknown): Owner | undefined =>
-  typeof value === 'string' && TYPED.test(value) ? value as Owner : undefined;
+  typeof value === 'string' && TYPED.test(value) ? currentOwner(value) as Owner : undefined;
 
 /**
  * Who a principal's work is.

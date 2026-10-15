@@ -1,5 +1,6 @@
 /** What a session does, matched against what an automation watches for. */
 
+import { currentOwner } from './values.js';
 import type { SessionAbout, SessionEvent, SessionEventKind, SessionRule, SessionTurn } from './types/triggers.js';
 
 /**
@@ -190,7 +191,7 @@ export function createRuleEngine(options: RuleEngineOptions = {}): RuleEngine {
     if (filter.providers !== undefined
       && (about.provider === undefined || !filter.providers.includes(about.provider))) return false;
     if (filter.owners !== undefined
-      && (about.owner === undefined || !filter.owners.includes(about.owner))) return false;
+      && (about.owner === undefined || !filter.owners.some((one) => currentOwner(one) === about.owner))) return false;
     if (filter.projects !== undefined
       && (about.project === undefined || !filter.projects.includes(about.project))) return false;
     // A session works in a set of directories, so a rule names one of them.

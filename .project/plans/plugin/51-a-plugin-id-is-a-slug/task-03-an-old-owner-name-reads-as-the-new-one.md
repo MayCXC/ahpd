@@ -1,6 +1,6 @@
 ---
 title: An old owner name reads as the new one
-status: todo
+status: implemented
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "sdk"
 refs:
@@ -21,6 +21,8 @@ Nothing on disk is rewritten.
 
 - `UPDATE: packages/sdk/test/values.test.ts` - the cases for `currentOwner` and `ownerOf`.
 - `UPDATE: packages/sdk/test/usage.test.ts` - a usage line with an old owner.
+- `UPDATE: packages/sdk/test/sessions.test.ts` - a saved row with an old owner and sender.
+- `UPDATE: packages/sdk/test/triggers.test.ts` - a rule whose `owners` names an old owner.
 - `UPDATE: packages/sdk/src/values.ts:31-41` - `currentOwner`, and `ownerOf` reads through it.
 - `UPDATE: packages/sdk/src/usage.ts:242-266` - `entriesIn` reads `owner` and `pools` through `currentOwner`.
 - `UPDATE: packages/sdk/src/triggers.ts:192-193` - the `owners` filter reads through `currentOwner`.
@@ -52,3 +54,7 @@ Nothing on disk is rewritten.
 
 ## Resume
 
+- **Done:** 2026-10-14. `currentOwner` in `values.ts` reads `plugin:@ahpd/<x>` as `plugin:<x>` and `plugin:ahpd-web` as `plugin:web`.
+- **Readers:** `ownerOf`, `entriesIn` and the trigger filter call `currentOwner`. Sessions, wake senders and scheduled automations read through `ownerOf`, so they need no change of their own.
+- **Departure:** a `triggers.test.ts` case was added, because the trigger filter had no test for this.
+- **Gates:** typecheck, boundary and schema pass. The test gate passes with 5086 tests.
