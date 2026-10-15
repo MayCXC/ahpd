@@ -52,6 +52,8 @@ export function sessionFlag(
     else if (counted.length === 1) chatFlag(ctx, uri, counted[0] as string, Status.IsRead, false);
   }
   if (bit === Status.IsArchived && on) queueMicrotask(() => { void ctx.sleep(uri).catch(() => undefined); });
+  // Unarchived: the tree back before anything wakes the session into it.
+  if (bit === Status.IsArchived && !on) void ctx.restore(uri);
   return true;
 }
 

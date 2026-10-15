@@ -1,6 +1,6 @@
 ---
 title: Archive shelves the tree and unarchive restores it
-status: todo
+status: implemented
 depends: [task-01-the-worktree-record-outlives-the-daemon.md]
 layer: "sdk"
 refs:
@@ -48,4 +48,38 @@ An unarchived session gets the tree back at the same path on the same branch.
 
 ## Resume
 
-Not started.
+### Built
+
+- `shelve` removes the tree of an archived session after its agents close, and it keeps the branch.
+- `shelve` keeps a dirty tree, a tree with no branch of its own, and a tree the window holds a handle on.
+- `shelve` checks again after the dirty check, so an unarchive or a wake in that time keeps the tree.
+- `restore` puts the tree back at its path on its branch, and it links the symlink folders again.
+- Unarchive calls `restore`, and every wake calls `restore` before `resume`.
+- An archive of a session that is not live gives its tree back at once.
+- One promise chain per session orders `shelve` and `restore`.
+- `shelve` keeps a tree with a detached `HEAD` or another branch, and a tree whose port has no `head` call.
+- The `Worktrees` port has an optional `head` call, and the git port reads it with `git symbolic-ref`.
+- `dirty` and `remove` take the linked folder names, and an untracked link at one of those names is not work.
+- `remove` takes the links out before `git worktree remove`, and it puts them back when git refuses.
+- Delete, the move, archive and the detached handle methods pass the linked folder names too.
+- Delete applies the `HEAD` check of archive to a tree with a recorded branch, and it logs the same words.
+
+### Validation
+
+- `worktrees.test.ts` has ten cases for archive, unarchive, wake, a race, a handle, a detached checkout and two git failures.
+- A failed restore leaves the session unarchived, and a failed remove leaves the tree, and the log says why.
+- The cases fail when `shelve` skips the dirty check, when `restore` does nothing, and without the later checks.
+- New cases keep a tree with a commit on a detached `HEAD`, and a tree on another branch.
+- A new case keeps the tree when the port has no `head` call.
+- New cases use `node_modules/` in `.gitignore`, and archive and delete remove a clean tree with its links.
+- A refused removal leaves the untracked file and puts back both links.
+- The `HEAD` cases fail without the check, and the link case fails without the link restore.
+- Two delete cases keep a tree with a commit on a detached `HEAD`, and a tree on another branch.
+- The two delete cases fail when `teardown` skips the `HEAD` check.
+
+### Seen and not done
+
+- After a restart, the host does not know the linked folders, so a tree with links stays on archive and on delete.
+- After a restart, `restore` does not link the folders again, for the same reason.
+- A delete still removes a clean tree with no recorded branch without a `HEAD` check, as main does.
+- Every wake calls `restore`, which does nothing when the tree is present or the session has no record.

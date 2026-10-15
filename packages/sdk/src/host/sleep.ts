@@ -18,7 +18,10 @@ import type { HostContext } from './context.js';
 export interface Sleep {
   /** Whether a live session has nothing in hand, and so may sleep. */
   quiet(uri: string): boolean;
-  /** Let a quiet session's agent go. Answers whether it slept. */
+  /**
+   * Let a quiet session's agent go. Answers whether it slept. An archived
+   * session gives its tree back as well, once it has stopped.
+   */
   sleep(uri: string): Promise<boolean>;
   /**
    * Bring a session that is not live back, resumed in place.
@@ -125,11 +128,24 @@ export function createSleep(ctx: HostContext): Sleep {
     return !watched(uri);
   };
 
+  /** Whether a session is archived, which sleeps it without waiting out the timeout. */
+  const archived = (uri: string): boolean => (kept.flags(idOf(uri)) & Status.IsArchived) !== 0;
+
   const sleep = async (uri: string): Promise<boolean> => {
+    const id = idOf(uri);
+    /*
+     * An archived session with no agent running here has stopped already, so
+     * its tree is given back now rather than at a sleep that will not come.
+     * Not while a wake or a close is under way: the one puts the session in
+     * the tree, and the other gives the tree back itself once it is done.
+     */
+    if (!sessions.has(uri) && !restarting.has(uri) && !closing.has(id) && !waking.has(id) && archived(uri)) {
+      void ctx.shelve(uri);
+      return false;
+    }
     if (!quiet(uri)) return false;
     const held = sessions.get(uri);
     if (held === undefined) return false;
-    const id = idOf(uri);
     /*
      * The row it is listed by from here, as a listing would have found it.
      * Built before the session leaves `sessions`, from the same live answer the
@@ -158,13 +174,13 @@ export function createSleep(ctx: HostContext): Sleep {
     summaryMoved(uri);
     const closed = Promise.all(stopping).then(() => undefined);
     closing.set(id, closed);
+    // An archived session gives its tree back once its agents have closed.
+    // Queued now, so a wake asked for during the close waits behind it.
+    if (archived(uri)) void ctx.shelve(uri, closed);
     await closed;
     if (closing.get(id) === closed) closing.delete(id);
     return true;
   };
-
-  /** Whether a session is archived, which sleeps it without waiting out the timeout. */
-  const archived = (uri: string): boolean => (kept.flags(idOf(uri)) & Status.IsArchived) !== 0;
 
   const sweep = (): void => {
     const at = now();
@@ -341,7 +357,8 @@ export function createSleep(ctx: HostContext): Sleep {
     if (already !== undefined) {
       return already.then((woken) => ({ uri: woken.uri, chat: picked(woken.uri, chat) ?? woken.chat }));
     }
-    const resumed = resume(uri, chat, sender);
+    // The tree first, where an archive took it, so the agent starts in it.
+    const resumed = ctx.restore(uri).then(() => resume(uri, chat, sender));
     waking.set(id, resumed);
     const clear = (): void => { if (waking.get(id) === resumed) waking.delete(id); };
     resumed.then(clear, clear);
