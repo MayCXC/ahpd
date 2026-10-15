@@ -36,7 +36,7 @@ describe('driving a turn', () => {
     };
     expect(opened.snapshot.state.lifecycle).toBe('ready');
     expect(opened.snapshot.state.defaultChat).toBe(chatUri);
-    expect(opened.snapshot.state.status).toBe(1);
+    expect(opened.snapshot.state.status).toBe(Status.Idle | Status.IsRead);
   });
 
   it('passes the client\'s turn to the agent', async () => {

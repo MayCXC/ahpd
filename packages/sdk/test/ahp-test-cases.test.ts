@@ -636,6 +636,10 @@ async function driven(one: HostCase, name: string): Promise<Driven> {
   const uri = `ahp-session:/${name}`;
   await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
   const opened = await client.handle({ method: 'subscribe', params: { channel: uri } }) as { snapshot: { state: { defaultChat: string } } };
+  // Unread, which is where almost every case starts. A new session and its
+  // chat start read here, and a session with one chat takes its chat with it.
+  await client.handle({ method: 'dispatchAction', params: { channel: uri, action: { type: 'session/isReadChanged', isRead: false } } });
+  await settle();
   const channel = one.reducer === 'root' ? 'ahp-root://' : one.reducer === 'session' ? uri : opened.snapshot.state.defaultChat;
   const before = await stateOf(client, channel);
   for (const action of one.actions) {

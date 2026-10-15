@@ -458,9 +458,10 @@ describe('more than one chat in a session', () => {
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
 
     // `summary`, which is what the reducer reads: a chat announced under any
-    // other name arrives as a TypeError inside it.
+    // other name arrives as a TypeError inside it. Idle and read (32), because
+    // a chat nobody has run anything in has nothing unread.
     expect(actions(p, uri).find((e) => e.action.type === 'session/chatAdded')?.action.summary)
-      .toMatchObject({ resource: second, status: 1 });
+      .toMatchObject({ resource: second, status: 1 | 32 });
 
     const opened = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { chats: { resource: string }[]; defaultChat: string } };

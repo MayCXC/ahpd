@@ -1940,7 +1940,7 @@ describe('a client\'s call, held by the backend', () => {
     const held_ = await state(clients[0] as Client, uri);
     const entry = (held_.inputNeeded ?? []).find((one) => one.id === id);
     expect(entry).toBeDefined();
-    expect(held_.status).toBe(IN_PROGRESS);
+    expect(held_.status).toBe(IN_PROGRESS | 32);
 
     /*
      * The protocol's own reducer, on the state the host serves.
@@ -1956,7 +1956,7 @@ describe('a client\'s call, held by the backend', () => {
     expect(again.status & NEEDS_PERSON).toBe(0);
 
     const asked = raised(again, { id: 'q-1', kind: 'chatInput', chat: chatUri } as SessionInputRequest);
-    expect(asked.status).toBe(INPUT_NEEDED);
+    expect(asked.status).toBe(INPUT_NEEDED | 32);
   });
 
   it('settles the call for its own client, and refuses the other one', async () => {

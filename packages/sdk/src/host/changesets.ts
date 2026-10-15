@@ -2,6 +2,7 @@ import type { ChangesetFile } from '@microsoft/agent-host-protocol';
 import { idOf, Status } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { chatUriFor } from './channels.js';
+import { startsRead } from './chatactions.js';
 import type {
   ChangeWords, ChangeWordsAsk, ChangeWordsMode, ChangeWordsSetting, ChangesetOperationContext, ChangesetState,
 } from '../types/changes.js';
@@ -306,6 +307,7 @@ export function createChangesets(ctx: HostContext): Changesets {
         held.workingDirectory, undefined, held.additional,
       );
       ctx.log(`opened ${chatUri} in ${uri} to write the words`);
+      startsRead(ctx, uri, chatUri);
       ctx.dispatch(uri, { type: 'session/chatAdded', summary: ctx.chatSummary(uri, chatUri, chat) });
       watching = watchTurn(chat, uri, turnId);
       const refused = ctx.beginOrRun(chat, held.agent.provider, turnId, prompt, undefined, { origin: { kind: 'systemNotification' } });

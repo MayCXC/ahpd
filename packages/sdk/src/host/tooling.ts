@@ -13,6 +13,7 @@ import { enablementKeyOf } from '../enablement.js';
 import { ROOT, chatIdFor, chatUriFor, schemeOf } from './channels.js';
 import { need } from './common.js';
 import { preambleOf } from './preamble.js';
+import { startsRead } from './chatactions.js';
 import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -1459,6 +1460,7 @@ export function createTooling(ctx: HostContext): Tooling {
       const chat = spawn(held.agent, at, chatUri, chatIdFor(at, chatUri), backendsOwn(held.config), preamble === undefined ? undefined : { context: preamble }, held.workingDirectory, undefined, held.additional);
       log(`opened ${chatUri} in ${at}`);
       if (asked.title !== undefined) { chat.setTitle?.(asked.title); keepTitle(at, chatUri, asked.title); }
+      startsRead(ctx, at, chatUri);
       dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });
       // And the row: a client listing sessions reads a session's chats there.
       summaryMoved(at);

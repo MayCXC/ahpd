@@ -2,7 +2,7 @@ import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { computerId } from '../computers.js';
 import { deleteNested } from '../nested.js';
 import { localPath, uriOf } from '../fileuri.js';
-import { idOf, uriFor } from '../catalog.js';
+import { idOf, uriFor, Status } from '../catalog.js';
 import { join } from 'node:path';
 import { worktreeFor, worktreesOf } from '../repo/worktrees.js';
 import { ROOT, chatIdFor, chatUriFor, named } from './channels.js';
@@ -10,6 +10,7 @@ import { keepChatAttachment, resolveChatAttachment } from './chatattachment.js';
 import { openLink } from '../tools/session.js';
 import { readCreatedBy, readOrigin } from '../remotesession.js';
 import { BANG, HOSTS_OWN } from './common.js';
+import { startsRead } from './chatactions.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
 import type { Session, MessageAttachment, MessageFrom } from '../types/session.js';
@@ -1427,6 +1428,10 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       captureBaseline(uri, urls);
     }
     if (origin !== undefined) origins.set(uri, origin);
+    // Read, and its chat with it, before anybody is told about it: a session
+    // nobody has said anything in has nothing new in it.
+    kept.setFlags(idOf(uri), kept.flags(idOf(uri)) | Status.IsRead);
+    startsRead(ctx, uri, chatUriFor(uri));
     log(`created ${uri}${where ? ` in ${where}` : ''}`);
     // Ready, then announced. A client that hears about a session before
     // it can be subscribed to has been told about something that is not

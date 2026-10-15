@@ -1,6 +1,6 @@
 ---
 title: Session and chat read bits move together
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -51,4 +51,30 @@ A new session and a new chat start read.
 
 ## Resume
 
-Not started.
+### Built
+
+- `chatactions.ts` has `chatFlag`, which sets one chat bit, sends it on the chat and on the session, and moves the row.
+- `countedChats` gives the open recorded chats of a session, without a `tool` origin and without a worker URI.
+- `sessionFollows` makes a read session unread when a counted chat turns unread.
+- `sessionFollows` makes the session read when a counted chat turns read and no counted chat stays unread.
+- `sessionFlag` marks every counted chat read on a session read, and marks the one counted chat unread on a session unread.
+- `startsRead` sets `IsRead` on a new chat before the host announces it.
+- `openSession` sets `IsRead` on the new session and on its default chat before `session/ready`.
+- `createChat`, a worker chat, the `createChat` tool and the side chat of `askAgent` call `startsRead`.
+- The `createChat` tool and the `askAgent` side chat are not in the Files list. The Answer that a new chat starts read applies to them too.
+
+### Validation
+
+- `host-catalogue.test.ts` has a new group, "a session and its chats, read together", beside "the flags a client sets".
+- The group tests the session sync, the chat sync, one `session/chatUpdated` per moved chat, start read, and a repeated action.
+- The worker tests are in `subagent-chat.test.ts`, because that file has the worker fixture.
+- Some tests in sdk now expect `IsRead` in a status outside a turn. A new session and a new chat start read.
+- Two tests in sdk mark a chat or a session unread first, because marking a read item read sends nothing.
+- `ahp-test-cases.test.ts` marks each driven session unread before a case runs, because almost every case starts unread.
+- With that start, `HOST_OWNS` and its counts are as they were before this plan.
+- Typecheck, boundary and schema pass. Vitest passes 4520 tests in 248 files.
+
+### Seen and not done
+
+- A catalogue session that nobody opened has no recorded chats, so a session read on it marks no chat.
+- A chat that `moveChat` moves keeps its flags under the session it left.

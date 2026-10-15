@@ -7,6 +7,7 @@ import { localPath, uriOf } from '../fileuri.js';
 import { CLOSING } from './common.js';
 import { chatIdFor, named, ROOT } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';
+import { startsRead } from './chatactions.js';
 import { SEEDS } from './sessionconfig.js';
 import type { ChatOrigin, ChatSummary } from '@microsoft/agent-host-protocol';
 import type { Bag } from '../types/common.js';
@@ -1170,6 +1171,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
       if (origin !== undefined) madeFrom.set(chatUri, origin);
       const chat = spawn(held.agent, uri, chatUri, chatIdFor(uri, chatUri), backendsOwn(held.config), made, held.workingDirectory, undefined, peers, connection);
       log(`opened ${chatUri} in ${uri}`);
+      startsRead(ctx, uri, chatUri);
       // `summary`, not `chat`: the reducer reads `action.summary.resource`,
       // and a chat named any other way arrives as a TypeError inside it.
       dispatch(uri, { type: 'session/chatAdded', summary: chatSummary(uri, chatUri, chat) });

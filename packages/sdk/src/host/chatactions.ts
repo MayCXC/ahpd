@@ -20,6 +20,12 @@ import type { ConnectionContext, HostContext } from './context.js';
  * on the session's default chat, which archives the session because that chat
  * is what the session's row is.
  *
+ * A read bit that moved moves its chats with it. A session marked read marks
+ * every counted chat read, and a session marked unread with one counted chat
+ * marks that chat unread: with one chat there is no other place the unread
+ * conversation can be. With several, which one is new is not the session's
+ * to say, and each chat keeps its own bit.
+ *
  * Answers whether anything moved. A bit handed the value it already had is not
  * a change, and a client told about one is a client woken for a message that
  * moved nothing.
@@ -40,8 +46,93 @@ export function sessionFlag(
   // each client keeping its own.
   ctx.dispatch(uri, action);
   ctx.summaryMoved(uri);
+  if (bit === Status.IsRead) {
+    const counted = countedChats(ctx, uri);
+    if (on) for (const chat of counted) chatFlag(ctx, uri, chat, Status.IsRead, true);
+    else if (counted.length === 1) chatFlag(ctx, uri, counted[0] as string, Status.IsRead, false);
+  }
   if (bit === Status.IsArchived && on) queueMicrotask(() => { void ctx.sleep(uri).catch(() => undefined); });
   return true;
+}
+
+/**
+ * The chats whose read bits make up their session's.
+ *
+ * The open chats the store records for the session, so a session that is not
+ * running answers as well as one that is. A worker is left out: it is the
+ * harness's work inside another chat's call, and a person reads the chat that
+ * called it rather than the worker.
+ */
+export function countedChats(ctx: HostContext, session: string): string[] {
+  return ctx.recordedChats(idOf(session))
+    .filter((one) => one.origin?.['kind'] !== 'tool' && toolCallOfSubagentChat(one.uri) === undefined)
+    .map((one) => one.uri);
+}
+
+/**
+ * Set or clear one of a chat's own two bits, and say so.
+ *
+ * Said on the chat, and on the session's list of chats, which is where a
+ * client watching the session rather than this one chat reads that chat's
+ * status. The value there is the chat's own status with its bits laid over
+ * it - the exact number the chat's own state now answers with, which is what
+ * the protocol requires of it.
+ *
+ * `action` is what goes out on the chat: a client's own action where a client
+ * sent one, and this host's where nobody did.
+ *
+ * Answers whether the bit moved, for the same reason `sessionFlag` does.
+ */
+export function chatFlag(
+  ctx: HostContext,
+  session: string,
+  chat: string,
+  bit: number,
+  on: boolean,
+  action?: Record<string, unknown>,
+): boolean {
+  const before = ctx.kept.chatFlags(idOf(session), chat);
+  const after = on ? before | bit : before & ~bit;
+  if (after === before) return false;
+  ctx.kept.setChatFlags(idOf(session), chat, after);
+  ctx.dispatch(chat, action ?? (bit === Status.IsRead
+    ? { type: 'chat/isReadChanged', isRead: on }
+    : { type: 'chat/isArchivedChanged', isArchived: on }));
+  const lead = ctx.byChat.get(chat)?.chat;
+  const base = lead !== undefined
+    ? lead.status()
+    : Number(((ctx.subagents.get(chat)?.state ?? {}) as Bag).status ?? Status.Idle);
+  ctx.dispatch(session, { type: 'session/chatUpdated', chat, changes: { status: base | after } });
+  ctx.summaryMoved(session);
+  return true;
+}
+
+/**
+ * The session's read bit, brought into step with one chat's.
+ *
+ * A counted chat that is unread makes a read session unread. A counted chat
+ * that is read makes an unread session read once no counted chat is left
+ * unread. A chat that is not counted moves nothing.
+ */
+export function sessionFollows(ctx: HostContext, session: string, chat: string): void {
+  const counted = countedChats(ctx, session);
+  if (!counted.includes(chat)) return;
+  const id = idOf(session);
+  const read = (ctx.kept.chatFlags(id, chat) & Status.IsRead) !== 0;
+  const sessionRead = (ctx.kept.flags(id) & Status.IsRead) !== 0;
+  if (read === sessionRead) return;
+  if (read && counted.some((one) => (ctx.kept.chatFlags(id, one) & Status.IsRead) === 0)) return;
+  sessionFlag(ctx, session, Status.IsRead, read, { type: 'session/isReadChanged', isRead: read });
+}
+
+/**
+ * A chat that is new, marked read before anybody is told about it.
+ *
+ * Nothing has been said in it yet, so there is nothing in it to read.
+ */
+export function startsRead(ctx: HostContext, session: string, chat: string): void {
+  const id = idOf(session);
+  ctx.kept.setChatFlags(id, chat, ctx.kept.chatFlags(id, chat) | Status.IsRead);
 }
 
 /**
@@ -115,6 +206,9 @@ export function chatAction(
    * away. Only a chat of a session this host is running has anywhere to keep
    * one - a chat read back off a disk is a row nothing was recorded for, and
    * the guard below answers for it.
+   *
+   * A read bit that moves brings the session's into step with it - see
+   * `sessionFollows`.
    */
   const bitOf = type === 'chat/isReadChanged' ? Status.IsRead
     : type === 'chat/isArchivedChanged' ? Status.IsArchived
@@ -136,26 +230,10 @@ export function chatAction(
       sessionFlag(ctx, flagSession, Status.IsArchived, on, { type: 'session/isArchivedChanged', isArchived: on });
       return;
     }
-    const before = kept.chatFlags(idOf(flagSession), channel);
-    const after = on ? before | bitOf : before & ~bitOf;
     // Said again, a bit that did not move is not a change: it would move the
     // catalogue and wake every client for a message that said nothing.
-    if (after === before) return;
-    kept.setChatFlags(idOf(flagSession), channel, after);
-    dispatch(channel, action);
-    /*
-     * And the session's list of chats, which is where a client watching the
-     * session rather than this one chat reads that chat's status. The value is
-     * the chat's own status with its bits laid over it - the exact number the
-     * chat's own state now answers with, which is what the protocol requires
-     * of it.
-     */
-    const lead = byChat.get(channel)?.chat;
-    const base = lead !== undefined
-      ? lead.status()
-      : Number(((subagents.get(channel)?.state ?? {}) as Bag).status ?? Status.Idle);
-    dispatch(flagSession, { type: 'session/chatUpdated', chat: channel, changes: { status: base | after } });
-    summaryMoved(flagSession);
+    if (!chatFlag(ctx, flagSession, channel, bitOf, on, action)) return;
+    if (bitOf === Status.IsRead) sessionFollows(ctx, flagSession, channel);
     return;
   }
   /*

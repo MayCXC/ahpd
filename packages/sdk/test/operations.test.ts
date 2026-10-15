@@ -410,9 +410,10 @@ it('lists the changesets on the session channel, and not on a catalogue row', as
   // The diff stat is a different field, is declared on a summary, and stays.
   expect(row).toHaveProperty('changes');
 
+  // Unread, because a new session starts read and marking it read moves nothing.
   client.handle({
     method: 'dispatchAction',
-    params: { channel: uri, action: { type: 'session/isReadChanged', isRead: true } },
+    params: { channel: uri, action: { type: 'session/isReadChanged', isRead: false } },
   });
   await settle();
   const moved = p.notes
