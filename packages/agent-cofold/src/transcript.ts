@@ -316,16 +316,19 @@ export async function turnsOf(store: Store, sessionId: string): Promise<Transcri
      * appended as a steer part-way through a run: it is a thing somebody said,
      * and the reply that follows it is its answer.
      */
-    if (message.role === 'user' && message.source !== 'system' && message.source !== 'summary') {
+    // A prompt command's expanded text belongs to the turn its typed line began.
+    if (message.source === 'skill') continue;
+    if (message.role === 'user' && message.source !== 'system' && message.source !== 'summary' && message.source !== 'notice') {
       begin(message, 'user');
       continue;
     }
 
     /*
-     * The harness's own words - a cancel marker or a compaction summary - are
-     * not the person's. They are kept as a system notification rather than
-     * dropped, because a transcript that reads as if nothing happened between
-     * two turns is a conversation read wrong.
+     * The harness's own words - a cancel marker, a compaction summary or what
+     * a runtime command returned - are not the person's. They are kept as a
+     * system notification rather than dropped, because a transcript that
+     * reads as if nothing happened between two turns is a conversation read
+     * wrong.
      *
      * A summary is the one of those whose text is not what a person reads: it
      * was written for the model, and the sentence that says a compaction

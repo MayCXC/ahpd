@@ -253,6 +253,8 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
   let held: { kind: 'reasoning' | 'text'; text: string }[] = [];
   /** How many compactions this turn has reported, which numbers the parts. */
   let compactions = 0;
+  /** How many notices runtime commands added to this turn, which numbers the parts. */
+  let commands = 0;
 
   /** Write what the last step's reply was held for, if anything. */
   const flush = (): Bag[] => {
@@ -418,6 +420,22 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
             kind: 'systemNotification',
             content: compactionNotice({ before: event.estimatedTokens, after: event.afterTokens }),
           };
+          parts.push(part);
+          return only([{ type: 'chat/responsePart', turnId, part: { ...part } }]);
+        }
+        /*
+         * A slash command the run took as its own rather than as a prompt.
+         * The line the person typed is already the turn's message, so the
+         * start says nothing. What the command returned is a notice in the
+         * turn, as the transcript reads it back; a command that returned
+         * nothing leaves the turn with no part.
+         */
+        case 'command.started':
+          return only([]);
+        case 'command.finished': {
+          if (event.output === undefined || event.output === '') return only([]);
+          commands += 1;
+          const part: Bag = { id: `${turnId}:command:${commands}`, kind: 'systemNotification', content: event.output };
           parts.push(part);
           return only([{ type: 'chat/responsePart', turnId, part: { ...part } }]);
         }

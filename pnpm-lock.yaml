@@ -86,20 +86,20 @@ importers:
   packages/agent-cofold:
     dependencies:
       '@cofold/agents':
-        specifier: ^0.2.1
-        version: 0.2.1
+        specifier: ^0.4.0
+        version: 0.4.0
       '@cofold/commands':
         specifier: ^0.3.0
         version: 0.3.0
       '@cofold/model-openai-compat':
         specifier: ^0.2.0
-        version: 0.2.0(@cofold/agents@0.2.1)
+        version: 0.2.0(@cofold/agents@0.4.0)
       '@cofold/store-file':
         specifier: ^0.2.1
-        version: 0.2.1(@cofold/agents@0.2.1)
+        version: 0.2.1(@cofold/agents@0.4.0)
       '@cofold/tools':
         specifier: ^0.4.0
-        version: 0.4.0(@cofold/agents@0.2.1)
+        version: 0.4.0(@cofold/agents@0.4.0)
     devDependencies:
       '@ahpd/sdk':
         specifier: workspace:*
@@ -433,6 +433,10 @@ packages:
 
   '@cofold/agents@0.2.1':
     resolution: {integrity: sha512-hqXIBYxvrkBNxVK6pmzTilvbNVcxKHlPZq/cobqwTaNEZlkrHNvNd8yFevwQNVwY0b0K6QwaoXWl1ihzjYVsYA==}
+    engines: {node: '>=22'}
+
+  '@cofold/agents@0.4.0':
+    resolution: {integrity: sha512-TtjZlw09kyWwkPloBW0qCuFVU8VbkCmUUmsUGZZqsh4AQ+ahW/U6rjxZ0Xl0ZDxWctATs9aver0zZ7R4IjzLKw==}
     engines: {node: '>=22'}
 
   '@cofold/commands@0.3.0':
@@ -2654,6 +2658,10 @@ snapshots:
     dependencies:
       '@cofold/sdk': 0.2.0
 
+  '@cofold/agents@0.4.0':
+    dependencies:
+      '@cofold/sdk': 0.2.0
+
   '@cofold/commands@0.3.0':
     dependencies:
       '@cofold/sdk': 0.2.0
@@ -2666,6 +2674,10 @@ snapshots:
     dependencies:
       '@cofold/agents': 0.2.1
 
+  '@cofold/model-openai-compat@0.2.0(@cofold/agents@0.4.0)':
+    dependencies:
+      '@cofold/agents': 0.4.0
+
   '@cofold/remote@0.5.0':
     dependencies:
       '@cofold/commands': 0.3.0
@@ -2676,13 +2688,17 @@ snapshots:
     dependencies:
       '@cofold/agents': 0.2.1
 
+  '@cofold/store-file@0.2.1(@cofold/agents@0.4.0)':
+    dependencies:
+      '@cofold/agents': 0.4.0
+
   '@cofold/terminal@0.3.0':
     dependencies:
       '@cofold/commands': 0.3.0
 
-  '@cofold/tools@0.4.0(@cofold/agents@0.2.1)':
+  '@cofold/tools@0.4.0(@cofold/agents@0.4.0)':
     dependencies:
-      '@cofold/agents': 0.2.1
+      '@cofold/agents': 0.4.0
 
   '@cofold/yaml@0.3.0': {}
 

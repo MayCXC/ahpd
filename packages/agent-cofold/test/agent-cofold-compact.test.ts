@@ -284,6 +284,30 @@ it('says a compaction as one notice rather than as the model\'s answer', async (
   expect(noticesRead.map((part) => part.content)).toEqual(notices.map((part) => part.content));
 });
 
+it('runs /compact as a command, and reads it back as the turn drew it', async () => {
+  put(CONFIG);
+  const model = createFakeModel({ script: [{ text: 'first answer' }, { text: 'the summary so far' }], stream: true });
+  const { store, view } = await run({ ...CONFIG, memory: true }, holding(model, WINDOW), ['hello', '/compact']);
+
+  const notices = drawn(view).filter((part) => part.kind === 'systemNotification').map((part) => part.content);
+  expect(notices).toHaveLength(2);
+  expect(notices[1]).toBe('Compacted');
+  expect(streamed(view, 'chat/delta')).not.toContain('the summary so far');
+
+  /*
+   * The typed line is the second turn's message, and what the command
+   * returned is a notice in that turn rather than a third turn.
+   */
+  const read = await turnsOf(store, 'one');
+  expect(read).toHaveLength(2);
+  expect(JSON.stringify(read[1]?.message)).toContain('/compact');
+  const noticesRead = read
+    .flatMap((turn) => turn.responseParts as Bag[])
+    .filter((part) => part.kind === 'systemNotification')
+    .map((part) => part.content);
+  expect(noticesRead).toEqual(notices);
+});
+
 it('words the notice the way the Claude backend does', () => {
   expect(compactionNotice({ before: 9000, after: 2000 })).toBe('Context compacted automatically: 9000 tokens to 2000.');
   expect(compactionNotice()).toBe('Context compacted automatically.');
