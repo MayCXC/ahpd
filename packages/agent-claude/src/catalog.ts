@@ -1,5 +1,5 @@
 import { deleteSession, getSessionInfo, listSessions } from '@anthropic-ai/claude-agent-sdk';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { SDKSessionInfo } from '@anthropic-ai/claude-agent-sdk';
@@ -50,14 +50,52 @@ export async function catalogue(dir: string): Promise<Listed[]> {
  * session ran in, and this is the one call that says which it was without a
  * listing. The paths are asked in turn, since a session lives under exactly one
  * of them and the first that has it is the only one that will.
+ *
+ * `folder` is the session's own working folder where the host recorded one,
+ * and is asked before the paths: a session that ran outside them, in a
+ * subfolder, a worktree or a bot's folder, is under none of them. It is asked
+ * once, in its place in the order when it is one of the paths. A folder that
+ * is not one of them is a path a client chose, so it is asked only when the
+ * transcript for this id is already in its project folder: the SDK looks for
+ * worktrees inside the folder itself when it is not, which is reading more of
+ * that folder than the one session asked for.
  */
-export async function findSession(dirs: string[], id: string): Promise<{ row: Listed; dir: string } | undefined> {
-  for (const dir of dirs) {
+export async function findSession(
+  dirs: string[],
+  id: string,
+  folder?: string,
+): Promise<{ row: Listed; dir: string } | undefined> {
+  const served = folder !== undefined && dirs.includes(folder);
+  if (folder !== undefined && !served && hasTranscript(id, folder)) {
+    const info = await getSessionInfo(id, { dir: folder }).catch(() => undefined);
+    if (info !== undefined) return { row: listed(info, folder), dir: folder };
+  }
+  for (const dir of served ? [folder, ...dirs.filter((one) => one !== folder)] : dirs) {
     const info = await getSessionInfo(id, { dir }).catch(() => undefined);
     if (info === undefined) continue;
     return { row: listed(info, dir), dir };
   }
   return undefined;
+}
+
+/** `~/.claude/projects`, or the same under `CLAUDE_CONFIG_DIR` where it is set. */
+const projectsDir = (): string => join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects');
+
+/**
+ * Whether the project folder of `folder` holds a transcript for `id` that is not
+ * empty, which is where the SDK finds it without looking anywhere else.
+ *
+ * The folder is spelled the way the SDK spells it, from its real path where it
+ * has one and as given where it does not. An id that is not a filename has no
+ * transcript.
+ */
+function hasTranscript(id: string, folder: string): boolean {
+  if (!/^[A-Za-z0-9-]+$/.test(id)) return false;
+  let real = folder;
+  try { real = realpathSync(folder); }
+  catch { /* a folder that is gone keeps its transcript under the name it had */ }
+  try { return statSync(join(projectsDir(), real.replace(/[^A-Za-z0-9]/g, '-'), `${id}.jsonl`)).size > 0; }
+  catch { return false; }
 }
 
 /**
@@ -100,7 +138,7 @@ export function sharedCatalogue(dirs: string[]): () => Promise<Listed[]> {
  */
 export function transcriptOf(id: string, directory: string | undefined): string | undefined {
   if (!/^[A-Za-z0-9-]+$/.test(id)) return undefined;
-  const projects = join(process.env.CLAUDE_CONFIG_DIR ?? join(homedir(), '.claude'), 'projects');
+  const projects = projectsDir();
   if (directory !== undefined) {
     const own = join(projects, directory.replace(/[^A-Za-z0-9]/g, '-'), `${id}.jsonl`);
     if (existsSync(own)) return own;

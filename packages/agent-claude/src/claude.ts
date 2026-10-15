@@ -495,7 +495,7 @@ export function claude(options: ClaudeOptions): Agent {
      * store is asked about that id and nothing else, which is one file read
      * where a listing is every transcript on the machine.
      */
-    find: async (id) => (await findSession(dirs, id))?.row,
+    find: async (id, at) => (await findSession(dirs, id, at?.workingDirectory))?.row,
 
     /*
      * The transcript on disk, which is the CLI's own record of a session, and
@@ -517,11 +517,12 @@ export function claude(options: ClaudeOptions): Agent {
       expectedStatus: 401,
     }],
 
-    // Whichever directory holds it. The transcript reader wants the one the
-    // session ran in, and asking the store about this one id is what says so,
-    // rather than listing every directory to find out.
-    transcript: async (id) => {
-      const found = await findSession(dirs, id);
+    // Whichever directory holds it, the session's own folder first. The
+    // transcript reader wants the one the session ran in, and asking the store
+    // about this one id is what says so, rather than listing every directory
+    // to find out.
+    transcript: async (id, at) => {
+      const found = await findSession(dirs, id, at?.workingDirectory);
       return found === undefined ? undefined : await turnsOf(id, found.dir);
     },
 
@@ -534,8 +535,8 @@ export function claude(options: ClaudeOptions): Agent {
      * that writes no meta file, and a worker neither names is left out rather
      * than linked to the wrong call.
      */
-    subagents: async (id, turns) => {
-      const found = await findSession(dirs, id);
+    subagents: async (id, turns, at) => {
+      const found = await findSession(dirs, id, at?.workingDirectory);
       if (found === undefined) return undefined;
       return subagentsOf(id, found.dir, turns ?? await turnsOf(id, found.dir));
     },

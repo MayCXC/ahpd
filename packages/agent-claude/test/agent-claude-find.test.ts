@@ -1,4 +1,7 @@
-import { expect, it, vi } from 'vitest';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterAll, expect, it, vi } from 'vitest';
 import type { Listed } from '@ahpd/sdk';
 
 /*
@@ -109,4 +112,73 @@ it('still lists for a host that asks for the catalogue', async () => {
   const rows = await agent().list?.();
   expect(rows?.map((one) => one.id)).toEqual(['one', 'two']);
   expect(sdk.listed).toBe(2);
+});
+
+/*
+ * A session that ran outside the configured paths: a bot's folder, a subfolder,
+ * a worktree. The host gives the folder it recorded, and it is asked first.
+ */
+
+const home = realpathSync(mkdtempSync(join(tmpdir(), 'ahpd-claude-find-')));
+const BOT = join(home, 'bots', 'one');
+const before = process.env.CLAUDE_CONFIG_DIR;
+process.env.CLAUDE_CONFIG_DIR = join(home, 'config');
+afterAll(() => {
+  if (before === undefined) delete process.env.CLAUDE_CONFIG_DIR;
+  else process.env.CLAUDE_CONFIG_DIR = before;
+  rmSync(home, { recursive: true, force: true });
+});
+
+/** The transcript the CLI writes for a session of `folder`, with one line in it. */
+const written = (id: string, folder: string): void => {
+  const project = join(home, 'config', 'projects', folder.replace(/[^A-Za-z0-9]/g, '-'));
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, `${id}.jsonl`), '{}\n');
+};
+
+const withBot = (): void => {
+  stored();
+  mkdirSync(BOT, { recursive: true });
+  sdk.store[BOT] = { bot: session('bot', BOT) };
+  written('bot', BOT);
+};
+
+it('answers a session in the given folder outside the paths, asking there first', async () => {
+  withBot();
+  const row = await agent().find?.('bot', { workingDirectory: BOT });
+  expect(row).toMatchObject({ id: 'bot', workingDirectories: [`file://${BOT}`] });
+  expect(sdk.asked).toEqual([{ id: 'bot', dir: BOT }]);
+});
+
+it('answers nothing for the same session when no folder is given', async () => {
+  withBot();
+  expect(await agent().find?.('bot')).toBeUndefined();
+  expect(sdk.asked).toEqual([{ id: 'bot', dir: ONE }, { id: 'bot', dir: TWO }]);
+});
+
+it('falls back to the paths when the given folder does not exist', async () => {
+  stored();
+  const gone = join(home, 'gone');
+  const row = await agent().find?.('two', { workingDirectory: gone });
+  expect(row).toMatchObject({ id: 'two', workingDirectories: [`file://${TWO}`] });
+  expect(sdk.asked).toEqual([{ id: 'two', dir: ONE }, { id: 'two', dir: TWO }]);
+});
+
+it('does not ask the SDK about a folder whose project holds no transcript for the id', async () => {
+  withBot();
+  expect(await agent().find?.('other', { workingDirectory: BOT })).toBeUndefined();
+  expect(sdk.asked).toEqual([{ id: 'other', dir: ONE }, { id: 'other', dir: TWO }]);
+});
+
+it('asks a given folder that is one of the paths once, first', async () => {
+  stored();
+  await agent().find?.('two', { workingDirectory: TWO });
+  expect(sdk.asked).toEqual([{ id: 'two', dir: TWO }]);
+});
+
+it('reads the transcript and the subagents of a session in the given folder', async () => {
+  withBot();
+  expect(await agent().transcript?.('bot', { workingDirectory: BOT })).toEqual([]);
+  expect(await agent().subagents?.('bot', undefined, { workingDirectory: BOT })).toEqual([]);
+  expect(sdk.asked).toEqual([{ id: 'bot', dir: BOT }, { id: 'bot', dir: BOT }]);
 });
