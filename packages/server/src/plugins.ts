@@ -1184,7 +1184,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
  * range the running SDK does not satisfy, `unconfigured` for a manifest that
  * names a required option the configuration does not set, `disabled` for a
  * spec turned off, `missing` for one that does not resolve, and `error` for a
- * manifest that does not parse or does not hold.
+ * manifest that does not parse or does not hold, or an id that is not a slug.
  */
 export type PluginState = 'ready' | 'incompatible' | 'unconfigured' | 'disabled' | 'missing' | 'error';
 
@@ -1248,11 +1248,14 @@ export async function describePlugin(
 
   const row: PluginRow = { spec, name, state: 'ready', url: resolved.url };
   if (resolved.path !== undefined) row.path = resolved.path;
+  // An id a load refuses, as the line a listing shows for it.
+  const slugged = (one: PluginRow): PluginRow =>
+    isRecordSlug(name) ? one : { ...one, state: 'error', problem: `its name is not a slug: ${RECORD_SLUG}` };
 
   const packageDir = resolved.packageDir ?? (resolved.path === undefined ? undefined : nearestManifest(resolved.path));
   if (packageDir === undefined) {
     if (resolved.path !== undefined) row.module = fileNameOf(resolved.path);
-    return row;
+    return slugged(row);
   }
 
   const manifest = readManifest(packageDir);
@@ -1273,6 +1276,7 @@ export async function describePlugin(
     }
     if (!satisfied) return { ...row, state: 'incompatible', problem: why };
   }
+  if (!isRecordSlug(name)) return slugged(row);
 
   const inside = manifest.ahpd as Record<string, unknown> | undefined;
   const wanted = inside?.options;

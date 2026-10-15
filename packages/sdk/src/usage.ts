@@ -547,7 +547,8 @@ const split = (uri: string): At | undefined => {
   catch { return undefined; }
   try {
     return {
-      pool: decodeURIComponent(held.id),
+      // A first-party plugin's old name reads as its id, as a saved line does.
+      pool: currentOwner(decodeURIComponent(held.id)),
       leaf: decodeURIComponent(held.leaf),
       asked: new URLSearchParams(held.query),
     };
@@ -901,11 +902,11 @@ const textParam = (command: string, params: Record<string, unknown>, name: strin
   return value;
 };
 
-/** The pool a command names, or a refusal saying it needs one. */
+/** The pool a command names, a first-party plugin's old name read as its id, or a refusal saying it needs one. */
 const poolParam = (command: string, params: Record<string, unknown>): string => {
   const pool = textParam(command, params, 'pool');
   if (pool === undefined || pool === '') throw new RpcError(INVALID_PARAMS, `${command} needs pool, a pool key such as user:ana`);
-  return pool;
+  return currentOwner(pool);
 };
 
 /**
@@ -934,7 +935,7 @@ export const usageMethods = (provider: UsageProvider): Record<string, PluginMeth
     describe: () => ({ title, description }),
     authorize: async (params, reader) => {
       const pool = params.pool;
-      return typeof pool === 'string' && pool !== '' && answers.readable(reader, pool);
+      return typeof pool === 'string' && pool !== '' && answers.readable(reader, currentOwner(pool));
     },
     handle: async (params, reader) => {
       const pool = poolParam(command, params);

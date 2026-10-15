@@ -22,7 +22,8 @@ Nothing on disk is rewritten.
 
 ## Files
 
-- No file changes. Each reader below either reads through `currentOwner` already or cannot hold a `plugin:` reference.
+- `UPDATE: plan.md` - the risk on hand-written owners is removed.
+- No code changes. Each reader below either reads through `currentOwner` already or cannot hold a `plugin:` reference.
 
 ## Places that read a principal or an owner
 
@@ -54,5 +55,5 @@ Nothing on disk is rewritten.
 
 - **Done:** 2026-10-14. The search found no reader to change. The only hand-written configuration that takes `plugin:` is a trigger's `owners` filter, and task 03 reads it through `currentOwner`.
 - **Searches:** `rg` for `plugin:`, `ownerOf(`, `as Owner`, the owner patterns `^(?:user|team|project|root` and `startsWith('plugin:')` in `packages/*/src`.
-- **Not changed:** a usage read by pool name, such as `usage://plugin:@ahpd/bot`, is a query and not configuration. It answers nothing for an old name, because task 03 reads each saved line under the new name.
-- **Gates:** no code changed. The task 05 gates stand.
+- **Not changed:** a usage read by pool name, such as `usage://plugin:@ahpd/bot`, is a query and not configuration. Task 07 reads it through `currentOwner`.
+- **Gates:** no code changed, so the task 05 gates stand.

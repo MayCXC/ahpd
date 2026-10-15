@@ -224,6 +224,19 @@ it('reads a pool name holding colons as one encoded segment', async () => {
     .toEqual(['project:backend:search']);
 });
 
+it('reads a first-party plugin\'s old pool name as its id', async () => {
+  const { provider } = await over([
+    modelUse('2026-10-02T10:00:00.000Z', ['plugin:bot'], { owner: 'plugin:bot', cost: { amount: 0.25, currency: 'usd', from: 'harness' } }),
+  ], 'UTC');
+
+  const read = await json('usage://plugin%3A%40ahpd%2Fbot', undefined, provider);
+  expect(read.pool).toBe('plugin:bot');
+  expect(read.month).toEqual({ usd: 0.25, providerUsd: 0.25, calls: 1 });
+  expect(await json('usage://plugin%3A%40ahpd%2Fbot/month', undefined, provider)).toEqual(read.month);
+  expect(await json('usage://plugin%3A%40ahpd%2Fbot/records', undefined, provider))
+    .toEqual(await json('usage://plugin%3Abot/records', undefined, provider));
+});
+
 it('answers the records charged to a pool, newest first, and takes the range off the query', async () => {
   const { provider } = await over([
     modelUse('2026-09-28T10:00:00.000Z', ['user:ana'], { cost: { amount: 9, currency: 'usd', from: 'harness' } }),

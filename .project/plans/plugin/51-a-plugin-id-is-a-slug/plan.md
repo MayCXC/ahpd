@@ -19,6 +19,7 @@ refs:
   - "[code://packages/sdk/src/sessions.ts#L610-L618](../../../../packages/sdk/src/sessions.ts#L610-L618) - a saved session's owner and senders, read through `ownerOf`"
   - "[code://packages/server/src/scheduled.ts#L404](../../../../packages/server/src/scheduled.ts#L404) - a saved automation's owner, read through `ownerOf`"
   - "[code://packages/sdk/src/usage.ts#L242-L266](../../../../packages/sdk/src/usage.ts#L242-L266) - `entriesIn`, the one reading of a usage line, with its `owner` and `pools`"
+  - "[code://packages/server/src/plugins.ts#L1231-L1292](../../../../packages/server/src/plugins.ts#L1231-L1292) - `describePlugin`, the row `ahpd plugin list` shows"
   - "[code://packages/sdk/src/triggers.ts#L192-L193](../../../../packages/sdk/src/triggers.ts#L192-L193) - a trigger's `owners` filter, compared with a session's owner"
   - "[code://packages/webhook/src/route.ts#L8-L11](../../../../packages/webhook/src/route.ts#L8-L11) - `NAME` and `PREFIX`, the webhook's id and route"
   - "[code://docs/PLUGINS.md#L39-L47](../../../../docs/PLUGINS.md#L39-L47) - the section on the id"
@@ -73,7 +74,9 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | A grant, a policy, a usage rule or any other configuration a person writes reads `plugin:@ahpd/<x>` as `plugin:<x>`, through `currentOwner`. Nothing on disk is rewritten | Softov, 2026-10-14, asked "Grants, policies and usage rules that a person wrote by hand with `plugin:@ahpd/<x>` are not read as `plugin:<x>`. What should happen?": "Read them as the new name" | 06 |
 | Root config keeps flat `plugins.<id>` keys, so a key reads `plugins.agent-claude` | Softov, 2026-10-14, "Keep flat keys" | 01 |
 | `config.json` keys its entries by spec, so it needs no migration, and a spec such as `@ahpd/bot` still names its plugin in a verb and in `--plugin-option` | [code://packages/server/src/plugins.ts#L79](../../../../packages/server/src/plugins.ts#L79) | - |
-| `routePrefix` still encodes each segment, because a provisional id may hold `@` and `/` | [code://packages/sdk/src/plugins.ts#L138-L139](../../../../packages/sdk/src/plugins.ts#L138-L139) | - |
+| `routePrefix` keeps the encoding of each segment as a guard. No id that loads holds `@` or `/`, so no such name reaches a route today | (defaulted: follows from "Refuse at load") | 07 |
+| A usage read by pool name reads the name through `currentOwner`. This covers `usage://<pool>` and its leaves, and the pool param of `x-ahpd/usage/totals`, `range` and `records`. A read of `plugin:@ahpd/bot` answers the lines saved under `plugin:bot` | (defaulted: follows from "Read the old name as the new") | 07 |
+| `ahpd plugin list` shows a plugin whose id is not a slug as `error`, with the problem `its name is not a slug`, like a manifest that does not hold. The listing does not say `ready` for a plugin that a load skips | (defaulted: follows from "Refuse at load") | 07 |
 | The tasks go in this order: the ids change first, then the loader refuses a name that is not a slug, because the refusal would skip every first-party plugin that still exports `@ahpd/<name>` | (defaulted: each task's commit keeps the gates green) | 01, 02 |
 
 ## Proposed architecture
@@ -94,6 +97,7 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | implemented | 01 |
 | [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | implemented | 02 |
 | [06 - A hand-written old owner reads as the new one](task-06-a-hand-written-old-owner-reads-as-the-new-one.md) | implemented | 03 |
+| [07 - The listing and usage reads agree with the id](task-07-the-listing-and-usage-reads-agree-with-the-id.md) | implemented | 03, 05 |
 
 ## Risks and tradeoffs
 
@@ -104,8 +108,8 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 
 ## Resume state
 
-- **Done so far:** the plan and tasks 01 to 06, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
-- **Next action:** review tasks 05 and 06.
+- **Done so far:** the plan and tasks 01 to 07, 2026-10-14. Task 04 is ahpw commit `d4272a3`.
+- **Next action:** review tasks 05, 06 and 07.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 

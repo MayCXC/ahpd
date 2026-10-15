@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { describePlugin, pluginLine } from '../src/plugins.js';
+import { describePlugin, pluginIdsOf, pluginLine } from '../src/plugins.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import type { PluginSpec } from '../../sdk/src/types/plugin.js';
 
@@ -123,5 +123,51 @@ describe('describePlugin', () => {
     const row = await listing('./fixtures/plugin-bad-manifest');
     expect(row.state).toBe('error');
     expect(row.problem).toContain('package.json');
+  });
+
+  it('lists a file whose name is not a slug as error, the way a load refuses it', async () => {
+    loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
+    writeFileSync(join(loose, 'My_Plugin.js'), 'export function apply() {}\n');
+    const row = await listing(join(loose, 'My_Plugin.js'));
+
+    expect(row.state).toBe('error');
+    expect(row.name).toBe('My_Plugin');
+    expect(row.problem).toBe('its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter');
+    expect(pluginLine(row)).toMatch(/^error My_Plugin /);
+  });
+
+  it('lists a manifest name that is not a slug once its scope is joined as error', async () => {
+    loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
+    const long = `@acme/${'x'.repeat(40)}`;
+    writeFileSync(join(loose, 'package.json'), JSON.stringify({ name: long, type: 'module', exports: { '.': './entry.js' }, ahpd: { entry: './entry.js' } }));
+    writeFileSync(join(loose, 'entry.js'), 'export function apply() {}\n');
+    const row = await listing(loose);
+
+    expect(row.state).toBe('error');
+    expect(row.name).toBe(`acme-${'x'.repeat(40)}`);
+    expect(row.problem).toContain('not a slug');
+  });
+
+  it('lists a scoped manifest name as ready by the slug a load gives it', async () => {
+    loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
+    writeFileSync(join(loose, 'package.json'), JSON.stringify({ name: '@acme/y', type: 'module', exports: { '.': './entry.js' }, ahpd: { entry: './entry.js' } }));
+    writeFileSync(join(loose, 'entry.js'), 'export function apply() {}\n');
+    const row = await listing(loose);
+
+    expect(row.state).toBe('ready');
+    expect(row.name).toBe('acme-y');
+    expect(row.module).toBe('@acme/y');
+  });
+
+  it('lists a module that exports a name that is not a slug as error once the ids are read', async () => {
+    loose = mkdtempSync(join(tmpdir(), 'ahpd-loose-'));
+    const file = join(loose, 'scoped.js');
+    writeFileSync(file, "export const name = '@acme/x';\nexport function apply() {}\n");
+    await pluginIdsOf([file], { configDir: fixtures, cwd: here });
+    const row = await listing(file);
+
+    expect(row.state).toBe('error');
+    expect(row.name).toBe('@acme/x');
+    expect(row.problem).toContain('not a slug');
   });
 });

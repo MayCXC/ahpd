@@ -923,7 +923,7 @@ missing ./gone -> - (not resolved): Plugin ./gone is not there: tried /work/gone
 | `unconfigured` | `ahpd.options` names a required option the configuration does not set |
 | `disabled` | The spec carries `"enabled": false` |
 | `missing` | The spec does not resolve |
-| `error` | The manifest does not parse or does not hold |
+| `error` | The manifest does not parse or does not hold, or the id is not a slug |
 
 A plugin whose `apply` would throw still lists as `ready`, because a listing never calls `apply`. A module that throws on import lists under the id its manifest gives, and the rest of its row comes from the manifest, which is why the `ahpd` key exists.
 

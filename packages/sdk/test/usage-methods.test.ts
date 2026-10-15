@@ -109,6 +109,19 @@ it('answers what each read answers, for an admin and for a member', async () => 
   ]);
 });
 
+it('reads a first-party plugin\'s old pool name as its id', async () => {
+  const usage = fileUsage({ folder });
+  await usage.record(modelUse('2026-10-02T10:00:00.000Z', ['plugin:bot'], 4, 'plugin:bot'));
+  const methods = usageMethods(usageProvider({ usage, timezone: 'UTC' }));
+  const ask = async (name: string, pool: string): Promise<unknown> =>
+    methods[`x-ahpd/usage/${name}`]!.handle({ pool }, ADMIN, 'probe');
+
+  for (const name of ['totals', 'range', 'records']) {
+    expect(await ask(name, 'plugin:@ahpd/bot')).toEqual(await ask(name, 'plugin:bot'));
+  }
+  expect(await ask('records', 'plugin:@ahpd/bot')).toHaveLength(1);
+});
+
 it('lets a member in for her own pools and her team\'s, and nobody else\'s, as the scheme does', async () => {
   const { provider, methods } = await over();
   const may = async (name: string, params: Record<string, unknown>, reader: Principal) =>
