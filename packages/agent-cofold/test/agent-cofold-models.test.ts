@@ -292,3 +292,38 @@ it('advertises the whole catalogue on the root channel, which is what a picker r
     { id: 'open_router/qwen/qwen3-8b', name: 'qwen/qwen3-8b', provider: 'cofold' },
   ]);
 });
+
+it('offers cofold\'s slash commands, which a session completes after a slash', async () => {
+  put(CONFIG);
+  answering({ data: LISTED });
+  const offered = await cofoldAgent({ memory: true }).probe?.();
+  expect(offered?.commands).toContainEqual({ name: 'compact', description: expect.any(String) as string });
+
+  const path = mkdtempSync(join(tmpdir(), 'ahpd-cofold-models-slash-'));
+  const host = createHost({ path, agents: [cofoldAgent({ memory: true })] });
+  const peer: Peer = {
+    send: () => {},
+    notify: () => {},
+    request: async () => ({}),
+    answered: () => {},
+    close: () => {},
+  };
+  const client = host.accept(peer);
+  await client.handle({
+    method: 'initialize',
+    params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: ['ahp-root://'] },
+  });
+  /** What a composer is offered after a bare slash on a channel. */
+  const completed = async (channel: string): Promise<string[]> => (await client.handle({
+    method: 'completions',
+    params: { channel, kind: 'userMessage', text: '/', offset: 1 },
+  }) as { items: { insertText: string }[] }).items.map((one) => one.insertText);
+  // The boot probe is fire-and-forget, so the root may not have the list yet.
+  await untilAsync(async () => (await completed('ahp-root://')).includes('/compact'));
+
+  await client.handle({ method: 'createSession', params: { channel: `ahp-session:${path}/slash`, provider: 'cofold' } });
+  const opened = await client.handle({ method: 'subscribe', params: { channel: `ahp-session:${path}/slash` } }) as {
+    snapshot: { state: { defaultChat: string } };
+  };
+  expect(await completed(opened.snapshot.state.defaultChat)).toContain('/compact');
+});

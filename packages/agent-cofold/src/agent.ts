@@ -24,6 +24,7 @@ import type { HarnessConfig, HarnessProvider } from './config.js';
 import type { ToolsConfig } from './capabilities.js';
 import { cofoldSession } from './session.js';
 import { turnsOf } from './transcript.js';
+import { commandsOf } from './turnagent.js';
 
 /** What an embedder, or a plugin's options, may set. */
 export interface CofoldOptions {
@@ -735,7 +736,7 @@ export function cofoldAgent(options: CofoldOptions = {}): Agent {
       const models = connection.reference === undefined || listed.some((model) => model.id === connection.reference)
         ? listed
         : [{ id: connection.reference, name: connection.reference }, ...listed];
-      return { models, customizations: [], commands: [] };
+      return { models, customizations: [], commands: await commandsOf(options) };
     },
     /*
      * The sessions this backend already has.

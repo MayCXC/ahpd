@@ -1,9 +1,11 @@
-import { PERMISSION_MODES, createAgent, createAskUserTool, policyOf } from '@cofold/agents';
-import type { Agent as CofoldAgent, PermissionMode, Tool } from '@cofold/agents';
+import {
+  PERMISSION_MODES, createAgent, createAskUserTool, createMemoryStore, listPromptCommands, listSlashCommands, policyOf,
+} from '@cofold/agents';
+import type { Agent as CofoldAgent, ModelAdapter, PermissionMode, Tool } from '@cofold/agents';
 import { resolveWithin } from '@cofold/tools';
 import { workspaceSlug } from '@cofold/store-file';
 import { createClientCalls, str } from '@ahpd/sdk';
-import type { Bag, ClientCallAnswer, Session } from '@ahpd/sdk';
+import type { Bag, ClientCallAnswer, Offered, Session } from '@ahpd/sdk';
 import { join } from 'node:path';
 import { DEFAULT_TOOLS, capabilitiesOf } from './capabilities.js';
 import { defaultStoreRoot, modelOf, modelReferenceOf } from './agent.js';
@@ -116,6 +118,45 @@ export const AGENT_ID = 'cofold';
 
 /** What the model is told when neither the package nor the session named a prompt. */
 const DEFAULT_INSTRUCTIONS = 'You are a helpful assistant.';
+
+/**
+ * The model of an agent built only to be read, which no run is ever started on.
+ *
+ * cofold refuses an agent without a model adapter, and the commands an agent
+ * takes do not depend on which model it has.
+ */
+const UNASKED: ModelAdapter = {
+  id: 'unasked',
+  modelId: 'unasked',
+  features: { tools: false, streaming: false, images: false, structuredOutput: false, reasoning: false },
+  complete: () => Promise.reject(new Error('This agent lists its commands and runs nothing.')),
+};
+
+/**
+ * The slash commands a session of this backend takes, as a slash menu lists them.
+ *
+ * cofold's own list for the capabilities a session gets: what a capability
+ * adds, the harness's built-ins such as `/compact`, and the prompt commands a
+ * capability expands for the model. The list belongs to a cofold agent, so it
+ * is read off one built with those capabilities, a model that is never asked
+ * and a store in memory. No workspace is known before a session exists, so
+ * the memory capability, which is placed per workspace, is not in it, and
+ * neither is a prompt command a capability offers for one workspace only.
+ */
+export const commandsOf = async (options: CofoldOptions): Promise<Offered['commands']> => {
+  const agent = createAgent({
+    id: AGENT_ID,
+    instructions: DEFAULT_INSTRUCTIONS,
+    model: UNASKED,
+    store: createMemoryStore(),
+    capabilities: capabilitiesOf(options.tools ?? DEFAULT_TOOLS, { workspace: '' }),
+  });
+  return [...listSlashCommands(agent), ...await listPromptCommands(agent)].map((command) => ({
+    name: command.name,
+    description: command.description,
+    ...(command.argumentHint !== undefined ? { argumentHint: command.argumentHint } : {}),
+  }));
+};
 
 /** The tool's own name, off the `<clientId>__<name>` the model was offered. */
 const bareName = (name: string, owner: string): string =>

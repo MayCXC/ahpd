@@ -49,14 +49,15 @@ it('gives a second registration its own provider', () => {
   expect(cofoldAgent({ provider: 'other', displayName: 'Other' })).toMatchObject({ provider: 'other', displayName: 'Other' });
 });
 
-it('offers the configured model and no commands', async () => {
+it('offers the configured model and cofold\'s own commands', async () => {
   // An adapter, so the case is about the configured model standing in rather
   // than about whatever endpoint this machine happens to have running; the
   // catalogue an endpoint serves is `agent-cofold-models.test.ts`.
   const stub = { id: 'stub', modelId: 'stub', features: {} } as unknown as ModelAdapter;
   const offered = await cofoldAgent({ adapter: stub, model: 'deepseek-chat' }).probe?.();
   expect(offered?.models).toEqual([{ id: 'deepseek-chat', name: 'deepseek-chat' }]);
-  expect(offered?.commands).toEqual([]);
+  // `/compact` is cofold's built-in, and the default tools add no command.
+  expect(offered?.commands).toEqual([{ name: 'compact', description: expect.any(String) as string }]);
 });
 
 it('builds an OpenAI-compatible adapter for the chosen model', () => {
