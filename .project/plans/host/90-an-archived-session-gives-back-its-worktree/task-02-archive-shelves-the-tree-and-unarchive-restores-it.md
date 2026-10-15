@@ -1,6 +1,6 @@
 ---
 title: Archive shelves the tree and unarchive restores it
-status: implemented
+status: done
 depends: [task-01-the-worktree-record-outlives-the-daemon.md]
 layer: "sdk"
 refs:

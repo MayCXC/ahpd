@@ -191,7 +191,7 @@ Reference: [00-host.md](host/00-host.md)
 | [87 - A turn is refused while one runs](host/87-a-turn-is-refused-while-one-runs/plan.md) | high | active 2026-10-14; task 01 implemented and reviewed | - | - |
 | [88 - A 0.10.0 offer gets the 1.0.0 contract](host/88-a-0-10-0-offer-gets-the-1-0-0-contract/plan.md) | high | built 2026-10-15 ([implemented.md](host/88-a-0-10-0-offer-gets-the-1-0-0-contract/implemented.md)) | - | - |
 | [89 - Chat and session read state stay in step](host/89-chat-and-session-read-state-stay-in-step/plan.md) | high | built 2026-10-15 ([implemented.md](host/89-chat-and-session-read-state-stay-in-step/implemented.md)) | - | - |
-| [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | planned 2026-10-14 | - | 91 |
+| [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | built 2026-10-15 ([implemented.md](host/90-an-archived-session-gives-back-its-worktree/implemented.md)) | - | 91 |
 | [91 - Merged sessions archive and delete themselves](host/91-merged-sessions-archive-and-delete-themselves/plan.md) | medium | planned 2026-10-14 | 90 | - |
 | [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
 | [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | planned 2026-10-15 | - | - |

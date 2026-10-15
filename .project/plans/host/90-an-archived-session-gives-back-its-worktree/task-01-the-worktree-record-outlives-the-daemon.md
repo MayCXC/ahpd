@@ -1,6 +1,6 @@
 ---
 title: The worktree record outlives the daemon
-status: implemented
+status: done
 depends: []
 layer: "sdk"
 refs:

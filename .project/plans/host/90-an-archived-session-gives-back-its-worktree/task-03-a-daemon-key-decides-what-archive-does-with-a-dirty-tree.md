@@ -1,6 +1,6 @@
 ---
 title: A daemon key decides what archive does with a dirty tree
-status: implemented
+status: done
 depends: [task-02-archive-shelves-the-tree-and-unarchive-restores-it.md]
 layer: "sdk, server"
 refs:

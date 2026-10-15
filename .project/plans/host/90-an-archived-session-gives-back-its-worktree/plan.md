@@ -1,7 +1,7 @@
 ---
 title: An archived session gives back its worktree
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -67,6 +67,7 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 | A tree on a detached `HEAD`, with no branch of its own, stays on archive | Softov, 2026-10-14, "What does archive do with a tree on a detached `HEAD`, with no branch of its own?" (defaulted: proposed, unarchive cannot put it back on the same commit) | 02 |
 | A wake of an archived session whose tree is gone restores the tree first, as unarchive does | Softov, 2026-10-14, "What happens when a client wakes an archived session whose tree is gone?" (defaulted: proposed) | 02 |
 | Unarchive puts the tree back at the stored path on the stored branch, and links the symlink folders again | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream c289a58900a) | 02 |
+| Delete applies the `HEAD` check of archive, and keeps a tree with a detached `HEAD` or another branch checked out | Softov, 2026-10-15, "Add it in host/90 now" | 02 |
 | Unarchive does not copy the include files again | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream c289a58900a) | 02 |
 | A tree that still exists on unarchive is left alone; a branch that is gone fails with a log line | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream c289a58900a) | 02 |
 | The removal and the restore of one session run one after the other | Softov, 2026-10-14, chose "Record and plan" for Pass 6 (defaulted: upstream c289a58900a) | 02 |
@@ -84,9 +85,9 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The worktree record outlives the daemon](task-01-the-worktree-record-outlives-the-daemon.md) | todo | - |
-| [02 - Archive shelves the tree and unarchive restores it](task-02-archive-shelves-the-tree-and-unarchive-restores-it.md) | todo | 01 |
-| [03 - A daemon key decides what archive does with a dirty tree](task-03-a-daemon-key-decides-what-archive-does-with-a-dirty-tree.md) | todo | 02 |
+| [01 - The worktree record outlives the daemon](task-01-the-worktree-record-outlives-the-daemon.md) | done | - |
+| [02 - Archive shelves the tree and unarchive restores it](task-02-archive-shelves-the-tree-and-unarchive-restores-it.md) | done | 01 |
+| [03 - A daemon key decides what archive does with a dirty tree](task-03-a-daemon-key-decides-what-archive-does-with-a-dirty-tree.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -97,20 +98,20 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-worktree-record-outlives-the-daemon.md](task-01-the-worktree-record-outlives-the-daemon.md).
+- **Done so far:** tasks 01, 02 and 03 are done, and the plan is built, 2026-10-15.
+- **Next action:** none. The cases that wait are in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** the move path at `lifecycle.ts` L570-L585 and the detached methods also drop the record. Each one must drop the stored copy too.
 
 ## Final verification checklist
 
-- [ ] A test: the record is read back after a store reopen, and `teardown` uses it.
-- [ ] A test: archiving a clean session removes the tree and keeps the branch.
-- [ ] A test: under `keep`, archiving a dirty session keeps the tree.
-- [ ] A test: under `commit`, archiving a dirty session commits the changes on the branch and removes the tree.
-- [ ] A test: the key is in the root config schema, and a push of it applies with no restart.
-- [ ] `docs/HOST.md` lists `archiveDirtyWorktree`.
-- [ ] A test: unarchiving puts the tree back on the branch, with the symlinks.
-- [ ] A test: archive then unarchive at once leaves the tree in place.
-- [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.
+- [x] A test: the record is read back after a store reopen, and `teardown` uses it.
+- [x] A test: archiving a clean session removes the tree and keeps the branch.
+- [x] A test: under `keep`, archiving a dirty session keeps the tree.
+- [x] A test: under `commit`, archiving a dirty session commits the changes on the branch and removes the tree.
+- [x] A test: the key is in the root config schema, and a push of it applies with no restart.
+- [x] `docs/HOST.md` lists `archiveDirtyWorktree`.
+- [x] A test: unarchiving puts the tree back on the branch, with the symlinks.
+- [x] A test: archive then unarchive at once leaves the tree in place.
+- [x] The gates pass: typecheck, boundary, schema and vitest.
+- [x] `plans/index.md` updated.
