@@ -10,13 +10,20 @@ Claude Code as a backend for [`@ahpd/sdk`](https://www.npmjs.com/package/@ahpd/s
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-claude`](https://github.com/softov/ahpd/tree/main/packages/agent-claude).
 
-## In the daemon
-
-Install it where the daemon resolves a plugin name from, and name it in the configuration. The ordinary install takes no options: it catalogues whatever directories the daemon was started on.
+## Install
 
 ```bash
 ahpd plugin install @ahpd/agent-claude
+ahpd restart
 ```
+
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+### What it needs
+
+- Claude Code signed in on this host, with `claude login`, or `ANTHROPIC_API_KEY` in the daemon's environment.
+
+## Options
 
 ```json
 {
@@ -26,9 +33,7 @@ ahpd plugin install @ahpd/agent-claude
 }
 ```
 
-`paths` is the one option a person sets most often, because it narrows the catalogue the daemon serves. Everything else has a default that fits most installs. The daemon loads the change on its next restart.
-
-## Options
+The ordinary install takes no options: it catalogues whatever directories the daemon was started on. `paths` is the one option a person sets most often, because it narrows the catalogue the daemon serves. Everything else has a default that fits most installs. The daemon loads the change on its next restart.
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An option written per variant, such as `provider`, `displayName`, `models` or `keepCliModels`, fails the load and says where it goes: inside `presets.<id>`.
 
@@ -64,20 +69,11 @@ A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "mat
 
 A preset's `env` value is a string, `null` to unset the variable, `{ "fromEnv": "NAME" }` for the daemon's own `NAME`, or `{ "$secret": "host:<name>" }` for a credential kept in the vault. A variable that is named with `fromEnv` and is not there when the plugin loads skips the preset that names it.
 
+`ahpd vault set host:<name>` keeps the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#marking-a-credential) for what a credential is.
+
 An `extraArgs` value is given by name without the `--`, and `null` for a flag that takes none. A value that is not a string reaches the CLI as its JSON text, so `"settings": { "permissions": { "allow": ["Read"] } }` is started as `--settings '{"permissions":{"allow":["Read"]}}'`.
 
 Every field is checked when the plugin loads. A preset that is wrongly written, whose `fromEnv` variable is not in the daemon's environment or whose `$secret` cannot be read, is not registered: it is skipped with one line naming it, which is stamped to the daemon's log and printed by `ahpd start` and `ahpd restart` as `skipped: <plugin>: <the preset and why>`, above the line that says the daemon is up. The other presets register as they were written, and the load is refused only when no preset is left to register an agent for.
-
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/agent-claude` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/agent-claude` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
-| `ahpd vault set host:<name>` | Keep the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input |
-
-See [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--plugin-and-what-naming-one-runs) for what naming a plugin runs, and [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md#marking-a-credential) for what a credential is.
 
 ## In your own host
 
@@ -117,7 +113,7 @@ Two presets, two entries in the picker, and a session picks the agent rather tha
 
 ### Project files, and trust
 
-A session in a folder the host was not told to trust loads none of that folder's own files. Nothing of the project is loaded: no settings, so no hooks, no project `CLAUDE.md`, and no `.mcp.json` beside the project. The person's own files are not a project's and are read either way. Trust is the window's answer, pushed in the root config - see [Trusted folders](https://github.com/softov/ahpd/blob/main/docs/AUTHENTICATION.md#trusted-folders). A session nobody vouched for is untrusted, which is the same answer a host with no window to ask gives.
+A session in a folder the host was not told to trust loads none of that folder's own files. Nothing of the project is loaded: no settings, so no hooks, no project `CLAUDE.md`, and no `.mcp.json` beside the project. The person's own files are not a project's and are read either way. Trust is the window's answer, pushed in the root config - see [Trusted folders](https://github.com/softov/ahpd/blob/main/docs/sdk/AUTHENTICATION.md#trusted-folders). A session nobody vouched for is untrusted, which is the same answer a host with no window to ask gives.
 
 ### A second Claude on another endpoint
 
@@ -192,15 +188,15 @@ Sessions use whatever the Claude CLI is signed in with. A client can push a toke
 
 A session in a machine runs the CLI from the `claude` part at its pinned version, not this host's: `computerCli: "host"` mounts this host's binary instead, and `computerCliFallback: "host"` mounts it only when the part cannot be built. Its configuration is a state volume at `/ahpd/<variant>`, seeded from this host's settings, instructions, skills, agents, commands and the MCP servers of `~/.claude.json`, never the sign-in. A profile with `state: "host"` mounts this host's `~/.claude` instead, sign-in included.
 
-The CLI there runs with the variant's own `env`, a pushed token and `CLAUDE_CONFIG_DIR`, and nothing of the daemon's environment: the daemon's `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the variant names them with `{ "fromEnv" }`. So a variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token`, or `ANTHROPIC_API_KEY` in its `env`, and a machine that used to share this host's sign-in needs one of those or a sign-in made once inside it. See [Claude Code in a machine](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#claude-code-in-a-machine).
+The CLI there runs with the variant's own `env`, a pushed token and `CLAUDE_CONFIG_DIR`, and nothing of the daemon's environment: the daemon's `ANTHROPIC_*` and `CLAUDE_CODE_OAUTH_TOKEN` cross only when the variant names them with `{ "fromEnv" }`. So a variant signs in with `CLAUDE_CODE_OAUTH_TOKEN`, from `claude setup-token`, or `ANTHROPIC_API_KEY` in its `env`, and a machine that used to share this host's sign-in needs one of those or a sign-in made once inside it. See [Claude Code in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#claude-code-in-a-machine).
 
 ## Documentation
 
 | | |
 | --- | --- |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Loading a plugin into the daemon |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | The `Agent` and `Session` contracts this implements |
-| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/AHP.md) | Which actions are served, which are refused, and why |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading a plugin into the daemon |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | The `Agent` and `Session` contracts this implements |
+| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AHP.md) | Which actions are served, which are refused, and why |
 
 ## License
 

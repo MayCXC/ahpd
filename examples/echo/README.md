@@ -1,6 +1,6 @@
 # A host of your own
 
-[docs/AGENT.md](../../docs/AGENT.md) is the contract in reference form; this is
+[docs/sdk/AGENT.md](../../docs/sdk/AGENT.md) is the contract in reference form; this is
 the shortest thing that satisfies it, running.
 
 

@@ -27,7 +27,10 @@
     "test:unit": "node tools/schema.mjs && vitest run --exclude 'packages/computer/**' --exclude 'packages/server/test/server-cli*' --exclude 'packages/server/test/server-http*' --exclude 'packages/sdk/test/nested-process*'",
     "test:processes": "node tools/schema.mjs && vitest run packages/computer/ packages/server/test/server-cli packages/server/test/server-http packages/sdk/test/nested-process",
     "schema": "node tools/schema.mjs",
-    "wire": "node tools/validate.mjs"
+    "wire": "node tools/validate.mjs",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "devDependencies": {
     "@ahpd/agent-claude": "workspace:*",
@@ -43,6 +46,7 @@
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
     "typescript": "^5.9.3",
+    "vitepress": "^1.6.4",
     "vitest": "^3.0.0",
     "ws": "^8.18.0"
   },

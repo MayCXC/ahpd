@@ -139,7 +139,7 @@ A container whose root opens the device does not need that group:
 
   docker run --device /dev/kvm ...
 
-See docs/COMPUTER.md.`;
+See docs/plugins/COMPUTERS.md.`;
 
 function start() {
   if (exists()) {

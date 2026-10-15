@@ -226,7 +226,7 @@ ahpd \
 
 The token controls access to the host. Agent providers may additionally use their own authentication.
 
-See [`docs/DAEMON.md`](docs/DAEMON.md) for networking, configuration and token handling.
+See [`docs/server/REMOTE.md`](docs/server/REMOTE.md) for networking and tokens, and [`docs/server/CONFIGURE.md`](docs/server/CONFIGURE.md) for configuration.
 
 # Extension Plugins
 
@@ -271,7 +271,7 @@ You can inspect configured plugins without loading any of them:
 ahpd plugin list
 ```
 
-See [docs/PLUGINS.md](docs/PLUGINS.md) for writing one and [docs/DAEMON.md](docs/DAEMON.md#--plugin-and-what-naming-one-runs) for running one.
+See [docs/plugins/PLUGINS.md](docs/plugins/PLUGINS.md) for writing one and [docs/server/PLUGINS.md](docs/server/PLUGINS.md) for running one.
 
 ---
 
@@ -410,7 +410,7 @@ The implementation currently covers **33 of 33 declared commands** and **102 of 
 
 An unsupported operation returns `-32601`, not an empty success, so a client is never left waiting for state that will not arrive.
 
-For the command-by-command compatibility matrix, see [`docs/AHP.md`](docs/AHP.md).
+For the command-by-command compatibility matrix, see [`docs/sdk/AHP.md`](docs/sdk/AHP.md).
 
 # Documentation
 
@@ -418,15 +418,16 @@ Every document under `docs/` is listed in [`docs/README.md`](docs/README.md), on
 
 | Document                                   | Purpose                                                   |
 | ------------------------------------------ | --------------------------------------------------------- |
-| [docs/DAEMON.md](docs/DAEMON.md)           | CLI, configuration, tokens, runtimes (Node/Bun/Deno)      |
-| [docs/LIBRARY.md](docs/LIBRARY.md)         | Building an AHP server with `createHost` and the ports    |
-| [docs/AGENT.md](docs/AGENT.md)             | Building an `Agent` and `Session` contracts               |
-| [docs/AHP.md](docs/AHP.md)                 | Detailed AHP compatibility                                |
-| [`docs/PLUGINS.md`](docs/PLUGINS.md)       | Plugin system and authoring                               |
-| [docs/COMPUTER.md](docs/COMPUTER.md)       | Disposable computers (Docker)                             |
-| [docs/CONTAINERS.md](docs/CONTAINERS.md)   | Dev containers                                            |
-| [docs/USERS.md](docs/USERS.md)             | Users and authorization                                   |
-| [docs/POLICY.md](docs/POLICY.md)           | Who may use which agent, model and computer                |
+| [docs/server/GET-STARTED.md](docs/server/GET-STARTED.md)           | Install, configure, start, and connect VS Code            |
+| [docs/server/REFERENCE.md](docs/server/REFERENCE.md)               | Every command and flag                                    |
+| [docs/sdk/LIBRARY.md](docs/sdk/LIBRARY.md)         | Building an AHP server with `createHost` and the ports    |
+| [docs/sdk/AGENT.md](docs/sdk/AGENT.md)             | Building an `Agent` and `Session` contracts               |
+| [docs/sdk/AHP.md](docs/sdk/AHP.md)                 | Detailed AHP compatibility                                |
+| [`docs/plugins/PLUGINS.md`](docs/plugins/PLUGINS.md)       | Plugin system and authoring                               |
+| [docs/plugins/COMPUTERS.md](docs/plugins/COMPUTERS.md)       | Disposable computers (Docker)                             |
+| [docs/plugins/CONTAINERS.md](docs/plugins/CONTAINERS.md)   | Dev containers                                            |
+| [docs/sdk/USERS.md](docs/sdk/USERS.md)             | Users and authorization                                   |
+| [docs/sdk/POLICY.md](docs/sdk/POLICY.md)           | Who may use which agent, model and computer                |
 | [REFERENCE.md](REFERENCE.md)               | Protocol/reference-host decisions                         |
 | [DEVELOPER.md](DEVELOPER.md)               | How to run and develop the project from source            |
 
@@ -527,7 +528,7 @@ Only `path` and `agents` are required.
 
 Leave a port out and the operations that need it answer that they are unsupported.
 
-See [`docs/LIBRARY.md`](docs/LIBRARY.md) for full SDK reference.
+See [`docs/sdk/LIBRARY.md`](docs/sdk/LIBRARY.md) for full SDK reference.
 
 ---
 
@@ -580,7 +581,7 @@ Register it like any other, and the host cannot tell it from `claude()`:
 const host = createHost({ path, agents: [shout()] });
 ```
 
-Everything else an `Agent` can declare is optional. See [`docs/AGENT.md`](docs/AGENT.md) for the full contracts, and [`examples/echo`](examples/echo) for the smallest one that runs.
+Everything else an `Agent` can declare is optional. See [`docs/sdk/AGENT.md`](docs/sdk/AGENT.md) for the full contracts, and [`examples/echo`](examples/echo) for the smallest one that runs.
 
 ---
 

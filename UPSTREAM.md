@@ -33,7 +33,7 @@ The storage suggestion, its thresholds (5 GB or 20 worktrees) and the setting `c
 
 The sandbox in 1.141 is the Copilot SDK's and the terminal tool engine's; the upstream Claude agent does not sandbox. The root config gains a `sandbox` object (`enabled`, network and path rules; `common/sandboxConfigSchema.ts`), and the session key `sandboxEnabled` stays an enum in `common/agentHostSchema.ts`. The MSRC fixes to the MCP sandbox in this range are Copilot-only.
 
-- [x] **`sandboxEnabled` is replaced by the `sandbox` preset declaration in the Claude backend**, which maps `default`/`on`/`off` to the SDK `settings.sandbox.enabled`, and a stored `sandboxEnabled: 'on'` still applies. `packages/agent-claude/src/options.ts` (`storedSandbox`), `docs/AHP.md` (the Claude backend does not declare `sandboxEnabled`), decisions `a-stored-sandbox-on-survives-the-preset.md` and `a-preset-sandbox-off-wins-over-a-stored-on.md`.
+- [x] **`sandboxEnabled` is replaced by the `sandbox` preset declaration in the Claude backend**, which maps `default`/`on`/`off` to the SDK `settings.sandbox.enabled`, and a stored `sandboxEnabled: 'on'` still applies. `packages/agent-claude/src/options.ts` (`storedSandbox`), `docs/sdk/AHP.md` (the Claude backend does not declare `sandboxEnabled`), decisions `a-stored-sandbox-on-survives-the-preset.md` and `a-preset-sandbox-off-wins-over-a-stored-on.md`.
 - [ ] **Declare the root `sandbox` object.** A 1.141 window pushes it in `root/configChanged`; `packages/sdk/src/host/actions.ts` logs it as refused because `packages/sdk/src/vscoderootconfig.ts` does not declare it. Declaring it stops the noise. Mapping `enabled`, network and paths onto the Claude SDK `settings.sandbox` when the preset says `default` is Softov's call. `packages/sdk/src/vscoderootconfig.ts`, `packages/agent-claude/src/options.ts`.
 
 ### Session grid
@@ -228,12 +228,12 @@ VS Code `3aa54039` (2026-08-29) to `8e35945b` (2026-09-12), 206 agentHost commit
 ### Protocol
 
 - [x] **`authenticate` with an empty `token` is a revocation.** The protocol now says so beside `expiresIn`, and the reference host deletes the stored token on it (`agentHostAuthenticationService.ts`). This host answered `-32602`. Forget the token for that connection and answer `{}`. Nothing running is told: a token is spent at start, into the harness's environment, and cannot be taken back out.
-- [x] **`authenticate.expiresIn` is honoured.** Seconds of life left, a positive integer, omitted when unknown. Keep an `expiresAt` beside the token; do not spend an expired one on a new session; send `auth/required` with `reason: 'expired'` when one runs out, to the connections that gave it. The `auth/required` row in `docs/AHP.md` says expiry is never reported because the host cannot know - it can now. Upstream `b4e90b1a`, protocol `fd0471d`.
+- [x] **`authenticate.expiresIn` is honoured.** Seconds of life left, a positive integer, omitted when unknown. Keep an `expiresAt` beside the token; do not spend an expired one on a new session; send `auth/required` with `reason: 'expired'` when one runs out, to the connections that gave it. The `auth/required` row in `docs/sdk/AHP.md` says expiry is never reported because the host cannot know - it can now. Upstream `b4e90b1a`, protocol `fd0471d`.
 - [x] **`ahp-automations://catalog` is accepted as the automations channel.** VS Code spelt it that way between `a0bc67f8` and `fd0471d4`, and `isAhpAutomationCatalogChannel` there now takes any URI on the `ahp-automations` scheme. Insiders builds from that window subscribe under the old spelling and were refused `-32001` about a session nobody named. Normalise on the way in, the way chat URIs already are.
 
 ### What the reference client reads out of `_meta`
 
-- [x] **`activity: null` clears the activity in `root/sessionSummaryChanged`.** The reference host sends `null` (`agentHostStateManager.ts:205`, upstream `a9864c02`) and its client treats an absent field as unchanged (`agentHostSessionListStore.ts`), which it always did by object spread. This host left the field off when a session went idle, so the row in the agents window kept saying what the last tool was doing. Off-schema: `SessionSummary.activity` is typed `string`, and the row in `docs/AHP.md` should say why the wire carries `null` anyway.
+- [x] **`activity: null` clears the activity in `root/sessionSummaryChanged`.** The reference host sends `null` (`agentHostStateManager.ts:205`, upstream `a9864c02`) and its client treats an absent field as unchanged (`agentHostSessionListStore.ts`), which it always did by object spread. This host left the field off when a session went idle, so the row in the agents window kept saying what the last tool was doing. Off-schema: `SessionSummary.activity` is typed `string`, and the row in `docs/sdk/AHP.md` should say why the wire carries `null` anyway.
 - [x] **`_meta.toolKind` on tool calls.** `terminal`, `read`, `search`, `subagent` - the hint that routes a call to the terminal renderer, the subagent UI, or the search renderer. Upstream now derives it from Copilot's `permissionRequest` payload when a host does not stamp it, "for remote hosts", and this host is one. Bash is `terminal`; Read is `read`; Grep, Glob, WebSearch and WebFetch are `search`; Task and Agent are `subagent`. The Copilot fallback shape is not emitted.
 - [x] **`_meta.progressMessage` on a running tool call.** The latest line of progress from a tool, transient, meaningful only while `running`. The SDK reports tool progress; this host dropped it. Upstream `dd12d29d`.
 - [x] **`_meta.isSkill: true` on a completion item that is a skill.** The Automations editor keeps a runtime skill completion only when the flag says so. Upstream `6b606c6c`.
@@ -241,7 +241,7 @@ VS Code `3aa54039` (2026-08-29) to `8e35945b` (2026-09-12), 206 agentHost commit
 ### Documentation
 
 - [x] **`REFERENCE.md` records the checkpoint.** The revisions this repository was last read against, both repositories, with the date - so a pass starts from a line in the repository rather than from whatever the clone was left at. And the `--word-diff` note.
-- [x] **`docs/AHP.md` says why `8e27ac16` does not apply here.** VS Code's `initialize` registers a state channel before its snapshot exists, so a client reconnecting across a host restart could replay deltas onto pre-restart state and draw a finished turn as running; upstream fixed it with a per-client "baseline debt". This host puts a channel on the watch list only after `snapshotOf` returned, which is why the bug has no purchase - a sentence in the `initialize` row, so nobody ports the fix.
+- [x] **`docs/sdk/AHP.md` says why `8e27ac16` does not apply here.** VS Code's `initialize` registers a state channel before its snapshot exists, so a client reconnecting across a host restart could replay deltas onto pre-restart state and draw a finished turn as running; upstream fixed it with a per-client "baseline debt". This host puts a channel on the watch list only after `snapshotOf` returned, which is why the bug has no purchase - a sentence in the `initialize` row, so nobody ports the fix.
 
 ### Read and not taken
 
@@ -254,4 +254,4 @@ Kept here so the next pass does not re-read them.
 
 ## Pass 1 - 2026-09-05
 
-VS Code `3aa54039`, protocol `fd0471d`, during the 0.4.0 work. No list was kept; what came out of it is in `docs/AHP.md` and the commits of that week.
+VS Code `3aa54039`, protocol `fd0471d`, during the 0.4.0 work. No list was kept; what came out of it is in `docs/sdk/AHP.md` and the commits of that week.

@@ -12,14 +12,18 @@ A session uses the models and keys cofold already knows about, and runs cofold's
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-cofold`](https://github.com/softov/ahpd/tree/main/packages/agent-cofold).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/agent-cofold
-ahpd --plugin @ahpd/agent-cofold --path /work/project
+ahpd restart
 ```
 
-Or in the configuration file, with the backend's own options as defaults for every session it serves:
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+## Options
+
+In the configuration file, with the backend's own options as defaults for every session it serves:
 
 ```json
 {
@@ -39,10 +43,6 @@ Or in the configuration file, with the backend's own options as defaults for eve
 ```
 
 With no model named anywhere, the providers, keys and model come from cofold's own configuration file, `$COFOLD_CONFIG` or `$XDG_CONFIG_HOME/cofold/config.json` or `~/.config/cofold/config.json`. Inside a machine the first of those is what finds it.
-
-A session in a machine runs nested: an `ahpd` from the `ahpd` part, which carries this plugin, is started inside, so any glibc image runs it with nothing installed. Its configuration is a state volume at `/ahpd/cofold`, seeded with this host's file, and the keys in that file are readable by anything in the machine. See [Cofold in a machine](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#cofold-in-a-machine).
-
-## Options
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
 
@@ -65,6 +65,8 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `autoCompactTokens` | 80% of the model's listed context, or of 32000 | The estimated history size at which a session compacts, never above that 80% |
 | `policy` | cofold's own default | The run-level policy a pause comes from, which turns the approvals mode control off |
 
+`ahpd vault set host:<name>` keeps a key that `apiKey` or a search provider's `apiKey` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
+
 ### `tools`
 
 An absent key is on, and `false` turns that capability off.
@@ -86,17 +88,6 @@ The providers `web_search` asks, in the order they are written. A failing one is
 | `tavily` | none | Tavily, as `{ "apiKey": "..." }` |
 | `duckduckgo` | `false` | `true` scrapes DuckDuckGo's results page, with no key |
 
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/agent-cofold` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/agent-cofold` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
-| `ahpd vault set host:<name>` | Keep a key that `apiKey` or a search provider's `apiKey` reads with `{ "$secret": "host:<name>" }`, from standard input |
-
-See [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--plugin-and-what-naming-one-runs) for what naming a plugin runs, and [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
-
 ## In your own host
 
 ```bash
@@ -113,6 +104,10 @@ const host = createHost({
 });
 await listen({ port: 9187 }, (peer) => host.accept(peer));
 ```
+
+## In a machine
+
+A session in a machine runs nested: an `ahpd` from the `ahpd` part, which carries this plugin, is started inside, so any glibc image runs it with nothing installed. Its configuration is a state volume at `/ahpd/cofold`, seeded with this host's file, and the keys in that file are readable by anything in the machine. See [Cofold in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#cofold-in-a-machine).
 
 ## The tools a session runs
 
@@ -136,8 +131,8 @@ The named providers are tried in the order the configuration lists them, and a f
 
 | | |
 | --- | --- |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | The whole backend, the session settings and the cofold configuration |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | The `Agent` and `Session` contracts this implements |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | The whole backend, the session settings and the cofold configuration |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | The `Agent` and `Session` contracts this implements |
 | [cofold](https://github.com/softov/cofold) | The agent runtime this runs |
 
 ## License

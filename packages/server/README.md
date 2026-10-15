@@ -17,7 +17,7 @@ It bundles no agent. Every backend is a plugin you install beside it:
 - [`@ahpd/agent-cofold`](https://www.npmjs.com/package/@ahpd/agent-cofold): any OpenAI-compatible endpoint, through the cofold runtime.
 - [`@ahpd/agent-pi`](https://www.npmjs.com/package/@ahpd/agent-pi): the pi coding agent, embedded in the daemon.
 
-A daemon with no backend refuses to start and says how to install one. To serve another agent, write an `Agent` and load it the same way: see [docs/AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) and [docs/PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md).
+A daemon with no backend refuses to start and says how to install one. To serve another agent, write an `Agent` and load it the same way: see [docs/sdk/AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) and [docs/plugins/PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md).
 
 ## Install
 
@@ -80,11 +80,11 @@ ahpd vault list             every name this host keeps a secret under, and wheth
 ahpd completion <shell>     print the completion script: bash, zsh or fish
 ```
 
-`start` runs the same program detached. It writes its output to `daemon.log` and its pid and URL to `daemon.json`, both next to the config, which is where `status` reads from. `restart` is refused while a turn is running unless the line carries `--force`: see [`ahpd restart`](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#ahpd-restart).
+`start` runs the same program detached. It writes its output to `daemon.log` and its pid and URL to `daemon.json`, both next to the config, which is where `status` reads from. `restart` is refused while a turn is running unless the line carries `--force`: see [`ahpd restart`](https://github.com/softov/ahpd/blob/main/docs/server/RUN.md#restart).
 
-Every command has `--json`, which prints the same value the prose is rendered from, on stdout alone. `--quiet` prints only the identifier an answer names, `--verbose` adds diagnostics on stderr, `--no-color` turns colour off, and `--yes` runs a command that removes something without asking. A command line with no verb runs the daemon, and `ahpd --help` renders every command and the foreground run's flags: see [`--json`, for the things a script reads](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--json-for-the-things-a-script-reads).
+Every command has `--json`, which prints the same value the prose is rendered from, on stdout alone. `--quiet` prints only the identifier an answer names, `--verbose` adds diagnostics on stderr, `--no-color` turns colour off, and `--yes` runs a command that removes something without asking. A command line with no verb runs the daemon, and `ahpd --help` renders every command and the foreground run's flags: see [`--json`, for the things a script reads](https://github.com/softov/ahpd/blob/main/docs/server/RUN.md#output-for-scripts).
 
-[DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#commands) has the detail of each command: [`configure`](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#ahpd-configure), [`vault`](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#the-vault), [`completion`](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#completion) and [`--remote`](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--remote-the-same-cli-against-a-daemon) among them.
+[REFERENCE.md](https://github.com/softov/ahpd/blob/main/docs/server/REFERENCE.md#commands) has the detail of each command: [`configure`](https://github.com/softov/ahpd/blob/main/docs/server/CONFIGURE.md#first-setup), [`vault`](https://github.com/softov/ahpd/blob/main/docs/server/VAULT.md), [`completion`](https://github.com/softov/ahpd/blob/main/docs/server/RUN.md#shell-completion) and [`--remote`](https://github.com/softov/ahpd/blob/main/docs/server/REMOTE.md#run-commands-from-another-machine) among them.
 
 Every verb and every flag is one declaration under [`src/commands`](https://github.com/softov/ahpd/tree/main/packages/server/src/commands), and the table below says which file declares what.
 
@@ -221,11 +221,12 @@ For a host of a different shape, build it from `@ahpd/sdk` and skip this package
 
 | | |
 | --- | --- |
-| [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md) | The CLI, config file, connection tokens, and Node/Bun/Deno |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Loading and writing plugins |
-| [LIBRARY.md](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md) | Building a host with `@ahpd/sdk` |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | Writing another agent backend |
-| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/AHP.md) | Protocol coverage, and every action it emits |
+| [GET-STARTED.md](https://github.com/softov/ahpd/blob/main/docs/server/GET-STARTED.md) | Install, configure, start, and connect VS Code |
+| [REFERENCE.md](https://github.com/softov/ahpd/blob/main/docs/server/REFERENCE.md) | Every command and flag |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading and writing plugins |
+| [LIBRARY.md](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md) | Building a host with `@ahpd/sdk` |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | Writing another agent backend |
+| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AHP.md) | Protocol coverage, and every action it emits |
 | [agent-host-protocol](https://github.com/microsoft/agent-host-protocol) | The protocol itself, and its [documentation](https://microsoft.github.io/agent-host-protocol/) |
 
 ## License

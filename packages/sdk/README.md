@@ -74,16 +74,16 @@ const host = createHost({
 | `agents` | required | The backends to serve, as `Agent` implementations, each with its own `provider`. The first is what a client gets when it names none |
 | `hostName` | `host` | What the host is called in the owner `root:<hostName>` of work nobody started as themselves |
 | `agentPlugins` | none | The plugin that registered each agent, by provider, so a session of it can run nested in a machine. `foldHostOptions` writes it |
-| `resources` | none | File reads, writes and `@` completion. Use `fileResources()`. See [resources](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#resources) |
+| `resources` | none | File reads, writes and `@` completion. Use `fileResources()`. See [resources](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#resources) |
 | `resourceProviders` | none | One provider per URI scheme beside `file:`; an optional `describe()` is what the host advertises in `_meta['ahpd.resourceProviders']` |
-| `terminals` | none | A shell as a terminal channel. Use `shellTerminals()`. See [terminals](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#terminals) |
-| `changes` | none | Uncommitted changes as a changeset. Use `gitChanges()`. See [changes](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#changes) |
-| `directories` | none | The current branch of each served directory. Use `gitBranches()`. See [directories](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#directories) |
+| `terminals` | none | A shell as a terminal channel. Use `shellTerminals()`. See [terminals](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#terminals) |
+| `changes` | none | Uncommitted changes as a changeset. Use `gitChanges()`. See [changes](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#changes) |
+| `directories` | none | The current branch of each served directory. Use `gitBranches()`. See [directories](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#directories) |
 | `worktrees` | none | Sessions in their own git worktree. Use `gitWorktrees()` |
 | `worktreesRoot` | beside the repository | An absolute folder every session tree goes under, as `<root>/<repo>/<name>`. Left out, a tree sits at `<repo>.worktrees` beside its repository, which is where VS Code's host looks for it |
-| `github` | none | What GitHub knows about a session's branch, such as its pull request. Use `githubPullRequests()`. See [github](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#github) |
+| `github` | none | What GitHub knows about a session's branch, such as its pull request. Use `githubPullRequests()`. See [github](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#github) |
 | `users` | none | The people who may use this host. Left out, the connection token is the whole of who may connect. Use `fileUsers({ file })` |
-| `automations` | none | Triggered agents. Use `memoryAutomations()`. The clock store for cron is the daemon's, in `@ahpd/server`. See [automations](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#automations) |
+| `automations` | none | Triggered agents. Use `memoryAutomations()`. The clock store for cron is the daemon's, in `@ahpd/server`. See [automations](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#automations) |
 | `unownedAutomations` | `every` | What an automation that names no owner sees: `every` or `none` |
 | `sessions` | `memorySessions()` | Where the flags and configuration the host adds to a session are kept. A daemon wants `fileSessions({ dir })`, which outlives a restart |
 | `computers` | none | How a backend runs its process inside a named machine. The plugin that owns the `computer:` scheme contributes it |
@@ -93,7 +93,7 @@ const host = createHost({
 | `policies` | none | Where the policies that say who may use what are kept. Use `filePolicies({ file })` or `memoryPolicies()` |
 | `policiesCheck` | `false` | Whether what the policies say is enforced |
 | `vault` | none | Where the secrets the host's work needs are kept, by scoped name. Left out, a plugin that reads a secret is told there is no vault |
-| `tools` | none | Tools the host adds to every session, as the protocol's `serverTools`. Use `hostTools()`. See [The tools](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#the-tools) |
+| `tools` | none | Tools the host adds to every session, as the protocol's `serverTools`. Use `hostTools()`. See [The tools](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#the-tools) |
 | `mcpServers` | none | The MCP servers every session is offered, by name, in VS Code's `mcpServers` shape |
 | `toolsServers` | none | Where the host serves its own tools as an MCP server. Use `toolServers(...)` and mount its handler on your listener |
 | `sessionConfig` | none | Session settings merged into every session's schema. The fold fills it from the plugins' `registerSessionConfig` |
@@ -105,7 +105,7 @@ const host = createHost({
 | `sessionResidencyLimit` | `10` | How many sessions are loaded at most. Over it, the least recently used quiet session is let go first. `0` sets no limit |
 | `now`, `timer` | the system clock, `setTimeout` | The clock and the timer that sleep and agent wakeups read, which a test replaces |
 | `rootConfig` | none | The daemon's own settings, shown in root config beside the host's keys, with writes handed back |
-| `diagnostics` | none | What the host answers when a window asks for its version, logs, network or shutdown. See [What the window asks](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md#what-the-window-asks-a-host-about-itself) |
+| `diagnostics` | none | What the host answers when a window asks for its version, logs, network or shutdown. See [What the window asks](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md#what-the-window-asks-a-host-about-itself) |
 | `onEvent` | none | Called with one line per notable event, for a log |
 | `events` | none | What plugins subscribed to, by event. The fold fills it from `pluginHost`; `raise()` calls them |
 | `closers` | none | What plugins asked to run when the host closes. The fold fills it from `registerClose` |
@@ -140,7 +140,7 @@ A session the host can let go while it is quiet has two optional members to say 
 
 Pass it to the host like any other backend: `createHost({ path, agents: [parrot()] })`. It registers the same way as [`@ahpd/agent-claude`](https://www.npmjs.com/package/@ahpd/agent-claude), and the two can run side by side.
 
-[docs/AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) has the contract, and [examples/echo](https://github.com/softov/ahpd/tree/main/examples/echo) is a working backend in about two hundred lines.
+[docs/sdk/AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) has the contract, and [examples/echo](https://github.com/softov/ahpd/tree/main/examples/echo) is a working backend in about two hundred lines.
 
 ## Types
 
@@ -170,9 +170,9 @@ All types are exported. Nothing under `types/` imports a runtime value, so you c
 
 | | |
 | --- | --- |
-| [LIBRARY.md](https://github.com/softov/ahpd/blob/main/docs/LIBRARY.md) | `createHost` and the ports in full |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | The `Agent` and `Session` contracts |
-| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/AHP.md) | Protocol coverage, action by action |
+| [LIBRARY.md](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md) | `createHost` and the ports in full |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | The `Agent` and `Session` contracts |
+| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AHP.md) | Protocol coverage, action by action |
 
 ## License
 

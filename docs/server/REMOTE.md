@@ -1,0 +1,99 @@
+# Remote access
+
+## The connection token
+
+Every client presents the token to connect. Set it one of three ways:
+
+| Flag | Key | Does |
+| --- | --- | --- |
+| `--connection-token-file <path>` | `connectionTokenFile` | Read the token from the file. Writes a new one, mode 0600, if it is missing |
+| `--connection-token <secret>` | `connectionToken` | Use this token |
+| `--without-connection-token` | `withoutConnectionToken` | Accept any connection |
+
+With none of them, the host accepts loopback only.
+
+## Listen on the network
+
+```bash
+ahpd start --host 0.0.0.0 --connection-token-file ~/.config/ahpd/connection-token
+```
+
+::: danger
+`--host 0.0.0.0` refuses to start without a token. A client with the token can run anything the agents can run on this machine.
+:::
+
+| To reach it as | Add |
+| --- | --- |
+| Another IP or name, such as `http://203.0.113.5:9187` | `--origin http://203.0.113.5:9187` (key `origins`, a list) |
+| An https name for sign-in | `--resource https://ahpd.example.com/` |
+| A public URL with no open port | the [`@ahpd/tunnel-devtunnel`](../plugins/tunnel-devtunnel.md) plugin |
+
+For a person's own token instead of the shared one, see [Users](USERS.md).
+
+## HTTP API
+
+Turn it on to run the `ahpd` commands over HTTP:
+
+::: code-group
+
+```json [Same port]
+{ "http": true }
+```
+
+```json [Own port]
+{ "http": { "port": 9188, "host": "127.0.0.1" } }
+```
+
+:::
+
+With `true` the API is at `http://127.0.0.1:9187/api`, beside the WebSocket. The startup log says where: `http on http://127.0.0.1:9187/api`. It needs a connection token or a user directory.
+
+```bash
+curl http://127.0.0.1:9187/api/status -H "Authorization: Bearer $TOKEN"
+```
+
+A refusal says why:
+
+```
+HTTP/1.1 403 Forbidden
+{ "message": "ada may not config:read here" }
+```
+
+`GET /api/cli-manifest` lists every command, with no token. The [model proxy](PROXY.md) is served beside it at `/v1`.
+
+### Who may run what
+
+The deployment's connection token may run everything. A person's token needs the grant:
+
+| Command | Needs |
+| --- | --- |
+| `status`, `plugin list` | `config:read` |
+| `config` | `config:write` |
+| `user list` | `user:read`, `role:read` |
+| `user add`, `user rm`, `user token`, `user member` | `user:write` |
+| `team list` / `team add`, `team rm` | `team:read` / `team:write` |
+| `project list` / `project add`, `project rm` | `project:read` / `project:write` |
+| `usage` | own pools; any pool with `usage:read` |
+| `vault list` | `config:read` for `host:`; `team:write` for the team's; own |
+| `vault set`, `vault delete` | `config:write` for `host:`; `team:write` for the team's; own |
+| `plugin install`, `remove`, `update`, `config`, `enable`, `disable`, `restart` | deployment token only |
+
+### Browser safety
+
+A request must have one of the daemon's own names as its `Host`, and the same for its `Origin` when a browser sends one. The names are the loopback names, the bound address, the `resource` host and each entry in `origins`. A body must be `application/json`; anything else gets 415.
+
+## Run commands from another machine
+
+```bash
+ahpd --remote http://203.0.113.5:9187 --token "$TOKEN" status
+ahpd --remote http://203.0.113.5:9187 --token-file ~/token plugin list
+AHPD_TOKEN="$TOKEN" ahpd --remote http://203.0.113.5:9187 restart
+```
+
+The remote daemon must have the HTTP API on. Help, completion and `--json` work as at its own terminal. `start` and `stop` stay local.
+
+The command list is cached in `~/.cache/ahpd/remote`. `--refresh` fetches it again.
+
+::: warning
+Plain `http://` to a host that is not loopback sends the token in the clear. Use `https://` or a tunnel.
+:::

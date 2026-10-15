@@ -1,8 +1,8 @@
 # A backend that stops and asks
 
 The rules below are the ones about *asking*.
-[docs/AGENT.md](../../docs/AGENT.md) is the `Agent` and `Session` contract in
-full; [docs/AHP.md](../../docs/AHP.md) is the same ground as protocol
+[docs/sdk/AGENT.md](../../docs/sdk/AGENT.md) is the `Agent` and `Session` contract in
+full; [docs/sdk/AHP.md](../../docs/sdk/AHP.md) is the same ground as protocol
 compatibility.
 
 

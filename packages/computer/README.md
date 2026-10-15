@@ -12,23 +12,24 @@ Docker is the runtime it ships with. A machine is a container this package start
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/computer`](https://github.com/softov/ahpd/tree/main/packages/computer).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/computer
+ahpd restart
 ```
 
-Or name it beside a backend for one run:
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
 
-```bash
-ahpd --plugin @ahpd/agent-claude --plugin @ahpd/computer
-```
+### What it needs
 
-The account the daemon runs as has to reach Docker. Run this once, then start a new login session:
+- Docker, reachable by the account the daemon runs as. Run this once, then start a new login session:
 
-```bash
-sudo usermod -aG docker "$USER"
-```
+  ```bash
+  sudo usermod -aG docker "$USER"
+  ```
+
+## Options
 
 In the configuration file, with the options a person sets most often:
 
@@ -52,8 +53,6 @@ In the configuration file, with the options a person sets most often:
 }
 ```
 
-## Options
-
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs. An entry inside a map (`env`, `needs`, a profile) that cannot be used is dropped with a line, and the rest load.
 
 | Option | Default | What it does |
@@ -70,17 +69,19 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `prefix` | `ahpd-computer` | What the name of every machine this host makes starts with |
 | `sessionSetting` | `true` | Whether the plugin adds a `computer` session setting that names the machine a session runs in |
 | `sessionDefault` | none | That setting's default, as a `computer://<id>` URI |
-| `needs` | none | Values for any agent's machine needs, by need name. A value may be `{ "$secret": "<scope>:<name>" }`, read when the machine is made. See [Profiles](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#profiles) |
+| `needs` | none | Values for any agent's machine needs, by need name. A value may be `{ "$secret": "<scope>:<name>" }`, read when the machine is made. See [Profiles](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#profiles) |
 | `mounts` | none | What every machine this plugin makes can see, each `<host path>:<machine path>` |
 | `profiles` | none | The named sets a person picks from when making a machine. See `profiles.<name>` below |
-| `bodyMounts` | `false` | Whether a person making a machine may name `mounts` or a `folder` of their own. With it on, `computer:write` is root on the host. See [Security](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#security) |
+| `bodyMounts` | `false` | Whether a person making a machine may name `mounts` or a `folder` of their own. With it on, `computer:write` is root on the host. See [Security](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#security) |
 | `imageMounts` | `true` | Whether a part may be mounted from its own image. `false` mounts every part from a volume filled once from it |
 | `images` | any image | The image patterns a machine may be made from, such as `node:*` or `ghcr.io/acme/**` |
 | `devcontainer` | the `devcontainer` CLI | The Dev Container CLI, as a launcher and as a machine maker. `false` switches every dev container route off. See `devcontainer` below |
 
+`ahpd vault set <scope>:<name>` keeps a value a need reads with `{ "$secret": "<scope>:<name>" }`, from standard input. A need may name `host:`, `team:<team>/` or `user:<id>/`. See [VAULT.md](https://github.com/softov/ahpd/blob/main/docs/server/VAULT.md) for the vault, and [COMPUTERS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#profiles) for who a need is read for.
+
 ### `profiles.<name>`
 
-A manifest picks a profile with `"profile": "<name>"`, and its own fields still win. [Profiles](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#profiles) and [Disposable machines](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#disposable-machines) have the detail.
+A manifest picks a profile with `"profile": "<name>"`, and its own fields still win. [Profiles](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#profiles) and [Disposable machines](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#disposable-machines) have the detail.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -110,7 +111,7 @@ A manifest picks a profile with `"profile": "<name>"`, and its own fields still 
 
 ### `devcontainer`
 
-[CONTAINERS.md](https://github.com/softov/ahpd/blob/main/docs/CONTAINERS.md#what-the-host-needs) has the detail.
+[CONTAINERS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/CONTAINERS.md#what-the-host-needs) has the detail.
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -122,17 +123,6 @@ A manifest picks a profile with `"profile": "<name>"`, and its own fields still 
 | `docker` | the plugin's `command` | The Docker program commands inside the container run through |
 | `install` | `true` | How the install step runs: a shell command, or `false` to skip it for an image that already has a host |
 | `folders` | any folder, or none on a host with a users directory | The absolute host folders a dev container may be made from |
-
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/computer` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/computer` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
-| `ahpd vault set <scope>:<name>` | Keep a value a need reads with `{ "$secret": "<scope>:<name>" }`, from standard input. A need may name `host:`, `team:<team>/` or `user:<id>/` |
-
-See [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#the-vault) for the vault, and [COMPUTER.md](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#profiles) for who a need is read for.
 
 ## In your own host
 
@@ -156,7 +146,7 @@ await listen({ port: 9187 }, (peer) => host.accept(peer));
 
 ## Agents in a machine
 
-A machine made for an agent carries what the agent's `machine()` declares. Each agent's CLI comes from a part, an image this host builds at the version `images/versions.json` pins and mounts at `/opt/ahpd/<id>`, so any glibc image runs it with nothing installed. Each agent keeps its configuration in a state volume per provider, seeded from a few host files and never a login file; a profile with `state: "host"` mounts this host's own configuration instead. A value the vault fills for a need reaches only the agent whose need declared it, `computer_exec` from that agent's session included. See [COMPUTER.md](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#parts).
+A machine made for an agent carries what the agent's `machine()` declares. Each agent's CLI comes from a part, an image this host builds at the version `images/versions.json` pins and mounts at `/opt/ahpd/<id>`, so any glibc image runs it with nothing installed. Each agent keeps its configuration in a state volume per provider, seeded from a few host files and never a login file; a profile with `state: "host"` mounts this host's own configuration instead. A value the vault fills for a need reaches only the agent whose need declared it, `computer_exec` from that agent's session included. See [COMPUTERS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#parts).
 
 ## The tools
 
@@ -183,9 +173,9 @@ Nothing under `computer:` can be written. Machines are made with the tools above
 
 | | |
 | --- | --- |
-| [COMPUTER.md](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md) | Docker and KVM access, and `scripts/computer.mjs` for making a machine by hand |
-| [CONTAINERS.md](https://github.com/softov/ahpd/blob/main/docs/CONTAINERS.md) | Running a whole host in a dev container |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Loading a plugin into the daemon |
+| [COMPUTERS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md) | Docker and KVM access, and `scripts/computer.mjs` for making a machine by hand |
+| [CONTAINERS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/CONTAINERS.md) | Running a whole host in a dev container |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading a plugin into the daemon |
 
 ## License
 

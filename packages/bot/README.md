@@ -10,13 +10,16 @@ A bot plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/bot`](https://github.com/softov/ahpd/tree/main/packages/bot).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/bot
+ahpd restart
 ```
 
-That installs it where the daemon looks for plugins and adds it to `plugins` in the configuration file. A plugin installed with `npm i -g` is not seen.
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+## Options
 
 In the configuration file, with every option set:
 
@@ -24,23 +27,13 @@ In the configuration file, with every option set:
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
 ```
 
-## Options
-
 | Option | Default | What it does |
 | --- | --- | --- |
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
 
 A bot is a record of the host's record store, so the daemon keeps each one as a file beside its own configuration: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter and `instructions` as the Markdown body, with the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported and skipped, and every other bot is kept.
 
-The record store is a port, so a plugin that takes it over with `registerRecords(store, 'replace')` - a sqlite or a postgresql store - keeps the bots there instead of in files, and nothing in this plugin changes. [`docs/BOTS.md`](https://github.com/softov/ahpd/blob/main/docs/BOTS.md#the-file) shows one bot file and what a hand edit may change.
-
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/bot` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/bot` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
+The record store is a port, so a plugin that takes it over with `registerRecords(store, 'replace')` - a sqlite or a postgresql store - keeps the bots there instead of in files, and nothing in this plugin changes. [`docs/plugins/BOTS.md`](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md#the-file) shows one bot file and what a hand edit may change.
 
 No option holds a credential, so the plugin takes nothing from the vault.
 
@@ -99,7 +92,7 @@ A listing shows what a read would allow: a list that showed a bot the reader can
 
 ### The catalogue
 
-A subscribe to `x-ahpd-bots://` answers `{ bots }`, the bots the reader may read, then `x-ahpd-bots/added`, `x-ahpd-bots/changed` and `x-ahpd-bots/removed` as they change - [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/BOTS.md#the-catalogue).
+A subscribe to `x-ahpd-bots://` answers `{ bots }`, the bots the reader may read, then `x-ahpd-bots/added`, `x-ahpd-bots/changed` and `x-ahpd-bots/removed` as they change - [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md#the-catalogue).
 
 ### The workspace
 
@@ -121,9 +114,9 @@ A deleted slug is not made again. A client held the address, and a different bot
 
 | | |
 | --- | --- |
-| [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/BOTS.md) | The `bot:` scheme, the record and the session |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Writing and loading a plugin |
-| [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md) | Running the daemon |
+| [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md) | The `bot:` scheme, the record and the session |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Writing and loading a plugin |
+| [GET-STARTED.md](https://github.com/softov/ahpd/blob/main/docs/server/GET-STARTED.md) | Running the daemon |
 
 ## License
 

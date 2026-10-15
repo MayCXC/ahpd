@@ -12,13 +12,16 @@ It is two halves. A `push:` resource provider keeps the registered devices, and 
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/push`](https://github.com/softov/ahpd/tree/main/packages/push).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/push
+ahpd restart
 ```
 
-That installs it where the daemon looks for plugins and adds it to `plugins` in the configuration file. A plugin installed with `npm i -g` is not seen.
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+## Options
 
 In the configuration file, with every option set:
 
@@ -36,8 +39,6 @@ In the configuration file, with every option set:
   ]
 }
 ```
-
-## Options
 
 No option is required. A daemon that names none still pushes, titled with its own name and without an access token.
 
@@ -97,8 +98,8 @@ A device Expo answers `DeviceNotRegistered` for is removed: the token has been r
 
 | | |
 | --- | --- |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Writing and loading a plugin, and the events a plugin may watch |
-| [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md) | Running the daemon |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Writing and loading a plugin, and the events a plugin may watch |
+| [GET-STARTED.md](https://github.com/softov/ahpd/blob/main/docs/server/GET-STARTED.md) | Running the daemon |
 
 ## License
 

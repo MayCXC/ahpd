@@ -87,7 +87,7 @@ it('asks every method and action for an operation the table knows, or a group of
 
 it('answers every method and action for a role of whole groups as the verb it replaced', () => {
   /*
-   * The matrix, over the three built-ins and the two roles `docs/USERS.md`
+   * The matrix, over the three built-ins and the two roles `docs/sdk/USERS.md`
    * spells out. What it asserts is not a recorded table of booleans but the
    * property behind it: an operation is covered by exactly the role that held
    * the group it sits in, so nothing an existing role could do stops working

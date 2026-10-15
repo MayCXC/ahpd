@@ -10,39 +10,31 @@ A [Dev Tunnel](https://aka.ms/devtunnels) plugin for the [`@ahpd/server`](https:
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/tunnel-devtunnel`](https://github.com/softov/ahpd/tree/main/packages/tunnel-devtunnel).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/tunnel-devtunnel
+ahpd restart
 ```
 
-That installs it where the daemon looks for plugins and adds it to `plugins` in the configuration file. A plugin installed with `npm i -g` is not seen.
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+### What it needs
+
+- The [`devtunnel` CLI](https://aka.ms/devtunnels/download), installed and logged in:
+
+  ```bash
+  devtunnel user login       # a Microsoft account
+  devtunnel user login -g    # or a GitHub one
+  ```
+
+## Options
 
 In the configuration file, with every option set:
 
 ```json
 { "plugins": [{ "name": "@ahpd/tunnel-devtunnel", "options": { "name": "dev03", "anonymous": true } }] }
 ```
-
-The daemon prints the tunnel beside its own address, and `ahpd status` shows it:
-
-```
-ahpd on ws://127.0.0.1:9187 (node), sessions in /work
-tunnel sunny-otter-9k3 (dev03), port 31546
-```
-
-In VS Code, sign in to the same Dev Tunnels account and run **Agents: Connect to Remote Agent Host via Dev Tunnel**. Finding a tunnel needs that sign-in. A direct WebSocket address does not, and is what **Agents: Add Remote Agent Host...** takes.
-
-### What it needs
-
-The [`devtunnel` CLI](https://aka.ms/devtunnels/download), installed and logged in:
-
-```bash
-devtunnel user login       # a Microsoft account
-devtunnel user login -g    # or a GitHub one
-```
-
-## Options
 
 | Option | Default | What it does |
 | --- | --- | --- |
@@ -51,14 +43,6 @@ devtunnel user login -g    # or a GitHub one
 | `anonymous` | `false` | Whether somebody not signed in to this account may reach it |
 
 Keep `keep` on: a client derives its connection token from the tunnel's id, so a new tunnel on every start is a new token on every start.
-
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/tunnel-devtunnel` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/tunnel-devtunnel` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
 
 No option holds a credential, so the plugin takes nothing from the vault. The tunnel signs in through the `devtunnel` CLI's own login.
 
@@ -88,6 +72,17 @@ await raise(options.events, { type: 'stopping' });
 await listener.close();
 ```
 
+## In VS Code
+
+The daemon prints the tunnel beside its own address, and `ahpd status` shows it:
+
+```
+ahpd on ws://127.0.0.1:9187 (node), sessions in /work
+tunnel sunny-otter-9k3 (dev03), port 31546
+```
+
+In VS Code, sign in to the same Dev Tunnels account and run **Agents: Connect to Remote Agent Host via Dev Tunnel**. Finding a tunnel needs that sign-in. A direct WebSocket address does not, and is what **Agents: Add Remote Agent Host...** takes.
+
 ## The connection token
 
 A client connecting over a tunnel computes its token from the tunnel's id, as the unpadded base64url of its SHA-256, and presents it as `?tkn=`. Only people who pass the Dev Tunnels access check can reach the tunnel, so the token does not need to be secret.
@@ -114,8 +109,8 @@ It claims `protocolv5` and not 6, because protocol 6 clients also expect a selec
 
 | | |
 | --- | --- |
-| [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md) | Connection tokens and remote access |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Loading a plugin into the daemon |
+| [REMOTE.md](https://github.com/softov/ahpd/blob/main/docs/server/REMOTE.md) | Connection tokens and remote access |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading a plugin into the daemon |
 
 ## License
 

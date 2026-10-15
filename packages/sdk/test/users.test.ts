@@ -36,7 +36,7 @@ const AREAS: Grant[] = [
 
 it('advertises a record the standard recognises: a page field and no invented issuer', () => {
   const record = open().resource;
-  expect(record.resource_documentation).toBe('https://github.com/softov/ahpd/blob/main/docs/USERS.md');
+  expect(record.resource_documentation).toBe('https://github.com/softov/ahpd/blob/main/docs/sdk/USERS.md');
   expect(record).not.toHaveProperty('authorization_servers');
   expect(record.required).toBe(true);
   expect(record.resource_name).toBe('ahpd users');
@@ -48,7 +48,7 @@ it('advertises the identifier a deployment names, and keeps the rest of the reco
   const record = signInRecord('https://ahpd.example.com/');
   expect(record.resource).toBe('https://ahpd.example.com/');
   expect(record.resource_name).toBe('ahpd users');
-  expect(record.resource_documentation).toBe('https://github.com/softov/ahpd/blob/main/docs/USERS.md');
+  expect(record.resource_documentation).toBe('https://github.com/softov/ahpd/blob/main/docs/sdk/USERS.md');
   expect(record).not.toHaveProperty('authorization_servers');
 });
 
@@ -769,7 +769,7 @@ it('takes an operation of a subject it decides and any operation word of one it 
 });
 
 /*
- * `docs/USERS.md` against the table it documents.
+ * `docs/sdk/USERS.md` against the table it documents.
  *
  * The page is written by hand and the table is code, so this is the only thing
  * that notices one of them moving without the other: a subject or an operation
@@ -777,7 +777,7 @@ it('takes an operation of a subject it decides and any operation word of one it 
  * a client cannot be built from.
  */
 
-const PAGE = join(import.meta.dirname, '../../../docs/USERS.md');
+const PAGE = join(import.meta.dirname, '../../../docs/sdk/USERS.md');
 
 /** The row of the grants table a subject is in, or nothing when it has none. */
 const rowFor = (page: string, subject: string): string | undefined =>
@@ -787,7 +787,7 @@ it('documents every subject the host gates, and every operation it has', () => {
   const page = readFileSync(PAGE, 'utf8');
   for (const [subject, mine] of Object.entries(OPERATIONS)) {
     const row = rowFor(page, subject);
-    expect(row, `${subject} has no row in docs/USERS.md`).toBeDefined();
+    expect(row, `${subject} has no row in docs/sdk/USERS.md`).toBeDefined();
     // The two groups are named as the columns they are, so the page says which
     // half an operation is in rather than leaving it to be guessed.
     for (const operation of mine.groups.read) expect(row, `${subject}:${operation}`).toContain(`\`${operation}\``);

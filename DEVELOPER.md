@@ -40,6 +40,39 @@ Every flag is the same as the published `ahpd`, and the examples in the README a
 To record what a client and this host say to each other, start it with `--wire <file>` or set `wire` in the configuration file: every frame in both directions is appended as one JSON line, `{ at, from, peer, frame }`.
 [`scripts/tee.mjs`](scripts/tee.mjs) is the same recording as a proxy, for a host that cannot be restarted with the flag.
 
+### On Bun, and how Node finds the sources
+
+```bash
+pnpm dev:bun     # the daemon on Bun
+pnpm echo:bun    # examples/echo on Bun
+pnpm notes:bun   # examples/notes on Bun
+```
+
+[`packages/sdk/src/listen.ts`](packages/sdk/src/listen.ts) is the only file that knows the runtime, and it has one code path for each of Node, Bun and Deno, so a change to it is run on more than one.
+The sources import `./host.js`, the name the build emits.
+Bun maps that to the `.ts` by itself; on Node, [`scripts/dev.mjs`](scripts/dev.mjs) registers [`scripts/dev-hooks.mjs`](scripts/dev-hooks.mjs) to do the same.
+On a Node older than 22.15 or 23.5 the hooks run on their own thread, and importing pi takes about four times as long.
+Deno runs `dist/`, or `src/` with `--sloppy-imports`.
+Node strips types and does not transform them, so the sources use no enum, namespace or constructor parameter property; [`packages/sdk/test/strippable.test.ts`](packages/sdk/test/strippable.test.ts) checks it.
+
+## How the CLI is declared
+
+Every command and flag is one declaration under [`packages/server/src/commands`](packages/server/src/commands), and [`packages/server/src/main.ts`](packages/server/src/main.ts) renders them with `@cofold/terminal`.
+Help, completion, `--json`, exit codes, the HTTP API and the `--remote` manifest all come from those declarations.
+[`docs/server/REFERENCE.md`](docs/server/REFERENCE.md) is generated from them when the docs build.
+
+## How a restart works
+
+1. `ahpd restart` sends the recorded process `SIGHUP`, or `SIGUSR2` with `--force`. On Windows it writes one JSON line, the key and the signal, to the named pipe in the record.
+2. The daemon reads its recorded arguments over the configuration as it is now. It refuses when either cannot be read.
+3. It runs the installed entry once with those arguments and `AHPD_CHECK_LINE` set, which reads them strictly. A refusal there leaves the daemon running.
+4. It fires no automation, ends every session and terminal, waits up to five seconds for their processes, and closes its stores.
+5. It starts the successor with the same token, environment and working directory, and exits.
+
+The daemon writes `restart: stopping (SIGHUP)` or `(SIGUSR2)` to `daemon.log`, and each refusal names its signal, so the terminal reads only the answer to its own kind of request.
+The terminal waits five seconds for that line, then as long as the old daemon takes to stop, then 25 seconds for the successor.
+One restart runs at a time, and `ahpd stop` during a restart wins.
+
 ## The checks
 
 Every check below runs in CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) and again in the release workflow.
@@ -74,7 +107,7 @@ A reducer cannot see either, and neither can TypeScript: a conditional spread is
 
 The check that cannot be done here is driving it with a client that was not written against it.
 `ahpc` is lenient in places - a `chat/reasoning` bug in this host went unnoticed for exactly that reason, because no screen ever showed what a conformant client would have - so the reducers above are the strict reader, and VS Code is the one that has to agree.
-A drive against VS Code found two bugs that were invisible from the source; both are in `git log`, and what they cost is written up in [docs/AHP.md](docs/AHP.md).
+A drive against VS Code found two bugs that were invisible from the source; both are in `git log`, and what they cost is written up in [docs/sdk/AHP.md](docs/sdk/AHP.md).
 
 The host can be tested without opening a socket: `accept()` takes a peer and returns its handler.
 

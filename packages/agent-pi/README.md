@@ -12,14 +12,22 @@ pi runs inside the daemon's process through pi's own SDK, not as a `pi --mode rp
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-pi`](https://github.com/softov/ahpd/tree/main/packages/agent-pi).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/agent-pi
-ahpd --plugin @ahpd/agent-pi --path /work/project
+ahpd restart
 ```
 
-Or in the configuration file, with the options a person sets most often:
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+### What it needs
+
+- At least one model provider set up in pi's own settings. pi reads its model providers and credentials from its own settings, so nothing here needs configuring. Running `pi` by hand in the same directory is the quickest check.
+
+## Options
+
+In the configuration file, with the options a person sets most often:
 
 ```json
 {
@@ -30,24 +38,6 @@ Or in the configuration file, with the options a person sets most often:
 ```
 
 `{ "plugins": ["@ahpd/agent-pi"] }` is enough when pi's own settings already name a model.
-
-pi reads its model providers and credentials from its own settings, so nothing here needs configuring. Set up at least one provider for pi first; running `pi` by hand in the same directory is the quickest check.
-
-### In a machine
-
-A pi session whose `computer` setting names a machine runs nested: pi is a library in the daemon's process, so an `ahpd` from the `ahpd` part, which carries this plugin, is started inside the machine and runs the session there. Any glibc image runs it with nothing installed.
-
-pi's agent directory inside is `/ahpd/pi`, set as `PI_CODING_AGENT_DIR`: a state volume seeded with this host's `settings.json` and `models.json`, or this host's directory mounted read-write in a profile with `state: "host"`. `auth.json` is never seeded, so a key reaches the machine as a need the profile fills, one per variable pi's provider list reads, named `<provider>.<VARIABLE>`:
-
-```json
-{ "plugins": [{ "name": "@ahpd/computer", "options": {
-  "profiles": { "pi": { "agents": ["pi"], "needs": { "pi.ANTHROPIC_API_KEY": { "$secret": "user:ada/anthropic" } } } }
-} }] }
-```
-
-Such a key reaches pi's nested host and no other agent in the machine. A variable only pi's own `models.json` names is not declared, and does not reach a machine. See [pi in a machine](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#pi-in-a-machine).
-
-## Options
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
 
@@ -62,21 +52,11 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 
 `projectTrust` is `trust` or `deny`. pi's third answer, `ask`, is not offered, because a daemon has nobody at a terminal to answer it. `trust` loads the project's pi resources, which runs its code.
 
-The host's own answer about the folder is asked as well, and both have to say yes. A folder no window vouched for loads none of the project's extensions, skills or prompts, however `projectTrust` is set. See [Trusted folders](https://github.com/softov/ahpd/blob/main/docs/AUTHENTICATION.md#trusted-folders).
+The host's own answer about the folder is asked as well, and both have to say yes. A folder no window vouched for loads none of the project's extensions, skills or prompts, however `projectTrust` is set. See [Trusted folders](https://github.com/softov/ahpd/blob/main/docs/sdk/AUTHENTICATION.md#trusted-folders).
 
 With `sessionDir` left alone, `pi` run by hand in the same directory lists the sessions started here, and the other way round.
 
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/agent-pi` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/agent-pi` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
-
-No option of this plugin holds a credential, so it needs no `ahpd vault`. A key for a machine is the `@ahpd/computer` profile's, as above.
-
-See [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--plugin-and-what-naming-one-runs) for what naming a plugin runs.
+No option of this plugin holds a credential, so it needs no `ahpd vault`. A key for a machine is the `@ahpd/computer` profile's, as below.
 
 ## In your own host
 
@@ -94,6 +74,20 @@ await listen({ port: 9187 }, (peer) => host.accept(peer));
 ```
 
 `piAgent(options, directories)` takes the options above and the directories the backend may work in.
+
+## In a machine
+
+A pi session whose `computer` setting names a machine runs nested: pi is a library in the daemon's process, so an `ahpd` from the `ahpd` part, which carries this plugin, is started inside the machine and runs the session there. Any glibc image runs it with nothing installed.
+
+pi's agent directory inside is `/ahpd/pi`, set as `PI_CODING_AGENT_DIR`: a state volume seeded with this host's `settings.json` and `models.json`, or this host's directory mounted read-write in a profile with `state: "host"`. `auth.json` is never seeded, so a key reaches the machine as a need the profile fills, one per variable pi's provider list reads, named `<provider>.<VARIABLE>`:
+
+```json
+{ "plugins": [{ "name": "@ahpd/computer", "options": {
+  "profiles": { "pi": { "agents": ["pi"], "needs": { "pi.ANTHROPIC_API_KEY": { "$secret": "user:ada/anthropic" } } } }
+} }] }
+```
+
+Such a key reaches pi's nested host and no other agent in the machine. A variable only pi's own `models.json` names is not declared, and does not reach a machine. See [pi in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#pi-in-a-machine).
 
 ## What maps, and what does not
 
@@ -121,8 +115,8 @@ Sessions are listed from two places at once: pi's own files, so a conversation s
 
 | | |
 | --- | --- |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | Loading a plugin into the daemon |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | The `Agent` and `Session` contracts this implements |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading a plugin into the daemon |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | The `Agent` and `Session` contracts this implements |
 | [pi](https://github.com/earendil-works/pi) | The coding agent this runs |
 
 ## License

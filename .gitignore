@@ -13,3 +13,7 @@ dist
 
 # Local experiments, kept out of git for now.
 /.scratch
+
+# The documentation site that `pnpm docs:build` writes, and its cache.
+/docs/.vitepress/dist
+/docs/.vitepress/cache

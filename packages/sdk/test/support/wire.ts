@@ -7,7 +7,7 @@
  * spread over the row the client holds, so a key left off is a field that did
  * not move, and an idled row kept saying what its last tool was doing. The
  * reference host sends the same and its client reads the `null` as cleared.
- * `docs/AHP.md` records it under `root/sessionSummaryChanged`, and it is the
+ * `docs/sdk/AHP.md` records it under `root/sessionSummaryChanged`, and it is the
  * only finding here a suite should not have to write down twice.
  *
  * Not a test file. `vitest` collects `*.test.ts`, and this is imported by the

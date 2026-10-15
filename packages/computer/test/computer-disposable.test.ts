@@ -1292,11 +1292,11 @@ it('mounts the session\'s folder read-write at the same path where the profile s
 /*
  * Task 04: the docs' own example.
  *
- * The object below is the `profiles` half of the example in `docs/COMPUTER.md`,
+ * The object below is the `profiles` half of the example in `docs/plugins/COMPUTERS.md`,
  * kept in step by hand, with its one host path pointed at a directory this host
  * has: an example that does not load is worse than none.
  */
-it('loads the disposable example from docs/COMPUTER.md', async () => {
+it('loads the disposable example from docs/plugins/COMPUTERS.md', async () => {
   const dir = temp();
   const state = join(dir, 'docker.json');
   const claudeHome = join(dir, 'claude-home');

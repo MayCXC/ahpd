@@ -5,7 +5,7 @@
  * Lists the models, then calls one in each dialect the proxy reads: OpenAI's
  * chat completions and Anthropic's messages, whole and streamed. Then the
  * refusals a client meets: no token, a model nobody serves, a wrong method.
- * See docs/PROXY.md for what each answer should be.
+ * See docs/server/PROXY.md for what each answer should be.
  *
  *   AHPD_TOKEN=<token> node scripts/completions.mjs
  *   node scripts/completions.mjs --base http://127.0.0.1:9187 --model local/default --token <token>

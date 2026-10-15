@@ -12,13 +12,24 @@ Any program that speaks ACP over its stdio is one configured command, not a pack
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/agent-acp`](https://github.com/softov/ahpd/tree/main/packages/agent-acp).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/agent-acp
+ahpd restart
 ```
 
-Then add one entry to `plugins` in the daemon's `config.json`, and one key per ACP server under its `presets`:
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+### What it needs
+
+- Each agent's own command on the daemon's `PATH`. A command that is missing fails that provider's turns with a message and leaves the daemon running.
+- `codex-acp` for `codex`. The `codex` CLI has no ACP mode of its own; `codex-acp` comes from `npm i -g @agentclientprotocol/codex-acp`.
+- `cursor-agent` for `cursor`, which runs `cursor-agent acp`, the name Cursor's installer puts on the host and its part ships.
+
+## Options
+
+Add one entry to `plugins` in the daemon's `config.json`, and one key per ACP server under its `presets`:
 
 ```json
 {
@@ -41,9 +52,7 @@ Then add one entry to `plugins` in the daemon's `config.json`, and one key per A
 
 Each key registers an agent of its own, under that key as the provider id, so `copilot`, `codex` and `my-agent` are three entries in the picker out of one load.
 
-The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp` and `qwen`. A key that names none of them writes a `command` of its own, and a key that names one takes its command, its arguments and its environment. The command has to be on the daemon's `PATH`. The `codex` CLI has no ACP mode of its own; `codex-acp` comes from `npm i -g @agentclientprotocol/codex-acp`. `cursor` runs `cursor-agent acp`, the name Cursor's installer puts on the host and its part ships. A command that is missing fails that provider's turns with a message and leaves the daemon running.
-
-## Options
+The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp` and `qwen`. A key that names none of them writes a `command` of its own, and a key that names one takes its command, its arguments and its environment.
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
 
@@ -81,20 +90,11 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `state` | `/ahpd/<id>` for a shipped preset | The absolute directory the agent keeps its configuration in, as a state volume |
 | `seed` | the agent's own host files | The host files `state` is seeded from, each `{ "source", "target", "keep", "drop" }` |
 
-Every shipped preset brings a `machine`: its CLI's part, a state directory at `/ahpd/<id>` seeded from the agent's own host files and never its login file, and the variables that point the CLI there. So a preset in a machine runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/COMPUTER.md#acp-agents-in-a-machine).
+Every shipped preset brings a `machine`: its CLI's part, a state directory at `/ahpd/<id>` seeded from the agent's own host files and never its login file, and the variables that point the CLI there. So a preset in a machine runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#acp-agents-in-a-machine).
 
 A per-agent option written at the top level fails the load and says where it goes now. A preset that cannot be resolved is skipped with one line naming it, and the rest register: a `base` naming no shipped preset, no `command` where one is needed, an `authenticate` with no `methodId`, a `$secret` the vault does not hold, or a `machine` that is wrongly written or reads a variable the daemon does not have. A row whose sign-in depends on a variable sends it only when the daemon's own environment or that preset's `env` has the variable, and for a session placed in a machine also when the preset's `machine.env` sets it.
 
-## Commands
-
-| Command | What it does |
-| --- | --- |
-| `ahpd plugin install @ahpd/agent-acp` | Install the package into the configuration directory and name it in `config.json` |
-| `ahpd plugin update @ahpd/agent-acp` | Move it to the version that matches the daemon; `all` in place of the name moves every installed plugin |
-| `ahpd plugin list` | What the configuration names, and what a run would load, without loading it |
-| `ahpd vault set host:<name>` | Keep the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input |
-
-See [DAEMON.md](https://github.com/softov/ahpd/blob/main/docs/DAEMON.md#--plugin-and-what-naming-one-runs) for what naming a plugin runs, and [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
+`ahpd vault set host:<name>` keeps the credential a preset's `env` reads with `{ "$secret": "host:<name>" }`, from standard input. See [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md#naming-a-secret-instead-of-holding-one) for a `$secret`.
 
 ## In your own host
 
@@ -134,9 +134,9 @@ An `elicitation/create` is a question, and it is asked on the chat as a `chat/in
 
 | | |
 | --- | --- |
-| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/PLUGINS.md) | The ACP options in the daemon, and what the server may ask the host for |
-| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/AGENT.md) | The `Agent` and `Session` contracts this implements |
-| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/AHP.md) | Which actions are served, which are refused, and why |
+| [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | The ACP options in the daemon, and what the server may ask the host for |
+| [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | The `Agent` and `Session` contracts this implements |
+| [AHP.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AHP.md) | Which actions are served, which are refused, and why |
 
 ## License
 

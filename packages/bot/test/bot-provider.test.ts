@@ -923,13 +923,13 @@ it('leaves no bot behind when the owner may not start the session', async () => 
 });
 
 /*
- * The writes `docs/BOTS.md` prints, sent as the file prints them.
+ * The writes `docs/plugins/BOTS.md` prints, sent as the file prints them.
  *
  * The examples in that file are bodies a client may copy, so they are bodies
  * this host has to answer. A change on either side the other did not follow is
  * a doc that has stopped being true.
  */
-it('answers the writes docs/BOTS.md shows', async () => {
+it('answers the writes docs/plugins/BOTS.md shows', async () => {
   const { host, sessions } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('claude')]);
   // The session the file's link example names, which the host has for soft.
   sessions.setOwner('6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e', 'user:soft');

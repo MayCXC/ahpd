@@ -12,13 +12,26 @@ Each endpoint is a record in the `webhooks` collection, and names its own vault 
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/webhook`](https://github.com/softov/ahpd/tree/main/packages/webhook).
 
-## In the daemon
+## Install
 
 ```bash
 ahpd plugin install @ahpd/webhook
+ahpd restart
 ```
 
-That installs it where the daemon looks for plugins and adds it to `plugins` in the configuration file.
+Update, remove and one-run flags such as `--plugin` are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
+
+## Options
+
+In the configuration file, with every option set:
+
+```json
+{ "plugins": [{ "name": "@ahpd/webhook", "options": { "syncTimeoutSeconds": 60 } }] }
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `syncTimeoutSeconds` | `60` | How long a sync call waits for its turn to end, in seconds |
 
 ## An endpoint
 
@@ -33,7 +46,13 @@ callbackPrefix: https://ci.example.com/hooks/
 
 Kept as `<configDir>/webhooks/ci.md`, this endpoint answers `POST /plugins/webhook/ci` with `Authorization: Bearer <the value of host:ci-hook>`.
 
-[WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/WEBHOOKS.md) describes the record, the call and the answers.
+[WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/WEBHOOKS.md) describes the record, the call and the answers.
+
+## Documentation
+
+| | |
+| --- | --- |
+| [WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/WEBHOOKS.md) | The record, the call and the answers |
 
 ## License
 

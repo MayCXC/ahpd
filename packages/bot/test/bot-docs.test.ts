@@ -6,22 +6,22 @@ import { memoryRecords } from '../../sdk/src/records.js';
 import { botStore } from '../src/store.js';
 
 /*
- * The bot file `docs/BOTS.md` shows, read the way the daemon reads one.
+ * The bot file `docs/plugins/BOTS.md` shows, read the way the daemon reads one.
  *
  * The page prints a file a person may copy, so it is a file the daemon has to
  * accept: frontmatter, a body, and every field a bot needs. A change on either
  * side the other did not follow is a doc that has stopped being true.
  */
 
-const PAGE = join(import.meta.dirname, '../../../docs/BOTS.md');
+const PAGE = join(import.meta.dirname, '../../../docs/plugins/BOTS.md');
 
 /** The one fenced block a section of the page shows, as the text between its fences. */
 const sample = (markdown: string, heading: string): string => {
   const from = markdown.indexOf(`\n## ${heading}\n`);
-  if (from === -1) throw new Error(`docs/BOTS.md has no ${heading} section`);
+  if (from === -1) throw new Error(`docs/plugins/BOTS.md has no ${heading} section`);
   const next = markdown.indexOf('\n## ', from + 1);
   const opened = /^```md\n([\s\S]*?)^```$/m.exec(markdown.slice(from, next === -1 ? undefined : next));
-  if (opened === null) throw new Error(`the ${heading} section of docs/BOTS.md shows no file`);
+  if (opened === null) throw new Error(`the ${heading} section of docs/plugins/BOTS.md shows no file`);
   return opened[1] ?? '';
 };
 

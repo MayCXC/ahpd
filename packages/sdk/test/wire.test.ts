@@ -244,11 +244,11 @@ const PREFIXED = ['ahpd.', 'vscode.', 'anthropic/', 'agentHost/'];
 const REFERENCE: { key: string; at: string; from: string }[] = [
   // What the reference client picks a row's renderer by. A call it has no kind
   // for carries no `_meta` at all rather than a guess.
-  { key: 'toolKind', at: 'action/_meta', from: 'docs/AHP.md' },
+  { key: 'toolKind', at: 'action/_meta', from: 'docs/sdk/AHP.md' },
   // A completion item has to say it is a command, or the reference client
   // drops it without a word, and `description` is the menu's second column.
-  { key: 'command', at: 'attachment/_meta', from: 'docs/AHP.md' },
-  { key: 'description', at: 'attachment/_meta', from: 'docs/AHP.md' },
+  { key: 'command', at: 'attachment/_meta', from: 'docs/sdk/AHP.md' },
+  { key: 'description', at: 'attachment/_meta', from: 'docs/sdk/AHP.md' },
   // The version the reference client writes in its Output channel, and the key
   // it reads to decide this host is a native one - its own name, un-prefixed,
   // and not the protocol's - decision `ahpd-says-it-is-a-native-host`.
@@ -561,7 +561,7 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
    * The requests this host serves that the protocol's own maps do not name.
    *
    * The reference window's own set, kept so a VS Code client can talk to this
-   * daemon as it talks to that host, and named in `docs/AHP.md` so the list is
+   * daemon as it talks to that host, and named in `docs/sdk/AHP.md` so the list is
    * a decision rather than an oversight. Two of them are answered here, which
    * is what makes them departures rather than gaps.
    */
@@ -654,7 +654,7 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
    *
    * A method in no map is either a departure somebody decided on or a hole in
    * the checker, and the only thing that tells them apart is being written
-   * down. Each names the heading in `docs/AHP.md` that records the decision,
+   * down. Each names the heading in `docs/sdk/AHP.md` that records the decision,
    * and the assertion below reads the section back - so this list and the
    * section a person reads are the same set, or the suite says which moved.
    */
@@ -694,9 +694,9 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
    * colon.
    */
   const documented = (): string[] => {
-    const text = readFileSync(new URL('../../../docs/AHP.md', import.meta.url), 'utf8');
+    const text = readFileSync(new URL('../../../docs/sdk/AHP.md', import.meta.url), 'utf8');
     const start = text.indexOf('\n### What is served outside the protocol');
-    if (start < 0) throw new Error('docs/AHP.md has no section naming what is served outside the protocol');
+    if (start < 0) throw new Error('docs/sdk/AHP.md has no section naming what is served outside the protocol');
     const end = text.indexOf('\n### ', start + 1);
     return text.slice(start, end < 0 ? undefined : end)
       .split('\n')

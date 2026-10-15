@@ -16,7 +16,7 @@ import type { ConfigPropertySchema } from '@microsoft/agent-host-protocol';
  *
  * This host acts on one of them, `globalAutoApproveEnabled`. The rest are
  * declared so that a client can draw them and so that a push of one is kept
- * and read back rather than refused; what is acted on is in `docs/AHP.md`.
+ * and read back rather than refused; what is acted on is in `docs/sdk/AHP.md`.
  */
 
 /**
