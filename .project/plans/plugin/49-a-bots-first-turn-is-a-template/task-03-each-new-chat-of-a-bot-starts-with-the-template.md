@@ -1,6 +1,6 @@
 ---
 title: Each new chat of a bot starts with the template
-status: implemented
+status: done
 depends: [task-01-a-bots-first-turn-is-its-filled-template.md, task-02-a-plugin-gives-a-new-chats-preamble.md]
 layer: "packages/bot, docs"
 refs:

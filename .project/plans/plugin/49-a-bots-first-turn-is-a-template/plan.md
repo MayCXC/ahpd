@@ -1,7 +1,7 @@
 ---
 title: A bot's first turn is a template
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-13
 revalidated: 2026-10-14
@@ -77,9 +77,9 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A bot's first turn is its filled template](task-01-a-bots-first-turn-is-its-filled-template.md) | implemented | - |
-| [02 - A plugin gives a new chat's preamble](task-02-a-plugin-gives-a-new-chats-preamble.md) | implemented | - |
-| [03 - Each new chat of a bot starts with the template](task-03-each-new-chat-of-a-bot-starts-with-the-template.md) | implemented | 01, 02 |
+| [01 - A bot's first turn is its filled template](task-01-a-bots-first-turn-is-its-filled-template.md) | done | - |
+| [02 - A plugin gives a new chat's preamble](task-02-a-plugin-gives-a-new-chats-preamble.md) | done | - |
+| [03 - Each new chat of a bot starts with the template](task-03-each-new-chat-of-a-bot-starts-with-the-template.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -88,7 +88,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 ## Resume state
 
 - **Done so far:** the plan, 2026-10-13; the task files, 2026-10-14; Softov's answers to eleven questions, 2026-10-14; tasks 01, 02 and 03 implemented, 2026-10-14. Task 02 of the first draft became tasks 02 and 03, for the host hook and the bot's use of it.
-- **Next action:** Softov reviews the three tasks.
+- **Next action:** none. Built 2026-10-15; see [implemented.md](implemented.md).
 - **Open questions:** none. Softov answered the task 01 question on 2026-10-14.
 - **Watch out for:**
   - The first chat opens with the session and not through `createChat`, so it gets the template once.
@@ -98,6 +98,6 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 
 ## Final verification checklist
 
-- [ ] `pnpm vitest run packages/bot packages/sdk` passes.
-- [ ] `pnpm -s typecheck` passes.
-- [ ] `plans/index.md` updated.
+- [x] `pnpm vitest run packages/bot packages/sdk` passes.
+- [x] `pnpm -s typecheck` passes.
+- [x] `plans/index.md` updated.

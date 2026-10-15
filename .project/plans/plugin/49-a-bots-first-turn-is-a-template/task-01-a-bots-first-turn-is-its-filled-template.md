@@ -1,6 +1,6 @@
 ---
 title: A bot's first turn is its filled template
-status: implemented
+status: done
 depends: []
 layer: "packages/bot, packages/sdk, docs"
 refs:

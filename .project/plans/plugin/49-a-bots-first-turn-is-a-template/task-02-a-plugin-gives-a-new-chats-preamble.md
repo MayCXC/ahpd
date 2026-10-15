@@ -1,6 +1,6 @@
 ---
 title: A plugin gives a new chat's preamble
-status: implemented
+status: done
 depends: []
 layer: "packages/sdk, docs"
 refs:
