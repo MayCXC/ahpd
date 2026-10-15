@@ -1,7 +1,7 @@
 ---
 title: A plugin's late problem is logged
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -60,11 +60,12 @@ plugin problem(line) -> told.push -> (during apply) load answer -> log | (after 
 ## Resume state
 
 - **Done so far:** nothing.
-- **Next action:** [task-01-a-late-problem-line-goes-to-the-log.md](task-01-a-late-problem-line-goes-to-the-log.md).
+- **Checked by hand:** on Linux, 2026-10-15, at `3cf1dc13`. After a client reads `bot://`, a bot file edited by hand to a new owner gives `bot: bots/boozi-2 changed owner; the bot was left as it was` in the daemon log. Before anything reads the bots, the store is not loaded. An edit made then becomes the bot's first state, with no refusal.
+- **Next action:** `implemented.md` and `status: built`.
 - **Open questions:** none.
 - **Watch out for:** the bot's owner after a restart is not this plan, see [the problem](../../../problems/a-bot-file-edited-by-hand-to-a-new-owner-takes-it-after-a-restart.md).
 
 ## Final verification checklist
 
-- [ ] A bot file edited by hand to a new owner gives a line in the daemon log.
+- [x] A bot file edited by hand to a new owner gives a line in the daemon log.
 - [ ] `plans/index.md` updated.

@@ -108,7 +108,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
   Task 05: `docs/DAEMON.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
   Task 06, implemented 2026-10-14: a restart through the control pipe names the pipe in its two log lines. A forced one adds `forced`, and a signal keeps its name.
-- **Next action:** review task 06, then check on Windows that the log names the pipe. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
+- **Next action:** the checks on Windows in [windows-checks.md](../../../pending/windows-checks.md). Task 06 is reviewed and merged. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
 - **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. During a turn, `ahpd restart` exits 1 with the turn named, and the pid stays the same. `ahpd restart --force` restarts from the recorded line in about 3 seconds, and the client reconnects. `ahpd stop` during a turn logs `stopping` and `stopped`, removes `daemon.json`, and `ahpd status --json` prints `{"running":false}`.
   Left to check: the stop line in the final list, on a daemon started with `--connection-token-file`. The run does not show that the daemon was started with that flag.
   Left to check for task 06: a restart while a turn runs logs `restart refused (control pipe)`, and a forced one logs `restart: stopping (control pipe, forced)`.

@@ -36,7 +36,8 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`. Each re
 
 ## By Softov's hand
 
-- daemon/13 restart checks, host/56 task 05, container/02 tasks 01-03 (Windows VS Code run), container/05 p9 task 06 on dev02.
+- [windows-checks.md](../pending/windows-checks.md) and [macos-checks.md](../pending/macos-checks.md).
+- host/56 task 05, container/02 tasks 01-03 (Windows VS Code run), container/05 p9 task 06 on dev02.
 - The Modal title copy button needs a scena change.
 
 ## Next builds
@@ -47,4 +48,3 @@ When a plan is reviewed, each of its `implemented` tasks becomes `done`. Each re
 ## Reviews
 
 - [2026-09-19-upstream-pass-4.md](../review/2026-09-19-upstream-pass-4.md)
-- [daemon-13-restart-checks.md](../review/daemon-13-restart-checks.md)

@@ -88,14 +88,16 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 ## Resume state
 
 - **Done so far:** planned 2026-10-14; tasks 01 to 05 implemented 2026-10-14; task 03 reviewed. Task 05 makes `ahpd status` show the start folder, and makes a forwarded add name it. In task 04, a daemon that names no folder records its start folder. The first `paths add` to a file with no `paths` writes that folder and the new one. `ahpd paths list`, `add` and `remove` are declared once and serve both surfaces. At the terminal they edit the file `--config-file` names. Served they edit the daemon's own file, and change the list that daemon serves, so `ahpd status` shows the change with no restart.
-- **Next action:** review tasks 04 and 05, then the checks by hand that remain in the final list, and the task 05 check on Windows. At the terminal, `ahpd paths add` and `remove` send the change to a running daemon that serves the HTTP API, and write the file otherwise.
+- **Next action:** `implemented.md` and `status: built`. Tasks 04 and 05 are reviewed and merged. At the terminal, `ahpd paths add` and `remove` send the change to a running daemon that serves the HTTP API, and write the file otherwise.
 - **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. On a daemon started with no `paths`, `ahpd paths add` and `remove` exit 0, and `paths list`, `ahpd status --json` and `config.json` name the same folders after each change. After `ahpd restart`, the daemon serves the folders the file names. That check found that `ahpd status --json` had no `startFolder`, which task 05 fixes.
+  On Linux, 2026-10-15, at `3cf1dc13`, with a config folder of its own: on a fresh folder, `ahpd paths add` writes only that folder.
+  Then `ahpd start` serves it. Removing the last folder is refused, and removing a folder not listed exits 2 with no question.
 - **Open questions:** none.
 - **Watch out for:** the suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit. `docs/DAEMON.md`'s `## Commands` block lists every verb, the three `paths` verbs included.
 
 ## Final verification checklist
 
-- [ ] On a fresh folder, `ahpd paths add <folder>` writes `config.json`, and `ahpd start` serves the folder.
+- [x] On a fresh folder, `ahpd paths add <folder>` writes `config.json`, and `ahpd start` serves the folder.
 - [x] With a daemon running and `http` on, a plain `ahpd paths add <folder>` makes `ahpd status --json` show the folder with no restart.
-- [ ] `ahpd paths remove` of the last folder is refused, and of a folder not listed stops with no question.
+- [x] `ahpd paths remove` of the last folder is refused, and of a folder not listed stops with no question.
 - [ ] `plans/index.md` updated.

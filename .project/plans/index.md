@@ -28,20 +28,20 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [10 - `ahpd configure` sets the daemon up, and a first start at a terminal offers it](daemon/10-a-first-run-sets-the-daemon-up/plan.md) | medium | built 2026-10-02 ([implemented.md](daemon/10-a-first-run-sets-the-daemon-up/implemented.md)) | daemon 09 | - |
 | [11 - Root config carries the daemon's settings and each plugin's options, and a client edits them](daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md) | high | built 2026-10-02 ([implemented.md](daemon/11-root-config-carries-the-daemon-and-its-plugins/implemented.md)) | - | - |
 | [12 - A plugin option is set from the command line, in the file or for one run](daemon/12-a-plugin-option-is-set-from-the-command-line/plan.md) | medium | built 2026-10-04 ([implemented.md](daemon/12-a-plugin-option-is-set-from-the-command-line/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65; by-hand checks not run | - | - |
-| [13 - `ahpd restart` restarts the daemon in place, and refuses while a turn runs](daemon/13-ahpd-restart/plan.md) | high | active 2026-09-30; tasks 01-03 done (reviewed, fixed in host 64), 04 done 2026-10-09; waiting on the checks by hand | - | - |
+| [13 - `ahpd restart` restarts the daemon in place, and refuses while a turn runs](daemon/13-ahpd-restart/plan.md) | high | active 2026-09-30; tasks 01-04 done; checked on Linux 2026-10-15; the ahpapp Restart button waits in an idea | - | - |
 | [14 - The daemon log rotates at start](daemon/14-the-daemon-log-rotates-at-start/plan.md) | low | built 2026-10-02 ([implemented.md](daemon/14-the-daemon-log-rotates-at-start/implemented.md)) | - | - |
 | [15 - A verb declares only the flags it reads](daemon/15-a-verb-declares-only-its-own-flags/plan.md) | medium | built 2026-10-06 ([implemented.md](daemon/15-a-verb-declares-only-its-own-flags/implemented.md)); reviewed and merged 2026-10-06, fixes in host 65 | - | - |
 | [16 - A command says what it does to what, and the daemon serves on the cofold that checks it](daemon/16-a-command-says-what-it-does-to-what/plan.md) | high | built 2026-10-06 ([implemented.md](daemon/16-a-command-says-what-it-does-to-what/implemented.md)) | cofold commands/03, commands/04 | ahpd-web resource screens |
 | [17 - A plugin installs at the newest version whose sdk range admits the daemon](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/plan.md) | high | built 2026-10-09 ([implemented.md](daemon/17-a-plugin-installs-at-the-newest-version-that-fits-the-sdk/implemented.md)) | daemon 09 | - |
 | [18 - The API answers to the origins a deployment names](daemon/18-the-api-answers-to-the-origins-a-deployment-names/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/18-the-api-answers-to-the-origins-a-deployment-names/implemented.md)) | daemon 05 | - |
 | [19 - A plugin is known by its id, not by the spec that loads it](daemon/19-a-plugin-is-known-by-its-id/plan.md) | high | built 2026-10-10 ([implemented.md](daemon/19-a-plugin-is-known-by-its-id/implemented.md)); checked 2026-10-13 | daemon 11 | - |
-| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-14; task 06 implemented; checked on Windows 2026-10-14; the review of task 06 and its Windows check remain | daemon 13 | - |
-| [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; the Windows check by hand remains | daemon 20 | - |
-| [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; the check by hand remains | - | - |
+| [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | active 2026-10-14; task 06 implemented and reviewed; the Windows checks wait in `pending/windows-checks.md` | daemon 13 | - |
+| [21 - The shutdown method stops the daemon gracefully](daemon/21-the-shutdown-method-stops-the-daemon-gracefully/plan.md) | high | active 2026-10-15; task 01 implemented and reviewed, checked on Linux 2026-10-15; task 02 todo; the Windows check waits in `pending/windows-checks.md` | daemon 20 | - |
+| [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | active 2026-10-13; task 01 implemented and reviewed; checked on Linux 2026-10-15 | - | - |
 | [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
-| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented; checked on Windows 2026-10-14; the review of tasks 04 and 05 and three checks by hand remain | - | - |
+| [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | active 2026-10-14; tasks 01 to 05 implemented and reviewed; checked on Windows 2026-10-14 and on Linux 2026-10-15 | - | - |
 
 Next free number in `daemon`: `27`.
 
@@ -316,7 +316,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | active 2026-10-14; tasks 01-04 implemented | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | active 2026-10-14; tasks 01-03 implemented | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
-| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-07 implemented, awaiting review | daemon 19 | ahpw `/plugins/web/` |
+| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-07 implemented and reviewed | daemon 19 | ahpw `/plugins/web/` |
 
 Next free number in `plugin`: `52`.
 
