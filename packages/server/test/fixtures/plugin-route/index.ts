@@ -4,16 +4,14 @@ import type { Plugin } from '@ahpd/sdk';
  * A plugin that serves a route of its own, and announces a host of its own.
  *
  * Both halves are what a webhook or a tunnel plugin needs and what this plan
- * has to be checked against. The name is scoped on purpose, so the fixture
- * exercises the encoding: it is served under `/plugins/%40ahpd/plugin-route/`,
- * and no name is refused for holding `@` and `/`.
+ * has to be checked against. It is served under `/plugins/plugin-route/`.
  *
  * The `say` line is the tunnel's: a plugin that made this daemon reachable
  * somewhere else names that address in the announcement, and the daemon reads
  * the host out of it rather than being told about it twice.
  */
 
-export const name = '@ahpd/plugin-route';
+export const name = 'plugin-route';
 
 /** The host the line below names, as a caller reaches the tunnel. */
 export const TUNNEL_HOST = 'fixture-tunnel.example.com';

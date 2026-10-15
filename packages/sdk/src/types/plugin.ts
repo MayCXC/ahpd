@@ -860,7 +860,11 @@ export interface PluginHost extends PluginContext {
  * is the plugin cannot be guessed at and a silent one is worse than a refusal.
  */
 export interface Plugin {
-  /** The plugin's id, unique among the plugins a daemon loads. */
+  /**
+   * The plugin's id, unique among the plugins a daemon loads: lowercase
+   * letters, digits and dashes, one to forty of them, starting with a letter.
+   * The daemon skips a plugin whose exported `name` is not one.
+   */
   name: string;
   /** What a listing prints instead of the id. */
   title?: string;

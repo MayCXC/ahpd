@@ -29,7 +29,7 @@ import { basename, dirname, extname, isAbsolute, join, resolve, sep } from 'node
 import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
-import { foldHostOptions, frozenCopy, grantProblem, isRecord, pluginHost, readSecret, reason, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
+import { foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
 import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { satisfies } from './compat.js';
 
@@ -780,6 +780,11 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   if (wrong !== undefined) return { problems: [...problems, wrong] };
 
   const held = module as Record<string, unknown>;
+  // A name the module exports is its id, and an id is a slug; a provisional id
+  // is not held to that, because the contract lets a module export no name.
+  if (typeof held.name === 'string' && held.name.trim() !== '' && !isRecordSlug(held.name)) {
+    return { problems: [...problems, `plugin ${held.name} skipped: its name is not a slug: ${RECORD_SLUG}`] };
+  }
   const apply = held.apply as Plugin['apply'];
   // The module wins for shape and its `name` wins for the listing; the
   // manifest is the fallback, and the spec is the last resort.

@@ -40,6 +40,8 @@ process.
 
 A plugin is known by its id. The id is the module's `name` export. A module without one takes the manifest's `name`, then its file name (the directory's name for an `index` file), then the spec as written. The configuration names a plugin by its spec, and everything else names it by its id: the root config key `plugins.<id>`, the `ahpd plugin` verbs, `--plugin-option <id>.<key>=<value>` and the listing. The verbs and `--plugin-option` also take the spec as written. The id of each of ahpd's own plugins is its package name without the scope: `@ahpd/bot` is the plugin `bot`.
 
+A `name` the module exports is a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter. A module that exports any other `name`, such as `@acme/agent-mine`, is skipped with `plugin @acme/agent-mine skipped: its name is not a slug`, and its `apply` is never called. An id taken from the manifest, the file name or the spec is not checked.
+
 ```json
 { "plugins": [{ "name": "./plugins/mine", "options": { "model": "careful" } }] }
 ```
@@ -189,7 +191,7 @@ against its contract before it is recorded.
 export const apply: Plugin['apply'] = (host) => {
   host.registerRoute(async (request) => {
     const { pathname } = new URL(request.url);
-    if (pathname !== '/plugins/%40acme/webhooks/github/hook') return new Response('No such path', { status: 404 });
+    if (pathname !== '/plugins/webhooks/github/hook') return new Response('No such path', { status: 404 });
     return new Response(JSON.stringify(await request.json()), { headers: { 'content-type': 'application/json' } });
   });
 };
@@ -199,9 +201,9 @@ export const apply: Plugin['apply'] = (host) => {
 
 `@ahpd/webhook` is a plugin that does this: each endpoint names a vault secret, and a call passes only with that secret as its bearer token - [WEBHOOKS.md](WEBHOOKS.md).
 
-One route per plugin, and the prefix is your plugin's name with each `/`-separated segment percent-encoded: `@acme/webhooks` is served under `/plugins/%40acme/webhooks/`. Nothing is refused for the shape of its name, because a throw there would cost the plugin everything else it registered.
+One route per plugin, and the prefix is your plugin's id: a plugin that exports `name = 'webhooks'` is served under `/plugins/webhooks/`. A module that exports no `name` may have an id with `@` or `/`, such as the manifest name `@acme/webhooks`, and then each `/`-separated segment is percent-encoded: `/plugins/%40acme/webhooks/`.
 
-The path reaches your handler whole, prefix and all, so `new URL(request.url).pathname` is the path you wrote the webhook for. The prefix is matched by whole segments: `/plugins/%40acme/webhooksy/hook` reaches nothing, rather than being the start of yours.
+The path reaches your handler whole, prefix and all, so `new URL(request.url).pathname` is the path you wrote the webhook for. The prefix is matched by whole segments: `/plugins/webhooksy/hook` reaches nothing, rather than being the start of yours.
 
 A route is served whether `http` is on or off, and on the daemon's own port rather than one of its own, so a tunnel forwards it like everything else here and no second port is opened for you. `/api` is unaffected.
 

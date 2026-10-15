@@ -324,4 +324,34 @@ describe('a plugin id', () => {
     expect(pluginIdOf('./fixtures/plugin-alike/', { configDir: fixtures, cwd: here })).toBe('plugin-alike');
     expect(pluginIdOf('./fixtures/plugin-alike/')).toBe('./fixtures/plugin-alike/');
   });
+
+  it('refuses a name the module exports that is not a slug, and never applies it', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-not-a-slug-'));
+    try {
+      writeFileSync(join(root, 'scoped.js'), "export const name = '@acme/x';\nexport function apply() { throw new Error('applied'); }\n");
+      writeFileSync(join(root, 'plain.js'), "export const name = 'plain';\nexport function apply() {}\n");
+      const { loaded, problems } = await load([join(root, 'scoped.js'), join(root, 'plain.js')]);
+      expect(problems).toEqual([
+        'plugin @acme/x skipped: its name is not a slug: lowercase letters, digits and dashes, one to forty of them, starting with a letter',
+      ]);
+      expect(loaded.map((one) => one.name)).toEqual(['plain']);
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('is the manifest name when the module exports none, slug or not', async () => {
+    const root = mkdtempSync(join(tmpdir(), 'ahpd-manifest-id-'));
+    try {
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ name: '@acme/y', type: 'module', exports: { '.': './entry.js' }, ahpd: { entry: './entry.js' } }));
+      writeFileSync(join(root, 'entry.js'), 'export function apply() {}\n');
+      const { loaded, problems } = await load([root]);
+      expect(problems).toEqual([]);
+      expect(loaded.map((one) => one.name)).toEqual(['@acme/y']);
+    }
+    finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

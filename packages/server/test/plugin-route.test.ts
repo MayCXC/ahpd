@@ -29,7 +29,7 @@ const BACKEND = join(import.meta.dirname, 'fixtures', 'plugin-echo');
 /** The plugin under test: one route, and a host announced of its own. */
 const ROUTE = join(import.meta.dirname, 'fixtures', 'plugin-route');
 /** What the fixture's prefix is, with the scope encoded as the listener serves it. */
-const PREFIX = '/plugins/%40ahpd/plugin-route';
+const PREFIX = '/plugins/plugin-route';
 /** The host the fixture's announcement names, which the daemon learns from that line. */
 const TUNNEL_HOST = 'fixture-tunnel.example.com';
 
@@ -190,9 +190,9 @@ describe('a route with http off', () => {
   });
 
   it('does not reach the route by a prefix that is not whole segments', async () => {
-    // `@ahpd/plugin-route` is served under `%40ahpd/plugin-route/`, so a path
-    // that only starts like it is nobody's.
-    for (const path of [`${PREFIX}-extra/hook`, '/plugins/%40ahpd/plugin-rout/hook', '/plugins/plugin-route/hook']) {
+    // `plugin-route` is served under `/plugins/plugin-route/`, so a path that
+    // only starts like it, or that names its package, is nobody's.
+    for (const path of [`${PREFIX}-extra/hook`, '/plugins/plugin-rout/hook', '/plugins/%40ahpd/plugin-route/hook']) {
       expect((await hook(one.port, path, 'a=1')).status).toBe(404);
     }
     // And the route itself is untouched by the requests that missed it.
@@ -200,7 +200,7 @@ describe('a route with http off', () => {
   });
 
   it('answers 404 for a plugin this daemon did not load', async () => {
-    const answer = await hook(one.port, '/plugins/%40ahpd/nobody/hook', 'a=1');
+    const answer = await hook(one.port, '/plugins/nobody/hook', 'a=1');
     expect(answer.status).toBe(404);
     expect((await answer.json() as { message: string }).message).toContain('No plugin route at');
   });
@@ -209,12 +209,12 @@ describe('a route with http off', () => {
     const failed = await hook(one.port, `${PREFIX}/boom`, 'a=1');
     expect(failed.status).toBe(500);
     const message = (await failed.json() as { message: string }).message;
-    expect(message).toContain('@ahpd/plugin-route');
+    expect(message).toContain('plugin-route');
     // The reason is the plugin's own and goes to the log, not to the caller.
     expect(message).not.toContain('asked to fail');
 
     expect((await hook(one.port, `${PREFIX}/hook`, 'a=1')).status).toBe(200);
-    expect(one.stderr()).toContain('plugin @ahpd/plugin-route failed at /plugins/%40ahpd/plugin-route/boom: the fixture was asked to fail');
+    expect(one.stderr()).toContain('plugin plugin-route failed at /plugins/plugin-route/boom: the fixture was asked to fail');
   });
 
   it('leaves everything else this listener answered before it alone', async () => {

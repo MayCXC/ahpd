@@ -1,6 +1,6 @@
 ---
 title: The daemon refuses a plugin whose name is not a slug
-status: todo
+status: implemented
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "server"
 refs:
@@ -46,3 +46,8 @@ A provisional id is not checked.
 
 ## Resume
 
+- **Done:** 2026-10-14. `loadOne` skips a module whose exported `name` is not a slug, before options or `apply`.
+- **Tests:** two cases in `plugin-load.test.ts`. The first loads `@acme/x` beside `plain`, and only `plain` loads. The second loads a module with no `name` under the manifest name `@acme/y`.
+- **Departure:** the whole-segment case in `plugin-route.test.ts` now checks that the old path `/plugins/%40ahpd/plugin-route/hook` answers 404.
+- **Kept:** the `routePrefix` encoding tests in `packages/sdk/test/plugin-fold.test.ts`, because a provisional id may still hold `@` and `/`.
+- **Gates:** typecheck, boundary and schema pass. The test gate passes with 5080 tests.

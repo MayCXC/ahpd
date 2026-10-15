@@ -88,7 +88,7 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - ahpd's plugins export slugs](task-01-ahpds-plugins-export-slugs.md) | implemented | - |
-| [02 - The daemon refuses a plugin whose name is not a slug](task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md) | todo | 01 |
+| [02 - The daemon refuses a plugin whose name is not a slug](task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md) | implemented | 01 |
 | [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | todo | 01 |
 | [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | todo | 01 |
 
@@ -102,8 +102,8 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 
 ## Resume state
 
-- **Done so far:** the plan and task 01, 2026-10-14.
-- **Next action:** [task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md](task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md).
+- **Done so far:** the plan and tasks 01 and 02, 2026-10-14.
+- **Next action:** [task-03-an-old-owner-name-reads-as-the-new-one.md](task-03-an-old-owner-name-reads-as-the-new-one.md).
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 
