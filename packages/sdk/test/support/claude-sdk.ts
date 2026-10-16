@@ -39,6 +39,18 @@ export const sdk = {
   init: {} as Record<string, unknown>,
   mcp: [] as Record<string, unknown>[],
   skills: [] as Record<string, unknown>[],
+  /**
+   * The plugins the CLI reports, and the ones `enabledPlugins` has taken away.
+   *
+   * A plugin switch is an `enabledPlugins` setting the CLI reads when it loads
+   * its plugins, so one switched off stops being one it loads - which is what
+   * `reloadPlugins` answers and why the CLI's own list cannot be what a
+   * switched-off row is drawn from.
+   */
+  plugins: [] as Record<string, unknown>[],
+  pluginsOff: new Set<string>(),
+  /** Every set of flag settings the CLI was handed, in order. */
+  flags: [] as Record<string, unknown>[],
   said: [] as string[],
   /**
    * What each prompt carried when it was not plain text, in order.
@@ -166,9 +178,16 @@ export const fake = {
       interrupt: async () => { sdk.interrupted++; },
       setPermissionMode: async (mode: string) => { sdk.modesSet.push(mode); },
       setModel: async (model?: string) => { sdk.modelsSet.push(model); },
-      applyFlagSettings: async (settings: { effortLevel?: string | null; sandbox?: { enabled: boolean } | null }) => {
+      applyFlagSettings: async (settings: { effortLevel?: string | null; sandbox?: { enabled: boolean } | null; enabledPlugins?: Record<string, boolean> }) => {
+        sdk.flags.push(settings);
         if ('effortLevel' in settings) sdk.effortsSet.push(settings.effortLevel);
         if ('sandbox' in settings) sdk.sandboxSet.push(settings.sandbox);
+        // The flag layer as the CLI keeps it, one assignment per key, with the
+        // source of a plugin as the key a switch moves.
+        for (const [source, on] of Object.entries(settings.enabledPlugins ?? {})) {
+          if (on) sdk.pluginsOff.delete(source);
+          else sdk.pluginsOff.add(source);
+        }
       },
       toggleMcpServer: async (name: string, enabled: boolean) => { sdk.mcpToggled.push({ name, enabled }); },
       reconnectMcpServer: async (name: string) => { sdk.mcpReconnected.push(name); },
@@ -183,7 +202,11 @@ export const fake = {
       initializationResult: async () => sdk.init,
       mcpServerStatus: async () => sdk.mcp,
       reloadSkills: async () => ({ skills: sdk.skills }),
-      reloadPlugins: async () => ({ plugins: [] }),
+      reloadPlugins: async () => ({
+        plugins: sdk.plugins.filter((one) => !sdk.pluginsOff.has(
+          String(one['source'] ?? '') === '' ? `${String(one['name'])}@${String(one['path'])}` : String(one['source']),
+        )),
+      }),
       supportedModels: async () => [],
       streamInput: async () => {},
       close: () => { fake.closed = true; fake.wake?.(); },
@@ -200,6 +223,9 @@ export function resetSdk(): void {
   sdk.throwOnce = 0;
   sdk.mcp.length = 0;
   sdk.skills.length = 0;
+  sdk.plugins.length = 0;
+  sdk.pluginsOff.clear();
+  sdk.flags.length = 0;
   sdk.said.length = 0;
   sdk.blocks.length = 0;
   sdk.modelsSet.length = 0;

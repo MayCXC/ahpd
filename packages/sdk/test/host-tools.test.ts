@@ -2546,3 +2546,134 @@ describe('a customization switched for every session or a folder', () => {
     expect(told).toEqual([[SERVER.id, false]]);
   });
 });
+
+describe('a customization switched for one session', () => {
+  /** A plugin the backend found for itself, with a skill of the plugin's under it. */
+  const PLUGIN: Bag = {
+    type: 'plugin',
+    id: 'plugin:cc-plugin-agents-md',
+    uri: 'cc-plugin-agents-md@builtin',
+    name: 'cc-plugin-agents-md',
+    children: [{ type: 'skill', id: 'skill:agents-md', name: 'agents-md', uri: 'virtual://skill/agents-md', enabled: true }],
+  };
+
+  const dirs: string[] = [];
+  afterEach(() => {
+    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  });
+
+  /**
+   * Sessions in a host whose backend reports a plugin of its own and switches it.
+   *
+   * The switch is taken and what the backend reports does not move: a backend
+   * says whether a customization *can* be switched and never what it decided,
+   * so a session reporting the switch as off is this host's answer rather than
+   * the backend's. A skill of the plugin has no switch at all, which is what
+   * the refusal is for.
+   */
+  async function switchable() {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-enablement-one-'));
+    dirs.push(dir);
+    const base = echo({ path: dir, pace: 0 });
+    const told: [string, boolean][] = [];
+    const said: string[] = [];
+    const agent: Agent = {
+      ...base,
+      probe: async () => ({ models: [], commands: [], customizations: [PLUGIN] }),
+      create: (start: Start) => ({
+        ...base.create(start),
+        setCustomizationEnabled: async (id: string, on: boolean) => {
+          told.push([id, on]);
+          return id === PLUGIN.id;
+        },
+      }),
+    };
+    const host = createHost({
+      path: dir, agents: [agent], ...machine(), enablement: memoryEnablement(),
+      onEvent: (message) => said.push(message),
+    });
+
+    const open = async (name: string, made = true) => {
+      const uri = `ahp-session:/${name}`;
+      const client = host.accept(peer());
+      await client.handle(hello(['0.9.0']));
+      if (made) await client.handle({ method: 'createSession', params: { channel: uri, provider: 'echo' } });
+      /** What this session reports now, which is what a client's snapshot carries. */
+      const reported = async (): Promise<Record<string, unknown>[]> => {
+        const answer = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+          snapshot: { state: { customizations?: Record<string, unknown>[] } };
+        };
+        return answer.snapshot.state.customizations ?? [];
+      };
+      return {
+        uri,
+        /** The one plugin, as this session reports it right now. */
+        plugin: async (): Promise<Record<string, unknown> | undefined> =>
+          (await reported()).find((one) => one.id === PLUGIN.id),
+        toggle: (id: string, enabled: boolean) => client.handle({ method: 'dispatchAction', params: {
+          channel: uri,
+          action: { type: 'session/customizationToggled', id, enablement: [{ kind: 'session', enabled }] },
+        } }),
+      };
+    };
+    return { host, told, said, open };
+  }
+
+  it('keeps the decision on the session that made it, and reports it off', async () => {
+    const { told, open } = await switchable();
+    const one = await open('one');
+    // Nothing decided anywhere is an absent field, not an empty list.
+    expect((await one.plugin())?.enablement).toBeUndefined();
+
+    await one.toggle(PLUGIN.id as string, false);
+    await settle();
+
+    expect(told).toEqual([[PLUGIN.id, false]]);
+    // The backend went on reporting the plugin as it found it, so this entry is
+    // the decision this host kept rather than anything the backend said.
+    expect((await one.plugin())?.enablement).toEqual([{ kind: 'session', enabled: false }]);
+  });
+
+  it('reports the same entry to a later snapshot, and keeps nothing in the store', async () => {
+    const { open } = await switchable();
+    const one = await open('one');
+    await one.toggle(PLUGIN.id as string, false);
+    await settle();
+
+    // A session's own decision is about the session and outlives nothing, so
+    // the store is where it is *not*: a later snapshot reads it off the host.
+    const later = await open('one', false);
+    expect((await later.plugin())?.enablement).toEqual([{ kind: 'session', enabled: false }]);
+  });
+
+  it('leaves another session with the plugin on', async () => {
+    const { open } = await switchable();
+    const one = await open('one');
+    const two = await open('two');
+
+    await one.toggle(PLUGIN.id as string, false);
+    await settle();
+
+    expect((await one.plugin())?.enablement).toEqual([{ kind: 'session', enabled: false }]);
+    // The decision is keyed by the session it was made in, so the session
+    // beside it has none - whatever the plugin's own `source` keys elsewhere.
+    expect((await two.plugin())?.enablement).toBeUndefined();
+  });
+
+  it('refuses a skill of the plugin out loud, with the list sent again', async () => {
+    const { said, told, open } = await switchable();
+    const one = await open('one');
+
+    await one.toggle('skill:agents-md', false);
+    await settle();
+
+    // The backend has no switch for a skill, and says so by refusing it: a
+    // control that reports success and changes nothing is worse than one that
+    // says it cannot.
+    expect(said.some((line) => line.includes('skill:agents-md has no runtime switch'))).toBe(true);
+    expect(told).toEqual([['skill:agents-md', false]]);
+    // And nothing was kept, so the skill stays as the backend reports it.
+    const plugin = await one.plugin();
+    expect((plugin?.children as Record<string, unknown>[])[0]?.enablement).toBeUndefined();
+  });
+});

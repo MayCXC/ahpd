@@ -120,8 +120,10 @@ export interface Toggled {
  *
  * `own` is the decision this session made for itself, which is the most
  * specific one there is and the one a decision about a folder or about every
- * session cannot move. A backend's own decision for a session is the backend's
- * to keep, so a customization it reported has none here.
+ * session cannot move. For a customization the backend reported it is the
+ * decision the backend took, which this host keeps by id: the backend answered
+ * a switch and then goes on reporting what it reports, so a decision read only
+ * off that report is one that moves back on the next one.
  */
 export interface Carried {
   readonly key: string;
@@ -238,6 +240,15 @@ export interface Tooling {
   /** Forget what a session's backends were told, called where a chat starts. */
   forgetTold(uri: string): void;
   /**
+   * Keep what a session decided about one of its backend's customizations.
+   *
+   * Called where the backend answered a switch and took it, which is the only
+   * moment this host learns the decision: the backend goes on reporting what
+   * it reports, so this is what a session's list reads it from until the next
+   * report says otherwise.
+   */
+  keepDecision(uri: string, id: string, enabled: boolean): void;
+  /**
    * Tell a session's chats what they may offer, after the clients moved.
    *
    * The plugins a session's clients announced are copied here too: a client
@@ -324,6 +335,22 @@ export function createTooling(ctx: HostContext): Tooling {
    * decision about every session, and is left with the session's own.
    */
   const store = options.enablement;
+
+  /**
+   * What one session decided about one customization of its backend, by id.
+   *
+   * The store is where a decision about a folder or about every session goes,
+   * and this is where a session's own goes - the one scope the store cannot
+   * hold, because it is about the session it was made in. Keyed by the session
+   * and not by its chats, because that is what the decision is about: `heldAs`
+   * is what turns a chat channel into the session it is one of.
+   *
+   * The switch is taken off the backend's answer and kept here because the
+   * backend's next report does not carry it: a customization a backend
+   * switched is one it goes on reporting as it found it, and a session that
+   * read the decision off that report would draw the switch back on.
+   */
+  const decided = new Map<string, Map<string, boolean>>();
 
   /**
    * The tools a session is offered, with the permission applied once.
@@ -559,7 +586,8 @@ export function createTooling(ctx: HostContext): Tooling {
   const withEntries = (uri: string, one: Bag, owner?: string): Bag => {
     const carried = enablementOf(one.enablement);
     const key = enablementKeyOf(one, owner);
-    const entries = key === undefined ? undefined : entriesFor(uri, key, carried, ownIn(carried));
+    const own = ownIn(carried) ?? decisionOf(uri, str(one.id) ?? '');
+    const entries = key === undefined ? undefined : entriesFor(uri, key, carried, own);
     const children = Array.isArray(one.children)
       ? one.children.map((child) => withEntries(uri, bag(child), str(one.uri)))
       : undefined;
@@ -660,6 +688,23 @@ export function createTooling(ctx: HostContext): Tooling {
 
   /** Most specific first, which is the order every reader of a decision list takes. */
   const byScope = (decisions: Bag[]): Bag[] => [...decisions].sort((a, b) => specificityOf(a) - specificityOf(b));
+
+  /** What a session decided about one customization for itself, if it decided. */
+  const decisionOf = (uri: string, id: string): boolean | undefined => decided.get(heldAs(uri))?.get(id);
+
+  /**
+   * Keep a session's own decision about one customization.
+   *
+   * Called where a backend answered a switch, which is the only moment this
+   * host learns that a customization it did not hold is off: the backend has
+   * no entry to read it off, and what it keeps is its own to report.
+   */
+  const keepDecision = (uri: string, id: string, enabled: boolean): void => {
+    const session = heldAs(uri);
+    const held = decided.get(session) ?? new Map<string, boolean>();
+    decided.set(session, held);
+    held.set(id, enabled);
+  };
 
   /**
    * The parts of a copy that has just landed, with a client's decisions on them.
@@ -834,7 +879,9 @@ export function createTooling(ctx: HostContext): Tooling {
       for (const one of list.map(bag)) {
         if (str(one.id) === id) {
           const key = enablementKeyOf(one, owner);
-          return key === undefined ? undefined : { key, of: 'backend' };
+          if (key === undefined) return undefined;
+          const own = decisionOf(uri, id);
+          return { key, of: 'backend', ...(own === undefined ? {} : { own }) };
         }
         const children = Array.isArray(one.children) ? one.children.map(bag) : [];
         const below = reported(children, str(one.uri));
@@ -1640,10 +1687,18 @@ export function createTooling(ctx: HostContext): Tooling {
    * that stopped answering rather than one that outlived the tools behind it.
    */
   const served = new Map<string, ToolsEndpoint[]>();
-  /** Take back every endpoint a session opened. */
+  /**
+   * Take back everything a session kept of its own, now that it is gone.
+   *
+   * Its endpoints, which stop answering with it, and the decisions it made for
+   * itself about its backend's customizations - a session that is over has no
+   * answer to give about one, and the store is where a decision that outlives
+   * a session is kept.
+   */
   const toolsServersGone = (uri: string): void => {
     for (const opened of served.get(uri) ?? []) opened.close();
     served.delete(uri);
+    decided.delete(uri);
   };
 
   /**
@@ -1741,7 +1796,7 @@ export function createTooling(ctx: HostContext): Tooling {
 
   return {
     permitted, strategyOf, shapedDefinition, toolDefinitions,
-    clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold,
+    clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold, keepDecision,
     retool, pluginsSettled, chatMeant, renameChat, toolContext,
     pluginsFor, pluginsMoved, mcpFor, deniedMcpServers,
     toolsServersGone, boundTools, instructions, turnInstructions,

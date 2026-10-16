@@ -3,7 +3,7 @@ import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
 import { protectedResource, urlOf } from '../mcp.js';
 import { flagSettingsOf } from '../options.js';
-import { customizationsOf } from './customizations.js';
+import { customizationsOf, rootOf } from './customizations.js';
 import type { Published } from './customizations.js';
 
 /** What this area offers the rest of the session. */
@@ -48,6 +48,53 @@ export function createServers(ctx: SessionContext): Servers {
   const wanted = new Map<string, Published>();
 
   /**
+   * What the CLI last said it has, kept so the list can be built again.
+   *
+   * A switch moves the plugins and nothing else, and the SDK asks for a whole
+   * answer every time - so the halves that did not move are the ones already
+   * read, rather than four calls to be answered again for a plugin a person
+   * just switched. The MCP half is refreshed where a server is switched, so
+   * what is kept here is what the CLI last said.
+   */
+  const reported: { init: Bag; mcp: unknown[]; skills: unknown[] } = { init: {}, mcp: [], skills: [] };
+
+  /**
+   * What this session has decided about each plugin, by id.
+   *
+   * Two things are made of it. The ones it switched off are the rows the CLI
+   * has stopped reporting and the session still lists - a switch here is an
+   * `enabledPlugins` setting the CLI reads when it loads its plugins, so there
+   * is nothing left in the CLI's answer to build the row from, and what the
+   * plugin was is kept here instead.
+   *
+   * And every decision is sent again on the next switch, because `enabledPlugins`
+   * is one key of the flag layer and `applyFlagSettings` merges at the top
+   * level: a map holding only the plugin being moved would say this session has
+   * no opinion about the ones it moved before, and the CLI would load them
+   * again.
+   */
+  const switched = new Map<string, { name: string; source: string; enabled: boolean }>();
+
+  /**
+   * Lay the session's customizations out from a plugin list, and say them.
+   *
+   * The plugins are the half a switch moves, so every rebuild starts here -
+   * the handshake's and a switch's alike. Said as the whole list because a
+   * switch can take a row out of it as well as move one, and a client reading
+   * one action has nothing to reconcile.
+   */
+  const laid = (plugins: unknown[]): void => {
+    const handed = new Set((ctx.options.plugins ?? []).map((one) => one.path));
+    const off = [...switched.values()]
+      .filter((one) => !one.enabled)
+      .map((one) => ({ name: one.name, path: one.source, source: one.source }));
+    ctx.customizations = customizationsOf(reported.init, reported.mcp, reported.skills, wanted, plugins, handed, off);
+    if (ctx.customizations.length > 0) {
+      ctx.emit('session', { type: 'session/customizationsChanged', customizations: ctx.customizations });
+    }
+  };
+
+  /**
    * Ask each server that needs signing in where to sign in.
    *
    * Only the remote ones: a stdio server has no URL, so there is no protected
@@ -75,6 +122,7 @@ export function createServers(ctx: SessionContext): Servers {
    */
   const refreshMcp = async (): Promise<void> => {
     const found = await ctx.handle.mcpServerStatus().then((r) => (Array.isArray(r) ? r : [])).catch(() => [] as unknown[]);
+    reported.mcp = found;
     await discover(found);
     for (const raw of found) {
       const server = bag(raw);
@@ -181,6 +229,51 @@ export function createServers(ctx: SessionContext): Servers {
   };
 
   /**
+   * Switch a plugin this session offered, the CLI's own built-ins included.
+   *
+   * The CLI has no call for it. What it takes is an `enabledPlugins` setting,
+   * named by the source a plugin is keyed under - `<name>@<marketplace>`, and
+   * `<name>@builtin` for one the CLI ships itself - and it reads that when it
+   * loads its plugins, so the switch is the setting and then a reload to make
+   * it now. The reload is also the answer: a plugin gone from the list is one
+   * that stopped being loaded, and one still in it is a switch the CLI did not
+   * take, which is what a person is entitled to be told.
+   *
+   * The rest of the flag settings go with it rather than the one setting
+   * alone: `applyFlagSettings` merges into the layer, and a set written from
+   * nothing would say this host has an opinion about the style and the
+   * `enabledPlugins` of every other plugin.
+   */
+  const switchPlugin = async (id: string, enabled: boolean): Promise<boolean> => {
+    const held = ctx.customizations.find((entry) => str(entry.id) === id);
+    const name = str(held?.name);
+    const source = str(held?.uri);
+    if (str(held?.type) !== 'plugin' || name === undefined || name === '' || source === undefined || source === '')
+      return false;
+    const decided = Object.fromEntries([
+      ...[...switched.values()].map((one) => [one.source, one.enabled] as const),
+      [source, enabled] as const,
+    ]);
+    try {
+      await ctx.handle.applyFlagSettings({ ...flagSettingsOf(ctx.values), enabledPlugins: decided });
+    }
+    catch {
+      return false;
+    }
+    const plugins = await ctx.handle.reloadPlugins()
+      .then((answer) => list(bag(answer as unknown).plugins))
+      .catch(() => undefined);
+    if (plugins === undefined)
+      return false;
+    const loading = plugins.some((raw) => rootOf(bag(raw)) === source);
+    if (enabled ? !loading : loading)
+      return false;
+    switched.set(id, { name, source, enabled });
+    laid(plugins);
+    return true;
+  };
+
+  /**
    * Ask the CLI what it can do, without asking it to do anything.
    *
    * Fired as soon as the query exists. Best effort: a CLI that will not answer
@@ -225,14 +318,11 @@ export function createServers(ctx: SessionContext): Servers {
     if (asked !== undefined && asked !== str(init.output_style)) {
       await ctx.handle.applyFlagSettings(flagSettingsOf(ctx.values)).catch(() => {});
     }
+    reported.init = init;
+    reported.mcp = mcp;
+    reported.skills = skills;
     await discover(mcp);
-    // The plugins this host handed the CLI, which it reports back by the same
-    // paths and which the session already lists from the host's own side.
-    const handed = new Set((ctx.options.plugins ?? []).map((one) => one.path));
-    ctx.customizations = customizationsOf(init, mcp, skills, wanted, plugins, handed);
-    if (ctx.customizations.length > 0) {
-      ctx.emit('session', { type: 'session/customizationsChanged', customizations: ctx.customizations });
-    }
+    laid(plugins);
     ctx.options.onHandshake?.();
   };
 
@@ -240,15 +330,15 @@ export function createServers(ctx: SessionContext): Servers {
     /**
      * Turn one on or off.
      *
-     * Only MCP servers: the CLI has `toggleMcpServer` and nothing equivalent
-     * for a skill, a prompt or a subagent. Those are refused rather than
-     * accepted and dropped - a switch that reports success and changes
-     * nothing is worse than one that says it cannot.
+     * An MCP server the CLI has, and a plugin it loaded. The rest - a skill, a
+     * prompt, a subagent - the CLI has no switch for at all, and those are
+     * refused rather than accepted and dropped: a switch that reports success
+     * and changes nothing is worse than one that says it cannot.
      */
     setCustomizationEnabled: async (id, enabled) => {
       const server = serverNamed(id);
       if (!server)
-        return false;
+        return switchPlugin(id, enabled);
       const held = ctx.customizations.find((entry) => str(entry.id) === id);
       const was = str(bag(held?.state).kind);
       try {

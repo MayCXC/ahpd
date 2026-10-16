@@ -1331,15 +1331,28 @@ export function chatAction(
           void session.setCustomizationEnabled(id, onFor(session.uri, asked));
         break;
       }
-      void session.setCustomizationEnabled(id, onFor(session.uri, asked)).then((took) => {
+      const on = onFor(session.uri, asked);
+      void session.setCustomizationEnabled(id, on).then((took) => {
+        /*
+         * What the backend took is this host's to keep.
+         *
+         * A backend says whether a switch can be made and not what it decided:
+         * it goes on reporting the customization as it found it, or reports
+         * nothing about one it has stopped loading. So the decision is kept
+         * here, by id, and the list below is what reads it back.
+         */
         if (took)
-          return;
-        // Said, not swallowed. The customization list is what a client
-        // draws the switch from, so re-reporting it puts the switch
-        // back where it was rather than leaving it showing a change
-        // that did not happen - and the refusal beside it is what tells
-        // the one client that asked why it moved back.
-        no(`${id} has no runtime switch`);
+          ctx.keepDecision(session.uri, id, on);
+        else
+          no(`${id} has no runtime switch`);
+        /*
+         * And the list either way, said rather than swallowed. The
+         * customization list is what a client draws the switch from: with the
+         * decision kept it stands where the client put it, and without one it
+         * goes back where it was rather than showing a change that did not
+         * happen. The refusal beside it is what tells the client that asked
+         * why it moved back.
+         */
         dispatch(session.uri, { type: 'session/customizationsChanged', customizations: session.customizations() });
       });
       break;

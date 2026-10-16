@@ -16,6 +16,22 @@ import { bag, list, str } from './common.js';
 export type Published = Bag & { resource: string };
 
 /**
+ * Where a plugin came from, which is also what its decisions are kept under.
+ *
+ * The root the SDK reported, where it is one. A plugin built into the CLI has
+ * no root: the SDK reports `builtin` as the path of every one of them, and one
+ * key for all of them switched every built-in when a person switched one. Its
+ * `source`, `<name>@builtin`, is its own.
+ *
+ * Exported because a switch is named by it: an `enabledPlugins` setting takes
+ * the source, and the reload that follows is read for the same one.
+ */
+export const rootOf = (plugin: Bag): string => {
+  const path = str(plugin.path) as string;
+  return isAbsolute(path) ? path : (str(plugin.source) ?? `${str(plugin.name)}@${path}`);
+};
+
+/**
  * What the session was handed, in the protocol's shape.
  *
  * Eight `CustomizationType`s and one flat list. `disableUserInvocation` is
@@ -30,7 +46,7 @@ export type Published = Bag & { resource: string };
  * composer that can only offer them once the conversation has started, which
  * is exactly too late.
  */
-export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = [], wanted?: Map<string, Published>, plugins: unknown[] = [], ours?: Set<string>): Bag[] {
+export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = [], wanted?: Map<string, Published>, plugins: unknown[] = [], ours?: Set<string>, off: Bag[] = []): Bag[] {
   const out: Bag[] = [];
 
   /*
@@ -76,8 +92,22 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
    * never said it came from. The container's URI is the real plugin root the
    * SDK reported, and its name and version are the plugin's own.
    */
-  const reportedPlugins = list(plugins)
+  /*
+   * The plugins this session switched off, which the CLI has stopped reporting.
+   *
+   * A switch here is an `enabledPlugins` setting the CLI reads when it loads
+   * its plugins, so one switched off stops being a plugin it is loading - and
+   * a list built only from what the CLI reports would drop the row a person
+   * had just moved. These are described the way the CLI describes one, so a
+   * container is built out of them the same way.
+   */
+  const stopped = list(off)
     .map((raw) => bag(raw))
+    .filter((one) => (str(one.name) ?? '') !== '');
+  const named = new Set(list(plugins).map((raw) => str(bag(raw).name) ?? ''));
+  /** The names of the plugins switched off that the CLI is not loading. */
+  const switchedOff = new Set(stopped.map((one) => str(one.name) as string).filter((name) => !named.has(name)));
+  const reportedPlugins = [...list(plugins).map((raw) => bag(raw)), ...stopped]
     .filter((one) => (str(one.name) ?? '') !== '' && (str(one.path) ?? '') !== '')
     /*
      * Less the ones this host handed over itself. The CLI reports a plugin by
@@ -93,18 +123,6 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     const prefix = `${str(plugin.name) ?? ''}:`;
     return name.startsWith(prefix) ? name.slice(prefix.length) : name;
   };
-  /*
-   * Where a plugin came from, which is also what its decisions are kept under.
-   *
-   * The root the SDK reported, where it is one. A plugin built into the CLI has
-   * no root: the SDK reports `builtin` as the path of every one of them, and
-   * one key for all of them switched every built-in when a person switched
-   * one. Its `source`, `<name>@builtin`, is its own.
-   */
-  const rootOf = (plugin: Bag): string => {
-    const path = str(plugin.path) as string;
-    return isAbsolute(path) ? path : (str(plugin.source) ?? `${str(plugin.name)}@${path}`);
-  };
   const pluginContainers = new Map<string, Bag>();
   for (const plugin of reportedPlugins) {
     const name = str(plugin.name) as string;
@@ -115,6 +133,15 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
       uri: rootOf(plugin),
       name,
       ...(str(plugin.version) !== undefined ? { version: str(plugin.version) as string } : {}),
+      /*
+       * The session's own answer, for a plugin it switched off.
+       *
+       * A switch is kept by the session that made it, and the CLI has no word
+       * for it beyond having stopped loading the plugin - so without this the
+       * row is one the CLI reports and nobody has decided about, which is a
+       * switch drawn back on the moment it was moved.
+       */
+      ...(switchedOff.has(name) ? { enablement: [{ kind: 'session', enabled: false }] } : {}),
       children: [],
     });
   }

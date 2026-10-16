@@ -690,6 +690,49 @@ describe('turning a customization on and off', () => {
     expect(actions(p, 'ahp-session:/live').some((e) => e.action.type === 'session/customizationsChanged')).toBe(true);
   });
 
+  it('takes a plugin toggle, and keeps the row after the CLI stops reporting it', async () => {
+    const said: string[] = [];
+    // A plugin the CLI is loading, named by the source a switch moves. The
+    // session's list is read from `reloadPlugins`, so a switch that took takes
+    // it out of the CLI's own answer as well.
+    sdk.plugins = [{ name: 'cc-plugin-agents-md', path: 'builtin', source: 'cc-plugin-agents-md@builtin' }];
+    const host = createHost({
+      path: '/home/softov',
+      agents: [claude({ paths: ['/home/softov'] })],
+      onEvent: (message) => said.push(message),
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/live', provider: 'claude' } });
+    await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/live' } });
+    await settle(8);
+
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: 'ahp-session:/live', action: { type: 'session/customizationToggled', id: 'plugin:cc-plugin-agents-md', enablement: [{ kind: 'session', enabled: false }] } },
+    });
+    await settle(8);
+
+    expect(said.filter((line) => line.includes('has no runtime switch'))).toEqual([]);
+    // The switch reached the CLI as the setting it reads when it loads its
+    // plugins, named by the plugin's source rather than by its id.
+    expect(sdk.flags.at(-1)?.enabledPlugins as Record<string, boolean> | undefined)
+      .toEqual({ 'cc-plugin-agents-md@builtin': false });
+    /*
+     * And the row is on the list all the same.
+     *
+     * What the CLI reports is what it is loading, and this plugin is no longer
+     * one of them - so the decision is the session's, and the list a client
+     * draws the switch from has to carry it or the switch would be drawn back
+     * on by the very report that says the switch worked.
+     */
+    const lists = actions(p, 'ahp-session:/live').filter((e) => e.action.type === 'session/customizationsChanged');
+    const container = (lists.at(-1)?.action.customizations as Record<string, unknown>[] | undefined)
+      ?.find((one) => one.id === 'plugin:cc-plugin-agents-md');
+    expect(container?.enablement).toEqual([{ kind: 'session', enabled: false }]);
+  });
+
   it('serves the dedicated start and stop actions too', async () => {
     const { client } = await withServers('disabled');
     client.handle({
