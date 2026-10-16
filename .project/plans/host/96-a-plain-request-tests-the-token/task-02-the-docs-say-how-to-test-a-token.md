@@ -1,6 +1,6 @@
 ---
 title: The docs say how to test a token
-status: todo
+status: implemented
 depends:
   - task-01-a-host-answers-plain-request-by-token.md
 layer: "docs"
@@ -27,3 +27,8 @@ The docs say that a plain `GET /?tkn=<token>` answers 401 for a refused token an
 - Each doc names the 401, the 426 and the header.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `docs/server/REMOTE.md` has a section `Test a token`, with a `curl` example. `docs/sdk/AHP.md` has one sentence under `What is served outside the protocol`, with a link to that section.
+- **Next action:** review the plan.
+- **Open questions:** none.
+- **Watch out for:** neither doc named the 426 before, so step 1 found no place to add the 401. The new text names the 401, the 426 and the header in both docs.

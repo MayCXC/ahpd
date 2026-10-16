@@ -30,6 +30,21 @@ ahpd start --host 0.0.0.0 --connection-token-file ~/.config/ahpd/connection-toke
 
 For a person's own token instead of the shared one, see [Users](USERS.md).
 
+## Test a token
+
+A plain `GET /?tkn=<token>` on the daemon's port tells a client whether the host accepts the token.
+A refused token gets 401 with `A connection token is required`, the same sentence the WebSocket handshake gives.
+An accepted token gets 426, because the port speaks AHP over WebSocket.
+A host with no token answers 426 to every request.
+
+```bash
+curl -i "http://127.0.0.1:9187/?tkn=$(cat ~/.config/ahpd/connection-token)"
+```
+
+Both answers carry `Access-Control-Allow-Origin: *`, so a page on any origin can read them.
+From a browser, put the token in `?tkn=` and not in a header, so the request needs no preflight.
+`/api` and `/v1` keep their own answers and their `origins` check.
+
 ## HTTP API
 
 Turn it on to run the `ahpd` commands over HTTP:
