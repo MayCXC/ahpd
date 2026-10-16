@@ -12,10 +12,11 @@ import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { canonicalFromCli, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import type { AutomationStore, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, DoorOptions, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   clientPluginsIn,
   createHost,
+  doorOf,
   fileResources,
   fileSessions,
   fileUsage,
@@ -469,10 +470,29 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     otherwise: api,
     onProblem: stamp,
   });
+  /*
+   * Who may open a connection on the daemon's own port: the deployment's own
+   * token, which is the host, and a person's token that the directory knows.
+   * The same options build the door of the handshake and of a plain request.
+   */
+  const door: DoorOptions = {
+    ...(token !== undefined ? { token } : {}),
+    ...(users === undefined
+      ? {}
+      : {
+        identify: async (presented: string) => {
+          const who = await users.verify(presented);
+          if (who === undefined) return undefined;
+          return who.trusted === true ? { principal: who } : {};
+        },
+        root: true,
+      }),
+  };
   // On the daemon's own port: a session's tools endpoint where it is, then a
-  // plugin's route where it is, then the proxy and the API where they are, and
-  // the 404 that says they are not where `http.port` moved them.
-  const below = ownPort === undefined ? (served ?? withoutApi()) : withoutApi();
+  // plugin's route where it is, then the proxy and the API where they are, the
+  // 404 that says they are not where `http.port` moved them, and the answer to
+  // a token everywhere else.
+  const below = withoutApi(doorOf(door), ownPort === undefined ? served : undefined);
   /*
    * A plugin's own route, on this listener.
    *
@@ -1018,17 +1038,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       {
         port: options.port,
         host: options.host,
-        ...(token !== undefined ? { token } : {}),
-        ...(users === undefined
-          ? {}
-          : {
-            identify: async (presented: string) => {
-              const who = await users.verify(presented);
-              if (who === undefined) return undefined;
-              return who.trusted === true ? { principal: who } : {};
-            },
-            root: true,
-          }),
+        ...door,
         tap,
         // The plain requests beside the upgrade.
         ...plainRequests(daemonRequest),

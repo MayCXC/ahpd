@@ -1,6 +1,6 @@
 ---
 title: A host answers a plain request by its token
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -47,3 +47,12 @@ Both answers carry `Access-Control-Allow-Origin: *`.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `doorOf` in `packages/sdk/src/listen.ts` is the token check, and `listen` builds its door from it. `plainAnswer` answers a plain request by that door: 401 with `A connection token is required`, or 426, each with `Access-Control-Allow-Origin: *`. Bun, Deno and Node give that answer when the host has no HTTP surface. `withoutApi(door, api?)` gives it on the daemon's port off `/api` and `/v1`. It hands `/api` and `/v1` to the API when the API is on that port. `run.ts` builds one `DoorOptions` and passes it to `listen` and to `withoutApi`.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:**
+  - Step 1 found that with `http` on, a plain request off `/api` reached `serve()` of `@cofold/remote`, which answered 404 `No route for GET /`. That path now gets the 401 or the 426.
+  - The API's own port, when `http.port` gives it one, is not a WebSocket port and keeps its 404 off `/api`.
+  - On Bun the handshake's own 426 also carries the header.
+  - Bun and Deno were checked by hand with a script against the built `listen`, because vitest runs on Node only.

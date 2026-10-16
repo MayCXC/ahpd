@@ -1,6 +1,6 @@
 import { createPeer, receive } from './rpc.js';
 import type {
-  Connected, Listener, ListenOptions, NodeRequestListener, OnConnect, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
+  Admission, Connected, Door, DoorOptions, Listener, ListenOptions, NodeRequestListener, OnConnect, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
 } from './types/listen.js';
 import type { Principal } from './types/users.js';
 
@@ -81,28 +81,24 @@ const tapping = (tap: Tap | undefined, peer: number): {
   in: (text) => { tap?.('client', text, peer); },
 });
 
-export async function listen(options: ListenOptions, onConnect: OnConnect): Promise<Listener> {
-  const here = runtime();
-  if (here === 'node' && options.request !== undefined) mountable(options.nodeRequest);
-  const host = options.host ?? '127.0.0.1';
-  let accepted = 0;
+/**
+ * The door: who, if anyone, a request's token carries.
+ *
+ * The deployment's own token admits the socket and is the host, which is
+ * what it has always done and the one thing that does not change. Anything
+ * else is put to `identify`, which a daemon wires to its user directory: the
+ * answer says whether the token opens the door at all, and whether it also
+ * says who they are. A person's own token opens it and says nobody unless
+ * their record trusts it - decision `the-door-is-a-door` - so the socket is
+ * admitted and `authenticate` is what authorizes them. A host with no
+ * directory passes no `identify`, so nothing changes for it.
+ *
+ * The WebSocket handshake and a plain request are both decided here, so the
+ * two can never disagree about a token.
+ */
+export const doorOf = (options: DoorOptions): Door => {
   const token = options.token;
-  /**
-   * Who, if anyone, this handshake carries.
-   *
-   * The deployment's own token admits the socket and is the host, which is
-   * what it has always done and the one thing that does not change. Anything
-   * else is put to `identify`, which a daemon wires to its user directory: the
-   * answer says whether the token opens the door at all, and whether it also
-   * says who they are. A person's own token opens it and says nobody unless
-   * their record trusts it - decision `the-door-is-a-door` - so the socket is
-   * admitted and `authenticate` is what authorizes them. A host with no
-   * directory passes no `identify`, so nothing changes for it.
-   */
-  const identityOf = async (
-    url: string | undefined,
-    authorization: string | null,
-  ): Promise<{ admitted: true; principal?: Principal; root?: boolean } | { admitted: false }> => {
+  return async (url, authorization) => {
     const held = presented(url, authorization);
     if (token === undefined) {
       const arrival = held === undefined || held === '' || options.identify === undefined
@@ -125,6 +121,43 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
     }
     return { admitted: false };
   };
+};
+
+/** The sentence a refused token is answered with, on the handshake and on a plain request. */
+const TOKEN_REQUIRED = 'A connection token is required';
+
+/** The sentence an admitted plain request is answered with. */
+const SPEAKS_AHP = 'ahpd speaks the Agent Host Protocol over WebSocket';
+
+/**
+ * The headers of a plain request's answer.
+ *
+ * Any origin may read it, so a page served from anywhere can test a token.
+ */
+const PLAIN_HEADERS = { 'content-type': 'text/plain', 'access-control-allow-origin': '*' } as const;
+
+/** The status and the body of a plain request's answer: 401 for a refused token, 426 for an admitted one. */
+const plainVerdict = (admission: Admission): { status: number; body: string } =>
+  (admission.admitted ? { status: 426, body: SPEAKS_AHP } : { status: 401, body: TOKEN_REQUIRED });
+
+/**
+ * The answer to a plain request on a WebSocket port.
+ *
+ * 401 when the handshake would refuse the request's token, and 426 when it
+ * would admit it, so a client can test a token without opening a socket.
+ */
+export const plainAnswer = async (door: Door, request: Request): Promise<Response> => {
+  const { status, body } = plainVerdict(await door(request.url, request.headers.get('authorization')));
+  return new Response(body, { status, headers: PLAIN_HEADERS });
+};
+
+export async function listen(options: ListenOptions, onConnect: OnConnect): Promise<Listener> {
+  const here = runtime();
+  if (here === 'node' && options.request !== undefined) mountable(options.nodeRequest);
+  const host = options.host ?? '127.0.0.1';
+  let accepted = 0;
+  const token = options.token;
+  const identityOf = doorOf(options);
 
   if (here === 'bun') {
     const Bun = (globalThis as unknown as { Bun: {
@@ -138,18 +171,19 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
       hostname: host,
       async fetch(request: Request, server_: { upgrade(r: Request, options?: { data?: unknown }): boolean }) {
         // A plain request is the host's own HTTP surface when it has one,
-        // answered in full there and never signed in at this door.
-        if (options.request !== undefined && !upgrading(request)) return options.request(request);
+        // answered in full there and never signed in at this door. Without
+        // one, it is answered by its token.
+        if (!upgrading(request)) return options.request === undefined ? plainAnswer(identityOf, request) : options.request(request);
         // Refused before the upgrade, so an unauthorised client is told in
         // HTTP rather than handed a socket that closes on its first message.
         const identity = await identityOf(request.url, request.headers.get('authorization'));
         if (!identity.admitted) {
-          return new Response('A connection token is required', { status: 401 });
+          return new Response(TOKEN_REQUIRED, { status: 401 });
         }
         // The principal rides on the socket, because Bun's `open` is handed
         // the socket and not the request this answer came from.
         if (server_.upgrade(request, { data: { principal: identity.principal, root: identity.root } })) return undefined;
-        return new Response('ahpd speaks the Agent Host Protocol over WebSocket', { status: 426 });
+        return new Response(SPEAKS_AHP, { status: 426, headers: PLAIN_HEADERS });
       },
       websocket: {
         open(ws: BunSocket) {
@@ -203,13 +237,10 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
     /** The upgraded sockets still open, closed first on close: a shutdown waits on each. */
     const sockets = new Set<DenoSocket>();
     const server = Deno.serve({ port: options.port, hostname: host }, async (request) => {
-      if (options.request !== undefined && !upgrading(request)) return options.request(request);
+      if (!upgrading(request)) return options.request === undefined ? plainAnswer(identityOf, request) : options.request(request);
       const identity = await identityOf(request.url, request.headers.get('authorization'));
       if (!identity.admitted) {
-        return new Response('A connection token is required', { status: 401 });
-      }
-      if (!upgrading(request)) {
-        return new Response('ahpd speaks the Agent Host Protocol over WebSocket', { status: 426 });
+        return new Response(TOKEN_REQUIRED, { status: 401 });
       }
       const { socket, response } = Deno.upgradeWebSocket(request);
       sockets.add(socket);
@@ -282,7 +313,7 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
         accept(true);
         return;
       }
-      accept(false, 401, 'A connection token is required');
+      accept(false, 401, TOKEN_REQUIRED);
     });
   };
   /*
@@ -291,15 +322,18 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
    * Served on a `node:http` server of this module's own that `ws` attaches to,
    * so a close lets a request in flight finish as `serveRequests` does. A host
    * with an HTTP surface on the same port brings `nodeRequest`; one without is
-   * answered 426 as on the other runtimes. The upgrade itself is decided by
-   * the same `verifyClient` either way.
+   * answered by its token as on the other runtimes. The upgrade itself is
+   * decided by the same `verifyClient` either way.
    */
   const { createServer } = await import('node:http');
   /** The `node:http` server `ws` is attached to, which `ws` does not close. */
   const plain = createServer(options.request === undefined
-    ? (_request, response) => {
-      response.writeHead(426, { 'content-type': 'text/plain' });
-      response.end('ahpd speaks the Agent Host Protocol over WebSocket');
+    ? (request, response) => {
+      void identityOf(request.url, request.headers.authorization ?? null).then((admission) => {
+        const { status, body } = plainVerdict(admission);
+        response.writeHead(status, PLAIN_HEADERS);
+        response.end(body);
+      });
     }
     : mountable(options.nodeRequest));
   const server: NodeServer = new WebSocketServer({ server: plain, verifyClient });

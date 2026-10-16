@@ -31,7 +31,7 @@ export { readJson, readJsonObject, writeJsonAtomic } from './jsonfile.js';
 export type { JsonRead, JsonObjectRead, JsonWriteOptions } from './jsonfile.js';
 export type { EachPresetOptions, FoldedOptions, HostRecording, ServedRoute } from './plugins.js';
 export { sdkVersion } from './version.js';
-export { listen, overStdio, runtime, serveRequests } from './listen.js';
+export { doorOf, listen, overStdio, plainAnswer, runtime, serveRequests } from './listen.js';
 export {
   createPeer, receive, RpcError, RpcTimeout, RpcClosed, ANSWER_TIMEOUT,
   PARSE_ERROR, INVALID_REQUEST, METHOD_NOT_FOUND, INTERNAL_ERROR,

@@ -17,7 +17,7 @@ import { networkInterfaces, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { fileUsers } from '@ahpd/sdk';
+import { doorOf, fileUsers } from '@ahpd/sdk';
 import type { Options } from '../src/commands/options.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
@@ -484,7 +484,7 @@ describe('the handlers, called with a Request', () => {
   });
 
   it('answers 404 under /api and 426 elsewhere with no API', async () => {
-    const handler = withoutApi();
+    const handler = withoutApi(doorOf({}));
     const missing = await handler(request('/api/x'));
     expect(missing.status).toBe(404);
     expect((await missing.json() as { message: string }).message).toBe('No API at /api/x');
@@ -492,6 +492,71 @@ describe('the handlers, called with a Request', () => {
     expect(plain.status).toBe(426);
     expect(await plain.text()).toBe('ahpd speaks the Agent Host Protocol over WebSocket');
   });
+
+  it('answers a plain request 401 for a refused token and 426 for an admitted one, from any origin', async () => {
+    const handler = withoutApi(doorOf({ token: 'root-secret' }));
+    for (const refused of [await handler(request('/')), await handler(request('/', 'nope')), await handler(request('/?tkn=nope'))]) {
+      expect(refused.status).toBe(401);
+      expect(await refused.text()).toBe('A connection token is required');
+      expect(refused.headers.get('access-control-allow-origin')).toBe('*');
+    }
+    for (const admitted of [await handler(request('/', 'root-secret')), await handler(request('/?tkn=root-secret'))]) {
+      expect(admitted.status).toBe(426);
+      expect(admitted.headers.get('access-control-allow-origin')).toBe('*');
+    }
+    const missing = await handler(request('/api/x', 'root-secret'));
+    expect(missing.status).toBe(404);
+    expect(missing.headers.get('access-control-allow-origin')).toBeNull();
+  });
+
+  it('hands /api and /v1 to the API, and answers the rest by its token', async () => {
+    const api = async (asked: Request): Promise<Response> => new Response(new URL(asked.url).pathname, { status: 200 });
+    const handler = withoutApi(doorOf({ token: 'root-secret' }), api);
+    expect(await (await handler(request('/api/status'))).text()).toBe('/api/status');
+    expect(await (await handler(request('/v1/models'))).text()).toBe('/v1/models');
+    expect((await handler(request('/?tkn=nope'))).status).toBe(401);
+    expect((await handler(request('/?tkn=root-secret'))).status).toBe(426);
+  });
+});
+
+describe('a plain request tests the token', () => {
+  /** A plain `GET /` on the daemon's own port, with the token in `?tkn=` when there is one. */
+  const knock = (one: Daemon, token?: string): Promise<Response> =>
+    fetch(`http://127.0.0.1:${String(one.port)}/${token === undefined ? '' : `?tkn=${encodeURIComponent(token)}`}`);
+
+  it('answers 401 for a refused token and 426 for the deployment one, with the API off', async () => {
+    const one = await daemon({ plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    for (const token of [undefined, 'nope']) {
+      const refused = await knock(one, token);
+      expect(refused.status).toBe(401);
+      expect(await refused.text()).toBe('A connection token is required');
+      expect(refused.headers.get('access-control-allow-origin')).toBe('*');
+    }
+    const admitted = await knock(one, 'root-secret');
+    expect(admitted.status).toBe(426);
+    expect(admitted.headers.get('access-control-allow-origin')).toBe('*');
+    const api = await get(`http://127.0.0.1:${String(one.port)}/api/status`, 'root-secret');
+    expect(api.status).toBe(404);
+  }, 30000);
+
+  it('answers the same with the API on, and /api keeps its own answer', async () => {
+    const { one, token, member } = await guarded();
+    const refused = await knock(one, 'nope');
+    expect(refused.status).toBe(401);
+    expect(await refused.text()).toBe('A connection token is required');
+    expect(refused.headers.get('access-control-allow-origin')).toBe('*');
+    for (const admitted of [await knock(one, token), await knock(one, member)]) {
+      expect(admitted.status).toBe(426);
+      expect(admitted.headers.get('access-control-allow-origin')).toBe('*');
+    }
+    const api = await get(`http://127.0.0.1:${String(one.port)}/api/status`);
+    expect(api.status).toBe(401);
+    expect(api.headers.get('access-control-allow-origin')).toBeNull();
+    const foreign = await fetch(`http://127.0.0.1:${String(one.port)}/api/status`, {
+      headers: { authorization: `Bearer ${token}`, origin: 'https://elsewhere.example' },
+    });
+    expect(foreign.status).toBe(403);
+  }, 30000);
 });
 
 describe('a request signs in', () => {

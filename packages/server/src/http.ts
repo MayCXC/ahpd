@@ -7,8 +7,8 @@
  * the daemon's.
  *
  * Off, the daemon's listener still answers plain requests, so `/api` is a 404
- * rather than the 426 it would otherwise be; everything that is not the API
- * keeps the answer it always had.
+ * rather than the answer to a token; everything that is not the API is
+ * answered by its token, as the listener answers it.
  *
  * A plugin's own route is mounted here too, under `/plugins/<name>/`, because
  * it is the same listener, the same `Request` and the same path handling as
@@ -17,14 +17,11 @@
 
 import { serve, toNodeListener, type RequestHandler } from '@cofold/remote';
 import type { Runner } from '@cofold/commands';
-import { routeOf, ROUTE_ROOT, serveRequests, type NodeRequestListener, type Route, type Users } from '@ahpd/sdk';
+import { plainAnswer, routeOf, ROUTE_ROOT, serveRequests, type Door, type NodeRequestListener, type Route, type Users } from '@ahpd/sdk';
 import { authorizeOverHttp } from './commands/authorize.js';
 
 /** The path the API is served under, on whichever listener carries it. */
 export const API_PREFIX = '/api';
-
-/** The sentence this listener answers a non-upgrade request with, as `ws` did. */
-const SPEAKS_AHP = 'ahpd speaks the Agent Host Protocol over WebSocket';
 
 /** What the manifest names. */
 export interface ApiProgram {
@@ -133,18 +130,21 @@ export const PROXY_PREFIX = '/v1';
 export const isUnder = (path: string, prefix: string): boolean => path === prefix || path.startsWith(`${prefix}/`);
 
 /**
- * What a daemon with no API answers a plain request with.
+ * What the daemon's own port answers a plain request with.
  *
- * `/api` and `/v1` and everything under them is 404, because a path nobody
- * serves is not a WebSocket handshake; anything else is 426, because this
- * listener speaks the protocol and a plain request is not one.
+ * `/api` and `/v1` and everything under them is `api`'s when the API is on
+ * this port, and 404 otherwise, because a path nobody serves is not a
+ * WebSocket handshake. Anything else is answered by its token, as the
+ * listener answers it: 401 when the handshake would refuse the token, and 426
+ * when it would admit it, because this listener speaks the protocol and a
+ * plain request is not one.
  */
-export function withoutApi(): RequestHandler {
-  return guarded((_request, path) => {
+export function withoutApi(door: Door, api?: RequestHandler): RequestHandler {
+  return guarded((request, path) => {
     if (isUnder(path, API_PREFIX) || isUnder(path, PROXY_PREFIX)) {
-      return Promise.resolve(json(404, { message: `No API at ${path}` }));
+      return api === undefined ? Promise.resolve(json(404, { message: `No API at ${path}` })) : api(request);
     }
-    return Promise.resolve(new Response(SPEAKS_AHP, { status: 426, headers: { 'content-type': 'text/plain' } }));
+    return plainAnswer(door, request);
   });
 }
 
@@ -165,7 +165,7 @@ export interface PluginRoutesOptions {
    * arrives through a tunnel names a host this has never been configured with.
    */
   authorities(): readonly string[];
-  /** What answers a path that is not a plugin's route: the API, or the 426. */
+  /** What answers a path that is not a plugin's route: the API, or the answer to a token. */
   otherwise(request: Request): Promise<Response>;
   /** One line to the daemon's log, for a handler that failed. */
   onProblem?(line: string): void;
@@ -185,7 +185,7 @@ export interface PluginRoutesOptions {
  * connection, so the grants its operator wrote are the gate.
  *
  * A path under `/plugins/` that no loaded plugin registered is 404 rather than
- * the 426 the rest of this listener gives, so an author whose route did not
+ * the 401 or 426 the rest of this listener gives, so an author whose route did not
  * load is told there is nothing there instead of being told they spoke the
  * wrong protocol.
  */

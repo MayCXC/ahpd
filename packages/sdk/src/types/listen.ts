@@ -102,15 +102,30 @@ export interface ListenOptions {
    *
    * The upgrade is still the WebSocket's; a request that is not one is handed
    * here and the handler answers it in full. Left out, this listener answers a
-   * plain request the way it always has - 426, because it speaks AHP over
-   * WebSocket - which is what keeps every host that never asked for an HTTP
-   * surface exactly as it was. Bun and Deno serve this handler as it is; Node
-   * serves `nodeRequest`, and refuses to start without it.
+   * plain request by its token, as `plainAnswer` does: 401 with the
+   * handshake's sentence when the handshake would refuse the token, and 426
+   * when it would admit it, both readable from any origin. Bun and Deno serve
+   * this handler as it is; Node serves `nodeRequest`, and refuses to start
+   * without it.
    */
   request?: RequestHandler;
   /** The same plain requests as a `node:http` listener, which is what Node serves. */
   nodeRequest?: NodeRequestListener;
 }
+
+/** The part of `ListenOptions` that decides who may open a connection. */
+export type DoorOptions = Pick<ListenOptions, 'token' | 'identify' | 'root'>;
+
+/**
+ * What the door decided about one request's token.
+ *
+ * Admitted, with the person it named when it named one and `root` when it is
+ * the host itself; or refused.
+ */
+export type Admission = { admitted: true; principal?: Principal; root?: boolean } | { admitted: false };
+
+/** The door: the decision on a request's URL and its `Authorization` header. */
+export type Door = (url: string | undefined, authorization: string | null) => Promise<Admission>;
 
 /**
  * A plain HTTP request handler: one `Request` in, one `Response` out.

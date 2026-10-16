@@ -1,6 +1,6 @@
 import { afterEach, expect, it } from 'vitest';
 import { WebSocket } from 'ws';
-import { listen } from '../src/listen.js';
+import { doorOf, listen, plainAnswer } from '../src/listen.js';
 import type { Arrival, Connected, Listener } from '../src/types/listen.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Principal } from '../src/types/users.js';
@@ -138,4 +138,42 @@ it('admits an unknown token when no connection token is required, and names nobo
   running = await listen({ port: 0, identify: ana }, watching);
   expect(await knock(`ws://127.0.0.1:${running.port}/?tkn=nope`)).toBe('open');
   expect(arrived).toEqual([undefined]);
+});
+
+/** A plain `GET /` on the listener, with `?tkn=` when a token is given and the headers as given. */
+const ask = (token?: string, headers?: Record<string, string>): Promise<Response> =>
+  fetch(`http://127.0.0.1:${running?.port ?? 0}/${token === undefined ? '' : `?tkn=${encodeURIComponent(token)}`}`, headers === undefined ? {} : { headers });
+
+it('answers a plain request 401 when the handshake would refuse its token, and 426 when it would admit it', async () => {
+  running = await listen({ port: 0, token: ROOT, identify: doorOnly }, watching);
+  for (const refused of [await ask(), await ask('nope'), await ask(undefined, { authorization: 'Bearer nope' })]) {
+    expect(refused.status).toBe(401);
+    expect(await refused.text()).toBe('A connection token is required');
+    expect(refused.headers.get('access-control-allow-origin')).toBe('*');
+  }
+  for (const admitted of [await ask(ROOT), await ask('ana-secret'), await ask(undefined, { authorization: `Bearer ${ROOT}` })]) {
+    expect(admitted.status).toBe(426);
+    expect(await admitted.text()).toBe('ahpd speaks the Agent Host Protocol over WebSocket');
+    expect(admitted.headers.get('access-control-allow-origin')).toBe('*');
+  }
+});
+
+it('answers every plain request 426 when no connection token is required', async () => {
+  running = await listen({ port: 0 }, watching);
+  for (const admitted of [await ask(), await ask('nope')]) {
+    expect(admitted.status).toBe(426);
+    expect(admitted.headers.get('access-control-allow-origin')).toBe('*');
+  }
+});
+
+it('decides a plain request and a handshake with the same door', async () => {
+  const door = doorOf({ token: ROOT, identify: ana, root: true });
+  expect(await door(`/?tkn=${ROOT}`, null)).toEqual({ admitted: true, root: true });
+  expect(await door('/', `Bearer ${ROOT}`)).toEqual({ admitted: true, root: true });
+  expect((await door('/?tkn=ana-secret', null))).toMatchObject({ admitted: true, principal: { id: 'ana' } });
+  expect(await door('/?tkn=nope', null)).toEqual({ admitted: false });
+  const answered = await plainAnswer(door, new Request('http://127.0.0.1/?tkn=nope'));
+  expect(answered.status).toBe(401);
+  expect(answered.headers.get('access-control-allow-origin')).toBe('*');
+  expect((await plainAnswer(door, new Request(`http://127.0.0.1/?tkn=${ROOT}`))).status).toBe(426);
 });

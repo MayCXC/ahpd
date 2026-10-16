@@ -29,7 +29,7 @@ export type {
 } from './events.js';
 export type { Page } from './paging.js';
 export type {
-  Connected, OnConnect, Runtime, Listener, ListenOptions, NodeRequestListener, RequestHandler, RequestsListener, RequestsOptions, StdioOptions, Tap,
+  Admission, Connected, Door, DoorOptions, OnConnect, Runtime, Listener, ListenOptions, NodeRequestListener, RequestHandler, RequestsListener, RequestsOptions, StdioOptions, Tap,
 } from './listen.js';
 export type { Offered } from './probe.js';
 export type { Agent, Listed, Start, BoundTool, Endpoint, ToolEffects, RestoredSubagent, SessionAt, McpServer, StdioMcpServer, HttpMcpServer } from './agent.js';

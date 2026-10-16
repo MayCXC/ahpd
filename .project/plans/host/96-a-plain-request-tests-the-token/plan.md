@@ -64,7 +64,7 @@ ahpw runs from ahpd as a plugin, from 127.0.0.1, from a remote server and in Tau
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A host answers a plain request by its token](task-01-a-host-answers-plain-request-by-token.md) | todo | - |
+| [01 - A host answers a plain request by its token](task-01-a-host-answers-plain-request-by-token.md) | implemented | - |
 | [02 - The docs say how to test a token](task-02-the-docs-say-how-to-test-a-token.md) | todo | 01 |
 
 ## Risks and tradeoffs
@@ -74,8 +74,8 @@ ahpw runs from ahpd as a plugin, from 127.0.0.1, from a remote server and in Tau
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-16. Task 01 implemented 2026-10-16: `doorOf` and `plainAnswer` in the sdk, and `withoutApi` on the daemon's port.
+- **Next action:** build task 02.
 - **Open questions:** none.
 - **Watch out for:** a host with no token admits every request, so it answers 426 to every plain request.
 
