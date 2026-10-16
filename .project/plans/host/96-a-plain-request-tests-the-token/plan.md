@@ -1,7 +1,7 @@
 ---
 title: A plain request tests the token
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -74,8 +74,8 @@ ahpw runs from ahpd as a plugin, from 127.0.0.1, from a remote server and in Tau
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16. Task 01 implemented 2026-10-16: `doorOf` and `plainAnswer` in the sdk, and `withoutApi` on the daemon's port. Task 02 implemented 2026-10-16: `Test a token` in `docs/server/REMOTE.md`, and one sentence in `docs/sdk/AHP.md`.
-- **Next action:** review the plan, and check by hand that ahpw on another origin reads the 401.
+- **Done so far:** planned 2026-10-16. Task 01 implemented 2026-10-16: `doorOf` and `plainAnswer` in the sdk, and `withoutApi` on the daemon's port. Task 02 implemented 2026-10-16: `Test a token` in `docs/server/REMOTE.md`, and one sentence in `docs/sdk/AHP.md`. Both reviewed 2026-10-16.
+- **Next action:** the check by hand in a browser, in `pending/token-probe-checks.md`.
 - **Open questions:** none.
 - **Watch out for:** a host with no token admits every request, so it answers 426 to every plain request.
 

@@ -201,7 +201,7 @@ Reference: [00-host.md](host/00-host.md)
 | [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | built 2026-10-15 ([implemented.md](host/93-a-turn-lets-go-of-its-sender-at-every-end/implemented.md)) | - | - |
 | [94 - VS Code lists ahpd's automations](host/94-vscode-lists-ahpds-automations/plan.md) | high | built 2026-10-15 ([implemented.md](host/94-vscode-lists-ahpds-automations/implemented.md)) | - | - |
 | [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the VS Code check remains | - | - |
-| [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | planned 2026-10-16 | - | ahpw sign-in |
+| [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
 
 Next free number in `host`: `97`.
 
