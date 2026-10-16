@@ -1,7 +1,7 @@
 /*
  * A fixture whose entry must never run.
  *
- * It declares `@ahpd/sdk@^0.12.0`, which the daemon this checkout builds does
+ * It declares `@ahpd/sdk@^99.0.0`, which the daemon this checkout builds does
  * not satisfy, so the range check has to refuse it before `import()` is
  * reached. Setting a global as the very first thing is how the test knows the
  * check came first: if this module ever runs, the flag is there.

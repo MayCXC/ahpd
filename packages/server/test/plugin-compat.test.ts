@@ -62,7 +62,7 @@ describe('a plugin that declares a range', () => {
 
     expect(loaded).toEqual([]);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toContain('^0.12.0');
+    expect(problems[0]).toContain('^99.0.0');
     expect(problems[0]).toContain(sdkVersion());
     expect((globalThis as Record<string, unknown>).__pluginIncompatibleImported).toBeUndefined();
   });
