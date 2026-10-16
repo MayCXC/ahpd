@@ -1,6 +1,6 @@
 ---
 title: VS Code's file is imported as an automation
-status: implemented
+status: done
 depends:
   - task-01-automation-exported-as-vscode-file.md
 layer: server

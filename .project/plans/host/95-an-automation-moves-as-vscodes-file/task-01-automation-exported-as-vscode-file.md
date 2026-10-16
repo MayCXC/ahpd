@@ -1,6 +1,6 @@
 ---
 title: An automation is exported as VS Code's file
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

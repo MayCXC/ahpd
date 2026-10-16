@@ -1,6 +1,6 @@
 ---
 title: Export writes local for every zone
-status: implemented
+status: done
 layer: server
 depends:
   - task-01-automation-exported-as-vscode-file.md

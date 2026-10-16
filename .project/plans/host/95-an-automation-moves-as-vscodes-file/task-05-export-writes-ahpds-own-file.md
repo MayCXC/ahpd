@@ -1,6 +1,6 @@
 ---
 title: Export writes ahpd's own file, and --vscode writes VS Code's
-status: implemented
+status: done
 layer: server
 refs:
   - "[code://packages/server/src/commands/automation.ts](../../../../packages/server/src/commands/automation.ts) - `automation export` and `automation import`"

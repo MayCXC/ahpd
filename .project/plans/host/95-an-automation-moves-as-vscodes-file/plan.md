@@ -1,7 +1,7 @@
 ---
 title: An automation moves as VS Code's file
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-15
 revalidated: 2026-10-15
@@ -72,11 +72,11 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | implemented | - |
-| [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | implemented | 01 |
-| [03 - Export writes local for every zone](task-03-export-writes-local-for-every-zone.md) | implemented | 01 |
-| [04 - The CLI lists the automations](task-04-the-cli-lists-the-automations.md) | implemented | - |
-| [05 - Export writes ahpd's own file, and --vscode writes VS Code's](task-05-export-writes-ahpds-own-file.md) | implemented | 01, 02 |
+| [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | done | - |
+| [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | done | 01 |
+| [03 - Export writes local for every zone](task-03-export-writes-local-for-every-zone.md) | done | 01 |
+| [04 - The CLI lists the automations](task-04-the-cli-lists-the-automations.md) | done | - |
+| [05 - Export writes ahpd's own file, and --vscode writes VS Code's](task-05-export-writes-ahpds-own-file.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -85,19 +85,19 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16. Tasks 03 and 04 implemented and reviewed 2026-10-16, merged in `b600db07`. Task 05 implemented 2026-10-16: export and import read and write the store's file, and `--vscode` keeps VS Code's.
-- **Next action:** the check by hand in VS Code, in `pending/vscode-checks.md`.
+- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16. Tasks 03 and 04 implemented and reviewed 2026-10-16, merged in `b600db07`. Task 05 implemented 2026-10-16: export and import read and write the store's file, and `--vscode` keeps VS Code's. Reviewed and merged in `547ed2e2`. Softov did the check by hand in VS Code, both ways, on 2026-10-16.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:** VS Code refuses a file with any key it does not know, so export writes no key of ahpd's own.
 
 ## Final verification checklist
 
-- [ ] A test: an exported file parses with VS Code's rules, as the fixture `.scratch/review-yesterday-s-commits.automation.md` does.
-- [ ] A test: export refuses each case the format cannot hold, with its sentence.
-- [ ] A test: export of an automation in another zone writes `timeZone: local` and the same hour.
-- [ ] A test: `ahpd automation list` shows each automation, and `--json` gives the same rows.
-- [ ] A test: `10 * * * *`, `*/30 * * * *`, an event trigger and a zone survive the native round trip.
-- [ ] A test: import of the fixture makes a switched-off automation in the folder given.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
-- [ ] By hand: a file exported by ahpd imports in VS Code, and a file exported by VS Code imports in ahpd.
-- [ ] `docs/sdk/AUTOMATIONS.md` and `plans/index.md` updated.
+- [x] A test: an exported file parses with VS Code's rules, as the fixture `.scratch/review-yesterday-s-commits.automation.md` does.
+- [x] A test: export refuses each case the format cannot hold, with its sentence.
+- [x] A test: export of an automation in another zone writes `timeZone: local` and the same hour.
+- [x] A test: `ahpd automation list` shows each automation, and `--json` gives the same rows.
+- [x] A test: `10 * * * *`, `*/30 * * * *`, an event trigger and a zone survive the native round trip.
+- [x] A test: import of the fixture makes a switched-off automation in the folder given.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] By hand: a file exported by ahpd imports in VS Code, and a file exported by VS Code imports in ahpd.
+- [x] `docs/sdk/AUTOMATIONS.md` and `plans/index.md` updated.
