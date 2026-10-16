@@ -51,11 +51,11 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 
 ## host/95: an automation file moves both ways
 
-1. Run `ahpd automation export <id> --out /tmp/ahpd-chk/one.automation.md` for an automation with a daily schedule.
+1. Run `ahpd automation export <id> --vscode --out /tmp/ahpd-chk/one.automation.md` for an automation with a daily schedule.
 2. In VS Code's Automations view, import `/tmp/ahpd-chk/one.automation.md`.
 3. Check that the name, prompt and schedule are the same, and that the automation is switched off.
 4. In VS Code, export one automation to `/tmp/ahpd-chk/two.automation.md`.
-5. Run `ahpd automation import /tmp/ahpd-chk/two.automation.md --folder <folder>`.
+5. Run `ahpd automation import /tmp/ahpd-chk/two.automation.md --vscode --folder <folder>`.
 6. Reload the window, and check that the ahpd host lists it with the same name, prompt and schedule.
 
 ## Reply
