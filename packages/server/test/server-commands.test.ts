@@ -105,6 +105,8 @@ describe('the command registry', () => {
     // A person sets their own primary, so the declaration names no grant at
     // all and the body asks for `user:write` only about somebody else's.
     expect(scopes('user.primary')).toEqual([]);
+    // Reading an automation out is what a listing of them already shows.
+    expect(scopes('automation.export')).toEqual(['automation:list']);
   });
 
   it('refuses each verb without its own subject, and allows it with that one', async () => {
@@ -762,6 +764,7 @@ describe('what a served command says it does', () => {
       .map((one) => [one.id, one.effect ?? null, one.resource ?? null] as const)
       .sort((left, right) => left[0].localeCompare(right[0]));
     expect(rows).toEqual([
+      ['automation.export', 'read', { kind: 'automation', key: 'id' }],
       ['daemon.config', 'read', null],
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],

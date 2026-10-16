@@ -11,8 +11,9 @@
 
 import { createRegistry } from '@cofold/commands';
 import type { Registry } from '@cofold/commands';
-import type { Usage, Users, Vault } from '@ahpd/sdk';
+import type { AutomationStore, Usage, Users, Vault } from '@ahpd/sdk';
 import type { Options } from './options.js';
+import { declareAutomation } from './automation.js';
 import { declareConfig } from './config.js';
 import { declarePaths } from './paths.js';
 import { declarePlugin } from './plugin.js';
@@ -67,6 +68,12 @@ export interface ServedFacts {
    */
   vault?(): Vault;
   /**
+   * Where this host's automations are kept, read per request because a plugin
+   * may have replaced the store the host was built over. Absent, or answering
+   * nothing, before the host is built.
+   */
+  automations?(): AutomationStore | undefined;
+  /**
    * Read that line over the configuration as it is now, then stop this daemon
    * once the answer has gone and start it again with it. Throws, or rejects,
    * with why the line cannot run or, unless forced, which turns are running,
@@ -87,6 +94,7 @@ export const servedRegistry = (facts: ServedFacts): Registry<object> => {
   declareProxy(registry, facts);
   declareUsage(registry, facts);
   declareVault(registry, facts);
+  declareAutomation(registry, facts);
   declareRestart(registry, facts);
   return registry;
 };

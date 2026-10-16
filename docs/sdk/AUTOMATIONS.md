@@ -224,7 +224,7 @@ A daemon started over the `automations.json` an earlier version wrote converts i
 
 ## Commands
 
-Automations have no verb of their own - there is no `ahpd automation`. They are driven over the protocol, and over the HTTP API where the daemon serves one.
+Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation` moves one in and out as [VS Code's file](#vs-code-automation-files).
 
 | Command | What it does |
 | --- | --- |
@@ -238,11 +238,51 @@ Automations have no verb of their own - there is no `ahpd automation`. They are 
 
 The `automation/*` and `automationRun/*` rows, with their origins, are [AHP.md](AHP.md#automation--4-of-4-).
 
+## VS Code automation files
+
+VS Code shares an automation as one `.automation.md` file: YAML frontmatter with a name and a schedule, and the prompt as the body. `ahpd automation export` writes one in that format exactly, so it opens in VS Code.
+
+```bash
+ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10
+ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 --out review-yesterday-s-commits.automation.md
+```
+
+```markdown
+---
+version: 1
+id: "review-yesterday-s-commits"
+name: "Review yesterday's commits"
+schedule:
+  kind: cron
+  expression: "0 9 * * *"
+  timeZone: local
+---
+
+Review the commits made to this repository since yesterday morning.
+```
+
+The id is the automation's id in this host's store, bare or as `ahp-automation:/<id>`. The file's `id` and its file name are made from the title, as VS Code makes them. The file holds the title, the message and the schedule, and nothing else: no folder, no provider, no owner, and not whether it is on, because VS Code refuses a file with any key it does not know.
+
+The file holds a schedule VS Code's editor can show, so export refuses an automation it cannot hold and says what:
+
+| The automation has | Why it is refused |
+| --- | --- |
+| An event or webhook trigger | The file holds only a schedule |
+| More than one schedule | The file holds one |
+| A cron other than `M H * * *`, `M H * * 1-5` or `M H * * D` | The file holds daily, weekday and weekly schedules |
+| `M * * * *` with `M` other than 0 | The file runs hourly on the hour |
+| A zone other than this host's | The file says `timeZone: local`, which is the zone of whoever imports it |
+| `misfirePolicy: skip` | VS Code always catches a missed run up |
+
+An automation with no schedule is written as `kind: manual`. A schedule with no `timeZone` is in UTC, so it exports only from a host whose zone is UTC.
+
+Over HTTP it is `GET /api/automation/export/{id}`, which answers the id, the file name and the text. There is no `--out`; the caller writes the file.
+
 ## Grants
 
 | What | Grant |
 | --- | --- |
-| List the catalogue, read a run, ask the trigger definitions | `automation:list` |
+| List the catalogue, read a run, ask the trigger definitions, export one | `automation:list` |
 | Write, patch or remove an automation | `automation:create`, `automation:update`, `automation:remove` |
 | Press Run | `automation:run` |
 | Ask to stop a run | `automation:cancel`, which is asked before the refusal |

@@ -364,6 +364,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const vault = fileVault({ file: vaultPath() });
   // This daemon's own once a plugin has folded in a vault of its own.
   let held: Vault = vault;
+  // The store the host was built over, once it is: a plugin may have replaced
+  // the daemon's own, and before the host exists a request finds none.
+  let kept: AutomationStore | undefined;
   /*
    * The policies saying who may use which agent, model and computer.
    *
@@ -417,6 +420,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     turning: () => turning(),
     usage: () => metered,
     vault: () => held,
+    automations: () => kept,
     restart: (argv, force) => restart(argv, force),
   };
   /*
@@ -985,6 +989,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // would report a total nothing was charged to.
   if (folded.usage !== undefined) metered = folded.usage;
   if (folded.vault !== undefined) held = folded.vault;
+  kept = folded.automations;
 
   /*
    * The door, and which transport this host answers on.

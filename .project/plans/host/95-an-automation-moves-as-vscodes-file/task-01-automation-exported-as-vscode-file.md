@@ -1,6 +1,6 @@
 ---
 title: An automation is exported as VS Code's file
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -40,3 +40,14 @@ refs:
 - Run `pnpm -s build`, `pnpm typecheck`, `pnpm boundary`, `pnpm schema` and the vitest suites of sdk and server.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `packages/server/src/blueprint.ts` holds VS Code's parser and serializer rule for rule, with VS Code's names and refusal sentences. `ahpd automation export <id>` prints the file or writes it to `--out`, and `GET /api/automation/export/{id}` answers `{ id, fileName, text }`. The served store is the daemon's own, through a new `automations()` on `ServedFacts`.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:** these choices were not in the plan:
+  - Export also refuses an hourly cron off the hour, such as `30 * * * *`. VS Code's `kind: hourly` holds no minute and would drop it.
+  - Export also refuses `misfirePolicy: skip`. VS Code always writes `runOnce`.
+  - A schedule with no `timeZone` counts as UTC, as the store reads it.
+  - The file's `id` and file name come from the title, as VS Code's export makes them. No `description` is written, as in VS Code.
+  - At a terminal, export opens the store in `<configDir>/automations` for the one command and closes it after.
+  - The grant is `automation:list`, the grant that already lets a caller read the catalogue.
