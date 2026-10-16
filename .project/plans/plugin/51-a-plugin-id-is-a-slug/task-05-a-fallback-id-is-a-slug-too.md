@@ -1,6 +1,6 @@
 ---
 title: A fallback id is a slug too
-status: implemented
+status: done
 depends: [task-02-daemon-refuses-a-non-slug-name.md]
 layer: "server"
 refs:

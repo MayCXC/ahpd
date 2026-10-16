@@ -38,7 +38,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/20-stop-and-restart-reach-a-daemon-on-windows/implemented.md)); checked on Windows 2026-10-15 | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-shutdown-method-stops-daemon-gracefully/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/21-shutdown-method-stops-daemon-gracefully/implemented.md)); checked on Linux and Windows 2026-10-15 | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | built 2026-10-15 | - | - |
-| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed; passed on Windows 2026-10-13 | - | - |
+| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | built 2026-10-16 ([implemented.md](daemon/23-npm-installs-a-plugin-on-windows/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
@@ -191,8 +191,8 @@ Reference: [00-host.md](host/00-host.md)
 | [83 p5 - A chat is attached to a message](host/83-p5-a-chat-is-attached-to-a-message/plan.md) | low | built 2026-10-13 ([implemented.md](host/83-p5-a-chat-is-attached-to-a-message/implemented.md)); checked live | 83 p1 to p3 | - |
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-agent-shell-environment/plan.md) | medium | built 2026-10-11 ([implemented.md](host/84-the-operator-sets-agent-shell-environment/implemented.md)); the check by hand remains; ACP, cofold and pi deferred | - | ACP, cofold and pi shells |
 | [85 - A watched changeset gets its files when a turn ends](host/85-watched-changeset-gets-files-at-turn-end/plan.md) | high | built 2026-10-13 ([implemented.md](host/85-watched-changeset-gets-files-at-turn-end/implemented.md)); a session in a machine is not checked | - | - |
-| [86 - Every automation due at once fires](host/86-every-automation-due-at-once-fires/plan.md) | high | active 2026-10-13; task 01 implemented and reviewed | - | - |
-| [87 - A turn is refused while one runs](host/87-a-turn-is-refused-while-one-runs/plan.md) | high | active 2026-10-14; task 01 implemented and reviewed | - | - |
+| [86 - Every automation due at once fires](host/86-every-automation-due-at-once-fires/plan.md) | high | built 2026-10-16 ([implemented.md](host/86-every-automation-due-at-once-fires/implemented.md)) | - | - |
+| [87 - A turn is refused while one runs](host/87-a-turn-is-refused-while-one-runs/plan.md) | high | built 2026-10-16 ([implemented.md](host/87-a-turn-is-refused-while-one-runs/implemented.md)) | - | - |
 | [88 - A 0.10.0 offer gets the 1.0.0 contract](host/88-a-0-10-0-offer-gets-the-1-0-0-contract/plan.md) | high | built 2026-10-15 ([implemented.md](host/88-a-0-10-0-offer-gets-the-1-0-0-contract/implemented.md)) | - | - |
 | [89 - Chat and session read state stay in step](host/89-chat-and-session-read-state-stay-in-step/plan.md) | high | built 2026-10-15 ([implemented.md](host/89-chat-and-session-read-state-stay-in-step/implemented.md)) | - | - |
 | [90 - An archived session gives back its worktree](host/90-an-archived-session-gives-back-its-worktree/plan.md) | medium | built 2026-10-15 ([implemented.md](host/90-an-archived-session-gives-back-its-worktree/implemented.md)) | - | 91 |
@@ -326,7 +326,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | built 2026-10-15 | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
-| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | active 2026-10-14; 01-07 implemented and reviewed | daemon 19 | ahpw `/plugins/web/` |
+| [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | built 2026-10-16 ([implemented.md](plugin/51-a-plugin-id-is-a-slug/implemented.md)) | daemon 19 | ahpw `/plugins/web/` |
 
 Next free number in `plugin`: `52`.
 
@@ -406,7 +406,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [13 - session.ts is split into one file per area](acp/13-session-is-split-by-area/plan.md) | high | built 2026-10-07 ([implemented.md](acp/13-session-is-split-by-area/implemented.md)) | host 52 | - |
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
-| [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | active; task 01 implemented and reviewed | - | - |
+| [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
 
 Next free number in `acp`: `17`.
 

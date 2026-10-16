@@ -1,6 +1,6 @@
 ---
 title: A hand-written old owner reads as the new one
-status: implemented
+status: done
 depends: [task-03-an-old-owner-name-reads-as-the-new-one.md]
 layer: "sdk"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: An old owner name reads as the new one
-status: implemented
+status: done
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "sdk"
 refs:

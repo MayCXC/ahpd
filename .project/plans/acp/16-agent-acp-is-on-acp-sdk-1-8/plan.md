@@ -1,7 +1,7 @@
 ---
 title: agent-acp is on the ACP SDK 1.8.0
 domain: acp
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -39,7 +39,7 @@ The peer is `zod ^3.25 || ^4`, unchanged.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-acp is on the ACP SDK 1.8.0](task-01-agent-acp-is-on-acp-sdk-1-8.md) | implemented | - |
+| [01 - agent-acp is on the ACP SDK 1.8.0](task-01-agent-acp-is-on-acp-sdk-1-8.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -47,12 +47,12 @@ The peer is `zod ^3.25 || ^4`, unchanged.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16, from a trial upgrade. Task 01 is implemented, 2026-10-16.
-- **Next action:** review task 01.
+- **Done so far:** built 2026-10-16. Task 01 is done: the SDK range is `^1.8.0`, and the lock is at 1.8.0. See [implemented.md](implemented.md).
+- **Next action:** none. The SDK's new features wait in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** `agent-acp-ports.test.ts` reads `tools/ahp.strict.schema.json`, so run `node tools/schema.mjs` before a bare vitest run.
 
 ## Final verification checklist
 
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest on agent-acp.
-- [ ] `plans/index.md` updated.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest on agent-acp.
+- [x] `plans/index.md` updated.

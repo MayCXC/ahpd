@@ -1,6 +1,6 @@
 ---
 title: fire takes every due automation before it announces one
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

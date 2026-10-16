@@ -1,6 +1,6 @@
 ---
 title: ahpd's plugins export slugs
-status: implemented
+status: done
 depends: []
 layer: "plugin packages, docs"
 refs:

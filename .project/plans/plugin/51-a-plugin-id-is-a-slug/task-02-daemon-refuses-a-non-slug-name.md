@@ -1,6 +1,6 @@
 ---
 title: The daemon refuses a plugin whose name is not a slug
-status: implemented
+status: done
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "server"
 refs:

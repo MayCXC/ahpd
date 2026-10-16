@@ -1,6 +1,6 @@
 ---
 title: npm starts through node on Windows
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

@@ -1,7 +1,7 @@
 ---
 title: npm installs a plugin on Windows
 domain: daemon
-status: planned
+status: built
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -55,7 +55,7 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - npm starts through node on Windows](task-01-npm-starts-through-node-on-windows.md) | implemented | - |
+| [01 - npm starts through node on Windows](task-01-npm-starts-through-node-on-windows.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -63,13 +63,13 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-13; the one task implemented 2026-10-13, not reviewed and not set to done.
-- **Next action:** the review, then the two checks by hand on Windows: [task-01-npm-starts-through-node-on-windows.md](task-01-npm-starts-through-node-on-windows.md).
+- **Done so far:** built 2026-10-16. Task 01 is done, and the plan passed on Windows 2026-10-13. See [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the build runs on Linux, so the Windows path is tested through the pure function only.
 
 ## Final verification checklist
 
-- [ ] On Windows, `ahpd configure` installs the three plugins.
-- [ ] On Windows, `ahpd plugin remove` removes a plugin.
-- [ ] `plans/index.md` updated.
+- [x] On Windows, `ahpd configure` installs the three plugins.
+- [x] On Windows, `ahpd plugin remove` removes a plugin.
+- [x] `plans/index.md` updated.

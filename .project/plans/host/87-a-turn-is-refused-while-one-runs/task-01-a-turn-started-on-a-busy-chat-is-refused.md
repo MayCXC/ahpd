@@ -1,6 +1,6 @@
 ---
 title: A turn started on a busy chat is refused
-status: implemented
+status: done
 depends: []
 layer: "sdk, agent-claude, agent-acp, agent-cofold, agent-pi"
 refs:

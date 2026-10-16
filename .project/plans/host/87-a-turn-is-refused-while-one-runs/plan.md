@@ -1,7 +1,7 @@
 ---
 title: A turn is refused while one runs
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -59,7 +59,7 @@ client chat/turnStarted -> lifecycle.ts beginOrRun -> session.begin -> beginTurn
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A turn started on a busy chat is refused](task-01-a-turn-started-on-a-busy-chat-is-refused.md) | implemented | - |
+| [01 - A turn started on a busy chat is refused](task-01-a-turn-started-on-a-busy-chat-is-refused.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -68,15 +68,15 @@ client chat/turnStarted -> lifecycle.ts beginOrRun -> session.begin -> beginTurn
 
 ## Resume state
 
-- **Done so far:** task 01 implemented 2026-10-14, reviewed 2026-10-14, not set to done. The host refuses a turn on a busy chat, and agent-claude drops one that still reaches `begin`. agent-acp, agent-cofold and agent-pi needed no change.
-- **Next action:** review task 01, then the *Final verification checklist* by hand.
+- **Done so far:** built 2026-10-16. Task 01 is done: the host refuses a turn on a busy chat. The agent-claude backend drops a turn that still reaches `begin`. The other three backends needed no change. See [implemented.md](implemented.md).
+- **Next action:** none. The tests for agent-acp, agent-cofold and agent-pi wait in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** a turn whose model switch is still in progress is busy through `ctx.beginning`, not `ctx.active`. Count it as busy. A message that waited its turn and a `!command` are exempt from the host's check, so the queue keeps moving.
 
 ## Final verification checklist
 
-- [ ] A test: a client `chat/turnStarted` on a busy chat is rejected, and the running turn is unchanged.
-- [ ] A test: a queued message still starts its turn when the running one ends.
+- [x] A test: a client `chat/turnStarted` on a busy chat is rejected, and the running turn is unchanged.
+- [x] A test: a queued message still starts its turn when the running one ends.
 - [ ] A test per backend: `begin` while busy leaves the running turn in place.
-- [ ] The gates pass: typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.
+- [x] The gates pass: typecheck, boundary, schema and vitest.
+- [x] `plans/index.md` updated.

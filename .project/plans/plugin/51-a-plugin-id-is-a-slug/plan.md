@@ -1,7 +1,7 @@
 ---
 title: A plugin id is a slug
 domain: plugin
-status: active
+status: built
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -91,13 +91,13 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - ahpd's plugins export slugs](task-01-ahpds-plugins-export-slugs.md) | implemented | - |
-| [02 - The daemon refuses a plugin whose name is not a slug](task-02-daemon-refuses-a-non-slug-name.md) | implemented | 01 |
-| [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | implemented | 01 |
-| [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | implemented | 01 |
-| [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | implemented | 02 |
-| [06 - A hand-written old owner reads as the new one](task-06-old-owner-reads-as-the-new-one.md) | implemented | 03 |
-| [07 - The listing and usage reads agree with the id](task-07-listing-and-usage-agree-with-the-id.md) | implemented | 03, 05 |
+| [01 - ahpd's plugins export slugs](task-01-ahpds-plugins-export-slugs.md) | done | - |
+| [02 - The daemon refuses a plugin whose name is not a slug](task-02-daemon-refuses-a-non-slug-name.md) | done | 01 |
+| [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | done | 01 |
+| [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | done | 01 |
+| [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | done | 02 |
+| [06 - A hand-written old owner reads as the new one](task-06-old-owner-reads-as-the-new-one.md) | done | 03 |
+| [07 - The listing and usage reads agree with the id](task-07-listing-and-usage-agree-with-the-id.md) | done | 03, 05 |
 
 ## Risks and tradeoffs
 
@@ -108,8 +108,8 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 
 ## Resume state
 
-- **Done so far:** the plan and tasks 01 to 07, 2026-10-14. Task 04 is ahpw commit `e500c19`.
-- **Next action:** review tasks 05, 06 and 07.
+- **Done so far:** built 2026-10-16. Tasks 01 to 07 are done, and task 04 is ahpw commit `e500c19`. See [implemented.md](implemented.md).
+- **Next action:** the checks by hand in [linux-checks.md](../../../pending/linux-checks.md), which tick the first four checklist lines.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 
@@ -119,4 +119,4 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 - [ ] A plugin that exports `name = '@acme/x'` is skipped, and the problem line names the slug rule.
 - [ ] A session saved with owner `plugin:@ahpd/bot` reads back with owner `plugin:bot`.
 - [ ] ahpw answers under `/plugins/web/`.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

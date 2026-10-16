@@ -1,6 +1,6 @@
 ---
 title: ahpw exports `web` and serves `/plugins/web/`
-status: implemented
+status: done
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "ahpw"
 refs:

@@ -1,6 +1,6 @@
 ---
 title: The listing and usage reads agree with the id
-status: implemented
+status: done
 depends: [task-03-an-old-owner-name-reads-as-the-new-one.md, task-05-a-fallback-id-is-a-slug-too.md]
 layer: "sdk, server"
 refs:

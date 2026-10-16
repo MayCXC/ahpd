@@ -1,6 +1,6 @@
 ---
 title: agent-acp is on the ACP SDK 1.8.0
-status: implemented
+status: done
 depends: []
 layer: "agent-acp"
 refs:

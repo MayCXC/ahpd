@@ -1,7 +1,7 @@
 ---
 title: Every automation due at once fires
 domain: host
-status: active
+status: built
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -54,7 +54,7 @@ timer -> fire -> due listener (run 1) -> store write -> onChanged -> rearm (all 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - fire takes every due automation before it announces one](task-01-fire-takes-every-due-automation-first.md) | implemented | - |
+| [01 - fire takes every due automation before it announces one](task-01-fire-takes-every-due-automation-first.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -62,12 +62,12 @@ timer -> fire -> due listener (run 1) -> store write -> onChanged -> rearm (all 
 
 ## Resume state
 
-- **Done so far:** task 01 implemented 2026-10-13, not reviewed and not set to done. `fire` takes the whole due list before it announces any of it.
-- **Next action:** review task 01, then the *Final verification checklist* by hand.
+- **Done so far:** built 2026-10-16. Task 01 is done: `fire` takes the whole due list before it announces any of it. See [implemented.md](implemented.md).
+- **Next action:** the check by hand in [linux-checks.md](../../../pending/linux-checks.md), which ticks the first checklist line.
 - **Open questions:** none.
 - **Watch out for:** `onChanged` must still rearm before it tells its listeners, for the reason its comment gives.
 
 ## Final verification checklist
 
 - [ ] Two automations with one schedule both run at that minute.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.
