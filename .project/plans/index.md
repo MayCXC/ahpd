@@ -210,7 +210,7 @@ Reference: [00-host.md](host/00-host.md)
 | [94 - VS Code lists ahpd's automations](host/94-vscode-lists-ahpds-automations/plan.md) | high | built 2026-10-15 ([implemented.md](host/94-vscode-lists-ahpds-automations/implemented.md)) | - | - |
 | [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | built 2026-10-16 | - | - |
 | [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
-| [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | planned 2026-10-16 | - | - |
+| [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | built 2026-10-16 | - | - |
 | [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | planned 2026-10-16 | - | - |
 | [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | planned 2026-10-16 | - | - |
 | [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | 101 |

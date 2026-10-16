@@ -1,7 +1,7 @@
 ---
 title: An unchanged client set is echoed back
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -74,9 +74,9 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The sender hears its unchanged set](task-01-the-sender-hears-its-unchanged-set.md) | todo | - |
-| [02 - The docs say when a set is echoed](task-02-the-docs-say-when-a-set-is-echoed.md) | todo | 01, 03 |
-| [03 - An idle cancel is echoed to its sender](task-03-an-idle-cancel-is-echoed-to-its-sender.md) | todo | 01 |
+| [01 - The sender hears its unchanged set](task-01-the-sender-hears-its-unchanged-set.md) | done | - |
+| [02 - The docs say when a set is echoed](task-02-the-docs-say-when-a-set-is-echoed.md) | done | 01, 03 |
+| [03 - An idle cancel is echoed to its sender](task-03-an-idle-cancel-is-echoed-to-its-sender.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -85,17 +85,19 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-hears-that-its-active-client-set-was-applied.md`. Planned 2026-10-16 with Softov's answers. Task 03 added 2026-10-16.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-16. All three tasks built and reviewed 2026-10-16, merged in `c5b4e7b6`.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
 - **Watch out for:**
   - Never send the echo to the other clients. The loop of 300 round trips came from that.
   - The echo is not buffered, so a client that reconnects does not get it again.
+  - A cancel that names no turn still stops the running turn. Only a name that differs from the running turn gets the echo.
+  - `usage-meter.test.ts`'s `metered` fake had to grow a `chatState`, because the cancel handler now reads `activeTurn` and that fake starts turns behind the backend's back.
 
 ## Final verification checklist
 
-- [ ] A test: an unchanged set gets an echo with its `clientSeq` to the sender, and the other client gets nothing.
-- [ ] A test: a cancel with no turn running gets an echo to its sender only.
-- [ ] `presence.test.ts:142` still passes: a changed set reaches every client.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
-- [ ] `plans/index.md` updated.
+- [x] A test: an unchanged set gets an echo with its `clientSeq` to the sender, and the other client gets nothing.
+- [x] A test: a cancel with no turn running gets an echo to its sender only.
+- [x] `presence.test.ts:142` still passes: a changed set reaches every client.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] `plans/index.md` updated.

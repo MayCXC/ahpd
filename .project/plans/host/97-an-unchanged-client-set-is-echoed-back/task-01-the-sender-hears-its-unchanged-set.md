@@ -1,6 +1,6 @@
 ---
 title: The sender hears its unchanged set
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -38,3 +38,21 @@ The other clients get nothing, as now.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+Built 2026-10-16, uncommitted. The worktree holds `packages/sdk/src/host.ts`, `packages/sdk/src/host/context.ts`, `packages/sdk/src/host/actions.ts` and `packages/sdk/test/presence.test.ts`. `packages/sdk/test/fixtures/wire.jsonl` is dirty with the suite's own regeneration, which is not this task's; the restore command is denied here, so it is Softov's to run.
+
+### What changed, file by file
+
+- `packages/sdk/src/host.ts` - `echoTo(peer, channel, action, origin)`, beside `refuse`, sends one accepted envelope to one peer at the current `serverSeq`, under the name that peer watches the channel by, and without touching the replay buffer. The alias lookup `refuse` had inline is now `watchedAs(peer, channel)`, which both use (step 1, 2). `echoTo` is handed out on `ctx` beside `refuse`.
+- `packages/sdk/src/host/context.ts` - `echoTo` on `HostContext`, documented as the accepted half of what `refuse` is the refused half of.
+- `packages/sdk/src/host/actions.ts` - the silence guard in the `session/activeClientSet` handler echoes the action to its sender before it returns (step 3). `held`, `dispatch` and `retool` are untouched, and so is the log of a failed `setTools` (step 4, 5).
+- `packages/sdk/test/presence.test.ts` - a new `envelopes` helper reads a whole envelope, for its `serverSeq` and its `origin`. The old *says nothing* case is now *echoes an unchanged announcement to its sender, and to nobody else*: a second client watches the same session, the sender hears the change plus one echo per unchanged announcement, each carrying the `clientSeq` it sent and the sequence the host is still at, and the other client hears the change alone (step 6). The changed-set case gained the same second client, which hears both changes.
+
+### Verified
+
+- `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` all clean.
+- `pnpm -s exec vitest run packages/sdk --maxWorkers=2 --testTimeout=10000`: 149 files, 2979 tests, all pass.
+
+### Decided while building
+
+- The echo carries the action the client sent, not the `activeClient` this host rebuilt out of it. That is what the task says to hand the helper, and what `refuse` sends on the other path.

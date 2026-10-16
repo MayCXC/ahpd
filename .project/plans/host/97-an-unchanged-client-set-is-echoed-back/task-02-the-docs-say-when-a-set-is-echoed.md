@@ -1,6 +1,6 @@
 ---
 title: The docs say when a set is echoed
-status: todo
+status: done
 depends: [task-01-the-sender-hears-its-unchanged-set.md, task-03-an-idle-cancel-is-echoed-to-its-sender.md]
 layer: docs
 refs:
@@ -30,3 +30,15 @@ It says that no other client does.
 - `pnpm -s docs:build` passes.
 
 ## Resume
+
+Built 2026-10-16, uncommitted. The worktree holds `docs/sdk/AHP.md`, and with it the two tasks this one documents.
+
+### What changed, file by file
+
+- `docs/sdk/AHP.md` - two paragraphs under *An action that changes nothing is not a change*, after the one that ends on the loop of three hundred round trips. The first says the silence is for the other clients and that the sender is answered: a client holds the action it sent until this host answers to its `clientSeq`, so an unanswered sender holds a change nobody will confirm until it reconnects, and the action comes back to that one client with its own `origin` and no `rejectionReason` (steps 1, 2). It then says the echo comes back at the `serverSeq` the host is already at and is not buffered, so it is not state moving and not the start of another loop (step 4). The second names the cancel: `chat/turnCancelled` naming a turn that chat is not running stops nothing and is answered as an unchanged set is, while one that does name the running turn is a change and goes out to every client (step 3).
+
+### Verified
+
+- `pnpm -s docs:build`: build complete in 17.51s.
+- `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` all clean.
+- No package changed, so no vitest run: the one file this task touches is prose.
