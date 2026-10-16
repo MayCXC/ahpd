@@ -158,10 +158,10 @@ export function serializeAutomationBlueprint(blueprint: AutomationBlueprint): st
  *
  * The name is the title and the id is made from it, as VS Code's export does.
  * The folder, the provider, the owner and whether it is on are left out: a
- * blueprint has no target. `zone` is this host's zone, which is the only one
- * `timeZone: local` can carry.
+ * blueprint has no target. The schedule keeps its hour and minute and drops
+ * its zone: `timeZone: local` is the zone of whoever imports the file.
  */
-export function automationToBlueprint(automation: AutomationEntry, zone: string = localTimeZone()): AutomationBlueprint {
+export function automationToBlueprint(automation: AutomationEntry): AutomationBlueprint {
   const named = automation.resource.replace(/^ahp-automation:\//u, '');
   const definition = bag(automation.definition);
   const title = typeof definition.title === 'string' ? definition.title.trim() : '';
@@ -174,7 +174,7 @@ export function automationToBlueprint(automation: AutomationEntry, zone: string 
     id: createAutomationBlueprintId(name),
     name,
     prompt,
-    schedule: projectSchedule(named, definition.triggers, zone),
+    schedule: projectSchedule(named, definition.triggers),
   };
 }
 
@@ -216,10 +216,10 @@ function createAutomationBlueprintId(name: string): string {
  * An automation's triggers as a blueprint schedule, refused where the format
  * cannot hold them.
  *
- * The format holds one schedule or none, in this host's zone, that runs on the
- * hour, daily, on weekdays or weekly, and catches a missed run up.
+ * The format holds one schedule or none, in the importer's zone, that runs on
+ * the hour, daily, on weekdays or weekly, and catches a missed run up.
  */
-function projectSchedule(named: string, raw: unknown, zone: string): AutomationSchedule {
+function projectSchedule(named: string, raw: unknown): AutomationSchedule {
   const triggers = Array.isArray(raw) ? raw.map((one) => bag(one)) : [];
   if (triggers.some((trigger) => trigger.kind !== 'schedule')) {
     throw new Error(`${named} has an event trigger, and a VS Code automation file holds only a schedule.`);
@@ -230,10 +230,6 @@ function projectSchedule(named: string, raw: unknown, zone: string): AutomationS
   const trigger = triggers[0];
   if (trigger === undefined) return { interval: 'manual', scheduleHour: 0, scheduleMinute: 0, scheduleDay: 0 };
   const held = bag(trigger.schedule);
-  const at = typeof held.timeZone === 'string' && held.timeZone !== '' ? held.timeZone : 'UTC';
-  if (at !== zone) {
-    throw new Error(`${named} runs in ${at}, and a VS Code automation file holds only this host's zone, ${zone}.`);
-  }
   if (trigger.misfirePolicy === 'skip') {
     throw new Error(`${named} skips a missed run, and a VS Code automation file always catches one up.`);
   }

@@ -63,9 +63,9 @@ const schedule = (expression: string, timeZone: string | null = ZONE, misfirePol
 });
 
 /** The refusal an export makes, as its sentence. */
-const refusal = (automation: AutomationEntry, zone = ZONE): string => {
+const refusal = (automation: AutomationEntry): string => {
   try {
-    automationToBlueprint(automation, zone);
+    automationToBlueprint(automation);
   }
   catch (error) {
     return (error as Error).message;
@@ -105,7 +105,7 @@ describe('export', () => {
   ];
   for (const [name, expression, expected] of cases) {
     it(`writes a ${name} schedule that reads back the same`, () => {
-      const blueprint = automationToBlueprint(entry([schedule(expression)]), ZONE);
+      const blueprint = automationToBlueprint(entry([schedule(expression)]));
       expect(blueprint.schedule).toMatchObject(expected);
       const text = serializeAutomationBlueprint(blueprint);
       expect(parseAutomationBlueprint(text)).toEqual(blueprint);
@@ -113,7 +113,7 @@ describe('export', () => {
   }
 
   it('writes a daily schedule as VS Code does', () => {
-    const text = serializeAutomationBlueprint(automationToBlueprint(entry([schedule('0 9 * * *')]), ZONE));
+    const text = serializeAutomationBlueprint(automationToBlueprint(entry([schedule('0 9 * * *')])));
     expect(text).toBe([
       '---',
       'version: 1',
@@ -131,7 +131,7 @@ describe('export', () => {
   });
 
   it('writes an automation with no schedule as manual', () => {
-    const blueprint = automationToBlueprint(entry([]), ZONE);
+    const blueprint = automationToBlueprint(entry([]));
     expect(blueprint.schedule.interval).toBe('manual');
     const text = serializeAutomationBlueprint(blueprint);
     expect(header(text)['schedule']).toEqual({ kind: 'manual' });
@@ -139,14 +139,14 @@ describe('export', () => {
   });
 
   it('reads the weekday spellings a cron allows, and 7 as Sunday', () => {
-    expect(automationToBlueprint(entry([schedule('0 8 * * MON-FRI')]), ZONE).schedule.interval).toBe('weekdays');
-    expect(automationToBlueprint(entry([schedule('0 8 * * 1,2,3,4,5')]), ZONE).schedule.interval).toBe('weekdays');
-    expect(automationToBlueprint(entry([schedule('0 8 * * 7')]), ZONE).schedule.scheduleDay).toBe(0);
+    expect(automationToBlueprint(entry([schedule('0 8 * * MON-FRI')])).schedule.interval).toBe('weekdays');
+    expect(automationToBlueprint(entry([schedule('0 8 * * 1,2,3,4,5')])).schedule.interval).toBe('weekdays');
+    expect(automationToBlueprint(entry([schedule('0 8 * * 7')])).schedule.scheduleDay).toBe(0);
   });
 
   it('writes no key but the five the format allows', () => {
     for (const triggers of [[], [schedule('0 * * * *')], [schedule('0 9 * * 1-5')]]) {
-      const keys = Object.keys(header(serializeAutomationBlueprint(automationToBlueprint(entry(triggers), ZONE))));
+      const keys = Object.keys(header(serializeAutomationBlueprint(automationToBlueprint(entry(triggers)))));
       expect(keys.every((key) => ['version', 'id', 'name', 'description', 'schedule'].includes(key))).toBe(true);
     }
   });
@@ -179,11 +179,10 @@ describe('export', () => {
       .toBe('0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 runs at minute 30 of each hour, and a VS Code automation file runs hourly on the hour.');
   });
 
-  it('refuses a zone other than this host\'s', () => {
-    expect(refusal(entry([schedule('0 9 * * *', 'Europe/Lisbon')])))
-      .toBe(`0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 runs in Europe/Lisbon, and a VS Code automation file holds only this host's zone, ${ZONE}.`);
-    expect(refusal(entry([schedule('0 * * * *', null)]))).toContain('runs in UTC');
-    expect(automationToBlueprint(entry([schedule('0 9 * * *', null)]), 'UTC').schedule.interval).toBe('daily');
+  it('writes local for another zone, and keeps the hour', () => {
+    const text = serializeAutomationBlueprint(automationToBlueprint(entry([schedule('30 9 * * *', 'Europe/Lisbon')])));
+    expect(header(text)['schedule']).toEqual({ kind: 'cron', expression: '30 9 * * *', timeZone: 'local' });
+    expect(automationToBlueprint(entry([schedule('0 9 * * *', null)])).schedule).toMatchObject({ interval: 'daily', scheduleHour: 9 });
   });
 
   it('refuses a schedule that skips a missed run', () => {
@@ -326,10 +325,10 @@ describe('ahpd automation export', () => {
     });
 
     it('refuses one it cannot hold as a conflict', async () => {
-      store.create('ahp-automation:/other', entry([schedule('0 9 * * *', 'Europe/Lisbon')]).definition);
+      store.create('ahp-automation:/other', entry([schedule('*/5 * * * *', zone)]).definition);
       const answer = await call('/automation/export/other');
       expect(answer.status).toBe(409);
-      expect((await answer.json() as { message: string }).message).toContain('runs in Europe/Lisbon');
+      expect((await answer.json() as { message: string }).message).toContain('runs on "*/5 * * * *"');
     });
   });
 });

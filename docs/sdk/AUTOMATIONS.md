@@ -271,10 +271,9 @@ The file holds a schedule VS Code's editor can show, so export refuses an automa
 | More than one schedule | The file holds one |
 | A cron other than `M H * * *`, `M H * * 1-5` or `M H * * D` | The file holds daily, weekday and weekly schedules |
 | `M * * * *` with `M` other than 0 | The file runs hourly on the hour |
-| A zone other than this host's | The file says `timeZone: local`, which is the zone of whoever imports it |
 | `misfirePolicy: skip` | VS Code always catches a missed run up |
 
-An automation with no schedule is written as `kind: manual`. A schedule with no `timeZone` is in UTC, so it exports only from a host whose zone is UTC.
+An automation with no schedule is written as `kind: manual`. Export keeps the hour and drops the zone: the file says `timeZone: local`, which is the zone of whoever imports it.
 
 Over HTTP it is `GET /api/automation/export/{id}`, which answers the id, the file name and the text. There is no `--out`; the caller writes the file.
 
