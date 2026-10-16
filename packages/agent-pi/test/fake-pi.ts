@@ -99,10 +99,10 @@ export function fakePi() {
     subscribe: (one) => { listener = one; return () => { listener = undefined; }; },
     prompt: async (text, images) => {
       asked.push({ kind: 'prompt', text, images: images ?? [] });
-      if (settle) listener?.({ type: 'agent_settled' });
+      if (settle) listener?.({ type: 'agent_settled', aborted: false });
     },
     steer: async (text, images) => { asked.push({ kind: 'steer', text, images: images ?? [] }); },
-    abort: async () => { asked.push({ kind: 'abort' }); listener?.({ type: 'agent_settled' }); },
+    abort: async () => { asked.push({ kind: 'abort' }); listener?.({ type: 'agent_settled', aborted: true }); },
     models: async () => runtime,
     levels: (model) => (model.provider === 'anthropic' ? ['off', 'medium', 'high'] : ['off']),
     chosen: () => ({ id: 'anthropic/claude-opus-5', config: { [THINKING_KEY]: 'off' } }),

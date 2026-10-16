@@ -344,7 +344,7 @@ it('takes a tool change made during a turn on the turn after it', async () => {
   await session.setTools?.([{ definition: { name: 'two' }, run: async () => 'ok' }]);
   // The running turn already handed pi its tools and is not touched.
   expect(pi.opens).toHaveLength(1);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   session.begin('t2', 'again');
   await settled();

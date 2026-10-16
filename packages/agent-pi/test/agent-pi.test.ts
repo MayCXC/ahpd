@@ -158,7 +158,7 @@ it('ends the turn on pi settling, not on the prompt returning', async () => {
   pi.raise({ type: 'agent_end', messages: [], willRetry: true });
   await settled();
   expect(types('chat')).not.toContain('chat/turnComplete');
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(types('chat')).toContain('chat/turnComplete');
 });
@@ -180,7 +180,7 @@ it('announces an edit before and after, for the absolute path, on the running tu
     ['t1', join(root, 'src/a.ts'), 'before'],
     ['t1', join(root, 'src/a.ts'), 'after'],
   ]);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(edits).toHaveLength(2);
 });
@@ -197,7 +197,7 @@ it('settles a write that never ended when the turn does', async () => {
   const elsewhere = join(root, 'elsewhere', 'c.ts');
   await driveCall(pi, 'c1', 'write', { path: elsewhere, content: 'c' });
   expect(edits).toEqual([['t1', elsewhere, 'before']]);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(edits).toEqual([['t1', elsewhere, 'before'], ['t1', elsewhere, 'after']]);
 });
@@ -279,7 +279,7 @@ it('has failed by the time it says a turn failed', async () => {
     type: 'message_end',
     message: { role: 'assistant', stopReason: 'error', errorMessage: 'boom' },
   } as never);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(at.get('chat/error')).toBe(Status.Error);
 });
@@ -392,7 +392,7 @@ it('queues a second message and runs it when the first turn ends', async () => {
   expect(types('chat')).toContain('chat/pendingMessageSet');
   expect(pi.asked.filter((one) => one.kind === 'prompt').map((one) => one.text)).toEqual(['first']);
 
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(types('chat')).toContain('chat/pendingMessageRemoved');
   expect(pi.asked.filter((one) => one.kind === 'prompt').map((one) => one.text)).toEqual(['first', 'second']);
@@ -471,7 +471,7 @@ it('answers where a watched turn ended, and nothing for one it never saw end', a
   // Still running, so there is no point to name yet.
   expect(session.endPoint?.('t1')).toBeUndefined();
   pi.setLeaf('entry-7');
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(session.endPoint?.('t1')).toBe('entry-7');
   expect(session.endPoint?.('never-watched')).toBeUndefined();
@@ -485,7 +485,7 @@ it('names where a watched turn ended as the point a fork copies through', async 
   // Still running, so there is no point to name yet.
   expect(session.forkPoint?.('t1')).toBeUndefined();
   pi.setLeaf('entry-7');
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   // The turn's last entry, not the prompt it began with: a fork copies the
   // conversation through the turn it names, answer included.
@@ -524,7 +524,7 @@ it('fails the turn on the last assistant message ending in error', async () => {
     type: 'message_end',
     message: { role: 'assistant', stopReason: 'error', errorMessage: '429 rate limited' },
   } as never);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(((last('chat/error')?.part as Bag).error as Bag).message).toBe('429 rate limited');
   expect(session.status()).toBe(2);
@@ -544,7 +544,7 @@ it('does not fail a turn pi retried and then answered', async () => {
   // error with an answer.
   pi.raise({ type: 'agent_end', messages: [], willRetry: true });
   pi.raise({ type: 'message_end', message: { role: 'assistant', stopReason: 'stop' } } as never);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(types('chat')).toContain('chat/turnComplete');
   expect(types('chat')).not.toContain('chat/error');
@@ -577,7 +577,7 @@ it('sends what the turn used, before it ends, and keeps it on the transcript', a
       usage: { input: 120, output: 30, cacheRead: 10, cacheWrite: 5, totalTokens: 165 },
     },
   } as never);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   const expected = {
     inputTokens: 120,
@@ -623,7 +623,7 @@ it('sends no usage for an error that used no tokens', async () => {
       usage: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, totalTokens: 0 },
     },
   } as never);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   expect(types('chat')).toContain('chat/error');
   expect(types('chat')).not.toContain('chat/usage');

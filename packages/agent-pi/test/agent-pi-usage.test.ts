@@ -33,9 +33,9 @@ function fakePi() {
     id: 'pi-session-1',
     file: undefined,
     subscribe: (one) => { listener = one; return () => { listener = undefined; }; },
-    prompt: async () => { if (settle) listener?.({ type: 'agent_settled' }); },
+    prompt: async () => { if (settle) listener?.({ type: 'agent_settled', aborted: false }); },
     steer: async () => {},
-    abort: async () => { listener?.({ type: 'agent_settled' }); },
+    abort: async () => { listener?.({ type: 'agent_settled', aborted: true }); },
     models: async () => [],
     leaf: () => 'entry-1',
     levels: () => ['off'],
@@ -146,7 +146,7 @@ it('grows the total it sends with every call, and ends on the sum', async () => 
   pi.raise(call({ input: 100, output: 20, cost: 0.01 }));
   pi.raise(call({ input: 50, output: 10, cacheRead: 5, cacheWrite: 7, cost: 0.02 }));
   pi.raise(call({ input: 30, output: 40, cost: 0.005 }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   const sentTotals = totals(sent);
@@ -188,7 +188,7 @@ it('names the model of the last call, whatever the turn ran before', async () =>
 
   pi.raise(call({ input: 10, model: 'claude-opus-5' }));
   pi.raise(call({ input: 20, model: 'gpt-5' }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   expect(totals(sent).map((one) => one.model)).toEqual([
@@ -206,7 +206,7 @@ it('sends no usage for a call that failed before the provider answered', async (
 
   pi.raise(call({ input: 40, output: 5, cost: 0.02 }));
   pi.raise(call({ stopReason: 'error', errorMessage: '401 Unauthorized' }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   // The failed call reported every count at zero, which is not something the
@@ -240,7 +240,7 @@ it('sends the cost split the way pi priced it, the sent side summed into one par
   const one: Price = { input: 1, cacheRead: 0.5, output: 2 };
   pi.raise(call({ input: 100, output: 20, cost: one }));
   pi.raise(call({ input: 50, output: 30, cost: one }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   // The running total after each call, and the turn's own when it ended.
@@ -260,7 +260,7 @@ it('sends a call priced as a bare total with no split invented for it', async ()
   // A total and no parts: there is nothing to say which side of the call cost
   // what, and a nought written into either would be a figure pi never gave.
   pi.raise(call({ input: 10, output: 5, cost: 0.5 }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   expect(totals(sent).map((each) => (each._meta as Bag)['ahpd.cost'])).toEqual([
@@ -275,13 +275,13 @@ it('starts the next turn from nothing, rather than on what the last one used', a
   session.begin('t1', 'hello');
   await settled();
   pi.raise(call({ input: 100, output: 20, cost: 0.01 }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   session.begin('t2', 'again');
   await settled();
   pi.raise(call({ input: 7, output: 3, cost: 0.002 }));
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
 
   const after = totals(sent).slice(2);

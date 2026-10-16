@@ -28,7 +28,7 @@ vi.mock('@earendil-works/pi-coding-agent', async () => {
     sessionManager: { getSessionFile: () => '/tmp/pi/pi-lazy-1.jsonl', getLeafId: () => 'entry-1' },
     modelRuntime: { getAvailable: async () => [] },
     subscribe: (one: (event: Bag) => void) => { listener = one; return () => { listener = undefined; }; },
-    prompt: async () => { listener?.({ type: 'agent_settled' }); },
+    prompt: async () => { listener?.({ type: 'agent_settled', aborted: false }); },
     steer: async () => {},
     abort: async () => {},
     model: undefined,

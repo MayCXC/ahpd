@@ -1,6 +1,6 @@
 ---
 title: agent-pi is on pi 1.3.0
-status: todo
+status: implemented
 depends: []
 layer: "agent-pi"
 refs:
@@ -40,3 +40,7 @@ agent-pi depends on pi 1.3.0, and it builds and passes its tests on it.
 - `pnpm why brace-expansion` shows 5.0.12 or later under pi-coding-agent.
 
 ## Resume
+
+- **Done:** 2026-10-16. Both pi ranges and the root dev dependency are `^1.3.0`, and `engines.node` is `>=22.19.0`. pnpm added the 7 release-age excludes. `steer` resolves to `undefined`, and `TYPESAFE_API_KEY` is in `PI_KEY_VARIABLES`.
+- **Departure:** the tests have 31 fake `agent_settled` sites, not 32. The 4 sites in a fake `abort` say `aborted: true`, and the other 27 say `aborted: false`.
+- **Gates:** build, typecheck, boundary and schema pass. The test gate passes with 5102 tests, and agent-pi passes with 197 tests. `pnpm why brace-expansion` shows only 5.0.12, under pi-coding-agent 1.3.0 and its minimatch 10.2.6.

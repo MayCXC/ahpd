@@ -278,7 +278,7 @@ function wrap(sdk: Pi, session: AgentSession): PiBackend {
       source: INPUT_SOURCE,
       ...(images !== undefined && images.length > 0 ? { images } : {}),
     }),
-    steer: (text, images) => session.steer(text, images, { source: INPUT_SOURCE }),
+    steer: (text, images) => session.steer(text, images, { source: INPUT_SOURCE }).then(() => undefined),
     abort: () => session.abort(),
     models,
     leaf: () => session.sessionManager.getLeafId() ?? undefined,

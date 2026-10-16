@@ -71,7 +71,7 @@ it('rebuilds a session it never watched from pi file, with the parts a live turn
     isError: false,
   });
   for (const event of streamed([{ type: 'text', text: ' It is empty.' }])) pi.raise(event);
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await settled();
   const live = (session.allTurns()[0] as Bag).responseParts;
   // The times are the one thing the two do not share: live they are this

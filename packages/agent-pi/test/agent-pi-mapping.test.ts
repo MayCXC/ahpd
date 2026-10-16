@@ -191,7 +191,7 @@ it('reads a tool result whatever shape it came in', () => {
 });
 
 it('tells "this event says nothing about activity" from "it is idle now"', () => {
-  expect(activityOf({ type: 'agent_settled' })).toBeUndefined();
+  expect(activityOf({ type: 'agent_settled', aborted: false })).toBeUndefined();
   expect(activityOf({ type: 'summarization_retry_finished' })).toBe(false);
   expect(activityOf({ type: 'tool_execution_start', toolCallId: 'c', toolName: 'bash', args: {} }))
     .toBe('Running bash');

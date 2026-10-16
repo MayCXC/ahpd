@@ -202,7 +202,7 @@ it('sends a queued message with its image when its turn comes', async () => {
   // Waiting, so only the first turn has reached pi.
   expect(prompts(pi).map((one) => one.text)).toEqual(['first']);
 
-  pi.raise({ type: 'agent_settled' });
+  pi.raise({ type: 'agent_settled', aborted: false });
   await until(() => prompts(pi).length === 2);
   expect(prompts(pi)).toEqual([
     { kind: 'prompt', text: 'first', images: [] },
