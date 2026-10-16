@@ -22,6 +22,8 @@ pnpm install
 pnpm build
 ```
 
+On Windows, clone with `git clone -c core.longpaths=true https://github.com/softov/ahpd`. Some paths under `.project/plans` are 185 characters long, so with the clone folder in front they pass the 260 a Windows path may have, and the checkout fails with "Filename too long".
+
 `pnpm build` compiles each package into its own `packages/*/dist` with its own `tsconfig`.
 The two libraries ship `src` as well, and the daemon ships `dist` alone, which is why a change under `packages/sdk/src` is visible to the examples without a rebuild when they run with `--conditions development`.
 
