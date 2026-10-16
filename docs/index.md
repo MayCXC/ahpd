@@ -18,7 +18,7 @@ features:
     link: /server/GET-STARTED
   - title: SDK
     details: For a person who builds a host with @ahpd/sdk - what each subject is, as the code defines it.
-    link: /sdk/LIBRARY
+    link: /sdk/BUILD-A-HOST
   - title: Plugins
     details: For a person who writes a plugin, and one page for each plugin that ships in this repository.
     link: /plugins/PLUGINS

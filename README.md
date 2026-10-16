@@ -3,6 +3,7 @@
 [![CI](https://github.com/softov/ahpd/actions/workflows/ci.yml/badge.svg)](https://github.com/softov/ahpd/actions/workflows/ci.yml)
 [![@ahpd/server](https://img.shields.io/npm/v/%40ahpd%2Fserver?label=%40ahpd%2Fserver)](https://www.npmjs.com/package/@ahpd/server)
 [![@ahpd/sdk](https://img.shields.io/npm/v/%40ahpd%2Fsdk?label=%40ahpd%2Fsdk)](https://www.npmjs.com/package/@ahpd/sdk)
+[![docs](https://img.shields.io/badge/docs-softov.github.io%2Fahpd-0b7285)](https://softov.github.io/ahpd/)
 ![license MIT](https://img.shields.io/badge/license-MIT-blue)
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
 ![Agent Host Protocol 1.0.0](https://img.shields.io/badge/AHP-1.0.0-0b7285)
@@ -22,6 +23,8 @@ An [Agent Host Protocol](https://microsoft.github.io/agent-host-protocol/) serve
 Run agents on your workstation, server, VM or container, then connect from [ahpc](https://github.com/softov/ahpc), [VS Code](https://code.visualstudio.com/), or any AHP-compliant client.
 
 Sessions run on the host, not on the client or terminal that started them.
+
+**[Read the documentation](https://softov.github.io/ahpd/)**
 
 
 ```mermaid
@@ -414,13 +417,15 @@ For the command-by-command compatibility matrix, see [`docs/sdk/AHP.md`](docs/sd
 
 # Documentation
 
-Every document under `docs/` is listed in [`docs/README.md`](docs/README.md), one line each.
+The documentation is a site at [softov.github.io/ahpd](https://softov.github.io/ahpd/). Every document under `docs/` is listed in [`docs/README.md`](docs/README.md), one line each.
 
 | Document                                   | Purpose                                                   |
 | ------------------------------------------ | --------------------------------------------------------- |
 | [docs/server/GET-STARTED.md](docs/server/GET-STARTED.md)           | Install, configure, start, and connect VS Code            |
+| [docs/server/INSTALL.md](docs/server/INSTALL.md)                   | Install, and run on Node, Bun or Deno                     |
+| [docs/server/UPGRADE.md](docs/server/UPGRADE.md)                   | Upgrade the daemon and its plugins                        |
 | [docs/server/REFERENCE.md](docs/server/REFERENCE.md)               | Every command and flag                                    |
-| [docs/sdk/LIBRARY.md](docs/sdk/LIBRARY.md)         | Building an AHP server with `createHost` and the ports    |
+| [docs/sdk/BUILD-A-HOST.md](docs/sdk/BUILD-A-HOST.md) | Build your own host with `createHost` and the ports       |
 | [docs/sdk/AGENT.md](docs/sdk/AGENT.md)             | Building an `Agent` and `Session` contracts               |
 | [docs/sdk/AHP.md](docs/sdk/AHP.md)                 | Detailed AHP compatibility                                |
 | [`docs/plugins/PLUGINS.md`](docs/plugins/PLUGINS.md)       | Plugin system and authoring                               |
@@ -528,7 +533,7 @@ Only `path` and `agents` are required.
 
 Leave a port out and the operations that need it answer that they are unsupported.
 
-See [`docs/sdk/LIBRARY.md`](docs/sdk/LIBRARY.md) for full SDK reference.
+See [Build your own host](docs/sdk/BUILD-A-HOST.md) for the full guide.
 
 ---
 

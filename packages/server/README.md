@@ -224,7 +224,7 @@ For a host of a different shape, build it from `@ahpd/sdk` and skip this package
 | [GET-STARTED.md](https://github.com/softov/ahpd/blob/main/docs/server/GET-STARTED.md) | Install, configure, start, and connect VS Code |
 | [REFERENCE.md](https://github.com/softov/ahpd/blob/main/docs/server/REFERENCE.md) | Every command and flag |
 | [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Loading and writing plugins |
-| [LIBRARY.md](https://github.com/softov/ahpd/blob/main/docs/sdk/LIBRARY.md) | Building a host with `@ahpd/sdk` |
+| [BUILD-A-HOST.md](https://github.com/softov/ahpd/blob/main/docs/sdk/BUILD-A-HOST.md) | Building a host with `@ahpd/sdk` |
 | [AGENT.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AGENT.md) | Writing another agent backend |
 | [AHP.md](https://github.com/softov/ahpd/blob/main/docs/sdk/AHP.md) | Protocol coverage, and every action it emits |
 | [agent-host-protocol](https://github.com/microsoft/agent-host-protocol) | The protocol itself, and its [documentation](https://microsoft.github.io/agent-host-protocol/) |

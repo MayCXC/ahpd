@@ -90,7 +90,7 @@ It is **per connection**: it is kept on the connection that pushed it and read b
 
 It reaches two of the three ways in: a client's terminal uses it, and a `!` command and a backend's terminal do not, for the reason above.
 
-The rest of the root config is [HOST.md](HOST.md#root-config), and the daemon's own keys are [HOST.md](HOST.md#configuration-keys). Nothing in either turns terminals off: a host built without a terminal store answers `This host does not serve createTerminal yet` and advertises no `terminalCommandPrefix`, and a plugin's `registerTerminals` is what puts one there - [LIBRARY.md](LIBRARY.md#terminals), [PLUGINS.md](../plugins/PLUGINS.md).
+The rest of the root config is [HOST.md](HOST.md#root-config), and the daemon's own keys are [HOST.md](HOST.md#configuration-keys). Nothing in either turns terminals off: a host built without a terminal store answers `This host does not serve createTerminal yet` and advertises no `terminalCommandPrefix`, and a plugin's `registerTerminals` is what puts one there - [BUILD-A-HOST.md](BUILD-A-HOST.md#terminals), [PLUGINS.md](../plugins/PLUGINS.md).
 
 ## Commands
 
@@ -126,5 +126,5 @@ Everything a terminal does is one of its operations, and read and write are the 
 | [AHP.md](AHP.md#terminal--11-of-11-) | The terminal channel's eleven actions, one line each |
 | [TOOLS.md](TOOLS.md) | `ahp_terminals`, and the rest of what a session's model is offered |
 | [USERS.md](USERS.md#roles) | What the grants are, and what each built-in role holds |
-| [LIBRARY.md](LIBRARY.md#terminals) | The `terminals` port, for a host built from the SDK |
+| [BUILD-A-HOST.md](BUILD-A-HOST.md#terminals) | The `terminals` port, for a host built from the SDK |
 | [COMPUTERS.md](../plugins/COMPUTERS.md) | A session in a machine, where its commands run |

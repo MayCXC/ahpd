@@ -203,5 +203,5 @@ The counters live in memory, as the reference host's do, so a restart is a new p
 | [RESOURCES.md](RESOURCES.md) | `ahp_resource`, and the schemes a resource URI may name |
 | [TERMINALS.md](TERMINALS.md) | `ahp_terminals`, and the shells it lists |
 | [PLUGINS.md](../plugins/PLUGINS.md) | Registering a tool, and the endpoint a backend without in-process tools is handed |
-| [LIBRARY.md](LIBRARY.md#the-tools) | `hostTools()`, and building a host with a set of its own |
+| [BUILD-A-HOST.md](BUILD-A-HOST.md#the-tools) | `hostTools()`, and building a host with a set of its own |
 | [COMPUTERS.md](../plugins/COMPUTERS.md) | The three tools that declare advanced permission |

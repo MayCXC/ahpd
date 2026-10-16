@@ -75,7 +75,7 @@ Resources have no key of their own. What changes what a client can reach is whic
 | `paths` | list of directories | the directory the daemon was started in | The directories this host catalogues, and where a session goes when a client names none. It does not restrict what a client may read - the first directory is the session default, not a boundary |
 | `plugins` | a list of specs | none | Which plugins are loaded, and so which schemes this host serves |
 
-Everything else about the daemon's keys is [HOST.md](HOST.md#configuration-keys), and a host built from the SDK is given its file store and its schemes directly - [LIBRARY.md](LIBRARY.md).
+Everything else about the daemon's keys is [HOST.md](HOST.md#configuration-keys), and a host built from the SDK is given its file store and its schemes directly - [BUILD-A-HOST.md](BUILD-A-HOST.md).
 
 ## Commands
 
@@ -115,4 +115,4 @@ A scheme nobody serves is `-32601` and not a permission answer: the host has not
 | [USERS.md](USERS.md) | Who may read what, and the people schemes this host serves |
 | [TOOLS.md](TOOLS.md) | `ahp_resource`, how a session's model reaches one |
 | [PLUGINS.md](../plugins/PLUGINS.md#what-you-can-register) | `registerResourceProvider`, and the rest of what a plugin contributes |
-| [LIBRARY.md](LIBRARY.md) | Building a host with a file store and providers of your own |
+| [BUILD-A-HOST.md](BUILD-A-HOST.md) | Building a host with a file store and providers of your own |

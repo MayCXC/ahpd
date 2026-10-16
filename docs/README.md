@@ -11,7 +11,8 @@ For a person who runs the `ahpd` daemon: its commands, its flags and its configu
 | File | What it covers |
 | --- | --- |
 | [GET-STARTED.md](server/GET-STARTED.md) | Install, configure, start, and connect VS Code |
-| [INSTALL.md](server/INSTALL.md) | Install, upgrade, and run on Node, Bun or Deno |
+| [INSTALL.md](server/INSTALL.md) | Install, and run on Node, Bun or Deno |
+| [UPGRADE.md](server/UPGRADE.md) | Upgrade the daemon and its plugins, and the update check |
 | [RUN.md](server/RUN.md) | Start, stop, restart, the files the daemon keeps, and served folders |
 | [CONFIGURE.md](server/CONFIGURE.md) | `ahpd configure`, `config.json`, and which setting wins |
 | [PLUGINS.md](server/PLUGINS.md) | Install, update and configure plugins |
@@ -31,7 +32,7 @@ For a person who builds a host with `@ahpd/sdk`: what each subject is, as the co
 | --- | --- |
 | [AHP.md](sdk/AHP.md) | The surface: every command, action and well-known key this host serves, with the row that says why |
 | [AGENT.md](sdk/AGENT.md) | Writing a backend: the `Agent` interface, and what a backend owes the host |
-| [LIBRARY.md](sdk/LIBRARY.md) | Building a host with `@ahpd/sdk` instead of running this one |
+| [BUILD-A-HOST.md](sdk/BUILD-A-HOST.md) | Building a host with `@ahpd/sdk` instead of running this one |
 | [HOST.md](sdk/HOST.md) | The host itself: what it announces, what it serves and every setting it reads |
 | [SESSIONS.md](sdk/SESSIONS.md) | What a session is: its backend, its settings, the directories it may touch and what it is charged to |
 | [CHATS.md](sdk/CHATS.md) | One conversation inside a session: its turns, its parts and the chat URI |

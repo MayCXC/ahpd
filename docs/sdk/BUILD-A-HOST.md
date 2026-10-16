@@ -1,4 +1,4 @@
-# Using ahpd as a library
+# Build your own host
 
 `createHost` is the protocol and nothing else: no agent logic, and nothing that
 touches the machine. It is the same function the daemon in

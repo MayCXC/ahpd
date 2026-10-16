@@ -24,6 +24,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
     items: [
       page('Get started', '/server/GET-STARTED'),
       page('Install', '/server/INSTALL'),
+      page('Upgrade', '/server/UPGRADE'),
       page('Run', '/server/RUN'),
       page('Configure', '/server/CONFIGURE'),
       page('Plugins', '/server/PLUGINS'),
@@ -41,7 +42,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
     items: [
       page('AHP', '/sdk/AHP'),
       page('Agent', '/sdk/AGENT'),
-      page('Library', '/sdk/LIBRARY'),
+      page('Build your own host', '/sdk/BUILD-A-HOST'),
       page('Host', '/sdk/HOST'),
       page('Sessions', '/sdk/SESSIONS'),
       page('Chats', '/sdk/CHATS'),
