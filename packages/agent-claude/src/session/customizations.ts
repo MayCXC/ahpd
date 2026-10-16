@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { McpServerState } from '@microsoft/agent-host-protocol';
 import { uriOf } from '@ahpd/sdk';
@@ -93,6 +93,18 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     const prefix = `${str(plugin.name) ?? ''}:`;
     return name.startsWith(prefix) ? name.slice(prefix.length) : name;
   };
+  /*
+   * Where a plugin came from, which is also what its decisions are kept under.
+   *
+   * The root the SDK reported, where it is one. A plugin built into the CLI has
+   * no root: the SDK reports `builtin` as the path of every one of them, and
+   * one key for all of them switched every built-in when a person switched
+   * one. Its `source`, `<name>@builtin`, is its own.
+   */
+  const rootOf = (plugin: Bag): string => {
+    const path = str(plugin.path) as string;
+    return isAbsolute(path) ? path : (str(plugin.source) ?? `${str(plugin.name)}@${path}`);
+  };
   const pluginContainers = new Map<string, Bag>();
   for (const plugin of reportedPlugins) {
     const name = str(plugin.name) as string;
@@ -100,7 +112,7 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     pluginContainers.set(name, {
       type: 'plugin',
       id: `plugin:${name}`,
-      uri: str(plugin.path) as string,
+      uri: rootOf(plugin),
       name,
       ...(str(plugin.version) !== undefined ? { version: str(plugin.version) as string } : {}),
       children: [],

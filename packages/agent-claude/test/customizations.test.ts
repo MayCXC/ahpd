@@ -57,6 +57,17 @@ describe('where a customization came from', () => {
     expect(out[0]).not.toHaveProperty('version');
   });
 
+  it('gives each plugin built into the CLI a uri of its own, though the SDK reports one path for all', () => {
+    // As the SDK reported them: `builtin` is every built-in's path, and only
+    // `source` tells them apart. A shared uri is a shared enablement key.
+    const out = customizationsOf({}, [], [], undefined, [
+      { name: 'cc-plugin-agents-md', path: 'builtin', source: 'cc-plugin-agents-md@builtin' },
+      { name: 'cc-plugin-telemetry', path: 'builtin', source: 'cc-plugin-telemetry@builtin' },
+      PLUGIN,
+    ]);
+    expect(out.map((one) => one.uri)).toEqual(['cc-plugin-agents-md@builtin', 'cc-plugin-telemetry@builtin', '/plugins/acme']);
+  });
+
   it('answers exactly the three directory containers when the SDK reported no plugins', () => {
     const out = customizationsOf({
       commands: [{ name: 'review', description: 'Review the diff' }],
