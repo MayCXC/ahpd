@@ -145,7 +145,7 @@ function warnCleartext(url: string): void {
 const program: Program = new Program({
   name: 'ahpd',
   version: version(),
-  description: 'An Agent Host Protocol server, with a Claude backend',
+  description: 'An Agent Host Protocol server for Claude, pi, ACP agents and any agent a plugin adds',
   registry,
   /*
    * `ahpd --help` is a question about the program, and the flags a person

@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: ahpd
-  tagline: An Agent Host Protocol server, with a Claude backend, on Node, Bun or Deno - and the parts to build your own
+  tagline: An Agent Host Protocol server for Claude, pi, ACP agents such as Codex, and any agent a plugin adds, on Node, Bun or Deno - and the parts to build your own
   actions:
     - theme: brand
       text: Get started

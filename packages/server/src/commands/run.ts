@@ -434,7 +434,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     registry: servedRegistry(facts),
     ...(token === undefined ? {} : { token }),
     ...(users === undefined ? {} : { users }),
-    program: { name: 'ahpd', version: version(), description: 'An Agent Host Protocol server, with a Claude backend' },
+    program: { name: 'ahpd', version: version(), description: 'An Agent Host Protocol server for Claude, pi, ACP agents and any agent a plugin adds' },
     origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
   });
   /*
