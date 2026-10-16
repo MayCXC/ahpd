@@ -55,7 +55,10 @@ curl | bash -> install.sh -> node >= 22 -> npm prefix -> npm install -g @ahpd/se
 | The scripts are served from ahpio.com | (defaulted: the site is live and serves `public/` from the root) | - |
 | A missing Node is installed after a question on a TTY; without a TTY the script stops with the command | Softov, 2026-10-15, to "When Node 22+ is missing, what does the install script do?" - "Ask, then install" | - |
 | The script runs on Node or on Bun, chosen with `--runtime` | Softov, 2026-10-15, to "Does the script accept Bun or Deno instead of Node?" - "Node or Bun" | - |
-| Uninstall is a section in INSTALL.md; `--uninstall` is an idea | Softov, 2026-10-15, to "How does a person uninstall?" - "docs now. idea for --uninstall" | - |
+| Uninstall is a section in INSTALL.md, and the script takes `--uninstall` and `--purge` | Softov, 2026-10-15, to "How does a person uninstall?" - "docs now. idea for --uninstall"; Softov, 2026-10-16, asked for the idea as task 04 | 03, 04 |
+| `--uninstall` runs `ahpd stop` first | Softov, 2026-10-16, chose the recommended answer for "What does `--uninstall` do when a daemon runs?" | 04 |
+| `--uninstall` leaves the npm prefix `~/.npm-global` | Softov, 2026-10-16, chose the recommended answer for "Does `--uninstall` undo the npm prefix `~/.npm-global` that the script set?" | 04 |
+| `--uninstall` runs `ahpd service uninstall` first, before `ahpd stop` and the npm step, when a service exists | Softov, 2026-10-16, chose the recommended answer for "Does `--uninstall` remove the service of daemon/31 when one is installed?" | 04 |
 
 ## Proposed architecture
 
@@ -71,7 +74,7 @@ curl | bash -> install.sh -> node >= 22 -> npm prefix -> npm install -g @ahpd/se
   7. On an upgrade, run `ahpd plugin update all` and print `ahpd restart`. Never restart the daemon.
   8. On a TTY and without `--no-onboard`, run `ahpd configure` with stdin from `/dev/tty`.
 - **Bun** - `--runtime bun` finds `bun` and installs with `bun add -g @ahpd/server`. node-pty under Bun needs its own install step.
-- **Uninstall** - INSTALL.md names `npm uninstall -g @ahpd/server`, the PATH line and `~/.config/ahpd`. [`--uninstall`](../../../ideas/the-install-script-uninstalls.md) is an idea.
+- **Uninstall** - `--uninstall` stops the daemon, removes the service, the package and the PATH line, and keeps `~/.config/ahpd` unless `--purge` is given. INSTALL.md names the one line and the steps by hand.
 - **Flags** - `--version <v>`, `--runtime node|bun`, `--no-onboard`, `--dry-run`, `--verbose`, `--help`. PowerShell: `-Version`, `-Runtime`, `-NoOnboard`, `-DryRun`.
 - **Tests** - `AHPD_INSTALL_NO_RUN=1` lets a test source the script. CI runs it in a clean container with no Node, with Node 20, and with Node 22.
 - **Source-of-truth files** - `scripts/install/install.sh`, `scripts/install/install.ps1`.
@@ -83,6 +86,7 @@ Tasks are written when the plan moves to `planned`. The proposal is:
 1. `install.sh`, with its test in CI.
 2. `install.ps1`, with its test on the Windows runner.
 3. The ahpio-site build copies the scripts, and INSTALL.md and GET-STARTED.md lead with the one line.
+4. [The install script uninstalls](task-04-the-install-script-uninstalls.md), with `--uninstall` and `--purge`.
 
 ## Risks and tradeoffs
 
@@ -92,9 +96,9 @@ Tasks are written when the plan moves to `planned`. The proposal is:
 
 ## Resume state
 
-- **Done so far:** the proposal and the research, 2026-10-15.
-- **Next action:** write the tasks and move the plan to `planned`.
-- **Open questions:** none. Softov answered the three on 2026-10-15.
+- **Done so far:** the proposal and the research, 2026-10-15. Task 04 and its answers, 2026-10-16.
+- **Next action:** write tasks 01 to 03 and move the plan to `planned`.
+- **Open questions:** none.
 - **Watch out for:** `irm | iex` cannot pass parameters, so each flag needs an environment twin. Under `iex`, `exit` closes the person's window; use `throw`.
 
 ## Final verification checklist

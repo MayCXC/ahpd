@@ -6,7 +6,7 @@ covers:
   - packages/sdk/src/timing.ts
   - packages/sdk/src/host/tooling.ts
 decisions:
-  - decisions/each-backend-offers-its-own-approval-options.md
+  - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
 refs:
   - "[code://packages/sdk/src/types/host.ts#L676-L728](../../packages/sdk/src/types/host.ts#L676-L728) - `HostTool`, with `effects`, `advancedPermission`, `instruction`, `forSession` and `deferLoading`"
   - "[code://packages/sdk/src/types/host.ts#L420-L427](../../packages/sdk/src/types/host.ts#L420-L427) - `HostOptions.advancedTools`"

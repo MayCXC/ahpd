@@ -27,9 +27,9 @@ refs:
   - code://packages/sdk/src/listen.ts#L15-L19 - `runtimeOf()`, the runtime detection the resolver reuses for the Deno case
   - code://scripts/boundary.mjs#L60-L82 - the check that every package declares what it imports, which the SDK's new export does not disturb
   - code://test/example.test.ts#L1-L30 - the fake-peer pattern the end-to-end plugin test reuses
-  - code://.project/ideas/plugins.md - the shape this plan implements
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/plugins.md - the shape this plan implements
   - code://.project/plans/plugin/00-plugin.md - the registration kinds table, of which this plan implements the first three
-  - code://.project/ideas/agents-as-extensions.md - the decision that a backend is a configuration key, that a bare spec resolves through `createRequire` against the configuration directory, that a failing plugin is skipped and that a duplicate `provider` refuses
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md - the decision that a backend is a configuration key, that a bare spec resolves through `createRequire` against the configuration directory, that a failing plugin is skipped and that a duplicate `provider` refuses
   - file:///github/pi/packages/coding-agent/src/core/pi-manifest.ts - the `package.json` manifest precedent, and the `pi.extensions` key it reads
   - file:///github/pi/packages/coding-agent/src/core/extensions/loader.ts#L592-L600 - how pi reports a module that exports no factory and a factory that throws
   - file:///github/deepseek-harness/packages/sdk/server/src/index.ts#L20-L46 - the named-export plugin shape and the no-default-export rule
@@ -74,7 +74,7 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 ### Gaps
 
 - `@ahpd/sdk` holds no plugin contract: there is no `Plugin` or `PluginHost` type and no pure fold to test, though every type they are built from is already there.
-- Nothing enumerates the kinds a plugin may register: the `PluginHost` sketch in `ideas/plugins.md` shows three and the rest are inferable only from `HostOptions`, which is why decision 4 writes the closed list down.
+- Nothing enumerates the kinds a plugin may register: the `PluginHost` sketch in [`ideas/plugins.md`](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/plugins.md) shows three and the rest are inferable only from `HostOptions`, which is why decision 4 writes the closed list down.
 - `Options` and `Config` have no `plugins` key and `parse()` has no case for `--plugin`, so a plugin can be neither named nor switched off.
 - The `createHost` object is built inline, so there is no point between the flags and the host where a contribution can be inserted.
 - Nothing turns a spec into something importable, so no rule exists for where an installed package is found or what a bad spec does.
@@ -96,8 +96,8 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 | --- | --- | --- |
 | `agents` and `tools` concatenate; a singleton port claimed twice is an error naming both unless the later plugin asks for `replace` | decision 1 | 01 |
 | What a `register*` is given is checked before it is recorded, and a failed check fails that plugin and not the daemon | decision 4, and doop's `plugin-asserts.ts` | 08 |
-| A bare spec resolves through `createRequire` against the configuration directory, so `npm i` there is the install | [agents as extensions](../../../ideas/agents-as-extensions.md) | 02 |
-| A plugin that fails to resolve, import or apply is reported and skipped, and a duplicate `provider` refuses at startup naming both | [agents as extensions](../../../ideas/agents-as-extensions.md) | 03, 05 |
+| A bare spec resolves through `createRequire` against the configuration directory, so `npm i` there is the install | [agents as extensions](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md) | 02 |
+| A plugin that fails to resolve, import or apply is reported and skipped, and a duplicate `provider` refuses at startup naming both | [agents as extensions](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md) | 03, 05 |
 | `--plugin` is repeatable and `--no-plugins` switches the whole set off | decision 1, and the flag shape `--path` and `--automations` already use | 04 |
 | Compatibility is `peerDependencies` on `@ahpd/sdk`, and no `apiVersion` field is added | decision 2, and deepseek-harness, which has none either | 01 |
 | A path spec is checked against its own manifest before its code is imported: a directory resolves through `ahpd.entry`, `exports`, `main` or `index.js`, and a `@ahpd/sdk` range the host does not satisfy is refused | decision 5, and doop's `validatePluginCompat` | 02, 03 |
@@ -107,7 +107,7 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 ## Proposed architecture
 
 - **Data flow** - specs from `config.json` and then the command line become loaded plugin records, each record's `apply` registers through a `PluginHost` that checks every value before it records it, and the contributions fold into the one `HostOptions` that `createHost` receives.
-- **Event flow** - none in this plan, because the loader runs once before the host exists; a plugin that wants events adopts one of the two forms `ideas/plugins.md` records and neither needs a change here.
+- **Event flow** - none in this plan, because the loader runs once before the host exists; a plugin that wants events adopts one of the two forms [`ideas/plugins.md`](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/plugins.md) records and neither needs a change here.
 - **State flow** - none beyond `config.json`; the loader writes nothing, and the only record it consults is the plugin's own `package.json`.
 - **Layer responsibilities** - packages/sdk: the contract types in `types/plugin.ts`, the pure `pluginHost` and `foldHostOptions` in `plugins.ts`, and one exported `runtime()` so the resolver reuses the detection `listen.ts` already owns · packages/server/src/plugins.ts: resolution, import, manifest reading, failure policy and `loadPlugins` · packages/server/src/main.ts: what is named, the base options, one call, and the startup line.
 - **Source-of-truth files** - `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/server/src/plugins.ts`, `code://packages/server/src/main.ts`, `code://packages/server/src/config.ts`.

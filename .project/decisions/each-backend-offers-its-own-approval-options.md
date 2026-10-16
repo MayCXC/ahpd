@@ -1,6 +1,7 @@
 ---
 title: Each backend offers its own approval options, and the host remembers no approval
-status: accepted
+status: superseded
+superseded-by: decisions/each-backend-offers-its-options-unless-a-rule-asks.md
 date: 2026-09-28
 refs:
   - "[code://packages/sdk/src/types/session.ts#L382](../../packages/sdk/src/types/session.ts#L382) - `confirm(toolCallId, approved)`, the answer a backend receives"

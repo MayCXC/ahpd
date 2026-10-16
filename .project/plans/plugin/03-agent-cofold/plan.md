@@ -17,7 +17,7 @@ refs:
   - code://packages/sdk/src/types/plugin.ts - `PluginHost`, `Plugin` and `PluginContext`, which the entry implements
   - code://packages/server/src/plugins.ts - `loadPlugins`, which resolves and imports this package by spec
   - code://.project/decisions/agent-package-only-when-it-brings-a-runtime.md - why this is one package and not one per model
-  - code://.project/ideas/agents-as-extensions.md - the first-party order this plan is the first step of
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md - the first-party order this plan is the first step of
   - file:///github/cofold/packages/agents/src/index.ts - `createAgent`, `run`, `resume`, `createTool`, the store and the policy
   - file:///github/cofold/packages/agents/src/types/event.ts - the `RunEvent` union this bridge maps onto `chat/*`
   - file:///github/cofold/packages/agents/src/types/run.ts - `RunArgs`, `ResumeArgs` and `RunHandle`, the stream and the cancel
@@ -120,7 +120,7 @@ ahpd --plugin @ahpd/agent-cofold
 ## Resume state
 
 - **Done so far:** all five tasks, done 2026-09-20, and [implemented.md](implemented.md) written.
-- **Next action:** none; the plan is built. `@ahpd/agent-acp` is the next agent package, and [agents as extensions](../../../ideas/agents-as-extensions.md) is the order.
+- **Next action:** none; the plan is built. `@ahpd/agent-acp` is the next agent package, and [agents as extensions](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md) is the order.
 - **Open questions:** none open; facio is linked, the provider is per registration, the store is an option, and the resume shape is the seed giving way to the replay.
 - **Watch out for:** pnpm's store is outside this checkout, so `pnpm install` needs wider file access than the default sandbox allows; facio is unpublished and its packages must be built in `/github/cofold` before this package typechecks; and the package is `private: true` until facio has a version on npm.
 

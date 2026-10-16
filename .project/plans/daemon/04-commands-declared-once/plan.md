@@ -57,7 +57,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | `CliField.negatable` in `@cofold/commands`, released as 0.2.1 on 2026-09-26; ahpd depends on `^0.2.1`. | Softov, 2026-09-26: "Add negatable to cofold". | 12, 06 |
 | `serve()` passes what its `authorize` returned to `registry.execute` as `request.actor`, released in `@cofold/remote` 0.3.1 on 2026-09-26. | Softov, 2026-09-26: "serve() passes actor". | 14 |
 | A command's options typed before `start` are forwarded to the child like those after it, and only the program's own globals stay with the parent. | the program accepts a command's options before its word, and task 05's objective: the record names the process that is serving | 18 |
-| The group hint fails as every other failure does, one `ahpd: ` line and exit 2 in every mode; a JSON shape for failures is [an idea](../../../ideas/failures-have-a-json-shape.md). | Softov, 2026-09-26, asked how `ahpd plugin` with no sub-command should fail: "one... and another latter". | 20 |
+| The group hint fails as every other failure does, one `ahpd: ` line and exit 2 in every mode; a JSON shape for failures is [an idea](https://github.com/softov/ahpd/blob/5e5f35ce034f24747bd952d4dfdadf2763740cbb/.project/ideas/failures-have-a-json-shape.md). | Softov, 2026-09-26, asked how `ahpd plugin` with no sub-command should fail: "one... and another latter". | 20 |
 | Each handler throws a `CofoldError` that keeps today's exit code (`ArgumentError` for 2, kind `conflict` for 1) and writes only through its context; a failure's sentence moves to stderr as `ahpd: <sentence>`. | Softov, 2026-09-26, asked "How should ahpd's command handlers answer failure, instead of process.exit and process.stderr?": "Throw CofoldError". | 16 |
 
 ## Tasks
@@ -98,7 +98,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Done so far:** every task is `done`, reviewed by Softov on 2026-09-28; the plan is built, see [implemented.md](implemented.md).
 - **Next action:** none.
 - **Open questions:** none.
-  A JSON shape for failures is [an idea](../../../ideas/failures-have-a-json-shape.md).
+  A JSON shape for failures is [an idea](https://github.com/softov/ahpd/blob/5e5f35ce034f24747bd952d4dfdadf2763740cbb/.project/ideas/failures-have-a-json-shape.md).
 - **Watch out for:** task 16 landed before [daemon/05 task 08](../05-an-http-api/task-08-served-commands-use-the-daemons-options.md), so that task rebases on the throwing handlers; task 14 landed before [daemon/05 task 09](../05-an-http-api/task-09-the-grants-each-command-needs.md), so task 09 applies the grants in the registry's `authorize` hook and `authorizeOverHttp` only identifies; `run` is a hidden command given its word when a line has no command, so the foreground daemon keeps matching `ahpd [options]`; this environment's global pnpm store is read-only, so installs need `--store-dir /tmp/pnpm-store`; the pinning cases set `CI=1`, which silences the update line in every case that does not remove it; [daemon/05](../05-an-http-api/plan.md) changes the scopes `packages/server/test/server-commands.test.ts:59-69` pins, so a scope failure there is daemon/05's to fix.
 
 ## Final verification checklist

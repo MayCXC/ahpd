@@ -9,7 +9,7 @@ covers:
   - packages/sdk/src/types/terminals.ts
 decisions:
   - decisions/claude-approvals-keeps-dont-ask.md
-  - decisions/each-backend-offers-its-own-approval-options.md
+  - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
   - decisions/pi-is-embedded-not-spawned.md
   - decisions/subagent-chats-are-restored-from-the-cli-meta-file.md
   - decisions/the-daemon-bundles-no-agent.md

@@ -36,5 +36,5 @@ Nothing a person typed before changed meaning.
 
 ## Left for later
 
-- A JSON shape for failures is [an idea](../../../ideas/failures-have-a-json-shape.md).
+- A JSON shape for failures is [an idea](https://github.com/softov/ahpd/blob/5e5f35ce034f24747bd952d4dfdadf2763740cbb/.project/ideas/failures-have-a-json-shape.md).
 - The scopes each command needs belong to [daemon/05](../05-an-http-api/plan.md).

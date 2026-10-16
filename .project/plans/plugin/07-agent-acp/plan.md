@@ -20,7 +20,7 @@ refs:
   - code://packages/agent-cofold/src/plugin.ts - the plugin entry this one mirrors, options checked key by key and one agent registered
   - code://packages/server/src/plugins.ts - `loadPlugins`, which resolves and imports this package by spec
   - code://test/example.test.ts - the fake peer and the turn a backend test follows
-  - code://.project/ideas/agents-as-extensions.md - the first-party order this plan is the next step of
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md - the first-party order this plan is the next step of
   - code://.project/plans/plugin/01-plugins-load-from-configuration/deferred.md - where "ports through `Start`" was recorded as waiting on this package
   - npm://@agentclientprotocol/sdk@^1.4.0 - the ACP schema and the connection the bridge speaks
   - file:///github/deepseek-harness/packages/acp/acp/src/index.ts - the ACP server side of the same protocol, and the server the tests run against
@@ -79,7 +79,7 @@ ahpd --plugin @ahpd/agent-acp
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | The bridge speaks ACP through the published protocol SDK | the user, 2026-09-22, over hand-rolling the stdio JSON-RPC |
-| 2 | An ACP backend reaches files and a shell through `Start` | defaulted from [agents as extensions](../../../ideas/agents-as-extensions.md), which orders "ports through `Start`" and rejects building the access twice |
+| 2 | An ACP backend reaches files and a shell through `Start` | defaulted from [agents as extensions](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md), which orders "ports through `Start`" and rejects building the access twice |
 
 | What | Source | Task |
 | --- | --- | --- |

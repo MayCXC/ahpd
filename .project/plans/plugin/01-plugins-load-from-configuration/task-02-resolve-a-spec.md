@@ -36,7 +36,7 @@ refs:
 5. Write `entryOf(dir)`: read `dir/package.json`, and take the entry in the order `ahpd.entry`, `exports["."]` as a string or its `default`, `main`, `index.js`; resolve it against `dir` and refuse an entry that escapes `dir`, or a directory where none of the four is there, naming the directory and what was looked for.
 6. When the resolved path is a directory, set `packageDir` and run `entryOf`; when it is a file, leave `packageDir` undefined and let task 03 find the manifest by walking up.
 7. For a bare spec, refuse with a message that says to write `npm:<name>` when `runtime()` is `deno`, since Deno has no `createRequire`.
-8. Otherwise resolve it with `createRequire(join(configDir, 'package.json')).resolve(spec)` and convert with `pathToFileURL().href`, which is what makes `npm i` in the configuration directory the install, as `ideas/agents-as-extensions.md` decided.
+8. Otherwise resolve it with `createRequire(join(configDir, 'package.json')).resolve(spec)` and convert with `pathToFileURL().href`, which is what makes `npm i` in the configuration directory the install, as [`ideas/agents-as-extensions.md`](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md) decided.
 9. Set `packageDir` by walking up from the resolved file to the nearest `package.json`, the way `version.ts` does, so an installed package is validated by the same rule as a path.
 10. Wrap the `createRequire` call so a spec that is not installed becomes a message naming the spec and the directory it was looked for in, rather than a resolved `MODULE_NOT_FOUND` stack.
 11. Keep the function free of the network and free of `import()`, so a listing and a load agree on what a spec means and neither runs a plugin.

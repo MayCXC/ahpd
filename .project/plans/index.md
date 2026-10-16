@@ -38,14 +38,22 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/20-stop-and-restart-reach-a-daemon-on-windows/implemented.md)); checked on Windows 2026-10-15 | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-shutdown-method-stops-daemon-gracefully/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/21-shutdown-method-stops-daemon-gracefully/implemented.md)); checked on Linux and Windows 2026-10-15 | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | built 2026-10-15 | - | - |
-| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | built 2026-10-16 ([implemented.md](daemon/23-npm-installs-a-plugin-on-windows/implemented.md)); passed on Windows 2026-10-13; the remove check on Windows remains | - | - |
+| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | built 2026-10-16 ([implemented.md](daemon/23-npm-installs-a-plugin-on-windows/implemented.md)); passed on Windows 2026-10-13; the remove check passed on Windows 2026-10-16 | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
-| [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15 | - | - |
+| [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15; task 04 planned 2026-10-16, tasks 01-03 still to write | - | - |
 | [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
-| [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; the Windows check remains | - | - |
+| [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; passed on Windows 2026-10-16 | - | - |
+| [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | planned 2026-10-16 | - | daemon 27 task 04 |
+| [32 - A failure has a JSON shape under --json](daemon/32-a-failure-has-a-json-shape/plan.md) | medium | planned 2026-10-16 | cofold commands 06 | - |
+| [33 - ahpd's checks pass on Windows](daemon/33-ahpds-checks-pass-on-windows/plan.md) | medium | planned 2026-10-16; parent of p1 to p5 | - | - |
+| [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
+| [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
+| [33 p3 - POSIX-only tests say why they skip](daemon/33-p3-posix-only-tests-say-why-they-skip/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
+| [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5 | - |
+| [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
 
 Next free number in `daemon`: `31`.
 
@@ -183,11 +191,11 @@ Reference: [00-host.md](host/00-host.md)
 | [81 p3 - Usage is read through commands](host/81-p3-usage-is-read-through-commands/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-p3-usage-is-read-through-commands/implemented.md)) | 81 p1 | - |
 | [81 p4 - Computers are a channel and commands](host/81-p4-computers-are-a-channel/plan.md) | high | built 2026-10-11 ([implemented.md](host/81-p4-computers-are-a-channel/implemented.md)) | 81 p1, 81 p2 | - |
 | [82 - A file or the whole changeset is staged, unstaged, discarded or committed](host/82-a-file-or-changeset-is-staged-or-committed/plan.md) | medium | built 2026-10-11 ([implemented.md](host/82-a-file-or-changeset-is-staged-or-committed/implemented.md)) | - | ahpc screen/11 |
-| [83 - The host offers what VS Code's own host offers](host/83-the-host-matches-vscodes-host/plan.md) | high | active 2026-10-11; p1 to p5 built, the checks by hand of p1 to p4 remain | - | VS Code window parity |
-| [83 p1 - The host describes itself as VS Code's host does](host/83-p1-the-host-describes-itself/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p1-the-host-describes-itself/implemented.md)); the VS Code check by hand remains | 83 | 83 p3, 83 p5 |
-| [83 p2 - A run is stopped, and runs are capped](host/83-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p2-a-run-is-stopped-and-runs-are-capped/implemented.md)); the VS Code check by hand remains | 83, host 80 | - |
-| [83 p3 - A remote session is taken and keeps its origin](host/83-p3-a-remote-session-keeps-its-origin/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p3-a-remote-session-keeps-its-origin/implemented.md)); the VS Code check by hand remains; ACP, cofold and pi deferred | 83 p1 | - |
-| [83 p4 - A customization is switched for all sessions or a folder](host/83-p4-customization-switched-for-all-sessions/plan.md) | medium | built 2026-10-11 ([implemented.md](host/83-p4-customization-switched-for-all-sessions/implemented.md)); the VS Code check by hand remains | 83 | - |
+| [83 - The host offers what VS Code's own host offers](host/83-the-host-matches-vscodes-host/plan.md) | high | active 2026-10-11; p1 to p5 built and checked; host/104 holds the \"Disable (Session)\" fix | - | VS Code window parity |
+| [83 p1 - The host describes itself as VS Code's host does](host/83-p1-the-host-describes-itself/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p1-the-host-describes-itself/implemented.md)); checked on Windows in VS Code 2026-10-16 | 83 | 83 p3, 83 p5 |
+| [83 p2 - A run is stopped, and runs are capped](host/83-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p2-a-run-is-stopped-and-runs-are-capped/implemented.md)); checked on Windows in VS Code 2026-10-16 | 83, host 80 | - |
+| [83 p3 - A remote session is taken and keeps its origin](host/83-p3-a-remote-session-keeps-its-origin/plan.md) | high | built 2026-10-11 ([implemented.md](host/83-p3-a-remote-session-keeps-its-origin/implemented.md)); checked on Windows in VS Code 2026-10-16; ACP, cofold and pi deferred | 83 p1 | - |
+| [83 p4 - A customization is switched for all sessions or a folder](host/83-p4-customization-switched-for-all-sessions/plan.md) | medium | built 2026-10-11 ([implemented.md](host/83-p4-customization-switched-for-all-sessions/implemented.md)); checked on Windows in VS Code 2026-10-16 | 83 | - |
 | [83 p5 - A chat is attached to a message](host/83-p5-a-chat-is-attached-to-a-message/plan.md) | low | built 2026-10-13 ([implemented.md](host/83-p5-a-chat-is-attached-to-a-message/implemented.md)); checked live | 83 p1 to p3 | - |
 | [84 - The operator sets the environment of agent shells](host/84-the-operator-sets-agent-shell-environment/plan.md) | medium | built 2026-10-11 ([implemented.md](host/84-the-operator-sets-agent-shell-environment/implemented.md)); the check by hand remains; ACP, cofold and pi deferred | - | ACP, cofold and pi shells |
 | [85 - A watched changeset gets its files when a turn ends](host/85-watched-changeset-gets-files-at-turn-end/plan.md) | high | built 2026-10-13 ([implemented.md](host/85-watched-changeset-gets-files-at-turn-end/implemented.md)); a session in a machine is not checked | - | - |
@@ -200,8 +208,23 @@ Reference: [00-host.md](host/00-host.md)
 | [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
 | [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | built 2026-10-15 ([implemented.md](host/93-a-turn-lets-go-of-its-sender-at-every-end/implemented.md)) | - | - |
 | [94 - VS Code lists ahpd's automations](host/94-vscode-lists-ahpds-automations/plan.md) | high | built 2026-10-15 ([implemented.md](host/94-vscode-lists-ahpds-automations/implemented.md)) | - | - |
-| [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the VS Code check remains | - | - |
+| [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | active; tasks 01-02 implemented and reviewed; tasks 03-04 added 2026-10-16; the VS Code check remains | - | - |
 | [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
+| [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | planned 2026-10-16 | - | - |
+| [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | planned 2026-10-16 | - | - |
+| [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | planned 2026-10-16 | - | - |
+| [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | 101 |
+| [100 p1 - A command is split and matched](host/100-p1-a-command-is-split-and-matched/plan.md) | medium | planned 2026-10-16 | 100 | 100 p2, 100 p3 |
+| [100 p2 - A session gets its owner's command check](host/100-p2-a-session-gets-its-owners-command-check/plan.md) | medium | planned 2026-10-16 | 100 p1 | 100 p4, 100 p5, 101 |
+| [100 p3 - Another parser replaces the splitter](host/100-p3-another-parser-replaces-the-splitter/plan.md) | medium | planned 2026-10-16 | 100 p1 | - |
+| [100 p4 - Claude and ACP ask only for unmatched commands](host/100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
+| [100 p5 - pi and cofold ask only for unmatched commands](host/100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
+| [100 p6 - The docs name the terminal rules](host/100-p6-the-docs-name-the-terminal-rules/plan.md) | medium | planned 2026-10-16 | 100 p1 to p5 | - |
+| [101 - A rule makes a tool call ask every time](host/101-a-rule-makes-a-tool-call-ask-every-time/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
+| [102 - Verify a JWT locally](host/102-verify-a-jwt-locally/plan.md) | low | planned 2026-10-16 | - | - |
+| [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | planned 2026-10-16 | - | - |
+| [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | planned 2026-10-16 | - | - |
+| [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | planned 2026-10-16 | - | - |
 
 Next free number in `host`: `97`.
 
@@ -466,18 +489,12 @@ Next free number in `vault`: `02`.
 None. `host`, `claude`, `documentation`, `plugin`, `container`, `pi`, `acp`, `usage`, `policy`, `proxy` and `vault` each have a plan above.
 Ideas, one file each:
 
-- [agents as extensions](../ideas/agents-as-extensions.md)
-- [the install script uninstalls](../ideas/the-install-script-uninstalls.md)
 - [an SSH command that attaches to the daemon](../ideas/an-ssh-command-that-attaches-to-the-daemon.md)
 - [a plugin reloads without a restart](../ideas/a-plugin-reloads-without-a-restart.md)
 - [Copilot through the CLI](../ideas/copilot-goes-through-the-cli.md)
 - [deliberate duplication](../ideas/deliberate-duplication.md)
-- [terminal commands approved by rule](../ideas/terminal-commands-approved-by-rule.md)
 - [turn and model-call diagnostics](../ideas/turn-and-model-call-diagnostics.md)
-- [verify a JWT locally](../ideas/verify-a-jwt-locally.md)
-- [failures have a JSON shape](../ideas/failures-have-a-json-shape.md)
 - [more computer runtimes](../ideas/more-computer-runtimes.md)
-- [plugins, beyond agents](../ideas/plugins.md)
 - [repositories are resources](../ideas/repositories-are-resources.md)
 - [issues follow the repository](../ideas/issues-follow-the-repository.md)
 - [a sqlite store](../ideas/a-sqlite-store.md)

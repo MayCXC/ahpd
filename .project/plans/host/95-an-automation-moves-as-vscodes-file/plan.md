@@ -49,7 +49,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | The store file keeps its shape, because VS Code refuses a file with a key it does not know | Softov, 2026-10-15, asked how to handle the format and chose "Add export and import" | 01 |
 | The output is VS Code's format exactly, and VS Code's import reads it | Softov, 2026-10-15, "export and import automations from/to vscode with less parsing" | 01 |
 | Export refuses an automation the format cannot hold, with a sentence that names what: a webhook or event trigger, more than one schedule, or a cron the format does not allow | (defaulted: VS Code's own export refuses a schedule it cannot carry) | 01 |
-| Export writes `timeZone: local` when the zone is the host's zone, and refuses another zone | (defaulted: the format allows only `local`) | 01 |
+| Export writes `timeZone: local` for every zone and keeps the hour, because the file moves to a computer whose zone is not known | Softov, 2026-10-16, asked "When an automation's zone differs from the host's, what does export write?" and chose "Write local, keep the hour" | 03 |
+| `ahpd automation list` shows each automation's id, name, folder, schedule and whether it is on | Softov, 2026-10-16, chose "automation list" for "The CLI has automation export and import but no way to see the ids. What do we add?" | 04 |
 | Export of an automation with no schedule writes `kind: manual` | (defaulted: VS Code's mapping) | 01 |
 | Import makes a new id, and the automation is switched off, as VS Code's import does | VS Code's `automationsView.ts` | 02 |
 | Import takes the folder from `--folder`, and refuses without one | (defaulted: the file holds no folder) | 02 |
@@ -67,6 +68,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | --- | --- | --- |
 | [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | implemented | - |
 | [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | implemented | 01 |
+| [03 - Export writes local for every zone](task-03-export-writes-local-for-every-zone.md) | todo | 01 |
+| [04 - The CLI lists the automations](task-04-the-cli-lists-the-automations.md) | todo | - |
 
 ## Risks and tradeoffs
 
@@ -76,7 +79,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Resume state
 
 - **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16.
-- **Next action:** the check by hand in VS Code, in `pending/vscode-checks.md`.
+- **Next action:** build tasks 03 and 04. Then the check by hand in VS Code, in `pending/vscode-checks.md`.
 - **Open questions:** none.
 - **Watch out for:** VS Code refuses a file with any key it does not know, so export writes no key of ahpd's own.
 
@@ -84,6 +87,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - [ ] A test: an exported file parses with VS Code's rules, as the fixture `.scratch/review-yesterday-s-commits.automation.md` does.
 - [ ] A test: export refuses each case the format cannot hold, with its sentence.
+- [ ] A test: export of an automation in another zone writes `timeZone: local` and the same hour.
+- [ ] A test: `ahpd automation list` shows each automation, and `--json` gives the same rows.
 - [ ] A test: import of the fixture makes a switched-off automation in the folder given.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: a file exported by ahpd imports in VS Code, and a file exported by VS Code imports in ahpd.

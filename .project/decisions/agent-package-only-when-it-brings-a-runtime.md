@@ -8,12 +8,12 @@ refs:
   - file:///github/cofold/packages/agents/src/index.ts - the harness that already exists, so a model-backed backend is not a new one
   - file:///github/cofold/packages/model-openai-compat/src/index.ts - the `/chat/completions` adapter, which is why OpenAI-compatible and DeepSeek are model configs and not packages
   - file:///github/deepseek-harness/packages/acp/acp/package.json - deepseek-harness ships an ACP server, so it arrives through the ACP package
-  - code://.project/ideas/agents-as-extensions.md - the first-party list this corrects
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md - the first-party list this corrects
 ---
 
 ## Context
 
-`@ahpd/agent-claude` proved a backend is a package the host knows nothing about, and `ideas/agents-as-extensions.md` then named `@ahpd/agent-acp` and `@ahpd/agent-openai` as the next ones.
+`@ahpd/agent-claude` proved a backend is a package the host knows nothing about, and [`ideas/agents-as-extensions.md`](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md) then named `@ahpd/agent-acp` and `@ahpd/agent-openai` as the next ones.
 That list treated every provider as a package, and the second half of it is wrong: a backend is not a package because it talks to an API, it is a package because there is a *runtime* on the other side to translate.
 
 A runtime is everything an agent needs to exist: the loop, the conversation and its persistence, the workspace, memory, skills, tools and their confirmation, and the pause and resume of a run.

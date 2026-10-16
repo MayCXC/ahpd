@@ -14,7 +14,7 @@ refs:
   - code://packages/sdk/src/version.ts - `sdkVersion()`, the version a plugin's range is checked against
   - code://packages/sdk/src/plugins.ts - `foldHostOptions`, which this task calls with what `apply` produced
   - code://packages/sdk/src/types/plugin.ts - `Plugin`, `PluginHost` and `Contribution`, which the shape check enforces
-  - code://.project/ideas/agents-as-extensions.md - a failing plugin is skipped and a duplicate `provider` refuses
+  - https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/agents-as-extensions.md - a failing plugin is skipped and a duplicate `provider` refuses
   - file:///github/pi/packages/coding-agent/src/core/extensions/loader.ts#L592-L600 - the two messages pi reports, for a module with no factory and a factory that throws
   - code://test/example.test.ts#L1-L30 - the fake `Agent` the loader test contributes
 ---
