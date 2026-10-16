@@ -51,8 +51,8 @@ importers:
   packages/agent-acp:
     dependencies:
       '@agentclientprotocol/sdk':
-        specifier: ^1.5.0
-        version: 1.6.0(zod@4.5.4)
+        specifier: ^1.8.0
+        version: 1.8.0(zod@4.5.4)
     devDependencies:
       '@ahpd/sdk':
         specifier: workspace:*
@@ -179,8 +179,8 @@ importers:
 
 packages:
 
-  '@agentclientprotocol/sdk@1.6.0':
-    resolution: {integrity: sha512-XxXrmX7aZkDgOB0Rg9cu+ZFyiUUc5lF2n9seO3Gc4OR+MTdfZOwIqF6m3LvsmmM8K3qgPmXkDH8/IFM2u9vdcQ==}
+  '@agentclientprotocol/sdk@1.8.0':
+    resolution: {integrity: sha512-fbP7qHZsFyTJVT0/RPrcWJ8An26qLXHEuGCHHEKDyxD1xpXV+Ejyh2LAE6vBAFePkpVjZeeohnbgvuEhZ7wLMg==}
     peerDependencies:
       zod: ^3.25.0 || ^4.0.0
 
@@ -2282,7 +2282,7 @@ packages:
 
 snapshots:
 
-  '@agentclientprotocol/sdk@1.6.0(zod@4.5.4)':
+  '@agentclientprotocol/sdk@1.8.0(zod@4.5.4)':
     dependencies:
       zod: 4.5.4
 

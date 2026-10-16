@@ -39,7 +39,7 @@ The peer is `zod ^3.25 || ^4`, unchanged.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-acp is on the ACP SDK 1.8.0](task-01-agent-acp-is-on-acp-sdk-1-8.md) | todo | - |
+| [01 - agent-acp is on the ACP SDK 1.8.0](task-01-agent-acp-is-on-acp-sdk-1-8.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -47,8 +47,8 @@ The peer is `zod ^3.25 || ^4`, unchanged.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16, from a trial upgrade.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-16, from a trial upgrade. Task 01 is implemented, 2026-10-16.
+- **Next action:** review task 01.
 - **Open questions:** none.
 - **Watch out for:** `agent-acp-ports.test.ts` reads `tools/ahp.strict.schema.json`, so run `node tools/schema.mjs` before a bare vitest run.
 
