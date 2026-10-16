@@ -15,7 +15,7 @@ daemon/23 and daemon/30 are built, and their tests pass. This run checks the npm
 2. Check that `Installing <names> with npm.` shows before npm's own output.
 3. Run `ahpd plugin update all`.
 4. Check that `Updating <names> with npm.` shows before npm runs.
-5. Run `ahpd plugin uninstall` on one plugin.
+5. Run `ahpd plugin remove` on one plugin.
 6. Check that `Removing <names> with npm.` shows before npm runs.
 7. A pass of steps 5 and 6 also ticks the remove line of daemon/23.
 
