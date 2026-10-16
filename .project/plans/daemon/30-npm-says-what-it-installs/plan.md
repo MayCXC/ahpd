@@ -1,7 +1,7 @@
 ---
 title: npm says what it installs before it runs
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16

@@ -45,7 +45,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15 | - | - |
 | [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
-| [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | planned 2026-10-16 | - | - |
+| [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; the Windows check remains | - | - |
 
 Next free number in `daemon`: `31`.
 
