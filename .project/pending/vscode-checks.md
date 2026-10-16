@@ -77,15 +77,16 @@ A recording proxy, `scripts/tee.mjs`, sat between the window and ahpd for p2 to 
 - **p3:** pass, after a fix.
   The window sends the origin on the request's `_meta`, not in `config._meta`, so the agent never reported back.
   See the departure in host/83 p3's `implemented.md`.
-- **p4:** steps 1 to 3 pass, after a fix. Step 4 is open.
+- **p4:** pass, after a fix.
   Switching off one built-in plugin switched off all three, because they shared the enablement key `builtin`.
-  The stored decision survived `ahpd restart`, but the window was not reloaded and checked after it.
+  With the fix, `cc-plugin-agents-md` switched off stays off in a new session after `ahpd restart`, and the other two stay on.
+  "Disable (Session)" does not stay; see host/83 p4's `implemented.md`.
 - **host/95:** not run.
 
 ### Seen on the way, not fixed
 
 - The window's slash list names the skills of the "VS Code Synced Data" plugin by its nonce, as in `/1683262406:advisor`.
 - The Automations view once showed "The agent host is disconnected on ahpd" while ahpd ran the whole time.
-- On Windows, `pnpm boundary` fails: `scripts/boundary.mjs:60` builds `F:\F:\github\ahpd\packages` from a URL pathname.
+- On Windows, `pnpm boundary` fails: `scripts/boundary.mjs:60` builds `/github/ahpd/packages` from a URL pathname.
 - On Windows, vitest fails 17 tests in `packages/agent-claude` and about 200 in `packages/sdk`, the same with and without the fixes.
   Most assume POSIX paths, such as `/dev/zero` and `/home/softov`, or a POSIX shell, git worktree or pty.
