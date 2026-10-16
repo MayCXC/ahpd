@@ -14,15 +14,21 @@ import type { BotStore } from './store.js';
  * the bot (see `provider.ts`), titled with the bot's name, working in the bot's
  * folder.
  *
- * Nothing runs here. A turn ends in the same call it starts in, with no
- * response part and no model behind it - the answer arrives later, as the bot's
- * own session posts into this one. What this backend is for is the *log*: one
- * JSON line per turn under `<configDir>/bot-chats/`, which is what lets a
- * daemon that restarts list a chat, open it, and show what was said in it.
+ * No model runs here either, but something answers: a turn this chat begins
+ * stays open until whoever started the chat ends it, through the handle
+ * `turns` answers with. The answer is the bot's own - a markdown part when its
+ * session posts one, a notice when there is nothing to say, and a cancelled
+ * turn when somebody stops it - and until then the turn is the chat's
+ * `activeTurn`. A chat nobody is listening to is a chat with no bot behind it,
+ * and its turn ends the moment it begins, which is what this backend did before
+ * there was a handle.
  *
- * The log is the whole of the state. Nothing about a chat is kept in memory
- * past the process that made it, so `list`, `find` and `transcript` read the
- * folder and there is no index that could fall out of step with it.
+ * What this backend is for is the *log*: one JSON line per moment under
+ * `<configDir>/bot-chats/` - a line when a turn begins, a line when it ends
+ * with its response, and a line for each message steered into an open turn.
+ * Nothing about a chat is kept in memory past the process that made it, so
+ * `list`, `find` and `transcript` read the folder and there is no index that
+ * could fall out of step with it.
  */
 
 /**
@@ -35,6 +41,64 @@ import type { BotStore } from './store.js';
  */
 type Transcript = NonNullable<Awaited<ReturnType<NonNullable<Agent['transcript']>>>>;
 type ChatTurn = Transcript[number];
+
+/** How a turn can end, in the protocol's spelling. */
+type Ending = ChatTurn['state'];
+
+/**
+ * One turn a chat has open, before it is a turn at all.
+ *
+ * `ActiveTurn` in the protocol's spelling, and without the two fields a turn
+ * has only once it has ended: a state and a duration. Being open is exactly the
+ * absence of those.
+ */
+interface OpenTurn {
+  id: string;
+  startedAt: string;
+  message: ChatTurn['message'];
+  responseParts: Bag[];
+}
+
+/**
+ * One message in a chat: what was said, and the turn it belongs to.
+ *
+ * What the handle's `onMessage` is told. A turn this chat begins and a message
+ * steered into the open one are told the same way, because the difference is
+ * not in the telling: whoever answers is told what somebody said, and answers
+ * the turn either way.
+ */
+export interface ChatMessage {
+  /** The URI of the session the chat is in. */
+  session: string;
+  /** The turn that began, or the open turn the message was steered into. */
+  turnId: string;
+  /** What was said. */
+  text: string;
+}
+
+/**
+ * The handle over one chat's open turn: what ends it, and what hears about it.
+ *
+ * Held by whoever started the chat, which is the plugin: nothing in this
+ * package knows what a bot's answer is, and nothing here would ever end a turn
+ * by itself. `reply` is that answer, `notice` is something that happened
+ * instead of one, and `end` is a turn that gets neither - each ends the turn it
+ * finds open, and does nothing at all when there is none.
+ *
+ * `onMessage` is the other direction: each turn this chat begins, and each
+ * message steered into the open one, is handed to it. That is how what a person
+ * says to a bot reaches the session that does the work.
+ */
+export interface TurnHandle {
+  /** End the open turn with this as its answer. */
+  reply(text: string): void;
+  /** End the open turn with a notice rather than an answer. */
+  notice(text: string): void;
+  /** End the open turn with no response at all. */
+  end(): void;
+  /** Who hears about each turn that begins and each message steered into one. */
+  onMessage?: (message: ChatMessage) => void;
+}
 
 /** The provider id a chat is registered and named under. */
 export const CHAT_PROVIDER = 'bot-chat';
@@ -93,6 +157,18 @@ const messageOf = (text: string, from?: MessageFrom): ChatTurn['message'] => ({
 });
 
 /**
+ * The ending a line's `state` names, or `complete` where it names none.
+ *
+ * A line a turn *began* with carries no state, and neither does one a person
+ * wrote by hand. A state is what an ending is, so anything that is not one of
+ * the endings reads back as a turn that finished - which is what such a turn
+ * is, as far as a chat that answers again after a restart can say.
+ */
+const endingIn = (said: unknown): Ending => (
+  said === 'cancelled' || said === 'error' ? said : 'complete'
+);
+
+/**
  * One turn read back off a log line, or nothing when the line is not one.
  *
  * A log a person has edited by hand can say anything, so what comes back is
@@ -121,7 +197,7 @@ const turnOf = (said: Bag): ChatTurn | undefined => {
       ...(typeof held['_meta'] === 'object' && held['_meta'] !== null ? { _meta: held['_meta'] as Bag } : {}),
     },
     responseParts: Array.isArray(said['responseParts']) ? said['responseParts'] as Bag[] : [],
-    state: 'complete',
+    state: endingIn(said['state']),
     usage: undefined,
   };
 };
@@ -137,12 +213,20 @@ const turnOf = (said: Bag): ChatTurn | undefined => {
  * turns are two lines, and a file whose first line is unreadable still says
  * which chat it is. It is what tells a listing which bot a chat is for, since
  * the file is named by a session id and says nothing else.
+ *
+ * A turn is two lines - the one it began with and the one it ended with - and
+ * what comes back is one turn: the line an ending was written on replaces the
+ * line the turn opened on, because it is the same turn said again, as it
+ * finished. A chat whose daemon died mid-turn has only the first of the two,
+ * and that reads as the turn it was.
  */
 const logAt = (path: string): { turns: ChatTurn[]; mark: Bag | undefined } | undefined => {
   let text: string;
   try { text = readFileSync(path, 'utf8'); }
   catch { return undefined; }
   const turns: ChatTurn[] = [];
+  /** Where each turn read so far sits, so the line that ends it can replace it. */
+  const at = new Map<string, number>();
   let mark: Bag | undefined;
   for (const line of text.split('\n')) {
     if (line.trim() === '') continue;
@@ -151,10 +235,28 @@ const logAt = (path: string): { turns: ChatTurn[]; mark: Bag | undefined } | und
     try { said = JSON.parse(line); }
     catch { continue; }
     if (typeof said !== 'object' || said === null || Array.isArray(said)) continue;
-    const one = turnOf(said as Bag);
+    const held = said as Bag;
+    /*
+     * What somebody said into a turn that was already running.
+     *
+     * Kept, as everything said in a chat is, and not a turn: a steering message
+     * is consumed by the turn it steers, and the protocol has no place on a
+     * finished turn for a second message. It is still a line of this chat's, so
+     * it says which bot the chat is for like any other.
+     */
+    if (held['steering'] === true) {
+      mark ??= markIn(held);
+      continue;
+    }
+    const one = turnOf(held);
     if (one === undefined) continue;
-    mark ??= markIn(said as Bag);
-    turns.push(one);
+    mark ??= markIn(held);
+    const known = at.get(one.id);
+    if (known === undefined) {
+      at.set(one.id, turns.length);
+      turns.push(one);
+    }
+    else turns[known] = one;
   }
   return { turns, mark };
 };
@@ -197,6 +299,31 @@ const rowOf = (dir: string, id: string, store: BotStore): Listed | undefined => 
 };
 
 /**
+ * The handles of the chats this process has open, by the URI of their session.
+ *
+ * A chat is started by the host, which answers with a session URI and nothing
+ * else - a `Session` never leaves this package - so a URI is all the plugin
+ * that started a chat has to reach the turn in it by. The URI is the one the
+ * *host* made for the session, which is the one a backend is started with:
+ * a client names an id and the host names the scheme, so the URI a client
+ * sent is an alias of this one and not this one.
+ */
+const handles = new Map<string, TurnHandle>();
+
+/**
+ * The handle over one chat's open turn, by the URI of the session it is in.
+ *
+ * Throws for a session that is not a chat of this provider's: a URI nothing
+ * here answers to names something else, which is a different thing from a chat
+ * with no turn open in it.
+ */
+export function turns(session: string): TurnHandle {
+  const held = handles.get(session);
+  if (held === undefined) throw new Error(`${session} is not a chat this host is running`);
+  return held;
+}
+
+/**
  * The `bot-chat` agent, over one daemon's configuration folder and its bots.
  *
  * `store` is read rather than a file of its own, because a chat is a chat
@@ -218,11 +345,88 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
     const turns: ChatTurn[] = logAt(fileOf(dir, id))?.turns ?? [];
     let modified = new Date().toISOString();
     let draft: Bag | undefined;
+    /**
+     * The turn this chat has open, until the handle ends it.
+     *
+     * Not in `turns`: a turn is one of those once it has ended, and what a
+     * client reading the chat is told about while it runs is `activeTurn`. A
+     * chat starts with none open, even one whose log has a line a turn began
+     * with and none it ended with - nothing here knows who was going to answer
+     * it, and the plugin that started the chat is where that is known.
+     */
+    let open: OpenTurn | undefined;
 
     const touch = (): void => { modified = new Date().toISOString(); };
 
     /**
-     * Say one turn, and keep it.
+     * End the open turn, and keep the turn it was.
+     *
+     * The state and the duration are written down here rather than at the
+     * beginning, which is the whole difference between a turn that is open and
+     * one that is over. The line goes down before the turn is announced, as the
+     * line it began with did: a turn a client watched end is a turn a restart
+     * can read back.
+     */
+    const finish = (held: OpenTurn, state: Ending, parts: Bag[]): void => {
+      open = undefined;
+      const duration = Date.now() - Date.parse(held.startedAt);
+      const turn: ChatTurn = {
+        id: held.id,
+        startedAt: held.startedAt,
+        duration,
+        message: held.message,
+        responseParts: parts,
+        state,
+        usage: undefined,
+      };
+      // The same turn said again, as it ended: one turn, two lines, and the
+      // second of them is the one a reader takes.
+      append(dir, id, { ...turn, _meta: mark });
+      turns.push(turn);
+      touch();
+      // Whatever it answered with, before the turn is said to be over: a part
+      // that arrived after the end is a part of a turn nobody is holding.
+      for (const part of parts) start.emit('chat', { type: 'chat/responsePart', turnId: held.id, part });
+      start.emit('chat', state === 'cancelled'
+        ? { type: 'chat/turnCancelled', turnId: held.id, duration }
+        : { type: 'chat/turnComplete', turnId: held.id, duration });
+    };
+
+    /**
+     * The handle over this chat's open turn, which the plugin that started the
+     * chat holds.
+     *
+     * A method here that finds no open turn does nothing: the turn it was meant
+     * to answer has ended, and a second ending would be a second turn.
+     */
+    const handle: TurnHandle = {
+      reply: (text) => {
+        const held = open;
+        if (held === undefined) return;
+        /*
+         * One part, whole. Nothing streams into a chat that runs no model, so
+         * there are no `chat/delta`s after it - and the id is the turn's, which
+         * is what a delta would have appended to.
+         */
+        finish(held, 'complete', [{ id: `${held.id}:reply`, kind: 'markdown', content: text }]);
+      },
+      notice: (text) => {
+        const held = open;
+        if (held === undefined) return;
+        // No id: `SystemNotificationResponsePart` has none, which is what the
+        // reference harness writes for a notice of its own.
+        finish(held, 'complete', [{ kind: 'systemNotification', content: text }]);
+      },
+      end: () => {
+        const held = open;
+        if (held === undefined) return;
+        finish(held, 'complete', []);
+      },
+    };
+    handles.set(start.uri, handle);
+
+    /**
+     * Say one turn, and keep the beginning of it.
      *
      * The line goes down before the turn is announced, so a log that could not
      * be written is a turn that did not happen rather than one a client watched
@@ -235,22 +439,11 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
     const beginTurn = (turnId: string, text: string, from?: MessageFrom, queuedMessageId?: string): void => {
       const startedAt = new Date().toISOString();
       const message = messageOf(text, from);
-      /*
-       * Read before the write rather than after: a turn's duration is the
-       * turn's, and the two actions below carry the number the log does.
-       */
-      const duration = Date.now() - Date.parse(startedAt);
-      const turn: ChatTurn = {
-        id: turnId,
-        startedAt,
-        duration,
-        message,
-        responseParts: [],
-        state: 'complete',
-        usage: undefined,
-      };
-      append(dir, id, { ...turn, _meta: mark });
-      turns.push(turn);
+      const held: OpenTurn = { id: turnId, startedAt, message, responseParts: [] };
+      open = held;
+      // No state and no duration: this is the turn as it began, and the line
+      // that ends it is the one that says how it went.
+      append(dir, id, { id: turnId, startedAt, message, responseParts: [], _meta: mark });
       touch();
       start.emit('chat', {
         type: 'chat/turnStarted',
@@ -259,7 +452,14 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         message,
         ...(queuedMessageId === undefined ? {} : { queuedMessageId }),
       });
-      start.emit('chat', { type: 'chat/turnComplete', turnId, duration });
+      /*
+       * The turn is open before anybody is told about it, because what is told
+       * is what answers it - and it is over at once when nobody is. That is a
+       * chat with no bot behind it: one a person opened to read, or one this
+       * host has just restarted and not answered again.
+       */
+      if (handle.onMessage === undefined) finish(held, 'complete', []);
+      else handle.onMessage({ session: start.uri, turnId, text });
     };
 
     return {
@@ -272,10 +472,16 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
       agentId: () => id,
       customizations: () => start.seedCustomizations ?? [],
 
+      // The turns that are over. One still open is not here: it is what
+      // `chatState().activeTurn` is for, as it is for every other backend.
       allTurns: () => turns,
-      // `SessionStatus`: a turn ends in the call that starts it, so there is
-      // never one running here to report.
-      status: () => Status.Idle,
+      /*
+       * `SessionStatus`: an open turn is `InProgress`, because the chat is
+       * waiting - on the bot's session, which is where the answer is being
+       * worked out. Nothing is being waited *for* from the person, so it is not
+       * `InputNeeded`.
+       */
+      status: () => (open === undefined ? Status.Idle : Status.InProgress),
       activity: () => undefined,
       title: () => bot.name,
       modifiedAt: () => modified,
@@ -286,7 +492,7 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         // `SessionState`, and a client subscribed to this channel named it.
         provider: CHAT_PROVIDER,
         title: bot.name,
-        status: Status.Idle,
+        status: open === undefined ? Status.Idle : Status.InProgress,
         lifecycle: 'ready',
         defaultChat: start.chatUri,
         chats: [{ resource: start.chatUri, title: bot.name }],
@@ -302,9 +508,22 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
       chatState: () => ({
         resource: start.chatUri,
         title: bot.name,
-        status: Status.Idle,
+        status: open === undefined ? Status.Idle : Status.InProgress,
         modifiedAt: modified,
         turns,
+        // The turn that is running, in the protocol's own spelling for one:
+        // no state and no duration, because it has neither until it ends. The
+        // parts array is the live one, so a client that reads the state while
+        // an answer is being written sees what is in it.
+        ...(open === undefined ? {} : {
+          activeTurn: {
+            id: open.id,
+            startedAt: open.startedAt,
+            message: open.message,
+            responseParts: open.responseParts,
+            usage: undefined,
+          },
+        }),
         ...(draft === undefined ? {} : { draft }),
         _meta: mark,
       }),
@@ -325,11 +544,51 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         beginTurn(crypto.randomUUID(), text, from, id);
       },
 
-      // Nothing waits and nothing runs, so there is nothing for either of these
-      // to move or stop. A turn here is over before a client could ask.
+      // Nothing ever waits behind anything here, so there is nothing for these
+      // to move. A stop is a different matter, and is below.
       unqueue: () => {},
       reorder: () => {},
-      cancel: () => {},
+
+      /**
+       * A message put into the turn that is already running.
+       *
+       * Nothing here can take one: a correction halfway is read by a model, and
+       * this chat runs none. What it does instead is hand the message on to
+       * whoever answers the chat - which is the session doing the work, and it
+       * is told mid-turn the same way a harness with steering would be - and
+       * keep it, because what was said into a turn was said in this chat.
+       *
+       * The id the host names is the client's own entry, which nothing here
+       * holds a queue of: the line is written against the turn the message
+       * went into, which is the one thing a later reader asks about.
+       *
+       * False where there is no open turn to put it in, which is a message the
+       * host refuses rather than one it quietly turns into a turn of its own.
+       */
+      steer: (_pendingId, text) => {
+        const held = open;
+        if (held === undefined) return false;
+        append(dir, id, { id: held.id, steering: true, message: messageOf(text), _meta: mark });
+        touch();
+        handle.onMessage?.({ session: start.uri, turnId: held.id, text });
+        return true;
+      },
+
+      /**
+       * Stop the turn that is running.
+       *
+       * There is nothing here to stop - the work is the bot's session, and
+       * whether that hears the stop is the plugin's business - so the turn is
+       * ended as a cancelled one, and a client watching the chat is told
+       * exactly that. A stop that names neither the open turn nor nothing at
+       * all is a stop for a turn this chat is not running, which is not one.
+       */
+      cancel: (turnId) => {
+        const held = open;
+        if (held === undefined) return;
+        if (turnId !== '' && turnId !== held.id) return;
+        finish(held, 'cancelled', []);
+      },
 
       // Held by the session, so two people on one chat see each other's - which
       // is the whole of what a draft is for.
@@ -354,8 +613,15 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
 
       settings: () => ({ ...start.settings }),
 
-      // Nothing runs between turns: no process to stop and no timer to clear.
-      close: () => {},
+      /*
+       * Nothing runs between turns: no process to stop and no timer to clear.
+       * What there is to let go of is the handle, which is nobody's once this
+       * chat is one this host no longer runs - and a chat started again, under
+       * the same URI, registers a handle of its own.
+       */
+      close: () => {
+        if (handles.get(start.uri) === handle) handles.delete(start.uri);
+      },
     };
   }
 

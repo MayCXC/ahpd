@@ -69,7 +69,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A main chat and its back sessions have names](task-01-a-main-chat-and-its-back-sessions-have-names.md) | implemented | - |
-| [02 - A main turn stays open](task-02-a-main-turn-stays-open.md) | todo | - |
+| [02 - A main turn stays open](task-02-a-main-turn-stays-open.md) | implemented | - |
 | [03 - A message wakes a back session](task-03-a-message-wakes-a-back-session.md) | todo | 01, 02 |
 | [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | todo | 03 |
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
