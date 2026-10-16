@@ -107,17 +107,29 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
   const named = new Set(list(plugins).map((raw) => str(bag(raw).name) ?? ''));
   /** The names of the plugins switched off that the CLI is not loading. */
   const switchedOff = new Set(stopped.map((one) => str(one.name) as string).filter((name) => !named.has(name)));
-  const reportedPlugins = [...list(plugins).map((raw) => bag(raw)), ...stopped]
-    .filter((one) => (str(one.name) ?? '') !== '' && (str(one.path) ?? '') !== '')
-    /*
-     * Less the ones this host handed over itself. The CLI reports a plugin by
-     * the directory it was given, and the session's customizations already
-     * carry the host's own entry for it - so a plugin listed twice would be
-     * one a person is offered two switches for.
-     */
-    .filter((one) => ours?.has(str(one.path) ?? '') !== true);
+  const reported = [...list(plugins).map((raw) => bag(raw)), ...stopped]
+    .filter((one) => (str(one.name) ?? '') !== '' && (str(one.path) ?? '') !== '');
+  /*
+   * The ones this host handed over itself, kept apart from the rest. The CLI
+   * reports a plugin by the directory it was given, and the session's
+   * customizations already carry the host's own entry for it - so a plugin
+   * listed twice would be one a person is offered two switches for.
+   */
+  const handed = reported.filter((one) => ours?.has(str(one.path) ?? '') === true);
+  const reportedPlugins = reported.filter((one) => ours?.has(str(one.path) ?? '') !== true);
   const pluginOf = (name: string): Bag | undefined =>
     reportedPlugins.find((plugin) => name.startsWith(`${str(plugin.name) ?? ''}:`));
+  /*
+   * The handed plugin that namespaced a name, which is the CLI's own name for
+   * it: a skill of a copy is `<the name the CLI read>:<the file's name>`, and
+   * the name it read is a plugin name this host wrote (see `clientplugins`).
+   *
+   * Read off the CLI's report rather than worked out from the path, because
+   * that name is what the CLI runs a skill by, and a name this host guessed
+   * would be one the CLI answers to with nothing.
+   */
+  const handedOf = (name: string): Bag | undefined =>
+    handed.find((plugin) => name.startsWith(`${str(plugin.name) ?? ''}:`));
   /** The SDK's name with the plugin's namespace taken off it. */
   const bare = (plugin: Bag, name: string): string => {
     const prefix = `${str(plugin.name) ?? ''}:`;
@@ -173,6 +185,15 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
     .filter(([name]) => name !== ''));
 
   for (const [name, skill] of loaded) {
+    /*
+     * A skill the CLI read out of a copy this host handed over is left out, and
+     * the host's own entry for that copy is what lists it.
+     *
+     * The two are the same file. Listed from both, a person is offered the skill
+     * twice - and under the name the CLI read it by, which for a copy is the
+     * nonce its directory is named, so one of the two is `1683262406:advisor`.
+     */
+    if (handedOf(name) !== undefined) continue;
     const command = offered.get(name);
     const described = str(skill.description) ?? str(bag(command).description);
     const hint = str(skill.argumentHint) ?? str(bag(command).argumentHint);
@@ -197,6 +218,8 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
 
   for (const [name, command] of offered) {
     if (loaded.has(name)) continue;
+    // A command of a handed plugin, for the same reason as a skill of one.
+    if (handedOf(name) !== undefined) continue;
     const plugin = pluginOf(name);
     const leaf: Bag = {
       type: 'prompt',

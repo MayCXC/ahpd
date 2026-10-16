@@ -15,6 +15,9 @@ import type { Bag } from '../../sdk/src/types/common.js';
  */
 
 const PLUGIN = { name: 'acme', path: '/plugins/acme', version: '1.0.0' };
+/** A copy this host handed the CLI itself, under the nonce directory it was filed in. */
+const HANDED = '/copies/virtual---plugin-bundle/1683262406';
+const BUNDLE = { name: 'vs-code-synced-data', path: HANDED };
 const children = (one: Bag | undefined): Bag[] => (one?.children ?? []) as Bag[];
 const byType = (list: Bag[], type: string): Bag | undefined => list.find((one) => one.type === type);
 
@@ -105,6 +108,40 @@ describe('where a customization came from', () => {
     ]);
     // Everything was attributed, so no per-kind directory is reported at all.
     expect(out.filter((one) => one.type === 'directory')).toEqual([]);
+  });
+
+  it('leaves a skill of a handed plugin out, because the host\'s own entry lists it', () => {
+    const out = customizationsOf({}, [], [
+      { name: 'vs-code-synced-data:advisor', description: '(vs-code-synced-data) A plugin skill' },
+      { name: 'user-skill', description: 'A user skill from disk' },
+    ], undefined, [BUNDLE], new Set([HANDED]));
+    // The copy is what the host's entry holds, and the CLI reports the same
+    // file under the plugin's name - which for a copy is the nonce its
+    // directory is named. Listed from both, the skill is offered twice.
+    expect(out.filter((one) => one.type === 'plugin')).toEqual([]);
+    expect(children(byType(out, 'directory')).map((one) => one.name)).toEqual(['user-skill']);
+    // Not moved under a container of its own either, which is where a name
+    // with no plugin to attribute it to goes.
+    expect(JSON.stringify(out)).not.toContain('advisor');
+  });
+
+  it('leaves a command of a handed plugin out too', () => {
+    const out = customizationsOf(
+      { commands: [{ name: 'vs-code-synced-data:sync-now' }] }, [], [], undefined, [BUNDLE], new Set([HANDED]),
+    );
+    // Nothing was attributed and nothing else was reported, so no container is
+    // invented for what is left over - and what is left over is nothing.
+    expect(out).toEqual([]);
+  });
+
+  it('attributes a skill to a plugin this host did not hand over, as before', () => {
+    const out = customizationsOf({}, [], [
+      { name: 'acme:acme-skill' },
+      { name: 'vs-code-synced-data:advisor' },
+    ], undefined, [PLUGIN, BUNDLE], new Set([HANDED]));
+    const plugin = byType(out, 'plugin');
+    expect(plugin).toMatchObject({ name: 'acme', uri: '/plugins/acme' });
+    expect(children(plugin).map((one) => one.name)).toEqual(['acme-skill']);
   });
 
   it('never invents a container for a namespace the SDK did not report', () => {

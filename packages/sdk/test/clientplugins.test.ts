@@ -29,6 +29,22 @@ const tree = (): Tree => ({
   [OTHER]: { 'plugin.json': '{}' },
 });
 
+const BUNDLE = 'virtual://plugin/bundle';
+/** Where the bundle is filed, which is its URI with everything but letters and digits turned to dashes. */
+const BUNDLE_KEY = 'virtual---plugin-bundle';
+
+/**
+ * A bundle as VS Code announces one: an Open Plugins manifest, a skill, and no
+ * Claude manifest.
+ *
+ * A tree of its own because the manifest is a file inside the copy, and none of
+ * the other trees here has one of those.
+ */
+const bundle = (manifest: Record<string, string>): Tree => ({
+  [BUNDLE]: { 'SKILL.md': '---\nname: advisor\n---\n' },
+  [`${BUNDLE}/.plugin`]: { 'plugin.json': JSON.stringify(manifest) },
+});
+
 /** A client that serves one tree, and counts what it was asked for. */
 function serving(tree: Tree, broken: string[] = []): { clients: () => Clients; asked: string[] } {
   const asked: string[] = [];
@@ -116,6 +132,51 @@ it('copies again when the client says the plugin changed', async () => {
   expect(second).toEqual({ uri: PLUGIN, nonce: 'n2', path: join(dir, KEY, 'n2') });
   expect(asked.filter((one) => one.startsWith('read'))).toHaveLength(6);
   expect(dirs(join(dir, KEY))).toEqual(['n1', 'n2']);
+  rmSync(dir, { recursive: true, force: true });
+});
+
+it('gives a copy that brought only an Open Plugins manifest the Claude one it has none of', async () => {
+  const dir = place();
+  const manifest = { name: 'VS Code Synced Data', description: 'Customization data synced from VS Code', skills: 'custom/' };
+  const port = clientPluginsIn(dir, serving(bundle(manifest)).clients);
+
+  const [answer] = await port.sync('plugin', [{ uri: BUNDLE, nonce: 'n1' }]);
+
+  // The directory a copy lands in is the nonce, and a Claude CLI with no
+  // manifest to read names the plugin by it - so the name a person would be
+  // shown is the one the client wrote, spelled the way a Claude plugin's is.
+  // Every other field goes with it, so a component the manifest moved is still
+  // found where it said.
+  expect(answer).toEqual({ uri: BUNDLE, nonce: 'n1', path: join(dir, BUNDLE_KEY, 'n1') });
+  expect(JSON.parse(readFileSync(join(dir, BUNDLE_KEY, 'n1', '.claude-plugin', 'plugin.json'), 'utf8')))
+    .toEqual({ ...manifest, name: 'vs-code-synced-data' });
+  rmSync(dir, { recursive: true, force: true });
+});
+
+it('leaves a Claude manifest a copy brought itself exactly where it is', async () => {
+  const dir = place();
+  const both = { ...bundle({ name: 'VS Code Synced Data' }), [`${BUNDLE}/.claude-plugin`]: { 'plugin.json': '{"name":"mine"}' } };
+  const port = clientPluginsIn(dir, serving(both).clients);
+
+  const [answer] = await port.sync('plugin', [{ uri: BUNDLE, nonce: 'n1' }]);
+
+  // The client's own name for its plugin wins over anything this host would
+  // have read out of the other manifest.
+  expect(answer).toEqual({ uri: BUNDLE, nonce: 'n1', path: join(dir, BUNDLE_KEY, 'n1') });
+  expect(readFileSync(join(dir, BUNDLE_KEY, 'n1', '.claude-plugin', 'plugin.json'), 'utf8')).toBe('{"name":"mine"}');
+  rmSync(dir, { recursive: true, force: true });
+});
+
+it('gives a copy that brought no manifest at all no Claude manifest', async () => {
+  const dir = place();
+  const port = clientPluginsIn(dir, serving(tree()).clients);
+
+  const [answer] = await port.sync('plugin', [{ uri: PLUGIN, nonce: 'n1' }]);
+
+  // Nothing named the plugin, so there is no name to write, and a manifest this
+  // host invented would be one the client never sent.
+  expect(answer).toEqual({ uri: PLUGIN, nonce: 'n1', path: join(dir, KEY, 'n1') });
+  expect(existsSync(join(dir, KEY, 'n1', '.claude-plugin'))).toBe(false);
   rmSync(dir, { recursive: true, force: true });
 });
 

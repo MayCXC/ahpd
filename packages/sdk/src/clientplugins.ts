@@ -28,7 +28,7 @@
  */
 
 import { createHash } from 'node:crypto';
-import { mkdirSync, readdirSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, renameSync, rmdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join, relative } from 'node:path';
 import { localPath, uriOf } from './fileuri.js';
 import { readJsonObject, writeJsonAtomic } from './jsonfile.js';
@@ -48,6 +48,10 @@ const KEY_CHARS = 128;
 const NO_NONCE = 'default';
 /** What a half-built copy is named, beside the name it is moved to. */
 const BUILDING = '.building';
+/** Where a Claude plugin keeps the manifest a Claude CLI reads. */
+const CLAUDE_MANIFEST = '.claude-plugin/plugin.json';
+/** And where an Open Plugins plugin keeps its own, which is the one a client hands a copy over in. */
+const OPEN_MANIFEST = '.plugin/plugin.json';
 /** The folder under the copies' directory where an automation's plugins live. */
 const AUTOMATIONS = 'automations';
 
@@ -69,6 +73,36 @@ const isDir = (path: string): boolean => {
 const under = (dir: string, path: string): boolean => {
   const rest = relative(dir, path);
   return rest !== '' && !rest.startsWith('..') && !isAbsolute(rest);
+};
+
+/** A plugin name as a Claude plugin writes one: lower case, and a dash for each run of anything else. */
+const kebab = (text: string): string => text.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
+/**
+ * Give a copy the manifest a Claude CLI reads, where it has none of its own.
+ *
+ * The CLI reads `.claude-plugin/plugin.json` and no other manifest, and names a
+ * plugin it finds no manifest for by its directory. For a copy here that
+ * directory is the nonce it was filed under, so every skill of it is offered as
+ * `1683262406:advisor` rather than under a name a person wrote. The name is
+ * therefore taken from the manifest the client did send, spelled the way a
+ * Claude plugin's name is. Every other field of that manifest is carried over
+ * as it was written, because the place a manifest moves a component to - a
+ * `skills` folder of its own - is read off whichever manifest is read first,
+ * and this one is.
+ *
+ * A copy that brought a Claude manifest is left where it is: the client's own
+ * name for the plugin is the one to keep. A copy that brought no manifest at all
+ * gets none, because there is nothing here to read a name from.
+ */
+const claudeManifestIn = (dir: string): void => {
+  const manifest = join(dir, CLAUDE_MANIFEST);
+  if (existsSync(manifest)) return;
+  const read = readJsonObject(join(dir, OPEN_MANIFEST));
+  if (!read.ok) return;
+  const name = kebab(str(read.value.name) ?? '');
+  if (name === '') return;
+  writeJsonAtomic(manifest, { ...read.value, name });
 };
 
 /**
@@ -183,6 +217,7 @@ export function clientPluginsIn(dir: string, clients: () => Clients): ClientPlug
         rmSync(building, { recursive: true, force: true });
         rmSync(at, { recursive: true, force: true });
         await copy(client, uri, building);
+        claudeManifestIn(building);
         renameSync(building, at);
         note(uri, nonce);
         answers.push({ ...asked, path: at });
