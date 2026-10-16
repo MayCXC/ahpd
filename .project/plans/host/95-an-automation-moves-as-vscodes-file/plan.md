@@ -1,7 +1,7 @@
 ---
 title: An automation moves as VS Code's file
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-15
 revalidated: 2026-10-15
@@ -75,8 +75,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`.
-- **Next action:** review both tasks.
+- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16.
+- **Next action:** the check by hand in VS Code, in `pending/vscode-checks.md`.
 - **Open questions:** none.
 - **Watch out for:** VS Code refuses a file with any key it does not know, so export writes no key of ahpd's own.
 

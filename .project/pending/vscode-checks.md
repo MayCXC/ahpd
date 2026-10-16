@@ -1,15 +1,16 @@
 ---
-title: Check host/83 in VS Code's window
+title: Check host/83 and host/95 in VS Code's window
 plans:
   - plans/host/83-p1-the-host-describes-itself/plan.md
   - plans/host/83-p2-a-run-is-stopped-and-runs-are-capped/plan.md
   - plans/host/83-p3-a-remote-session-keeps-its-origin/plan.md
   - plans/host/83-p4-customization-switched-for-all-sessions/plan.md
+  - plans/host/95-an-automation-moves-as-vscodes-file/plan.md
 ---
 
-# Check host/83 in VS Code's window
+# Check host/83 and host/95 in VS Code's window
 
-host/83 p1 to p4 are built, and their tests pass. Each one has one check that only VS Code's window can do. Use VS Code 1.140 or later.
+host/83 p1 to p4 and host/95 are implemented, and their tests pass. Each one has one check that only VS Code's window can do. Use VS Code 1.140 or later.
 
 ## Set up
 
@@ -47,6 +48,15 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 2. Open a new session, and check that the plugin is off there.
 3. Run `ahpd restart`, and reload the window.
 4. Open one more session, and check that the plugin is still off.
+
+## host/95: an automation file moves both ways
+
+1. Run `ahpd automation export <id> --out /tmp/ahpd-chk/one.automation.md` for an automation with a daily schedule.
+2. In VS Code's Automations view, import `/tmp/ahpd-chk/one.automation.md`.
+3. Check that the name, prompt and schedule are the same, and that the automation is switched off.
+4. In VS Code, export one automation to `/tmp/ahpd-chk/two.automation.md`.
+5. Run `ahpd automation import /tmp/ahpd-chk/two.automation.md --folder <folder>`.
+6. Reload the window, and check that the ahpd host lists it with the same name, prompt and schedule.
 
 ## Reply
 
