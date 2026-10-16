@@ -1,5 +1,6 @@
 /**
- * `ahpd automation`: one automation as VS Code's `.automation.md` file.
+ * `ahpd automation`: the automations this host holds, and one of them as VS
+ * Code's `.automation.md` file.
  *
  * The file is VS Code's blueprint (see `../blueprint.ts`), so an automation
  * made here opens in VS Code and one shared from VS Code runs here. Served, the
@@ -11,11 +12,11 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { isAbsolute, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { output } from '@cofold/commands';
 import type { Command, CommandContext, Registry } from '@cofold/commands';
-import { ownerOfPrincipal } from '@ahpd/sdk';
-import type { AutomationStore, Owner, Principal } from '@ahpd/sdk';
+import { bag, ownerOfPrincipal } from '@ahpd/sdk';
+import type { AutomationEntry, AutomationStore, Owner, Principal } from '@ahpd/sdk';
 import {
   automationToBlueprint,
   createAutomationBlueprintFileName,
@@ -52,6 +53,65 @@ const storeOf = (served?: ServedFacts): { store: AutomationStore; done(): void }
 
 /** The resource an id names: a bare id or the whole `ahp-automation:/` URI. */
 const resourceOf = (id: string): string => (id.startsWith(PREFIX) ? id : `${PREFIX}${id}`);
+
+/** One row of `automation list`. */
+export interface ListedAutomation {
+  /** The automation's id in this host's store, the one `automation export` takes. */
+  id: string;
+  /** Its title, or its id when it has none. */
+  name: string;
+  /** The folder it runs in, when it names one. */
+  folder?: string;
+  /** Each trigger: a cron expression with its zone, or `on <type>` for an event; `manual` for none. */
+  schedule: string;
+  /** Whether it runs on its triggers. */
+  enabled: boolean;
+}
+
+/** The folder a working directory names: a path for a `file:` URI, the text otherwise. */
+const folderOfDirectory = (directory: unknown): string | undefined => {
+  if (typeof directory !== 'string' || directory === '') return undefined;
+  if (!directory.startsWith('file:')) return directory;
+  try {
+    return fileURLToPath(directory);
+  }
+  catch {
+    return directory;
+  }
+};
+
+/** One trigger as `automation list` shows it. */
+const triggerOf = (raw: unknown): string => {
+  const trigger = bag(raw);
+  if (trigger.kind === 'schedule') {
+    const held = bag(trigger.schedule);
+    const expression = typeof held.expression === 'string' ? held.expression.trim() : '';
+    const zone = typeof held.timeZone === 'string' && held.timeZone !== '' ? held.timeZone : 'UTC';
+    return `${expression} ${zone}`;
+  }
+  return `on ${typeof trigger.type === 'string' ? trigger.type : String(trigger.kind)}`;
+};
+
+/** One automation as a row of `automation list`. */
+const rowOf = (automation: AutomationEntry): ListedAutomation => {
+  const id = automation.resource.startsWith(PREFIX) ? automation.resource.slice(PREFIX.length) : automation.resource;
+  const definition = bag(automation.definition);
+  const title = typeof definition.title === 'string' ? definition.title.trim() : '';
+  const directories = bag(definition.session).workingDirectories;
+  const folder = folderOfDirectory(Array.isArray(directories) ? directories[0] : undefined);
+  const triggers = Array.isArray(definition.triggers) ? definition.triggers : [];
+  return {
+    id,
+    name: title || id,
+    ...(folder === undefined ? {} : { folder }),
+    schedule: triggers.length === 0 ? 'manual' : triggers.map(triggerOf).join(', '),
+    enabled: definition.enabled !== false,
+  };
+};
+
+/** One line per row: the id, the name, the folder, the schedule and on or off. */
+const lineOf = (row: ListedAutomation): string =>
+  [row.id, row.name, row.folder ?? '-', row.schedule, row.enabled ? 'on' : 'off'].join('  ');
 
 /** What `automation export` answers. */
 export interface ExportedAutomation {
@@ -114,6 +174,30 @@ const blueprintOf = (text: string, file?: string): AutomationBlueprint => {
 };
 
 export const declareAutomation = (registry: Registry<object>, served?: ServedFacts): Command[] => {
+  const list = registry.action({
+    id: 'automation.list',
+    summary: 'The automations this host holds',
+    description: 'One row each: the id export takes, the name, the folder, the schedule and whether it is on.',
+    surfaces: { cli: { pattern: ['automation', 'list'] }, http: { method: 'GET', path: '/automation/list' } },
+    // No key: this is the listing, and each row carries the `id` the other
+    // verbs here take.
+    effect: 'read',
+    resource: { kind: 'automation' },
+    input: {},
+    scopes: ['automation:list'],
+    run: async () => {
+      const { store, done } = storeOf(served);
+      let rows: ListedAutomation[];
+      try {
+        rows = store.list().map(rowOf);
+      }
+      finally {
+        done();
+      }
+      return output(rows, rows.length === 0 ? 'No automations yet.\n' : `${rows.map(lineOf).join('\n')}\n`);
+    },
+  });
+
   const exported = registry.action({
     id: 'automation.export',
     summary: 'Write an automation as a VS Code automation file',
@@ -216,5 +300,5 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
     },
   });
 
-  return [exported, imported];
+  return [list, exported, imported];
 };

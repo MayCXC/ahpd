@@ -1,6 +1,6 @@
 /*
  * VS Code's `.automation.md` file, read and written here, and `ahpd automation
- * export` on both surfaces.
+ * list` and `export` on both surfaces.
  *
  * The format is VS Code's own, so what is pinned is that a file VS Code wrote
  * reads back to the same text, that each schedule the format holds is written
@@ -330,6 +330,85 @@ describe('ahpd automation export', () => {
       expect(answer.status).toBe(409);
       expect((await answer.json() as { message: string }).message).toContain('runs on "*/5 * * * *"');
     });
+  });
+});
+
+describe('ahpd automation list', () => {
+  let home: string;
+  let had: string | undefined;
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), 'ahpd-automation-list-'));
+    had = process.env['XDG_CONFIG_HOME'];
+    process.env['XDG_CONFIG_HOME'] = home;
+  });
+  afterEach(() => {
+    if (had === undefined) delete process.env['XDG_CONFIG_HOME'];
+    else process.env['XDG_CONFIG_HOME'] = had;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  const ID = '0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10';
+  const rows = [
+    { id: ID, name: 'Review yesterday\'s commits', folder: '/home/softov/ahpd', schedule: `0 9 * * * ${ZONE}`, enabled: true },
+    { id: 'quiet', name: 'quiet', schedule: 'manual', enabled: false },
+  ];
+
+  /** Two automations: one daily in a folder, and one manual, untitled and switched off. */
+  const fill = (store: AutomationStore): void => {
+    store.create(`ahp-automation:/${ID}`, entry([schedule('0 9 * * *')]).definition);
+    store.create('ahp-automation:/quiet', { message: { text: 'Hush.' }, enabled: false, triggers: [] });
+  };
+
+  const run = async (): Promise<{ data: unknown; text: string }> => {
+    const registry = cliRegistry();
+    const command = registry.find('automation.list');
+    if (command === undefined) throw new Error('no automation.list');
+    const said = await registry.execute(command, { surface: 'cli', input: {}, readStdin: async () => '' });
+    if (said === null) throw new Error('answered nothing');
+    return { data: said.data, text: typeof said.plain === 'function' ? said.plain() : said.plain ?? '' };
+  };
+
+  it('shows each automation at a terminal, and the same rows as data', async () => {
+    const store = scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), timer: () => ({ cancel: () => {} }) });
+    fill(store);
+    store.close?.();
+    const said = await run();
+    expect(said.data).toEqual(expect.arrayContaining(rows));
+    expect((said.data as unknown[]).length).toBe(2);
+    expect(said.text.split('\n')).toEqual(expect.arrayContaining([
+      `${ID}  Review yesterday's commits  /home/softov/ahpd  0 9 * * * ${ZONE}  on`,
+      'quiet  quiet  -  manual  off',
+    ]));
+  });
+
+  it('says so when there is none', async () => {
+    const said = await run();
+    expect(said.data).toEqual([]);
+    expect(said.text).toBe('No automations yet.\n');
+  });
+
+  it('answers the same rows over /api', async () => {
+    const store = memoryAutomations();
+    fill(store);
+    const facts: ServedFacts = {
+      options: optionsFrom({}),
+      configFile: join(home, 'config.json'),
+      running: () => ({ pid: process.pid, url: `ws://${AUTHORITY}`, host: '127.0.0.1', port: 9361, paths: [], startedAt: '' }),
+      turning: () => [],
+      automations: () => store,
+      restart: () => {},
+    };
+    const handler = apiHandler({
+      registry: servedRegistry(facts),
+      token: 'root-secret',
+      program: { name: 'ahpd', version: '0.0.0' },
+      origins: () => apiOrigins('127.0.0.1', undefined, 9361),
+    });
+    const answer = await handler(new Request(`http://${AUTHORITY}/api/automation/list`, {
+      headers: { host: AUTHORITY, authorization: 'Bearer root-secret' },
+    }));
+    expect(answer.status).toBe(200);
+    expect(await answer.json()).toEqual(rows);
   });
 });
 

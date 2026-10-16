@@ -107,6 +107,7 @@ describe('the command registry', () => {
     expect(scopes('user.primary')).toEqual([]);
     // Reading an automation out is what a listing of them already shows.
     expect(scopes('automation.export')).toEqual(['automation:list']);
+    expect(scopes('automation.list')).toEqual(['automation:list']);
     expect(scopes('automation.import')).toEqual(['automation:create']);
   });
 
@@ -767,6 +768,7 @@ describe('what a served command says it does', () => {
     expect(rows).toEqual([
       ['automation.export', 'read', { kind: 'automation', key: 'id' }],
       ['automation.import', 'add', { kind: 'automation' }],
+      ['automation.list', 'read', { kind: 'automation' }],
       ['daemon.config', 'read', null],
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],

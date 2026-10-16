@@ -226,6 +226,12 @@ A daemon started over the `automations.json` an earlier version wrote converts i
 
 Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation export` and `import` move one out and in as [VS Code's file](#vs-code-automation-files).
 
+`ahpd automation list` shows one row per automation: the id that export takes, the name, the folder, the schedule and whether it is on. `--json` gives the same rows, and over HTTP it is `GET /api/automation/list`.
+
+```text
+0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10  Review yesterday's commits  /home/softov/ahpd  0 9 * * * America/Campo_Grande  on
+```
+
 | Command | What it does |
 | --- | --- |
 | `listAutomationTriggerDefinitions` | Every event trigger type this host fires: `session`, `watch`, and each plugin's |
@@ -303,7 +309,7 @@ Over HTTP it is `POST /api/automation/import`, with the file's text as the body'
 
 | What | Grant |
 | --- | --- |
-| List the catalogue, read a run, ask the trigger definitions, export one | `automation:list` |
+| List the catalogue, read a run, ask the trigger definitions, list the automations, export one | `automation:list` |
 | Write, patch or remove an automation, import one | `automation:create`, `automation:update`, `automation:remove` |
 | Press Run | `automation:run` |
 | Ask to stop a run | `automation:cancel`, which is asked before the refusal |
