@@ -552,6 +552,79 @@ describe('a session and its chats, read together', () => {
     expect(await isRead(client, uri)).toBe(false);
   });
 
+  /** A second client of the same session, subscribed to both its channels. */
+  const alsoWatching = async (started: Awaited<ReturnType<typeof running>>) => {
+    const p = peer();
+    const client = started.host.accept(p);
+    await client.handle(hello(['0.9.0'], { clientId: 'second' }));
+    await client.handle({ method: 'subscribe', params: { channel: started.uri } });
+    await client.handle({ method: 'subscribe', params: { channel: started.chatUri } });
+    return { client, peer: p };
+  };
+
+  /*
+   * A stop naming a turn that is not running applies to nothing, and this host
+   * used to hand it to the backend anyway - which cancels whatever it *is*
+   * running, whatever id it was handed. What the client holds meanwhile is its
+   * own action, pending until an echo carrying its `clientSeq` comes back: the
+   * same answer an unchanged announcement gets, and to the same one client.
+   */
+  it('echoes a cancel that stopped nothing to its sender alone', async () => {
+    const started = await running();
+    const { peer: two } = await alsoWatching(started);
+    // The sequence this host is at now, which the echo has to leave alone.
+    const at = Math.max(...actions(started.peer).map((e) => e.serverSeq));
+    started.peer.notes.length = 0;
+    two.notes.length = 0;
+
+    started.client.handle({
+      method: 'dispatchAction',
+      params: { channel: started.chatUri, clientSeq: 7, action: { type: 'chat/turnCancelled', turnId: 't1' } },
+    });
+    await settle();
+
+    const said = actions(started.peer, started.chatUri);
+    expect(said).toHaveLength(1);
+    expect(said[0]?.action).toEqual({ type: 'chat/turnCancelled', turnId: 't1' });
+    expect(said[0]?.origin).toEqual({ clientId: 'probe', clientSeq: 7 });
+    // Still where it was: no state moved, so no sequence did either.
+    expect(said[0]?.serverSeq).toBe(at);
+    // Nobody else applied it, so nobody else has anything to put back.
+    expect(actions(two)).toEqual([]);
+  });
+
+  it('stops the running turn when the cancel names it, and tells every client', async () => {
+    const started = await running();
+    const { peer: two } = await alsoWatching(started);
+    await send(started.client, started.chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+    started.peer.notes.length = 0;
+    two.notes.length = 0;
+
+    await send(started.client, started.chatUri, { type: 'chat/turnCancelled', turnId: 't1' });
+
+    expect(actions(started.peer, started.chatUri).some((e) => e.action.type === 'chat/turnCancelled')).toBe(true);
+    expect(actions(two, started.chatUri).some((e) => e.action.type === 'chat/turnCancelled')).toBe(true);
+  });
+
+  it('leaves the running turn alone when the cancel names another one', async () => {
+    const started = await running();
+    await send(started.client, started.chatUri, { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } });
+    started.peer.notes.length = 0;
+
+    started.client.handle({
+      method: 'dispatchAction',
+      params: { channel: started.chatUri, clientSeq: 9, action: { type: 'chat/turnCancelled', turnId: 't2' } },
+    });
+    await settle();
+
+    // The only stop on this channel is the echo, which is what says the
+    // backend was never asked to end the turn that is really running.
+    const said = actions(started.peer, started.chatUri).filter((e) => e.action.type === 'chat/turnCancelled');
+    expect(said).toHaveLength(1);
+    expect(said[0]?.action).toEqual({ type: 'chat/turnCancelled', turnId: 't2' });
+    expect(said[0]?.origin).toEqual({ clientId: 'probe', clientSeq: 9 });
+  });
+
   it('marks an unread chat read when it is archived, after the archive', async () => {
     const { client, peer: p, uri, chatUri } = await twoChats();
     await send(client, chatUri, chatRead(false));

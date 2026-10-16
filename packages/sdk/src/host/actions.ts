@@ -35,7 +35,7 @@ export interface Actions {
 
 export function createActions(ctx: HostContext, conn: ConnectionContext): Actions {
   const { connection, tokensFor } = conn;
-  const { refuse } = ctx;
+  const { refuse, echoTo } = ctx;
   /*
    * Nothing here that the host rewrites after it is built: `advancedTools`,
    * `contributed`, `contributing` and `restartNeeded` change while this
@@ -709,9 +709,15 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
        * of us ran that loop three hundred times in a few seconds, burning
        * a sequence number apiece. The guard `isReadChanged` has below is
        * the same guard, and this is the same reason for it.
+       *
+       * The client is still holding what it sent, so it is answered - to
+       * its own hearing only, which is the one place this differs from the
+       * echo every other action gets: the others did not send it.
        */
-      if (JSON.stringify(held.get(clientId)) === JSON.stringify(activeClient))
+      if (JSON.stringify(held.get(clientId)) === JSON.stringify(activeClient)) {
+        echoTo(connection.peer, channel, action, origin);
         return;
+      }
       // Re-announcing is how a client refreshes what it contributes, so
       // this replaces rather than merges - a tool taken away has to be
       // able to go.

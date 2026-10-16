@@ -182,6 +182,20 @@ function metered(scripts: Script[]): Agent {
           running = undefined;
           say({ type: 'chat/turnCancelled', turnId, duration: 1 });
         },
+        /*
+         * In step with the turn it is holding.
+         *
+         * This fake starts a turn without the example backend underneath it
+         * knowing - it says `chat/turnStarted` itself and never calls that
+         * backend's `begin` - so the state under it reports no `activeTurn`.
+         * The host reads `activeTurn` to tell a stop that stops something from
+         * one that changes nothing, which is a question this fake has to be
+         * able to answer.
+         */
+        chatState: () => ({
+          ...session.chatState(),
+          ...(running === undefined ? {} : { activeTurn: { id: running } }),
+        }),
       };
     },
   };

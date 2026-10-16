@@ -79,6 +79,17 @@ const actions = (p: ReturnType<typeof peer>, channel: string) => p.notes
   .filter((n) => n.channel === channel)
   .map((n) => n.action);
 
+/** The envelopes one client heard on one channel, whole, for the sequence and the origin. */
+const envelopes = (p: ReturnType<typeof peer>, channel: string) => p.notes
+  .filter((n) => n.method === 'action')
+  .map((n) => n.params as {
+    channel: string;
+    action: Record<string, unknown>;
+    serverSeq: number;
+    origin?: { clientId: string; clientSeq: number };
+  })
+  .filter((n) => n.channel === channel);
+
 const clientsIn = async (client: { handle(r: { method: string; params: Record<string, unknown> }): Promise<unknown> }, uri: string) => {
   const opened = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
     snapshot: { state: { activeClients: { clientId: string }[] } };
@@ -117,41 +128,58 @@ const enter = async (client: Client, id: string, tools: unknown[] = []): Promise
  * that changed nothing was itself the change that prompted the next
  * announcement - a loop the two ran three hundred times in a few seconds,
  * burning a `serverSeq` apiece.
+ *
+ * The announcement is still answered, to the client that sent it and to that
+ * one alone: it is holding the action until an echo carrying its `clientSeq`
+ * comes back, and no other client applied anything that has to be put back.
  */
-it('says nothing when a client announces what it already announced', async () => {
+it('echoes an unchanged announcement to its sender, and to nobody else', async () => {
   const held = host();
-  const { client, peer: p } = await joins(held, 'one');
+  const { client, peer: one } = await joins(held, 'one');
+  const { client: second, peer: two } = await joins(held, 'two');
   await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo' } });
   await client.handle({ method: 'subscribe', params: { channel: URI } });
+  await second.handle({ method: 'subscribe', params: { channel: URI } });
 
-  const announce = () => client.handle({
+  const announce = (clientSeq: number) => client.handle({
     method: 'dispatchAction',
-    params: { channel: URI, action: { type: 'session/activeClientSet', activeClient: { tools: [] } } },
+    params: { channel: URI, clientSeq, action: { type: 'session/activeClientSet', activeClient: { tools: [] } } },
   });
-  announce();
+  await announce(1);
   await settle();
-  announce();
-  announce();
+  // The sequence the change left this host at, and the one an echo of a later
+  // announcement carries: saying again is not state moving.
+  const at = envelopes(one, URI).at(-1)?.serverSeq;
+  await announce(2);
+  await announce(3);
   await settle();
 
-  // Once, for the one thing that changed. `serverSeq` advances with state and
-  // never with messages.
-  expect(actions(p, URI).filter((a) => a.type === 'session/activeClientSet')).toHaveLength(1);
+  // Once for the one thing that changed, and once for each announcement that
+  // changed nothing. `serverSeq` advances with state and never with messages.
+  const said = envelopes(one, URI).filter((e) => e.action.type === 'session/activeClientSet');
+  expect(said).toHaveLength(3);
+  expect(said.slice(1).map((e) => e.origin?.clientSeq)).toEqual([2, 3]);
+  expect(said.slice(1).map((e) => e.serverSeq)).toEqual([at, at]);
+  // The other client heard the change and nothing else.
+  const heard = envelopes(two, URI).filter((e) => e.action.type === 'session/activeClientSet');
+  expect(heard).toHaveLength(1);
 });
 
 it('says so again when what a client contributes has changed', async () => {
   const held = host();
   const { client, peer: p } = await joins(held, 'one');
+  const { client: second, peer: two } = await joins(held, 'two');
   await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo' } });
   await client.handle({ method: 'subscribe', params: { channel: URI } });
+  await second.handle({ method: 'subscribe', params: { channel: URI } });
 
-  client.handle({
+  await client.handle({
     method: 'dispatchAction',
     params: { channel: URI, action: { type: 'session/activeClientSet', activeClient: { tools: [] } } },
   });
   await settle();
   // A tool arriving is a change, and has to go out.
-  client.handle({
+  await client.handle({
     method: 'dispatchAction',
     params: {
       channel: URI,
@@ -161,6 +189,8 @@ it('says so again when what a client contributes has changed', async () => {
   await settle();
 
   expect(actions(p, URI).filter((a) => a.type === 'session/activeClientSet')).toHaveLength(2);
+  // A change is the session's, so every client watching it hears it.
+  expect(actions(two, URI).filter((a) => a.type === 'session/activeClientSet')).toHaveLength(2);
 });
 
 it('is an empty list before anybody says otherwise, because the field is required', async () => {

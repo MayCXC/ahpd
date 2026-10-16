@@ -159,7 +159,7 @@ export function chatAction(
   no: (reason: string) => void,
 ): Promise<void> | undefined {
   const { connection } = conn;
-  const { refuse } = ctx;
+  const { refuse, echoTo } = ctx;
   const {
     admitted, beginOrRun, beginTurn, beside, byChat, charge, charged, connections, contributedDefaults, decided,
     described, dispatch, drafts, fire, first, kept, known, leadOf, lifeOf, lives, log, messageAttachments,
@@ -1095,7 +1095,29 @@ export function chatAction(
      */
     case 'chat/turnCancelled': {
       if (!worker) {
-        session.cancel(String(action.turnId ?? ''));
+        /*
+         * A stop that names a turn this chat is not running stops nothing.
+         *
+         * Read here rather than left to the backend, because the example
+         * backends cancel whatever they are running whatever id they were
+         * handed - `turnId || turn.id` in both - and a client stopping a turn
+         * it had already finished would end somebody else's.
+         *
+         * A stop that names nothing is not one of those. A client with no id
+         * to give means the running turn, and there is nothing for a name to
+         * disagree with.
+         *
+         * Where nothing stops, the client applied the action all the same and
+         * is holding it, so it is answered rather than dropped: an echo to
+         * that client alone, since nothing here changed for anybody else.
+         */
+        const named = String(action.turnId ?? '');
+        const current = (session.chatState() as { activeTurn?: { id?: unknown } }).activeTurn;
+        if (current === undefined || (named !== '' && String(current.id ?? '') !== named)) {
+          echoTo(connection.peer, channel, action, origin);
+          break;
+        }
+        session.cancel(named);
         break;
       }
       const call = toolCallOfSubagentChat(channel);

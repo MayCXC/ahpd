@@ -718,6 +718,15 @@ export function createHost(options: HostOptions): Host {
     catch (error) { log(`plugin ${served.by}: left on ${served.scheme} failed: ${reason(error)}`); }
   };
   /**
+   * The name one connection watches a channel by, or the channel itself.
+   *
+   * A client that subscribed under a spelling of its own is sent everything
+   * under that name - its subscription is keyed by it and it would drop
+   * anything else - and one that uses the held name is sent the held name.
+   */
+  const watchedAs = (peer: Peer, channel: string): string =>
+    [...connections].find((one) => one.peer === peer)?.aliases.get(channel) ?? channel;
+  /**
    * A client's action, refused in that client's hearing.
    *
    * The other half of the write-ahead loop. A client applies an action before
@@ -751,9 +760,33 @@ export function createHost(options: HostOptions): Host {
     reason: string,
   ): void => {
     log(`${channel}: ${reason}`);
-    // Under the name the client watches it by, as `broadcast` sends an action.
-    const alias = [...connections].find((one) => one.peer === peer)?.aliases.get(channel);
-    peer.notify('action', { channel: alias ?? channel, action, serverSeq: ctx.serverSeq, origin, rejectionReason: reason });
+    peer.notify('action', { channel: watchedAs(peer, channel), action, serverSeq: ctx.serverSeq, origin, rejectionReason: reason });
+  };
+  /**
+   * A client's action, accepted, echoed in that client's hearing alone.
+   *
+   * The other half of the loop `refuse` is half of. A client applies its own
+   * action before it sends it and holds it pending until the host says what
+   * became of it - an echo carrying the `clientSeq` it sent, or a refusal. An
+   * action that leaves this host's state exactly as it was gets neither on the
+   * ordinary path, and the client sits on it until it reconnects.
+   *
+   * The same three things `refuse` deliberately does not do, for the same
+   * reasons. `serverSeq` does not move, because no state did. It is not
+   * buffered for replay, because a client that comes back is asking what it
+   * missed of the state and this changed none of it. And it goes to the one
+   * connection that sent it rather than to everyone watching the channel: the
+   * others applied nothing and so have nothing pending to drop, while an
+   * action echoed back to *them* is a state action on the session, which is
+   * what sent the loop round three hundred times.
+   */
+  const echoTo = (
+    peer: Peer,
+    channel: string,
+    action: Record<string, unknown>,
+    origin: Origin | undefined,
+  ): void => {
+    peer.notify('action', { channel: watchedAs(peer, channel), action, serverSeq: ctx.serverSeq, origin });
   };
   /**
    * Let a watch go once nobody is listening to it.
@@ -904,7 +937,7 @@ export function createHost(options: HostOptions): Host {
     options, dir, known, replayable, leaves, seenBy, claims, agents, first, connections, relays: new Map(), holders, sessions, byChat, subagents, owners, names,
     leadOf, wheres, worktrees, worktreeOf, githubFacts, kept, offered, decided, about, terminals,
     madeFrom, origins, births, moves, browsable, broadcast, presence, beside, marks, lives, lifeOf, restarting, learned, starting,
-    logs, detached, refuse,
+    logs, detached, refuse, echoTo,
     serverSeq: 0,
     closed: false, refusing: undefined, bareSessions: new Set<string>(), commandTurns: new Map<string, boolean>(), described, links,
     watches, marksOf, resumedSessions, activeClientsOf, drafts,

@@ -658,6 +658,21 @@ whenever the session state moves, this host's echo *is* the state moving, and
 so the echo was the change that prompted the next announcement. Three hundred
 round trips in a few seconds, a sequence number apiece.
 
+Silence is for the other clients; the sender is answered. A client applies its
+action as it sends it and holds it until this host answers to the `clientSeq`
+that action carried, so a sender told nothing is a sender holding a change
+nobody will ever confirm, until it reconnects. The action therefore comes back
+to that one client with its own `origin` and no `rejectionReason`, which is the
+answer that lets it drop what it holds. It comes back at the `serverSeq` this
+host is already at, and is not buffered for replay, so it is not state moving,
+not a reason for any other client to reconcile, and not the start of another
+loop.
+
+A cancel is the same case. `chat/turnCancelled` naming a turn that chat is not
+running stops nothing, so it changes nothing, and its sender is answered as an
+unchanged set is. A cancel that does name the running turn stops it, which is a
+change, and goes out to every client as one.
+
 ### The snapshot and the actions have to agree
 
 A client driven by actions builds its own state; a client that subscribes reads

@@ -300,6 +300,20 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
     origin: Origin | undefined,
     reason: string,
   ) => void;
+  /**
+   * Answer one client's dispatch with the action it sent, accepted.
+   *
+   * For an action that leaves this host's state exactly as it was: the sender
+   * applied it optimistically and is holding it pending, and this is what tells
+   * it the action is done. To that client alone, and without moving
+   * `serverSeq`, for the reasons `refuse` gives.
+   */
+  echoTo: (
+    peer: Peer,
+    channel: string,
+    action: Record<string, unknown>,
+    origin: Origin | undefined,
+  ) => void;
   /** The host's own log. */
   log: (message: string) => void;
   /** What the window's "collect logs" gets, and reads back. */
