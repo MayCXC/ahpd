@@ -1,6 +1,6 @@
 ---
 title: a pipe request names the pipe in the log
-status: implemented
+status: done
 depends: [task-05-docs.md]
 layer: server
 refs:

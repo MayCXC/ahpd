@@ -23,7 +23,6 @@ Current progress and pending items only, as of 2026-10-15.
 
 Each of these has its tasks built and reviewed. To close one, follow its Resume state.
 
-- daemon/20 and daemon/21: the Windows checks in [windows-checks.md](../pending/windows-checks.md).
 - daemon/23: passed on Windows; it needs only the close.
 - daemon/25: checked on Windows; Softov's review remains.
 - host/33: tasks 03 and 04 are implemented.
@@ -56,7 +55,7 @@ Each of these has its tasks built and reviewed. To close one, follow its Resume 
 
 ## By Softov's hand
 
-- [windows-checks.md](../pending/windows-checks.md) and [macos-checks.md](../pending/macos-checks.md).
+- [macos-checks.md](../pending/macos-checks.md).
 - container/02 tasks 01 to 03: the Windows VS Code run.
 - container/05 p9 task 06 on dev02.
 - The Modal title copy button needs a scena change.

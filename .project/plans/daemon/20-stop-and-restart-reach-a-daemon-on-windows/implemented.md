@@ -2,7 +2,7 @@
 title: "`ahpd stop` and `ahpd restart` reach a daemon on Windows - implemented"
 date: 2026-10-11
 refs:
-  - git://0ac2c07
+  - git://cc35a824
   - "[code://packages/server/src/control.ts](../../../../packages/server/src/control.ts)"
   - "[code://packages/server/src/daemon.ts](../../../../packages/server/src/daemon.ts)"
 ---
@@ -21,6 +21,8 @@ On Windows, `ahpd stop` and `ahpd restart` reach a detached daemon through a nam
 
 - `pnpm exec vitest run packages/server`: 48 files, 946 tests pass, with `control.test.ts` new.
 - `pnpm -s typecheck` and `pnpm -s boundary` pass on main after the merge.
+- Task 06: a restart through the control pipe names the pipe in its two log lines, and a forced one adds `forced`.
+- On Windows 10 Pro 19045 with Node v24.12.0, 2026-10-15, at `ff1288e0`: every check in the plan's final list passes.
 
 ## Departures from the plan
 
@@ -28,4 +30,4 @@ On Windows, `ahpd stop` and `ahpd restart` reach a detached daemon through a nam
 
 ## Left for later
 
-- The two checks by hand on Windows in the plan's final list - they need Softov's Windows machine.
+- none.

@@ -1,6 +1,6 @@
 ---
 title: The shutdown method runs the way down
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

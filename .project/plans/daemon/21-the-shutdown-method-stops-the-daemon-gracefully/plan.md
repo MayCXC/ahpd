@@ -1,7 +1,7 @@
 ---
 title: The shutdown method stops the daemon gracefully
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-13
 revalidated: 2026-10-13
@@ -57,7 +57,7 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The shutdown method runs the way down](task-01-the-shutdown-method-runs-the-way-down.md) | implemented | - |
+| [01 - The shutdown method runs the way down](task-01-the-shutdown-method-runs-the-way-down.md) | done | - |
 | [02 - A client hears the daemon go away](task-02-a-client-hears-the-daemon-go-away.md) | done | - |
 
 ## Risks and tradeoffs
@@ -69,13 +69,14 @@ client shutdown -> vscodemethods.ts shutdown -> logs.close -> diagnostics.shutdo
 
 - **Done so far:** planned 2026-10-13; task 01 implemented 2026-10-13, not reviewed. `diagnostics.shutdown` now runs the lifecycle's way down, so a `shutdown` request raises `stopping` and closes the listeners on every platform instead of signalling the daemon.
 - **Checked by hand:** on Linux, 2026-10-15, at `3cf1dc13`. After `initialize`, a `shutdown` request is answered, and the log shows `stopping` and `stopped` with no signal. With task 02, each client open at `shutdown` gets code 1001 and `the host is stopping`, checked the same day.
-- **Next action:** none on Linux; task 02 done 2026-10-15. The Windows check waits in [windows-checks.md](../../../pending/windows-checks.md).
+- **Checked by hand on Windows:** On Windows 10 Pro 19045 with Node v24.12.0, 2026-10-15, at `ff1288e0`. `shutdown` after `initialize` answers `{}`, the client gets 1001, and the log shows `stopping` and `stopped` within 10 ms.
+- **Next action:** none. The plan is built; see [implemented.md](implemented.md).
 - **Open questions:** none.
 - **Watch out for:** daemon/20 is not in 0.11.0. A Windows user gets both fixes in the next release.
 
 ## Final verification checklist
 
 - [x] A `shutdown` request raises `stopping` and closes the listeners before the exit, and sends no signal.
-- [ ] By hand on Windows: after `shutdown`, the daemon log shows the way down.
+- [x] By hand on Windows: after `shutdown`, the daemon log shows the way down.
 - [x] A client open at `shutdown` gets close code 1001.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

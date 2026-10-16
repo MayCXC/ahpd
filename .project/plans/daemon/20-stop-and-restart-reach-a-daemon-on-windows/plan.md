@@ -1,7 +1,7 @@
 ---
 title: "`ahpd stop` and `ahpd restart` reach a daemon on Windows"
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-11
 revalidated: 2026-10-11
@@ -92,7 +92,7 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
 | [03 - Stop and restart send through the pipe on Windows](task-03-stop-and-restart-send-through-the-pipe.md) | done | 02 |
 | [04 - Stop waits for the daemon to exit](task-04-stop-waits-for-the-daemon-to-exit.md) | done | 03 |
 | [05 - The docs describe stop and restart on Windows](task-05-docs.md) | done | 04 |
-| [06 - a pipe request names the pipe in the log](task-06-a-pipe-request-names-the-pipe-in-the-log.md) | implemented | 05 |
+| [06 - a pipe request names the pipe in the log](task-06-a-pipe-request-names-the-pipe-in-the-log.md) | done | 05 |
 
 ## Risks and tradeoffs
 
@@ -108,17 +108,15 @@ control server -> key matches -> the handler that signal runs on Unix: way.shutd
   Task 04: `stop(steps)` waits for the pid to go, kills it after `STOP_WAIT_MS`, forgets the record only then, and answers `{ record, killed }`.
   Task 05: `docs/server/REFERENCE.md` has the paragraph on the pipe and the wait, and the two command lists say `ahpd stop` waits.
   Task 06, implemented 2026-10-14: a restart through the control pipe names the pipe in its two log lines. A forced one adds `forced`, and a signal keeps its name.
-- **Next action:** the checks on Windows in [windows-checks.md](../../../pending/windows-checks.md). Task 06 is reviewed and merged. Tasks 01 to 05 are built and reviewed; see [implemented.md](implemented.md).
-- **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. During a turn, `ahpd restart` exits 1 with the turn named, and the pid stays the same. `ahpd restart --force` restarts from the recorded line in about 3 seconds, and the client reconnects. `ahpd stop` during a turn logs `stopping` and `stopped`, removes `daemon.json`, and `ahpd status --json` prints `{"running":false}`.
-  Left to check: the stop line in the final list, on a daemon started with `--connection-token-file`. The run does not show that the daemon was started with that flag.
-  Left to check for task 06: a restart while a turn runs logs `restart refused (control pipe)`, and a forced one logs `restart: stopping (control pipe, forced)`.
+- **Next action:** none. The plan is built; see [implemented.md](implemented.md).
+- **Checked by hand:** On Windows 10 Pro 19045 with Node v24.12.0, 2026-10-15, at `ff1288e0`. A daemon started with `--connection-token-file` stops in under a second during a turn, and logs `stopping` and `stopped`. The client gets 1001, `daemon.json` is gone, and `ahpd status --json` prints `{"running":false}`. `ahpd restart` during a turn exits 1, and the log says `restart refused (control pipe)`. `ahpd restart --force` logs `restart: stopping (control pipe, forced)`, and the successor comes up with the same argv.
 - **Open questions:** none.
 - **Watch out for:** never write the key or `connectUrl` to a log line or to stdout; `ahpd status --json` must not print `control`.
 
 ## Final verification checklist
 
-- [ ] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass. A signal keeps its name in the restart log lines, and a request through the control pipe names the pipe.
-- [ ] On Windows: `ahpd start --connection-token-file <f>`, open a session, start a turn, `ahpd stop`; the log shows `stopping`, `daemon.json` is gone, and `ahpd status --json` prints `{"running":false}`.
+- [x] On Linux, `server-restart.test.ts`, `server-cli-restart.test.ts` and `daemon.test.ts` pass. A signal keeps its name in the restart log lines, and a request through the control pipe names the pipe.
+- [x] On Windows: `ahpd start --connection-token-file <f>`, open a session, start a turn, `ahpd stop`; the log shows `stopping`, `daemon.json` is gone, and `ahpd status --json` prints `{"running":false}`.
 - [x] On Windows: `ahpd restart` refuses while a turn runs, `ahpd restart --force` restarts, and the successor comes up from the recorded line.
 - [x] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/server` pass.
 - [x] `plans/index.md` updated.
