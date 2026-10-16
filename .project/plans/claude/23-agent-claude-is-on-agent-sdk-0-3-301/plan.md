@@ -48,7 +48,7 @@ These changes do not fail a test, and they are the ones to know.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-claude is on the Agent SDK 0.3.301](task-01-agent-claude-is-on-agent-sdk-0-3-301.md) | todo | - |
+| [01 - agent-claude is on the Agent SDK 0.3.301](task-01-agent-claude-is-on-agent-sdk-0-3-301.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -56,8 +56,8 @@ These changes do not fail a test, and they are the ones to know.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16, from a trial upgrade.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-16, from a trial upgrade. Task 01 is implemented, 2026-10-16.
+- **Next action:** review task 01, and run the checks by hand.
 - **Open questions:** none.
 - **Watch out for:** the root `package.json` has its own SDK range, and it moves with the package's.
 

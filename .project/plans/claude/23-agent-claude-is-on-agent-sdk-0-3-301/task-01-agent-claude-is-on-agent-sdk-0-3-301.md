@@ -1,6 +1,6 @@
 ---
 title: agent-claude is on the Agent SDK 0.3.301
-status: todo
+status: implemented
 depends: []
 layer: "agent-claude"
 refs:
@@ -32,3 +32,6 @@ agent-claude depends on the Claude Agent SDK 0.3.301, and the probe names its pe
 - `pnpm -s exec vitest run packages/agent-claude packages/sdk/test/host-tools.test.ts` passes.
 
 ## Resume
+
+- **Done:** 2026-10-16. The SDK range is `^0.3.301` in `packages/agent-claude/package.json` and in the root `package.json`, and the lock moves from 0.3.278 to 0.3.301. pnpm added the 9 release-age excludes. The probe sends `permissionMode: 'default'`.
+- **Gates:** build, typecheck, boundary and schema pass. The test gate passes with 5102 tests.
