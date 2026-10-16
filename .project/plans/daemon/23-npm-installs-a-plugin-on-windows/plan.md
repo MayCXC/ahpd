@@ -63,13 +63,13 @@ ahpd configure | ahpd plugin install | remove -> options.run('npm', argv) -> run
 
 ## Resume state
 
-- **Done so far:** built 2026-10-16. Task 01 is done, and the plan passed on Windows 2026-10-13. See [implemented.md](implemented.md).
-- **Next action:** none.
+- **Done so far:** built 2026-10-16. Task 01 is done, and `ahpd configure` passed on Windows 2026-10-13. See [implemented.md](implemented.md).
+- **Next action:** the remove check in [windows-checks.md](../../../pending/windows-checks.md), which ticks the second checklist line.
 - **Open questions:** none.
 - **Watch out for:** the build runs on Linux, so the Windows path is tested through the pure function only.
 
 ## Final verification checklist
 
 - [x] On Windows, `ahpd configure` installs the three plugins.
-- [x] On Windows, `ahpd plugin remove` removes a plugin.
+- [ ] On Windows, `ahpd plugin remove` removes a plugin.
 - [x] `plans/index.md` updated.

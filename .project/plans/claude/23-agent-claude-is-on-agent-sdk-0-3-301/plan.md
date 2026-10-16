@@ -1,7 +1,7 @@
 ---
 title: agent-claude is on the Claude Agent SDK 0.3.301
 domain: claude
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -48,7 +48,7 @@ These changes do not fail a test, and they are the ones to know.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-claude is on the Agent SDK 0.3.301](task-01-agent-claude-is-on-agent-sdk-0-3-301.md) | implemented | - |
+| [01 - agent-claude is on the Agent SDK 0.3.301](task-01-agent-claude-is-on-agent-sdk-0-3-301.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -56,14 +56,14 @@ These changes do not fail a test, and they are the ones to know.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16, from a trial upgrade. Task 01 is implemented, 2026-10-16.
-- **Next action:** review task 01, and run the checks by hand.
+- **Done so far:** built 2026-10-16. Task 01 is done, and the checks by hand passed on 2026-10-16. See [implemented.md](implemented.md).
+- **Next action:** none. The SDK's new features wait in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** the root `package.json` has its own SDK range, and it moves with the package's.
 
 ## Final verification checklist
 
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest on agent-claude and `host-tools.test.ts`.
-- [ ] By hand: a Claude session runs one turn and one tool call on Softov's daemon.
-- [ ] By hand: a preset with `extraArgs` starts.
-- [ ] `plans/index.md` updated.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest on agent-claude and `host-tools.test.ts`.
+- [x] By hand: a Claude session runs one turn and one tool call on Softov's daemon.
+- [x] By hand: a preset with `extraArgs` starts.
+- [x] `plans/index.md` updated.

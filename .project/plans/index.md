@@ -38,7 +38,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [20 - `ahpd stop` and `ahpd restart` reach a daemon on Windows](daemon/20-stop-and-restart-reach-a-daemon-on-windows/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/20-stop-and-restart-reach-a-daemon-on-windows/implemented.md)); checked on Windows 2026-10-15 | daemon 13 | - |
 | [21 - The shutdown method stops the daemon gracefully](daemon/21-shutdown-method-stops-daemon-gracefully/plan.md) | high | built 2026-10-15 ([implemented.md](daemon/21-shutdown-method-stops-daemon-gracefully/implemented.md)); checked on Linux and Windows 2026-10-15 | daemon 20 | - |
 | [22 - A plugin's late problem is logged](daemon/22-a-plugins-late-problem-is-logged/plan.md) | medium | built 2026-10-15 | - | - |
-| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | built 2026-10-16 ([implemented.md](daemon/23-npm-installs-a-plugin-on-windows/implemented.md)); passed on Windows 2026-10-13 | - | - |
+| [23 - npm installs a plugin on Windows](daemon/23-npm-installs-a-plugin-on-windows/plan.md) | high | built 2026-10-16 ([implemented.md](daemon/23-npm-installs-a-plugin-on-windows/implemented.md)); passed on Windows 2026-10-13; the remove check on Windows remains | - | - |
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
@@ -235,7 +235,7 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [20 - A Claude turn reads its message's attachments, queued and steered ones included](claude/20-a-claude-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](claude/20-a-claude-turn-reads-its-attachments/implemented.md), [deferred.md](claude/20-a-claude-turn-reads-its-attachments/deferred.md)) | host 68 | ahpapp `chat/03` for Claude sessions |
 | [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-agent-whole-and-on-time/plan.md) | high | built 2026-10-11 ([implemented.md](claude/21-client-tools-reach-agent-whole-and-on-time/implemented.md)); the VS Code check by hand remains | - | - |
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | built 2026-10-11 ([implemented.md](claude/22-a-claude-session-fails-cleanly/implemented.md)) | - | - |
-| [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | active; task 01 implemented and reviewed; the check by hand remains | - | - |
+| [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | built 2026-10-16 ([implemented.md](claude/23-agent-claude-is-on-agent-sdk-0-3-301/implemented.md)) | - | - |
 
 Next free number in `claude`: `24`.
 
@@ -379,7 +379,7 @@ Worked in this order: 01, 02, 09, 10, then 03, 04, host 19, 05, 06, 07.
 | [13 - A model pi cannot find fails the turn that asked for it](pi/13-a-model-pi-cannot-find-fails-the-turn/plan.md) | high | built 2026-10-02 ([implemented.md](pi/13-a-model-pi-cannot-find-fails-the-turn/implemented.md)) | - | - |
 | [14 - agent-pi.test.ts is split into one test file per area](pi/14-pi-test-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](pi/14-pi-test-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [15 - A pi turn reads its message's attachments, queued and steered ones included](pi/15-a-pi-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](pi/15-a-pi-turn-reads-its-attachments/implemented.md)) | host 68 | - |
-| [16 - agent-pi is on pi 1.3.0](pi/16-agent-pi-is-on-pi-1-3/plan.md) | medium | active; task 01 implemented and reviewed; the check by hand remains | - | - |
+| [16 - agent-pi is on pi 1.3.0](pi/16-agent-pi-is-on-pi-1-3/plan.md) | medium | built 2026-10-16 ([implemented.md](pi/16-agent-pi-is-on-pi-1-3/implemented.md)) | - | - |
 
 Next free number in `pi`: `17`.
 

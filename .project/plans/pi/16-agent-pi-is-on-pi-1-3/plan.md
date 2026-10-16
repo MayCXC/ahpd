@@ -1,7 +1,7 @@
 ---
 title: agent-pi is on pi 1.3.0
 domain: pi
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -54,7 +54,7 @@ They are nested tool events from codemode, the MCP tool names, the `azure` provi
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-pi is on pi 1.3.0](task-01-agent-pi-is-on-pi-1-3.md) | implemented | - |
+| [01 - agent-pi is on pi 1.3.0](task-01-agent-pi-is-on-pi-1-3.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -63,14 +63,14 @@ They are nested tool events from codemode, the MCP tool names, the `azure` provi
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16, from a trial upgrade. Task 01 is implemented, 2026-10-16.
-- **Next action:** review task 01, and run the check by hand.
+- **Done so far:** built 2026-10-16. Task 01 is done, and the check by hand passed on 2026-10-16. See [implemented.md](implemented.md).
+- **Next action:** none. pi's new features wait in [deferred.md](deferred.md).
 - **Open questions:** none.
 - **Watch out for:** the build stops at agent-pi, so the packages after it do not build until `backend.ts` is fixed.
 
 ## Final verification checklist
 
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest on agent-pi.
-- [ ] `pnpm why brace-expansion` shows no version below 5.0.12 under pi-coding-agent.
-- [ ] By hand: a pi session runs one turn and one steer on Softov's daemon.
-- [ ] `plans/index.md` updated.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest on agent-pi.
+- [x] `pnpm why brace-expansion` shows no version below 5.0.12 under pi-coding-agent.
+- [x] By hand: a pi session runs one turn and one steer on Softov's daemon.
+- [x] `plans/index.md` updated.

@@ -1,6 +1,6 @@
 ---
 title: agent-claude is on the Agent SDK 0.3.301
-status: implemented
+status: done
 depends: []
 layer: "agent-claude"
 refs:

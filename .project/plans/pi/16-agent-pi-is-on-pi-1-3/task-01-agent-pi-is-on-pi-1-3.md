@@ -1,6 +1,6 @@
 ---
 title: agent-pi is on pi 1.3.0
-status: implemented
+status: done
 depends: []
 layer: "agent-pi"
 refs:
