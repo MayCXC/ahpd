@@ -21,6 +21,36 @@ export interface Wire {
   close(): void;
   /** Whether a `send` would still reach the client. */
   isOpen(): boolean;
+  /**
+   * How many bytes this wire is still holding for its client.
+   *
+   * What the socket took and the client has not read, in bytes: a client that
+   * reads slowly makes this grow, and one that has stopped reading makes it
+   * grow without end. Absent on a wire with no queue behind it - the
+   * in-process pair - which is also a wire that cannot fall behind.
+   */
+  buffered?(): number;
+}
+
+/**
+ * What bounds one client: the most this host will hold for it, and where a
+ * client that went past it is said.
+ *
+ * `limit` is a reader rather than a number, because the value is a root config
+ * key: read at each send, a limit pushed while the host runs applies to the
+ * frame after it rather than at the next restart.
+ */
+export interface Bounding {
+  /** The most this host's wire may hold for this client, in bytes, as it is set now. */
+  limit(): number;
+  /**
+   * Where a client closed for being behind is said, and what it was holding.
+   *
+   * Nothing is said without one, the way nothing is recorded without a `tap`:
+   * a listener or a host nobody asked to hear from closes the socket and
+   * writes no line.
+   */
+  log?(line: string): void;
 }
 
 /**
@@ -56,6 +86,25 @@ export interface Peer {
   answered(message: Record<string, unknown>): void;
   /** Close the connection, rejecting every question still unanswered. */
   close(): void;
+  /**
+   * The bytes this connection's wire is still holding for its client, or
+   * nothing where the wire cannot say.
+   *
+   * The same number `Wire.buffered` reports, read here because a host holds
+   * peers and not wires: how far behind a client is, is the one thing about a
+   * connection that cannot be seen from a frame.
+   */
+  buffered?(): number | undefined;
+  /**
+   * Bound this connection: past what the wire holds, the host writes nothing
+   * more to this client and closes it.
+   *
+   * A peer is built by whichever listener accepted the socket, and the limit
+   * is the host's own - a root config key the listener knows nothing of - so
+   * the host binds the peer it was handed rather than the listener being told
+   * a number it cannot read.
+   */
+  bounded?(bounding: Bounding): void;
 }
 
 /**

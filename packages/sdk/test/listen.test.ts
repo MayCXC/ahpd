@@ -1,8 +1,11 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { connect, type Socket } from 'node:net';
 import { WebSocket } from 'ws';
+import { echo } from '../../../examples/echo/agent.js';
+import { createHost } from '../src/host.js';
 import { listen, serveRequests } from '../src/listen.js';
 import type { Listener } from '../src/types/listen.js';
+import type { Peer } from '../src/types/rpc.js';
 
 /*
  * The connection token, over a real socket.
@@ -289,6 +292,262 @@ const deaf = (port: number): Promise<{ socket: Socket; told: Promise<Buffer>; go
     '',
     '',
   ].join('\r\n'));
+});
+
+/** One text frame as a client sends it: masked, which is what a server requires. */
+const masked = (text: string): Buffer => {
+  const payload = Buffer.from(text, 'utf8');
+  const mask = Buffer.from([0x11, 0x22, 0x33, 0x44]);
+  const head = payload.length < 126
+    ? Buffer.from([0x81, 0x80 | payload.length])
+    : Buffer.from([0x81, 0xfe, payload.length >> 8, payload.length & 0xff]);
+  const body = Buffer.alloc(payload.length);
+  for (let at = 0; at < payload.length; at++) {
+    body.writeUInt8(payload.readUInt8(at) ^ mask.readUInt8(at % 4), at);
+  }
+  return Buffer.concat([head, mask, body]);
+};
+
+/**
+ * A client that completes the handshake by hand and then stops reading.
+ *
+ * `speaks` is a frame it sends with the handshake, before it stops: a client
+ * that introduced itself has to, or the host has no id to resume it under.
+ */
+const mute = (port: number, speaks?: string): Promise<Socket> => new Promise((resolve, reject) => {
+  const socket = connect(port, '127.0.0.1');
+  const chunks: Buffer[] = [];
+  socket.on('error', () => undefined);
+  socket.once('error', reject);
+  socket.on('data', (chunk: Buffer) => {
+    chunks.push(chunk);
+    const all = Buffer.concat(chunks).toString('latin1');
+    if (!all.startsWith('HTTP/1.1 101')) {
+      reject(new Error(all));
+      return;
+    }
+    // Reading stops here, which is the whole of this client: every frame the
+    // host writes after the handshake is left where it landed.
+    socket.pause();
+    resolve(socket);
+  });
+  socket.write([
+    'GET / HTTP/1.1',
+    `Host: 127.0.0.1:${port}`,
+    'Upgrade: websocket',
+    'Connection: Upgrade',
+    'Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==',
+    'Sec-WebSocket-Version: 13',
+    '',
+    '',
+  ].join('\r\n'));
+  if (speaks !== undefined) socket.write(masked(speaks));
+});
+
+it('reports the queue a Node socket keeps for a client that does not read', async () => {
+  let handOver = (_peer: Peer): void => undefined;
+  const handed = new Promise<Peer>((resolve) => { handOver = resolve; });
+  running = await listen({ port: 0 }, (peer) => { handOver(peer); return nothing(); });
+  // The client first: the peer is handed over when a connection opens, and
+  // nothing opens one before this.
+  const client = await mute(running.port);
+  const peer = await handed;
+  try {
+    /*
+     * The kernel takes a few megabytes before `ws` has a byte of its own to
+     * queue, so the host is asked after each frame until it says it is
+     * holding something.
+     */
+    const frame = 'x'.repeat(256 * 1024);
+    let queued = 0;
+    for (let i = 0; i < 200 && queued === 0; i++) {
+      peer.notify('action', { frame });
+      queued = peer.buffered?.() ?? 0;
+    }
+    expect(queued).toBeGreaterThan(0);
+    // And it grows: this client never reads, so nothing of what is queued drains.
+    for (let i = 0; i < 10; i++) peer.notify('action', { frame });
+    expect(peer.buffered?.() ?? 0).toBeGreaterThan(queued);
+  }
+  finally {
+    client.destroy();
+  }
+});
+
+/** The limit these tests hold a client to, which is `MINIMUM_LIMIT_BYTES`. */
+const LIMIT = 1024 * 1024;
+
+/**
+ * Whether a close frame reaches a client once it is told to read again.
+ *
+ * The frames this host writes all carry a payload of ASCII `x`, so the only
+ * `0x88` in the stream is a close frame's own opcode - which is the one thing
+ * a client that never reads cannot otherwise be shown: the frame was written,
+ * and it is sitting in the queue it will not take.
+ */
+const closed = (socket: Socket): Promise<boolean> => new Promise((resolve) => {
+  const chunks: Buffer[] = [];
+  socket.on('data', (chunk: Buffer) => {
+    chunks.push(chunk);
+    if (Buffer.concat(chunks).includes(0x88)) resolve(true);
+  });
+  socket.on('end', () => { resolve(false); });
+});
+
+it('closes a client that stops reading once its queue is past the limit, and says what it held', async () => {
+  const said: string[] = [];
+  let handOver = (_peer: Peer): void => undefined;
+  const handed = new Promise<Peer>((resolve) => { handOver = resolve; });
+  running = await listen(
+    { port: 0, clientQueueBytes: () => LIMIT, log: (line) => { said.push(line); } },
+    (peer) => { handOver(peer); return nothing(); },
+  );
+  const client = await mute(running.port);
+  const peer = await handed;
+  try {
+    // The kernel takes a few megabytes before `ws` queues anything of its
+    // own, so the host is written to until the limit is reached.
+    const frame = 'x'.repeat(256 * 1024);
+    for (let i = 0; i < 200 && said.length === 0; i++) peer.notify('action', { frame });
+    expect(said).toHaveLength(1);
+    // The queue it was closed at, which is over the limit and named with it.
+    const [, held] = /^held (\d+) bytes for a client that is not reading/u.exec(said[0] ?? '') ?? [];
+    expect(Number(held)).toBeGreaterThan(LIMIT);
+    expect(said[0]).toContain(`past the ${LIMIT} it is allowed, and was closed`);
+    // And the wire really was closed, not merely given up on: the close frame
+    // is in the queue, where the client finds it the moment it reads.
+    // The client starts reading. The handler that stopped it goes first: it
+    // pauses the socket after every chunk it is handed, which is what made
+    // this client the one that never reads.
+    client.removeAllListeners('data');
+    const told = closed(client);
+    client.resume();
+    expect(await told).toBe(true);
+  }
+  finally {
+    client.destroy();
+  }
+});
+
+it('goes on serving the client that reads, past the one it closed', async () => {
+  const said: string[] = [];
+  const peers: Peer[] = [];
+  running = await listen(
+    { port: 0, clientQueueBytes: () => LIMIT, log: (line) => { said.push(line); } },
+    (peer) => { peers.push(peer); return nothing(); },
+  );
+  const reader = new WebSocket(`ws://127.0.0.1:${running.port}`);
+  /** The next frame the reader takes, which arrives a turn after it was written. */
+  const next = (): Promise<Record<string, unknown>> => new Promise((resolve) => {
+    reader.once('message', (raw) => { resolve(JSON.parse(String(raw)) as Record<string, unknown>); });
+  });
+  await new Promise((opened) => { reader.on('open', opened); });
+  const client = await mute(running.port);
+  try {
+    // The reader connected first, so it is the first peer handed over and the
+    // one that stays.
+    while (peers.length < 2) await new Promise((turn) => { setImmediate(turn); });
+    const before = next();
+    peers[0]?.notify('action', { frame: 'small' });
+    expect(await before).toMatchObject({ method: 'action' });
+    // Written to until the limit is reached, and closed there.
+    const frame = 'x'.repeat(256 * 1024);
+    for (let i = 0; i < 200 && said.length === 0; i++) peers[1]?.notify('action', { frame });
+    expect(said).toHaveLength(1);
+    // And the client beside it is still served: the frame after the close
+    // reaches it, on the listener that just closed the other one.
+    const after = next();
+    peers[0]?.notify('ping', {});
+    expect(await after).toMatchObject({ method: 'ping' });
+    expect(reader.readyState).toBe(WebSocket.OPEN);
+  }
+  finally {
+    client.destroy();
+    reader.close();
+  }
+});
+
+/** One request over a WebSocket, and the answer that carries its id. */
+const asked = (socket: WebSocket, id: number, method: string, params: Record<string, unknown>): Promise<Record<string, unknown>> =>
+  new Promise((resolve) => {
+    socket.on('message', (raw) => {
+      const message = JSON.parse(String(raw)) as Record<string, unknown>;
+      if (message.id === id) resolve(message);
+    });
+    socket.send(JSON.stringify({ jsonrpc: '2.0', id, method, params }));
+  });
+
+/*
+ * The client that was closed is not left behind.
+ *
+ * The close is this listener's, but what a client does next is the host's: its
+ * socket is gone, so it comes back under the id it introduced itself with and
+ * says where it had read to. The host answers that out of its buffer, as it
+ * answers any reconnect - and this is the one path the close could have broken,
+ * because the client that reconnects is the one this host stopped writing to.
+ */
+it('answers the client it closed when it comes back, with a replay or snapshots', async () => {
+  // A real host with the backend written from nothing, so nothing here depends
+  // on a session: what is under test is the close and the reconnect.
+  const dir = '/tmp/ahpd-listen-reconnect';
+  const said: string[] = [];
+  const host = createHost({ path: dir, agents: [echo({ path: dir })], onEvent: (line) => { said.push(line); } });
+  let handOver = (_peer: Peer): void => undefined;
+  const handed = new Promise<Peer>((resolve) => { handOver = resolve; });
+  running = await listen(
+    { port: 0 },
+    (peer) => { handOver(peer); return host.accept(peer); },
+  );
+  // The client that will be closed is the one that introduces itself: the id
+  // it comes back under is an id this host has seen.
+  const client = await mute(running.port, JSON.stringify({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'initialize',
+    params: { channel: 'ahp-root://', clientId: 'probe', protocolVersions: ['0.9.0'] },
+  }));
+  const peer = await handed;
+  let back: WebSocket | undefined;
+  try {
+    // Turns for the frame it sent with its handshake to be read and answered,
+    // which is what makes `probe` a client this host knows.
+    for (let i = 0; i < 10; i++) await new Promise((turn) => { setImmediate(turn); });
+    /*
+     * Written to until this host closes it, which is at the default limit this
+     * host holds a client to - the listener was given no limit of its own, so
+     * the number in force is the one `accept` bound the peer with.
+     */
+    const frame = 'x'.repeat(256 * 1024);
+    const behind = (): string[] => said.filter((line) => line.includes('not reading'));
+    for (let i = 0; i < 400 && behind().length === 0; i++) peer.notify('action', { frame });
+    expect(behind()).toHaveLength(1);
+    // Said against the client by the name it introduced itself under, which a
+    // peer cannot say for itself: the line is the host's.
+    expect(behind()[0]).toContain('probe: held');
+    // And now it comes back, on a new socket, under the id it introduced
+    // itself with and from before what it missed.
+    const again = new WebSocket(`ws://127.0.0.1:${running.port}`);
+    back = again;
+    await new Promise((opened) => { again.on('open', opened); });
+    const answer = await asked(again, 2, 'reconnect', {
+      channel: 'ahp-root://',
+      clientId: 'probe',
+      lastSeenServerSeq: 0,
+      subscriptions: ['ahp-root://'],
+    });
+    expect(answer.error).toBeUndefined();
+    // A replay of what it missed, or state where the gap is longer than the
+    // buffer: either way it is served, on the listener that closed it.
+    const result = answer.result as { type: string; missing: string[] };
+    expect(['replay', 'snapshot']).toContain(result.type);
+    // And nothing it asked back for has gone, which is the other half of a
+    // client that dropped being answerable at all.
+    expect(result.missing).toEqual([]);
+  }
+  finally {
+    client.destroy();
+    back?.close();
+  }
 });
 
 it('drops a client that ignores the close frame after the grace, and then settles', async () => {

@@ -80,7 +80,7 @@ is.
 | `ping` | ✅ | A round trip, and the one method the specification says works before the handshake - a liveness check that needed one first could not tell a half-open socket from a busy one. |
 | `subscribe` | ✅ | The snapshot is taken *at* a `serverSeq`, and anything dispatched while it was being taken is replayed on top of it. Subscribing twice to one channel is answered twice, including while the first snapshot is still in flight; the reference host cancels the earlier subscribe and answers it `-32001`, so a client written against that one may never send the second. |
 | `unsubscribe` | ✅ | A notification, so it carries no id and gets no reply. Per connection: one client unsubscribing does not stop another's stream. |
-| `reconnect` | ✅ | Replays what a dropped client missed from its `lastSeenServerSeq`, or hands back whole snapshots when the gap is longer than the buffer. Stateless notifications - the OTLP channels - are never replayed, because they carry no `serverSeq` to have been missed from. |
+| `reconnect` | ✅ | Replays what a dropped client missed from its `lastSeenServerSeq`, or hands back whole snapshots when the gap is longer than the buffer. The buffer holds the last 1000 envelopes, or `replayBytes` of them, whichever comes first, so a handful of large actions shorten it below the count - see [A client that stops reading](#a-client-that-stops-reading). Stateless notifications - the OTLP channels - are never replayed, because they carry no `serverSeq` to have been missed from. |
 | `dispatchAction` | 🚧 | A notification. The echo carries `origin` - the `clientId` and `clientSeq` the dispatch came with - and one this host will not act on comes back carrying `rejectionReason` instead. See [state actions](#state-actions) for which. |
 | `listSessions` | ✅ | Most-recently-modified first, live sessions included. Pages when a client sends `limit` and answers the whole catalogue when it does not, because neither client that connects here reads `nextCursor` and a default page size would be a catalogue silently cut down to it. A cursor this host did not issue is `-32602`. |
 | `createSession` | ✅ | Takes the URI the client chose, under whatever scheme it chose it. `activeClient` puts the creating client into the session as it is made, under the `clientId` it introduced itself with rather than the one in the payload. |
@@ -192,7 +192,7 @@ which is a different complaint from an action nobody has served.
 The schema a client draws its controls from holds three kinds of key: the ones VS Code's client pushes, this host's own, and the daemon's.
 `packages/sdk/src/vscoderootconfig.ts` holds the first, one property per key as VS Code's agent host declares it at `7516b04bc94`, out of `common/agentHostSchema.ts`, `common/agentMerge.ts` and `common/automationConfig.ts`.
 Two entries resolve a constant from `src/vs/platform/chat/common/chatSettings.ts` and write the literal it holds, naming the file by URL.
-This host acts on `defaultShell`, on `workspaceTrust` through the connection that pushed it, on `globalAutoApproveEnabled`, and on its own `changeWords`, which says where a commit message and a pull request's words come from; nothing else it declares changes what it does.
+This host acts on `defaultShell`, on `workspaceTrust` through the connection that pushed it, on `globalAutoApproveEnabled`, and on three of its own: `changeWords`, which says where a commit message and a pull request's words come from, `clientQueueBytes` and `replayBytes`, which bound what the host holds for a client that is not reading ([A client that stops reading](#a-client-that-stops-reading)); nothing else it declares changes what it does.
 The rest are declared so that a client can draw each one. A value pushed for one reads back as a setting, not as an unknown key.
 The description on such a key describes VS Code's agent host, not this one. `automationsEnabled` reads as a promise, and automations here run whatever it says.
 Three keys VS Code declared before 1.140 are not declared here, because 1.140 dropped them: `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration`.
@@ -382,6 +382,36 @@ What these things are, rather than how they behave on the wire: a session is [SE
 | read and archived survive one, if the host was given a store that keeps them | `IsRead` and `IsArchived` are this host's rather than a backend's and are shared by every client, so where they go is a `SessionStore`. `memorySessions()` is the default and forgets them; `fileSessions()` writes them down. `@ahpd/server` chooses with `--sessions file\|memory` and defaults to the file |
 | so do the settings chosen for a session | the configuration values in force are kept the same way, in the same store, and come back with it |
 | the sessions themselves come back either way | they are read from the backend's own transcripts, so what a store decides is only whether what this host added on top of them comes back too |
+
+### A client that stops reading
+
+A client that reads slower than the host writes leaves every frame it has not
+taken in its socket's queue, and nothing in the protocol bounds that queue: a
+socket sends while it is open, and what it holds until the client reads it is
+the socket's own business. `clientQueueBytes` bounds it, 16 MiB by default.
+Before each send the peer reads what its wire still holds - `bufferedAmount` on
+Node's `ws` and on Deno's `WebSocket`, `getBufferedAmount` on Bun, the write
+buffer's length on stdio - and a client past the limit is named in the log and
+closed rather than written to. The frame that would have crossed the limit is
+dropped with the close, and so is every answer still in flight to it.
+
+A client closed this way is not a client lost: it reconnects with its
+`lastSeenServerSeq` as any client does, and is answered from the replay buffer
+or with snapshots. A wire that cannot say what it holds - the in-process pair -
+is never closed for being behind.
+
+The replay buffer is bounded twice: the last 1000 envelopes, or `replayBytes`
+of them, 32 MiB by default, whichever comes first. An envelope weighs the
+length of the text it goes out as, measured once when the host buffers it, and
+the oldest are dropped while either limit is passed. The newest is kept
+whatever it weighs on its own, because one action larger than the whole budget
+is still the state this host holds.
+
+Both keys are this host's own in the root config schema, and both are read
+where they are used rather than held, so a value pushed while the host runs
+applies to the next send and to the next action buffered. Either may be pushed
+down to 1 MiB and no further, and pushing one needs `config:write`
+([AUTHENTICATION.md](AUTHENTICATION.md#trusted-folders)).
 
 ### Turns
 

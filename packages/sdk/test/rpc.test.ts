@@ -11,8 +11,13 @@ import type { Wire } from '../src/types/rpc.js';
  * that a question this host asks ends in exactly one of four ways.
  */
 
-/** A socket, kept as decoded messages so a test reads what was sent. */
-function wire(): Wire & { written: Record<string, unknown>[]; shut(): void } {
+/**
+ * A socket, kept as decoded messages so a test reads what was sent.
+ *
+ * `buffered` is what the socket still holds for its client, which a wire that
+ * cannot queue - the in-process pair - leaves out entirely.
+ */
+function wire(buffered?: () => number): Wire & { written: Record<string, unknown>[]; shut(): void } {
   const written: Record<string, unknown>[] = [];
   let open = true;
   return {
@@ -21,6 +26,7 @@ function wire(): Wire & { written: Record<string, unknown>[]; shut(): void } {
     close: () => { open = false; },
     isOpen: () => open,
     shut: () => { open = false; },
+    ...(buffered === undefined ? {} : { buffered }),
   };
 }
 
@@ -149,6 +155,74 @@ describe('a question this host asks', () => {
     void peer.request('ping', {}).catch(() => {});
     expect(socket.written.map((message) => message.id)).toEqual([1, 2]);
     peer.close();
+  });
+});
+
+/*
+ * What a host does with a client that is not reading.
+ *
+ * The check is at the send and nowhere else, because the number it turns on is
+ * the socket's own: what this host has written and the client has not taken.
+ * One queue per connection, so a client that stalls is closed rather than
+ * queued for, and the client beside it is untouched.
+ */
+describe('a client that is not reading', () => {
+  const LIMIT = 1024 * 1024;
+
+  it('is written to while its queue is under the limit, whatever the frame weighs', () => {
+    const socket = wire(() => LIMIT);
+    const peer = createPeer(socket, { limit: () => LIMIT });
+    // At the limit and not past it, and the frame's own size is no reason to
+    // hold back: one large snapshot still has to reach a client that reads.
+    peer.notify('action', { frame: 'x'.repeat(4 * LIMIT) });
+    expect(socket.written).toHaveLength(1);
+    expect(socket.isOpen()).toBe(true);
+  });
+
+  it('is closed, with the frame dropped and the queue said, past the limit', () => {
+    const said: string[] = [];
+    const socket = wire(() => LIMIT + 1);
+    const peer = createPeer(socket, { limit: () => LIMIT, log: (line) => { said.push(line); } });
+    peer.notify('action', {});
+    expect(socket.written).toEqual([]);
+    expect(socket.isOpen()).toBe(false);
+    expect(said).toEqual([
+      `held ${LIMIT + 1} bytes for a client that is not reading, past the ${LIMIT} it is allowed, and was closed`,
+    ]);
+  });
+
+  it('is read at each send, so a limit pushed while the host runs applies to the next frame', () => {
+    let limit = 2 * LIMIT;
+    const socket = wire(() => LIMIT + 1);
+    const peer = createPeer(socket, { limit: () => limit });
+    peer.notify('action', {});
+    expect(socket.written).toHaveLength(1);
+    // A lower value under the same key, which is what a client's push leaves
+    // behind: the number is asked for rather than held at the binding.
+    limit = LIMIT;
+    peer.notify('action', {});
+    expect(socket.written).toHaveLength(1);
+    expect(socket.isOpen()).toBe(false);
+  });
+
+  it('is left alone where the wire cannot say what it holds', () => {
+    const socket = wire();
+    const peer = createPeer(socket, { limit: () => 1 });
+    peer.notify('action', {});
+    // A wire with no queue behind it cannot fall behind, whatever it was
+    // bound by - the in-process pair, and every fake in this suite.
+    expect(socket.written).toHaveLength(1);
+    expect(socket.isOpen()).toBe(true);
+  });
+
+  it('takes a question in flight down with it, rather than leaving it to time out', async () => {
+    const socket = wire(() => LIMIT + 1);
+    const peer = createPeer(socket, { limit: () => LIMIT });
+    const asked = peer.request('resourceRead', {}).catch((error: unknown) => error);
+    // The question was never written, and the connection it was asked on is
+    // closed: what a caller gets is the close, not thirty seconds of silence.
+    expect(socket.written).toEqual([]);
+    expect(await asked).toBeInstanceOf(RpcClosed);
   });
 });
 

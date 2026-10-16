@@ -4,6 +4,7 @@ import { OPERATIONS, operationsOf } from '../users.js';
 import { REMOTE_SESSIONS_META } from '../remotesession.js';
 import { sdkVersion } from '../version.js';
 import { vscodeRootProperties } from '../vscoderootconfig.js';
+import { CLIENT_QUEUE_BYTES, MINIMUM_LIMIT_BYTES, REPLAY_BYTES } from './limits.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 import type { HostContext } from './context.js';
@@ -223,12 +224,14 @@ export function createRoot(ctx: HostContext): Root {
    * setting. The host's own keys come after, so a clash would resolve to the
    * host's reading of the same key (there is none).
    *
-   * Four of them are read by this host: `defaultShell` and `workspaceTrust`
+   * Six of them are read by this host: `defaultShell` and `workspaceTrust`
    * below, which belong to the connection that pushed them,
    * `globalAutoApproveEnabled`, which `trust.ts` asks before a tool call runs,
    * and this host's own `changeWords`, which says where a commit message and a
-   * pull request's words come from. The rest are declared and nothing more,
-   * which is what a client needs and all it gets.
+   * pull request's words come from, with `clientQueueBytes` and `replayBytes`
+   * beside it, which bound what this host holds for a client that is not
+   * reading (`limits.ts`). The rest are declared and nothing more, which is
+   * what a client needs and all it gets.
    */
   const ROOT_CONFIG_SCHEMA = {
     // `type` is required of a `ConfigSchema` and is always `object`. Left out,
@@ -310,6 +313,52 @@ export function createRoot(ctx: HostContext): Root {
           },
         },
         required: ['mode'],
+      },
+      /*
+       * How much this host holds for one client that is not reading.
+       *
+       * The socket queue of a connection whose client reads slower than the
+       * host writes grows with every frame it has not taken, and past this the
+       * host stops writing to that client and closes it rather than queue for
+       * it for as long as it stays connected (`rpc.ts`). Bytes rather than
+       * frames, because what a stalled client costs is memory: one action
+       * carrying a large tool output is worth a thousand small ones.
+       *
+       * This host's own key and not VS Code's, like `changeWords` beside it,
+       * and read at each send rather than held.
+       *
+       * A `number` and not an `integer`, and the least value said in the
+       * description rather than as a `minimum`: the protocol's property schema
+       * declares five types and no bound, so both are what `rootconfig.ts`
+       * says for the daemon's own keys.
+       */
+      clientQueueBytes: {
+        type: 'number',
+        title: 'Client Queue Bytes',
+        description: `The most a client that is not reading may have queued for it, in bytes, before the host closes it. At least ${MINIMUM_LIMIT_BYTES}.`,
+        default: CLIENT_QUEUE_BYTES,
+      },
+      /*
+       * How much the replay buffer holds, beside its thousand envelopes.
+       *
+       * The buffer keeps the last `REPLAY` actions so a client that reconnects
+       * is sent what it missed rather than a fresh snapshot of every session it
+       * watches. That count bounds nothing about memory: a thousand actions
+       * carrying large tool outputs are a thousand envelopes whatever they
+       * weigh, and they are held for as long as they stay inside the count.
+       * Past this the buffer drops its oldest envelopes, as it does past the
+       * count, and a client whose gap is older than what is left is sent
+       * snapshots - which is what the protocol does for any gap it cannot
+       * replay.
+       *
+       * Read at each push, and a `number` with its least value in the
+       * description, for the reason `clientQueueBytes` above is.
+       */
+      replayBytes: {
+        type: 'number',
+        title: 'Replay Bytes',
+        description: `The most the replay buffer holds, in bytes, before it drops its oldest envelopes. At least ${MINIMUM_LIMIT_BYTES}.`,
+        default: REPLAY_BYTES,
       },
     },
   };

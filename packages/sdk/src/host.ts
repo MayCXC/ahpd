@@ -45,6 +45,7 @@ import type { StoredWorktree } from './types/sessions.js';
 import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
 import { bag, ownerOfPrincipal } from './values.js';
 import { reason } from './host/common.js';
+import { clientQueueBytes, replayBytes } from './host/limits.js';
 import {
   ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, methodIn, baseOf, URI_KEYS, named,
   chatUriFor, subagentChatUri, WORKER_ACTIONS, toolCallOfSubagentChat, isAutomations,
@@ -373,10 +374,25 @@ export function createHost(options: HostOptions): Host {
    * of the daemon's life. Past it, a returning client is handed fresh
    * snapshots instead - which is correct, only more expensive, and is what
    * the protocol has the second reconnect result for.
+   *
+   * The count is the reference host's; the bytes beside it are this host's
+   * (`replayBytes`), because a thousand envelopes of a config echo and a
+   * thousand carrying a turn's text are not the same weight held for the
+   * length of a daemon's life.
    */
   const REPLAY = 1000;
   /** The last `REPLAY` action envelopes, oldest first. */
   const replayable: { channel: string; action: Record<string, unknown>; serverSeq: number; origin: Origin | undefined; audience?: PublishOptions }[] = [];
+  /**
+   * What each held envelope's text weighs in bytes, in step with `replayable`.
+   *
+   * Beside the buffer rather than on the envelope, because a held entry is
+   * what a client is sent: `seenBy` hands most of them back exactly as they
+   * are, and a size on one would be a field no client declared.
+   */
+  const weights: number[] = [];
+  /** What `replayable` weighs together, so the budget is not a sum over it. */
+  let weight = 0;
   /** Everything watching a channel, which is not everything connected. */
 
   /**
@@ -641,8 +657,24 @@ export function createHost(options: HostOptions): Host {
     ctx.asking(channel, action);
     ctx.links.observe(channel, action);
     ctx.sessionEvents.observe(channel, action);
-    replayable.push({ ...envelope, action: structuredClone(action) });
-    if (replayable.length > REPLAY) replayable.shift();
+    const held = { ...envelope, action: structuredClone(action) };
+    replayable.push(held);
+    // Measured once, here, as the text this envelope will go out as.
+    const size = JSON.stringify(held).length;
+    weights.push(size);
+    weight += size;
+    /*
+     * Past the count or past the budget the oldest go, and never the newest
+     * whatever it weighs on its own: a client that comes back is replayed
+     * from here, and one envelope heavier than the whole budget is still the
+     * state this host holds. The budget is read at each push, so a value
+     * pushed while the host runs applies to the next action.
+     */
+    const budget = replayBytes(ctx.rootConfig);
+    while (replayable.length > REPLAY || (replayable.length > 1 && weight > budget)) {
+      replayable.shift();
+      weight -= weights.shift() ?? 0;
+    }
     broadcast(channel, 'action', envelope, (connection) => seenBy(connection, envelope));
   };
   /**
@@ -1257,6 +1289,19 @@ export function createHost(options: HostOptions): Host {
         // And one admitted on the deployment's own token is the host itself.
         ...(root === true ? { root: true } : {}),
       };
+      /*
+       * What this host will hold for this client, bound here because this is
+       * the first place a host has the peer.
+       *
+       * The listener that built the peer knows nothing of root config, and the
+       * limit is a key of this host's own, so a reader is passed in rather than
+       * a number: a value pushed while the host runs applies to the next send.
+       * The line is named for the connection, which the peer itself cannot do.
+       */
+      peer.bounded?.({
+        limit: () => clientQueueBytes(ctx.rootConfig),
+        log: (line) => { ctx.log(`${connection.clientId || 'a client'}: ${line}`); },
+      });
       /*
        * A person or a plugin this host was given rather than one that signed in.
        *

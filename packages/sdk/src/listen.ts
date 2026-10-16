@@ -1,8 +1,9 @@
 import { createPeer, receive } from './rpc.js';
 import type {
-  Admission, Connected, Door, DoorOptions, Listener, ListenOptions, NodeRequestListener, OnConnect, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
+  Admission, Bounds, Connected, Door, DoorOptions, Listener, ListenOptions, NodeRequestListener, OnConnect, RequestHandler, RequestsListener, RequestsOptions, Runtime, StdioOptions, Tap,
 } from './types/listen.js';
 import type { Principal } from './types/users.js';
+import type { Bounding } from './types/rpc.js';
 
 /**
  * Accepts WebSocket connections on Node, Bun or Deno.
@@ -82,6 +83,17 @@ const tapping = (tap: Tap | undefined, peer: number): {
 });
 
 /**
+ * How a listener was told to bound its clients, or nothing when it was not.
+ *
+ * The limit reaches the peer through this and nothing else, since it is the
+ * one place that knows whether the caller gave one: a listener with no limit
+ * accepts a client that never reads, as every WebSocket server does.
+ */
+const boundingOf = (options: Bounds): Bounding | undefined => options.clientQueueBytes === undefined
+  ? undefined
+  : { limit: options.clientQueueBytes, ...(options.log === undefined ? {} : { log: options.log }) };
+
+/**
  * The door: who, if anyone, a request's token carries.
  *
  * The deployment's own token admits the socket and is the host, which is
@@ -158,6 +170,9 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
   let accepted = 0;
   const token = options.token;
   const identityOf = doorOf(options);
+  // Read once, since the reader inside it is called at each send: what a
+  // caller passed is a function, and whether it passed one does not change.
+  const bounding = boundingOf(options);
 
   if (here === 'bun') {
     const Bun = (globalThis as unknown as { Bun: {
@@ -192,7 +207,8 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
             send: (text) => { seen.out(text); ws.send(text); },
             close: () => ws.close(),
             isOpen: () => ws.readyState === 1,
-          });
+            buffered: () => ws.getBufferedAmount(),
+          }, bounding);
           const arrival = ws.data as { principal?: Principal; root?: boolean } | undefined;
           bound.set(ws, { peer, connected: onConnect(peer, arrival?.principal, arrival?.root), seen });
         },
@@ -251,7 +267,8 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
           send: (text) => { seen.out(text); socket.send(text); },
           close: () => socket.close(),
           isOpen: () => socket.readyState === 1,
-        });
+          buffered: () => socket.bufferedAmount,
+        }, bounding);
         // Closed over rather than carried on the socket: this handler already
         // has the answer the upgrade was decided on.
         held = { peer, connected: onConnect(peer, identity.principal, identity.root), seen };
@@ -344,7 +361,8 @@ export async function listen(options: ListenOptions, onConnect: OnConnect): Prom
       send: (text) => { seen.out(text); socket.send(text); },
       close: () => socket.close(),
       isOpen: () => socket.readyState === 1,
-    });
+      buffered: () => socket.bufferedAmount,
+    }, bounding);
     const arrival = decided.get(request);
     const connected = onConnect(peer, arrival?.principal, arrival?.root);
     decided.delete(request);
@@ -532,7 +550,10 @@ export async function overStdio(options: StdioOptions, onConnect: OnConnect): Pr
     // something another process owns is that process's business, not ours.
     close: () => { input.pause(); },
     isOpen: () => running,
-  });
+    // What a pipe has taken and the reader has not, which is the same
+    // question a socket's queue answers.
+    buffered: () => output.writableLength,
+  }, boundingOf(options));
   const connected: Connected = onConnect(peer, undefined, options.root !== false);
 
   /** The one ending, so a close and an end cannot both release the connection. */
@@ -593,12 +614,14 @@ export async function overStdio(options: StdioOptions, onConnect: OnConnect): Pr
 /** A server `Bun.serve` answered: `stop(true)` drops the connections still open, `stop(false)` waits for them. */
 interface BunServer { stop(closeActive?: boolean): void | Promise<void>; port: number }
 
-interface BunSocket { send(text: string): unknown; close(code?: number, reason?: string): void; readyState: number; data?: unknown }
+interface BunSocket { send(text: string): unknown; close(code?: number, reason?: string): void; readyState: number; getBufferedAmount(): number; data?: unknown }
 
 interface DenoSocket {
   send(text: string): void;
   close(code?: number, reason?: string): void;
   readyState: number;
+  /** What the socket has taken and the client has not read, as `WebSocket` declares it. */
+  bufferedAmount: number;
   onopen: (() => void) | null;
   onmessage: ((event: { data: unknown }) => void) | null;
   onclose: (() => void) | null;
@@ -635,6 +658,8 @@ interface NodeSocket {
   send(text: string): void;
   close(): void;
   readyState: number;
+  /** What `ws` has taken and the client has not read, as `@types/ws` declares it. */
+  bufferedAmount: number;
   on(event: 'message', handler: (raw: string | Buffer) => void): void;
   on(event: 'close', handler: () => void): void;
 }

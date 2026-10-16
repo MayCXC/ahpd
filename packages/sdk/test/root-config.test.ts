@@ -2,6 +2,7 @@ import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
 import { uriOf } from '../src/fileuri.js';
 import { trusted } from '../src/host/trust.js';
+import { CLIENT_QUEUE_BYTES, REPLAY_BYTES, clientQueueBytes, replayBytes } from '../src/host/limits.js';
 import { vscodeRootProperties } from '../src/vscoderootconfig.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
@@ -28,7 +29,7 @@ const RESOURCE = 'ahpd://users';
  * and which of the three a key came from is what the cases below read.
  */
 const PUSHED_BY_VSCODE = Object.keys(vscodeRootProperties);
-const HOST_OWN = ['defaultShell', 'workspaceTrust', 'changeWords'];
+const HOST_OWN = ['defaultShell', 'workspaceTrust', 'changeWords', 'clientQueueBytes', 'replayBytes'];
 const DAEMON_OWN = ['daemonPort', 'advancedTools', 'apiKey'];
 
 /** A directory that knows one admin and one member, by the token each presents. */
@@ -488,6 +489,87 @@ it('refuses a write from a member, and never asks the daemon', async () => {
   await settle();
   expect(writes).toEqual([]);
   expect(heardOnRoot(member.heard)).toEqual([expect.objectContaining({ rejectionReason: expect.stringContaining('config:change') })]);
+});
+
+/*
+ * The two limits on what the host holds for a client that is not reading.
+ *
+ * Declared as a client reads them - one type, a title, a description and a
+ * default - because that is all the protocol's property schema carries: a
+ * bound is a sentence in the description rather than a `minimum`, the way the
+ * daemon's own keys are declared.
+ */
+it('declares the two limits, each with its default', async () => {
+  const { signedIn, rootOf } = served(false);
+  const admin = await signedIn('admin', 'admin');
+  const { schema } = (await rootOf(admin.client)).config as { schema: { properties: Record<string, Record<string, unknown>> } };
+
+  expect(schema.properties.clientQueueBytes).toEqual({
+    type: 'number',
+    title: 'Client Queue Bytes',
+    description: expect.stringContaining('At least 1048576.'),
+    default: 16777216,
+  });
+  expect(schema.properties.replayBytes).toEqual({
+    type: 'number',
+    title: 'Replay Bytes',
+    description: expect.stringContaining('At least 1048576.'),
+    default: 33554432,
+  });
+});
+
+it('reads a pushed limit at the time of use, and its default when it cannot', async () => {
+  // No daemon port, so `values` is this host's half alone - which is the map
+  // the reader is handed, since a host key is kept where the root shows it.
+  const { signedIn, rootOf } = served(false);
+  const admin = await signedIn('admin', 'admin');
+  const held = async (): Promise<Record<string, unknown>> =>
+    ((await rootOf(admin.client)).config as { values: Record<string, unknown> }).values;
+  const push = async (config: Record<string, unknown>): Promise<void> => {
+    await admin.client.handle({
+      method: 'dispatchAction',
+      params: { channel: ROOT, action: { type: 'root/configChanged', config } },
+    });
+    await settle();
+  };
+
+  // Nothing pushed: the defaults, which is what a host nobody configured runs
+  // on, and what a value reads as once it is taken back.
+  expect(clientQueueBytes(await held())).toBe(CLIENT_QUEUE_BYTES);
+  expect(replayBytes(await held())).toBe(REPLAY_BYTES);
+
+  await push({ clientQueueBytes: 4194304, replayBytes: 8388608 });
+  expect(clientQueueBytes(await held())).toBe(4194304);
+  expect(replayBytes(await held())).toBe(8388608);
+
+  /*
+   * A value under the least either key may be, and one that is not a number:
+   * kept as pushed, because a declared key is a setting a client reads back,
+   * and read as the default - a host that closed a client under any burst at
+   * all is not a limit anybody means.
+   */
+  await push({ clientQueueBytes: 1024, replayBytes: 'plenty' });
+  expect(await held()).toMatchObject({ clientQueueBytes: 1024, replayBytes: 'plenty' });
+  expect(clientQueueBytes(await held())).toBe(CLIENT_QUEUE_BYTES);
+  expect(replayBytes(await held())).toBe(REPLAY_BYTES);
+});
+
+it('refuses a limit pushed without config:write, as it does any other host key', async () => {
+  const { signedIn, rootOf, heardOnRoot } = served(false);
+  const member = await signedIn('member', 'member');
+  await member.client.handle({
+    method: 'dispatchAction',
+    params: { channel: ROOT, action: { type: 'root/configChanged', config: { clientQueueBytes: 4194304 } } },
+  });
+  await settle();
+  expect(heardOnRoot(member.heard)).toEqual([
+    expect.objectContaining({ rejectionReason: expect.stringContaining('config:change') }),
+  ]);
+  // And nothing moved: the member may read the host's own keys, and the one it
+  // was refused reads as the default.
+  const { values } = (await rootOf(member.client)).config as { values: Record<string, unknown> };
+  expect(values.clientQueueBytes).toBeUndefined();
+  expect(clientQueueBytes(values)).toBe(CLIENT_QUEUE_BYTES);
 });
 
 it('sends an admin write to the daemon, and its echo to the admins only', async () => {

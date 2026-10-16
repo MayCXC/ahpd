@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PROTOCOL_VERSION } from '@microsoft/agent-host-protocol';
+import { ROOT } from '../src/host.js';
 import { sdkVersion } from '../src/version.js';
 import {
   resetSdk, actions, emit, hello, open, peer, sdk, serving, sessionQueries,
@@ -394,6 +395,102 @@ describe('a client that dropped, coming back', () => {
     }) as { type: string; snapshots: { resource: string }[] };
     expect(result.type).toBe('snapshot');
     expect(result.snapshots.map((s) => s.resource)).toEqual(['ahp-session:/live']);
+  });
+
+  /*
+   * The byte budget, which is the second bound on the buffer and the one a
+   * count cannot say: ten turns of a few hundred kilobytes each are ten
+   * envelopes, and they are not the same weight as ten config echoes.
+   *
+   * Each test pushes the least budget this host may be held to, which is what
+   * makes ten enough to pass it: at the default of 32 MiB it would be a
+   * hundred turns.
+   */
+  it('drops its oldest envelopes once it is over its byte budget', async () => {
+    const { host, client, peer: p, uri } = await running();
+    const marks = `${uri}/annotations`;
+    await client.handle({ method: 'subscribe', params: { channel: marks } });
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: ROOT, action: { type: 'root/configChanged', config: { replayBytes: 1024 * 1024 } } },
+    });
+    await settle();
+    const upTo = actions(p).at(-1)?.serverSeq ?? 0;
+
+    /*
+     * A mark carrying a few hundred kilobytes of text, set ten times. A mark
+     * is the one action a client may carry any text in, so it is the one that
+     * makes a small buffer out of an action count this short.
+     */
+    for (let i = 0; i < 10; i++) {
+      await client.handle({
+        method: 'dispatchAction',
+        params: {
+          channel: marks,
+          action: {
+            type: 'annotations/set',
+            annotation: {
+              id: 'a1',
+              origin: { session: uri },
+              resource: 'file:///home/softov/x.ts',
+              resolved: false,
+              entries: [{ id: 'e1', text: `${i}:${'x'.repeat(300 * 1024)}` }],
+            },
+          },
+        },
+      });
+    }
+    await settle();
+    expect(actions(p, marks)).toHaveLength(10);
+
+    // A client that had read everything before the ten. A replay would mean
+    // all ten are still held, so state here says this: fewer than ten fit,
+    // and the oldest held is past where this one had read to.
+    const back = host.accept(peer());
+    await back.handle(hello(['0.9.0']));
+    const state = await back.handle({
+      method: 'reconnect',
+      params: { channel: ROOT, clientId: 'probe', lastSeenServerSeq: upTo, subscriptions: [marks] },
+    }) as { type: string };
+    expect(state.type).toBe('snapshot');
+
+    // And what is over the budget is the oldest only: the newest envelope is
+    // still there to be replayed, which is what a client a moment behind gets.
+    const late = host.accept(peer());
+    await late.handle(hello(['0.9.0']));
+    const kept = await late.handle({
+      method: 'reconnect',
+      params: { channel: ROOT, clientId: 'probe', lastSeenServerSeq: upTo + 9, subscriptions: [marks] },
+    }) as { type: string };
+    expect(kept.type).toBe('replay');
+  });
+
+  it('still keeps a thousand envelopes where the actions are small', async () => {
+    const { host, client, peer: p, uri } = await running();
+    for (let i = 0; i < 1100; i++) {
+      await client.handle({
+        method: 'dispatchAction',
+        params: { channel: uri, action: { type: 'session/isReadChanged', isRead: i % 2 === 0 } },
+      });
+    }
+    await settle();
+    const upTo = actions(p, uri).at(-1)?.serverSeq ?? 0;
+
+    /** What a client that had read up to `since` is answered. */
+    const answer = async (since: number): Promise<string> => {
+      const back = host.accept(peer());
+      await back.handle(hello(['0.9.0']));
+      const result = await back.handle({
+        method: 'reconnect',
+        params: { channel: ROOT, clientId: 'probe', lastSeenServerSeq: since, subscriptions: [uri] },
+      }) as { type: string };
+      return result.type;
+    };
+
+    // The last thousand are held, so a client a thousand behind them is
+    // replayed to, and one envelope further back is a hole.
+    expect(await answer(upTo - 1000)).toBe('replay');
+    expect(await answer(upTo - 1001)).toBe('snapshot');
   });
 });
 

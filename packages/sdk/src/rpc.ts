@@ -13,7 +13,7 @@
  * whichever method it arrived at, and the sentence is the same one.
  */
 
-import type { Handler, Peer, Request, Wire } from './types/rpc.js';
+import type { Bounding, Handler, Peer, Request, Wire } from './types/rpc.js';
 export const PARSE_ERROR = -32700;
 export const INVALID_REQUEST = -32600;
 export const METHOD_NOT_FOUND = -32601;
@@ -127,8 +127,15 @@ export class RpcClosed extends Error {
   }
 }
 
-/** Ask and answer over one wire. */
-export function createPeer(wire: Wire): Peer {
+/**
+ * Ask and answer over one wire.
+ *
+ * `bounding` is what the caller building the peer already knows about the
+ * limit, and it is the same thing `Peer.bounded` sets later: a listener that
+ * was given a limit binds the peer it accepts, and a host that holds a peer a
+ * listener built binds it with the reader of its own root config.
+ */
+export function createPeer(wire: Wire, bounding?: Bounding): Peer {
   /*
    * The ids this host spends asking, which are its own to allocate.
    *
@@ -141,10 +148,41 @@ export function createPeer(wire: Wire): Peer {
     method: string;
     settle(error: Error | undefined, result?: unknown): void;
   }>();
+  let bound = bounding;
+
+  /**
+   * Whether this client is already holding more than it may.
+   *
+   * The wire's own number rather than a count kept here, because it is what
+   * the socket has not handed over yet: a frame the client read is a client
+   * keeping up, whatever this host has sent it.
+   *
+   * False for a wire that cannot say - the in-process pair - and for a peer
+   * nobody bounded: a connection with no queue behind it cannot fall behind.
+   */
+  const behind = (): number | undefined => {
+    if (bound === undefined) return undefined;
+    const queued = wire.buffered?.();
+    return queued !== undefined && queued > bound.limit() ? queued : undefined;
+  };
 
   const peer: Peer = {
     send: (message) => {
-      if (wire.isOpen()) wire.send(JSON.stringify(message));
+      if (!wire.isOpen()) return;
+      const queued = behind();
+      if (queued !== undefined && bound !== undefined) {
+        /*
+         * Closed rather than queued behind the frames already held, and the
+         * frame dropped with them: a client this far behind is not reading
+         * what is in the queue either, so writing one more would be holding
+         * more for somebody who has stopped. What it missed is what a
+         * reconnect is answered with.
+         */
+        bound?.log?.(`held ${queued} bytes for a client that is not reading, past the ${bound.limit()} it is allowed, and was closed`);
+        peer.close();
+        return;
+      }
+      wire.send(JSON.stringify(message));
     },
     notify: (method, params) => {
       peer.send({ jsonrpc: '2.0', method, params });
@@ -204,6 +242,10 @@ export function createPeer(wire: Wire): Peer {
       }
       wire.close();
     },
+    // Reported rather than kept: what the socket holds is the socket's own
+    // number, and it moves with what the client reads.
+    buffered: () => wire.buffered?.(),
+    bounded: (given) => { bound = given; },
   };
   return peer;
 }

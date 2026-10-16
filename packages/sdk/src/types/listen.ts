@@ -56,8 +56,30 @@ export interface Listener {
   close(): void | Promise<void>;
 }
 
+/**
+ * What a listener holds a client by: how much of a queue it will keep, and
+ * where a client that went past it is said.
+ *
+ * A listener knows nothing of root config, so this is a reader rather than a
+ * number - what the caller bound the listener by, read at each send, the way
+ * the host reads its own key. Left out, a socket's queue is the socket's own
+ * business, which is what every WebSocket server does by default.
+ */
+export interface Bounds {
+  /** The most this listener will hold for one client, in bytes, as it is set now. */
+  clientQueueBytes?: () => number;
+  /**
+   * Where a client closed for being behind is said, with what it was holding.
+   *
+   * Read when `clientQueueBytes` is given and nothing else: a client is closed
+   * for being behind by this limit or by no reason at all, and nothing is
+   * written without a log to write to.
+   */
+  log?: (line: string) => void;
+}
+
 /** Where to accept connections, and who may open one. */
-export interface ListenOptions {
+export interface ListenOptions extends Bounds {
   /** TCP port to bind. */
   port: number;
   /**
@@ -191,7 +213,7 @@ export interface Arrival {
  * be carried by another host - decision `a-nested-host-speaks-stdio` - so the
  * connection is the host itself unless the caller says otherwise.
  */
-export interface StdioOptions {
+export interface StdioOptions extends Bounds {
   /**
    * Whether this connection is the host itself.
    *
