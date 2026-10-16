@@ -20,11 +20,16 @@ Stop on a running automation in VS Code's window stops it. The run settles as ca
 
 - `pnpm exec vitest run packages/sdk packages/server packages/agent-claude`: 4013 of 4013 tests pass after the rebase onto main.
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- The check by hand, by Softov on 2026-10-16, on Windows with VS Code 1.141.2: Stop on a running automation ends the run as `cancelled`, and its session stays in the list, idle.
 
 ## Departures from the plan
 
 - Task 01 step 2 - a run that waits for a slot is not in `waiting`, so the host drops its held wake instead. The run settles as cancelled, which is what the step asked for.
+- The window's Stop sends `chat/turnCancelled` on the run's session, not `automationRun/cancelRequested`.
+  The run settled as `cancelled`, but the check by hand found the session drawn as failed.
+  After an interrupt the Claude SDK ends the turn with a result of its own, `error_during_execution` with `is_error: true`, and that set the session's error.
+  `agent-claude` now marks a turn it stopped as `interrupted`, and the result that follows it is not read as a failure.
 
 ## Left for later
 
-- The check by hand: Stop in VS Code's window ends a running automation as cancelled.
+- none.

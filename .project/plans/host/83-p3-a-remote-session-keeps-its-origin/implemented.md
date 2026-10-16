@@ -24,12 +24,15 @@ VS Code's window can send a session to ahpd. The session keeps its origin, the s
 - `pnpm exec vitest run packages/sdk packages/server packages/agent-claude`: 4013 of 4013 tests pass after the rebase onto main.
 - `host-remote-session.test.ts` is new. It covers a client that joins or leaves between turns.
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- The check by hand, by Softov on 2026-10-16, on Windows with VS Code 1.141.2, after the fix below: a local chat sent a task to ahpd, the session opened there with its origin, the agent called `send_remote_message` with session `origin`, and the answer came back to the local chat.
 
 ## Departures from the plan
 
 - Task 02 also puts the creating client in the session before `openSession`, with a rollback if it throws. This is the fix that claude/21 task 03 plans.
+- Task 01 read the origin from `createSession` `config._meta`, but VS Code 1.141 sends it on the request's own `_meta`, beside an empty `config`.
+  The check by hand on 2026-10-16 found the origin dropped and no report back.
+  `configOf` in [`code://packages/sdk/src/remotesession.ts`](../../../../packages/sdk/src/remotesession.ts) now moves the origin and the creator from the request's `_meta` into the config, and `createSession` opens the session with it.
 
 ## Left for later
 
-- The check by hand: a session sent from VS Code's window opens on ahpd and reports back to the chat that sent it.
 - The per-turn instruction in ACP, cofold and pi - see [deferred.md](deferred.md).

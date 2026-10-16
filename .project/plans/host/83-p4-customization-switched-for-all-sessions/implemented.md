@@ -25,11 +25,16 @@ A customization switched off for every session, or for one folder, stays off in 
 - `pnpm exec vitest run packages/sdk packages/server`: 3725 of 3726 tests pass after the rebase onto main. The one failure is `nested-start.test.ts`, which times out on main too.
 - `enablement.test.ts` is new in sdk and in server, and `host-tools.test.ts` has the toggle cases.
 - `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- The check by hand, by Softov on 2026-10-16, on Windows with VS Code 1.141.2, after the fix below: `cc-plugin-telemetry` switched off for all sessions is off in two new sessions, and the other two built-ins stay on. After `ahpd restart`, the store still holds `cc-plugin-telemetry@builtin: false`.
 
 ## Departures from the plan
+
+- The check by hand found that switching off one plugin the CLI has built in switched off all three.
+  The SDK reports every built-in with the path `builtin`, and `agent-claude` used the path as the plugin's `uri`, which is the enablement key.
+  A built-in's `uri` is now its `source`, such as `cc-plugin-telemetry@builtin`.
 
 - A global or folder decision needs `config:change` on a host with people. The review added this, with a test. The plan let `session:configure` write them, and those decisions switch other people's sessions. A sender without `config:change` switches their own session only, as a host with no store does. Softov may change this default.
 
 ## Left for later
 
-- The check by hand in VS Code: a daemon restart with a plugin off for all sessions.
+- The last step of the check by hand: after the restart, reload the window, open one more session, and check that `cc-plugin-telemetry` is still off there.

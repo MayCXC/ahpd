@@ -61,3 +61,31 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 ## Reply
 
 Write "pass" for each section, or what you saw. A pass ticks the matching line in the plan.
+
+## Results on Windows, 2026-10-16
+
+Run by Softov on Windows 10 with VS Code 1.141.2 and Node 24.12.0, from ahpd `main` at `ea7a01b8` with the fixes below.
+A recording proxy, `scripts/tee.mjs`, sat between the window and ahpd for p2 to p4.
+
+- **Set up:** pass, after a fix.
+  A plugin named by a Windows drive path, as step 4 does, stopped ahpd from starting: `hasScheme` read `F:` as a URL scheme.
+- **p1:** pass.
+  The Agent Host channel shows `Agent host version 0.12.0`.
+- **p2:** pass, after a fix.
+  Stop ended the run as `cancelled`, but the session was drawn as failed.
+  See the departure in host/83 p2's `implemented.md`.
+- **p3:** pass, after a fix.
+  The window sends the origin on the request's `_meta`, not in `config._meta`, so the agent never reported back.
+  See the departure in host/83 p3's `implemented.md`.
+- **p4:** steps 1 to 3 pass, after a fix. Step 4 is open.
+  Switching off one built-in plugin switched off all three, because they shared the enablement key `builtin`.
+  The stored decision survived `ahpd restart`, but the window was not reloaded and checked after it.
+- **host/95:** not run.
+
+### Seen on the way, not fixed
+
+- The window's slash list names the skills of the "VS Code Synced Data" plugin by its nonce, as in `/1683262406:advisor`.
+- The Automations view once showed "The agent host is disconnected on ahpd" while ahpd ran the whole time.
+- On Windows, `pnpm boundary` fails: `scripts/boundary.mjs:60` builds `F:\F:\github\ahpd\packages` from a URL pathname.
+- On Windows, vitest fails 17 tests in `packages/agent-claude` and about 200 in `packages/sdk`, the same with and without the fixes.
+  Most assume POSIX paths, such as `/dev/zero` and `/home/softov`, or a POSIX shell, git worktree or pty.
