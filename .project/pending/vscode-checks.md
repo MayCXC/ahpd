@@ -63,6 +63,13 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 3. Check that the skill is in the slash list once, as `vs-code-synced-data:advisor`, with no number in its name.
 4. Run the skill, and check that it answers.
 
+## host/99: the account menu shows the Codex account
+
+1. Sign in to Codex on the host with `codex login`, and restart ahpd.
+2. Connect the window to ahpd as the owner.
+3. Open the account menu, and check that it shows the Codex account email.
+4. Connect as a guest without `account:read`, and check that the menu shows no email.
+
 ## Reply
 
 Write "pass" for each section, or what you saw. A pass ticks the matching line in the plan.

@@ -1,7 +1,7 @@
 ---
 title: A client sees the agent account
 domain: host
-status: planned
+status: active
 priority: low
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -85,10 +85,10 @@ The shape follows VS Code's `vscode.codexAccount`, so VS Code's window can read 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The Claude probe reports its account](task-01-the-claude-probe-reports-its-account.md) | todo | - |
-| [02 - The host publishes each agent account](task-02-the-host-publishes-each-agent-account.md) | todo | 01 |
-| [03 - The ACP backend hears the Codex account](task-03-the-acp-backend-hears-the-codex-account.md) | todo | 02 |
-| [04 - The docs say who sees the account](task-04-the-docs-say-who-sees-the-account.md) | todo | 02, 03 |
+| [01 - The Claude probe reports its account](task-01-the-claude-probe-reports-its-account.md) | done | - |
+| [02 - The host publishes each agent account](task-02-the-host-publishes-each-agent-account.md) | done | 01 |
+| [03 - The ACP backend hears the Codex account](task-03-the-acp-backend-hears-the-codex-account.md) | done | 02 |
+| [04 - The docs say who sees the account](task-04-the-docs-say-who-sees-the-account.md) | done | 02, 03 |
 
 ## Risks and tradeoffs
 
@@ -98,8 +98,8 @@ The shape follows VS Code's `vscode.codexAccount`, so VS Code's window can read 
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-sees-which-account-an-agent-bills-to.md`. Planned 2026-10-16 with Softov's answers.
-- **Next action:** build task 01.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-sees-which-account-an-agent-bills-to.md`. Planned 2026-10-16 with Softov's answers. Task 01 built 2026-10-16: `Offered.account` as `Account`, and the Claude probe maps `initializationResult().account` onto it. Task 02 built 2026-10-16: the host keeps one account per backend in `Learned.account`, publishes it on the root config under `accountKey`, keeps it off the schema so a client cannot push one, and filters it per connection with `seesAccount` - in the snapshot and in every `root/configChanged`. The `account` subject's one operation is `status`, not `read`, which is the group. Task 03 built 2026-10-16: the ACP connection reads `authStatus` off the handshake and takes `_auth/status_update`, mapping the five kinds codex-acp 1.13.1 sends onto task 01's states and handing the account to `start.onAccount`. `external`, which the task did not name, is mapped like VS Code maps a non-ChatGPT account. Task 04 built 2026-10-16: `AGENT.md`, `HOST.md` and `AUTHENTICATION.md` say what the account is, where it is published and which grant reads it, and the `account:read` row went to `HOST.md`'s Grants table because `REMOTE.md`'s table is one row per `ahpd` verb. Reviewed and merged in `e01ee998`.
+- **Next action:** Softov runs the host/99 check in `pending/vscode-checks.md`.
 - **Open questions:** none.
 - **Watch out for:**
   - Decision `a-role-refuses-at-the-dispatch-boundary.md` says the root state is never hidden, so the filter is an overlay as in `host.ts:570-593`.
@@ -109,9 +109,9 @@ The shape follows VS Code's `vscode.codexAccount`, so VS Code's window can read 
 
 ## Final verification checklist
 
-- [ ] A test: the Claude probe's account reaches a connection with the grant.
-- [ ] A test: a connection without the grant never gets the email.
-- [ ] A test: an `_auth/status_update` from ACP updates the account.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] A test: the Claude probe's account reaches a connection with the grant.
+- [x] A test: a connection without the grant never gets the email.
+- [x] A test: an `_auth/status_update` from ACP updates the account.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: VS Code's account menu shows the Codex account from this host.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

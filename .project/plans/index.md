@@ -212,7 +212,7 @@ Reference: [00-host.md](host/00-host.md)
 | [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
 | [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | built 2026-10-16 | - | - |
 | [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | planned 2026-10-16 | - | - |
-| [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | planned 2026-10-16 | - | - |
+| [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | 101 |
 | [100 p1 - A command is split and matched](host/100-p1-a-command-is-split-and-matched/plan.md) | medium | planned 2026-10-16 | 100 | 100 p2, 100 p3 |
 | [100 p2 - A session gets its owner's command check](host/100-p2-a-session-gets-its-owners-command-check/plan.md) | medium | planned 2026-10-16 | 100 p1 | 100 p4, 100 p5, 101 |
