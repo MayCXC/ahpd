@@ -76,7 +76,7 @@ The deployment's connection token may run everything. A person's token needs the
 | `usage` | own pools; any pool with `usage:read` |
 | `vault list` | `config:read` for `host:`; `team:write` for the team's; own |
 | `vault set`, `vault delete` | `config:write` for `host:`; `team:write` for the team's; own |
-| `automation export` | `automation:list` |
+| `automation export` / `automation import` | `automation:list` / `automation:create` |
 | `plugin install`, `remove`, `update`, `config`, `enable`, `disable`, `restart` | deployment token only |
 
 ### Browser safety

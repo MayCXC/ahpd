@@ -224,7 +224,7 @@ A daemon started over the `automations.json` an earlier version wrote converts i
 
 ## Commands
 
-Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation` moves one in and out as [VS Code's file](#vs-code-automation-files).
+Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation export` and `import` move one out and in as [VS Code's file](#vs-code-automation-files).
 
 | Command | What it does |
 | --- | --- |
@@ -278,12 +278,34 @@ An automation with no schedule is written as `kind: manual`. A schedule with no 
 
 Over HTTP it is `GET /api/automation/export/{id}`, which answers the id, the file name and the text. There is no `--out`; the caller writes the file.
 
+`ahpd automation import` makes an automation from a file VS Code wrote, or from one export wrote:
+
+```bash
+ahpd automation import review-yesterday-s-commits.automation.md --folder ~/src/ahpd
+```
+
+The automation is new and switched off, as VS Code's import makes it: it has an id of its own, a second import of the same file is a second automation, and it runs on its schedule only once it is turned on. Its title is the file's `name` and its message is the body. The file's `id` and `description` are not kept.
+
+`--folder` is the folder it runs in, and it is required, because the file names none. It must be a folder this host serves, or one under it. No provider is set, so a run uses this host's default.
+
+The schedule is read as VS Code reads it, in this host's zone:
+
+| The file says | The automation runs on |
+| --- | --- |
+| `kind: manual` | No trigger. It runs when somebody presses Run |
+| `kind: hourly` | `0 * * * *` |
+| `kind: cron` | The file's `expression` |
+
+A file VS Code would refuse is refused with VS Code's sentence: an unknown `version`, a key it does not know, a cron its editor cannot show, or a `timeZone` other than `local`.
+
+Over HTTP it is `POST /api/automation/import`, with the file's text as the body's `text` and the folder as `folder`, which must be absolute. A request names no path on the host, so it cannot read a file there.
+
 ## Grants
 
 | What | Grant |
 | --- | --- |
 | List the catalogue, read a run, ask the trigger definitions, export one | `automation:list` |
-| Write, patch or remove an automation | `automation:create`, `automation:update`, `automation:remove` |
+| Write, patch or remove an automation, import one | `automation:create`, `automation:update`, `automation:remove` |
 | Press Run | `automation:run` |
 | Ask to stop a run | `automation:cancel`, which is asked before the refusal |
 

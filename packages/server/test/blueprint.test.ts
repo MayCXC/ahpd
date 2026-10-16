@@ -6,13 +6,16 @@
  * reads back to the same text, that each schedule the format holds is written
  * and read again unchanged, and that an automation the format cannot hold is
  * refused with a sentence naming what, rather than written as something it is
- * not.
+ * not. An import is a new automation, switched off, in a folder this host
+ * serves.
  */
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { manifestFrom } from '@cofold/remote';
 import { parseYaml } from '@cofold/yaml';
 import { memoryAutomations } from '@ahpd/sdk';
 import type { AutomationEntry, AutomationStore, Bag } from '@ahpd/sdk';
@@ -327,6 +330,168 @@ describe('ahpd automation export', () => {
       const answer = await call('/automation/export/other');
       expect(answer.status).toBe(409);
       expect((await answer.json() as { message: string }).message).toContain('runs in Europe/Lisbon');
+    });
+  });
+});
+
+describe('ahpd automation import', () => {
+  let home: string;
+  let had: string | undefined;
+  let work: string;
+  let config: string;
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), 'ahpd-automation-import-'));
+    had = process.env['XDG_CONFIG_HOME'];
+    process.env['XDG_CONFIG_HOME'] = home;
+    work = join(home, 'work');
+    mkdirSync(join(work, 'ahpd'), { recursive: true });
+    config = join(home, 'config.json');
+    writeFileSync(config, `${JSON.stringify({ paths: [work] })}\n`);
+  });
+  afterEach(() => {
+    if (had === undefined) delete process.env['XDG_CONFIG_HOME'];
+    else process.env['XDG_CONFIG_HOME'] = had;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+
+  const run = async (input: Record<string, unknown>): Promise<{ data: { id: string; resource: string }; text: string }> => {
+    const registry = cliRegistry();
+    const command = registry.find('automation.import');
+    if (command === undefined) throw new Error('no automation.import');
+    const said = await registry.execute(command, { surface: 'cli', input: { configFile: config, ...input }, readStdin: async () => '' });
+    if (said === null) throw new Error('answered nothing');
+    return { data: said.data as { id: string; resource: string }, text: typeof said.plain === 'function' ? said.plain() : said.plain ?? '' };
+  };
+
+  /** Every automation the daemon's folder holds now. */
+  const held = (): AutomationEntry[] => {
+    const store = scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), timer: () => ({ cancel: () => {} }) });
+    const all = store.list();
+    store.close?.();
+    return all;
+  };
+
+  /** A file of VS Code's with these frontmatter lines. */
+  const file = (lines: string[]): string => {
+    const at = join(home, 'one.automation.md');
+    writeFileSync(at, ['---', ...lines, '---', '', 'Do it.', ''].join('\n'));
+    return at;
+  };
+
+  it('makes the fixture a switched-off automation in the folder given', async () => {
+    const folder = join(work, 'ahpd');
+    const said = await run({ file: FIXTURE, folder });
+    expect(said.data.resource).toBe(`ahp-automation:/${said.data.id}`);
+    expect(said.text).toBe(`Imported Review yesterday's commits as ${said.data.id}. It is switched off.\n`);
+    const [one] = held();
+    expect(one?.resource).toBe(said.data.resource);
+    const definition = one?.definition as Bag;
+    const fixture = parseAutomationBlueprint(readFileSync(FIXTURE, 'utf8'));
+    expect(definition).toMatchObject({
+      title: 'Review yesterday\'s commits',
+      message: { text: fixture.prompt, origin: { kind: 'automation' } },
+      session: { workingDirectories: [pathToFileURL(folder).href] },
+      enabled: false,
+      triggers: [{ id: 'schedule', kind: 'schedule', schedule: { expression: '0 9 * * *', timeZone: zone }, misfirePolicy: 'runOnce' }],
+    });
+    expect((definition['session'] as Bag)['provider']).toBeUndefined();
+  });
+
+  it('makes a second automation with another id from the same file', async () => {
+    const first = await run({ file: FIXTURE, folder: work });
+    const second = await run({ file: FIXTURE, folder: work });
+    expect(second.data.id).not.toBe(first.data.id);
+    expect(held().map((one) => one.resource).sort()).toEqual([first.data.resource, second.data.resource].sort());
+  });
+
+  it('reads a manual and an hourly file as the triggers VS Code writes', async () => {
+    const manual = await run({ file: file(['version: 1', 'id: "m"', 'name: "M"', 'schedule:', '  kind: manual']), folder: work });
+    const hourly = await run({ file: file(['version: 1', 'id: "h"', 'name: "H"', 'schedule:', '  kind: hourly']), folder: work });
+    const by = new Map(held().map((one) => [one.resource, one.definition]));
+    expect(by.get(manual.data.resource)?.['triggers']).toEqual([]);
+    expect(by.get(hourly.data.resource)?.['triggers']).toEqual([
+      { id: 'schedule', kind: 'schedule', schedule: { expression: '0 * * * *', timeZone: zone }, misfirePolicy: 'runOnce' },
+    ]);
+  });
+
+  it('exports back to the file it was imported from', async () => {
+    const said = await run({ file: FIXTURE, folder: work });
+    const exported = cliRegistry();
+    const command = exported.find('automation.export');
+    if (command === undefined) throw new Error('no automation.export');
+    const answer = await exported.execute(command, { surface: 'cli', input: { id: said.data.id }, readStdin: async () => '' });
+    expect((answer?.data as { text: string }).text).toBe(readFileSync(FIXTURE, 'utf8'));
+  });
+
+  it('refuses no --folder', async () => {
+    await expect(run({ file: FIXTURE })).rejects.toThrow('automation import needs --folder: the file names no folder to run in.');
+    expect(held()).toEqual([]);
+  });
+
+  it('refuses a folder this host does not serve', async () => {
+    const outside = join(home, 'elsewhere');
+    mkdirSync(outside);
+    await expect(run({ file: FIXTURE, folder: outside })).rejects.toThrow(`${outside} is not a folder this host serves. Add it with ahpd paths add.`);
+    expect(held()).toEqual([]);
+  });
+
+  it('refuses an unknown version and an unknown key, with VS Code\'s sentence', async () => {
+    const two = file(['version: 2', 'id: "a"', 'name: "A"', 'schedule:', '  kind: manual']);
+    await expect(run({ file: two, folder: work })).rejects.toThrow(`${two}: Automation blueprint version 2 is not supported.`);
+    const keyed = file(['version: 1', 'id: "a"', 'name: "A"', 'enabled: true', 'schedule:', '  kind: manual']);
+    await expect(run({ file: keyed, folder: work })).rejects.toThrow(`${keyed}: The property 'enabled' is not supported.`);
+    expect(held()).toEqual([]);
+  });
+
+  describe('served', () => {
+    let store: AutomationStore;
+    beforeEach(() => { store = memoryAutomations(); });
+
+    const facts = (): ServedFacts => ({
+      options: optionsFrom({ configFile: config }),
+      configFile: config,
+      running: () => ({ pid: process.pid, url: `ws://${AUTHORITY}`, host: '127.0.0.1', port: 9361, paths: [work], startedAt: '' }),
+      turning: () => [],
+      automations: () => store,
+      restart: () => {},
+    });
+
+    const call = async (body: unknown): Promise<Response> => {
+      const handler = apiHandler({
+        registry: servedRegistry(facts()),
+        token: 'root-secret',
+        program: { name: 'ahpd', version: '0.0.0' },
+        origins: () => apiOrigins('127.0.0.1', undefined, 9361),
+      });
+      return handler(new Request(`http://${AUTHORITY}/api/automation/import`, {
+        method: 'POST',
+        headers: { host: AUTHORITY, 'content-type': 'application/json', authorization: 'Bearer root-secret' },
+        body: JSON.stringify(body),
+      }));
+    };
+
+    it('reads the file from the body', async () => {
+      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: work });
+      expect(answer.status).toBe(200);
+      const body = await answer.json() as { id: string; resource: string };
+      const kept = store.get(body.resource);
+      expect(kept?.definition).toMatchObject({ title: 'Review yesterday\'s commits', enabled: false });
+    });
+
+    it('takes no path', async () => {
+      const command = manifestFrom(servedRegistry(facts()), { name: 'ahpd', version: '0.0.0' }).commands.find((one) => one.id === 'automation.import');
+      expect([...(command?.options ?? []).map((one) => one.field ?? one.name), ...Object.keys(command?.arguments ?? {})].sort()).toEqual(['folder', 'text']);
+      const answer = await call({ file: FIXTURE, folder: work });
+      expect(answer.status).toBe(400);
+      expect(store.list()).toEqual([]);
+    });
+
+    it('refuses a folder that is not absolute', async () => {
+      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: 'work' });
+      expect(answer.status).toBe(400);
+      expect((await answer.json() as { message: string }).message).toBe('work is not an absolute path.');
     });
   });
 });

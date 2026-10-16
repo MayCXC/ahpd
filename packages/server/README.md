@@ -78,6 +78,7 @@ ahpd vault set <name>       keep a value under a name, read from standard input
 ahpd vault delete <name>    take a name out of the vault
 ahpd vault list             every name this host keeps a secret under, and whether it is set
 ahpd automation export <id> write an automation as a VS Code .automation.md file, or to --out
+ahpd automation import <f>  make a switched-off automation from that file, in --folder
 ahpd completion <shell>     print the completion script: bash, zsh or fish
 ```
 
@@ -104,7 +105,7 @@ Every verb and every flag is one declaration under [`src/commands`](https://gith
 | [proxy.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/proxy.ts) | `ahpd proxy list` |
 | [usage.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/usage.ts) | `ahpd usage` and `ahpd usage <pool>` |
 | [vault.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/vault.ts) | `ahpd vault set`, `delete`, `list` |
-| [automation.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/automation.ts) | `ahpd automation export` |
+| [automation.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/automation.ts) | `ahpd automation export`, `import` |
 | [options.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/options.ts) | Every flag and every configuration key, as one declaration |
 | [registry.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/registry.ts) | The registry each surface renders, and the commands `--remote` fetches |
 | [served.ts](https://github.com/softov/ahpd/blob/main/packages/server/src/commands/served.ts) | The registry a daemon serves over HTTP |

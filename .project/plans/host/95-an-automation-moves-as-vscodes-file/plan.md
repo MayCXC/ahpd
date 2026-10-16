@@ -66,7 +66,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | implemented | - |
-| [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | todo | 01 |
+| [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -75,8 +75,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`.
-- **Next action:** build task 02.
+- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`.
+- **Next action:** review both tasks.
 - **Open questions:** none.
 - **Watch out for:** VS Code refuses a file with any key it does not know, so export writes no key of ahpd's own.
 
