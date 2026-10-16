@@ -20,7 +20,7 @@ On Windows, npm starts as the daemon's own Node with `npm-cli.js`, so the spawn 
 - `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0.
 - Vitest on sdk, server, agent-claude and agent-acp passes: 241 files and 4345 tests. `plugin-install.test.ts` has 56 tests, and four of them are new.
 - On Windows, 2026-10-13, `ahpd configure` installed the three plugins.
-- The check of `ahpd plugin remove` on Windows waits in [windows-checks.md](../../../pending/windows-checks.md).
+- On Windows, 2026-10-16, from a build of ahpd main at `299481a8`, `ahpd plugin remove @ahpd/agent-claude` removed the plugin from the config and uninstalled it with npm.
 
 ## Departures from the plan
 

@@ -61,5 +61,5 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - [ ] A test: install, update, update with `--force` and uninstall each say their line before npm runs.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
-- [ ] By hand: `ahpd configure` on Windows prints the line before npm.
+- [x] By hand: `ahpd configure` on Windows prints the line before npm.
 - [ ] `plans/index.md` updated.
