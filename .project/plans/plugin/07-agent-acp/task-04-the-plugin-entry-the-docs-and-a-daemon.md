@@ -2,8 +2,8 @@
 title: The plugin entry, the docs, and a daemon that serves a configured server
 status: done
 depends:
-  - task-02-the-catalogue-a-resume-and-the-config-schema.md
-  - task-03-the-hosts-files-and-shell-reach-the-server.md
+  - task-02-catalogue-resume-and-config-schema.md
+  - task-03-host-files-and-shell-reach-the-server.md
 layer: agents
 refs:
   - code://packages/agent-cofold/src/plugin.ts - the entry this mirrors, options checked key by key

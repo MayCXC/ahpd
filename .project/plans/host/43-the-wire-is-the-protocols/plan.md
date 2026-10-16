@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-03
 revalidated: 2026-10-07
 requires:
-  - plans/host/44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
+  - plans/host/44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
 refs:
   - "[code://packages/sdk/test/wire.test.ts](../../../../packages/sdk/test/wire.test.ts) - the strict schema check over a recorded host, which checks snapshots and actions only"
   - "[code://tools/schema.mjs](../../../../tools/schema.mjs) - generates the strict schema the check runs on"
@@ -65,10 +65,10 @@ rootConfig port schema -> RootState.config -> config:read connection
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The wire test checks every request, result and notification](../43-the-wire-is-the-protocols-p1-the-wire-test-checks-every-frame/plan.md) | built 2026-10-07 | - |
-| [p2 - Results and actions are the protocol's shapes](../43-the-wire-is-the-protocols-p2-results-and-actions-are-the-protocols/plan.md) | built 2026-10-07 | p1 |
-| [p3 - The root config schema is one a client can read](../43-the-wire-is-the-protocols-p3-the-root-config-schema-conforms/plan.md) | built 2026-10-07 | p1 |
-| [p4 - Every `_meta` key ahpd invents is named `ahpd.<name>`](../43-the-wire-is-the-protocols-p4-ahpds-own-meta-keys-say-ahpd/plan.md) | built 2026-10-09 | p1, and ahpapp and ahpc reading both names |
+| [p1 - The wire test checks every request, result and notification](../43-p1-the-wire-test-checks-every-frame/plan.md) | built 2026-10-07 | - |
+| [p2 - Results and actions are the protocol's shapes](../43-p2-results-and-actions-are-protocol-shapes/plan.md) | built 2026-10-07 | p1 |
+| [p3 - The root config schema is one a client can read](../43-p3-the-root-config-schema-conforms/plan.md) | built 2026-10-07 | p1 |
+| [p4 - Every `_meta` key ahpd invents is named `ahpd.<name>`](../43-p4-ahpds-own-meta-keys-say-ahpd/plan.md) | built 2026-10-09 | p1, and ahpapp and ahpc reading both names |
 
 ## Risks and tradeoffs
 
@@ -80,7 +80,7 @@ rootConfig port schema -> RootState.config -> config:read connection
 - **Done so far:** p1, p2, p3 and p4 built.
 - **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none.
-- **Requires:** [host/44 p1](../44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md), which moves ahpd to the 1.0.0 package. It owns the guard that rebuilds the strict schema when the package changes. The children were re-checked against 1.0.0 on 2026-10-03.
+- **Requires:** [host/44 p1](../44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md), which moves ahpd to the 1.0.0 package. It owns the guard that rebuilds the strict schema when the package changes. The children were re-checked against 1.0.0 on 2026-10-03.
 - **Watch out for:** a fix that lands without removing its line from p1's known-defects list fails the wire test, and that is the point.
 
 ## Final verification checklist

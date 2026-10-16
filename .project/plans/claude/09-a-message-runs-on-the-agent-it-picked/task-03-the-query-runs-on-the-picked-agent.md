@@ -1,7 +1,7 @@
 ---
 title: The query runs on the picked agent
 status: done
-depends: [task-01-the-picked-agent-reaches-the-backend.md, task-02-built-in-agents-are-listed-as-vscode-lists-them.md]
+depends: [task-01-the-picked-agent-reaches-the-backend.md, task-02-built-in-agents-listed-as-vscode-does.md]
 layer: "agent-claude"
 refs:
   - "[code://packages/agent-claude/src/session.ts#L2180-L2243](../../../../packages/agent-claude/src/session.ts#L2180-L2243) - `beginTurn`"

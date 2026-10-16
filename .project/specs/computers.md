@@ -190,4 +190,4 @@ A runtime that only lists, such as ssh, is metered from its listings and charged
 
 ## Known gaps
 
-A machine made by libvirt or Proxmox is planned in [a virtual machine is made for a computer](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md).
+A machine made by libvirt or Proxmox is planned in [a virtual machine is made for a computer](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md).

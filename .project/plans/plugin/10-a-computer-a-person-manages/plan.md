@@ -82,7 +82,7 @@ a session -> createSession({ computer: 'computer://<name>' })  -> schema has the
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A machine is made by a resource write](task-01-a-machine-is-made-by-a-resource-write.md) | done | - |
-| [02 - A machine is destroyed by a resource delete](task-02-a-machine-is-destroyed-by-a-resource-delete.md) | done | 01 |
+| [02 - A machine is destroyed by a resource delete](task-02-machine-destroyed-by-resource-delete.md) | done | 01 |
 | [03 - What a client reads says what can be asked](task-03-what-a-client-reads.md) | done | 01 |
 | [04 - A tool that needs advanced permission waits for the host](task-04-a-tool-that-needs-advanced-permission.md) | done | - |
 | [05 - A plugin contributes a session key](task-05-a-plugin-contributes-a-session-key.md) | done | - |

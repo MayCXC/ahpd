@@ -1,7 +1,7 @@
 ---
 title: The API's guards have no gaps - a missing Host, an IPv6 bind, an empty http.host, no actor, an uppercase scheme
 status: done
-depends: [task-11-origin-and-host-are-checked.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-it-is-remote.md]
+depends: [task-11-origin-and-host-are-checked.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-remote.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/http.ts#L72-L79](../../../../packages/server/src/http.ts#L72-L79) - `foreign`, which refuses a request with no `Host` as it refuses a foreign one"

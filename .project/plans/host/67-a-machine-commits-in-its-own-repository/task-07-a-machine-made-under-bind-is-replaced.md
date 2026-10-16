@@ -1,7 +1,7 @@
 ---
 title: A machine made under bind is replaced, not entered
 status: done
-depends: [task-02-a-machine-gets-a-git-directory-of-its-own.md]
+depends: [task-02-machine-gets-its-own-git-directory.md]
 layer: "computer"
 refs:
   - "[code://packages/computer/src/runtime.ts#L2164-L2172](../../../../packages/computer/src/runtime.ts#L2164-L2172) - `remove`"

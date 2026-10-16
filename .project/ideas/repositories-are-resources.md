@@ -8,7 +8,7 @@ Pending, to see and think about; not a plan yet.
 
 Today a session opens on a folder this host already has (`file://`), and a machine works on that folder through a mount.
 The idea is a `repository:` (or `git:`) resource scheme, served like `computer:` and the people schemes: a host lists the repositories it can reach on GitHub and GitLab, and a session is opened on one of them rather than on a folder.
-The host clones it when a session needs it, where the session runs: on this host, or inside a machine that cannot mount anything ([container 05 p8](../plans/container/05-an-agent-in-a-machine-p8-a-profile-on-another-docker/plan.md) clones it there).
+The host clones it when a session needs it, where the session runs: on this host, or inside a machine that cannot mount anything ([container 05 p8](../plans/container/05-p8-a-profile-on-another-docker/plan.md) clones it there).
 Nothing is kept beyond the session's own clone, so a host needs no checked-out copies to serve a repository.
 
 | | |

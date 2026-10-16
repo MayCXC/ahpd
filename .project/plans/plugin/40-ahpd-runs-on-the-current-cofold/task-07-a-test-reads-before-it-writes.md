@@ -1,7 +1,7 @@
 ---
 title: A test reads a file before it writes it
 status: done
-depends: [task-02-a-paused-run-is-answered-on-its-own-handle.md]
+depends: [task-02-paused-run-answered-on-its-own-handle.md]
 layer: "agent-cofold"
 refs:
   - "[code://packages/agent-cofold/test/agent-cofold-tools.test.ts#L324-L335](../../../../packages/agent-cofold/test/agent-cofold-tools.test.ts#L324-L335) - the `onFileEdit` case edits a file it never read"

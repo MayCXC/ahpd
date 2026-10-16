@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-06
 revalidated: 2026-10-07
 requires:
-  - plans/host/68-an-attachments-bytes-are-a-file-the-host-wrote/plan.md
+  - plans/host/68-attachment-bytes-are-a-file-the-host-wrote/plan.md
 changes: []
 creates: []
 decisions:

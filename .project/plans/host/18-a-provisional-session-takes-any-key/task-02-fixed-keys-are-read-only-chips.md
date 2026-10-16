@@ -1,7 +1,7 @@
 ---
 title: A running session shows its fixed keys read-only
 status: done
-depends: [task-01-a-fixed-key-restarts-an-unstarted-session.md]
+depends: [task-01-fixed-key-restarts-unstarted-session.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L2615](../../../../packages/sdk/src/host.ts#L2615) - the `schema` handed to a backend at spawn"

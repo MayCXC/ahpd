@@ -1,7 +1,7 @@
 ---
 title: A long session compacts itself before it fills the model
 status: done
-depends: [task-02-a-turn-runs-on-the-providers-model-with-its-price.md]
+depends: [task-02-turn-runs-on-provider-model-with-price.md]
 layer: "agent-cofold, docs"
 refs:
   - "[code://packages/agent-cofold/src/turnagent.ts#L178-L222](../../../../packages/agent-cofold/src/turnagent.ts#L178-L222) - the `createAgent` call, with no `context`"

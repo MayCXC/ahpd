@@ -8,7 +8,7 @@ refs:
   - "[code://packages/agent-acp/src/session.ts#L1006-L1147](../../../../packages/agent-acp/src/session.ts#L1006-L1147) - `open`, where `Start.forkAt` becomes a fork"
   - "[code://packages/sdk/src/types/agent.ts#L357](../../../../packages/sdk/src/types/agent.ts#L357) - `chats.fork`, a static field of the agent; `probe` spawns nothing"
   - "[code://packages/sdk/src/types/session.ts#L245-L260](../../../../packages/sdk/src/types/session.ts#L245-L260) - `forkPoint`, which offers the control per turn"
-  - "[code://.project/plans/host/19-a-fork-copies-through-the-turn/task-01-the-contract-says-a-fork-copies-through-the-turn.md](../../host/19-a-fork-copies-through-the-turn/task-01-the-contract-says-a-fork-copies-through-the-turn.md) - the contract this task is written to; done first"
+  - "[code://.project/plans/host/19-a-fork-copies-through-the-turn/task-01-contract-says-fork-copies-through-turn.md](../../host/19-a-fork-copies-through-the-turn/task-01-contract-says-fork-copies-through-turn.md) - the contract this task is written to; done first"
   - "[code://packages/agent-acp/test/agent-acp.test.ts](../../../../packages/agent-acp/test/agent-acp.test.ts) - the scripted server"
 ---
 

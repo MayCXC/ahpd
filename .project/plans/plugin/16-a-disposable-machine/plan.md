@@ -100,12 +100,12 @@ another session names an alone machine -> [new] refused
 | [02 - The machine is made when the session starts](task-02-made-at-session-start.md) | done | 01 |
 | [03 - It goes after the last session, unless picked again](task-03-it-goes-after-the-last-session.md) | done | 02 |
 | [04 - Docs](task-04-docs.md) | done | 03 |
-| [05 - A machine is left when its session moves away before the first turn](task-05-a-machine-is-left-when-its-session-moves-away.md) | done | - |
+| [05 - A machine is left when its session moves away before the first turn](task-05-machine-left-when-session-moves-away.md) | done | - |
 | [06 - A resumed session counts as a user](task-06-a-resumed-session-counts-as-a-user.md) | done | 05 |
 | [07 - A daemon adopts only its own leftovers](task-07-a-daemon-adopts-only-its-own-leftovers.md) | done | 06, plugin/15 task 08 |
-| [08 - A disposable-alone machine refuses another session](task-08-a-disposable-alone-machine-refuses-another-session.md) | done | 07, plugin/15 task 11 |
+| [08 - A disposable-alone machine refuses another session](task-08-disposable-alone-machine-refuses-others.md) | done | 07, plugin/15 task 11 |
 | [09 - A machine made for a session counts against max and needs computer:write](task-09-a-machine-made-for-a-session-counts.md) | done | - |
-| [10 - The session folder needs the profile's flag](task-10-the-session-folder-needs-the-profiles-flag.md) | done | - |
+| [10 - The session folder needs the profile's flag](task-10-session-folder-needs-profile-flag.md) | done | - |
 | [11 - Docs and comments](task-11-docs-and-comments.md) | done | 05, 06, 07, 08, 09, 10 |
 
 ## Risks and tradeoffs

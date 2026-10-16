@@ -25,7 +25,7 @@ The `@ahpd/computer` plugin makes and reaches machines, the SDK carries the `com
 
 ## Runtimes
 
-A profile's `runtime` names what makes the machine: `docker`, `ssh`, `libvirt` or `proxmox`, each with its own options, per [One computer: provider, the runtime named for what makes the machine](./05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md).
+A profile's `runtime` names what makes the machine: `docker`, `ssh`, `libvirt` or `proxmox`, each with its own options, per [One computer: provider, the runtime named for what makes the machine](./05-p11-a-vm-is-made-for-a-machine/plan.md).
 `docker` is the one built; the container/05 plans add the others.
 A machine id records which runtime made it, so several runtimes can serve one host.
 

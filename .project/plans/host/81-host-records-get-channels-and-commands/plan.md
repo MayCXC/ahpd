@@ -72,10 +72,10 @@ client x-ahpd/usage/totals -> host -> served method -> usage authorize -> Usage.
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host serves x- commands, and a plugin registers one](../81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/plan.md) | built | - |
-| [p2 - People and policies are channels and commands](../81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/plan.md) | built | p1 |
-| [p3 - Usage is read through commands](../81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/plan.md) | built | p1 |
-| [p4 - Computers are a channel and commands](../81-host-records-get-channels-and-commands-p4-computers-are-a-channel/plan.md) | built | p1, p2 |
+| [p1 - The host serves x- commands, and a plugin registers one](../81-p1-the-host-serves-x-commands/plan.md) | built | - |
+| [p2 - People and policies are channels and commands](../81-p2-people-and-policies-are-channels/plan.md) | built | p1 |
+| [p3 - Usage is read through commands](../81-p3-usage-is-read-through-commands/plan.md) | built | p1 |
+| [p4 - Computers are a channel and commands](../81-p4-computers-are-a-channel/plan.md) | built | p1, p2 |
 
 The ahpapp half is ahpapp's own plan, and it starts when p2 is built.
 

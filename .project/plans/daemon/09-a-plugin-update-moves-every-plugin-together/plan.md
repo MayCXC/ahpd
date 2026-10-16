@@ -83,7 +83,7 @@ npm i -g @ahpd/server (0.8.0) -> ahpd plugin install @ahpd/agent-claude ... -> n
 | [07 - Updating named plugins is refused while another is behind](task-07-update-one-refuses-a-plugin-behind.md) | dropped | 06 |
 | [08 - Install and update put the daemon's sdk beside the plugins](task-08-the-daemon-pins-the-sdk.md) | done | 06 |
 | [09 - Our plugins take any @ahpd/sdk from 0.8 on](task-09-a-plugin-names-its-oldest-sdk.md) | done | 08 |
-| [10 - Install refuses a package that is not a plugin](task-10-install-refuses-a-package-that-is-not-a-plugin.md) | done | 08 |
+| [10 - Install refuses a package that is not a plugin](task-10-install-refuses-a-non-plugin-package.md) | done | 08 |
 | [11 - Update answers what moved](task-11-update-answers-what-moved.md) | done | 10 |
 | [12 - Update and remove use the plugin root, and an sdk move asks for a restart](task-12-update-and-remove-use-the-plugin-root.md) | done | 11 |
 

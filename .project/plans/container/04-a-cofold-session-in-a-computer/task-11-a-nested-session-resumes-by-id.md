@@ -1,7 +1,7 @@
 ---
 title: A nested session resumes the inner transcript by id
 status: done
-depends: [task-09-an-ended-nested-session-refuses-with-the-reason.md]
+depends: [task-09-ended-nested-session-refuses-with-reason.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/nested.ts#L232](../../../../packages/sdk/src/nested.ts#L232) - `innerSession`, a random URI"

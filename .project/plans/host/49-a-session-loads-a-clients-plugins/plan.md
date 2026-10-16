@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-03
 revalidated: 2026-10-04
 requires:
-  - plans/host/44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
+  - plans/host/44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
 refs:
   - "[code://packages/sdk/src/host/actions.ts#L454-L509](../../../../packages/sdk/src/host/actions.ts#L454-L509) - `session/activeClientSet`: kept whole in `presence`, but only `tools` is read"
   - "[code://packages/sdk/src/host.ts#L658-L679](../../../../packages/sdk/src/host.ts#L658-L679) - `leaves`: `session/activeClientRemoved` once a client watches the session no more"
@@ -91,8 +91,8 @@ session/activeClientRemoved -> the client's plugins leave the set -> same restar
 | --- | --- | --- |
 | [01 - A client's plugin is copied to the host](task-01-a-clients-plugin-is-copied-to-the-host.md) | done | - |
 | [02 - A session reports the plugins a client hands it](task-02-a-session-reports-a-clients-plugins.md) | done | 01 |
-| [03 - The agent runs with the session's client plugins](task-03-the-agent-runs-with-the-sessions-client-plugins.md) | done | 02 |
-| [04 - A disconnected client is kept for 30 seconds](task-04-a-disconnected-client-is-kept-for-30-seconds.md) | done | - |
+| [03 - The agent runs with the session's client plugins](task-03-agent-runs-with-session-client-plugins.md) | done | 02 |
+| [04 - A disconnected client is kept for 30 seconds](task-04-disconnected-client-kept-for-30-seconds.md) | done | - |
 
 ## Risks and tradeoffs
 

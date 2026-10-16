@@ -1,7 +1,7 @@
 ---
 title: The plan closes on what is true - statuses, deferred work, docs, ranges and refs
 status: done
-depends: [task-14-inside-follows-a-dangling-link.md, task-15-a-declined-edit-sends-its-after-when-declined.md]
+depends: [task-14-inside-follows-a-dangling-link.md, task-15-declined-edit-sends-after-on-decline.md]
 layer: "docs, agent-cofold"
 refs:
   - "[code://docs/plugins/PLUGINS.md#L409-L413](../../../../docs/plugins/PLUGINS.md#L409-L413) - the tool section, where a session naming no mode gets `auto` and `web_fetch` names what it does not catch"

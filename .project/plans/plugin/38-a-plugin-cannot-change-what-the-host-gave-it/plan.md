@@ -93,7 +93,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 | [01 - a principal cannot be changed](task-01-a-principal-cannot-be-changed.md) | done | - |
 | [02 - an agent's start holds copies](task-02-an-agents-start-holds-copies.md) | done | 01 |
 | [03 - the host holds copies of contributions](task-03-the-host-holds-copies-of-contributions.md) | done | 01 |
-| [04 - events, paths and options are per plugin copies](task-04-events-paths-and-options-are-per-plugin-copies.md) | done | 01 |
+| [04 - events, paths and options are per plugin copies](task-04-events-paths-options-are-per-plugin.md) | done | 01 |
 | [05 - the fold keeps the base's getters](task-05-the-fold-keeps-the-bases-getters.md) | done | - |
 | [06 - docs](task-06-docs.md) | done | 02, 03, 04 |
 

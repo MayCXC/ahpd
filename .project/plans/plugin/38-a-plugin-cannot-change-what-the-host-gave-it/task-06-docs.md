@@ -1,7 +1,7 @@
 ---
 title: The plugin docs say what a plugin gets is read-only
 status: done
-depends: [task-02-an-agents-start-holds-copies.md, task-03-the-host-holds-copies-of-contributions.md, task-04-events-paths-and-options-are-per-plugin-copies.md]
+depends: [task-02-an-agents-start-holds-copies.md, task-03-the-host-holds-copies-of-contributions.md, task-04-events-paths-options-are-per-plugin.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the plugin author's guide"

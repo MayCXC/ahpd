@@ -83,8 +83,8 @@ createSession config -> worktreeIncludeFiles (array from VS Code) -> read as a s
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The GitHub state is published per folder](task-01-the-github-state-is-published-per-folder.md) | done | - |
-| [02 - The files a worktree brings along are a list, and a string still reads](task-02-the-files-a-worktree-brings-along-are-a-list.md) | done | - |
-| [03 - A worktree links the git-ignored folders it is told to](task-03-a-worktree-links-the-folders-it-is-told-to.md) | done | - |
+| [02 - The files a worktree brings along are a list, and a string still reads](task-02-worktree-files-to-bring-are-a-list.md) | done | - |
+| [03 - A worktree links the git-ignored folders it is told to](task-03-worktree-links-the-folders-it-is-told.md) | done | - |
 
 ## Risks and tradeoffs
 

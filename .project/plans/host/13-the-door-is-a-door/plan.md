@@ -56,7 +56,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The door admits, `authenticate` authorizes, and `trustToken` opts out](task-01-the-door-admits-and-the-token-may-be-trusted.md) | done | - |
+| [01 - The door admits, `authenticate` authorizes, and `trustToken` opts out](task-01-door-admits-and-token-may-be-trusted.md) | done | - |
 
 ## Risks and tradeoffs
 

@@ -38,7 +38,7 @@ Over HTTP, each of those failures is answered with its sentence and a status, ne
 2. Drop the `context.surface === 'remote'` branches that only existed to avoid `process.exit`, and the comments that explained them.
 3. `run.ts` is the daemon and keeps its process calls; `registry.ts`'s `warn` is the registry's configuration and stays.
 4. `rg -n "process\.(exit|stdout|stderr)" packages/server/src/commands/ --glob '!run.ts'` finds only `registry.ts`'s `warn`.
-5. [daemon/05 task 08](../05-an-http-api/task-08-served-commands-act-on-the-daemons-own-options.md) changes what `status`, `user` and `optionsFrom` read over HTTP; whichever lands second rebases on the other.
+5. [daemon/05 task 08](../05-an-http-api/task-08-served-commands-use-the-daemons-options.md) changes what `status`, `user` and `optionsFrom` read over HTTP; whichever lands second rebases on the other.
 
 ## Validation
 

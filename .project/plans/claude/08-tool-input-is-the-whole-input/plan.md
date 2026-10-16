@@ -48,8 +48,8 @@ tool_use input -> summarize (cut at 400 for unknown tools) -> invocationMessage 
 | --- | --- | --- |
 | [01 - toolInput is the whole input](task-01-tool-input-is-the-whole-input.md) | done | - |
 | [02 - A row line is never cut JSON](task-02-a-row-line-is-never-cut-json.md) | done | 01 |
-| [03 - A confirmation during streaming carries the input](task-03-a-confirmation-during-streaming-carries-the-input.md) | done | 01 |
-| [04 - A row reads the call's description, or VS Code's line when it has none](task-04-a-row-reads-the-calls-description-or-vs-codes-line.md) | done | 02 |
+| [03 - A confirmation during streaming carries the input](task-03-confirmation-in-streaming-carries-input.md) | done | 01 |
+| [04 - A row reads the call's description, or VS Code's line when it has none](task-04-row-shows-description-or-vscode-line.md) | done | 02 |
 
 ## Resume state
 

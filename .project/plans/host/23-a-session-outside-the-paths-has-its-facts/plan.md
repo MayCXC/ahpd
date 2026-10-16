@@ -83,7 +83,7 @@ turn ends -> refreshFacts(dir) -> facts, pull requests, changes -> row and verbs
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - Opening a changeset reads the folder's git facts first](task-01-opening-a-changeset-reads-the-facts.md) | done | - |
-| [02 - A stored session's folder is read at startup](task-02-a-stored-sessions-folder-is-read-at-startup.md) | done | 01 |
+| [02 - A stored session's folder is read at startup](task-02-stored-session-folder-read-at-startup.md) | done | 01 |
 
 ## Risks and tradeoffs
 

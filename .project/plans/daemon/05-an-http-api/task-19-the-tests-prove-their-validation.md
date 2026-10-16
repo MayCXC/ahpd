@@ -1,7 +1,7 @@
 ---
 title: The API's tests prove what their tasks' Validation says
 status: done
-depends: [task-08-served-commands-act-on-the-daemons-own-options.md, task-10-an-unconfigured-daemon-refuses-http.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-it-is-remote.md]
+depends: [task-08-served-commands-use-the-daemons-options.md, task-10-an-unconfigured-daemon-refuses-http.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-remote.md]
 layer: "server"
 refs:
   - "[code://packages/server/test/server-http.test.ts#L366-L382](../../../../packages/server/test/server-http.test.ts#L366-L382) - the `http.host` case, which checks the bind as well as the announcement"

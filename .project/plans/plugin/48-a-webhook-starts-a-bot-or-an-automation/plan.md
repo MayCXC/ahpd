@@ -8,7 +8,7 @@ revalidated: 2026-10-14
 requires:
   - plans/plugin/21-a-plugin-serves-an-http-route/plan.md
   - plans/plugin/37-a-bot-is-a-record-with-a-session/plan.md
-  - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md
+  - plans/plugin/45-p1-the-host-gives-a-record-store/plan.md
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L801](../../../../packages/sdk/src/types/plugin.ts#L801) - `registerRoute`, which serves `/plugins/<name>/` on the daemon port; no plugin uses it yet"
   - "[code://packages/sdk/src/types/plugin.ts#L828-L842](../../../../packages/sdk/src/types/plugin.ts#L828-L842) - `registerTriggerType` and `fireTrigger`"
@@ -85,11 +85,11 @@ POST /plugins/%40ahpd/webhook/<endpoint> + bearer -> route -> endpoint record ->
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md) | done | - |
+| [01 - The webhook plugin keeps endpoints and checks the caller](task-01-webhook-keeps-endpoints-checks-caller.md) | done | - |
 | [02 - A webhook talks to a bot by thread](task-02-a-webhook-talks-to-a-bot-by-thread.md) | done | 01 |
-| [03 - A webhook fires an automation, and the run reads the event](task-03-a-webhook-fires-an-automation-and-the-run-reads-the-event.md) | done | 01 |
-| [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-a-public-port-of-their-own.md) | done | 01 |
-| [05 - A callback follows no redirect, and a refused turn is answered](task-05-a-callback-follows-no-redirect-and-a-refused-turn-is-answered.md) | done | 02 |
+| [03 - A webhook fires an automation, and the run reads the event](task-03-webhook-fires-automation-run-reads-event.md) | done | 01 |
+| [04 - Routes can listen on a public port of their own](task-04-routes-can-listen-on-their-own-port.md) | done | 01 |
+| [05 - A callback follows no redirect, and a refused turn is answered](task-05-callback-follows-no-redirect.md) | done | 02 |
 
 ## Risks and tradeoffs
 

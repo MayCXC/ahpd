@@ -80,7 +80,7 @@ restart -> resume session -> spawn(chatUriFor(session)) only -> peer chat gone; 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A peer chat runs under its own backend id](task-01-a-peer-chat-runs-under-its-own-backend-id.md) | done | - |
+| [01 - A peer chat runs under its own backend id](task-01-peer-chat-runs-under-its-own-backend-id.md) | done | - |
 | [02 - The store records a session's chats](task-02-the-store-records-a-sessions-chats.md) | done | - |
 | [03 - A restart rebuilds every chat of a session](task-03-a-restart-rebuilds-every-chat.md) | done | 01, 02 |
 

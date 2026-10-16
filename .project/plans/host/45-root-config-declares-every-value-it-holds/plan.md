@@ -6,9 +6,9 @@ priority: medium
 created: 2026-10-03
 revalidated: 2026-10-04
 requires:
-  - plans/host/44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
-  - plans/host/43-the-wire-is-the-protocols-p1-the-wire-test-checks-every-frame/plan.md
-  - plans/host/43-the-wire-is-the-protocols-p3-the-root-config-schema-conforms/plan.md
+  - plans/host/44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
+  - plans/host/43-p1-the-wire-test-checks-every-frame/plan.md
+  - plans/host/43-p3-the-root-config-schema-conforms/plan.md
 decisions:
   - decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md
 refs:
@@ -86,7 +86,7 @@ That is [Daemon and plugin keys reach only connections with config:read, and a w
 | The wire test pushes the checkpoint client's connect patch and fails on any value in root `config.values` with no property in `config.schema.properties` | the request, 2026-10-03 | 03 |
 | `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration` are not declared and nothing reads them: the artifact tools keep only the long wording, every session runs under the deferred title strategy with no key to change it, and `rename_chat` is `deferLoading: true`; a push of any of the three from an older client is refused key by key under task 02 | Softov, 2026-10-03, asked "VS Code dropped both keys before the checkpoint: the compact-prompt experiment was removed (git://45dd7fa1f8b, 2026-09-23), and deferred titles became the default with no setting (git://3b2b948b52d, 2026-09-25). What should ahpd do?": "Follow upstream" | 04 |
 | A session resumed or browsed after a restart is `deferred` too, not upstream's `utility` fallback for a session with no persisted strategy | Softov, 2026-10-03, asked "Sessions that existed before the title change: what title mode do they get?": "Deferred, like new ones" | 04 |
-| Conforming each property to `ConfigPropertySchema` is host/43 p3's, which this plan does not repeat; these properties are taken from a host that already declares them as `ConfigPropertySchema` | [host/43 p3](../43-the-wire-is-the-protocols-p3-the-root-config-schema-conforms/plan.md) | 03 |
+| Conforming each property to `ConfigPropertySchema` is host/43 p3's, which this plan does not repeat; these properties are taken from a host that already declares them as `ConfigPropertySchema` | [host/43 p3](../43-p3-the-root-config-schema-conforms/plan.md) | 03 |
 | The protocol's own cases 127, 128 and 130, which push the root config value `theme` that no schema here declares, are expected to be refused: `ahp-test-cases.test.ts` names them in `HOST_REFUSED` and drops them from `HOST_OWNS`, and the counts move with them (`NOT_REPLAYED` 205 to 208, `HOST_REFUSED` 59 to 62, `HOST_OWNS` 14 to 11) | Softov, 2026-10-09, asked "host/45: what happens to the 3 protocol tests that send the undeclared root config value theme?": "Expect the refusal" | 02 |
 
 ## Proposed architecture
@@ -101,10 +101,10 @@ That is [Daemon and plugin keys reach only connections with config:read, and a w
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The root config declares the keys VS Code pushes](task-01-the-root-config-declares-the-keys-vscode-pushes.md) | done | - |
+| [01 - The root config declares the keys VS Code pushes](task-01-root-config-declares-vscode-pushed-keys.md) | done | - |
 | [02 - A pushed key nobody declares is refused](task-02-a-pushed-key-nobody-declares-is-refused.md) | done | 01 |
-| [03 - The wire test finds no value without a property](task-03-the-wire-test-finds-no-value-without-a-property.md) | done | 01, 02, 04, host/43 p1 task 03 |
-| [04 - The compact wording and the title keys go, and deferred titles are the default, as upstream](task-04-the-compact-wording-and-the-title-keys-go-as-upstream.md) | done | 01, 02 |
+| [03 - The wire test finds no value without a property](task-03-every-root-config-value-has-a-property.md) | done | 01, 02, 04, host/43 p1 task 03 |
+| [04 - The compact wording and the title keys go, and deferred titles are the default, as upstream](task-04-compact-wording-and-title-keys-go.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 

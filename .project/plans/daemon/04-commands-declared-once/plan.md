@@ -69,10 +69,10 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [03 - main.ts runs through the terminal program](task-03-main-runs-through-the-program.md) | done | 02 |
 | [04 - Docs, dependencies and the lockfile](task-04-docs-and-dependencies.md) | done | 03 |
 | [05 - start forwards the words after start, wherever it appears](task-05-start-forwards-the-words-after-start.md) | done | 04 |
-| [06 - The update check is declared by what it turns on, and its test can fail](task-06-the-update-check-is-declared-by-what-it-turns-on.md) | done | 12, 17 |
-| [07 - ahpd --help keeps the sentences a person acts on](task-07-help-keeps-the-sentences-a-person-acts-on.md) | done | 04 |
-| [08 - plugin install and remove say each line as it happens, and npm writes to stderr](task-08-plugin-writes-say-each-line-as-it-happens.md) | done | 04 |
-| [09 - The bare run completes its flags, and -v and --help are read only where they are flags](task-09-the-bare-run-completes-and-reads-flags-only-as-flags.md) | done | 04 |
+| [06 - The update check is declared by what it turns on, and its test can fail](task-06-update-check-declared-by-what-it-enables.md) | done | 12, 17 |
+| [07 - ahpd --help keeps the sentences a person acts on](task-07-help-keeps-sentences-a-person-acts-on.md) | done | 04 |
+| [08 - plugin install and remove say each line as it happens, and npm writes to stderr](task-08-plugin-writes-say-each-line-as-it-runs.md) | done | 04 |
+| [09 - The bare run completes its flags, and -v and --help are read only where they are flags](task-09-bare-run-reads-flags-only-as-flags.md) | done | 04 |
 | [10 - The pinning tests bind a port and start a daemon](task-10-the-pinning-tests-bind-a-port-and-start.md) | done | 05 |
 | [11 - The comments under commands/ document the declarations, and the refs point at them](task-11-comments-document-the-declarations.md) | done | 04 |
 | [12 - A cofold field says whether its flag negates, released by Softov](task-12-cofold-fields-say-whether-they-negate.md) | done | 04 |
@@ -81,12 +81,12 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [15 - A bare plugin or user names its sub-commands](task-15-a-bare-verb-names-its-sub-commands.md) | done | 04 |
 | [16 - The command handlers fail by throwing a cofold error, and never touch the process](task-16-handlers-fail-by-throwing.md) | done | 04 |
 | [17 - cofold leaves a boolean flag nobody typed out of the canonical input, released by Softov](task-17-cofold-leaves-an-untyped-flag-out.md) | done | 12 |
-| [18 - start forwards its options wherever they are typed, and finds the start that is the word](task-18-start-forwards-its-options-wherever-they-are-typed.md) | done | 05 |
-| [19 - The pinning cases fail when --host or a conflict's 409 breaks, and read no personal configuration](task-19-the-pinning-cases-fail-when-host-or-a-conflict-breaks.md) | done | 10, 16 |
-| [20 - A refusal takes only its sentence, and the group hint fails like every other failure](task-20-a-refusal-takes-its-sentence-and-the-group-hint-fails-like-the-others.md) | done | 15, 16 |
+| [18 - start forwards its options wherever they are typed, and finds the start that is the word](task-18-start-forwards-options-wherever-typed.md) | done | 05 |
+| [19 - The pinning cases fail when --host or a conflict's 409 breaks, and read no personal configuration](task-19-pinning-cases-fail-on-host-or-409.md) | done | 10, 16 |
+| [20 - A refusal takes only its sentence, and the group hint fails like every other failure](task-20-refusal-takes-only-its-sentence.md) | done | 15, 16 |
 | [21 - The task refs and Resumes in this plan point at the code as it is](task-21-the-refs-follow-the-code.md) | done | 18, 19, 20 |
-| [22 - A start regression leaves no daemon running, and the token case can fail](task-22-a-start-regression-leaves-no-daemon-and-the-token-case-can-fail.md) | done | 18 |
-| [23 - The comments and records of this plan say what is true](task-23-the-comments-and-records-say-what-is-true.md) | done | 20 |
+| [22 - A start regression leaves no daemon running, and the token case can fail](task-22-start-regression-leaves-no-daemon.md) | done | 18 |
+| [23 - The comments and records of this plan say what is true](task-23-comments-and-records-say-what-is-true.md) | done | 20 |
 
 ## Risks and tradeoffs
 
@@ -99,7 +99,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Next action:** none.
 - **Open questions:** none.
   A JSON shape for failures is [an idea](../../../ideas/failures-have-a-json-shape.md).
-- **Watch out for:** task 16 landed before [daemon/05 task 08](../05-an-http-api/task-08-served-commands-act-on-the-daemons-own-options.md), so that task rebases on the throwing handlers; task 14 landed before [daemon/05 task 09](../05-an-http-api/task-09-the-grants-each-command-needs.md), so task 09 applies the grants in the registry's `authorize` hook and `authorizeOverHttp` only identifies; `run` is a hidden command given its word when a line has no command, so the foreground daemon keeps matching `ahpd [options]`; this environment's global pnpm store is read-only, so installs need `--store-dir /tmp/pnpm-store`; the pinning cases set `CI=1`, which silences the update line in every case that does not remove it; [daemon/05](../05-an-http-api/plan.md) changes the scopes `packages/server/test/server-commands.test.ts:59-69` pins, so a scope failure there is daemon/05's to fix.
+- **Watch out for:** task 16 landed before [daemon/05 task 08](../05-an-http-api/task-08-served-commands-use-the-daemons-options.md), so that task rebases on the throwing handlers; task 14 landed before [daemon/05 task 09](../05-an-http-api/task-09-the-grants-each-command-needs.md), so task 09 applies the grants in the registry's `authorize` hook and `authorizeOverHttp` only identifies; `run` is a hidden command given its word when a line has no command, so the foreground daemon keeps matching `ahpd [options]`; this environment's global pnpm store is read-only, so installs need `--store-dir /tmp/pnpm-store`; the pinning cases set `CI=1`, which silences the update line in every case that does not remove it; [daemon/05](../05-an-http-api/plan.md) changes the scopes `packages/server/test/server-commands.test.ts:59-69` pins, so a scope failure there is daemon/05's to fix.
 
 ## Final verification checklist
 

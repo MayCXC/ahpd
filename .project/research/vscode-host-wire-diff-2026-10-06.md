@@ -32,7 +32,7 @@ Each row names the plan that already covers it, so later plans pick only from wh
 
 | Item | VS Code host | ahpd | Covered by | Note |
 | --- | --- | --- | --- | --- |
-| `protocolVersion` | `0.9.0` | `0.9.0` | [host/44 p1](../plans/host/44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md) | ahpd also speaks 1.0.0; VS Code did not offer it. |
+| `protocolVersion` | `0.9.0` | `0.9.0` | [host/44 p1](../plans/host/44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md) | ahpd also speaks 1.0.0; VS Code did not offer it. |
 | `serverInfo` | absent | `{ name: 'ahpd', version }` | - | ahpd only. |
 | `defaultDirectory` | yes | yes | - | Same. |
 | `completionTriggerCharacters` | `@`, `#`, `/` | `/`, `@` | not covered | `#` is VS Code's `#chat:<title>` reference to another chat of the session and `#` file references (`node/agentHostChatCompletionProvider.ts#L94-L106`, `node/agentHostFileCompletionProvider.ts#L111`). |
@@ -47,7 +47,7 @@ Each row names the plan that already covers it, so later plans pick only from wh
 | `_meta['vscode.importSession']` | true | absent | not covered | Gates `vscode/importSession`, which adopts a provider-native session listed with `_meta['vscode.external']: true`. |
 | `_meta['vscode.agentHostTiming']`, `['vscode.chatUserInteractionTiming']` | absent here (off by setting) | absent | [idea](../ideas/turn-and-model-call-diagnostics.md) only | Gate `vscode/reportAgentHostFirstResponse` and `vscode/reportChatUserInteraction`. |
 | `_meta['vscode.canvases']` | absent | absent | [host/47](../plans/host/47-ahpd-serves-what-ahp-1-0-0-added/plan.md) leaves canvas out | FETCH_HEAD moves canvases into the protocol. |
-| `_meta['ahpd.resourceProviders']`, `['ahpd.grants']`, `['ahpd.principal']` | absent | yes | [host/43 p4](../plans/host/43-the-wire-is-the-protocols-p4-ahpds-own-meta-keys-say-ahpd/plan.md) | ahpd only; also repeated on root `_meta`. |
+| `_meta['ahpd.resourceProviders']`, `['ahpd.grants']`, `['ahpd.principal']` | absent | yes | [host/43 p4](../plans/host/43-p4-ahpds-own-meta-keys-say-ahpd/plan.md) | ahpd only; also repeated on root `_meta`. |
 | Client `_meta` read | `vscode.telemetryLevel`, connection kind, machine and device ids | ignored | - | Nothing in ahpd reads them. |
 
 ## Root state
@@ -80,7 +80,7 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 | --- | --- | --- | --- | --- |
 | The 39 keys host/45 task 01 lists (`telemetryLevel`, `agentMerge.*`, `artifactTools`, `automationsEnabled`, `automationRunTimeoutMinutes`, `*MultiRootEnabled`, `terminalAutoApproveRules`, `http.proxy*`, `showExternalSessions` and the rest) | declared | value kept, no property | [host/45](../plans/host/45-root-config-declares-every-value-it-holds/plan.md) | host/45 task 01 also lists `canvasesEnabled`, `mcpToolRoutingEnabled`, `overlapProviderPreparation` and `workspaceSnapshotEnabled`, which the 1.140 host does not declare on this wire. |
 | `workspaceTrust` (`readOnly`, `{ enabled, trustedUris }`) | declared, `{ enabled: true, trustedUris: [home] }` | absent | [host/45](../plans/host/45-root-config-declares-every-value-it-holds/plan.md), and a separate plan | Being planned separately: declare it, honour `trustedUris` for project hooks, settings and plugins, and send `vscode/requestWorkspaceTrust` when a chat adds a folder. |
-| `mcpServers` | declared | declared by the daemon | [daemon/11](../plans/daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md) | Same key, different owner. |
+| `mcpServers` | declared | declared by the daemon | [daemon/11](../plans/daemon/11-root-config-holds-daemon-and-plugin-options/plan.md) | Same key, different owner. |
 | `defaultShell` | declared | declared | - | Same. |
 | `permissions` (`sessionMutable`, `{ allow, deny }`) | declared at root | session config only | host/45 task 01 leaves it out | The root default the session key inherits. |
 | `customizations` ("Plugins") | declared, `[]` | absent | not covered; [host/49](../plans/host/49-a-session-loads-a-clients-plugins/plan.md) is the per-session client half | Plugins configured on the host and offered to remote sessions. |
@@ -90,17 +90,17 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 | `byokModelsEnabled`, `runtimePath`, `skillCharBudget` | declared | absent | host/45 task 01 leaves them out | Scope `Local`, never sent to a remote host. |
 | `codex.personality`, `codex.autoReviewPolicy` | declared, provider-backed | absent | - | Codex's `config.toml`; drawn through `vscode.agentCustomizationSettings`. |
 | `artifactToolsCompactPrompts`, `deferredTitleGeneration`, `activeAgentTitleGeneration` | not declared at 1.140 | first two declared, third held as a value | host/45 task 04 removes them | See the FETCH_HEAD section: main declares the two title keys again. |
-| `paths`, `port`, `host`, `http`, `updateCheck`, `advancedTools`, `wire`, `plugins.*` | absent | declared | [daemon/11](../plans/daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md) | ahpd only. |
+| `paths`, `port`, `host`, `http`, `updateCheck`, `advancedTools`, `wire`, `plugins.*` | absent | declared | [daemon/11](../plans/daemon/11-root-config-holds-daemon-and-plugin-options/plan.md) | ahpd only. |
 
 ## Session state
 
 | Item | VS Code host | ahpd | Covered by | Note |
 | --- | --- | --- | --- | --- |
-| State keys | `provider`, `title`, `status`, `lifecycle`, `workingDirectories`, `chats`, `defaultChat`, `config`, `customizations`, `serverTools`, `changesets`, `activeClients`, `_meta` | the same, plus `project`, `activity`, and `resource` on some backends | [host/43 p2](../plans/host/43-the-wire-is-the-protocols-p2-results-and-actions-are-the-protocols/plan.md) | `resource` is not a `SessionState` field and appears on `claude-deepseek`, `pi` and `cofold` but not `claude`. |
+| State keys | `provider`, `title`, `status`, `lifecycle`, `workingDirectories`, `chats`, `defaultChat`, `config`, `customizations`, `serverTools`, `changesets`, `activeClients`, `_meta` | the same, plus `project`, `activity`, and `resource` on some backends | [host/43 p2](../plans/host/43-p2-results-and-actions-are-protocol-shapes/plan.md) | `resource` is not a `SessionState` field and appears on `claude-deepseek`, `pi` and `cofold` but not `claude`. |
 | `chats[]` | `resource`, `title`, `status`, `modifiedAt`, `origin`, `interactivity` | the same, plus `activity` | - | Same shape. |
 | `changesets[]` | `session` kind ("Session Changes") | `session` with `capabilities.review`, and `uncommitted` | - | ahpd offers more. |
 | `serverTools` comment tools: `addComment`, `listComments`, `replyToComment`, `resolveComments`, `deleteComments`, `viewUnreviewedComments` | offered | absent | not covered | The agent-feedback tools over `<session>/annotations`; ahpd serves the channel but no backend can write it ([`code://packages/sdk/src/host/snapshots.ts#L88-L100`](../../packages/sdk/src/host/snapshots.ts#L88-L100)). |
-| `serverTools` session tools: `list_sessions`, `get_current_session`, `get_session_context`, `send_message`, `create_session`, `delete_session`, `rename_chat`, artifact trio | offered | offered | UPSTREAM.md Pass 4 (ticked), [host/33](../plans/host/33-a-session-tool-acts-as-the-person-it-works-for/plan.md) | Same names. |
+| `serverTools` session tools: `list_sessions`, `get_current_session`, `get_session_context`, `send_message`, `create_session`, `delete_session`, `rename_chat`, artifact trio | offered | offered | UPSTREAM.md Pass 4 (ticked), [host/33](../plans/host/33-a-session-tool-acts-as-its-person/plan.md) | Same names. |
 | `customizations[].type` | `directory`, `mcpServer` | `plugin`, `directory`, `mcpServer` | - | ahpd adds the `agents-md` plugin row. |
 | `_meta['vscode.external']` | false on every session | absent | not covered | Marks a provider-native session not yet adopted; pairs with `vscode/importSession`. |
 | `_meta.workingDirectoryScopeIds` | one SHA-1 per folder set | absent | [host/39](../plans/host/39-what-vs-code-1140-stopped-reading/plan.md) took `githubData` only | The client reads per-folder `gitData` through it; ahpd's single-folder `_meta.git` is still read. |
@@ -133,7 +133,7 @@ VS Code marks `autoApprovePolicyRestricted` and `workspaceTrust` `readOnly`, and
 | `turns[].usage._meta` | `vscode.modelCall`, `turnTokenTotals`, `modelContextWindow`, `quotaSnapshots`, `copilotUsage`, `cost`, `reasoningOutputTokens`, `autoModeResolved` | `cost`, `cacheWriteTokens`, `reasoningTokens` | [idea](../ideas/turn-and-model-call-diagnostics.md) only | `vscode.modelCall` is per-call timing and tokens. |
 | `turns[].message._meta` | none | `sender` | [host/38](../plans/host/38-a-client-sees-who-sent-each-turn/plan.md) | ahpd only. |
 | tool call `_meta` | `toolKind`, `language` | `toolKind`, `ahpd.startedAt`, `ahpd.endedAt`, `ahpd.durationMs` | [plugin/29](../plans/plugin/29-a-tool-call-says-when-it-ran/plan.md) | One VS Code tool call in the sample. |
-| `listSessions` rows | `chats`, `defaultChat` | absent; `project`, `activity` instead | [host/44 p3](../plans/host/44-ahpd-speaks-ahp-1-0-0-p3-a-sessions-row-lists-its-chats/plan.md) | Same `_meta` gaps as session state. |
+| `listSessions` rows | `chats`, `defaultChat` | absent; `project`, `activity` instead | [host/44 p3](../plans/host/44-p3-a-sessions-row-lists-its-chats/plan.md) | Same `_meta` gaps as session state. |
 
 ## Extension methods and notifications
 

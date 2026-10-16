@@ -1,7 +1,7 @@
 ---
 title: A role named __proto__ in the users file is read as a role
 status: done
-depends: [task-23-user-add-on-an-existing-person-is-bounded.md]
+depends: [task-23-user-add-on-existing-person-is-bounded.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/users.ts#L228-L238](../../../../packages/sdk/src/users.ts#L228-L238) - the role table built into `{}` with `roles[name] = kept`"

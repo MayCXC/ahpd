@@ -1,7 +1,7 @@
 ---
 title: The name a create gives a dev container is kept for it
 status: done
-depends: [task-07-the-fake-cli-behaves-like-the-real-one.md, task-09-read-only-needs-through-an-override-config.md]
+depends: [task-07-the-fake-cli-behaves-like-the-real-one.md, task-09-read-only-needs-via-an-override-config.md]
 layer: "computer"
 refs:
   - "[code://packages/computer/src/provider.ts#L269-L300](../../../../packages/computer/src/provider.ts#L269-L300) - the write, which ignores the id `run` answers"

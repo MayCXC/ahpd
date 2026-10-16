@@ -1,7 +1,7 @@
 ---
 title: Every request answers to either name of a session
 status: done
-depends: [task-01-a-created-session-is-held-under-its-providers-name.md]
+depends: [task-01-created-session-held-under-provider-name.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/sessionmethods.ts#L576-L579](../../../../packages/sdk/src/host/sessionmethods.ts#L576-L579) - `createChat`, which looks the session up by the exact string"

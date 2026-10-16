@@ -64,7 +64,7 @@ client createChat source.kind 'fork' -> host.ts:6957 forkPoint(turnId) -> [chang
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The contract says a fork copies through the turn](task-01-the-contract-says-a-fork-copies-through-the-turn.md) | done | - |
+| [01 - The contract says a fork copies through the turn](task-01-contract-says-fork-copies-through-turn.md) | done | - |
 | [02 - Claude forks through the turn](task-02-claude-forks-through-the-turn.md) | done | 01 |
 | [03 - cofold forks through the turn](task-03-cofold-forks-through-the-turn.md) | done | 01 |
 

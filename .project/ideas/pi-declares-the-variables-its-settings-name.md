@@ -3,7 +3,7 @@ title: pi declares the key variables its settings name
 created: 2026-10-04
 ---
 
-For now pi's `machine()` declares only the key variables pi's provider list names, and a custom variable in a person's pi settings is the profile's to add as a need ([container/05 p5](../plans/container/05-an-agent-in-a-machine-p5-agents-run-from-their-parts/plan.md), task 07).
+For now pi's `machine()` declares only the key variables pi's provider list names, and a custom variable in a person's pi settings is the profile's to add as a need ([container/05 p5](../plans/container/05-p5-agents-run-from-their-parts/plan.md), task 07).
 Source: Softov, 2026-10-04, chose that for now and kept the other route for later.
 
 ## What it would add

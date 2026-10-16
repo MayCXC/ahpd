@@ -89,8 +89,8 @@ window root/configChanged { autoArchiveMergedSessionsAfterDays: 7 } -> actions.t
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - An inactive merged session is archived](task-01-an-inactive-merged-session-is-archived.md) | done | host/90 |
-| [02 - An auto-archived merged session is deleted](task-02-an-auto-archived-merged-session-is-deleted.md) | done | 01 |
-| [03 - A daemon key picks how a pull request is looked up](task-03-a-daemon-key-picks-how-a-pull-request-is-looked-up.md) | done | 01 |
+| [02 - An auto-archived merged session is deleted](task-02-auto-archived-merged-session-is-deleted.md) | done | 01 |
+| [03 - A daemon key picks how a pull request is looked up](task-03-daemon-key-picks-pull-request-lookup.md) | done | 01 |
 
 ## Risks and tradeoffs
 

@@ -102,8 +102,8 @@ ahpd --plugin @ahpd/agent-acp
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The package, the provider and a turn](task-01-the-package-the-provider-and-a-turn.md) | done | - |
-| [02 - The catalogue, a resume and the config schema](task-02-the-catalogue-a-resume-and-the-config-schema.md) | done | 01 |
-| [03 - The host's files and shell reach the server](task-03-the-hosts-files-and-shell-reach-the-server.md) | done | 01 |
+| [02 - The catalogue, a resume and the config schema](task-02-catalogue-resume-and-config-schema.md) | done | 01 |
+| [03 - The host's files and shell reach the server](task-03-host-files-and-shell-reach-the-server.md) | done | 01 |
 | [04 - The plugin entry, the docs and a daemon that serves it](task-04-the-plugin-entry-the-docs-and-a-daemon.md) | done | 02, 03 |
 
 ## Risks and tradeoffs

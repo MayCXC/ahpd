@@ -48,4 +48,4 @@ The docs describe 0.10.0 rather than 0.9.
 
 ## Left for later
 
-- `leftOver()` in `computer-disposable.test.ts` and `computer-git-fetch.test.ts` reads the whole `TMPDIR` of a run, which every test file shares. A bundle another file has in flight therefore reads as a leftover. It is older than this plan, no task here covers it, and each file passes alone. See the Resume of [task-01](task-01-a-machine-is-removed-only-once-its-work-is-out.md).
+- `leftOver()` in `computer-disposable.test.ts` and `computer-git-fetch.test.ts` reads the whole `TMPDIR` of a run, which every test file shares. A bundle another file has in flight therefore reads as a leftover. It is older than this plan, no task here covers it, and each file passes alone. See the Resume of [task-01](task-01-machine-removed-once-its-work-is-out.md).

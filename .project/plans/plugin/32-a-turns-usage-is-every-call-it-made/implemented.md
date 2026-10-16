@@ -9,7 +9,7 @@ Every backend now reports a turn's usage as the sum of every model call it made,
 
 ## What was built
 
-- [p1 claude](../32-a-turns-usage-is-every-call-it-made-p1-claude-counts-every-call/implemented.md), [p2 pi](../32-a-turns-usage-is-every-call-it-made-p2-pi-sums-its-calls/implemented.md), [p3 cofold](../32-a-turns-usage-is-every-call-it-made-p3-cofold-counts-each-step/implemented.md), [p4 ACP](../32-a-turns-usage-is-every-call-it-made-p4-acp-reports-what-it-has/implemented.md).
+- [p1 claude](../32-p1-claude-counts-every-call/implemented.md), [p2 pi](../32-p2-pi-sums-its-calls/implemented.md), [p3 cofold](../32-p3-cofold-counts-each-step/implemented.md), [p4 ACP](../32-p4-acp-reports-what-it-has/implemented.md).
 
 ## Verified
 

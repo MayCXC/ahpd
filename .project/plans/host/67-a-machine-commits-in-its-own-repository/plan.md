@@ -6,8 +6,8 @@ priority: high
 created: 2026-10-06
 revalidated: 2026-10-06
 requires:
-  - plans/host/65-what-the-review-of-the-nine-built-plans-found-p2-a-machines-git-directory/plan.md
-  - plans/container/05-an-agent-in-a-machine-p7-a-worktree-brings-its-repository/plan.md
+  - plans/host/65-p2-a-machines-git-directory/plan.md
+  - plans/container/05-p7-a-worktree-brings-its-repository/plan.md
 decisions:
   - decisions/a-machine-commits-in-its-own-repository-and-the-host-fetches-it.md
 refs:
@@ -108,14 +108,14 @@ after:  ... -> -v <root> + <gitDir>/objects:ro + volume ahpd-git-<machine> as th
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - gitGuard is fetch or open](task-01-gitguard-is-fetch-or-open.md) | done | - |
-| [02 - A machine gets a git directory of its own](task-02-a-machine-gets-a-git-directory-of-its-own.md) | done | 01 |
-| [03 - The machine's repository is seeded from the host's](task-03-the-machines-repository-is-seeded-from-the-hosts.md) | done | 02 |
+| [02 - A machine gets a git directory of its own](task-02-machine-gets-its-own-git-directory.md) | done | 01 |
+| [03 - The machine's repository is seeded from the host's](task-03-machine-repo-seeded-from-the-hosts.md) | done | 02 |
 | [04 - ahpd brings the work back by fetch](task-04-ahpd-brings-the-work-back-by-fetch.md) | done | 03 |
 | [05 - The work comes back when it matters](task-05-the-work-comes-back-when-it-matters.md) | done | 04 |
 | [06 - The machine follows the host's branch](task-06-the-machine-follows-the-hosts-branch.md) | done | 04 |
 | [07 - A machine made under bind is replaced](task-07-a-machine-made-under-bind-is-replaced.md) | done | 02 |
 | [08 - COMPUTER.md says how a machine commits](task-08-docs.md) | done | 05, 06, 07, 09 |
-| [09 - A profile can give a machine a copy of the folder](task-09-a-profile-can-give-a-machine-a-copy-of-the-folder.md) | done | 04, 06 |
+| [09 - A profile can give a machine a copy of the folder](task-09-profile-can-give-machine-a-folder-copy.md) | done | 04, 06 |
 
 ## Risks and tradeoffs
 

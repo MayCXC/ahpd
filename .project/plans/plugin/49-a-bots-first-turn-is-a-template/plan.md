@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-13
 revalidated: 2026-10-14
 requires:
-  - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md
+  - plans/plugin/45-p2-the-bot-keeps-its-records-there/plan.md
 refs:
   - "[code://packages/bot/src/start.ts#L27-L38](../../../../packages/bot/src/start.ts#L27-L38) - `sessionFor`, which sends `instructions` as the first turn"
   - "[code://packages/bot/src/record.ts#L52-L86](../../../../packages/bot/src/record.ts#L52-L86) - `BotRecord`, the facts a template fills in"
@@ -79,7 +79,7 @@ bot made, or a chat added to its session -> read template -> fill {{word}} -> fi
 | --- | --- | --- |
 | [01 - A bot's first turn is its filled template](task-01-a-bots-first-turn-is-its-filled-template.md) | done | - |
 | [02 - A plugin gives a new chat's preamble](task-02-a-plugin-gives-a-new-chats-preamble.md) | done | - |
-| [03 - Each new chat of a bot starts with the template](task-03-each-new-chat-of-a-bot-starts-with-the-template.md) | done | 01, 02 |
+| [03 - Each new chat of a bot starts with the template](task-03-new-bot-chat-starts-with-the-template.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 

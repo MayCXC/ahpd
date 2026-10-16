@@ -11,9 +11,9 @@ Claude and pi load project settings only when the folder is trusted, and an ACP 
 
 ## What was built
 
-- [p1](../66-a-session-honours-the-folders-vscode-trusts-p1-the-host-declares-keeps-and-asks/implemented.md) - the key, the value per connection, the question before a move.
-- [p2](../66-a-session-honours-the-folders-vscode-trusts-p2-claude-and-pi-load-project-files-only-when-trusted/implemented.md) - Claude and pi load project files only when trusted.
-- [p3](../66-a-session-honours-the-folders-vscode-trusts-p3-an-acp-agent-in-an-untrusted-folder/implemented.md) - an ACP agent is refused in an untrusted folder.
+- [p1](../66-p1-the-host-declares-keeps-and-asks/implemented.md) - the key, the value per connection, the question before a move.
+- [p2](../66-p2-claude-and-pi-load-trusted-files/implemented.md) - Claude and pi load project files only when trusted.
+- [p3](../66-p3-an-acp-agent-in-an-untrusted-folder/implemented.md) - an ACP agent is refused in an untrusted folder.
 
 ## Verified
 

@@ -1,7 +1,7 @@
 ---
 title: npm runs without holding the daemon, its stderr streams as it runs, and a served install says to restart the daemon that answered
 status: done
-depends: [task-08-served-commands-act-on-the-daemons-own-options.md]
+depends: [task-08-served-commands-use-the-daemons-options.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/install.ts#L35-L68](../../../../packages/server/src/install.ts#L35-L68) - `Runner` and `run`: `spawn` with stderr written through as it arrives"

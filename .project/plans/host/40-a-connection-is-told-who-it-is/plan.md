@@ -57,7 +57,7 @@ subscribe(ahp-root://) -> rootState(mine, connection) -> _meta (no principal tod
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - Initialize and sign-in say who](task-01-initialize-and-sign-in-say-who.md) | done | - |
-| [02 - The docs say how a client learns who it is](task-02-the-docs-say-how-a-client-learns-who-it-is.md) | done | 01 |
+| [02 - The docs say how a client learns who it is](task-02-docs-say-how-a-client-learns-who-it-is.md) | done | 01 |
 
 ## Risks and tradeoffs
 

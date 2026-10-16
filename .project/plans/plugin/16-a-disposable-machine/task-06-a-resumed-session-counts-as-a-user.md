@@ -1,7 +1,7 @@
 ---
 title: A resumed session counts as a user of its disposable machine
 status: done
-depends: [task-05-a-machine-is-left-when-its-session-moves-away.md]
+depends: [task-05-machine-left-when-session-moves-away.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L10143](../../../../packages/sdk/src/host.ts#L10143) - a listed session resumed through `spawn`, which never calls `enter`"

@@ -1,7 +1,7 @@
 ---
 title: A dev container carries the agents it was made for and the body's limits
 status: done
-depends: [task-09-read-only-needs-through-an-override-config.md]
+depends: [task-09-read-only-needs-via-an-override-config.md]
 layer: "computer"
 refs:
   - "[code://packages/computer/src/runtime.ts#L656-L696](../../../../packages/computer/src/runtime.ts#L656-L696) - the devcontainer branch, which records no agents and drops `cpus`, `memory` and `workdir`"

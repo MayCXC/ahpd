@@ -43,7 +43,7 @@ connection.principal -> createSession -> session owner (persisted) ; sendMessage
 
 | What | Source | Task |
 | --- | --- | --- |
-| A turn carries the person who sent it; a turn an automation started carries the automation's creator | Softov, 2026-09-30, in [host 33](../33-a-session-tool-acts-as-the-person-it-works-for/plan.md): "Who sent the turn" | 02, 03 |
+| A turn carries the person who sent it; a turn an automation started carries the automation's creator | Softov, 2026-09-30, in [host 33](../33-a-session-tool-acts-as-its-person/plan.md): "Who sent the turn" | 02, 03 |
 | A host with no users directory records no owner | (defaulted: there is no person to record) | 01 |
 | A root connection records `root:<host>` as owner | Softov, 2026-10-01, asked the root owner's spelling: "root:<host>" | 01 |
 | `<host>` is `HostOptions.hostName`, which the daemon sets from the machine's hostname | (defaulted: the sdk has no name for its host today) | 01 |
@@ -67,7 +67,7 @@ connection.principal -> createSession -> session owner (persisted) ; sendMessage
 ## Risks and tradeoffs
 
 - [host 32](../32-the-session-store-is-a-file-per-session/plan.md) reshapes the session store; whichever lands second carries `owner` into the other's shape.
-- [host 33](../33-a-session-tool-acts-as-the-person-it-works-for/plan.md) task 01 needs the turn's sender too; task 02 here and that task build the same thing, so whichever lands first builds it.
+- [host 33](../33-a-session-tool-acts-as-its-person/plan.md) task 01 needs the turn's sender too; task 02 here and that task build the same thing, so whichever lands first builds it.
 - The team and project the work is charged to come from [host 35](../35-a-person-belongs-to-teams-and-projects/plan.md), which is better built first so the owner and its scope land together; `team:` and `project:` owners wait for work no person starts.
 
 ## Resume state

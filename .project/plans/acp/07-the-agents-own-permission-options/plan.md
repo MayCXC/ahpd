@@ -48,7 +48,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - Confirm carries the chosen option](task-01-confirm-carries-the-chosen-option.md) | dropped | - |
-| [02 - The agent's options are offered and the chosen one answered](task-02-the-agent-options-are-offered-and-answered.md) | dropped | 01 |
+| [02 - The agent's options are offered and the chosen one answered](task-02-agent-options-are-offered-and-answered.md) | dropped | 01 |
 | [02 - Docs](task-02-docs.md) | dropped | 02 |
 
 ## Risks and tradeoffs

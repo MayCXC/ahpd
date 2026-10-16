@@ -1,7 +1,7 @@
 ---
 title: Claude looks in the folder first
 status: done
-depends: [task-01-the-record-keeps-the-folder-and-the-host-passes-it.md]
+depends: [task-01-record-keeps-folder-and-host-passes-it.md]
 layer: "packages/agent-claude"
 refs:
   - "[code://packages/agent-claude/src/catalog.ts#L54-L62](../../../../packages/agent-claude/src/catalog.ts#L54-L62) - `findSession`, which asks the configured paths only"

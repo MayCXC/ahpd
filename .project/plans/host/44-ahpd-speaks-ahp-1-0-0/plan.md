@@ -57,9 +57,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - ahpd speaks 1.0.0 and 0.9.0](../44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md) | built | - |
-| [p2 - An automation disables itself as its definition says](../44-ahpd-speaks-ahp-1-0-0-p2-an-automation-disables-itself/plan.md) | built | p1 |
-| [p3 - A session's row lists its chats, and a chat is read or archived on its own](../44-ahpd-speaks-ahp-1-0-0-p3-a-sessions-row-lists-its-chats/plan.md) | built | p1 |
+| [p1 - ahpd speaks 1.0.0 and 0.9.0](../44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md) | built | - |
+| [p2 - An automation disables itself as its definition says](../44-p2-an-automation-disables-itself/plan.md) | built | p1 |
+| [p3 - A session's row lists its chats, and a chat is read or archived on its own](../44-p3-a-sessions-row-lists-its-chats/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 

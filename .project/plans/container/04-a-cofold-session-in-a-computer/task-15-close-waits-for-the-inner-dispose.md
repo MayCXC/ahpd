@@ -1,7 +1,7 @@
 ---
 title: Close waits for the inner session to be disposed
 status: done
-depends: [task-07-the-inner-hosts-pipes-cannot-crash-the-daemon.md]
+depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/nested.ts#L511-L524](../../../../packages/sdk/src/nested.ts#L511-L524) - `close`, which sends `disposeSession` and signals the process in the same tick"

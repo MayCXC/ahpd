@@ -1,7 +1,7 @@
 ---
 title: a graceful stop writes to the log
 status: done
-depends: [task-02-the-daemon-forgets-its-record-on-the-way-down.md]
+depends: [task-02-daemon-forgets-its-record-going-down.md]
 layer: server
 refs:
   - "[code://packages/server/src/commands/restart.ts#L177-L197](../../../../packages/server/src/commands/restart.ts#L177-L197) - `lifecycle.shutdown`, which logs only a failure today"

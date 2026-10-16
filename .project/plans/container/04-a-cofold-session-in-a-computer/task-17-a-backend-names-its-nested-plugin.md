@@ -16,7 +16,7 @@ refs:
 
 ## Objective
 
-The host knows which plugin spec registered each agent, the inner host loads that plugin whatever the provider is called and wherever the plugin came from, and the inner session is created under the provider the inner host serves, per [the plugin decision](./plan.md) and [the profile decision](../05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md).
+The host knows which plugin spec registered each agent, the inner host loads that plugin whatever the provider is called and wherever the plugin came from, and the inner session is created under the provider the inner host serves, per [the plugin decision](./plan.md) and [the profile decision](../05-p12-off-host-machine-reaches-models-via-proxy/plan.md).
 
 ## Files
 

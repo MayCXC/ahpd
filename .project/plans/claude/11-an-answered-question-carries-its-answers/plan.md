@@ -53,8 +53,8 @@ The files read are the `refs` above.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A live answered question carries its answers](task-01-a-live-answered-question-carries-its-answers.md) | done | claude/08 |
-| [02 - A replayed answered question carries its answers](task-02-a-replayed-answered-question-carries-its-answers.md) | done | 01 |
+| [01 - A live answered question carries its answers](task-01-live-answered-question-carries-answers.md) | done | claude/08 |
+| [02 - A replayed answered question carries its answers](task-02-replayed-answered-question-has-answers.md) | done | 01 |
 | [03 - A restored question is drawn as the answered question](task-03-a-restored-question-is-drawn-answered.md) | done | 02 |
 
 ## Risks and tradeoffs

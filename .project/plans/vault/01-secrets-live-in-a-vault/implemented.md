@@ -11,8 +11,8 @@ The host has a vault: a port a plugin may replace, filled by the daemon's plain 
 
 ## What was built
 
-- [p1](../01-secrets-live-in-a-vault-p1-the-vault-and-its-local-file/implemented.md) - the port, the file, `$secret` in plugin options, `ahpd vault`.
-- [p2](../01-secrets-live-in-a-vault-p2-a-machine-need-names-a-secret/implemented.md) - a machine need read from the vault when the machine is made.
+- [p1](../01-p1-the-vault-and-its-local-file/implemented.md) - the port, the file, `$secret` in plugin options, `ahpd vault`.
+- [p2](../01-p2-a-machine-need-names-a-secret/implemented.md) - a machine need read from the vault when the machine is made.
 
 ## Verified
 

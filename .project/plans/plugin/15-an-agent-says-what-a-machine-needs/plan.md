@@ -65,7 +65,7 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 | [The host hands an agent's machine needs to the plugin that makes the machine](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-09-26 | 02, 03, 04 |
 | [Cofold's configuration reaches a machine at a fixed target, named by a path variable](../../../decisions/cofold-config-reaches-a-machine-by-a-path-variable.md) | Softov, 2026-09-26 and 2026-10-03 | 06 |
 | A session on a machine not prepared for its agent fails at creation | Softov, 2026-09-26 | 11 |
-| [A shared target is refused at create only when what lands there differs](../../container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md) | Softov, 2026-09-26 and 2026-10-03 | 09 |
+| [A shared target is refused at create only when what lands there differs](../../container/05-p4-a-part-is-mounted-into-a-machine/plan.md) | Softov, 2026-09-26 and 2026-10-03 | 09 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -101,8 +101,8 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 | [07 - Docs](task-07-docs.md) | done | 04, 05, 06 |
 | [08 - Every label a listing reads is read by name](task-08-a-label-naming-two-agents-is-read-whole.md) | done | - |
 | [09 - Every mount target is checked at create](task-09-every-mount-target-is-checked-at-create.md) | done | - |
-| [10 - A path a machine is made with is absolute and there](task-10-a-path-a-machine-is-made-with-is-absolute-and-there.md) | done | - |
-| [11 - A session on the wrong machine fails at creation](task-11-a-session-on-the-wrong-machine-fails-at-creation.md) | done | - |
+| [10 - A path a machine is made with is absolute and there](task-10-machine-path-is-absolute-and-exists.md) | done | - |
+| [11 - A session on the wrong machine fails at creation](task-11-wrong-machine-session-fails-at-creation.md) | done | - |
 | [12 - The docs cover every need, and the comments document](task-12-docs-and-comments.md) | done | 06, 09, 10 |
 
 ## Risks and tradeoffs

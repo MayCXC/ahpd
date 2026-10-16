@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-04
 revalidated: 2026-10-04
 requires:
-  - plans/host/43-the-wire-is-the-protocols-p1-the-wire-test-checks-every-frame/plan.md
+  - plans/host/43-p1-the-wire-test-checks-every-frame/plan.md
 changes: []
 creates: []
 decisions: []

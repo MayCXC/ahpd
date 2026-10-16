@@ -14,17 +14,17 @@ Each child plan says what it built and how it was verified.
 
 ## What was built
 
-- [p1](../48-host-is-split-by-area-p1-the-grant-and-uri-tables/implemented.md) - the shared helpers, the held state, the URI and channel tables and the grant tables are files of their own.
-- [p2](../48-host-is-split-by-area-p2-routing/implemented.md) - `HostContext`, URI routing, the client relay and connection admission are files of their own.
-- [p3](../48-host-is-split-by-area-p3-changesets-and-facts/implemented.md) - changesets and the git and GitHub facts are files of their own, and the repository ports are in `packages/sdk/src/repo/`.
-- [p4](../48-host-is-split-by-area-p4-telemetry-owners-and-machines/implemented.md) - telemetry, sign-in requirements, owners and machines are files of their own.
-- [p5](../48-host-is-split-by-area-p5-session-and-root-config/implemented.md) - session config and root config are files of their own.
-- [p6](../48-host-is-split-by-area-p6-catalogue-and-transcripts/implemented.md) - the catalogue, past sessions and snapshots are files of their own.
-- [p7](../48-host-is-split-by-area-p7-session-lifecycle/implemented.md) - starting, restarting and removing a session are files of their own.
-- [p8](../48-host-is-split-by-area-p8-tools-terminals-and-automations/implemented.md) - session tools, terminals and automations are files of their own.
-- [p9](../48-host-is-split-by-area-p9-the-method-table/implemented.md) - the method table is one file per family.
-- [p10](../48-host-is-split-by-area-p10-action-dispatch/implemented.md) - action dispatch and chat actions are files of their own.
-- [p11](../48-host-is-split-by-area-p11-open-plans-cite-the-new-files/implemented.md) - open plans cite the new files instead of `host.ts`.
+- [p1](../48-p1-the-grant-and-uri-tables/implemented.md) - the shared helpers, the held state, the URI and channel tables and the grant tables are files of their own.
+- [p2](../48-p2-routing/implemented.md) - `HostContext`, URI routing, the client relay and connection admission are files of their own.
+- [p3](../48-p3-changesets-and-facts/implemented.md) - changesets and the git and GitHub facts are files of their own, and the repository ports are in `packages/sdk/src/repo/`.
+- [p4](../48-p4-telemetry-owners-and-machines/implemented.md) - telemetry, sign-in requirements, owners and machines are files of their own.
+- [p5](../48-p5-session-and-root-config/implemented.md) - session config and root config are files of their own.
+- [p6](../48-p6-catalogue-and-transcripts/implemented.md) - the catalogue, past sessions and snapshots are files of their own.
+- [p7](../48-p7-session-lifecycle/implemented.md) - starting, restarting and removing a session are files of their own.
+- [p8](../48-p8-tools-terminals-and-automations/implemented.md) - session tools, terminals and automations are files of their own.
+- [p9](../48-p9-the-method-table/implemented.md) - the method table is one file per family.
+- [p10](../48-p10-action-dispatch/implemented.md) - action dispatch and chat actions are files of their own.
+- [p11](../48-p11-open-plans-cite-the-new-files/implemented.md) - open plans cite the new files instead of `host.ts`.
 
 ## Verified
 
@@ -38,4 +38,4 @@ Each child plan says what it built and how it was verified.
 
 ## Left for later
 
-- Plans written after p11 (host/52, claude/17, documentation/02) may still cite `host.ts`; see [p11's implemented.md](../48-host-is-split-by-area-p11-open-plans-cite-the-new-files/implemented.md).
+- Plans written after p11 (host/52, claude/17, documentation/02) may still cite `host.ts`; see [p11's implemented.md](../48-p11-open-plans-cite-the-new-files/implemented.md).

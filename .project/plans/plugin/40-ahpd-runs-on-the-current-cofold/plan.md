@@ -197,7 +197,7 @@ tool.writes(input) -> the changeset's before and after, when the file is inside 
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - ahpd takes the cofold release](task-01-ahpd-takes-the-cofold-release.md) | done | - |
-| [02 - A paused run is answered and stopped on its own handle](task-02-a-paused-run-is-answered-on-its-own-handle.md) | done | 01 |
+| [02 - A paused run is answered and stopped on its own handle](task-02-paused-run-answered-on-its-own-handle.md) | done | 01 |
 | [03 - Modes and effort are cofold's lists](task-03-modes-and-effort-are-cofolds-lists.md) | done | 01 |
 | [04 - A tool row is titled by the subject cofold sends](task-04-a-tool-row-is-titled-by-its-subject.md) | done | 01 |
 | [05 - An edit is the file the tool says it writes](task-05-an-edit-is-the-file-the-tool-writes.md) | done | 01 |
@@ -214,7 +214,7 @@ tool.writes(input) -> the changeset's before and after, when the file is inside 
 - `memory_read` rows are now titled by the file, where they showed the tool name.
 - cofold keeps what a session read in process memory, so after a daemon restart the model must read a file again before it writes it. `requireRead: false` turns the rule off (task 09).
 - Task 09 waits on a cofold release. Tasks 01-08 can merge before it, and cofold tests that release against them.
-- [host 61](../../host/61-agents-share-their-session-kit-presets-and-input-checks/plan.md) task 01 rewrites `runs.ts` status and activity; whichever lands second rebases.
+- [host 61](../../host/61-agents-share-session-kit-and-input-checks/plan.md) task 01 rewrites `runs.ts` status and activity; whichever lands second rebases.
 - The parked worktree `build-agents-cofold-uptake` holds the range move, one test fix and edits to plugin 22. The build starts from main and takes those by hand.
 
 ## Resume state

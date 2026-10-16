@@ -4,7 +4,7 @@ created: 2026-10-04
 ---
 
 A microVM gives a computer its own kernel behind a hardware boundary, booting in about a hundred milliseconds rather than a full VM's seconds.
-It sits between today's Docker containers and the full VMs of [container/05 p11](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md).
+It sits between today's Docker containers and the full VMs of [container/05 p11](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md).
 Source: Softov, 2026-10-04: "Kata is good. short modifications... but microsandbox is a interesting one".
 Background: Docker's [Why MicroVMs: the architecture behind Docker Sandboxes](https://www.docker.com/blog/why-microvms-the-architecture-behind-docker-sandboxes/).
 
@@ -16,15 +16,15 @@ Background: Docker's [Why MicroVMs: the architecture behind Docker Sandboxes](ht
   The cost is on the host: the `kata-static` tarball, the `vhost_vsock` and `vhost_net` modules, a `runtimes` entry in `/etc/docker/daemon.json` and a Docker restart.
 - **microsandbox as a runtime of its own** (https://github.com/superradcompany/microsandbox).
   It makes an OCI image into a libkrun microVM and has a CLI verb for each `ComputerRuntime` operation, with `msb exec --stream` as `how()`.
-  It would be a fourth maker beside `docker`, `ssh` and the VM makers, under ["One computer: provider, the runtime named for what makes the machine"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md), and a second local `ComputerRuntime` about the size of Docker's.
-  What it gives that Kata cannot: snapshot and fork of a running machine, no root setup beyond `/dev/kvm`, macOS and Windows hosts, and placeholder secrets that reach only an allowed host, which overlaps the credential proxy of [container/05 p12](../plans/container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md).
+  It would be a fourth maker beside `docker`, `ssh` and the VM makers, under ["One computer: provider, the runtime named for what makes the machine"](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md), and a second local `ComputerRuntime` about the size of Docker's.
+  What it gives that Kata cannot: snapshot and fork of a running machine, no root setup beyond `/dev/kvm`, macOS and Windows hosts, and placeholder secrets that reach only an allowed host, which overlaps the credential proxy of [container/05 p12](../plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md).
   What it costs: it is beta, on its own libkrun fork, installed from a script, and an external binary, which is a dependency and Softov's call.
 
 ## Where it would wire in
 
 - A case that needs a stronger boundary than a container, such as an untrusted repository or an agent allowed to run Docker itself, takes Kata first: a profile option and nothing else.
 - A case that needs to snapshot or fork a machine (try two approaches from one state, or keep a warm machine to fork per session), or a microVM on a laptop, is the reason to take microsandbox.
-- Parts ([container/05 p4](../plans/container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md)) mount through Docker under Kata; under microsandbox an image is not a mount, so a part would be a copy or a volume.
+- Parts ([container/05 p4](../plans/container/05-p4-a-part-is-mounted-into-a-machine/plan.md)) mount through Docker under Kata; under microsandbox an image is not a mount, so a part would be a copy or a volume.
 
 ## Questions it must answer first
 

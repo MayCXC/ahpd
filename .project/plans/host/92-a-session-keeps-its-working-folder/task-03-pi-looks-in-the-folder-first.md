@@ -1,7 +1,7 @@
 ---
 title: pi looks in the folder first
 status: done
-depends: [task-01-the-record-keeps-the-folder-and-the-host-passes-it.md]
+depends: [task-01-record-keeps-folder-and-host-passes-it.md]
 layer: "packages/agent-pi"
 refs:
   - "[code://packages/agent-pi/src/replay.ts#L196-L219](../../../../packages/agent-pi/src/replay.ts#L196-L219) - `replayed`, which calls `SessionManager.findById` in each configured path"

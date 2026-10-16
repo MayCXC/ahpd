@@ -1,7 +1,7 @@
 ---
 title: Review the bot record store
 plans:
-  - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md
+  - plans/plugin/45-p2-the-bot-keeps-its-records-there/plan.md
 ---
 
 # Review the bot record store

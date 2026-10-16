@@ -95,7 +95,7 @@ server elicitation/create -> [new] chat/inputRequested -> a client answers chat/
 | [02 - A session forks where the server can](task-02-a-session-forks-where-the-server-can.md) | done | 01, and host 19 task 01 |
 | [03 - A server's question is asked in the chat](task-03-a-servers-question-is-asked-in-the-chat.md) | done | - |
 | [04 - Docs](task-04-docs.md) | done | 01, 02, 03 |
-| [05 - A decline and a cancel reach the server apart](task-05-a-decline-and-a-cancel-reach-the-server-apart.md) | done | 03 |
+| [05 - A decline and a cancel reach the server apart](task-05-decline-and-cancel-reach-server-apart.md) | done | 03 |
 | [06 - A server that only resumes is resumable, and an unknown field is asked as text](task-06-a-resume-only-server-is-resumable.md) | done | 01, 03 |
 
 ## Risks and tradeoffs

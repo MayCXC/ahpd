@@ -1,7 +1,7 @@
 ---
 title: what the Windows run found in ahpd paths is fixed
 status: done
-depends: [task-02-a-served-paths-change-reaches-the-running-daemon.md]
+depends: [task-02-served-paths-change-reaches-daemon.md]
 layer: server
 refs:
   - "[code://packages/server/src/commands/paths.ts](../../../../packages/server/src/commands/paths.ts) - the three verbs, `restartLine` and the live change"

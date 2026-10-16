@@ -90,7 +90,7 @@ model calls edit_file -> beforeTool [new] onFileEdit(before) -> policy asks or a
 | [03 - The permission modes cover the new tools](task-03-permission-modes-cover-them.md) | done | 01 |
 | [04 - Docs and the package](task-04-docs-and-package.md) | done | 02, 03 |
 | [05 - cofold's harness asks for a read outside the workspace](task-05-cofold-asks-for-a-read-outside.md) | done | - |
-| [06 - @cofold/tools checks real paths and refuses internal addresses](task-06-cofold-tools-check-real-paths-and-addresses.md) | done | - |
+| [06 - @cofold/tools checks real paths and refuses internal addresses](task-06-cofold-tools-check-paths-and-addresses.md) | done | - |
 | [07 - ahpd's workspace check follows symlinks](task-07-ahpd-inside-follows-symlinks.md) | done | - |
 | [08 - ahpd takes the cofold releases, and its tests pin reads and addresses](task-08-ahpd-takes-the-cofold-releases.md) | done | 05, 06 |
 | [09 - The denial, the end-of-run sweep, cancel and a session with no directory are pinned by tests](task-09-the-untested-paths-are-pinned.md) | done | - |
@@ -99,9 +99,9 @@ model calls edit_file -> beforeTool [new] onFileEdit(before) -> policy asks or a
 | [12 - Search providers are tried in the configured order](task-12-search-providers-in-configured-order.md) | done | - |
 | [13 - A turn with no model says to add "model" to the cofold configuration file](task-13-no-model-says-what-to-add.md) | done | - |
 | [14 - ahpd's workspace check follows a dangling symlink, through cofold's own resolver](task-14-inside-follows-a-dangling-link.md) | done | 07, 08 |
-| [15 - A declined edit sends its after when the person declines](task-15-a-declined-edit-sends-its-after-when-declined.md) | done | 09 |
+| [15 - A declined edit sends its after when the person declines](task-15-declined-edit-sends-after-on-decline.md) | done | 09 |
 | [16 - The plan closes on what is true](task-16-the-close-says-what-is-true.md) | done | 14, 15 |
-| [17 - cofold follows a link's target one name at a time, released by Softov](task-17-cofold-follows-a-link-target-one-name-at-a-time.md) | done | 14 |
+| [17 - cofold follows a link's target one name at a time, released by Softov](task-17-cofold-follows-link-one-name-at-a-time.md) | done | 14 |
 | [18 - The tool tests wait on time, and the mode table is one case per row](task-18-the-tool-tests-wait-on-time.md) | done | 15 |
 | [19 - The close is true](task-19-the-close-is-true.md) | done | 16, 18 |
 | [20 - The tool section and the README are one sentence per line again](task-20-the-tool-docs-are-one-sentence-per-line.md) | done | 19 |

@@ -41,7 +41,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The catalogue lists the working tree first](task-01-the-catalogue-lists-the-working-tree-first.md) | done | - |
+| [01 - The catalogue lists the working tree first](task-01-catalogue-lists-working-tree-first.md) | done | - |
 
 ## Risks and tradeoffs
 

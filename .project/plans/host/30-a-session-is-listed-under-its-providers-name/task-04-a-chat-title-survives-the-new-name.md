@@ -1,7 +1,7 @@
 ---
 title: A chat title survives the session's new name
 status: done
-depends: [task-01-a-created-session-is-held-under-its-providers-name.md]
+depends: [task-01-created-session-held-under-provider-name.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/sessions.ts#L42-L52](../../../../packages/sdk/src/sessions.ts#L42-L52) - `chatTitle` and `setChatTitle`, by the exact chat URI"

@@ -6,7 +6,7 @@ priority: medium
 created: 2026-09-26
 revalidated: 2026-09-30
 requires:
-  - plans/daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md
+  - plans/daemon/11-root-config-holds-daemon-and-plugin-options/plan.md
 changes: []
 creates: []
 decisions:

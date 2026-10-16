@@ -12,12 +12,12 @@ File edits use the protocol's types, an automation carries its template's client
 
 ## What was built
 
-- [p1](../47-ahpd-serves-what-ahp-1-0-0-added-p1-moving-a-chat/implemented.md) - `moveChat`, `session/chatsReordered` and `chat/movableChanged`.
-- [p2](../47-ahpd-serves-what-ahp-1-0-0-added-p2-a-chat-lists-its-background-work/implemented.md) - `ChatState.backgroundWork` and its two actions.
-- [p3](../47-ahpd-serves-what-ahp-1-0-0-added-p3-an-mcp-server-startup-can-be-backgrounded/implemented.md) - `session/mcpServerBackgroundRequested` and `McpServerStartingState.blocking`.
-- [p4](../47-ahpd-serves-what-ahp-1-0-0-added-p4-a-file-edit-is-the-protocols-type/implemented.md) - `FileEditSide` and `FileEditCollection`, and the Claude write preview.
-- [p5](../47-ahpd-serves-what-ahp-1-0-0-added-p5-an-automation-carries-client-plugins/implemented.md) - `customizations` on an automation and its capability.
-- [p6](../47-ahpd-serves-what-ahp-1-0-0-added-p6-a-changeset-says-it-is-recomputing/implemented.md) - `ChangesetStatus.recomputing`.
+- [p1](../47-p1-moving-a-chat/implemented.md) - `moveChat`, `session/chatsReordered` and `chat/movableChanged`.
+- [p2](../47-p2-a-chat-lists-its-background-work/implemented.md) - `ChatState.backgroundWork` and its two actions.
+- [p3](../47-p3-mcp-server-startup-can-be-backgrounded/implemented.md) - `session/mcpServerBackgroundRequested` and `McpServerStartingState.blocking`.
+- [p4](../47-p4-a-file-edit-is-the-protocols-type/implemented.md) - `FileEditSide` and `FileEditCollection`, and the Claude write preview.
+- [p5](../47-p5-an-automation-carries-client-plugins/implemented.md) - `customizations` on an automation and its capability.
+- [p6](../47-p6-a-changeset-says-it-is-recomputing/implemented.md) - `ChangesetStatus.recomputing`.
 
 ## Verified
 
@@ -32,4 +32,4 @@ File edits use the protocol's types, an automation carries its template's client
 ## Left for later
 
 - The canvas actions and the `ahp-canvas:` channel, left out by Softov on 2026-10-03.
-- A move into a session of another provider or another computer, in p1's [deferred.md](../47-ahpd-serves-what-ahp-1-0-0-added-p1-moving-a-chat/deferred.md).
+- A move into a session of another provider or another computer, in p1's [deferred.md](../47-p1-moving-a-chat/deferred.md).

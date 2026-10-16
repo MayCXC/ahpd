@@ -92,12 +92,12 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - ahpd's plugins export slugs](task-01-ahpds-plugins-export-slugs.md) | implemented | - |
-| [02 - The daemon refuses a plugin whose name is not a slug](task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md) | implemented | 01 |
+| [02 - The daemon refuses a plugin whose name is not a slug](task-02-daemon-refuses-a-non-slug-name.md) | implemented | 01 |
 | [03 - An old owner name reads as the new one](task-03-an-old-owner-name-reads-as-the-new-one.md) | implemented | 01 |
 | [04 - ahpw exports `web` and serves `/plugins/web/`](task-04-ahpw-exports-web.md) | implemented | 01 |
 | [05 - A fallback id is a slug too](task-05-a-fallback-id-is-a-slug-too.md) | implemented | 02 |
-| [06 - A hand-written old owner reads as the new one](task-06-a-hand-written-old-owner-reads-as-the-new-one.md) | implemented | 03 |
-| [07 - The listing and usage reads agree with the id](task-07-the-listing-and-usage-reads-agree-with-the-id.md) | implemented | 03, 05 |
+| [06 - A hand-written old owner reads as the new one](task-06-old-owner-reads-as-the-new-one.md) | implemented | 03 |
+| [07 - The listing and usage reads agree with the id](task-07-listing-and-usage-agree-with-the-id.md) | implemented | 03, 05 |
 
 ## Risks and tradeoffs
 

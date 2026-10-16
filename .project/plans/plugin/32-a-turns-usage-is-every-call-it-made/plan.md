@@ -52,10 +52,10 @@ harness per-call usage -> backend sums the turn -> chat/usage (running total, _m
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - claude counts every call, subagents and cache writes included, with its cost](../32-a-turns-usage-is-every-call-it-made-p1-claude-counts-every-call/plan.md) | built 2026-10-01 | - |
-| [p2 - pi sums every call of a turn, with its cost](../32-a-turns-usage-is-every-call-it-made-p2-pi-sums-its-calls/plan.md) | built 2026-10-01 | - |
-| [p3 - cofold counts each step, and sends the run's cost](../32-a-turns-usage-is-every-call-it-made-p3-cofold-counts-each-step/plan.md) | built 2026-10-01 | - |
-| [p4 - ACP sends the cost and tokens its agent reports](../32-a-turns-usage-is-every-call-it-made-p4-acp-reports-what-it-has/plan.md) | built 2026-10-01 | - |
+| [p1 - claude counts every call, subagents and cache writes included, with its cost](../32-p1-claude-counts-every-call/plan.md) | built 2026-10-01 | - |
+| [p2 - pi sums every call of a turn, with its cost](../32-p2-pi-sums-its-calls/plan.md) | built 2026-10-01 | - |
+| [p3 - cofold counts each step, and sends the run's cost](../32-p3-cofold-counts-each-step/plan.md) | built 2026-10-01 | - |
+| [p4 - ACP sends the cost and tokens its agent reports](../32-p4-acp-reports-what-it-has/plan.md) | built 2026-10-01 | - |
 
 ## Risks and tradeoffs
 

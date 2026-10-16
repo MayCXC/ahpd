@@ -1,7 +1,7 @@
 ---
 title: A restart rebuilds every chat of a session
 status: done
-depends: [task-01-a-peer-chat-runs-under-its-own-backend-id.md, task-02-the-store-records-a-sessions-chats.md]
+depends: [task-01-peer-chat-runs-under-its-own-backend-id.md, task-02-the-store-records-a-sessions-chats.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/tooling.ts#L297-L308](../../../../packages/sdk/src/host/tooling.ts#L297-L308) - `createChat`, where a chat is recorded"

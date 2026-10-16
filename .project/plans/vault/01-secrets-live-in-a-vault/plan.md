@@ -69,8 +69,8 @@ Child plans, each scoped to one package or two.
 
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [p1 - The vault port and the daemon's plain file](../01-secrets-live-in-a-vault-p1-the-vault-and-its-local-file/plan.md) | sdk, server | built | - |
-| [p2 - A machine need names a secret](../01-secrets-live-in-a-vault-p2-a-machine-need-names-a-secret/plan.md) | computer | built | p1 |
+| [p1 - The vault port and the daemon's plain file](../01-p1-the-vault-and-its-local-file/plan.md) | sdk, server | built | - |
+| [p2 - A machine need names a secret](../01-p2-a-machine-need-names-a-secret/plan.md) | computer | built | p1 |
 
 ## Risks and tradeoffs
 

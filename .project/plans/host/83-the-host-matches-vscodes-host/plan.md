@@ -67,11 +67,11 @@ VS Code window -> initialize and root state _meta -> it offers stop, delegation,
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host describes itself as VS Code's host does](../83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md) | built | - |
-| [p2 - A run is stopped, and runs are capped](../83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | built | host 80 |
-| [p3 - A remote session is taken and keeps its origin](../83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md) | built | p1 |
-| [p4 - A customization is switched for all sessions or a folder](../83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md) | built | - |
-| [p5 - A chat is attached to a message](../83-the-host-matches-vscodes-host-p5-a-chat-is-attached-to-a-message/plan.md) | built | p1 |
+| [p1 - The host describes itself as VS Code's host does](../83-p1-the-host-describes-itself/plan.md) | built | - |
+| [p2 - A run is stopped, and runs are capped](../83-p2-a-run-is-stopped-and-runs-are-capped/plan.md) | built | host 80 |
+| [p3 - A remote session is taken and keeps its origin](../83-p3-a-remote-session-keeps-its-origin/plan.md) | built | p1 |
+| [p4 - A customization is switched for all sessions or a folder](../83-p4-customization-switched-for-all-sessions/plan.md) | built | - |
+| [p5 - A chat is attached to a message](../83-p5-a-chat-is-attached-to-a-message/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 

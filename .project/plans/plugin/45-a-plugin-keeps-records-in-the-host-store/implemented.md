@@ -12,8 +12,8 @@ The bot plugin is the first one to use it: each bot is a file that a person can 
 
 ## What was built
 
-- p1: the record store. See [its implemented.md](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md).
-- p2: the bot store on top of it. See [its implemented.md](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/implemented.md).
+- p1: the record store. See [its implemented.md](../45-p1-the-host-gives-a-record-store/implemented.md).
+- p2: the bot store on top of it. See [its implemented.md](../45-p2-the-bot-keeps-its-records-there/implemented.md).
 
 ## Verified
 

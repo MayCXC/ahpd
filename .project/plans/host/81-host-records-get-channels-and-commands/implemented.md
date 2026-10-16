@@ -11,10 +11,10 @@ The resource schemes stay as they are.
 
 ## What was built
 
-- [p1](../81-host-records-get-channels-and-commands-p1-the-host-serves-x-commands/implemented.md) - the host serves `x-` commands, and a plugin registers one with `registerMethod`.
-- [p2](../81-host-records-get-channels-and-commands-p2-people-and-policies-are-channels/implemented.md) - users, teams, projects, roles and policies are channels, with `put` and `remove` commands.
-- [p3](../81-host-records-get-channels-and-commands-p3-usage-is-read-through-commands/implemented.md) - usage is read through five commands.
-- [p4](../81-host-records-get-channels-and-commands-p4-computers-are-a-channel/implemented.md) - computers are a channel, with five commands.
+- [p1](../81-p1-the-host-serves-x-commands/implemented.md) - the host serves `x-` commands, and a plugin registers one with `registerMethod`.
+- [p2](../81-p2-people-and-policies-are-channels/implemented.md) - users, teams, projects, roles and policies are channels, with `put` and `remove` commands.
+- [p3](../81-p3-usage-is-read-through-commands/implemented.md) - usage is read through five commands.
+- [p4](../81-p4-computers-are-a-channel/implemented.md) - computers are a channel, with five commands.
 
 ## Verified
 

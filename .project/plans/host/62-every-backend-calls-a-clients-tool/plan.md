@@ -104,10 +104,10 @@ agent calls <clientId>__<name> -> backend: chat/toolCallStart { contributor: cli
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The sdk holds a client call, raises it for the client, and runs one for the tool server](../62-every-backend-calls-a-clients-tool-p1-the-sdk-holds-a-client-call/plan.md) | built | - |
-| [p2 - Claude runs its client calls through the sdk](../62-every-backend-calls-a-clients-tool-p2-claude-runs-client-calls-through-the-sdk/plan.md) | built | p1 |
-| [p3 - pi and cofold run their client calls through the sdk](../62-every-backend-calls-a-clients-tool-p3-pi-and-cofold-run-client-calls-through-the-sdk/plan.md) | built | p1 |
-| [p4 - An ACP agent calls a client's tool](../62-every-backend-calls-a-clients-tool-p4-an-acp-agent-calls-a-clients-tool/plan.md) | built | p1 |
+| [p1 - The sdk holds a client call, raises it for the client, and runs one for the tool server](../62-p1-the-sdk-holds-a-client-call/plan.md) | built | - |
+| [p2 - Claude runs its client calls through the sdk](../62-p2-claude-runs-client-calls-through-the-sdk/plan.md) | built | p1 |
+| [p3 - pi and cofold run their client calls through the sdk](../62-p3-pi-and-cofold-run-client-calls-via-sdk/plan.md) | built | p1 |
+| [p4 - An ACP agent calls a client's tool](../62-p4-an-acp-agent-calls-a-clients-tool/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 

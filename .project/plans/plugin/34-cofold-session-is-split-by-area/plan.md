@@ -133,7 +133,7 @@ A line only on the `>` side is wiring: imports, a factory's signature, destructu
 | [02 - The agent a turn runs on is one file](task-02-the-turn-agent-is-one-file.md) | done | 01 |
 | [03 - Reading and reopening a run is one file](task-03-reading-a-run-is-one-file.md) | done | 02 |
 | [04 - A paused run's answers and stops are one file](task-04-a-paused-runs-answers-are-one-file.md) | done | 03 |
-| [05 - Opening a turn and the queue are one file](task-05-opening-a-turn-and-the-queue-are-one-file.md) | done | 04 |
+| [05 - Opening a turn and the queue are one file](task-05-turn-opening-and-queue-are-one-file.md) | done | 04 |
 
 ## Risks and tradeoffs
 

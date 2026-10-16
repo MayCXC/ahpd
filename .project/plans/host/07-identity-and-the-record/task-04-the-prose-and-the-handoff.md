@@ -3,7 +3,7 @@ title: The prose and the handoff
 status: done
 depends:
   - task-01-the-record-is-true.md
-  - task-02-a-connection-token-that-resolves-to-a-person.md
+  - task-02-connection-token-resolves-to-a-person.md
   - task-03-the-daemon-hands-a-person-their-url.md
 layer: docs
 refs:

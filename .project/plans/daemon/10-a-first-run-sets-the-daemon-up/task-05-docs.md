@@ -1,7 +1,7 @@
 ---
 title: Docs say how to configure the daemon
 status: done
-depends: [task-02-ahpd-configure.md, task-03-a-start-with-no-configuration-offers-configure.md, task-04-a-start-in-an-unserved-folder-asks.md]
+depends: [task-02-ahpd-configure.md, task-03-start-without-config-offers-configure.md, task-04-a-start-in-an-unserved-folder-asks.md]
 layer: "docs"
 refs:
   - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - start, stop and the configuration"

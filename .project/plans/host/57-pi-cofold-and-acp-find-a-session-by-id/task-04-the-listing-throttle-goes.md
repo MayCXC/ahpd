@@ -1,7 +1,7 @@
 ---
 title: The listing throttle goes
 status: done
-depends: [task-01-pi-finds-a-session-by-id.md, task-02-cofold-finds-a-session-by-id.md, task-03-acp-finds-a-session-by-listing-its-own-server.md]
+depends: [task-01-pi-finds-a-session-by-id.md, task-02-cofold-finds-a-session-by-id.md, task-03-acp-finds-session-by-listing-its-server.md]
 layer: "sdk, docs"
 refs:
   - "[code://packages/sdk/src/host/history.ts#L10-L20](../../../../packages/sdk/src/host/history.ts#L10-L20) - `LISTING_FRESH`, which goes"

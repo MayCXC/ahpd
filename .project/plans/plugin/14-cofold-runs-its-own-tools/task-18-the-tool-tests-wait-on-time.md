@@ -1,7 +1,7 @@
 ---
 title: The tool tests wait on time, not on a count of ticks, and the mode table is one case per row
 status: done
-depends: [task-15-a-declined-edit-sends-its-after-when-declined.md]
+depends: [task-15-declined-edit-sends-after-on-decline.md]
 layer: "agent-cofold"
 refs:
   - "[code://packages/agent-cofold/test/agent-cofold-tools.test.ts#L31-L41](../../../../packages/agent-cofold/test/agent-cofold-tools.test.ts#L31-L41) - `when`, the wait every case uses, and the file's case timeout above its budget"

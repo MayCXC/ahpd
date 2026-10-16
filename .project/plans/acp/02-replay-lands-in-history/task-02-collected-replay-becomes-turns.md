@@ -1,7 +1,7 @@
 ---
 title: Collected replay becomes the session's earlier turns
 status: done
-depends: [task-01-replay-is-collected-not-mapped-into-a-turn.md]
+depends: [task-01-replay-is-collected-not-mapped-to-a-turn.md]
 layer: "agent-acp"
 refs:
   - "[code://packages/agent-acp/src/transcript.ts#L38-L65](../../../../packages/agent-acp/src/transcript.ts#L38-L65) - watched turns"

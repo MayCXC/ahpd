@@ -103,34 +103,34 @@ ahpd --remote URL plugin list -> [new] manifest from URL/api/cli-manifest -> com
 | [04 - The CLI runs commands against a daemon with --remote](task-04-remote-flag.md) | done | 03 |
 | [05 - Docs](task-05-docs.md) | done | 04 |
 | [06 - `serve()` survives a malformed request and takes only JSON bodies (cofold repository)](task-06-serve-survives-a-malformed-request.md) | done | - |
-| [07 - The daemon's listener survives a malformed request, with the API on or off](task-07-the-listener-survives-a-malformed-request.md) | done | - |
-| [08 - Served commands act on the daemon's own options, and no request ends the daemon](task-08-served-commands-act-on-the-daemons-own-options.md) | done | 07 |
+| [07 - The daemon's listener survives a malformed request, with the API on or off](task-07-listener-survives-a-malformed-request.md) | done | - |
+| [08 - Served commands act on the daemon's own options, and no request ends the daemon](task-08-served-commands-use-the-daemons-options.md) | done | 07 |
 | [09 - Each served command needs its own grant, and config hides the token](task-09-the-grants-each-command-needs.md) | done | 08, and daemon/04's registry-hook task |
 | [10 - A daemon with no token and no users refuses to start with http on](task-10-an-unconfigured-daemon-refuses-http.md) | done | - |
 | [11 - The API checks Origin and Host, and takes only JSON bodies](task-11-origin-and-host-are-checked.md) | done | 07, 12 |
 | [12 - http.host binds the API's own listener](task-12-http-host.md) | done | - |
-| [13 - `--remote` needs a token, reads it from a file too, warns on cleartext, keeps its cache private, and its tests prove the daemon answered](task-13-remote-needs-a-token-and-proves-it-is-remote.md) | done | 08 |
+| [13 - `--remote` needs a token, reads it from a file too, warns on cleartext, keeps its cache private, and its tests prove the daemon answered](task-13-remote-needs-a-token-and-proves-remote.md) | done | 08 |
 | [14 - Docs for the API's grants, guards and --remote](task-14-docs-for-the-amendments.md) | done | 09, 10, 11, 12, 13 |
 | [15 - `serve()` takes a Request and answers a Response, with a Node adapter (cofold repository)](task-15-serve-takes-a-request.md) | done | 06 |
 | [16 - The HTTP API is served on Node, Bun and Deno](task-16-the-api-on-bun-and-deno.md) | done | 07, 15 |
 | [17 - A user command gives, mints for and removes only what its caller holds](task-17-a-caller-gives-only-what-it-holds.md) | done | 09 |
 | [18 - The API's guards have no gaps](task-18-the-guards-have-no-gaps.md) | done | 11, 12, 13 |
 | [19 - The API's tests prove what their tasks' Validation says](task-19-the-tests-prove-their-validation.md) | done | 08, 10, 12, 13 |
-| [20 - A served config answers from the daemon's own file, hides its secrets, or says it is gone](task-20-served-config-reads-the-daemons-file-or-says-it-is-gone.md) | done | 08 |
+| [20 - A served config answers from the daemon's own file, hides its secrets, or says it is gone](task-20-served-config-reads-daemon-file-or-gone.md) | done | 08 |
 | [21 - npm runs without holding the daemon, and a served install says to restart](task-21-npm-runs-without-holding-the-daemon.md) | done | 08 |
-| [22 - The docs, comments and task refs for the API say what the code does](task-22-the-docs-comments-and-refs-say-what-the-code-does.md) | done | 17, 18, 19, 20, 21 |
-| [23 - user add on a person who exists is bounded by the roles they hold](task-23-user-add-on-an-existing-person-is-bounded.md) | done | 17 |
+| [22 - The docs, comments and task refs for the API say what the code does](task-22-api-docs-comments-and-refs-are-true.md) | done | 17, 18, 19, 20, 21 |
+| [23 - user add on a person who exists is bounded by the roles they hold](task-23-user-add-on-existing-person-is-bounded.md) | done | 17 |
 | [24 - A served plugin list hides every plugin option value](task-24-plugin-list-hides-option-values.md) | done | 20 |
 | [25 - Served plugin installs and removes run one at a time](task-25-served-plugin-writes-run-one-at-a-time.md) | done | 21 |
 | [26 - The addresses the daemon prints and accepts read back as URLs](task-26-addresses-read-back-as-urls.md) | done | 18 |
-| [27 - A blank token or host is refused, and the comments and refs say what is true](task-27-blank-values-are-refused-and-the-records-are-true.md) | done | 22 |
+| [27 - A blank token or host is refused, and the comments and refs say what is true](task-27-blank-values-refused-and-records-true.md) | done | 22 |
 | [28 - A personal URL brackets an IPv6 host](task-28-a-personal-url-brackets-an-ipv6-host.md) | done | 26 |
 | [29 - A role named __proto__ in the users file is read as a role](task-29-a-role-named-proto-is-a-role.md) | done | 23 |
-| [30 - ahpd start runs the daemon under the same node flags it was run with](task-30-start-runs-the-child-under-the-same-node-flags.md) | done | - |
-| [31 - Served answers hide the credentials in a plugin's URL](task-31-served-answers-hide-credentials-in-a-plugin-url.md) | done | 24 |
+| [30 - ahpd start runs the daemon under the same node flags it was run with](task-30-start-runs-child-with-same-node-flags.md) | done | - |
+| [31 - Served answers hide the credentials in a plugin's URL](task-31-served-answers-hide-plugin-url-secrets.md) | done | 24 |
 | [32 - The comment on urlHost says what it is](task-32-urlhost-says-what-it-is.md) | done | 28 |
-| [33 - A --remote token is trimmed whichever of the three it came from](task-33-a-remote-token-is-trimmed-from-every-source.md) | done | 27 |
-| [34 - DAEMON.md is wrapped where it is prose, and its flag table names the update check as declared](task-34-daemon-md-is-wrapped-and-names-the-update-flag.md) | done | - |
+| [33 - A --remote token is trimmed whichever of the three it came from](task-33-remote-token-trimmed-from-every-source.md) | done | 27 |
+| [34 - DAEMON.md is wrapped where it is prose, and its flag table names the update check as declared](task-34-daemon-md-wrapped-and-names-update-flag.md) | done | - |
 | [35 - The SDK mounts the Node listener the server adapts, and node-pty is the server's](task-35-the-sdk-mounts-what-the-server-adapts.md) | done | 16 |
 
 ## Risks and tradeoffs

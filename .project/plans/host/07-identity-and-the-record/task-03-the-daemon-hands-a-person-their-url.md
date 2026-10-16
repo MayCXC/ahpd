@@ -2,7 +2,7 @@
 title: The daemon answers the door and hands a person their URL
 status: done
 depends:
-  - task-02-a-connection-token-that-resolves-to-a-person.md
+  - task-02-connection-token-resolves-to-a-person.md
 layer: packages/server
 refs:
   - "[code://packages/server/src/main.ts#L548-L560](../../../../packages/server/src/main.ts#L548-L560) - where `fileUsers` is built inline inside `base`, and where it has to be built once instead so the door can ask it too"

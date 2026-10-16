@@ -104,16 +104,16 @@ tool_result for the call (foreground) or task_notification (background) -> [new]
 | [05 - A permission ask inside a subagent is asked there](task-05-asks-inside-a-subagent.md) | done | 03 |
 | [06 - A subagent's chat is there again after a restart](task-06-restored-after-a-restart.md) | done | 03 |
 | [07 - Docs and upstream](task-07-docs-and-upstream.md) | done | 04, 05, 06 |
-| [08 - The host holds a call's content only while a worker needs it](task-08-the-host-holds-only-a-workers-call-content.md) | done | - |
-| [09 - A background worker is linked from its call when the call completes](task-09-a-background-worker-is-linked-on-completion.md) | done | 08 |
-| [10 - The spawning call carries the reference's subagent _meta](task-10-the-spawning-call-carries-the-reference-meta.md) | done | 08 |
+| [08 - The host holds a call's content only while a worker needs it](task-08-host-holds-call-content-for-workers.md) | done | - |
+| [09 - A background worker is linked from its call when the call completes](task-09-background-worker-linked-on-completion.md) | done | 08 |
+| [10 - The spawning call carries the reference's subagent _meta](task-10-spawning-call-carries-the-reference-meta.md) | done | 08 |
 | [11 - A cancelled turn ends its own workers, and an ended worker stays ended](task-11-a-worker-ends-once-and-stays-ended.md) | done | - |
-| [12 - A nested worker is linked from the worker chat that spawned it](task-12-a-nested-worker-is-linked-from-its-parent-worker.md) | done | - |
-| [13 - A resumed session keeps the worker chats it was restored with](task-13-a-resumed-session-keeps-its-restored-workers.md) | done | - |
+| [12 - A nested worker is linked from the worker chat that spawned it](task-12-nested-worker-linked-from-its-parent.md) | done | - |
+| [13 - A resumed session keeps the worker chats it was restored with](task-13-resumed-session-keeps-restored-workers.md) | done | - |
 | [14 - Any task_started marks a worker background, and a foreground spawn ends on its result](task-14-background-is-told-by-the-reference-rule.md) | done | 11 |
-| [15 - A permission ask inside a subagent, seen on a real stream](task-15-an-ask-inside-a-subagent-on-a-real-stream.md) | done | - |
-| [16 - A worker's own actions are schema-checked, and its comments document](task-16-worker-actions-checked-and-comments-document.md) | done | 09, 10, 11, 12, 13 |
-| [17 - An answer given in a worker chat reaches its session, and a stop there stops the lead turn](task-17-an-answer-in-a-worker-chat-reaches-its-session.md) | done | 05 |
+| [15 - A permission ask inside a subagent, seen on a real stream](task-15-a-subagent-ask-on-a-real-stream.md) | done | - |
+| [16 - A worker's own actions are schema-checked, and its comments document](task-16-worker-actions-checked-comments-document.md) | done | 09, 10, 11, 12, 13 |
+| [17 - An answer given in a worker chat reaches its session, and a stop there stops the lead turn](task-17-worker-chat-answer-reaches-its-session.md) | done | 05 |
 
 ## Risks and tradeoffs
 

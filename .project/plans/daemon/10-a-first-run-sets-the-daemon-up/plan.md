@@ -62,7 +62,7 @@ The files read are the `refs` above.
 | --- | --- | --- |
 | [01 - A question at the terminal, with its default](task-01-a-question-with-its-default.md) | done | - |
 | [02 - `ahpd configure`](task-02-ahpd-configure.md) | done | 01 |
-| [03 - A start with no configuration offers configure](task-03-a-start-with-no-configuration-offers-configure.md) | done | 02 |
+| [03 - A start with no configuration offers configure](task-03-start-without-config-offers-configure.md) | done | 02 |
 | [04 - A start in an unserved folder asks to trust it, and `--no-cwd`](task-04-a-start-in-an-unserved-folder-asks.md) | done | 01 |
 | [05 - Docs](task-05-docs.md) | done | 02, 03, 04 |
 

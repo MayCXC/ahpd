@@ -10,9 +10,9 @@ An automation disables itself as its definition says, and a session's row lists 
 
 ## What was built
 
-- [p1](../44-ahpd-speaks-ahp-1-0-0-p1-ahpd-speaks-1-0-0-and-0-9-0/implemented.md) - the 1.0.0 handshake beside 0.9.0.
-- [p2](../44-ahpd-speaks-ahp-1-0-0-p2-an-automation-disables-itself/implemented.md) - `disableConditions` and the refusals.
-- [p3](../44-ahpd-speaks-ahp-1-0-0-p3-a-sessions-row-lists-its-chats/implemented.md) - the row's chats and a chat's own bits.
+- [p1](../44-p1-ahpd-speaks-1-0-0-and-0-9-0/implemented.md) - the 1.0.0 handshake beside 0.9.0.
+- [p2](../44-p2-an-automation-disables-itself/implemented.md) - `disableConditions` and the refusals.
+- [p3](../44-p3-a-sessions-row-lists-its-chats/implemented.md) - the row's chats and a chat's own bits.
 
 ## Verified
 

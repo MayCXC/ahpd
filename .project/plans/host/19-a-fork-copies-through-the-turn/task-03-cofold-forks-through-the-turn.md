@@ -1,7 +1,7 @@
 ---
 title: cofold forks through the turn
 status: done
-depends: [task-01-the-contract-says-a-fork-copies-through-the-turn.md]
+depends: [task-01-contract-says-fork-copies-through-turn.md]
 layer: "agent-cofold"
 refs:
   - "[code://packages/agent-cofold/src/session.ts#L1167-L1168](../../../../packages/agent-cofold/src/session.ts#L1167-L1168) - `forkPoint` from `points.input`"

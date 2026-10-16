@@ -57,7 +57,7 @@ initialize -> _meta has no vscode.autonomousAutomations -> state 'incompatible' 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The host says its automations run with no client](task-01-the-host-says-its-automations-run-with-no-client.md) | done | - |
+| [01 - The host says its automations run with no client](task-01-automations-run-with-no-client.md) | done | - |
 
 ## Risks and tradeoffs
 

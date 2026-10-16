@@ -1,7 +1,7 @@
 ---
 title: The task refs and Resumes in this plan point at the code as it is
 status: done
-depends: [task-18-start-forwards-its-options-wherever-they-are-typed.md, task-19-the-pinning-cases-fail-when-host-or-a-conflict-breaks.md, task-20-a-refusal-takes-its-sentence-and-the-group-hint-fails-like-the-others.md]
+depends: [task-18-start-forwards-options-wherever-typed.md, task-19-pinning-cases-fail-on-host-or-409.md, task-20-refusal-takes-only-its-sentence.md]
 layer: "docs"
 refs:
   - "[code://packages/server/src/commands/scopes.ts](../../../../packages/server/src/commands/scopes.ts) - `checkScopes`, created by task 14 and listed there as an update to `registry.ts`"

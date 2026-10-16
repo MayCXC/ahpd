@@ -68,7 +68,7 @@ client: message.agent = { uri } -> host chat/turnStarted -> messageFrom(message)
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The picked agent reaches the backend](task-01-the-picked-agent-reaches-the-backend.md) | done | - |
-| [02 - Built-in agents are listed as VS Code lists them](task-02-built-in-agents-are-listed-as-vscode-lists-them.md) | done | - |
+| [02 - Built-in agents are listed as VS Code lists them](task-02-built-in-agents-listed-as-vscode-does.md) | done | - |
 | [03 - The query runs on the picked agent](task-03-the-query-runs-on-the-picked-agent.md) | done | 01, 02 |
 | [04 - Docs](task-04-docs.md) | done | 03, 05 |
 | [05 - A restored session reopens on its model](task-05-a-restored-session-reopens-on-its-model.md) | done | - |

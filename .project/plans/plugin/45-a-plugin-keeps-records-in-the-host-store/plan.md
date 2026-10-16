@@ -49,7 +49,7 @@ a sqlite plugin -> registerRecords(store, 'replace') -> every plugin's collectio
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [A plugin keeps its records in a record store the host gives it](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | Softov, 2026-10-11 |
+| 1 | [A plugin keeps its records in a record store the host gives it](../45-p1-the-host-gives-a-record-store/plan.md) | Softov, 2026-10-11 |
 | 2 | [The server depends on @cofold/yaml, and the sdk does not](../../../rules/the-sdk-depends-only-on-the-protocol.md) | Softov, 2026-10-11 |
 | 3 | [A plugin gets parseYaml and stringifyYaml from the host](../../../../docs/plugins/PLUGINS.md) | Softov, 2026-10-11 |
 | 4 | [A bot or an automation is one Markdown file with YAML frontmatter](../../../../docs/plugins/BOTS.md) | Softov, 2026-10-10 |
@@ -70,8 +70,8 @@ The child plans hold the second table for their own tasks.
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host gives each plugin a record store](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md) | built | cofold commands/05 |
-| [p2 - The bot keeps its records in the record store](../45-a-plugin-keeps-records-in-the-host-store-p2-the-bot-keeps-its-records-there/plan.md) | built | p1 |
+| [p1 - The host gives each plugin a record store](../45-p1-the-host-gives-a-record-store/plan.md) | built | cofold commands/05 |
+| [p2 - The bot keeps its records in the record store](../45-p2-the-bot-keeps-its-records-there/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 
@@ -81,7 +81,7 @@ The child plans hold the second table for their own tasks.
 
 ## Resume state
 
-- **Done so far:** p1 is built and reviewed on 2026-10-11; see its [implemented.md](../45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/implemented.md). The server depends on `@cofold/yaml` `^0.3.0` from npm.
+- **Done so far:** p1 is built and reviewed on 2026-10-11; see its [implemented.md](../45-p1-the-host-gives-a-record-store/implemented.md). The server depends on `@cofold/yaml` `^0.3.0` from npm.
 - **Next action:** Softov reviews p2.
 - **Open questions:** none.
 - **Watch out for:** host plan 80 needs p1's Markdown record code in the server.

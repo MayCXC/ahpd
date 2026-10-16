@@ -78,7 +78,7 @@ running -> state.config.schema.computer                -> [new] sessionMutable: 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A fixed key restarts a session that has not started](task-01-a-fixed-key-restarts-an-unstarted-session.md) | done | - |
+| [01 - A fixed key restarts a session that has not started](task-01-fixed-key-restarts-unstarted-session.md) | done | - |
 | [02 - A running session shows its fixed keys read-only](task-02-fixed-keys-are-read-only-chips.md) | done | 01 |
 
 ## Risks and tradeoffs

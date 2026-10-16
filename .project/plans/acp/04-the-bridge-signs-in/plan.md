@@ -13,7 +13,7 @@ refs:
   - "[code://packages/agent-acp/src/session.ts#L526-L547](../../../../packages/agent-acp/src/session.ts#L526-L547) - `initialize` then `session/new`, where `authenticate` goes between"
   - "[code://packages/agent-acp/src/connection.ts#L137-L146](../../../../packages/agent-acp/src/connection.ts#L137-L146) - the handshake reply, whose `authMethods` is never read"
   - "[code://packages/agent-acp/src/types.ts#L42-L60](../../../../packages/agent-acp/src/types.ts#L42-L60) - `AcpOptions`"
-  - "[code://.project/plans/container/05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs/plan.md](../../../../.project/plans/container/05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs/plan.md) - where this work was first planned, and moved from"
+  - "[code://.project/plans/container/05-p2-an-acp-agent-says-what-its-machine-needs/plan.md](../../../../.project/plans/container/05-p2-an-acp-agent-says-what-its-machine-needs/plan.md) - where this work was first planned, and moved from"
   - npm://@agentclientprotocol/sdk - `authenticate`, `AuthMethod`, the `auth_required` error
 ---
 

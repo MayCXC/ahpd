@@ -47,18 +47,18 @@ harness transcript on disk -> plugin restores the turns -> the same _meta on eac
 | ACP calls are timed by receive time while the daemon runs; calls replayed after a restart carry none | Softov, 2026-09-29, asked "ACP has no times in its protocol and no history after a daemon restart... Accept that?": "Accept it" | p4 |
 | An ACP call starts at the receive time of the first update about it | Softov, 2026-10-03, asked "plugin/29 p4: for an ACP agent's tool call, which moment counts as its start?": "First update about it" | p4 |
 | A live pi call a person is asked about starts at its approval, as a Claude one does | Softov, 2026-10-03, asked "pi: a tool call that asks the person first. When does it start?": "At approval" | p3 |
-| cofold's restored calls move from the bare timing names to the `ahpd.` ones in p5, and [host/43 p4](../../host/43-the-wire-is-the-protocols-p4-ahpds-own-meta-keys-say-ahpd/plan.md) leaves them to it | the decision; host/43 p4's Resume state, Softov, 2026-10-03 | p5 |
+| cofold's restored calls move from the bare timing names to the `ahpd.` ones in p5, and [host/43 p4](../../host/43-p4-ahpds-own-meta-keys-say-ahpd/plan.md) leaves them to it | the decision; host/43 p4's Resume state, Softov, 2026-10-03 | p5 |
 | The host adds no times of its own; a backend that stamps nothing shows none | Softov, 2026-09-29, asked "A backend that stamps nothing... should the host fill in times from its own clock?": "No host fallback" | - |
 
 ## Tasks
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The sdk has one helper that builds and keeps a tool call's timing _meta](../29-a-tool-call-says-when-it-ran-p1-the-sdk-keeps-a-calls-times/plan.md) | done | - |
-| [p2 - Claude tool calls carry their start and end, live and restored](../29-a-tool-call-says-when-it-ran-p2-claude-stamps-its-calls/plan.md) | done | p1 |
-| [p3 - pi tool calls carry their start and end, live and restored](../29-a-tool-call-says-when-it-ran-p3-pi-stamps-its-calls/plan.md) | done | p1 |
-| [p4 - ACP tool calls carry their start and end while the daemon runs](../29-a-tool-call-says-when-it-ran-p4-acp-stamps-its-calls/plan.md) | done | p1 |
-| [p5 - cofold tool calls carry their start and end live too, and restored calls keep their kind](../29-a-tool-call-says-when-it-ran-p5-cofold-stamps-its-live-calls/plan.md) | done | p1 |
+| [p1 - The sdk has one helper that builds and keeps a tool call's timing _meta](../29-p1-the-sdk-keeps-a-calls-times/plan.md) | done | - |
+| [p2 - Claude tool calls carry their start and end, live and restored](../29-p2-claude-stamps-its-calls/plan.md) | done | p1 |
+| [p3 - pi tool calls carry their start and end, live and restored](../29-p3-pi-stamps-its-calls/plan.md) | done | p1 |
+| [p4 - ACP tool calls carry their start and end while the daemon runs](../29-p4-acp-stamps-its-calls/plan.md) | done | p1 |
+| [p5 - cofold tool calls carry their start and end live too, and restored calls keep their kind](../29-p5-cofold-stamps-its-live-calls/plan.md) | done | p1 |
 
 ## Risks and tradeoffs
 

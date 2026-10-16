@@ -1,10 +1,10 @@
 ---
 title: Check host/83 in VS Code's window
 plans:
-  - plans/host/83-the-host-matches-vscodes-host-p1-the-host-describes-itself/plan.md
-  - plans/host/83-the-host-matches-vscodes-host-p2-a-run-is-stopped-and-runs-are-capped/plan.md
-  - plans/host/83-the-host-matches-vscodes-host-p3-a-remote-session-keeps-its-origin/plan.md
-  - plans/host/83-the-host-matches-vscodes-host-p4-a-customization-is-switched-for-all-sessions/plan.md
+  - plans/host/83-p1-the-host-describes-itself/plan.md
+  - plans/host/83-p2-a-run-is-stopped-and-runs-are-capped/plan.md
+  - plans/host/83-p3-a-remote-session-keeps-its-origin/plan.md
+  - plans/host/83-p4-customization-switched-for-all-sessions/plan.md
 ---
 
 # Check host/83 in VS Code's window

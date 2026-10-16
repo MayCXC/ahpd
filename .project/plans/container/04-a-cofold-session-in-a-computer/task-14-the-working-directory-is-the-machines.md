@@ -1,7 +1,7 @@
 ---
 title: The inner session works in the machine's directory
 status: done
-depends: [task-07-the-inner-hosts-pipes-cannot-crash-the-daemon.md]
+depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "computer | sdk"
 refs:
   - "[code://packages/sdk/src/nested.ts#L376-L381](../../../../packages/sdk/src/nested.ts#L376-L381) - `createSession` sends this host's path as the inner working directory"

@@ -93,7 +93,7 @@ client -> ws://host:port?tkn=<token>            -> listen.ts: root token, else t
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The advertised record is true](task-01-the-record-is-true.md) | done | - |
-| [02 - A connection token that resolves to a person](task-02-a-connection-token-that-resolves-to-a-person.md) | done | - |
+| [02 - A connection token that resolves to a person](task-02-connection-token-resolves-to-a-person.md) | done | - |
 | [03 - The daemon hands a person their URL](task-03-the-daemon-hands-a-person-their-url.md) | done | 02 |
 | [04 - The prose and the handoff](task-04-the-prose-and-the-handoff.md) | done | 01, 02, 03 |
 

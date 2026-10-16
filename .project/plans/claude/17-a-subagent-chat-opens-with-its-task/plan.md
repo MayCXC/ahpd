@@ -64,7 +64,7 @@ assistant() tool_use Agent -> spawning.set(id, { description, prompt, ... }) -> 
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - A live worker chat waits for its spawn](task-01-a-live-worker-chat-waits-for-its-spawn.md) | done | - |
-| [02 - A restored worker chat takes the same title](task-02-a-restored-worker-chat-takes-the-same-title.md) | done | - |
+| [02 - A restored worker chat takes the same title](task-02-restored-worker-chat-takes-same-title.md) | done | - |
 
 ## Risks and tradeoffs
 

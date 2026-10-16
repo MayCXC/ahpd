@@ -1,7 +1,7 @@
 ---
 title: Docs for the API's grants, guards and --remote
 status: done
-depends: [task-09-the-grants-each-command-needs.md, task-10-an-unconfigured-daemon-refuses-http.md, task-11-origin-and-host-are-checked.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-it-is-remote.md]
+depends: [task-09-the-grants-each-command-needs.md, task-10-an-unconfigured-daemon-refuses-http.md, task-11-origin-and-host-are-checked.md, task-12-http-host.md, task-13-remote-needs-a-token-and-proves-remote.md]
 layer: "docs"
 refs:
   - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the HTTP API section"

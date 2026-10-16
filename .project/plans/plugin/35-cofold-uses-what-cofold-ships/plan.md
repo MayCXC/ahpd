@@ -7,7 +7,7 @@ created: 2026-10-06
 revalidated: 2026-10-06
 requires:
   - plans/plugin/05-endpoint-models/plan.md
-  - plans/plugin/32-a-turns-usage-is-every-call-it-made-p3-cofold-counts-each-step/plan.md
+  - plans/plugin/32-p3-cofold-counts-each-step/plan.md
 changes: []
 creates: []
 decisions:
@@ -97,7 +97,7 @@ transcript() -> turnsOf -> every message kept; a summary message -> the same com
 | Compaction fires at a plugin option, `autoCompactTokens`, capped at 80% of the model's listed `contextTokens` (32000 when the list gives none); unset, it fires at that 80% | Softov, 2026-10-06, asked "where should a cofold session's auto-compaction numbers come from?" with the options "From the model list (listed contextTokens else 32000, compact at 80%, no plugin option)", "A plugin option" and "papo's fixed numbers": "A plugin option < than the models 80%" | 03 |
 | A compacted session keeps every message for every client and shows one notice where the compaction happened, worded as the Claude backend's and the same live and in the transcript; the summary is never shown as the model's answer | Softov, 2026-10-06, asked "once a cofold session compacts, should its transcript hide the messages the summary covers?": "Keep history, show a notice"; the sibling, [`code://packages/agent-claude/src/session/query.ts#L345-L358`](../../../../packages/agent-claude/src/session/query.ts#L345-L358) | 04, 06 |
 | The ask tool is added unless an offered tool already has its name, which then keeps it | [`code://packages/agent-cofold/src/capabilities.ts#L76-L91`](../../../../packages/agent-cofold/src/capabilities.ts#L76-L91), the rule `withoutTaken` already applies | 05 |
-| A session's title is the first non-blank line cut at 80, in the catalogue row as well as on the first turn | Softov, 2026-10-05, in [host 61](../../host/61-agents-share-their-session-kit-presets-and-input-checks/plan.md): "First line, up to 80"; amended into its [task 02](../../host/61-agents-share-their-session-kit-presets-and-input-checks/task-02-every-backend-titles-a-session-from-the-first-line.md), not built here | - |
+| A session's title is the first non-blank line cut at 80, in the catalogue row as well as on the first turn | Softov, 2026-10-05, in [host 61](../../host/61-agents-share-session-kit-and-input-checks/plan.md): "First line, up to 80"; amended into its [task 02](../../host/61-agents-share-session-kit-and-input-checks/task-02-every-backend-titles-from-first-line.md), not built here | - |
 
 ## Proposed architecture
 
@@ -111,8 +111,8 @@ transcript() -> turnsOf -> every message kept; a summary message -> the same com
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The catalogue is read through cofold's provider](task-01-the-catalogue-is-read-through-cofolds-provider.md) | done | - |
-| [02 - A turn runs on the provider's model, with the listed price](task-02-a-turn-runs-on-the-providers-model-with-its-price.md) | done | 01 |
+| [01 - The catalogue is read through cofold's provider](task-01-catalogue-read-through-cofold-provider.md) | done | - |
+| [02 - A turn runs on the provider's model, with the listed price](task-02-turn-runs-on-provider-model-with-price.md) | done | 01 |
 | [03 - A long session compacts itself before it fills the model](task-03-a-long-session-compacts-itself.md) | done | 02 |
 | [04 - A live compaction reads as a notice, not as the model's answer](task-04-a-live-compaction-reads-as-a-notice.md) | done | 03 |
 | [05 - The model can ask the person a question](task-05-the-model-can-ask-the-person.md) | done | - |

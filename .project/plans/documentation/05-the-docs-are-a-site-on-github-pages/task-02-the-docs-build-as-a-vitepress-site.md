@@ -2,7 +2,7 @@
 title: The docs build as a VitePress site
 status: done
 depends:
-  - task-01-the-docs-live-in-server-sdk-and-plugins-folders.md
+  - task-01-docs-live-in-server-sdk-plugins-folders.md
 layer: "docs"
 refs:
   - "[code://docs/README.md](../../../../docs/README.md) - the order of the files in each folder, which the sidebar groups follow"

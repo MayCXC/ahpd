@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
 requires:
-  - plans/daemon/11-root-config-carries-the-daemon-and-its-plugins/plan.md
+  - plans/daemon/11-root-config-holds-daemon-and-plugin-options/plan.md
 refs:
   - "[code://packages/server/src/plugins.ts#L60](../../../../packages/server/src/plugins.ts#L60) - `nameOf`, the spec as written"
   - "[code://packages/server/src/plugins.ts#L183-L285](../../../../packages/server/src/plugins.ts#L183-L285) - `resolvePlugin` and `readManifest`, which find a plugin and its manifest without an import"

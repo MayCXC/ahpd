@@ -1,7 +1,7 @@
 ---
 title: A restored question is drawn as the answered question
 status: done
-depends: [task-02-a-replayed-answered-question-carries-its-answers.md]
+depends: [task-02-replayed-answered-question-has-answers.md]
 layer: "agent-claude"
 refs:
   - "[code://packages/agent-claude/src/session.ts#L1889-L1925](../../../../packages/agent-claude/src/session.ts#L1889-L1925) - the live carousel: questions `q1..qN`, options keyed by label, `message` from the header"

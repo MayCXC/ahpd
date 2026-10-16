@@ -102,7 +102,7 @@ push to main -> deploy-docs.yml -> pnpm docs:build -> docs/.vitepress/dist -> Pa
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The docs live in server, sdk and plugins folders](task-01-the-docs-live-in-server-sdk-and-plugins-folders.md) | done | - |
+| [01 - The docs live in server, sdk and plugins folders](task-01-docs-live-in-server-sdk-plugins-folders.md) | done | - |
 | [02 - The docs build as a VitePress site](task-02-the-docs-build-as-a-vitepress-site.md) | done | 01 |
 | [03 - A push to main publishes the site](task-03-a-push-to-main-publishes-the-site.md) | done | 02 |
 

@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/users.ts#L807-L854](../../../../packages/sdk/src/users.ts#L807-L854) - `verify`"
   - "[code://packages/sdk/src/users.ts#L24-L54](../../../../packages/sdk/src/users.ts#L24-L54) - the built-in roles and `SUBJECTS`, where a `proxy` subject goes"
   - "[code://packages/sdk/src/scopes.ts#L155-L180](../../../../packages/sdk/src/scopes.ts#L155-L180) - `scopeFor`"
-  - "[code://.project/plans/container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/task-01-a-session-has-a-token.md](../../container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/task-01-a-session-has-a-token.md) - the task that fills `whose`"
+  - "[code://.project/plans/container/05-p12-off-host-machine-reaches-models-via-proxy/task-01-a-session-has-a-token.md](../../container/05-p12-off-host-machine-reaches-models-via-proxy/task-01-a-session-has-a-token.md) - the task that fills `whose`"
 ---
 
 ## Objective

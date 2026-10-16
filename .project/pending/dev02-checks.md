@@ -1,7 +1,7 @@
 ---
 title: Check an ssh machine on dev02
 plans:
-  - plans/container/05-an-agent-in-a-machine-p9-an-ssh-machine-runs-a-nested-host/plan.md
+  - plans/container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md
 ---
 
 # Check an ssh machine on dev02

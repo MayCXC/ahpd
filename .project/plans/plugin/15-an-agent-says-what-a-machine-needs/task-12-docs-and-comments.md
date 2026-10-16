@@ -1,7 +1,7 @@
 ---
 title: The docs cover every need and how a plugin declares one, and the comments document
 status: done
-depends: [task-06-cofold-declares.md, task-09-every-mount-target-is-checked-at-create.md, task-10-a-path-a-machine-is-made-with-is-absolute-and-there.md]
+depends: [task-06-cofold-declares.md, task-09-every-mount-target-is-checked-at-create.md, task-10-machine-path-is-absolute-and-exists.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/COMPUTERS.md#L171-L224](../../../../docs/plugins/COMPUTERS.md#L171-L224) - the needs table, which has no cofold row, and the profile rules"

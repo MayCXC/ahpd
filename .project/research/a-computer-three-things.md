@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/types/agent.ts#L151-L152](../../packages/sdk/src/types/agent.ts#L151-L152) - `Agent.schema()`, which is where a session's config schema comes from"
   - "[code://packages/sdk/src/types/plugin.ts#L101-L140](../../packages/sdk/src/types/plugin.ts#L101-L140) - every `register*` a plugin has, and the `registerSessionConfig` that is not there"
   - "[code://packages/sdk/src/types/agent.ts#L92-L141](../../packages/sdk/src/types/agent.ts#L92-L141) - `Start`, which carries a working directory, ports and tools, and no place to run"
-  - "[code://.project/plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) - one provider per scheme, the runtime an option, `computer://<id>` whatever made it"
+  - "[code://.project/plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md) - one provider per scheme, the runtime an option, `computer://<id>` whatever made it"
   - "[code://docs/plugins/COMPUTERS.md](../../docs/plugins/COMPUTERS.md) - the tool route this note questions"
   - "[code://docs/sdk/RESOURCES.md](../../docs/sdk/RESOURCES.md) - a provider implements only what it serves, and the write half is optional"
   - "[code://.project/research/host-owned-uri-resources.md](../../.project/research/host-owned-uri-resources.md) - the proposal that named the tool, and said what it is not"
@@ -26,7 +26,7 @@ Written 2026-09-23 after the user's correction: "Agents are not suppose to creat
 
 ## What the records already say, and where the fork was
 
-["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) settles the catalogue: one package, the runtime an option, and `computer://<id>` names a machine whatever made it. That part is not in question.
+["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md) settles the catalogue: one package, the runtime an option, and `computer://<id>` names a machine whatever made it. That part is not in question.
 
 [A machine is made by a host tool, not by a resource write](../../docs/plugins/COMPUTERS.md) settles creation as three host tools, and records the source as the user choosing the tool route. The research that decision points at says something narrower, in its own words at `host-owned-uri-resources.md`: "A tool such as `request_disposable_computer` would be an agent-callable operation within a session, **not the user's primary machine selector before a session exists**." That sentence is the fork. The tool half was built; the selector half was not, and the decision's title reads as though the two were the same thing.
 
@@ -122,7 +122,7 @@ So the shape is: a person makes a machine with a resource write, a session names
 ## What this would change in the records
 
 - [A machine is made by a host tool, not by a resource write](../../docs/plugins/COMPUTERS.md) would be superseded: creation becomes a resource write a person makes, with the tools kept as an optional agent-facing extra.
-- ["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) stands as it is.
+- ["One computer: provider, one package, the runtime chosen by option"](../plans/container/05-p11-a-vm-is-made-for-a-machine/plan.md) stands as it is.
 - [A scheme provider implements less than a resource store](../../docs/sdk/RESOURCES.md) stands, and is the decision that allows the provider to grow a `write` and a `remove` half.
 - The Dev Container idea is the existing home of "a session runs inside a machine"; a generic `computer:` substrate is the same shape with the runtime as an option.
 

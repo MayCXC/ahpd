@@ -1,7 +1,7 @@
 ---
 title: ahpd brings a machine's work back by fetch
 status: done
-depends: [task-03-the-machines-repository-is-seeded-from-the-hosts.md]
+depends: [task-03-machine-repo-seeded-from-the-hosts.md]
 layer: "computer, sdk"
 refs:
   - "[code://packages/sdk/src/types/computers.ts#L182-L184](../../../../packages/sdk/src/types/computers.ts#L182-L184) - `ComputerPort`"

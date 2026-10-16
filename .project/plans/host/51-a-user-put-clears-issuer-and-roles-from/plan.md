@@ -48,7 +48,7 @@ resourceWrite user://<id> -> people.ts put -> Users.add(options) -> users file r
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A null issuer or roles-from is taken away](task-01-a-null-issuer-or-roles-from-is-taken-away.md) | done | - |
+| [01 - A null issuer or roles-from is taken away](task-01-null-issuer-or-roles-from-is-removed.md) | done | - |
 
 ## Risks and tradeoffs
 

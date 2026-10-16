@@ -1,7 +1,7 @@
 ---
 title: A fallback id is a slug too
 status: implemented
-depends: [task-02-the-daemon-refuses-a-name-that-is-not-a-slug.md]
+depends: [task-02-daemon-refuses-a-non-slug-name.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/plugins.ts#L93-L101](../../../../packages/server/src/plugins.ts#L93-L101) - `unscoped` and `provisionalOf`, the fallback id"

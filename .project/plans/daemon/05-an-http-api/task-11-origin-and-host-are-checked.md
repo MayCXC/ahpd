@@ -1,7 +1,7 @@
 ---
 title: The API checks Origin and Host, and takes only JSON bodies
 status: done
-depends: [task-07-the-listener-survives-a-malformed-request.md, task-12-http-host.md]
+depends: [task-07-listener-survives-a-malformed-request.md, task-12-http-host.md]
 layer: "server"
 refs:
   - "[The HTTP API checks Origin and Host, and takes only JSON bodies](../../../../docs/server/REFERENCE.md) - what this task applies, and the daemon's own origins"

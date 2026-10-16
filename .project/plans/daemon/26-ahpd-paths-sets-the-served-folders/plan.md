@@ -73,8 +73,8 @@ POST /v1/paths/add -> the same write to the daemon's config.json -> served.optio
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-and-removes-a-folder.md) | done | - |
-| [02 - a served paths change reaches the running daemon](task-02-a-served-paths-change-reaches-the-running-daemon.md) | done | 01 |
+| [01 - ahpd paths lists, adds and removes a folder](task-01-ahpd-paths-lists-adds-removes-a-folder.md) | done | - |
+| [02 - a served paths change reaches the running daemon](task-02-served-paths-change-reaches-daemon.md) | done | 01 |
 | [03 - what the Windows run found in ahpd paths is fixed](task-03-what-the-windows-run-found.md) | done | 02 |
 | [04 - the first ahpd paths add keeps the start folder](task-04-the-first-add-keeps-the-start-folder.md) | done | 03 |
 | [05 - status shows the start folder](task-05-status-shows-the-start-folder.md) | done | 04 |

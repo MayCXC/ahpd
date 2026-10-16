@@ -1,7 +1,7 @@
 ---
 title: The docs say what a disposable machine does, and the comments document
 status: done
-depends: [task-05-a-machine-is-left-when-its-session-moves-away.md, task-06-a-resumed-session-counts-as-a-user.md, task-07-a-daemon-adopts-only-its-own-leftovers.md, task-08-a-disposable-alone-machine-refuses-another-session.md, task-09-a-machine-made-for-a-session-counts.md, task-10-the-session-folder-needs-the-profiles-flag.md]
+depends: [task-05-machine-left-when-session-moves-away.md, task-06-a-resumed-session-counts-as-a-user.md, task-07-a-daemon-adopts-only-its-own-leftovers.md, task-08-disposable-alone-machine-refuses-others.md, task-09-a-machine-made-for-a-session-counts.md, task-10-session-folder-needs-profile-flag.md]
 layer: "docs"
 refs:
   - "[code://packages/sdk/src/types/computers.ts#L160-L177](../../../../packages/sdk/src/types/computers.ts#L160-L177) - `enter`, documented as not called on a pre-turn restart, which `host.ts:5125` does call, and `leave`"

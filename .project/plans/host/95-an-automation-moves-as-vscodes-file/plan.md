@@ -65,8 +65,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An automation is exported as VS Code's file](task-01-an-automation-is-exported-as-vscodes-file.md) | todo | - |
-| [02 - VS Code's file is imported as an automation](task-02-vscodes-file-is-imported-as-an-automation.md) | todo | 01 |
+| [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | todo | - |
+| [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | todo | 01 |
 
 ## Risks and tradeoffs
 

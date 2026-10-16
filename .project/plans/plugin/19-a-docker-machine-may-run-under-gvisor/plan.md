@@ -49,7 +49,7 @@ profile { ociRuntime: 'runsc' } -> manifestOf -> MachineSpec.ociRuntime -> docke
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [gVisor is a docker profile option, ociRuntime, and not a computer runtime](../../../../docs/plugins/COMPUTERS.md) | Softov, 2026-09-26 |
-| 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | Softov, 2026-10-02 |
+| 2 | [One computer: provider, the runtime named for what makes the machine](../../container/05-p11-a-vm-is-made-for-a-machine/plan.md) | Softov, 2026-10-02 |
 
 | What | Source | Task |
 | --- | --- | --- |

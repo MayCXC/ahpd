@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-04
 revalidated: 2026-10-04
 requires:
-  - plans/host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/plan.md
+  - plans/host/56-catalogue-answers-at-once-summary-on-change/plan.md
 changes: []
 creates: []
 decisions: []
@@ -106,7 +106,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 | --- | --- | --- |
 | [01 - pi finds a session by id](task-01-pi-finds-a-session-by-id.md) | done | - |
 | [02 - cofold finds a session by id](task-02-cofold-finds-a-session-by-id.md) | done | - |
-| [03 - ACP finds a session by listing its own server](task-03-acp-finds-a-session-by-listing-its-own-server.md) | done | - |
+| [03 - ACP finds a session by listing its own server](task-03-acp-finds-session-by-listing-its-server.md) | done | - |
 | [04 - The listing throttle goes](task-04-the-listing-throttle-goes.md) | done | 01, 02, 03 |
 
 ## Risks and tradeoffs

@@ -1,7 +1,7 @@
 ---
 title: A served plugin list hides every plugin option value
 status: done
-depends: [task-20-served-config-reads-the-daemons-file-or-says-it-is-gone.md]
+depends: [task-20-served-config-reads-daemon-file-or-gone.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/commands/plugin.ts#L22-L46](../../../../packages/server/src/commands/plugin.ts#L22-L46) - `plugin list`, whose rows carry each spec with its `options`"

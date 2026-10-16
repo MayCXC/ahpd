@@ -86,8 +86,8 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The worktree record outlives the daemon](task-01-the-worktree-record-outlives-the-daemon.md) | done | - |
-| [02 - Archive shelves the tree and unarchive restores it](task-02-archive-shelves-the-tree-and-unarchive-restores-it.md) | done | 01 |
-| [03 - A daemon key decides what archive does with a dirty tree](task-03-a-daemon-key-decides-what-archive-does-with-a-dirty-tree.md) | done | 02 |
+| [02 - Archive shelves the tree and unarchive restores it](task-02-archive-shelves-and-unarchive-restores.md) | done | 01 |
+| [03 - A daemon key decides what archive does with a dirty tree](task-03-daemon-key-decides-dirty-tree-archive.md) | done | 02 |
 
 ## Risks and tradeoffs
 

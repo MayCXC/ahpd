@@ -62,7 +62,7 @@ process exits                    -> [new] the session ends with the stderr tail 
 | A cofold session in a computer runs in an ahpd started inside it | 01, 04 |
 | A session reaches a nested host through a generic proxy backend in the SDK | 02, 03, 04 |
 | A nested session is resumed by resuming the inner transcript by id | 11 |
-| [A nested host is configured by the machine's profile only](../05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | 17 |
+| [A nested host is configured by the machine's profile only](../05-p12-off-host-machine-reaches-models-via-proxy/plan.md) | 17 |
 | The host records which plugin registered each agent, and a nested host loads that plugin | 17 |
 
 | What | Source | Task |
@@ -96,13 +96,13 @@ process exits                    -> [new] the session ends with the stderr tail 
 | [04 - A backend that runs nested is proxied instead of refused](task-04-nested-instead-of-refused.md) | done | 03 |
 | [05 - A nested start that fails says why](task-05-a-failed-start-says-why.md) | done | 04 |
 | [06 - Docs](task-06-docs.md) | done | 05 |
-| [07 - The inner host's pipes cannot crash the daemon](task-07-the-inner-hosts-pipes-cannot-crash-the-daemon.md) | done | 06 |
-| [08 - The stderr tail and the stdout framing are bounded](task-08-the-stderr-tail-and-stdout-framing-are-bounded.md) | done | 07 |
-| [09 - An ended nested session refuses what follows with the reason](task-09-an-ended-nested-session-refuses-with-the-reason.md) | done | 07 |
+| [07 - The inner host's pipes cannot crash the daemon](task-07-inner-host-pipes-cannot-crash-daemon.md) | done | 06 |
+| [08 - The stderr tail and the stdout framing are bounded](task-08-stderr-tail-and-stdout-framing-bounded.md) | done | 07 |
+| [09 - An ended nested session refuses what follows with the reason](task-09-ended-nested-session-refuses-with-reason.md) | done | 07 |
 | [10 - Inner chat URIs are rewritten to the outer ones](task-10-inner-chat-uris-are-rewritten.md) | done | 07 |
 | [11 - A nested session resumes the inner transcript by id](task-11-a-nested-session-resumes-by-id.md) | done | 09 |
 | [12 - The proxy answers only what it knows](task-12-the-proxy-answers-only-what-it-knows.md) | done | 10 |
-| [13 - Models, sign-in and the inner host's requests cross the proxy](task-13-models-sign-in-and-requests-cross-the-proxy.md) | done | 12 |
+| [13 - Models, sign-in and the inner host's requests cross the proxy](task-13-models-sign-in-and-requests-cross-proxy.md) | done | 12 |
 | [14 - The inner session works in the machine's directory](task-14-the-working-directory-is-the-machines.md) | done | 07 |
 | [15 - Close waits for the inner session to be disposed](task-15-close-waits-for-the-inner-dispose.md) | done | 07 |
 | [16 - The docs say how the image gets ahpd and what a nested session does](task-16-docs-for-the-fixes.md) | done | 11, 12, 13, 14, 15, 17 |

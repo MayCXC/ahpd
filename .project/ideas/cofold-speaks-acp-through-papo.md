@@ -11,7 +11,7 @@ If papo, cofold's CLI and TUI, had an `--acp` mode that served the Agent Client 
 
 ## What it gives
 
-- cofold in a machine without ahpd's code in it: the machine runs `papo --acp`, and `agent-acp` speaks to it like any ACP agent ([plan container/05](../plans/container/05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs)).
+- cofold in a machine without ahpd's code in it: the machine runs `papo --acp`, and `agent-acp` speaks to it like any ACP agent ([plan container/05](../plans/container/05-p2-an-acp-agent-says-what-its-machine-needs)).
 - cofold in editors that speak ACP, which is cofold's reach, not only ahpd's.
 - A second path that checks the first: what `agent-cofold` maps and what papo's ACP mode sends should match.
 

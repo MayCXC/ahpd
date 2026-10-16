@@ -63,7 +63,7 @@ a client reads computer://<id>/status
 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
-| 1 | [One computer: provider, one package, the runtime chosen by option](../../container/05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | The user, 2026-09-22: "I want 1 also as option", after the duplicate-scheme rule made two packages impossible. |
+| 1 | [One computer: provider, one package, the runtime chosen by option](../../container/05-p11-a-vm-is-made-for-a-machine/plan.md) | The user, 2026-09-22: "I want 1 also as option", after the duplicate-scheme rule made two packages impossible. |
 | 2 | [A machine is made by a host tool, not by a resource write](../../../../docs/plugins/COMPUTERS.md) | The user, 2026-09-22: asked how a machine would be set up if the provider only reported them. |
 
 | What | Source | Task |

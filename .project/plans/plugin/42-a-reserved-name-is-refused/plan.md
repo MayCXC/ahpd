@@ -71,7 +71,7 @@ client subscribe <provider>:/<id> -> schemeOf -> spaceOf / channelKind -> sessio
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - One reserved list refuses a scheme and a harness](task-01-one-reserved-list.md) | done | - |
-| [02 - A harness and a scheme cannot share a name](task-02-a-harness-and-a-scheme-cannot-share-a-name.md) | done | 01 |
+| [02 - A harness and a scheme cannot share a name](task-02-harness-and-scheme-cannot-share-a-name.md) | done | 01 |
 | [03 - The docs list the reserved names](task-03-the-docs-list-the-reserved-names.md) | done | 02 |
 
 ## Risks and tradeoffs

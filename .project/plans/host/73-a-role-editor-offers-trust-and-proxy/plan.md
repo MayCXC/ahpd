@@ -64,7 +64,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - trust and proxy are in the operations table](task-01-trust-and-proxy-are-in-the-operations-table.md) | done | - |
+| [01 - trust and proxy are in the operations table](task-01-trust-and-proxy-in-operations-table.md) | done | - |
 
 ## Risks and tradeoffs
 

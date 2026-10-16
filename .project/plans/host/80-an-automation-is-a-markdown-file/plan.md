@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-10
 revalidated: 2026-10-11
 requires:
-  - plans/plugin/45-a-plugin-keeps-records-in-the-host-store-p1-the-host-gives-a-record-store/plan.md
+  - plans/plugin/45-p1-the-host-gives-a-record-store/plan.md
 decisions:
 refs:
   - "[code://packages/sdk/src/scheduled.ts#L12-L60](../../../../packages/sdk/src/scheduled.ts#L12-L60) - `ScheduledOptions` and `Saved`, the one file and its shape"

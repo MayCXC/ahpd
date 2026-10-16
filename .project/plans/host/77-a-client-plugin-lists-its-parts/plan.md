@@ -52,7 +52,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | --- | --- | --- |
 | [01 - A copied plugin's parts are read](task-01-a-copied-plugins-parts-are-read.md) | done | - |
 | [02 - A client plugin lists its parts](task-02-a-client-plugin-lists-its-parts.md) | done | 01 |
-| [03 - A switched-off server does not reach the agent](task-03-a-switched-off-server-does-not-reach-the-agent.md) | done | 02 |
+| [03 - A switched-off server does not reach the agent](task-03-switched-off-server-does-not-reach-agent.md) | done | 02 |
 
 ## Risks and tradeoffs
 

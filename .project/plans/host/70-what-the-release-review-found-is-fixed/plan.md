@@ -99,12 +99,12 @@ remove(machine) -> running? start it -> bringBack (a failed exec throws) -> keep
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A machine is removed only once its work is out](task-01-a-machine-is-removed-only-once-its-work-is-out.md) | done | - |
+| [01 - A machine is removed only once its work is out](task-01-machine-removed-once-its-work-is-out.md) | done | - |
 | [02 - Only a machine ahpd made is judged as made under bind](task-02-only-a-machine-ahpd-made-is-judged.md) | done | - |
-| [03 - The clash check names what the runtime mounts](task-03-the-clash-check-names-what-the-runtime-mounts.md) | done | - |
+| [03 - The clash check names what the runtime mounts](task-03-clash-check-names-runtime-mounts.md) | done | - |
 | [04 - Pushing trust needs trust:write](task-04-pushing-trust-needs-trust-write.md) | done | - |
 | [05 - The approve-everything key is declared](task-05-the-approve-everything-key-is-declared.md) | done | - |
-| [06 - Leaving a machine clears the nested record](task-06-leaving-a-machine-clears-the-nested-record.md) | done | - |
+| [06 - Leaving a machine clears the nested record](task-06-leaving-machine-clears-nested-record.md) | done | - |
 | [07 - A preset can turn the sandbox off, and two small fixes](task-07-a-preset-can-turn-the-sandbox-off.md) | done | - |
 | [08 - Docs](task-08-docs.md) | done | 01-07 |
 

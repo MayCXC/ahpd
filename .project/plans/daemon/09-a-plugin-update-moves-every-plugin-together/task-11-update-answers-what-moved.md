@@ -1,7 +1,7 @@
 ---
 title: Update answers what moved, with each version before and after
 status: done
-depends: [task-10-install-refuses-a-package-that-is-not-a-plugin.md]
+depends: [task-10-install-refuses-a-non-plugin-package.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/commands/plugin.ts#L148-L171](../../../../packages/server/src/commands/plugin.ts#L148-L171) - `output({ plugins: names })`, the names npm was asked to move"

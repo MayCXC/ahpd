@@ -1,7 +1,7 @@
 ---
 title: A webhook talks to a bot by thread
 status: done
-depends: [task-01-the-webhook-plugin-keeps-endpoints-and-checks-the-caller.md]
+depends: [task-01-webhook-keeps-endpoints-checks-caller.md]
 layer: "packages/webhook"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L145](../../../../packages/sdk/src/types/plugin.ts#L145) - `PluginPeer`, the client connection that `connect()` gives"

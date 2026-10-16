@@ -1,7 +1,7 @@
 ---
 title: Docs
 status: dropped
-depends: [task-02-the-agent-options-are-offered-and-answered.md]
+depends: [task-02-agent-options-are-offered-and-answered.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - the ACP section"

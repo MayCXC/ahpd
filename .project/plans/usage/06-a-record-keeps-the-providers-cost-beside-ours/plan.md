@@ -95,7 +95,7 @@ provider answer -> usageReader (tokens, and now cost) -> record: cost from price
 | --- | --- | --- |
 | [01 - A record and a total carry both costs and their split](task-01-a-record-and-a-total-carry-both-costs.md) | done | - |
 | [02 - The proxy reads the provider's cost and never prices a missing side as 0](task-02-the-proxy-reads-the-providers-cost.md) | done | 01 |
-| [03 - Anthropic-dialect and DeepSeek answers are checked from captured replies](task-03-anthropic-and-deepseek-answers-are-checked.md) | done | 02 |
+| [03 - Anthropic-dialect and DeepSeek answers are checked from captured replies](task-03-anthropic-and-deepseek-answers-checked.md) | done | 02 |
 
 ## Risks and tradeoffs
 

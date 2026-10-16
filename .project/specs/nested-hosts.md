@@ -132,5 +132,5 @@ The machine gets its keys as the agent's machine needs say.
 ## Known gaps
 
 A nested host does not yet get the session's proxy token and URL, and `NestedStart` carries no environment.
-[A machine off this host reaches its models through the proxy](../plans/container/05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) plans this.
-`ahpd join <url>`, where one ahpd dials another that then lists it as a computer, is planned in [a host joins a hub](../plans/container/05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md).
+[A machine off this host reaches its models through the proxy](../plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md) plans this.
+`ahpd join <url>`, where one ahpd dials another that then lists it as a computer, is planned in [a host joins a hub](../plans/container/05-p10-a-host-joins-a-hub/plan.md).

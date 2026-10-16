@@ -88,7 +88,7 @@ The files read are the `refs` above.
 | [01 - The record keeps the argv](task-01-the-record-keeps-the-argv.md) | done | - |
 | [02 - `ahpd restart`](task-02-ahpd-restart.md) | done | 01 |
 | [03 - The restart line and docs](task-03-the-restart-line-and-docs.md) | done | 02 |
-| [04 - `plugin config` says a recorded flag overrides it](task-04-plugin-config-says-a-recorded-flag-overrides-it.md) | done | 01 |
+| [04 - `plugin config` says a recorded flag overrides it](task-04-plugin-config-says-a-flag-overrides-it.md) | done | 01 |
 
 ## Risks and tradeoffs
 

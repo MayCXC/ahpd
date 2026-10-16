@@ -76,7 +76,7 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The record keeps the folder, and the host passes it](task-01-the-record-keeps-the-folder-and-the-host-passes-it.md) | done | - |
+| [01 - The record keeps the folder, and the host passes it](task-01-record-keeps-folder-and-host-passes-it.md) | done | - |
 | [02 - Claude looks in the folder first](task-02-claude-looks-in-the-folder-first.md) | done | 01 |
 | [03 - pi looks in the folder first](task-03-pi-looks-in-the-folder-first.md) | done | 01 |
 

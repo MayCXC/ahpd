@@ -120,17 +120,17 @@ Estimated at 1,500 to 2,000 lines.
 
 | Plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The grant tables and the URI names are files of their own](../48-host-is-split-by-area-p1-the-grant-and-uri-tables/plan.md) | built | plugin/29 |
-| [p2 - The URI routing, the client relay and the connection gate are files of their own](../48-host-is-split-by-area-p2-routing/plan.md) | built | p1 |
-| [p3 - Changesets and git and GitHub facts are files of their own, and the repository ports live in repo/](../48-host-is-split-by-area-p3-changesets-and-facts/plan.md) | built | p2 |
-| [p4 - Telemetry, sign-in requirements, owners and machines are files of their own](../48-host-is-split-by-area-p4-telemetry-owners-and-machines/plan.md) | built | p2 |
-| [p5 - Session config and root config are files of their own](../48-host-is-split-by-area-p5-session-and-root-config/plan.md) | built | p4 |
-| [p6 - The catalogue, past sessions and snapshots are files of their own](../48-host-is-split-by-area-p6-catalogue-and-transcripts/plan.md) | built | p3, p5 |
-| [p7 - Starting, restarting and removing a session are files of their own](../48-host-is-split-by-area-p7-session-lifecycle/plan.md) | built | p6 |
-| [p8 - Session tools, terminals and automations are files of their own](../48-host-is-split-by-area-p8-tools-terminals-and-automations/plan.md) | built | p7 |
-| [p9 - The method table is split by family](../48-host-is-split-by-area-p9-the-method-table/plan.md) | built | p8 |
-| [p10 - Action dispatch is split by family](../48-host-is-split-by-area-p10-action-dispatch/plan.md) | built | p9 |
-| [p11 - Open plans cite the new files](../48-host-is-split-by-area-p11-open-plans-cite-the-new-files/plan.md) | built | p10 |
+| [p1 - The grant tables and the URI names are files of their own](../48-p1-the-grant-and-uri-tables/plan.md) | built | plugin/29 |
+| [p2 - The URI routing, the client relay and the connection gate are files of their own](../48-p2-routing/plan.md) | built | p1 |
+| [p3 - Changesets and git and GitHub facts are files of their own, and the repository ports live in repo/](../48-p3-changesets-and-facts/plan.md) | built | p2 |
+| [p4 - Telemetry, sign-in requirements, owners and machines are files of their own](../48-p4-telemetry-owners-and-machines/plan.md) | built | p2 |
+| [p5 - Session config and root config are files of their own](../48-p5-session-and-root-config/plan.md) | built | p4 |
+| [p6 - The catalogue, past sessions and snapshots are files of their own](../48-p6-catalogue-and-transcripts/plan.md) | built | p3, p5 |
+| [p7 - Starting, restarting and removing a session are files of their own](../48-p7-session-lifecycle/plan.md) | built | p6 |
+| [p8 - Session tools, terminals and automations are files of their own](../48-p8-tools-terminals-and-automations/plan.md) | built | p7 |
+| [p9 - The method table is split by family](../48-p9-the-method-table/plan.md) | built | p8 |
+| [p10 - Action dispatch is split by family](../48-p10-action-dispatch/plan.md) | built | p9 |
+| [p11 - Open plans cite the new files](../48-p11-open-plans-cite-the-new-files/plan.md) | built | p10 |
 
 ## Risks and tradeoffs
 

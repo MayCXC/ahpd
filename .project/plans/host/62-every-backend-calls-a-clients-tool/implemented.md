@@ -29,27 +29,27 @@ A stopped turn leaves no waiter behind (the review of 2026-10-06).
 
 Each child's `implemented.md` is the account of its own work, task by task:
 
-- [p1 - the sdk holds a client call](../62-every-backend-calls-a-clients-tool-p1-the-sdk-holds-a-client-call/implemented.md) - `createClientCalls`: one holder per session, `open`, `wait`, `complete`, `owner`, `gone`, `release` and `entries`.
+- [p1 - the sdk holds a client call](../62-p1-the-sdk-holds-a-client-call/implemented.md) - `createClientCalls`: one holder per session, `open`, `wait`, `complete`, `owner`, `gone`, `release` and `entries`.
   The entry is the protocol's `toolClientExecution` request, raised and removed without the session ever reading as needing input.
   A call nobody answers fails after the daemon's `clientToolTimeoutMs`, ten minutes by default.
   The tool server runs a client's tool through the backend's runner and hands back MCP content.
   Reviewed and merged.
-- [p2 - Claude runs its client calls through the sdk](../62-every-backend-calls-a-clients-tool-p2-claude-runs-client-calls-through-the-sdk/implemented.md) - claude's own map is gone.
+- [p2 - Claude runs its client calls through the sdk](../62-p2-claude-runs-client-calls-through-the-sdk/implemented.md) - claude's own map is gone.
   A call is raised when the CLI reports it running.
   An answer that arrives before the harness asks is kept.
   The handler is told which call it runs by `_meta['claudecode/toolUseId']`, with a warned name-and-input fallback.
-  The live-CLI run that would let the fallback go is in [deferred.md](../62-every-backend-calls-a-clients-tool-p2-claude-runs-client-calls-through-the-sdk/deferred.md).
+  The live-CLI run that would let the fallback go is in [deferred.md](../62-p2-claude-runs-client-calls-through-the-sdk/deferred.md).
   The review of 2026-10-06 found the confirmation path never opened the call, and it is fixed.
   An approved call opens, and a declined one refuses its handler.
-- [p3 - pi and cofold run their client calls through the sdk](../62-every-backend-calls-a-clients-tool-p3-pi-and-cofold-run-client-calls-through-the-sdk/implemented.md) - pi and cofold onto the same holder.
+- [p3 - pi and cofold run their client calls through the sdk](../62-p3-pi-and-cofold-run-client-calls-via-sdk/implemented.md) - pi and cofold onto the same holder.
   pi hands its model an image as an image.
   cofold names what its text-only tools cannot carry.
   cofold's open and wait are one step in its relay rather than two.
-- [p4 - An ACP agent calls a client's tool](../62-every-backend-calls-a-clients-tool-p4-an-acp-agent-calls-a-clients-tool/implemented.md) - a `tool_call` the agent reports for a client's tool carries the client contributor.
+- [p4 - An ACP agent calls a client's tool](../62-p4-an-acp-agent-calls-a-clients-tool/implemented.md) - a `tool_call` the agent reports for a client's tool carries the client contributor.
   The `tools/call` on the session's `ahp` MCP server is paired to it, and waits on the owner.
   The endpoint's list follows `setTools`.
   `toolsChanged`, `notify` by default, is how the agent hears of a tool that arrived after it listed.
-  The by-hand ACP run waits, and so does pairing a request with a call already answered: [deferred.md](../62-every-backend-calls-a-clients-tool-p4-an-acp-agent-calls-a-clients-tool/deferred.md).
+  The by-hand ACP run waits, and so does pairing a request with a call already answered: [deferred.md](../62-p4-an-acp-agent-calls-a-clients-tool/deferred.md).
   The review of 2026-10-06 found the pairing answered a request with the oldest open call when the agent reported no arguments.
   It now pairs a lone open call, and refuses a request two calls could be for.
 

@@ -82,7 +82,7 @@ resumed session -> [new] ends seeded from the same replay -> endPoint answers
 | [03 - A session from disk is replayed into turns](task-03-a-session-from-disk-is-replayed.md) | done | 01 |
 | [04 - A resumed session keeps its history](task-04-a-resumed-session-keeps-its-history.md) | done | 03 |
 | [05 - The dev loader resolves on the main thread](task-05-the-dev-loader-resolves-in-thread.md) | done | 01 |
-| [06 - A new pi session is saved under the id the client named](task-06-a-new-session-is-saved-under-the-clients-id.md) | done | 01 |
+| [06 - A new pi session is saved under the id the client named](task-06-new-session-saved-under-client-id.md) | done | 01 |
 
 ## Risks and tradeoffs
 

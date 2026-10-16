@@ -75,7 +75,7 @@ harness usage -> agent mapping (_meta.cost) -> meter costOf -> ModelUse { cost, 
 | [02 - Claude sends no cost for a result that spent nothing](task-02-claude-sends-no-cost-for-nothing-spent.md) | done | - |
 | [03 - pi sends its cost split into sent and received](task-03-pi-sends-its-cost-split.md) | done | 01 |
 | [04 - A turn's tokens are what the provider counted](task-04-a-turns-tokens-are-what-was-counted.md) | done | - |
-| [05 - A reset conversation starts the cost baseline again](task-05-a-reset-conversation-starts-the-cost-baseline-again.md) | done | 02 |
+| [05 - A reset conversation starts the cost baseline again](task-05-reset-chat-restarts-the-cost-baseline.md) | done | 02 |
 
 ## Risks and tradeoffs
 

@@ -70,8 +70,8 @@ ahpd start -> spawn -> pty probe, plugins, listen, listening, checks -> announce
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - configure makes the folder before the token](task-01-configure-makes-the-folder-before-the-token.md) | done | - |
-| [02 - the daemon forgets its record on the way down](task-02-the-daemon-forgets-its-record-on-the-way-down.md) | done | - |
+| [01 - configure makes the folder before the token](task-01-configure-makes-folder-before-token.md) | done | - |
+| [02 - the daemon forgets its record on the way down](task-02-daemon-forgets-its-record-going-down.md) | done | - |
 | [03 - a graceful stop writes to the log](task-03-a-graceful-stop-writes-to-the-log.md) | done | 02 |
 | [04 - a start logs its stages and waits 60 s](task-04-a-start-logs-its-stages-and-waits-60-s.md) | done | - |
 

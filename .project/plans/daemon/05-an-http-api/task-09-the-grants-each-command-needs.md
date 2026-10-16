@@ -1,7 +1,7 @@
 ---
 title: Each served command needs its own grant, and config hides the token
 status: done
-depends: [task-08-served-commands-act-on-the-daemons-own-options.md]
+depends: [task-08-served-commands-use-the-daemons-options.md]
 layer: "server | sdk"
 refs:
   - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - `config:read`"

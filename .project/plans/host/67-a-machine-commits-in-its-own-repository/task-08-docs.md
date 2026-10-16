@@ -1,7 +1,7 @@
 ---
 title: COMPUTER.md says how a machine commits
 status: done
-depends: [task-05-the-work-comes-back-when-it-matters.md, task-06-the-machine-follows-the-hosts-branch.md, task-07-a-machine-made-under-bind-is-replaced.md, task-09-a-profile-can-give-a-machine-a-copy-of-the-folder.md]
+depends: [task-05-the-work-comes-back-when-it-matters.md, task-06-the-machine-follows-the-hosts-branch.md, task-07-a-machine-made-under-bind-is-replaced.md, task-09-profile-can-give-machine-a-folder-copy.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/COMPUTERS.md#L344](../../../../docs/plugins/COMPUTERS.md#L344) - the `gitGuard` row"

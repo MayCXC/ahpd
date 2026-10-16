@@ -7,7 +7,7 @@ created: 2026-10-06
 revalidated: 2026-10-06
 requires:
   - plans/host/30-a-session-is-listed-under-its-providers-name/plan.md
-  - plans/host/56-the-catalogue-answers-at-once-and-a-summary-is-sent-when-it-changes/plan.md
+  - plans/host/56-catalogue-answers-at-once-summary-on-change/plan.md
   - plans/daemon/13-ahpd-restart/plan.md
   - plans/claude/10-a-claude-session-runs-on-a-preset/plan.md
 decisions:
@@ -72,12 +72,12 @@ The review's probes reproduced tasks 01, 02 and 03; their cases are the first te
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A running session is never announced removed](task-01-a-running-session-is-never-announced-removed.md) | done | - |
-| [02 - A deleted session leaves the held catalogue](task-02-a-deleted-session-leaves-the-held-catalogue.md) | done | - |
+| [01 - A running session is never announced removed](task-01-running-session-never-announced-removed.md) | done | - |
+| [02 - A deleted session leaves the held catalogue](task-02-deleted-session-leaves-held-catalogue.md) | done | - |
 | [03 - A channel is a string or the request is refused](task-03-a-channel-is-a-string-or-refused.md) | done | - |
-| [04 - Turns are fetched only for a session's channel](task-04-turns-are-fetched-only-for-a-sessions-channel.md) | done | 03 |
+| [04 - Turns are fetched only for a session's channel](task-04-turns-fetched-only-for-session-channel.md) | done | 03 |
 | [05 - A restart takes no new turn once it has checked](task-05-a-restart-takes-no-new-turn-once-checked.md) | done | - |
-| [06 - A restart checks its line with the code that will run it](task-06-a-restart-checks-its-line-with-the-code-that-will-run-it.md) | done | 05 |
+| [06 - A restart checks its line with the code that will run it](task-06-restart-checks-line-with-running-code.md) | done | 05 |
 | [07 - A stored sandbox on survives the preset](task-07-a-stored-sandbox-on-survives-the-preset.md) | done | - |
 
 ## Risks and tradeoffs

@@ -72,9 +72,9 @@ session start -> placedIn(folder = worktree, owner, team, project) -> the varian
 | --- | --- |
 | [A part is mounted from its own image, and a volume filled from that image is the fallback](../../../../docs/plugins/COMPUTERS.md) | p4 |
 | A nested host is used only for a backend that runs nested and for a machine on another host | p5, p8, p9, p10 |
-| [Any ahpd can be the hub other hosts join](../05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | p10 |
+| [Any ahpd can be the hub other hosts join](../05-p10-a-host-joins-a-hub/plan.md) | p10 |
 | [The image ahpd publishes is its parts joined, and there is no other base](../../../../docs/plugins/COMPUTERS.md) | p3 |
-| [Every agent CLI is pinned in one versions file, and none updates itself](../05-an-agent-in-a-machine-p3-parts-are-built-from-one-versions-file/plan.md) | p3 |
+| [Every agent CLI is pinned in one versions file, and none updates itself](../05-p3-parts-are-built-from-one-versions-file/plan.md) | p3 |
 | [A dev container is made by the Dev Container CLI and reached by docker exec](../../../decisions/a-dev-container-is-reached-by-docker-exec.md) | p1, p4 |
 | [A plugin is loaded once, and each of its presets is a variant registered as an agent of its own](../../../../docs/server/REFERENCE.md) | p2, p5, p6 |
 | [Secrets live in a vault port, and the host's own vault is a plain file until it is encrypted](../../../../docs/server/REFERENCE.md) | p1, p2 |
@@ -100,18 +100,18 @@ Child plans, each scoped to one package or two.
 
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [p1 - A secret reaches a machine in its environment, never in its argv](../05-an-agent-in-a-machine-p1-a-secret-reaches-a-machine-by-name/plan.md) | computer | built | container 03 |
-| [p2 - An ACP preset says what its machine needs](../05-an-agent-in-a-machine-p2-an-acp-agent-says-what-its-machine-needs/plan.md) | agent-acp | built | p1, acp 05 (the ACP presets plan) |
-| [p3 - Parts are built from one versions file](../05-an-agent-in-a-machine-p3-parts-are-built-from-one-versions-file/plan.md) | computer (images) | built | - |
-| [p4 - A part is mounted into a machine](../05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md) | sdk, computer | built | p3, plugin 15, container 03 |
-| [p5 - Agents run from their parts and keep their own state](../05-an-agent-in-a-machine-p5-agents-run-from-their-parts/plan.md) | agent-claude, agent-acp, agent-cofold, agent-pi | planned | p2, p4, p6, acp 05 (the ACP presets plan) |
-| [p6 - An agent's configuration lives in a volume per profile](../05-an-agent-in-a-machine-p6-an-agents-configuration-lives-in-a-volume/plan.md) | sdk, computer | planned | - |
-| [p7 - A worktree reaches its machine with its repository](../05-an-agent-in-a-machine-p7-a-worktree-brings-its-repository/plan.md) | sdk, computer | planned | plugin 16 |
-| [p8 - A profile's machines may live on another Docker](../05-an-agent-in-a-machine-p8-a-profile-on-another-docker/plan.md) | computer | planned | p5, p7, p9, p12 |
-| [p9 - An ssh machine runs a nested host](../05-an-agent-in-a-machine-p9-an-ssh-machine-runs-a-nested-host/plan.md) | computer, sdk | planned | container 04 (tasks 11, 14, 15, 17) |
-| [p10 - A host joins another, which relays its sessions](../05-an-agent-in-a-machine-p10-a-host-joins-a-hub/plan.md) | server, sdk | planned | p9, p12, daemon 13 |
-| [p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](../05-an-agent-in-a-machine-p11-a-vm-is-made-for-a-machine/plan.md) | computer | planned | p3, p5, p8, p9, p12 |
-| [p12 - A machine off this host reaches its models through this host's proxy](../05-an-agent-in-a-machine-p12-a-machine-off-this-host-reaches-models-through-the-proxy/plan.md) | sdk, computer, server | planned | p9, claude 16, the proxy listener plan (not written yet) |
+| [p1 - A secret reaches a machine in its environment, never in its argv](../05-p1-a-secret-reaches-a-machine-by-name/plan.md) | computer | built | container 03 |
+| [p2 - An ACP preset says what its machine needs](../05-p2-an-acp-agent-says-what-its-machine-needs/plan.md) | agent-acp | built | p1, acp 05 (the ACP presets plan) |
+| [p3 - Parts are built from one versions file](../05-p3-parts-are-built-from-one-versions-file/plan.md) | computer (images) | built | - |
+| [p4 - A part is mounted into a machine](../05-p4-a-part-is-mounted-into-a-machine/plan.md) | sdk, computer | built | p3, plugin 15, container 03 |
+| [p5 - Agents run from their parts and keep their own state](../05-p5-agents-run-from-their-parts/plan.md) | agent-claude, agent-acp, agent-cofold, agent-pi | planned | p2, p4, p6, acp 05 (the ACP presets plan) |
+| [p6 - An agent's configuration lives in a volume per profile](../05-p6-agent-configuration-lives-in-a-volume/plan.md) | sdk, computer | planned | - |
+| [p7 - A worktree reaches its machine with its repository](../05-p7-a-worktree-brings-its-repository/plan.md) | sdk, computer | planned | plugin 16 |
+| [p8 - A profile's machines may live on another Docker](../05-p8-a-profile-on-another-docker/plan.md) | computer | planned | p5, p7, p9, p12 |
+| [p9 - An ssh machine runs a nested host](../05-p9-an-ssh-machine-runs-a-nested-host/plan.md) | computer, sdk | planned | container 04 (tasks 11, 14, 15, 17) |
+| [p10 - A host joins another, which relays its sessions](../05-p10-a-host-joins-a-hub/plan.md) | server, sdk | planned | p9, p12, daemon 13 |
+| [p11 - A virtual machine is made for a computer, by libvirt and then by Proxmox](../05-p11-a-vm-is-made-for-a-machine/plan.md) | computer | planned | p3, p5, p8, p9, p12 |
+| [p12 - A machine off this host reaches its models through this host's proxy](../05-p12-off-host-machine-reaches-models-via-proxy/plan.md) | sdk, computer, server | planned | p9, claude 16, the proxy listener plan (not written yet) |
 
 ## Risks and tradeoffs
 

@@ -1,7 +1,7 @@
 ---
 title: Docs
 status: done
-depends: [task-01-a-machine-is-removed-only-once-its-work-is-out.md, task-04-pushing-trust-needs-trust-write.md, task-05-the-approve-everything-key-is-declared.md, task-07-a-preset-can-turn-the-sandbox-off.md]
+depends: [task-01-machine-removed-once-its-work-is-out.md, task-04-pushing-trust-needs-trust-write.md, task-05-the-approve-everything-key-is-declared.md, task-07-a-preset-can-turn-the-sandbox-off.md]
 layer: "docs"
 refs:
   - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - grants and the per-connection keys"

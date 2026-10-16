@@ -1,7 +1,7 @@
 ---
 title: Inner chat URIs are rewritten to the outer ones
 status: done
-depends: [task-07-the-inner-hosts-pipes-cannot-crash-the-daemon.md]
+depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/nested.ts#L295-L332](../../../../packages/sdk/src/nested.ts#L295-L332) - `pump`, which emits inner actions unchanged"

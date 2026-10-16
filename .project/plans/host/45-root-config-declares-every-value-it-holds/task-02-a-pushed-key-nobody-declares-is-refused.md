@@ -1,7 +1,7 @@
 ---
 title: A pushed key nobody declares is refused
 status: done
-depends: [task-01-the-root-config-declares-the-keys-vscode-pushes.md]
+depends: [task-01-root-config-declares-vscode-pushed-keys.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/actions.ts#L220-L359](../../../../packages/sdk/src/host/actions.ts#L220-L359) - the `root/configChanged` handler: `config`, `apply`, the daemon half"

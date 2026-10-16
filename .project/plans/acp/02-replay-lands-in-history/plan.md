@@ -54,9 +54,9 @@ begin -> [changes] open() first, mapping set after -> session/load -> replay -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Replay is collected, not mapped into a turn](task-01-replay-is-collected-not-mapped-into-a-turn.md) | done | - |
+| [01 - Replay is collected, not mapped into a turn](task-01-replay-is-collected-not-mapped-to-a-turn.md) | done | - |
 | [02 - Collected replay becomes the session's earlier turns](task-02-collected-replay-becomes-turns.md) | done | 01 |
-| [03 - A session never watched is loaded when a client reads it](task-03-a-session-opened-after-a-restart-is-loaded.md) | done | 02 |
+| [03 - A session never watched is loaded when a client reads it](task-03-an-unwatched-session-loads-when-read.md) | done | 02 |
 
 ## Risks and tradeoffs
 

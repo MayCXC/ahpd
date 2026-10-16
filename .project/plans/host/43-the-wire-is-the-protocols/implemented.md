@@ -11,10 +11,10 @@ Every `_meta` key ahpd invents is named `ahpd.<name>`.
 
 ## What was built
 
-- [p1](../43-the-wire-is-the-protocols-p1-the-wire-test-checks-every-frame/implemented.md) - the wire test checks every frame.
-- [p2](../43-the-wire-is-the-protocols-p2-results-and-actions-are-the-protocols/implemented.md) - results and actions are the protocol's shapes.
-- [p3](../43-the-wire-is-the-protocols-p3-the-root-config-schema-conforms/implemented.md) - the root config schema conforms.
-- [p4](../43-the-wire-is-the-protocols-p4-ahpds-own-meta-keys-say-ahpd/implemented.md) - ahpd's own `_meta` keys say `ahpd`.
+- [p1](../43-p1-the-wire-test-checks-every-frame/implemented.md) - the wire test checks every frame.
+- [p2](../43-p2-results-and-actions-are-protocol-shapes/implemented.md) - results and actions are the protocol's shapes.
+- [p3](../43-p3-the-root-config-schema-conforms/implemented.md) - the root config schema conforms.
+- [p4](../43-p4-ahpds-own-meta-keys-say-ahpd/implemented.md) - ahpd's own `_meta` keys say `ahpd`.
 
 ## Verified
 

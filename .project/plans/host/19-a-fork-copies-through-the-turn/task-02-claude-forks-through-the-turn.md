@@ -1,7 +1,7 @@
 ---
 title: Claude forks through the turn
 status: done
-depends: [task-01-the-contract-says-a-fork-copies-through-the-turn.md]
+depends: [task-01-contract-says-fork-copies-through-turn.md]
 layer: "agent-claude"
 refs:
   - "[code://packages/agent-claude/src/session.ts#L2019-L2031](../../../../packages/agent-claude/src/session.ts#L2019-L2031) - `cuts` and `ends`"

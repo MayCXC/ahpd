@@ -55,9 +55,9 @@ What each ahpd backend loads from a project folder, checked in the code and the 
 
 | Child plan | Status | Depends on |
 | --- | --- | --- |
-| [p1 - The host declares workspaceTrust, keeps it per connection, and asks before a session moves](../66-a-session-honours-the-folders-vscode-trusts-p1-the-host-declares-keeps-and-asks/plan.md) | built | - |
-| [p2 - Claude and pi load a project's files only when it is trusted](../66-a-session-honours-the-folders-vscode-trusts-p2-claude-and-pi-load-project-files-only-when-trusted/plan.md) | built | p1 |
-| [p3 - An ACP agent in a folder nobody trusted](../66-a-session-honours-the-folders-vscode-trusts-p3-an-acp-agent-in-an-untrusted-folder/plan.md) | built | p1 |
+| [p1 - The host declares workspaceTrust, keeps it per connection, and asks before a session moves](../66-p1-the-host-declares-keeps-and-asks/plan.md) | built | - |
+| [p2 - Claude and pi load a project's files only when it is trusted](../66-p2-claude-and-pi-load-trusted-files/plan.md) | built | p1 |
+| [p3 - An ACP agent in a folder nobody trusted](../66-p3-an-acp-agent-in-an-untrusted-folder/plan.md) | built | p1 |
 
 ## Risks and tradeoffs
 

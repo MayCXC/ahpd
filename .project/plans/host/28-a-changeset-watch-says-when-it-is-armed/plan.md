@@ -62,7 +62,7 @@ subscribe changeset -> first read -> startWatchingDir -> gitChanges.watch: rev-p
 | [01 - The git watch says when it is armed, and the host re-reads then](task-01-the-watch-says-when-it-is-armed.md) | done | 03 |
 | [02 - The coalesce case waits on its source](task-02-the-coalesce-case-waits-on-its-source.md) | done | - |
 | [03 - A background git read takes no optional lock](task-03-a-background-git-read-takes-no-lock.md) | done | - |
-| [04 - A re-read whose directory is gone ends quietly](task-04-a-re-read-of-a-gone-directory-ends-quietly.md) | done | - |
+| [04 - A re-read whose directory is gone ends quietly](task-04-re-read-of-a-gone-directory-ends-quietly.md) | done | - |
 | [05 - gitBranches takes no optional lock either](task-05-gitbranches-takes-no-lock.md) | done | 03 |
 
 ## Risks and tradeoffs

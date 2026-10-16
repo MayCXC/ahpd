@@ -69,9 +69,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The server README lists every command and flag](task-01-the-server-readme-lists-every-command-and-flag.md) | done | - |
+| [01 - The server README lists every command and flag](task-01-server-readme-lists-commands-and-flags.md) | done | - |
 | [02 - Each agent README explains every option](task-02-each-agent-readme-explains-every-option.md) | done | - |
-| [03 - The bot, computer and tunnel READMEs explain every option](task-03-the-bot-computer-and-tunnel-readmes-explain-every-option.md) | done | - |
+| [03 - The bot, computer and tunnel READMEs explain every option](task-03-bot-computer-and-tunnel-readme-options.md) | done | - |
 | [04 - The sdk README says how to build a host](task-04-the-sdk-readme-says-how-to-build-a-host.md) | done | - |
 
 ## Risks and tradeoffs

@@ -5,7 +5,7 @@ created: 2026-10-05
 
 A machine's parts are not all equal: some are what its session cannot run without, and some only make it better.
 A mandatory part that fails to build refuses the machine; a desired one that fails leaves the machine made without it, with a line naming the part.
-Source: Softov, 2026-10-05, on [container/05 p4](../plans/container/05-an-agent-in-a-machine-p4-a-part-is-mounted-into-a-machine/plan.md)'s question of a machine made for one session whose own part fails: "I dont want to decide it as a rule, but for now refuse at create. in a future, some parts are desired, some are mandatory. so one desired does not fail. while a mandatory fails."
+Source: Softov, 2026-10-05, on [container/05 p4](../plans/container/05-p4-a-part-is-mounted-into-a-machine/plan.md)'s question of a machine made for one session whose own part fails: "I dont want to decide it as a rule, but for now refuse at create. in a future, some parts are desired, some are mandatory. so one desired does not fail. while a mandatory fails."
 
 ## Today
 

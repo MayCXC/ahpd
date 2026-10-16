@@ -48,7 +48,7 @@ What the tests cover: a body of exactly the shape ahpapp sends (every field a st
 Notes and open questions:
 
 - `source` was published and not read, which the review of this task found. It is read now: when a body carries `source`, `image` reads only the image fields and the folder beside it is ignored, `devcontainer` requires the folder and refuses a body that has none, and any other value is refused with the enum's own sentence. A body with no `source` behaves as it did. So the open question above is closed rather than deferred.
-- The review also asked for the `devcontainer: false` case to publish no source fields at all, which is [task 08](task-08-only-allowed-folders-and-an-off-switch-for-every-route.md)'s off switch rather than this task's form, and is recorded in that task's Resume.
+- The review also asked for the `devcontainer: false` case to publish no source fields at all, which is [task 08](task-08-only-allowed-folders-and-an-off-switch.md)'s off switch rather than this task's form, and is recorded in that task's Resume.
 - `pnpm exec tsc --noEmit`, `pnpm boundary` and `pnpm test` green after the change (2489 tests).
 
 ### The fix turn of 2026-10-05

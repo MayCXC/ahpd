@@ -51,7 +51,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Loopback over http, and an issuer to test with](task-01-loopback-over-http-and-an-issuer-to-test-with.md) | done | - |
+| [01 - Loopback over http, and an issuer to test with](task-01-loopback-http-and-an-issuer-to-test.md) | done | - |
 
 ## Risks and tradeoffs
 

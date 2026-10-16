@@ -1,7 +1,7 @@
 ---
 title: The docs list the reserved names
 status: done
-depends: [task-02-a-harness-and-a-scheme-cannot-share-a-name.md]
+depends: [task-02-harness-and-scheme-cannot-share-a-name.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/PLUGINS.md](../../../../docs/plugins/PLUGINS.md) - what a plugin may register"

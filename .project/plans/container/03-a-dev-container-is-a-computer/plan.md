@@ -109,14 +109,14 @@ vscode/devContainers/connect  -> find the computer for F or make it -> [new] pro
 | [05 - VS Code's connect finds or makes the same computer](task-05-connect-uses-the-computer.md) | done | 02 |
 | [06 - Docs and the domain text](task-06-docs.md) | done | 03, 08, 18 |
 | [07 - The fakes behave like the real CLI and Docker](task-07-the-fake-cli-behaves-like-the-real-one.md) | done | 18 |
-| [08 - Only allowed folders, and an off switch for every route](task-08-only-allowed-folders-and-an-off-switch-for-every-route.md) | done | - |
-| [09 - Read-only needs through an override config](task-09-read-only-needs-through-an-override-config.md) | done | 07 |
+| [08 - Only allowed folders, and an off switch for every route](task-08-only-allowed-folders-and-an-off-switch.md) | done | - |
+| [09 - Read-only needs through an override config](task-09-read-only-needs-via-an-override-config.md) | done | 07 |
 | [10 - The name given is kept for the container](task-10-the-name-given-is-a-label.md) | done | 07, 09 |
 | [11 - The agents and the body's limits reach the container](task-11-agents-label-and-body-limits.md) | done | 09 |
 | [12 - A dev container made at session start needs computer:write](task-12-a-session-time-dev-container-counts.md) | done | - |
 | [13 - A stopped container is started first](task-13-a-stopped-container-is-started-first.md) | done | 07 |
 | [14 - The picker decodes the folder, and a dev container keeps the working directory](task-14-the-picker-decodes-and-exec-keeps-cwd.md) | done | 18 |
-| [15 - A container from an older connect is adopted](task-15-a-container-from-an-older-connect-is-adopted.md) | done | 10 |
+| [15 - A container from an older connect is adopted](task-15-older-connect-container-is-adopted.md) | done | 10 |
 | [16 - Comments document](task-16-comments-document.md) | done | 18 |
 | [17 - docker exec matches devcontainer exec against the real CLI](task-17-docker-exec-matches-devcontainer-exec.md) | done | - |
 | [18 - Every command reaches a dev container by docker exec](task-18-every-command-reaches-it-by-docker-exec.md) | done | 17 |

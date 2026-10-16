@@ -6,7 +6,7 @@ priority: high
 created: 2026-10-04
 revalidated: 2026-10-04
 requires:
-  - plans/host/46-built-in-surfaces-are-advertised-for-role-control/plan.md
+  - plans/host/46-built-in-surfaces-advertised-for-roles/plan.md
 changes: []
 creates: []
 decisions:

@@ -1,7 +1,7 @@
 ---
 title: ahpd takes the cofold releases, and its tests pin reads and addresses
 status: done
-depends: [task-05-cofold-asks-for-a-read-outside.md, task-06-cofold-tools-check-real-paths-and-addresses.md]
+depends: [task-05-cofold-asks-for-a-read-outside.md, task-06-cofold-tools-check-paths-and-addresses.md]
 layer: "agent-cofold"
 refs:
   - "[code://packages/agent-cofold/package.json#L64-L69](../../../../packages/agent-cofold/package.json#L64-L69) - `@cofold/agents` and `@cofold/tools` ranges"
