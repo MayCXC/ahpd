@@ -1,6 +1,7 @@
 import { expandHome } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
+import { backSessions, SESSIONS } from './names.js';
 import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
@@ -67,6 +68,12 @@ export const apply: Plugin['apply'] = (host, options) => {
    * read of `bot://` answer the same chat the second time as the first.
    */
   const chats = host.records(CHATS);
+  /*
+   * One row per back session: the bot, the person and the name a message
+   * addresses, and the session that name is on. What makes a name a session a
+   * person can come back to, rather than one started again every time.
+   */
+  const backs = backSessions(host.records(SESSIONS));
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
@@ -77,6 +84,7 @@ export const apply: Plugin['apply'] = (host, options) => {
     hostName: host.hostName,
     templates,
     chats,
+    backSessions: backs,
     sessions: {
       owner: (uri) => host.sessionOwner(uri),
       start: (wanted) => host.startSession(wanted),

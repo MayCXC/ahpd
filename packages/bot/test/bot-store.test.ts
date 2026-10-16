@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
+import { backSessions } from '../src/names.js';
 import { botProvider } from '../src/provider.js';
 import { botStore } from '../src/store.js';
 import type { BotProvider } from '../src/provider.js';
@@ -57,6 +58,7 @@ async function made() {
     store,
     sessions: { owner: async () => undefined, start: async () => 'echo:/one' },
     chats: await records.collection('bot-chats'),
+    backSessions: backSessions(await records.collection('bot-sessions')),
     hostName: 'test',
     templates: { text: async () => undefined, lastChats: 10 },
   });
