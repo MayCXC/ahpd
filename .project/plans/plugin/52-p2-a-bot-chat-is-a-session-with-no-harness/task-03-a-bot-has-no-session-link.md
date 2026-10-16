@@ -1,6 +1,6 @@
 ---
 title: A bot has no session link
-status: todo
+status: done
 depends: [task-02-a-read-of-a-bot-answers-the-readers-chat.md]
 layer: "packages/bot, docs"
 refs:

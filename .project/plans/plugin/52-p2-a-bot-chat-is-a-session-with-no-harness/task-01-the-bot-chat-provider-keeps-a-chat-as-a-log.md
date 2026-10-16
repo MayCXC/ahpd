@@ -1,6 +1,6 @@
 ---
 title: The bot-chat provider keeps a chat as a log
-status: todo
+status: done
 depends: []
 layer: packages/bot
 refs:

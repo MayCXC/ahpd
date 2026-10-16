@@ -1,6 +1,6 @@
 ---
 title: A read of a bot answers the reader's chat
-status: todo
+status: done
 depends: [task-01-the-bot-chat-provider-keeps-a-chat-as-a-log.md]
 layer: packages/bot
 refs:
