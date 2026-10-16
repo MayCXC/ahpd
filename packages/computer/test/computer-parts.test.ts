@@ -93,7 +93,8 @@ it('reads the file that ships, and every part it names', () => {
   ]);
 
   const codex = parts.find((one) => one.id === 'codex');
-  expect(codex?.version).toBe('2.1.1');
+  // The version moves with each bump, so only its form is checked.
+  expect(codex?.version).toMatch(/^\d+\.\d+\.\d+$/);
   expect(codex?.packages).toEqual(['@agentclientprotocol/codex-acp']);
   expect(codex?.bin).toEqual(['codex-acp']);
   expect(codex?.requires).toEqual(['node']);
