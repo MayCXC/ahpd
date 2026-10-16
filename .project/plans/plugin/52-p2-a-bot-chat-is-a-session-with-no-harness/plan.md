@@ -1,7 +1,7 @@
 ---
 title: A bot chat is a session with no harness
 domain: plugin
-status: draft
+status: planned
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -44,14 +44,27 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | The plugin's own index holds bot plus person to chat, and `BotRecord.session` goes | Softov, 2026-10-16, chose "Bot provider's own index" | - |
 | A direct chat needs a grant of its own | Softov, 2026-10-16, chose "A grant of its own" | - |
 | The provider id is not `bot` | Softov, 2026-10-16, chose "A new id, such as bot-chat" | - |
-| No migration of old links | Softov, 2026-10-16, "ignore those. any migration process" | - |
+| No migration of old links | Softov, 2026-10-16, "ignore those. any migration process" | 03 |
+| A read of `bot:/<slug>` answers `chat`, the reader's chat, and the first read starts it | Softov, 2026-10-16, chose "Read the bot answers it" | 02 |
+| Every holder of `session:read` sees every chat until p4's members | Softov, 2026-10-16, chose "Wait for p4" | - |
+| The grant is `bot:chat`, and the bot's owner chats without it | (defaulted: the proposal in this plan) | 02 |
+| The provider id is `bot-chat` | (defaulted: the proposal in this plan) | 01 |
+| The logs are in `<configDir>/bot-chats/`, not in the bot's folder, so a bot cannot rewrite a chat | (defaulted: the proposal in this plan) | 01 |
+| A turn ends at once with no response until p3 | (defaulted: no wake exists before p3) | 01 |
+| A person needs `session:create` as well, because `startSession` asks it | (defaulted: `startSession` asks the owner's grants) | 02 |
+| The preamble goes, and p3 decides how the template reaches a wake | (defaulted: no session is a bot's session) | 03 |
+
+## Tasks
+
+| Task | Status | Depends on |
+| --- | --- | --- |
+| [01 - The bot-chat provider keeps a chat as a log](task-01-the-bot-chat-provider-keeps-a-chat-as-a-log.md) | todo | - |
+| [02 - A read of a bot answers the reader's chat](task-02-a-read-of-a-bot-answers-the-readers-chat.md) | todo | 01 |
+| [03 - A bot has no session link](task-03-a-bot-has-no-session-link.md) | todo | 02 |
 
 ## Resume state
 
-- **Done so far:** draft written 2026-10-16. No tasks yet.
-- **Next action:** ask the open questions, then write the tasks.
-- **Open questions:**
-  1. The grant's name - proposed: `bot:chat`.
-  2. The provider id - proposed: `bot-chat`.
-  3. Where the logs live - proposed: the plugin's data folder, not the bot's folder, so a bot cannot rewrite a person's chat.
+- **Done so far:** planned 2026-10-16 with three tasks.
+- **Next action:** build task 01.
+- **Open questions:** none.
 - **Watch out for:** a client opens a chat by its session URI. A chat is never addressed as `bot:/<slug>`.
