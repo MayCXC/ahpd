@@ -64,7 +64,9 @@ The routes listener checks the `Host` header like the daemon's port does. A call
 
 ## A call to a bot
 
-A call to a bot endpoint sends its text as a turn in one chat of the bot's session. The caller names a thread, and every call with the same thread goes to the same chat. The first call of a thread makes the chat.
+A call to a bot endpoint sends its text as a turn in the plugin's own chat with the bot. That is one chat for the endpoint: the caller names a thread, and every thread talks in it. The chat is the one a read of the bot answers the plugin, and the first call starts it.
+
+A turn in that chat runs no model. It ends in the call that starts it, with no response part, so a call is answered with no `text` until the bot's own work can post into its chat.
 
 The call is one of two shapes:
 
@@ -73,7 +75,7 @@ The call is one of two shapes:
 
 A JSON body that has no string `text` is the second shape, so the whole body is the text.
 
-The plugin keeps each thread in the `webhook-threads` collection, as the endpoint, the thread id, the session and the chat.
+The plugin keeps each thread in the `webhook-threads` collection, as the endpoint, the thread id, the session and the chat. Every thread of an endpoint holds the same session and chat, which is what a session started again under a new URI rewrites.
 
 ### The reply
 
@@ -83,7 +85,7 @@ The plugin keeps each thread in the `webhook-threads` collection, as the endpoin
 | `sync` | 200 with `{ thread, turn, status, text, error }` at the turn's end, or 502 when the turn failed. When the turn runs longer than the timeout, 202 with `status: "running"`, and the turn goes on |
 | `none` | 202 with `{ thread, turn }` once the turn is sent |
 
-`text` is the bot's answer in that turn, and `status` is `complete`, `cancelled` or `error`. A turn that failed has `status: "error"` and the message of its error in `error`, which no other answer holds. A `sync` call answers a failed turn with 502, so a caller that reads only the HTTP status sees the failure. A cancelled turn answers 200.
+`text` is the turn's `markdown` response parts, joined: what the bot said in it. A turn in a `bot-chat` has none until the bot posts into its chat, so `text` is empty. `status` is `complete`, `cancelled` or `error`. A turn that failed has `status: "error"` and the message of its error in `error`, which no other answer holds. A `sync` call answers a failed turn with 502, so a caller that reads only the HTTP status sees the failure. A cancelled turn answers 200.
 
 A callback URL must start with the endpoint's `callbackPrefix`. The plugin compares the URL as `new URL` writes it, so `https://ci.example.com.evil.test/` does not pass the prefix `https://ci.example.com/`. Without this check, any caller could make the host post to any address.
 
@@ -94,7 +96,7 @@ A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugi
 ```json
 {
   "plugins": [
-    { "name": "@ahpd/webhook", "options": { "syncTimeoutSeconds": 30 }, "grants": ["bot:get", "session:read", "session:write"] }
+    { "name": "@ahpd/webhook", "options": { "syncTimeoutSeconds": 30 }, "grants": ["bot:get", "bot:chat", "session:read", "session:create", "session:write"] }
   ]
 }
 ```
@@ -102,7 +104,7 @@ A `sync` call waits for `syncTimeoutSeconds`: the endpoint's field, or the plugi
 | Answer | When |
 | --- | --- |
 | 400 | The call has no thread or no text, or its callback URL is missing or outside the prefix |
-| 409 | The bot has no session, the plugin may not read the bot, the plugin may not make a chat in the bot's session, or the host refused the turn. The answer's `message` is the host's reason. A turn that the host does not echo in 10 seconds is not refused: the call goes on, and the daemon's log gets a problem line. The last three are also a problem in the daemon's log, and the plugin's chat refusal names the grant `session:write` |
+| 409 | The plugin may not read the bot, the read answered no chat for it, or the host refused the turn. The answer's `message` is the host's reason. A turn that the host does not echo in 10 seconds is not refused: the call goes on, and the daemon's log gets a problem line. The first two are also a problem in the daemon's log, and the chat refusal names the grants `bot:chat` and `session:create` |
 
 ### The grants
 
@@ -110,9 +112,13 @@ On a host with a users directory, the plugin acts as `plugin:webhook`, with the 
 
 | Grant | What it is for |
 | --- | --- |
-| `bot:get` | Read the bot, to find its session |
-| `session:read` | Load the session, and read the turn's text |
-| `session:write` | Make the thread's chat, and send the turn |
+| `bot:get` | Read the bot |
+| `bot:chat` | Be answered a chat by it, which the read starts |
+| `session:read` | Read the session's state, which names the chat, and the turn's text |
+| `session:create` | Start a session for an owner, which a read of the bot does |
+| `session:write` | Send the turn |
+
+The chat is the plugin's own, started as the owner `plugin:webhook`, so `session:create` is asked of nobody here: it is in the list because those two are the grants the plugin's problem line prints when a read is answered no chat.
 
 The plugin opens its connection when the daemon listens, and hears each turn's end from the host.
 

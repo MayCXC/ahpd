@@ -6,7 +6,7 @@
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
 ![Agent Host Protocol 0.9.0](https://img.shields.io/badge/AHP-0.9.0-0b7285)
 
-A bot plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It serves the `bot:` scheme, where a bot is a record with a workspace of its own and a session to run in.
+A bot plugin for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. It serves the `bot:` scheme, where a bot is a record with a workspace of its own, talked to in a chat of its own.
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/bot`](https://github.com/softov/ahpd/tree/main/packages/bot).
 
@@ -32,7 +32,7 @@ In the configuration file, with every option set:
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
 | `lastChats` | `10` | How many chats a template lists for `{{chats}}` |
 
-A bot is a record of the host's record store, so the daemon keeps each one as a file beside its own configuration: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter and `instructions` as the Markdown body, with the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported and skipped, and every other bot is kept.
+A bot is a record of the host's record store, so the daemon keeps each one as a file beside its own configuration: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter and `instructions` as the Markdown body, with the tombstones in `<configDir>/bots-gone/`. A file there that cannot be read is reported and skipped, and every other bot is kept. The chats are in `<configDir>/bot-chats/`: one row per bot and person, and beside it the log of the chat that row names.
 
 The record store is a port, so a plugin that takes it over with `registerRecords(store, 'replace')` - a sqlite or a postgresql store - keeps the bots there instead of in files, and nothing in this plugin changes. [`docs/plugins/BOTS.md`](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md#the-file) shows one bot file and what a hand edit may change.
 
@@ -66,7 +66,7 @@ A bot is addressed by its slug, which is the URI path and the record's own `id`:
 | --- | --- |
 | `resourceWrite bot://<slug>` with `createOnly` | Makes a bot. The body is the record, and `name` is the only field it must carry. |
 | `resourceWrite bot://<slug>` with `ifMatch` | Edits one. `ifMatch` is the `etag` the last `resourceResolve` answered, so a write against a bot somebody else has changed is refused `-32011`. |
-| `resourceRead bot://<slug>` | The record, as JSON. |
+| `resourceRead bot://<slug>` | The record, as JSON, with `chat` where the reader may talk to it. |
 | `resourceResolve bot://<slug>` | Its metadata, with `etag`. |
 | `resourceList bot://` | The bots the reader may see, by slug. |
 | `resourceDelete bot://<slug>` | Deletes one, and leaves a tombstone. |
@@ -74,7 +74,9 @@ A bot is addressed by its slug, which is the URI path and the record's own `id`:
 
 A slug is lowercase letters, digits and dashes, one to forty of them, starting with a letter. Anything else is refused `-32602`: the slug is a folder name and a URI path at once.
 
-A body may carry `name`, `labels`, `description`, `body`, `color`, `instructions`, `template`, `harness`, `model`, `preset`, `workspace`, `computer` and `session`. `id`, `createdAt` and `updatedAt` are read but never obeyed - what they name is the host's, and a write that names another `id` is refused rather than followed. `owner` may be named by a make, as the maker or a team or project the maker belongs to; a write naming anybody else is refused `-32009`, and an edit may not move it.
+A body may carry `name`, `labels`, `description`, `body`, `color`, `instructions`, `template`, `harness`, `model`, `preset`, `workspace`, `computer` and `owner`. `id`, `createdAt` and `updatedAt` are read but never obeyed - what they name is the host's, and a write that names another `id` is refused rather than followed. `owner` may be named by a make, as the maker or a team or project the maker belongs to; a write naming anybody else is refused `-32009`, and an edit may not move it. A read answers one key more, `chat`, the reader's own conversation with the bot: it is answered and never obeyed, so a client that writes a record it read back is writing back a bot.
+
+A bot has no session, so a body that names `session` is refused `-32602` like any other key it does not have, and a file an older daemon wrote that still holds the line is read without it.
 
 A bot is drawn in one of fifteen bodies and in one of eleven colours or a hex colour, `#rrggbb`. A make that names neither gets a body at random and the first colour.
 
@@ -87,9 +89,10 @@ A bot is drawn in one of fifteen bodies and in one of eleven colours or a hex co
 | `bot:get` | Read any bot |
 | `bot:list` | List every bot |
 | `bot:put` | Make a bot in the scheme, edit their own |
+| `bot:chat` | Be answered a chat by any bot they may read |
 | `*:*`, or a root connection | Any of it, on any bot |
 
-A listing shows what a read would allow: a list that showed a bot the reader cannot open would be a list of names they cannot use. Making a bot also needs the maker's `session:create` where a session is started for it, because that session is theirs.
+A listing shows what a read would allow: a list that showed a bot the reader cannot open would be a list of names they cannot use. A read that opens a chat also needs the reader's own `session:create`, because the chat is theirs rather than the bot's.
 
 ### The catalogue
 
@@ -97,15 +100,17 @@ A subscribe to `x-ahpd-bots://` answers `{ bots }`, the bots the reader may read
 
 ### The workspace
 
-A bot works in a folder of its own, `<root>/<slug>` unless the body named one, and a named one has to be under `root`. No two bots share a folder, and an edit never moves one: two bots in one tree would be two sessions working over each other. The folder is made when the bot is made, before its session starts, since that is where the session works.
+A bot works in a folder of its own, `<root>/<slug>` unless the body named one, and a named one has to be under `root`. No two bots share a folder, and an edit never moves one: two bots in one tree would be two of them working over each other. The folder is made when the bot is made, so a bot has one whether or not anybody has talked to it yet. A bot in a `computer` is not made a folder here: the machine makes it, as the working directory of whatever runs there.
 
-### The session
+### The chat
 
-A bot is talked to in its session. A body may link one its owner already has by naming it in `session`, and the link is kept only where the host has that session and it belongs to the bot's owner: a URI this host has no session for is refused `-32602`, and one that belongs to somebody else is refused `-32009`.
+A person talks to a bot in a chat: one session of the `bot-chat` provider per bot and person. The provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bot-chats/`, so a chat is still readable after the daemon restarts. Nothing about a chat is kept in memory past the process that made it.
 
-A bot made with no `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. It runs the bot's `preset`, or its `harness` and `model`, in the bot's workspace, or in the `computer` the record names; its first turn is the bot's template filled with its name, description, instructions and last chats, and its title is the bot's `name`. A bot that names no `template` gets the default one. Each chat a person or a tool opens later in the session starts with the template too, filled again. A template that no longer exists gives the default one and a problem. An edit that does not name `template` still passes when the bot's template was deleted. The host is asked before the record is saved, so a start the owner may not make leaves no bot behind.
+A chat is opened by a read. `resourceRead bot://<slug>` answers the record with `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats. A reader who may not chat is answered the record alone, with no `chat` and no refusal.
 
-An edit that sets `session` to `null` unlinks it, and an edit that says nothing about `session` leaves the link as it was.
+A chat works in the bot's `workspace` and is titled with the bot's `name`. Starting one asks the reader's own `session:create`, by the host's own road, and a refusal there is the read's refusal.
+
+A bot may name a `template`, the text a chat with it would open with, and a bot that names none gets the default one the plugin ships. A make or an edit that names a template that does not exist is refused `-32602`. Nothing fills a template yet: a chat runs no model, so there is no first turn for one to open.
 
 ### The tombstone
 
@@ -115,7 +120,7 @@ A deleted slug is not made again. A client held the address, and a different bot
 
 | | |
 | --- | --- |
-| [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md) | The `bot:` scheme, the record and the session |
+| [BOTS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/BOTS.md) | The `bot:` scheme, the record and the chat |
 | [PLUGINS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/PLUGINS.md) | Writing and loading a plugin |
 | [GET-STARTED.md](https://github.com/softov/ahpd/blob/main/docs/server/GET-STARTED.md) | Running the daemon |
 

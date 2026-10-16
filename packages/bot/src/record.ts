@@ -67,7 +67,7 @@ export interface BotRecord {
   color: BotColor;
   /** What it was asked to be, in its own words, for whoever it answers. */
   instructions?: string;
-  /** The template its first turn is made from, by name. Absent is the plugin's default. */
+  /** The template a chat with it would open with, by name. Absent is the plugin's default. */
   template?: string;
   /** The backend a session of it runs on, where a bot chooses one. */
   harness?: string;
@@ -79,8 +79,6 @@ export interface BotRecord {
   workspace: string;
   /** The machine it runs in, where it names one. */
   computer?: string;
-  /** The session it is linked to, once one has been started for it. */
-  session?: string;
   /** Whose it is. */
   owner: Owner;
   /** When it was made. */
@@ -111,17 +109,20 @@ export interface BotDraft {
   model?: string | undefined;
   preset?: string | undefined;
   computer?: string | undefined;
-  session?: string | undefined;
 }
 
 /** The keys a body may carry: a bot's own fields, and nothing else. */
 const FIELDS = [
   'id', 'name', 'labels', 'description', 'body', 'color', 'instructions', 'template',
-  'harness', 'model', 'preset', 'workspace', 'computer', 'session', 'owner',
+  'harness', 'model', 'preset', 'workspace', 'computer', 'owner',
   // The two times are here rather than refused, because a client that read a
   // bot and wrote the whole record back is writing what it was given. Neither
   // is read: what they hold is the host's.
   'createdAt', 'updatedAt',
+  // The reader's own chat, which a read answers and the host keeps. A body that
+  // carries it back is writing what it was given, and it is not read: a chat is
+  // the reader's, so it is the same key for two people reading one bot.
+  'chat',
 ];
 
 /** An owner, as the four kinds the usage rules spell. */
@@ -185,22 +186,6 @@ const colour = (said: unknown, fallback: BotColor): BotColor => {
   return among(said, BOT_COLORS, 'a colour a bot is drawn in', fallback as (typeof BOT_COLORS)[number]);
 };
 
-/**
- * The session a body links a bot to, or the link a body takes away.
- *
- * Three things a body may say and they are three different answers: naming a
- * session is the link, `null` is the link taken away, and leaving the key out
- * is the link left as it was - which is what makes an edit of the name not an
- * edit of this. A blank string is nothing said, the same as `null`.
- */
-const link = (said: unknown, existing?: string): string | undefined => {
-  if (said === undefined) return existing;
-  if (said === null) return undefined;
-  if (typeof said !== 'string') throw new RpcError(INVALID_PARAMS, 'session is a session URI, or null to unlink one');
-  const held = said.trim();
-  return held === '' ? undefined : held;
-};
-
 /** A body at random, which is what a make that named none is drawn with. */
 const drawn = (): BotBody => BOT_BODIES[Math.floor(Math.random() * BOT_BODIES.length)] ?? BOT_BODIES[0];
 
@@ -261,6 +246,5 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
     model: line('model', body['model']) ?? existing?.model,
     preset: line('preset', body['preset']) ?? existing?.preset,
     computer: line('computer', body['computer']) ?? existing?.computer,
-    session: link(body['session'], existing?.session),
   };
 }

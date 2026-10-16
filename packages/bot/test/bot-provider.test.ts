@@ -13,12 +13,11 @@ import { echo } from '../../../examples/echo/agent.js';
 import { apply } from '../src/plugin.js';
 import { BOT_BODIES, BOT_COLORS } from '../src/record.js';
 import { botStore } from '../src/store.js';
-import type { Agent, Start } from '../../sdk/src/types/agent.js';
+import type { Agent } from '../../sdk/src/types/agent.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
-import type { Chosen, MessageFrom, Session } from '../../sdk/src/types/session.js';
 import type { Grant, Principal, Users } from '../../sdk/src/types/users.js';
 
 /*
@@ -117,9 +116,9 @@ function made(
     log: () => {},
     say: () => {},
   };
-  // The sessions this host keeps, which is where a link is checked against:
-  // read live off the host rather than held by the plugin, so the two are the
-  // same store a running daemon would hand it.
+  // The sessions this host keeps, which is where a chat is started: read live
+  // off the host rather than held by the plugin, so the two are the same store
+  // a running daemon would hand it.
   const sessions = memorySessions();
   // The record store in place of a folder: the plugin keeps its bots in two
   // collections of this, as a running daemon keeps them in `fileRecords`. Read
@@ -215,8 +214,7 @@ it('makes a bot from a name alone', async () => {
     id: 'motion',
     name: 'Motion',
     labels: [],
-    // The maker owns it, and its folder is its own until the session that runs
-    // in it makes one.
+    // The maker owns it, and its folder is its own.
     owner: 'user:soft',
     workspace: join(bots, 'motion'),
   });
@@ -249,7 +247,7 @@ it('refuses a slug that is not one', async () => {
   expect(await write(soft, 'bot://2motion', { name: 'Motion' }, { createOnly: true })).toMatchObject({ code: -32602 });
 });
 
-it('offers in the make form every field a write takes, the session among them', async () => {
+it('offers in the make form every field a write takes', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'] });
   const client = host.accept(peer());
   const ready = await client.handle({
@@ -266,7 +264,7 @@ it('offers in the make form every field a write takes, the session among them', 
   const properties = ((entry?.['manifest'] as Bag)?.['properties'] ?? {}) as Bag;
   expect(Object.keys(properties)).toEqual(expect.arrayContaining([
     'name', 'labels', 'description', 'body', 'color', 'instructions', 'template', 'harness', 'model', 'preset',
-    'workspace', 'computer', 'session', 'owner',
+    'workspace', 'computer', 'owner',
   ]));
   // A colour is a name or a hex, and the manifest says both.
   expect(properties['color']).toMatchObject({ anyOf: [{ enum: [...BOT_COLORS] }, { pattern: '^#[0-9a-fA-F]{6}$' }] });
@@ -374,70 +372,6 @@ it('leaves a tombstone where a bot was deleted', async () => {
   expect(await write(soft, 'bot://motion', { name: 'Again' }, { createOnly: true })).toMatchObject({ code: -32010 });
 });
 
-/*
- * The session a bot is linked to.
- *
- * A bot is talked to in its session, so `session` is a link to one this host
- * already has - and only to one that belongs to the bot's own owner. A bot
- * whose record pointed at somebody else's conversation would be work put into
- * a place its writer has no business being.
- */
-it('keeps a link to a session of the bot\'s owner, and a read gives it back', async () => {
-  const { host, sessions } = made({ soft: ['bot:*', 'session:create'] });
-  // The host opened this one for soft, which is what a link is checked against.
-  sessions.setOwner('one', 'user:soft');
-  const soft = await as(host, 'soft');
-
-  const answer = await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true });
-  expect(answer).toEqual({ result: {} });
-  expect((await record(soft, 'bot://motion'))['session']).toBe('claude:/one');
-});
-
-it('refuses a link to a session of another person', async () => {
-  const { host, sessions } = made({ soft: ['bot:*', 'session:create'] });
-  sessions.setOwner('one', 'user:ana');
-  const soft = await as(host, 'soft');
-
-  expect(await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true }))
-    .toMatchObject({ code: -32009, message: expect.stringContaining('claude:/one') });
-  // And nothing was made, which is the half a refusal has to mean.
-  expect(await listing(soft, 'bot://')).toEqual([]);
-});
-
-it('refuses a link to a session that is not there', async () => {
-  const { host } = made({ soft: ['bot:*', 'session:create'] });
-  const soft = await as(host, 'soft');
-
-  expect(await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/nowhere' }, { createOnly: true }))
-    .toMatchObject({ code: -32602, message: expect.stringContaining('claude:/nowhere') });
-  expect(await listing(soft, 'bot://')).toEqual([]);
-});
-
-it('takes the link away when an edit sets the session to null', async () => {
-  const { host, sessions } = made({ soft: ['bot:*', 'session:create'] });
-  sessions.setOwner('one', 'user:soft');
-  const soft = await as(host, 'soft');
-  await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true });
-
-  // `null` is the link taken away, and it is a different body from one that
-  // leaves the key out: an edit of the name is not an edit of this.
-  expect(await write(soft, 'bot://motion', { name: 'Moved', session: null })).toEqual({ result: {} });
-  expect((await record(soft, 'bot://motion'))['session']).toBeUndefined();
-});
-
-it('leaves the link alone when an edit says nothing about it', async () => {
-  const { host, sessions } = made({ soft: ['bot:*', 'session:create'] });
-  sessions.setOwner('one', 'user:soft');
-  const soft = await as(host, 'soft');
-  await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true });
-
-  // The session is gone from this host and the link stays: a write that did
-  // not mention it is not a write that moved it.
-  sessions.forget('one');
-  expect(await write(soft, 'bot://motion', { name: 'Moved' })).toEqual({ result: {} });
-  expect((await record(soft, 'bot://motion'))['session']).toBe('claude:/one');
-});
-
 it('shows a bot to its owner, to their team, and to whoever holds the grant', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'], ana: ['bot:write', 'session:create'], rob: ['bot:get', 'bot:list'] });
   const soft = await as(host, 'soft');
@@ -517,8 +451,8 @@ it('refuses a bot for a project the writer is not in', async () => {
  */
 it('lets an admin make a bot for another person, who then reads it', async () => {
   const { host } = made({ soft: ['*:*'], ana: ['bot:write', 'session:create'] });
-  // The bot's session is started as ana, and the host starts one for a person
-  // only once they have signed in.
+  // A host starts a session for a person only once they have signed in, and a
+  // chat is a session: ana signs in before she reads the bot of hers.
   const ana = await as(host, 'ana');
   const soft = await as(host, 'soft');
 
@@ -580,17 +514,6 @@ it('refuses the host as the owner to a writer without *:*', async () => {
   expect(await listing(soft, 'bot://')).toEqual([]);
 });
 
-it('links a host bot to a session the host opened under an older name', async () => {
-  const { host, sessions } = made({ soft: ['*:*'] });
-  // The machine was renamed since: the session still names the host as it was called then.
-  sessions.setOwner('one', 'root:old-name');
-  const soft = await as(host, 'soft');
-
-  const answer = await write(soft, 'bot://keeper', { name: 'Keeper', owner: 'root:test', session: 'claude:/one' }, { createOnly: true });
-  expect(answer).toEqual({ result: {} });
-  expect((await record(soft, 'bot://keeper'))['session']).toBe('claude:/one');
-});
-
 it('still refuses a bot for another person to a writer without *:*', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
@@ -622,9 +545,8 @@ it('names this host\'s own owner in the manifest', async () => {
  *
  * Making one is any holder of the grant a write asks for. Changing one is the
  * four ways in: its owner, a member of the team or project it belongs to, an
- * admin, and this host. The instructions on a bot are run in a session owned by
- * whoever it belongs to, so the grant that makes one may not reach into
- * somebody else's - and neither may a read of every bot.
+ * admin, and this host. A bot belongs to somebody, so the grant that makes one
+ * may not reach into somebody else's - and neither may a read of every bot.
  */
 it('refuses an edit and a delete to a bot whose writer it is not', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'], ana: ['bot:write'], rob: ['bot:*'] });
@@ -722,35 +644,20 @@ it('lets the host make a bot for a team it holds no membership of', async () => 
 });
 
 /*
- * The session a bot made with none is given.
+ * A bot made with no session is made anyway.
  *
- * A bot is talked to in its session, so a bot made with no `session` is one the
- * host opens for it: it runs the bot's preset, or its harness and model, in the
- * bot's own folder, and it opens with the bot's instructions. The session is the
- * bot's owner's, because it is the same session that person could have made.
+ * A bot is a record, a folder and a chat. A make leaves the record and the
+ * folder behind - the folder because that is where the bot works - and opens
+ * nothing: what anybody says to a bot is said in a chat, and a chat is opened
+ * by a read of the bot rather than by its maker.
  */
 
-/** An echo backend under a name, saying what each turn was asked to run on. */
-const speaking = (provider: string, seen: Bag[] = []): Agent => {
-  const agent = echo({ path: tmpdir(), pace: 0 });
-  return {
-    ...agent,
-    provider,
-    displayName: provider,
-    create: (start: Start): Session => {
-      const session = agent.create(start);
-      return {
-        ...session,
-        begin: (turnId: string, text: string, model?: Chosen, from?: MessageFrom) => {
-          seen.push({ text, model: model as Bag | undefined });
-          session.begin(turnId, text, model, from);
-        },
-      };
-    },
-  };
-};
-
-/** The row a client reads for one session, or the failure of it not being there. */
+/**
+ * The row a client reads for one session, or the failure of it not being there.
+ *
+ * A session is in the listing when this host has it, so an empty listing is
+ * what a host that started nothing answers with.
+ */
 const row = async (client: Client, uri: string): Promise<Bag> => {
   const answer = got(await call(client, 'listSessions', { channel: ROOT }));
   const items = (answer['items'] ?? []) as Bag[];
@@ -759,43 +666,11 @@ const row = async (client: Client, uri: string): Promise<Bag> => {
   return found;
 };
 
-it('starts a preset session for a bot, even when it also names a harness', async () => {
-  const { host } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [
-    speaking('loud'),
-    speaking('whisper'),
-  ]);
-  const soft = await as(host, 'soft');
-
-  // A preset is a whole harness of its own, so it wins: `base` is not what runs.
-  await write(soft, 'bot://motion', { name: 'Motion', preset: 'loud', harness: 'whisper' }, { createOnly: true });
-  const bot = await record(soft, 'bot://motion');
-  expect(String(bot['session'])).toMatch(/^loud:\//);
-});
-
-it('starts a bot on its harness, with the model it asked for', async () => {
-  const seen: Bag[] = [];
-  const { host } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('whisper', seen)]);
-  const soft = await as(host, 'soft');
-
-  await write(soft, 'bot://motion', {
-    name: 'Motion', harness: 'whisper', model: 'the-big-one', instructions: 'Be calm',
-  }, { createOnly: true });
-
-  const bot = await record(soft, 'bot://motion');
-  expect(String(bot['session'])).toMatch(/^whisper:\//);
-  // The model rides on the first turn, which is the only place a session has
-  // one - the host's own words for it.
-  expect(seen.at(-1)).toMatchObject({ model: { id: 'the-big-one' } });
-  expect(String(seen.at(-1)?.['text'])).toContain('Be calm');
-});
-
-it('starts a bot on the host\'s own harness when it names neither', async () => {
-  const { host } = made({ soft: ['bot:*', 'session:*'] });
-  const soft = await as(host, 'soft');
-
-  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
-  expect(String((await record(soft, 'bot://motion'))['session'])).toMatch(/^base:\//);
-});
+/** Every session this host holds, by URI. */
+const allSessions = async (client: Client): Promise<string[]> => {
+  const answer = got(await call(client, 'listSessions', { channel: ROOT }));
+  return ((answer['items'] ?? []) as Bag[]).map((one) => String(one['resource']));
+};
 
 it('runs a bot in its own folder, and makes the folder first', async () => {
   const { host, bots } = made({ soft: ['bot:*', 'session:*'] });
@@ -805,51 +680,24 @@ it('runs a bot in its own folder, and makes the folder first', async () => {
   expect(existsSync(workspace)).toBe(false);
   await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
 
-  // The folder is there for the session to work in, and the session says it is
-  // where it works: `workspace` is what a make with no folder of its own gets.
+  // The folder is there for the bot to work in, and it is the bot's whether or
+  // not anybody has talked to it: a read answers the same path.
   expect(existsSync(workspace)).toBe(true);
-  const uri = String((await record(soft, 'bot://motion'))['session']);
-  expect((await row(soft, uri))['workingDirectories']).toEqual([`file://${workspace}`]);
+  expect((await record(soft, 'bot://motion'))['workspace']).toBe(workspace);
 });
 
-it('starts a bot with a computer in that computer, in the same path', async () => {
-  const { host, bots, sessions } = made({ soft: ['bot:*', 'session:*'] });
+it('starts no session on a make', async () => {
+  // A bot is not talked to in a session of its own: what is said to it is said
+  // in a chat, and a chat is opened by a read of the bot. So a make opens
+  // nothing at all, whatever the body named - a preset, a harness or neither.
+  const { host } = made({ soft: ['bot:*', 'session:*'] });
   const soft = await as(host, 'soft');
 
-  await write(soft, 'bot://motion', {
-    name: 'Motion', computer: 'computer://box',
-  }, { createOnly: true });
+  await write(soft, 'bot://motion', { name: 'Motion', preset: 'loud', harness: 'whisper', model: 'the-big-one' }, { createOnly: true });
+  await write(soft, 'bot://quiet', { name: 'Quiet' }, { createOnly: true });
 
-  const uri = String((await record(soft, 'bot://motion'))['session']);
-  const id = uri.slice(uri.indexOf(':') + 1).replace(/^\/+/, '');
-  expect(sessions.config(id)).toMatchObject({ computer: 'computer://box' });
-  // And the machine works in the bot's folder, which is the same path on this
-  // host: the folder rides along as the session's working directory.
-  expect((await row(soft, uri))['workingDirectories']).toEqual([`file://${join(bots, 'motion')}`]);
-});
-
-it('opens a bot\'s session with the default template filled, instructions or none', async () => {
-  const seen: Bag[] = [];
-  const { host } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('whisper', seen)]);
-  const soft = await as(host, 'soft');
-
-  await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', instructions: 'Be calm' }, { createOnly: true });
-  await write(soft, 'bot://quiet', { name: 'Quiet', harness: 'whisper' }, { createOnly: true });
-  expect(seen.map((one) => one['text'])).toEqual([
-    'You are Motion. \n\nBe calm\n\n## Your last chats\n\nNone.',
-    'You are Quiet. \n\n\n\n## Your last chats\n\nNone.',
-  ]);
-});
-
-it('opens a bot\'s session with the template it names', async () => {
-  const seen: Bag[] = [];
-  const { host, records } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('whisper', seen)]);
-  const soft = await as(host, 'soft');
-  await (await records.collection('templates', { body: 'text' })).put({ id: 'short', title: 'Short', text: '{{name}}: {{instructions}}' });
-
-  await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', instructions: 'Be calm', template: 'short' }, { createOnly: true });
-  expect(seen.map((one) => one['text'])).toEqual(['Motion: Be calm']);
-  expect((await record(soft, 'bot://motion'))['template']).toBe('short');
+  expect(await allSessions(soft)).toEqual([]);
+  expect(await record(soft, 'bot://motion')).not.toHaveProperty('session');
 });
 
 it('edits a bot whose template was removed, and refuses an edit that names a missing one', async () => {
@@ -865,43 +713,6 @@ it('edits a bot whose template was removed, and refuses an edit that names a mis
     .toMatchObject({ code: -32602, message: 'The template short does not exist.' });
 });
 
-/** The example backend under `provider`, keeping the hidden `context` each chat was started with. */
-const opening = (provider: string, contexts: Map<string, string | undefined>): Agent => {
-  const agent = echo({ path: tmpdir(), pace: 0 });
-  return {
-    ...agent,
-    provider,
-    displayName: provider,
-    create: (start: Start): Session => {
-      contexts.set(start.chatUri, start.context);
-      return agent.create(start);
-    },
-  };
-};
-
-it('lets an edit pass when the bot\'s template was removed, and its next chat gets the default and a problem', async () => {
-  const contexts = new Map<string, string | undefined>();
-  const { host, records, reported } = made({ soft: ['bot:*', 'session:*', 'chat:*'] }, {}, {}, true, [opening('whisper', contexts)]);
-  const soft = await as(host, 'soft');
-  const templates = await records.collection('templates', { body: 'text' });
-  await templates.put({ id: 'short', title: 'Short', text: '{{name}}' });
-  got(await write(soft, 'bot://motion', { name: 'Motion', harness: 'whisper', template: 'short' }, { createOnly: true }));
-  await templates.remove('short');
-
-  // The edit names no template, so it passes and the bot keeps the name of the one it had.
-  got(await write(soft, 'bot://motion', { name: 'Calm' }));
-  const kept = await record(soft, 'bot://motion');
-  expect(kept).toMatchObject({ name: 'Calm', template: 'short' });
-  expect(reported).toEqual([]);
-
-  // The next chat of its session opens with the default template, and the plugin says why.
-  const session = String(kept['session']);
-  got(await call(soft, 'subscribe', { channel: session }));
-  got(await call(soft, 'createChat', { channel: session, chat: 'ahp-chat:/next' }));
-  expect(contexts.get('ahp-chat:/next')).toMatch(/^You are Calm\. /);
-  expect(reported).toEqual(['bot: bot motion: the template short does not exist, so the new chat got the default one']);
-});
-
 it('refuses a make that names a template that does not exist', async () => {
   const { host } = made({ soft: ['bot:*', 'session:*'] });
   const soft = await as(host, 'soft');
@@ -912,17 +723,31 @@ it('refuses a make that names a template that does not exist', async () => {
   expect(await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true })).toMatchObject({ result: {} });
 });
 
-it('leaves no bot behind when the owner may not start the session', async () => {
-  // `session:create` is the owner's own grant, asked of them by the host before
-  // the session is opened - so a bot whose session cannot start is a make that
-  // does not happen, rather than a record claiming a session it has not got.
-  const { host } = made({ soft: ['bot:*'] });
+it('refuses a body that names a session, and drops one an older file holds', async () => {
+  const { host, bots, records } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
 
-  expect(await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true }))
-    .toMatchObject({ code: -32009, message: 'soft may not session:create here' });
-  expect(await listing(soft, 'bot://')).toEqual([]);
-  expect(await call(soft, 'resourceRead', { uri: 'bot://motion' })).toMatchObject({ code: -32008 });
+  // A bot has no session, so `session` is a key a bot does not have - the same
+  // refusal any other unknown key gets, and the name stays free.
+  expect(await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true }))
+    .toMatchObject({ code: -32602, message: 'session is not something a bot has' });
+
+  // Nothing converts an older file: the key is dropped as the store reads it,
+  // so a bot this host answers is a bot with no link on it.
+  await (await records.collection('bots', { body: 'instructions' })).put({
+    id: 'motion',
+    name: 'Motion',
+    labels: [],
+    body: 'robot',
+    color: 'red',
+    workspace: join(bots, 'motion'),
+    owner: 'user:soft',
+    createdAt: '2026-10-11T00:00:00.000Z',
+    updatedAt: '2026-10-11T00:00:00.000Z',
+    session: 'claude:/6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e',
+  });
+
+  expect(await record(soft, 'bot://motion')).not.toHaveProperty('session');
 });
 
 /*
@@ -933,9 +758,7 @@ it('leaves no bot behind when the owner may not start the session', async () => 
  * a doc that has stopped being true.
  */
 it('answers the writes docs/plugins/BOTS.md shows', async () => {
-  const { host, sessions } = made({ soft: ['bot:*', 'session:*'] }, {}, {}, true, [speaking('claude')]);
-  // The session the file's link example names, which the host has for soft.
-  sessions.setOwner('6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e', 'user:soft');
+  const { host } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
 
   // A make from a name alone.
@@ -955,14 +778,6 @@ it('answers the writes docs/plugins/BOTS.md shows', async () => {
   expect(await record(soft, 'bot://reader')).toMatchObject({
     body: 'robot', color: 'teal', harness: 'claude', model: 'claude-sonnet-5',
   });
-
-  // A link to a session its owner already has, and the link taken away.
-  expect(await write(soft, 'bot://reader', { session: 'claude:/6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e' }))
-    .toEqual({ result: {} });
-  expect((await record(soft, 'bot://reader'))['session']).toBe('claude:/6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e');
-
-  expect(await write(soft, 'bot://reader', { session: null })).toEqual({ result: {} });
-  expect((await record(soft, 'bot://reader'))['session']).toBeUndefined();
 });
 
 /*
@@ -1063,4 +878,100 @@ it('tells a watch nothing once its last subscriber leaves', async () => {
   await write(soft.client, 'bot://motion', { name: 'Motion two' });
 
   expect(soft.heard(channel)).toEqual(['added bot://motion']);
+});
+
+/*
+ * The chat a read of a bot answers.
+ *
+ * A bot is talked to in a chat: one session of the `bot-chat` provider per bot
+ * and person, which runs no model and keeps what was said a line at a time. A
+ * read of `bot:/<slug>` is the one door onto it, so that is where one is opened:
+ * whoever holds `bot:chat`, or owns the bot, is answered the URI of their own,
+ * and reads the same bot again to find the same conversation. A reader who may
+ * not chat is answered the record alone, which is not a refusal - there is
+ * nothing wrong with their read, there is simply no conversation of theirs.
+ */
+
+/** The id inside a session URI, which is what the session store is keyed by. */
+const idIn = (uri: string): string => uri.slice(uri.indexOf(':') + 1).replace(/^\/+/, '');
+
+it('answers a read with the reader\'s own chat, and the same chat again', async () => {
+  const { host, bots, sessions } = made({
+    soft: ['bot:*', 'session:create'],
+    ana: ['bot:get', 'bot:chat', 'session:create', 'session:read'],
+  });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  const ana = await as(host, 'ana');
+  const first = await record(ana, 'bot://motion');
+  const chat = String(first['chat']);
+  expect(chat).toMatch(/^bot-chat:\//);
+  // A session of the plugin's own provider, in the bot's folder, named after
+  // the bot, and hers: it is the same session she would have started herself.
+  expect(await row(ana, chat)).toMatchObject({
+    title: 'Motion',
+    workingDirectories: [`file://${join(bots, 'motion')}`],
+  });
+  expect(sessions.owner(idIn(chat))).toBe('user:ana');
+
+  // And the second read is the same conversation: a person reads a bot over and
+  // over, and a session started for each read would be a chat per glance.
+  expect((await record(ana, 'bot://motion'))['chat']).toBe(chat);
+});
+
+it('gives two people a chat each with one bot', async () => {
+  const { host } = made({
+    // The owner holds no chat grant of her own and chats anyway: the grant is
+    // for everybody else, which is the read road's rule for `bot:get`.
+    soft: ['bot:write', 'session:create'],
+    ana: ['bot:get', 'bot:chat', 'session:create'],
+  });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  const hers = String((await record(soft, 'bot://motion'))['chat']);
+  const ana = await as(host, 'ana');
+  const theirs = String((await record(ana, 'bot://motion'))['chat']);
+
+  // One bot, two conversations: what each of them says to it is their own.
+  expect(hers).toMatch(/^bot-chat:\//);
+  expect(theirs).toMatch(/^bot-chat:\//);
+  expect(theirs).not.toBe(hers);
+});
+
+it('answers a reader who may not chat with the record alone', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'], rob: ['bot:get', 'session:read'] });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  const rob = await as(host, 'rob');
+  const read = await record(rob, 'bot://motion');
+  expect(read).toMatchObject({ id: 'motion', name: 'Motion' });
+  expect(read).not.toHaveProperty('chat');
+
+  // And nothing was opened for him: a chat he may not have is not started on
+  // the way to being withheld.
+  const listed = got(await call(rob, 'listSessions', { channel: ROOT }));
+  const items = (listed['items'] ?? []) as Bag[];
+  expect(items.map((one) => String(one['resource'])).filter((one) => one.startsWith('bot-chat:/'))).toEqual([]);
+});
+
+it('takes a write that carries a chat back, and keeps none of it', async () => {
+  const { host, records } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  // The way a client edits: it read the record, so what it writes back is the
+  // record with the chat it was answered. `chat` is the reader's own rather
+  // than a bot's field, so a body carrying one is a body about the rest.
+  const read = await record(soft, 'bot://motion');
+  expect(String(read['chat'])).toMatch(/^bot-chat:\//);
+  expect(await write(soft, 'bot://motion', read)).toEqual({ result: {} });
+
+  // None of it is kept, and the chat it was given is still the one it answers
+  // with - a chat is not something a write can move.
+  const kept = await (await records.collection('bots', { body: 'instructions' })).get('motion');
+  expect(kept).not.toHaveProperty('chat');
+  expect((await record(soft, 'bot://motion'))['chat']).toBe(read['chat']);
 });

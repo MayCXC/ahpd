@@ -1,10 +1,9 @@
-import { randomUUID } from 'node:crypto';
-import { reason, RpcError } from '@ahpd/sdk';
+import { reason } from '@ahpd/sdk';
 import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
 import { NAME, webhookRoute } from './route.js';
-import type { Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
-import type { BotSeams } from './bot.js';
+import type { Bag, Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
+import type { BotChat, BotSeams } from './bot.js';
 
 /**
  * The package as a plugin.
@@ -40,9 +39,6 @@ export const optionsSchema = {
     },
   },
 };
-
-/** The code the host refuses a call with when the caller lacks a grant. */
-const REFUSED = -32009;
 
 /** What the plugin's connection calls itself. */
 const CLIENT = 'ahpd-webhook';
@@ -135,38 +131,47 @@ function botSeams(host: PluginHost, open: () => Promise<Opened>, timeout: number
   const problem = (line: string): void => { host.problem(`${name}: ${line}`); };
   return {
     threads: host.records('webhook-threads'),
-    session: async (bot) => {
+    /**
+     * The plugin's own chat with the bot, read the way a client reads one.
+     *
+     * The read answers `chat` only to a reader who may chat - a holder of
+     * `bot:chat`, or the bot's owner - and the session is started there if it
+     * is not one this host holds, so the two grants the plugin needs are named
+     * in one problem line when the read answers the record without it. The chat
+     * a turn goes in is then the session's own default chat rather than a name
+     * of this plugin's: it is the one the session says is current.
+     */
+    chat: async (bot): Promise<BotChat | undefined> => {
       const conn = await peer();
-      let read: unknown;
+      let said: Bag;
       try {
-        read = await conn.request('resourceRead', { uri: bot });
+        const read = await conn.request('resourceRead', { uri: bot });
+        said = JSON.parse(String((read as { data?: unknown }).data)) as Bag;
       }
       catch (error) {
         problem(`${bot} cannot be read: ${reason(error)}`);
         return undefined;
       }
-      try {
-        const session = (JSON.parse(String((read as { data?: unknown }).data)) as { session?: unknown }).session;
-        return typeof session === 'string' && session !== '' ? session : undefined;
-      }
-      catch {
+      const session = said['chat'];
+      if (typeof session !== 'string' || session === '') {
+        problem(`needs the grants bot:chat and session:create to be answered a chat by ${bot}`);
         return undefined;
       }
-    },
-    chat: async (session) => {
-      const conn = await peer();
-      // A chat is made only in a session the host has loaded, and a subscribe loads it.
-      await conn.request('subscribe', { channel: session });
-      const chat = `ahp-chat:/${randomUUID()}`;
+      // A chat's state is read off a session the host has loaded, and a subscribe loads it.
+      let opened: { snapshot?: { state?: unknown } };
       try {
-        await conn.request('createChat', { channel: session, chat });
+        opened = await conn.request('subscribe', { channel: session }) as { snapshot?: { state?: unknown } };
       }
       catch (error) {
-        if (!(error instanceof RpcError) || error.code !== REFUSED) throw error;
-        problem(`needs the grant session:write to make a chat in ${session}: ${reason(error)}`);
+        problem(`${session} cannot be read: ${reason(error)}`);
         return undefined;
       }
-      return chat;
+      const chat = ((opened.snapshot?.state ?? {}) as Bag)['defaultChat'];
+      if (typeof chat !== 'string' || chat === '') {
+        problem(`${session} names no chat to send a turn to`);
+        return undefined;
+      }
+      return { session, chat };
     },
     send: async (chat, turn, text) => {
       const { conn, sender } = await open();

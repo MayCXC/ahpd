@@ -1,8 +1,8 @@
 # Bots
 
-A **bot** is a record a person keeps on the host, with a folder of its own and a session to talk to it in. `@ahpd/bot` serves it as the `bot:` scheme, so a bot is made, read, listed, edited and deleted through the same `resource*` methods every other resource uses - [RESOURCES.md](../sdk/RESOURCES.md).
+A **bot** is a record a person keeps on the host, with a folder of its own, talked to in a chat of its own. `@ahpd/bot` serves it as the `bot:` scheme, so a bot is made, read, listed, edited and deleted through the same `resource*` methods every other resource uses - [RESOURCES.md](../sdk/RESOURCES.md).
 
-A bot is not a backend. It runs on whichever harness the host already has, named by its `preset`, or by its `harness` and `model`, and this is what lets a bot be tried today rather than once a bot harness exists.
+A bot is not a backend of its own. It names whichever harness the host already has, by its `preset`, or by its `harness` and `model`, and the chat a person talks to it in runs no model at all - [The chat](#the-chat).
 
 ## The record
 
@@ -14,18 +14,18 @@ A bot is not a backend. It runs on whichever harness the host already has, named
 | `description` | One line about it, for a list of bots |
 | `body` | Which body it is drawn with. Any word: the fifteen below are the suggestions |
 | `color` | Which colour it is drawn in: one of the eleven below, or a hex colour `#rrggbb` |
-| `instructions` | What it was asked to be, in its own words. The template puts it in the first turn |
-| `template` | The template its first turn is made from, by name. Absent is the default template - [The first turn](#the-first-turn) |
+| `instructions` | What it was asked to be, in its own words |
+| `template` | The template a chat with it would open with, by name. Absent is the default template - [The template](#the-template) |
 | `harness` | The backend a session of it runs on, where a bot chooses one |
 | `model` | The model it asks for |
 | `preset` | The session preset it starts from. Where one is set it wins over `harness` and `model` |
 | `workspace` | The folder it works in, under `root`. Its own, and never moved |
 | `computer` | The machine it runs in, where it names one |
-| `session` | The session it is linked to |
 | `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a holder of `*:*` may name any owner, this host's own `root:<host>` among them. A body naming anybody else is refused `-32009`, and an edit may not move it. Any `root:` is this host, whatever name follows it: one a make names is written under the host's name today, and a renamed machine keeps its bots. The manifest gives this host's own owner as a `const` in `owner`, so a client sends it as given |
+| `chat` | The reader's own chat with this bot. Answered by a read and never obeyed: it is a different conversation for each reader, so what a body carries is not kept - [The chat](#the-chat) |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
-A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`.
+A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`. A bot has no session, so a body that names `session` is refused like any other key it does not have.
 
 ## The file
 
@@ -70,7 +70,7 @@ A slug is fixed when the bot is made and an edit cannot move it. A deleted slug 
 
 ## The folder
 
-A bot works in a folder of its own, `<root>/<slug>` unless the body named one, where `root` is the plugin's option and starts at `~/.bots`. No two bots share a folder and an edit never moves one: two bots in one tree would be two sessions working over each other, so a body naming a folder another bot has is refused `-32602`. The folder is made when the bot is made - before its session starts, since that is where the session works.
+A bot works in a folder of its own, `<root>/<slug>` unless the body named one, where `root` is the plugin's option and starts at `~/.bots`. No two bots share a folder and an edit never moves one: two bots in one tree would be two of them working over each other, so a body naming a folder another bot has is refused `-32602`. The folder is made when the bot is made, so a bot has one whether or not anybody has talked to it yet.
 
 ## Bodies and colours
 
@@ -78,21 +78,23 @@ The suggested bodies are `robot`, `humanoid`, `alien`, `gumbo`, `circle`, `semic
 
 A make that names neither gets a body at random and the first colour.
 
-## The session
+## The chat
 
-A bot is talked to in its session, and there are two ways it gets one.
+A person talks to a bot in a **chat**: one session of the `bot-chat` provider per bot and person. That provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bot-chats/`, so a chat is still readable after a daemon restarts.
 
-A body may **link** a session its owner already has, by naming it in `session`. The link is kept only where the host has that session and it belongs to the bot's owner: a URI the host has no session for is refused `-32602`, and one that belongs to somebody else is refused `-32009`. A link to somebody else's conversation would be this bot's work in a room its writer has no business in.
+A chat is opened by a **read**. `resourceRead bot://<slug>` answers the record with one more key, `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats.
 
-A bot made with **no** `session` is given one. The host starts it as the bot's owner, which is the same session that person could have made themselves: the owner's own `session:create` is asked first, and a refusal reads exactly as it does at the door. The session runs the bot's `preset`, or its `harness` and `model`, or the host's own default harness and model, in the bot's `workspace` - on this host, or in the `computer` the record names. Its first turn is the bot's template, filled, so a bot never opens silent. Each new chat in the session starts with the template as well - [The first turn](#the-first-turn). Its title is the bot's `name`.
+A reader may chat when they hold `bot:chat`, or when the bot is theirs. A reader who may not is answered the record alone: no `chat` key and no refusal, because there is nothing wrong with their read - there is simply no conversation of theirs to name.
 
-A start the owner may not make leaves no record at all: the host is asked before the bot is saved, so a make that failed is one that did not happen rather than one claiming a session it has not got.
+A chat is the reader's own session: it works in the bot's `workspace`, it is titled with the bot's `name`, and starting one needs the reader's own `session:create`, asked by the host the way it is asked at the door. A refusal there is the read's refusal.
 
-An edit that sets `session` to `null` takes the link away. An edit that says nothing about `session` leaves the link as it was, so changing a bot's name does not unlink it.
+`chat` is answered and never obeyed. A client that read a bot and writes the record back, `chat` and all, is writing what it was given, and the key is dropped rather than kept: a chat is the reader's, and the next reader's read answers the next reader's chat.
 
-## The first turn
+A chat's log is the whole of its state. Nothing about a chat is kept in memory past the process that made it, so a daemon that starts again lists, opens and replays the chats it has logs for.
 
-A bot's session opens with its template, filled. A bot that names no `template` gets the default one that the plugin ships:
+## The template
+
+A bot may name a `template`, which is what a chat with it would open with. A bot that names none gets the default one the plugin ships:
 
 ```text
 You are {{name}}. {{description}}
@@ -109,7 +111,7 @@ You are {{name}}. {{description}}
 | `{{name}}` | The bot's `name` |
 | `{{description}}` | The bot's `description`, or nothing |
 | `{{instructions}}` | The bot's `instructions`, or nothing |
-| `{{chats}}` | One line `- <title>` per chat of the bot's session, newest first, at most `lastChats` of them. `None.` when there are none, which is every make |
+| `{{chats}}` | One line `- <title>` per chat the bot is in, newest first, at most `lastChats` of them. `None.` when there are none |
 
 A word that is not in this table is left as it was written.
 
@@ -123,9 +125,9 @@ title: Short
 You are {{name}}. {{instructions}}
 ```
 
-A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it. An edit that does not name `template` passes even when the bot's template was deleted, and the bot keeps the name; its next chat gets the default template and a problem, as below.
+A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it. An edit that does not name `template` passes even when the bot's template was deleted, and the bot keeps the name.
 
-Each chat a person or a tool opens in a bot's session starts with the template too. It is filled again, with the session's chats at that moment. The text is hidden context before the chat's first message. A chat opened with no message gets it with the person's first message. The template is read for each chat, so an edit reaches the next one. A template that no longer exists gives the default one, and the plugin reports a problem that names the bot and the template.
+Nothing fills a template yet. A chat runs no model, so there is no first turn for one to open, and what a template reaches is decided with the work a bot does.
 
 ## Who may do what
 
@@ -136,12 +138,13 @@ Each chat a person or a tool opens in a bot's session starts with the template t
 | `bot:get` | Read any bot |
 | `bot:list` | List every bot |
 | `bot:put` | Make a bot in the scheme, edit their own |
+| `bot:chat` | Be answered a chat by any bot they may read |
 | `*:*` | Any of it, on any bot, and make a bot for any owner |
 | A root connection | Any of it, on any bot |
 
 A listing shows what a read would allow: a list that showed a bot the reader cannot open would be a list of names they cannot use.
 
-Making a bot also needs the maker's `session:create` where a session has to be started for it, because the session is theirs - [USERS.md](../sdk/USERS.md#roles).
+A read that opens a chat also needs the reader's own `session:create`, because the chat is theirs rather than the bot's - [USERS.md](../sdk/USERS.md#roles).
 
 ## A watch
 
@@ -160,7 +163,7 @@ A watch needs `bot:watch`, or a bot the reader may read: a watch on `bot://` is 
 
 A client that subscribes to `x-ahpd-bots://` gets every bot it may read in one snapshot, then an action for each change. It reads the bots without one `resourceRead` per bot, and it hears changes that other clients make.
 
-The snapshot state is `{ bots: BotRecord[] }`. Each record is the same JSON object that `resourceRead bot://<slug>` returns. Three actions follow it:
+The snapshot state is `{ bots: BotRecord[] }`. Each record is the bot's own, the JSON object a write takes and a read answers, without `chat` - a chat belongs to whoever read the bot, and the catalogue is one snapshot for the whole client. Three actions follow it:
 
 | Action | When the client gets it |
 | --- | --- |
@@ -199,14 +202,10 @@ A bot that runs on a harness of its own, with something to be:
 }
 ```
 
-An edit that links a session the owner already has, and one that takes a link away:
+An edit that asks for a harness, leaving everything else as it was:
 
 ```json
-{ "session": "claude:/6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e" }
-```
-
-```json
-{ "session": null }
+{ "harness": "claude", "model": "claude-sonnet-5" }
 ```
 
 ## Options
@@ -220,7 +219,7 @@ An edit that links a session the owner already has, and one that takes a link aw
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
 ```
 
-The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. The templates are in `<configDir>/templates/`. A plugin that takes the record store over keeps them wherever that store keeps them.
+The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. The templates are in `<configDir>/templates/`. The chats are in `<configDir>/bot-chats/`: one row per bot and person, and beside it the log of the chat that row names. A plugin that takes the record store over keeps them wherever that store keeps them.
 
 ## See also
 

@@ -7,16 +7,15 @@ import { checkEndpoint } from '../src/record.js';
 import type { AddressInfo } from 'node:net';
 import type { ServerResponse } from 'node:http';
 import type { PluginPeer } from '../../sdk/src/types/plugin.js';
-import type { BotSeams, TurnEnd } from '../src/bot.js';
+import type { BotChat, BotSeams, TurnEnd } from '../src/bot.js';
 import type { Endpoint } from '../src/record.js';
 
 /*
  * The bot target, over stub seams.
  *
- * The seams stand for the plugin's connection to its host: which session a bot
- * is linked to, a new chat in it, a turn sent there, and that turn's end. What
- * is checked is the thread map the target keeps, and what each reply mode
- * answers and posts.
+ * The seams stand for the plugin's connection to its host: the chat a read of
+ * the bot answers, a turn sent there, and that turn's end. What is checked is
+ * the thread map the target keeps, and what each reply mode answers and posts.
  */
 
 const URL_OF = 'http://127.0.0.1:1/plugins/webhook/ci';
@@ -30,24 +29,19 @@ interface Sent { chat: string; turn: string; text: string }
  * A turn ends when the case says so with `finish`, or at once when `auto` is
  * set, with the text `echo: <what was sent>`.
  */
-async function made(options: { auto?: boolean; sessions?: Record<string, string>; timeout?: number; refused?: boolean; turnRefused?: string } = {}) {
+async function made(options: { auto?: boolean; chats?: Record<string, BotChat>; timeout?: number; turnRefused?: string } = {}) {
   const threads = await memoryRecords().collection('webhook-threads');
-  const chats: { session: string; chat: string }[] = [];
   const sent: Sent[] = [];
   const posted: { url: string; body: Record<string, unknown> }[] = [];
   const problems: string[] = [];
   const waiting = new Map<string, (end: TurnEnd) => void>();
-  const sessions = options.sessions ?? { 'bot://motion': 'ahp-session:/motion' };
+  const chats = options.chats ?? { 'bot://motion': { session: 'bot-chat:/motion', chat: 'ahp-chat:/motion' } };
   const seams: BotSeams = {
     threads,
-    session: async (bot) => sessions[bot],
-    chat: async (session) => {
+    chat: async (bot) => {
       // A yield, so two first calls of one thread overlap here.
       await new Promise((r) => { setTimeout(r, 5); });
-      if (options.refused === true) return undefined;
-      const chat = `ahp-chat:/c${chats.length + 1}`;
-      chats.push({ session, chat });
-      return chat;
+      return chats[bot];
     },
     send: async (chat, turn, text) => {
       sent.push({ chat, turn, text });
@@ -67,7 +61,7 @@ async function made(options: { auto?: boolean; sessions?: Record<string, string>
     const turn = sent[n]?.turn ?? '';
     waiting.get(turn)?.({ status, text, ...(error === undefined ? {} : { error }) });
   };
-  return { target, threads, chats, sent, posted, problems, finish, waiting };
+  return { target, threads, sent, posted, problems, finish, waiting };
 }
 
 /** An endpoint as the route hands it over: checked. */
@@ -87,48 +81,45 @@ const call = (body: unknown, query = ''): Request => new Request(`${URL_OF}${que
 const settle = () => new Promise((r) => { setTimeout(r, 10); });
 
 describe('the thread map', () => {
-  it('makes one chat and keeps one thread record on a first call', async () => {
-    const { target, threads, chats, sent } = await made();
+  it('keeps one thread record, at the chat the read of the bot answered', async () => {
+    const { target, threads, sent } = await made();
     const answer = await target(endpoint(), call({ thread: 'pr-12', text: 'hello' }));
     expect(answer.status).toBe(202);
-    expect(chats).toEqual([{ session: 'ahp-session:/motion', chat: 'ahp-chat:/c1' }]);
-    expect(sent.map((one) => [one.chat, one.text])).toEqual([['ahp-chat:/c1', 'hello']]);
+    expect(sent.map((one) => [one.chat, one.text])).toEqual([['ahp-chat:/motion', 'hello']]);
     const kept = await threads.list();
     expect(kept).toHaveLength(1);
-    expect(kept[0]).toMatchObject({ endpoint: 'ci', thread: 'pr-12', session: 'ahp-session:/motion', chat: 'ahp-chat:/c1' });
+    expect(kept[0]).toMatchObject({ endpoint: 'ci', thread: 'pr-12', session: 'bot-chat:/motion', chat: 'ahp-chat:/motion' });
     expect(String(kept[0]?.id)).toMatch(/^t-[0-9a-f-]{36}$/);
   });
 
   it('sends a second call on the same thread in the same chat', async () => {
-    const { target, chats, sent } = await made();
+    const { target, sent } = await made();
     await target(endpoint(), call({ thread: 'pr-12', text: 'one' }));
     await target(endpoint(), call({ thread: 'pr-12', text: 'two' }));
-    expect(chats).toHaveLength(1);
-    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/c1', 'ahp-chat:/c1']);
+    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/motion', 'ahp-chat:/motion']);
     expect(sent[0]?.turn).not.toBe(sent[1]?.turn);
   });
 
-  it('makes another chat for another thread', async () => {
-    const { target, chats, sent } = await made();
+  it('sends another thread of the bot in the same chat', async () => {
+    const { target, threads, sent } = await made();
     await target(endpoint(), call({ thread: 'pr-12', text: 'one' }));
     await target(endpoint(), call({ thread: 'pr-13', text: 'two' }));
-    expect(chats.map((one) => one.chat)).toEqual(['ahp-chat:/c1', 'ahp-chat:/c2']);
-    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/c1', 'ahp-chat:/c2']);
+    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/motion', 'ahp-chat:/motion']);
+    expect((await threads.list()).map((one) => one['thread'])).toEqual(['pr-12', 'pr-13']);
   });
 
-  it('makes one chat for two first calls of one thread at the same time', async () => {
-    const { target, threads, chats, sent } = await made();
+  it('keeps a record of each thread, and one of two first calls of one thread at the same time', async () => {
+    const { target, threads, sent } = await made();
     const answers = await Promise.all([
       target(endpoint(), call({ thread: 'pr-12', text: 'one' })),
       target(endpoint(), call({ thread: 'pr-12', text: 'two' })),
     ]);
     expect(answers.map((one) => one.status)).toEqual([202, 202]);
-    expect(chats).toHaveLength(1);
-    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/c1', 'ahp-chat:/c1']);
+    expect(sent.map((one) => one.chat)).toEqual(['ahp-chat:/motion', 'ahp-chat:/motion']);
     expect(await threads.list()).toHaveLength(1);
   });
 
-  it('sends the text of a JSON body in the chat of its thread', async () => {
+  it('sends the text of a JSON body as the turn, with the thread from the body', async () => {
     const { target, sent } = await made();
     await target(endpoint(), call({ thread: 'pr-12', text: 'from json' }, '?thread=other'));
     expect(sent.map((one) => one.text)).toEqual(['from json']);
@@ -137,7 +128,7 @@ describe('the thread map', () => {
     expect(sent[1]?.chat).toBe(sent[0]?.chat);
   });
 
-  it('sends a plain text body as the text, in the chat of the thread query value', async () => {
+  it('sends a plain text body as the text, with the thread from the query value', async () => {
     const { target, sent, threads } = await made();
     expect((await target(endpoint(), call('the build broke', '?thread=pr-12'))).status).toBe(202);
     expect(sent.map((one) => one.text)).toEqual(['the build broke']);
@@ -160,15 +151,8 @@ describe('the thread map', () => {
     expect(sent).toEqual([]);
   });
 
-  it('answers 409 when the bot has no session', async () => {
-    const { target, sent } = await made({ sessions: {} });
-    const answer = await target(endpoint(), call({ thread: 'pr-12', text: 'hello' }));
-    expect(answer.status).toBe(409);
-    expect(sent).toEqual([]);
-  });
-
-  it('answers 409 and keeps no thread when the plugin may not make a chat', async () => {
-    const { target, threads, sent } = await made({ refused: true });
+  it('answers 409 and keeps no thread when the read answers no chat for the bot', async () => {
+    const { target, threads, sent } = await made({ chats: {} });
     const answer = await target(endpoint(), call({ thread: 'pr-12', text: 'hello' }));
     expect(answer.status).toBe(409);
     expect(await threads.list()).toEqual([]);

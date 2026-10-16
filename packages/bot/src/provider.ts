@@ -1,19 +1,20 @@
+import { createHash } from 'node:crypto';
 import { mkdirSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { RpcError } from '@ahpd/sdk';
-import { covers } from '@ahpd/sdk';
+import { covers, ownerOfPrincipal } from '@ahpd/sdk';
+import { CHAT_PROVIDER } from './chat.js';
 import {
-  BOT_BODIES, BOT_COLORS, checkRecord, isSlug, sameOwner,
+  BOT_BODIES, BOT_COLORS, checkRecord, isSlug,
 } from './record.js';
-import { sessionFor } from './start.js';
-import { DEFAULT_TEMPLATE, firstTurn, templateOf } from './template.js';
+import { DEFAULT_TEMPLATE, templateOf } from './template.js';
 import type { BotCatalogue } from './catalogue.js';
 import type { BotRecord } from './record.js';
 import type { BotStore } from './store.js';
 import type { BotTemplates } from './template.js';
 import type {
-  Bag, Entry, Metadata, Owner, Principal, Read, ResourceChange, ResourceProvider, SchemeDescription, SessionRequest, Watcher,
-  WatchOptions, Write,
+  Bag, Entry, Metadata, Owner, Principal, Read, RecordCollection, ResourceChange, ResourceProvider, SchemeDescription,
+  SessionRequest, Watcher, WatchOptions, Write,
 } from '@ahpd/sdk';
 
 /**
@@ -34,6 +35,12 @@ import type {
  * project it belongs to, and a holder of `bot:get` may read one, and a holder
  * of `bot:list` sees every one there is.
  *
+ * A read answers the record with one key more: `chat`, the reader's own direct
+ * chat with that bot. Who may chat is who may read it and then either holds
+ * `bot:chat` or owns it, and a reader who may not is answered the record alone.
+ * The chat is started the first time one is asked for, kept against the bot and
+ * the person in the `bot-chats` collection, so the next read is the same chat.
+ *
  * Who may change one is asked on the write and delete roads, and it is the
  * read road's list plus the host's own key: its owner, a member of the team or
  * project it belongs to, a holder of `*:*`, and this host. The grant that
@@ -51,11 +58,21 @@ import type {
  */
 
 /**
+ * The collection one row per bot and person is kept in.
+ *
+ * A record store puts collection `x` at `<configDir>/x/`, which is the folder
+ * the `bot-chat` provider keeps its logs in too: one chat's row and the log it
+ * is about are two files side by side, and a person reading the folder sees
+ * which chat each log belongs to.
+ */
+export const CHATS = 'bot-chats';
+
+/**
  * The sessions this host keeps, as much of them as a bot is about.
  *
  * Read through the host rather than held here, the way `store` lives beside the
- * daemon: a bot links a session the host already has, and a link is kept only
- * where the host opened that session for the bot's own owner.
+ * daemon: a chat is a session this host holds, and one it no longer holds - a
+ * daemon that restarted - is a chat that is started again.
  */
 export interface BotSessions {
   /** Whose the session at this URI is, or nothing where this host has none. */
@@ -70,8 +87,10 @@ export interface BotOptions {
   root: string;
   /** Where the records are kept. */
   store: BotStore;
-  /** The host's sessions, for the link a record may make to one. */
+  /** The host's sessions, where the chat a read opens is started. */
   sessions: BotSessions;
+  /** The index of bot and person to the chat the person talks to that bot in. */
+  chats: RecordCollection;
   /**
    * What this host is called, for a bot made by work nobody is a person for.
    *
@@ -84,7 +103,7 @@ export interface BotOptions {
   hostName: string;
   /** The `x-ahpd-bots://` catalogue, told each make, edit and delete. */
   catalogue?: BotCatalogue;
-  /** The templates a bot's first turn is made from. */
+  /** The templates a bot may name, read to refuse one that is not there. */
   templates: BotTemplates;
 }
 
@@ -187,13 +206,12 @@ const manifest = (hostName: string) => ({
       description: 'Which colour it is drawn in: a name, or `#rrggbb`.',
     },
     instructions: { type: 'string', description: 'What it was asked to be, in its own words.' },
-    template: { type: 'string', description: 'The template its first turn is made from, by name. Absent is the default.' },
+    template: { type: 'string', description: 'The template a chat with it would open with, by name. Absent is the default.' },
     harness: { type: 'string', description: 'The backend a session of it runs on.' },
     model: { type: 'string', description: 'The model it asks for.' },
     preset: { type: 'string', description: 'The session preset it starts from.' },
     workspace: { type: 'string', description: 'The folder it works in, under the plugin root. Its own, and never moved.' },
     computer: { type: 'string', description: 'The machine it runs in.' },
-    session: { type: 'string', description: 'The session it is linked to, one this host has for its owner.' },
     owner: {
       type: 'string',
       anyOf: [{ type: 'string' }, { const: `root:${hostName}`, title: 'This host' }],
@@ -222,10 +240,10 @@ export const mayRead = (bot: BotRecord, reader: Principal): boolean => {
 /**
  * Whether this writer may change or delete this bot.
  *
- * A bot is not every holder's to rewrite: its instructions are what a session
- * owned by whoever it belongs to is asked to be, so changing one is changing
- * what that person's session does. Four ways in - it is theirs, they belong to
- * the team or project it belongs to, they hold `*:*`, or they are this host.
+ * A bot is not every holder's to rewrite: it belongs to somebody, and its
+ * instructions are what it does for them, so changing one is changing somebody
+ * else's bot. Four ways in - it is theirs, they belong to the team or project
+ * it belongs to, they hold `*:*`, or they are this host.
  *
  * `*:*` is the grant that is every grant, which is what the `admin` role holds
  * and what no other built-in role does. Asked as the wildcard itself rather
@@ -252,8 +270,57 @@ const mayWrite = (bot: BotRecord, writer: Owner | undefined, reader: Principal |
   return false;
 };
 
+/**
+ * Whether this reader may talk to this bot in a chat of their own.
+ *
+ * Two ways in, and no others: a bot's owner is not made to hold a grant for
+ * their own conversation, which is the read road's own rule for `bot:get`, and
+ * `bot:chat` is what lets anybody else open one. A membership of the team or
+ * project a bot belongs to is not a way in here, because a chat is one person
+ * talking to one bot and there is nothing for a third to be shown.
+ *
+ * A reader who is nobody - the root connection, and every connection on a host
+ * with no users directory - is this host, which chats with any of its bots and
+ * has no grant to show for it.
+ */
+const mayChat = (bot: BotRecord, reader: Principal | undefined): boolean => {
+  if (reader === undefined) return true;
+  if (bot.owner === `user:${reader.id}`) return true;
+  return reader.can('bot:chat');
+};
+
+/** How much of a row's id is the readable part: forty is a record id, and the hash is nine of them. */
+const ROW = 31;
+
+/**
+ * The row one person's chat with one bot is kept under.
+ *
+ * A record id is lowercase letters, digits and dashes, one to forty of them, so
+ * `<slug>.<owner>` is written as one name with everything else a dash and the
+ * first eight hex of the two sha256'd on the end - the way a state volume is
+ * named, and for the same reason: two rows whose readable names meet, `user:a.b`
+ * with `x` and `user:a-b` with `x`, still get an id each.
+ */
+const chatRow = (slug: string, owner: Owner): string => {
+  const readable = `${slug}.${owner}`.toLowerCase().replace(/[^a-z0-9-]/g, '-').slice(0, ROW);
+  return `${readable}-${createHash('sha256').update(`${slug}\0${owner}`).digest('hex').slice(0, 8)}`;
+};
+
 export function botProvider(options: BotOptions): BotProvider {
   const { root, store } = options;
+
+  /** This host's own owner, whatever this machine is called today. */
+  const self: Owner = `root:${options.hostName}`;
+
+  /**
+   * The chats being started right now, by row id.
+   *
+   * One chat per bot and person means the second of two reads arriving together
+   * waits on the first rather than opening a session of its own: what a person
+   * gets for reading a bot twice at once is one chat, not two rows pointing at
+   * two conversations.
+   */
+  const starting = new Map<string, Promise<string>>();
 
   /** One open watch: the slug it is on, empty for `bot://`, and who opened it. */
   interface Watching {
@@ -321,7 +388,6 @@ export function botProvider(options: BotOptions): BotProvider {
     reader: Principal | undefined,
     existing?: BotRecord,
   ): Owner => {
-    const self: Owner = `root:${options.hostName}`;
     if (asked === undefined) return existing?.owner ?? writer ?? self;
     // An edit keeps the owner on record: `checkRecord` has refused any other,
     // and a host owner under an older name stays as it was written.
@@ -357,24 +423,6 @@ export function botProvider(options: BotOptions): BotProvider {
     throw new RpcError(-32009, `${writer} may not make a bot of ${asked} here`);
   };
 
-  /**
-   * Whether a body may link this bot to this session, or the refusal it is owed.
-   *
-   * A bot is talked to in its session and its instructions are what that
-   * session is asked to be, so a link to somebody else's session would be this
-   * bot's work in a conversation that is not the writer's to put it in. The
-   * session has to be one this host has, opened for the bot's own owner.
-   *
-   * Two refusals that read differently because they are different mistakes: a
-   * URI this host has no session for is a body that cannot be, and one that is
-   * somebody else's is the writer reaching past what is theirs.
-   */
-  const mayLink = async (session: string, whose: Owner): Promise<void> => {
-    const held = await options.sessions.owner(session);
-    if (held === undefined) throw new RpcError(-32602, `${session} is not a session this host has`);
-    if (!sameOwner(held, whose)) throw new RpcError(-32009, `${session} is not a session of ${whose}`);
-  };
-
   /** The folder a bot works in, or the refusal a folder another bot has is owed. */
   const workspaceFor = (slug: string, asked: string | undefined, existing?: BotRecord): string => {
     const workspace = asked ?? existing?.workspace ?? `${root}/${slug}`;
@@ -388,6 +436,45 @@ export function botProvider(options: BotOptions): BotProvider {
       throw new RpcError(-32602, `${workspace} is where ${clash.id} works; a bot's folder is its own`);
     }
     return workspace;
+  };
+
+  /**
+   * The chat this owner talks to this bot in, started the first time one is
+   * asked for.
+   *
+   * The row first, and the session the row names: a chat this host still has is
+   * the chat, and one whose session has gone - a daemon that restarted, whose
+   * session store is empty until somebody opens it again - is started afresh
+   * and the row written over it.
+   *
+   * The start is the host's own road, so it is the owner who is asked for
+   * `session:create` and a refusal there is this read's: a chat that could not
+   * be opened is not a record answered with a key missing.
+   */
+  const chatOf = async (bot: BotRecord, whose: Owner): Promise<string> => {
+    const id = chatRow(bot.id, whose);
+    const row = await options.chats.get(id);
+    const held = row?.['chat'];
+    if (typeof held === 'string' && await options.sessions.owner(held) !== undefined) return held;
+    const running = starting.get(id);
+    if (running !== undefined) return running;
+    const begun = options.sessions.start({
+      owner: whose,
+      provider: CHAT_PROVIDER,
+      // The bot's own folder, which is where its work happens and so where a
+      // conversation about that work belongs.
+      workingDirectory: bot.workspace,
+      config: { bot: bot.id },
+      title: bot.name,
+    }).then(async (chat) => {
+      await options.chats.put({ id, bot: bot.id, owner: whose, chat });
+      return chat;
+    });
+    starting.set(id, begun);
+    // Held only while it is being started, whether it answers or refuses.
+    const done = (): void => { starting.delete(id); };
+    begun.then(done, done);
+    return begun;
   };
 
   return {
@@ -444,13 +531,29 @@ export function botProvider(options: BotOptions): BotProvider {
       };
     },
 
-    read: async (uri) => {
+    /**
+     * The record, and the reader's own chat with the bot where they may have
+     * one.
+     *
+     * A read is the only door a person has onto a bot they hold a grant for
+     * rather than made, so it is where their chat is opened: the same read
+     * twice is the same chat, and a reader who may not chat is answered the
+     * record alone rather than a refusal - there is nothing wrong with their
+     * read, there is simply no conversation of theirs to name.
+     *
+     * The chat is written under `chat` and nothing else of the record moves, so
+     * a client that writes the whole record back is writing back a bot it read.
+     */
+    read: async (uri, _wanted, reader) => {
       await store.ready();
       const held = at(uri);
       if (held.leaf !== '' || held.slug === '') throw absent(uri);
       const bot = store.get(held.slug);
       if (bot === undefined) throw absent(uri);
-      return { data: JSON.stringify(bot, null, 2), encoding: 'utf-8', contentType: 'application/json' };
+      const answered = mayChat(bot, reader)
+        ? { ...bot, chat: await chatOf(bot, reader === undefined ? self : ownerOfPrincipal(reader)) }
+        : bot;
+      return { data: JSON.stringify(answered, null, 2), encoding: 'utf-8', contentType: 'application/json' };
     },
 
     /**
@@ -495,18 +598,12 @@ export function botProvider(options: BotOptions): BotProvider {
       const said = parsed(uri, content);
       const draft = checkRecord(slug, said, existing);
       const whose = ownerFor(draft.owner, owner, reader, existing);
-      // A make reads its template to fill the first turn. An edit reads it only
-      // where the body names one, so a bot whose template was removed can still
-      // be edited; its next chat gets the default one and a problem, from
-      // `botPreamble`.
+      // A make reads its template. An edit reads it only where the body names
+      // one, so a bot whose template was removed can still be edited; a template
+      // that is named and missing is refused either way.
       const reads = existing === undefined || (said as Bag)['template'] !== undefined;
       const template = reads ? await templateOf(draft, options.templates) : DEFAULT_TEMPLATE;
       if (template === undefined) throw new RpcError(-32602, `The template ${draft.template as string} does not exist.`);
-      // Asked only where the body named a session: a link a write carried over
-      // from the record is one an earlier write already had checked, and an
-      // edit of the name is not an edit of this.
-      const named = (said as Bag)['session'];
-      if (typeof named === 'string' && named.trim() !== '') await mayLink(draft.session as string, whose);
       const now = new Date().toISOString();
       const record: BotRecord = {
         id: slug,
@@ -522,25 +619,19 @@ export function botProvider(options: BotOptions): BotProvider {
         ...(draft.preset === undefined ? {} : { preset: draft.preset }),
         workspace: workspaceFor(slug, draft.workspace, existing),
         ...(draft.computer === undefined ? {} : { computer: draft.computer }),
-        ...(draft.session === undefined ? {} : { session: draft.session }),
         owner: whose,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
       };
       /*
-       * A bot made with no session gets one, and it is the maker's.
+       * A make leaves a folder behind, and starts nothing else.
        *
-       * The folder is made first, because the session runs in it: on this host
-       * that is a directory to make, and in a computer the folder rides along
-       * as the working directory and the machine makes it. The host is asked
-       * before the record is saved and its refusal is the make's, so a start
-       * that did not happen leaves no bot behind claiming a session it has not
-       * got.
+       * The folder is where a bot works, so a bot that was made has one whether
+       * or not anybody has talked to it yet: on this host that is a directory to
+       * make, and in a computer the folder rides along as the working directory
+       * of whatever runs there and the machine makes it.
        */
-      if (existing === undefined && record.session === undefined) {
-        if (record.computer === undefined) mkdirSync(record.workspace, { recursive: true });
-        record.session = await options.sessions.start(sessionFor(record, firstTurn(record, template, [], options.templates.lastChats)));
-      }
+      if (existing === undefined && record.computer === undefined) mkdirSync(record.workspace, { recursive: true });
       await store.put(record);
       told(existing === undefined ? 'added' : 'updated', record);
       options.catalogue?.put(record, existing);
@@ -554,10 +645,10 @@ export function botProvider(options: BotOptions): BotProvider {
      * been told something untrue about what it is holding.
      *
      * Who may is who may edit it, and a delete is the worse of the two to get
-     * wrong: an edit can be edited back, and the record a session of this bot
-     * was made from cannot. The flag a directory needs says nothing here, so it
-     * is dropped: a bot has no children, and everything about one is in the
-     * record.
+     * wrong: an edit can be edited back, and a bot that is gone is a name
+     * nobody can answer on again. The flag a directory needs says nothing here,
+     * so it is dropped: a bot has no children, and everything about one is in
+     * the record.
      */
     remove: async (uri, _recursive, owner, reader) => {
       await store.ready();

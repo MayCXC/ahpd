@@ -56,6 +56,7 @@ async function made() {
     root: '/tmp/bots',
     store,
     sessions: { owner: async () => undefined, start: async () => 'echo:/one' },
+    chats: await records.collection('bot-chats'),
     hostName: 'test',
     templates: { text: async () => undefined, lastChats: 10 },
   });

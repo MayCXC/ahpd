@@ -20,14 +20,27 @@ export interface TurnEnd {
 /** How one turn ended, as the host's `turn_end` says it. */
 type Ending = Omit<TurnEnd, 'text'>;
 
+/**
+ * One bot's own chat, as the seams give it.
+ *
+ * A read of the bot answers the session, and the session's own state names the
+ * chat a turn is said in. The two are kept separate because a session can be
+ * started again under the same chat: what a thread record is about is the chat,
+ * and the session is how that chat was found.
+ */
+export interface BotChat {
+  /** The session the bot's read answered, which a thread record keeps. */
+  session: string;
+  /** The default chat of that session: where every turn of this bot is said. */
+  chat: string;
+}
+
 /** What the bot target reads and calls, so a test gives each one. */
 export interface BotSeams {
   /** The `webhook-threads` collection. */
   threads: RecordCollection;
-  /** The session a bot is linked to, or nothing when it has none. */
-  session(bot: string): Promise<string | undefined>;
-  /** Make a new chat in a session, and give its URI, or nothing when the host refuses the plugin. */
-  chat(session: string): Promise<string | undefined>;
+  /** The bot's own chat, or nothing when the plugin is answered no chat for it. */
+  chat(bot: string): Promise<BotChat | undefined>;
   /** Send one turn in a chat, and give the host's reason when it refused the turn, or `undefined` when it took it. */
   send(chat: string, turn: string, text: string): Promise<string | undefined>;
   /** Wait for one turn to end. Asked before the turn is sent, so no end is missed. */
@@ -135,28 +148,31 @@ export function turnEnds() {
 /**
  * The target of a bot endpoint.
  *
- * A call's text is a turn in one chat of the bot's session. The chat is the
- * one the call's thread already has, or a new one. The endpoint's `reply`
- * decides what the call is answered with.
+ * A call's text is a turn in the bot's own chat: one conversation between this
+ * plugin and this bot, which every thread of the endpoint says its turns in.
+ * The endpoint's `reply` decides what the call is answered with.
  */
 export function botTarget(seams: BotSeams): Target {
-  /** The last lookup of each thread, so the lookups of one thread run one after another and make one chat. */
+  /** The last lookup of each thread, so the lookups of one thread run one after another and keep one record. */
   const queued = new Map<string, Promise<Thread | undefined>>();
 
-  const lookOrMake = async (endpoint: Endpoint, thread: string, session: string): Promise<Thread | undefined> => {
+  const lookFor = async (endpoint: Endpoint, thread: string, bot: string): Promise<Thread | undefined> => {
+    const own = await seams.chat(bot);
+    if (own === undefined) return undefined;
     const kept = await findThread(seams.threads, endpoint.id, thread);
-    if (kept !== undefined && kept.session === session) return kept;
-    const chat = await seams.chat(session);
-    if (chat === undefined) return undefined;
-    const record: Thread = { id: kept?.id ?? threadId(), endpoint: endpoint.id, thread, session, chat };
+    // The bot's chat is the one it was, so the record already says where this
+    // thread talks. A chat that moved - a session started again - is written
+    // down again, and the record keeps the id it had.
+    if (kept !== undefined && kept.session === own.session && kept.chat === own.chat) return kept;
+    const record: Thread = { id: kept?.id ?? threadId(), endpoint: endpoint.id, thread, session: own.session, chat: own.chat };
     await seams.threads.put({ ...record });
     return record;
   };
 
-  const threadOf = (endpoint: Endpoint, thread: string, session: string): Promise<Thread | undefined> => {
+  const threadOf = (endpoint: Endpoint, thread: string, bot: string): Promise<Thread | undefined> => {
     const key = `${endpoint.id}\n${thread}`;
     const before = queued.get(key) ?? Promise.resolve(undefined);
-    const next = before.catch(() => undefined).then(() => lookOrMake(endpoint, thread, session));
+    const next = before.catch(() => undefined).then(() => lookFor(endpoint, thread, bot));
     queued.set(key, next);
     const forget = (): void => { if (queued.get(key) === next) queued.delete(key); };
     next.then(forget, forget);
@@ -176,11 +192,8 @@ export function botTarget(seams: BotSeams): Target {
     }
 
     const bot = endpoint.bot ?? '';
-    const session = await seams.session(bot);
-    if (session === undefined) return answer(409, { message: 'The bot has no session.' });
-
-    const thread = await threadOf(endpoint, call.thread, session);
-    if (thread === undefined) return answer(409, { message: 'The plugin may not make a chat in the bot session.' });
+    const thread = await threadOf(endpoint, call.thread, bot);
+    if (thread === undefined) return answer(409, { message: 'The plugin has no chat with the bot.' });
     const turn = randomUUID();
     const end = seams.ended(thread.chat, turn);
     end.catch((error: unknown) => { seams.problem(`webhooks/${endpoint.id} lost the end of turn ${turn}: ${reason(error)}`); });

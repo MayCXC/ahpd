@@ -64,6 +64,10 @@ export interface BotStore {
  * The store knows no plugin's record shape, so every field is checked here: a
  * record a person edited by hand can say anything, and a store that answered
  * something else is caught by the same check.
+ *
+ * A bot has no session link, and a record an older plugin wrote still names
+ * one. The key is dropped rather than read: a bot this host answers is a bot
+ * with no link on it, and the file keeps the line until its next write.
  */
 const kept = (said: unknown): BotRecord | undefined => {
   if (typeof said !== 'object' || said === null || Array.isArray(said)) return undefined;
@@ -77,7 +81,9 @@ const kept = (said: unknown): BotRecord | undefined => {
   // A body is a tag, so any word is kept, and a file with none is drawn with
   // the first suggestion rather than left out of the listing.
   const body = typeof one['body'] === 'string' && one['body'].trim() !== '' ? one['body'] : BOT_BODIES[0];
-  return { ...said, body } as BotRecord;
+  const rest: Record<string, unknown> = { ...one, body };
+  delete rest['session'];
+  return rest as unknown as BotRecord;
 };
 
 /** Whether two records say the same thing, whatever order their fields are in. */

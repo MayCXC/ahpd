@@ -19,16 +19,18 @@ import type { Vault } from '../../sdk/src/types/vault.js';
  *
  * The daemon has a users directory, so the webhook plugin's connection is
  * answered against the grants its entry names, and nothing else. A root client
- * makes the bot, which starts its session. A `sync` call then waits for the
- * echo backend's answer and gets the turn's text back.
+ * makes the bot, which starts nothing. A `sync` call then reads the bot, which
+ * starts the plugin's own chat with it, and says its text as a turn there. A
+ * `bot-chat` turn ends with no response part, so the call is answered with the
+ * status of the turn and no text.
  */
 
 const REPO = join(import.meta.dirname, '../../..');
 const BOT = './packages/bot/src/index.ts';
 const WEBHOOK = './packages/webhook/src/index.ts';
 
-/** The grants the webhook plugin needs to read a bot, make a chat and send a turn. */
-const GRANTS = ['bot:get', 'session:read', 'session:write'];
+/** The grants the webhook plugin needs to read a bot, open a chat with it and say a turn there. */
+const GRANTS = ['bot:get', 'bot:chat', 'session:read', 'session:create', 'session:write'];
 
 let loose: string[] = [];
 afterEach(() => {
@@ -108,19 +110,15 @@ async function started(grants: string[] = GRANTS) {
   return { host, lines, problems, routes, records };
 }
 
-it('answers a sync call with the text of the bot turn', async () => {
+it('answers a sync call with the turn status and no text, in the plugin chat', async () => {
   const { host, problems, routes, records } = await started();
   expect(problems).toEqual([]);
 
-  // The host's own key makes the bot, which starts its session.
+  // The host's own key makes the bot, which starts nothing: a chat is started
+  // by the first read of a bot who may chat, and that read is the plugin's.
   const root = host.accept(peer(), undefined, true);
   await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
-  const read = async (): Promise<Bag> => {
-    const answer = await root.handle({ method: 'resourceRead', params: { uri: 'bot://motion' } }) as Bag;
-    return JSON.parse(String(answer['data'])) as Bag;
-  };
-  await until(async () => typeof (await read())['session'] === 'string', 'the bot session to start');
 
   const webhooks = await records.collection('webhooks');
   await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'sync', syncTimeoutSeconds: 10 });
@@ -133,19 +131,34 @@ it('answers a sync call with the text of the bot turn', async () => {
     body: JSON.stringify({ thread: 'pr-12', text }),
   }));
 
+  /** What one chat holds now, read the way a client reads a chat. */
+  const turns = async (chat: string): Promise<{ message: { text: string } }[]> => {
+    const opened = await root.handle({ method: 'subscribe', params: { channel: chat } }) as {
+      snapshot?: { state?: { turns?: { message: { text: string } }[] } };
+    };
+    return opened.snapshot?.state?.turns ?? [];
+  };
+
   const first = await call('hello there');
   const said = await first.json() as Bag;
   expect({ status: first.status, said }).toMatchObject({ status: 200, said: { thread: 'pr-12', status: 'complete' } });
-  expect(String(said['text'])).toContain('hello there');
+  // A `bot-chat` turn is complete and carries no response part, so there is no text to answer with.
+  expect(said['text']).toBe('');
 
   const second = await call('once more');
   expect(second.status).toBe(200);
-  expect(String((await second.json() as Bag)['text'])).toContain('once more');
+  expect((await second.json() as Bag)['text']).toBe('');
 
-  // One thread, one chat: the second call went to the chat the first one made.
+  // One thread and one chat: both calls are turns in the one chat the plugin's
+  // read of the bot answered, which is where the bot answers through.
+  const rows = await (await records.collection('bot-chats')).find({ owner: 'plugin:webhook' });
+  expect(rows).toHaveLength(1);
   const threads = await (await records.collection('webhook-threads')).list();
   expect(threads).toHaveLength(1);
-  expect(threads[0]).toMatchObject({ endpoint: 'ci', thread: 'pr-12' });
+  expect(threads[0]).toMatchObject({ endpoint: 'ci', thread: 'pr-12', session: rows[0]?.['chat'] });
+  const chat = String(threads[0]?.['chat']);
+  await until(async () => (await turns(chat)).length === 2, 'both turns to reach the plugin chat');
+  expect((await turns(chat)).map((one) => one.message.text)).toEqual(['hello there', 'once more']);
 });
 
 it('answers 409 when the plugin may not read the bot', async () => {
@@ -164,16 +177,11 @@ it('answers 409 when the plugin may not read the bot', async () => {
   expect(answer.status).toBe(409);
 });
 
-it('answers 409 and names the grant when the plugin may not make a chat', async () => {
+it('answers 409 and names the grants when the plugin is answered no chat', async () => {
   const { host, lines, routes, records } = await started(['bot:get', 'session:read']);
   const root = host.accept(peer(), undefined, true);
   await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
-  const read = async (): Promise<Bag> => {
-    const answer = await root.handle({ method: 'resourceRead', params: { uri: 'bot://motion' } }) as Bag;
-    return JSON.parse(String(answer['data'])) as Bag;
-  };
-  await until(async () => typeof (await read())['session'] === 'string', 'the bot session to start');
   const webhooks = await records.collection('webhooks');
   await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
 
@@ -183,6 +191,9 @@ it('answers 409 and names the grant when the plugin may not make a chat', async 
     body: 'hello',
   }));
   expect(answer.status).toBe(409);
-  expect(lines.some((line) => line.startsWith('webhook: ') && line.includes('session:write'))).toBe(true);
+  expect(lines.some((line) => line.startsWith('webhook: ')
+    && line.includes('bot:chat') && line.includes('session:create'))).toBe(true);
   expect(await (await records.collection('webhook-threads')).list()).toEqual([]);
+  // The read answered the record alone: no chat of the plugin's was started.
+  expect(await (await records.collection('bot-chats')).list()).toEqual([]);
 });

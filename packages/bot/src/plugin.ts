@@ -1,7 +1,7 @@
 import { expandHome } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
-import { botPreamble } from './preamble.js';
-import { botProvider } from './provider.js';
+import { botChatAgent } from './chat.js';
+import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
 import { LAST_CHATS } from './template.js';
@@ -11,16 +11,14 @@ import type { Plugin } from '@ahpd/sdk';
  * The package as a plugin.
  *
  * One provider for the `bot:` scheme, the `x-ahpd-bots://` catalogue of the
- * bots each reader may read, and the folder bots work in as its one option.
- * The records are kept in the host's own record store rather than under the
- * option: what a bot *is* belongs to the host, and where it works is the
- * operator's to choose.
+ * bots each reader may read, the `bot-chat` agent a chat with a bot runs as,
+ * and the folder bots work in as its one option. The records are kept in the
+ * host's own record store rather than under the option: what a bot *is* belongs
+ * to the host, and where it works is the operator's to choose.
  *
  * `instructions` is the collection's body, so it is the Markdown half of the
  * file a person edits, and every other field is frontmatter above it. A
  * template is a record of the `templates` collection, whose body is `text`.
- * Each chat a person or a tool opens in a bot's session starts with the
- * bot's template, filled again.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -64,7 +62,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
     lastChats,
   };
-  host.registerChatPreamble(botPreamble(store, templates, (line) => { host.problem(`${name}: ${line}`); }));
+  /*
+   * One row per bot and person, holding the chat they talk in. What makes a
+   * read of `bot://` answer the same chat the second time as the first.
+   */
+  const chats = host.records(CHATS);
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
@@ -74,9 +76,16 @@ export const apply: Plugin['apply'] = (host, options) => {
     catalogue,
     hostName: host.hostName,
     templates,
+    chats,
     sessions: {
       owner: (uri) => host.sessionOwner(uri),
       start: (wanted) => host.startSession(wanted),
     },
   }));
+  /*
+   * A chat with a bot: a session of its own that runs no model, one JSON line
+   * per turn under the daemon's own configuration. What a read of `bot://`
+   * starts, and where a person and their bot talk. See `chat.ts`.
+   */
+  host.registerAgent(botChatAgent(host.configDir, store));
 };

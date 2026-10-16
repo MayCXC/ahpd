@@ -313,13 +313,16 @@ export const checkMethod = (name: unknown, value: unknown, by: string): string =
 };
 
 /**
- * An owner, as the four kinds the usage rules spell.
+ * An owner, as the five kinds the usage rules spell.
  *
  * Written here rather than imported: the shape is what a *grant* is checked
  * against at this boundary, and a plugin's string is the one thing in the host
- * that has not been through a type.
+ * that has not been through a type. `plugin:<name>` is one of the five because
+ * a plugin is not a person and its own work is nobody's but its own - a chat it
+ * keeps with a bot is started for it and not for anybody at a keyboard - which
+ * is what the sessions store has read back since plugin/20 named the kind.
  */
-const OWNER = /^(?:user|team|project|root):.+$/;
+const OWNER = /^(?:user|team|project|root|plugin):.+$/;
 
 /**
  * Check one `startSession` request, and answer it in the host's own shape.
@@ -345,7 +348,7 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
   const prompt = typeof said === 'string' ? said.trim() : '';
   const owner = object.owner;
   if (typeof owner !== 'string' || !OWNER.test(owner)) {
-    throw new Error(miss(by, 'startSession', String(owner), 'an owner: user:, team:, project: or root:'));
+    throw new Error(miss(by, 'startSession', String(owner), 'an owner: user:, team:, project:, root: or plugin:'));
   }
   const provider = object.provider;
   if (provider !== undefined && !right(provider, 'string')) {
