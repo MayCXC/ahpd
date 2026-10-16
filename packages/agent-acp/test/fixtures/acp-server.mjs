@@ -414,6 +414,27 @@ const withdraw = (requestId) => {
   write({ jsonrpc: '2.0', method: '$/cancel_request', params: { requestId } });
 };
 
+/**
+ * Ask a question and withdraw it in the same write.
+ *
+ * One write puts both frames in one chunk on the pipe, so the client reads the
+ * withdrawal before its handler for the question runs. Two writes are two
+ * chunks a loaded client can read apart, and the question is then handled
+ * before the withdrawal arrives.
+ */
+const askWithdrawn = (method, params) => {
+  asked += 1;
+  const id = `s${asked}`;
+  const answered = new Promise((resolve, reject) => {
+    waiting.set(id, { resolve, reject });
+  });
+  process.stdout.write([
+    { jsonrpc: '2.0', id, method, params },
+    { jsonrpc: '2.0', method: '$/cancel_request', params: { requestId: id } },
+  ].map((message) => `${JSON.stringify(message)}\n`).join(''));
+  return answered;
+};
+
 /** The prompt's text, out of the content blocks the client sent. */
 const textOf = (params) => {
   const blocks = Array.isArray(params?.prompt) ? params.prompt : [];
@@ -1120,14 +1141,14 @@ const promptScript = async (id, params) => {
     /*
      * A withdrawal that beats the question to the client.
      *
-     * Both frames go out in one turn, so the request is already given up on by
+     * Both frames go out in one write, so the request is already given up on by
      * the time its handler runs: the client was never asked anything, so there
      * is nothing for it to draw - and nothing it could take away afterwards,
      * because the abort that would do it has already gone by. The prompt is
      * held the way `elicitwithdraw` holds it.
      */
     pending = id;
-    const question = askNamed('elicitation/create', {
+    const answered = askWithdrawn('elicitation/create', {
       mode: 'form',
       sessionId: session,
       toolCallId: 'call-aborted',
@@ -1138,8 +1159,7 @@ const promptScript = async (id, params) => {
         required: ['title'],
       },
     });
-    withdraw(question.id);
-    await question.answered;
+    await answered;
     return;
   }
 
