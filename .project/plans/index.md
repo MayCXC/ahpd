@@ -45,8 +45,9 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15 | - | - |
 | [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
+| [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | planned 2026-10-16 | - | - |
 
-Next free number in `daemon`: `30`.
+Next free number in `daemon`: `31`.
 
 ## host
 
@@ -233,8 +234,9 @@ Reference: [00-claude.md](claude/00-claude.md)
 | [20 - A Claude turn reads its message's attachments, queued and steered ones included](claude/20-a-claude-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](claude/20-a-claude-turn-reads-its-attachments/implemented.md), [deferred.md](claude/20-a-claude-turn-reads-its-attachments/deferred.md)) | host 68 | ahpapp `chat/03` for Claude sessions |
 | [21 - A client's tools reach the agent whole and on time](claude/21-client-tools-reach-agent-whole-and-on-time/plan.md) | high | built 2026-10-11 ([implemented.md](claude/21-client-tools-reach-agent-whole-and-on-time/implemented.md)); the VS Code check by hand remains | - | - |
 | [22 - A Claude session fails cleanly](claude/22-a-claude-session-fails-cleanly/plan.md) | medium | built 2026-10-11 ([implemented.md](claude/22-a-claude-session-fails-cleanly/implemented.md)) | - | - |
+| [23 - agent-claude is on the Claude Agent SDK 0.3.301](claude/23-agent-claude-is-on-agent-sdk-0-3-301/plan.md) | medium | planned 2026-10-16 | - | - |
 
-Next free number in `claude`: `23`.
+Next free number in `claude`: `24`.
 
 ## documentation
 
@@ -376,8 +378,9 @@ Worked in this order: 01, 02, 09, 10, then 03, 04, host 19, 05, 06, 07.
 | [13 - A model pi cannot find fails the turn that asked for it](pi/13-a-model-pi-cannot-find-fails-the-turn/plan.md) | high | built 2026-10-02 ([implemented.md](pi/13-a-model-pi-cannot-find-fails-the-turn/implemented.md)) | - | - |
 | [14 - agent-pi.test.ts is split into one test file per area](pi/14-pi-test-is-split-by-area/plan.md) | high | built 2026-10-04 ([implemented.md](pi/14-pi-test-is-split-by-area/implemented.md)); every task done, reviewed 2026-10-10 | - | - |
 | [15 - A pi turn reads its message's attachments, queued and steered ones included](pi/15-a-pi-turn-reads-its-attachments/plan.md) | medium | built 2026-10-07 ([implemented.md](pi/15-a-pi-turn-reads-its-attachments/implemented.md)) | host 68 | - |
+| [16 - agent-pi is on pi 1.3.0](pi/16-agent-pi-is-on-pi-1-3/plan.md) | medium | planned 2026-10-16 | - | - |
 
-Next free number in `pi`: `16`.
+Next free number in `pi`: `17`.
 
 ## acp
 
@@ -402,8 +405,9 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [13 - session.ts is split into one file per area](acp/13-session-is-split-by-area/plan.md) | high | built 2026-10-07 ([implemented.md](acp/13-session-is-split-by-area/implemented.md)) | host 52 | - |
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
+| [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | planned 2026-10-16 | - | - |
 
-Next free number in `acp`: `16`.
+Next free number in `acp`: `17`.
 
 ## usage
 
