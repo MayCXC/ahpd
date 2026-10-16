@@ -1,6 +1,6 @@
 ---
 title: A line names the packages before npm runs
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -36,3 +36,19 @@ Each npm call in `install.ts` follows a line that names its packages, so the ter
 - Run `pnpm -s build`, `pnpm typecheck`, `pnpm boundary`, `pnpm schema` and the vitest suites of sdk and server.
 
 ## Resume
+
+Done 2026-10-16. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`install.ts` says one line before each of its four npm calls:
+
+- `installPlugins`: `Installing <names> with npm.`
+- `updatePlugins`: `Updating <names> with npm.`, and with `--force` one `Updating <name> with npm.` before each package's own call.
+- `removePlugins`: `Removing <names> with npm.`
+
+The names are what npm is given: the install's `wanted`, the update's `targets` and the remove's `uninstalled`. So a chosen version shows, as in `Installing @ahpd/agent-claude@0.1.0 with npm.`, and the sdk that every call installs is not named. The `Installed` line after npm uses the same names.
+
+In `packages/server/test/plugin-install.test.ts`, `heard` records the lines said at each runner call, and four new cases check the line before npm for install, update, update with `--force` and uninstall. Nine cases that check the full list of said lines now hold the `Updating` line.
+
+Validation: build, typecheck, boundary, `node tools/schema.mjs` and `git diff --quiet tools/` pass. Vitest on sdk, server, agent-claude, agent-acp, agent-cofold and bot: 273 files and 4909 tests pass. `packages/sdk/test/fixtures/wire.jsonl` is restored.
+
+Left: the by-hand check of `ahpd configure` on Windows.

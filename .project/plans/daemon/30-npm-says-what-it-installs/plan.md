@@ -44,7 +44,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A line names the packages before npm runs](task-01-a-line-names-packages-before-npm.md) | todo | - |
+| [01 - A line names the packages before npm runs](task-01-a-line-names-packages-before-npm.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -52,8 +52,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16.
-- **Next action:** [task-01-a-line-names-packages-before-npm.md](task-01-a-line-names-packages-before-npm.md).
+- **Done so far:** planned 2026-10-16; the one task implemented 2026-10-16, not reviewed and not set to done.
+- **Next action:** the review of [task-01-a-line-names-packages-before-npm.md](task-01-a-line-names-packages-before-npm.md).
 - **Open questions:** none.
 - **Watch out for:** a test that checks the full list of said lines needs the new line.
 

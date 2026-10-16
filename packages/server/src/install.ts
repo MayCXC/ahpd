@@ -575,7 +575,8 @@ const refuseNonPlugins = async (names: readonly string[], options: InstallOption
  * it. A registry package is refused first when its manifest has no `ahpd`
  * field, and a bare name is installed at the newest version that admits this
  * daemon; nothing is loaded here, so whether the plugin works is what the next
- * `ahpd plugin list` or the next run says.
+ * `ahpd plugin list` or the next run says. What npm is given is said before it
+ * runs, because npm says nothing while it works.
  *
  * No `--allow-scripts` here, and that is a finding rather than an omission:
  * npm 12 refuses that flag on a project-scoped install (`--prefix`) and tells
@@ -599,6 +600,7 @@ export async function installPlugins(names: readonly string[], options: InstallO
   // `--enable` still writes the daemon's own configuration there.
   mkdirSync(options.configDir, { recursive: true });
   mkdirSync(root, { recursive: true });
+  options.say(`Installing ${wanted.join(', ')} with npm.`);
   const done = await options.run('npm', ['install', '--prefix', root, ...daemonsSdk(options.version), ...wanted]);
   if (done.code !== 0) {
     throw npmFailed(`npm could not install ${names.join(', ')}`, done);
@@ -651,9 +653,10 @@ export interface Moved {
  * package with no version that admits this daemon cannot be installed at all,
  * so it ends the update before npm runs, or with `force` is said and left where
  * it is while the others move. A package installed from outside the registry is
- * left as it is. `config.json` is not touched. Says each package whose
- * installed version changed, from the version before npm to the one npm left,
- * or `Nothing to update.` when none did, and answers those packages. The sdk is
+ * left as it is. `config.json` is not touched. Says what each npm call is
+ * given before it runs, then each package whose installed version changed,
+ * from the version before npm to the one npm left, or `Nothing to update.`
+ * when none did, and answers those packages. The sdk is
  * installed beside them by every call, so a version of it that changed is
  * answered as moved too, though it is no plugin to name.
  *
@@ -720,6 +723,7 @@ export async function updatePlugins(names: 'all' | readonly string[], options: U
   let reason: Ran | undefined;
   if (options.force === true) {
     for (const [at, one] of kept.entries()) {
+      options.say(`Updating ${targets[at] as string} with npm.`);
       const done = await options.run('npm', ['install', '--prefix', root, ...daemonsSdk(options.version), targets[at] as string]);
       if (done.code === 0) continue;
       // Which package npm refused, and npm's own words for the first of them.
@@ -728,6 +732,7 @@ export async function updatePlugins(names: 'all' | readonly string[], options: U
     }
   }
   else {
+    options.say(`Updating ${targets.join(', ')} with npm.`);
     const done = await options.run('npm', ['install', '--prefix', root, ...daemonsSdk(options.version), ...targets]);
     if (done.code !== 0) {
       throw npmFailed(`npm could not update ${kept.map((one) => packageOf(one.name)).join(', ')}; rerun with --force to update only the plugins that can be updated`, done);
@@ -773,6 +778,7 @@ export interface RemoveOptions {
  * run to stop loading a plugin leaves the package where it is. An uninstall
  * that fails is reported after the list has already changed, which is the
  * order a person can act on: the plugin is off, and npm's reason is on screen.
+ * The packages are said before npm runs.
  */
 export async function removePlugins(names: readonly string[], options: RemoveOptions): Promise<void> {
   const root = pluginRoot(options.configDir);
@@ -785,6 +791,7 @@ export async function removePlugins(names: readonly string[], options: RemoveOpt
   // The sdk is the daemon's, installed beside every plugin, and stays.
   const uninstalled = packages.filter((name) => name !== SDK);
   if (uninstalled.length === 0) return;
+  options.say(`Removing ${uninstalled.join(', ')} with npm.`);
   const done = await options.run('npm', ['uninstall', '--prefix', root, ...uninstalled]);
   if (done.code !== 0) {
     throw npmFailed(`npm could not uninstall ${uninstalled.join(', ')}`, done);
