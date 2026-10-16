@@ -208,7 +208,7 @@ Reference: [00-host.md](host/00-host.md)
 | [92 - A session keeps its working folder, and the backends find it there after a restart](host/92-a-session-keeps-its-working-folder/plan.md) | high | built 2026-10-15 | 57 | - |
 | [93 - A turn lets go of its sender at every end](host/93-a-turn-lets-go-of-its-sender-at-every-end/plan.md) | medium | built 2026-10-15 ([implemented.md](host/93-a-turn-lets-go-of-its-sender-at-every-end/implemented.md)) | - | - |
 | [94 - VS Code lists ahpd's automations](host/94-vscode-lists-ahpds-automations/plan.md) | high | built 2026-10-15 ([implemented.md](host/94-vscode-lists-ahpds-automations/implemented.md)) | - | - |
-| [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | active; tasks 01-02 implemented and reviewed; tasks 03-04 added 2026-10-16; the VS Code check remains | - | - |
+| [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | active; tasks 01-02 implemented and reviewed; tasks 03-04 implemented and reviewed 2026-10-16; the VS Code check remains | - | - |
 | [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
 | [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | planned 2026-10-16 | - | - |
 | [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | planned 2026-10-16 | - | - |
@@ -225,6 +225,7 @@ Reference: [00-host.md](host/00-host.md)
 | [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | planned 2026-10-16 | - | - |
 | [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | planned 2026-10-16 | - | - |
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | planned 2026-10-16 | - | - |
+| [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | planned 2026-10-16 | - | - |
 
 Next free number in `host`: `97`.
 
@@ -430,6 +431,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
 | [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
+| [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | planned 2026-10-16 | - | - |
 
 Next free number in `acp`: `17`.
 

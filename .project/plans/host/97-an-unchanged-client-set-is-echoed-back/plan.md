@@ -14,6 +14,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L746-L757](../../../../packages/sdk/src/host.ts#L746-L757) - `refuse`: to the sender only, at the current `serverSeq`, not buffered"
   - "[code://packages/sdk/src/host.ts#L1346-L1360](../../../../packages/sdk/src/host.ts#L1346-L1360) - `dispatchAction`, which sets `origin` and waits on `behind`"
   - "[code://packages/sdk/src/host/tooling.ts#L1087-L1100](../../../../packages/sdk/src/host/tooling.ts#L1087-L1100) - `retool`: `setTools` runs after the dispatch, and a failure is only logged"
+  - "[code://packages/sdk/src/host/chatactions.ts#L1096-L1099](../../../../packages/sdk/src/host/chatactions.ts#L1096-L1099) - a lead chat's `chat/turnCancelled` says nothing when no turn runs"
   - "[code://docs/sdk/AHP.md#L651-L659](../../../../docs/sdk/AHP.md#L651-L659) - \"An action that changes nothing is not a change\", and the loop of 300 round trips"
   - "[code://packages/sdk/test/presence.test.ts#L121-L142](../../../../packages/sdk/test/presence.test.ts#L121-L142) - the tests of the silence and of a changed set"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/agentHostStateManager.ts#L2029-L2052 - VS Code echoes every client action and moves `serverSeq`, a rejection too"
@@ -26,7 +27,7 @@ refs:
 
 ## Goal
 
-A client that sends `session/activeClientSet` always gets an answer to its `clientSeq`.
+A client that sends `session/activeClientSet` or `chat/turnCancelled` always gets an answer to its `clientSeq`.
 An announcement that changes nothing gets an echo to its sender only, so the client drops its pending action.
 The other clients hear nothing, so the loop of 300 round trips cannot come back.
 
@@ -62,6 +63,7 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 | The echo keeps the current `serverSeq` and does not move it | Softov, 2026-10-16, chose "the current one without moving it" for "The echo's `serverSeq`?" | 01 |
 | A `setTools` that fails is only logged, as now | Softov, 2026-10-16, chose "only log it" for "A `setTools` that fails?" | 01 |
 | The echo is always sent, with no capability flag | Softov, 2026-10-16, chose "always send it" for "Gate it?" | 01, 02 |
+| A `chat/turnCancelled` that changes nothing gets the same echo to its sender, at the current `serverSeq` | Softov, 2026-10-16, chose "Fold into plans" | 03 |
 
 ## Proposed architecture
 
@@ -73,7 +75,8 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The sender hears its unchanged set](task-01-the-sender-hears-its-unchanged-set.md) | todo | - |
-| [02 - The docs say when a set is echoed](task-02-the-docs-say-when-a-set-is-echoed.md) | todo | 01 |
+| [02 - The docs say when a set is echoed](task-02-the-docs-say-when-a-set-is-echoed.md) | todo | 01, 03 |
+| [03 - An idle cancel is echoed to its sender](task-03-an-idle-cancel-is-echoed-to-its-sender.md) | todo | 01 |
 
 ## Risks and tradeoffs
 
@@ -82,7 +85,7 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-hears-that-its-active-client-set-was-applied.md`. Planned 2026-10-16 with Softov's answers.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-hears-that-its-active-client-set-was-applied.md`. Planned 2026-10-16 with Softov's answers. Task 03 added 2026-10-16.
 - **Next action:** build task 01.
 - **Open questions:** none.
 - **Watch out for:**
@@ -92,6 +95,7 @@ The other clients hear nothing, so the loop of 300 round trips cannot come back.
 ## Final verification checklist
 
 - [ ] A test: an unchanged set gets an echo with its `clientSeq` to the sender, and the other client gets nothing.
+- [ ] A test: a cancel with no turn running gets an echo to its sender only.
 - [ ] `presence.test.ts:142` still passes: a changed set reaches every client.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] `plans/index.md` updated.

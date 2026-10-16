@@ -68,8 +68,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | --- | --- | --- |
 | [01 - An automation is exported as VS Code's file](task-01-automation-exported-as-vscode-file.md) | implemented | - |
 | [02 - VS Code's file is imported as an automation](task-02-vscode-file-imported-as-an-automation.md) | implemented | 01 |
-| [03 - Export writes local for every zone](task-03-export-writes-local-for-every-zone.md) | todo | 01 |
-| [04 - The CLI lists the automations](task-04-the-cli-lists-the-automations.md) | todo | - |
+| [03 - Export writes local for every zone](task-03-export-writes-local-for-every-zone.md) | implemented | 01 |
+| [04 - The CLI lists the automations](task-04-the-cli-lists-the-automations.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -78,8 +78,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16.
-- **Next action:** build tasks 03 and 04. Then the check by hand in VS Code, in `pending/vscode-checks.md`.
+- **Done so far:** planned 2026-10-15. Task 01 implemented 2026-10-16: `blueprint.ts` and `ahpd automation export`. Task 02 implemented 2026-10-16: `ahpd automation import`. Both reviewed 2026-10-16. Tasks 03 and 04 implemented and reviewed 2026-10-16, merged in `b600db07`.
+- **Next action:** the check by hand in VS Code, in `pending/vscode-checks.md`.
 - **Open questions:** none.
 - **Watch out for:** VS Code refuses a file with any key it does not know, so export writes no key of ahpd's own.
 

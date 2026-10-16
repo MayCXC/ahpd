@@ -1,6 +1,6 @@
 ---
 title: The CLI lists the automations
-status: todo
+status: implemented
 layer: server
 refs:
   - "[code://packages/server/src/commands/automation.ts](../../../../packages/server/src/commands/automation.ts) - the `automation` group, with export and import"

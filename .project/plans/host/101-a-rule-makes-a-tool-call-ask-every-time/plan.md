@@ -26,7 +26,7 @@ refs:
   - "[code://packages/agent-cofold/src/pauses.ts#L139-L180](../../../../packages/agent-cofold/src/pauses.ts#L139-L180) - `confirm` sends `alwaysApprove` for `allow-session`"
   - "[code://.project/decisions/each-backend-offers-its-options-unless-a-rule-asks.md](../../../../.project/decisions/each-backend-offers-its-options-unless-a-rule-asks.md) - each backend offers its own options; the host remembers no approval"
   - "[code://.project/decisions/claude-approvals-keeps-dont-ask.md](../../../../.project/decisions/claude-approvals-keeps-dont-ask.md) - the six Claude modes, `dontAsk` included"
-  - npm://@anthropic-ai/claude-agent-sdk@^0.3.301 - `HookPermissionDecision` and `permissionDecision: 'ask'` in a `PreToolUse` answer
+  - npm://@anthropic-ai/claude-agent-sdk@0.3.278 - `HookCallback`, `HookCallbackMatcher.timeout` and `PreToolUseHookSpecificOutput` with `permissionDecision`
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/workbench/contrib/chat/browser/chat.shared.contribution.ts#L881 - `chat.tools.eligibleForAutoApproval`, a map of tool name to boolean
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts#L1071-L1100 - an ineligible tool always confirms and offers no auto-confirm
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/workbench/contrib/chat/browser/tools/languageModelToolsService.ts#L1348-L1411 - `isToolEligibleForAutoApproval`, and the session level that skips it
@@ -73,7 +73,7 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 | --- | --- | --- |
 | The question for a matched call offers no "always" option | Softov, 2026-10-14, the idea: "the card offers no \"always\"" | 02-05 |
 | A remembered allow does not apply to a matched call | Softov, 2026-10-14, the idea | 02-05 |
-| Claude enforces it with a `PreToolUse` hook that answers `ask` | Softov, 2026-10-14, the idea | 02 |
+| Claude enforces it with a `PreToolUse` hook | Softov, 2026-10-14, the idea | 02 |
 | For ACP, the host enforces it only on the MCP tools it serves | Softov, 2026-10-14, the idea | 03 |
 | The name is VS Code's: `eligibleForAutoApproval`, where `false` means "always ask" | (defaulted: upstream parity) | 01 |
 | An ask rule wins over a terminal allow rule | (defaulted: as VS Code, eligibility comes before auto-approval) | 01 |
@@ -83,11 +83,12 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 | The rule wins over every mode, `bypassPermissions` included, and `dontAsk` refuses the call | Softov, 2026-10-16, chose "the rule wins over every mode" for "What the permission mode does" | 02-05 |
 | A new decision supersedes "each backend offers its own approval options" and holds the exception | Softov, 2026-10-16, chose "a decision that amends it" for "Whether a decision is needed"; [decision](../../../decisions/each-backend-offers-its-options-unless-a-rule-asks.md) | 01 |
 | One check on `Start`, shared with host/100, with this rule first | Softov, 2026-10-16, chose "one check on `Start`" for "How this plan relates to host/100" | 01 |
+| Claude's hook awaits the confirmation `canUseTool` uses and answers `allow` or `deny`, never `ask`; it offers no `allow-always` and drops `updatedPermissions` | Softov, 2026-10-16, chose "Fold into plans" | 02 |
 
 ## Proposed architecture
 
 - **Data flow** - the operator sets the rule. `getAutoApproval`, which host/100 p2 puts on `Start`, reads it first. A match returns "ask, with no always option"; otherwise the terminal check of host/100 runs.
-- **Layer responsibilities** - The sdk holds the rule, its matcher and its place in the check. In agent-claude, a `PreToolUse` hook asks, and `canUseTool` skips `settled`. The other backends ask and remove the "always" options. The docs give the rule and its limits.
+- **Layer responsibilities** - The sdk holds the rule, its matcher and its place in the check. In agent-claude, a `PreToolUse` hook awaits the confirmation of `canUseTool` and answers `allow` or `deny`, and `canUseTool` skips `settled`. The other backends ask and remove the "always" options. The docs give the rule and its limits.
 - **Requires** - host/100 p2, task 01, for `getAutoApproval` on `Start`.
 - **Matchers** - not shared with host/100. This rule matches tool names; host/100 matches command lines.
 - **Source-of-truth files** - [`code://packages/sdk/src/vscoderootconfig.ts`](../../../../packages/sdk/src/vscoderootconfig.ts), and the [decision](../../../decisions/each-backend-offers-its-options-unless-a-rule-asks.md).
@@ -106,13 +107,14 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 ## Risks and tradeoffs
 
 - An ACP agent decides itself whether to ask, so the rule holds only on the host's MCP tools. The docs say so.
-- The Claude SDK may not honor `permissionDecision: 'ask'` in `bypassPermissions`. Task 02 checks it with a probe and stops if it does not.
+- The Claude hook waits for a person, so its timeout must outlast the answer. Task 02 checks the timeout and the modes first, and stops if one fails.
+- An `ask` from a hook could be skipped by auto mode or `allowedTools`, so the hook answers `allow` or `deny` itself.
 - The plan touches five packages, so it may become a parent plan.
 - This differs from VS Code, where the session's Auto-Approve level skips the setting. The decision says why.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from `ideas/a-rule-makes-a-tool-call-ask-every-time.md`. Softov answered the five questions 2026-10-16. The decision is written.
+- **Done so far:** drafted 2026-10-16 from `ideas/a-rule-makes-a-tool-call-ask-every-time.md`. Softov answered the five questions 2026-10-16. The decision is written. Task 02 changed 2026-10-16: the hook answers `allow` or `deny`.
 - **Next action:** build host/100 p2 task 01, then [task-01-the-rule-is-read-in-the-approval-check.md](task-01-the-rule-is-read-in-the-approval-check.md).
 - **Open questions:** none.
 - **Watch out for:** in VS Code a terminal deny rule also means "ask". It is not this rule: it is a match on the command line and it still offers "always".
