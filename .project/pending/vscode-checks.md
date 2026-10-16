@@ -48,6 +48,14 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 3. Run `ahpd restart`, and reload the window.
 4. Open one more session, and check that the plugin is still off.
 
+## host/104: Disable (Session) on a built-in plugin stays
+
+1. Open a session on ahpd, and open its customizations list.
+2. Choose "Disable (Session)" on `cc-plugin-agents-md`.
+3. Check that the switch stays off and does not flicker back.
+4. Check that the plugin's skills leave the slash list of that session.
+5. Open a new session, and check that the plugin is on there.
+
 ## Reply
 
 Write "pass" for each section, or what you saw. A pass ticks the matching line in the plan.

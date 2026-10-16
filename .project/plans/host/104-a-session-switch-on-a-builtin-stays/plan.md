@@ -1,7 +1,7 @@
 ---
 title: A session switch on a built-in stays
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -85,9 +85,9 @@ The window's switch does not flicker back.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Claude switches a built-in plugin](task-01-claude-switches-a-builtin-plugin.md) | todo | - |
-| [02 - The host keeps a session decision](task-02-the-host-keeps-a-session-decision.md) | todo | 01 |
-| [03 - The docs say a built-in switches](task-03-the-docs-say-a-builtin-switches.md) | todo | 02 |
+| [01 - Claude switches a built-in plugin](task-01-claude-switches-a-builtin-plugin.md) | done | - |
+| [02 - The host keeps a session decision](task-02-the-host-keeps-a-session-decision.md) | done | 01 |
+| [03 - The docs say a built-in switches](task-03-the-docs-say-a-builtin-switches.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -96,16 +96,16 @@ The window's switch does not flicker back.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from host/83 p4's `implemented.md`. Planned 2026-10-16 with Softov's answers.
-- **Next action:** build task 01.
+- **Done so far:** planned 2026-10-16. All three tasks built and reviewed 2026-10-16, merged in `21d0c2ed`.
+- **Next action:** Softov runs the host/104 check in `pending/vscode-checks.md`.
 - **Open questions:** none.
-- **Watch out for:** the id of a built-in plugin is `plugin:<name>`, and its `enabledPlugins` key is its `source`.
+- **Watch out for:** the id of a built-in plugin is `plugin:<name>`, and its `enabledPlugins` key is its `source`. Two readings from task 01 that task 02 rests on: a switched-off plugin is *absent* from `reloadPlugins`' answer, so agent-claude is the one keeping the row; and `applyFlagSettings` merges into the flag layer at the top level, so a switch sends every decision of the session and not only the one it is moving.
 
 ## Final verification checklist
 
-- [ ] A test in agent-claude: switching a built-in off sets `enabledPlugins` and reloads the plugins, and answers `true`.
-- [ ] A test in the sdk: a session toggle of a built-in stays off in `customizations()`, with no refusal.
-- [ ] A test in the sdk: a skill toggle is still refused.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] A test in agent-claude: switching a built-in off sets `enabledPlugins` and reloads the plugins, and answers `true`.
+- [x] A test in the sdk: a session toggle of a built-in stays off in `customizations()`, with no refusal.
+- [x] A test in the sdk: a skill toggle is still refused.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: "Disable (Session)" on `cc-plugin-agents-md` stays off, and the plugin's skills leave the slash list.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.
