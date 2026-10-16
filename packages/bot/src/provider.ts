@@ -180,7 +180,7 @@ const manifest = (hostName: string) => ({
     name: { type: 'string', description: 'What a person called it.' },
     labels: { type: 'array', items: { type: 'string' }, description: 'Words a client groups bots by.' },
     description: { type: 'string', description: 'One line about it, for a list of bots.' },
-    body: { type: 'string', enum: [...BOT_BODIES], description: 'Which body it is drawn with.' },
+    body: { type: 'string', examples: [...BOT_BODIES], description: 'Which body it is drawn with: any word, and these are the suggestions.' },
     color: {
       type: 'string',
       anyOf: [{ enum: [...BOT_COLORS] }, { pattern: '^#[0-9a-fA-F]{6}$' }],

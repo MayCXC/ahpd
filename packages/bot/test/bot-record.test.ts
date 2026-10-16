@@ -75,8 +75,11 @@ it('refuses a body that is not a bot, or that names a field a bot does not have'
   expect(() => checkRecord('motion', { name: 'Motion', colour: 'red' })).toThrow(/colour/);
 });
 
-it('refuses a body or a colour outside the lists', () => {
-  expect(() => checkRecord('motion', { name: 'Motion', body: 'dragon' })).toThrow(/dragon/);
+it('keeps any word as a body, and refuses a colour outside the list', () => {
+  expect(checkRecord('motion', { name: 'Motion', body: 'flame' })).toMatchObject({ body: 'flame' });
+  expect(checkRecord('motion', { name: 'Motion', body: ' flame ' })).toMatchObject({ body: 'flame' });
+  expect(() => checkRecord('motion', { name: 'Motion', body: '' })).toThrow(/body/);
+  expect(() => checkRecord('motion', { name: 'Motion', body: 7 })).toThrow(/body/);
   expect(() => checkRecord('motion', { name: 'Motion', color: 'chartreuse' })).toThrow(/chartreuse/);
   expect(() => checkRecord('motion', { name: 'Motion', labels: [1] })).toThrow(/labels/);
 

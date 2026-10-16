@@ -272,15 +272,18 @@ it('offers in the make form every field a write takes, the session among them', 
   expect(properties['color']).toMatchObject({ anyOf: [{ enum: [...BOT_COLORS] }, { pattern: '^#[0-9a-fA-F]{6}$' }] });
 });
 
-it('refuses a body or a colour outside the lists', async () => {
+it('makes a bot with any word as its body, and refuses a colour outside the list', async () => {
   const { host } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
 
-  expect(await write(soft, 'bot://motion', { name: 'Motion', body: 'dragon' }, { createOnly: true }))
+  expect(await write(soft, 'bot://dragon', { name: 'Dragon', body: 'dragon' }, { createOnly: true }))
+    .toEqual({ result: {} });
+  expect(await record(soft, 'bot://dragon')).toMatchObject({ body: 'dragon' });
+  expect(await write(soft, 'bot://motion', { name: 'Motion', body: '' }, { createOnly: true }))
     .toMatchObject({ code: -32602 });
   expect(await write(soft, 'bot://motion', { name: 'Motion', color: 'chartreuse' }, { createOnly: true }))
     .toMatchObject({ code: -32602 });
-  // And neither of them was made, which is the half a refusal has to mean.
+  // And neither refused one was made, which is the half a refusal has to mean.
   expect(await call(soft, 'resourceRead', { uri: 'bot://motion' })).toMatchObject({ code: -32008 });
 });
 

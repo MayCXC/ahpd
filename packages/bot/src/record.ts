@@ -28,10 +28,11 @@ export const ALREADY_EXISTS = -32010;
 export const CONFLICT = -32011;
 
 /**
- * The bodies a bot is drawn with.
+ * The bodies a client is offered for a bot, and the ones a make with no body
+ * is drawn from.
  *
- * A closed set, because a client draws one: a bot whose body this host invented
- * is a bot nothing can render.
+ * A suggestion, not a limit: a bot's body is a tag, and any word is kept. A
+ * client draws a body it does not know with one of its own.
  */
 export const BOT_BODIES = [
   'robot', 'humanoid', 'alien', 'gumbo', 'circle',
@@ -45,7 +46,8 @@ export const BOT_COLORS = [
   'purple', 'pink', 'brown', 'grey', 'black',
 ] as const;
 
-export type BotBody = (typeof BOT_BODIES)[number];
+/** A bot's body: one of `BOT_BODIES`, or any other word a person chose. */
+export type BotBody = string;
 /** One of `BOT_COLORS`, or a hex colour kept as `#rrggbb` in lowercase. */
 export type BotColor = (typeof BOT_COLORS)[number] | `#${string}`;
 
@@ -155,6 +157,15 @@ const words = (said: unknown, fallback: string[]): string[] => {
   return (said as string[]).map((one) => one.trim()).filter((one) => one !== '');
 };
 
+/** A word, trimmed, or the make's own default. */
+const tag = (said: unknown, missing: string, fallback: string): string => {
+  if (said === undefined) return fallback;
+  if (typeof said !== 'string' || said.trim() === '') {
+    throw new RpcError(INVALID_PARAMS, `${missing} is a word`);
+  }
+  return said.trim();
+};
+
 /** One of a closed list, or the make's own default. */
 const among = <T extends string>(said: unknown, list: readonly T[], missing: string, fallback: T): T => {
   if (said === undefined) return fallback;
@@ -239,7 +250,7 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
   return {
     name,
     labels: words(body['labels'], existing?.labels ?? []),
-    body: among(body['body'], BOT_BODIES, 'a body a bot is drawn with', existing?.body ?? drawn()),
+    body: tag(body['body'], 'body', existing?.body ?? drawn()),
     color: colour(body['color'], existing?.color ?? BOT_COLORS[0]),
     owner: said_ as Owner | undefined,
     workspace,

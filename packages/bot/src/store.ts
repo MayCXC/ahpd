@@ -72,10 +72,12 @@ const kept = (said: unknown): BotRecord | undefined => {
   if (typeof one['name'] !== 'string' || one['name'].trim() === '') return undefined;
   if (typeof one['workspace'] !== 'string' || typeof one['owner'] !== 'string') return undefined;
   if (typeof one['createdAt'] !== 'string' || typeof one['updatedAt'] !== 'string') return undefined;
-  if (!(BOT_BODIES as readonly string[]).includes(String(one['body']))) return undefined;
   if (!isBotColor(one['color'])) return undefined;
   if (!Array.isArray(one['labels']) || one['labels'].some((label) => typeof label !== 'string')) return undefined;
-  return said as BotRecord;
+  // A body is a tag, so any word is kept, and a file with none is drawn with
+  // the first suggestion rather than left out of the listing.
+  const body = typeof one['body'] === 'string' && one['body'].trim() !== '' ? one['body'] : BOT_BODIES[0];
+  return { ...said, body } as BotRecord;
 };
 
 /** Whether two records say the same thing, whatever order their fields are in. */

@@ -245,3 +245,20 @@ it('says a write made through the scheme once, and not again for the store', asy
 
   expect(heard).toEqual(['added motion']);
 });
+
+it('lists a saved bot whatever its body says, and gives one with no body the first suggestion', async () => {
+  const { bots, store, provider, problems } = await made();
+  await bots.put(bot('flame', { body: 'flame' }));
+  const { body: _, ...bare } = bot('bare');
+  await bots.put(bare as StoredRecord);
+  await store.ready();
+
+  expect(store.all().map((one) => one.id).sort()).toEqual(['bare', 'flame']);
+  expect(store.get('flame')).toMatchObject({ body: 'flame' });
+  expect(store.get('bare')).toMatchObject({ body: 'robot' });
+  expect(problems).toEqual([]);
+
+  // And an edit to another word is kept, rather than refused.
+  await provider.write('bot://flame', said({ name: 'flame', body: 'spark' }));
+  expect((await record(provider, 'bot://flame'))['body']).toBe('spark');
+});
