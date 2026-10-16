@@ -15,6 +15,7 @@ import { apply } from '../src/plugin.js';
 import { botStore } from '../src/store.js';
 import type { ChatMessage } from '../src/chat.js';
 import type { Bag } from '../../sdk/src/types/common.js';
+import type { Start } from '../../sdk/src/types/agent.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
@@ -154,6 +155,18 @@ const said = (client: Client, turnId: string, text: string): Promise<unknown> =>
   params: { channel: CHAT, action: { type: 'chat/turnStarted', turnId, message: { text } } },
 });
 
+/** A client holds a message for later. */
+const queued = (client: Client, id: string, text: string): Promise<unknown> => client.handle({
+  method: 'dispatchAction',
+  params: { channel: CHAT, action: { type: 'chat/pendingMessageSet', kind: 'queued', id, message: { text } } },
+});
+
+/** A client takes one back. */
+const taken = (client: Client, id: string): Promise<unknown> => client.handle({
+  method: 'dispatchAction',
+  params: { channel: CHAT, action: { type: 'chat/pendingMessageRemoved', kind: 'queued', id } },
+});
+
 /** What the chat's state is, as a client subscribing to it now is told. */
 const stateOf = async (client: Client): Promise<Bag> => {
   const opened = await client.handle({ method: 'subscribe', params: { channel: CHAT } }) as {
@@ -163,17 +176,26 @@ const stateOf = async (client: Client): Promise<Bag> => {
 };
 
 /**
- * The agent a restarted daemon has: the same records, and the same folder.
+ * The backend over one daemon's folder, and the bots it reads.
  *
- * A restart is nothing in memory and everything on the disk, so this is the
- * whole of what it leaves behind for the chats to be read back from.
+ * The agent a restarted daemon has: a restart is nothing in memory and
+ * everything on the disk, so this is the whole of what it leaves behind for the
+ * chats to be read back from.
+ *
+ * And the only way to reach a road a client's message never arrives on. A
+ * `begin` while a turn is open is refused by the host rather than handed to a
+ * backend, so the guard behind that refusal is a method only this can call.
  */
-async function restarted(configDir: string, records: ReturnType<typeof memoryRecords>) {
-  return botChatAgent(configDir, botStore(
+async function backend(configDir: string, records: ReturnType<typeof memoryRecords>) {
+  const store = botStore(
     await records.collection('bots', { body: 'instructions' }),
     await records.collection('bots-gone'),
     () => {},
-  ));
+  );
+  // A chat is started by a read of `bot://`, which is what loads the store by
+  // the time a `create` asks it for a bot. A test asking it directly waits.
+  await store.ready();
+  return botChatAgent(configDir, store);
 }
 
 /** What the call was refused with, or a case that fails because it was allowed. */
@@ -213,7 +235,7 @@ it('keeps a chat in a log, and answers it again after a restart', async () => {
   expect(kept[1]).toMatchObject({ id: 't1', state: 'complete', responseParts: [] });
 
   // A daemon that restarts has nothing in memory. What it has is the folder.
-  const fresh = await restarted(configDir, records);
+  const fresh = await backend(configDir, records);
 
   expect(await fresh.list?.()).toMatchObject([{ id: 'one', title: 'Backer' }]);
   expect(await fresh.find?.('one')).toMatchObject({ id: 'one', title: 'Backer' });
@@ -283,7 +305,7 @@ it('holds a turn open until the handle answers it', async () => {
     responseParts: [{ id: 't1:reply', kind: 'markdown', content: 'hello yourself' }],
   });
 
-  const fresh = await restarted(configDir, records);
+  const fresh = await backend(configDir, records);
   const read = await fresh.transcript?.('one');
   expect(read?.[0]?.responseParts).toEqual([{ id: 't1:reply', kind: 'markdown', content: 'hello yourself' }]);
   expect(read?.[0]?.state).toBe('complete');
@@ -353,10 +375,200 @@ it('hands a steer to whoever answers, and keeps it in the log', async () => {
   expect(kept[1]).toMatchObject({ id: 't1', steering: true, message: { text: 'stop that', origin: { kind: 'user' } } });
 
   chat.reply('done');
-  const fresh = await restarted(configDir, records);
+  const fresh = await backend(configDir, records);
   const read = await fresh.transcript?.('one');
   expect(read?.map((turn) => turn.message.text)).toEqual(['hello']);
   expect(read?.[0]?.responseParts).toEqual([{ id: 't1:reply', kind: 'markdown', content: 'done' }]);
+});
+
+it('waits a queued message out, and starts it when the turn in front ends', async () => {
+  const { host, configDir } = made();
+  const notes: Notes = [];
+  const client = await anyone(host, notes);
+  await talkTo(client);
+  const chat = turns(HELD);
+  const heard: ChatMessage[] = [];
+  chat.onMessage = (message) => { heard.push(message); };
+
+  await said(client, 't1', 'hello');
+  await queued(client, 'q1', 'and then this');
+
+  /*
+   * Waiting: the turn somebody is answering is still the one that was started,
+   * and what was queued is not a turn and has not been said to anyone. The log
+   * says so too: the one line is the beginning of the turn that is open, and a
+   * message that has not begun has none.
+   */
+  const waiting = await stateOf(client);
+  expect(waiting['activeTurn']).toMatchObject({ id: 't1', message: { text: 'hello' } });
+  expect(waiting['turns']).toEqual([]);
+  expect(waiting['queuedMessages']).toMatchObject([{ id: 'q1', message: { text: 'and then this' } }]);
+  expect(heard).toEqual([{ session: HELD, turnId: 't1', text: 'hello' }]);
+  expect(lines(configDir, 'one')).toHaveLength(1);
+
+  chat.reply('one');
+
+  // Started: the entry left the queue, and its message is the turn that began -
+  // under a turn id of the chat's own, with the entry it was named on it.
+  const started = await stateOf(client);
+  const next = started['activeTurn'] as Bag;
+  expect(started['queuedMessages']).toEqual([]);
+  expect(started['turns']).toMatchObject([{ id: 't1', state: 'complete' }]);
+  expect(next).toMatchObject({ message: { text: 'and then this' } });
+  expect(heard).toEqual([
+    { session: HELD, turnId: 't1', text: 'hello' },
+    { session: HELD, turnId: String(next['id']), text: 'and then this' },
+  ]);
+  // And the client is told both ways a queued entry ends: taken out of its
+  // queue, and named on the turn it became.
+  expect(actions(notes, CHAT).filter((one) => one['type'] === 'chat/pendingMessageRemoved'))
+    .toMatchObject([{ kind: 'queued', id: 'q1' }]);
+  expect(actions(notes, CHAT).filter((one) => one['type'] === 'chat/turnStarted').map((one) => one['queuedMessageId']))
+    .toEqual([undefined, 'q1']);
+
+  chat.reply('two');
+  // Two turns, and two lines each: the queued one is a turn of the chat's, kept
+  // the same way as the one it waited behind.
+  expect(lines(configDir, 'one').map((one) => (one['message'] as Bag)['text']))
+    .toEqual(['hello', 'hello', 'and then this', 'and then this']);
+});
+
+it('starts what waited in the order the queue was left in', async () => {
+  const { host, configDir } = made();
+  const client = await anyone(host);
+  await talkTo(client);
+  const chat = turns(HELD);
+  chat.onMessage = () => {};
+
+  await said(client, 't1', 'hello');
+  await queued(client, 'q1', 'first asked');
+  await queued(client, 'q2', 'second asked');
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: CHAT, action: { type: 'chat/queuedMessagesReordered', order: ['q2', 'q1'] } },
+  });
+
+  // Applied where it was asked for and read back from the state: the order a
+  // client sends is the order the chat holds.
+  expect((await stateOf(client))['queuedMessages']).toMatchObject([{ id: 'q2' }, { id: 'q1' }]);
+
+  chat.reply('one');
+  expect((await stateOf(client))['activeTurn']).toMatchObject({ message: { text: 'second asked' } });
+  chat.reply('two');
+  // And the one behind that, which is the rest of what the order said - the
+  // queue emptying one turn at a time rather than all at once.
+  const last = await stateOf(client);
+  expect(last['activeTurn']).toMatchObject({ message: { text: 'first asked' } });
+  expect(last['queuedMessages']).toEqual([]);
+  chat.reply('three');
+
+  expect(lines(configDir, 'one').map((one) => (one['message'] as Bag)['text'])).toEqual([
+    'hello', 'hello', 'second asked', 'second asked', 'first asked', 'first asked',
+  ]);
+});
+
+it('takes a queued message back, and it is never a turn', async () => {
+  const { host, configDir } = made();
+  const notes: Notes = [];
+  const client = await anyone(host, notes);
+  await talkTo(client);
+  const chat = turns(HELD);
+  chat.onMessage = () => {};
+
+  await said(client, 't1', 'hello');
+  await queued(client, 'q1', 'never said');
+  await taken(client, 'q1');
+
+  expect((await stateOf(client))['queuedMessages']).toEqual([]);
+  chat.reply('one');
+
+  // One turn in it, and nothing started behind it: what was taken back is a
+  // message the chat never heard of, rather than one it says later.
+  const idle = await stateOf(client);
+  expect(idle['activeTurn']).toBeUndefined();
+  expect(idle['turns']).toMatchObject([{ id: 't1', state: 'complete' }]);
+  expect(lines(configDir, 'one')).toHaveLength(2);
+  expect(actions(notes, CHAT).filter((one) => one['type'] === 'chat/turnStarted')).toHaveLength(1);
+});
+
+it('refuses a second message while the answer is still coming', async () => {
+  const { host } = made();
+  const notes: Notes = [];
+  const client = await anyone(host, notes);
+  await talkTo(client);
+  const chat = turns(HELD);
+  chat.onMessage = () => {};
+
+  await said(client, 't1', 'hello');
+  await said(client, 't2', 'and this');
+
+  /*
+   * The host's own refusal: a client's message never reaches a session with a
+   * turn already open, so it is the host that decides what becomes of it - and
+   * what it decides is that the client is told rather than queued. Which is why
+   * the guard in `begin` is the second line of defence rather than the one a
+   * person meets.
+   */
+  const refused = notes
+    .map((note) => note.params as { rejectionReason?: string; action?: Bag })
+    .find((one) => one.rejectionReason !== undefined);
+  expect(refused?.rejectionReason).toBe('A turn is running in this chat');
+  expect(refused?.action).toMatchObject({ type: 'chat/turnStarted', turnId: 't2' });
+  // Nothing of it arrived: one turn, still open, and nobody was told of a second.
+  expect((await stateOf(client))['activeTurn']).toMatchObject({ id: 't1' });
+});
+
+it('holds a begin behind the open turn rather than taking its place', async () => {
+  const { host, configDir, records } = made();
+  const client = await anyone(host);
+  // The bot, written the way a person writes one. No session is started here:
+  // what is tested below is a road into a turn no client's message takes.
+  await client.handle({
+    method: 'resourceWrite',
+    params: { uri: 'bot://backer', data: JSON.stringify({ name: 'Backer' }), createOnly: true },
+  });
+
+  const agent = await backend(configDir, records);
+  const solo = 'bot-chat:/solo';
+  const sent: Bag[] = [];
+  // What this backend reads off a `Start`, and nothing more: no model, no
+  // machine, and a limit on a client call a chat never makes.
+  const start: Start = {
+    uri: solo,
+    chatUri: 'ahp-chat:/solo',
+    settings: { bot: 'backer' },
+    schema: () => ({}),
+    emit: (_channel: string, action: Bag) => { sent.push(action); },
+    clientToolTimeoutMs: 0,
+  };
+  const session = agent.create(start);
+  // Somebody answers this chat, which is what leaves the first turn open.
+  turns(solo).onMessage = () => {};
+
+  session.begin('t1', 'hello');
+  session.begin('t2', 'and then this');
+
+  // Not replaced: the open turn is still the one that began, and the message
+  // after it is waiting rather than a turn of its own.
+  expect(session.chatState().activeTurn).toMatchObject({ id: 't1', message: { text: 'hello' } });
+  expect(session.chatState().turns).toEqual([]);
+  expect(session.chatState().queuedMessages).toMatchObject([{ id: 't2', message: { text: 'and then this' } }]);
+
+  // It begins when the turn in front ends, under the id the client named - the
+  // whole difference between a message that waited and one that was dropped.
+  turns(solo).reply('one');
+  const next = session.chatState();
+  expect(next.turns).toMatchObject([{ id: 't1', state: 'complete' }]);
+  expect(next.activeTurn).toMatchObject({ id: 't2', message: { text: 'and then this' } });
+  expect(next.queuedMessages).toEqual([]);
+  expect(sent.map((one) => one['type'])).toEqual([
+    'chat/turnStarted',
+    'chat/pendingMessageSet',
+    'chat/responsePart',
+    'chat/turnComplete',
+    'chat/pendingMessageRemoved',
+    'chat/turnStarted',
+  ]);
 });
 
 it('refuses a chat with a bot that is not there', async () => {

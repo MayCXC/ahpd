@@ -23,6 +23,10 @@ import type { BotStore } from './store.js';
  * and its turn ends the moment it begins, which is what this backend did before
  * there was a handle.
  *
+ * One turn at a time, then. A message that arrives while a turn is open waits
+ * behind it, in this chat's own queue, and becomes the next turn when that one
+ * ends.
+ *
  * What this backend is for is the *log*: one JSON line per moment under
  * `<configDir>/bot-chats/` - a line when a turn begins, a line when it ends
  * with its response, and a line for each message steered into an open turn.
@@ -57,6 +61,24 @@ interface OpenTurn {
   startedAt: string;
   message: ChatTurn['message'];
   responseParts: Bag[];
+}
+
+/**
+ * One message waiting for the turn in front of it.
+ *
+ * What a client queued, and what a `begin` found a turn already running: the
+ * same thing either way, because both are a message that has to wait and the
+ * only difference between them is who chose the id - and a turn id is chosen
+ * for a queued message when it is held rather than when it starts.
+ */
+interface Waiting {
+  /** The turn it becomes, fixed when it was held. */
+  turnId: string;
+  /** The entry a client holds it in its queue as, which is the turn id a `begin` named. */
+  id: string;
+  text: string;
+  /** Who said it, where anybody was named. */
+  from: MessageFrom | undefined;
 }
 
 /**
@@ -355,6 +377,16 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
      * it, and the plugin that started the chat is where that is known.
      */
     let open: OpenTurn | undefined;
+    /**
+     * Messages waiting for the open turn to end, in the order they will start.
+     *
+     * The queue is the session's rather than a client's, because nothing in a
+     * client watches for a turn to end: a message held there would be one
+     * nothing could ever send. A chat that is closed with messages still in it
+     * loses them, as a backend gone between two turns loses everything it was
+     * holding.
+     */
+    const waiting: Waiting[] = [];
 
     const touch = (): void => { modified = new Date().toISOString(); };
 
@@ -390,6 +422,10 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
       start.emit('chat', state === 'cancelled'
         ? { type: 'chat/turnCancelled', turnId: held.id, duration }
         : { type: 'chat/turnComplete', turnId: held.id, duration });
+      // Whatever was waiting behind it, now that there is nothing in front of
+      // it. After the turn is said to be over, so a client reads one ending and
+      // then the next beginning rather than the other way round.
+      startNext();
     };
 
     /**
@@ -462,6 +498,42 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
       else handle.onMessage({ session: start.uri, turnId, text });
     };
 
+    /**
+     * Hold one message for the turn in front of it.
+     *
+     * Announced first, because a client draws the queue it was put in, and held
+     * under the entry's own id: the same id twice edits what is waiting rather
+     * than adding a second message behind the first.
+     */
+    const enqueue = (entry: Waiting): void => {
+      const at = waiting.findIndex((held) => held.id === entry.id);
+      if (at < 0) waiting.push(entry);
+      else waiting[at] = entry;
+      start.emit('chat', {
+        type: 'chat/pendingMessageSet',
+        kind: 'queued',
+        id: entry.id,
+        message: messageOf(entry.text, entry.from),
+      });
+      touch();
+    };
+
+    /**
+     * Whatever was waiting, once the turn in front of it is done.
+     *
+     * The entry leaves the client's queue with the turn, two ways: the turn
+     * names the entry it was, which is the word a client's reducer takes it out
+     * on, and the entry is removed outright - because a client holding an entry
+     * the turn does not name has nothing else to take it out with.
+     */
+    const startNext = (): void => {
+      if (open !== undefined) return;
+      const next = waiting.shift();
+      if (next === undefined) return;
+      start.emit('chat', { type: 'chat/pendingMessageRemoved', kind: 'queued', id: next.id });
+      beginTurn(next.turnId, next.text, next.from, next.id);
+    };
+
     return {
       uri: start.uri,
       chatUri: start.chatUri,
@@ -511,6 +583,10 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         status: open === undefined ? Status.Idle : Status.InProgress,
         modifiedAt: modified,
         turns,
+        // What is waiting for the open turn to end, in the order it will start.
+        // Read here rather than left to the client's own queue, so a client
+        // that opens this chat while a message waits is told about it.
+        queuedMessages: waiting.map((held) => ({ id: held.id, message: messageOf(held.text, held.from) })),
         // The turn that is running, in the protocol's own spelling for one:
         // no state and no duration, because it has neither until it ends. The
         // parts array is the live one, so a client that reads the state while
@@ -528,26 +604,63 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         _meta: mark,
       }),
 
-      // The client says a turn has begun; making it true - and writing it down -
-      // is this method.
-      begin: (turnId, text, _model, from) => { beginTurn(turnId, text, from); },
+      /**
+       * The client says a turn has begun; making it true - and writing it down -
+       * is this method.
+       *
+       * Except while one is already open: a chat runs one turn at a time, and
+       * the second message is one that has to wait rather than one that takes
+       * the open turn's place. The host refuses such a message before it
+       * reaches here, so this is the guard behind that refusal rather than the
+       * one a client meets - and it is the difference between a lost turn and a
+       * queued one if the two ever disagree.
+       */
+      begin: (turnId, text, _model, from) => {
+        if (open === undefined) {
+          beginTurn(turnId, text, from);
+          return;
+        }
+        enqueue({ turnId, id: turnId, text, from });
+      },
 
       /**
        * A message a client held for later.
        *
-       * Nothing ever waits behind anything here, so it is said at once, under a
-       * turn id of its own and naming the entry it was: it is announced first
-       * because a client draws the queue it was put in.
+       * Said at once when nothing is running, and otherwise held until the turn
+       * in front of it ends. Its turn id is chosen here rather than when it
+       * starts, so that the turn it becomes is the same one either way.
        */
       queue: (id, text, _model, from) => {
-        start.emit('chat', { type: 'chat/pendingMessageSet', kind: 'queued', id, message: messageOf(text, from) });
-        beginTurn(crypto.randomUUID(), text, from, id);
+        enqueue({ turnId: crypto.randomUUID(), id, text, from });
+        startNext();
       },
 
-      // Nothing ever waits behind anything here, so there is nothing for these
-      // to move. A stop is a different matter, and is below.
-      unqueue: () => {},
-      reorder: () => {},
+      /** Take one back, while it is still waiting. */
+      unqueue: (id) => {
+        const at = waiting.findIndex((held) => held.id === id);
+        if (at < 0) return;
+        waiting.splice(at, 1);
+        start.emit('chat', { type: 'chat/pendingMessageRemoved', kind: 'queued', id });
+        touch();
+      },
+
+      /** Reorder what is waiting. Anything the order does not name keeps its place behind what it does. */
+      reorder: (order) => {
+        const byId = new Map(waiting.map((held) => [held.id, held]));
+        const named = new Set<string>();
+        const moved: Waiting[] = [];
+        for (const id of order) {
+          const held = byId.get(id);
+          if (held === undefined || named.has(id)) continue;
+          named.add(id);
+          moved.push(held);
+        }
+        for (const held of waiting) if (!named.has(held.id)) moved.push(held);
+        waiting.length = 0;
+        waiting.push(...moved);
+        start.emit('chat', { type: 'chat/queuedMessagesReordered', order: moved.map((held) => held.id) });
+        touch();
+      },
 
       /**
        * A message put into the turn that is already running.
@@ -558,9 +671,10 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
        * is told mid-turn the same way a harness with steering would be - and
        * keep it, because what was said into a turn was said in this chat.
        *
-       * The id the host names is the client's own entry, which nothing here
-       * holds a queue of: the line is written against the turn the message
-       * went into, which is the one thing a later reader asks about.
+       * The id the host names is the client's own entry, which is not one of
+       * this chat's queue: a steer is a message the open turn takes rather than
+       * one waiting for it, so the line is written against the turn it went
+       * into, which is the one thing a later reader asks about.
        *
        * False where there is no open turn to put it in, which is a message the
        * host refuses rather than one it quietly turns into a turn of its own.
