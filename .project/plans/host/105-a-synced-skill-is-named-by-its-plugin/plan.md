@@ -1,7 +1,7 @@
 ---
 title: A synced skill is named by its plugin
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -60,6 +60,7 @@ The skill is listed once.
 | What | Source | Task |
 | --- | --- | --- |
 | The Claude name is the Open Plugins name in kebab case, `vs-code-synced-data` | (defaulted: a Claude plugin name is kebab case) | 01 |
+| The written manifest holds every field of the Open Plugins manifest, with only `name` in kebab case | Softov, 2026-10-16, chose "Every field, name in kebab" for "What does the written manifest hold?" | 01 |
 | A copy that has its own `.claude-plugin/plugin.json` is left as it is | (defaulted: the client's manifest wins) | 01 |
 | The sdk copy writes `.claude-plugin/plugin.json` from the Open Plugins manifest, when the copy has none | Softov, 2026-10-16, chose "The sdk copy writes `.claude-plugin/plugin.json` from the Open Plugins manifest, when it has none" for "Where does the CLI get the plugin's name?" | 01 |
 | agent-claude drops a skill of a handed plugin, and the host's entry keeps it | Softov, 2026-10-16, chose "agent-claude drops a skill of a handed plugin, and the host's entry keeps it" for "What happens to the skill that agent-claude lists in its `skills` container?" | 02 |
@@ -75,9 +76,9 @@ The skill is listed once.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The copy gets a Claude manifest](task-01-the-copy-gets-a-claude-manifest.md) | todo | - |
-| [02 - A handed plugin's skill is listed once](task-02-a-handed-plugins-skill-is-listed-once.md) | todo | 01 |
-| [03 - A proposal for VS Code](task-03-a-proposal-for-vscode.md) | todo | 01 |
+| [01 - The copy gets a Claude manifest](task-01-the-copy-gets-a-claude-manifest.md) | done | - |
+| [02 - A handed plugin's skill is listed once](task-02-a-handed-plugins-skill-is-listed-once.md) | done | 01 |
+| [03 - A proposal for VS Code](task-03-a-proposal-for-vscode.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -86,17 +87,17 @@ The skill is listed once.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers.
-- **Next action:** build task 01.
+- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. Task 01 built 2026-10-16: `claudeManifestIn` in `packages/sdk/src/clientplugins.ts` writes `.claude-plugin/plugin.json` into a copy that brought only `.plugin/plugin.json`. The file has every field of that manifest, with its `name` in kebab case. A copy with its own Claude manifest, or with no manifest, stays as it is. Task 02 built 2026-10-16: `customizationsOf` in `packages/agent-claude/src/session/customizations.ts` keeps the handed plugins as a second list. It skips a skill and a command whose prefix names one, so only the host's own entry for the copy lists them. Task 03 built 2026-10-16: `.project/proposals/vscode-synced-plugin-has-no-claude-name.md`, with a row in the proposals index and `Filed` set to `no`. Reviewed and merged in `bd49a20d`.
+- **Next action:** Softov runs the host/105 check in `pending/vscode-checks.md`. Softov files the proposal if he wants it filed.
 - **Open questions:** none.
-- **Watch out for:** the window may send the skill's CLI name. Task 02 must keep the name that the CLI runs.
+- **Watch out for:** One thing the tasks do not decide: an agent of a handed plugin is still listed twice. The written manifest carries every field, so a component that the manifest moves stays where it said.
 
 ## Final verification checklist
 
-- [ ] A test in the sdk: a copy with only `.plugin/plugin.json` gets `.claude-plugin/plugin.json` named `vs-code-synced-data`.
-- [ ] A test in the sdk: a copy with its own Claude manifest keeps it.
-- [ ] A test in agent-claude: a skill of a handed plugin is not in the `skills` container.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] A test in the sdk: a copy with only `.plugin/plugin.json` gets `.claude-plugin/plugin.json` named `vs-code-synced-data`.
+- [x] A test in the sdk: a copy with its own Claude manifest keeps it.
+- [x] A test in agent-claude: a skill of a handed plugin is not in the `skills` container.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: the window's slash list shows the skill once, with no nonce in its name, and the skill runs.
-- [ ] Optional: the proposal is in `.project/proposals/`, with a row in its index.
-- [ ] `plans/index.md` updated.
+- [x] Optional: the proposal is in `.project/proposals/`, with a row in its index.
+- [x] `plans/index.md` updated.

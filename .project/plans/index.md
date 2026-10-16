@@ -224,7 +224,7 @@ Reference: [00-host.md](host/00-host.md)
 | [102 - Verify a JWT locally](host/102-verify-a-jwt-locally/plan.md) | low | planned 2026-10-16 | - | - |
 | [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | planned 2026-10-16 | - | - |
 | [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
-| [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | planned 2026-10-16 | - | - |
+| [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | planned 2026-10-16 | - | - |
 
 Next free number in `host`: `97`.

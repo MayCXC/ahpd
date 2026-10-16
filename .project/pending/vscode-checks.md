@@ -56,6 +56,13 @@ Below, `ahpd` means `node packages/server/dist/main.js`.
 4. Check that the plugin's skills leave the slash list of that session.
 5. Open a new session, and check that the plugin is on there.
 
+## host/105: a synced skill is named by its plugin
+
+1. Sync a plugin from the window that has only `.plugin/plugin.json`, such as the Windows run's `advisor` skill.
+2. Open a session on ahpd, and type `/` in the composer.
+3. Check that the skill is in the slash list once, as `vs-code-synced-data:advisor`, with no number in its name.
+4. Run the skill, and check that it answers.
+
 ## Reply
 
 Write "pass" for each section, or what you saw. A pass ticks the matching line in the plan.

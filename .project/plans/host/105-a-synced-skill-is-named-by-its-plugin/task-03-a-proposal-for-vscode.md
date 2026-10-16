@@ -1,6 +1,6 @@
 ---
 title: A proposal for VS Code
-status: todo
+status: done
 depends: [task-01-the-copy-gets-a-claude-manifest.md]
 layer: docs
 refs:
@@ -41,3 +41,10 @@ This task is optional, and nothing waits on Softov to file the proposal.
 - The proposal cites no other project.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `.project/proposals/vscode-synced-plugin-has-no-claude-name.md` is written in the form of `vscode-token-on-stdout.md` and `vscode-session-provider-read-from-scheme.md`: `title`, `target: https://github.com/microsoft/vscode`, `date` and `refs` in the frontmatter, then Summary, Where it comes from, Why it is worth a look, Suggested change and How a sibling project handles it. It names the cause as the two the plan did - the bundle carries only `.plugin/plugin.json`, and a revision is materialized under the nonce key - and proposes both routes, the bundle manifest first and a name at hand-over second. The row is in `.project/proposals/index.md` with `Filed` set to `no`.
+- **Next action:** none. Nothing waits on this task.
+- **Open questions:** none.
+- **Watch out for:**
+  - The proposal describes the double listing as what a host that also lists the bundle's own parts sees, not as something reproduced on VS Code. The plan's recon says VS Code's own Claude agent "likely" shows the same name; the nonce name is what was checked, so the second row is stated as a consequence of listing both rather than as a VS Code observation.
+  - The references are the plan's, checked at the lines given. The CLI binary was read as `@anthropic-ai/claude-agent-sdk-linux-x64@0.3.301` rather than the 0.3.278 the plan's reconnaissance used.

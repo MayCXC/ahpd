@@ -1,6 +1,6 @@
 ---
 title: The copy gets a Claude manifest
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -36,3 +36,13 @@ Its `name` is the Open Plugins name in kebab case, and its `description` is the 
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `claudeManifestIn` in `packages/sdk/src/clientplugins.ts` runs on the building directory, between the copy and the rename into place. A copy that brought `.plugin/plugin.json` and no `.claude-plugin/plugin.json` gets the second written from the first: its `name` in kebab case by `kebab`, which is lower case with a dash for each run of anything else, and the `description` it wrote carried over beside it. A copy that brought a Claude manifest is left exactly as it is, and one that brought no manifest gets none. Three tests in `packages/sdk/test/clientplugins.test.ts`: the bundle of `VS Code Synced Data` gets `vs-code-synced-data` with its description, a copy with its own `{"name":"mine"}` keeps it, and a copy with no manifest gets no `.claude-plugin` at all.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:**
+  - Step 1 was not run. It wants a Claude session against a provider, which this box has none of to spend, and the plan's live checks wait on Softov. What stands in for it is the CLI binary of `@anthropic-ai/claude-agent-sdk-linux-x64@0.3.301`: `claude-plugin/plugin.json` is in it 31 times and `.plugin/plugin.json` not at all, so the CLI reads the Claude manifest and no Open Plugins one. The other half of the gap, that a plugin with no manifest is named by its directory, is still read from the binary rather than from a run.
+  - `packages/sdk/test/fixtures/wire.jsonl` is dirty from the sdk suite. Restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+  - Only `sync` writes the manifest. `capture`, the automation path, is untouched, as this task's Files name `sync` alone.
+  - The manifest written holds `name` and `description` and nothing else. An Open Plugins manifest that moves a component, with `agents`, `skills`, `rules`, `hooks` or `mcpServers` of its own, would have that section read from nowhere once `pluginparts` finds the Claude manifest first and the Open Plugins one is no longer the format. The task decides the two fields and not the rest.
+  - A `.plugin/plugin.json` with no `name`, or one whose `name` is not a string, gets no Claude manifest: there is nothing to name the plugin by. The task does not decide this case either, so the copy is left exactly as the client sent it.
