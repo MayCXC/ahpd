@@ -1,7 +1,7 @@
 ---
 title: agent-claude is on the Claude Agent SDK 0.3.301
 domain: claude
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16

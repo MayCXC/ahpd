@@ -1,7 +1,7 @@
 ---
 title: agent-acp is on the ACP SDK 1.8.0
 domain: acp
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16

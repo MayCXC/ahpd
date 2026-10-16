@@ -1,7 +1,7 @@
 ---
 title: agent-pi is on pi 1.3.0
 domain: pi
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
