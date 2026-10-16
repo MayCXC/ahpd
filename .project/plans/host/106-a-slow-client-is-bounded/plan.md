@@ -1,7 +1,7 @@
 ---
 title: A slow client is bounded
 domain: host
-status: planned
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -109,11 +109,11 @@ The files read are the `refs` above, each with its note.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Each wire reports what it holds](task-01-each-wire-reports-what-it-holds.md) | todo | - |
-| [02 - The limits are host config keys](task-02-the-limits-are-host-config-keys.md) | todo | - |
-| [03 - A client past the limit is closed](task-03-a-client-past-the-limit-is-closed.md) | todo | 01, 02 |
-| [04 - The replay buffer has a byte budget](task-04-the-replay-buffer-has-a-byte-budget.md) | todo | 02 |
-| [05 - The docs name the limits](task-05-the-docs-name-the-limits.md) | todo | 02, 03, 04 |
+| [01 - Each wire reports what it holds](task-01-each-wire-reports-what-it-holds.md) | done | - |
+| [02 - The limits are host config keys](task-02-the-limits-are-host-config-keys.md) | done | - |
+| [03 - A client past the limit is closed](task-03-a-client-past-the-limit-is-closed.md) | done | 01, 02 |
+| [04 - The replay buffer has a byte budget](task-04-the-replay-buffer-has-a-byte-budget.md) | done | 02 |
+| [05 - The docs name the limits](task-05-the-docs-name-the-limits.md) | done | 02, 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -124,17 +124,17 @@ The files read are the `refs` above, each with its note.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from Softov's request. Planned 2026-10-16 with Softov's answers.
-- **Next action:** task 01 and task 02.
+- **Done so far:** drafted 2026-10-16 from Softov's request. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: every wire reports the bytes it still holds, and the in-process pair reports none. Task 02 implemented 2026-10-16: `clientQueueBytes` and `replayBytes` are root config keys with 16 MiB and 32 MiB defaults and a 1 MiB floor, read through `host/limits.ts` where they are used. Task 03 implemented 2026-10-16: a send to a client whose queue is past `clientQueueBytes` logs the line, closes the wire and drops the frame, `accept` binds every connection's peer with the reader of that key, and the tests cover the close, the client beside it, and the closed client coming back to a replay or snapshots. Task 04 implemented 2026-10-16: the replay buffer keeps a byte total beside its count, measured once per push as the length of the envelope's serialised text, and drops its oldest while either limit is passed while keeping the newest, so a reconnect inside the buffer replays and one before it gets snapshots. Task 05 implemented 2026-10-16: `AHP.md` names both limits in the `reconnect` row, says what the host does with a client that stops reading in its own section, and lists the two keys with their defaults and the grant among the keys this host acts on; `pnpm -s docs:build` passes. Reviewed and merged in `1fed4b68`.
+- **Next action:** none. The plan is built.
 - **Open questions:** none.
-- **Watch out for:** `peer.send` also carries answers to requests, so a close drops a pending answer with the socket.
+- **Watch out for:** `peer.send` also carries answers to requests, so a close drops a pending answer with the socket. The two keys are declared `type: 'number'` with the floor in the description, because the protocol's property schema carries no `minimum` and no `integer` and `wire.test.ts` closes it - see task 02's Resume. A listener's own `clientQueueBytes` is overridden by `accept` wherever a host is behind the listener, so it only binds a listener with no host; both are exercised by `listen.test.ts`. Task 05's "transport section" does not exist in `AHP.md`, so the note on a slow client went into `## Behaviour worth knowing` after `### Restarts`, which is where that file describes the connection rather than an action. `docs/sdk/HOST.md`'s `## Root config` table says the host's own schema is two keys and names neither `changeWords` nor the two new ones, which was already short of `changeWords` before this plan; it is not in any task's `Files` and is left alone.
 
 ## Final verification checklist
 
-- [ ] A test: a client that stops reading is closed past `clientQueueBytes`, and another client goes on.
-- [ ] A test: both keys are in the root schema with their defaults, and a push changes the limit.
-- [ ] A test: a client that reconnects after it was closed gets a replay or snapshots.
-- [ ] A test: large actions drop the oldest envelopes from the replay buffer before 1000 are held.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
-- [ ] `pnpm -s docs:build` passes.
-- [ ] `plans/index.md` updated.
+- [x] A test: a client that stops reading is closed past `clientQueueBytes`, and another client goes on.
+- [x] A test: both keys are in the root schema with their defaults, and a push changes the limit.
+- [x] A test: a client that reconnects after it was closed gets a replay or snapshots.
+- [x] A test: large actions drop the oldest envelopes from the replay buffer before 1000 are held.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] `pnpm -s docs:build` passes.
+- [x] `plans/index.md` updated.

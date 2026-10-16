@@ -1,6 +1,6 @@
 ---
 title: A client past the limit is closed
-status: todo
+status: done
 depends: [task-01-each-wire-reports-what-it-holds.md, task-02-the-limits-are-host-config-keys.md]
 layer: sdk
 refs:
@@ -40,3 +40,8 @@ Another client on the same host goes on as before.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `types/rpc.ts` has `Bounding` (a `limit()` read at each send, and an optional `log`), and `createPeer(wire, bounding?)` takes one at construction and keeps it: before a send it reads `wire.buffered?.()`, and past the limit it logs, closes the peer and drops the frame - so a pending request ends as `RpcClosed` rather than at the timeout, and a wire that cannot report its queue is never closed for being behind. `types/listen.ts` has `Bounds` (`clientQueueBytes?: () => number`, `log?`), which `ListenOptions` and `StdioOptions` extend, and `listen.ts` turns it into a `Bounding` once per listener (`boundingOf`) - given to `createPeer` on Bun, Deno and Node, and to the stdio pair. `host.ts`'s `accept` binds the peer it was handed with `limit: () => clientQueueBytes(ctx.rootConfig)` and a `log` that names the connection, because the host is the side that knows root config. Tests: five in `rpc.test.ts` under 'a client that is not reading' (written to at the limit whatever the frame weighs, closed with the queue said, the limit read at each send, a wire that cannot say left alone, a question in flight ending `RpcClosed`), and three in `listen.test.ts` over real sockets - a stalled client closed with its queue named and the close frame in the queue, the client beside it still served, and the closed client reconnecting with its `serverSeq` and answered a replay or snapshots.
+- **Next action:** build task 04.
+- **Open questions:** none.
+- **Watch out for:** a listener's `clientQueueBytes` is not what a host over it closes on: `accept` rebinds the peer with the root config's key, so the listener option is for a listener with no host behind it (the tests use both, one each). The third validation bullet had no file of its own in this task's `Files`, so its test went into `listen.test.ts` with the other two, against a real `createHost` (echo backend, no session needed) - that is also the only test that covers what `accept` binds. `packages/sdk/test/fixtures/wire.jsonl` is dirty again from the runs and needs `git checkout -- packages/sdk/test/fixtures/wire.jsonl`, which is denied in this session.

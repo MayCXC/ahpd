@@ -1,6 +1,6 @@
 ---
 title: The limits are host config keys
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -42,3 +42,8 @@ Two host root config keys hold the limits, with defaults that apply when nobody 
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the schema gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `host/limits.ts` holds the defaults (`CLIENT_QUEUE_BYTES` 16 MiB, `REPLAY_BYTES` 32 MiB, `MINIMUM_LIMIT_BYTES` 1 MiB) and the two readers `clientQueueBytes(rootConfig)` and `replayBytes(rootConfig)`, each answering the pushed value when it is a safe integer at or above the minimum and the default otherwise - read from `rootConfig` where they are called, so a push applies at once. `ROOT_CONFIG_SCHEMA` declares both keys after `changeWords`, and the comment that counted the keys this host reads now says six. Three tests in `root-config.test.ts`: the two properties with their defaults, a push read back through the reader with a value below the minimum and a value that is not a number reading as the default, and a member refused with `config:change` with nothing moved.
+- **Next action:** build task 03.
+- **Open questions:** none.
+- **Watch out for:** the keys are declared `type: 'number'` with the 1 MiB floor said in the description, not `type: 'integer'` with a `minimum` as the task's steps 01 and 02 word it. The protocol's `ConfigPropertySchema` declares five types and no bound, and `tools/ahp.strict.schema.json` closes it with `additionalProperties: false`, so the literal shape fails `wire.test.ts` with four findings (checked, not guessed) - `packages/server/src/rootconfig.ts` answers the same question the same way for the daemon's own keys.

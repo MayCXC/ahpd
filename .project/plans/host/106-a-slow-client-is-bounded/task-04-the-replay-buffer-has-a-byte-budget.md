@@ -1,6 +1,6 @@
 ---
 title: The replay buffer has a byte budget
-status: todo
+status: done
 depends: [task-02-the-limits-are-host-config-keys.md]
 layer: sdk
 refs:
@@ -41,3 +41,8 @@ The replay buffer drops its oldest envelopes while it holds more bytes than `rep
 - `pnpm -s build`, `pnpm -s typecheck` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `host.ts` keeps a `weights: number[]` in step with `replayable` and a running `weight`, measured once at each push as the length of the envelope's serialised text, and the drop loop past either limit reads `replayBytes(ctx.rootConfig)` at that push, so a pushed value applies to the next action. The newest envelope is kept whatever it weighs on its own (`replayable.length > 1`), because one action heavier than the whole budget is still the state this host holds. The size is held beside the buffer rather than on the envelope, which is what step 7 decides: `seenBy` hands most held entries back to a client verbatim, so a `size` field would be a field no client declared - `handshake.ts` and `sessionmethods.ts` read only `channel` and `serverSeq` off an entry, so neither is affected either way. Tests: two in `host-handshake.test.ts` under 'a client that dropped, coming back' - ten `annotations/set` actions of ~300 KiB each against a pushed `replayBytes` of 1 MiB leave the buffer shorter than ten (a reconnect from before it gets a snapshot, one from inside it a replay), and 1100 small `session/isReadChanged` actions still keep the thousand, so a gap of exactly 1000 replays and 1001 snapshots.
+- **Next action:** build task 05.
+- **Open questions:** none.
+- **Watch out for:** the test pushes `replayBytes: 1024 * 1024`, the floor, because ten of those actions would not pass the 32 MiB default; the same test with the default pushed fails, which is how the budget was confirmed to bite. `annotations/set` is the action used because it is accepted repeatedly, where a `chat/turnStarted` is refused while a turn runs and the buffer never fills. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the runs and needs `git checkout -- packages/sdk/test/fixtures/wire.jsonl`, which is denied in this session.

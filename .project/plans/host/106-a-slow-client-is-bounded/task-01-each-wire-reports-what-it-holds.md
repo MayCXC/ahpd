@@ -1,6 +1,6 @@
 ---
 title: Each wire reports what it holds
-status: todo
+status: done
 depends: []
 layer: sdk
 refs:
@@ -42,3 +42,8 @@ A wire with no queue, such as the in-process pair, reports nothing.
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `Wire.buffered?()` is what a wire still holds for its client, and the four wires in `listen.ts` answer it: `ws.getBufferedAmount()` on Bun, `socket.bufferedAmount` on Deno and on Node `ws`, and `output.writableLength` over stdio. The in-process pair has none. `Peer.buffered?()` reports the same number, because a host holds peers and not wires. The test in `listen.test.ts` holds a Node client that completes the handshake and stops reading, and sees the queue grow.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:** `Peer.buffered?()` is optional, so a host reads it as `peer.buffered?.()`. Bun's and Deno's names were checked against the docs, since neither type is installed: `getBufferedAmount` is a method and `bufferedAmount` a property.
