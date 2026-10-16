@@ -1,5 +1,5 @@
 import { availableParallelism, totalmem } from 'node:os';
-import { seesConfig, PER_CONNECTION } from './gate.js';
+import { seesAccount, seesConfig, PER_CONNECTION } from './gate.js';
 import { OPERATIONS, operationsOf } from '../users.js';
 import { REMOTE_SESSIONS_META } from '../remotesession.js';
 import { sdkVersion } from '../version.js';
@@ -91,6 +91,26 @@ const capacity = (measure: () => number | undefined): number | undefined => {
   catch { return undefined; }
 };
 
+/**
+ * The root config key one backend's account is published under.
+ *
+ * VS Code has a name for one of them: its window reads the account its own
+ * Codex agent runs on out of `vscode.codexAccount`, so a Codex account lands
+ * where that window already looks. Every other backend takes the same name with
+ * this host's prefix, and there is no other key to take - VS Code names Codex
+ * and no other harness.
+ *
+ * The key is deliberately not one `ROOT_CONFIG_SCHEMA` declares. The value is
+ * the harness's own answer about who it is signed in as, so a client that could
+ * push one would be telling this host the operator's email - and undeclared, a
+ * push of it is refused by the same path every key this host cannot describe
+ * takes. It is published into `config.values` all the same, which is where VS
+ * Code's own host puts its account: a value a client reads, not a setting it
+ * draws a control for.
+ */
+export const accountKey = (provider: string): string =>
+  provider === 'codex' ? 'vscode.codexAccount' : `ahpd.${provider}Account`;
+
 /** What the root channel advertises, and the config a client pushes to it. */
 export interface Root {
   rootConfig: Record<string, unknown>;
@@ -115,6 +135,25 @@ export function createRoot(ctx: HostContext): Root {
   // Read once for the same reason, and out of the manifest rather than from a
   // literal here, which is what `version.ts` is for.
   const build = sdkVersion();
+
+  /**
+   * Each backend's account, by the key it is published under.
+   *
+   * Built per root state rather than kept beside `rootConfig`, because where it
+   * lives is `about`: a probe fills it at boot and a running session that
+   * reports its own replaces it, and two copies of one value are two answers
+   * waiting to disagree.
+   *
+   * A backend no account has been reported for has no key at all, which is the
+   * honest shape of "not known yet". VS Code's own reader answers `unknown` for
+   * an absent value, and a client draws no account rather than an empty one.
+   */
+  const accountValues = (): Record<string, unknown> => Object.fromEntries(
+    [...agents.values()].flatMap((agent): [string, unknown][] => {
+      const { account } = ctx.about(agent.provider);
+      return account === undefined ? [] : [[accountKey(agent.provider), account]];
+    }),
+  );
 
   /**
    * Every backend, as the root channel advertises them.
@@ -491,7 +530,7 @@ export function createRoot(ctx: HostContext): Root {
    * Every subject a grant may name, and the operations each one has.
    *
    * Read off `OPERATIONS`, so what the host advertises and what the gate asks
-   * for cannot be two lists that drift. Ten subjects are the ones this host
+   * for cannot be two lists that drift. Eleven subjects are the ones this host
    * decides, and every scheme it serves is beside them under its own name, so a
    * client drawing a role editor reads one map rather than a table and a key it
    * has to join itself. Always present, with or without a
@@ -530,6 +569,15 @@ export function createRoot(ctx: HostContext): Root {
     const daemonValues = Object.keys(theirs).length === 0 || options.rootConfig === undefined
       ? {}
       : await options.rootConfig.values();
+    /*
+     * The account each backend bills to, for a connection that may read it.
+     *
+     * The operator's own, so it is `account:read`'s and the host's - decision
+     * `an-agent-account-is-shown-to-account-readers`. A connection without the
+     * grant is handed no account value at all rather than an empty one, which
+     * is the same absence a backend nothing has reported an account for has.
+     */
+    const accounts = seesAccount(connection) ? accountValues() : {};
     const schemes = advertisedSchemes();
     const channels = advertisedChannels();
     const methods = advertisedMethods();
@@ -616,6 +664,7 @@ export function createRoot(ctx: HostContext): Root {
           ...Object.fromEntries(Object.entries(rootConfig).filter(([key]) => !PER_CONNECTION.has(key))),
           ...mine,
           ...daemonValues,
+          ...accounts,
         },
       },
       /*

@@ -159,6 +159,13 @@
  * sign-in itself, which is a different thing: `authenticate` answers with an
  * error of its own and the session is never reached.
  *
+ * `--auth-status=<kind>` makes it a server that reports its sign-in the way
+ * `@agentclientprotocol/codex-acp` does: the handshake carries
+ * `agentCapabilities._meta.authStatus`, and one `_auth/status_update` with a
+ * `kind` of that name goes out as soon as the handshake is answered. A
+ * `--auth-silent` server sends the same update and advertises nothing, which is
+ * a server that reports a sign-in it never said it would.
+ *
  * `--grandchild=<file>` starts a process of this server's own at startup and
  * writes its pid into that file, which is how a test reads what a close left
  * running.
@@ -183,6 +190,33 @@ import { createInterface } from 'node:readline';
 
 /** The file every request is recorded in, when a test named one. */
 const LOG = process.env.ACP_LOG;
+
+/**
+ * What this server reports its sign-in as, by the kind it was started with.
+ *
+ * The shapes are `@agentclientprotocol/codex-acp`'s: an `account` carries the
+ * email and the plan of the sign-in it is, a `gateway` may name the provider it
+ * goes through, and every one of them carries a label of its own for a client
+ * to draw.
+ */
+const AUTH_STATUSES = {
+  account: { kind: 'account', label: 'ChatGPT Max', account: { email: 'ana@example.test', plan: 'max' } },
+  api_key: { kind: 'api_key', label: 'OpenAI API key' },
+  gateway: { kind: 'gateway', label: 'Custom model gateway', detail: 'an internal gateway' },
+  none: { kind: 'none', label: 'Not logged in' },
+  external: { kind: 'external', label: 'AWS Bedrock' },
+};
+
+/** The kind this server was started to report, or nothing when it reports none. */
+const authStatus = process.argv.find((one) => one.startsWith('--auth-status='));
+
+/**
+ * Whether the handshake says this server reports its sign-in at all.
+ *
+ * A server started with `--auth-silent` sends the update without this, which is
+ * one that reports a sign-in it never said it would.
+ */
+const announcesAuth = authStatus !== undefined && !process.argv.includes('--auth-silent');
 
 /** The session id this server names; one process serves one conversation. */
 let session = 'acp-session-1';
@@ -1435,6 +1469,9 @@ const onLine = (line) => {
       respond(message.id, {
         protocolVersion: 1,
         agentCapabilities: {
+          // Presence alone is what a server promises with: the key is there and
+          // what it holds is nothing.
+          ...(announcesAuth ? { _meta: { authStatus: {} } } : {}),
           ...(process.argv.includes('--no-load') ? {} : { loadSession: true }),
           mcpCapabilities: { http: !process.argv.includes('--no-http-mcp') },
           ...(process.argv.includes('--prompt-caps')
@@ -1451,6 +1488,15 @@ const onLine = (line) => {
         },
         authMethods: process.argv.includes('--signin') || process.argv.includes('--signin-fails') ? [{ id: 'api-key', name: 'API key' }] : [],
       });
+      // A server that reports its sign-in says so as soon as it has answered
+      // the handshake, which is when the account it was started with is known.
+      if (authStatus !== undefined) {
+        write({
+          jsonrpc: '2.0',
+          method: '_auth/status_update',
+          params: { authStatus: AUTH_STATUSES[authStatus.slice('--auth-status='.length)] },
+        });
+      }
       return;
 
     case 'authenticate':

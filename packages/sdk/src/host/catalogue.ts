@@ -1,8 +1,10 @@
 import { ROOT, subagentChatUri } from './channels.js';
+import { accountKey } from './root.js';
 import { Status, idFor, idOf } from '../catalog.js';
 import { localPath } from '../fileuri.js';
 import type { Summary, SummaryChat } from '../types/catalog.js';
 import type { Agent, Listed } from '../types/agent.js';
+import type { Account } from '../types/probe.js';
 import type { Bag } from '../types/common.js';
 import type { Session } from '../types/session.js';
 import type { WireTurn } from '../types/wire.js';
@@ -51,6 +53,11 @@ export interface Catalogue {
   forgetSent(uri: string): void;
   activeSessionsMoved(): void;
   learnModels(uri: string): void;
+  /**
+   * Record one backend's account and tell the root channel, which publishes it
+   * as a root config value under `accountKey`.
+   */
+  learnAccount(provider: string, account: Account): void;
   /** Every backend's rows, with what a refusing backend had last time carried over. */
   listing(before?: Summary[]): Promise<Summary[]>;
   /** Record one listed row and build it, as a listing does for every row it finds. */
@@ -584,6 +591,25 @@ export function createCatalogue(ctx: HostContext): Catalogue {
   };
 
   /**
+   * Record the account one backend's harness is signed in as, and say so.
+   *
+   * The value is published as a root config value rather than on the agent
+   * list, under the key that backend's account belongs at, because that is
+   * where a client reads it - `vscode.codexAccount` for Codex, which is where
+   * VS Code's own window looks, and `ahpd.<provider>Account` for the rest. So
+   * a client watching the root is told the same way whether the account came
+   * from a probe at boot or from a session that has since signed in.
+   *
+   * A partial `root/configChanged`, which merges: one key moves and the rest
+   * of the config is left alone. The filter that decides which connections may
+   * see it is per connection, in `seenBy`.
+   */
+  const learnAccount = (provider: string, account: Account): void => {
+    about(provider).account = account;
+    ctx.dispatch(ROOT, { type: 'root/configChanged', config: { [accountKey(provider)]: account } });
+  };
+
+  /**
    * Every id a session this host is serving answers to.
    *
    * The session's own, and the backend's own id for each of its chats: the two
@@ -1073,7 +1099,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
   return {
     statusOf, startedBy, chatSummary, movable, running, movableMoved, chatsReordered, subagentSummary, restoredSubagentSummary,
     chatCatalogOf,
-    activityOf, sessionAdded, summaryMoved, forgetSent, activeSessionsMoved, learnModels,
+    activityOf, sessionAdded, summaryMoved, forgetSent, activeSessionsMoved, learnModels, learnAccount,
     listing, adopt, rowAdded, liveRows, allRows, rowsMoved, waitingFor, readStored,
   };
 }

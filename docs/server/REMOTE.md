@@ -94,6 +94,8 @@ The deployment's connection token may run everything. A person's token needs the
 | `automation export` / `automation import` | `automation:list` / `automation:create` |
 | `plugin install`, `remove`, `update`, `config`, `enable`, `disable`, `restart` | deployment token only |
 
+One thing a remote client reads is not a command and so has no row here: the account each agent bills to, which is a value of the root config rather than an `ahpd` verb, needs `account:read` and is shown to nobody else - [HOST.md](../sdk/HOST.md#grants) has that row.
+
 ### Browser safety
 
 A request must have one of the daemon's own names as its `Host`, and the same for its `Origin` when a browser sends one. The names are the loopback names, the bound address, the `resource` host and each entry in `origins`. A body must be `application/json`; anything else gets 415.

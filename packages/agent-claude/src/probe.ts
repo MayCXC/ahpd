@@ -1,7 +1,7 @@
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import { customizationsOf, EFFORT_LABELS, EFFORTS } from './session.js';
-import type { Offered } from '@ahpd/sdk';
-import { bag, str } from '@ahpd/sdk';
+import type { Account, Offered } from '@ahpd/sdk';
+import { bag, isRecord, str } from '@ahpd/sdk';
 
 /**
  * Reads what the agent backend offers, once, without creating a session.
@@ -46,6 +46,37 @@ const thinkingFor = (efforts: string[]): { configSchema?: Record<string, unknown
   };
 };
 
+/**
+ * The account the CLI is signed in as, as `Offered.account`.
+ *
+ * `initializationResult()` answers an `account` on every CLI, signed in or
+ * not, so the state is read out of what the answer holds and not out of the
+ * answer being there. A key is not an account, and neither is a provider that
+ * hands out its own credentials - Bedrock, Vertex, a gateway - so both say
+ * `unavailable` and neither names an email: a field beside those states would
+ * be read as the account they say is not there. What is left is a CLI that
+ * could have one, which is `signedIn` when it names an email and `signedOut`
+ * when it names none.
+ *
+ * `observedAt` is the time of the probe, which is also the time of the boot
+ * that ran it: this is read once, and a client drawing it wants to know how
+ * old the answer is.
+ */
+const accountOf = (value: unknown, at: number): Account | undefined => {
+  // A CLI that answered no account at all said nothing, which is not the same
+  // as one answering that it has no sign-in.
+  if (!isRecord(value)) return undefined;
+  const key = str(value.apiKeySource);
+  const provider = str(value.apiProvider);
+  if ((key !== undefined && key !== 'none') || (provider !== undefined && provider !== 'firstParty')) {
+    return { status: 'unavailable', observedAt: at };
+  }
+  const email = str(value.email);
+  if (email === undefined) return { status: 'signedOut', observedAt: at };
+  const plan = str(value.subscriptionType);
+  return { status: 'signedIn', email, ...(plan === undefined ? {} : { planType: plan }), observedAt: at };
+};
+
 export async function probe(cwd: string): Promise<Offered> {
   // A prompt that never yields. The query needs one to exist; it does not need
   // one to answer what it can do.
@@ -56,6 +87,7 @@ export async function probe(cwd: string): Promise<Offered> {
   }
 
   const handle = query({ prompt: silence(), options: { cwd, permissionMode: 'default' } } as Parameters<typeof query>[0]);
+  const at = Date.now();
   try {
     const [init, mcp, skills, plugins] = await Promise.all([
       handle.initializationResult().then((answer) => bag(answer as unknown)),
@@ -70,8 +102,10 @@ export async function probe(cwd: string): Promise<Offered> {
       handle.reloadPlugins().then((answer) => list(bag(answer as unknown).plugins)).catch(() => [] as unknown[]),
     ]);
     const styles = list(init.available_output_styles).filter((s): s is string => typeof s === 'string');
+    const account = accountOf(init.account, at);
     return {
       customizations: customizationsOf(init, mcp, skills, undefined, plugins),
+      ...(account === undefined ? {} : { account }),
       // Only when the harness has them. An empty list would draw a picker
       // with nothing in it, which is worse than no control.
       ...(styles.length > 0 ? { outputStyles: styles } : {}),

@@ -54,7 +54,7 @@ import type { Space } from './host/channels.js';
 import { DELTA_WINDOW_MS, merger } from './host/deltas.js';
 import { Claiming } from './host/state.js';
 import type { Claimed, Held, Learned, LiveSubagent, NameKind, Origin } from './host/state.js';
-import { GREETINGS, UNGATED, PER_CONNECTION, seesConfig, DECLARED, REVERSE, ownIn } from './host/gate.js';
+import { GREETINGS, UNGATED, PER_CONNECTION, seesAccount, seesConfig, DECLARED, REVERSE, ownIn } from './host/gate.js';
 import type { Home } from './host/gate.js';
 import { createChatRecord } from './host/chatrecord.js';
 import { createRouting } from './host/routing.js';
@@ -64,7 +64,7 @@ import { createFacts } from './host/facts.js';
 import { createOwners } from './host/owners.js';
 import { createMachines } from './host/machines.js';
 import { createSessionConfig } from './host/sessionconfig.js';
-import { createRoot } from './host/root.js';
+import { accountKey, createRoot } from './host/root.js';
 import { createCatalogue } from './host/catalogue.js';
 import { createSpawn } from './host/spawn.js';
 import { createLifecycle } from './host/lifecycle.js';
@@ -527,6 +527,15 @@ export function createHost(options: HostOptions): Host {
     }
   };
   /**
+   * Whether a root config key is one a backend's account is published under.
+   *
+   * Asked of the agents this host serves rather than matched by the shape of
+   * the name: `vscode.codexAccount` is VS Code's own name for one of them, and
+   * a host that went by the word would be guessing at a key it does not serve.
+   */
+  const isAccountKey = (key: string): boolean =>
+    [...agents.values()].some((agent) => accountKey(agent.provider) === key);
+  /**
    * An action envelope as one connection receives it.
    *
    * Two actions are not the same for every connection. `root/configChanged`
@@ -534,7 +543,11 @@ export function createHost(options: HostOptions): Host {
    * the sender gets its echo whole, and every other connection gets the same
    * envelope and `serverSeq` without those keys, with its own values in their
    * place when the action replaces the config. It carries the daemon's own keys
-   * too, which are dropped for a connection without `config:read`.
+   * too, which are dropped for a connection without `config:read`, and the
+   * agents' accounts, which are dropped for one without `account:read` - the
+   * email is the operator's, and the root config is read before anybody signs
+   * in. A dropped key is absent rather than emptied, the same shape the
+   * snapshot leaves it in.
    * `root/agentsChanged` carries
    * the root agent list, whose sign-in resource says `required: true` for a
    * connection that must sign in and `false` for one the host already treats
@@ -593,9 +606,19 @@ export function createHost(options: HostOptions): Host {
      * envelope is one per host, which is why this is here and not where the
      * change is applied.
      */
-    const shown = seesConfig(connection)
+    const mine = seesConfig(connection)
       ? config
       : Object.fromEntries(Object.entries(config).filter(([key]) => !daemonKey(key)));
+    /*
+     * And the accounts go to a connection holding `account:read` and to no
+     * other, the sender among them. A client pushing a config it may not read
+     * the account in is refused the answer rather than trusted with it, which
+     * is the rule the daemon's keys already take - decision
+     * `an-agent-account-is-shown-to-account-readers`.
+     */
+    const shown = seesAccount(connection)
+      ? mine
+      : Object.fromEntries(Object.entries(mine).filter(([key]) => !isAccountKey(key)));
     const echo = (config: Record<string, unknown>): E => ({ ...envelope, action: { ...action, config } });
     if (envelope.origin !== undefined && envelope.origin.clientId === connection.clientId) {
       return shown === config ? envelope : echo(shown);
@@ -1057,7 +1080,7 @@ export function createHost(options: HostOptions): Host {
     rootConfig, descriptors, daemonSchema, daemonProperties, daemonKey,
     advertisedSchemes, advertisedChannels, advertisedMethods, rootState,
     statusOf, startedBy, chatSummary, subagentSummary, restoredSubagentSummary,
-    activityOf, sessionAdded, summaryMoved, activeSessionsMoved, learnModels,
+    activityOf, sessionAdded, summaryMoved, activeSessionsMoved, learnModels, learnAccount,
     listing, waitingFor, readStored,
     absorb, unstamped, withWorkerUri, stampedCalls, withSender,
     sendSubagent, describedSub, endedWorkers, openSubagent,
@@ -1102,6 +1125,13 @@ export function createHost(options: HostOptions): Host {
        * one that connected after the probe answered.
        */
       if (offered.models.length > 0) held.models = offered.models;
+      /*
+       * The account, where the probe had one, which is the only moment this
+       * backend's CLI is asked anything before a session starts. A later answer
+       * replaces it through the same call, so the probe's value is not kept
+       * anywhere else and nothing has to tell the two apart.
+       */
+      if (offered.account !== undefined) learnAccount(agent.provider, offered.account);
       log(`${agent.provider}: ${held.models.length} model(s), ${held.commands.length} command(s), ${held.seeds.length} customization(s)`);
       dispatch(ROOT, { type: 'root/agentsChanged', agents: descriptors() });
     }).catch(() => { });

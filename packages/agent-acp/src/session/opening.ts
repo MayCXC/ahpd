@@ -351,6 +351,8 @@ export function createOpening(ctx: SessionContext): Opening {
           // have sent.
           elicitation: ctx.askElicitation,
           elicitationComplete: ctx.heardElicitationComplete,
+          // Where a server's account goes, for a host that keeps one per agent.
+          ...(start.onAccount === undefined ? {} : { account: start.onAccount }),
           // Each half only where the session has what it needs: an
           // unadvertised capability is a request a conformant server never
           // makes, and one with nothing behind it would throw.

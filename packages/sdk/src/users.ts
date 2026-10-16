@@ -58,6 +58,11 @@ export const SUBJECTS = [
   // that window's sessions load from the project. The gate asks for
   // `trust:push`, and the write group covers it.
   'trust',
+  // The account each agent bills to, which the host publishes as a root config
+  // value and which the operator's own email is in. Nothing to change: the
+  // gate asks for `account:status`, and the read group covers it. Decision
+  // `an-agent-account-is-shown-to-account-readers`.
+  'account',
 ] as const;
 
 /** What one subject is, what may be done to it, and which group each act is in. */
@@ -166,10 +171,10 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     operations: ['connect', 'disconnect', 'relay', 'stop', 'remove'],
     groups: { read: [], write: ['connect', 'disconnect', 'relay', 'stop', 'remove'] },
   },
-  // The two subjects the gate asks about through no method: a `workspaceTrust`
-  // push on the root config, and a model call or a model list on the proxy's
-  // `/v1`. Neither has a scheme of its own, so a client drawing a role editor
-  // reads them here or not at all.
+  // The three subjects the gate asks about through no method: a `workspaceTrust`
+  // push on the root config, a model call or a model list on the proxy's
+  // `/v1`, and the account the root config carries. None has a scheme of its
+  // own, so a client drawing a role editor reads them here or not at all.
   trust: {
     title: 'Workspace trust',
     description: 'A window\'s answer about the folders its sessions load project files from.',
@@ -181,6 +186,18 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     description: 'Calling a model through this host\'s proxy, and listing the names it serves.',
     operations: ['models', 'call'],
     groups: { read: ['models'], write: ['call'] },
+  },
+  // The third of those, and the only one with nothing to write: what the
+  // harness says about who it is signed in as, which only the harness can know.
+  //
+  // Its one operation is `status` rather than `read`, because `read` is the
+  // group: a subject with an operation by that name would make `account:read`
+  // mean one act and the whole of what a role may read at once.
+  account: {
+    title: 'Agent accounts',
+    description: 'The account each agent\'s harness is signed in as, which this host publishes on the root config.',
+    operations: ['status'],
+    groups: { read: ['status'], write: [] },
   },
 };
 

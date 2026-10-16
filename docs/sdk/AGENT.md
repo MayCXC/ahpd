@@ -79,7 +79,7 @@ const host = createHost({ path, agents: [shout()] });
 | `schema()`, `defaults()` | What a session can be told to do differently | required |
 | `create(start)` | Start one. Returns a `Session` | required |
 | `description` | One line about what this backend is | optional |
-| `probe()` | What you offer, asked once at startup | optional |
+| `probe()` | What you offer, asked once at startup: the models, the commands, and the account your harness bills to | optional |
 | `directories()` | The directories you will work in | optional |
 | `list()` | Sessions somebody can browse | optional |
 | `find(id, at?)` | One of those, on its own, for an id the host has not got | optional |
@@ -101,6 +101,14 @@ controls on the new-session screen than in the session.
 and the commands behind a slash are what a composer draws itself from, so
 answering late means offering them only once the conversation has started -
 which is exactly too late.
+
+**`probe()` may answer with an `account` too.** It is the sign-in the harness
+behind you bills to, in the shape of VS Code's `vscode.codexAccount`, and the
+host publishes it on its root config for the connections that hold
+`account:read`. Leaving it out is a real answer beside the rest: it is what a
+backend that cannot say who is billed says, and what one that learns it later
+says - an ACP server reports its own when a session opens, with
+`Start.onAccount`, which takes the place of what this answered.
 
 **`find(id)` is how a row the host is not holding is opened.** A link from
 another machine, or a session written to disk after the last listing, is asked

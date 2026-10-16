@@ -47,7 +47,7 @@ import type {
   WriteTextFileRequest,
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
-import type { Bag, MessageFrom, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
+import type { Account, Bag, MessageFrom, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
 
 /**
  * What a machine needs for one agent to run in it, as the agent declares it.
@@ -231,6 +231,15 @@ export interface AcpHandlers {
    * there is the server's business rather than this bridge's.
    */
   elicitationComplete?(notification: CompleteElicitationNotification): void;
+  /**
+   * The account the server says it is signed in as.
+   *
+   * A server that advertises `authStatus` in its handshake sends
+   * `_auth/status_update` when it knows, which is how a harness signed in out
+   * of band - Codex through its own CLI - says who is billed. Absent, the
+   * update is read and dropped, because there is nowhere for an account to go.
+   */
+  account?(account: Account): void;
 }
 
 /** How a connection spawns a server and where its updates go. */

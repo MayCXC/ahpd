@@ -228,11 +228,17 @@ A worktree is trusted exactly when the repository it was cut from is, since the 
 
 `globalAutoApproveEnabled` is the neighbouring key and the host's rather than a window's. It is a boolean, off by default, and turning it on runs every tool call in every session on this host without asking. It is not a per-connection key, so pushing it needs `config:write`, which only `admin` holds among the built-in roles.
 
+## Agent accounts
+
+The account each agent's harness is signed in as is on the root config, with the email and the plan the harness reports: `vscode.codexAccount` for Codex, which is the key VS Code's window reads the account of its own host's Codex agent from, and `ahpd.<provider>Account` for every other backend. Only the harness knows it, so the Claude probe answers with the sign-in of the CLI it starts at boot, and an ACP server that advertises `authStatus` reports its own when a session opens - which is why the Codex account is known once a Codex session has run and not before. A harness on an API key, on a gateway, or on a provider that hands out its own credentials answers `unavailable` rather than an account of anybody's, and `signedOut` is a harness with no sign-in of its own.
+
+That email is the operator's, and the root state is readable before anybody signs in - so a connection that is not root and does not hold `account:read` is shown no account value at all, in the state it subscribes to and in every `root/configChanged` after it. Decision [an agent account, email included, is shown to the holders of account:read](../../.project/decisions/an-agent-account-is-shown-to-account-readers.md) is that grant. Nothing may push one: the keys are not declared in the root config schema, so a client that writes to one is refused like any other key nobody declared.
+
 ## What is readable before signing in
 
 The agent list, a session count, the root config, and every open terminal's URI, title and claim - including, when a session opened it, that session's and chat's URIs. Knowing a channel is not being able to drive it: a dispatch into any of them is refused unless the person signed in and their role covers it.
 
-The root state is one per host, so it cannot be filtered wholesale without giving every connection its own sequence numbers - decision [a role refuses at the dispatch boundary, and never hides root state](../../.project/decisions/a-role-refuses-at-the-dispatch-boundary.md) says why, and `protectedResources` is the reason it must be readable at all: it is what tells a client where to sign in. Two parts are overlaid for the one connection reading them, with no second sequence number: the `config` values that connection pushed, and the `required` field on the host's own sign-in resource when the connection is root or signed in.
+The root state is one per host, so it cannot be filtered wholesale without giving every connection its own sequence numbers - decision [a role refuses at the dispatch boundary, and never hides root state](../../.project/decisions/a-role-refuses-at-the-dispatch-boundary.md) says why, and `protectedResources` is the reason it must be readable at all: it is what tells a client where to sign in. Three parts are overlaid for the one connection reading them, with no second sequence number: the `config` values that connection pushed, the `required` field on the host's own sign-in resource when the connection is root or signed in, and the agents' accounts for a connection holding `account:read`.
 
 ## Configuration keys
 

@@ -87,13 +87,13 @@ A grant names a subject and one of its operations, and read and write are groups
 
 The host advertises every subject a grant may name in `_meta['ahpd.grants']` on
 the handshake and on the root state, so a client reads the operations from the
-wire rather than from this page. That map holds the ten the host decides and,
+wire rather than from this page. That map holds the eleven the host decides and,
 beside them, every scheme this host serves - `user`, `team`, `project`, `role`,
 `policy`, `usage` and any plugin's - each under its own name, with the
 operations its provider implements and the groups those fall into. A client
 drawing a role editor reads that one key and has every subject there is.
 
-The subjects the host decides are these ten:
+The subjects the host decides are these eleven:
 
 | Subject | Read group | Write group | What they cover |
 | --- | --- | --- | --- |
@@ -107,6 +107,7 @@ The subjects the host decides are these ten:
 | `container` | - | `connect`, `disconnect`, `relay`, `stop`, `remove` | Connecting to dev containers, and stopping or removing one |
 | `proxy` | `models` | `call` | The model proxy under `/v1` ([PROXY.md](../server/PROXY.md)). `proxy:call` calls a model, which spends this host's provider keys; `proxy:models` lists the model names |
 | `trust` | - | `push` | Pushing a window's answer about a folder to this host, which decides what that window's sessions load from the project. A window answers for every folder at once ([Trusted folders](AUTHENTICATION.md#trusted-folders)) |
+| `account` | `status` | - | The account each agent's harness is signed in as, published on the root config under `vscode.codexAccount` for Codex and `ahpd.<provider>Account` for the rest. The email is the operator's own, so a connection that does not hold `account:read` is shown no account value at all ([Agent accounts](AUTHENTICATION.md#agent-accounts)) |
 
 `proxy` and `trust` have no scheme of their own: a client never reads a
 `proxy://` or a `trust://` URI, so nothing asks for a resource operation on

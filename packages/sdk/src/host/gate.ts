@@ -355,6 +355,21 @@ export const PER_CONNECTION = new Set(['defaultShell', 'workspaceTrust']);
 export const seesConfig = (connection: Connection | undefined): boolean =>
   connection?.root === true || connection?.principal?.can('config:settings') === true;
 
+/**
+ * Whether this connection is somebody who may read the account an agent bills to.
+ *
+ * The account is the operator's: an email and a plan, out of the CLI this
+ * daemon runs. Root state is readable before anybody signs in, so a connection
+ * that is not the host and does not hold `account:read` is shown none of it -
+ * decision `an-agent-account-is-shown-to-account-readers`.
+ *
+ * `account:status`, the operation, rather than the read group: a role that
+ * holds the group covers it, as a role holding `config:read` covers the
+ * settings this host asks for by their own operation.
+ */
+export const seesAccount = (connection: Connection | undefined): boolean =>
+  connection?.root === true || connection?.principal?.can('account:status') === true;
+
 /** The kinds of channel a family of client action can belong on. */
 export type Home = 'session' | 'terminal' | 'automations' | 'root' | 'watch';
 

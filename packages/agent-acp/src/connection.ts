@@ -39,7 +39,8 @@ import type {
   SetSessionModeRequest,
   SetSessionModeResponse,
 } from '@agentclientprotocol/sdk';
-import { sdkVersion } from '@ahpd/sdk';
+import { bag, isRecord, sdkVersion, str } from '@ahpd/sdk';
+import type { Account } from '@ahpd/sdk';
 import type { AcpConnection, AcpConnectionOptions } from './types.js';
 
 /**
@@ -86,6 +87,19 @@ const STDERR_BYTES = 8 * 1024;
  */
 const KILL_GRACE_MS = 5000;
 
+/**
+ * Where a server says it reports its sign-in at all.
+ *
+ * ACP reserves `_meta` for extensions of its own, and this key is
+ * `@agentclientprotocol/codex-acp`'s: the empty object under it is a presence
+ * flag rather than a shape, so all it says is that the server reports its
+ * sign-in at all.
+ */
+const AUTH_STATUS = 'authStatus';
+
+/** The notification a server that advertises `authStatus` reports its sign-in with. */
+const AUTH_STATUS_UPDATE = '_auth/status_update';
+
 /** The sentence for a server that could not be started at all. */
 const unstarted = (command: string, cwd: string | undefined, error: NodeJS.ErrnoException): Error => {
   if (error.code === 'ENOENT' && cwd !== undefined && !existsSync(cwd)) {
@@ -95,6 +109,39 @@ const unstarted = (command: string, cwd: string | undefined, error: NodeJS.Errno
     return new Error(`${command} was not found; install it, or put its directory on the PATH the daemon runs with`);
   }
   return new Error(`${command} could not be started: ${error.message}`);
+};
+
+/**
+ * What a server's `authStatus` says about the account, as the host publishes it.
+ *
+ * The kinds and the fields they carry are `@agentclientprotocol/codex-acp`'s:
+ * an `account` names the email and the plan of the sign-in it is, and the other
+ * three are sign-ins that are not an account of the operator's - a key, a
+ * gateway, and a provider's own identity, which is what Bedrock and an agent's
+ * own name are. None of those is a sign-out, so each is `unavailable` rather
+ * than `signedOut`, and none of them names an email.
+ *
+ * A kind this bridge does not know is left unanswered rather than read as one
+ * of the others: each state is a claim about who is billed, and a guess at one
+ * is worse than saying nothing.
+ */
+const accountOf = (status: unknown, at: number): Account | undefined => {
+  if (!isRecord(status)) return undefined;
+  const kind = str(status.kind);
+  if (kind === 'none') return { status: 'signedOut', observedAt: at };
+  if (kind === 'api_key' || kind === 'gateway' || kind === 'external') return { status: 'unavailable', observedAt: at };
+  if (kind !== 'account') return undefined;
+  // The nested object is left out entirely by a server that names neither, so
+  // an account with no email is a sign-in this host can only say it has.
+  const held = isRecord(status.account) ? status.account : {};
+  const email = str(held.email);
+  const plan = str(held.plan);
+  return {
+    status: 'signedIn',
+    ...(email === undefined ? {} : { email }),
+    ...(plan === undefined ? {} : { planType: plan }),
+    observedAt: at,
+  };
 };
 
 /** The sentence for a server that exited, by its code or the signal that ended it. */
@@ -168,7 +215,7 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
   const handlers = options.handlers;
   const {
     readTextFile, writeTextFile, createTerminal, terminalOutput,
-    waitForTerminalExit, killTerminal, releaseTerminal, elicitation, elicitationComplete,
+    waitForTerminalExit, killTerminal, releaseTerminal, elicitation, elicitationComplete, account,
   } = handlers;
 
   /*
@@ -251,6 +298,34 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
   if (killTerminal !== undefined) app.onRequest(methods.client.terminal.kill, (context) => killTerminal(context.params));
   if (releaseTerminal !== undefined) app.onRequest(methods.client.terminal.release, (context) => releaseTerminal(context.params));
 
+  /*
+   * The account the server is signed in as, which a harness that signs in out
+   * of band states with a notification of its own.
+   *
+   * `authStatus` in the handshake is what a server says it will do this with,
+   * and that reply is read after this registration - so a status that arrived
+   * first is kept and handed over once the handshake has said the server means
+   * it, rather than an account being dropped for the order it arrived in.
+   */
+  let held: Account | undefined;
+  /** Whether the handshake advertised that this server reports its sign-in. */
+  let announces = false;
+  const handOver = (): void => {
+    if (announces && held !== undefined) account?.(held);
+  };
+  if (account !== undefined) {
+    app.onNotification<{ authStatus?: unknown }>(
+      AUTH_STATUS_UPDATE,
+      (params) => bag(params) as { authStatus?: unknown },
+      (context) => {
+        const read = accountOf(bag(context.params).authStatus, Date.now());
+        if (read === undefined) return;
+        held = read;
+        handOver();
+      },
+    );
+  }
+
   const connection = app.connect(stream);
 
   /**
@@ -329,6 +404,9 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
       };
       return heard(() => connection.agent.request(methods.agent.initialize, greeting)).then((reply) => {
         handshake = reply;
+        const says = reply.agentCapabilities?._meta?.[AUTH_STATUS];
+        announces = says !== undefined && says !== null;
+        handOver();
         return reply;
       });
     },

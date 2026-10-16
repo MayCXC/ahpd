@@ -1,5 +1,34 @@
 /** What the agent backend offers, read once before any session exists. */
 
+/**
+ * The account a harness is signed in as.
+ *
+ * The shape is VS Code's `ICodexAccountInfo`: its window reads exactly these
+ * fields out of a host's root state, so a client that already draws an account
+ * menu draws this one as it is rather than as a translation of it. The fields
+ * left are the ones a harness can state - what the sign-in is, the email it
+ * belongs to, the plan it bills to and when it was read. An account with no
+ * email is a real answer and not a missing one.
+ */
+export interface Account {
+  /**
+   * What the sign-in is.
+   *
+   * `signedIn` is an account with an email. `signedOut` is a harness that
+   * holds no sign-in of its own, and `unavailable` one that does not sign in
+   * at all: an API key, or a preset pointed at a provider that hands out its
+   * own credentials. The other three are VS Code's, for a value that is being
+   * read, has failed to be read, or has not been read yet.
+   */
+  status: 'unknown' | 'downloading' | 'signedIn' | 'signedOut' | 'unavailable' | 'error';
+  /** The email the harness is signed in as. */
+  email?: string;
+  /** The plan the account bills to, as the provider names it. */
+  planType?: string;
+  /** When the account was read, in Unix milliseconds. */
+  observedAt?: number;
+}
+
 /** The harness-wide capabilities, used until a session reports its own. */
 export interface Offered {
   /**
@@ -31,6 +60,13 @@ export interface Offered {
    * once rather than several seconds later when its own agent replies.
    */
   customizations: Record<string, unknown>[];
+  /**
+   * The account this harness bills to, when it can say.
+   *
+   * Optional because a harness that was asked and did not answer has nothing
+   * to report, which is not the same as one reporting no sign-in.
+   */
+  account?: Account;
   /**
    * Output styles this harness has, and the one in force.
    *

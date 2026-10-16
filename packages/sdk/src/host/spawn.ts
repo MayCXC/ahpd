@@ -131,7 +131,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     sessionHolding, respell, dirOf, operationsMoved, refreshWatched, refreshFacts,
     fire, charged, senders, senderOf, sentBy, forgetSender, enteredIn, inMachine, bringBackOf,
     contributedDefaults, runningSchema, chatSummary, subagentSummary, summaryMoved, learnModels,
-    movableMoved,
+    learnAccount, movableMoved,
   } = ctx;
 
   /**
@@ -1087,6 +1087,13 @@ export function createSpawn(ctx: HostContext): Spawn {
         if (sender !== undefined) kept.setSender(idOf(uri), transcriptId, sender);
       },
       onHandshake: () => { learnModels(uri); },
+      /*
+       * The account the running CLI is signed in as, which is the only way this
+       * host learns one for a backend that spawns nothing at boot. It is kept
+       * and published the same way the probe's is, so a client sees one key
+       * rather than two paths that could disagree about who is signed in.
+       */
+      onAccount: (account) => { learnAccount(agent.provider, account); },
     });
     const held = sessions.get(uri) ?? {
       agent,

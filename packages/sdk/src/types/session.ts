@@ -4,6 +4,7 @@ import type { MessageAttachment } from '@microsoft/agent-host-protocol';
 import type { Bag } from './common.js';
 import type { FileEdit } from './changes.js';
 import type { BoundTool } from './agent.js';
+import type { Account } from './probe.js';
 import type { ClientCallAnswer } from '../tools/clientcalls.js';
 
 export type { MessageAttachment };
@@ -239,6 +240,15 @@ export interface SessionOptions {
    * no such callback.
    */
   onTurnRecorded?(turnId: string, transcriptId: string): void;
+  /**
+   * The account this backend's harness is signed in as, once it is known.
+   *
+   * `Start.onAccount` handed down: a backend that reads the account while it
+   * runs - an ACP server that reports its sign-in when a session starts - says
+   * so here, and the host publishes it where a client reads the operator's
+   * account. Absent on a host that keeps none.
+   */
+  onAccount?(account: Account): void;
   /** Called once the agent has reported what it can do. */
   onHandshake?(): void;
 }

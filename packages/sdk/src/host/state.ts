@@ -1,4 +1,5 @@
 import type { Agent } from '../types/agent.js';
+import type { Account } from '../types/probe.js';
 import type { Bag } from '../types/common.js';
 import type { Session } from '../types/session.js';
 
@@ -93,6 +94,16 @@ export interface Learned {
    * empty stayed empty for anyone who looked before the reply landed.
    */
   seeds: Bag[];
+  /**
+   * The account this backend's harness is signed in as.
+   *
+   * Not part of the agent list: it is published as a root config value, under
+   * `accountKey`, because it is what a client reads as the operator's account
+   * and is the operator's own to restrict. Absent until a probe or a running
+   * session reports one, which for a backend that shows nothing at boot is a
+   * session's answer rather than a missing one.
+   */
+  account?: Account;
 }
 
 /** Which client's dispatch an action is the echo of. */

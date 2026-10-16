@@ -6,7 +6,7 @@ import type { FileEdit } from './changes.js';
 import type { WireTurn } from './wire.js';
 import type { Emit, Session, SubagentChat, SubagentRequest } from './session.js';
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
-import type { Offered } from './probe.js';
+import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
 import type { StartTerminals } from './terminals.js';
 import type { RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
@@ -408,6 +408,20 @@ export interface Start {
    * turn that is only findable by the id the client sent.
    */
   onTurnRecorded?(turnId: string, transcriptId: string): void;
+  /**
+   * The account this backend's harness is signed in as, once it is known.
+   *
+   * A backend whose harness is signed in before it starts never calls it: the
+   * probe answered already and the host published what it read. One that learns
+   * it while running - an ACP server that reports its sign-in when a session
+   * starts - says so here, and what it says takes the place of what the host
+   * had.
+   *
+   * Optional both ways, like `onTurnRecorded`: a backend whose account does not
+   * move never calls it, and a host that keeps no account for this backend
+   * passes none.
+   */
+  onAccount?(account: Account): void;
   /** Called once the backend has reported what it can do. */
   onHandshake?(): void;
   /**

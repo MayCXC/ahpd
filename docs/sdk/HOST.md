@@ -45,7 +45,7 @@ Every entry of `agents` is one backend, as the protocol's `AgentInfo`:
 | `customizations` | The skills, subagents and MCP servers a session of this backend starts with, so a client can show what a harness offers before any session exists |
 | `capabilities` | `multipleChats`, with `fork` and `sideChat` where the backend can resume at a turn; and `multipleWorkingDirectories`, with `immutablePrimary` and `primaryReplacement` where it takes more than one directory |
 
-`ahpd.grants` is the other half of what a client is told: one entry per subject a grant may name, each with its `title`, a one-line `description`, its `operations` and the two groups those fall into. Ten subjects are the host's own - session, chat, file, automation, terminal, diagnostics, container, config, trust and proxy, plus the people and cost schemes - and every scheme a provider serves is beside them under its own name. A client draws a role editor from this one map, which is why it is advertised with or without a user directory: it says what a role *could* hold, not what anybody holds.
+`ahpd.grants` is the other half of what a client is told: one entry per subject a grant may name, each with its `title`, a one-line `description`, its `operations` and the two groups those fall into. Eleven subjects are the host's own - session, chat, file, automation, terminal, diagnostics, container, config, trust, proxy and account, plus the people and cost schemes - and every scheme a provider serves is beside them under its own name. A client draws a role editor from this one map, which is why it is advertised with or without a user directory: it says what a role *could* hold, not what anybody holds.
 
 ## What a host serves
 
@@ -138,6 +138,8 @@ Three keys VS Code declared before 1.140 are not declared: `artifactToolsCompact
 
 `defaultShell` and `workspaceTrust` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last. The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
 
+One value is in `config.values` and in no schema at all: the account each agent's harness is signed in as, under `vscode.codexAccount` for Codex - the key VS Code's window reads the account of its own host's Codex agent from - and `ahpd.<provider>Account` for every other backend. Nobody declares it and so no client can push one, which is the point: the host writes it when a probe answers with an account or a running session reports one, and a client that writes to the key is refused like any other key nobody declared. The email in it is the operator's own, so a connection that is not root and does not hold `account:read` is shown no account value at all, in the state it subscribes to and in every change after it.
+
 The daemon's half is added to the same schema, and `config:read` is what a connection needs to be shown it. It is `paths`, `port`, `host`, `http`, `routes`, `updateCheck`, `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `archiveDirtyWorktree`, `pullRequestLookup`, `wire` and `mcpServers`, and each configured plugin is one more key, `plugins.<id>` by its [id](../plugins/PLUGINS.md#the-id), whose value is `{ enabled, options }` - so one plugin is one key and its variants are its own options. Nothing else the file holds is there: `stdio`, `configFile`, `noCwd`, `worktreesRoot`, `clientToolTimeoutMs`, the connection token keys, `trustToken`, `issuer`, `resource`, `users`, `automations` and `sessions` are still edited the way they always were.
 
 Pushing a key acts in one of two ways, and the answer says which.
@@ -168,6 +170,7 @@ The verbs that read or change this host's own settings, one line each. The rest 
 | Change a host-wide root config key | `config:change` | `root/configChanged`, and a `replace` - `config:write` covers it |
 | Push `workspaceTrust` | `trust:push` | The same action, when every key it carries is a connection's own - `trust:write` covers it |
 | Push only `defaultShell` | none, but a sign-in | It changes nothing anybody else reads |
+| Read the account an agent bills to | `account:read` | `seesAccount`, on the root state a connection subscribes to and on every `root/configChanged` after it |
 | Stop the daemon | `config:change` | The `shutdown` command|
 | Edit the configuration over HTTP | `config:write` | `GET /api/config`, and the `plugin` verbs that write - the deployment token only, for those |
 
