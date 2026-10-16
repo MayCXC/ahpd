@@ -1,9 +1,12 @@
 /**
- * `ahpd automation`: the automations this host holds, and one of them as VS
- * Code's `.automation.md` file.
+ * `ahpd automation`: the automations this host holds, and one of them as a
+ * `.automation.md` file.
  *
- * The file is VS Code's blueprint (see `../blueprint.ts`), so an automation
- * made here opens in VS Code and one shared from VS Code runs here. Served, the
+ * The file is ahpd's own by default: the store's file (see `../scheduled.ts`)
+ * without the owner and the time it was made, so every trigger, zone and
+ * setting moves to another host. With `--vscode` it is VS Code's blueprint
+ * (see `../blueprint.ts`), so an automation made here opens in VS Code and one
+ * shared from VS Code runs here. Served, the
  * store is the daemon's own and a plugin may have replaced it; at a terminal it
  * is the folder beside the configuration, the way `vault` reads its file.
  */
@@ -16,7 +19,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { output } from '@cofold/commands';
 import type { Command, CommandContext, Registry } from '@cofold/commands';
 import { bag, ownerOfPrincipal } from '@ahpd/sdk';
-import type { AutomationEntry, AutomationStore, Owner, Principal } from '@ahpd/sdk';
+import type { AutomationEntry, AutomationStore, Bag, Owner, Principal } from '@ahpd/sdk';
 import {
   automationToBlueprint,
   createAutomationBlueprintFileName,
@@ -26,7 +29,7 @@ import {
 } from '../blueprint.js';
 import type { AutomationBlueprint } from '../blueprint.js';
 import { automationStatePath, automationsDir } from '../config.js';
-import { scheduledAutomations } from '../scheduled.js';
+import { automationFile, readAutomationFile, scheduledAutomations } from '../scheduled.js';
 import { isRoot } from './authorize.js';
 import { under } from './configure.js';
 import { conflict, optionsFrom, serverFields, stop } from './options.js';
@@ -34,6 +37,9 @@ import type { ServedFacts } from './served.js';
 
 /** What every automation's resource starts with. */
 const PREFIX = 'ahp-automation:/';
+
+/** What import says to a VS Code file read without `--vscode`. */
+const VSCODE_FILE = 'This is a VS Code automation file. Add --vscode.';
 
 /**
  * The store this run reads and writes, and what to do once it is done.
@@ -117,7 +123,7 @@ const lineOf = (row: ListedAutomation): string =>
 export interface ExportedAutomation {
   /** The automation's id in this host's store. */
   id: string;
-  /** The file name VS Code gives it. */
+  /** The file name, made from the title as VS Code makes it. */
   fileName: string;
   /** The file's text. */
   text: string;
@@ -144,22 +150,89 @@ const ownerOf = (context: Pick<CommandContext, 'request'>, served?: ServedFacts)
 };
 
 /**
- * The folder an import runs in, refused unless this host serves it.
+ * A folder an import runs in, refused unless this host serves it.
  *
  * Served, the folders are the daemon's own and the folder must be absolute,
  * because a request has no current folder. At a terminal they are the ones the
- * configuration names, and the folder is read against the current one.
+ * configuration names, and the folder is read against the current one. A
+ * folder the file names is not read against anything, so it must be absolute
+ * on both.
  */
-const folderOf = (context: Pick<CommandContext, 'optional' | 'input'>, served?: ServedFacts): string => {
-  const named = context.optional<string>('folder');
-  if (named === undefined || named.trim() === '') stop('automation import needs --folder: the file names no folder to run in.');
-  if (served !== undefined && !isAbsolute(named)) stop(`${named} is not an absolute path.`);
+const servedFolder = (
+  named: string,
+  context: Pick<CommandContext, 'input'>,
+  served: ServedFacts | undefined,
+  absolute: boolean,
+): string => {
+  if ((absolute || served !== undefined) && !isAbsolute(named)) stop(`${named} is not an absolute path.`);
   const folder = resolve(named);
   const input = context.input as Readonly<Record<string, unknown>>;
   const paths = served === undefined ? optionsFrom({ configFile: input['configFile'] }).paths : served.options.paths;
   if (!paths.some((one) => under(folder, one))) stop(`${folder} is not a folder this host serves. Add it with ahpd paths add.`);
   if (!existsSync(folder) || !statSync(folder).isDirectory()) stop(`No folder at ${folder}.`);
   return folder;
+};
+
+/** The `--folder` an import was given, when it was given one. */
+const namedFolder = (context: Pick<CommandContext, 'optional'>): string | undefined => {
+  const named = context.optional<string>('folder');
+  return named === undefined || named.trim() === '' ? undefined : named;
+};
+
+/** The folder a VS Code file's import runs in: `--folder`, which it needs. */
+const folderOf = (context: Pick<CommandContext, 'optional' | 'input'>, served?: ServedFacts): string => {
+  const named = namedFolder(context);
+  if (named === undefined) stop('automation import needs --folder: the file names no folder to run in.');
+  return servedFolder(named, context, served, false);
+};
+
+/**
+ * The working directories of an imported ahpd file: `--folder` alone when it
+ * is given, and otherwise each one the file names, refused unless this host
+ * serves it.
+ */
+const directoriesOf = (
+  session: Bag,
+  context: Pick<CommandContext, 'optional' | 'input'>,
+  served?: ServedFacts,
+): string[] => {
+  const named = namedFolder(context);
+  if (named !== undefined) return [pathToFileURL(servedFolder(named, context, served, false)).href];
+  const held = Array.isArray(session.workingDirectories) ? session.workingDirectories : [];
+  const folders = held.map(folderOfDirectory).filter((one): one is string => one !== undefined);
+  if (folders.length === 0) stop('automation import needs --folder: the file names no folder to run in.');
+  return folders.map((one) => pathToFileURL(servedFolder(one, context, served, true)).href);
+};
+
+/**
+ * An ahpd file's text read as the definition an import makes, switched off.
+ *
+ * Read as the store reads its own file, so the owner, the time and any id the
+ * file names are dropped. The host's note of a pinned chat is dropped too,
+ * because that chat is on the host the file came from.
+ */
+const definitionOf = (text: string, file?: string): Bag => {
+  let definition: Bag;
+  try {
+    ({ definition } = readAutomationFile(text));
+  }
+  catch (error) {
+    const said = `The file cannot be read: ${error instanceof Error ? error.message : String(error)}.`;
+    return stop(file === undefined ? said : `${file}: ${said}`);
+  }
+  if (definition.schedule !== undefined && definition.triggers === undefined) {
+    stop(file === undefined ? VSCODE_FILE : `${file}: ${VSCODE_FILE}`);
+  }
+  return { ...unpinned(definition), enabled: false };
+};
+
+/** A definition without the host's note of the chat a pinned automation keeps. */
+const unpinned = (definition: Bag): Bag => {
+  const meta = bag(definition._meta);
+  const ahpd = bag(meta.ahpd);
+  if (ahpd.pinnedSession === undefined) return definition;
+  const { pinnedSession: _pinned, ...rest } = ahpd;
+  return { ...definition, _meta: { ...meta, ahpd: rest } };
 };
 
 /** The file's text read as a blueprint, refused with VS Code's sentence. */
@@ -200,13 +273,14 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
 
   const exported = registry.action({
     id: 'automation.export',
-    summary: 'Write an automation as a VS Code automation file',
-    description: 'Prints the file, or writes it with --out. Refused for an automation the file cannot hold, saying what.',
+    summary: 'Write an automation as an automation file',
+    description: 'Prints the file, or writes it with --out. The file is ahpd\'s own, which holds every trigger; --vscode writes VS Code\'s, refused for an automation that file cannot hold.',
     surfaces: { cli: { pattern: ['automation', 'export', ':id'] }, http: { method: 'GET', path: '/automation/export/{id}' } },
     effect: 'read',
     resource: { kind: 'automation', key: 'id' },
     input: {
       id: { type: 'string', description: 'The automation\'s id.' },
+      vscode: { type: 'boolean', description: 'Write VS Code\'s automation file.' },
       ...(served === undefined
         ? { out: { type: 'string', description: 'Write the file here instead of printing it.', cli: { value: 'PATH' } } }
         : {}),
@@ -221,15 +295,21 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
       try {
         const automation = store.get(resource);
         if (automation === undefined) conflict(`No automation called ${id}.`);
-        let blueprint;
-        try {
-          blueprint = automationToBlueprint(automation);
+        if (context.flag('vscode')) {
+          let blueprint;
+          try {
+            blueprint = automationToBlueprint(automation);
+          }
+          catch (error) {
+            conflict(error instanceof Error ? error.message : String(error));
+          }
+          text = serializeAutomationBlueprint(blueprint);
+          fileName = createAutomationBlueprintFileName(blueprint.name);
         }
-        catch (error) {
-          conflict(error instanceof Error ? error.message : String(error));
+        else {
+          text = automationFile(unpinned(bag(automation.definition)));
+          fileName = createAutomationBlueprintFileName(rowOf(automation).name);
         }
-        text = serializeAutomationBlueprint(blueprint);
-        fileName = createAutomationBlueprintFileName(blueprint.name);
       }
       finally {
         done();
@@ -245,8 +325,8 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
 
   const imported = registry.action({
     id: 'automation.import',
-    summary: 'Make an automation from a VS Code automation file',
-    description: 'The automation is new and switched off, and runs in --folder. At a terminal the file is a path; over /api it is the body\'s "text".',
+    summary: 'Make an automation from an automation file',
+    description: 'The file is ahpd\'s own; --vscode reads VS Code\'s. The automation is new and switched off, and runs in --folder, or in the folder an ahpd file names. At a terminal the file is a path; over /api it is the body\'s "text".',
     surfaces: {
       cli: { pattern: served === undefined ? ['automation', 'import', ':file'] : ['automation', 'import'] },
       http: { method: 'POST', path: '/automation/import' },
@@ -261,6 +341,7 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
           }
         : { text: { type: 'string', description: 'The text of the .automation.md file.' } }),
       folder: { type: 'string', description: 'The folder it runs in, one this host serves.', cli: { value: 'PATH' } },
+      vscode: { type: 'boolean', description: 'Read VS Code\'s automation file.' },
     },
     scopes: ['automation:create'],
     run: async (context) => {
@@ -274,17 +355,25 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
       else {
         text = context.required<string>('text');
       }
-      const blueprint = blueprintOf(text, file);
-      const folder = folderOf(context, served);
+      let definition: Bag;
+      if (context.flag('vscode')) {
+        const blueprint = blueprintOf(text, file);
+        const folder = folderOf(context, served);
+        definition = {
+          title: blueprint.name,
+          message: { text: blueprint.prompt, origin: { kind: 'automation' } },
+          session: { workingDirectories: [pathToFileURL(folder).href] },
+          enabled: false,
+          triggers: scheduleTrigger(blueprint.schedule),
+        };
+      }
+      else {
+        const read = definitionOf(text, file);
+        const session = bag(read.session);
+        definition = { ...read, session: { ...session, workingDirectories: directoriesOf(session, context, served) } };
+      }
       const id = randomUUID();
       const resource = `${PREFIX}${id}`;
-      const definition = {
-        title: blueprint.name,
-        message: { text: blueprint.prompt, origin: { kind: 'automation' } },
-        session: { workingDirectories: [pathToFileURL(folder).href] },
-        enabled: false,
-        triggers: scheduleTrigger(blueprint.schedule),
-      };
       const { store, done } = storeOf(served);
       try {
         store.create(resource, definition, ownerOf(context, served));
@@ -296,7 +385,8 @@ export const declareAutomation = (registry: Registry<object>, served?: ServedFac
         done();
       }
       const data: ImportedAutomation = { id, resource };
-      return output(data, `Imported ${blueprint.name} as ${id}. It is switched off.\n`);
+      const title = typeof definition.title === 'string' ? definition.title.trim() : '';
+      return output(data, `Imported ${title || id} as ${id}. It is switched off.\n`);
     },
   });
 

@@ -184,6 +184,14 @@ const idsIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true 
   .map((one) => one.name.slice(0, -'.md'.length))
   .filter((id) => isAutomationId(id));
 
+/** What an automation's file holds beside its definition. */
+export interface AutomationFileStamps {
+  /** Whose work it is. */
+  owner?: string;
+  /** When it was made, as an ISO 8601 time. */
+  createdAt?: string;
+}
+
 /**
  * One automation as the text of its file.
  *
@@ -191,9 +199,10 @@ const idsIn = (dir: string): string[] => readdirSync(dir, { withFileTypes: true 
  * frontmatter; the message the automation sends is the body below it, which is
  * the one long text a person writes. Whatever else the message carried - an
  * origin, an attachment - stays in the frontmatter, so nothing a client wrote
- * is lost by the file.
+ * is lost by the file. An owner or a time not given is not written, which is
+ * the file `ahpd automation export` writes.
  */
-const textOf = (held: Held): string => {
+export const automationFile = (definition: Bag, stamps: AutomationFileStamps = {}): string => {
   /*
    * The one field `StoredRecord` insists on is the one this file writes as its
    * name instead: an automation's id is the file it is in, so a copy under a
@@ -204,7 +213,7 @@ const textOf = (held: Held): string => {
    * deleted it would find again.
    */
   const fields = {} as StoredRecord;
-  for (const [key, value] of Object.entries(held.definition)) {
+  for (const [key, value] of Object.entries(definition)) {
     if (value !== undefined) (fields as Record<string, unknown>)[key] = value;
   }
   const message = bag(fields.message);
@@ -216,10 +225,35 @@ const textOf = (held: Held): string => {
   if (Object.keys(rest).length === 0) delete fields.message;
   else fields.message = rest;
   fields[BODY] = text;
-  if (held.owner !== undefined) fields.owner = held.owner;
-  fields.createdAt = held.createdAt;
+  if (stamps.owner !== undefined) fields.owner = stamps.owner;
+  if (stamps.createdAt !== undefined) fields.createdAt = stamps.createdAt;
   return recordFile(fields, BODY);
 };
+
+/**
+ * One automation from the text of its file: the definition, and whose work it
+ * is and when it was made when the file says.
+ *
+ * Everything the file carries that is not the definition is taken out: the
+ * message text below the frontmatter, the owner, and the time. An id somebody
+ * wrote is dropped rather than read, because the file name is the id - so a
+ * copy under a new name is a new automation whatever the frontmatter it was
+ * copied from still says. Throws with what is wrong, for the caller to report.
+ */
+export const readAutomationFile = (text: string): { definition: Bag } & AutomationFileStamps => {
+  const { [BODY]: body, owner, createdAt, id: named, ...definition } = readRecordFile(text, BODY);
+  return {
+    definition: {
+      ...definition,
+      message: { ...bag(definition.message), text: typeof body === 'string' ? body : '' },
+    },
+    ...(typeof owner === 'string' ? { owner } : {}),
+    ...(typeof createdAt === 'string' ? { createdAt } : {}),
+  };
+};
+
+/** One automation as the text of the file the store keeps it in. */
+const textOf = (held: Held): string => automationFile(held.definition, held);
 
 /**
  * A host that fires its own automations.
@@ -293,29 +327,18 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
   /** One file read as an automation, or nothing when it is reported instead. */
   const heldIn = (id: string, text: string): Held | undefined => {
     const file = fileOf(id);
-    let fields: StoredRecord;
+    let read: ReturnType<typeof readAutomationFile>;
     try {
-      fields = readRecordFile(text, BODY);
+      read = readAutomationFile(text);
     }
     catch (error) {
       told(`${file} cannot be read: ${reason(error)}`);
       return undefined;
     }
-    /*
-     * Everything the file carries that is not the definition: the message text
-     * below the frontmatter, whose work it is, and when it was made. An id
-     * somebody wrote is dropped rather than read, because the file name is the
-     * id - so a copy under a new name is a new automation whatever the
-     * frontmatter it was copied from still says.
-     */
-    const { [BODY]: body, owner, createdAt, id: named, ...definition } = fields;
     return {
-      definition: {
-        ...definition,
-        message: { ...bag(definition.message), text: typeof body === 'string' ? body : '' },
-      },
-      ...(typeof owner === 'string' ? { owner } : {}),
-      createdAt: typeof createdAt === 'string' ? createdAt : now().toISOString(),
+      definition: read.definition,
+      ...(read.owner === undefined ? {} : { owner: read.owner }),
+      createdAt: read.createdAt ?? now().toISOString(),
     };
   };
 

@@ -1,13 +1,14 @@
 /*
- * VS Code's `.automation.md` file, read and written here, and `ahpd automation
- * list` and `export` on both surfaces.
+ * VS Code's `.automation.md` file, read and written here, ahpd's own file, and
+ * `ahpd automation list`, `export` and `import` on both surfaces.
  *
  * The format is VS Code's own, so what is pinned is that a file VS Code wrote
  * reads back to the same text, that each schedule the format holds is written
  * and read again unchanged, and that an automation the format cannot hold is
  * refused with a sentence naming what, rather than written as something it is
- * not. An import is a new automation, switched off, in a folder this host
- * serves.
+ * not. ahpd's own file carries every trigger, zone and setting through a
+ * round trip. An import is a new automation, switched off, in a folder this
+ * host serves.
  */
 
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -260,9 +261,9 @@ describe('ahpd automation export', () => {
     return { data: said.data, text: typeof said.plain === 'function' ? said.plain() : said.plain ?? '' };
   };
 
-  it('prints the file at a terminal', async () => {
+  it('prints VS Code\'s file at a terminal with --vscode', async () => {
     kept();
-    const said = await run({ id: ID });
+    const said = await run({ id: ID, vscode: true });
     const text = (said.data as { text: string }).text;
     expect(said.data).toMatchObject({ id: ID, fileName: 'review-yesterday-s-commits.automation.md' });
     expect(parseAutomationBlueprint(text).schedule).toMatchObject({ interval: 'daily', scheduleHour: 9 });
@@ -272,15 +273,15 @@ describe('ahpd automation export', () => {
   it('writes the file with --out', async () => {
     kept();
     const out = join(home, 'out.automation.md');
-    const said = await run({ id: `ahp-automation:/${ID}`, out });
+    const said = await run({ id: `ahp-automation:/${ID}`, out, vscode: true });
     expect(said.text).toBe(`Wrote ${out}.\n`);
     expect(readFileSync(out, 'utf8')).toBe((said.data as { text: string }).text);
   });
 
-  it('refuses an automation it cannot hold, and writes nothing', async () => {
+  it('refuses with --vscode an automation VS Code\'s file cannot hold, and writes nothing', async () => {
     kept([schedule('*/5 * * * *', zone)]);
     const out = join(home, 'out.automation.md');
-    await expect(run({ id: ID, out })).rejects.toThrow(`${ID} runs on "*/5 * * * *"`);
+    await expect(run({ id: ID, out, vscode: true })).rejects.toThrow(`${ID} runs on "*/5 * * * *"`);
     expect(existsSync(out)).toBe(false);
   });
 
@@ -316,8 +317,8 @@ describe('ahpd automation export', () => {
       }));
     };
 
-    it('answers the file over /api', async () => {
-      const answer = await call(`/automation/export/${ID}`);
+    it('answers VS Code\'s file over /api', async () => {
+      const answer = await call(`/automation/export/${ID}?vscode=true`);
       expect(answer.status).toBe(200);
       const body = await answer.json() as { id: string; fileName: string; text: string };
       expect(body.fileName).toBe('review-yesterday-s-commits.automation.md');
@@ -326,7 +327,7 @@ describe('ahpd automation export', () => {
 
     it('refuses one it cannot hold as a conflict', async () => {
       store.create('ahp-automation:/other', entry([schedule('*/5 * * * *', zone)]).definition);
-      const answer = await call('/automation/export/other');
+      const answer = await call('/automation/export/other?vscode=true');
       expect(answer.status).toBe(409);
       expect((await answer.json() as { message: string }).message).toContain('runs on "*/5 * * * *"');
     });
@@ -438,7 +439,7 @@ describe('ahpd automation import', () => {
     const registry = cliRegistry();
     const command = registry.find('automation.import');
     if (command === undefined) throw new Error('no automation.import');
-    const said = await registry.execute(command, { surface: 'cli', input: { configFile: config, ...input }, readStdin: async () => '' });
+    const said = await registry.execute(command, { surface: 'cli', input: { configFile: config, vscode: true, ...input }, readStdin: async () => '' });
     if (said === null) throw new Error('answered nothing');
     return { data: said.data as { id: string; resource: string }, text: typeof said.plain === 'function' ? said.plain() : said.plain ?? '' };
   };
@@ -499,7 +500,7 @@ describe('ahpd automation import', () => {
     const exported = cliRegistry();
     const command = exported.find('automation.export');
     if (command === undefined) throw new Error('no automation.export');
-    const answer = await exported.execute(command, { surface: 'cli', input: { id: said.data.id }, readStdin: async () => '' });
+    const answer = await exported.execute(command, { surface: 'cli', input: { id: said.data.id, vscode: true }, readStdin: async () => '' });
     expect((answer?.data as { text: string }).text).toBe(readFileSync(FIXTURE, 'utf8'));
   });
 
@@ -551,7 +552,7 @@ describe('ahpd automation import', () => {
     };
 
     it('reads the file from the body', async () => {
-      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: work });
+      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: work, vscode: true });
       expect(answer.status).toBe(200);
       const body = await answer.json() as { id: string; resource: string };
       const kept = store.get(body.resource);
@@ -560,16 +561,211 @@ describe('ahpd automation import', () => {
 
     it('takes no path', async () => {
       const command = manifestFrom(servedRegistry(facts()), { name: 'ahpd', version: '0.0.0' }).commands.find((one) => one.id === 'automation.import');
-      expect([...(command?.options ?? []).map((one) => one.field ?? one.name), ...Object.keys(command?.arguments ?? {})].sort()).toEqual(['folder', 'text']);
-      const answer = await call({ file: FIXTURE, folder: work });
+      expect([...(command?.options ?? []).map((one) => one.field ?? one.name), ...Object.keys(command?.arguments ?? {})].sort()).toEqual(['folder', 'text', 'vscode']);
+      const answer = await call({ file: FIXTURE, folder: work, vscode: true });
       expect(answer.status).toBe(400);
       expect(store.list()).toEqual([]);
     });
 
     it('refuses a folder that is not absolute', async () => {
-      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: 'work' });
+      const answer = await call({ text: readFileSync(FIXTURE, 'utf8'), folder: 'work', vscode: true });
       expect(answer.status).toBe(400);
       expect((await answer.json() as { message: string }).message).toBe('work is not an absolute path.');
+    });
+  });
+});
+
+describe('ahpd\'s own automation file', () => {
+  let home: string;
+  let had: string | undefined;
+  let work: string;
+  let config: string;
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), 'ahpd-automation-native-'));
+    had = process.env['XDG_CONFIG_HOME'];
+    process.env['XDG_CONFIG_HOME'] = home;
+    work = join(home, 'work');
+    mkdirSync(join(work, 'ahpd'), { recursive: true });
+    config = join(home, 'config.json');
+    writeFileSync(config, `${JSON.stringify({ paths: [work] })}\n`);
+  });
+  afterEach(() => {
+    if (had === undefined) delete process.env['XDG_CONFIG_HOME'];
+    else process.env['XDG_CONFIG_HOME'] = had;
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  const ID = 'nightly-review';
+  const EVENT: Bag = { id: 't1', kind: 'event', type: 'webhook', title: 'On a call', events: [{ id: 'call' }], config: {} };
+  const TRIGGERS: Bag[] = [schedule('10 * * * *'), schedule('*/30 * * * *', ZONE, 'skip'), EVENT];
+
+  /** The definition kept: VS Code's file could hold none of these triggers. */
+  const definition = (folder = join(work, 'ahpd')): Bag => ({
+    ...entry(TRIGGERS).definition,
+    session: { provider: 'claude', workingDirectories: [pathToFileURL(folder).href] },
+    _meta: { ahpd: { session: 'pinned', overlap: 'skip', pinnedSession: 'ahp-session:/claude/kept' } },
+  });
+
+  /** The daemon's folder, holding one automation. */
+  const kept = (held: Bag = definition()): void => {
+    const store = scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), timer: () => ({ cancel: () => {} }) });
+    store.create(`ahp-automation:/${ID}`, held, 'user:softov');
+    store.close?.();
+  };
+
+  /** Every automation the daemon's folder holds now. */
+  const held = (): AutomationEntry[] => {
+    const store = scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), timer: () => ({ cancel: () => {} }) });
+    const all = store.list();
+    store.close?.();
+    return all;
+  };
+
+  const run = async (id: string, input: Record<string, unknown>): Promise<{ data: unknown; text: string }> => {
+    const registry = cliRegistry();
+    const command = registry.find(id);
+    if (command === undefined) throw new Error(`no ${id}`);
+    const said = await registry.execute(command, { surface: 'cli', input: { ...(id === 'automation.import' ? { configFile: config } : {}), ...input }, readStdin: async () => '' });
+    if (said === null) throw new Error('answered nothing');
+    return { data: said.data, text: typeof said.plain === 'function' ? said.plain() : said.plain ?? '' };
+  };
+
+  /** The text export writes for the kept automation, and the file it wrote. */
+  const exported = async (): Promise<{ text: string; file: string; fileName: string }> => {
+    const file = join(home, 'out.automation.md');
+    const said = await run('automation.export', { id: ID, out: file });
+    const data = said.data as { text: string; fileName: string };
+    return { text: data.text, file, fileName: data.fileName };
+  };
+
+  it('writes every trigger, zone and setting, without the owner, the time or the id', async () => {
+    kept();
+    const { text, file, fileName } = await exported();
+    expect(fileName).toBe('review-yesterday-s-commits.automation.md');
+    expect(readFileSync(file, 'utf8')).toBe(text);
+    const fields = header(text);
+    expect(fields['triggers']).toEqual(TRIGGERS);
+    expect(fields).toMatchObject({ title: 'Review yesterday\'s commits', enabled: true, _meta: { ahpd: { session: 'pinned', overlap: 'skip' } } });
+    expect(fields['owner']).toBeUndefined();
+    expect(fields['createdAt']).toBeUndefined();
+    expect(fields['id']).toBeUndefined();
+    expect(fields['message.text']).toBeUndefined();
+    expect((fields['_meta'] as { ahpd: Bag }).ahpd['pinnedSession']).toBeUndefined();
+    expect(text.endsWith('---\nReview the commits.\n')).toBe(true);
+  });
+
+  it('imports back to the same schedule, switched off, in the folder the file names', async () => {
+    kept();
+    const { file } = await exported();
+    const said = await run('automation.import', { file });
+    const { id, resource } = said.data as { id: string; resource: string };
+    expect(id).not.toBe(ID);
+    expect(said.text).toBe(`Imported Review yesterday's commits as ${id}. It is switched off.\n`);
+    const one = held().find((each) => each.resource === resource);
+    const { _meta, ...rest } = definition();
+    expect(one?.definition).toEqual({ ...rest, _meta: { ahpd: { session: 'pinned', overlap: 'skip' } }, enabled: false });
+  });
+
+  it('keeps America/Campo_Grande through the round trip', async () => {
+    kept({ ...definition(), triggers: [schedule('0 9 * * 1-5', ZONE)] });
+    const { file } = await exported();
+    const { resource } = (await run('automation.import', { file })).data as { resource: string };
+    const triggers = held().find((each) => each.resource === resource)?.definition['triggers'] as Bag[];
+    expect(triggers).toEqual([schedule('0 9 * * 1-5', ZONE)]);
+  });
+
+  it('replaces the file\'s folder with --folder', async () => {
+    kept();
+    const { file } = await exported();
+    const { resource } = (await run('automation.import', { file, folder: work })).data as { resource: string };
+    expect(held().find((each) => each.resource === resource)?.definition['session']).toEqual({
+      provider: 'claude',
+      workingDirectories: [pathToFileURL(work).href],
+    });
+  });
+
+  it('refuses a file\'s folder this host does not serve, unless --folder is given', async () => {
+    const outside = join(home, 'elsewhere');
+    mkdirSync(outside);
+    kept(definition(outside));
+    const { file } = await exported();
+    await expect(run('automation.import', { file })).rejects.toThrow(`${outside} is not a folder this host serves. Add it with ahpd paths add.`);
+    expect(held()).toHaveLength(1);
+    await run('automation.import', { file, folder: work });
+    expect(held()).toHaveLength(2);
+  });
+
+  it('refuses a file that names no folder, without --folder', async () => {
+    kept({ ...definition(), session: { provider: 'claude' } });
+    const { file } = await exported();
+    await expect(run('automation.import', { file })).rejects.toThrow('automation import needs --folder: the file names no folder to run in.');
+  });
+
+  it('refuses VS Code\'s file without --vscode, with its sentence', async () => {
+    await expect(run('automation.import', { file: FIXTURE, folder: work })).rejects.toThrow(`${FIXTURE}: This is a VS Code automation file. Add --vscode.`);
+    expect(held()).toEqual([]);
+  });
+
+  it('refuses a file with no frontmatter', async () => {
+    const file = join(home, 'plain.automation.md');
+    writeFileSync(file, 'Do it.\n');
+    await expect(run('automation.import', { file, folder: work })).rejects.toThrow(`${file}: The file cannot be read: it does not open with a --- line.`);
+  });
+
+  it('gives VS Code\'s file with --vscode, as before', async () => {
+    kept({ ...definition(), triggers: [schedule('0 9 * * *', Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC')] });
+    const said = await run('automation.export', { id: ID, vscode: true });
+    const text = (said.data as { text: string }).text;
+    expect(text).toBe(serializeAutomationBlueprint(automationToBlueprint({ ...entry([]), resource: `ahp-automation:/${ID}`, definition: held()[0]?.definition ?? {} })));
+    expect(parseAutomationBlueprint(text).schedule).toMatchObject({ interval: 'daily', scheduleHour: 9 });
+    kept();
+    await expect(run('automation.export', { id: ID, vscode: true })).rejects.toThrow(`${ID} has an event trigger, and a VS Code automation file holds only a schedule.`);
+  });
+
+  describe('served', () => {
+    let store: AutomationStore;
+    beforeEach(() => {
+      store = memoryAutomations();
+      store.create(`ahp-automation:/${ID}`, definition());
+    });
+
+    const facts = (): ServedFacts => ({
+      options: optionsFrom({ configFile: config }),
+      configFile: config,
+      running: () => ({ pid: process.pid, url: `ws://${AUTHORITY}`, host: '127.0.0.1', port: 9361, paths: [work], startedAt: '' }),
+      turning: () => [],
+      automations: () => store,
+      restart: () => {},
+    });
+
+    const call = async (path: string, body?: unknown): Promise<Response> => {
+      const handler = apiHandler({
+        registry: servedRegistry(facts()),
+        token: 'root-secret',
+        program: { name: 'ahpd', version: '0.0.0' },
+        origins: () => apiOrigins('127.0.0.1', undefined, 9361),
+      });
+      return handler(new Request(`http://${AUTHORITY}/api${path}`, {
+        ...(body === undefined ? {} : { method: 'POST', body: JSON.stringify(body) }),
+        headers: { host: AUTHORITY, 'content-type': 'application/json', authorization: 'Bearer root-secret' },
+      }));
+    };
+
+    it('exports ahpd\'s file and imports it from the body', async () => {
+      const answer = await call(`/automation/export/${ID}`);
+      expect(answer.status).toBe(200);
+      const { text } = await answer.json() as { text: string };
+      expect(header(text)['triggers']).toEqual(TRIGGERS);
+      const made = await call('/automation/import', { text });
+      expect(made.status).toBe(200);
+      const { resource } = await made.json() as { resource: string };
+      expect(store.get(resource)?.definition).toMatchObject({ enabled: false, triggers: TRIGGERS });
+    });
+
+    it('refuses VS Code\'s file without --vscode', async () => {
+      const answer = await call('/automation/import', { text: readFileSync(FIXTURE, 'utf8'), folder: work });
+      expect(answer.status).toBe(400);
+      expect((await answer.json() as { message: string }).message).toBe('This is a VS Code automation file. Add --vscode.');
     });
   });
 });

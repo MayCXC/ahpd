@@ -224,7 +224,7 @@ A daemon started over the `automations.json` an earlier version wrote converts i
 
 ## Commands
 
-Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation export` and `import` move one out and in as [VS Code's file](#vs-code-automation-files).
+Automations are driven over the protocol, and over the HTTP API where the daemon serves one. `ahpd automation export` and `import` move one out and in as [ahpd's own file](#automation-files), or as [VS Code's file](#vs-code-automation-files) with `--vscode`.
 
 `ahpd automation list` shows one row per automation: the id that export takes, the name, the folder, the schedule and whether it is on. `--json` gives the same rows, and over HTTP it is `GET /api/automation/list`.
 
@@ -244,13 +244,56 @@ Automations are driven over the protocol, and over the HTTP API where the daemon
 
 The `automation/*` and `automationRun/*` rows, with their origins, are [AHP.md](AHP.md#automation--4-of-4-).
 
-## VS Code automation files
+## Automation files
 
-VS Code shares an automation as one `.automation.md` file: YAML frontmatter with a name and a schedule, and the prompt as the body. `ahpd automation export` writes one in that format exactly, so it opens in VS Code.
+`ahpd automation export` writes an automation as the file [this host keeps it in](#where-an-automation-is-kept), without the owner, the time it was made and the id. Every trigger, zone and setting is in it, so it moves to another ahpd host as it is.
 
 ```bash
-ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10
-ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 --out review-yesterday-s-commits.automation.md
+ahpd automation export nightly-review
+ahpd automation export nightly-review --out nightly-review.automation.md
+```
+
+```markdown
+---
+title: Nightly review
+enabled: true
+session:
+  provider: claude
+  workingDirectories:
+    - file:///home/softov/ahpd
+triggers:
+  - id: t1
+    kind: schedule
+    title: Every ten past
+    schedule:
+      expression: 10 * * * *
+      timeZone: America/Campo_Grande
+    misfirePolicy: skip
+---
+
+Review what changed in the repository today.
+```
+
+The id is the automation's id in this host's store, bare or as `ahp-automation:/<id>`. The file name is made from the title, as VS Code makes it. The note of the chat a pinned automation keeps is left out, because that chat is on this host.
+
+`ahpd automation import` makes an automation from that file:
+
+```bash
+ahpd automation import nightly-review.automation.md
+ahpd automation import nightly-review.automation.md --folder ~/src/ahpd
+```
+
+The automation is new and switched off: it has an id of its own, and a second import of the same file is a second automation. Without `--folder` it runs in the folders the file names, and each one must be a folder this host serves, or one under it. `--folder` replaces them. A file VS Code wrote is refused with "This is a VS Code automation file. Add --vscode."
+
+Over HTTP, export is `GET /api/automation/export/{id}`, which answers the id, the file name and the text, and import is `POST /api/automation/import`, with the file's text as the body's `text`. There is no `--out`; the caller writes the file.
+
+## VS Code automation files
+
+VS Code shares an automation as one `.automation.md` file: YAML frontmatter with a name and a schedule, and the prompt as the body. `ahpd automation export --vscode` writes one in that format exactly, so it opens in VS Code.
+
+```bash
+ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 --vscode
+ahpd automation export 0b6f1c1e-4d8e-4d8a-9a43-6a3f4c2b9e10 --vscode --out review-yesterday-s-commits.automation.md
 ```
 
 ```markdown
@@ -281,12 +324,12 @@ The file holds a schedule VS Code's editor can show, so export refuses an automa
 
 An automation with no schedule is written as `kind: manual`. Export keeps the hour and drops the zone: the file says `timeZone: local`, which is the zone of whoever imports it.
 
-Over HTTP it is `GET /api/automation/export/{id}`, which answers the id, the file name and the text. There is no `--out`; the caller writes the file.
+Over HTTP it is `GET /api/automation/export/{id}?vscode=true`.
 
-`ahpd automation import` makes an automation from a file VS Code wrote, or from one export wrote:
+`ahpd automation import --vscode` makes an automation from a file VS Code wrote, or from one `export --vscode` wrote:
 
 ```bash
-ahpd automation import review-yesterday-s-commits.automation.md --folder ~/src/ahpd
+ahpd automation import review-yesterday-s-commits.automation.md --vscode --folder ~/src/ahpd
 ```
 
 The automation is new and switched off, as VS Code's import makes it: it has an id of its own, a second import of the same file is a second automation, and it runs on its schedule only once it is turned on. Its title is the file's `name` and its message is the body. The file's `id` and `description` are not kept.
@@ -303,7 +346,7 @@ The schedule is read as VS Code reads it, in this host's zone:
 
 A file VS Code would refuse is refused with VS Code's sentence: an unknown `version`, a key it does not know, a cron its editor cannot show, or a `timeZone` other than `local`.
 
-Over HTTP it is `POST /api/automation/import`, with the file's text as the body's `text` and the folder as `folder`, which must be absolute. A request names no path on the host, so it cannot read a file there.
+Over HTTP it is `POST /api/automation/import`, with the file's text as the body's `text`, `vscode` as `true`, and the folder as `folder`, which must be absolute. A request names no path on the host, so it cannot read a file there.
 
 ## Grants
 

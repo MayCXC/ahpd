@@ -1,6 +1,7 @@
 /**
  * VS Code's automation blueprint: one automation as a portable `.automation.md`
- * file.
+ * file, which `ahpd automation export --vscode` writes and `import --vscode`
+ * reads.
  *
  * The format is VS Code's, from `automationBlueprint.ts`, rule for rule: YAML
  * frontmatter holding `version`, `id`, `name`, `description` and `schedule`,
