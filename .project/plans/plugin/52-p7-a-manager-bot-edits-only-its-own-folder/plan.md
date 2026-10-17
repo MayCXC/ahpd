@@ -6,7 +6,7 @@ priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
 requires:
-  - plans/plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md
+  - plans/plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md
   - plans/host/100-p2-a-session-gets-its-owners-command-check/plan.md
   - plans/host/101-a-rule-makes-a-tool-call-ask-every-time/plan.md
 changes: []

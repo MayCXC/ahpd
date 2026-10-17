@@ -1,10 +1,10 @@
 ---
 title: A message wakes the bot and it replies
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
-revalidated: 2026-10-16
+revalidated: 2026-10-17
 requires:
   - plans/plugin/52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md
 changes: []
@@ -43,7 +43,10 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - No `post_message` tool.
 - A call links only a worker chat in its own session, not a chat in another session.
 - Nothing shows one session's question in another chat.
-- A session request has no system prompt, so the bot's rules cannot reach the harness.
+- A session request has no system prompt, so the use of `post_message` cannot reach the harness.
+- The plugin writes no file in the bot's folder, and no template asks the owner what the bot is for.
+- A session with no turns is gone after a restart, but its owner row stays.
+- The bot plugin needs the grants `session:read` and `session:write` on its entry, and the docs do not say so.
 
 ## Answers
 
@@ -61,7 +64,16 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A name may hold `{turn}`, which gives a new back session for each message | (defaulted: one word for "a new one if desired") | 03 |
 | `<user>` is the id after `user:`, and the host's name for a reader who is nobody | (defaulted: `chatOf` keys on the owner the same way) | 01 |
 | A back session is owned by the person of its main chat | (defaulted: the person reads and answers their own back session) | 03 |
-| The system prompt is the bot's filled template, with what `post_message` is for | (defaulted: `firstTurn` fills the template and no code calls it) | 07 |
+| The system prompt is only the use of `post_message`, and the bot's rules are in `AGENTS.md` | Softov, 2026-10-17, chose "AGENTS.md" for "How should a back session get the bot's rules and the instruction to call post_message?" | 07, 10 |
+| `post_message` replies in the main chat, and `send_message` stays a turn in another session | Softov, 2026-10-17, "post_message is sidebyside with send_message tool right?" | 07 |
+| `AGENTS.md` is the persona, read by the harness, and `CLAUDE.md` holds `@AGENTS.md` | Softov, 2026-10-16, chose "AGENTS.md read by the harness" | 10 |
+| The bot rewrites its own `AGENTS.md` | Softov, 2026-10-16, "AGENTS.md will need a rewrite right. When bot desires" | 10 |
+| The plugin marks only the bot's own folder as trusted | Softov, 2026-10-16, chose "Yes, own folder only" | 10 |
+| The record's `instructions` is only the seed of the first `AGENTS.md` | Softov, 2026-10-17, chose "Seed only" | 10 |
+| The maker runs on the owner's first wake, in the owner's main chat | Softov, 2026-10-17, chose "Owner's first wake" | 11 |
+| The manager text is copied into `AGENTS.md`, so an ahpd update does not change a bot that exists | Softov, 2026-10-16, chose "Copied into AGENTS.md" | 11 |
+| "Never does direct work" is a template choice | Softov, 2026-10-16, chose "A template choice" | 11 |
+| A session that is gone is started again, because `sessionOwner` answers nothing for it | (defaulted: Softov's test showed `No agent for session` and a main chat that "no longer exists") | 09 |
 | A back session that ends its turn with no post closes the main turn with a notice | (defaulted: the draft's goal) | 04 |
 
 ## Tasks
@@ -74,8 +86,11 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | todo | 03 |
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
-| [07 - The bot's rules are the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | todo | 03 |
-| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07 |
+| [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | todo | 03 |
+| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11 |
+| [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | todo | 03 |
+| [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | todo | 03 |
+| [11 - The owner's first wake makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | todo | 07, 10 |
 
 ## Risks and tradeoffs
 
@@ -85,7 +100,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Resume state
 
 - **Done so far:** planned 2026-10-16 with eight tasks. Tasks 01 and 02 are on main. Task 03 is implemented. `packages/bot/src/wake.ts` sends each message of a main chat to the back session that the bot's `session` names. The plugin opens its own connection to the host for this. Every chat handle, new or resumed, gets the wake as its `onMessage`.
-- **Next action:** build task 04.
+- **Next action:** review task 04, then build task 09.
 - **Open questions:** none.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.

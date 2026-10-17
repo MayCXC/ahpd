@@ -1,7 +1,7 @@
 ---
 title: A bot is made with its AGENTS.md
 domain: plugin
-status: draft
+status: dropped
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -14,6 +14,8 @@ refs:
   - "[code://packages/bot/src/plugin.ts#L57](../../../../packages/bot/src/plugin.ts#L57) - the `templates` collection"
   - "[code://packages/agent-claude/src/session/query.ts#L320](../../../../packages/agent-claude/src/session/query.ts#L320) - Claude loads `CLAUDE.md` only from a trusted folder"
 ---
+
+Dropped 2026-10-17: Softov chose AGENTS.md for p3, so tasks 10 and 11 of 52 p3 carry this plan.
 
 ## Goal
 
