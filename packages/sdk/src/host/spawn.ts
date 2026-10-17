@@ -651,8 +651,17 @@ export function createSpawn(ctx: HostContext): Spawn {
      * A worktree this host made is read as the repository it was cut from: it
      * is a folder the window has never opened and so cannot have pushed, and
      * one the host made is trusted exactly when its repository is.
+     *
+     * One folder is trusted without a connection: the one a plugin asked for
+     * with `session:trust`, kept with the session. Nobody at the keyboard
+     * vouched for it - that is the point of the grant - and a restart that
+     * starts the session again has no connection to ask. It is that folder
+     * alone, compared as the folder it names, and no folder under it: what the
+     * grant bought is one folder, not a tree.
      */
     const trustedBy = (folder: string): boolean => {
+      const asked = kept.trustedFolder?.(idOf(uri));
+      if (asked !== undefined && sameFolder(asked, folder)) return true;
       if (sender === undefined) return false;
       if (options.users !== undefined) {
         const who = ctx.ownerFor(sender);

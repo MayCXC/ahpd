@@ -141,6 +141,13 @@ export interface StartSession {
   provider?: string;
   /** Where it should work. */
   workingDirectory?: string;
+  /**
+   * Whether that folder is trusted, so its project files are read.
+   *
+   * Trusts only `workingDirectory`, and is kept with the session. Only a
+   * plugin may ask for it, and only with `session:trust` on its entry.
+   */
+  trusted?: boolean;
   /** Config values for the new session. */
   config?: Record<string, unknown>;
   /** The model the session template names, as the protocol's `ModelSelection`. */

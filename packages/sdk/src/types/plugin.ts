@@ -91,6 +91,17 @@ export interface SessionRequest {
   provider?: string;
   /** Where it works, or wherever a session with nothing said usually works. */
   workingDirectory?: string;
+  /**
+   * Whether the session's own folder is trusted, so its project files are read.
+   *
+   * Trusts only the `workingDirectory` this request names - the folder itself,
+   * never one under it - and is kept with the session, so a session started
+   * again after a restart is still trusted in that one folder. Honoured only
+   * where the plugin's configuration entry holds `session:trust`; a request
+   * that asks for it without that grant is refused, and the refusal names it.
+   * A plugin that asks for trust and names no folder trusts nothing.
+   */
+  trusted?: boolean;
   /** Config values for the new session, as a client's `createSession` gives. */
   config?: Record<string, unknown>;
   /** The model it asks for, as the protocol's `ModelSelection`, or the backend's own. */
@@ -137,6 +148,15 @@ export interface SessionRequest {
 export interface PluginStarts {
   /** The plugin that asked. */
   by: string;
+  /**
+   * What this plugin's configuration entry grants it, set by its host.
+   *
+   * The same question its own connection is gated against, asked here because
+   * a session request does not arrive on that connection. Absent until the
+   * host fills it in, and absent on a host built by hand with no grants: a
+   * plugin that holds nothing may make no request that needs a grant.
+   */
+  can?: (grant: Grant) => boolean;
   /**
    * Where the ask goes, set by the host once it exists.
    *

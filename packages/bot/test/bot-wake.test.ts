@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { backSessions, rowId } from '../src/names.js';
@@ -31,6 +34,15 @@ const CHAT = 'bot-chat:/one';
 /** The person of that chat, who is whose the back session is. */
 const PERSON: Owner = 'user:ana';
 
+/**
+ * Where the bots work in these cases.
+ *
+ * A real, empty folder, because a wake now writes the bot's files before it
+ * starts the session and a folder nothing may write is a wake these cases
+ * would be measuring for the wrong reason.
+ */
+const WORKSPACE = mkdtempSync(join(tmpdir(), 'ahpd-bot-wake-'));
+
 /** One bot, as the store holds it. */
 const bot = (over: Partial<BotRecord> = {}): BotRecord => ({
   id: 'backer',
@@ -40,7 +52,7 @@ const bot = (over: Partial<BotRecord> = {}): BotRecord => ({
   color: 'red',
   harness: 'base',
   session: 'work',
-  workspace: '/bots/backer',
+  workspace: WORKSPACE,
   owner: 'user:soft',
   createdAt: '2026-10-16T00:00:00.000Z',
   updatedAt: '2026-10-16T00:00:00.000Z',
@@ -150,7 +162,8 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
   expect(wanted).toEqual({
     owner: PERSON,
     provider: 'claude',
-    workingDirectory: '/bots/backer',
+    workingDirectory: WORKSPACE,
+    trusted: true,
     model: { id: 'claude-sonnet-5' },
     config: { computer: 'workstation' },
     title: 'Backer',
@@ -161,7 +174,7 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
   // wins over the harness and the model rather than sitting beside them.
   expect(sessionFor(bot({ preset: 'loud', harness: 'claude', model: 'claude-sonnet-5' }), PERSON))
     .toEqual({
-      owner: PERSON, provider: 'loud', workingDirectory: '/bots/backer', title: 'Backer',
+      owner: PERSON, provider: 'loud', workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
       tools: ['post_message'],
     });
 
@@ -170,7 +183,7 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
   const quiet = { ...bot() };
   delete quiet.harness;
   expect(sessionFor(quiet, PERSON)).toEqual({
-    owner: PERSON, workingDirectory: '/bots/backer', title: 'Backer',
+    owner: PERSON, workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
     tools: ['post_message'],
   });
 });
@@ -192,7 +205,7 @@ it('starts a back session on the first message, and says the second in it', asyn
   await one.wake.woken(message('t1', 'hello'), first.handle);
 
   expect(one.starts).toEqual([{
-    owner: PERSON, provider: 'base', workingDirectory: '/bots/backer', title: 'Backer',
+    owner: PERSON, provider: 'base', workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
     tools: ['post_message'],
   }]);
   expect(one.sent).toMatchObject([{

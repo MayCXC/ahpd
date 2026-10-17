@@ -117,6 +117,8 @@ export function memorySessions(): SessionStore & Held {
     // An empty list is held as that absence: a session that asked for no opt-in
     // tool is one nothing was recorded for, the way an empty chat list is.
     setTools: (id, value) => { patch(id, { tools: value === undefined || value.length === 0 ? undefined : [...value] }); },
+    trustedFolder: (id) => rows.get(id)?.trustedFolder,
+    setTrustedFolder: (id, value) => { patch(id, { trustedFolder: value === '' ? undefined : value }); },
     parent: (id) => rows.get(id)?.parent,
     setParent: (id, value) => { patch(id, { parent: value }); },
     rootOf: (id) => treeOf(id).root,
@@ -232,6 +234,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.senders === undefined ? {} : { senders: held.senders }),
         ...(held.provider === undefined ? {} : { provider: held.provider }),
         ...(held.tools === undefined ? {} : { tools: held.tools }),
+        ...(held.trustedFolder === undefined ? {} : { trustedFolder: held.trustedFolder }),
         ...(held.artifacts === undefined ? {} : { artifacts: held.artifacts }),
         ...(held.pullRequests === undefined ? {} : { pullRequests: held.pullRequests }),
         ...(held.chatTitles === undefined ? {} : { chatTitles: held.chatTitles }),
@@ -378,6 +381,8 @@ interface Row {
   provider?: string | undefined;
   /** The opt-in host tools the session's request named, by name. */
   tools?: string[] | undefined;
+  /** The one folder the session was started trusted in. */
+  trustedFolder?: string | undefined;
   artifacts?: Record<string, unknown>[] | undefined;
   pullRequests?: PullRequestBaseline | undefined;
   chatTitles?: Map<string, string> | undefined;
@@ -402,7 +407,7 @@ interface Row {
 const empty = (row: Row): boolean =>
   row.flags === undefined && row.config === undefined && row.scope === undefined
   && row.owner === undefined && row.senders === undefined && row.provider === undefined
-  && row.tools === undefined
+  && row.tools === undefined && row.trustedFolder === undefined
   && row.artifacts === undefined && row.pullRequests === undefined && row.chatTitles === undefined
   && row.chatFlags === undefined
   && row.parent === undefined && row.nested === undefined && row.chats === undefined
@@ -428,6 +433,8 @@ interface Saved {
   provider?: string;
   /** The opt-in host tools the session's request named, by name. */
   tools?: string[];
+  /** The one folder the session was started trusted in. */
+  trustedFolder?: string;
   artifacts?: Record<string, unknown>[];
   pullRequests?: PullRequestBaseline;
   chatTitles?: Record<string, string>;
@@ -574,6 +581,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.senders === undefined ? {} : { senders: Object.fromEntries(held.senders) }),
       ...(held.provider === undefined ? {} : { provider: held.provider }),
       ...(held.tools === undefined ? {} : { tools: held.tools }),
+      ...(held.trustedFolder === undefined ? {} : { trustedFolder: held.trustedFolder }),
       ...(held.artifacts === undefined ? {} : { artifacts: held.artifacts }),
       ...(held.pullRequests === undefined ? {} : { pullRequests: held.pullRequests }),
       ...(held.chatTitles === undefined ? {} : { chatTitles: Object.fromEntries(held.chatTitles) }),
@@ -694,6 +702,9 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
         const names = row.tools.filter((one): one is string => typeof one === 'string');
         inner.setTools?.(row.id, names.length === 0 ? undefined : names);
       }
+      // A folder, and anything that is not a non-empty string is ignored rather
+      // than guessed at, as every other field here is.
+      if (typeof row.trustedFolder === 'string' && row.trustedFolder !== '') inner.setTrustedFolder?.(row.id, row.trustedFolder);
       if (Array.isArray(row.artifacts)) inner.setArtifacts(row.id, row.artifacts.filter((one) => typeof one === 'object' && one !== null));
       // Only an object with two arrays of strings is a baseline this version
       // understands; anything else is ignored rather than guessed at.
@@ -768,6 +779,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setProvider: (id, value) => { touched(id, () => { inner.setProvider(id, value); }); },
     tools: (id) => inner.tools?.(id),
     setTools: (id, value) => { touched(id, () => { inner.setTools?.(id, value); }); },
+    trustedFolder: (id) => inner.trustedFolder?.(id),
+    setTrustedFolder: (id, value) => { touched(id, () => { inner.setTrustedFolder?.(id, value); }); },
     parent: (id) => inner.parent(id),
     setParent: (id, value) => { touched(id, () => { inner.setParent(id, value); }); },
     rootOf: (id) => inner.rootOf(id),

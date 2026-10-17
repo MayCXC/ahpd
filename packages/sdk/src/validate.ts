@@ -358,6 +358,13 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
   if (workingDirectory !== undefined && !right(workingDirectory, 'string')) {
     throw new Error(miss(by, 'startSession', 'workingDirectory', 'a string, or nothing'));
   }
+  // Whether the folder is trusted is a yes or a no, and nothing else: a plugin
+  // that writes it as a string asks for something the host would have to guess
+  // at, and a grant is not a thing to guess at.
+  const trusted = object.trusted;
+  if (trusted !== undefined && !right(trusted, 'boolean')) {
+    throw new Error(miss(by, 'startSession', 'trusted', 'true or false, or nothing'));
+  }
   const config = object.config;
   if (config !== undefined && !right(config, 'object')) {
     throw new Error(miss(by, 'startSession', 'config', 'an object of session config, or nothing'));
@@ -394,6 +401,7 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
     owner: owner as Owner,
     ...(provider === undefined ? {} : { provider: provider as string }),
     ...(workingDirectory === undefined ? {} : { workingDirectory: workingDirectory as string }),
+    ...(trusted === undefined ? {} : { trusted: trusted as boolean }),
     ...(config === undefined ? {} : { config: config as Record<string, unknown> }),
     ...(model === undefined ? {} : { model }),
     ...(title === undefined ? {} : { title: title as string }),

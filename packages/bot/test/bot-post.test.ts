@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { backSessions, rowId } from '../src/names.js';
@@ -32,6 +35,9 @@ const CHAT = 'bot-chat:/one';
 /** The person of that chat, who is whose the back session is. */
 const PERSON: Owner = 'user:ana';
 
+/** Where the bot works, which the wake writes the bot's files into. */
+const WORKSPACE = mkdtempSync(join(tmpdir(), 'ahpd-bot-post-'));
+
 /** One bot, as the store holds it. */
 const bot = (over: Partial<BotRecord> = {}): BotRecord => ({
   id: 'backer',
@@ -41,7 +47,7 @@ const bot = (over: Partial<BotRecord> = {}): BotRecord => ({
   color: 'red',
   harness: 'base',
   session: 'work',
-  workspace: '/bots/backer',
+  workspace: WORKSPACE,
   owner: 'user:soft',
   createdAt: '2026-10-16T00:00:00.000Z',
   updatedAt: '2026-10-16T00:00:00.000Z',

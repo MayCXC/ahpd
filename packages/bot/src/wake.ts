@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { reason } from '@ahpd/sdk';
+import { prepareFolder } from './folder.js';
 import { userOf } from './names.js';
 import { isFilledName, TURN_WORD } from './record.js';
 import type { Bag, Owner, RecordCollection, SessionRequest } from '@ahpd/sdk';
@@ -140,6 +141,13 @@ export interface Wake {
  * Its tools name `post_message`: the tool is opt-in, so a session that does
  * not ask for it is not offered it, and this is the session that has a main
  * chat to post to.
+ *
+ * It asks for its folder to be trusted, and only that folder: the rules the
+ * bot works by are in `AGENTS.md` there, and a harness reads a folder's own
+ * files only where the folder is trusted. The host honours the ask only where
+ * the plugin's entry holds `session:trust`; without it the start is refused
+ * naming the grant, which is an operator's to add rather than something this
+ * can paper over.
  */
 export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
   const provider = bot.preset ?? bot.harness;
@@ -147,6 +155,7 @@ export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
     owner,
     ...(provider === undefined ? {} : { provider }),
     workingDirectory: bot.workspace,
+    trusted: true,
     ...(bot.preset !== undefined || bot.model === undefined ? {} : { model: { id: bot.model } }),
     ...(bot.computer === undefined ? {} : { config: { computer: bot.computer } }),
     title: bot.name,
@@ -207,12 +216,25 @@ export function botWake(seams: WakeSeams): Wake {
     const key = `${bot.id}\n${user}\n${name}`;
     const running = starting.get(key);
     if (running !== undefined) return running;
-    const begun = seams.sessions.start(sessionFor(bot, owner)).then(async (session) => {
+    const begun = (async (): Promise<string> => {
+      /*
+       * The folder before the session, because the session starts in it and
+       * reads what is there: a bot whose `AGENTS.md` has not been written yet
+       * is one that starts without its rules. A write that fails is the
+       * caller's refusal, which is the same notice a start the host refused
+       * gets - the person is waiting either way.
+       *
+       * Not for a bot that works in a computer: its folder is the machine's,
+       * made there when the session starts, and a folder written here would be
+       * one nothing reads - which is the same reason the maker makes none.
+       */
+      if (bot.computer === undefined) prepareFolder(bot.workspace, bot.instructions);
+      const session = await seams.sessions.start(sessionFor(bot, owner));
       // Written down before the message is sent, so a back session that is
       // working is one a later message finds rather than one started again.
       await seams.backs.put(bot.id, user, name, session);
       return session;
-    });
+    })();
     starting.set(key, begun);
     // Held only while it is being started, whether it answers or refuses.
     const done = (): void => { if (starting.get(key) === begun) starting.delete(key); };

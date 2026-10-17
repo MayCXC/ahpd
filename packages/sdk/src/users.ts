@@ -115,11 +115,11 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     description: 'Agent sessions: seeing them, starting them and changing them.',
     operations: [
       'list', 'state',
-      'create', 'dispose', 'rename', 'configure', 'folders', 'attach', 'mark', 'review', 'changes', 'worktree', 'artifacts',
+      'create', 'dispose', 'rename', 'configure', 'folders', 'attach', 'mark', 'review', 'changes', 'worktree', 'artifacts', 'trust',
     ],
     groups: {
       read: ['list', 'state'],
-      write: ['create', 'dispose', 'rename', 'configure', 'folders', 'attach', 'mark', 'review', 'changes', 'worktree', 'artifacts'],
+      write: ['create', 'dispose', 'rename', 'configure', 'folders', 'attach', 'mark', 'review', 'changes', 'worktree', 'artifacts', 'trust'],
     },
   },
   chat: {

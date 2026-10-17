@@ -12,7 +12,7 @@ import { CLOSING, need } from './common.js';
 import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { AutomationEntry, AutomationRun, AutomationRunState, RunEnding, StartSession } from '../types/automations.js';
-import type { TriggerTypeDefinition } from '../types/plugin.js';
+import type { PluginStarts, TriggerTypeDefinition } from '../types/plugin.js';
 import type { RuleMatch } from '../triggers.js';
 import type { WakeFacts } from '../wakemessage.js';
 import type { AutomationWake, SessionEventKind, SessionRule } from '../types/triggers.js';
@@ -188,9 +188,10 @@ export interface Automations {
    *
    * The same steps a run takes, asked the same way, and one question more: a
    * plugin starts work *for* somebody, who could have started it themselves,
-   * so the owner's own `session:create` is asked first.
+   * so the owner's own `session:create` is asked first. `who` is the plugin's
+   * own entry, which is what says whether it may ask for a trusted folder.
    */
-  startForPlugin(wanted: StartSession): Promise<string>;
+  startForPlugin(wanted: StartSession, who?: PluginStarts): Promise<string>;
   /** The clock, wired to the only thing that can act on it. */
   due(event: { automation: string; origin: Bag }): void;
 }
@@ -754,6 +755,16 @@ export function createAutomations(ctx: HostContext): Automations {
       ctx.retool(uri);
       await ctx.pluginsSettled(uri);
     }
+    /*
+     * The folder a trusted request asked for, kept with the session before it
+     * is opened: the backend is told what is trusted when it starts, and the
+     * row is what a restart reads. So the folder is trusted again after a
+     * restart without anybody repeating the request, and it is the one folder
+     * named rather than everything under it.
+     */
+    if (wanted.trusted === true && wanted.workingDirectory !== undefined) {
+      kept.setTrustedFolder?.(idOf(uri), localPath(wanted.workingDirectory));
+    }
     openSession(
       uri,
       provider,
@@ -904,8 +915,18 @@ export function createAutomations(ctx: HostContext): Automations {
    * refusal would be the answer to a question that had not been reached yet. A
    * host with no users directory gates nothing, as it gates nothing for a
    * client.
+   *
+   * A request that asks for a trusted folder is a different grant, on the
+   * plugin's own entry rather than on the person: the folder is the plugin's
+   * business - a bot's own folder, a machine it works in - and nobody at the
+   * keyboard vouched for it. So it is asked before anything is started, and
+   * the refusal names `session:trust`, which is the one thing an operator has
+   * to add.
    */
-  const beginPluginSession = async (wanted: StartSession): Promise<string> => {
+  const beginPluginSession = async (wanted: StartSession, who?: PluginStarts): Promise<string> => {
+    if (wanted.trusted === true && who?.can?.('session:trust') !== true) {
+      throw new RpcError(-32009, refusalReason(`plugin:${who?.by ?? 'unknown'}`, 'session:trust'), {});
+    }
     const owner = wanted.owner;
     if (options.users !== undefined && owner?.startsWith('user:') === true) {
       const person = principalFor(owner);
@@ -931,7 +952,8 @@ export function createAutomations(ctx: HostContext): Automations {
 
   const startForAutomation = (wanted: StartSession): Promise<string> => startHeld(() => beginAutomation(wanted));
 
-  const startForPlugin = (wanted: StartSession): Promise<string> => startHeld(() => beginPluginSession(wanted));
+  const startForPlugin = (wanted: StartSession, who?: PluginStarts): Promise<string> =>
+    startHeld(() => beginPluginSession(wanted, who));
 
   /**
    * Whether this host can open a session: running now, or in its catalogue.
@@ -1259,7 +1281,10 @@ export function createAutomations(ctx: HostContext): Automations {
    * else.
    */
   for (const one of options.pluginStarts ?? []) {
-    one.start = (wanted) => startForPlugin(wanted);
+    // The entry itself is handed over rather than its name: what it grants is
+    // set on this same object by the plugin host, and a request that asks for
+    // a trusted folder is answered from it.
+    one.start = (wanted) => startForPlugin(wanted, one);
     one.opens = (uri) => opensSession(uri);
   }
 

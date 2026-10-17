@@ -237,6 +237,21 @@ export interface SessionStore {
   /** Record them, or forget them with `undefined`. */
   setTools?(id: string, value: string[] | undefined): void;
   /**
+   * The one folder this session was started trusted in, or nothing where no
+   * request asked for trust.
+   *
+   * Kept beside the opt-in tool names and for the same reason: trust is asked
+   * for once, by the request that started the session, and what it bought is
+   * that the folder's project files are read. A session started again - by a
+   * restart, by a resume - has no request to ask again, so the answer has to
+   * live with the session. Only the folder named, never one under it.
+   *
+   * Optional: a store that leaves it out trusts no folder for any session.
+   */
+  trustedFolder?(id: string): string | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setTrustedFolder?(id: string, value: string | undefined): void;
+  /**
    * The session this one was started from, as the id that session is held
    * under, or nothing where nothing started it.
    *

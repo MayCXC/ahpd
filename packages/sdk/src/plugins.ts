@@ -794,6 +794,15 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     roles: Object.freeze([]),
     can: (grant: Grant) => holds(new Set(options.grants ?? []), grant),
   });
+  /*
+   * The same question, reachable from the session request a plugin makes.
+   *
+   * A request does not arrive on the plugin's connection, so nothing there
+   * gates it; `can` is the one answer to what the entry grants, put where the
+   * host's session road reads it - which is where `session:trust` is asked
+   * about.
+   */
+  starts.can = principal.can;
   const contribution: Contribution = {
     by,
     ...(options.spec === undefined ? {} : { spec: options.spec }),
