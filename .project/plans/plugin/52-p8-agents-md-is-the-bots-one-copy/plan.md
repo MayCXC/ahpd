@@ -56,7 +56,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - AGENTS.md has parts the UI owns](task-01-agents-md-has-parts-the-ui-owns.md) | todo | - |
+| [01 - AGENTS.md has parts the UI owns](task-01-agents-md-has-parts-the-ui-owns.md) | implemented | - |
 | [02 - A bot's persona is read from and written to its AGENTS.md](task-02-the-persona-is-read-from-agents-md.md) | todo | 01 |
 | [03 - An edit to a computer bot waits for the computer](task-03-an-edit-to-a-computer-bot-waits.md) | todo | 02 |
 | [04 - The docs say where a bot's persona is](task-04-the-docs-say-where-the-persona-is.md) | todo | 02, 03, 05 |
@@ -70,8 +70,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-17.
-- **Next action:** build [task-01-agents-md-has-parts-the-ui-owns.md](task-01-agents-md-has-parts-the-ui-owns.md).
+- **Done so far:** planned 2026-10-17. Task 01 is implemented: the parser and the writer are in `packages/bot/src/agents.ts`, and the default text is in `packages/bot/src/template.ts`. The provider does not use them yet.
+- **Next action:** build [task-02-the-persona-is-read-from-agents-md.md](task-02-the-persona-is-read-from-agents-md.md).
 - **Open questions:**
   1. The text of the default template - proposed: the text in task 01, which Softov refines.
   2. How a plugin keeps records in `bots/<slug>/` - proposed: `records` takes a path of slugs under the plugin's own collection.

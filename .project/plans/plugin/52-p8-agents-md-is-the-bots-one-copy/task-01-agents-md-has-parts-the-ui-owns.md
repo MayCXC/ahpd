@@ -1,6 +1,6 @@
 ---
 title: AGENTS.md has parts the UI owns
-status: todo
+status: implemented
 depends: []
 layer: "packages/bot"
 refs:
