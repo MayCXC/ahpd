@@ -264,14 +264,30 @@ it('refuses a name that a message fills into something no session can be named',
 
 it('starts a name again whose session this host no longer has', async () => {
   const one = await sitting();
-  // The row of a daemon that restarted: it names a session this host has not.
+  /*
+   * The row of a daemon that restarted: it names a session this host has not.
+   * A session that ran no turn is not on the backend's disk, so its store row
+   * outlives it and `sessionOwner` - the seam `owner` is built on - answers
+   * nothing for it. Nothing is a name to start again rather than a cause to
+   * end the main turn over.
+   */
   await one.backs.put('backer', 'ana', 'work', 'ahp-session:/gone');
+  const said = turn();
 
-  await one.wake.woken(message('t1', 'hello'), turn().handle);
+  await one.wake.woken(message('t1', 'hello'), said.handle);
 
   expect(one.starts).toHaveLength(1);
+  // The row is written over before the message is sent, so the next message
+  // finds the new session rather than starting a third one.
   expect(await one.backs.get('backer', 'ana', 'work')).toBe('ahp-session:/1');
-  expect(one.sent).toMatchObject([{ channel: 'ahp-chat:/1' }]);
+  expect(one.sent).toMatchObject([{
+    channel: 'ahp-chat:/1',
+    action: { type: 'chat/turnStarted', message: { text: 'hello' } },
+  }]);
+  // The person is not told a restart happened: the message reached a session
+  // of the bot's, and the main turn waits on that one.
+  expect([...said.notices, ...said.endings]).toEqual([]);
+  expect(one.wake.main('ahp-session:/1')).toMatchObject({ session: CHAT, turnId: 't1' });
 });
 
 it('ends the main turn with a notice when the host refuses the start', async () => {

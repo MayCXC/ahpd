@@ -951,10 +951,24 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
      * awaited for the same reason. Nothing where this host keeps no sessions
      * and nothing where it has never opened this one, which are the two
      * answers a plugin linking somebody else's session has to tell apart.
+     *
+     * A row is not a session, though, and the store keeps one for longer than
+     * the session lasts: a process that ran no turn leaves nothing on a
+     * backend's disk, so after a restart the row is all there is and the host
+     * answers `No agent for session` to a subscribe. The owner is therefore
+     * answered only where the host can still open the session, which is the
+     * question `opens` asks of the live catalogue - so a plugin reusing a
+     * session starts a new one instead of sending to the one that is gone.
+     *
+     * With no host built over this plugin there is no catalogue to ask, and
+     * the store's answer is the whole of what is known: a host handed to a
+     * test rather than folded into one behaves as it always did.
      */
     sessionOwner: async (uri) => {
       const sessions = await options.sessions?.();
-      return sessions?.owner(idOf(uri));
+      const owner = sessions?.owner(idOf(uri));
+      if (owner === undefined || starts.opens === undefined) return owner;
+      return await starts.opens(uri) ? owner : undefined;
     },
     /*
      * Not a registration, so it is not refused after `apply` returned. The

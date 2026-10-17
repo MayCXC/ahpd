@@ -580,9 +580,10 @@ export interface HostOptions {
    * Every plugin that may start a session for somebody, one entry each.
    *
    * The fold fills this from every contribution, and the host sets each entry's
-   * `start`, so a plugin's `startSession` reaches the live host from wherever it
-   * is called. Kept by plugin, so a plugin's own entry is the whole of what
-   * removing it would take.
+   * `start` and `opens`, so a plugin's `startSession` reaches the live host
+   * from wherever it is called and `sessionOwner` can tell a session the host
+   * still has from a row a restart left behind. Kept by plugin, so a plugin's
+   * own entry is the whole of what removing it would take.
    */
   pluginStarts?: PluginStarts[];
   /**

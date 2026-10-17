@@ -930,6 +930,25 @@ export function createAutomations(ctx: HostContext): Automations {
   const startForPlugin = (wanted: StartSession): Promise<string> => startHeld(() => beginPluginSession(wanted));
 
   /**
+   * Whether this host can open a session: running now, or in its catalogue.
+   *
+   * The same two answers a subscribe is served from, asked as one - a session
+   * this host is holding, or one a backend's disk has that a read can bring
+   * back. What is left is a session that is no more: a store row a restart left
+   * behind, with no process here and nothing on disk, and a plugin reusing a
+   * session has to be told it apart from one it still has.
+   *
+   * `past` is what asks the catalogue, because it answers for a backend that
+   * can be asked about one id as well as for a listing already held, and it
+   * keeps a transcript it read. Nothing is asked of the store: the row that
+   * outlived the session is exactly the thing this question does not trust.
+   */
+  const opensSession = async (uri: string): Promise<boolean> => {
+    const named = ctx.heldAs(uri);
+    return sessions.has(named) || (await ctx.past(idOf(named))) !== undefined;
+  };
+
+  /**
    * Every automation this host is watching, by resource.
    *
    * Beside the engine's rule rather than on it: the engine holds what a rule
@@ -1237,6 +1256,7 @@ export function createAutomations(ctx: HostContext): Automations {
    */
   for (const one of options.pluginStarts ?? []) {
     one.start = (wanted) => startForPlugin(wanted);
+    one.opens = (uri) => opensSession(uri);
   }
 
   /**

@@ -113,7 +113,8 @@ export interface SessionRequest {
  * Built by the plugin host and carried through the fold rather than copied, for
  * the same reason `PluginTriggers` is: a plugin starts a session from a route or
  * a timer long after `apply` returned, so the object its closure holds has to be
- * the object the host fills in. `start` is that place.
+ * the object the host fills in. `start` is that place, and `opens` is the other
+ * half of it - whether the session a plugin holds is one this host still has.
  */
 export interface PluginStarts {
   /** The plugin that asked. */
@@ -127,6 +128,17 @@ export interface PluginStarts {
    * that asks too early is told rather than dropped.
    */
   start?: (wanted: StartSession) => Promise<string>;
+  /**
+   * Whether this host can open a session: running now, or in its catalogue.
+   *
+   * Set by the host once it exists, beside `start`, and absent until then. The
+   * store keeps what was recorded about a session - its owner, its chats - and
+   * a row outlives the session itself: a process that ran no turn leaves
+   * nothing on a backend's disk, so a restart has nothing to open and the row
+   * is what is left. This is the question that tells the two apart, and it is
+   * the same pair a subscribe is answered from.
+   */
+  opens?: (uri: string) => Promise<boolean>;
 }
 
 /**
@@ -601,6 +613,14 @@ export interface PluginHost extends PluginContext {
    * is theirs to make, and the store that knows is the host's own. A URI this
    * host has never opened answers nothing, which is a different answer from a
    * session of the host's own that nobody owns.
+   *
+   * A row is not a session. What the store keeps about one outlives the
+   * process that ran it, and a session that ran no turn leaves nothing on a
+   * backend's disk for a restart to read back - so its owner is answered only
+   * where this host can still open it, running now or in its catalogue. A
+   * plugin that reuses a session is told nothing for the one that is gone and
+   * starts a new one, rather than sending to a session `No agent for session`
+   * answers.
    *
    * Read the way `sessionKept` is, and for the same reason: the store is named
    * by the fold that runs after every plugin has applied, so a plugin asking
