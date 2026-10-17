@@ -1,7 +1,8 @@
 import { expect, it } from 'vitest';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { AGENTS_VERSION, readAgents, writeAgents } from '../src/agents.js';
 import { agentsFilled, DEFAULT_AGENTS_TEMPLATE } from '../src/template.js';
-import type { AgentsParts } from '../src/agents.js';
+import type { AgentsParts, Yaml } from '../src/agents.js';
 import type { BotRecord } from '../src/record.js';
 
 /*
@@ -10,6 +11,9 @@ import type { BotRecord } from '../src/record.js';
  * `## Instructions`. The rest of the file is the bot's own and is not read or
  * changed here.
  */
+
+/** The parser the daemon hands a plugin, and the one the other plugin tests use. */
+const yaml: Yaml = { parseYaml, stringifyYaml };
 
 const parts = (over: Partial<AgentsParts> = {}): AgentsParts => ({
   version: 1,
@@ -37,7 +41,7 @@ The rest is the bot's.
 `;
 
 it('reads the owner parts of a full file', () => {
-  expect(readAgents(FULL)).toEqual({
+  expect(readAgents(yaml, FULL)).toEqual({
     version: 1,
     name: 'Motion',
     description: 'A careful reviewer.',
@@ -46,7 +50,7 @@ it('reads the owner parts of a full file', () => {
 });
 
 it('reads a file with no frontmatter as empty parts and its section', () => {
-  expect(readAgents('# Motion\n\n## Instructions\n\nBe calm.\n')).toEqual({
+  expect(readAgents(yaml, '# Motion\n\n## Instructions\n\nBe calm.\n')).toEqual({
     version: undefined,
     name: '',
     description: '',
@@ -55,7 +59,7 @@ it('reads a file with no frontmatter as empty parts and its section', () => {
 });
 
 it('reads a file with no Instructions section as empty instructions', () => {
-  expect(readAgents('---\nversion: 1\nname: Motion\n---\n\n# Motion\n')).toEqual({
+  expect(readAgents(yaml, '---\nversion: 1\nname: Motion\n---\n\n# Motion\n')).toEqual({
     version: 1,
     name: 'Motion',
     description: '',
@@ -78,7 +82,7 @@ it('reads the default template filled with a bot as that bot words', () => {
     description: 'A careful reviewer.',
     instructions: 'Be calm.',
   };
-  expect(readAgents(agentsFilled(bot, DEFAULT_AGENTS_TEMPLATE))).toEqual({
+  expect(readAgents(yaml, agentsFilled(bot, DEFAULT_AGENTS_TEMPLATE))).toEqual({
     version: 1,
     name: 'Motion',
     description: 'A careful reviewer.',
@@ -87,7 +91,7 @@ it('reads the default template filled with a bot as that bot words', () => {
 });
 
 it('changes only the owner parts and keeps every other byte', () => {
-  const edited = writeAgents(FULL, parts({ name: 'Reviewer', description: 'Reads code.', instructions: 'Be kind.\nBe exact.' }));
+  const edited = writeAgents(yaml, FULL, parts({ name: 'Reviewer', description: 'Reads code.', instructions: 'Be kind.\nBe exact.' }));
   expect(edited).toBe(`---
 version: 1
 name: Reviewer
@@ -109,12 +113,12 @@ The rest is the bot's.
 
 it('quotes a description with a colon or a quote so it reads back the same', () => {
   const description = 'Reviews code: carefully, "at times".';
-  expect(readAgents(writeAgents(FULL, parts({ description }))).description).toBe(description);
+  expect(readAgents(yaml, writeAgents(yaml, FULL, parts({ description }))).description).toBe(description);
 });
 
 it('adds the Instructions section after the frontmatter when the file has none', () => {
   const text = '---\nversion: 1\nname: Motion\ndescription: Empty\n---\n\n## Notes\n\nKeep this.\n';
-  expect(writeAgents(text, parts({ description: 'Empty' }))).toBe(`---
+  expect(writeAgents(yaml, text, parts({ description: 'Empty' }))).toBe(`---
 version: 1
 name: Motion
 description: Empty
@@ -131,7 +135,7 @@ Keep this.
 });
 
 it('adds the frontmatter to a file with none and keeps its text', () => {
-  expect(writeAgents('## Notes\n\nKeep this.\n', parts())).toBe(`---
+  expect(writeAgents(yaml, '## Notes\n\nKeep this.\n', parts())).toBe(`---
 version: 1
 name: Motion
 description: A careful reviewer.
@@ -148,15 +152,15 @@ Keep this.
 });
 
 it('reads a section emptied by an edit as empty', () => {
-  expect(readAgents(writeAgents(FULL, parts({ instructions: '' }))).instructions).toBe('');
+  expect(readAgents(yaml, writeAgents(yaml, FULL, parts({ instructions: '' }))).instructions).toBe('');
 });
 
 it('keeps the layout version a file already names when the parts name none', () => {
   const text = '---\nversion: 2\nname: Motion\n---\n';
-  expect(readAgents(writeAgents(text, parts({ version: undefined, instructions: '' }))).version).toBe(2);
+  expect(readAgents(yaml, writeAgents(yaml, text, parts({ version: undefined, instructions: '' }))).version).toBe(2);
 });
 
 it('writes the layout version when neither the parts nor the file name one', () => {
-  const text = writeAgents('# Motion\n', parts({ version: undefined, instructions: '' }));
-  expect(readAgents(text).version).toBe(AGENTS_VERSION);
+  const text = writeAgents(yaml, '# Motion\n', parts({ version: undefined, instructions: '' }));
+  expect(readAgents(yaml, text).version).toBe(AGENTS_VERSION);
 });

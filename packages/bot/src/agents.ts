@@ -1,5 +1,3 @@
-import { parseYaml, stringifyYaml } from '@cofold/yaml';
-
 /**
  * The parts of an `AGENTS.md` that its owner owns, and how to read and change
  * them without touching the rest of the file.
@@ -20,6 +18,21 @@ import { parseYaml, stringifyYaml } from '@cofold/yaml';
 
 /** The layout version `writeAgents` writes when neither the parts nor the file names one. */
 export const AGENTS_VERSION = 1;
+
+/**
+ * The YAML the plugin host hands the plugin, which the host reads its own
+ * files with.
+ *
+ * Taken as a value rather than imported, so the package runs with no YAML
+ * dependency of its own: the daemon gives the plugin its own subset, and a
+ * test gives it the parser the other plugin tests use.
+ */
+export interface Yaml {
+  /** A YAML text as data, with the subset the host reads its own files with. */
+  parseYaml(text: string): unknown;
+  /** A value as YAML text that `parseYaml` reads back as the same value. */
+  stringifyYaml(value: unknown): string;
+}
 
 /** The heading whose section is the owner's, and from where the section's text begins. */
 const INSTRUCTIONS = /^##[ \t]+Instructions[ \t]*(?:\r?\n|$)/m;
@@ -85,14 +98,15 @@ function split(text: string): Split {
 /**
  * The frontmatter as a mapping, or nothing.
  *
- * The same parser the record collections read their frontmatter with, so a
- * file means here what it means there. A frontmatter that is not a mapping, or
- * that the parser rejects, is no frontmatter rather than a refusal: the file
- * belongs to the bot, and a broken one is still read for what it does say.
+ * The parser the plugin host gives the plugin, which is the one the record
+ * collections read their frontmatter with, so a file means here what it means
+ * there. A frontmatter that is not a mapping, or that the parser rejects, is
+ * no frontmatter rather than a refusal: the file belongs to the bot, and a
+ * broken one is still read for what it does say.
  */
-function fields(front: string): Record<string, unknown> | undefined {
+function fields(yaml: Yaml, front: string): Record<string, unknown> | undefined {
   try {
-    const parsed = parseYaml(front);
+    const parsed = yaml.parseYaml(front);
     return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
       ? parsed as Record<string, unknown>
       : undefined;
@@ -140,9 +154,9 @@ const versionOf = (fields: Record<string, unknown> | undefined): number | undefi
  * with no Instructions section reads its instructions as empty - what a bot
  * leaves of a section it removed, and what an edit in the UI writes again.
  */
-export function readAgents(text: string): AgentsParts {
+export function readAgents(yaml: Yaml, text: string): AgentsParts {
   const { front, body } = split(text);
-  const parsed = fields(front);
+  const parsed = fields(yaml, front);
   return {
     version: versionOf(parsed),
     name: said(parsed, 'name'),
@@ -152,7 +166,7 @@ export function readAgents(text: string): AgentsParts {
 }
 
 /** One frontmatter entry, quoted or written as a block exactly as the parser reads it back. */
-const entry = (key: string, value: unknown): string => stringifyYaml({ [key]: value });
+const entry = (yaml: Yaml, key: string, value: unknown): string => yaml.stringifyYaml({ [key]: value });
 
 /**
  * The frontmatter with the owner's keys set and every other byte as it was.
@@ -163,7 +177,7 @@ const entry = (key: string, value: unknown): string => stringifyYaml({ [key]: va
  * them. A key a bot wrote twice is written twice with the new value, which is
  * still the value the parser reads last.
  */
-function setFields(front: string, values: Record<string, unknown>): string {
+function setFields(yaml: Yaml, front: string, values: Record<string, unknown>): string {
   const matches = [...front.matchAll(KEY)];
   const spans = matches.map((match, at) => ({
     key: match[1] ?? '',
@@ -175,9 +189,9 @@ function setFields(front: string, values: Record<string, unknown>): string {
   for (let at = spans.length - 1; at >= 0; at -= 1) {
     const span = spans[at];
     if (span === undefined || !(OWNED as readonly string[]).includes(span.key)) continue;
-    out = out.slice(0, span.start) + entry(span.key, values[span.key]) + out.slice(span.end);
+    out = out.slice(0, span.start) + entry(yaml, span.key, values[span.key]) + out.slice(span.end);
   }
-  return OWNED.filter((key) => !seen.has(key)).map((key) => entry(key, values[key])).join('') + out;
+  return OWNED.filter((key) => !seen.has(key)).map((key) => entry(yaml, key, values[key])).join('') + out;
 }
 
 /** A line ending before text that does not already begin one. */
@@ -193,16 +207,16 @@ const gap = (body: string, eol: string): string =>
  * the frontmatter, and a missing frontmatter is added on top, so a file the
  * bot wrote before this layout reads with its old text below the new section.
  */
-export function writeAgents(text: string, parts: AgentsParts): string {
+export function writeAgents(yaml: Yaml, text: string, parts: AgentsParts): string {
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const { head, front, close, body, has } = split(text);
-  const version = parts.version ?? versionOf(fields(front)) ?? AGENTS_VERSION;
+  const version = parts.version ?? versionOf(fields(yaml, front)) ?? AGENTS_VERSION;
   const values: Record<string, unknown> = {
     version,
     name: parts.name,
     description: parts.description,
   };
-  const edited = setFields(front, values);
+  const edited = setFields(yaml, front, values);
 
   const region = sectionOf(body);
   const kept = region === undefined

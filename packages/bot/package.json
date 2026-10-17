@@ -52,14 +52,12 @@
     "prepack": "tsc -p .",
     "test": "cd ../.. && vitest run packages/bot/test"
   },
-  "dependencies": {
-    "@cofold/yaml": "^0.3.0"
-  },
   "peerDependencies": {
     "@ahpd/sdk": ">=0.10 <1"
   },
   "devDependencies": {
-    "@ahpd/sdk": "workspace:*"
+    "@ahpd/sdk": "workspace:*",
+    "@cofold/yaml": "^0.3.0"
   },
   "ahpd": {
     "entry": "./dist/index.js",
