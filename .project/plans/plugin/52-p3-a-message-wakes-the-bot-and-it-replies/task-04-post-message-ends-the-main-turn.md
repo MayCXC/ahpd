@@ -1,6 +1,6 @@
 ---
 title: post_message ends the main turn
-status: todo
+status: implemented
 depends: [task-03-a-message-wakes-a-back-session.md]
 layer: "packages/bot"
 refs:

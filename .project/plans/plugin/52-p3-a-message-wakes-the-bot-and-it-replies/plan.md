@@ -84,7 +84,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [01 - A main chat and its back sessions have names](task-01-a-main-chat-and-its-back-sessions-have-names.md) | implemented | - |
 | [02 - A main turn stays open](task-02-a-main-turn-stays-open.md) | implemented | - |
 | [03 - A message wakes a back session](task-03-a-message-wakes-a-back-session.md) | implemented | 01, 02 |
-| [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | todo | 03 |
+| [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | implemented | 03 |
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
 | [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | todo | 03 |
@@ -100,8 +100,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 with eight tasks. Tasks 01 and 02 are on main. Task 03 is implemented. `packages/bot/src/wake.ts` sends each message of a main chat to the back session that the bot's `session` names. The plugin opens its own connection to the host for this. Every chat handle, new or resumed, gets the wake as its `onMessage`. Task 09 is implemented: `sessionOwner` answers nothing for a session this host can neither hold nor open, asked through a new `PluginStarts.opens` the host fills beside `start`; the wake's existing restart case now also checks the row is rewritten and the main turn is left holding on the new session.
-- **Next action:** review task 04, then build task 10.
+- **Done so far:** planned 2026-10-16. Tasks 01 to 03 and 09 are on main. Task 04 is implemented: `packages/bot/src/post.ts` holds `post_message`, which ends the main turn of the calling back session, and a turn end with no post ends the main turn with a notice. Task 07 is implemented: `post_message` is opt-in, the wake names it, and its instruction rides on the tool.
+- **Next action:** review tasks 04 and 07, then build task 10.
 - **Open questions:** none.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.
@@ -111,7 +111,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - [x] A test: a message in a main chat starts a back session, and a second message is a turn in the same one. (`packages/bot/test/bot-wake.test.ts`, by task 03)
 - [x] A test: a name with `{turn}` starts a new back session for each message. (`packages/bot/test/bot-wake.test.ts`, by task 03)
-- [ ] A test: `post_message` ends the main turn with its text, and a back session cannot post into another chat.
+- [x] A test: `post_message` ends the main turn with its text, and a back session cannot post into another chat. (`packages/bot/test/bot-post.test.ts`, by task 04)
 - [ ] A test: a back session's question is answered from the main chat.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: in ahpw, a message to a bot gets a reply, and the subagent call opens the back session.
