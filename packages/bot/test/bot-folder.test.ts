@@ -92,7 +92,7 @@ it('writes a bot with no template the default AGENTS.md, filled with its words',
   // its own words in place of the three.
   expect(read(config, join('templates', 'bots', 'AGENTS.md'))).toBe(DEFAULT_AGENTS_TEMPLATE);
   expect(read(dir, AGENTS_FILE)).toBe(agentsFilled(record, DEFAULT_AGENTS_TEMPLATE));
-  expect(read(dir, AGENTS_FILE)).toContain('# Backer');
+  expect(read(dir, AGENTS_FILE)).toContain('name: Backer');
   expect(read(dir, AGENTS_FILE)).toContain('A careful reviewer.');
   expect(read(dir, AGENTS_FILE)).toContain('Be calm.');
   // The import is the whole of CLAUDE.md: Claude reads that file, and the line

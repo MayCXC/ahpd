@@ -110,6 +110,10 @@ importers:
         version: link:../sdk
 
   packages/bot:
+    dependencies:
+      '@cofold/yaml':
+        specifier: ^0.3.0
+        version: 0.3.0
     devDependencies:
       '@ahpd/sdk':
         specifier: workspace:*

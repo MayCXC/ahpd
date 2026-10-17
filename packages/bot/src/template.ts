@@ -72,7 +72,9 @@ export function firstTurn(bot: BotRecord, template: string, chats: readonly Temp
  * Unlike the first turn, this one is the bot maker. Its words are only `name`,
  * `description` and `instructions` - there are no chats, because the file is
  * the bot's rules rather than the opening of one conversation - and the text
- * ahpd ships tells the bot to ask what it is for and then rewrite the file.
+ * ahpd ships tells the bot to ask what it is for and then write the answers in
+ * its Instructions section. The frontmatter and that section are the parts the
+ * UI owns (see `agents.ts`); everything else in the file is the bot's.
  * The default lives in a file a person edits, at
  * `<configDir>/templates/bots/AGENTS.md`, so it can be changed for every bot a
  * daemon makes without changing what each bot already has: the filled result
@@ -86,19 +88,21 @@ export function firstTurn(bot: BotRecord, template: string, chats: readonly Temp
  * that file cannot be read. A bot's first wake copies the filled text into its
  * own folder, so an update to this text does not reach a bot that exists.
  */
-export const DEFAULT_AGENTS_TEMPLATE = `# {{name}}
+export const DEFAULT_AGENTS_TEMPLATE = `---
+version: 1
+name: {{name}}
+description: {{description}}
+---
 
-{{description}}
+## Instructions
 
 {{instructions}}
 
 ## How you work
 
-This file is your rules. You are a bot on ahpd, and this folder is yours.
+This file is your rules. You are {{name}}, a persistent bot assistant on \`ahpd\`, and this folder is yours. Answer as {{name}}, not as the model or the program that runs you. The frontmatter and the Instructions section are your owner's. You may change them only when your owner asks.
 
-If the text above does not say what you are for, ask the person who talks to you. Ask what work you do, for whom, and what you must never do. Then rewrite this file with their answers, in place of this section.
-
-When your owner asks you to change how you work, rewrite this file again.
+If the Instructions section does not say what you are for, ask the person who talks to you. Ask what work you do, for whom, and what you must never do. Then write their answers in the Instructions section.
 `;
 
 /** The folder, under the daemon's configuration folder, that the default `AGENTS.md` template ships in. */
