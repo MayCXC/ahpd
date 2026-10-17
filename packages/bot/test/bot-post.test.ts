@@ -220,3 +220,14 @@ it('ends nothing when the session\'s own turn ends after a post', async () => {
   expect(said.replies).toEqual(['the answer']);
   expect(said.notices).toEqual([]);
 });
+
+it('is offered only to a session that names it, with the rule that it is the reply', () => {
+  const tool = postMessage(botWake({} as never));
+
+  // The rule rides on the tool, so a session is told it exactly when it has the
+  // tool, a restart included: the names are kept with the session, a request's
+  // instructions are not.
+  expect(tool.optIn).toBe(true);
+  expect(tool.instruction).toContain('main chat');
+  expect(tool.instruction).toMatch(/send_message starts a turn in another session and does not reply/);
+});

@@ -66,6 +66,11 @@ export interface Spawn {
    * client sent it. It is what the start's `trusted` is read from and nothing
    * else is, so a start nobody's connection asked for - an automation, a host
    * tool, a daemon restarting what it held - is a start with no trust at all.
+   *
+   * `askedInstructions` is what the request that asked for this session says,
+   * added to `Start.instructions` after what the host's tools say. It is not
+   * kept, so a session started again after a restart is not told it: what has
+   * to hold for the whole life of a session belongs on a tool's instruction.
    */
   spawn(
     agent: Agent,
@@ -78,6 +83,7 @@ export interface Spawn {
     credentials?: Record<string, string>,
     additional?: string[],
     sender?: Connection,
+    askedInstructions?: string[],
   ): Session;
 }
 
@@ -512,6 +518,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     credentials?: Record<string, string>,
     additional?: string[],
     sender?: Connection,
+    askedInstructions?: string[],
   ): Session => {
     /*
      * The backend that actually runs this session.
@@ -655,6 +662,16 @@ export function createSpawn(ctx: HostContext): Spawn {
       const vouched = made !== undefined && sameFolder(made.path, folder) ? made.repository : folder;
       return trusted(vouched, sender.config?.workspaceTrust, sender.trustedFolders);
     };
+    /*
+     * What the model is told before it starts, in the order it is told.
+     *
+     * The host's tools' own instructions come first, because they are about
+     * tools every session is offered; what the session was asked for joins
+     * them after, which is where a request's own words belong - it may name a
+     * tool that only its session has, so nothing in front of it could account
+     * for that.
+     */
+    const told = [...ctx.instructions(uri), ...(askedInstructions ?? [])];
     const session = used.create({
       uri,
       chatUri,
@@ -670,7 +687,7 @@ export function createSpawn(ctx: HostContext): Spawn {
        * announcement moved the list.
        */
       ...(ctx.boundTools(uri, chatUri, agent.provider).length > 0 ? { tools: deepFreeze(ctx.boundTools(uri, chatUri, agent.provider)) } : {}),
-      ...(ctx.instructions(uri).length > 0 ? { instructions: ctx.instructions(uri) } : {}),
+      ...(told.length > 0 ? { instructions: told } : {}),
       /*
        * The stores a backend may need for itself, handed down only when the
        * host holds them. Files are this host's own store, so a backend reads

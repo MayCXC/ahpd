@@ -113,6 +113,10 @@ export function memorySessions(): SessionStore & Held {
     },
     provider: (id) => rows.get(id)?.provider,
     setProvider: (id, value) => { patch(id, { provider: value }); },
+    tools: (id) => rows.get(id)?.tools,
+    // An empty list is held as that absence: a session that asked for no opt-in
+    // tool is one nothing was recorded for, the way an empty chat list is.
+    setTools: (id, value) => { patch(id, { tools: value === undefined || value.length === 0 ? undefined : [...value] }); },
     parent: (id) => rows.get(id)?.parent,
     setParent: (id, value) => { patch(id, { parent: value }); },
     rootOf: (id) => treeOf(id).root,
@@ -227,6 +231,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.owner === undefined ? {} : { owner: held.owner }),
         ...(held.senders === undefined ? {} : { senders: held.senders }),
         ...(held.provider === undefined ? {} : { provider: held.provider }),
+        ...(held.tools === undefined ? {} : { tools: held.tools }),
         ...(held.artifacts === undefined ? {} : { artifacts: held.artifacts }),
         ...(held.pullRequests === undefined ? {} : { pullRequests: held.pullRequests }),
         ...(held.chatTitles === undefined ? {} : { chatTitles: held.chatTitles }),
@@ -371,6 +376,8 @@ interface Row {
   owner?: Owner | undefined;
   senders?: Map<string, Owner> | undefined;
   provider?: string | undefined;
+  /** The opt-in host tools the session's request named, by name. */
+  tools?: string[] | undefined;
   artifacts?: Record<string, unknown>[] | undefined;
   pullRequests?: PullRequestBaseline | undefined;
   chatTitles?: Map<string, string> | undefined;
@@ -395,6 +402,7 @@ interface Row {
 const empty = (row: Row): boolean =>
   row.flags === undefined && row.config === undefined && row.scope === undefined
   && row.owner === undefined && row.senders === undefined && row.provider === undefined
+  && row.tools === undefined
   && row.artifacts === undefined && row.pullRequests === undefined && row.chatTitles === undefined
   && row.chatFlags === undefined
   && row.parent === undefined && row.nested === undefined && row.chats === undefined
@@ -418,6 +426,8 @@ interface Saved {
   owner?: string;
   senders?: Record<string, string>;
   provider?: string;
+  /** The opt-in host tools the session's request named, by name. */
+  tools?: string[];
   artifacts?: Record<string, unknown>[];
   pullRequests?: PullRequestBaseline;
   chatTitles?: Record<string, string>;
@@ -563,6 +573,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.owner === undefined ? {} : { owner: held.owner }),
       ...(held.senders === undefined ? {} : { senders: Object.fromEntries(held.senders) }),
       ...(held.provider === undefined ? {} : { provider: held.provider }),
+      ...(held.tools === undefined ? {} : { tools: held.tools }),
       ...(held.artifacts === undefined ? {} : { artifacts: held.artifacts }),
       ...(held.pullRequests === undefined ? {} : { pullRequests: held.pullRequests }),
       ...(held.chatTitles === undefined ? {} : { chatTitles: Object.fromEntries(held.chatTitles) }),
@@ -676,6 +687,13 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       // non-empty one is taken as it stands. A row written before providers
       // were kept has none, and reads as a session nothing was recorded for.
       if (typeof row.provider === 'string' && row.provider !== '') inner.setProvider(row.id, row.provider);
+      // Opt-in tool names are strings and nothing else: a list that holds
+      // anything else is ignored rather than guessed at, as every other field
+      // here is. An empty one is the same as none named, as it is in the store.
+      if (Array.isArray(row.tools)) {
+        const names = row.tools.filter((one): one is string => typeof one === 'string');
+        inner.setTools?.(row.id, names.length === 0 ? undefined : names);
+      }
       if (Array.isArray(row.artifacts)) inner.setArtifacts(row.id, row.artifacts.filter((one) => typeof one === 'object' && one !== null));
       // Only an object with two arrays of strings is a baseline this version
       // understands; anything else is ignored rather than guessed at.
@@ -748,6 +766,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setSender: (id, turnId, value) => { touched(id, () => { inner.setSender(id, turnId, value); }); },
     provider: (id) => inner.provider(id),
     setProvider: (id, value) => { touched(id, () => { inner.setProvider(id, value); }); },
+    tools: (id) => inner.tools?.(id),
+    setTools: (id, value) => { touched(id, () => { inner.setTools?.(id, value); }); },
     parent: (id) => inner.parent(id),
     setParent: (id, value) => { touched(id, () => { inner.setParent(id, value); }); },
     rootOf: (id) => inner.rootOf(id),

@@ -98,6 +98,24 @@ export interface SessionRequest {
   /** What it is called, where the plugin already has a name for it. */
   title?: string;
   /**
+   * What the host tells the model beside its own prompt.
+   *
+   * The plugin's half of `Start.instructions`, added after the instructions the
+   * host's tools carry. A backend that takes no system prompt gets them in the
+   * first message, which is the only place a session can be told anything
+   * before it starts working.
+   */
+  instructions?: string[];
+  /**
+   * The opt-in host tools this session asks for, by name.
+   *
+   * A tool the host marks `optIn` is offered to no session unless its request
+   * names it here, and the names are kept with the session so a restart offers
+   * the same tools. Naming a tool the host does not offer is not a refusal;
+   * the session simply never sees it.
+   */
+  tools?: string[];
+  /**
    * The first thing said in it, where the plugin has something to say.
    *
    * Absent is a session that opens with nobody speaking, which is what a bot

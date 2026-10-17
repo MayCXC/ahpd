@@ -402,18 +402,31 @@ export function createTooling(ctx: HostContext): Tooling {
     return named !== undefined && ctx.sessionToolsProviders.includes(named);
   };
   /**
-   * The host's tools for one session, less the session tools where its provider
-   * is not offered them.
+   * The opt-in tool names one session's request asked for.
    *
-   * Where `permitted` decides once and for every session, this is decided per
-   * session, because a list of providers is: it is applied both to the
-   * definitions that go on the wire and to the tools a backend binds, so a
-   * session offered none is neither told of them nor handed them, whose shape this follows.
+   * Kept with the session rather than read off the request again, so a restart
+   * offers the same tools: a session opened again is opened from what was
+   * written down, and what was written down is this.
    */
-  const contributingTo = (uri: string, provider?: string): HostTool[] =>
-    sessionToolsFor(uri, provider)
-      ? ctx.contributing
-      : ctx.contributing.filter((one) => !SESSION_TOOL_NAMES.includes(one.definition.name));
+  const namedBy = (uri: string): string[] => kept.tools?.(idOf(uri)) ?? [];
+  /**
+   * The host's tools for one session, less those it did not ask for.
+   *
+   * Where `permitted` decides once and for every session, `optIn` is asked of
+   * each session by name: the tools offered are the contributing ones less
+   * every opt-in tool this session's request did not name. It is applied both
+   * to the definitions that go on the wire and to the tools a backend binds,
+   * so a session offered none is neither told of them nor handed them, and its
+   * instructions - read off the same list - say nothing about them either.
+   *
+   * Less the session tools, too, where its provider is not offered them.
+   */
+  const contributingTo = (uri: string, provider?: string): HostTool[] => {
+    const named = namedBy(uri);
+    return ctx.contributing.filter((one) =>
+      (one.optIn !== true || named.includes(one.definition.name))
+      && (sessionToolsFor(uri, provider) || !SESSION_TOOL_NAMES.includes(one.definition.name)));
+  };
   /**
    * The title strategy every session runs under, which is the deferred one.
    *
@@ -1772,11 +1785,21 @@ export function createTooling(ctx: HostContext): Tooling {
   const offersSendRemoteMessage = (uri: string): boolean => activeClientsOf(uri).some((client) =>
     (Array.isArray(client.tools) ? client.tools : []).some((tool) => bag(tool).name === SEND_REMOTE_MESSAGE));
 
-  /** What the host's tools want the model told, in the order the tools are offered. */
-  const instructions = (uri: string): string[] => ctx.contributing.flatMap((one) => {
-    if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
-    return one.instruction === undefined ? [] : [one.instruction];
-  });
+  /**
+   * What the host's tools want the model told, in the order the tools are offered.
+   *
+   * An opt-in tool this session did not name is not among them: an instruction
+   * about a tool the model has not been offered is an instruction it cannot
+   * follow.
+   */
+  const instructions = (uri: string): string[] => {
+    const named = namedBy(uri);
+    return ctx.contributing.flatMap((one) => {
+      if (one.optIn === true && !named.includes(one.definition.name)) return [];
+      if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
+      return one.instruction === undefined ? [] : [one.instruction];
+    });
+  };
 
   /**
    * What a turn of a session another window delegated here is told.

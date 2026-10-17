@@ -165,6 +165,21 @@ export interface StartSession {
    */
   title?: string;
   /**
+   * What the host tells the model beside its own prompt.
+   *
+   * Added after the instructions the host's tools carry, and given to a
+   * backend that takes no system prompt in the first message of the session.
+   */
+  instructions?: string[];
+  /**
+   * The opt-in host tools this session asks for, by name.
+   *
+   * A host tool marked `optIn` is offered only to a session whose request
+   * names it. The names are kept with the session, so a restart offers the
+   * same tools.
+   */
+  tools?: string[];
+  /**
    * The first message, which is what the automation is *for*.
    *
    * Empty where a session is asked for with nothing to open with, which only a

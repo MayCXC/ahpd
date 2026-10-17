@@ -227,8 +227,24 @@ export function createTurn(ctx: SessionContext): Turn {
   const attachmentUri = (label: string): string => `acp-attachment:${provider}/${label}`;
 
   /**
+   * Whether the session's instructions have gone out.
+   *
+   * ACP gives a prompt rather than a system prompt, so what the host wants the
+   * model told rides in front of the first turn's text - the only place a
+   * server is told anything before the work starts. Said once, because they are
+   * the session's rather than the turn's: repeating them every turn would spend
+   * context on what the conversation already holds. A failed prompt has sent
+   * nothing, so it leaves the flag down and the next turn opens with them.
+   */
+  let told = false;
+
+  /**
    * The blocks one turn is prompted with: what was said, then the message's
    * attachments as the parts the shared helper made of them.
+   *
+   * The instructions open the first prompt of the session, before anything the
+   * person said, because they are what the agent is to keep in mind while it
+   * reads the rest.
    *
    * The helper decides which of the three an attachment is, and within which
    * limits, so nothing here reads a file: a part is what the message already
@@ -241,6 +257,9 @@ export function createTurn(ctx: SessionContext): Turn {
   const blocksFor = async (text: string, attachments: MessageAttachment[] | undefined): Promise<ContentBlock[]> => {
     const parts = await partsOf(text, attachments, { images: ctx.takes?.image === true });
     const blocks: ContentBlock[] = [];
+    if (!told && start.instructions !== undefined && start.instructions.length > 0) {
+      blocks.push({ type: 'text', text: start.instructions.join('\n\n') });
+    }
     for (const part of parts) {
       if (part.type === 'image') {
         blocks.push({
@@ -322,6 +341,7 @@ export function createTurn(ctx: SessionContext): Turn {
       await ctx.chooseModel(held, chosen);
       ctx.mapping.prompted = true;
       const response = await held.connection.prompt(held.sessionId, await blocksFor(text, attachments));
+      told = true;
       saidUsage(response.usage);
       stopReasonFor(turnId, response.stopReason);
     }

@@ -154,18 +154,36 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
     model: { id: 'claude-sonnet-5' },
     config: { computer: 'workstation' },
     title: 'Backer',
+    tools: ['post_message'],
   });
 
   // A preset is a session whose backend and settings are already decided, so it
   // wins over the harness and the model rather than sitting beside them.
   expect(sessionFor(bot({ preset: 'loud', harness: 'claude', model: 'claude-sonnet-5' }), PERSON))
-    .toEqual({ owner: PERSON, provider: 'loud', workingDirectory: '/bots/backer', title: 'Backer' });
+    .toEqual({
+      owner: PERSON, provider: 'loud', workingDirectory: '/bots/backer', title: 'Backer',
+      tools: ['post_message'],
+    });
 
   // A bot that names no backend at all says nothing about one: the host starts
   // the session on whatever it starts its own on.
   const quiet = { ...bot() };
   delete quiet.harness;
-  expect(sessionFor(quiet, PERSON)).toEqual({ owner: PERSON, workingDirectory: '/bots/backer', title: 'Backer' });
+  expect(sessionFor(quiet, PERSON)).toEqual({
+    owner: PERSON, workingDirectory: '/bots/backer', title: 'Backer',
+    tools: ['post_message'],
+  });
+});
+
+it('asks the host for post_message when it starts a back session', async () => {
+  const one = await sitting();
+
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+
+  // `post_message` is opt-in, so a session that does not name it is never
+  // offered it, and is never told its instruction either.
+  expect(one.starts[0]?.tools).toEqual(['post_message']);
+  expect(one.starts[0]?.instructions).toBeUndefined();
 });
 
 it('starts a back session on the first message, and says the second in it', async () => {
@@ -173,7 +191,10 @@ it('starts a back session on the first message, and says the second in it', asyn
   const first = turn();
   await one.wake.woken(message('t1', 'hello'), first.handle);
 
-  expect(one.starts).toEqual([{ owner: PERSON, provider: 'base', workingDirectory: '/bots/backer', title: 'Backer' }]);
+  expect(one.starts).toEqual([{
+    owner: PERSON, provider: 'base', workingDirectory: '/bots/backer', title: 'Backer',
+    tools: ['post_message'],
+  }]);
   expect(one.sent).toMatchObject([{
     channel: 'ahp-chat:/1',
     action: { type: 'chat/turnStarted', message: { text: 'hello' } },

@@ -373,6 +373,22 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
   if (title !== undefined && !right(title, 'string')) {
     throw new Error(miss(by, 'startSession', 'title', 'a string, or nothing'));
   }
+  /*
+   * The two lists a request carries: what the model is told beside the host's
+   * own prompt, and the opt-in tools the session asks for. Both are read as
+   * lists of strings and nothing else - a single string where a list belongs is
+   * the mistake a plugin makes, and one this check is the only place to catch.
+   */
+  const listOf = (member: string): string[] | undefined => {
+    const value = object[member];
+    if (value === undefined) return undefined;
+    if (!Array.isArray(value) || value.some((one) => typeof one !== 'string')) {
+      throw new Error(miss(by, 'startSession', member, 'an array of strings, or nothing'));
+    }
+    return [...value] as string[];
+  };
+  const instructions = listOf('instructions');
+  const tools = listOf('tools');
   return {
     text: prompt,
     owner: owner as Owner,
@@ -381,6 +397,8 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
     ...(config === undefined ? {} : { config: config as Record<string, unknown> }),
     ...(model === undefined ? {} : { model }),
     ...(title === undefined ? {} : { title: title as string }),
+    ...(instructions === undefined ? {} : { instructions }),
+    ...(tools === undefined ? {} : { tools }),
   };
 };
 

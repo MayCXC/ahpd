@@ -767,6 +767,10 @@ export function createAutomations(ctx: HostContext): Automations {
       // catalogue names after the turn it was asked to say.
       wanted.title,
       forWhom(wanted.owner),
+      {
+        ...(wanted.instructions === undefined ? {} : { instructions: wanted.instructions }),
+        ...(wanted.tools === undefined ? {} : { tools: wanted.tools }),
+      },
     );
     fireRun(wanted);
     beginIn(uri, wanted);

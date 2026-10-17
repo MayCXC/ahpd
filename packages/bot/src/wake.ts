@@ -136,6 +136,10 @@ export interface Wake {
  * would write over the one it asked for. What decides the owner is the main
  * chat rather than the bot, since a bot owned by a team is chatted with by a
  * person, and the work is charged to them.
+ *
+ * Its tools name `post_message`: the tool is opt-in, so a session that does
+ * not ask for it is not offered it, and this is the session that has a main
+ * chat to post to.
  */
 export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
   const provider = bot.preset ?? bot.harness;
@@ -146,6 +150,7 @@ export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
     ...(bot.preset !== undefined || bot.model === undefined ? {} : { model: { id: bot.model } }),
     ...(bot.computer === undefined ? {} : { config: { computer: bot.computer } }),
     title: bot.name,
+    tools: ['post_message'],
   };
 };
 

@@ -223,6 +223,20 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setProvider(id: string, value: string | undefined): void;
   /**
+   * The opt-in host tools this session's request named, or nothing where it
+   * named none.
+   *
+   * Kept with the session rather than read off the request each time, because
+   * a request is one moment and a session outlives it: a session started again
+   * - by a restart, by a resume - is offered the same tools it was started
+   * with, without anybody repeating the list.
+   *
+   * Optional: a store that leaves it out offers no opt-in tool to any session.
+   */
+  tools?(id: string): string[] | undefined;
+  /** Record them, or forget them with `undefined`. */
+  setTools?(id: string, value: string[] | undefined): void;
+  /**
    * The session this one was started from, as the id that session is held
    * under, or nothing where nothing started it.
    *

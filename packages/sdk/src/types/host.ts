@@ -700,6 +700,18 @@ export interface HostTool {
    */
   advancedPermission?: boolean;
   /**
+   * Whether the tool is offered only to a session that asks for it by name.
+   *
+   * Where `advancedPermission` is one switch over every session, this is a
+   * question about one session: a tool that sets it is absent from every
+   * session whose request does not name it in `tools`, and offered to the ones
+   * that do. The names are kept with the session, so a restart offers the same
+   * tools without the request being repeated. It is what a tool whose answer
+   * only means something in one kind of session asks for - `post_message` is
+   * offered to a bot's back session and to nothing else.
+   */
+  optIn?: boolean;
+  /**
    * What to tell the model about when to call it, beyond the description.
    *
    * Added to the agent's instructions while the tool is offered, the way the

@@ -143,7 +143,7 @@ export interface Lifecycle {
    * out at all - and is absent where nobody sent the message.
    */
   messageAttachments(message: Record<string, unknown>, sender?: Connection): Attached;
-  /** Start a session. */
+  /** Start a session, with what its request asked to be told and offered. */
   openSession(
     uri: string,
     provider: string,
@@ -154,6 +154,7 @@ export interface Lifecycle {
     additional?: string[],
     title?: string,
     by?: { owner?: Owner; principal?: Principal; sender?: Connection },
+    asked?: { instructions?: string[]; tools?: string[] },
   ): void;
 }
 
@@ -1571,6 +1572,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     additional?: string[],
     title?: string,
     by?: { owner?: Owner; principal?: Principal; sender?: Connection },
+    asked?: { instructions?: string[]; tools?: string[] },
   ): void => {
     named(uri, 'session');
     if (sessions.has(uri))
@@ -1604,8 +1606,18 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     if (sentFrom !== undefined) kept.setRemoteOrigin?.(idOf(uri), sentFrom);
     const madeBy = readCreatedBy(config);
     if (madeBy !== undefined) kept.setCreatedBy?.(idOf(uri), madeBy);
+    /*
+     * The opt-in tools the request asked for, written down before the session
+     * spawns: which tools are offered is read off the store while the first
+     * turn is being set up, and the names are kept for the reason an owner is
+     * - a session opened again after a restart is offered the same tools
+     * without the request being repeated. A session that asked for none writes
+     * nothing, so a row read back is a session with no names rather than one
+     * that asked for an empty list.
+     */
+    if (asked !== undefined) kept.setTools?.(idOf(uri), asked.tools);
     try {
-      const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), config, undefined, where, credentials, additional, by?.sender);
+      const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), config, undefined, where, credentials, additional, by?.sender, asked?.instructions);
       // Named before it is announced, when the maker had a name for it: a
       // row that appears as "New session" and is renamed a moment later is
       // two rows to a client that lists once. Written down for the same
