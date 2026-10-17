@@ -1,7 +1,7 @@
 ---
 title: AGENTS.md is the bot's one copy
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-17
 revalidated: 2026-10-17
@@ -49,6 +49,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | `version` is the version of the file's layout | (defaulted: a parser tells an old layout from a new one) | 01 |
 | A section the bot removed reads as empty, and an edit in the UI writes it again | (defaulted: the bot owns the rest of the file and can break it) | 01 |
 | The wire shape of a bot does not change, so a client needs no change | (defaulted: the provider reads the parts from the file) | 02 |
+| A plugin reads YAML with the host's `parseYaml` and `stringifyYaml`, and has no YAML dependency of its own | Softov, 2026-10-17, "Server could expose the yaml call for plugins right?", then "plan and implement" | 06 |
 | An edit to a computer bot while the computer is offline waits, and the next back session start writes it | Softov, 2026-10-17, "Its possible to make like a pending sync? For when offline?" | 03 |
 | All the data of one bot is in `bots/<slug>/`, and a delete removes that folder | Softov, 2026-10-17, chose "One folder per bot" for "Deleting a bot leaves its rows in bot-chats/ and bot-sessions/, its chat logs, and its folder. Which fix?" | 05 |
 
@@ -57,10 +58,11 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - AGENTS.md has parts the UI owns](task-01-agents-md-has-parts-the-ui-owns.md) | implemented | - |
-| [02 - A bot's persona is read from and written to its AGENTS.md](task-02-the-persona-is-read-from-agents-md.md) | todo | 01 |
+| [02 - A bot's persona is read from and written to its AGENTS.md](task-02-the-persona-is-read-from-agents-md.md) | todo | 01, 06 |
 | [03 - An edit to a computer bot waits for the computer](task-03-an-edit-to-a-computer-bot-waits.md) | todo | 02 |
 | [04 - The docs say where a bot's persona is](task-04-the-docs-say-where-the-persona-is.md) | todo | 02, 03, 05 |
 | [05 - A bot's data is one folder](task-05-a-bots-data-is-one-folder.md) | todo | 02 |
+| [06 - AGENTS.md uses the host's YAML](task-06-agents-md-uses-the-hosts-yaml.md) | todo | 01 |
 
 ## Risks and tradeoffs
 

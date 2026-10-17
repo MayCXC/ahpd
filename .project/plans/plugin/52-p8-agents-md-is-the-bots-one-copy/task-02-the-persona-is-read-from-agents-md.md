@@ -1,7 +1,7 @@
 ---
 title: A bot's persona is read from and written to its AGENTS.md
 status: todo
-depends: [task-01-agents-md-has-parts-the-ui-owns.md]
+depends: [task-01-agents-md-has-parts-the-ui-owns.md, task-06-agents-md-uses-the-hosts-yaml.md]
 layer: "packages/bot"
 refs:
   - "[code://packages/bot/src/provider.ts](../../../../packages/bot/src/provider.ts) - the read, write and delete roads of a bot"
