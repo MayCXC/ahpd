@@ -2,16 +2,21 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
+import { pluginHost } from '../../sdk/src/plugins.js';
 import { memoryRecords } from '../../sdk/src/records.js';
+import { memorySessions } from '../../sdk/src/sessions.js';
+import { sdkVersion } from '../../sdk/src/version.js';
 import { backSessions, rowId } from '../src/names.js';
+import { apply, defaults, optionsSchema } from '../src/plugin.js';
 import { postMessage } from '../src/post.js';
 import { botStore } from '../src/store.js';
 import { botWake } from '../src/wake.js';
+import type { MainTurnAbsence } from '../src/wake.js';
 import type { ChatMessage, TurnHandle } from '../src/chat.js';
 import type { BotSessions } from '../src/provider.js';
 import type { BotRecord } from '../src/record.js';
 import type { ToolCall } from '../../sdk/src/types/host.js';
-import type { SessionRequest } from '../../sdk/src/types/plugin.js';
+import type { LoaderContext, SessionRequest } from '../../sdk/src/types/plugin.js';
 import type { Owner } from '../../sdk/src/types/usage.js';
 
 /*
@@ -20,9 +25,10 @@ import type { Owner } from '../../sdk/src/types/usage.js';
  * A message said to a bot leaves a main turn open while a back session works,
  * and something has to end it. This is the two ways: `post_message`, which ends
  * it with the text the session posts, and the end of the session's own turn,
- * which ends it with a notice when nothing was posted. What is checked is that
- * the chat answered is the session's own - the tool reads `at.session` and no
- * input - and that a turn ends once, whichever road gets there first.
+ * which ends it as `mainTurnPostMessageAbsent` says - the session's last words
+ * by default, or the notice, or nothing. What is checked is that the chat
+ * answered is the session's own - the tool reads `at.session` and no input -
+ * and that a turn ends once, whichever road gets there first.
  *
  * The host's own halves are stubs, as they are in `bot-wake.test.ts`: what
  * starts a session and what carries an action are the plugin's. The wake and
@@ -96,7 +102,7 @@ const called = (session: string): ToolCall => ({ session } as unknown as ToolCal
  * start, `look` reads a chat off the same map, and `send` records what it was
  * asked to carry rather than carrying it.
  */
-async function sitting(record: BotRecord = bot()) {
+async function sitting(record: BotRecord = bot(), absent: MainTurnAbsence = 'post') {
   const records = memoryRecords();
   const store = botStore(
     await records.collection('bots', { body: 'instructions' }),
@@ -142,7 +148,7 @@ async function sitting(record: BotRecord = bot()) {
     // carries is not what a post answers: nothing here is refused.
     send: async () => undefined,
     problem: () => {},
-  });
+  }, absent);
 
   return { wake, post: postMessage(wake) };
 }
@@ -197,24 +203,89 @@ it('posts into the chat that woke the session, never one an input names', async 
   expect(said.replies).toEqual(['the answer']);
 });
 
-it('ends the main turn with a notice when the back session finishes without a post', async () => {
+/**
+ * The main turn one back session answered, after its turn ends with `text` and
+ * no post.
+ */
+async function ended(absent: MainTurnAbsence | undefined, text: string) {
+  const one = await sitting(bot(), absent);
+  const said = await woken(one);
+  one.wake.finished('ahp-session:/1', text);
+  return { one, said };
+}
+
+it('posts the last words of a turn that ended with no post, by default', async () => {
+  const { one, said } = await ended(undefined, 'The answer is 42.');
+
+  // The default: the person asked a question, so the session's last words are
+  // the reply rather than a notice that nothing was posted.
+  expect(said.replies).toEqual(['The answer is 42.']);
+  expect(said.notices).toEqual([]);
+  expect(said.endings).toEqual([]);
+  expect(one.wake.main('ahp-session:/1')).toBeUndefined();
+});
+
+it('ends with nothing on post when the turn said nothing', async () => {
+  const { said } = await ended('post', '');
+
+  // Nothing to post is not an empty reply: the turn is ended outright.
+  expect(said.replies).toEqual([]);
+  expect(said.notices).toEqual([]);
+  expect(said.endings).toEqual(['ended']);
+});
+
+it('ends with the notice on notice, whatever the turn said', async () => {
+  const withText = await ended('notice', 'The answer is 42.');
+  expect(withText.said.replies).toEqual([]);
+  expect(withText.said.notices).toEqual(['Backer finished without a reply']);
+  expect(withText.said.endings).toEqual([]);
+
+  // A notice even when the turn had words: this is what the option did before
+  // it could post, and a host that chose it keeps that.
+  const silent = await ended('notice', '');
+  expect(silent.said.notices).toEqual(['Backer finished without a reply']);
+  expect(silent.said.endings).toEqual([]);
+});
+
+it('ends with nothing on silence, whatever the turn said', async () => {
+  const withText = await ended('silence', 'The answer is 42.');
+  expect(withText.said.replies).toEqual([]);
+  expect(withText.said.notices).toEqual([]);
+  expect(withText.said.endings).toEqual(['ended']);
+
+  const silent = await ended('silence', '');
+  expect(silent.said.replies).toEqual([]);
+  expect(silent.said.notices).toEqual([]);
+  expect(silent.said.endings).toEqual(['ended']);
+});
+
+it('posts the last words on postNotice, and the notice when there are none', async () => {
+  const withText = await ended('postNotice', 'The answer is 42.');
+  expect(withText.said.replies).toEqual(['The answer is 42.']);
+  expect(withText.said.notices).toEqual([]);
+
+  // The difference from post is exactly this: a turn with no words is still
+  // told to the person rather than ended in silence.
+  const silent = await ended('postNotice', '');
+  expect(silent.said.replies).toEqual([]);
+  expect(silent.said.notices).toEqual(['Backer finished without a reply']);
+  expect(silent.said.endings).toEqual([]);
+});
+
+it('ends the main turn once, whichever road got there first', async () => {
   const one = await sitting();
   const said = await woken(one);
 
-  // The session's turn is over and nothing was posted, so the person is told
-  // that rather than left with a turn nothing will ever end.
-  one.wake.finished('ahp-session:/1');
+  one.wake.finished('ahp-session:/1', 'the answer');
+  // A second ending would be a turn of its own, and a session this wake never
+  // woke ends nothing at all.
+  one.wake.finished('ahp-session:/1', 'and again');
+  one.wake.finished('ahp-session:/stray', 'nobody');
 
-  expect(said.notices).toEqual(['Backer finished without a reply']);
-  expect(said.replies).toEqual([]);
+  expect(said.replies).toEqual(['the answer']);
+  expect(said.notices).toEqual([]);
   expect(said.endings).toEqual([]);
   expect(one.wake.main('ahp-session:/1')).toBeUndefined();
-
-  // A session that already answered ends nothing when its turn ends after, and
-  // neither does one this wake never woke.
-  one.wake.finished('ahp-session:/1');
-  one.wake.finished('ahp-session:/stray');
-  expect(said.notices).toHaveLength(1);
 });
 
 it('ends nothing when the session\'s own turn ends after a post', async () => {
@@ -223,8 +294,9 @@ it('ends nothing when the session\'s own turn ends after a post', async () => {
 
   await one.post.run({ text: 'the answer' }, called('ahp-session:/1'));
   // The turn a post ended is over, so the session's own turn ending after it
-  // is nothing: the answer is not followed by a notice saying it was not given.
-  one.wake.finished('ahp-session:/1');
+  // is nothing: the answer is not followed by the last words as well, and
+  // neither is it followed by a notice saying it was not given.
+  one.wake.finished('ahp-session:/1', 'the last words');
 
   expect(said.replies).toEqual(['the answer']);
   expect(said.notices).toEqual([]);
@@ -239,4 +311,28 @@ it('is offered only to a session that names it, with the rule that it is the rep
   expect(tool.optIn).toBe(true);
   expect(tool.instruction).toContain('main chat');
   expect(tool.instruction).toMatch(/send_message starts a turn in another session and does not reply/);
+});
+
+it('gives mainTurnPostMessageAbsent a default of post, and declares it', () => {
+  expect(defaults.mainTurnPostMessageAbsent).toBe('post');
+  expect(optionsSchema.properties).toHaveProperty('mainTurnPostMessageAbsent');
+});
+
+it('reports a value outside the table, and loads anyway', () => {
+  const root = mkdtempSync(join(tmpdir(), 'ahpd-bot-post-option-'));
+  const context: LoaderContext = {
+    path: root, paths: [root], version: sdkVersion(), hostName: 'test', configDir: join(root, 'config'), log: () => {}, say: () => {},
+  };
+  const problems: string[] = [];
+  const { host } = pluginHost('bot', context, {
+    sessions: () => memorySessions(),
+    records: () => memoryRecords(),
+    problem: (line) => problems.push(line),
+  });
+
+  apply(host, { root: join(root, 'bots'), mainTurnPostMessageAbsent: 'shout' });
+
+  // A value the table does not name is reported rather than thrown: the plugin
+  // still loads, and the main turn is answered as post, which is the default.
+  expect(problems).toEqual([expect.stringContaining('mainTurnPostMessageAbsent is "shout"')]);
 });

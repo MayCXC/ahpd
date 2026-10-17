@@ -36,11 +36,12 @@ import type { BotStore } from './store.js';
  *
  * A message that reached a back session leaves its main turn open until one of
  * two things happens: the session posts an answer with `post_message`, which is
- * `post.ts`, or its turn ends without one and the person is given a notice
- * saying so. Both are said through `answering` - the map from a back session to
- * the turn that woke it - which is also what lets the turn go. A message that
- * never reached a session is the one ending this file makes itself, with a
- * notice naming the cause.
+ * `post.ts`, or its turn ends without one and the option
+ * `mainTurnPostMessageAbsent` decides what the main turn gets - the session's
+ * last words, a notice that none came, or nothing. Both are said through
+ * `answering` - the map from a back session to the turn that woke it - which is
+ * also what lets the turn go. A message that never reached a session is the one
+ * ending this file makes itself, with a notice naming the cause.
  */
 
 /** One back session's chat, as the host answers it. */
@@ -92,9 +93,27 @@ export interface Answering {
   turnId: string;
   /** The handle over that turn: what the answer is said through, and what ends it. */
   handle: TurnHandle;
-  /** The bot's name, which the notice a session that finishes without an answer is said in. */
+  /** The bot's name, which the notice is said in, where the option asks for one. */
   bot: string;
 }
+
+/**
+ * What a main turn does when the back session's turn ends without a
+ * `post_message` call, as the option `mainTurnPostMessageAbsent` says.
+ *
+ * `post` ends it with the session's last words, and with nothing where the turn
+ * said nothing. `notice` ends it with the notice, as it was before the option.
+ * `silence` ends it with nothing. `postNotice` ends it with the last words, and
+ * with the notice where there are none.
+ */
+export type MainTurnAbsence = 'post' | 'notice' | 'silence' | 'postNotice';
+
+/** Every value `mainTurnPostMessageAbsent` takes, in the order the table lists them. */
+export const MAIN_TURN_ABSENCES: readonly MainTurnAbsence[] = ['post', 'notice', 'silence', 'postNotice'];
+
+/** Whether a value is one `mainTurnPostMessageAbsent` takes. */
+export const isMainTurnAbsence = (value: unknown): value is MainTurnAbsence =>
+  typeof value === 'string' && (MAIN_TURN_ABSENCES as readonly string[]).includes(value);
 
 /** What the plugin holds of the wake: the waking itself, and the turns it left open. */
 export interface Wake {
@@ -124,13 +143,17 @@ export interface Wake {
    */
   posted(backSession: string, text: string): boolean;
   /**
-   * End the main turn one back session was answering, with a notice, because
-   * the session's turn is over and nothing was posted.
+   * End the main turn one back session was answering, because the session's
+   * turn is over and nothing was posted.
+   *
+   * `text` is what the session said in that turn, and what the main turn gets
+   * is the option `mainTurnPostMessageAbsent`: the last words, the notice, or
+   * nothing.
    *
    * Nothing where no main turn is waiting on this session, which is a session
    * that posted already and one this wake never woke.
    */
-  finished(backSession: string): void;
+  finished(backSession: string, text: string): void;
 }
 
 /**
@@ -178,8 +201,12 @@ export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
  * given, so this takes seams rather than a host: what starts a session, what a
  * name is looked up in and what a message is sent with are all somebody else's,
  * and the wake is what decides the order they happen in.
+ *
+ * `absent` is the plugin's `mainTurnPostMessageAbsent`, and defaults to `post`:
+ * a person asked a question, and the session's last words are the answer unless
+ * the host was told otherwise.
  */
-export function botWake(seams: WakeSeams): Wake {
+export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wake {
   /** The main turn each back session is answering, by that session's URI. */
   const answering = new Map<string, Answering>();
   /** The back sessions being started right now, by the name each is started for. */
@@ -287,12 +314,25 @@ export function botWake(seams: WakeSeams): Wake {
       return true;
     },
 
-    finished: (backSession) => {
+    finished: (backSession, text) => {
       const held = answering.get(backSession);
       if (held === undefined) return;
       // Let go first, for the reason `posted` says.
       answering.delete(backSession);
-      held.handle.notice(`${held.bot} finished without a reply`);
+      /*
+       * The table `mainTurnPostMessageAbsent` names. A turn that said nothing
+       * has nothing to post, so it is ended rather than given an empty reply;
+       * whether that ending is a notice is what `postNotice` is for.
+       */
+      if (text !== '' && (absent === 'post' || absent === 'postNotice')) {
+        held.handle.reply(text);
+        return;
+      }
+      if (absent === 'notice' || absent === 'postNotice') {
+        held.handle.notice(`${held.bot} finished without a reply`);
+        return;
+      }
+      held.handle.end();
     },
 
     woken: async (message, handle) => {

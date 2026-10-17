@@ -8,7 +8,8 @@ import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
 import { agentsTextOf, LAST_CHATS } from './template.js';
-import { botWake } from './wake.js';
+import { botWake, isMainTurnAbsence } from './wake.js';
+import type { MainTurnAbsence } from './wake.js';
 import type { Bag, Plugin, PluginPeer } from '@ahpd/sdk';
 import type { BotSessions } from './provider.js';
 
@@ -47,6 +48,7 @@ export const title = 'Bot';
 export const defaults = {
   root: '~/.bots',
   lastChats: LAST_CHATS,
+  mainTurnPostMessageAbsent: 'post',
 } as const;
 
 /** The options `apply` receives, as a JSON Schema the daemon checks them against. */
@@ -55,6 +57,10 @@ export const optionsSchema = {
   properties: {
     root: { type: 'string', description: "The folder a bot's own workspace is under, as <root>/<slug>." },
     lastChats: { type: 'integer', minimum: 1, description: 'How many chats a template lists for {{chats}}.' },
+    mainTurnPostMessageAbsent: {
+      type: 'string',
+      description: "What a main turn does when the back session's turn ends without post_message: post (the default), notice, silence or postNotice.",
+    },
   },
 };
 
@@ -122,6 +128,21 @@ interface Opened {
   sender: Dispatcher;
 }
 
+/**
+ * The text of one turn in a chat's state: its `markdown` response parts, joined.
+ *
+ * Read off the chat rather than off `turn_end`, which names a turn but not what
+ * it said. The parts are the answer a client draws, and the markdown ones are
+ * the answer a person reads.
+ */
+const textOf = (state: unknown, turn: string): string => {
+  const turns = (state as { turns?: unknown } | undefined)?.turns;
+  if (!Array.isArray(turns)) return '';
+  const found = turns.find((one: unknown) => (one as { id?: unknown }).id === turn) as { responseParts?: unknown } | undefined;
+  const parts = Array.isArray(found?.responseParts) ? found.responseParts as { kind?: unknown; content?: unknown }[] : [];
+  return parts.filter((part) => part.kind === 'markdown').map((part) => String(part.content ?? '')).join('');
+};
+
 export const apply: Plugin['apply'] = (host, options) => {
   const asked = options.root as string | undefined;
   const root = expandHome(asked === undefined || asked.trim() === '' ? defaults.root : asked);
@@ -146,6 +167,19 @@ export const apply: Plugin['apply'] = (host, options) => {
   );
   const asked_ = options.lastChats;
   const lastChats = typeof asked_ === 'number' && Number.isInteger(asked_) && asked_ >= 1 ? asked_ : defaults.lastChats;
+  /*
+   * What a main turn does when a back session's turn ends without a post.
+   *
+   * The schema checks that the option is a string and not which one, so a value
+   * outside the table is reported here and `post` is used: a person waiting on
+   * a reply is owed the bot's last words, not an empty turn caused by a typo in
+   * the daemon's configuration.
+   */
+  const askedAbsent = options.mainTurnPostMessageAbsent;
+  const absent: MainTurnAbsence = isMainTurnAbsence(askedAbsent) ? askedAbsent : defaults.mainTurnPostMessageAbsent;
+  if (askedAbsent !== undefined && !isMainTurnAbsence(askedAbsent)) {
+    host.problem(`${name}: mainTurnPostMessageAbsent is ${JSON.stringify(askedAbsent)}, which is not one of post, notice, silence or postNotice; using post`);
+  }
   const kept = host.records('templates', { body: 'text' });
   const templates = {
     // A bot file is edited by hand too, so a name is checked again here.
@@ -252,16 +286,54 @@ export const apply: Plugin['apply'] = (host, options) => {
       return await sender.dispatch(chat, action);
     },
     problem: (line) => { host.problem(`${name}: ${line}`); },
-  });
+  }, absent);
   /*
    * How a main turn ends, the two ways a back session has of ending it: the
    * `post_message` tool, which answers it with what the session says, and the
-   * end of the session's own turn, which answers it with a notice when nothing
-   * was posted. The tool finds the chat from the calling session, and the event
-   * names the session that ended a turn - neither can name somebody else's.
+   * end of the session's own turn, which answers it as the option
+   * `mainTurnPostMessageAbsent` says. The tool finds the chat from the calling
+   * session, and the event names the session that ended a turn - neither can
+   * name somebody else's.
    */
   host.registerTool(postMessage(wake));
-  host.on('turn_end', (event) => { wake.finished(event.session); });
+  /*
+   * The end of a turn: the words it ended with, read off the session's chat.
+   *
+   * Every turn of the daemon raises the event, so one no main chat is waiting
+   * on is left alone rather than read. The session is asked again after the
+   * read, because a message that arrived meanwhile woke it again and holds a
+   * turn of its own: answering that turn with these words would answer a
+   * message nobody sent. A read that fails is reported and the main turn ends
+   * with no text, so a person waiting on it is not left waiting on an error
+   * they cannot see.
+   */
+  host.on('turn_end', (event) => {
+    const held = wake.main(event.session);
+    if (held === undefined) return;
+    /*
+     * Whether this is still the main turn waiting when the read comes back: a
+     * message that arrived meanwhile holds its own turn in the same chat, and
+     * these words are not its answer. The handle is the chat's and is the same
+     * for every turn in it, so the turn is compared as well.
+     */
+    const still = (): boolean => {
+      const now = wake.main(event.session);
+      return now !== undefined && now.handle === held.handle && now.turnId === held.turnId;
+    };
+    const read = (async (): Promise<string> => {
+      const { conn } = await connection();
+      const answered = await conn.request('subscribe', { channel: event.chat }) as { snapshot?: { state?: unknown } };
+      return textOf(answered.snapshot?.state, event.turn);
+    })();
+    read.then((text) => {
+      if (!still()) return;
+      wake.finished(event.session, text);
+    }, (error: unknown) => {
+      host.problem(`${name}: the end of turn ${event.turn} in ${event.chat} was not read: ${reason(error)}`);
+      if (!still()) return;
+      wake.finished(event.session, '');
+    });
+  });
   /*
    * A chat with a bot: a session of its own that runs no model, one JSON line
    * per turn under the daemon's configuration folder. Every message in one,
