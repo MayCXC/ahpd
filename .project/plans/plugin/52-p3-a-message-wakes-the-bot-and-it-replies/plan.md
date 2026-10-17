@@ -65,6 +65,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | `<user>` is the id after `user:`, and the host's name for a reader who is nobody | (defaulted: `chatOf` keys on the owner the same way) | 01 |
 | A back session is owned by the person of its main chat | (defaulted: the person reads and answers their own back session) | 03 |
 | The system prompt is only the use of `post_message`, and the bot's rules are in `AGENTS.md` | Softov, 2026-10-17, chose "AGENTS.md" for "How should a back session get the bot's rules and the instruction to call post_message?" | 07, 10 |
+| `post_message` is opt-in, and only a session whose request names it has it | Softov, 2026-10-17, chose "Session asks for it" for "How should post_message be offered only to a bot's back sessions?" | 07 |
 | `post_message` replies in the main chat, and `send_message` stays a turn in another session | Softov, 2026-10-17, "post_message is sidebyside with send_message tool right?" | 07 |
 | `AGENTS.md` is the persona, read by the harness, and `CLAUDE.md` holds `@AGENTS.md` | Softov, 2026-10-16, chose "AGENTS.md read by the harness" | 10 |
 | The bot rewrites its own `AGENTS.md` | Softov, 2026-10-16, "AGENTS.md will need a rewrite right. When bot desires" | 10 |
