@@ -87,7 +87,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | implemented | 03 |
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
-| [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | todo | 03 |
+| [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | implemented | 03 |
 | [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11 |
 | [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | implemented | 03 |
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | todo | 03 |
@@ -100,10 +100,12 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16. Tasks 01 to 03 and 09 are on main. Task 04 is implemented: `packages/bot/src/post.ts` holds `post_message`, which ends the main turn of the calling back session, and a turn end with no post ends the main turn with a notice. Task 07 is implemented: `post_message` is opt-in, the wake names it, and its instruction rides on the tool.
+- **Done so far:** planned 2026-10-16. Tasks 01 to 03 and 09 are on main. Task 04 is implemented: `post_message` in `packages/bot/src/post.ts` ends the main turn of the calling back session. A turn end with no post ends the main turn with a notice. Task 07 is implemented: a session request carries `instructions` and `tools`. The host adds `instructions` to `Start.instructions` after the tools' own words. It offers an opt-in host tool only to a session that named it, and keeps the names with the session. `post_message` is opt-in, the wake names it, and the rule to answer with it is the tool's own `instruction`. An ACP session gets the instructions in front of its first prompt.
 - **Next action:** review tasks 04 and 07, then build task 10.
 - **Open questions:** none.
+- **Watch out for:** a request's `instructions` are not kept, so a session started again after a restart is not told them. A rule that must hold for the whole session goes on a tool's `instruction`. Task 11 must account for this with the maker text.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
+- **Watch out for:** the opt-in names are in `SessionStore.tools`, not in the session config. `openSession` gets `backendsOwn(config)`, which removes a host key before `setConfig`.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.
 - **Watch out for:** a name a message fills is checked with `isFilledName`, not `isSlug`. A turn id is a uuid, so the filled name may start with a digit and is at most eighty characters.
 
