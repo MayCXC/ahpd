@@ -1,12 +1,13 @@
 import { expandHome, reason, Status } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
+import { prepareAgentsTemplate } from './folder.js';
 import { backSessions, SESSIONS } from './names.js';
 import { postMessage } from './post.js';
 import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
-import { LAST_CHATS } from './template.js';
+import { agentsTextOf, LAST_CHATS } from './template.js';
 import { botWake } from './wake.js';
 import type { Bag, Plugin, PluginPeer } from '@ahpd/sdk';
 import type { BotSessions } from './provider.js';
@@ -23,6 +24,11 @@ import type { BotSessions } from './provider.js';
  * `instructions` is the collection's body, so it is the Markdown half of the
  * file a person edits, and every other field is frontmatter above it. A
  * template is a record of the `templates` collection, whose body is `text`.
+ * The default `AGENTS.md` template is a file of its own, under
+ * `<configDir>/templates/bots/`: this writes it at load when it is absent, and
+ * a person may edit it after. It is not a record, because it is the one text
+ * every bot starts from rather than a named one, and the `templates`
+ * collection reads only the `.md` records directly in its folder.
  *
  * A message said to a bot wakes the back session its record names, which is
  * `wake.ts` - and the connection that sends it is here, because a plugin
@@ -119,6 +125,20 @@ interface Opened {
 export const apply: Plugin['apply'] = (host, options) => {
   const asked = options.root as string | undefined;
   const root = expandHome(asked === undefined || asked.trim() === '' ? defaults.root : asked);
+  /*
+   * The default `AGENTS.md` template, written once where there is none.
+   *
+   * A person edits it by hand, so it is written only when it is absent and
+   * never over: an update to ahpd does not replace what they wrote. A failure
+   * to write it costs the file and not the plugin - a wake falls back to the
+   * text ahpd ships - so the operator is told and the daemon goes on.
+   */
+  try {
+    prepareAgentsTemplate(host.configDir);
+  }
+  catch (error) {
+    host.problem(`${name}: the default AGENTS.md template was not written: ${reason(error)}`);
+  }
   const store = botStore(
     host.records('bots', { body: 'instructions' }),
     host.records('bots-gone'),
@@ -201,6 +221,13 @@ export const apply: Plugin['apply'] = (host, options) => {
     chats,
     backs,
     sessions,
+    /*
+     * The bot's `AGENTS.md`, made when its folder is first prepared: the
+     * template record it names, or the default file under the configuration
+     * folder, filled with its words. Read per wake rather than kept, because a
+     * template is a file a person edits.
+     */
+    agents: (bot) => agentsTextOf(bot, templates, host.configDir),
     /*
      * A back session's chat, and whether a turn is running in it: the two
      * things a message needs, both read off the session's own state, which is

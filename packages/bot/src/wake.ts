@@ -62,6 +62,14 @@ export interface WakeSeams {
   /** This host's sessions, where a back session is looked for and started. */
   sessions: BotSessions;
   /**
+   * The `AGENTS.md` a first wake writes into the bot's folder.
+   *
+   * The template the record names, or the default one, already filled with the
+   * bot's words. Async because a template is a record, which a store may answer
+   * later, and the default one is a file that is read when it is asked for.
+   */
+  agents(bot: BotRecord): Promise<string>;
+  /**
    * One session's chat and whether it is working, or the failure of asking.
    *
    * Throws where the session cannot be read, and the sentence it throws is what
@@ -220,15 +228,17 @@ export function botWake(seams: WakeSeams): Wake {
       /*
        * The folder before the session, because the session starts in it and
        * reads what is there: a bot whose `AGENTS.md` has not been written yet
-       * is one that starts without its rules. A write that fails is the
-       * caller's refusal, which is the same notice a start the host refused
-       * gets - the person is waiting either way.
+       * is one that starts without its rules. The text is the bot's template
+       * filled with its words, so a bot made without instructions still gets a
+       * file, one that tells it to ask what it is for. A write that fails is
+       * the caller's refusal, which is the same notice a start the host
+       * refused gets - the person is waiting either way.
        *
        * Not for a bot that works in a computer: its folder is the machine's,
        * made there when the session starts, and a folder written here would be
        * one nothing reads - which is the same reason the maker makes none.
        */
-      if (bot.computer === undefined) prepareFolder(bot.workspace, bot.instructions);
+      if (bot.computer === undefined) prepareFolder(bot.workspace, await seams.agents(bot));
       const session = await seams.sessions.start(sessionFor(bot, owner));
       // Written down before the message is sent, so a back session that is
       // working is one a later message finds rather than one started again.

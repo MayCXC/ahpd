@@ -130,6 +130,9 @@ async function sitting(record: BotRecord = bot()) {
     chats,
     backs,
     sessions,
+    // What a first wake writes into the folder: the real plugin fills the
+    // template, and these cases are about the post rather than the file.
+    agents: async (one) => `# ${one.name}\n`,
     look: async (session) => {
       const chat = at.get(session);
       if (chat === undefined) throw new Error(`${session} names no chat to say a message in`);
