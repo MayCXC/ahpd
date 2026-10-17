@@ -646,10 +646,12 @@ it('lets the host make a bot for a team it holds no membership of', async () => 
 /*
  * A bot made with no session is made anyway.
  *
- * A bot is a record, a folder and a chat. A make leaves the record and the
- * folder behind - the folder because that is where the bot works - and opens
- * nothing: what anybody says to a bot is said in a chat, and a chat is opened
- * by a read of the bot rather than by its maker.
+ * A bot is a record, a folder, a chat, and the name of the session a message to
+ * it wakes. A make leaves the record and the folder behind - the folder because
+ * that is where the bot works - and opens nothing: what anybody says to a bot is
+ * said in a chat, and a chat is opened by a read of the bot rather than by its
+ * maker. The name is written rather than started, so nothing is running until
+ * somebody says something.
  */
 
 /**
@@ -697,7 +699,9 @@ it('starts no session on a make', async () => {
   await write(soft, 'bot://quiet', { name: 'Quiet' }, { createOnly: true });
 
   expect(await allSessions(soft)).toEqual([]);
-  expect(await record(soft, 'bot://motion')).not.toHaveProperty('session');
+  // The name is on the record, and a name is not a session: the one a bot that
+  // names none has is `work`.
+  expect((await record(soft, 'bot://motion'))['session']).toBe('work');
 });
 
 it('edits a bot whose template was removed, and refuses an edit that names a missing one', async () => {
@@ -723,31 +727,39 @@ it('refuses a make that names a template that does not exist', async () => {
   expect(await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true })).toMatchObject({ result: {} });
 });
 
-it('refuses a body that names a session, and drops one an older file holds', async () => {
+it('takes the name of a back session, and fills one a bot named none of', async () => {
   const { host, bots, records } = made({ soft: ['bot:*', 'session:create'] });
   const soft = await as(host, 'soft');
 
-  // A bot has no session, so `session` is a key a bot does not have - the same
-  // refusal any other unknown key gets, and the name stays free.
-  expect(await write(soft, 'bot://motion', { name: 'Motion', session: 'claude:/one' }, { createOnly: true }))
-    .toMatchObject({ code: -32602, message: 'session is not something a bot has' });
+  await write(soft, 'bot://motion', { name: 'Motion', session: 'reviews' }, { createOnly: true });
+  expect((await record(soft, 'bot://motion'))['session']).toBe('reviews');
 
-  // Nothing converts an older file: the key is dropped as the store reads it,
-  // so a bot this host answers is a bot with no link on it.
+  // A name a session can have is a slug, and `{turn}` is the one word it may
+  // hold: a body that names anything else is refused, so a name read back off a
+  // bot is always a name a message can wake.
+  expect(await write(soft, 'bot://other', { name: 'Other', session: 'claude:/one' }, { createOnly: true }))
+    .toMatchObject({
+      code: -32602,
+      message: 'claude:/one is not a name a back session can have: lowercase letters, digits, a dash and {turn}, starting with a letter',
+    });
+  expect(await write(soft, 'bot://job', { name: 'Job', session: 'job-{turn}' }, { createOnly: true }))
+    .toMatchObject({ result: {} });
+
+  // A file written before a bot named one is read as a bot that named none: the
+  // store fills the name in, so nothing that reads a bot has to know the default.
   await (await records.collection('bots', { body: 'instructions' })).put({
-    id: 'motion',
-    name: 'Motion',
+    id: 'older',
+    name: 'Older',
     labels: [],
     body: 'robot',
     color: 'red',
-    workspace: join(bots, 'motion'),
+    workspace: join(bots, 'older'),
     owner: 'user:soft',
     createdAt: '2026-10-11T00:00:00.000Z',
     updatedAt: '2026-10-11T00:00:00.000Z',
-    session: 'claude:/6f1c0b6e-2a5a-4a1e-9a4a-0f0e0b1c0d0e',
   });
 
-  expect(await record(soft, 'bot://motion')).not.toHaveProperty('session');
+  expect((await record(soft, 'bot://older'))['session']).toBe('work');
 });
 
 /*

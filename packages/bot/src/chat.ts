@@ -351,8 +351,11 @@ export function turns(session: string): TurnHandle {
  * `store` is read rather than a file of its own, because a chat is a chat
  * *with a bot*: which bot it is for is checked at `create`, and a slug no bot
  * has is refused there rather than opening a session nothing can answer.
+ *
+ * `heard` is set as the `onMessage` of every chat's handle, a new chat and a
+ * resumed one alike.
  */
-export function botChatAgent(configDir: string, store: BotStore): Agent {
+export function botChatAgent(configDir: string, store: BotStore, heard?: (message: ChatMessage, handle: TurnHandle) => void): Agent {
   /** The folder every chat of this daemon is under. */
   const dir = join(configDir, CHATS_DIR);
 
@@ -459,6 +462,7 @@ export function botChatAgent(configDir: string, store: BotStore): Agent {
         finish(held, 'complete', []);
       },
     };
+    if (heard !== undefined) handle.onMessage = (message) => { heard(message, handle); };
     handles.set(start.uri, handle);
 
     /**

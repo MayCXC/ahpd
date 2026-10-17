@@ -74,9 +74,9 @@ A bot is addressed by its slug, which is the URI path and the record's own `id`:
 
 A slug is lowercase letters, digits and dashes, one to forty of them, starting with a letter. Anything else is refused `-32602`: the slug is a folder name and a URI path at once.
 
-A body may carry `name`, `labels`, `description`, `body`, `color`, `instructions`, `template`, `harness`, `model`, `preset`, `workspace`, `computer` and `owner`. `id`, `createdAt` and `updatedAt` are read but never obeyed - what they name is the host's, and a write that names another `id` is refused rather than followed. `owner` may be named by a make, as the maker or a team or project the maker belongs to; a write naming anybody else is refused `-32009`, and an edit may not move it. A read answers one key more, `chat`, the reader's own conversation with the bot: it is answered and never obeyed, so a client that writes a record it read back is writing back a bot.
+A body may carry `name`, `labels`, `description`, `body`, `color`, `instructions`, `template`, `harness`, `model`, `preset`, `session`, `workspace`, `computer` and `owner`. `id`, `createdAt` and `updatedAt` are read but never obeyed - what they name is the host's, and a write that names another `id` is refused rather than followed. `owner` may be named by a make, as the maker or a team or project the maker belongs to; a write naming anybody else is refused `-32009`, and an edit may not move it. A read answers one key more, `chat`, the reader's own conversation with the bot: it is answered and never obeyed, so a client that writes a record it read back is writing back a bot.
 
-A bot has no session, so a body that names `session` is refused `-32602` like any other key it does not have, and a file an older daemon wrote that still holds the line is read without it.
+A bot's `session` is the name of the back session a message to it wakes. It is a slug, or a slug holding `{turn}` where the turn id of each message takes that word's place - so a bot that names `{turn}` is a session per message rather than one a person comes back to. A body that names none has `work`, a body that names something that is no name is refused `-32602`, and a file an older daemon wrote without the line is read as the bot that named none.
 
 A bot is drawn in one of fifteen bodies and in one of eleven colours or a hex colour, `#rrggbb`. A make that names neither gets a body at random and the first colour.
 
@@ -104,7 +104,7 @@ A bot works in a folder of its own, `<root>/<slug>` unless the body named one, a
 
 ### The chat
 
-A person talks to a bot in a chat: one session of the `bot-chat` provider per bot and person. The provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bot-chats/`, so a chat is still readable after the daemon restarts. Nothing about a chat is kept in memory past the process that made it.
+A person talks to a bot in a chat: one session of the `bot-chat` provider per bot and person. The provider runs no model, and a turn it begins stays open until the plugin that started the chat ends it - which is what the bot's back session answers into. Each turn is one JSON line under `<configDir>/bot-chats/`, so a chat is still readable after the daemon restarts. Nothing about a chat is kept in memory past the process that made it.
 
 A chat is opened by a read. `resourceRead bot://<slug>` answers the record with `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats. A reader who may not chat is answered the record alone, with no `chat` and no refusal.
 

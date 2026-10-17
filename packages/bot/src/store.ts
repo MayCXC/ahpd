@@ -1,4 +1,4 @@
-import { BOT_BODIES, isBotColor, isSlug } from './record.js';
+import { BOT_BODIES, DEFAULT_SESSION, isBotColor, isSlug } from './record.js';
 import type { BotRecord } from './record.js';
 import type { RecordChange, RecordCollection } from '@ahpd/sdk';
 
@@ -65,9 +65,9 @@ export interface BotStore {
  * record a person edited by hand can say anything, and a store that answered
  * something else is caught by the same check.
  *
- * A bot has no session link, and a record an older plugin wrote still names
- * one. The key is dropped rather than read: a bot this host answers is a bot
- * with no link on it, and the file keeps the line until its next write.
+ * Two keys are filled in rather than checked, because a bot with no word for
+ * them and a bot whose word nobody has read are the same bot: the body it is
+ * drawn with, and the name of the back session a message wakes.
  */
 const kept = (said: unknown): BotRecord | undefined => {
   if (typeof said !== 'object' || said === null || Array.isArray(said)) return undefined;
@@ -81,8 +81,15 @@ const kept = (said: unknown): BotRecord | undefined => {
   // A body is a tag, so any word is kept, and a file with none is drawn with
   // the first suggestion rather than left out of the listing.
   const body = typeof one['body'] === 'string' && one['body'].trim() !== '' ? one['body'] : BOT_BODIES[0];
-  const rest: Record<string, unknown> = { ...one, body };
-  delete rest['session'];
+  /*
+   * And a back session's name, which a file that names none has as `work`: a
+   * bot this host answers always names the session a message wakes, so nothing
+   * that reads one has to know what the default is. Whether the name is one a
+   * session can have is not asked here - a hand-written name that is no name is
+   * refused where the message arrives, by the wake.
+   */
+  const session = typeof one['session'] === 'string' && one['session'].trim() !== '' ? one['session'].trim() : DEFAULT_SESSION;
+  const rest: Record<string, unknown> = { ...one, body, session };
   return rest as unknown as BotRecord;
 };
 

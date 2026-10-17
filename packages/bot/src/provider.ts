@@ -5,7 +5,7 @@ import { covers, ownerOfPrincipal } from '@ahpd/sdk';
 import { CHAT_PROVIDER } from './chat.js';
 import { named, rowId, userOf, whose } from './names.js';
 import {
-  BOT_BODIES, BOT_COLORS, checkRecord, isSlug,
+  BOT_BODIES, BOT_COLORS, checkRecord, DEFAULT_SESSION, isSlug, TURN_WORD,
 } from './record.js';
 import { DEFAULT_TEMPLATE, templateOf } from './template.js';
 import type { BackSessions } from './names.js';
@@ -230,6 +230,10 @@ const manifest = (hostName: string) => ({
     harness: { type: 'string', description: 'The backend a session of it runs on.' },
     model: { type: 'string', description: 'The model it asks for.' },
     preset: { type: 'string', description: 'The session preset it starts from.' },
+    session: {
+      type: 'string',
+      description: `The name of the back session a message to it wakes, as a slug, or one with ${TURN_WORD} in it for a session of its own per message. Absent is ${DEFAULT_SESSION}.`,
+    },
     workspace: { type: 'string', description: 'The folder it works in, under the plugin root. Its own, and never moved.' },
     computer: { type: 'string', description: 'The machine it runs in.' },
     owner: {
@@ -715,6 +719,7 @@ export function botProvider(options: BotOptions): BotProvider {
         ...(draft.harness === undefined ? {} : { harness: draft.harness }),
         ...(draft.model === undefined ? {} : { model: draft.model }),
         ...(draft.preset === undefined ? {} : { preset: draft.preset }),
+        session: draft.session,
         workspace: workspaceFor(slug, draft.workspace, existing),
         ...(draft.computer === undefined ? {} : { computer: draft.computer }),
         owner: whose,

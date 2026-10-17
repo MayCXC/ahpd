@@ -1,4 +1,4 @@
-import { expandHome } from '@ahpd/sdk';
+import { expandHome, reason, Status } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
 import { backSessions, SESSIONS } from './names.js';
@@ -6,7 +6,9 @@ import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
 import { LAST_CHATS } from './template.js';
-import type { Plugin } from '@ahpd/sdk';
+import { botWake } from './wake.js';
+import type { Bag, Plugin, PluginPeer } from '@ahpd/sdk';
+import type { BotSessions } from './provider.js';
 
 /**
  * The package as a plugin.
@@ -20,6 +22,12 @@ import type { Plugin } from '@ahpd/sdk';
  * `instructions` is the collection's body, so it is the Markdown half of the
  * file a person edits, and every other field is frontmatter above it. A
  * template is a record of the `templates` collection, whose body is `text`.
+ *
+ * A message said to a bot wakes the back session its record names, which is
+ * `wake.ts` - and the connection that sends it is here, because a plugin
+ * reaching the sessions of its own host has to arrive as a client does. It is
+ * opened on the first message that needs it, so a daemon nobody talks to opens
+ * none.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -42,6 +50,70 @@ export const optionsSchema = {
     lastChats: { type: 'integer', minimum: 1, description: 'How many chats a template lists for {{chats}}.' },
   },
 };
+
+/** What the plugin's connection to the host calls itself, which is how it knows its own frames. */
+const CLIENT = 'ahpd-bot';
+
+/** How long a dispatch waits for the host's echo before it goes on as taken, in milliseconds. */
+const ECHO_MS = 10_000;
+
+/** Dispatches actions on the plugin's connection, and hears whether the host took each one. */
+interface Dispatcher {
+  /** Dispatch one action, and give the host's refusal reason, or `undefined` when the host took it or said nothing. */
+  dispatch(channel: string, action: Record<string, unknown>): Promise<string | undefined>;
+}
+
+/**
+ * The dispatcher over the plugin's connection, which sets its one `onMessage`
+ * handler.
+ *
+ * Each dispatch carries the next `clientSeq`, and the host answers an action it
+ * applied with an `action` frame naming that `clientId` and that `clientSeq` -
+ * with a `rejectionReason` when it refused it, and without one when it took it.
+ * The host echoes a taken action only to the subscribers of its channel, so a
+ * caller subscribes first. A dispatch that hears nothing in `waitMs` gives
+ * `undefined` and calls `silent`: only a refusal the host sent is a refusal,
+ * since an action a host is still holding can still be applied.
+ */
+function dispatcher(conn: PluginPeer, clientId: string, waitMs: number, silent?: (channel: string) => void): Dispatcher {
+  let seq = 0;
+  const waiting = new Map<number, (refused: string | undefined) => void>();
+  conn.onMessage((message) => {
+    if (message.method !== 'action') return;
+    const params = message.params as { origin?: { clientId?: unknown; clientSeq?: unknown }; rejectionReason?: unknown } | undefined;
+    const origin = params?.origin;
+    if (origin?.clientId !== clientId || typeof origin.clientSeq !== 'number') return;
+    const done = waiting.get(origin.clientSeq);
+    if (done === undefined) return;
+    waiting.delete(origin.clientSeq);
+    done(typeof params?.rejectionReason === 'string' ? params.rejectionReason : undefined);
+  });
+  return {
+    dispatch: (channel, action) => {
+      seq += 1;
+      const clientSeq = seq;
+      return new Promise((resolve) => {
+        const timer = setTimeout(() => {
+          waiting.delete(clientSeq);
+          silent?.(channel);
+          resolve(undefined);
+        }, waitMs);
+        timer.unref?.();
+        waiting.set(clientSeq, (refused) => {
+          clearTimeout(timer);
+          resolve(refused);
+        });
+        conn.notify('dispatchAction', { channel, clientSeq, action });
+      });
+    },
+  };
+}
+
+/** The plugin's connection to the host, and the dispatcher over it. */
+interface Opened {
+  conn: PluginPeer;
+  sender: Dispatcher;
+}
 
 export const apply: Plugin['apply'] = (host, options) => {
   const asked = options.root as string | undefined;
@@ -74,6 +146,36 @@ export const apply: Plugin['apply'] = (host, options) => {
    * person can come back to, rather than one started again every time.
    */
   const backs = backSessions(host.records(SESSIONS));
+  /*
+   * The plugin's own connection to this host, opened by the first message that
+   * needs one.
+   *
+   * A bot's work runs in a session of its own and a message reaches it as a
+   * turn, which is a client action: a plugin is a client of its own host, and
+   * `connect` is the only door onto one - there is no plugin-side "send a
+   * turn". Opened here rather than when the daemon listens, because nothing
+   * this plugin does needs it before somebody says something to a bot; a
+   * connection that failed is dropped, so the next message tries again.
+   */
+  let opened: Promise<Opened> | undefined;
+  const connection = (): Promise<Opened> => {
+    opened ??= (async () => {
+      const conn = host.connect();
+      const sender = dispatcher(conn, CLIENT, ECHO_MS, (channel) => {
+        host.problem(`${name}: the host did not echo an action in ${channel} in ${ECHO_MS / 1000} seconds`);
+      });
+      await conn.request('initialize', { clientId: CLIENT, protocolVersions: ['0.9.0'] });
+      return { conn, sender };
+    })();
+    const failed = (): void => { opened = undefined; };
+    opened.catch(failed);
+    return opened;
+  };
+  /** This host's own sessions, where a chat and a back session are started, and read for the one a bot has. */
+  const sessions: BotSessions = {
+    owner: (uri) => host.sessionOwner(uri),
+    start: (wanted) => host.startSession(wanted),
+  };
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
@@ -85,15 +187,52 @@ export const apply: Plugin['apply'] = (host, options) => {
     templates,
     chats,
     backSessions: backs,
-    sessions: {
-      owner: (uri) => host.sessionOwner(uri),
-      start: (wanted) => host.startSession(wanted),
-    },
+    sessions,
   }));
   /*
-   * A chat with a bot: a session of its own that runs no model, one JSON line
-   * per turn under the daemon's own configuration. What a read of `bot://`
-   * starts, and where a person and their bot talk. See `chat.ts`.
+   * The wake: every turn one of those chats begins, and every message steered
+   * into an open one, goes to the back session the bot's record names. A chat
+   * this plugin did not open - one a client started by itself - names no bot
+   * in the rows and is left as it was.
    */
-  host.registerAgent(botChatAgent(host.configDir, store));
+  const wake = botWake({
+    store,
+    chats,
+    backs,
+    sessions,
+    /*
+     * A back session's chat, and whether a turn is running in it: the two
+     * things a message needs, both read off the session's own state, which is
+     * what a subscribe answers. Idle means the message begins a turn, and
+     * working means it steers the one that is running.
+     */
+    look: async (session) => {
+      const { conn } = await connection();
+      const answered = await conn.request('subscribe', { channel: session }) as { snapshot?: { state?: Bag } };
+      const state = answered.snapshot?.state ?? {};
+      const chat = state['defaultChat'];
+      if (typeof chat !== 'string' || chat === '') {
+        throw new Error(`${session} names no chat to say a message in`);
+      }
+      const status = typeof state['status'] === 'number' ? state['status'] : Status.Idle;
+      return { chat, working: (status & Status.InProgress) !== 0 };
+    },
+    send: async (chat, action) => {
+      const { conn, sender } = await connection();
+      // The host echoes a taken action only to the subscribers of its channel.
+      await conn.request('subscribe', { channel: chat });
+      return await sender.dispatch(chat, action);
+    },
+    problem: (line) => { host.problem(`${name}: ${line}`); },
+  });
+  /*
+   * A chat with a bot: a session of its own that runs no model, one JSON line
+   * per turn under the daemon's configuration folder. Every message in one,
+   * new or resumed, goes to the wake. See `chat.ts`.
+   */
+  host.registerAgent(botChatAgent(host.configDir, store, (message, handle) => {
+    wake.woken(message, handle).catch((error: unknown) => {
+      host.problem(`${name}: a message in ${message.session} was not woken: ${reason(error)}`);
+    });
+  }));
 };

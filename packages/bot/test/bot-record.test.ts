@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import {
-  BOT_BODIES, BOT_COLORS, checkRecord, isSlug,
+  BOT_BODIES, BOT_COLORS, checkRecord, isBackName, isSlug,
 } from '../src/record.js';
 import type { BotRecord } from '../src/record.js';
 
@@ -20,6 +20,7 @@ const WAS: BotRecord = {
   labels: ['mascot'],
   body: 'robot',
   color: 'red',
+  session: 'work',
   workspace: '/home/softov/.bots/motion',
   owner: 'user:soft',
   createdAt: '2026-01-01T00:00:00.000Z',
@@ -113,6 +114,28 @@ it('keeps what an edit did not name, and refuses what an edit may not move', () 
   expect(() => checkRecord('motion', { name: 'Moved', id: 'other' }, WAS)).toThrow(/other/);
   expect(() => checkRecord('motion', { name: 'Moved', owner: 'user:ana' }, WAS)).toThrow(/user:ana/);
   expect(() => checkRecord('motion', { name: 'Moved', workspace: '/elsewhere' }, WAS)).toThrow(/elsewhere/);
+});
+
+it('takes the name of a back session, and fills one a body named none of', () => {
+  // What a message to a bot wakes: one name, and therefore one session a person
+  // comes back to, unless the body chose another.
+  expect(checkRecord('motion', { name: 'Motion' }).session).toBe('work');
+  expect(checkRecord('motion', { name: 'Motion', session: 'reviews' }).session).toBe('reviews');
+  expect(checkRecord('motion', { name: 'Calm' }, WAS).session).toBe('work');
+
+  // `{turn}` is the one word a name may hold, and it is what makes a name a
+  // name per message: the name is a slug once a turn id has taken its place.
+  expect(checkRecord('motion', { name: 'Motion', session: 'job-{turn}' }).session).toBe('job-{turn}');
+  expect(isBackName('work')).toBe(true);
+  expect(isBackName('{turn}')).toBe(true);
+  expect(isBackName('job-{turn}')).toBe(true);
+  expect(isBackName('{turn}{turn}')).toBe(true);
+  expect(isBackName('Job')).toBe(false);
+  expect(isBackName('two words')).toBe(false);
+  expect(isBackName('/p{turn}')).toBe(false);
+
+  expect(() => checkRecord('motion', { name: 'Motion', session: 'Not A Name' }))
+    .toThrow(expect.objectContaining({ code: -32602 }) as Error);
 });
 
 it('takes a template by name, refuses one that is not a slug, and keeps it on an edit', () => {

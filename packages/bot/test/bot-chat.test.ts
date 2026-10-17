@@ -186,7 +186,7 @@ const stateOf = async (client: Client): Promise<Bag> => {
  * `begin` while a turn is open is refused by the host rather than handed to a
  * backend, so the guard behind that refusal is a method only this can call.
  */
-async function backend(configDir: string, records: ReturnType<typeof memoryRecords>) {
+async function backend(configDir: string, records: ReturnType<typeof memoryRecords>, heard?: Parameters<typeof botChatAgent>[2]) {
   const store = botStore(
     await records.collection('bots', { body: 'instructions' }),
     await records.collection('bots-gone'),
@@ -195,7 +195,7 @@ async function backend(configDir: string, records: ReturnType<typeof memoryRecor
   // A chat is started by a read of `bot://`, which is what loads the store by
   // the time a `create` asks it for a bot. A test asking it directly waits.
   await store.ready();
-  return botChatAgent(configDir, store);
+  return botChatAgent(configDir, store, heard);
 }
 
 /** What the call was refused with, or a case that fails because it was allowed. */
@@ -213,6 +213,13 @@ it('keeps a chat in a log, and answers it again after a restart', async () => {
   const client = await anyone(host);
 
   await talkTo(client);
+  /*
+   * Nobody answers this chat here, and saying so is answering it with nothing:
+   * the plugin puts its wake on every chat it starts, and a chat whose bot it
+   * cannot find is one it ends the turn of at once. That is the state this test
+   * is about - it checks the log a chat leaves, not what a message wakes.
+   */
+  turns(HELD).onMessage = () => { turns(HELD).end(); };
   for (const [turnId, text] of [['t1', 'hello'], ['t2', 'again']] as const) await said(client, turnId, text);
 
   /*
@@ -584,4 +591,30 @@ it('refuses a chat with a bot that is not there', async () => {
   // backend's sentence: `openSession` answers every one of them the same way.
   expect(refusal.code).toBe(-32602);
   expect(refusal.message).toBe('There is no bot nobody.');
+});
+
+it('tells a resumed chat\'s messages to the agent\'s listener, as it does a new one\'s', async () => {
+  const { host, configDir, records } = made();
+  const client = await anyone(host);
+  await client.handle({
+    method: 'resourceWrite',
+    params: { uri: 'bot://backer', data: JSON.stringify({ name: 'Backer' }), createOnly: true },
+  });
+  const heard: ChatMessage[] = [];
+  const agent = await backend(configDir, records, (message) => { heard.push(message); });
+  // A chat the host resumes after a restart: no `session_start` is fired for it.
+  const session = agent.create({
+    uri: 'bot-chat:/again',
+    chatUri: 'ahp-chat:/again',
+    settings: { bot: 'backer' },
+    schema: () => ({}),
+    emit: () => {},
+    clientToolTimeoutMs: 0,
+    resume: 'again',
+  } as Start);
+
+  session.begin('t1', 'hello');
+
+  expect(heard).toEqual([{ session: 'bot-chat:/again', turnId: 't1', text: 'hello' }]);
+  expect(turns('bot-chat:/again').onMessage).toBeDefined();
 });
