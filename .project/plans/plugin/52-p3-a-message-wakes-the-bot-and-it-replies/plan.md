@@ -73,7 +73,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A plugin asks for trust with `trusted: true` on its request, which trusts only its `workingDirectory`, and the host honours it only with the grant `session:trust` | Softov, 2026-10-17, chose "Request flag + grant" for "How does a bot's back session get trust for its own folder?" | 10 |
 | `session:trust` is in the `session` write group, so `session:write` covers it | Softov, 2026-10-17, chose "Keep it in write" for "Every session operation must be in the read or write group, so session:write would cover session:trust. Which way?" | 10 |
 | The record's `instructions` is only the seed of the first `AGENTS.md` | Softov, 2026-10-17, chose "Seed only" | 10 |
-| The maker runs on the owner's first wake, in the owner's main chat | Softov, 2026-10-17, chose "Owner's first wake" | 11 |
+| ahpd ships a default `AGENTS.md` template at `templates/bots/AGENTS.md` in the config folder, used when a bot names no template, and edited only by hand | Softov, 2026-10-17, "There must be a template default loaded with ahpd. Thats the AGENTS.md template" | 11 |
+| The template is the maker: the written `AGENTS.md` tells the bot to ask what it is for and rewrite itself | Softov, 2026-10-17, chose "Template is the maker" for "Does the AGENTS.md template replace task 11's maker?" | 11 |
 | The manager text is copied into `AGENTS.md`, so an ahpd update does not change a bot that exists | Softov, 2026-10-16, chose "Copied into AGENTS.md" | 11 |
 | "Never does direct work" is a template choice | Softov, 2026-10-16, chose "A template choice" | 11 |
 | A session that is gone is started again, because `sessionOwner` answers nothing for it | (defaulted: Softov's test showed `No agent for session` and a main chat that "no longer exists") | 09 |
@@ -93,7 +94,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11 |
 | [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | implemented | 03 |
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | implemented | 03 |
-| [11 - The owner's first wake makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | todo | 07, 10 |
+| [11 - The AGENTS.md template makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | implemented | 10 |
 
 ## Risks and tradeoffs
 
@@ -102,15 +103,16 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16. Tasks 01 to 04, 07 and 09 are on main. Task 10 is implemented. A plugin asks for trust with `trusted: true` on its session request. The host refuses it without `session:trust`, which `session:write` covers. The store keeps the trusted folder, so a restart keeps it. `trustedBy` trusts that one folder and no folder under it. Before a back session starts, the bot writes `CLAUDE.md` and `AGENTS.md` when each is absent.
-- **Next action:** review task 10, then build task 11.
+- **Done so far:** planned 2026-10-16. Tasks 01 to 04, 07 and 09 are on main. Task 10 is implemented. A plugin asks for trust with `trusted: true` on its session request. The host refuses it without `session:trust`, which `session:write` covers. The store keeps the trusted folder, so a restart keeps it. `trustedBy` trusts that one folder and no folder under it. Task 11 is implemented. At load, the plugin writes `<configDir>/templates/bots/AGENTS.md` when the file is absent, never over one a person edited. A bot's first wake fills the template it names, or that default file, with `name`, `description` and `instructions`. The result is the bot's `AGENTS.md`. The shipped text is the maker, so a bot with no instructions gets a file too. Before a back session starts, the bot writes `CLAUDE.md` and `AGENTS.md` when each is absent.
+- **Next action:** build task 05, the main turn shows the back session as a subagent.
 - **Open questions:** none.
-- **Watch out for:** a request's `instructions` are not kept, so a session started again after a restart is not told them. A rule that must hold for the whole session goes on a tool's `instruction`. Task 11 must account for this with the maker text.
+- **Watch out for:** a request's `instructions` are not kept, so a session started again after a restart is not told them. A rule that must hold for the whole session goes on a tool's `instruction`.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
 - **Watch out for:** the opt-in names are in `SessionStore.tools`, not in the session config. `openSession` gets `backendsOwn(config)`, which removes a host key before `setConfig`.
 - **Watch out for:** the bot plugin's entry needs `session:trust` beside `session:read` and `session:write`. Without it every wake is refused with an error naming the grant. A grant group covers it: `session:write` and `session:*` both hold `session:trust`.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.
 - **Watch out for:** a name a message fills is checked with `isFilledName`, not `isSlug`. A turn id is a uuid, so the filled name may start with a digit and is at most eighty characters.
+- **Watch out for:** a bot's `AGENTS.md`, once written, is the bot's. The template and the record's `instructions` are not read again for it. An edit to `<configDir>/templates/bots/AGENTS.md` changes the next bot made, and no bot that exists.
 
 ## Final verification checklist
 
