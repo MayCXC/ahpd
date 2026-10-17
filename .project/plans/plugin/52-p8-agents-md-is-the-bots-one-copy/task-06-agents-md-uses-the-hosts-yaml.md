@@ -1,6 +1,6 @@
 ---
 title: AGENTS.md uses the host's YAML
-status: todo
+status: implemented
 depends: [task-01-agents-md-has-parts-the-ui-owns.md]
 layer: "packages/bot"
 refs:
@@ -34,3 +34,13 @@ refs:
 - `bot-agents.test.ts` passes with the seam.
 - `pnpm -s boundary` passes with no runtime dependency on `@ahpd/bot`.
 - The gates pass: build, typecheck, boundary, schema and vitest.
+
+## Resume
+
+- **Done so far:** all steps. `readAgents(yaml, text)` and `writeAgents(yaml, text, parts)` take the two YAML functions as their first argument, and `agents.ts` imports no YAML.
+- **Built as:** `Yaml` is the two functions as `PluginContext` names them, exported from `agents.ts`. `fields`, `setFields` and `entry` take it through, so one parse of a frontmatter and one stringify per changed key use the host's subset.
+- **Built as:** `@cofold/yaml` is no longer a runtime dependency. It is a `devDependency`, because the test imports it as step 5 says. It was not removed from `package.json` altogether: an undeclared import resolves only where hoisting happens to provide it. `boundary` reports `@ahpd/bot: 1 declared, none undeclared`, the `@ahpd/sdk` peer.
+- **Changed files:** `packages/bot/src/agents.ts`, `packages/bot/package.json`, `packages/bot/test/bot-agents.test.ts`, `pnpm-lock.yaml`.
+- **Gates:** `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `git diff --quiet tools/` pass; vitest over the eight packages: 307 files and 5340 tests passed.
+- **Left dirty by the suite:** `packages/sdk/test/fixtures/wire.jsonl` is rewritten on every run. Restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Not committed:** the work is uncommitted, as this preset expects.

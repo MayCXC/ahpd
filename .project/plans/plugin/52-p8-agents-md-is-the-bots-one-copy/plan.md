@@ -62,7 +62,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [03 - An edit to a computer bot waits for the computer](task-03-an-edit-to-a-computer-bot-waits.md) | todo | 02 |
 | [04 - The docs say where a bot's persona is](task-04-the-docs-say-where-the-persona-is.md) | todo | 02, 03, 05 |
 | [05 - A bot's data is one folder](task-05-a-bots-data-is-one-folder.md) | todo | 02 |
-| [06 - AGENTS.md uses the host's YAML](task-06-agents-md-uses-the-hosts-yaml.md) | todo | 01 |
+| [06 - AGENTS.md uses the host's YAML](task-06-agents-md-uses-the-hosts-yaml.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -72,9 +72,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-17. Task 01 is implemented: the parser and the writer are in `packages/bot/src/agents.ts`, and the default text is in `packages/bot/src/template.ts`. The provider does not use them yet.
+- **Done so far:** planned 2026-10-17. Tasks 01 and 06 are implemented: the parser and the writer are in `packages/bot/src/agents.ts`, and the default text is in `packages/bot/src/template.ts`. `readAgents` and `writeAgents` take a `Yaml` first argument, which task 02 passes from the plugin context. The provider does not use them yet.
 - **Next action:** build [task-02-the-persona-is-read-from-agents-md.md](task-02-the-persona-is-read-from-agents-md.md).
 - **Open questions:**
   1. The text of the default template - proposed: the text in task 01, which Softov refines.
   2. How a plugin keeps records in `bots/<slug>/` - proposed: `records` takes a path of slugs under the plugin's own collection.
-- **Watch out for:** a bot's `AGENTS.md` today has no frontmatter. Task 02 moves its parts into the new layout and keeps the bot's own text.
+- **Watch out for:** a bot's `AGENTS.md` today has no frontmatter. Task 02 moves its parts into the new layout and keeps the bot's own text. `@cofold/yaml` stays in `packages/bot/package.json` as a `devDependency` for `bot-agents.test.ts` only; the runtime takes YAML from the plugin context.
