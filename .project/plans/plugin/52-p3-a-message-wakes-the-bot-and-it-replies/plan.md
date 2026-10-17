@@ -56,7 +56,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | The main chat is `bot:/<bot>/<user>`, and a back session is `bot:/<bot>/<user>/<name>` | Softov, 2026-10-16, "bot:/{bot}/{user} is the fucking main session for a user", "bot:/{bot}/{user}/xyz for others" | 01 |
 | The template says the back session's name, to continue one or start a new one | Softov, 2026-10-16, "the idea is to choise a running session or a new one if desired" | 03 |
 | A back session's question or approval goes to its main chat, as a subagent's does | Softov, 2026-10-16, "when a `template session` has a question, it goes to main chat with that session" | 06 |
-| The main turn stays open until `post_message` | Softov, 2026-10-16, chose "Turn stays open" | 02, 04 |
+| The main turn stays open until `post_message`, or ends as `mainTurnPostMessageAbsent` says when the back session's turn ends with no post | Softov, 2026-10-16, chose "Turn stays open"; the option from 2026-10-17 | 02, 04, 13 |
 | The open main turn shows the back session as a subagent call, as ahpapp draws one | Softov, 2026-10-16, answered "Working. subagent on top like ahpapp?" for "What does your open turn show while the wake works?" | 05 |
 | A back session works in the bot's folder | Softov, 2026-10-16, chose "The bot's folder" | 03 |
 | The host's bot rules are a system prompt where possible | Softov, 2026-10-16, chose "System prompt where possible" | 07 |
@@ -99,7 +99,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | implemented | 03 |
 | [11 - The AGENTS.md template makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | implemented | 10 |
 | [12 - A bot session loads no user settings](task-12-a-bot-session-loads-no-user-settings.md) | todo | 10 |
-| [13 - A turn with no post has a set ending](task-13-a-turn-with-no-post-has-a-set-ending.md) | todo | 04 |
+| [13 - A turn with no post has a set ending](task-13-a-turn-with-no-post-has-a-set-ending.md) | implemented | 04 |
 | [14 - A bot asks with the question tool](task-14-a-bot-asks-with-the-question-tool.md) | todo | 06 |
 | [15 - A woken message carries its context](task-15-a-woken-message-carries-its-context.md) | todo | 03 |
 
@@ -110,8 +110,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16. Tasks 01 to 04, 07 and 09 are on main. Task 10 is implemented. A plugin asks for trust with `trusted: true` on its session request. The host refuses it without `session:trust`, which `session:write` covers. The store keeps the trusted folder, so a restart keeps it. `trustedBy` trusts that one folder and no folder under it. Task 11 is implemented. At load, the plugin writes `<configDir>/templates/bots/AGENTS.md` when the file is absent, never over one a person edited. A bot's first wake fills the template it names, or that default file, with `name`, `description` and `instructions`. The result is the bot's `AGENTS.md`. The shipped text is the maker, so a bot with no instructions gets a file too. Before a back session starts, the bot writes `CLAUDE.md` and `AGENTS.md` when each is absent.
-- **Next action:** build tasks 12 and 13, then task 05. Plan 52 p8 replaces the record's copy of the persona.
+- **Done so far:** planned 2026-10-16. Tasks 01 to 04, 07 and 09 are on main. Task 10 is implemented. A plugin asks for trust with `trusted: true` on its session request. The host refuses it without `session:trust`, which `session:write` covers. The store keeps the trusted folder, so a restart keeps it. `trustedBy` trusts that one folder and no folder under it. Task 11 is implemented. At load, the plugin writes `<configDir>/templates/bots/AGENTS.md` when the file is absent, never over one a person edited. A bot's first wake fills the template it names, or that default file, with `name`, `description` and `instructions`. The result is the bot's `AGENTS.md`. The shipped text is the maker, so a bot with no instructions gets a file too. Before a back session starts, the bot writes `CLAUDE.md` and `AGENTS.md` when each is absent. Task 13 is implemented. When a back session's turn ends without a post, the main turn reads the turn's `markdown` parts from the session's chat and ends as `mainTurnPostMessageAbsent` says: the last words by default, the notice, nothing, or the last words with the notice where the turn said none. A value outside those four is reported through `host.problem` and `post` is used.
+- **Next action:** build task 12, then task 05. Plan 52 p8 replaces the record's copy of the persona.
 - **Open questions:** none.
 - **Watch out for:** a request's `instructions` are not kept, so a session started again after a restart is not told them. A rule that must hold for the whole session goes on a tool's `instruction`.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
