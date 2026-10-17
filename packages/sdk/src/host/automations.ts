@@ -781,6 +781,7 @@ export function createAutomations(ctx: HostContext): Automations {
       {
         ...(wanted.instructions === undefined ? {} : { instructions: wanted.instructions }),
         ...(wanted.tools === undefined ? {} : { tools: wanted.tools }),
+        ...(wanted.userSettings === undefined ? {} : { userSettings: wanted.userSettings }),
       },
     );
     fireRun(wanted);

@@ -182,6 +182,20 @@ export interface Start {
    */
   trusted?: (folder: string) => boolean;
   /**
+   * Whether this session loads the settings of the person who runs the daemon.
+   *
+   * A backend that loads a person's settings - their global file, their
+   * memory, whatever their own tool keeps in a home directory - reads this to
+   * decide. Absent is `true`, which is what every session did before this was
+   * said: a session somebody started for themselves is theirs in every way.
+   *
+   * `false` is for work done as somebody else: a bot's back session is owned by
+   * the person who chatted with it, but it is not that person at the keyboard,
+   * and what they put in their own settings must not shape it. What the folder
+   * carries is a different question, answered by `trusted`.
+   */
+  userSettings?: boolean;
+  /**
    * Tools the host contributes to this session, for the backend to offer.
    *
    * The host's own, not this backend's: a backend that cannot take tools from

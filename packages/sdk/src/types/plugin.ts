@@ -102,6 +102,20 @@ export interface SessionRequest {
    * A plugin that asks for trust and names no folder trusts nothing.
    */
   trusted?: boolean;
+  /**
+   * Whether the session loads the settings of the person who runs the daemon.
+   *
+   * `true` is what every session has always done, and what an absent flag
+   * means. `false` is for work the plugin does as somebody else - a bot's back
+   * session, which belongs to the person who chatted with it but must not be
+   * shaped by what that person put in `~/.claude`: no user settings, no
+   * memory, no `~/.claude/CLAUDE.md`. What the folder carries still loads where
+   * the request also has it trusted, so a bot's own `CLAUDE.md` reaches it.
+   *
+   * Kept with the session, so a session started again after a restart loads
+   * the same settings without the request being repeated.
+   */
+  userSettings?: boolean;
   /** Config values for the new session, as a client's `createSession` gives. */
   config?: Record<string, unknown>;
   /** The model it asks for, as the protocol's `ModelSelection`, or the backend's own. */

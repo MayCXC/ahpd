@@ -252,6 +252,20 @@ export interface SessionStore {
   /** Record it, or forget it with `undefined`. */
   setTrustedFolder?(id: string, value: string | undefined): void;
   /**
+   * Whether this session loads the settings of the person who runs the daemon,
+   * where its request said `false`, and nothing where it left the default.
+   *
+   * Kept beside the trusted folder and for the same reason: the request is one
+   * moment and the session outlives it. Absent is the default every session
+   * has always had - its own person's settings load - so only the `false` a
+   * request asked for is written down.
+   *
+   * Optional: a store that leaves it out loads them for every session.
+   */
+  userSettings?(id: string): boolean | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setUserSettings?(id: string, value: boolean | undefined): void;
+  /**
    * The session this one was started from, as the id that session is held
    * under, or nothing where nothing started it.
    *

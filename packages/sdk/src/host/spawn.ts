@@ -681,10 +681,18 @@ export function createSpawn(ctx: HostContext): Spawn {
      * for that.
      */
     const told = [...ctx.instructions(uri), ...(askedInstructions ?? [])];
+    /*
+     * Whether the backend loads the person's own settings, read off the store
+     * rather than off a request: a restart has no request, and what the session
+     * asked for is kept for exactly this moment. Absent is the default every
+     * session has always had, and only the `false` a request asked for is there.
+     */
+    const userSettings = kept.userSettings?.(idOf(uri));
     const session = used.create({
       uri,
       chatUri,
       trusted: trustedBy,
+      ...(userSettings === undefined ? {} : { userSettings }),
       /*
        * The tools bound to this session: this host's own, and whatever the
        * clients already in it provide.

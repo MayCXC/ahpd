@@ -167,6 +167,7 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
     provider: 'claude',
     workingDirectory: WORKSPACE,
     trusted: true,
+    userSettings: false,
     model: { id: 'claude-sonnet-5' },
     config: { computer: 'workstation' },
     title: 'Backer',
@@ -177,8 +178,8 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
   // wins over the harness and the model rather than sitting beside them.
   expect(sessionFor(bot({ preset: 'loud', harness: 'claude', model: 'claude-sonnet-5' }), PERSON))
     .toEqual({
-      owner: PERSON, provider: 'loud', workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
-      tools: ['post_message'],
+      owner: PERSON, provider: 'loud', workingDirectory: WORKSPACE, trusted: true, userSettings: false,
+      title: 'Backer', tools: ['post_message'],
     });
 
   // A bot that names no backend at all says nothing about one: the host starts
@@ -186,7 +187,7 @@ it('starts a back session on the bot\'s own harness, in its folder, for the pers
   const quiet = { ...bot() };
   delete quiet.harness;
   expect(sessionFor(quiet, PERSON)).toEqual({
-    owner: PERSON, workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
+    owner: PERSON, workingDirectory: WORKSPACE, trusted: true, userSettings: false, title: 'Backer',
     tools: ['post_message'],
   });
 });
@@ -208,8 +209,8 @@ it('starts a back session on the first message, and says the second in it', asyn
   await one.wake.woken(message('t1', 'hello'), first.handle);
 
   expect(one.starts).toEqual([{
-    owner: PERSON, provider: 'base', workingDirectory: WORKSPACE, trusted: true, title: 'Backer',
-    tools: ['post_message'],
+    owner: PERSON, provider: 'base', workingDirectory: WORKSPACE, trusted: true, userSettings: false,
+    title: 'Backer', tools: ['post_message'],
   }]);
   expect(one.sent).toMatchObject([{
     channel: 'ahp-chat:/1',

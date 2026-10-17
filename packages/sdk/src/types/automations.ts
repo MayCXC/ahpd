@@ -148,6 +148,15 @@ export interface StartSession {
    * plugin may ask for it, and only with `session:trust` on its entry.
    */
   trusted?: boolean;
+  /**
+   * Whether the session loads the settings of the person who runs the daemon.
+   *
+   * `true` when absent, as a session a person started is theirs. A plugin's
+   * back session asks for `false`: it is owned by the person who chatted with
+   * the bot, but it is not them at the keyboard. Kept with the session, so a
+   * restart keeps the answer.
+   */
+  userSettings?: boolean;
   /** Config values for the new session. */
   config?: Record<string, unknown>;
   /** The model the session template names, as the protocol's `ModelSelection`. */

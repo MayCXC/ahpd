@@ -365,6 +365,13 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
   if (trusted !== undefined && !right(trusted, 'boolean')) {
     throw new Error(miss(by, 'startSession', 'trusted', 'true or false, or nothing'));
   }
+  // The same yes or no, and for the same reason: whether a session loads the
+  // person's own settings is a thing a plugin decides, not a string the host
+  // would have to read a meaning into.
+  const userSettings = object.userSettings;
+  if (userSettings !== undefined && !right(userSettings, 'boolean')) {
+    throw new Error(miss(by, 'startSession', 'userSettings', 'true or false, or nothing'));
+  }
   const config = object.config;
   if (config !== undefined && !right(config, 'object')) {
     throw new Error(miss(by, 'startSession', 'config', 'an object of session config, or nothing'));
@@ -402,6 +409,7 @@ export const checkSessionRequest = (value: unknown, by: string): StartSession =>
     ...(provider === undefined ? {} : { provider: provider as string }),
     ...(workingDirectory === undefined ? {} : { workingDirectory: workingDirectory as string }),
     ...(trusted === undefined ? {} : { trusted: trusted as boolean }),
+    ...(userSettings === undefined ? {} : { userSettings: userSettings as boolean }),
     ...(config === undefined ? {} : { config: config as Record<string, unknown> }),
     ...(model === undefined ? {} : { model }),
     ...(title === undefined ? {} : { title: title as string }),

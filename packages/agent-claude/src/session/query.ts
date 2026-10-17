@@ -12,15 +12,23 @@ import { agentNameOf } from './customizations.js';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
- * Every settings file the CLI reads, in the order it reads them.
+ * The settings files one session loads, from the two answers it was started
+ * with.
  *
- * `user` is the person's own `~/.claude/settings.json`, `project` is the
- * folder's `.claude/settings.json` with its hooks and its `CLAUDE.md`, and
- * `local` is the checkout's own `.claude/settings.local.json`. Named rather
- * than left off because the option is what decides between them: omitting it
- * loads all three, and there is no other way to say "the person's alone".
+ * `trusted` says whether the folder's own files may reach the model, and
+ * `userSettings` whether the person's own may. They are independent: a bot's
+ * back session is trusted in its own folder and loads nothing of the person's,
+ * so it gets the folder's `CLAUDE.md` and none of `~/.claude` - which is the
+ * whole point of saying both. A session that is neither trusted nor allowed the
+ * person's settings loads no settings file at all, and the empty list is how
+ * the CLI is told so.
  */
-const ALL_SOURCES: SettingSource[] = ['user', 'project', 'local'];
+const settingSourcesOf = (trusted: boolean, userSettings: boolean): SettingSource[] => {
+  const sources: SettingSource[] = [];
+  if (userSettings) sources.push('user');
+  if (trusted) sources.push('project', 'local');
+  return sources;
+};
 
 /**
  * How long the CLI has to answer its handshake before it is a CLI that died.
@@ -315,9 +323,15 @@ export function createQuery(ctx: SessionContext): Query {
        * and the CLI loads a project's `CLAUDE.md` only when `project` is among
        * the sources - so a folder nobody vouched for gets `user` alone and
        * reaches the model with none of it. The person's own file is not a
-       * project's and is kept either way.
+       * project's and is kept either way - unless the session asked for none
+       * of the person's settings, which is a bot's back session: nothing of
+       * `~/.claude` reaches it, and the folder's own file still does where the
+       * folder is trusted.
        */
-      settingSources: ctx.options.trusted?.(ctx.options.cwd) === true ? ALL_SOURCES : ['user'],
+      settingSources: settingSourcesOf(
+        ctx.options.trusted?.(ctx.options.cwd) === true,
+        ctx.options.userSettings !== false,
+      ),
       /*
        * A subagent's own words, not only its tool calls.
        *

@@ -143,7 +143,7 @@ export interface Lifecycle {
    * out at all - and is absent where nobody sent the message.
    */
   messageAttachments(message: Record<string, unknown>, sender?: Connection): Attached;
-  /** Start a session, with what its request asked to be told and offered. */
+  /** Start a session, with what its request asked to be told, offered and shaped by. */
   openSession(
     uri: string,
     provider: string,
@@ -154,7 +154,7 @@ export interface Lifecycle {
     additional?: string[],
     title?: string,
     by?: { owner?: Owner; principal?: Principal; sender?: Connection },
-    asked?: { instructions?: string[]; tools?: string[] },
+    asked?: { instructions?: string[]; tools?: string[]; userSettings?: boolean },
   ): void;
 }
 
@@ -1572,7 +1572,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     additional?: string[],
     title?: string,
     by?: { owner?: Owner; principal?: Principal; sender?: Connection },
-    asked?: { instructions?: string[]; tools?: string[] },
+    asked?: { instructions?: string[]; tools?: string[]; userSettings?: boolean },
   ): void => {
     named(uri, 'session');
     if (sessions.has(uri))
@@ -1616,6 +1616,13 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * that asked for an empty list.
      */
     if (asked !== undefined) kept.setTools?.(idOf(uri), asked.tools);
+    /*
+     * Whether it loads the person's own settings, written down with the tools
+     * and for the same reason: the backend reads it when it starts, and a
+     * restart that starts the session again has no request to ask. Absent is
+     * `true`, so a request that said nothing writes nothing.
+     */
+    if (asked !== undefined) kept.setUserSettings?.(idOf(uri), asked.userSettings);
     try {
       const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), config, undefined, where, credentials, additional, by?.sender, asked?.instructions);
       // Named before it is announced, when the maker had a name for it: a

@@ -179,6 +179,13 @@ export interface Wake {
  * the plugin's entry holds `session:trust`; without it the start is refused
  * naming the grant, which is an operator's to add rather than something this
  * can paper over.
+ *
+ * It loads none of the settings of the person who runs the daemon. The session
+ * is owned by the person who chatted with the bot, but it is the bot working
+ * for them and not them at a keyboard: what their own `~/.claude` holds - their
+ * global instructions, their memory - would otherwise shape every bot they
+ * talk to. The bot's rules are its `AGENTS.md` in its own folder, which trust
+ * still loads.
  */
 export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
   const provider = bot.preset ?? bot.harness;
@@ -187,6 +194,7 @@ export const sessionFor = (bot: BotRecord, owner: Owner): SessionRequest => {
     ...(provider === undefined ? {} : { provider }),
     workingDirectory: bot.workspace,
     trusted: true,
+    userSettings: false,
     ...(bot.preset !== undefined || bot.model === undefined ? {} : { model: { id: bot.model } }),
     ...(bot.computer === undefined ? {} : { config: { computer: bot.computer } }),
     title: bot.name,

@@ -84,6 +84,15 @@ export interface ClaudeSessionOptions extends SessionOptions {
    */
   trusted?: (folder: string) => boolean;
   /**
+   * Whether this session loads the settings of the person who runs the daemon,
+   * carried from `Start`. Absent is yes.
+   *
+   * The query reads it for the CLI's `settingSources`: `false` takes `user`
+   * out, so no `~/.claude` settings, memory or global `CLAUDE.md` reach the
+   * model. What the folder carries is the other half, decided by `trusted`.
+   */
+  userSettings?: boolean;
+  /**
    * The host's seam for a chat of one tool call's own.
    *
    * A subagent is a conversation inside one call, and the host owns what a

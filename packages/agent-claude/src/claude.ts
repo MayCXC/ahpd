@@ -609,6 +609,9 @@ export function claude(options: ClaudeOptions): Agent {
       // The same answer again, for what the query loads from the folder's own
       // settings - the two halves of one decision, read where each is used.
       ...(start.trusted === undefined ? {} : { trusted: start.trusted }),
+      // And whether the query may load the person's own settings, which is the
+      // other half of the same switch: absent is yes.
+      ...(start.userSettings === undefined ? {} : { userSettings: start.userSettings }),
       // Each one checked the way the first is: a directory this host does not
       // serve is not one an agent may be pointed at, however it arrived.
       ...(start.additional && start.additional.length > 0
