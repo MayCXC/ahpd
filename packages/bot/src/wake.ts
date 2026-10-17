@@ -33,9 +33,13 @@ import type { BotStore } from './store.js';
  * is where the connection that carries it lives, the way the webhook package
  * keeps its own seams beside its route.
  *
- * Nothing here ends the main turn but a refusal. A message that reached a back
- * session leaves the turn open until something answers it, which is what
- * `answering` - the map from a back session to the turn that woke it - is for.
+ * A message that reached a back session leaves its main turn open until one of
+ * two things happens: the session posts an answer with `post_message`, which is
+ * `post.ts`, or its turn ends without one and the person is given a notice
+ * saying so. Both are said through `answering` - the map from a back session to
+ * the turn that woke it - which is also what lets the turn go. A message that
+ * never reached a session is the one ending this file makes itself, with a
+ * notice naming the cause.
  */
 
 /** One back session's chat, as the host answers it. */
@@ -79,6 +83,8 @@ export interface Answering {
   turnId: string;
   /** The handle over that turn: what the answer is said through, and what ends it. */
   handle: TurnHandle;
+  /** The bot's name, which the notice a session that finishes without an answer is said in. */
+  bot: string;
 }
 
 /** What the plugin holds of the wake: the waking itself, and the turns it left open. */
@@ -100,6 +106,22 @@ export interface Wake {
    * about it a caller cannot choose.
    */
   main(backSession: string): Answering | undefined;
+  /**
+   * Answer the main turn one back session is answering, and let it go.
+   *
+   * False where no main turn is waiting on this session - it is not a back
+   * session this wake started, or the turn it woke has already ended - so a
+   * caller that posted into nothing says so rather than answering a turn twice.
+   */
+  posted(backSession: string, text: string): boolean;
+  /**
+   * End the main turn one back session was answering, with a notice, because
+   * the session's turn is over and nothing was posted.
+   *
+   * Nothing where no main turn is waiting on this session, which is a session
+   * that posted already and one this wake never woke.
+   */
+  finished(backSession: string): void;
 }
 
 /**
@@ -214,6 +236,28 @@ export function botWake(seams: WakeSeams): Wake {
   return {
     main: (backSession) => answering.get(backSession),
 
+    posted: (backSession, text) => {
+      const held = answering.get(backSession);
+      if (held === undefined) return false;
+      /*
+       * Let go before the answer is said: ending the turn starts whatever was
+       * queued behind it in the main chat, and that message wakes a session
+       * which may be this one - a turn left in the map here would be answered
+       * by the next message's turn as well.
+       */
+      answering.delete(backSession);
+      held.handle.reply(text);
+      return true;
+    },
+
+    finished: (backSession) => {
+      const held = answering.get(backSession);
+      if (held === undefined) return;
+      // Let go first, for the reason `posted` says.
+      answering.delete(backSession);
+      held.handle.notice(`${held.bot} finished without a reply`);
+    },
+
     woken: async (message, handle) => {
       const chat = await chatOf(message.session);
       if (chat === undefined) {
@@ -247,7 +291,7 @@ export function botWake(seams: WakeSeams): Wake {
        * Held before the message is sent, so a back session that answers and
        * ends inside the send still finds the turn that is waiting on it.
        */
-      answering.set(session, { session: message.session, turnId: message.turnId, handle });
+      answering.set(session, { session: message.session, turnId: message.turnId, handle, bot: bot.name });
       let refused: string | undefined;
       try {
         refused = await seams.send(looked.chat, looked.working ? steer(message.text) : turn(message.text));

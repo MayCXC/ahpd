@@ -2,6 +2,7 @@ import { expandHome, reason, Status } from '@ahpd/sdk';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
 import { backSessions, SESSIONS } from './names.js';
+import { postMessage } from './post.js';
 import { botProvider, CHATS } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
@@ -225,6 +226,15 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
     problem: (line) => { host.problem(`${name}: ${line}`); },
   });
+  /*
+   * How a main turn ends, the two ways a back session has of ending it: the
+   * `post_message` tool, which answers it with what the session says, and the
+   * end of the session's own turn, which answers it with a notice when nothing
+   * was posted. The tool finds the chat from the calling session, and the event
+   * names the session that ended a turn - neither can name somebody else's.
+   */
+  host.registerTool(postMessage(wake));
+  host.on('turn_end', (event) => { wake.finished(event.session); });
   /*
    * A chat with a bot: a session of its own that runs no model, one JSON line
    * per turn under the daemon's configuration folder. Every message in one,
