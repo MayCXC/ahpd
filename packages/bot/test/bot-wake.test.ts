@@ -62,6 +62,14 @@ const bot = (over: Partial<BotRecord> = {}): BotRecord => ({
 /** One message in a main chat, as `chat.ts` hands the plugin one. */
 const message = (turnId: string, text: string, session = CHAT): ChatMessage => ({ session, turnId, text });
 
+/**
+ * The text a woken message carries: the context block, one blank line, then
+ * the person's own words. What is in the block, and what the main chat shows,
+ * is `bot-context.test.ts`; here it is only in the way of the words.
+ */
+const carrying = (said: string): RegExp =>
+  new RegExp(`^<context>\\nmain chat: bot:/backer/ana\\nfrom: ana\\ntime: [^\\n]+\\n</context>\\n\\n${said}$`);
+
 /** A handle over a main turn, and what was said through it. */
 interface Recorded {
   handle: TurnHandle;
@@ -214,7 +222,7 @@ it('starts a back session on the first message, and says the second in it', asyn
   }]);
   expect(one.sent).toMatchObject([{
     channel: 'ahp-chat:/1',
-    action: { type: 'chat/turnStarted', message: { text: 'hello' } },
+    action: { type: 'chat/turnStarted', message: { text: carrying('hello') } },
   }]);
   // The turn in the back session is the back session's own, not the main chat's.
   expect(typeof one.sent[0]?.action['turnId']).toBe('string');
@@ -230,7 +238,7 @@ it('starts a back session on the first message, and says the second in it', asyn
 
   expect(one.starts).toHaveLength(1);
   expect(one.sent.map((each) => each.action['type'])).toEqual(['chat/turnStarted', 'chat/turnStarted']);
-  expect(one.sent[1]).toMatchObject({ channel: 'ahp-chat:/1', action: { message: { text: 'and again' } } });
+  expect(one.sent[1]).toMatchObject({ channel: 'ahp-chat:/1', action: { message: { text: carrying('and again') } } });
   // What the second message waits on is the second turn.
   expect(one.wake.main('ahp-session:/1')).toMatchObject({ turnId: 't2', handle: second.handle });
   // Nothing ended a turn of the main chat: the wake ends one only over a
@@ -251,7 +259,7 @@ it('steers a message into the back session that is already working', async () =>
   expect(one.sent.map((each) => each.action['type'])).toEqual(['chat/turnStarted', 'chat/pendingMessageSet']);
   expect(one.sent[1]).toMatchObject({
     channel: 'ahp-chat:/1',
-    action: { type: 'chat/pendingMessageSet', kind: 'steering', message: { text: 'stop that' } },
+    action: { type: 'chat/pendingMessageSet', kind: 'steering', message: { text: carrying('stop that') } },
   });
   // The entry is the sender's own, which is what the protocol asks of a steer.
   expect(typeof one.sent[1]?.action['id']).toBe('string');
@@ -320,7 +328,7 @@ it('starts a name again whose session this host no longer has', async () => {
   expect(await one.backs.get('backer', 'ana', 'work')).toBe('ahp-session:/1');
   expect(one.sent).toMatchObject([{
     channel: 'ahp-chat:/1',
-    action: { type: 'chat/turnStarted', message: { text: 'hello' } },
+    action: { type: 'chat/turnStarted', message: { text: carrying('hello') } },
   }]);
   // The person is not told a restart happened: the message reached a session
   // of the bot's, and the main turn waits on that one.

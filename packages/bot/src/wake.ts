@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { reason } from '@ahpd/sdk';
+import { contextBlock, timeWithOffset } from './context.js';
 import { prepareFolder } from './folder.js';
 import { userOf } from './names.js';
 import { isFilledName, TURN_WORD } from './record.js';
@@ -26,6 +27,10 @@ import type { BotStore } from './store.js';
  * instead of continuing one. The name is looked up in the `bot-sessions` rows
  * of task 01, and a row whose session this host no longer has - a daemon that
  * restarted - is a back session started again and written over.
+ *
+ * What the message becomes is not only the person's words: a context block in
+ * front of them says the main chat, the person and the time, because those
+ * change with every message and the system prompt does not. See `context.ts`.
  *
  * The message is sent by the plugin's own connection to its host, which is the
  * only door onto `chat/turnStarted`, and whether the back session is idle or
@@ -287,8 +292,18 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
     return begun;
   };
 
-  /** The action that begins a turn in a chat, as a client sends one. */
-  const turn = (text: string): Bag => ({ type: 'chat/turnStarted', turnId: randomUUID(), message: { text } });
+  /**
+   * The action that begins a turn in a chat, as a client sends one.
+   *
+   * The text is the person's words with the context block in front of them,
+   * one blank line between: what was said, and the chat, the person and the
+   * time it was said in.
+   */
+  const turn = (block: string, text: string): Bag => ({
+    type: 'chat/turnStarted',
+    turnId: randomUUID(),
+    message: { text: `${block}\n\n${text}` },
+  });
 
   /**
    * The action that puts a message into the turn already running.
@@ -296,13 +311,15 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
    * `id` is the sender's own entry rather than the running turn's id, which is
    * what the protocol asks for: a steer is a message the open turn takes, and
    * the client holding it names it. The host hands the id to the backend and
-   * the backends that can steer ignore it.
+   * the backends that can steer ignore it. The context block is in front of the
+   * text for the same reason it is in a turn's: a steer is a message of its own,
+   * and when it was said is not when the turn began.
    */
-  const steer = (text: string): Bag => ({
+  const steer = (block: string, text: string): Bag => ({
     type: 'chat/pendingMessageSet',
     kind: 'steering',
     id: randomUUID(),
-    message: { text },
+    message: { text: `${block}\n\n${text}` },
   });
 
   return {
@@ -373,13 +390,25 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
         return;
       }
       /*
+       * What changes from message to message, said with the message: the main
+       * chat the person is waiting in, who they are, and when they said it. The
+       * system prompt is the bot's and never changes, so nothing of this goes
+       * there. Only the back session is given it - `message.text` stays the
+       * person's own words, which is what the main chat keeps and shows.
+       */
+      const block = contextBlock([
+        ['main chat', `bot:/${bot.id}/${userOf(owner)}`],
+        ['from', userOf(owner)],
+        ['time', timeWithOffset(new Date())],
+      ]);
+      /*
        * Held before the message is sent, so a back session that answers and
        * ends inside the send still finds the turn that is waiting on it.
        */
       answering.set(session, { session: message.session, turnId: message.turnId, handle, bot: bot.name });
       let refused: string | undefined;
       try {
-        refused = await seams.send(looked.chat, looked.working ? steer(message.text) : turn(message.text));
+        refused = await seams.send(looked.chat, looked.working ? steer(block, message.text) : turn(block, message.text));
       }
       catch (error) {
         // A send that could not be made at all - the connection's own refusal,
