@@ -78,7 +78,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | The manager text is copied into `AGENTS.md`, so an ahpd update does not change a bot that exists | Softov, 2026-10-16, chose "Copied into AGENTS.md" | 11 |
 | "Never does direct work" is a template choice | Softov, 2026-10-16, chose "A template choice" | 11 |
 | A session that is gone is started again, because `sessionOwner` answers nothing for it | (defaulted: Softov's test showed `No agent for session` and a main chat that "no longer exists") | 09 |
-| A back session that ends its turn with no post closes the main turn with a notice | (defaulted: the draft's goal) | 04 |
+| A back session that ends its turn with no post closes the main turn as the option `mainTurnPostMessageAbsent` says, with `post` as the default | Softov, 2026-10-17, "Configurable as a host config key. default to post the final text" | 13 |
+| A bot's back session loads no settings of the person who runs the daemon, by the request flag `userSettings: false` | Softov, 2026-10-17, chose "Request flag" for "How should a bot session stop loading them?" | 12 |
+| A bot asks a question with its harness's question tool, so the question shows in the main chat | Softov, 2026-10-17, chose "Ask with the tool" | 14 |
 
 ## Tasks
 
@@ -91,10 +93,13 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
 | [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | implemented | 03 |
-| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11 |
+| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11, 12, 13, 14 |
 | [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | implemented | 03 |
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | implemented | 03 |
 | [11 - The AGENTS.md template makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | implemented | 10 |
+| [12 - A bot session loads no user settings](task-12-a-bot-session-loads-no-user-settings.md) | todo | 10 |
+| [13 - A turn with no post has a set ending](task-13-a-turn-with-no-post-has-a-set-ending.md) | todo | 04 |
+| [14 - A bot asks with the question tool](task-14-a-bot-asks-with-the-question-tool.md) | todo | 06 |
 
 ## Risks and tradeoffs
 
@@ -104,7 +109,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Resume state
 
 - **Done so far:** planned 2026-10-16. Tasks 01 to 04, 07 and 09 are on main. Task 10 is implemented. A plugin asks for trust with `trusted: true` on its session request. The host refuses it without `session:trust`, which `session:write` covers. The store keeps the trusted folder, so a restart keeps it. `trustedBy` trusts that one folder and no folder under it. Task 11 is implemented. At load, the plugin writes `<configDir>/templates/bots/AGENTS.md` when the file is absent, never over one a person edited. A bot's first wake fills the template it names, or that default file, with `name`, `description` and `instructions`. The result is the bot's `AGENTS.md`. The shipped text is the maker, so a bot with no instructions gets a file too. Before a back session starts, the bot writes `CLAUDE.md` and `AGENTS.md` when each is absent.
-- **Next action:** build task 05, the main turn shows the back session as a subagent.
+- **Next action:** build tasks 12 and 13, then task 05. Plan 52 p8 replaces the record's copy of the persona.
 - **Open questions:** none.
 - **Watch out for:** a request's `instructions` are not kept, so a session started again after a restart is not told them. A rule that must hold for the whole session goes on a tool's `instruction`.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.

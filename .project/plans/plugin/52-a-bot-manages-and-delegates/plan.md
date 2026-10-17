@@ -94,6 +94,7 @@ Child plans, each for one part.
 | [p5 - A bot is made with its AGENTS.md](../52-p5-a-bot-is-made-with-its-agents-file/plan.md) | bot | draft | p3 |
 | [p6 - A bot wakes when a session it started finishes](../52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | bot | draft | p3 |
 | [p7 - A manager bot edits only its own folder](../52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | bot | draft | p5, host/100 p2, host/101 |
+| [p8 - AGENTS.md is the bot's one copy](../52-p8-agents-md-is-the-bots-one-copy/plan.md) | bot | planned | p3 |
 
 ## Risks and tradeoffs
 
