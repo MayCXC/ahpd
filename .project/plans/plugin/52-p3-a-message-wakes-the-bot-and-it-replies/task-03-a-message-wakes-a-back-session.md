@@ -1,6 +1,6 @@
 ---
 title: A message wakes a back session
-status: todo
+status: implemented
 depends: [task-01-a-main-chat-and-its-back-sessions-have-names.md, task-02-a-main-turn-stays-open.md]
 layer: "packages/bot"
 refs:

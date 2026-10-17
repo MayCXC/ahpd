@@ -70,7 +70,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | --- | --- | --- |
 | [01 - A main chat and its back sessions have names](task-01-a-main-chat-and-its-back-sessions-have-names.md) | implemented | - |
 | [02 - A main turn stays open](task-02-a-main-turn-stays-open.md) | implemented | - |
-| [03 - A message wakes a back session](task-03-a-message-wakes-a-back-session.md) | todo | 01, 02 |
+| [03 - A message wakes a back session](task-03-a-message-wakes-a-back-session.md) | implemented | 01, 02 |
 | [04 - post_message ends the main turn](task-04-post-message-ends-the-main-turn.md) | todo | 03 |
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
@@ -84,16 +84,17 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** draft written 2026-10-16. Planned 2026-10-16 with eight tasks. Task 01 implemented 2026-10-16, uncommitted: `packages/bot/src/names.ts` (new) holds `userOf`, `whose`, `named`, `rowId` and the `backSessions` seam over the `bot-sessions` collection; the read, list and resolve roads of `packages/bot/src/provider.ts` take the paths under a bot, so a read of `bot://<slug>/<user>` answers `{ chat }`, a read of `bot://<slug>/<user>/<name>` answers `{ session }` or is not found, a list of `bot://<slug>/<user>/` answers the names, and looking into them is refused to anyone but that person, the bot's owner and this host; `chatRow` is `rowId` now, and `packages/bot/src/plugin.ts` opens the collection. `packages/bot/test/bot-names.test.ts` (new) is the eight cases. The gates pass: schema, build, typecheck, boundary and `git diff --quiet tools/`; vitest over bot, sdk, server and webhook is 4275 tests over 217 files, all passing. One line outside the task's files: `packages/bot/test/bot-store.test.ts` gained the new provider option. The suite left `packages/sdk/test/fixtures/wire.jsonl` dirty, which no gate here may restore: `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
-- **Next action:** build task 02.
+- **Done so far:** planned 2026-10-16 with eight tasks. Tasks 01 and 02 are on main. Task 03 is implemented. `packages/bot/src/wake.ts` sends each message of a main chat to the back session that the bot's `session` names. The plugin opens its own connection to the host for this. Every chat handle, new or resumed, gets the wake as its `onMessage`.
+- **Next action:** build task 04.
 - **Open questions:** none.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.
+- **Watch out for:** a name a message fills is checked with `isFilledName`, not `isSlug`. A turn id is a uuid, so the filled name may start with a digit and is at most eighty characters.
 
 ## Final verification checklist
 
-- [ ] A test: a message in a main chat starts a back session, and a second message is a turn in the same one.
-- [ ] A test: a name with `{turn}` starts a new back session for each message.
+- [x] A test: a message in a main chat starts a back session, and a second message is a turn in the same one. (`packages/bot/test/bot-wake.test.ts`, by task 03)
+- [x] A test: a name with `{turn}` starts a new back session for each message. (`packages/bot/test/bot-wake.test.ts`, by task 03)
 - [ ] A test: `post_message` ends the main turn with its text, and a back session cannot post into another chat.
 - [ ] A test: a back session's question is answered from the main chat.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
