@@ -89,7 +89,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
 | [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | todo | 03 |
 | [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11 |
-| [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | todo | 03 |
+| [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | implemented | 03 |
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | todo | 03 |
 | [11 - The owner's first wake makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | todo | 07, 10 |
 
@@ -100,8 +100,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 with eight tasks. Tasks 01 and 02 are on main. Task 03 is implemented. `packages/bot/src/wake.ts` sends each message of a main chat to the back session that the bot's `session` names. The plugin opens its own connection to the host for this. Every chat handle, new or resumed, gets the wake as its `onMessage`.
-- **Next action:** review task 04, then build task 09.
+- **Done so far:** planned 2026-10-16 with eight tasks. Tasks 01 and 02 are on main. Task 03 is implemented. `packages/bot/src/wake.ts` sends each message of a main chat to the back session that the bot's `session` names. The plugin opens its own connection to the host for this. Every chat handle, new or resumed, gets the wake as its `onMessage`. Task 09 is implemented: `sessionOwner` answers nothing for a session this host can neither hold nor open, asked through a new `PluginStarts.opens` the host fills beside `start`; the wake's existing restart case now also checks the row is rewritten and the main turn is left holding on the new session.
+- **Next action:** review task 04, then build task 10.
 - **Open questions:** none.
 - **Watch out for:** `post_message` finds its main chat from the calling session, never from an input, so a back session cannot post as another bot.
 - **Watch out for:** p2's main chat is a `bot-chat:/<uuid>` session. Task 01 gives it the name `bot:/<bot>/<user>`, and the session URI stays as it is.
