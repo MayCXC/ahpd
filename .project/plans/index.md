@@ -354,7 +354,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p7 | plugin 49 | - |
 | [52 p1 - The host keeps one task list](plugin/52-p1-the-host-keeps-one-task-list/plan.md) | medium | draft 2026-10-16; questions answered, tasks not written | 52 | - |
 | [52 p2 - A bot chat is a session with no harness](plugin/52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | medium | built 2026-10-16 | 52 | 52 p3 |
-| [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 15 tasks, 10 implemented | 52 p2 | 52 p4, 52 p6, 52 p7, 52 p8 |
+| [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 16 tasks, 11 implemented | 52 p2 | 52 p4, 52 p6, 52 p7, 52 p8 |
 | [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |
 | [52 p5 - A bot is made with its AGENTS.md](plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md) | medium | dropped 2026-10-17; moved into 52 p3 tasks 10 and 11 | 52 p3 | - |
 | [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |

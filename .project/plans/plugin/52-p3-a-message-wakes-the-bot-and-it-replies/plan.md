@@ -82,6 +82,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A bot's back session loads no settings of the person who runs the daemon, by the request flag `userSettings: false` | Softov, 2026-10-17, chose "Request flag" for "How should a bot session stop loading them?" | 12 |
 | A bot asks a question with its harness's question tool, so the question shows in the main chat | Softov, 2026-10-17, chose "Ask with the tool" | 14 |
 | Data that changes for each message goes in a context block in front of the woken message, not in the system prompt | Softov, 2026-10-17, chose "Plan it" for "Should I plan the per-message context block as p3 task 15?" | 15 |
+| `post_message` runs without asking, by a flag on the host tool that each backend honours; a deny list still wins | Softov, 2026-10-17, chose "Flag on the host tool" for "How should a bot's back session run post_message without asking?" | 16 |
 
 ## Tasks
 
@@ -94,7 +95,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [05 - The main turn shows the back session as a subagent](task-05-the-main-turn-shows-the-back-session.md) | todo | 03 |
 | [06 - A back session's question is asked in the main chat](task-06-a-back-sessions-question-is-asked-in-the-main-chat.md) | todo | 05 |
 | [07 - The use of post_message is the system prompt](task-07-the-bots-rules-are-the-system-prompt.md) | implemented | 03 |
-| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11, 12, 13, 14, 15 |
+| [08 - The docs say how a bot wakes](task-08-the-docs-say-how-a-bot-wakes.md) | todo | 04, 05, 06, 07, 09, 10, 11, 12, 13, 14, 15, 16 |
 | [09 - A session that is gone is started again](task-09-a-session-that-is-gone-is-started-again.md) | implemented | 03 |
 | [10 - A bot's folder has its AGENTS.md](task-10-a-bots-folder-has-its-agents-file.md) | implemented | 03 |
 | [11 - The AGENTS.md template makes the bot](task-11-the-owners-first-wake-makes-the-bot.md) | implemented | 10 |
@@ -102,6 +103,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | [13 - A turn with no post has a set ending](task-13-a-turn-with-no-post-has-a-set-ending.md) | implemented | 04 |
 | [14 - A bot asks with the question tool](task-14-a-bot-asks-with-the-question-tool.md) | todo | 06 |
 | [15 - A woken message carries its context](task-15-a-woken-message-carries-its-context.md) | implemented | 03 |
+| [16 - post_message runs without asking](task-16-post-message-runs-without-asking.md) | todo | 04 |
 
 ## Risks and tradeoffs
 
