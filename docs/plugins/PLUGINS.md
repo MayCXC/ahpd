@@ -861,7 +861,7 @@ Or in the configuration file:
   "plugins": [
     "@acme/agent-mine",
     { "name": "./my-plugin", "options": { "token": "…" }, "enabled": false },
-    { "name": "@ahpd/bot", "grants": ["session:write"] }
+    { "name": "@ahpd/bot", "grants": ["session:read", "session:write"] }
   ]
 }
 ```
