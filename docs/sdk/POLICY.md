@@ -1,6 +1,6 @@
 # Policies
 
-A **policy** says who may use which agent, model and computer. An operator writes them; a daemon enforces them; a client edits them. They are off until a daemon is switched on, and a daemon that is switched on with an empty store refuses everybody but the root connection, which says so once at start.
+A **policy** says who may use which agent, model and computer, and how much. An operator writes them; a daemon enforces them; a client edits them. They are off until a daemon is switched on, and a daemon that is switched on with an empty store refuses everybody but the root connection, which says so once at start.
 
 Nothing here is on unless it is asked for. A host with no `policies` store, or with a store and no switch, behaves exactly as it did before policies existed: the rows are kept and the `policy:` scheme is served, and nothing is refused.
 
@@ -15,9 +15,9 @@ Every policy is one row in one store, and every row has the same fields.
 | `kind` | What the row is about: `model` (the proxy's calls), `agent` (the harnesses ahpd runs) or `computer` (the machines sessions run in). |
 | `effect` | `allow` or `deny`. **A deny wins over any allow**, so one `deny` that matches is the whole answer. |
 | `match` | What the row applies to, as typed values with globs. |
-| `limits` | How much may be used. Absent or empty means unlimited. Stored, and not enforced yet - see below. |
-| `pool` | A name several rows draw from one total under. Enforced by a later plan. |
-| `cap` | Whether the row counts and never pays. Enforced by a later plan. |
+| `limits` | How much may be used. Absent or empty means unlimited. A row with limits is charged for its work and refused when a counted one is out - see [How a limit is counted](#how-a-limit-is-counted). |
+| `pool` | A name several rows draw from one total under. A pooled row writes `pool:<name>/...` keys instead of `policy:<id>/...`, so rows naming the same pool share every total under it. |
+| `cap` | Whether the row counts and never pays. Its keys are written and its limits are checked, but it never ends a measure; a later row pays it. |
 | `from`, `until` | When the row is valid. Absent means already valid, or no expiry. A bare `YYYY-MM-DD` is the whole day on both sides, so a window is stored as the instants a check compares. |
 
 ### What a `match` holds
@@ -39,15 +39,17 @@ A type the request did not ask for is skipped by an `allow` and fails the match 
 
 ### What a `limit` holds
 
-Each limit is an `amount`, a `measure`, a `period` (`day`, `week`, `month` or `total`) and a `pool` (`shared`, one total for the group, or `each`, every member has their own). A row has room only while every one of its limits has room, and whichever is reached first closes it whatever its unit - which is why several limits on one row, a day and a week and a month, are the ordinary case.
+Each limit is an `amount`, a `measure`, a `period` (`day`, `week`, `month` or `total`) and a `pool` (`shared`, one total for the group, or `each`, every member has their own). A row has room only while every one of its counted limits has room, and whichever is reached first closes it whatever its unit - which is why several limits on one row, a day and a week and a month, are the ordinary case.
 
-Measures are chosen by the kind of the row:
+Measures are chosen by the kind of the row, and only some of them are counted yet:
 
-| Kind | Measures |
-| --- | --- |
-| `model` | `usd`, `tokens`, `calls` |
-| `agent` | `usd`, `tokens`, `turns`, `hours` |
-| `computer` | `hours`, `sessions` |
+| Kind | Measures | Counted |
+| --- | --- | --- |
+| `model` | `usd`, `tokens`, `calls` | `usd`, `tokens` and `calls` |
+| `agent` | `usd`, `tokens`, `turns`, `hours` | `usd`, `tokens` and `turns`; `hours` is not counted yet |
+| `computer` | `hours`, `sessions` | neither yet |
+
+A limit in a measure that is not counted yet is stored, never closes its row, and reads back as `counted: false`. `calls` counts the records a model row paid for, one per record; `turns` counts a turn once, by its first record. A period begins at 00:00 in `usage.timezone`: the day, the week on Monday and the month on the 1st, and it resets at the next one. A `total` limit counts from the row's `from`, or from the beginning of the store when it names none, and never resets. Unused room does not roll over.
 
 A row is refused, by name, for a measure its kind does not have, a limit with no `pool`, a `from` after its `until`, or a value type its kind does not take.
 
@@ -59,6 +61,7 @@ A host with a policies store serves one scheme of its own, the way it serves `co
 | --- | --- |
 | `policy://` | Every row, in the order the store holds them |
 | `policy://<id>` | One row, as JSON |
+| `policy://<id>/limits` | One row's limits, each with what is used and when it resets - see [Reading a limit](#reading-a-limit) |
 
 A write to `policy://<id>` makes the row or edits the one there. **A row is written whole**: a field the body does not name is the one the row already had, and the id in the URI wins over any the body carries, so a client that reads a row and writes the same JSON back has changed nothing. `createOnly` refuses an id that is already held, and `resourceDelete` takes a row away.
 
@@ -99,8 +102,8 @@ The store and the switch are separate. A daemon that is switched off, or that ha
 | When | Checked | Refused with |
 | --- | --- | --- |
 | A session is created | `agent`, for the harness and the machine asked for; then `computer`, for that machine | The users gate's `-32009`, naming the policy |
-| A turn starts | `agent`, for the harness, the session's machine and the model the turn named | The same, on the action's rejection reason |
-| A proxy call ([PROXY.md](../server/PROXY.md)) | `model`, for the name called and each provider entry that serves it; the first entry allowed is called | 403 in the caller's dialect, naming the row; a session's call is checked as the person it runs for unless `proxy.sessionCalls` is `skip` |
+| A turn starts | `agent`, for the harness, the session's machine and the model the turn named; then the agent limits | The same, on the action's rejection reason, or the limit sentence below |
+| A proxy call ([PROXY.md](../server/PROXY.md)) | `model`, for the name called and each provider entry that serves it, and the model limits; the first entry allowed is called | 403 in the caller's dialect, naming the row; a session's call is checked as the person it runs for unless `proxy.sessionCalls` is `skip` |
 
 The session's checks run **before** the machine is made, so a refused session leaves nothing behind.
 
@@ -110,6 +113,10 @@ Each check runs the same four steps:
 2. The candidates are the rows of that kind that are **active now**, whose **scope** holds the person with the request's team and project, and whose **match** holds the request.
 3. Any candidate that denies refuses it, and the refusal names that row's id.
 4. No candidate at all refuses it, and the refusal names the kind and what was asked.
+
+A session's check stops at those four steps, because a session spends nothing until its first turn. A turn and a proxy call go on to [the limit walk](#how-a-limit-is-counted).
+
+A model at its limit stays in `/v1/models`, which asks only whether a policy allows it. The call to it is the one that is refused.
 
 A store that cannot be read refuses the work and says so, because a check that failed open is not a check.
 
@@ -133,19 +140,112 @@ Nothing allowing it reads as there being no policy for it:
 no policy allows computer kvm-shared
 ```
 
-## What this does not yet enforce
+## How a limit is counted
 
-- **`limits` are stored and read by nobody.** A row that has already spent what it had still allows. Enforcing a limit, charging the right pool for it, and refusing when every pool is out are the next plan's work.
-- **`pool` and `cap` are stored and read by nobody**, for the same reason. A row naming a `pool` does not yet draw from one total with the rows naming the same one.
-- **Which row pays is not settled here.** A refused turn is refused; an allowed one is not yet charged to a particular row in a particular unit.
+A turn and a proxy call walk their rows for room after the four steps allowed them. Each measure is walked on its own, in the person's order: their own rows, then the project, the team and `all` last. Within one scope, `policies.payOrder` says which row goes first.
+
+1. A row with no limits takes the measure and adds no key.
+2. A row with no limit in this measure is skipped, and the measure walks on.
+3. A row with a counted limit that has used its amount is closed, and the measure spills to the next row.
+4. A `cap` row is checked and adds its keys, but it never pays; a row with room adds the keys of its limits in this measure and ends the measure.
+5. A measure no row pays is recorded with no key, and the work is refused only when no measure finds a payer.
+
+A row has room only while every counted limit has room, so a row closed in one measure pays no other. The check is before the work and the record after it, so two turns that start together can both pass an amount.
+
+`policies.payOrder` decides among the rows of one scope only:
+
+| Value | Which row of one scope pays first |
+| --- | --- |
+| `ending` | The row whose `until` comes soonest, and rows with none last. This is the default. |
+| `regular` | The rows with no `until`, then the others by `until`. |
+| `extra` | The rows with an `until`, the newest `from` first, and rows with none last. |
+
+Rows that compare equal keep the order the store holds them in.
+
+### The keys
+
+A record carries its owner, team and project as before, and beside them one key for each limit that paid for it:
+
+| Row | Limit `pool` | Key |
+| --- | --- | --- |
+| `policy:<id>` | `shared` | `policy:<id>/<measure>` |
+| `policy:<id>` | `each` | `policy:<id>/<measure>/user:<id>` |
+| `pool:<name>` | `shared` | `pool:<name>/<measure>` |
+| `pool:<name>` | `each` | `pool:<name>/<measure>/user:<id>` |
+
+Every record of one turn carries the keys its check chose, so a turn written per report is charged the same way as one written at its end. With the check off, with no usage store, with no person, or for a `*:*` holder, no policy key is written.
+
+### The refusal
+
+A row with no room refuses the turn or the call, and names itself and the figure that closed it:
+
+```
+A3 has no room: 100 / 100 usd this week
+```
+
+A `total` limit says `in total` rather than `this week`. The id is the first row the walk met with no room, and the measure is the first of its counted limits that closed.
+
+### Reading a limit
+
+Two reads answer a limit, both with the same figure: the amount, what the period has used, where the period began and when it resets. `from` is the first instant of the period in `usage.timezone`, and `resets` is the next one. A `total` limit has no `resets`, a row with an `until` says `ends`, and a measure that is not counted yet says `counted: false` and carries no figure.
+
+`policy://<id>/limits` answers one row to a reader holding `policy:read`. An `each` limit answers every member the store holds a key for, as `{ user, used }`, because the reader may see them all. A member who used nothing has no key and is not listed, and their figure is zero. A row that is not there is `-32008`, and a host with no usage store serves no leaf.
+
+```json
+{
+  "id": "A2",
+  "kind": "agent",
+  "scope": "team:backend",
+  "limits": [
+    {
+      "amount": 400,
+      "measure": "usd",
+      "period": "week",
+      "pool": "shared",
+      "counted": true,
+      "from": "2026-10-19T04:00:00.000Z",
+      "resets": "2026-10-26T04:00:00.000Z",
+      "used": 120
+    },
+    {
+      "amount": 20,
+      "measure": "usd",
+      "period": "week",
+      "pool": "each",
+      "counted": true,
+      "from": "2026-10-19T04:00:00.000Z",
+      "resets": "2026-10-26T04:00:00.000Z",
+      "members": [
+        { "user": "ana", "used": 30 },
+        { "user": "beto", "used": 45 }
+      ]
+    }
+  ]
+}
+```
+
+`usage://limits` answers a list of the same shape, one entry for each active row whose scope holds the reader: `all`, the reader, or a team or project of theirs. An `each` limit answers only the reader's own figure, as `used` and never `members`. A reader with no person, which is the root connection or a host with no users directory, reads `[]`. The read needs no grant, and it is served while `policies.ownLimits` is on, which is the default; off, it is `-32008`.
+
+## What waits
+
+- **`hours` and `sessions`.** A limit in either is stored, reads back as `counted: false`, and never closes its row. Counting machine hours, open sessions and agent work time is a later plan.
+- **The cancel during a turn.** With the default `per: 'turn'`, what a limit has used moves only when the turn ends, so a long turn can pass its amount. Cancelling a turn when it passes its amount, and moving its charge to the next row with room, is a later plan.
+- **Charge rules.** Everybody is charged in the `auto` order: their own rows, then the project, the team and `all`. A person's own charge rule, and a team default for its members, are a later plan.
+- **Two turns that start together** can both pass an amount, because the check is before the work and the record after it. That is accepted rather than fixed.
+- **Usage recorded before limits were counted** carries no policy key, so every limit starts at zero. The daemon says so once at start with the check on.
 
 ## Where it is in the code
 
 | | |
 | --- | --- |
 | The four steps | `decide` in `packages/sdk/src/decide.ts` |
+| The walk, the keys and the figures | `chargeFor`, `keysOf` and `limitsOf` in `packages/sdk/src/charge.ts` |
+| The periods | `periodOf` in `packages/sdk/src/periods.ts` |
+| The turn's check and its keys | `checked` in `packages/sdk/src/host/owners.ts`, and `write` in `packages/sdk/src/meter.ts` |
 | The row and the two stores | `packages/sdk/src/policies.ts` |
 | The `policy:` scheme and its channel | `packages/sdk/src/policy.ts` and `packages/sdk/src/recordschannel.ts` |
-| The switch, in the host | `policies` and `policiesCheck` on `HostOptions`, `packages/sdk/src/types/host.ts` |
-| The switch, in the daemon | `PoliciesSetting` in `packages/server/src/config.ts`, and the wiring in `packages/server/src/commands/run.ts` |
-| The proxy's check | `policyFor` in `packages/server/src/proxy/listener.ts` |
+| The switch and the charge settings, in the host | `policies`, `policiesCheck`, `policiesPayOrder` and `usageTimezone` on `HostOptions`, `packages/sdk/src/types/host.ts` |
+| The switch and the charge settings, in the daemon | `PoliciesSetting` and `UsageSetting` in `packages/server/src/config.ts`, and the wiring in `packages/server/src/commands/run.ts` |
+| The `ownLimits` switch, in the usage scheme | `ownLimits` on `UsageProviderOptions`, `packages/sdk/src/usage.ts` |
+| The proxy's check and its record | `policyFor` and `record` in `packages/server/src/proxy/listener.ts` |
+| The reads | `policy://<id>/limits` in `packages/sdk/src/policy.ts`, and `usage://limits` in `packages/sdk/src/usage.ts` |
