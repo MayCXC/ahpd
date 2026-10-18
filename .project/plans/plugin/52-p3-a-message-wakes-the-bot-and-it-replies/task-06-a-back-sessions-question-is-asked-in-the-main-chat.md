@@ -1,6 +1,6 @@
 ---
 title: A back session's question is asked in the main chat
-status: todo
+status: implemented
 depends: [task-05-the-main-turn-shows-the-back-session.md]
 layer: "packages/bot"
 refs:

@@ -1,12 +1,12 @@
 ---
 title: The main turn shows the back session as a subagent
-status: todo
+status: implemented
 depends: [task-03-a-message-wakes-a-back-session.md]
 layer: "packages/sdk, packages/bot"
 refs:
   - "[code://packages/sdk/src/host/spawn.ts#L166](../../../../packages/sdk/src/host/spawn.ts#L166) - `withWorkerUri`, which stamps a worker chat only where none is named"
   - "[code://packages/sdk/src/host/spawn.ts#L339-L436](../../../../packages/sdk/src/host/spawn.ts#L339-L436) - `openSubagent`, the `subagent` content of a call"
-  - "[code://packages/sdk/src/host/calllinks.ts#L30](../../../../packages/sdk/src/host/calllinks.ts#L30) - a spawning call"
+  - "[code://packages/sdk/src/calllinks.ts#L30](../../../../packages/sdk/src/calllinks.ts#L30) - a spawning call"
 ---
 
 ## Objective
@@ -17,7 +17,7 @@ A client opens that chat from the call, as it opens a subagent's chat.
 ## Files
 
 - `UPDATE: packages/bot/src/chat.ts` - the handle of task 02 starts and ends the call.
-- `UPDATE: packages/sdk/src/host/calllinks.ts` - a spawning call may link a chat in another session.
+- `UPDATE: packages/sdk/src/calllinks.ts` - a spawning call may link a chat in another session.
 - `UPDATE: packages/sdk/src/host/spawn.ts` - keep a `subagent` content that names a chat in another session.
 - `UPDATE: packages/bot/test/bot-chat.test.ts` - the tests of the call.
 - `CREATE: packages/sdk/test/subagent-link.test.ts` - a call in one session links a chat in another.
