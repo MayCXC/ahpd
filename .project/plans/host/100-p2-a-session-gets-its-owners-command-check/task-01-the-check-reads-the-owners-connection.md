@@ -1,6 +1,6 @@
 ---
 title: The check reads the owner's connection
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -42,7 +42,7 @@ host/101 adds its rule to it later.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-18: the check on `Start`, built in `spawn.ts`, and the three keys per connection. Tests in `autoapproval.test.ts` and `root-config.test.ts`.
+- **Next action:** none - implemented.
 - **Open questions:** none.
-- **Watch out for:** `trustedBy` returns `false` with no sender; the check returns nothing in the same case.
+- **Watch out for:** `trustedBy` returns `false` with no sender; the check returns nothing in the same case. The protocol's `ToolCallConfirmationReason` is an ambient const enum, so `spawn.ts` writes `'not-needed'` as that type rather than importing the value.
