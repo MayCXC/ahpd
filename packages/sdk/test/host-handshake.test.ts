@@ -514,6 +514,16 @@ describe('authenticating', () => {
     return { host, client };
   };
 
+  /**
+   * The key the last session's CLI runs on: its own `env`'s, or the daemon's
+   * when it has none. A session can carry an `env` for other reasons, such as
+   * the switch that turns Claude's own task tools on.
+   */
+  const spent = (): string | undefined => {
+    const env = sessionQueries().at(-1)?.options.env as Record<string, string> | undefined;
+    return env === undefined ? process.env.ANTHROPIC_API_KEY : env.ANTHROPIC_API_KEY;
+  };
+
   it('advertises the resource a token would be for', async () => {
     const { client } = await opened();
     const root = await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } }) as {
@@ -564,7 +574,7 @@ describe('authenticating', () => {
     });
     await settle();
     // Started on nothing, the way a session for a client that never pushed is.
-    expect(sessionQueries().at(-1)?.options.env).toBeUndefined();
+    expect(spent()).toBe(process.env.ANTHROPIC_API_KEY);
   });
 
   it('refuses a lifetime that is not a positive integer of seconds', async () => {
@@ -613,7 +623,7 @@ describe('authenticating', () => {
       await vi.advanceTimersByTimeAsync(10);
       // Not spent: a session started on a credential its client was just told
       // is gone would fail saying so, later and less clearly.
-      expect(sessionQueries().at(-1)?.options.env).toBeUndefined();
+      expect(spent()).toBe(process.env.ANTHROPIC_API_KEY);
     }
     finally {
       vi.useRealTimers();
@@ -698,9 +708,9 @@ describe('authenticating', () => {
       params: { channel: 'ahp-session:/plain', provider: 'claude', workingDirectories: [`file://${DIR}`] },
     });
     await settle();
-    // Absent, so the subprocess inherits - which is how every session worked
-    // before there was anything to push, and how an automation's still does.
-    expect(sessionQueries().at(-1)?.options.env).toBeUndefined();
+    // The daemon's own, so the subprocess inherits - which is how every session
+    // worked before there was anything to push, and how an automation's still does.
+    expect(spent()).toBe(process.env.ANTHROPIC_API_KEY);
   });
 
   it('does not lend a token to a session another client asked for', async () => {
@@ -724,7 +734,7 @@ describe('authenticating', () => {
 
     // Per connection, which the specification is explicit about. A token one
     // client offered is theirs.
-    expect(sessionQueries().at(-1)?.options.env).toBeUndefined();
+    expect(spent()).toBe(process.env.ANTHROPIC_API_KEY);
   });
 });
 
