@@ -53,6 +53,50 @@ jobs:
       - name: Pack each package
         run: pnpm -r exec pnpm pack --pack-destination ${{ runner.temp }}
 
+  # The same checks on Windows, where they are not all green yet. It reports
+  # what fails rather than blocking a merge, until the plans that fix what it
+  # finds have landed. Every step runs under bash, so this is the same commands
+  # as `check` rather than a second version of them.
+  check-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      # Before the checkout: some paths under `.project/plans` are 185
+      # characters long, and with the checkout folder in front they pass the 260
+      # a Windows path may have, and the checkout fails with "Filename too long".
+      - run: git config --global core.longpaths true
+        shell: bash
+
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+        shell: bash
+
+      - name: The packages import only what they declare
+        run: pnpm boundary
+        shell: bash
+
+      - run: pnpm typecheck
+        shell: bash
+
+      - name: Tests
+        run: timeout 300 pnpm test:unit
+        shell: bash
+
+      # Last, because it is the slowest and the only one that writes anything.
+      # `check` packs each package after this step and this job does not: what a
+      # package would publish is one answer, and Linux's is it.
+      - run: pnpm build
+        shell: bash
+
   # The cases that start real processes and Docker containers: the daemon's
   # command line, the HTTP server, the computer plugin and a nested host. They
   # are most of the test time, so they run beside `check` on a runner of their

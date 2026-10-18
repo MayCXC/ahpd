@@ -1,5 +1,6 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 /**
  * Whether every package imports only what it declares.
@@ -20,7 +21,7 @@ import { join } from 'node:path';
  * here and breaks there.
  */
 
-const ROOT = new URL('..', import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
 
 /** Every `.ts` under a directory, recursively. */
 const sources = (dir) => readdirSync(dir).flatMap((entry) => {
