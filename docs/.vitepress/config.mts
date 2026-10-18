@@ -70,6 +70,8 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       page('Computer', '/plugins/COMPUTERS'),
       page('Containers', '/plugins/CONTAINERS'),
       page('@ahpd/push', '/plugins/push'),
+      page('@ahpd/tasks', '/plugins/tasks'),
+      page('Tasks', '/plugins/TASK-LIST'),
       page('@ahpd/tunnel-devtunnel', '/plugins/tunnel-devtunnel'),
       page('@ahpd/webhook', '/plugins/webhook'),
       page('Webhooks', '/plugins/WEBHOOKS'),

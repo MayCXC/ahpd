@@ -51,7 +51,8 @@ export interface UsageSetting {
   /** `turn` writes one record when a turn ends, `report` one per report. */
   per?: 'turn' | 'report';
   /**
-   * The zone a day and a week start in, as `Intl` names one.
+   * The zone a day and a week start in, and the store keeps its days in, as
+   * `Intl` names one.
    *
    * Absent is the system's own. It is what makes a week begin on Monday where
    * the deployment is rather than where the reader happens to be.
@@ -76,6 +77,21 @@ export interface PoliciesSetting {
    * anything starts refusing.
    */
   check?: boolean;
+  /**
+   * Which row of one scope pays first when several can.
+   *
+   * `ending` uses the row that ends soonest first, `regular` the rows with no
+   * `until`, and `extra` the rows with one, the newest `from` first. Defaults
+   * to `ending`, so temporary credit is spent before regular credit.
+   */
+  payOrder?: 'ending' | 'regular' | 'extra';
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * Defaults to `true`: a person sees the limits that apply to them, with only
+   * their own figure for a limit every member has their own total of.
+   */
+  ownLimits?: boolean;
 }
 
 /**
@@ -272,6 +288,19 @@ export interface Config {
    * and this is the operator's decision for the whole daemon.
    */
   shellEnv?: ShellEnv;
+  /**
+   * The rules a session's shell commands are matched against when the window
+   * that started it pushed none.
+   *
+   * `vscode`, the default, is VS Code's own terminal auto-approve table, so a
+   * command the reference client approves runs without asking. `none` approves
+   * no command, so every one asks, which is what a deployment that would rather
+   * review each command runs with.
+   *
+   * Only a window that pushed no rules falls back to this: one that pushed an
+   * empty table has said what it approves, and it approves nothing.
+   */
+  terminalAutoApproveDefaults?: 'vscode' | 'none';
   /**
    * How long a streamed delta waits for the next one before it is sent.
    *

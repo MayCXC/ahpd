@@ -14,10 +14,11 @@
 import { execFileSync } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { partsOf, SNAPSHOT_TAG } from '../src/attachments.js';
+import { uriOf } from '../src/fileuri.js';
 import type { Bag } from '../src/types/common.js';
 import type { MessageAttachment } from '../src/types/session.js';
 import type { Part } from '../src/attachments.js';
@@ -42,20 +43,20 @@ const given = (dir: string, name: string, bytes: Buffer | string, type: string):
 };
 
 /** The attachment for a file this host wrote, as the rewrite leaves it. */
-const snapshot = (path: string, type: string, label = path.split('/').pop() as string): MessageAttachment => ({
+const snapshot = (path: string, type: string, label = basename(path)): MessageAttachment => ({
   type: 'resource',
   label,
-  uri: `file://${path}`,
+  uri: uriOf(path),
   sizeHint: 0,
   contentType: type,
   _meta: { [SNAPSHOT_TAG]: { isSnapshot: true, contentType: type } },
 } as MessageAttachment);
 
 /** The attachment for a file somebody works in, which the host left alone. */
-const theirs = (path: string, type: string, label = path.split('/').pop() as string): MessageAttachment => ({
+const theirs = (path: string, type: string, label = basename(path)): MessageAttachment => ({
   type: 'resource',
   label,
-  uri: `file://${path}`,
+  uri: uriOf(path),
   contentType: type,
 } as MessageAttachment);
 
@@ -81,7 +82,7 @@ it('sends a pasted screenshot as an image, and the text before it', async () => 
     type: 'image',
     mimeType: 'image/png',
     data: png().toString('base64'),
-    source: { label: 'ab12cd34-shot.png', uri: `file://${path}` },
+    source: { label: 'ab12cd34-shot.png', uri: uriOf(path) },
   });
 });
 
@@ -106,7 +107,7 @@ it('says which attachment each part came from', async () => {
     type: 'image',
     mimeType: 'image/png',
     data: png().toString('base64'),
-    source: { label: 'shot.png', uri: `file://${path}` },
+    source: { label: 'shot.png', uri: uriOf(path) },
   });
   // An attachment that names no file has a label and no URI.
   expect(parts[2]).toEqual({ type: 'text', text: 'Terminal output:\n$ ls', source: { label: 'terminal' } });
@@ -169,7 +170,7 @@ it('inlines pasted text, labelled with the lines it covers', async () => {
   expect(parts[1]).toEqual({
     type: 'text',
     text: 'notes.txt (lines 1-2):\n```\nfirst\nsecond\n```',
-    source: { label: 'notes.txt', uri: `file://${path}`, text: 'first\nsecond\n' },
+    source: { label: 'notes.txt', uri: uriOf(path), text: 'first\nsecond\n' },
   });
 });
 
@@ -201,9 +202,9 @@ it.skipIf(!posix)('names a directory, a pipe and a file that is not there', asyn
   chmodSync(pipe, 0o400);
 
   const parts = await partsOf('these', [
-    { type: 'resource', label: 'a-folder', uri: `file://${folder}` } as MessageAttachment,
-    { type: 'resource', label: 'a-pipe', uri: `file://${pipe}` } as MessageAttachment,
-    { type: 'resource', label: 'gone.txt', uri: `file://${join(dir, 'gone.txt')}` } as MessageAttachment,
+    { type: 'resource', label: 'a-folder', uri: uriOf(folder) } as MessageAttachment,
+    { type: 'resource', label: 'a-pipe', uri: uriOf(pipe) } as MessageAttachment,
+    { type: 'resource', label: 'gone.txt', uri: uriOf(join(dir, 'gone.txt')) } as MessageAttachment,
   ], { images: true });
 
   // Read, a pipe is forever and a folder is nothing, so neither is opened.
@@ -279,13 +280,13 @@ it('reads a file name as the type where nothing else says', async () => {
   const parts = await partsOf('', [{
     type: 'resource',
     label: 'shot.png',
-    uri: `file://${path}`,
+    uri: uriOf(path),
   } as MessageAttachment], { images: true });
   expect(parts[1]).toEqual({
     type: 'image',
     mimeType: 'image/png',
     data: png().toString('base64'),
-    source: { label: 'shot.png', uri: `file://${path}` },
+    source: { label: 'shot.png', uri: uriOf(path) },
   });
 });
 

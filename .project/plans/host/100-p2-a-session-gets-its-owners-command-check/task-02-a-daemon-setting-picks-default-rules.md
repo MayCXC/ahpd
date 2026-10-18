@@ -1,6 +1,6 @@
 ---
 title: The daemon setting picks the default rules
-status: todo
+status: implemented
 depends: [task-01-the-check-reads-the-owners-connection.md]
 layer: sdk, server
 refs:
@@ -39,7 +39,7 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-18: the daemon key with its default and its refusal, and the fallback in the check. Tests in both packages.
+- **Next action:** none - implemented.
 - **Open questions:** none.
-- **Watch out for:** an empty object pushed by a client counts as "no rules", as VS Code's `_compileRules` reads it.
+- **Watch out for:** an empty object pushed by a client counts as "no rules", as VS Code reads it.

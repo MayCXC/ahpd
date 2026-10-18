@@ -291,8 +291,8 @@ const scriptedAgent = (
       activity: () => undefined,
       title: () => 'Scripted',
       modifiedAt: () => new Date().toISOString(),
-      workingDirectories: () => [`file://${REPO_ROOT}`],
-      sessionState: () => ({ resource: session.uri, provider: PROVIDER, title: 'Scripted', status: 1, lifecycle: 'ready', chats: [], workingDirectories: [`file://${REPO_ROOT}`] }),
+      workingDirectories: () => [uriOf(REPO_ROOT)],
+      sessionState: () => ({ resource: session.uri, provider: PROVIDER, title: 'Scripted', status: 1, lifecycle: 'ready', chats: [], workingDirectories: [uriOf(REPO_ROOT)] }),
       chatState: () => ({ resource: session.chatUri, title: 'Scripted', status: 1, modifiedAt: new Date().toISOString(), turns: [] }),
       begin: (turnId: string, text: string) => {
         session.emit('chat', { type: 'chat/turnStarted', turnId, startedAt: new Date().toISOString(), message: { text } });
@@ -854,9 +854,9 @@ it('the inner session works at the path the folder has inside the machine', asyn
     timeoutMs: 500,
   }).create(start(emit, '/srv/app/x'));
   await until(() => created(host) !== undefined);
-  expect(created(host)?.params.workingDirectories).toEqual(['file:///workspaces/app/x']);
+  expect(created(host)?.params.workingDirectories).toEqual([uriOf('/workspaces/app/x')]);
   // A client outside still reads the folder it named.
-  expect(session.workingDirectories()).toEqual(['file:///srv/app/x']);
+  expect(session.workingDirectories()).toEqual([uriOf('/srv/app/x')]);
   session.close();
 });
 

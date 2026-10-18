@@ -7,7 +7,8 @@ Terms, one line each:
 | Term | |
 | --- | --- |
 | a usage record | One thing that was spent - a model call, or a stretch of computer time |
-| a pool | The name a record is charged to: a person, a team or a project |
+| a pool | The name a record is charged to: a person, a team, a project, or a policy limit |
+| a policy key | The key a charge walk adds for a limit that paid: `policy:<id>/<measure>` or `pool:<name>/<measure>`, with `/user:<id>` for an `each` limit |
 | the owner | Who the work belongs to, as a typed reference - `user:<id>`, `team:<name>`, `project:<team>:<project>` or `root:<host>` |
 | the store | Where the records are kept and what a pool has been charged |
 | the charged cost | What the pools are charged, in US dollars |
@@ -20,7 +21,7 @@ Two kinds share one base and one port. A **model call** is `kind: 'model'`, writ
 
 Every record carries when it happened, what wrote it, who it belongs to and where it ran: the owner, the team and the project it is charged under, the session, the chat and the turn, the agent provider, and the computer when there was one. The base is the same for both kinds, so a listing by agent or by computer is a filter and never a join.
 
-A model record carries the model's `<maker>/<name>`, the provider it ran on, and the tokens in three parts: `input`, `output`, and `cache` split into what was read from and written to the provider's cache. A pool's `tokens` is all three added together, because those are the tokens that were billed, and the three counts are kept apart as well so a report can say what was sent and what came back.
+A model record carries the model's `<maker>/<name>`, the provider it ran on, and the tokens in three parts: `input`, `output`, and `cache` split into what was read from and written to the provider's cache. A pool's `tokens` is all three added together, because those are the tokens that were billed, and the three counts are kept apart as well so a report can say what was sent and what came back. A model record also carries `opens: true` when it is the first record the meter wrote for its turn, which is what a pool's `turns` counts. A turn written once and a turn written per report both open once, so `turns` counts one however many records the turn has, while `calls` counts every record.
 
 ### The two costs
 
@@ -32,13 +33,15 @@ A harness that priced what was sent and what was received apart says so beside t
 
 ## Pools
 
-A record names the pools it is charged to, and `pools` on the record is the whole of it: the owner, `team:<name>`, and `project:<team>:<project>`. Each is named only when the record has it, so work with no owner and no scope is charged to no pool rather than to one whose name says nothing. The name is opaque to the store; what a pool means belongs to the policy plan.
+A record names the pools it is charged to, and `pools` on the record is the whole of it: the owner, `team:<name>`, `project:<team>:<project>`, and one key for each policy limit that paid for the work. Each is named only when the record has it, so work with no owner and no scope is charged to no pool rather than to one whose name says nothing.
 
-The store keeps a **live total** per pool per day, rebuilt when it starts up, because a limit is checked before a call and debited as usage arrives - an answer read off the month's file would be a total from before the last few seconds. A day is the granularity, which is exact for the ranges a limit asks about and counts a partly covered day whole.
+A policy key is `policy:<id>/<measure>`, or `pool:<name>/<measure>` when the row names a `pool`, and an `each` limit adds `/user:<id>`. The keys a record carries are the ones its check chose, so a shared limit has one key for the whole group and an each limit has one per member. To the store a policy key is a pool like any other: `usage://` lists it to a reader holding `usage:read`, and `usage://<policy-key>` reads its totals. A person reads the limits that apply to them through [`usage://limits`](#limits) rather than by naming a key.
+
+The store keeps a **live total** per pool per day, rebuilt when it starts up, because a limit is checked before a call and debited as usage arrives - an answer read off the month's file would be a total from before the last few seconds. A day is the granularity, which is exact for the ranges a limit asks about and counts a partly covered day whole. A day is the local day in `usage.timezone`, so a period summed over it holds no record from the period before.
 
 ## What a pool reads
 
-Through the `usage:` scheme, one leaf under the pool.
+Through the `usage:` scheme, at the root and one leaf under the pool.
 
 | URI | What it answers |
 | --- | --- |
@@ -48,6 +51,7 @@ Through the `usage:` scheme, one leaf under the pool.
 | `usage://<pool>/range?from=&until=` | One total between two days |
 | `usage://<pool>/records?from=&until=` | The records charged to it, newest first, at most the newest 200 |
 | `usage://groups?by=&from=&until=` | The records between two days summed by user, team and project, one row per set of key values |
+| `usage://limits` | Each active policy whose scope holds the reader, with its limits, what each used and when it resets |
 
 A listing is the same for every reader: the pools the store has records for, limited to the pools the reader may read. Root and a member see the same row for the same pool, and a pool nothing was charged to is listed for neither, so a team or project that spent nothing has no row until its first record.
 
@@ -81,6 +85,34 @@ A record counts once in a group, however many pools it is charged to, where a po
 
 The three periods are ranges in the configured zone rather than in UTC, so a week starts on the deployment's Monday 00:00 and not the evening before - see the `timezone` key below. `until` is always now, so the day behind the current hour is a partly covered one and is counted whole. The records a period's total summed are the records that period's `records` leaf lists, because both compare the range at the day.
 
+### Limits
+
+`usage://limits` is a read at the scheme's root, like `groups`, and not a pool. It answers one entry for each active policy whose scope holds the reader: `all`, the reader, or a team or project of theirs. The shape is the one `policy://<id>/limits` answers, and each limit carries its amount, what the period used, where the period began and when it resets.
+
+```json
+[
+  {
+    "id": "A2",
+    "kind": "agent",
+    "scope": "team:backend",
+    "limits": [
+      {
+        "amount": 20,
+        "measure": "usd",
+        "period": "week",
+        "pool": "each",
+        "counted": true,
+        "from": "2026-10-19T04:00:00.000Z",
+        "resets": "2026-10-26T04:00:00.000Z",
+        "used": 30
+      }
+    ]
+  }
+]
+```
+
+An `each` limit answers only the reader's own figure, as `used` and never `members`; `policy://<id>/limits` answers every member, because its reader holds `policy:read`. A person reads their own without a grant. A reader with no person, which is the root connection or a host with no users directory, reads `[]`. With `policies.ownLimits` off the read is `-32008`, and so it is on a host with no policies store. The rows and their figures are [POLICY.md](POLICY.md#reading-a-limit).
+
 ## Reading usage by command
 
 Each read above is also an `x-` command a client sends on its connection, which answers the same value as JSON rather than as text in a `data` string. The `usage:` scheme stays, and both answer from the same functions. Usage has no channel: nothing is sent when a record is written.
@@ -111,10 +143,12 @@ Both keys are in the daemon's configuration file, under `usage`. Neither has a f
 
 | Key | Values | Default | What changes |
 | --- | --- | --- | --- |
-| `usage.per` | `turn` or `report` | `turn` | `turn` holds the running sum a harness reports and writes one record when the turn ends. `report` writes one record for every usage report, each holding what that report added since the one before it, so a long turn is billed while it is still running |
-| `usage.timezone` | an IANA zone name, as `America/Sao_Paulo` | the system's own zone | The zone a day begins in and a week starts in. A week is Monday 00:00 there, not the system's own |
+| `usage.per` | `turn` or `report` | `turn` | `turn` holds the running sum a harness reports and writes one record when the turn ends. `report` writes one record for every usage report, each holding what that report added since the one before it, so a long turn is billed while it is still running. A turn written per report still counts one turn, because only its first record opens it |
+| `usage.timezone` | an IANA zone name, as `America/Sao_Paulo` | the system's own zone | The zone a day begins in and a week starts in, and the zone the store keeps its days in. A week is Monday 00:00 there, not the system's own, so a period's total holds no record from the period before |
 
 Both modes bill the same work, and a wrong value is refused by name at startup: `usage.per` must be one of `turn` or `report`, and a `timezone` this host cannot read is one line at start and the system's own zone.
+
+The store and the `usage:` scheme are given the same zone, so a period's total and the records behind it agree. With two zones they would count different days.
 
 Where the records are kept is not a key: the daemon writes them into a `usage` folder beside its own configuration, and a host built from the SDK is handed its own store. Everything else about the daemon's keys is [HOST.md](HOST.md#configuration-keys).
 

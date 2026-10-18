@@ -2,6 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { uriOf } from '../src/fileuri.js';
 import { Status } from '../src/catalog.js';
 import { ROOT, createHost } from '../src/host.js';
 import { fileSessions } from '../src/sessions.js';
@@ -140,14 +141,15 @@ describe('the filters list_sessions takes', () => {
   });
 
   it('matches a directory with a space, however the URI was written', () => {
-    const spaced = row({ resource: 'ahp-session:/spaced', workingDirectories: ['file:///github/my%20dir'] });
+    const dir = join(tmpdir(), 'ahpd spaced dir');
+    const spaced = row({ resource: 'ahp-session:/spaced', workingDirectories: [uriOf(dir)] });
     const found = (args: Record<string, unknown>) =>
       filterSessions([spaced], args).map((one) => one.resource);
     // A URI the client encoded and a path somebody typed are the same place,
     // and a workspace filter that compared their text matched neither.
-    expect(found({ workspace: 'file:///github/my dir' })).toEqual(['ahp-session:/spaced']);
-    expect(found({ workspace: 'file:///github/my%20dir' })).toEqual(['ahp-session:/spaced']);
-    expect(found({ workspace: '/github/my dir/' })).toEqual(['ahp-session:/spaced']);
+    expect(found({ workspace: uriOf(dir).replace('%20', ' ') })).toEqual(['ahp-session:/spaced']);
+    expect(found({ workspace: uriOf(dir) })).toEqual(['ahp-session:/spaced']);
+    expect(found({ workspace: `${dir}/` })).toEqual(['ahp-session:/spaced']);
   });
 
   it('keeps the flags the reference host filters on', () => {

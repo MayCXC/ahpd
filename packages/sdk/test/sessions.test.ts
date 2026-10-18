@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { uriOf } from '../src/fileuri.js';
 import { createHost } from '../src/host.js';
 import { PAGE } from '../src/paging.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
@@ -1314,8 +1315,8 @@ it('forgets a session in a directory it read, and keeps one in a directory it di
    * ever read, which is why its row must not be read as a session that went.
    */
   let offered: Listed[] = [
-    { id: 'near', title: 'Near', createdAt: '2026-01-01T00:00:00.000Z', modifiedAt: '2026-01-01T00:00:00.000Z', workingDirectories: [`file://${root}`] },
-    { id: 'far', title: 'Far', createdAt: '2026-01-01T00:00:00.000Z', modifiedAt: '2026-01-01T00:00:00.000Z', workingDirectories: [`file://${worktree}`] },
+    { id: 'near', title: 'Near', createdAt: '2026-01-01T00:00:00.000Z', modifiedAt: '2026-01-01T00:00:00.000Z', workingDirectories: [uriOf(root)] },
+    { id: 'far', title: 'Far', createdAt: '2026-01-01T00:00:00.000Z', modifiedAt: '2026-01-01T00:00:00.000Z', workingDirectories: [uriOf(worktree)] },
   ];
   const { client } = await running(store, undefined, { ...echo({ path: root, pace: 0 }), list: async () => offered });
   // Both listed once, so this host knows where each of them ran.

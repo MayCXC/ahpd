@@ -1,6 +1,6 @@
 ---
 title: Status and stop under --json keep their result
-status: todo
+status: implemented
 depends:
   - task-01-ahpd-takes-cofold-terminal-0-4.md
 layer: server
@@ -34,3 +34,8 @@ A script reads each stream as one JSON value at most.
 - `pnpm -s typecheck` and the server vitest suite pass.
 
 ## Resume
+
+- **Done so far:** every step. `status` and `stop` keep their `{"running":false}` and `{"stopped":false}` write on stdout, and the comment above each says the failure goes to stderr. Both keep exit 1 and the kind `conflict`. `server-cli.test.ts` has a case for each: the result on stdout, one JSON failure on stderr, and exit 1.
+- **Next action:** task 04.
+- **Open questions:** none.
+- **Watch out for:** the result is written before the failure, so a script reads stdout to its end and stderr as one line. The failure line is `{"message":"None running.","kind":"conflict","exitCode":1}`.

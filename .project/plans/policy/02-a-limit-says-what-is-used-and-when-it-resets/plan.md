@@ -97,6 +97,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | A refusal names the row and the figure that closed it, as `A3 has no room: 100 / 100 usd this week` | the rules draft, examples 11 and 12 | 03 |
 | Every record of a turn carries the keys its check chose, and the cost is not split across rows during a turn | the rules draft, "During a turn", which policy 03 builds | 04 |
 | A turn whose check is off, or whose person is root or `*:*`, carries no policy key | the rules draft, "Root and `*:*` holders are never limited" | 04 |
+| `/v1/models` still lists a model at its limit, and the call to it is refused | Softov, 2026-10-18: "What should happen to a model at its limit in the listing?" Answer: "Listed, refused at call" | 04 |
 
 ## Proposed architecture
 
@@ -113,9 +114,9 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | [01 - The periods are one module, and the store keeps its days in the usage timezone](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) | implemented | - |
 | [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | implemented | - |
 | [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | implemented | 01, 02 |
-| [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | todo | 03 |
-| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | todo | 03 |
-| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | todo | 04, 05 |
+| [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | implemented | 03 |
+| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | implemented | 03 |
+| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | implemented | 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -127,13 +128,14 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Resume state
 
-- **Done so far:** 2026-10-18, tasks 01, 02 and 03 are implemented.
-- **Next action:** [task-04-a-turn-and-a-proxy-call-are-charged.md](task-04-a-turn-and-a-proxy-call-are-charged.md).
-- **Open questions:** none.
+- **Done so far:** 2026-10-18, tasks 01 to 06 are implemented. `ownLimits` reads `policies.ownLimits`. Task 06 wrote the limits section in `POLICY.md`, the policy keys and `usage://limits` in `USAGE.md`, and `payOrder`, `ownLimits` and the store's days in `HOST.md`.
+- **Next action:** review task 06, then run the final verification checklist.
+- **Open questions:** `docs/server/REFERENCE.md` is generated from the built server, so `policies.payOrder` and `policies.ownLimits` are written in `HOST.md` instead. The generated `usage` description does not say the store's days are cut in `usage.timezone`.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
   The store and the provider must have the same zone, and `run.ts` and `ahpd usage` give it to both.
   With two zones, the store and the provider count different days.
+  A turn's keys are kept by turn id until its end, so a queued turn's keys move with its sender.
 
 ## Final verification checklist
 

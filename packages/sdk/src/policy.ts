@@ -13,14 +13,49 @@
  * through `policiesCheck`, and `decide` does the checking.
  */
 
+import { limitsOf, type LimitFigure } from './charge.js';
+import { zoneOf } from './periods.js';
 import { checkPolicy, EFFECTS, KINDS, LIMIT_POOLS, MATCHES, MEASURES, PERIODS } from './policies.js';
-import { line, lines, recordsProvider, type Records, type RecordsProvider } from './records.js';
+import { absentResource, asFile, EPOCH, line, lines, recordsProvider, splitResource, type Records, type RecordsProvider } from './records.js';
 import { recordsDomain, type RecordsChannel } from './recordschannel.js';
 import type { PluginMethod } from './types/plugin.js';
-import type { Policies } from './types/policies.js';
+import type { Policies, PolicyKind, PolicyScope } from './types/policies.js';
+import type { Metadata, Read } from './types/resources.js';
+import type { Usage } from './types/usage.js';
 
 /** The scheme, which is also its grant subject. */
 const SCHEMES = ['policy'] as const;
+
+/** The leaf under a row that answers its limits. */
+const LIMITS = 'limits';
+
+/**
+ * What a provider needs to answer `policy://<id>/limits`.
+ *
+ * The usage store is where a limit's used figure comes from, and the zone is
+ * the one its days are cut in. Without a store the leaf is not served, because
+ * nothing can say what a limit has used.
+ */
+export interface PolicySchemeOptions {
+  /** The store the work is charged to. Absent, `policy://<id>/limits` is not served. */
+  usage?: Usage;
+  /** The zone the periods are cut in, as `usage.timezone` names it. */
+  timezone?: string;
+  /** Where a zone that cannot be read is said. */
+  onProblem?(message: string): void;
+}
+
+/** One row's limits, as `policy://<id>/limits` and `usage://limits` answer them. */
+export interface PolicyLimits {
+  /** The row's id. */
+  id: string;
+  /** What the row is about. */
+  kind: PolicyKind;
+  /** Who the row is about. */
+  scope: PolicyScope;
+  /** Each limit, with what is used and when it resets. */
+  limits: LimitFigure[];
+}
 
 /**
  * What this provider implements.
@@ -143,14 +178,70 @@ const records = (store: Policies): Records => ({
 });
 
 /**
+ * The provider with the `limits` leaf under a row.
+ *
+ * A row is a file whose bytes are its JSON, so a leaf under one is new here.
+ * `policy://<id>/limits` answers the row's own limits, each with what the
+ * period has used and when it resets, read by `limitsOf`. The reader holds
+ * `policy:read`, which is what the scheme's gate has already said, so an `each`
+ * limit answers every member rather than one person.
+ *
+ * Every other leaf is the record provider's answer, which is the refusal it
+ * always gave. A host with no usage store serves no leaf at all: a limit whose
+ * used figure cannot be read is not a figure.
+ */
+const withLimits = (provider: RecordsProvider, store: Policies, options: PolicySchemeOptions): PolicyProvider => {
+  const usage = options.usage;
+  if (usage === undefined) return provider;
+  const zone = zoneOf(options.timezone, (message) => { options.onProblem?.(message); });
+
+  /** The JSON a read of the leaf answers, or the refusal a row that is not there gets. */
+  const body = async (uri: string, id: string): Promise<string> => {
+    const row = await store.get(id);
+    if (row === undefined) throw absentResource('policy', uri);
+    const answer: PolicyLimits = {
+      id: row.id,
+      kind: row.kind,
+      scope: row.scope,
+      limits: await limitsOf(row, usage, zone, new Date()),
+    };
+    return JSON.stringify(answer, null, 2);
+  };
+
+  return {
+    ...provider,
+
+    resolve: async (uri, followSymlinks): Promise<Metadata> => {
+      const at = splitResource(uri, 'policy');
+      if (at.id !== '' && at.leaf === LIMITS) {
+        return {
+          uri,
+          type: 'file',
+          size: Buffer.byteLength(await body(uri, at.id), 'utf8'),
+          mtime: EPOCH,
+          ctime: EPOCH,
+        } as Metadata;
+      }
+      return provider.resolve(uri, followSymlinks);
+    },
+
+    read: async (uri, wanted): Promise<Read> => {
+      const at = splitResource(uri, 'policy');
+      if (at.id !== '' && at.leaf === LIMITS) return asFile(await body(uri, at.id));
+      return provider.read(uri, wanted);
+    },
+  };
+};
+
+/**
  * The `policy:` provider, over a store.
  *
  * One scheme, so this answers a `Record<string, PolicyProvider>` like
  * `peopleProviders` does and sits in the same `resourceProviders` map beside
  * them rather than in a second spread.
  */
-export const policyProviders = (store: Policies): Record<string, PolicyProvider> =>
-  Object.fromEntries(SCHEMES.map((what) => [what, recordsProvider(what, records(store))]));
+export const policyProviders = (store: Policies, options: PolicySchemeOptions = {}): Record<string, PolicyProvider> =>
+  Object.fromEntries(SCHEMES.map((what) => [what, withLimits(recordsProvider(what, records(store)), store, options)]));
 
 /** The policy scheme as a provider, a channel and commands, over one store. */
 export interface PolicyChannels {
@@ -169,12 +260,15 @@ export interface PolicyChannels {
  *
  * The channel needs `policy:read`. The store has no watch, so a row edited by
  * hand in the file reaches the channel at the next change made through the
- * host.
+ * host. The provider also serves the `limits` leaf when it is given the usage
+ * store, which is where a limit's used figure is kept.
  */
-export const policyChannels = (store: Policies, options: { onProblem?: (message: string) => void } = {}): PolicyChannels => {
-  const one = recordsDomain('policies', 'policy', records(store), options);
+export const policyChannels = (store: Policies, options: PolicySchemeOptions = {}): PolicyChannels => {
+  const one = recordsDomain('policies', 'policy', records(store), {
+    ...(options.onProblem === undefined ? {} : { onProblem: options.onProblem }),
+  });
   return {
-    providers: { policy: one.provider },
+    providers: { policy: withLimits(one.provider, store, options) },
     channels: [one.channel],
     methods: one.methods,
     refresh: one.channel.refresh,

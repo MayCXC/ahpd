@@ -333,9 +333,9 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
          * Kept twice, because the keys are two kinds.
          *
          * What changed is who *acts* on a key. `PER_CONNECTION` names the
-         * person's - `defaultShell` today - and those are also written to
-         * this connection, which is the only place anything reads them from
-         * now. `rootConfig`'s copy is display state and nothing opens a shell
+         * person's - the shell, the trust and the command rules a window
+         * pushes - and those are also written to this connection, which is the
+         * only place anything reads them from now. `rootConfig`'s copy is display state and nothing opens a shell
          * with it. So two people on one daemon each get their own, and the
          * paths with no connection in hand take the daemon's own shell and
          * nobody's preference at all.
@@ -455,14 +455,19 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
          * asked, because a pushed `null` takes a key away - and the value a key
          * taken away holds is its default, every session and every provider
          * again.
+         *
+         * Only when the push names either key: what the daemon holds is the
+         * file alone, so a push of any other key would otherwise undo a
+         * `--no-session-tools` or a `--session-tools-providers` the line set.
          */
+        const touched = Object.hasOwn(theirs, 'sessionTools') || Object.hasOwn(theirs, 'sessionToolsProviders');
         const heldOn = held['sessionTools'];
         const offering = heldOn === false ? false : true;
         const named = held['sessionToolsProviders'];
         const narrowing = Array.isArray(named)
           ? named.filter((one): one is string => typeof one === 'string')
           : [];
-        if (offering !== ctx.sessionTools || JSON.stringify(narrowing) !== JSON.stringify(ctx.sessionToolsProviders)) {
+        if (touched && (offering !== ctx.sessionTools || JSON.stringify(narrowing) !== JSON.stringify(ctx.sessionToolsProviders))) {
           ctx.sessionTools = offering;
           ctx.sessionToolsProviders = narrowing;
           for (const uri of sessions.keys()) {

@@ -1,6 +1,6 @@
 ---
 title: A client reads each limit with its amount, what is used and when it resets
-status: todo
+status: implemented
 depends: [task-03-the-charge-walk.md]
 layer: "sdk, server"
 refs:
@@ -49,3 +49,22 @@ refs:
 
 ## Resume
 
+Implemented 2026-10-18, not reviewed.
+
+- `policy.ts` wraps the provider so `policy://<id>/limits` answers `{ id, kind, scope, limits }` from `limitsOf`.
+- An `each` limit there answers every member, because the reader holds `policy:read`.
+- The leaf resolves as a file and reads as JSON; every other leaf is refused as before.
+- A row that is not there answers `-32008`, and a host with no usage store serves no leaf.
+- `usage.ts` answers `usage://limits` with each active row whose scope holds the reader.
+- An `each` limit there answers the reader's own figure as `used`, and never `members`.
+- A reader with no person reads `[]`, and `policies.ownLimits` off refuses the read with `-32008`.
+- `run.ts` gives the policy scheme the usage store and the zone, and the usage scheme the policies store.
+- A row whose `from` or `until` puts it outside now is not read.
+
+Open question: step 9 needs the `policies.ownLimits` key from the configuration.
+`config.ts` and `options.ts` are not in Files, and they hold the key.
+`run.ts` passes `ownLimits: true`, the default, until task 04 adds it.
+That task's step 1 adds both `payOrder` and `ownLimits` to `PoliciesSetting`.
+
+Tests: `policy-scheme.test.ts` and `usage-scheme.test.ts` each gained one case.
+The gates pass: schema, build, typecheck, boundary and vitest over `packages/sdk` and `packages/server`.

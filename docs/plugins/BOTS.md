@@ -2,7 +2,7 @@
 
 A **bot** is a record a person keeps on the host, with a folder of its own, talked to in a chat of its own. `@ahpd/bot` serves it as the `bot:` scheme, so a bot is made, read, listed, edited and deleted through the same `resource*` methods every other resource uses - [RESOURCES.md](../sdk/RESOURCES.md).
 
-A bot is not a backend of its own. It names whichever harness the host already has, by its `preset`, or by its `harness` and `model`, and the chat a person talks to it in runs no model at all - [The chat](#the-chat).
+A bot is not a backend of its own. It names whichever harness the host already has, by its `preset`, or by its `harness` and `model`, and the chat a person talks to it in runs no model at all - [The chat and its back sessions](#the-chat-and-its-back-sessions).
 
 ## The record
 
@@ -23,7 +23,7 @@ A bot is not a backend of its own. It names whichever harness the host already h
 | `session` | The name of the back session a message wakes. `work` where absent, and a name with `{turn}` in it starts one session per message |
 | `computer` | The machine it runs in, where it names one |
 | `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a holder of `*:*` may name any owner, this host's own `root:<host>` among them. A body naming anybody else is refused `-32009`, and an edit may not move it. Any `root:` is this host, whatever name follows it: one a make names is written under the host's name today, and a renamed machine keeps its bots. The manifest gives this host's own owner as a `const` in `owner`, so a client sends it as given |
-| `chat` | The reader's own chat with this bot. Answered by a read and never obeyed: it is a different conversation for each reader, so what a body carries is not kept - [The chat](#the-chat) |
+| `chat` | The reader's own chat with this bot. Answered by a read and never obeyed: it is a different conversation for each reader, so what a body carries is not kept - [The chat and its back sessions](#the-chat-and-its-back-sessions) |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
 Three of the fields in that table are the `AGENTS.md`'s rather than `bot.md`'s: `name`, `description` and `instructions`. The file is their one copy, a read answers them from it, and a make or an edit writes them there - [The persona](#the-persona). Everything else that is the bot's is in the record file; `chat` belongs to the reader, and is not kept in the record.
@@ -105,6 +105,8 @@ A part the file does not have reads empty. A bot that removed its Instructions s
 
 A make fills the bot's template into the file: the `templates` record it names, or the default `AGENTS.md` template at `<configDir>/templates/bots/AGENTS.md`, which the daemon writes at load where it is absent and a person may edit. The filled text is copied into the bot's folder, once; an edit to the template reaches the next bot made and no bot that exists. A folder that already has an `AGENTS.md` keeps it, because the file is the bot's from its first moment.
 
+A folder with no `AGENTS.md` - one whose make failed to write it, or one a person emptied - gets the same text at the first wake of a back session. The file is the bot's rules: every harness reads it, and a wake never writes over a file that is there.
+
 A bot on a computer keeps its `AGENTS.md` on that computer. The host reads and writes it through the computer while the computer is online, and keeps the last parts it read in the record, which are what a read answers while the computer is offline. An edit made while the computer is offline waits in the record; the next start of a back session writes it to the file, and the record keeps it as the last parts read.
 
 ## The slug
@@ -125,19 +127,73 @@ The suggested bodies are `robot`, `humanoid`, `alien`, `gumbo`, `circle`, `semic
 
 A make that names neither gets a body at random and the first colour.
 
-## The chat
+## The chat and its back sessions
 
-A person talks to a bot in a **chat**: one session of the `bot-chat` provider per bot and person. That provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bots/<slug>/logs/`, so a chat is still readable after a daemon restarts.
+A person talks to a bot in a **chat**: one session of the `bot-chat` provider per bot and person. That provider runs no model, and keeps each turn as one JSON line under `<configDir>/bots/<slug>/logs/`, so a chat is still readable after a daemon restarts. A turn it begins stays open until the plugin ends it, which is what the work behind the chat answers into.
 
-A chat is opened by a **read**. `resourceRead bot://<slug>` answers the record with one more key, `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats.
+A message said in the chat wakes a **back session**: an ordinary session of the host, on the bot's harness, which does the work and replies. The chat is the person's main chat with the bot, and each back session is behind it. Their two names are:
 
-A reader may chat when they hold `bot:chat`, or when the bot is theirs. A reader who may not is answered the record alone: no `chat` key and no refusal, because there is nothing wrong with their read - there is simply no conversation of theirs to name.
+| Name | What it is |
+| --- | --- |
+| `bot:/<bot>/<user>` | One person's main chat with one bot. A read answers `{ chat }`, the session the chat is in |
+| `bot:/<bot>/<user>/<name>` | One back session behind that chat. A read answers `{ session }`, the session that name is on today, and "not found" when no row has the name |
+
+`bot:/<bot>/<user>/` is a directory, and a list of it answers the names of that person's back sessions. `bot:/` and `bot://` are the same address.
+
+`<user>` is the id after `user:`, so `user:ana` is `ana` in the path. A reader who is nobody is this host, named after the machine, so a host with no users directory has a main chat of its own.
+
+A read of the main chat is answered to the person it is named for, to the bot's owner and to this host. A reader who is none of those is refused, because a chat is one person's conversation rather than part of the record. Reading one's own main chat also needs `bot:chat` unless the bot is theirs, as a read of the bot does, and the first read starts the chat the way a read of the bot does. A back session and a list of the names are answered to those same three.
+
+A chat is opened by a **read**. `resourceRead bot://<slug>` answers the record with one more key, `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats. A reader who may not chat is answered the record alone: no `chat` key and no refusal, because there is nothing wrong with their read - there is simply no conversation of theirs to name.
 
 A chat is the reader's own session: it works in the bot's `workspace`, it is titled with the bot's `name`, and starting one needs the reader's own `session:create`, asked by the host the way it is asked at the door. A refusal there is the read's refusal.
 
 `chat` is answered and never obeyed. A client that read a bot and writes the record back, `chat` and all, is writing what it was given, and the key is dropped rather than kept: a chat is the reader's, and the next reader's read answers the next reader's chat.
 
 A chat's log is the whole of its state. Nothing about a chat is kept in memory past the process that made it, so a daemon that starts again lists, opens and replays the chats it has logs for.
+
+### The name a message wakes
+
+The bot's `session` names the back session a message goes to. It is `work` unless the bot says otherwise, and it may hold `{turn}`: the turn id of the message takes that word's place, so a bot that names `{turn}` starts a back session for each message rather than continuing one. A name is up to 40 lowercase letters, digits and dashes, starting with a letter, and `{turn}` may stand anywhere in it; a make that names anything else is refused `-32602`.
+
+A message that reaches the wake is a **turn** when its back session is idle and a **steer** when the session is working. A back session is started on the bot's `preset`, or its `harness` and `model`, in the bot's folder, owned by the person of the main chat, and titled with the bot's name. It loads none of the settings of the person who runs the daemon: the bot's rules are its own `AGENTS.md`, not the operator's.
+
+The session a name is on is kept in the bot's own `sessions/` rows, so a message that comes back to an idle name continues the session it started. A name whose session the host no longer has - a daemon that restarted - is started again and the row written over. Two messages that arrive together for one name start one session.
+
+Each woken message carries a context block in front of what the person said:
+
+```text
+<context>
+main chat: bot:/<bot>/<user>
+from: <the person's id>
+time: <ISO time with the host's offset>
+</context>
+
+<what the person said>
+```
+
+The block says what changes from message to message; the system prompt does not. The main chat shows and keeps only the person's own words.
+
+### What the back session answers with
+
+The main turn stays open while the back session works, and it shows the back session as a `subagent` tool call whose content opens the back session's chat. It ends when the back session calls `post_message` with the reply: that text becomes the response of the turn the person is waiting on. The tool is offered only to a back session, and it posts only to the main chat that woke the calling session, so a back session cannot post into another chat. It is marked as running without a confirmation, and a deny list a session carries still refuses it.
+
+A back session asks a question with its harness's question tool, and the question is shown in the main chat; the answer given there goes back to the back session. An approval is shown as a tool call waiting for a confirmation, and a request the back session withdraws leaves the main chat. A harness with no question tool asks in the text it posts.
+
+A back session may also end its turn without posting. What the main turn does then is the plugin's `mainTurnPostMessageAbsent`:
+
+| Value | The main turn |
+| --- | --- |
+| `post` | Ends with the final text of the back session's turn as the reply. A turn with no text ends with nothing. The default |
+| `notice` | Ends with the notice `<bot name> finished without a reply` |
+| `silence` | Ends with nothing |
+| `postNotice` | Ends with the final text as the reply. A turn with no text ends with the notice |
+
+A value outside those four is reported and `post` is used.
+
+### The bot's rules
+
+A back session's system prompt says only what no file can: that a person is waiting in the main chat for its reply, that `post_message` is what answers them, that a question is asked with the harness's question tool, and that `send_message` starts a turn somewhere else and is not a reply. The bot's own rules are its `AGENTS.md`, which the harness reads: the template the bot names, or the shipped default `<configDir>/templates/bots/AGENTS.md`, filled with the bot's `name`, `description` and `instructions`. The file is written when the bot is made, and the first wake writes it where the folder has none; a file that is there is never written over - [The persona](#the-persona).
 
 ## The template
 
@@ -263,9 +319,16 @@ An edit that asks for a harness, leaving everything else as it was:
 | --- | --- | --- |
 | `root` | `~/.bots` | The folder a bot's workspace is under, as `<root>/<slug>` |
 | `lastChats` | `10` | How many chats `{{chats}}` lists |
+| `mainTurnPostMessageAbsent` | `post` | What a main turn does when the back session's turn ends without `post_message`: `post`, `notice`, `silence` or `postNotice` |
 
 ```json
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
+```
+
+The plugin's own entry needs `session:read` and `session:write`. A message is sent to a back session as a client's chat action, which `session:write` covers, and the session's state is read with `session:read`. The write group also holds `session:trust`, which the trusted start of a back session asks for; without the grant the start is refused, and the main turn ends with a notice naming what was refused.
+
+```json
+{ "plugins": [{ "name": "@ahpd/bot", "grants": ["session:read", "session:write"], "options": { "root": "/srv/bots" } }] }
 ```
 
 All the data of one bot is in `<configDir>/bots/<slug>/`: its record is `bot.md` - [The record file](#the-record-file) shows one - its main chat rows are in `chats/`, its back session rows in `sessions/`, and its chat logs in `logs/`. A delete removes that folder. The tombstones are in `<configDir>/bots-gone/`. Named templates are in `<configDir>/templates/<name>.md`, and the default `AGENTS.md` template is `<configDir>/templates/bots/AGENTS.md`. A bot's `AGENTS.md` is not in the configuration folder: it is in the bot's work folder, which the `root` option places - [The persona](#the-persona). A plugin that takes the record store over keeps the records and the tombstones wherever that store keeps them; the work folder and its `AGENTS.md` stay where they are.

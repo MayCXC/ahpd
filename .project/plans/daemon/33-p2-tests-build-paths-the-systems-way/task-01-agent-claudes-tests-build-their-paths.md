@@ -1,6 +1,6 @@
 ---
 title: agent-claude's tests build their paths
-status: todo
+status: implemented
 depends: []
 layer: agent-claude
 refs:
@@ -35,3 +35,20 @@ Its 17 failing tests build their paths and URIs the system's way.
 - The Windows job passes the agent-claude tests.
 
 ## Resume
+
+Done 2026-10-18. Not reviewed.
+
+p1 is not built, so its failure list is not on disk. The files came from the plan's refs and the agent-claude tree, the same departure p5 took.
+
+`customizations.ts` reads the home folder from `homedir()` in place of `process.env.HOME`.
+`customizations.test.ts` sets `USERPROFILE` beside `HOME`, and restores both.
+Its expected agent URI is built with `uriOf(join(home, '.claude', 'agents', 'Plan.md'))`.
+The plugin agent's expected URI is built with `join`, because the code reports a path there.
+`agent-claude-find.test.ts` builds its three `workingDirectories` values with `uriOf`.
+`agent-claude-agent-pick.test.ts` builds every URI it sends with `uriOf`.
+The `file:///dev/zero` case is now a folder named `zero`, because no two systems spell a device the same way.
+`delete.test.ts` keeps `/home/softov`, and `agent-claude-tool-input.test.ts` keeps `/tmp/project`: the code passes both to a mocked SDK.
+
+Gates run: `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
+Vitest on `packages/agent-claude` with `--maxWorkers=2 --testTimeout=10000`: 37 files and 329 tests pass.
+The sdk run rewrote `packages/sdk/test/fixtures/wire.jsonl`, and the restore is denied here: Softov runs `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

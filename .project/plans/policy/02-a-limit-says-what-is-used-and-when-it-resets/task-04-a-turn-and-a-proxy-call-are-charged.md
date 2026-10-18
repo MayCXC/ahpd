@@ -1,6 +1,6 @@
 ---
 title: A turn and a proxy call are refused at a limit, and their records carry the keys
-status: todo
+status: implemented
 depends: [task-03-the-charge-walk.md]
 layer: "sdk, server"
 refs:
@@ -65,3 +65,22 @@ Every record of the turn or the call carries the keys the check chose, beside it
 
 ## Resume
 
+Implemented 2026-10-18, not reviewed.
+
+- `checked` answers `{ refusal }` or `{ pools }`, and only walks the kind it is told to charge.
+- The turn's `agent` check runs `chargeFor`; the session's check reads the refusal only.
+- The turn's keys are kept by turn id, moved when a queued message becomes a turn, and let go when the turn ends.
+- The meter reads `keysOf(turn)` for every record, so `per: 'report'` charges each report the same way.
+- The proxy's `policyFor` walks each candidate entry and answers its keys; `record` adds them after owner, team and project.
+- `policies.payOrder` and `policies.ownLimits` are file only; `usage.timezone` reaches the host and the proxy.
+- The start-up note says limits count the usage recorded from now.
+
+Open question: the Files name `packages/server/test/proxy.test.ts`, which does not exist.
+The proxy cases are in `packages/server/test/proxy-policy-usage.test.ts`, which already holds the proxy's policy and usage cases.
+
+The proxy resolves `usage.timezone` with its own `zoneOf`, because `@ahpd/sdk` does not export one.
+
+`packages/sdk/test/fixtures/wire.jsonl` is dirty because the sdk suite rewrites it.
+Restore it with `git restore packages/sdk/test/fixtures/wire.jsonl`.
+
+Tests: the sdk suite passed 157 files and 3067 tests, and the server suite passed 55 files and 1122 tests.

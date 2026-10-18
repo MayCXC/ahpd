@@ -80,7 +80,7 @@ Today the bridge writes the server's current mode over the asked one at the open
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The open sends the asked mode](task-01-the-open-sends-the-asked-mode.md) | implemented | - |
-| [02 - A test opens a session in its asked mode](task-02-a-test-opens-in-the-asked-mode.md) | todo | 01 |
+| [02 - A test opens a session in its asked mode](task-02-a-test-opens-in-the-asked-mode.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -89,8 +89,8 @@ Today the bridge writes the server's current mode over the asked one at the open
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from Softov's request. Task 01 is implemented 2026-10-18, not reviewed. The open sends the asked mode on every path, through `ctx.sendAskedMode` and not `setConfig`.
-- **Next action:** task 02, the tests of a session opened in its asked mode.
+- **Done so far:** planned 2026-10-16 from Softov's request. Task 01 is implemented 2026-10-18, not reviewed. The open sends the asked mode on every path, through `ctx.sendAskedMode` and not `setConfig`. Task 02 is implemented 2026-10-18 as five tests in `agent-acp-catalog.test.ts`. They cover both ways to set a mode, a mode in force, a mode not offered, and a reopen.
+- **Next action:** the review of tasks 01 and 02.
 - **Open questions:** none.
 - **Watch out for:** the send must not go through `setConfig`, because `setConfig` calls `ctx.open()`.
 

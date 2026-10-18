@@ -10,7 +10,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { memoryPolicies, type ModelUse, type Policies, type Policy } from '@ahpd/sdk';
+import { memoryPolicies, type ModelUse, type Policies, type Policy, type Usage, type UsageTotal } from '@ahpd/sdk';
 import {
   answerJson, fakeProvider, isAnthropicError, isOpenAiError, MARKER, memoryUsage, pause, people, ROOT_TOKEN, send, serveProxy,
   type FakeProvider, type People, type Served, type ServeOptions,
@@ -46,6 +46,28 @@ const rows = async (...given: Policy[]): Promise<Policies> => {
 const ALLOW_ALL: Policy = { id: 'everyone', scope: 'all', kind: 'model', effect: 'allow', match: { model: ['*'] } };
 const DENY_OPENAI: Policy = { id: 'no-openai', scope: 'all', kind: 'model', effect: 'deny', match: { model: ['openai/*'] } };
 const LOCAL_ONLY: Policy = { id: 'local-only', scope: 'team:backend', kind: 'model', effect: 'allow', match: { proxy: ['local'] } };
+/** A row everybody's calls may use, for a week's `usd` that the store says how much of is spent. */
+const LIMITED: Policy = {
+  id: 'budget',
+  scope: 'all',
+  kind: 'model',
+  effect: 'allow',
+  match: { model: ['*'] },
+  limits: [{ measure: 'usd', period: 'week', amount: 4, pool: 'shared' }],
+};
+
+/** A usage store answering these totals, and keeping every record written. */
+const keeping = (totals: Record<string, UsageTotal> = {}): Usage & { entries: ModelUse[] } => {
+  const entries: ModelUse[] = [];
+  return {
+    entries,
+    record: async (entry) => { entries.push(entry as ModelUse); },
+    total: async (key) => totals[key] ?? {},
+    pools: async () => Object.keys(totals),
+    records: async () => [],
+    groups: async () => [],
+  };
+};
 
 /**
  * Softov's table with every provider pointed at fakes: `openrouter` and
@@ -150,6 +172,55 @@ describe('a policy decides the model', () => {
     expect(got.status).toBe(403);
     expect(got.json).toMatchObject({ error: { message: 'no policy could be read, so model is refused: the store is unreadable' } });
     expect(remote.received).toEqual([]);
+  });
+});
+
+describe('a call at a limit', () => {
+  /** Two fakes answering, and a proxy over them with the limited row and this usage store. */
+  const limited = async (usage: Usage & { entries: ModelUse[] }) => {
+    const remote = await fakeProvider(answerJson(200, COMPLETION));
+    const local = await fakeProvider(answerJson(200, COMPLETION));
+    fakes.push(remote, local);
+    const served = await serveProxy({
+      users: who.users, env: KEYS, proxy: softov(remote.endpoint, local.endpoint),
+      usage: () => usage, policies: await rows(LIMITED), policiesCheck: true,
+    });
+    open.push(served);
+    return { remote, local, served };
+  };
+
+  it('refuses a call on a row at its amount, with the limit sentence, without touching a provider', async () => {
+    const usage = keeping({ 'policy:budget/usd': { usd: 4 } });
+    const { remote, local, served } = await limited(usage);
+    const got = await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default' } });
+    expect(got.status).toBe(403);
+    expect(isOpenAiError(got.json)).toBe(true);
+    expect(got.json).toMatchObject({ error: { type: 'permission_error', message: 'budget has no room: 4 / 4 usd this week' } });
+    expect(remote.received).toEqual([]);
+    expect(local.received).toEqual([]);
+    expect(usage.entries).toEqual([]);
+  });
+
+  it('still lists a model at its limit, whose call is then refused', async () => {
+    const usage = keeping({ 'policy:budget/usd': { usd: 4 } });
+    const { served } = await limited(usage);
+    const listed = await send(served.port, '/v1/models', { headers: { 'x-api-key': who.ana } });
+    expect(listed.status).toBe(200);
+    expect((listed.json as { data: { id: string }[] }).data.map((one) => one.id)).toContain('local/default');
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default' } })).status).toBe(403);
+  });
+
+  it('writes the check\'s key on an allowed call\'s record, beside the owner, team and project', async () => {
+    const usage = keeping({ 'policy:budget/usd': { usd: 1 } });
+    const { served } = await limited(usage);
+    expect((await send(served.port, CHAT, { headers: { 'x-api-key': who.ana }, body: { model: 'local/default' } })).status).toBe(200);
+    const [entry] = await settled(usage, 1);
+    expect(entry).toMatchObject({
+      owner: 'user:ana',
+      team: 'backend',
+      project: 'billing',
+      pools: ['user:ana', 'team:backend', 'project:backend:billing', 'policy:budget/usd'],
+    });
   });
 });
 

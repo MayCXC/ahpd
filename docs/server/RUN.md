@@ -121,6 +121,25 @@ ahpd status --json | jq .url
 ahpd plugin list --json | jq '.[].state'
 ```
 
+Under `--json`, a failure is one JSON line on stderr, so stdout holds only the answer. `ahpd --json plugin` writes:
+
+```json
+{"message":"plugin takes list, update, config, install, remove, enable or disable.","kind":"argument","exitCode":2}
+```
+
+`kind` names the sort of failure, and `exitCode` is the code the process leaves, for a script that never reads stderr:
+
+| `kind` | Exit code | Means |
+| --- | --- | --- |
+| `argument` | 2 | The words typed are wrong. |
+| `configuration` | 3 | The program is not configured, or is configured wrongly. |
+| `authorization` | 3 | The request was refused, and `missing` names the scopes that would allow it. |
+| `unavailable` | 4 | Something the command needed did not answer. |
+| `conflict` | 1 | The machine's state does not allow it, such as a daemon that is not running. |
+| `internal` | 1 | An unexpected failure. |
+
+Without `--json`, each failure stays the one `ahpd: <sentence>` line on stderr.
+
 ## Shell completion
 
 ::: code-group

@@ -21,7 +21,8 @@ export const declareStop = (registry: Registry<object>): Command => registry.act
     const stopped = await stopDaemon();
     if (stopped === undefined) {
       // As with `status`, a script that asked for JSON gets JSON even when the
-      // answer is that there was nothing to stop.
+      // answer is that there was nothing to stop. The result stays on stdout;
+      // the failure that follows goes to stderr, as every failure does.
       if (context.globals['json'] === true) context.write('{"stopped":false}\n');
       conflict('None running.');
     }

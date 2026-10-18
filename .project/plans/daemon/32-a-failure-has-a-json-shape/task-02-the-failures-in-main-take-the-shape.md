@@ -1,6 +1,6 @@
 ---
 title: The failures in main.ts take the shape
-status: todo
+status: implemented
 depends:
   - task-01-ahpd-takes-cofold-terminal-0-4.md
 layer: server
@@ -43,3 +43,8 @@ Under `--json`, each one is a JSON line; without it, each one is the line of tod
 - `pnpm -s build`, `pnpm -s typecheck` and the server vitest suite pass.
 
 ## Resume
+
+- **Done so far:** every step. `main.ts` has `fail(error)`, which gives the error to `writeFailure` with the mode read from a literal `--json` in `argv0` and exits with `exitCodeFor`. The three token failures are `ArgumentError`s and go through `fail`, so they stay at exit 2. The remote surface failure goes through `fail`, so an unreachable daemon is `unavailable` and exits 4. The group hint calls `fail` with its `ArgumentError`. `warnCleartext` and the check run stay plain lines. The `user` and `plugin` group hints each have a JSON test case. `server-http.test.ts` has the token failure as JSON and the unreachable daemon at exit 4. The cleartext case expects exit 4 now.
+- **Next action:** task 03.
+- **Open questions:** none.
+- **Watch out for:** the remote surface failure now uses `exitCodeFor` for every error, as answered. A `ManifestError` is a plain `Error`, so it exits 1 rather than the old 2. The cleartext case an unreachable port leaves was updated from 2 to 4. A line without `--json` keeps `ahpd: <sentence>` and the same codes.

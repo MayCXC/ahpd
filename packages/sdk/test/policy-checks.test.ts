@@ -13,9 +13,9 @@
  * is at a turn that names one. That is why bob's session is created here and
  * his turn on fable-5 is refused.
  *
- * The limits the draft writes on these rows are read by nothing: a row that has
- * already spent what it had still allows, which is policy/02's work. A refusal
- * therefore always names a scope or a match and never an amount.
+ * A row with limits closes a turn once a measure has no room, and the keys the
+ * walk chose go on the turn's records. The store is in memory, so the cases
+ * here say what a limit has used directly rather than by writing records first.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -28,10 +28,12 @@ import { createHost, ROOT } from '../src/host.js';
 import { memoryPolicies } from '../src/policies.js';
 import { fileUsers } from '../src/users.js';
 import { echo } from '../../../examples/echo/agent.js';
+import type { Agent, Start } from '../src/types/agent.js';
 import type { ComputerPort } from '../src/types/computers.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { Policies, Policy } from '../src/types/policies.js';
 import type { Peer } from '../src/types/rpc.js';
+import type { ModelUse, Usage, UsageTotal } from '../src/types/usage.js';
 import type { Users } from '../src/types/users.js';
 
 /** The draft's store, as far as the cases below reach it. */
@@ -99,6 +101,76 @@ const unreadable = async (): Promise<Policies> => ({
   ...memoryPolicies(),
   list: async () => { throw new Error('the store is unreadable'); },
 });
+
+/** A row of alice's with a week's `usd` limit, which is a measure a turn is charged in. */
+const limited = (id: string, amount: number): Policy => ({
+  id,
+  scope: 'user:alice',
+  kind: 'agent',
+  effect: 'allow',
+  match: { agent: ['*'] },
+  limits: [{ measure: 'usd', period: 'week', amount, pool: 'shared' }],
+});
+
+/** The machine row alice's sessions need, which a store of its own must carry too. */
+const SANDBOX: Policy = { id: 'C1', scope: 'user:alice', kind: 'computer', effect: 'allow', match: { computer: ['sandbox-alice'] } };
+
+/** A usage store answering these totals, and keeping every record written. */
+const keeping = (totals: Record<string, UsageTotal> = {}): Usage & { entries: ModelUse[] } => {
+  const entries: ModelUse[] = [];
+  return {
+    entries,
+    record: async (entry) => { entries.push(entry as ModelUse); },
+    total: async (key) => totals[key] ?? {},
+    pools: async () => Object.keys(totals),
+    records: async () => [],
+    groups: async () => [],
+  };
+};
+
+/**
+ * The echo backend, saying what a turn used before it ends.
+ *
+ * It says the actions itself rather than handing them to the echo session,
+ * because the order is the point: the turn begins, the reports arrive, and
+ * then it ends. More than one report is what `per: 'report'` writes records
+ * for.
+ */
+const reporting = (provider: string, reports = 1): Agent => {
+  const base = echo({ path: root, pace: 0 });
+  return {
+    ...base,
+    provider,
+    displayName: provider,
+    create: (start: Start) => {
+      const session = base.create(start);
+      return {
+        ...session,
+        begin: (turnId, text, model, from) => {
+          start.emit('chat', {
+            type: 'chat/turnStarted',
+            turnId,
+            startedAt: new Date().toISOString(),
+            message: {
+              text,
+              ...(from?.origin === undefined ? {} : { origin: from.origin }),
+              ...(model === undefined ? {} : { model: { id: model.id } }),
+            },
+          });
+          for (let i = 0; i < reports; i++) {
+            start.emit('chat', {
+              type: 'chat/usage',
+              turnId,
+              // A running sum, as a harness reports it.
+              usage: { inputTokens: (i + 1) * 10, outputTokens: 5, _meta: { 'ahpd.cost': { amount: 0.5, currency: 'USD' } } },
+            });
+          }
+          start.emit('chat', { type: 'chat/turnComplete', turnId, duration: 1 });
+        },
+      };
+    },
+  };
+};
 
 /**
  * A host, switched on or off, with the draft's store and the draft's people.
@@ -298,6 +370,66 @@ describe('a turn, with the switch on', () => {
     // machine, so A5 - which names one - is not a candidate.
     await turnOn(client, said, 'silent', 'claude', 'kvm-shared', undefined);
     expect(rejection(said)).toBeUndefined();
+  });
+});
+
+describe('a turn at a limit', () => {
+  /** A store of alice's limited row and the machine row her session needs. */
+  const held = async (amount: number, id: string): Promise<Policies> => {
+    const made = memoryPolicies();
+    await made.put(limited(id, amount));
+    await made.put(SANDBOX);
+    return made;
+  };
+
+  it('refuses the turn at the amount, and leaves the session standing', async () => {
+    const usage = keeping({ 'policy:A3/usd': { usd: 100 } });
+    const { client, said } = await signedIn(
+      await host(true, true, await held(100, 'A3'), { usage, agents: [reporting('claude')] }),
+      'alice',
+    );
+    // The session was created; the turn is what the row has no room for.
+    await turnOn(client, said, 'spent', 'claude', 'sandbox-alice', 'anthropic/sonnet-5');
+    expect(rejection(said)).toBe('A3 has no room: 100 / 100 usd this week');
+    expect(usage.entries).toEqual([]);
+  });
+
+  it('writes the check\'s key on an allowed turn\'s record, beside the owner, team and project', async () => {
+    const usage = keeping({ 'policy:A4/usd': { usd: 10 } });
+    const { client, said } = await signedIn(
+      await host(true, true, await held(100, 'A4'), { usage, agents: [reporting('claude')] }),
+      'alice',
+    );
+    await turnOn(client, said, 'recorded', 'claude', 'sandbox-alice', 'anthropic/sonnet-5');
+    expect(rejection(said)).toBeUndefined();
+    expect(usage.entries.map((entry) => entry.pools)).toEqual([
+      ['user:alice', 'team:backend', 'project:backend:billing', 'policy:A4/usd'],
+    ]);
+  });
+
+  it('writes the same keys on every record of a turn when usage is per report', async () => {
+    const usage = keeping({ 'policy:A4/usd': { usd: 10 } });
+    const { client, said } = await signedIn(
+      await host(true, true, await held(100, 'A4'), { usage, usagePer: 'report', agents: [reporting('claude', 2)] }),
+      'alice',
+    );
+    await turnOn(client, said, 'reported', 'claude', 'sandbox-alice', 'anthropic/sonnet-5');
+    const keys = ['user:alice', 'team:backend', 'project:backend:billing', 'policy:A4/usd'];
+    expect(usage.entries.map((entry) => entry.pools)).toEqual([keys, keys]);
+  });
+
+  it('writes only the owner, team and project keys when the check is off', async () => {
+    // The same total that refused the first case, read by no check here.
+    const usage = keeping({ 'policy:A4/usd': { usd: 100 } });
+    const { client, said } = await signedIn(
+      await host(false, true, await held(100, 'A4'), { usage, agents: [reporting('claude')] }),
+      'alice',
+    );
+    await turnOn(client, said, 'unchecked', 'claude', 'sandbox-alice', 'anthropic/sonnet-5');
+    expect(rejection(said)).toBeUndefined();
+    expect(usage.entries.map((entry) => entry.pools)).toEqual([
+      ['user:alice', 'team:backend', 'project:backend:billing'],
+    ]);
   });
 });
 

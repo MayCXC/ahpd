@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
 import { gitChanges } from '../src/changes.js';
 import { createHost } from '../src/host.js';
+import { uriOf } from '../src/fileuri.js';
 import { echo } from '../../../examples/echo/agent.js';
 
 /*
@@ -173,9 +174,9 @@ describe('a rename, as two URIs', () => {
     const { source, files } = await rows(dir);
     expect(files).toHaveLength(1);
     const row = files[0];
-    expect(row?.id).toBe(`file://${dir}/docs/moved.md`);
-    expect(row?.edit.before?.uri).toBe(`file://${dir}/docs/AHP.md`);
-    expect(row?.edit.after?.uri).toBe(`file://${dir}/docs/moved.md`);
+    expect(row?.id).toBe(uriOf(join(dir, 'docs', 'moved.md')));
+    expect(row?.edit.before?.uri).toBe(uriOf(join(dir, 'docs', 'AHP.md')));
+    expect(row?.edit.after?.uri).toBe(uriOf(join(dir, 'docs', 'moved.md')));
     expect(await text(source, row?.edit.before?.content?.uri as string)).toBe('committed ahp\n');
   });
 
@@ -184,7 +185,7 @@ describe('a rename, as two URIs', () => {
     git(dir, 'mv', 'docs/AHP.md', 'docs/moved.md');
     const { source, files } = await rows(join(dir, 'docs'));
     expect(files.map((one) => [one.edit.before?.uri, one.edit.after?.uri])).toEqual([
-      [`file://${dir}/docs/AHP.md`, `file://${dir}/docs/moved.md`],
+      [uriOf(join(dir, 'docs', 'AHP.md')), uriOf(join(dir, 'docs', 'moved.md'))],
     ]);
     expect(await text(source, files[0]?.edit.before?.content?.uri as string)).toBe('committed ahp\n');
   });
@@ -194,7 +195,7 @@ describe('a rename, as two URIs', () => {
     mkdirSync(join(dir, 'sub'));
     git(dir, 'mv', 'docs/AHP.md', 'sub/AHP.md');
     const { files } = await rows(join(dir, 'sub'));
-    expect(files.map((one) => one.id)).toEqual([`file://${dir}/sub/AHP.md`]);
+    expect(files.map((one) => one.id)).toEqual([uriOf(join(dir, 'sub', 'AHP.md'))]);
     expect(files[0]?.edit.before).toBeUndefined();
     expect(files[0]?.edit.diff).toEqual({ added: 1, removed: 0 });
   });
@@ -539,13 +540,13 @@ describe('file:, a target an operation names', () => {
 
   it('discards a file named in VS Code\'s encoded form', async () => {
     const dir = repository();
-    await discard(dir, `file://${dir}/docs/a%20file%20%231.md`);
+    await discard(dir, uriOf(join(dir, 'docs', 'a file #1.md')));
     expect(readFileSync(join(dir, 'docs', 'a file #1.md'), 'utf8')).toBe('committed spaced\n');
     expect(readFileSync(join(dir, 'docs', 'AHP.md'), 'utf8')).toBe('changed ahp\n');
   });
 
   it('refuses a target that leaves the directory by `..`', async () => {
     const dir = repository();
-    await expect(discard(dir, `file://${dir}/../elsewhere.txt`)).rejects.toThrow('not in this directory');
+    await expect(discard(dir, `${uriOf(dir)}/../elsewhere.txt`)).rejects.toThrow('not in this directory');
   });
 });

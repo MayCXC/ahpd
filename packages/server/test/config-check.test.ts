@@ -64,6 +64,8 @@ describe('a wrong value on a known key', () => {
     // off the list reads the same way, the words named before the type.
     expect(refusal({ issuerVerify: 'keys' })).toBe(`${config}: issuerVerify must be one of userinfo, jwt, auto`);
     expect(refusal({ issuerVerify: 5 })).toBe(`${config}: issuerVerify must be one of userinfo, jwt, auto`);
+    // Two tables there are: VS Code's, and the one with nothing in it.
+    expect(refusal({ terminalAutoApproveDefaults: 'all' })).toBe(`${config}: terminalAutoApproveDefaults must be one of vscode, none`);
   });
 
   it('refuses a boolean given as a string', () => {
@@ -114,6 +116,14 @@ describe('a wrong value on a known key', () => {
     // Absent rather than defaulted here, because the host's own 75 milliseconds
     // is the same answer and one place should hold it.
     expect(folded({}).deltaWindowMs).toBeUndefined();
+  });
+
+  it('reads the default rules from the file, and VS Code\'s table when it names none', () => {
+    expect(folded({ terminalAutoApproveDefaults: 'none' }).terminalAutoApproveDefaults).toBe('none');
+    expect(folded({ terminalAutoApproveDefaults: 'vscode' }).terminalAutoApproveDefaults).toBe('vscode');
+    // Defaulted here rather than left off, because `vscode` is what the key
+    // means when the deployment said nothing.
+    expect(folded({}).terminalAutoApproveDefaults).toBe('vscode');
   });
 
   it('refuses http.host without http.port', () => {
@@ -223,7 +233,7 @@ describe('a valid file', () => {
   it('leaves the defaults where neither says anything', () => {
     const options = folded({});
     expect(options).toMatchObject({
-      port: 9187, host: '127.0.0.1', open: false, trustToken: false, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url',
+      port: 9187, host: '127.0.0.1', open: false, trustToken: false, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url', terminalAutoApproveDefaults: 'vscode',
       automations: 'file', sessions: 'file', usagePer: 'turn', plugins: [], updateCheck: true, warnings: [],
     });
     // Absent rather than defaulted here, for the same reason: a host that says

@@ -29,7 +29,9 @@ export const declareStatus = (registry: Registry<object>, served?: ServedFacts):
     const found = served === undefined ? running() : served.running();
     if (found === undefined) {
       // `--json` is answered even when there is nothing to report, because a
-      // script that asked for JSON should not have to parse prose.
+      // script that asked for JSON should not have to parse prose. The result
+      // stays on stdout; the failure that follows goes to stderr, as every
+      // failure does.
       if (context.globals['json'] === true) context.write('{"running":false}\n');
       conflict('None running.');
     }

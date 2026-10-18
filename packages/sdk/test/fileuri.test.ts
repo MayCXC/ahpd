@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { localPath, posixUriOf, uriOf } from '../src/fileuri.js';
 
@@ -11,7 +14,8 @@ import { localPath, posixUriOf, uriOf } from '../src/fileuri.js';
 
 describe('localPath', () => {
   it('decodes a URI a client sent', () => {
-    expect(localPath('file:///home/a/my%20dir')).toBe('/home/a/my dir');
+    const path = join(tmpdir(), 'my dir');
+    expect(localPath(uriOf(path))).toBe(path);
   });
 
   it('hands anything that is not a URI back unchanged, because callers get paths too', () => {
@@ -39,7 +43,7 @@ describe('localPath', () => {
     for (const uri of ['file:///work/..%2F..%2Fetc/passwd', 'file://x/work/..%2F..%2Fetc/passwd']) {
       const path = localPath(uri);
       expect(path).toContain('%2F');
-      expect(path.split('/')).not.toContain('..');
+      expect(path.split(/[\\/]/)).not.toContain('..');
     }
     expect(localPath('file://x/work/..%2F..%2Fetc/passwd'))
       .toBe(localPath('file:///work/..%2F..%2Fetc/passwd'));
@@ -67,18 +71,23 @@ describe('localPath', () => {
   });
 
   it('round-trips a path whose name had to be encoded', () => {
-    for (const path of ['/home/a/my dir', '/home/a/has#hash', '/home/a/query?mark', '/home/a/100%', '/home/a/café'])
+    for (const name of ['my dir', 'has#hash', 'query?mark', '100%', 'café']) {
+      const path = join(tmpdir(), name);
       expect(localPath(uriOf(path))).toBe(path);
+    }
   });
 
   it('round-trips both characters at once, as `localPath(uriOf(p))` is `p`', () => {
-    expect(localPath(uriOf('/a/C#/x?y'))).toBe('/a/C#/x?y');
+    const path = join(tmpdir(), 'C#', 'x?y');
+    expect(localPath(uriOf(path))).toBe(path);
   });
 });
 
 describe('uriOf', () => {
   it('encodes the URI a client reads back', () => {
-    expect(uriOf('/home/a/my dir')).toBe('file:///home/a/my%20dir');
+    const path = join(tmpdir(), 'my dir');
+    expect(uriOf(path)).toBe(pathToFileURL(path).href);
+    expect(uriOf(path)).toMatch(/my%20dir$/);
   });
 });
 

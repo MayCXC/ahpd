@@ -19,6 +19,7 @@ import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
 import type { Policies } from './policies.js';
+import type { PayOrder } from '../charge.js';
 import type { RecordStore } from './records.js';
 import type { Vault } from './vault.js';
 import type { Peer, Request } from './rpc.js';
@@ -287,6 +288,13 @@ export interface HostOptions {
    */
   usagePer?: 'turn' | 'report';
   /**
+   * The zone a day, a week and a month start in, as `Intl` names one.
+   *
+   * It is the zone the usage store cuts its days in, so the charge walk reads
+   * its periods over the same days the store keeps. Absent is the system's own.
+   */
+  usageTimezone?: string;
+  /**
    * Where this host keeps the policies that say who may use what.
    *
    * Left out, there is nothing to check and nothing a client may write.
@@ -317,6 +325,14 @@ export interface HostOptions {
    * a host with no users directory: those have no person to check.
    */
   policiesCheck?: boolean;
+  /**
+   * Which row of one scope pays first when several can, while the check runs.
+   *
+   * `ending` uses the row that ends soonest first, `regular` the rows with no
+   * `until`, and `extra` the rows with one, the newest `from` first. Defaults
+   * to `ending`.
+   */
+  policiesPayOrder?: PayOrder;
   /**
    * Tools this host contributes to every session it runs.
    *
@@ -481,6 +497,18 @@ export interface HostOptions {
    * uses `shellInitScripts` instead, which is that session's own.
    */
   shellEnv?: ShellEnv;
+  /**
+   * The rules a session's shell commands are matched against when its owner's
+   * window pushed none.
+   *
+   * `vscode`, the default, is VS Code's terminal auto-approve table, so a
+   * session whose window has not pushed a table runs the commands the
+   * reference client approves. `none` approves no command, for a deployment
+   * that would rather ask about each one. A window that pushed an empty table
+   * is not folded into this: it said what it approves, and it approves
+   * nothing.
+   */
+  terminalAutoApproveDefaults?: 'vscode' | 'none';
   /**
    * How long a turn asked for a commit message or a pull request's words is
    * waited for, in milliseconds.
@@ -774,6 +802,18 @@ export interface ToolCall {
   provider?: string;
   /** The turn the call is running in, when the chat has one running. */
   turn(): string | undefined;
+  /**
+   * Who is behind this call: a person's id, a session's owner, or `host`.
+   *
+   * Read from the sender of the turn the call is running in, which is the only
+   * thing that carries a person: a window outlives the turn it sent, and a
+   * tool reached after that turn ended has nobody to name. Where no turn is
+   * running, or the one that is was sent by nobody this host knows, the
+   * session's owner answers, and where the session has no owner the host
+   * itself is the name. A stamp written from a call always names something,
+   * and never the model that asked for it.
+   */
+  person(): string | undefined;
   /**
    * Whether this call may do that here.
    *

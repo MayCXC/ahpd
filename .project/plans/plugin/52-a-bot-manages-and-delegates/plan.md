@@ -87,7 +87,7 @@ Child plans, each for one part.
 
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [p1 - The host keeps one task list](../52-p1-the-host-keeps-one-task-list/plan.md) | tasks (new plugin) | draft | - |
+| [p1 - The host keeps one task list](../52-p1-the-host-keeps-one-task-list/plan.md) | tasks (new plugin), sdk | planned | - |
 | [p2 - A bot chat is a session with no harness](../52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | bot, sdk | draft | - |
 | [p3 - A message wakes the bot and it replies](../52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | bot, sdk | draft | p2 |
 | [p4 - A group chat has members and mentions](../52-p4-a-group-chat-has-members-and-mentions/plan.md) | bot, sdk | draft | p3 |
@@ -98,6 +98,8 @@ Child plans, each for one part.
 | [p9 - Front and Back are chats of one session](../52-p9-front-and-back-are-chats-of-one-session/plan.md) | bot | draft | p3, host/107 |
 | [p10 - A bot changes bots with a tool](../52-p10-a-bot-changes-bots-with-a-tool/plan.md) | bot | draft | p8 |
 | [p11 - A bot has a private session](../52-p11-a-bot-has-a-private-session/plan.md) | bot | draft | p9 |
+| [p12 - Claude and ACP write the task list](../52-p12-claude-and-acp-write-the-task-list/plan.md) | agent-claude, agent-acp, sdk, tasks | planned | p1 |
+| [p13 - A client sees the task list](../52-p13-a-client-sees-the-task-list/plan.md) | tasks, sdk | planned | p1 |
 
 ## Risks and tradeoffs
 

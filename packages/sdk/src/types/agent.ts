@@ -1,6 +1,7 @@
 /** An agent backend, and everything the host asks one for. */
 
-import type { Turn } from '@microsoft/agent-host-protocol';
+import type { ToolCallConfirmationReason, Turn } from '@microsoft/agent-host-protocol';
+import type { CommandShell } from '../commandautoapprover.js';
 import type { Bag } from './common.js';
 import type { FileEdit } from './changes.js';
 import type { WireTurn } from './wire.js';
@@ -142,6 +143,9 @@ export interface SessionAt {
   workingDirectory?: string;
 }
 
+/** The kinds of tool call the host's approval check answers for. */
+export type AutoApprovalKind = 'shell';
+
 /** How the host asks a backend to start a session. */
 export interface Start {
   /** The session channel URI the client chose. */
@@ -189,6 +193,23 @@ export interface Start {
    * for.
    */
   trusted?: (folder: string) => boolean;
+  /**
+   * Whether a tool call of this session runs without asking its person.
+   *
+   * The host answers it from the connection of the person whose session this
+   * is, the same one `trusted` reads: what a window allows is that window's,
+   * and a turn somebody else sends into the session is not theirs to allow. A
+   * start no connection asked for - an automation, a host tool, a daemon coming
+   * back up - has no rules at all, which is a call that asks.
+   *
+   * `not-needed` is the whole of an approval. A call a rule denied and a
+   * command line no rule could read are both `undefined`, which leaves the
+   * backend to ask as it would have without this field. `shell` is a command
+   * line, matched against the rules and edit patterns the owner's window
+   * pushed. Absent is a host that says nothing, and a backend must read that as
+   * a call that asks.
+   */
+  getAutoApproval?: (kind: AutoApprovalKind, line: string, shell: CommandShell) => ToolCallConfirmationReason | undefined;
   /**
    * Whether this session loads the settings of the person who runs the daemon.
    *

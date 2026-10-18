@@ -181,7 +181,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     dispatch, broadcast, flushDeltas, log, fire, sessionEvents, leadOf, chatOf,
     dirOf, changesetOf, stopUnwatched, captureBaseline,
     sessionMachines, enteredIn, inMachine, takeOut, placedIn, followOf,
-    isolating, charged, senders, sentBy, forgetSender, forgetSendersIn, checked, principalFor, machineFor, ownerFor,
+    isolating, charged, senders, sentBy, forgetSender, forgetSendersIn, forgetKeys, keepKeys,
+    checked, principalFor, machineFor, ownerFor,
     contributedDefaults, rootConfig,
     spawn, keepTitle, keepProvider, forgetChats,
     sessionAdded, forgetSent, activeSessionsMoved,
@@ -1237,6 +1238,14 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * call site had a connection in hand and was doing it itself.
      */
     const who = sender === undefined ? undefined : ownerFor(sender);
+    /*
+     * The keys the turn's check chose, once it has allowed the turn.
+     *
+     * Held here rather than in the map until `run` knows the turn will be
+     * begun: a message refused for the turn already running is not a turn, and
+     * a key left behind for it would be a record's key nobody writes.
+     */
+    let keys: string[] | undefined;
     const run = (): string | undefined => {
       /*
        * Who sent it, against the id this turn will be known by: the turn id when
@@ -1263,6 +1272,10 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       // And the window itself, under the same id, for whatever has to ask it
       // something later - the move an agent asks for in this turn most of all.
       if (sender !== undefined) sentBy.set(queuedAs ?? turnId, sender);
+      // What its records are charged under, under the same id for the same
+      // reason: a queued message becomes a turn the backend names later, and
+      // its keys are moved to that id beside its sender.
+      if (keys !== undefined) keepKeys(queuedAs ?? turnId, keys);
       if (command === '' || !options.terminals) {
         /*
          * With what this turn is told, decided by the backend when it begins.
@@ -1279,6 +1292,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       if (!session.ran) {
         // Refused, so no turn will ever end under this id to let its sender go.
         forgetSender(queuedAs ?? turnId);
+        forgetKeys(queuedAs ?? turnId);
         return `${provider} cannot run a command in a turn; use a terminal instead`;
       }
       ctx.commandTurns.set(queuedAs ?? turnId, false);
@@ -1334,6 +1348,11 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     const store = options.policies;
     if (options.policiesCheck !== true || store === undefined || principal === undefined) return turn();
     const held = sessions.get(session.uri);
+    /*
+     * The turn is charged, unlike the session, because this is where what a
+     * limit counts is about to be spent. The walk's keys are held for the
+     * meter, which is what writes the turn's records under them.
+     */
     return checked(principal, charged.get(session.uri)?.scope, [{
       kind: 'agent',
       asked: {
@@ -1341,7 +1360,11 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
         computer: machineFor(held?.config ?? {}),
         ...(model === undefined ? {} : { model: model.id }),
       },
-    }]).then((why) => why === undefined ? turn() : why);
+    }], 'agent').then((found) => {
+      if (found.refusal !== undefined) return found.refusal;
+      if (found.pools !== undefined && found.pools.length > 0) keys = found.pools;
+      return turn();
+    });
   };
 
   /**

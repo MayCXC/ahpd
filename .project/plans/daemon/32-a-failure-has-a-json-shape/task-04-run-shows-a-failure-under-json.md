@@ -1,6 +1,6 @@
 ---
 title: RUN.md shows a failure under --json
-status: todo
+status: implemented
 depends:
   - task-02-the-failures-in-main-take-the-shape.md
   - task-03-status-and-stop-under-json-fail-once.md
@@ -29,3 +29,8 @@ refs:
 - The example is the output of the test in task 02.
 
 ## Resume
+
+- **Done so far:** every step. `Output for scripts` in `docs/server/RUN.md` has the `ahpd --json plugin` example and the flat line with `message`, `kind` and `exitCode`. It has a table of the six kinds and their exit codes. It says that the failure is on stderr and that the plain mode is unchanged. The example is the output the `plugin` group hint test in task 02 asserts.
+- **Next action:** review.
+- **Open questions:** none.
+- **Watch out for:** `authorization` carries `missing` as a fourth field, so the table says so rather than listing it as always present.

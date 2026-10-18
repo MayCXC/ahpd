@@ -397,12 +397,18 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     onProblem: (message) => process.stdout.write(`${message}\n`),
   });
   /*
-   * A daemon switched on with nothing in the store refuses everybody but root,
-   * and says so once at start rather than at the first refusal.
+   * What a daemon with the checks on says once at start.
+   *
+   * An empty store refuses everybody but root, which is worth saying before
+   * the first refusal rather than at it. A limit counts the records tagged
+   * with its key, and usage written before the checks were on has no key, so
+   * every limit starts at zero and the daemon says that too.
    */
   const startingChecks = async (): Promise<void> => {
-    if (!options.policiesCheck || (await policies.list()).length > 0) return;
-    stamp('the policy checks are on and the store holds no policy, so every session and turn but root\'s is refused');
+    if (!options.policiesCheck) return;
+    if ((await policies.list()).length === 0)
+      stamp('the policy checks are on and the store holds no policy, so every session and turn but root\'s is refused');
+    stamp('policy limits count the usage recorded from now, so what was recorded before is not counted');
   };
 
   /*
@@ -482,6 +488,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     ...(users === undefined ? {} : { users }),
     policies,
     policiesCheck: options.policiesCheck,
+    policiesPayOrder: options.policiesPayOrder,
+    ...(options.usageTimezone === undefined ? {} : { usageTimezone: options.usageTimezone }),
     usage: () => metered,
     hostName: hostname(),
     origins: () => apiOrigins(apiHost, options.resource, apiBoundPort, options.origins),
@@ -571,7 +579,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * closed once `stopping` has been raised.
    */
   const listProblem = (message: string): void => { process.stdout.write(`${message}\n`); };
-  const policyLists = policyChannels(policies, { onProblem: listProblem });
+  const policyLists = policyChannels(policies, {
+    onProblem: listProblem,
+    // The limits of a row are read from the same usage store the scheme is, so
+    // `policy://<id>/limits` answers what a key has used in the same zone.
+    usage: store,
+    ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+  });
   const peopleLists = users === undefined
     ? undefined
     : peopleChannels(users, { onChange: () => { void policyLists.refresh(); }, onProblem: listProblem });
@@ -758,6 +772,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     ...(options.shellEnv === undefined ? {} : { shellEnv: options.shellEnv }),
     /*
+     * The rules a session's commands are matched against when its window
+     * pushed none.
+     *
+     * Handed on rather than defaulted here: `vscode` is what the key means
+     * when the file says nothing, and the host reads an absent one the same
+     * way.
+     */
+    terminalAutoApproveDefaults: options.terminalAutoApproveDefaults,
+    /*
      * How long the host gathers a streamed delta before it sends it.
      *
      * Left off rather than defaulted here, for the reason above: the host's
@@ -836,12 +859,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // Whether that is one record per turn or one per report, which `usage.per`
     // in the configuration file chose.
     usagePer: options.usagePer,
+    // The zone the store below keeps its days in, so a period walked for a
+    // limit reads the days the store wrote.
+    ...(options.usageTimezone === undefined ? {} : { usageTimezone: options.usageTimezone }),
     // The policies themselves, and whether anything is refused by them. The
     // store is always there so the `policy:` scheme above has somewhere to
     // write; the switch is off unless `policies.check` in the configuration
     // said otherwise.
     policies,
     policiesCheck: options.policiesCheck,
+    // Which row of one scope pays first: `policies.payOrder`.
+    policiesPayOrder: options.policiesPayOrder,
     /*
      * When, as well as what.
      *
@@ -888,6 +916,10 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const usageScheme = usageProvider({
     usage: store,
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+    // The rows `usage://limits` answers. A person reads the limits their scopes
+    // hold while `policies.ownLimits` is on, which is its default.
+    policies,
+    ownLimits: options.policiesOwnLimits,
     // The titles a pool is named with, read from the same directory the gate asks.
     ...(users === undefined ? {} : { titles: users }),
     onProblem: (message) => process.stdout.write(`${message}\n`),

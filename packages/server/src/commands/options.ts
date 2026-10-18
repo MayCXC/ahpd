@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
-import type { IssuerVerify, McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
+import type { IssuerVerify, McpServer, PayOrder, PluginSpec, ShellEnv } from '@ahpd/sdk';
 import type { Config, HttpSetting, RoutesSetting } from '../config.js';
 import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
 import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
@@ -84,6 +84,8 @@ export interface Options {
   clientToolTimeoutMs?: number;
   /** The environment every shell this host starts is given, absent when the deployment named none. */
   shellEnv?: ShellEnv;
+  /** The rules a session's commands are matched against when its window pushed none. */
+  terminalAutoApproveDefaults: 'vscode' | 'none';
   /** How long a streamed delta waits in the host before it is sent, absent when the deployment said nothing. */
   deltaWindowMs?: number;
   /** Minutes of quiet before a session's agent is let go, absent when the deployment said nothing. */
@@ -105,7 +107,8 @@ export interface Options {
    */
   usagePer: 'turn' | 'report';
   /**
-   * The zone a day and a week start in, as `Intl` names it.
+   * The zone a day and a week start in, and the store keeps its days in, as
+   * `Intl` names it.
    *
    * Absent is the system's own zone. A week that begins on the system's Monday
    * day is what this is for, so it has no flag, as a zone is a fact about where
@@ -121,6 +124,21 @@ export interface Options {
    * deployment rather than about one run.
    */
   policiesCheck: boolean;
+  /**
+   * Which row of one scope pays first when several can.
+   *
+   * `policies.payOrder` in the file, `ending` unless it says otherwise. It has
+   * no flag, for the same reason `check` has none: which credit is spent first
+   * is the deployment's, not one run's.
+   */
+  policiesPayOrder: PayOrder;
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * `policies.ownLimits` in the file, `true` unless it says otherwise. It has
+   * no flag, as who may read a row's limits is the deployment's.
+   */
+  policiesOwnLimits: boolean;
   /** A file every frame is appended to, both directions, one JSON line each. */
   wire?: string;
   /**
@@ -534,6 +552,11 @@ export const serverFields = {
     title: 'Shell environment',
     description: 'The environment every shell this host starts is given: a variable name set to its value, or to null to remove it, such as {"XDG_CONFIG_HOME": "/home/me/.config"}. Set in the configuration file only.',
   },
+  terminalAutoApproveDefaults: {
+    type: 'string',
+    enum: ['vscode', 'none'],
+    description: 'The rules a session\'s shell commands are matched against when the window that started it pushed none: vscode uses VS Code\'s terminal auto-approve table, none approves no command.',
+  },
   deltaWindowMs: {
     type: 'integer',
     minimum: 0,
@@ -574,7 +597,7 @@ export const serverFields = {
       per: { type: 'string', enum: ['turn', 'report'] },
       timezone: { type: 'string' },
     },
-    description: 'How a turn is written down: per "turn" writes one record when the turn ends, which is the default, and per "report" writes one record for every usage report a turn sends. timezone names, as Intl names one, the zone a day and a week start in, and is the system\'s own zone when it is absent. Set in the configuration file only.',
+    description: 'How a turn is written down: per "turn" writes one record when the turn ends, which is the default, and per "report" writes one record for every usage report a turn sends. timezone names, as Intl names one, the zone a day and a week start in and the zone the store keeps its days in, and is the system\'s own zone when it is absent. Set in the configuration file only.',
   },
   wire: {
     type: 'string',
@@ -586,8 +609,10 @@ export const serverFields = {
     type: 'object',
     properties: {
       check: { type: 'boolean' },
+      payOrder: { type: 'string', enum: ['ending', 'regular', 'extra'] },
+      ownLimits: { type: 'boolean' },
     },
-    description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it. Off by default, and the rows are written and listed either way. Set in the configuration file only.',
+    description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it, and refuses a turn or a proxy call whose limits have no room left. Off by default, and the rows are written and listed either way. payOrder says which row of one scope pays first: ending (the default), regular or extra. ownLimits, true by default, lets a person read the limits that apply to them. Set in the configuration file only.',
   },
   http: {
     type: ['object', 'boolean'],
@@ -1124,6 +1149,7 @@ const noCwd = input['noCwd'] === true;
     pullRequestLookup: given('pullRequestLookup') ?? 'url',
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),
+    terminalAutoApproveDefaults: given('terminalAutoApproveDefaults') ?? 'vscode',
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),
     ...(sleepAfterMinutes === undefined ? {} : { sleepAfterMinutes }),
     ...(sessionResidencyLimit === undefined ? {} : { sessionResidencyLimit }),
@@ -1133,6 +1159,8 @@ const noCwd = input['noCwd'] === true;
     usagePer: given('usage')?.per ?? 'turn',
     ...(usageZone === undefined ? {} : { usageTimezone: usageZone }),
     policiesCheck: given('policies')?.check ?? false,
+    policiesPayOrder: given('policies')?.payOrder ?? 'ending',
+    policiesOwnLimits: given('policies')?.ownLimits ?? true,
     ...(wire === undefined ? {} : { wire }),
     ...(http === undefined ? {} : { http }),
     ...(routes === undefined ? {} : { routes }),

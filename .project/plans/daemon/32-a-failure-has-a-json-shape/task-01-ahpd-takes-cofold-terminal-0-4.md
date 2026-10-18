@@ -1,6 +1,6 @@
 ---
 title: ahpd takes @cofold/terminal 0.4
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -32,3 +32,8 @@ refs:
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the server vitest suite pass.
 
 ## Resume
+
+- **Done so far:** every step. `npm view @cofold/terminal version` printed `0.4.0`. `packages/server/package.json` asks for `^0.4.0`, and `pnpm install` updated `pnpm-lock.yaml` and added the version to `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`. `packages/server/test/server-cli.test.ts` has the case: `ahpd --json plugin show nothing` writes one JSON line with the kind `argument` and the exit code 2.
+- **Next action:** task 02.
+- **Open questions:** none.
+- **Watch out for:** `plugin show nothing` names no command, so it reaches the group hint in `main.ts` rather than `runEntry`. Its JSON line is task 02's `fail`, and the case fails until that change lands.

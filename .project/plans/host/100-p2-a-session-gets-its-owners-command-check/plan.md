@@ -1,7 +1,7 @@
 ---
 title: A session gets its owner's command check
 domain: host
-status: planned
+status: implemented
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -70,8 +70,8 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The check reads the owner's connection](task-01-the-check-reads-the-owners-connection.md) | todo | - |
-| [02 - The daemon setting picks the default rules](task-02-a-daemon-setting-picks-default-rules.md) | todo | 01 |
+| [01 - The check reads the owner's connection](task-01-the-check-reads-the-owners-connection.md) | implemented | - |
+| [02 - The daemon setting picks the default rules](task-02-a-daemon-setting-picks-default-rules.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -79,13 +79,13 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan.
-- **Next action:** [task-01-the-check-reads-the-owners-connection.md](task-01-the-check-reads-the-owners-connection.md).
+- **Done so far:** planned 2026-10-16; both tasks implemented 2026-10-18. Tests in `autoapproval.test.ts`, `root-config.test.ts` and `config-check.test.ts`.
+- **Next action:** none - implemented.
 - **Open questions:** none.
 - **Watch out for:** host/101 task 01 builds on `getAutoApproval`; keep its answer open for a second kind of result.
 
 ## Final verification checklist
 
-- [ ] A session with two clients uses the owner's rules.
-- [ ] `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
-- [ ] `plans/index.md` updated.
+- [x] A session with two clients uses the owner's rules.
+- [x] `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
+- [x] `plans/index.md` updated.

@@ -1,5 +1,7 @@
 import { chatReducer } from '@microsoft/agent-host-protocol';
-import type { ChatAction, ChatState, SessionInputRequestKind } from '@microsoft/agent-host-protocol';
+import type { ChatAction, ChatState, SessionInputRequestKind, ToolCallConfirmationReason } from '@microsoft/agent-host-protocol';
+import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../commandautoapprover.js';
+import type { CommandShell, TerminalAutoApprovePatterns, TerminalAutoApproveRules } from '../commandautoapprover.js';
 import { RpcError, INTERNAL_ERROR } from '../rpc.js';
 import { computerId, computersFor } from '../computers.js';
 import { localPath, uriOf } from '../fileuri.js';
@@ -16,7 +18,7 @@ import { chatFlag, sessionFollows, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
 import { BASELINE_TURN } from '../types/changes.js';
 import type { Bag } from '../types/common.js';
-import type { Agent } from '../types/agent.js';
+import type { Agent, AutoApprovalKind } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Session, SubagentChat, SubagentRequest } from '../types/session.js';
 import type { MessageAttachment } from '@microsoft/agent-host-protocol';
@@ -65,9 +67,10 @@ export interface Spawn {
    * Start one backend's session, and the worker chats it goes on to ask for.
    *
    * `sender` is the connection that sent the turn this start is for, when a
-   * client sent it. It is what the start's `trusted` is read from and nothing
-   * else is, so a start nobody's connection asked for - an automation, a host
-   * tool, a daemon restarting what it held - is a start with no trust at all.
+   * client sent it. It is what the start's `trusted` and `getAutoApproval` are
+   * read from and nothing else is, so a start nobody's connection asked for -
+   * an automation, a host tool, a daemon restarting what it held - is a start
+   * with no trust and no rules at all.
    *
    * `askedInstructions` is what the request that asked for this session says,
    * added to `Start.instructions` after what the host's tools say. It is not
@@ -137,7 +140,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     options, sessions, byChat, subagents, owners, kept, names, births, drafts, about,
     dispatch, log, described, links, resumedSessions,
     sessionHolding, respell, dirOf, operationsMoved, refreshWatched, refreshFacts,
-    fire, charged, senders, senderOf, sentBy, forgetSender, enteredIn, inMachine, bringBackOf,
+    fire, charged, senders, senderOf, sentBy, forgetSender, keysOf, forgetKeys, moveKeys, enteredIn, inMachine, bringBackOf,
     contributedDefaults, runningSchema, chatSummary, subagentSummary, summaryMoved, summaryKept, learnModels,
     learnAccount, movableMoved,
   } = ctx;
@@ -540,6 +543,12 @@ export function createSpawn(ctx: HostContext): Spawn {
     catch { /* a checkpoint that is not there is a count from somewhere else */ }
   };
 
+  /*
+   * The rules that answer a shell command, one for every session this host
+   * starts: it keeps no state, so one is the same as one a session.
+   */
+  const approver = new CommandAutoApprover();
+
   const spawn = (
     agent: Agent,
     uri: string,
@@ -600,6 +609,9 @@ export function createSpawn(ctx: HostContext): Spawn {
       agent: agent.provider,
       computer: () => computerId(config.computer),
       senderOf,
+      // What the turn's check chose, read when each record is written and let
+      // go of when the turn ends.
+      keysOf,
       owner: () => kept.owner(idOf(uri)),
       scope: () => charged.get(uri)?.scope,
     });
@@ -705,6 +717,47 @@ export function createSpawn(ctx: HostContext): Spawn {
       return trusted(vouched, sender.config?.workspaceTrust, sender.trustedFolders);
     };
     /*
+     * Whether a command this session runs is answered by its owner's rules.
+     *
+     * Read from the same connection `trustedBy` reads, and for the same
+     * reason: what a window lets its agent run without asking is that window's
+     * answer, and a turn somebody else sends into this session is not theirs
+     * to widen. A start nobody's connection asked for has no rules at all,
+     * which is a command that asks.
+     *
+     * The rules and the edit patterns are the connection's own push. A window
+     * that pushed no rules gets what the daemon's setting applies - VS Code's
+     * table or none - and one that pushed an empty table gets no rules: an
+     * empty object is a table with nothing in it, not a window that never
+     * spoke.
+     *
+     * Only `approved` is an answer. A command a deny rule named, and a line no
+     * rule could read, are both `undefined`, which leaves the backend to ask.
+     */
+    const getAutoApproval = (kind: AutoApprovalKind, line: string, shell: CommandShell): ToolCallConfirmationReason | undefined => {
+      if (kind !== 'shell' || sender === undefined) return undefined;
+      if (options.users !== undefined) {
+        const who = ctx.ownerFor(sender);
+        if (who === undefined || who !== kept.owner(idOf(uri))) return undefined;
+      }
+      if (sender.config?.['terminalAutoApproveEnabled'] === false) return undefined;
+      const pushed = sender.config?.['terminalAutoApproveRules'];
+      const rules = pushed !== null && typeof pushed === 'object'
+        ? pushed as TerminalAutoApproveRules
+        : options.terminalAutoApproveDefaults === 'none' ? {} : DEFAULT_TERMINAL_AUTO_APPROVE_RULES;
+      const patterns = sender.config?.['editAutoApprovePatterns'];
+      const result = approver.evaluate(line, {
+        rules,
+        ...(patterns !== null && typeof patterns === 'object' ? { editPatterns: patterns as TerminalAutoApprovePatterns } : {}),
+        shell,
+        ...(workingDirectory === undefined ? {} : { workingDirectory }),
+      });
+      // The protocol's enum is ambient, so its one value is written out rather
+      // than reached for: `verbatimModuleSyntax` will not let this file import
+      // a const enum at runtime.
+      return result === 'approved' ? ('not-needed' as ToolCallConfirmationReason) : undefined;
+    };
+    /*
      * What the model is told before it starts, in the order it is told.
      *
      * The host's tools' own instructions come first, because they are about
@@ -725,6 +778,7 @@ export function createSpawn(ctx: HostContext): Spawn {
       uri,
       chatUri,
       trusted: trustedBy,
+      getAutoApproval,
       ...(userSettings === undefined ? {} : { userSettings }),
       /*
        * The tools bound to this session: this host's own, and whatever the
@@ -846,7 +900,9 @@ export function createSpawn(ctx: HostContext): Spawn {
           // connection that queued it.
           const queuedBy = sentBy.get(action.queuedMessageId);
           if (queuedBy !== undefined) sentBy.set(turn, queuedBy);
-          // The queued id names nothing once its turn has one of its own.
+          // The queued id names nothing once its turn has one of its own -
+          // its sender and the keys its records are charged under both move.
+          moveKeys(action.queuedMessageId, turn);
           if (action.queuedMessageId !== turn) forgetSender(action.queuedMessageId);
           // And a command waiting its turn is a command turn once it runs.
           if (ctx.commandTurns.delete(action.queuedMessageId)) ctx.commandTurns.set(turn, false);
@@ -898,7 +954,12 @@ export function createSpawn(ctx: HostContext): Spawn {
         // that failed is ended by its `chat/error`, as the protocol's reducer
         // ends it.
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled'
-          || action.type === 'chat/error') forgetSender(turn);
+          || action.type === 'chat/error') {
+          // The meter has written the turn's record by now, so the keys it
+          // read are let go of beside the sender.
+          forgetSender(turn);
+          forgetKeys(turn);
+        }
         // A nested session's record follows the title and the last turn.
         if (action.type === 'session/titleChanged' && typeof action.title === 'string') moveNested(idOf(uri), { title: action.title });
         else if (channel === 'chat' && action.type === 'chat/turnComplete') moveNested(idOf(uri), {});

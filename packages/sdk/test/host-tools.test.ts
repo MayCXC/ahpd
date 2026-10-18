@@ -14,7 +14,7 @@ import type { Agent, BoundTool, McpServer, Start } from '../src/types/agent.js';
 import type { ClientCalls } from '../src/tools/clientcalls.js';
 import type { Bag } from '../src/types/common.js';
 import type { HostEvent } from '../src/types/events.js';
-import type { HostOptions } from '../src/types/host.js';
+import type { HostOptions, ToolCall } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { Session } from '../src/types/session.js';
 import type { SessionAction, SessionInputRequest, SessionState } from '@microsoft/agent-host-protocol';
@@ -465,6 +465,54 @@ describe('tools the host contributes', () => {
     const said = await servers.ahp?.tools.find((one) => one.name === 'ahp_terminals')?.handler({});
     expect(said?.content[0]?.text).toContain('ahp-terminal:/t1');
   });
+
+  it('names the person behind a call, the session owner when no turn runs, and the host when neither', async () => {
+    const who = {
+      definition: { name: 'who', description: 'who', inputSchema: { type: 'object' as const, properties: {} } },
+      run: (_input: Record<string, unknown>, at: ToolCall) => at.person() ?? 'nobody',
+    };
+    const ana: Principal = { id: 'ana', roles: [], can: () => true };
+    const users = {
+      resource: { resource: 'ahpd://users', resource_name: 'ahpd users', authorization_servers: [], required: false },
+      verify: async () => ana,
+    } as unknown as Users;
+
+    /** A host with the `who` tool, and one session of it, with somebody where `people` says so. */
+    const opened = async (people: boolean) => {
+      const host = createHost({
+        path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), tools: [who],
+        ...(people ? { users } : {}),
+      });
+      const client = host.accept(peer(), people ? ana : undefined);
+      await client.handle(hello(['0.9.0']));
+      await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/who', provider: 'claude' } });
+      await client.handle({ method: 'subscribe', params: { channel: 'ahp-chat:/who' } });
+      const person = async (): Promise<string | undefined> => {
+        const servers = sessionQueries().at(-1)?.options.mcpServers as Record<string, {
+          tools: { name: string; handler: (input: unknown) => Promise<{ content: { text: string }[] }> }[];
+        }> | undefined;
+        const tool = servers?.ahp?.tools.find((one) => one.name === 'who');
+        return (await tool?.handler({}))?.content[0]?.text;
+      };
+      return { client, person };
+    };
+
+    // No turn runs yet, so the session's owner answers.
+    const plenty = await opened(true);
+    expect(await plenty.person()).toBe('user:ana');
+
+    // A turn sent by her gives the person the host knows behind that owner.
+    await plenty.client.handle({ method: 'dispatchAction', params: {
+      channel: 'ahp-chat:/who',
+      action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'who am I' } },
+    } });
+    await settle();
+    expect(await plenty.person()).toBe('ana');
+
+    // A host with no users directory has nobody to name but itself.
+    const bare = await opened(false);
+    expect(await bare.person()).toBe('host');
+  });
 });
 
 /*
@@ -626,6 +674,41 @@ describe('the session tools, which an install may switch off', () => {
     expect((await push({ sessionToolsProviders: null })).map((one) => one.name)).toEqual(HOST_OWN);
     expect((await push({ sessionTools: null })).map((one) => one.name)).toContain('list_sessions');
     expect(await offered(client, uri)).toContain('list_sessions');
+  });
+
+  it('stay off as the line set them when a push names neither key', async () => {
+    // The file holds no session tool key, so only the host's option says off.
+    const held: Record<string, unknown> = {};
+    const rootConfig: NonNullable<HostOptions['rootConfig']> = {
+      schema: () => ({
+        type: 'object',
+        properties: {
+          sessionTools: { type: 'boolean', title: 'Session tools', description: 'Offer the session tools.' },
+          closedChats: { type: 'string', enum: ['hidden', 'delete'], title: 'Closed chats', description: 'What closing a chat does.' },
+        },
+      }),
+      values: async () => ({ ...held }),
+      write: async (values) => {
+        for (const [key, one] of Object.entries(values)) held[key] = one;
+        return {};
+      },
+    };
+    const host = createHost({
+      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), tools: hostTools(),
+      rootConfig, sessionTools: false,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: [ROOT] }));
+    const uri = 'ahp-session:/line';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+
+    p.notes.length = 0;
+    await client.handle({ method: 'dispatchAction', params: { channel: ROOT, action: { type: 'root/configChanged', config: { closedChats: 'delete' } } } });
+    await settle();
+    expect(actions(p, uri).filter((one) => one.action.type === 'session/serverToolsChanged')).toHaveLength(0);
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
   });
 });
 
