@@ -9,6 +9,11 @@ Plan [01 - Plugins load from configuration](01-plugins-load-from-configuration/p
 Plan [02 - Plugins subscribe to the host's own events](02-plugins-subscribe-to-host-events/plan.md) built `on` and the thirteen events a handler observes.
 Every kind after those waits, and the whole list is in [deferred.md](01-plugins-load-from-configuration/deferred.md).
 
+## Glossary
+
+- **Front** - the chat where a person and a bot talk. The bot-chat provider serves it, with no model.
+- **Back** - a chat where a harness does a bot's work and replies to the Front with `post_message`.
+
 ## Packages
 
 - `code://packages/sdk` - `createHost` and `HostOptions`, the composition point a plugin contributes to; `types/agent.ts` is the `Agent` contract a harness plugin implements.
