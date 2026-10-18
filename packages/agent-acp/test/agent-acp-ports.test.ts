@@ -126,7 +126,12 @@ function recorder(): { source: ChangesetSource; seen: { turnId: string; path: st
 }
 
 /** A connected client with one ACP session, watching both its channels. */
-async function talking(options: { files?: boolean; shells?: boolean; changes?: ChangesetSource } = {}) {
+async function talking(options: {
+  files?: boolean;
+  shells?: boolean;
+  changes?: ChangesetSource;
+  rules?: Record<string, boolean>;
+} = {}) {
   const path = mkdtempSync(join(tmpdir(), 'ahpd-acp-ports-'));
   made.push(path);
   writeFileSync(join(path, 'note.txt'), 'the note body');
@@ -156,7 +161,14 @@ async function talking(options: { files?: boolean; shells?: boolean; changes?: C
     method: 'dispatchAction',
     params: {
       channel: 'ahp-root://',
-      action: { type: 'root/configChanged', config: { workspaceTrust: { enabled: true, trustedUris: [uriOf(path)] } } },
+      action: {
+        type: 'root/configChanged',
+        config: {
+          workspaceTrust: { enabled: true, trustedUris: [uriOf(path)] },
+          // The window's own command rules, read when the server asks.
+          ...(options.rules === undefined ? {} : { terminalAutoApproveRules: options.rules }),
+        },
+      },
     },
   });
   await client.handle({
@@ -410,6 +422,73 @@ it('answers the permission a cancel withdrew with `cancelled`, and takes the ent
   expect(types(p, uri).at(-1)).not.toBe('session/inputNeededSet');
   // And the cancel itself reached the server, after the permission was settled.
   expect(readFileSync(log, 'utf8')).toContain('"method":"session/cancel"');
+});
+
+/*
+ * A shell command the server asks about, in the shape codex-acp 1.13.1 sends:
+ * an `execute` call whose raw input carries the command beside its folder.
+ * An allowed line is answered with the server's `allow_once` before anybody is
+ * asked; an unmatched one, one with no command line and one whose choices have
+ * no `allow_once` all put the question as they always did.
+ */
+
+it('answers an allowed shell command without asking the person', async () => {
+  const { client, peer: p, uri, chatUri } = await talking({ rules: { 'make test': true } });
+  begin(client, chatUri, 't1', 'execrun');
+  await endedTurn(p, chatUri, 1);
+
+  expect(prose(p, chatUri)).toContain('exec=yes-once');
+  expect(types(p, uri)).not.toContain('session/inputNeededSet');
+  // Nor was the call answered from a rule by selecting an "always": the
+  // check picks the once option, and the policy is unchanged.
+  expect(prose(p, chatUri)).not.toContain('exec=yes-always');
+});
+
+it('asks for a shell command no rule matches', async () => {
+  const { client, peer: p, uri, chatUri } = await talking({ rules: { 'make build': true } });
+  begin(client, chatUri, 't1', 'execrun');
+  await until(() => types(p, uri).includes('session/inputNeededSet'));
+
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUri, action: { type: 'chat/toolCallConfirmed', turnId: 't1', toolCallId: 'call-run', approved: true } },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri)).toContain('exec=yes-once');
+});
+
+it('asks for a call of kind execute with no command line', async () => {
+  const { client, peer: p, uri, chatUri } = await talking({ rules: { 'make test': true } });
+  begin(client, chatUri, 't1', 'execrun nocmd');
+  await until(() => types(p, uri).includes('session/inputNeededSet'));
+
+  client.handle({
+    method: 'dispatchAction',
+    params: { channel: chatUri, action: { type: 'chat/toolCallConfirmed', turnId: 't1', toolCallId: 'call-run', approved: true } },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri)).toContain('exec=yes-once');
+});
+
+it('asks when the agent offers no allow_once option', async () => {
+  const { client, peer: p, uri, chatUri } = await talking({ rules: { 'make test': true } });
+  begin(client, chatUri, 't1', 'execrun alwaysonly');
+  await until(() => types(p, uri).includes('session/inputNeededSet'));
+
+  // The "always" is only selected because the person selected it: a check
+  // that approved the command still had no once option to answer with.
+  client.handle({
+    method: 'dispatchAction',
+    params: {
+      channel: chatUri,
+      action: {
+        type: 'chat/toolCallConfirmed', turnId: 't1', toolCallId: 'call-run',
+        approved: true, confirmed: 'user-action', selectedOptionId: 'yes-always',
+      },
+    },
+  });
+  await endedTurn(p, chatUri, 1);
+  expect(prose(p, chatUri)).toContain('exec=yes-always');
 });
 
 /** One question the server asked, out of the chat's own actions. */

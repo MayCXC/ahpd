@@ -292,11 +292,29 @@ export function createHandlers(ctx: SessionContext): Handlers {
    * kind is answered `cancelled`, because selecting an `always` is a decision
    * the person did not make.
    */
-  const askPermission = (request: RequestPermissionRequest): Promise<PermissionAnswer> => {
+  const askPermission = async (request: RequestPermissionRequest): Promise<PermissionAnswer> => {
     const option = (kind: PermissionOptionKind): string | undefined =>
       request.options.find((one) => one.kind === kind)?.optionId;
     const allow = option('allow_once');
     const reject = option('reject_once');
+    /*
+     * A shell command the owner's rules already allow.
+     *
+     * An ACP server asks about a command as a call of kind `execute`, and
+     * codex-acp 1.13.1 sends the line as `rawInput.command` beside its folder.
+     * The host answers from the rules the window that started this session
+     * pushed, and only an approval reaches here: a rule that denied it and a
+     * line no rule could read both answer nothing, and the question is put as
+     * it always was. The server's `allow_once` is selected rather than an
+     * "always", which would change this session's policy from one command;
+     * a server offering no `allow_once` is not answered by the check at all.
+     */
+    if (request.toolCall.kind === 'execute') {
+      const command = str(bag(request.toolCall.rawInput).command);
+      if (command !== undefined && (await start.getAutoApproval?.('shell', command, 'bash')) === 'not-needed') {
+        if (allow !== undefined) return { optionId: allow };
+      }
+    }
     const offered = confirmationOptions(request.options);
     const toolCallId = request.toolCall.toolCallId;
     const requestId = `${toolCallId}:permission`;

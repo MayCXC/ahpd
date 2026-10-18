@@ -227,6 +227,28 @@ export function createAsking(ctx: SessionContext): Asking {  /**
      */
     const id = str(about.toolUseID) ?? `req-${Date.now()}`;
     /*
+     * A shell command the owner's rules already allow.
+     *
+     * The host answers from the rules the window that started this session
+     * pushed, and only an approval reaches here: a command a rule denied and a
+     * line no rule could read both answer nothing, and the question is put as
+     * it always was. The line read is the one the model wrote, which
+     * `sourceFirst` kept under this call's id when it put the operator's
+     * environment in front of it; the input this callback was handed is the
+     * rewritten one. Read after the abort, because a cancelled call is not one
+     * to approve. Nothing is announced either, as with an allow list: the row
+     * the assistant message carries is already `not-needed`, and there is no
+     * question for a client to draw.
+     */
+    if (toolName === 'Bash') {
+      const written = ctx.unprefixed.get(id);
+      ctx.unprefixed.delete(id);
+      const command = written ?? str(raw.command);
+      if (command !== undefined && (await ctx.options.getAutoApproval?.('shell', command, 'bash')) === 'not-needed') {
+        return { behavior: 'allow', updatedInput: raw };
+      }
+    }
+    /*
      * The edit the tool would make, drawn on the card before it is approved.
      *
      * Somebody approving a write is being asked to trust a file they cannot

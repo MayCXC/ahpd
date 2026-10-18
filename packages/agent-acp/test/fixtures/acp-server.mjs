@@ -699,7 +699,7 @@ const promptScript = async (id, params) => {
   }
   const reaches = [
     'read', 'write', 'term', 'ask', 'hold', 'jump', 'paint', 'away', 'plan', 'name', 'shift', 'reauth', 'mrep=', 'mreq=',
-    'elicitform', 'elicitother', 'eliciturl', 'elicitcancel', 'elicitunknown',
+    'execrun', 'elicitform', 'elicitother', 'eliciturl', 'elicitcancel', 'elicitunknown',
   ].some((one) => text.includes(one));
   if (!reaches) for (const update of scriptFor(text)) notify(update);
   if (text.includes('chatter')) {
@@ -904,6 +904,39 @@ const promptScript = async (id, params) => {
       content: [{ type: 'content', content: { type: 'text', text: `answer=${chosen}` } }],
     });
     notify({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `perm=${chosen}` } });
+  }
+
+  if (text.includes('execrun')) {
+    /*
+     * A shell command the server asks about, in the shape codex-acp 1.13.1
+     * sends it: an `execute` call whose raw input carries the command and its
+     * folder. `nocmd` is the same call with no command line, and `alwaysonly`
+     * one whose choices have no `allow_once`.
+     */
+    const toolCall = {
+      toolCallId: 'call-run',
+      title: 'Run a command',
+      name: 'shell',
+      kind: 'execute',
+      status: 'in_progress',
+      rawInput: text.includes('nocmd') ? { cwd } : { command: 'make test', cwd },
+    };
+    notify({ sessionUpdate: 'tool_call', ...toolCall });
+    const answer = await ask('session/request_permission', {
+      sessionId: session,
+      toolCall,
+      options: text.includes('alwaysonly')
+        ? [{ optionId: 'yes-always', name: 'Always allow', kind: 'allow_always' }]
+        : PERMISSION,
+    });
+    const chosen = answer?.outcome?.outcome === 'selected' ? String(answer.outcome.optionId) : 'cancelled';
+    notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-run',
+      status: 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: `answer=${chosen}` } }],
+    });
+    notify({ sessionUpdate: 'agent_message_chunk', content: { type: 'text', text: `exec=${chosen}` } });
   }
 
   if (text.includes('hold')) {
