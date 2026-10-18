@@ -1,7 +1,7 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { expect, it, vi } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import type { BoundTool } from '@ahpd/sdk';
 
 /*
@@ -65,6 +65,8 @@ const queried = async (given: {
 } = {}): Promise<Record<string, unknown>> => {
   sdk.options = [];
   sdk.frames = [];
+  // A value the daemon inherits is kept, so the cases start without one.
+  vi.stubEnv('CLAUDE_CODE_ENABLE_TASKS', undefined);
   createSession({
     uri: 'ahp-session:/tasks',
     chatUri: 'ahp-chat:/tasks',
@@ -86,6 +88,8 @@ const queried = async (given: {
   if (one === undefined) throw new Error('no query was built');
   return one;
 };
+
+afterEach(() => { vi.unstubAllEnvs(); });
 
 /** The task tools Claude keeps to itself when the host takes their place. */
 const OWN = ['TodoWrite', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet'];
