@@ -16,7 +16,7 @@
 
 import type { ContentBlock, Diff, PermissionOption, PlanEntry, SessionUpdate, ToolCall, ToolCallStatus, ToolCallUpdate } from '@agentclientprotocol/sdk';
 import { bag, callTimes, str, strings, uriOf, withCallTimes } from '@ahpd/sdk';
-import type { Bag } from '@ahpd/sdk';
+import type { Bag, HarnessPlanEntry, PlanUpdate } from '@ahpd/sdk';
 import type { AcpCall, AcpTurn, ConfirmationOption } from './types.js';
 
 /** The text of a content block, or nothing for a kind this bridge does not carry. */
@@ -386,6 +386,20 @@ const entryLine = (entry: PlanEntry): string => {
 };
 
 /**
+ * One plan entry as the host reads it.
+ *
+ * The protocol's entry is already the host's shape: `content` is the text, and
+ * `status` and `priority` are the words a translated task takes. ACP sends the
+ * whole list each time, so an entry carries no id and the tasks plugin matches
+ * it by its text.
+ */
+const planEntryOf = (entry: PlanEntry): HarnessPlanEntry => ({
+  text: entry.content,
+  status: entry.status,
+  priority: entry.priority,
+});
+
+/**
  * The turn's one plan, as the call that holds it.
  *
  * A plan is something the agent writes rather than streams, so it is a call:
@@ -431,8 +445,17 @@ export function closePlan(turn: AcpTurn): Bag[] {
  * it: a call's times are when this plugin heard about it, and an update that
  * carries no time of its own - one a `session/load` replayed - leaves the calls
  * it mentions untimed rather than timing them with the replay's own clock.
+ *
+ * `planUpdate` is the host's seam for a harness's own task list. A plan update
+ * is one, and is handed over as it came - a whole list, never a change. Absent
+ * on a transcript replayed to nobody, where there is no host to tell.
  */
-export function mapUpdate(turn: AcpTurn, update: SessionUpdate, at?: number): Bag[] {
+export function mapUpdate(
+  turn: AcpTurn,
+  update: SessionUpdate,
+  at?: number,
+  planUpdate?: (update: PlanUpdate) => void,
+): Bag[] {
   switch (update.sessionUpdate) {
     /*
      * Prose and thinking, each appended to the run it continues.
@@ -519,9 +542,11 @@ export function mapUpdate(turn: AcpTurn, update: SessionUpdate, at?: number): Ba
     }
 
     /*
-     * The agent's plan, as the turn's one call for it.
+     * The agent's plan, as the turn's one call for it, and as the session's
+     * plan in the host.
      */
     case 'plan':
+      planUpdate?.({ turn: turn.turnId, tool: 'plan', entries: update.entries.map(planEntryOf) });
       return plan(turn, update.entries);
 
     /*

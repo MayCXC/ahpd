@@ -72,6 +72,69 @@ export interface SubagentChat {
 }
 
 /**
+ * One entry of a harness's own task list.
+ *
+ * `status` and `priority` are the harness's own words rather than the host's.
+ * A backend that translated them first would be deciding what a plugin is for:
+ * which of the host's statuses an entry belongs to, and what a status this host
+ * has never heard of becomes.
+ */
+export interface HarnessPlanEntry {
+  /** What the step says. */
+  text: string;
+  /** The status the harness gave it, as the harness spells it. */
+  status: string;
+  /** How urgent the harness said it is, where it said. */
+  priority?: string;
+}
+
+/**
+ * One change to a harness's task list, as a tool that names a single task
+ * sends it.
+ *
+ * `id` is the harness's own id for the task. A tool that adds a task may only
+ * learn its id once the call's result arrives, so a change that adds has none -
+ * and a change that updates names the id an earlier add was given.
+ */
+export interface HarnessPlanChange {
+  /** The harness's id for the task, absent on a change that adds it. */
+  id?: string;
+  /** What the task is, where the change says. */
+  text?: string;
+  /** The status it moves to, where the change says. */
+  status?: string;
+  /** How urgent it is, where the change says. */
+  priority?: string;
+}
+
+/**
+ * A harness's task list, or one change to it, handed to the host.
+ *
+ * A tool that rewrites its list whole sends `entries`; one that names a single
+ * task sends `change`, and the two are never both there. `turn` is the turn
+ * whose call wrote it, which is where a plugin reads who to stamp the task
+ * with; `tool` is the harness's own name for the tool, which a translated task
+ * keeps as its source.
+ */
+export type PlanUpdate = {
+  /** The turn whose call wrote the list or the change. */
+  turn: string;
+  /** The harness's tool that wrote it, as the harness names it. */
+  tool: string;
+} & (
+  | {
+    /** The whole list, when the tool sends one. */
+    entries: HarnessPlanEntry[];
+    change?: never;
+  }
+  | {
+    /** One change, when the tool sends one. */
+    change: HarnessPlanChange;
+    entries?: never;
+  }
+);
+
+/**
  * The model a turn runs on.
  *
  * An object rather than a name, because a model that carries a `configSchema`
@@ -249,6 +312,14 @@ export interface SessionOptions {
    * account. Absent on a host that keeps none.
    */
   onAccount?(account: Account): void;
+  /**
+   * A harness's own task list, or one change to it, out of this backend.
+   *
+   * `Start.planUpdate` handed down: the backend is the only thing that sees
+   * its harness's task calls, so it brings them here and the host raises
+   * `plan_update` with them. Absent on a host that passes no such callback.
+   */
+  planUpdate?(update: PlanUpdate): void;
   /** Called once the agent has reported what it can do. */
   onHandshake?(): void;
 }

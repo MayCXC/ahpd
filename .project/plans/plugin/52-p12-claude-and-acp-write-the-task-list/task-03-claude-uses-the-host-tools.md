@@ -1,6 +1,6 @@
 ---
 title: Claude uses the host tools
-status: todo
+status: implemented
 depends: []
 layer: "agent-claude"
 refs:
@@ -36,3 +36,9 @@ A Claude session leaves its own task tools by default and uses the host task too
 - `pnpm vitest run packages/agent-claude/test` passes.
 
 ## Resume
+
+- **Done so far:** every step. `hostTasks` is a declaration in `options.ts` with the fallback `true`, and a property of a preset in `optionsSchema`. `OWN_TASK_TOOLS` names the five tools once. `query.ts` builds `disallowedTools` from the person's deny list and adds the five only when `hostTasks` is not false and `ctx.offering` holds `task_add`.
+- **Files:** `packages/agent-claude/src/options.ts`, `packages/agent-claude/src/plugin.ts`, `packages/agent-claude/src/session/query.ts`, `packages/agent-claude/test/agent-claude-tasks.test.ts`, `packages/agent-claude/test/agent-claude-declarations.test.ts`.
+- **Next action:** task 04.
+- **Open questions:** none.
+- **Watch out for:** the setting is read where the query is built, because the deny list is also the person's. It is not a query option of its own. A name a person already denied is not repeated. A host with no `task_add` offers nothing in the tools' place, so the harness keeps them even with the setting on. `optionDefaults()` now holds two values, and the declarations test says so.

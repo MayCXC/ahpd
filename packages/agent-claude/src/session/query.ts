@@ -5,7 +5,7 @@ import type { HookCallback, SDKUserMessage, SettingSource } from '@anthropic-ai/
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
 import { failureOf } from './failure.js';
-import { ownEnvOf, queryOptionsOf } from '../options.js';
+import { hostHoldsTasks, ownEnvOf, OWN_TASK_TOOLS, queryOptionsOf } from '../options.js';
 import { agentNameOf } from './customizations.js';
 
 /** What the SDK will accept as a session id of our choosing. */
@@ -76,6 +76,19 @@ export function createQuery(ctx: SessionContext): Query {
    */
   const fromPreset = queryOptionsOf(ctx.values);
 
+  /**
+   * Whatever the host holds the list, the query is built the same way.
+   *
+   * A person's own deny list, and `TodoWrite`, `TaskCreate`, `TaskUpdate`,
+   * `TaskList` and `TaskGet` too when the host holds the list. A host that does
+   * not leaves the harness's own tools where they are.
+   */
+  const denyOption = (): Bag => {
+    const deny = [...ctx.allowed.deny];
+    if (hostHoldsTasks(ctx.values, ctx.offering)) for (const name of OWN_TASK_TOOLS) if (!deny.includes(name)) deny.push(name);
+    return deny.length > 0 ? { disallowedTools: deny } : {};
+  };
+
   const stopped: Query['stopped'] = { backgroundTasks: [], sessionCrons: [] };
   const keepStopped: HookCallback = async (input) => {
     if (input.hook_event_name !== 'Stop') return {};
@@ -136,6 +149,24 @@ export function createQuery(ctx: SessionContext): Query {
     const dir = ctx.options.spawnConfigDir;
     if (typeof dir === 'string') out.CLAUDE_CONFIG_DIR = dir;
     return out;
+  };
+
+  /**
+   * The environment that turns Claude's own task tools on, where Claude keeps them.
+   *
+   * `CLAUDE_CODE_ENABLE_TASKS` is the CLI's switch. It is set only when the
+   * host has not taken the tools' place and `enableTasks` is on, and a value a
+   * preset's own `env` gives is kept rather than written over. A machine gets
+   * the variable on the one command that starts its CLI, like every other
+   * variable a variant names.
+   */
+  const taskToolsEnv = (): Bag => {
+    if (ctx.values['enableTasks'] === false || hostHoldsTasks(ctx.values, ctx.offering)) return {};
+    const env = ctx.options.spawn === undefined
+      ? { ...(fromPreset.env as Bag | undefined ?? process.env), ...ctx.options.env }
+      : inMachine();
+    if (env.CLAUDE_CODE_ENABLE_TASKS !== undefined) return {};
+    return { env: { ...env, CLAUDE_CODE_ENABLE_TASKS: '1' } };
   };
 
   /**
@@ -372,6 +403,8 @@ export function createQuery(ctx: SessionContext): Query {
       ...(ctx.options.env ? { env: { ...(fromPreset.env as Bag | undefined ?? process.env), ...ctx.options.env } } : {}),
       // In a machine, the env above is replaced by the variant's own alone.
       ...(ctx.options.spawn === undefined ? {} : { env: inMachine() }),
+      // The switch for the task tools Claude keeps to itself.
+      ...taskToolsEnv(),
       // From the settings, which is where it lives: it is a config key like
       // the others, and a second way in was a second thing to keep in step.
       ...(typeof ctx.settings.permissionMode === 'string' ? { permissionMode: ctx.settings.permissionMode } : {}),
@@ -402,7 +435,7 @@ export function createQuery(ctx: SessionContext): Query {
        * call and that is what makes one set mid-session take effect.
        */
       ...(ctx.allowed.allow.length > 0 ? { allowedTools: [...ctx.allowed.allow] } : {}),
-      ...(ctx.allowed.deny.length > 0 ? { disallowedTools: [...ctx.allowed.deny] } : {}),
+      ...denyOption(),
       /*
        * Which conversation this query carries.
        *
@@ -722,7 +755,7 @@ export function createQuery(ctx: SessionContext): Query {
              */
             if (parent === '') ctx.options.onTurnRecorded?.(String(ctx.active.id), said);
           }
-          ctx.results(bag(message.message), parent);
+          ctx.results(bag(message.message), parent, message.tool_use_result);
           continue;
         }
 

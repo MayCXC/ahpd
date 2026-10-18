@@ -1,6 +1,6 @@
 ---
 title: The ACP plan update writes the plan
-status: todo
+status: implemented
 depends: [task-02-the-sessions-plan-takes-a-harness-list.md]
 layer: "agent-acp"
 refs:
@@ -35,3 +35,9 @@ The Plan call in the turn stays as it is.
 - `pnpm vitest run packages/agent-acp/test` passes.
 
 ## Resume
+
+- **Done so far:** every step. `mapping.ts` gains `planEntryOf`, which turns one ACP entry into the host's `{ text, status, priority }` with `content` as its text. `case 'plan'` hands `{ turn, tool: 'plan', entries }` to the seam before it draws the Plan call. Each update sends the whole list, so an update with no entries hands an empty one. The Plan call is unchanged: the mapping still returns `plan(turn, update.entries)`.
+- **Files:** `packages/agent-acp/src/mapping.ts`, `packages/agent-acp/src/session/handlers.ts`, `packages/agent-acp/test/agent-acp-plan.test.ts`. The test drives the fixture's existing `plan` script, which sends two updates over one turn; the fixture is unchanged.
+- **Next action:** task 07.
+- **Open questions:** none.
+- **Watch out for:** the task names `packages/agent-acp/src/session.ts` as where the seam is passed. The mapping is called from `session/handlers.ts`, which is where the `Start` is held. The seam is passed there as a fourth argument of `mapUpdate`, and `session.ts` is untouched. An update that arrives while a transcript is loading returns before the mapping, so a replayed conversation raises no `plan_update`. Only a live turn's plan does.

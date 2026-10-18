@@ -64,6 +64,8 @@ Each key under `presets` is the id clients name for that agent, and each one reg
 | `outputStyle` | none | The name of a style from the CLI's own settings |
 | `env` | none | Variables for the CLI's process, laid over the daemon's own environment on this host, and the whole of it in a machine |
 | `extraArgs` | none | Arguments the CLI is started with beyond the ones this backend builds |
+| `hostTasks` | `true` | Whether Claude leaves its own task tools to the host's `task_add`. Off keeps them, and their calls write the session's plan |
+| `enableTasks` | `true` | Start the CLI with `CLAUDE_CODE_ENABLE_TASKS=1` whenever Claude keeps its own task tools |
 
 A `models` entry is a model id, `{ "id", "name" }`, or `{ "fetch": "<url>", "match": "<pattern>", "key": { "fromEnv": "NAME" } }`, which reads an OpenAI-shaped model list and keeps the ids the pattern covers, where `*` is any run of characters. A fetch that fails is logged and offers nothing.
 
@@ -74,6 +76,12 @@ A preset's `env` value is a string, `null` to unset the variable, `{ "fromEnv": 
 An `extraArgs` value is given by name without the `--`, and `null` for a flag that takes none. A value that is not a string reaches the CLI as its JSON text, so `"settings": { "permissions": { "allow": ["Read"] } }` is started as `--settings '{"permissions":{"allow":["Read"]}}'`.
 
 Every field is checked when the plugin loads. A preset that is wrongly written, whose `fromEnv` variable is not in the daemon's environment or whose `$secret` cannot be read, is not registered: it is skipped with one line naming it, which is stamped to the daemon's log and printed by `ahpd start` and `ahpd restart` as `skipped: <plugin>: <the preset and why>`, above the line that says the daemon is up. The other presets register as they were written, and the load is refused only when no preset is left to register an agent for.
+
+### Tasks
+
+A Claude session uses the host's task tools by default. When the tasks plugin is loaded and offers `task_add`, the session's own `TodoWrite`, `TaskCreate`, `TaskUpdate`, `TaskList` and `TaskGet` are denied. The model adds its tasks with the host's tool, so every session works one list. A host that offers no `task_add` has nothing to put in their place, and the session keeps its own tools there.
+
+`hostTasks: false` in a preset keeps Claude's own tools; so does a host with no tasks plugin loaded. In either case the CLI is started with `CLAUDE_CODE_ENABLE_TASKS=1`, which `enableTasks` does and which is on by default. A value the preset's own `env` gives the variable is kept rather than written over. Each `TodoWrite`, `TaskCreate` and `TaskUpdate` is then written into the session's plan, and [The task list](https://github.com/softov/ahpd/blob/main/docs/plugins/TASK-LIST.md) says how.
 
 ## In your own host
 

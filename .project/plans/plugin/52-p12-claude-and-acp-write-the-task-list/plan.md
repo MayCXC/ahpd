@@ -1,7 +1,7 @@
 ---
 title: Claude and ACP write the task list
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -76,6 +76,7 @@ Claude TodoWrite / TaskCreate / TaskUpdate, or ACP `plan` -> backend -> host -> 
 | When two entries have the same text, an entry matches the first task in order that is not matched yet | (defaulted: proposed by the planner, 2026-10-18; Softov may change it) | 02 |
 | `by` on a stamp of a translated task is the sender of the turn | (defaulted: proposed by the planner, 2026-10-18; Softov may change it) | 02 |
 | A translated task keeps the `priority` of an ACP entry, which has the same values as a host task | (defaulted: proposed by the planner, 2026-10-18; Softov may change it) | 02, 06 |
+| The session's plan is called by the session's title, which the host adds to `plan_update`; with no title yet it is `Session <id>`, and the goal stays empty | Softov, 2026-10-18, "the session's plan is called by the session's title. The host adds the session's title to plan_update. Until the session has a title, the plan is called "Session <id>". The goal stays empty." for "What should the session's plan be called, and what should its goal be?" | 01, 02 |
 
 ## Proposed architecture
 
@@ -89,13 +90,13 @@ Claude TodoWrite / TaskCreate / TaskUpdate, or ACP `plan` -> backend -> host -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - a-backend-hands-its-list-to-the-host](task-01-a-backend-hands-its-list-to-the-host.md) | todo | - |
-| [02 - the-sessions-plan-takes-a-harness-list](task-02-the-sessions-plan-takes-a-harness-list.md) | todo | 01 |
-| [03 - claude-uses-the-host-tools](task-03-claude-uses-the-host-tools.md) | todo | - |
-| [04 - claude-keeps-its-own-tools-on-a-setting](task-04-claude-keeps-its-own-tools-on-a-setting.md) | todo | 03 |
-| [05 - claudes-own-task-calls-write-the-plan](task-05-claudes-own-task-calls-write-the-plan.md) | todo | 02, 04 |
-| [06 - the-acp-plan-update-writes-the-plan](task-06-the-acp-plan-update-writes-the-plan.md) | todo | 02 |
-| [07 - the-docs-say-how-a-harness-list-lands](task-07-the-docs-say-how-a-harness-list-lands.md) | todo | 05, 06 |
+| [01 - a-backend-hands-its-list-to-the-host](task-01-a-backend-hands-its-list-to-the-host.md) | implemented | - |
+| [02 - the-sessions-plan-takes-a-harness-list](task-02-the-sessions-plan-takes-a-harness-list.md) | implemented | 01 |
+| [03 - claude-uses-the-host-tools](task-03-claude-uses-the-host-tools.md) | implemented | - |
+| [04 - claude-keeps-its-own-tools-on-a-setting](task-04-claude-keeps-its-own-tools-on-a-setting.md) | implemented | 03 |
+| [05 - claudes-own-task-calls-write-the-plan](task-05-claudes-own-task-calls-write-the-plan.md) | implemented | 02, 04 |
+| [06 - the-acp-plan-update-writes-the-plan](task-06-the-acp-plan-update-writes-the-plan.md) | implemented | 02 |
+| [07 - the-docs-say-how-a-harness-list-lands](task-07-the-docs-say-how-a-harness-list-lands.md) | implemented | 05, 06 |
 
 ## Risks and tradeoffs
 
@@ -105,9 +106,9 @@ Claude TodoWrite / TaskCreate / TaskUpdate, or ACP `plan` -> backend -> host -> 
 
 ## Resume state
 
-- **Done so far:** plan and tasks written 2026-10-18, with the rows moved from p1. Open questions answered 2026-10-18. The plan is ready to build.
-- **Next action:** [task-01-a-backend-hands-its-list-to-the-host.md](task-01-a-backend-hands-its-list-to-the-host.md).
-- **Open questions:** none.
+- **Done so far:** plan and tasks written 2026-10-18, with the rows moved from p1. Open questions answered 2026-10-18. Task 01 implemented 2026-10-18, and amended the same day for the title answer. `plan_update` is a host event, and `Start.planUpdate` is the backend's call. `spawn` raises the event with the session, the chat, the harness, the tool, the turn, the title and the sender. Task 02 implemented the same day: the tasks plugin hears `plan_update` and writes the session's plan. It matches a whole list by text and a single change by the harness's id. Task 03 implemented the same day: `hostTasks`, on by default, denies Claude's own five task tools when the host offers `task_add`. Task 04 implemented the same day: `enableTasks` sets `CLAUDE_CODE_ENABLE_TASKS=1` when the session keeps its own tools, on the host and in a machine. Task 05 implemented the same day: Claude's three task calls are translated into the plan, and a `TaskCreate` waits for its id. Task 06 implemented the same day: each ACP `plan` update hands the whole list to the host, and the turn keeps its one Plan call. Task 07 implemented the same day: the task list doc, and the Claude and ACP READMEs, say how a harness's list lands.
+- **Next action:** none. All seven tasks are implemented; the final verification checklist is what is left.
+- **Open questions:** none. The title answer is the last row of the Answers table.
 - **Watch out for:** a missing step is `dropped`, never removed. A `TodoWrite` with an empty list after every step was `completed` is not a drop.
 
 ## Final verification checklist

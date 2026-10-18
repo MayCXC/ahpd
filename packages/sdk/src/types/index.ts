@@ -16,7 +16,7 @@ export type { Bag } from './common.js';
 export type { OnWire, WireTurn } from './wire.js';
 export type { Request, Wire, Peer, Handler } from './rpc.js';
 export type { Summary } from './catalog.js';
-export type { Emit, SessionOptions, Session, Ran, Chosen, MessageFrom, MessageAttachment, SubagentChat, SubagentRequest, TurnOptions } from './session.js';
+export type { Emit, SessionOptions, Session, Ran, Chosen, MessageFrom, MessageAttachment, SubagentChat, SubagentRequest, HarnessPlanEntry, HarnessPlanChange, PlanUpdate, TurnOptions } from './session.js';
 export type { HostOptions, Connection, Credential, Host, Diagnostics, HostTool, ToolCall, RootConfigPort, RootConfigAnswer } from './host.js';
 export type { AnnouncedPlugin, CapturedPlugin, ClientPlugins, HeldCopies, SyncedPlugin, TemplatePlugin } from './clientplugins.js';
 export type { ChannelHandle, ChannelSubscriber, ChatPreamble, OpenedChat, Loaded, LoaderContext, Plugin, PluginChannel, PluginConnects, PluginContext, PluginHost, PluginMethod, PluginPeer, PluginSpec, PluginStarts, Contribution, PortContribution, PortKey, PortOf, PublishOptions, Route, ServedChannel, ServedMethod, SessionRequest, TriggerTypeDefinition } from './plugin.js';
@@ -25,7 +25,7 @@ export type {
   EventName, HostEvent, HostEventOf, HostHandlers, InputNeededRemovedEvent, InputNeededSetEvent, ListeningEvent,
   LogEvent, MessageEvent, ResourceWriteEvent, SessionEndEvent, SessionOpenedEvent, SessionStartEvent,
   StoppingEvent, TerminalOpenEvent, UsersChangedEvent,
-  ToolCallEvent, TurnEndEvent, TurnStartEvent,
+  ToolCallEvent, TurnEndEvent, TurnStartEvent, PlanUpdateEvent,
 } from './events.js';
 export type { Page } from './paging.js';
 export type {

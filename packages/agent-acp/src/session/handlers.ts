@@ -158,7 +158,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
      * client reading the snapshot mid-turn reads the same number the stream
      * last carried.
      */
-    for (const action of mapUpdate(current, update, at)) {
+    for (const action of mapUpdate(current, update, at, start.planUpdate)) {
       if (action.type === 'chat/usage' && ctx.active !== undefined) ctx.active.usage = bag(action.usage);
       emit('chat', action);
     }

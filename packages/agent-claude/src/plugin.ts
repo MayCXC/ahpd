@@ -17,7 +17,7 @@ import { bag, eachPreset, readSecrets } from '@ahpd/sdk';
 import { claude } from './claude.js';
 import type { ClaudeOptions } from './claude.js';
 import { sharedCatalogue as oneListing } from './catalog.js';
-import { extraArgs, outputStyle, presetSchema, sandbox, thinking } from './options.js';
+import { enableTasks, extraArgs, hostTasks, outputStyle, presetSchema, sandbox, thinking } from './options.js';
 
 /** The plugin's id, unique among the plugins one daemon loads. */
 export const name = 'agent-claude';
@@ -86,6 +86,8 @@ export const optionsSchema = {
           // here, so a wrongly written value costs its preset and not this load.
           sandbox: { description: sandbox.schema.description },
           thinking: { description: thinking.schema.description },
+          hostTasks: { description: hostTasks.schema.description },
+          enableTasks: { description: enableTasks.schema.description },
           outputStyle: { description: outputStyle.schema.description },
           extraArgs: { description: extraArgs.schema.description },
         },

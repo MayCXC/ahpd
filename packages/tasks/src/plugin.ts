@@ -3,6 +3,7 @@ import { approveTools } from './approve.js';
 import { planTools } from './plans.js';
 import { taskStore } from './store.js';
 import { taskTools } from './tasks.js';
+import { writePlanList } from './translate.js';
 import type { Plugin } from '@ahpd/sdk';
 
 /**
@@ -121,6 +122,12 @@ export const apply: Plugin['apply'] = (host, options) => {
   for (const tool of tools) {
     host.registerTool({ ...tool, run: (input, at) => oneAtATime(async () => tool.run(input, at)) });
   }
+  /*
+   * A harness's own list, brought by its backend. It writes the session's plan
+   * one update at a time with the tool calls, because it reads a record before
+   * it writes it like they do.
+   */
+  host.on('plan_update', (event) => oneAtATime(() => writePlanList(store, event)));
   /*
    * A finished plan is held for the days the setting names, and looked at once
    * when the plugin is applied and then every hour. The timer is unref'd, so a
