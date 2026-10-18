@@ -571,7 +571,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * closed once `stopping` has been raised.
    */
   const listProblem = (message: string): void => { process.stdout.write(`${message}\n`); };
-  const policyLists = policyChannels(policies, { onProblem: listProblem });
+  const policyLists = policyChannels(policies, {
+    onProblem: listProblem,
+    // The limits of a row are read from the same usage store the scheme is, so
+    // `policy://<id>/limits` answers what a key has used in the same zone.
+    usage: store,
+    ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+  });
   const peopleLists = users === undefined
     ? undefined
     : peopleChannels(users, { onChange: () => { void policyLists.refresh(); }, onProblem: listProblem });
@@ -888,6 +894,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const usageScheme = usageProvider({
     usage: store,
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
+    // The rows `usage://limits` answers. A person reads the limits their scopes
+    // hold while `policies.ownLimits` is on, which is its default; the setting
+    // has no configuration key yet, so the default is what is passed.
+    policies,
+    ownLimits: true,
     // The titles a pool is named with, read from the same directory the gate asks.
     ...(users === undefined ? {} : { titles: users }),
     onProblem: (message) => process.stdout.write(`${message}\n`),

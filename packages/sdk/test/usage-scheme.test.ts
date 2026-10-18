@@ -17,7 +17,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { fileUsage, usageProvider } from '../src/usage.js';
+import { memoryPolicies } from '../src/policies.js';
 import { mayRead, poolsFor } from '../src/scopes.js';
+import type { Policy } from '../src/types/policies.js';
 import type { ComputerTime, ModelCall, ModelUse } from '../src/types/usage.js';
 import type { Principal } from '../src/types/users.js';
 
@@ -484,4 +486,79 @@ it('sums the records by user, team and project, each record once', async () => {
   await expect(provider.read('usage://groups?by=user&from=soon')).rejects.toMatchObject({ code: -32602 });
   await expect(provider.list('usage://groups')).rejects.toMatchObject({ code: -32008 });
   expect(await provider.resolve('usage://groups?by=user')).toMatchObject({ type: 'file' });
+});
+
+/*
+ * The limits a person may see, which is the one read here that is a person's
+ * rather than a pool's: a row holds them when its scope holds them, and an
+ * `each` limit answers their own figure and no other member's.
+ */
+it('answers each limit whose scope holds the reader, with their own each figure', async () => {
+  const usage = fileUsage({ folder, timezone: 'UTC' });
+  for (const one of [
+    modelUse('2026-10-05T10:00:00.000Z', ['policy:A2/usd', 'policy:A2/usd/user:alice'], {
+      owner: 'user:alice', cost: { amount: 0.25, currency: 'usd', from: 'harness' },
+    }),
+    modelUse('2026-10-06T10:00:00.000Z', ['policy:A2/usd', 'policy:A2/usd/user:bob'], {
+      owner: 'user:bob', cost: { amount: 0.5, currency: 'usd', from: 'harness' },
+    }),
+  ]) await usage.record(one);
+
+  const policies = memoryPolicies();
+  const rows: Policy[] = [
+    {
+      id: 'A1', scope: 'all', kind: 'agent', effect: 'allow', match: { agent: ['claude'] },
+      limits: [{ amount: 100, measure: 'usd', period: 'week', pool: 'shared' }],
+    },
+    {
+      id: 'A2', scope: 'team:backend', kind: 'agent', effect: 'allow', match: { agent: ['claude'] },
+      limits: [
+        { amount: 400, measure: 'usd', period: 'week', pool: 'shared' },
+        { amount: 20, measure: 'usd', period: 'week', pool: 'each' },
+      ],
+    },
+    {
+      id: 'A3', scope: 'user:beto', kind: 'agent', effect: 'allow', match: { agent: ['claude'] },
+      limits: [{ amount: 100, measure: 'usd', period: 'week', pool: 'shared' }],
+    },
+    // Ended before today, so no longer active.
+    {
+      id: 'A4', scope: 'all', kind: 'agent', effect: 'allow', match: { agent: ['claude'] }, until: '2026-10-01',
+      limits: [{ amount: 100, measure: 'usd', period: 'week', pool: 'shared' }],
+    },
+  ];
+  for (const row of rows) await policies.put(row);
+  const provider = usageProvider({ usage, timezone: 'UTC', policies });
+  const alice = person('alice', [], ['backend:search']);
+
+  const shown = await json('usage://limits', alice, provider) as { id: string; scope: string; limits: Record<string, any>[] }[];
+  // The `all` row holds her, the team row does too, and the other person's and
+  // the ended row do not.
+  expect(shown.map((one) => one.id)).toEqual(['A1', 'A2']);
+  expect(shown[1]?.scope).toBe('team:backend');
+
+  // The shared limit counts every record charged to the row, and the `each`
+  // limit counts only the reader's own - bob's half is not in it.
+  expect(shown[0]?.limits[0]).toMatchObject({ amount: 100, measure: 'usd', period: 'week', pool: 'shared', used: 0 });
+  expect(shown[1]?.limits[0]).toMatchObject({ measure: 'usd', pool: 'shared', used: 0.75 });
+  expect(shown[1]?.limits[1]).toMatchObject({ measure: 'usd', pool: 'each', used: 0.25 });
+  expect(shown[1]?.limits[1]).not.toHaveProperty('members');
+
+  // The week began on Monday in `usage.timezone`, and resets at the next one.
+  expect(shown[1]?.limits[0]?.from).toBe('2026-10-05T00:00:00.000Z');
+  expect(shown[1]?.limits[0]?.resets).toBe('2026-10-12T00:00:00.000Z');
+
+  // A person reads their own without `usage:read`, and a host with no person
+  // has no scope a row can hold.
+  expect(await provider.authorize('usage://limits', alice)).toBe(true);
+  expect(await json('usage://limits', undefined, provider)).toEqual([]);
+  expect(await provider.resolve('usage://limits')).toMatchObject({ type: 'file' });
+
+  // With `policies.ownLimits` off the read is refused, and so is it where no
+  // policies store is given.
+  const off = usageProvider({ usage, timezone: 'UTC', policies, ownLimits: false });
+  await expect(off.read('usage://limits', undefined, alice))
+    .rejects.toMatchObject({ code: -32008, message: expect.stringContaining('policies.ownLimits') });
+  await expect(usageProvider({ usage, timezone: 'UTC' }).read('usage://limits', undefined, alice))
+    .rejects.toMatchObject({ code: -32008 });
 });

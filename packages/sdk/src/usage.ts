@@ -9,12 +9,15 @@
 
 import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { limitsOf } from './charge.js';
 import { refusalReason } from './host.js';
 import { periodOf, shown, zoneOf } from './periods.js';
 import { absentResource, asFile, EPOCH, splitResource, type At as Split } from './records.js';
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { mayRead, membership } from './scopes.js';
 import { currentOwner } from './values.js';
+import type { PolicyLimits } from './policy.js';
+import type { Policies, Policy } from './types/policies.js';
 import type { Entry, Metadata, Read, ResourceProvider, SchemeDescription } from './types/resources.js';
 import type { PluginMethod } from './types/plugin.js';
 import type { Grant, Named, Principal } from './types/users.js';
@@ -450,13 +453,14 @@ const keysOf = (entry: UsageEntry, by: readonly UsageKey[]): UsageGroup['keys'] 
 /*
  * The `usage:` scheme.
  *
- * Leaves under a pool, a root listing and one grouped read, through the
+ * Leaves under a pool, a root listing and two reads of the root, through the
  * resource calls a client already uses: `usage://` lists the charged pools the
  * reader may read, a pool reads its kind, name, day, week and month, `range`
- * reads a total between two days, `records` reads what was charged, and
- * `usage://groups` sums the records by user, team and project. There is no
- * manifest and nothing is made here, which is why `describe` has no body for a
- * create form to draw.
+ * reads a total between two days, `records` reads what was charged,
+ * `usage://groups` sums the records by user, team and project, and
+ * `usage://limits` answers each policy whose scope holds the reader. There is
+ * no manifest and nothing is made here, which is why `describe` has no body for
+ * a create form to draw.
  *
  * The store answers every question below; the provider is the shape the answer
  * arrives in, and the reader is what decides which pools it arrives for.
@@ -520,6 +524,8 @@ export interface UsageAnswers {
   records(pool: string, from?: string, until?: string): Promise<UsageEntry[]>;
   /** The records this reader may read, summed by these keys, as `usage://groups`. */
   groups(by: readonly string[], from: string | undefined, until: string | undefined, reader: Principal | undefined): Promise<UsageNamedGroup[]>;
+  /** Each active row whose scope holds the reader, with its limits, as `usage://limits`. */
+  limits(reader: Principal | undefined): Promise<PolicyLimits[]>;
 }
 
 /** What the provider was built around. */
@@ -544,6 +550,20 @@ export interface UsageProviderOptions {
     teams(): Promise<Named[]>;
     projects(): Promise<Named[]>;
   };
+  /**
+   * The policies whose limits `usage://limits` answers.
+   *
+   * Absent, the leaf is not served: a host with no policies has no limit to
+   * read, and an absent scheme is a better answer than an empty one.
+   */
+  policies?: Policies;
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * On by default. Off, `usage://limits` is refused, and an operator holding
+   * `policy:read` still reads every row through `policy://<id>/limits`.
+   */
+  ownLimits?: boolean;
   /** Somewhere to say that the zone or the titles could not be read. */
   onProblem?(message: string): void;
 }
@@ -570,6 +590,14 @@ const LEAVES = ['day', 'week', 'month', 'range', 'records'] as const;
  * Not a pool, because a pool key holds a `:` and this does not.
  */
 const GROUPS = 'groups';
+
+/**
+ * The read at the scheme's root that answers the limits a person may see.
+ *
+ * Not a pool either, for the same reason: a pool key holds a `:`, and no
+ * record is charged to a key named for this read.
+ */
+const LIMITS = 'limits';
 
 /** The keys a grouped read may sum by. */
 const KEYS: readonly UsageKey[] = ['user', 'team', 'project'];
@@ -734,6 +762,40 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
   const groupsBody = async (held: At, reader: Principal | undefined): Promise<string> =>
     JSON.stringify(await groups(keysAsked(held.asked), held.asked.get('from') ?? undefined, held.asked.get('until') ?? undefined, reader), null, 2);
 
+  /** Whether a row is inside its window at this instant, as `decide` reads its `from` and `until`. */
+  const activeAt = (row: Policy, moment: string): boolean =>
+    (row.from === undefined || moment >= row.from) && (row.until === undefined || moment < row.until);
+
+  /** Whether the reader's own scope holds a row: `all`, the reader, a team or a project of theirs. */
+  const holds = (row: Policy, reader: Principal): boolean =>
+    row.scope === 'all' || mayRead(reader, row.scope);
+
+  /**
+   * Each active row whose scope holds the reader, with its limits.
+   *
+   * The reader is the person an `each` limit answers, so a person reads their
+   * own figure and no other member's. A host with no person, which is the root
+   * connection or a host with no users directory, has no scope a row can hold,
+   * so it reads none. A host with `policies.ownLimits` off refuses the read.
+   */
+  const limits = async (reader: Principal | undefined): Promise<PolicyLimits[]> => {
+    if (options.ownLimits === false) {
+      throw new RpcError(-32008, 'usage://limits is not served while policies.ownLimits is off');
+    }
+    const policies = options.policies;
+    if (policies === undefined) throw absentResource('usage', 'usage://limits');
+    if (reader === undefined) return [];
+    const now = new Date();
+    const moment = now.toISOString();
+    const held = (await policies.list()).filter((row) => activeAt(row, moment) && holds(row, reader));
+    return Promise.all(held.map(async (row) => ({
+      id: row.id,
+      kind: row.kind,
+      scope: row.scope,
+      limits: await limitsOf(row, store, zone, now, reader),
+    })));
+  };
+
   /**
    * The three periods, as the range each covers in `zone`.
    *
@@ -782,6 +844,7 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
     range,
     records,
     groups,
+    limits,
   };
 
   /** The bytes behind one URI, which `read` hands over and `resolve` measures. */
@@ -819,6 +882,8 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
       if (held === undefined || held.pool === '') return true;
       // The grouped read counts only the records the reader may read.
       if (held.pool === GROUPS && held.leaf === '') return true;
+      // The limits read answers only the rows whose scope holds the reader.
+      if (held.pool === LIMITS && held.leaf === '') return true;
       return !refused(reader, held.pool);
     },
 
@@ -844,6 +909,15 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
           ctime: EPOCH,
         };
       }
+      if (held.pool === LIMITS && held.leaf === '') {
+        return {
+          uri,
+          type: 'file',
+          size: Buffer.byteLength(JSON.stringify(await limits(undefined), null, 2), 'utf8'),
+          mtime: EPOCH,
+          ctime: EPOCH,
+        };
+      }
       if (held.leaf === '') {
         return { uri, type: 'directory', mtime: EPOCH, ctime: EPOCH };
       }
@@ -864,6 +938,9 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
       }
       if (held.pool === GROUPS && held.leaf === '') {
         return asFile(await groupsBody(held, reader));
+      }
+      if (held.pool === LIMITS && held.leaf === '') {
+        return asFile(JSON.stringify(await limits(reader), null, 2));
       }
       notYours(reader, held.pool);
       return asFile(await body(held));

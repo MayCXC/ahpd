@@ -12,6 +12,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Write } from '../src/types/resources.js';
 import type { Policy } from '../src/types/policies.js';
+import type { Usage, UsageTotal } from '../src/types/usage.js';
 import type { Users } from '../src/types/users.js';
 
 /*
@@ -36,6 +37,20 @@ const served = () => {
   const store = filePolicies({ file });
   return { store, policy: policyProviders(store).policy! };
 };
+
+/**
+ * A usage store whose totals a case sets, by key.
+ *
+ * The limit is read from these keys, so the case states what each row has used
+ * without writing a record: the records themselves are `charge.test.ts`'s.
+ */
+const totals = (byKey: Record<string, UsageTotal> = {}): Usage => ({
+  record: async () => {},
+  total: async (pool) => byKey[pool] ?? {},
+  pools: async () => Object.keys(byKey).sort(),
+  records: async () => [],
+  groups: async () => [],
+});
 
 /** One write, as a client sends it. */
 const body = (value: unknown, more: Partial<Write> = {}): Write =>
@@ -89,6 +104,62 @@ it('reads a row as JSON, and measures the body a write would make', async () => 
   // A URI naming no row still has the shape of one, which is what a form drawn
   // before the client has asked for anything needs.
   expect(await policy.resolve('policy://new')).toMatchObject({ type: 'file', size: 0 });
+});
+
+it('reads a row\'s limits with what is used and when they reset', async () => {
+  const store = filePolicies({ file });
+  const usage = totals({
+    'policy:A2/usd': { usd: 120 },
+    'policy:A2/usd/user:ana': { usd: 30 },
+    'policy:A2/usd/user:beto': { usd: 45 },
+  });
+  const policy = policyProviders(store, { usage, timezone: 'UTC' }).policy!;
+  await policy.write('policy://A2', body(row({
+    id: 'A2',
+    scope: 'team:backend',
+    kind: 'agent',
+    effect: 'allow',
+    match: { agent: ['claude'], model: ['anthropic/fable-5'] },
+    until: '2026-10-31',
+    limits: [
+      { amount: 400, measure: 'usd', period: 'week', pool: 'shared' },
+      { amount: 20, measure: 'usd', period: 'week', pool: 'each' },
+      { amount: 50, measure: 'usd', period: 'total', pool: 'shared' },
+    ],
+  })));
+
+  const answer = JSON.parse((await policy.read('policy://A2/limits') as { data: string }).data) as
+    { id: string; kind: string; scope: string; limits: Record<string, any>[] };
+
+  expect(answer).toMatchObject({ id: 'A2', kind: 'agent', scope: 'team:backend' });
+  // A shared limit answers what its key used, where the week began, when it
+  // resets, and the row's own end.
+  expect(answer.limits[0]).toMatchObject({
+    amount: 400, measure: 'usd', period: 'week', pool: 'shared', counted: true, used: 120,
+    ends: '2026-10-31T23:59:59.999Z',
+  });
+  expect(answer.limits[0]?.from).toEqual(expect.any(String));
+  expect(answer.limits[0]?.resets).toEqual(expect.any(String));
+
+  // The reader holds `policy:read`, so an `each` limit answers every member
+  // the store holds a key for, and none of them is the one used figure.
+  expect(answer.limits[1]).toMatchObject({ pool: 'each' });
+  expect(answer.limits[1]?.members).toEqual([{ user: 'ana', used: 30 }, { user: 'beto', used: 45 }]);
+  expect(answer.limits[1]).not.toHaveProperty('used');
+
+  // A `total` limit never resets.
+  expect(answer.limits[2]?.period).toBe('total');
+  expect(answer.limits[2]).not.toHaveProperty('resets');
+
+  // A leaf under a row that is not there, and a leaf that is not `limits`.
+  await expect(policy.read('policy://nothing/limits')).rejects.toMatchObject({ code: -32008 });
+  await expect(policy.read('policy://A2/anything')).rejects.toMatchObject({ code: -32008 });
+
+  // The leaf is measured as the body a read answers, and a host with no usage
+  // store serves no leaf at all.
+  expect((await policy.resolve('policy://A2/limits')).size)
+    .toBe(Buffer.byteLength(JSON.stringify(answer, null, 2), 'utf8'));
+  await expect(policyProviders(store).policy!.read('policy://A2/limits')).rejects.toMatchObject({ code: -32008 });
 });
 
 it('makes a row and a second write edits it', async () => {
