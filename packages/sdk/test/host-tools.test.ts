@@ -454,7 +454,9 @@ describe('tools the host contributes', () => {
     const { client } = await withTools();
     await client.handle({
       method: 'createTerminal',
-      params: { channel: 'ahp-terminal:/t1', cwd: 'file:///home/softov', command: 'true' },
+      // `echo` is a command a POSIX shell and PowerShell both run; `true` is a
+      // program only the first has.
+      params: { channel: 'ahp-terminal:/t1', cwd: 'file:///home/softov', command: 'echo' },
     });
     await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/asks', provider: 'claude' } });
     const servers = sessionQueries().at(-1)?.options.mcpServers as Record<string, { tools: {

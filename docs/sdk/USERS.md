@@ -377,7 +377,8 @@ from nowhere else, so two people on one daemon each get their own shell and
 neither can name the binary the other's terminal opens.
 
 The paths with no connection in hand take the daemon's own shell, `$SHELL` and
-then `/bin/sh`, and no person's preference at all: a `!command` typed in a chat,
+then `/bin/sh`, or PowerShell on Windows, and no person's preference at all: a
+`!command` typed in a chat,
 and the factory a backend opens a terminal with during a tool call. That is
 deliberate. It costs an agent's terminal the shell you chose in your client, and
 it closes the path where writing a file and naming it here would have made the

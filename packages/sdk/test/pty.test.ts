@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest';
-import { shellTerminals } from '../src/terminals.js';
+import { describe, expect, it, vi } from 'vitest';
+import type { SpawnOptions } from 'node:child_process';
+import { shellOf, shellTerminals } from '../src/terminals.js';
+import type { SpawnShell } from '../src/terminals.js';
 import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
 
 /*
@@ -13,17 +15,26 @@ import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
  */
 
 /** A pseudoterminal that says whatever a test tells it to. */
-function fakePty(): { spawn: SpawnPty; say: (data: string) => void; typed: string[] } {
+function fakePty(): {
+  spawn: SpawnPty;
+  say: (data: string) => void;
+  typed: string[];
+  started: { shell: string; args: string[] | string }[];
+} {
   let listen: ((data: string) => void) | undefined;
   const typed: string[] = [];
-  const spawn: SpawnPty = (): Pty => ({
-    onData: (to) => { listen = to; },
-    onExit: () => {},
-    write: (data) => { typed.push(data); },
-    resize: () => {},
-    kill: () => {},
-  });
-  return { spawn, say: (data) => listen?.(data), typed };
+  const started: { shell: string; args: string[] | string }[] = [];
+  const spawn: SpawnPty = (shell, args) => {
+    started.push({ shell, args });
+    return {
+      onData: (to) => { listen = to; },
+      onExit: () => {},
+      write: (data) => { typed.push(data); },
+      resize: () => {},
+      kill: () => {},
+    };
+  };
+  return { spawn, say: (data) => listen?.(data), typed, started };
 }
 
 const opened = (pty?: SpawnPty) => {
@@ -40,6 +51,177 @@ const opened = (pty?: SpawnPty) => {
 
 /** An OSC sequence, the way a shell integration script writes one. */
 const osc = (body: string) => `\u001b]${body}\u0007`;
+
+/*
+ * Which shell a terminal starts when nobody named one.
+ *
+ * The platform, the environment and the check for a file are handed in, so a
+ * case here asks what a Windows machine would answer without being one - and
+ * the build runs on Linux, where the lookup itself cannot run at all.
+ */
+describe('the shell a terminal starts', () => {
+  const win = { ProgramFiles: 'C:\\Program Files', SystemRoot: 'C:\\Windows' };
+  const seven = 'C:\\Program Files\\PowerShell\\7\\pwsh.exe';
+  const shipped = 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe';
+
+  it('takes PowerShell 7 from where its installer put it', () => {
+    expect(shellOf(undefined, 'win32', win, (at) => at === seven)).toBe(seven);
+  });
+
+  it('takes PowerShell 7 from PATH when the installer put it nowhere', () => {
+    // An unpacked copy, which is a directory on `PATH` and no installer.
+    const unpacked = 'D:\\tools\\pwsh\\pwsh.exe';
+    const env = { SystemRoot: 'C:\\Windows', PATH: 'C:\\Windows;D:\\tools\\pwsh' };
+    expect(shellOf(undefined, 'win32', env, (at) => at === unpacked)).toBe(unpacked);
+  });
+
+  it('falls back to the Windows PowerShell the system ships', () => {
+    expect(shellOf(undefined, 'win32', win, (at) => at === shipped)).toBe(shipped);
+  });
+
+  it('falls back to ComSpec, and then to cmd.exe', () => {
+    const env = { ...win, ComSpec: 'C:\\Windows\\system32\\cmd.exe' };
+    expect(shellOf(undefined, 'win32', env, () => false)).toBe('C:\\Windows\\system32\\cmd.exe');
+    // No ComSpec is an environment Windows does not make, but a machine with
+    // no PowerShell at all still deserves a shell rather than a spawn failure.
+    expect(shellOf(undefined, 'win32', win, () => false)).toBe('cmd.exe');
+  });
+
+  it('does not read SHELL there, which is a leftover rather than a Windows shell', () => {
+    const env = { ...win, SHELL: 'C:\\Program Files\\Git\\bin\\bash.exe' };
+    expect(shellOf(undefined, 'win32', env, () => false)).toBe('cmd.exe');
+  });
+
+  it('answers SHELL, then /bin/sh, off Windows, as it always has', () => {
+    expect(shellOf(undefined, 'linux', { SHELL: '/bin/zsh' })).toBe('/bin/zsh');
+    expect(shellOf(undefined, 'darwin', {})).toBe('/bin/sh');
+  });
+
+  it('gives the shell that was asked for, on either system', () => {
+    // A connection's `defaultShell`: somebody who named a shell gets it, and
+    // the answer is not second-guessed because it is not installed.
+    expect(shellOf('/usr/bin/fish', 'linux', { SHELL: '/bin/zsh' })).toBe('/usr/bin/fish');
+    expect(shellOf('C:\\tools\\nu.exe', 'win32', win, () => false)).toBe('C:\\tools\\nu.exe');
+  });
+});
+
+/*
+ * What a command reaches the shell as.
+ *
+ * A fake pty is where a case here can read the line: the flag and the quoting
+ * are built once and handed to both paths, and `cmd.exe`'s is one string under
+ * a pseudoterminal. The pipes spawn's own options - the verbatim flag among
+ * them - are read in the describe below. The kind comes from the shell's file
+ * name, which is the one part of a shell that says what it is; a case names
+ * the file rather than a `C:\...` path, because the split is the runtime's own
+ * and this runs on Linux.
+ */
+describe('the arguments a command reaches the shell with', () => {
+  /** One terminal under a fake pty, and what it was started with. */
+  const started = (shell: string, asked: { command?: string; args?: string[] }) => {
+    const pty = fakePty();
+    shellTerminals({ pty: pty.spawn }).create({
+      uri: 'ahp-terminal:/args',
+      cwd: '/tmp',
+      shell,
+      claim: { kind: 'session', session: 'ahp-session:/one', chat: 'ahp-chat:/one' },
+      ...asked,
+      emit: () => {},
+    });
+    return pty.started.at(-1);
+  };
+
+  it('gives PowerShell -NoProfile -Command, and doubles a quote inside a word', () => {
+    // A line arrives as it was typed: a `!` command in the composer is already
+    // PowerShell, and quoting it would look for a program named after it.
+    expect(started('pwsh.exe', { command: 'echo hi' })?.args)
+      .toEqual(['-NoProfile', '-Command', 'echo hi']);
+    // An argv is quoted word by word behind the call operator, which is what
+    // makes a quoted path a program to run rather than a string to print.
+    expect(started('powershell.exe', { command: 'C:\\tools\\it\'s.exe', args: ['a b'] })?.args)
+      .toEqual(['-NoProfile', '-Command', "& 'C:\\tools\\it''s.exe' 'a b'"]);
+  });
+
+  it('gives cmd.exe /d /s /c, one line in the outer quotes its /s strips', () => {
+    // One string rather than an argv, because `node-pty` passes a string to
+    // the Windows process as it is and escapes an array for the C runtime -
+    // with `\"` for a quote inside it, which `cmd.exe` does not read back.
+    expect(started('cmd.exe', { command: 'echo "a"' })?.args)
+      .toBe('/d /s /c "echo "a""');
+    expect(started('cmd.exe', { command: 'C:\\Program Files\\tool.exe', args: ['a b'] })?.args)
+      .toBe('/d /s /c ""C:\\Program Files\\tool.exe" "a b""');
+  });
+
+  it('gives a POSIX shell -c, as it always has', () => {
+    expect(started('/bin/sh', { command: 'echo hi' })?.args).toEqual(['-c', 'echo hi']);
+    expect(started('/bin/bash', { command: 'p', args: ["it's"] })?.args)
+      .toEqual(['-c', "'p' 'it'\\''s'"]);
+  });
+
+  it('gives no flag at all when there is no command', () => {
+    // A terminal somebody types into: `-NoProfile -Command` with nothing after
+    // it is a shell that exits rather than one that waits.
+    expect(started('pwsh.exe', {})?.args).toEqual([]);
+    expect(started('cmd.exe', {})?.args).toEqual([]);
+  });
+});
+
+/*
+ * What the pipe spawn is given.
+ *
+ * Without a pseudoterminal Node starts the shell, and it turns an argv into a
+ * Windows command line with backslash escapes for inner double quotes, which
+ * `cmd.exe` does not read. So its line is wrapped in outer quotes and the argv
+ * is passed verbatim, which is what Node's own `shell: true` does. Both are
+ * options to the spawn rather than arguments, so the spawn is handed in here
+ * and the case reads them.
+ */
+describe('the line a pipe spawn is given', () => {
+  /** The spawn's own call, from one terminal this case starts. */
+  const launched = (shell: string, asked: { command?: string; args?: string[] }) => {
+    const calls: { shell: string; args: string[]; options: SpawnOptions }[] = [];
+    const start: SpawnShell = (nextShell, args, options) => {
+      calls.push({ shell: nextShell, args, options });
+      return {
+        stdin: { writable: false, end: () => {} },
+        stdout: { on: () => {} },
+        stderr: { on: () => {} },
+        pid: undefined,
+        on: () => {},
+        kill: () => {},
+      } as unknown as ReturnType<SpawnShell>;
+    };
+    shellTerminals({ spawn: start }).create({
+      uri: 'ahp-terminal:/pipes',
+      cwd: '/tmp',
+      shell,
+      claim: { kind: 'session', session: 'ahp-session:/one', chat: 'ahp-chat:/one' },
+      ...asked,
+      emit: () => {},
+    });
+    return calls.at(-1);
+  };
+
+  it('wraps a cmd.exe line and hands it over verbatim', () => {
+    // `echo "a"` typed: the inner quotes are the ones Node would escape and
+    // the ones `cmd.exe` cannot read back.
+    const typed = launched('cmd.exe', { command: 'echo "a"' });
+    expect(typed?.args).toEqual(['/d', '/s', '/c', '"echo "a""']);
+    expect(typed?.options.windowsVerbatimArguments).toBe(true);
+    // A program named with an argument: each word is quoted for `cmd.exe`, and
+    // the line is wrapped once more for `/s`.
+    expect(launched('cmd.exe', { command: 'C:\\Program Files\\tool.exe', args: ['a b'] })?.args)
+      .toEqual(['/d', '/s', '/c', '""C:\\Program Files\\tool.exe" "a b""']);
+  });
+
+  it('leaves PowerShell and a POSIX shell to the runtime, as they were', () => {
+    const powershell = launched('pwsh.exe', { command: 'echo hi' });
+    expect(powershell?.args).toEqual(['-NoProfile', '-Command', 'echo hi']);
+    // Escaped by Node, the way it always has been: both read those escapes.
+    expect(powershell?.options.windowsVerbatimArguments).toBeUndefined();
+    expect(launched('/bin/sh', { command: 'echo hi' })?.args).toEqual(['-c', 'echo hi']);
+  });
+});
 
 describe('a shell under a pseudoterminal', () => {
   it('says it is one, and that command detection works', () => {
@@ -203,4 +385,71 @@ it('signals nothing when the shell never started, rather than its own process gr
     emit: () => {},
   } as never);
   expect(() => { terminal.close(); }).not.toThrow();
+});
+
+/*
+ * Ending a terminal by hand.
+ *
+ * Windows has no process group to signal and no signal a shell there acts on,
+ * so `close` and `^C` end the shell's tree with `taskkill` there. The program
+ * runner and the platform are handed in, which is what lets a case here read
+ * what a Windows run would do: `taskkill` is an executable this build has none
+ * of, and the branch taken is the machine's.
+ */
+describe('a terminal ended by hand', () => {
+  const claim = { kind: 'session', session: 'ahp-session:/one', chat: 'ahp-chat:/one' } as const;
+
+  /** One terminal, on a machine the case names, with the store's own answer untouched. */
+  const on = (platform: string, shell: string, run?: (program: string, argv: string[]) => void) =>
+    shellTerminals({ platform, ...(run === undefined ? {} : { run }) }).create({
+      uri: 'ahp-terminal:/ended',
+      cwd: '/tmp',
+      shell,
+      claim,
+      emit: () => {},
+    });
+
+  it('ends the shell\'s tree with taskkill on Windows, since there is no group to signal', () => {
+    const ran: { program: string; argv: string[] }[] = [];
+    // Node itself, which reads its standard input until it ends and so stays
+    // up: a real process with a real pid, which is what `taskkill` names.
+    const terminal = on('win32', process.execPath, (program, argv) => { ran.push({ program, argv }); });
+    terminal.close();
+
+    const [one] = ran;
+    expect(one?.program).toBe('taskkill');
+    expect(one?.argv[0]).toBe('/pid');
+    expect(one?.argv.slice(2)).toEqual(['/T', '/F']);
+    // The shell's own pid, and not the host's: the pid was read from the
+    // child, and it is one with a process still behind it.
+    expect(() => { process.kill(Number(one?.argv[1]), 0); }).not.toThrow();
+  });
+
+  it('runs no taskkill for a shell that never started', async () => {
+    const ran: string[] = [];
+    const terminal = on('win32', '/nonexistent/shell', (program) => { ran.push(program); });
+    await terminal.waitForExit();
+    // No pid, so no tree to name - the same guard the interrupt has, and the
+    // reason a failed spawn does not take the caller's own group with it.
+    expect(() => { terminal.close(); }).not.toThrow();
+    expect(ran).toEqual([]);
+  });
+
+  it('sends SIGKILL to the group off Windows, as it always has', () => {
+    const killed: { pid: number; signal: string | number | undefined }[] = [];
+    const spy = vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
+      killed.push({ pid, signal });
+      return true;
+    });
+    try {
+      on('linux', process.execPath).close();
+      expect(killed).toHaveLength(1);
+      // Negative, which is the group the shell was started in: a signal to the
+      // shell alone leaves the command it started running.
+      expect(killed[0]?.pid).toBeLessThan(0);
+      expect(killed[0]?.signal).toBe('SIGKILL');
+    } finally {
+      spy.mockRestore();
+    }
+  });
 });

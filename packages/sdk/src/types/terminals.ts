@@ -149,10 +149,17 @@ export interface Pty {
   kill(signal?: string): void;
 }
 
-/** Start one. The shape `node-pty`'s own `spawn` already has. */
+/**
+ * Start one. The shape `node-pty`'s own `spawn` already has.
+ *
+ * `args` is one string when the caller has the whole command line already
+ * built, which is what `cmd.exe` needs: the binding passes a string through
+ * verbatim on Windows, and escapes an array for the C runtime instead - whose
+ * backslash escapes `cmd.exe` does not read.
+ */
 export type SpawnPty = (
   file: string,
-  args: string[],
+  args: string[] | string,
   options: { cwd?: string; cols: number; rows: number; env: Record<string, string | undefined> },
 ) => Pty;
 

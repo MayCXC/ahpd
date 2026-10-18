@@ -84,10 +84,10 @@ export function createTerminals(ctx: HostContext): Terminals {
         command,
         name: 'Terminal',
         // No shell named, so `shellOf` takes the daemon's own: `$SHELL`, then
-        // `/bin/sh`. `defaultShell` is a connection's preference and this runs
-        // through a session, which has no connection - and a person's shell
-        // must not be what a turn runs, because that is the escalation the
-        // review found.
+        // `/bin/sh`, or the first PowerShell found on Windows. `defaultShell`
+        // is a connection's preference and this runs through a session, which
+        // has no connection - and a person's shell must not be what a turn
+        // runs, because that is the escalation the review found.
         emit: (_channel, action) => {
           dispatch(uri, action);
           if ((action as Bag).type !== 'terminal/exited') return;

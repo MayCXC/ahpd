@@ -308,7 +308,9 @@ describe('Host.close refuses what would start', () => {
     await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/one', provider: 'echo' } });
     expect(open).toBeDefined();
     await host.close();
-    expect(() => open?.({ cwd: dir, command: 'true' })).toThrow('This host is closing, so nothing new starts on it');
+    // `echo` rather than `true`: the first is a command a POSIX shell and
+    // PowerShell both run, and the second only the first has.
+    expect(() => open?.({ cwd: dir, command: 'echo' })).toThrow('This host is closing, so nothing new starts on it');
     client.close();
   });
 

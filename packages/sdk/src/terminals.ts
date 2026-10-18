@@ -1,4 +1,6 @@
-import { spawn } from 'node:child_process';
+import { spawn, type ChildProcessWithoutNullStreams, type SpawnOptions } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { basename, win32 } from 'node:path';
 import { localPath, uriOf } from './fileuri.js';
 import { shellEnvOf, type ShellEnv } from './shellenv.js';
 import type { Pty, SpawnPty, Terminal, TerminalOptions, TerminalStore } from './types/terminals.js';
@@ -15,8 +17,102 @@ import type { Pty, SpawnPty, Terminal, TerminalOptions, TerminalStore } from './
  * `node:child_process` is used because all three supported runtimes provide it.
  */
 
-/** What runs, when nothing else was asked for. */
-const shellOf = (asked?: string): string => asked ?? process.env.SHELL ?? '/bin/sh';
+/**
+ * Runs a program for its effect, and lets go of it.
+ *
+ * Handed in rather than reached for, so a case on one machine can read what
+ * another would run: the one program this starts is `taskkill`, which is an
+ * executable and which a build on Linux has none of.
+ */
+export type RunQuietly = (program: string, argv: string[]) => void;
+
+/** The real one: start it, and say nothing about it. */
+const quietly: RunQuietly = (program, argv) => {
+  /*
+   * Both pipes ignored: a terminal is being ended, and a program started to
+   * end it has nobody left to tell. The `error` listener is the load-bearing
+   * part - without it a missing executable arrives as an unhandled event,
+   * which takes the daemon down while it is tidying a terminal away.
+   */
+  spawn(program, argv, { stdio: 'ignore', windowsHide: true }).on('error', () => {});
+};
+
+/**
+ * Starts a shell under pipes, and answers the runtime's handle.
+ *
+ * Handed in for the same reason as `RunQuietly`: `cmd.exe`'s line and the
+ * verbatim flag are what a Windows run needs and what a case on Linux cannot
+ * otherwise read, since both are options to the spawn rather than arguments.
+ */
+export type SpawnShell = (shell: string, args: string[], options: SpawnOptions) => ChildProcessWithoutNullStreams;
+
+/**
+ * The real one: Node's `spawn`.
+ *
+ * Cast because `SpawnOptions` alone does not promise piped stdio; this is the
+ * one call that always passes `stdio: ['pipe', 'pipe', 'pipe']`, so the three
+ * streams are there.
+ */
+const shells: SpawnShell = (shell, args, options) =>
+  spawn(shell, args, options) as ChildProcessWithoutNullStreams;
+
+/**
+ * The Windows shell, in the order VS Code looks for one.
+ *
+ * PowerShell 7 where its installer put it and then wherever `PATH` names it,
+ * because a machine can have it unpacked somewhere the installer never ran;
+ * then the Windows PowerShell the system has had since Windows 7; then
+ * `cmd.exe`, which every Windows has and which is the last thing that can be
+ * started. Nothing here reads `SHELL`: it is a POSIX convention, and the value
+ * a person has on Windows is whatever Git Bash or Cygwin last left behind - a
+ * path a terminal would try to start and fail on.
+ *
+ * Read as Windows paths whatever machine this runs on, because the branch that
+ * reads them is the Windows one. `ComSpec` is taken as it is rather than
+ * checked: Windows sets it to the command interpreter, and an environment that
+ * names one which is not there is not one this can tell from a machine where
+ * it is.
+ */
+const windowsShell = (
+  env: Record<string, string | undefined>,
+  exists: (path: string) => boolean,
+): string => {
+  const installed = env.ProgramFiles === undefined
+    ? []
+    : [win32.join(env.ProgramFiles, 'PowerShell', '7', 'pwsh.exe')];
+  const onPath = (env.PATH ?? '').split(';')
+    .filter((folder) => folder !== '')
+    .map((folder) => win32.join(folder, 'pwsh.exe'));
+  const pwsh = [...installed, ...onPath].find((one) => exists(one));
+  if (pwsh !== undefined) return pwsh;
+  const system = env.SystemRoot === undefined
+    ? undefined
+    : win32.join(env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
+  if (system !== undefined && exists(system)) return system;
+  return env.ComSpec ?? 'cmd.exe';
+};
+
+/**
+ * What runs, when nothing else was asked for.
+ *
+ * `asked` is a connection's `defaultShell` where there is a connection to have
+ * one, and it wins on either system: somebody who named a shell gets that
+ * shell, and failing to start it is the answer rather than a reason to quietly
+ * pick another.
+ *
+ * The platform, the environment and the check for a file are handed in, so a
+ * case on Linux can ask what a Windows machine would answer - there is no
+ * other way to exercise the lookup from here.
+ */
+export const shellOf = (
+  asked?: string,
+  platform: string = process.platform,
+  env: Record<string, string | undefined> = process.env,
+  exists: (path: string) => boolean = existsSync,
+): string => {
+  if (asked !== undefined) return asked;
+  return platform === 'win32' ? windowsShell(env, exists) : env.SHELL ?? '/bin/sh';
+};
 
 /**
  * One word, quoted for a POSIX shell.
@@ -25,6 +121,67 @@ const shellOf = (asked?: string): string => asked ?? process.env.SHELL ?? '/bin/
  * written by closing, escaping and reopening: `it's` becomes `'it'\''s'`.
  */
 const quoted = (word: string): string => `'${word.replaceAll("'", "'\\''")}'`;
+
+/**
+ * One word, quoted for PowerShell.
+ *
+ * PowerShell's single quotes are literal the way a POSIX shell's are, and a
+ * quote inside one is written by doubling it rather than by closing and
+ * reopening: `it's` becomes `'it''s'`.
+ */
+const psQuoted = (word: string): string => `'${word.replaceAll("'", "''")}'`;
+
+/**
+ * One word, quoted for `cmd.exe`.
+ *
+ * Double quotes, which is all `cmd.exe` has. They are enough for the spaces
+ * and the `&`s a path is made of, and a word holding a double quote of its own
+ * is the case this does not answer - `cmd.exe` has no way to write one.
+ */
+const cmdQuoted = (word: string): string => `"${word}"`;
+
+/** Which shell a path names, read from the name of its file. */
+type ShellKind = 'powershell' | 'cmd' | 'posix';
+
+/**
+ * The kind of shell a path names.
+ *
+ * Read from the file's own name, because that is the one part of a shell that
+ * says what it is: `pwsh.exe` and `powershell.exe` both take PowerShell's
+ * arguments, `cmd.exe` takes `cmd.exe`'s, and everything else - `sh`, `bash`,
+ * `zsh`, `fish` - reads a command line the POSIX way. Anything unrecognised is
+ * POSIX, which is what every shell but these two is.
+ */
+const kindOf = (shell: string): ShellKind => {
+  const file = basename(shell).toLowerCase();
+  if (file === 'pwsh' || file === 'pwsh.exe' || file === 'powershell' || file === 'powershell.exe')
+    return 'powershell';
+  return file === 'cmd' || file === 'cmd.exe' ? 'cmd' : 'posix';
+};
+
+/**
+ * The flag a shell takes one command with.
+ *
+ * `-c` for a POSIX shell. PowerShell has no `-c` of its own - it reads `-c` as
+ * `-Command` but only when it is the last argument, which this is not - so it
+ * is spelled out, with `-NoProfile` in front of it so a person's profile does
+ * not run and print its own output into a command's answer. `cmd.exe` reads
+ * `/c` and wants `/d` and `/s` with it: `/d` skips the autorun registry keys,
+ * and `/s` is what makes it strip the outer quotes of the line it is given.
+ */
+const flagOf = (kind: ShellKind): string[] =>
+  kind === 'powershell' ? ['-NoProfile', '-Command'] : kind === 'cmd' ? ['/d', '/s', '/c'] : ['-c'];
+
+/**
+ * An argv as one line for the shell of `kind`.
+ *
+ * PowerShell needs `&` in front of it: without the call operator, a quoted
+ * path is a string and the shell prints it rather than running it.
+ */
+const argvLine = (kind: ShellKind, argv: string[]): string => {
+  if (kind === 'powershell') return ['&', ...argv.map(psQuoted)].join(' ');
+  return argv.map(kind === 'cmd' ? cmdQuoted : quoted).join(' ');
+};
 
 /**
  * What a shell says about itself, in the escape sequences it says it with.
@@ -41,10 +198,33 @@ const quoted = (word: string): string => `'${word.replaceAll("'", "'\\''")}'`;
  */
 const MARKS = /\u001b\](133|7);([^\u0007\u001b]*)(?:\u0007|\u001b\\)/g;
 
-export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEnv?: ShellEnv): Terminal {
+/**
+ * Open one.
+ *
+ * `pty`, `shellEnv`, `platform`, `run` and `start` are the machine's own: a
+ * pseudoterminal to run under, the environment an operator gives every shell,
+ * which system this is, how a program is started to end a tree, and how the
+ * shell itself is started. All five are handed in rather than reached for,
+ * which is the only way a case on Linux can ask what a Windows machine would
+ * do.
+ */
+export function createTerminal(
+  options: TerminalOptions,
+  pty?: SpawnPty,
+  shellEnv?: ShellEnv,
+  platform: string = process.platform,
+  run: RunQuietly = quietly,
+  start: SpawnShell = shells,
+): Terminal {
   const { uri, cwd, emit } = options;
-  const shell = shellOf(options.shell);
-  let title = options.name ?? shell.slice(shell.lastIndexOf('/') + 1);
+  /** Windows, where a shell is started without `detached` and ended by pid. */
+  const windows = platform === 'win32';
+  // Asked for once and kept: the search behind it reads the filesystem, and a
+  // `!` command opens a terminal of its own each time it runs.
+  const shell = shellOf(options.shell, platform);
+  // `basename`, which is the runtime's own: a Windows shell's path is separated
+  // by `\`, and cutting at the last `/` would leave the whole path as the title.
+  let title = options.name ?? basename(shell);
   let claim = options.claim;
   let cols = options.cols ?? 80;
   let rows = options.rows ?? 24;
@@ -76,9 +256,9 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
   };
 
   /*
-   * `-c` when there is a command, and nothing when there is not.
+   * The shell's own flag for one command, and nothing when there is no command.
    *
-   * A shell given `-c` runs the one thing and exits. Under pipes that is the
+   * A shell given one runs the one thing and exits. Under pipes that is the
    * only completion signal there is; under a pseudoterminal the shell says so
    * itself, in OSC 133.
    *
@@ -88,12 +268,27 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
    * a line - the `!` prefix in the composer is one - and that line is already
    * shell syntax: quoting it would ask the shell for a program named after the
    * whole line, which is a command that never existed.
+   *
+   * Which flag and which quoting is the shell's, not this host's: a line
+   * written for one shell is not a line the others read, and the composer's
+   * `!echo hi` reaches PowerShell as `echo hi` and `cmd.exe` as the same.
    */
-  const args = options.command === undefined
-    ? []
+  const kind = kindOf(shell);
+  /** The line the shell is asked to run, once there is one. */
+  const line = options.command === undefined
+    ? undefined
     : options.args === undefined
-      ? ['-c', options.command]
-      : ['-c', [options.command, ...options.args].map(quoted).join(' ')];
+      ? options.command
+      : argvLine(kind, [options.command, ...options.args]);
+  /*
+   * `cmd.exe` takes its line inside one more pair of double quotes, which its
+   * `/s` strips. Not decoration: Node turns an argv into a Windows command
+   * line with backslash escapes for inner quotes - `\"` - and `cmd.exe` reads
+   * no such escape, so a path with a space in it and a line such as `echo "a"`
+   * both arrive broken without this. The spawn is told the argv is verbatim
+   * for the same reason, and both are what Node's own `shell: true` does.
+   */
+  const args = line === undefined ? [] : [...flagOf(kind), kind === 'cmd' ? `"${line}"` : line];
   const environment: Record<string, string | undefined> = {
     // The operator's map over the daemon's own environment, which is what
     // makes a service unit with a private `XDG_CONFIG_HOME` reach its shells.
@@ -167,7 +362,17 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
     }
   };
 
-  const terminal: Pty | undefined = pty?.(shell, args, {
+  /*
+   * What a pseudoterminal is started with.
+   *
+   * `node-pty` takes the whole command line as one string, and passes a string
+   * to the Windows process verbatim - an argv is escaped for the C runtime
+   * instead, which is the mistake the outer quotes above exist to avoid. So
+   * `cmd.exe` gets the line whole, outer quotes and all, and every other shell
+   * gets the argv it was started with.
+   */
+  const ptyArgs: string[] | string = kind === 'cmd' && line !== undefined ? args.join(' ') : args;
+  const terminal: Pty | undefined = pty?.(shell, ptyArgs, {
     ...(cwd !== undefined ? { cwd } : {}),
     cols,
     rows,
@@ -181,7 +386,7 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
     emit('terminal', { type: 'terminal/commandDetectionAvailable' });
   }
 
-  const child = terminal !== undefined ? undefined : spawn(shell, args, {
+  const child = terminal !== undefined ? undefined : start(shell, args, {
     cwd,
     /*
      * Its own process group, so a signal reaches what it started.
@@ -189,14 +394,38 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
      * A shell reading from a pipe runs each command as its own child, and a
      * signal sent to the shell alone leaves the command running. The group is
      * what a terminal driver would have signalled, and this has no driver.
+     *
+     * Windows has no process group to signal, and `detached` there means
+     * something else entirely - a console of its own - so it is left off and
+     * the tree is ended with `taskkill` instead.
      */
-    detached: true,
+    ...(windows ? {} : { detached: true }),
+    // No console window for the shell to open over whatever the daemon is
+    // drawing. Said rather than left to the default, which is to show one.
+    windowsHide: true,
+    /*
+     * `cmd.exe` reads the argv as a command line, with no escaping on the way
+     * in - see the outer quotes on its line above. Every other shell gets the
+     * runtime's own quoting, which is what a POSIX shell and PowerShell both
+     * expect their arguments to have been written with.
+     */
+    ...(kind === 'cmd' ? { windowsVerbatimArguments: true } : {}),
     // A shell reading commands from a pipe. Without a pseudoterminal there is
     // no point asking it to be interactive: it would print a prompt nobody
     // can answer the way it expects.
     stdio: ['pipe', 'pipe', 'pipe'],
     env: environment,
   });
+
+  /**
+   * End the shell and everything it started, on Windows.
+   *
+   * The tree, named by the shell's own pid, because there is no group there to
+   * signal. `/F` because without it `taskkill` asks each process to close, and
+   * one with no window to close is left running - and the caller here has
+   * already decided the tree is going.
+   */
+  const endTree = (pid: number): void => { run('taskkill', ['/pid', String(pid), '/T', '/F']); };
 
   child?.stdout.on('data', (chunk: Buffer) => said(chunk.toString('utf8')));
   child?.stderr.on('data', (chunk: Buffer) => said(chunk.toString('utf8')));
@@ -299,7 +528,8 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
        * SIGINT to the foreground group. Pipes have none, so the byte arrives
        * as input and the command runs on - which is a terminal a runaway
        * command cannot be stopped in. Sending the signal is what the driver
-       * would have done.
+       * would have done. On Windows there is no signal to send either, so the
+       * command's tree is ended by pid instead.
        */
       /*
        * Under a pseudoterminal the byte is the signal.
@@ -329,11 +559,21 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
          * whatever started the host.
          */
         const group = child?.pid;
-        if (group !== undefined) {
-          try { process.kill(-group, 'SIGINT'); }
-          // The group is gone, which is the outcome asked for.
-          catch { /* nothing left to interrupt */ }
-        }
+        if (group === undefined) return;
+        /*
+         * Windows: the tree, by pid, because there is no group to name and no
+         * signal a shell there acts on.
+         *
+         * `/T /F` rather than `/T`, which asks a process to close and leaves a
+         * windowless one running - a `^C` that stops nothing is the one thing
+         * this exists to prevent. POSIX draws the difference between an
+         * interrupt and a kill; Windows has nothing here to draw it with, so
+         * both are the same tree-ending call.
+         */
+        if (windows) { endTree(group); return; }
+        try { process.kill(-group, 'SIGINT'); }
+        // The group is gone, which is the outcome asked for.
+        catch { /* nothing left to interrupt */ }
         return;
       }
       if (child?.stdin.writable) child.stdin.write(data);
@@ -380,6 +620,8 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
         child?.kill();
         return;
       }
+      // Windows: the tree, by pid, which is what `/T` is for - see `endTree`.
+      if (windows) { endTree(group); return; }
       try { process.kill(-group, 'SIGKILL'); }
       catch { child?.kill(); }
     },
@@ -412,7 +654,13 @@ export function createTerminal(options: TerminalOptions, pty?: SpawnPty, shellEn
  * opens: each name in it is set, and a name set to `null` is removed from what
  * the daemon itself runs with. A caller asking for one terminal still wins
  * over it, because a terminal somebody opened is theirs.
+ *
+ * `platform`, `run` and `spawn` are the machine's own as well, and are for a
+ * case that has to ask what another system would do - or, for `spawn`, read
+ * what the pipe path asks of the runtime. An ordinary caller names none.
  */
-export const shellTerminals = (options: { pty?: SpawnPty; shellEnv?: ShellEnv } = {}): TerminalStore => ({
-  create: (asked) => createTerminal(asked, options.pty, options.shellEnv),
+export const shellTerminals = (
+  options: { pty?: SpawnPty; shellEnv?: ShellEnv; platform?: string; run?: RunQuietly; spawn?: SpawnShell } = {},
+): TerminalStore => ({
+  create: (asked) => createTerminal(asked, options.pty, options.shellEnv, options.platform, options.run, options.spawn),
 });
