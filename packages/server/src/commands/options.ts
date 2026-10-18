@@ -1005,11 +1005,24 @@ const noCwd = input['noCwd'] === true;
    * and a person who names one plugin meant that one. `--no-plugins` is the
    * explicit off, and passing it beside a `--plugin` is refused rather than
    * resolved, because nobody means both.
+   *
+   * The flag picks which plugins run, not how each is set up: a `--plugin`
+   * naming a plugin the file lists takes that entry's options and grants. A
+   * nested host is started as `ahpd --stdio --plugin <each>`, and a box's own
+   * ahpd keeps its backends' settings in its file - an ACP load's presets, a
+   * model - so without this every such host loaded its backends bare. The
+   * entry's `enabled` is not taken: the person named the plugin for this run.
    */
   const typed = input['plugins'] as string[] | undefined;
   if (noPlugins && typed !== undefined && typed.length > 0) {
     stop('--no-plugins contradicts the --plugin you also passed.');
   }
+  const filed = (name: string): PluginSpec => {
+    const entry = (file.plugins ?? []).map(asSpec).find((one) => typeof one === 'object' && one.name === name);
+    if (typeof entry !== 'object') return name;
+    const { enabled: _enabled, ...rest } = entry;
+    return rest;
+  };
   const plugins: PluginSpec[] = [];
   if (!noPlugins) {
     (given('plugins') ?? []).forEach((entry, index) => {
@@ -1019,7 +1032,7 @@ const noCwd = input['noCwd'] === true;
           ? `${source('plugins')} has plugins[${String(index)}] = ${JSON.stringify(entry)}, which is not a plugin spec.`
           : `--plugin takes a name or a path, not ${String(entry)}.`);
       }
-      plugins.push(spec);
+      plugins.push(typed !== undefined && typeof spec === 'string' ? filed(spec) : spec);
     });
   }
 

@@ -559,6 +559,17 @@ export interface ComputerRuntime {
    */
   agents(id: string): Promise<string[] | undefined>;
   /**
+   * The parts one machine was made with, or nothing when there is nothing to
+   * check them against.
+   *
+   * Nothing for a machine that is not there, and nothing for one whose runtime
+   * mounts no parts: a part is an image mounted when a machine is made, and a
+   * box that is listed rather than made brings its own ahpd and agents. A
+   * machine made without the label answers an empty list, which is a machine
+   * made with no parts.
+   */
+  parts(id: string): Promise<string[] | undefined>;
+  /**
    * Whose one machine is and what its work is charged under, or nothing when it
    * is not there.
    *
@@ -3050,6 +3061,10 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     agents: async (id) => {
       const found = await look(id);
       return found === undefined ? undefined : preparedFor(found);
+    },
+    parts: async (id) => {
+      const found = await look(id);
+      return found === undefined ? undefined : partsHeld(found);
     },
     owner: async (id) => {
       const found = await look(id);

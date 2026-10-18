@@ -92,6 +92,8 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | [A nested host is used only for a backend that runs nested and for a machine on another host](../05-an-agent-in-a-machine/plan.md) | 03 |
 | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md) | 05 |
 | [A machine is owned by whoever created it, and its owner pays for the time it is up](../../../../docs/sdk/USAGE.md) | 02 |
+| [A --plugin that names a plugin the file lists takes that entry's options and grants](../../../decisions/a-plugin-flag-takes-its-options-from-the-file.md) | 06 |
+| [The folder inside a machine is trusted when this host's client trusts the session's folder](../../../decisions/a-machine-folder-is-trusted-when-the-sessions-folder-is.md) | 06 |
 
 | What | Source | Task |
 | --- | --- | --- |
@@ -115,6 +117,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | For now `how` writes non-secret variables inline, a secret env need (one whose value is named from the vault) is refused for an ssh machine, and p12's per-session token is the one credential that travels | Softov, 2026-10-03, asked "how does a value reach an ssh machine without sitting in a process list?": "as proposed" | 03 |
 | A name on the local Docker runtime holds no dot, so every id parses one way and no stored bare id changes | Softov, 2026-10-10, asked "How should a local docker machine's id be spelled?": "Bare, refuse dots" | 01 |
 | Each runtime answers `state()`, `agents()` and `owner()`, and the plugin stops reading Docker's `inspect` record; Docker answers them from its record | Softov, 2026-10-10, asked "How should an ssh machine answer?" about callers that read `inspect` in Docker's shape: "Typed runtime methods" | 02 |
+| Each runtime also answers `parts()`; ssh answers that it mounts none, so no part need is checked on a box | (defaulted: the same typed-method answer, found in task 06 when every agent with a part need was refused on the box) | 06 |
 | The ssh runtime takes a `pollSeconds` option: unset, only a listing moves the meter; set, a timer checks each machine over ssh at that interval | Softov, 2026-10-10, asked "How should an ssh machine's up time be metered?": "Configurable, off by default" | 02 |
 
 ## Proposed architecture
@@ -136,8 +139,8 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | [03 - A session on an ssh machine runs nested over ssh](task-03-a-session-on-an-ssh-machine-runs-nested.md) | done | 02, container 04 task 17 |
 | [04 - The ssh fixture and the tests](task-04-the-ssh-fixture-and-tests.md) | done | 01 |
 | [05 - A restart of this host leaves a nested session to resume](task-05-restart-leaves-nested-session-to-resume.md) | done | 03 |
-| [06 - dev02, set up by hand, runs a session](task-06-dev02-runs-a-session.md) | todo | 04 |
-| [07 - Docs](task-07-docs.md) | todo | 06 |
+| [06 - dev02, set up by hand, runs a session](task-06-dev02-runs-a-session.md) | done | 04 |
+| [07 - Docs](task-07-docs.md) | done | 06 |
 
 ## Risks and tradeoffs
 
@@ -148,17 +151,17 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 
 ## Resume state
 
-- **Done so far:** tasks 01 to 05 are done; 06 is a run by hand on dev02, and 07 waits on it. Four reads of Docker's record wait in [deferred.md](deferred.md).
-- **Next action:** [task-06-dev02-runs-a-session.md](task-06-dev02-runs-a-session.md) by hand, then task 07.
+- **Done so far:** every task is done. Task 06 ran 2026-10-18 from a Windows host to a Debian 13 VM listed as `ssh.deb`, not dev02. It fixed six bugs on the way, and its Resume has the run. Four reads of Docker's record wait in [deferred.md](deferred.md).
+- **Next action:** run `pnpm test` on Linux for branch `windows/container-05-p9`, then write `implemented.md`, set `status: built` and update the index row. The Windows run cannot answer that gate: the computer suite fails 144 cases there with and without this branch.
 - **Watch out for:** `ssh:dev02` is not a usable id, because `new URL('computer://ssh:dev02')` reads the colon as a port, so the separator is a dot; a policy matches a runtime with `computer: ["ssh.*"]`; a local docker name that holds a dot is refused at create; p8, p10 and p11 spell their ids through task 01's functions; container/04 tasks 11 (resume by id), 14 (the inner working directory), 15 (close waits for dispose) and 17 (a backend names its plugin) must land first, or a nested session on the box starts in a path the box does not have and never resumes; container/04 task 15 makes close wait for `disposeSession`, which task 05 here must not undo for a session that is ending because this host is stopping; claude/15 loads a plugin once with presets as variants, so the box's ahpd needs the same plugin options to serve a preset.
 
 ## Final verification checklist
 
-- [ ] `computer://ssh.dev02` is listed, and a session there answers a turn run by dev02's ahpd.
-- [ ] A Claude session and an ACP session on the ssh machine both run nested.
-- [ ] `ps` on this host shows no secret value while a session runs on dev02.
-- [ ] After `ahpd restart`, the session on dev02 continues its conversation.
-- [ ] dev02's up time as an ssh machine is written as stretches charged to `root:<host>`, closed when it stops answering.
-- [ ] A body asking for `runtime: "ssh"` is refused with a sentence: an ssh machine is listed, never made.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green.
-- [ ] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.
+- [x] `computer://ssh.dev02` is listed, and a session there answers a turn run by dev02's ahpd. (Run on `ssh.deb`, a Debian 13 VM, 2026-10-18.)
+- [x] A Claude session and an ACP session on the ssh machine both run nested. (ACP from a client that pushes trust; `@ahpd/web` 0.4.0 pushes none.)
+- [x] `ps` on this host shows no secret value while a session runs on dev02.
+- [x] After `ahpd restart`, the session on dev02 continues its conversation.
+- [x] dev02's up time as an ssh machine is written as stretches charged to `root:<host>`, closed when it stops answering. (Seen closed when the daemon stopped.)
+- [x] A body asking for `runtime: "ssh"` is refused with a sentence: an ssh machine is listed, never made.
+- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green. (`typecheck` and `boundary` green on Windows; `pnpm test` waits for Linux.)
+- [x] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

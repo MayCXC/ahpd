@@ -308,6 +308,59 @@ Each shipped `@ahpd/agent-acp` preset brings a `machine` block: the part its CLI
 
 A key is never in the shipped block: a person fills its variable in their own preset's `machine.env`, and a `$secret` there is read when the machine is made and passed by name on each command.
 
+## ssh machines
+
+A box that already runs ahpd is listed in the plugin's `ssh` option and reached over ssh.
+This host never makes, starts, stops or removes one: it lists it, runs commands on it, and starts a host on it for each session.
+
+```json
+{ "plugins": [{ "name": "@ahpd/computer", "options": { "ssh": { "machines": {
+  "deb": {
+    "destination": "me@box.example",
+    "workdir": "/home/me/work",
+    "host": ["sh", "-c", ". \"$HOME/.keys\" && exec ahpd \"$@\"", "ahpd"]
+  }
+} } } }] }
+```
+
+| Option | What it does |
+| --- | --- |
+| `ssh.command` | The program that reaches a box. `ssh` when absent. |
+| `ssh.args` | Arguments before its own, for a wrapper or a jump host. |
+| `ssh.connectTimeout` | Seconds ssh is given to reach a box. 10 when absent. |
+| `ssh.pollSeconds` | Seconds between checks of each box. Absent, only a listing moves the up-time meter. |
+| `ssh.machines.<name>.destination` | `user@host`, or a name from ssh's own config. |
+| `ssh.machines.<name>.port` | The port, when it is not the one ssh would use. |
+| `ssh.machines.<name>.identity` | The private key, when ssh would not pick one itself. |
+| `ssh.machines.<name>.workdir` | Where a command and a session start on the box. The login directory when absent. |
+| `ssh.machines.<name>.host` | The command that starts a host on the box. `["ahpd"]` when absent. |
+| `ssh.machines.<name>.agents` | The agents the box is prepared for. A session of another agent is refused. |
+
+The entry `deb` is the machine `computer://ssh.deb`.
+An id is `<runtime>.<name>`, and a machine on the local Docker keeps a bare name with no dot.
+A policy names every ssh machine with `computer: ["ssh.*"]`.
+
+### What the box needs
+
+- ahpd at this host's version, and the plugins of the agents it serves, each configured in the box's own `config.json`. The host on the box loads a plugin with the options its own file gives it, so an ACP load's `presets` and cofold's `model` live there.
+- `ahpd` on the `PATH` of a non-interactive login, which a Node installed by nvm is not. Otherwise name its full path in `host`.
+- Its own model credentials. Nothing is sent from this host: `host` above sources a file on the box, because a non-interactive ssh reads no profile.
+- This host's key in `authorized_keys`, and the box's host key known to this host. Every call passes `BatchMode=yes`, so a password prompt or an unknown host key fails with ssh's own sentence.
+
+### What runs there
+
+Every session on an ssh machine runs nested, whatever its backend: `<host> --stdio --plugin <the agent's plugin>` on the box, over one `ssh -T`.
+The session's folder there is the machine's `workdir`, written as the box's own path.
+An ACP agent runs only in a folder the person trusts: the folder inside is trusted when their client trusts the session's folder on this host.
+A restart of this host leaves the session on the box, and the next turn resumes it there.
+
+### What an ssh machine cannot do
+
+- It is never made: a create that names `"runtime": "ssh"` is refused.
+- It has no state to set: start, stop and restart are refused.
+- It takes no parts and no bind mounts, and a value named from the vault is refused in a command, since ssh carries a variable inside the remote command.
+- Its up time is charged to the host, `root:<host>`, as stretches that open when a listing finds it reachable and close when one finds it gone or the daemon stops.
+
 ## Profiles
 
 A profile is a named set of machine settings in the plugin options:

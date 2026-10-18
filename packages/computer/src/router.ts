@@ -173,6 +173,7 @@ export const routed = (
     inspect: (id) => about(id, (runtime, name) => runtime.inspect(name)),
     state: (id) => about(id, (runtime, name) => runtime.state(name)),
     agents: (id) => about(id, (runtime, name) => runtime.agents(name)),
+    parts: (id) => about(id, (runtime, name) => runtime.parts(name)),
     owner: (id) => about(id, (runtime, name) => runtime.owner(name)),
     how: (id, asked) => about(id, (runtime, name) => runtime.how(name, asked)),
     hostCommand: (id) => about(id, (runtime, name) => runtime.hostCommand(name)),

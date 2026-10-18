@@ -1,10 +1,10 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
-import { uriOf } from '../src/fileuri.js';
+import { posixUriOf, uriOf } from '../src/fileuri.js';
 import { createPeer, receive } from '../src/rpc.js';
 import { nestedAgent } from '../src/nested.js';
 import { fileSessions } from '../src/sessions.js';
@@ -852,12 +852,46 @@ it('the inner session works at the path the folder has inside the machine', asyn
     plugins: ['@ahpd/agent-cofold'],
     start: async () => ({ host: host.proc, workingDirectory: '/workspaces/app/x' }),
     timeoutMs: 500,
-  }).create(start(emit, '/srv/app/x'));
+  }).create(start(emit, resolve('/srv/app/x')));
   await until(() => created(host) !== undefined);
-  expect(created(host)?.params.workingDirectories).toEqual([uriOf('/workspaces/app/x')]);
-  // A client outside still reads the folder it named.
-  expect(session.workingDirectories()).toEqual([uriOf('/srv/app/x')]);
+  // The folder inside is the machine's own POSIX path, whatever this host is:
+  // a Windows host must not put its drive in front of it.
+  expect(created(host)?.params.workingDirectories).toEqual([posixUriOf('/workspaces/app/x')]);
+  // A client outside still reads the folder it named, a path on this host.
+  expect(session.workingDirectories()).toEqual([uriOf(resolve('/srv/app/x'))]);
   session.close();
+});
+
+it('carries this host trust in the session folder to the folder inside, and only then', async () => {
+  /** The trust pushes a scripted host was sent, in order. */
+  const pushed = (host: ReturnType<typeof scripted>): unknown[] => host.messages
+    .filter((message) => message.method === 'dispatchAction' && (message.params?.action as Bag | undefined)?.type === 'root/configChanged')
+    .map((message) => ((message.params?.action as Bag).config as Bag).workspaceTrust);
+
+  const trusted = serving([PROVIDER]);
+  const one = nestedAgent(backend(), {
+    plugins: ['@ahpd/agent-acp'],
+    start: async () => ({ host: trusted.proc, workingDirectory: '/home/me/work' }),
+    timeoutMs: 500,
+  }).create({ ...start(recorder().emit, '/srv/app/x'), trusted: (folder: string) => folder === '/srv/app/x' } as Start);
+  await until(() => created(trusted) !== undefined);
+  // The host inside reads trust from its client, which is this proxy: the one
+  // folder the session works in there, and it is pushed before the create.
+  expect(pushed(trusted)).toEqual([{ enabled: true, trustedUris: ['file:///home/me/work'] }]);
+  const order = trusted.messages.map((message) => message.method);
+  expect(order.indexOf('dispatchAction')).toBeLessThan(order.indexOf('createSession'));
+  one.close();
+
+  // A folder nobody here vouched for vouches for nothing inside either.
+  const untrusted = serving([PROVIDER]);
+  const two = nestedAgent(backend(), {
+    plugins: ['@ahpd/agent-acp'],
+    start: async () => ({ host: untrusted.proc, workingDirectory: '/home/me/work' }),
+    timeoutMs: 500,
+  }).create({ ...start(recorder().emit, '/srv/app/x'), trusted: () => false } as Start);
+  await until(() => created(untrusted) !== undefined);
+  expect(pushed(untrusted)).toEqual([]);
+  two.close();
 });
 
 it('a variant the inner host does not serve ends the session naming it, and an agent it serves is created there', async () => {
@@ -1016,6 +1050,10 @@ const madeAndStopped = async (dir: string, port: ReturnType<typeof scriptedPort>
   const first = await restartable(dir, port.computers);
   await first.client.handle({ method: 'createSession', params: { channel: 'ahp-session:/kept', provider: PROVIDER, config: { computer: 'computer://box' } } });
   await until(() => port.read().length > 0, 1000);
+  // And the copy inside, which the proxy's subscribe writes a moment after the
+  // create: a close that won that race left the machine holding nothing, and
+  // every case here reads what the machine holds.
+  await until(() => port.stored().length > 0, 1000);
   await first.client.handle({ method: 'dispatchAction', params: { channel: 'ahp-session:/kept', clientSeq: 1, action: { type: 'session/titleChanged', title: 'In the box' } } });
   await first.host.close();
 };

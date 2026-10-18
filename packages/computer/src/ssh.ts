@@ -180,6 +180,9 @@ const ran = (options: SshOptions, args: string[], timeout: number): Promise<Ran>
   const child = spawn(options.command ?? 'ssh', [...(options.args ?? []), ...args], {
     stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, ...(options.env ?? {}) },
+    // On Windows a daemon has no console, so each `ssh.exe` would open a
+    // window of its own for every listing and check.
+    windowsHide: true,
   });
   let stdout = '';
   let stderr = '';
@@ -349,6 +352,13 @@ export const sshRuntime = (options: SshOptions): ComputerRuntime => {
       const machine = machines[id];
       return machine === undefined ? undefined : machine.agents ?? [];
     },
+
+    /*
+     * No parts: they are images mounted when a machine is made, and a box is
+     * listed rather than made. Its ahpd and its agents are the ones installed
+     * on it, so there is nothing for an agent's part need to be checked against.
+     */
+    parts: async () => undefined,
 
     /*
      * Nobody here made the box, and nothing of ours is on it.

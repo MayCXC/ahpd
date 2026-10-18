@@ -1,5 +1,5 @@
 import { realpathSync } from 'node:fs';
-import { posix } from 'node:path';
+import { basename, dirname, isAbsolute, join, parse, sep } from 'node:path';
 import { localPath, uriOf } from '../fileuri.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
@@ -31,7 +31,14 @@ import type { Bag } from '../types/common.js';
  * The root keeps its own, because a root stripped of it is the empty string
  * and then nothing is under it.
  */
-const bare = (path: string): string => (path.length > 1 && path.endsWith('/') ? path.replace(/\/+$/, '') : path);
+const bare = (path: string): string => (path === parse(path).root ? path : path.replace(/[\\/]+$/, ''));
+
+/**
+ * A settled path as two folders are compared: Windows reads `C:\Users\Me` and
+ * `c:\users\me` as one folder, and a comparison by text would trust neither
+ * spelling for the other.
+ */
+const compared = (path: string): string => (process.platform === 'win32' ? path.toLowerCase() : path);
 
 /**
  * A path as the folder it names: absolute, and read the way the filesystem
@@ -49,7 +56,8 @@ const bare = (path: string): string => (path.length > 1 && path.endsWith('/') ? 
  * folder this host can enter.
  */
 const settled = (path: string): string | undefined => {
-  if (path === '' || !path.startsWith('/')) return undefined;
+  // Absolute by this system's own rules: `C:\Users\me` on Windows, `/home/me` elsewhere.
+  if (path === '' || !isAbsolute(path)) return undefined;
   let there = path;
   const beyond: string[] = [];
   for (;;) {
@@ -57,12 +65,12 @@ const settled = (path: string): string | undefined => {
       // The part that is there, followed, with the part that is not put back
       // on it: `link/not-yet` is read through `link` rather than beside it,
       // which reading the whole path as written would get wrong.
-      return bare(posix.join(realpathSync(there), ...beyond));
+      return bare(join(realpathSync(there), ...beyond));
     }
     catch {
-      const above = posix.dirname(there);
+      const above = dirname(there);
       if (above === there) return bare(there);
-      beyond.unshift(posix.basename(there));
+      beyond.unshift(basename(there));
       there = above;
     }
   }
@@ -88,19 +96,20 @@ const folderOf = (entry: string): string | undefined => {
 
 /** Whether `folder` is `parent` itself or somewhere under it, path by path. */
 const under = (folder: string, parent: string): boolean => {
-  const one = bare(folder);
-  const two = bare(parent);
+  const one = compared(bare(folder));
+  const two = compared(bare(parent));
   if (one === two) return true;
   // A parent that is the root already ends in the separator the comparison
   // needs, and one that is not gets it - so `/ab` is a sibling of `/a` and
   // never one of its children, which is what a bare `startsWith` would say.
-  return one.startsWith(two.endsWith('/') ? two : `${two}/`);
+  return one.startsWith(two.endsWith(sep) ? two : `${two}${sep}`);
 };
 
 /** Whether two paths name the same folder, once both are settled. */
 export const sameFolder = (one: string, two: string): boolean => {
   const left = settled(one);
-  return left !== undefined && left === settled(two);
+  const right = settled(two);
+  return left !== undefined && right !== undefined && compared(left) === compared(right);
 };
 
 /**

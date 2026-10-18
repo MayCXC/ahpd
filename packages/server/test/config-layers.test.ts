@@ -100,6 +100,27 @@ describe('the layers', () => {
   });
 });
 
+describe('a --plugin the file also lists', () => {
+  it('takes the options and grants, and leaves the rest of the file out', () => {
+    write(user, {
+      plugins: [
+        { name: '@ahpd/agent-acp', options: { presets: { 'pi-acp': { command: 'pi-acp' } } }, grants: ['session:read'], enabled: false },
+        { name: '@ahpd/agent-cofold', options: { model: 'm' } },
+      ],
+    });
+    /*
+     * How a nested host is started: `ahpd --stdio --plugin <each>`. The flag
+     * picks the plugins, and the box's file still says how each is set up, so
+     * an ACP load keeps the presets it cannot run without. Named for this run,
+     * it runs even where the file turned it off.
+     */
+    expect(optionsFrom({ plugins: ['@ahpd/agent-acp', './not-in-the-file'] }).plugins).toEqual([
+      { name: '@ahpd/agent-acp', options: { presets: { 'pi-acp': { command: 'pi-acp' } } }, grants: ['session:read'] },
+      './not-in-the-file',
+    ]);
+  });
+});
+
 describe('a relative path', () => {
   it('in the $AHPD_CONFIG file resolves against that file\'s directory', () => {
     write(environment, {
