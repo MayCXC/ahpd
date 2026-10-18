@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, expect, it, vi } from 'vitest';
+import { uriOf } from '@ahpd/sdk';
 import type { Listed } from '@ahpd/sdk';
 
 /*
@@ -81,7 +82,7 @@ it('answers a row for one id without listing anything', async () => {
     id: 'two', title: `A session in ${TWO}`,
     createdAt: new Date(1_800_000_000_000).toISOString(),
     modifiedAt: new Date(1_800_000_000_000).toISOString(),
-    workingDirectories: [`file://${TWO}`],
+    workingDirectories: [uriOf(TWO)],
   });
 });
 
@@ -146,7 +147,7 @@ const withBot = (): void => {
 it('answers a session in the given folder outside the paths, asking there first', async () => {
   withBot();
   const row = await agent().find?.('bot', { workingDirectory: BOT });
-  expect(row).toMatchObject({ id: 'bot', workingDirectories: [`file://${BOT}`] });
+  expect(row).toMatchObject({ id: 'bot', workingDirectories: [uriOf(BOT)] });
   expect(sdk.asked).toEqual([{ id: 'bot', dir: BOT }]);
 });
 
@@ -160,7 +161,7 @@ it('falls back to the paths when the given folder does not exist', async () => {
   stored();
   const gone = join(home, 'gone');
   const row = await agent().find?.('two', { workingDirectory: gone });
-  expect(row).toMatchObject({ id: 'two', workingDirectories: [`file://${TWO}`] });
+  expect(row).toMatchObject({ id: 'two', workingDirectories: [uriOf(TWO)] });
   expect(sdk.asked).toEqual([{ id: 'two', dir: ONE }, { id: 'two', dir: TWO }]);
 });
 

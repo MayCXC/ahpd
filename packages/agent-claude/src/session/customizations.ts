@@ -1,4 +1,5 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { basename, isAbsolute, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { McpServerState } from '@microsoft/agent-host-protocol';
@@ -68,7 +69,7 @@ export function customizationsOf(init: Bag, mcp: unknown[], skills: unknown[] = 
    * path under it will not exist; nothing dereferences it, because a client
    * reads a directory's `children` rather than walking it.
    */
-  const home = process.env.HOME ?? '';
+  const home = homedir();
   const folder = (kind: string): string => uriOf(`${home}/.claude/${kind}`);
   const container = (kind: string, contents: string, children: Bag[]): Bag | undefined =>
     (children.length === 0 ? undefined : {

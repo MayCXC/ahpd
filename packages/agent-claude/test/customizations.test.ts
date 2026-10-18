@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { uriOf } from '@ahpd/sdk';
 import { customizationsOf } from '../src/session.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 
@@ -32,9 +33,19 @@ function withHome(names: string[]): { home: string; restore: () => void } {
   const home = mkdtempSync(join(tmpdir(), 'ahpd-home-'));
   mkdirSync(join(home, '.claude', 'agents'), { recursive: true });
   for (const name of names) writeFileSync(join(home, '.claude', 'agents', `${name}.md`), `---\nname: ${name}\n---\n`);
+  // `os.homedir()` reads `HOME` on POSIX and `USERPROFILE` on Windows.
   const was = process.env.HOME;
+  const wasProfile = process.env.USERPROFILE;
   process.env.HOME = home;
-  return { home, restore: () => { if (was === undefined) delete process.env.HOME; else process.env.HOME = was; rmSync(home, { recursive: true, force: true }); } };
+  process.env.USERPROFILE = home;
+  return {
+    home,
+    restore: () => {
+      if (was === undefined) delete process.env.HOME; else process.env.HOME = was;
+      if (wasProfile === undefined) delete process.env.USERPROFILE; else process.env.USERPROFILE = wasProfile;
+      rmSync(home, { recursive: true, force: true });
+    },
+  };
 }
 
 /** Every agent leaf a listing reported, wherever it put it. */
@@ -190,7 +201,7 @@ describe('where an agent lives', () => {
     try {
       const out = customizationsOf({ agents: [{ name: 'Plan' }] }, []);
       expect(agentNamed(out, 'Plan')).toMatchObject({
-        type: 'agent', uri: `file://${home}/.claude/agents/Plan.md`,
+        type: 'agent', uri: uriOf(join(home, '.claude', 'agents', 'Plan.md')),
       });
     } finally { restore(); }
   });
@@ -215,7 +226,7 @@ describe('where an agent lives', () => {
         { agents: [{ name: 'acme:scribe' }, { name: 'acme:ghost' }] }, [], [], undefined,
         [{ name: 'acme', path: root }],
       );
-      expect(agentNamed(out, 'scribe')).toMatchObject({ uri: `${root}/agents/scribe.md` });
+      expect(agentNamed(out, 'scribe')).toMatchObject({ uri: join(root, 'agents', 'scribe.md') });
       expect(agentNamed(out, 'ghost')).toMatchObject({ uri: 'claude-internal:/agent/ghost' });
     } finally { restore(); rmSync(root, { recursive: true, force: true }); }
   });

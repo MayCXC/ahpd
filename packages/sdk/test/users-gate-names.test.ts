@@ -1,4 +1,5 @@
 import { expect, it } from 'vitest';
+import { uriOf } from '../src/fileuri.js';
 import { ROOT } from '../src/host.js';
 import { memorySessions } from '../src/sessions.js';
 import { memoryAutomations } from '../src/automations.js';
@@ -347,7 +348,7 @@ it('keeps every family of action to its own kind of channel', async () => {
     terminals: shellTerminals(),
   });
   const admin = await withRole(made, 'a');
-  const definition = { title: 'nightly', enabled: true, message: { text: 'review' }, session: { provider: 'claude', workingDirectories: [`file://${root}`] }, triggers: [] };
+  const definition = { title: 'nightly', enabled: true, message: { text: 'review' }, session: { provider: 'claude', workingDirectories: [uriOf(root)] }, triggers: [] };
   await admin.send('ahp-automations://', { type: 'automation/createRequested', resource: 'ahp-automation:/n', definition });
   expect(admin.refused()).toEqual([]);
   expect(store.get('ahp-automation:/n')).toBeDefined();

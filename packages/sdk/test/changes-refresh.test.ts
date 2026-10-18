@@ -8,7 +8,7 @@ import { changesetReducer } from '@microsoft/agent-host-protocol';
 import { gitChanges } from '../src/changes.js';
 import { gitBranches } from '../src/repo/git.js';
 import { createHost } from '../src/host.js';
-import { fileResources } from '../src/resources.js';
+import { fileResources, uriOf } from '../src/resources.js';
 import { shellTerminals } from '../src/terminals.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Listed, Start } from '../src/types/agent.js';
@@ -355,7 +355,7 @@ it('moves the changeset when a client writes a file through the host', async () 
 
   await client.handle({
     method: 'resourceWrite',
-    params: { uri: `file://${dir}/fresh.txt`, data: 'new\n', encoding: 'utf-8' },
+    params: { uri: uriOf(join(dir, 'fresh.txt')), data: 'new\n', encoding: 'utf-8' },
   });
   await waitFor(() => channelActions(p, CHANGESET).some((one) => JSON.stringify(one.files ?? '').includes('fresh.txt')));
 });
@@ -491,7 +491,7 @@ it('runs no git for tool calls or writes when no client watches the directory', 
   for (let i = 0; i < 10; i++) {
     await client.handle({
       method: 'resourceWrite',
-      params: { uri: `file://${dir}/f${String(i)}.txt`, data: 'x\n', encoding: 'utf-8' },
+      params: { uri: uriOf(join(dir, `f${String(i)}.txt`)), data: 'x\n', encoding: 'utf-8' },
     });
   }
   await settle(10);
@@ -510,7 +510,7 @@ it('moves the changeset when a terminal that committed in the directory exits', 
   const terminal = 'ahp-terminal:/t';
   await client.handle({
     method: 'createTerminal',
-    params: { channel: terminal, claim: { kind: 'client', clientId: 'probe' }, cwd: `file://${dir}` },
+    params: { channel: terminal, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(dir) },
   });
   await client.handle({ method: 'subscribe', params: { channel: terminal } });
   await settle(10);
@@ -820,7 +820,7 @@ const firstOperations = async (dir: string, github?: ReturnType<typeof noRequest
   const p = peer();
   const client = host.accept(p);
   await client.handle(hello);
-  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', workingDirectories: [`file://${dir}`] } });
+  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', workingDirectories: [uriOf(dir)] } });
   const answer = await client.handle({ method: 'subscribe', params: { channel: CHANGESET } }) as {
     snapshot: { state: { files: unknown[]; operations?: { id: string }[] } };
   };
@@ -864,7 +864,7 @@ it('answers a subscribe in a directory that is not a repository, when its facts 
   });
   const client = host.accept(peer());
   await client.handle(hello);
-  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', workingDirectories: [`file://${dir}`] } });
+  await client.handle({ method: 'createSession', params: { channel: URI, provider: 'echo', workingDirectories: [uriOf(dir)] } });
   const answer = await client.handle({ method: 'subscribe', params: { channel: `${URI}/changeset/session` } }) as {
     snapshot: { state: { files: unknown[]; operations?: unknown[] } };
   };
@@ -880,7 +880,7 @@ const storing = (home: string, dir: string): Agent => {
     title: 'Stored',
     createdAt: '2026-09-27T00:00:00.000Z',
     modifiedAt: '2026-09-27T00:00:00.000Z',
-    workingDirectories: [`file://${dir}`],
+    workingDirectories: [uriOf(dir)],
   };
   return { ...base, list: async () => [row] };
 };

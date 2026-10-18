@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, parse } from 'node:path';
 import { echo } from '../../../examples/echo/agent.js';
 import { uriOf } from '../src/resources.js';
 import type { Start } from '../src/types/agent.js';
@@ -63,7 +63,7 @@ describe('where the agent works', () => {
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { workingDirectories: string[] }[];
     };
-    expect(listed.items[0]?.workingDirectories).toEqual(['file:///brb_main/src']);
+    expect(listed.items[0]?.workingDirectories).toEqual([uriOf('/brb_main/src')]);
   });
 
   it('runs one anywhere the client names, the way the reference host does', async () => {
@@ -126,7 +126,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
     const client = await opened();
     const found = await client.handle({
       method: 'resourceList',
-      params: { channel: 'ahp-root://', uri: `file://${REPO}/packages/sdk/src` },
+      params: { channel: 'ahp-root://', uri: uriOf(join(REPO, 'packages', 'sdk', 'src')) },
     }) as { entries: { name: string; type: string }[] };
     expect(found.entries.map((e) => e.name)).toContain('host.ts');
     // A listing in whatever order the filesystem happened to return is one
@@ -139,7 +139,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
     const client = await opened();
     const found = await client.handle({
       method: 'resourceRead',
-      params: { channel: 'ahp-root://', uri: `file://${REPO}/packages/server/package.json` },
+      params: { channel: 'ahp-root://', uri: uriOf(join(REPO, 'packages', 'server', 'package.json')) },
     }) as { data: string; encoding: string };
     expect(found.encoding).toBe('utf-8');
     expect(found.data).toContain('"name": "@ahpd/server"');
@@ -151,7 +151,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
     // nothing a list of extensions could know.
     const found = await client.handle({
       method: 'resourceRead',
-      params: { channel: 'ahp-root://', uri: `file://${REPO}/LICENSE` },
+      params: { channel: 'ahp-root://', uri: uriOf(join(REPO, 'LICENSE')) },
     }) as { data: string; encoding: string };
     expect(found.encoding).toBe('utf-8');
     expect(found.data.length).toBeGreaterThan(0);
@@ -165,7 +165,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
       const client = await opened();
       const found = await client.handle({
         method: 'resourceRead',
-        params: { channel: 'ahp-root://', uri: `file://${file}` },
+        params: { channel: 'ahp-root://', uri: uriOf(file) },
       }) as { data: string; encoding: string };
       expect(found.encoding).toBe('base64');
       expect(Buffer.from(found.data, 'base64')).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0xff]));
@@ -182,12 +182,12 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
     // on the connection is the boundary, as on the reference host.
     const found = await client.handle({
       method: 'resourceList',
-      params: { channel: 'ahp-root://', uri: `file://${REPO}/packages/sdk/src/../../../../..` },
+      params: { channel: 'ahp-root://', uri: uriOf(join(REPO, 'packages', 'sdk', 'src', '..', '..', '..', '..', '..')) },
     }) as { entries: { name: string }[] };
     expect(found.entries.length).toBeGreaterThan(0);
     await expect(client.handle({
       method: 'resourceResolve',
-      params: { channel: 'ahp-root://', uri: 'file:///' },
+      params: { channel: 'ahp-root://', uri: uriOf(parse(REPO).root) },
     })).resolves.toMatchObject({ type: 'directory' });
   });
 
@@ -212,10 +212,10 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
     const client = await opened();
     const found = await client.handle({
       method: 'resourceResolve',
-      params: { channel: 'ahp-root://', uri: `file://${REPO}/packages/sdk/src` },
+      params: { channel: 'ahp-root://', uri: uriOf(join(REPO, 'packages', 'sdk', 'src')) },
     }) as { type: string; uri: string };
     expect(found.type).toBe('directory');
-    expect(found.uri).toBe(`file://${REPO}/packages/sdk/src`);
+    expect(found.uri).toBe(uriOf(join(REPO, 'packages', 'sdk', 'src')));
   });
 
   it('serves a write to a connected client without a grant', async () => {
@@ -227,7 +227,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
       // window that could not save was the whole symptom.
       await expect(client.handle({
         method: 'resourceWrite',
-        params: { channel: 'ahp-root://', uri: `file://${where}/written.txt`, data: 'x', encoding: 'utf-8' },
+        params: { channel: 'ahp-root://', uri: uriOf(join(where, 'written.txt')), data: 'x', encoding: 'utf-8' },
       })).resolves.toEqual({});
       expect(readFileSync(join(where, 'written.txt'), 'utf8')).toBe('x');
     } finally {
@@ -252,9 +252,9 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
         method,
         params: {
           channel: 'ahp-root://',
-          uri: `file://${REPO}/x`,
-          source: `file://${REPO}/x`,
-          destination: `file://${REPO}/y`,
+          uri: uriOf(join(REPO, 'x')),
+          source: uriOf(join(REPO, 'x')),
+          destination: uriOf(join(REPO, 'y')),
           data: '',
           encoding: 'utf-8',
         },
@@ -280,7 +280,7 @@ describe('completing an at-sign', () => {
     // A reference rather than the bytes: a completion that carried the file
     // would carry it per keystroke.
     const file = found.items.find((i) => i.insertText === '@packages/sdk/src/host.ts');
-    expect(file?.attachment).toMatchObject({ type: 'resource', uri: `file://${REPO}/packages/sdk/src/host.ts` });
+    expect(file?.attachment).toMatchObject({ type: 'resource', uri: uriOf(join(REPO, 'packages', 'sdk', 'src', 'host.ts')) });
   });
 
   it('answers an encoded attachment URI, so a reader can get the path back', async () => {
@@ -362,7 +362,7 @@ describe('completing a hash sign', () => {
     const file = hashes.items.find((i) => i.insertText === '#packages/sdk/src/host.ts');
     expect(file?.attachment).toMatchObject({
       type: 'resource',
-      uri: `file://${REPO}/packages/sdk/src/host.ts`,
+      uri: uriOf(join(REPO, 'packages', 'sdk', 'src', 'host.ts')),
       label: 'packages/sdk/src/host.ts',
     });
   });
@@ -577,6 +577,13 @@ describe('completing a hash sign', () => {
 });
 
 describe('more than one directory', () => {
+  // Folders the way this system spells them, outside the host's own path.
+  const ONE = join(tmpdir(), 'ahpd-more-one');
+  const TWO = join(tmpdir(), 'ahpd-more-two');
+  const THREE = join(tmpdir(), 'ahpd-more-three');
+  const EXTRA = join(tmpdir(), 'ahpd-more-extra');
+  const ELSEWHERE = join(tmpdir(), 'ahpd-more-elsewhere');
+
   it('advertises that it can, and which slot is fixed', async () => {
     const client = open();
     const result = await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] })) as {
@@ -602,17 +609,17 @@ describe('more than one directory', () => {
       method: 'createSession',
       params: {
         channel: 'ahp-session:/wide', provider: 'claude',
-        workingDirectories: ['file:///home/softov/one', 'file:///home/softov/two'],
+        workingDirectories: [uriOf(ONE), uriOf(TWO)],
       },
     });
     // The first is the process root; the rest are its peers, which the SDK
     // takes at startup as `additionalDirectories`.
-    expect(sessionQueries().at(-1)?.options.cwd).toBe('/home/softov/one');
-    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual(['/home/softov/two']);
+    expect(sessionQueries().at(-1)?.options.cwd).toBe(ONE);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([TWO]);
     const state = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/wide' } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    expect(state.workingDirectories).toEqual(['file:///home/softov/one', 'file:///home/softov/two']);
+    expect(state.workingDirectories).toEqual([uriOf(ONE), uriOf(TWO)]);
   });
 
   it('starts the agent again, resumed, when a directory is added to a running session', async () => {
@@ -628,7 +635,7 @@ describe('more than one directory', () => {
       method: 'dispatchAction',
       params: {
         channel: uri,
-        action: { type: 'session/workingDirectorySet', directory: 'file:///home/softov/extra' },
+        action: { type: 'session/workingDirectorySet', directory: uriOf(EXTRA) },
       },
     });
     await settle();
@@ -641,7 +648,7 @@ describe('more than one directory', () => {
      * place rather than a new one.
      */
     expect(sessionQueries().length).toBe(before + 1);
-    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual(['/home/softov/extra']);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([EXTRA]);
     expect(sessionQueries().at(-1)?.options.resume).toBeDefined();
   });
 
@@ -653,13 +660,13 @@ describe('more than one directory', () => {
     const uri = 'ahp-session:/rooted';
     await client.handle({
       method: 'createSession',
-      params: { channel: uri, provider: 'claude', workingDirectories: ['file:///home/softov/one'] },
+      params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(ONE)] },
     });
     client.handle({
       method: 'dispatchAction',
       params: {
         channel: uri,
-        action: { type: 'session/workingDirectoryRemoved', directory: 'file:///home/softov/one' },
+        action: { type: 'session/workingDirectoryRemoved', directory: uriOf(ONE) },
       },
     });
     await settle();
@@ -688,7 +695,7 @@ describe('more than one directory', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'claude',
-        workingDirectories: ['file:///home/softov/one', 'file:///home/softov/two', 'file:///home/softov/three'],
+        workingDirectories: [uriOf(ONE), uriOf(TWO), uriOf(THREE)],
       },
     });
     return { client, peer: p, uri };
@@ -699,23 +706,23 @@ describe('more than one directory', () => {
     const chat = 'ahp-chat:/narrow';
     await client.handle({
       method: 'createChat',
-      params: { channel: uri, chat, workingDirectories: ['file:///home/softov/one', 'file:///home/softov/three'] },
+      params: { channel: uri, chat, workingDirectories: [uriOf(ONE), uriOf(THREE)] },
     });
     // The first entry is the session's process root and is not a choice; what
     // a chat picks among is the peers, and the CLI takes those at startup.
-    expect(sessionQueries().at(-1)?.options.cwd).toBe('/home/softov/one');
-    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual(['/home/softov/three']);
+    expect(sessionQueries().at(-1)?.options.cwd).toBe(ONE);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([THREE]);
     const state = (await client.handle({ method: 'subscribe', params: { channel: chat } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    expect(state.workingDirectories).toEqual(['file:///home/softov/one', 'file:///home/softov/three']);
+    expect(state.workingDirectories).toEqual([uriOf(ONE), uriOf(THREE)]);
   });
 
   it('refuses to open a chat somewhere the session is not', async () => {
     const { client, uri } = await wide();
     await expect(client.handle({
       method: 'createChat',
-      params: { channel: uri, chat: 'ahp-chat:/stray', workingDirectories: ['file:///home/softov/elsewhere'] },
+      params: { channel: uri, chat: 'ahp-chat:/stray', workingDirectories: [uriOf(ELSEWHERE)] },
     })).rejects.toThrow(/is not a working directory of/);
   });
 
@@ -724,31 +731,31 @@ describe('more than one directory', () => {
     const chat = 'ahp-chat:/narrow';
     await client.handle({
       method: 'createChat',
-      params: { channel: uri, chat, workingDirectories: ['file:///home/softov/one', 'file:///home/softov/three'] },
+      params: { channel: uri, chat, workingDirectories: [uriOf(ONE), uriOf(THREE)] },
     });
     const before = sessionQueries().length;
     client.handle({
       method: 'dispatchAction',
-      params: { channel: chat, action: { type: 'chat/workingDirectorySet', directory: 'file:///home/softov/two' } },
+      params: { channel: chat, action: { type: 'chat/workingDirectorySet', directory: uriOf(TWO) } },
     });
     await settle();
     // One CLI, not the session's every chat: the session's own set has not
     // moved, so the default chat is still running where it was.
     expect(sessionQueries().length).toBe(before + 1);
     expect(sessionQueries().at(-1)?.options.additionalDirectories)
-      .toEqual(['/home/softov/three', '/home/softov/two']);
+      .toEqual([THREE, TWO]);
 
     client.handle({
       method: 'dispatchAction',
-      params: { channel: chat, action: { type: 'chat/workingDirectoryRemoved', directory: 'file:///home/softov/three' } },
+      params: { channel: chat, action: { type: 'chat/workingDirectoryRemoved', directory: uriOf(THREE) } },
     });
     await settle();
-    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual(['/home/softov/two']);
+    expect(sessionQueries().at(-1)?.options.additionalDirectories).toEqual([TWO]);
 
     // And the same rule as `createChat`, said rather than silently widening.
     client.handle({
       method: 'dispatchAction',
-      params: { channel: chat, action: { type: 'chat/workingDirectorySet', directory: 'file:///home/softov/elsewhere' } },
+      params: { channel: chat, action: { type: 'chat/workingDirectorySet', directory: uriOf(ELSEWHERE) } },
     });
     await settle();
     const refused = p.notes
@@ -796,7 +803,7 @@ describe('the repository a session\'s machine is handed', () => {
     const start = async (folder: string, computer = 'disposable:box') => {
       await client.handle({
         method: 'createSession',
-        params: { channel: 'ahp-session:/git', provider: 'echo', workingDirectories: [`file://${folder}`], config: { computer } },
+        params: { channel: 'ahp-session:/git', provider: 'echo', workingDirectories: [uriOf(folder)], config: { computer } },
       });
       await settle();
     };

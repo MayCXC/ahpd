@@ -28,12 +28,12 @@ beforeEach(resetSdk);
  */
 describe('a command typed into the conversation', () => {
   const shelled = async () => {
-    const host = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     const uri = 'ahp-session:/banged';
-    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: ['file:///tmp'] } });
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', workingDirectories: [uriOf(tmpdir())] } });
     const chatUri = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { defaultChat: string } };
     }).snapshot.state.defaultChat;
@@ -55,13 +55,13 @@ describe('a command typed into the conversation', () => {
     const first = await withShell.client.handle(hello(['0.9.0'])).catch(() => undefined);
     expect(first).toBeUndefined(); // already introduced
 
-    const bare = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })] }).accept(peer());
+    const bare = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })] }).accept(peer());
     const said = await bare.handle(hello(['0.9.0'])) as { terminalCommandPrefix?: string };
     // Absence is the protocol's own way of saying the shorthand is
     // unsupported, and a host with no shell cannot support it.
     expect(said.terminalCommandPrefix).toBeUndefined();
 
-    const able = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], ...machine() }).accept(peer());
+    const able = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })], ...machine() }).accept(peer());
     const also = await able.handle(hello(['0.9.0'])) as { terminalCommandPrefix?: string };
     expect(also.terminalCommandPrefix).toBe('!');
   });
@@ -200,7 +200,7 @@ describe('a command typed into the conversation', () => {
     // The road the daemon crashed on: a turn for a session nothing was
     // running, resumed on the spot, went to `begin` and the model saw `!ping`.
     sdk.sessions.push({ sessionId: 'on-disk', summary: 'Earlier', lastModified: 1, cwd: '/tmp' });
-    const host = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
@@ -269,14 +269,14 @@ describe('a command typed into the conversation', () => {
 
   it('refuses a command when the backend cannot hold one, rather than asking it', async () => {
     const { echo } = await import('../../../examples/echo/agent.js');
-    const host = createHost({ path: '/tmp', agents: [echo({ path: '/tmp', pace: 0 })], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [echo({ path: tmpdir(), pace: 0 })], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0']));
     const uri = 'ahp-session:/no-command';
     await client.handle({
       method: 'createSession',
-      params: { channel: uri, provider: 'echo', workingDirectories: ['file:///tmp'] },
+      params: { channel: uri, provider: 'echo', workingDirectories: [uriOf(tmpdir())] },
     });
     const chatUri = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { defaultChat: string } };
@@ -301,7 +301,7 @@ describe('a command typed into the conversation', () => {
 
 describe('a shell on this machine', () => {
   const opened = async () => {
-    const host = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
@@ -326,7 +326,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/one';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     await client.handle({ method: 'subscribe', params: { channel: uri } });
     client.handle({
@@ -342,7 +342,7 @@ describe('a shell on this machine', () => {
     await client.handle({
       method: 'createTerminal',
       params: {
-        channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp',
+        channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()),
         cols: 132, rows: 43, name: 'the one being cleared',
       },
     });
@@ -374,7 +374,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/two';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     const found = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { isPty: boolean; supportsCommandDetection: boolean } };
@@ -391,7 +391,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/three';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     const listed = actions(p, 'ahp-root://').filter((e) => e.action.type === 'root/terminalsChanged').at(-1);
     expect((listed?.action.terminals as { resource: string }[]).map((t) => t.resource)).toEqual([uri]);
@@ -460,7 +460,7 @@ describe('a shell on this machine', () => {
     // connection token is what decides who gets either, not the directory.
     await expect(client.handle({
       method: 'createTerminal',
-      params: { channel: 'ahp-terminal:/four', claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///etc' },
+      params: { channel: 'ahp-terminal:/four', claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     })).resolves.toBeDefined();
   });
 
@@ -469,7 +469,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/five';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     await client.handle({ method: 'subscribe', params: { channel: uri } });
     client.handle({
@@ -513,7 +513,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/six';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } });
     client.handle({
@@ -538,7 +538,7 @@ describe('a shell on this machine', () => {
     const uri = 'ahp-terminal:/alive';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     const found = await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { lifecycle?: { status?: string }; exitCode?: number } };
@@ -568,12 +568,12 @@ describe('a shell on this machine', () => {
 describe('a terminal a backend opens', () => {
   /** A backend that opens one through the host as it starts. */
   const opening = (held: OpenedTerminal[]): Agent => {
-    const inner = claude({ paths: ['/tmp'] });
+    const inner = claude({ paths: [tmpdir()] });
     return {
       ...inner,
       create: (start) => {
         const opened = start.terminals?.open({
-          cwd: '/tmp',
+          cwd: tmpdir(),
           command: 'sleep',
           args: ['30'],
           name: 'backend shell',
@@ -586,7 +586,7 @@ describe('a terminal a backend opens', () => {
 
   it('lists it on the root channel, and takes it off when released', async () => {
     const held: OpenedTerminal[] = [];
-    const host = createHost({ path: '/tmp', agents: [opening(held)], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [opening(held)], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
@@ -616,14 +616,14 @@ describe('a terminal a backend opens', () => {
 
 describe('interrupting a terminal', () => {
   it('turns ^C into a signal, because there is no line discipline to', async () => {
-    const host = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], ...machine() });
+    const host = createHost({ path: tmpdir(), agents: [claude({ paths: [tmpdir()] })], ...machine() });
     const p = peer();
     const client = host.accept(p);
     await client.handle(hello(['0.9.0']));
     const uri = 'ahp-terminal:/int';
     await client.handle({
       method: 'createTerminal',
-      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+      params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(tmpdir()) },
     });
     await client.handle({ method: 'subscribe', params: { channel: uri } });
 
