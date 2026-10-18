@@ -10,6 +10,7 @@
 import { appendFileSync, mkdirSync, readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { refusalReason } from './host.js';
+import { periodOf, shown, zoneOf } from './periods.js';
 import { absentResource, asFile, EPOCH, splitResource, type At as Split } from './records.js';
 import { INVALID_PARAMS, RpcError } from './rpc.js';
 import { mayRead, membership } from './scopes.js';
@@ -106,6 +107,15 @@ export interface FileUsageOptions {
    * the sessions and the automations.
    */
   folder: string;
+  /**
+   * The IANA zone the totals are kept in, as `America/Sao_Paulo` writes it.
+   *
+   * Absent is the system's own zone. A record is kept under the local day it
+   * happened on, so a period summed over that zone holds the records that
+   * happened inside it and no hours of the period before. `run.ts` gives the
+   * same zone the `usage:` scheme cuts its periods in.
+   */
+  timezone?: string;
   /** Somewhere to say that a record could not be kept or a line could not be read. */
   onProblem?(message: string): void;
 }
@@ -122,8 +132,10 @@ export interface FileUsageOptions {
  * before a call and debited as usage arrives, so the answer has to be a running
  * one rather than a read of the month's file. A day is the granularity, which is
  * exact for the ranges a limit asks about and counts a partly covered day
- * whole. A large install moves the totals into a database plugin, which answers
- * the same calls from the same records.
+ * whole. A day is the local day in `usage.timezone`, so a period summed over
+ * that zone holds the records that happened inside it. A large install moves the
+ * totals into a database plugin, which answers the same calls from the same
+ * records.
  *
  * **The pools and the records behind the totals read the files.** The totals
  * are charged in memory because a limit asks them mid-turn, but a report wants
@@ -140,22 +152,44 @@ export interface FileUsageOptions {
 export function fileUsage(options: FileUsageOptions): Usage {
   const folder = options.folder;
   const told = (message: string): void => { options.onProblem?.(message); };
+  // Resolved once, where the store is built, so every line it keeps and every
+  // range it sums is cut in one zone and a bad one is said once.
+  const zone = zoneOf(options.timezone, told);
 
   /** What each pool has been charged on each day, as `pool` then `YYYY-MM-DD`. */
   const held = new Map<string, Map<string, Measured>>();
+
+  /** The day an instant falls on in the store's zone, which is the day it is kept under. */
+  const todayIn = (at: Date): string => shown(zone, at).toISOString().slice(0, 10);
+
+  /**
+   * The zoned day a date or instant falls on, or nothing when it is not one.
+   *
+   * A bare date already names a day in the zone a range is read over and is
+   * taken as written; an instant names a moment, which is that moment's wall
+   * clock in the store's zone. Treating a date as midnight UTC and shifting it
+   * would put a client's `2026-09-29` on the day before in every zone west of
+   * Greenwich.
+   */
+  const dayIn = (at: string): string | undefined => {
+    if (!DAY.test(at)) return undefined;
+    if (at.length === 10) return at;
+    const when = new Date(at);
+    return Number.isNaN(when.getTime()) ? undefined : todayIn(when);
+  };
 
   /**
    * The day a record falls on, or nothing when it names no instant.
    *
    * A record is kept because of when it happened: that is what puts it in a
-   * month and what a total is summed by. One that names no day is reported and
-   * kept nowhere, which is the only answer that is not a charge in the wrong
-   * place.
+   * month and what a total is summed by. The day is the wall clock in the
+   * store's zone, so a period summed over it holds the records that happened
+   * inside the period and no hours of the period before. One that names no day
+   * is reported and kept nowhere, which is the only answer that is not a charge
+   * in the wrong place.
    */
-  const dayOf = (entry: UsageEntry): string | undefined => {
-    const at = typeof entry.at === 'string' ? entry.at : '';
-    return DAY.test(at) ? at.slice(0, 10) : undefined;
-  };
+  const dayOf = (entry: UsageEntry): string | undefined =>
+    typeof entry.at === 'string' ? dayIn(entry.at) : undefined;
 
   /** What this record is charged, in the measures a total reports. */
   const measured = (entry: UsageEntry): Measured => {
@@ -289,9 +323,6 @@ export function fileUsage(options: FileUsageOptions): Usage {
 
   load();
 
-  /** The day an instant falls on, in UTC, which is the day a line is written under. */
-  const today = (at: Date): string => at.toISOString().slice(0, 10);
-
   return {
     record: (entry) => serialise(() => {
       const day = dayOf(entry);
@@ -299,7 +330,12 @@ export function fileUsage(options: FileUsageOptions): Usage {
         told(`Not keeping a usage record with no readable date: ${String(entry.at)}`);
         return;
       }
-      const file = join(folder, `${day.slice(0, 7)}-${entry.kind}.jsonl`);
+      /*
+       * The file is named by the record's UTC month and not by the day it is
+       * charged under: the day moves with the store's zone, and the files on
+       * disk do not.
+       */
+      const file = join(folder, `${new Date(entry.at).toISOString().slice(0, 7)}-${entry.kind}.jsonl`);
       try { appendFileSync(file, `${JSON.stringify(entry)}\n`, { mode: 0o600 }); }
       catch (error) { told(`Could not write ${file}: ${error instanceof Error ? error.message : String(error)}`); }
       /*
@@ -320,8 +356,8 @@ export function fileUsage(options: FileUsageOptions): Usage {
          * comparisons. Both ends are days rather than instants, which is the
          * granularity the totals are kept at.
          */
-        const first = DAY.test(from) ? from.slice(0, 10) : '';
-        const last = DAY.test(until) ? until.slice(0, 10) : '';
+        const first = dayIn(from) ?? '';
+        const last = dayIn(until) ?? '';
         for (const [day, charged] of days) {
           if (day < first || day > last) continue;
           addTo(sum, charged);
@@ -339,13 +375,14 @@ export function fileUsage(options: FileUsageOptions): Usage {
     records: async (pool, from, until) => {
       /*
        * The same two day comparisons `total` makes, on the same defaults: the
-       * month's first day and now. A partly covered day counts whole here as it
-       * does there, which is what makes the records behind a period's total the
-       * records that total summed.
+       * first day of the month in the store's zone, and its day now. A partly
+       * covered day counts whole here as it does there, which is what makes the
+       * records behind a period's total the records that total summed.
        */
       const now = new Date();
-      const first = from === undefined ? `${today(now).slice(0, 7)}-01` : DAY.test(from) ? from.slice(0, 10) : '';
-      const last = until === undefined ? today(now) : DAY.test(until) ? until.slice(0, 10) : '';
+      const today = todayIn(now);
+      const first = from === undefined ? `${today.slice(0, 7)}-01` : dayIn(from) ?? '';
+      const last = until === undefined ? today : dayIn(until) ?? '';
       const found: UsageEntry[] = [];
       // The newest month first and each month's lines reversed, which is the
       // order the records were written in. A month holds a file per kind, so
@@ -369,8 +406,8 @@ export function fileUsage(options: FileUsageOptions): Usage {
        * three pools is in three of them, so no sum of pool totals counts it
        * once.
        */
-      const first = DAY.test(from) ? from.slice(0, 10) : '';
-      const last = DAY.test(until) ? until.slice(0, 10) : '';
+      const first = dayIn(from) ?? '';
+      const last = dayIn(until) ?? '';
       const rows = new Map<string, { keys: UsageGroup['keys']; sum: Measured }>();
       for (const name of months()) {
         for (const one of entriesIn(name)) {
@@ -567,74 +604,9 @@ const at = (uri: string): At => {
   return held;
 };
 
-/**
- * One instant as the wall clock in `zone` reads it.
- *
- * A `Date` whose UTC fields are that wall time, so the arithmetic below is
- * ordinary UTC arithmetic on a clock that is not UTC: `Intl` is the only zoned
- * clock this repository holds, and it answers in words rather than in numbers,
- * so the parts are put back together by hand.
- */
-const shown = (zone: string, at: Date): Date => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: zone,
-    hourCycle: 'h23',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-  }).formatToParts(at);
-  const field = (what: Intl.DateTimeFormatPartTypes): number =>
-    Number(parts.find((one) => one.type === what)?.value);
-  return new Date(Date.UTC(field('year'), field('month') - 1, field('day'), field('hour'), field('minute'), field('second')));
-};
-
-/** How far `zone` is from UTC at that instant, in milliseconds east of it. */
-const offsetAt = (zone: string, at: Date): number => shown(zone, at).getTime() - at.getTime();
-
-/**
- * The instant a local calendar day begins.
- *
- * Twice, because a zone that changes its offset at midnight would otherwise put
- * the answer on the wrong side of its own change: the first guess asks what the
- * offset was at local midnight read as UTC, and the second asks again at the
- * instant that gave.
- */
-const startOfDay = (zone: string, local: Date): Date => {
-  const midnight = Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate());
-  const guess = midnight - offsetAt(zone, new Date(midnight));
-  return new Date(midnight - offsetAt(zone, new Date(guess)));
-};
-
-/** The zone the periods are cut in, and what is said about one that cannot be read. */
-const zoneOf = (wanted: string | undefined, told: (message: string) => void): string => {
-  const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  if (wanted === undefined || wanted.trim() === '') return here;
-  try {
-    new Intl.DateTimeFormat('en-US', { timeZone: wanted }).format(new Date());
-    return wanted;
-  } catch {
-    told(`usage.timezone ${wanted} is not a zone this host can read, so usage is cut in ${here}.`);
-    return here;
-  }
-};
-
 export function usageProvider(options: UsageProviderOptions): UsageProvider {
   const store = options.usage;
   const zone = zoneOf(options.timezone, (message) => { options.onProblem?.(message); });
-
-  /** The local day `back` days before the local day `from` falls on. */
-  const earlier = (from: Date, back: number): Date =>
-    new Date(Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate() - back));
-
-  /** The Monday of the local week `local` falls in, which is the week already under way. */
-  const mondayOf = (local: Date): Date => earlier(local, (local.getUTCDay() + 6) % 7);
-
-  /** The first of the local month `local` falls in. */
-  const firstOf = (local: Date): Date =>
-    new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), 1));
 
   /**
    * Whether this reader may see this pool.
@@ -769,9 +741,9 @@ export function usageProvider(options: UsageProviderOptions): UsageProvider {
    * `total` counts whole: the day behind this hour's usage is still in it.
    */
   const spansOf = (now: Date): { day: [string, string]; week: [string, string]; month: [string, string] } => {
-    const local = shown(zone, now);
-    const span = (from: Date): [string, string] => [startOfDay(zone, from).toISOString(), now.toISOString()];
-    return { day: span(local), week: span(mondayOf(local)), month: span(firstOf(local)) };
+    const span = (period: 'day' | 'week' | 'month'): [string, string] =>
+      [periodOf(zone, period, now).from, now.toISOString()];
+    return { day: span('day'), week: span('week'), month: span('month') };
   };
 
   /** A pool's day, week and month. */

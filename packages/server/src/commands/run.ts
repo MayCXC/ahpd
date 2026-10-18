@@ -347,6 +347,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const store = fileUsage({
     folder: join(configDir(), 'usage'),
+    // The same zone the `usage:` scheme cuts its periods in, so the day a total
+    // is kept under and the day it is read over are the same day.
+    ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
     onProblem: (message) => process.stdout.write(`${message}\n`),
   });
   // This daemon's own once a plugin has folded in a store of its own; before

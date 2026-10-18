@@ -72,9 +72,15 @@ const unchecked: Principal = { id: 'the deployment token', roles: [], can: () =>
 const json = async (uri: string, reader?: Principal, provider = usageProvider({ usage: fileUsage({ folder }) })): Promise<any> =>
   JSON.parse((await provider.read(uri, undefined, reader)).data);
 
-/** A store with these records in it, and the provider over it. */
+/**
+ * A store with these records in it, and the provider over it.
+ *
+ * The zone is given to both, as `run.ts` gives it to both: the store keeps its
+ * days in it and the provider cuts its periods in it, and a store cut elsewhere
+ * would be counting different days than the periods it is read over.
+ */
 const over = async (records: (ModelUse | ComputerTime)[], timezone?: string) => {
-  const usage = fileUsage({ folder });
+  const usage = fileUsage({ folder, ...(timezone === undefined ? {} : { timezone }) });
   for (const one of records) await usage.record(one);
   return { usage, provider: usageProvider({ usage, ...(timezone === undefined ? {} : { timezone }) }) };
 };

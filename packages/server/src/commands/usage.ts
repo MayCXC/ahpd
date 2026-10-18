@@ -43,6 +43,9 @@ const storeOf = (
   return {
     store: fileUsage({
       folder: join(configDir(), 'usage'),
+      // The same zone the provider cuts the periods in, so the day a record was
+      // kept under and the day it is read over are the same day.
+      ...(from.usage?.timezone === undefined ? {} : { timezone: from.usage.timezone }),
       onProblem: (line) => { context.error(line); },
     }),
     zone: from.usage?.timezone,

@@ -214,7 +214,9 @@ it('charges a pool computer time as hours', async () => {
 });
 
 it('answers a range by the day it covers, in either store', async () => {
-  const usage = fileUsage({ folder });
+  // The zone is named, because the days a range covers are days in the store's
+  // own zone and this case is written in UTC days.
+  const usage = fileUsage({ folder, timezone: 'UTC' });
   await usage.record(modelUse('2026-10-04T10:00:00.000Z', ['p'], { input: 10 }));
   await usage.record(modelUse('2026-10-20T10:00:00.000Z', ['p'], { input: 30 }));
   await usage.record(modelUse('2026-10-21T10:00:00.000Z', ['p'], { input: 60 }));
@@ -230,7 +232,8 @@ it('answers a range by the day it covers, in either store', async () => {
 });
 
 it('keeps one file per month and kind, and rebuilds the totals from them', async () => {
-  const first = fileUsage({ folder });
+  // The case is written in UTC days, and the month it sums is a UTC month.
+  const first = fileUsage({ folder, timezone: 'UTC' });
   await first.record(modelUse('2026-10-31T23:00:00.000Z', ['p'], { input: 10 }, { cost: { amount: 1, currency: 'usd', from: 'harness' } }));
   await first.record(computerTime('2026-10-31T23:00:00.000Z', 1_800, ['p']));
   await first.record(modelUse('2026-11-01T00:10:00.000Z', ['p'], { input: 40 }));
@@ -238,7 +241,7 @@ it('keeps one file per month and kind, and rebuilds the totals from them', async
   expect(files()).toEqual(['2026-10-computer.jsonl', '2026-10-model.jsonl', '2026-11-model.jsonl']);
 
   // A new store over the same folder, which is what a restart is.
-  const second = fileUsage({ folder });
+  const second = fileUsage({ folder, timezone: 'UTC' });
   expect(await second.total('p', month.from, month.until)).toEqual({ usd: 1, providerUsd: 1, tokens: 10, input: 10, calls: 1, hours: 0.5 });
 
   // A range across the two months sums both files.
@@ -390,7 +393,7 @@ it('answers no records for a pool nothing was charged to', async () => {
 });
 
 it('compares the range at the day, so a partly covered day is answered whole and sums to the total', async () => {
-  const usage = fileUsage({ folder });
+  const usage = fileUsage({ folder, timezone: 'UTC' });
   await usage.record(modelUse('2026-10-04T01:00:00.000Z', ['p'], { input: 10 }));
   await usage.record(modelUse('2026-10-04T23:00:00.000Z', ['p'], { input: 20 }));
   await usage.record(modelUse('2026-10-06T10:00:00.000Z', ['p'], { input: 40 }));
@@ -451,3 +454,77 @@ it('answers this month and the newest of them when the range names no bounds', a
   }
   finally { vi.useRealTimers(); }
 });
+
+/*
+ * The days a store keeps are days in its own zone.
+ *
+ * A period summed over that zone has to hold the records that happened inside
+ * it and no hours of the period before: a limit that counts the wrong hours is
+ * wrong at every reset. America/Campo_Grande is UTC-4, so its Monday begins
+ * four hours after the UTC one.
+ */
+
+/** Sunday the 4th of October, 23:00 in the zone, which is already Monday in UTC. */
+const SUNDAY_EVENING = '2026-10-05T03:00:00.000Z';
+/** Monday the 5th of October, 00:00 in the zone. */
+const MONDAY = '2026-10-05T04:00:00.000Z';
+/** Monday the 5th, 01:00 in the zone. */
+const MONDAY_NIGHT = '2026-10-05T05:00:00.000Z';
+/** The last instant of Sunday the 11th, 23:59:59 in the zone, which ends the week. */
+const SUNDAY_END = '2026-10-12T03:59:59.999Z';
+
+it('keeps a record of Sunday evening out of the week that begins on Monday', async () => {
+  const usage = fileUsage({ folder, timezone: 'America/Campo_Grande' });
+  await usage.record(modelUse(SUNDAY_EVENING, ['p'], { input: 10 }));
+
+  // Sunday the 4th is the day before the Monday the week begins on.
+  expect(await usage.total('p', MONDAY, SUNDAY_END)).toEqual({});
+  // And the Sunday it happened on still holds it.
+  expect(await usage.total('p', '2026-10-04T04:00:00.000Z', '2026-10-05T03:59:59.999Z'))
+    .toEqual({ tokens: 10, input: 10, calls: 1 });
+});
+
+it('keeps a record after Monday midnight in that week and in Monday\'s day', async () => {
+  const usage = fileUsage({ folder, timezone: 'America/Campo_Grande' });
+  await usage.record(modelUse(MONDAY_NIGHT, ['p'], { input: 10 }));
+
+  // One hour after the week began, so it is in the week and in the day.
+  expect(await usage.total('p', MONDAY, SUNDAY_END)).toEqual({ tokens: 10, input: 10, calls: 1 });
+  expect(await usage.total('p', MONDAY, '2026-10-06T03:59:59.999Z')).toEqual({ tokens: 10, input: 10, calls: 1 });
+});
+
+it('names a record\'s file by its UTC month, though it is kept under a local day', async () => {
+  const usage = fileUsage({ folder, timezone: 'America/Campo_Grande' });
+  // Sunday the 1st of November at 03:00 UTC is still Saturday the 31st, 23:00,
+  // in the zone: the file stays in the month the instant is in, on disk.
+  await usage.record(modelUse('2026-11-01T03:00:00.000Z', ['p'], { input: 10 }));
+
+  expect(files()).toEqual(['2026-11-model.jsonl']);
+  const october = ['2026-10-31T04:00:00.000Z', '2026-11-01T03:59:59.999Z'] as const;
+  expect(await usage.total('p', ...october)).toEqual({ tokens: 10, input: 10, calls: 1 });
+  // And a store built again over the folder keeps it under the same day.
+  expect(await fileUsage({ folder, timezone: 'America/Campo_Grande' }).total('p', ...october))
+    .toEqual({ tokens: 10, input: 10, calls: 1 });
+});
+
+it('cuts its days in the system\'s own zone when it is given none', async () => {
+  const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const usage = fileUsage({ folder });
+  await usage.record(modelUse('2026-10-04T01:00:00.000Z', ['p'], { input: 10 }));
+
+  const day = ['2026-10-04T00:00:00.000Z', '2026-10-04T23:59:59.999Z'] as const;
+  expect(await usage.total('p', ...day)).toEqual(await fileUsage({ folder, timezone: here }).total('p', ...day));
+});
+
+it.skipIf(Intl.DateTimeFormat().resolvedOptions().timeZone !== 'UTC')(
+  'keeps the UTC days it kept before when no zone is given and the system\'s zone is UTC',
+  async () => {
+    const usage = fileUsage({ folder });
+    await usage.record(modelUse('2026-10-04T01:00:00.000Z', ['p'], { input: 10 }));
+    await usage.record(modelUse('2026-10-04T23:00:00.000Z', ['p'], { input: 20 }));
+
+    // Both are on the fourth in UTC, as every day was before the zone was an option.
+    expect(await usage.total('p', '2026-10-04T00:00:00.000Z', '2026-10-04T23:59:59.999Z'))
+      .toEqual({ tokens: 30, input: 30, calls: 2 });
+  },
+);
