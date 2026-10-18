@@ -111,10 +111,32 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-16; Softov answered the open questions on 2026-10-16. Task 01 built 2026-10-16: `checkpoints.ts`, the two port methods, the captures in `spawn.ts` and the removal in `lifecycle.ts`, with 5 tests. Task 02 built 2026-10-16: the `session` scope is a diff of the session's own checkpoints, with `sessionSummary` on the port. Task 03 built 2026-10-16: `mergeBaseOf` and `branchLook`, the `branch` scope with `branchSummary`, `state`'s fourth argument and the base on `changesetAt`, with 5 tests. Task 04 built 2026-10-16: `summaryKindOf` and the summary kept per session in the store (`changes`/`setChanges`, in memory and on disk), `changesOf` reading it, `summaryKept` and the `spawn.ts` calls at the baseline and at every turn's end, with 4 tests. Task 05 built 2026-10-16: `chat/error` joins the turn end in `spawn.ts`, with 1 test. Task 06 built 2026-10-16: `docs/sdk/SESSIONS.md` says what a row's `changes` counts, both kinds, the checkpoint refs and the fallback for a folder with no git. Gates and the sdk suite pass (2999 tests).
-- **Next action:** none - every task is implemented. Nothing is set to `done`, and `.project/plans/index.md` is untouched, as asked. The sdk's files under `git status` are the plan's work, uncommitted; `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite and wants `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Done so far:** The plan was written 2026-10-16, and Softov answered the open questions the same day.
+  Task 01 built `checkpoints.ts`, two port methods, the captures in `spawn.ts` and the removal in `lifecycle.ts`, with 5 tests.
+  Task 02 made the `session` scope a diff of the session's own checkpoints, with `sessionSummary` on the port.
+  Task 03 built `mergeBaseOf`, `branchLook` and the `branch` scope with `branchSummary`, with 5 tests.
+  Task 03 also gave `state` a fourth argument and `changesetAt` the base.
+  Task 04 built `summaryKindOf`, the per-session summary in the store, `changesOf`, `summaryKept` and the `spawn.ts` calls, with 4 tests.
+  Task 05 added `chat/error` to the turn end in `spawn.ts`, with 1 test.
+  Task 06 made `docs/sdk/SESSIONS.md` say what a row's `changes` counts, for both kinds, the checkpoint refs and the fallback.
+  The gates and the sdk suite pass with 2999 tests.
+  On review (2026-10-18), `commit-tree` got a fixed `ahpd` identity, so a checkpoint is written where git has no identity, with a test.
+- **Next action:** None - every task is implemented.
+  Nothing is set to `done`, and `.project/plans/index.md` is untouched, as asked.
+  The sdk's files under `git status` are the plan's work, uncommitted.
+  Restore `packages/sdk/test/fixtures/wire.jsonl` with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`; the suite dirties it.
 - **Open questions:** none.
-- **Watch out for:** the idea's line refs are stale; use the refs above. `look` stays: the `uncommitted` scope and the folder's facts read it. Task 01's Files list names no site for the baseline or for the removal, so the baseline is captured at `spawn.ts`'s session start and the removal is a `removeCheckpoints` on the port, called from `removeSession`. Task 03's Files list names only `scopes` taking the base, so `state` takes it as a fourth argument and `changesetAt` carries it - the source cannot read a session's base off the directory, and `state` is reached by a channel URI. Task 04 wants that base for a worktree row's counts, and `branchSummary?(dir, base?)` is how it gets them. Task 04's Files list names no site for the turn-end wiring, so `summaryKept` is called from `spawn.ts` where the tree is checkpointed (the baseline and every turn's end), and the kind is read from the persisted worktree record rather than from an `isolation` config value, which this host only ever says to a running session. `summaryKept` passes `idOf(uri)` to `sessionSummary` because that is what the checkpoints are committed under; the port's other readers pass the channel URI. Fault to report rather than fix: `changes.ts` reads a session's files under two keys - the changeset `state` arrives with the channel URI (`at.owner`, the same spelling `observe` keys the edit tracker by) and `sessionSummary` with the id - so a live session's `session` scope never sees the checkpoints, a row's counts never see the tracker, and the risk note below for a folder that is not a repository leans on the tracker. No task decides which spelling is canonical. Task 05's refs point at lines tasks 01 and 04 have moved; the turn end it means is the one that checkpoints, `spawn.ts:1016`. `packages/sdk/test/changes-refresh.test.ts`'s `announces the session's counts` case now passes on a timing: its row gains the session's own zero counts a moment after it asserts the directory's 1, and the test asserts before that lands (measured with a temporary probe, three moves in the row). `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Watch out for:** The idea's line refs are stale, so use the refs above.
+  `look` stays, because the `uncommitted` scope and the folder's facts read it.
+  Each turn's `add -A` on a fresh index hashes the whole tree, which is slow on a large repository.
+  Untracked files that are not ignored go into the object store.
+  Tasks 01, 03 and 04 chose sites their Files lists did not name; each task's Resume gives them.
+  The fault in task 04's Resume is open: `changes.ts` reads a session's files under the channel URI and under the id.
+  A live session's `session` scope never sees the checkpoints, and a row's counts never see the tracker.
+  No task decides which spelling is canonical.
+  `packages/sdk/test/changes-refresh.test.ts` case `announces the session's counts` now passes on a timing.
+  The row gains the session's own zero counts a moment after the test asserts the directory's 1.
+  A temporary probe measured three moves in the row.
 
 ## Final verification checklist
 

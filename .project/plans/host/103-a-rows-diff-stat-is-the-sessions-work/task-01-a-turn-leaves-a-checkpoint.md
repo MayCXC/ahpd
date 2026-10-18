@@ -43,7 +43,19 @@ Neither commit moves the person's branch, index or working tree.
 
 ## Resume
 
-- **Done so far:** built 2026-10-16. `packages/sdk/src/checkpoints.ts` - the baseline under `turn/0`, a commit per finished turn, written with `GIT_INDEX_FILE` so the person's branch, index and working tree do not move, one capture at a time per session. `ChangesetSource` has `checkpoint` and `removeCheckpoints`; `changes.ts` answers both from the module. `spawn.ts` captures at a turn end before it reads the folder again, and at the session start; `lifecycle.ts` removes the refs in `removeSession`. 5 tests in `test/checkpoints.test.ts`. Gates: `build`, `typecheck`, `boundary`, `node tools/schema.mjs` (508 definitions) and `git diff --quiet tools/` pass; sdk vitest 150 files, 2984 tests pass.
+- **Done so far:** Built 2026-10-16.
+  `packages/sdk/src/checkpoints.ts` writes the baseline under `turn/0` and one commit per finished turn.
+  It uses `GIT_INDEX_FILE`, so the branch, index and working tree do not move.
+  Captures run one at a time per session.
+  `ChangesetSource` has `checkpoint` and `removeCheckpoints`, and `changes.ts` answers both.
+  `spawn.ts` captures at the session start and at each turn end, before it reads the folder again.
+  `lifecycle.ts` removes the refs in `removeSession`.
+  5 tests are in `test/checkpoints.test.ts`.
+  `build`, `typecheck`, `boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` pass.
+  The sdk suite passes with 2984 tests.
 - **Next action:** [task-02-session-changes-come-from-checkpoints.md](task-02-session-changes-come-from-checkpoints.md).
 - **Open questions:** none.
-- **Watch out for:** the Files list names a site for the turn end only, so two things were placed where the code allows and are worth a look: the step 4 baseline is captured in `spawn.ts`'s session start at `keepFolder`, and step 7's removal is `removeCheckpoints?(dir, session)` on the port, called from `removeSession`. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Watch out for:** The Files list names a site for the turn end only, so two sites were chosen.
+  The baseline is captured in `spawn.ts` at `keepFolder`.
+  The removal is `removeCheckpoints?(dir, session)` on the port, called from `removeSession`.
+  Restore `packages/sdk/test/fixtures/wire.jsonl` with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`; the suite dirties it.

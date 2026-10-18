@@ -31,7 +31,17 @@ refs:
 
 ## Resume
 
-- **Done so far:** built 2026-10-16. `spawn.ts`'s turn-end condition takes `chat/error` with the two endings the protocol names, so a turn that failed checkpoints its tree, has its counts read and the folder's facts re-read, as a finished turn does; the comment above it says so. 1 test in `test/host-catalogue.test.ts` (`moves a row with the work a turn did before it failed`), which fails `files: 2` to `files: 5` without the condition. Gates: `build`, `typecheck`, `boundary`, `node tools/schema.mjs` (508 definitions) and `git diff --quiet tools/` pass; sdk vitest 151 files, 2999 tests pass.
+- **Done so far:** Built 2026-10-16.
+  The turn-end condition in `spawn.ts` now takes `chat/error` with the two endings the protocol names.
+  A failed turn checkpoints its tree, has its counts read and has the folder's facts re-read, as a finished turn does.
+  The comment above the condition says so.
+  1 test is in `test/host-catalogue.test.ts`: `moves a row with the work a turn did before it failed`.
+  It fails with `files: 2` instead of `files: 5` without the condition.
+  The gates pass, and the sdk suite passes with 2999 tests.
 - **Next action:** [task-06-the-docs-say-what-a-row-counts.md](task-06-the-docs-say-what-a-row-counts.md).
 - **Open questions:** none.
-- **Watch out for:** a failure is the agent's to report, so the test ends the turn with the fake CLI's `error_during_execution` result rather than by dispatching `chat/error`, which a client may not send. The task's refs point at lines that tasks 01 and 04 have moved; the condition it means is the turn end that checkpoints, now at `spawn.ts:1016`. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+- **Watch out for:** A failure is the agent's to report, so the test ends the turn with the fake CLI's `error_during_execution` result.
+  A client may not dispatch `chat/error`.
+  The task's refs point at lines that tasks 01 and 04 moved.
+  The condition it means is the turn end that checkpoints, now at `spawn.ts:1016`.
+  Restore `packages/sdk/test/fixtures/wire.jsonl` with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`; the suite dirties it.
