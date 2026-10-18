@@ -7,6 +7,7 @@ import { deepFreeze, frozenCopy } from '../frozen.js';
 import { nestedAgent } from '../nested.js';
 import { idOf, uriFor, Status } from '../catalog.js';
 import { meter } from '../meter.js';
+import { linkIn } from '../calllinks.js';
 import { DEFAULT_CLIENT_TOOL_TIMEOUT_MS } from '../tools/clientcalls.js';
 import { asSentAttachment } from './chatattachment.js';
 import { chatUriFor, subagentChatUri } from './channels.js';
@@ -160,21 +161,32 @@ export function createSpawn(ctx: HostContext): Spawn {
     typeof meta === 'object' && meta !== null && (meta as Bag).toolKind === 'subagent'
     && (meta as Bag).subagentChatUri === undefined;
   /**
-   * A tool call action with the worker chat's URI in its `_meta`.
+   * A tool call action with the chat it links in its `_meta`.
    *
    * The reference's `subagentChatUri`, stamped on every tool call action that
    * carries a `_meta` whose `toolKind` is `subagent`, so a client can open the
    * worker's chat from the call before the chat is announced. Every such
    * action and not only the start: an action carrying `_meta` replaces the
-   * call's whole bag. The backend never spells a chat URI; this host does.
-   * Any other action is returned as it is.
+   * call's whole bag; the backend never spells a worker chat URI, and this
+   * host does. Any other action is returned as it is.
+   *
+   * A call that carries a `subagent` content already says which chat it works
+   * with, and that link is kept: a worker chat of this session is the URI
+   * derived below, so nothing an ordinary worker does changes, while a chat of
+   * another session - a bot's back session - is not one this session could
+   * ever derive, and a worker chat named here would be a chat that does not
+   * exist. The content on this action is read first, then what the index holds
+   * from an earlier one, because a completion may carry no content at all.
    */
   const withWorkerUri = (chat: string, action: Bag): Bag => {
     if (typeof action.type !== 'string' || !action.type.startsWith('chat/toolCall')) return action;
     if (!unstamped(action._meta) || typeof action.toolCallId !== 'string') return action;
     const session = sessionHolding(chat);
     if (session === undefined) return action;
-    return { ...action, _meta: { ...action._meta, subagentChatUri: subagentChatUri(session, action.toolCallId) } };
+    const result = action.result as Bag | undefined;
+    const linked = linkIn(action.content) ?? linkIn(result?.content) ?? links.linkOf(chat, action.toolCallId);
+    const uri = linked ?? subagentChatUri(session, action.toolCallId);
+    return { ...action, _meta: { ...action._meta, subagentChatUri: uri } };
   };
   /**
    * A message with the attachments the client sent back on it.
@@ -251,8 +263,11 @@ export function createSpawn(ctx: HostContext): Spawn {
   };
   /**
    * A chat's state with the same stamp on every spawning call in its turns,
-   * so a client that subscribes late reads what the wire said. A copy where
-   * anything moved; the state passed in is the backend's own.
+   * so a client that subscribes late reads what the wire said. A call that
+   * links a chat carries that link, and every other one gets this session's
+   * worker chat; a worker's own content names exactly that URI, so a worker
+   * of this session is left as it was. A copy where anything moved; the state
+   * passed in is the backend's own.
    */
   const stampedCalls = (session: string, turns: Bag[]): Bag[] => turns.map((turn) => {
     const parts = Array.isArray(turn.responseParts) ? turn.responseParts as Bag[] : undefined;
@@ -262,7 +277,8 @@ export function createSpawn(ctx: HostContext): Spawn {
       const call = part.toolCall as Bag | undefined;
       if (call === undefined || !unstamped(call._meta) || typeof call.toolCallId !== 'string') return part;
       touched = true;
-      return { ...part, toolCall: { ...call, _meta: { ...call._meta, subagentChatUri: subagentChatUri(session, call.toolCallId) } } };
+      const linked = linkIn(call.content);
+      return { ...part, toolCall: { ...call, _meta: { ...call._meta, subagentChatUri: linked ?? subagentChatUri(session, call.toolCallId) } } };
     });
     return touched ? { ...turn, responseParts: next } : turn;
   });

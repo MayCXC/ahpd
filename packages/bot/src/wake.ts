@@ -406,6 +406,13 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
        * ends inside the send still finds the turn that is waiting on it.
        */
       answering.set(session, { session: message.session, turnId: message.turnId, handle, bot: bot.name });
+      /*
+       * The open turn shows what it is waiting on: the back session's chat, as
+       * a subagent call a client opens. The title is the bot's, which is who
+       * the person is talking to; a steered message into the same turn wakes
+       * the same chat again, and the handle keeps the one call it already has.
+       */
+      handle.working?.(looked.chat, bot.name);
       let refused: string | undefined;
       try {
         refused = await seams.send(looked.chat, looked.working ? steer(block, message.text) : turn(block, message.text));

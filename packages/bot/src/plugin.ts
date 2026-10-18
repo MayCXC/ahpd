@@ -1,4 +1,5 @@
 import { expandHome, reason, Status } from '@ahpd/sdk';
+import { botAsk } from './ask.js';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
 import { prepareAgentsTemplate } from './folder.js';
@@ -231,6 +232,18 @@ export const apply: Plugin['apply'] = (host, options) => {
     owner: (uri) => host.sessionOwner(uri),
     start: (wanted) => host.startSession(wanted),
   };
+  /**
+   * One action sent on a chat of this host, as a client sends one.
+   *
+   * The host echoes a taken action only to the subscribers of its channel, so
+   * the chat is subscribed first. Shared by the wake, which sends a person's
+   * message, and the asking, which sends their answer back.
+   */
+  const send = async (chat: string, action: Bag): Promise<string | undefined> => {
+    const { conn, sender } = await connection();
+    await conn.request('subscribe', { channel: chat });
+    return await sender.dispatch(chat, action);
+  };
   const catalogue = botCatalogue(store);
   catalogue.bind(host.registerChannel(CATALOGUE_SCHEME, catalogue.channel));
   host.on('users_changed', () => { catalogue.recompute(); });
@@ -279,14 +292,38 @@ export const apply: Plugin['apply'] = (host, options) => {
       const status = typeof state['status'] === 'number' ? state['status'] : Status.Idle;
       return { chat, working: (status & Status.InProgress) !== 0 };
     },
-    send: async (chat, action) => {
-      const { conn, sender } = await connection();
-      // The host echoes a taken action only to the subscribers of its channel.
-      await conn.request('subscribe', { channel: chat });
-      return await sender.dispatch(chat, action);
-    },
+    send,
     problem: (line) => { host.problem(`${name}: ${line}`); },
   }, absent);
+  /*
+   * A back session's question, asked in the main turn that woke it.
+   *
+   * The request is read off the session's own state, which is what the event
+   * names but does not carry, and the answer is sent to the chat it was asked
+   * in. A session no main chat is waiting on is left alone: it may be a
+   * session of another plugin's, or one whose person's turn has ended.
+   */
+  const ask = botAsk({
+    main: (backSession) => wake.main(backSession),
+    request: async (session, id) => {
+      const { conn } = await connection();
+      const answered = await conn.request('subscribe', { channel: session }) as { snapshot?: { state?: Bag } };
+      const list = answered.snapshot?.state?.['inputNeeded'];
+      if (!Array.isArray(list)) return undefined;
+      const found = list.find((one: unknown) => (
+        typeof one === 'object' && one !== null && (one as Bag)['id'] === id
+      ));
+      return found === undefined ? undefined : found as Bag;
+    },
+    send,
+    problem: (line) => { host.problem(`${name}: ${line}`); },
+  });
+  host.on('input_needed_set', (event) => {
+    void ask.asked(event.session, event.id).catch((error: unknown) => {
+      host.problem(`${name}: the request ${event.id} in ${event.session} was not shown: ${reason(error)}`);
+    });
+  });
+  host.on('input_needed_removed', (event) => { ask.withdrawn(event.session, event.id); });
   /*
    * How a main turn ends, the two ways a back session has of ending it: the
    * `post_message` tool, which answers it with what the session says, and the

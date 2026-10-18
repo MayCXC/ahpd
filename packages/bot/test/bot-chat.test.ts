@@ -578,6 +578,83 @@ it('holds a begin behind the open turn rather than taking its place', async () =
   ]);
 });
 
+it('shows the back session as a subagent call, and completes it with the turn', async () => {
+  const { host, configDir } = made();
+  const notes: Notes = [];
+  const client = await anyone(host, notes);
+  await talkTo(client);
+  const chat = turns(HELD);
+  /** The chat of the back session a message wakes, as the wake knows it. */
+  const back = `ahp-chat://default/${Buffer.from('bot:/backer/ana/work', 'utf8').toString('base64url')}`;
+  /*
+   * What the wake does for a message: the turn it leaves open shows the chat it
+   * is waiting on. A steer into the same turn wakes the same chat again, which
+   * is the second call below.
+   */
+  chat.onMessage = () => { chat.working?.(back, 'Backer'); };
+
+  await said(client, 't1', 'hello');
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: CHAT, action: { type: 'chat/pendingMessageSet', kind: 'steering', id: 's1', message: { text: 'and this' } } },
+  });
+
+  /*
+   * Open, and waiting on the back session: one call of kind `subagent`, whose
+   * content names the chat a client opens. It is running rather than streaming
+   * or asking, because nothing is being asked.
+   */
+  const running = await stateOf(client);
+  const active = running['activeTurn'] as Bag;
+  expect(active['responseParts']).toMatchObject([{
+    kind: 'toolCall',
+    toolCall: {
+      toolName: 'subagent',
+      displayName: 'Backer',
+      status: 'running',
+      confirmed: 'not-needed',
+      content: [{ type: 'subagent', resource: back, title: 'Backer' }],
+      _meta: { toolKind: 'subagent', subagentChatUri: back },
+    },
+  }]);
+  const started = actions(notes, CHAT).filter((one) => String(one['type']).startsWith('chat/toolCall'));
+  expect(started.map((one) => one['type'])).toEqual([
+    'chat/toolCallStart',
+    'chat/toolCallReady',
+    'chat/toolCallContentChanged',
+  ]);
+  expect(started[2]?.['content']).toEqual([{ type: 'subagent', resource: back, title: 'Backer' }]);
+
+  chat.reply('done');
+
+  /*
+   * Over, and the call is a part of the finished turn: the one its start
+   * appended, completed, and not a second part a response could have added.
+   */
+  const idle = await stateOf(client);
+  const turn = (idle['turns'] as Bag[])[0] as Bag;
+  const parts = turn['responseParts'] as Bag[];
+  expect(parts).toHaveLength(2);
+  expect(parts[0]).toMatchObject({
+    kind: 'toolCall',
+    toolCall: {
+      status: 'completed',
+      success: true,
+      content: [{ type: 'subagent', resource: back, title: 'Backer' }],
+    },
+  });
+  expect(parts[1]).toMatchObject({ kind: 'markdown', content: 'done' });
+  const kinds = actions(notes, CHAT).map((one) => one['type']);
+  expect(kinds.slice(kinds.indexOf('chat/toolCallComplete'))).toEqual([
+    'chat/toolCallComplete',
+    'chat/responsePart',
+    'chat/turnComplete',
+  ]);
+  expect(kinds.filter((one) => one === 'chat/responsePart')).toHaveLength(1);
+  // And the line a restart reads holds the same two parts.
+  expect(lines(configDir, 'one').at(-1)).toMatchObject({ id: 't1', state: 'complete', responseParts: parts });
+});
+
 it('refuses a chat with a bot that is not there', async () => {
   const { host } = made();
   const client = await anyone(host);

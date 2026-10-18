@@ -61,6 +61,40 @@ interface OpenTurn {
   startedAt: string;
   message: ChatTurn['message'];
   responseParts: Bag[];
+  /** The calls this turn shows while it waits on another session's chat. */
+  calls: WorkingCall[];
+  /** The questions and approvals it shows while another session waits on a person. */
+  asked: AskedCopy[];
+}
+
+/**
+ * One call an open turn shows: the chat it waits on, and the part it is drawn by.
+ *
+ * A call is a part the turn's `responseParts` holds while it runs - the
+ * protocol's `chat/toolCallStart` *appends* one - and the part is what the
+ * completion updates. Holding it here is what lets the completion name the same
+ * part rather than add a second one.
+ */
+interface WorkingCall {
+  /** The chat of another session this turn is waiting on. */
+  chat: string;
+  /** The `toolCall` part, as the turn holds it and as a client drew it. */
+  part: Bag;
+}
+
+/**
+ * One request another session is waiting on, as this turn shows it.
+ *
+ * The copy is the back session's own request, drawn here so the person answers
+ * it where they are talking. It is kept by the entry's id, because that is what
+ * the back session's removal names, while the answer names the request inside a
+ * chat input or the call inside a tool confirmation.
+ */
+interface AskedCopy {
+  /** The id of the `session/inputNeeded` entry the back session raised. */
+  id: string;
+  /** The part this turn shows: an `inputRequest` for a question, a `toolCall` for an approval. */
+  part: Bag;
 }
 
 /**
@@ -118,6 +152,36 @@ export interface TurnHandle {
   notice(text: string): void;
   /** End the open turn with no response at all. */
   end(): void;
+  /**
+   * Say the open turn is waiting on a chat of another session, and link it.
+   *
+   * The turn shows one tool call of kind `subagent` whose content names that
+   * chat, which is how a client opens it: the back session is not a worker
+   * this chat's backend opened, so nothing else would draw it. Optional
+   * because a handle over a chat with nothing behind it has nothing to show.
+   */
+  working?(chat: string, title: string): void;
+  /**
+   * Show a request another session is waiting on, in the open turn.
+   *
+   * The entry is the back session's `session/inputNeeded` entry, whole: an
+   * approval is drawn as a tool call in `pending-confirmation` with the back
+   * session's own title, and a question as an `inputRequest` part with its
+   * fields. Optional for the same reason `working` is.
+   */
+  asking?(entry: Bag): void;
+  /** Take a request's copy out of the open turn, because the back session no longer waits on it. */
+  withdrawn?(id: string): void;
+  /** What a client of this chat confirmed, for the plugin to send back to the back session. */
+  onConfirm?: (toolCallId: string, approved: boolean, optionId?: string) => void;
+  /**
+   * What a client of this chat answered, for the plugin to send back.
+   *
+   * True where the request is one this turn shows: the host echoes a taken
+   * `chat/inputCompleted` to the chat on that answer, as it does for a session
+   * that asks by itself.
+   */
+  onAnswer?: (requestId: string, accepted: boolean, answers: Bag, response?: 'accept' | 'decline' | 'cancel') => boolean;
   /** Who hears about each turn that begins and each message steered into one. */
   onMessage?: (message: ChatMessage) => void;
 }
@@ -394,7 +458,191 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
     const touch = (): void => { modified = new Date().toISOString(); };
 
     /**
+     * Say the open turn is waiting on another session's chat, as a subagent is drawn.
+     *
+     * The call starts, runs, and its content names the chat, which is the link
+     * a client opens. One call per chat in a turn: a message steered into an
+     * open turn wakes the same back session again, and a second row for it
+     * would be a second worker nobody started.
+     *
+     * `subagentChatUri` is in the `_meta` because the host stamps a spawning
+     * call with a worker chat of *this* session when nothing is named, and a
+     * worker chat derived here is a chat that does not exist. The chat is the
+     * back session's own, which only this side knows.
+     */
+    const showWorking = (held: OpenTurn, chat: string, title: string): void => {
+      if (held.calls.some((one) => one.chat === chat)) return;
+      const toolCallId = `call-${crypto.randomUUID()}`;
+      const meta: Bag = { toolKind: 'subagent', subagentChatUri: chat };
+      const part: Bag = {
+        id: toolCallId,
+        kind: 'toolCall',
+        toolCall: { toolCallId, toolName: 'subagent', displayName: title, status: 'streaming', _meta: meta },
+      };
+      held.responseParts.push(part);
+      held.calls.push({ chat, part });
+      start.emit('chat', {
+        type: 'chat/toolCallStart',
+        turnId: held.id,
+        toolCallId,
+        toolName: 'subagent',
+        displayName: title,
+        _meta: meta,
+      });
+      // Running, not a question: nothing is being asked, and a call left
+      // streaming is one the reducer will not take content for.
+      const toolCall = part.toolCall as Bag;
+      toolCall.status = 'running';
+      toolCall.confirmed = 'not-needed';
+      toolCall.invocationMessage = title;
+      start.emit('chat', {
+        type: 'chat/toolCallReady',
+        turnId: held.id,
+        toolCallId,
+        invocationMessage: title,
+        confirmed: 'not-needed',
+        _meta: meta,
+      });
+      const content = [{ type: 'subagent', resource: chat, title }];
+      toolCall.content = content;
+      start.emit('chat', {
+        type: 'chat/toolCallContentChanged',
+        turnId: held.id,
+        toolCallId,
+        content,
+        _meta: meta,
+      });
+    };
+
+    /**
+     * Show one of another session's requests in the open turn.
+     *
+     * An approval starts a tool call of its own here - the back session's call
+     * is in the back chat and a client of this chat cannot see it - and the
+     * copy is `pending-confirmation` with the same title, so the person
+     * approves it where they are talking. A question appends the back
+     * session's `inputRequest` part with its request whole, which is what a
+     * harness's own question looks like.
+     *
+     * The call's `_meta` is not copied: a spawning call of the back session
+     * says `toolKind: 'subagent'`, and a copy saying it here would be stamped
+     * with a worker chat of *this* session - a chat nobody opened.
+     *
+     * An entry the turn already shows is replaced rather than added, which is
+     * the protocol's upsert by request id: a question re-raised with its
+     * answers is the same part, and a confirmation re-raised is the same call.
+     */
+    const showAsked = (held: OpenTurn, entry: Bag): void => {
+      const id = typeof entry['id'] === 'string' ? entry['id'] : '';
+      if (id === '') return;
+      const known = held.asked.find((one) => one.id === id);
+      const kind = entry['kind'];
+      if (kind === 'chatInput') {
+        const request = entry['request'];
+        if (typeof request !== 'object' || request === null || Array.isArray(request)) return;
+        const copy = { ...request as Bag };
+        const requestId = typeof copy['id'] === 'string' ? copy['id'] : id;
+        copy['id'] = requestId;
+        const part: Bag = { kind: 'inputRequest', request: copy };
+        if (known === undefined) {
+          held.responseParts.push(part);
+          held.asked.push({ id, part });
+        }
+        else known.part = part;
+        start.emit('chat', { type: 'chat/inputRequested', request: copy });
+        return;
+      }
+      if (kind !== 'toolConfirmation') return;
+      const found = entry['toolCall'];
+      if (typeof found !== 'object' || found === null || Array.isArray(found)) return;
+      const original = found as Bag;
+      const toolCallId = typeof original['toolCallId'] === 'string' && original['toolCallId'] !== ''
+        ? original['toolCallId'] as string
+        : id;
+      const toolName = typeof original['toolName'] === 'string' ? original['toolName'] as string : 'tool';
+      const displayName = typeof original['displayName'] === 'string' ? original['displayName'] as string : toolName;
+      const confirmationTitle = original['confirmationTitle'] ?? `Run ${displayName}?`;
+      const invocationMessage = original['invocationMessage'] ?? confirmationTitle;
+      const toolCall: Bag = {
+        toolCallId,
+        toolName,
+        displayName,
+        status: 'pending-confirmation',
+        confirmationTitle,
+        invocationMessage,
+        ...(original['toolInput'] === undefined ? {} : { toolInput: original['toolInput'] }),
+        ...(original['options'] === undefined ? {} : { options: original['options'] }),
+        ...(original['edits'] === undefined ? {} : { edits: original['edits'] }),
+        ...(original['riskAssessment'] === undefined ? {} : { riskAssessment: original['riskAssessment'] }),
+        ...(original['editable'] === undefined ? {} : { editable: original['editable'] }),
+      };
+      const part: Bag = { id: toolCallId, kind: 'toolCall', toolCall };
+      if (known === undefined) {
+        held.responseParts.push(part);
+        held.asked.push({ id, part });
+        start.emit('chat', {
+          type: 'chat/toolCallStart',
+          turnId: held.id,
+          toolCallId,
+          toolName,
+          displayName,
+        });
+      }
+      else known.part = part;
+      start.emit('chat', {
+        type: 'chat/toolCallReady',
+        turnId: held.id,
+        toolCallId,
+        invocationMessage,
+        confirmationTitle,
+        ...(original['toolInput'] === undefined ? {} : { toolInput: original['toolInput'] }),
+        ...(original['options'] === undefined ? {} : { options: original['options'] }),
+        ...(original['edits'] === undefined ? {} : { edits: original['edits'] }),
+      });
+    };
+
+    /**
+     * Take a request's copy out of the open turn.
+     *
+     * The protocol has no action that removes a response part, so the copy is
+     * spliced out of the state a client subscribes to and a live client is told
+     * the part is resolved: a question is cancelled and a call is skipped. The
+     * back session asked and no longer asks, and a person left drawing it would
+     * be answering a question that is over.
+     */
+    const withdrawAsked = (held: OpenTurn, id: string): void => {
+      const at = held.asked.findIndex((one) => one.id === id);
+      if (at < 0) return;
+      const [copy] = held.asked.splice(at, 1);
+      const part = copy?.part;
+      if (part === undefined) return;
+      const inTurn = held.responseParts.indexOf(part);
+      if (inTurn >= 0) held.responseParts.splice(inTurn, 1);
+      if (part['kind'] === 'inputRequest') {
+        const request = part['request'] as Bag;
+        start.emit('chat', {
+          type: 'chat/inputCompleted',
+          requestId: String(request['id'] ?? id),
+          response: 'cancel',
+        });
+        return;
+      }
+      const toolCall = part['toolCall'] as Bag;
+      start.emit('chat', {
+        type: 'chat/toolCallConfirmed',
+        toolCallId: String(toolCall['toolCallId'] ?? id),
+        approved: false,
+        reason: 'skipped',
+      });
+    };
+
+    /**
      * End the open turn, and keep the turn it was.
+     *
+     * The calls the turn showed end with it, and each ending updates the part
+     * its start appended rather than adding another: `chat/toolCallStart` is
+     * what put the part in a client's turn, and a `chat/responsePart` for the
+     * same call would draw it twice.
      *
      * The state and the duration are written down here rather than at the
      * beginning, which is the whole difference between a turn that is open and
@@ -405,12 +653,30 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
     const finish = (held: OpenTurn, state: Ending, parts: Bag[]): void => {
       open = undefined;
       const duration = Date.now() - Date.parse(held.startedAt);
+      for (const call of held.calls) {
+        const toolCall = call.part.toolCall as Bag;
+        const result = {
+          success: true,
+          pastTenseMessage: 'Worked',
+          content: [{ type: 'subagent', resource: call.chat, title: String(toolCall.displayName ?? '') }],
+        };
+        Object.assign(toolCall, result, { status: 'completed', confirmed: 'not-needed' });
+        start.emit('chat', {
+          type: 'chat/toolCallComplete',
+          turnId: held.id,
+          toolCallId: toolCall.toolCallId,
+          result,
+          _meta: toolCall._meta,
+        });
+      }
+      // The calls came first in the turn, and the answer after them.
+      const responseParts = [...held.responseParts, ...parts];
       const turn: ChatTurn = {
         id: held.id,
         startedAt: held.startedAt,
         duration,
         message: held.message,
-        responseParts: parts,
+        responseParts,
         state,
         usage: undefined,
       };
@@ -420,7 +686,8 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
       turns.push(turn);
       touch();
       // Whatever it answered with, before the turn is said to be over: a part
-      // that arrived after the end is a part of a turn nobody is holding.
+      // that arrived after the end is a part of a turn nobody is holding. The
+      // calls are not here: their starts already appended them.
       for (const part of parts) start.emit('chat', { type: 'chat/responsePart', turnId: held.id, part });
       start.emit('chat', state === 'cancelled'
         ? { type: 'chat/turnCancelled', turnId: held.id, duration }
@@ -461,6 +728,21 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
         if (held === undefined) return;
         finish(held, 'complete', []);
       },
+      working: (chat, title) => {
+        const held = open;
+        if (held === undefined) return;
+        showWorking(held, chat, title);
+      },
+      asking: (entry) => {
+        const held = open;
+        if (held === undefined) return;
+        showAsked(held, entry);
+      },
+      withdrawn: (id) => {
+        const held = open;
+        if (held === undefined) return;
+        withdrawAsked(held, id);
+      },
     };
     if (heard !== undefined) handle.onMessage = (message) => { heard(message, handle); };
     handles.set(start.uri, handle);
@@ -479,7 +761,7 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
     const beginTurn = (turnId: string, text: string, from?: MessageFrom, queuedMessageId?: string): void => {
       const startedAt = new Date().toISOString();
       const message = messageOf(text, from);
-      const held: OpenTurn = { id: turnId, startedAt, message, responseParts: [] };
+      const held: OpenTurn = { id: turnId, startedAt, message, responseParts: [], calls: [], asked: [] };
       open = held;
       // No state and no duration: this is the turn as it began, and the line
       // that ends it is the one that says how it went.
@@ -718,9 +1000,79 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
         start.emit('chat', { type: 'chat/draftChanged', ...(next !== undefined ? { draft: next } : {}) });
       },
 
-      // Nothing here ever asks, so there is never anything to answer.
-      confirm: () => {},
-      answer: () => false,
+      /*
+       * The answer a person gave in this chat, on its way to the session that
+       * asked.
+       *
+       * Only a request this turn shows is taken: a confirmation or a question
+       * the back session raised, drawn here by `asking`. The copy is resolved
+       * in place, as a backend's own confirmation is, and then handed to the
+       * plugin, which knows the back session's chat. Nothing is sent from here:
+       * this package is the chat, and the door onto another session is the
+       * plugin's connection.
+       *
+       * A tool confirmation is not echoed by the host, so the approval or the
+       * denial is emitted here; a question's is, on the true this returns.
+       */
+      confirm: (toolCallId, approved, optionId) => {
+        const held = open;
+        if (held === undefined) return;
+        const asked = held.asked.find((one) => {
+          const call = one.part['toolCall'] as Bag | undefined;
+          return one.part['kind'] === 'toolCall' && call?.['toolCallId'] === toolCallId;
+        });
+        if (asked === undefined) return;
+        const toolCall = asked.part['toolCall'] as Bag;
+        if (approved) {
+          Object.assign(toolCall, {
+            status: 'running',
+            confirmed: 'user-action',
+            ...(optionId === undefined ? {} : { selectedOptionId: optionId }),
+          });
+          start.emit('chat', {
+            type: 'chat/toolCallConfirmed',
+            turnId: held.id,
+            toolCallId,
+            approved: true,
+            confirmed: 'user-action',
+            ...(optionId === undefined ? {} : { selectedOptionId: optionId }),
+          });
+        }
+        else {
+          Object.assign(toolCall, { status: 'cancelled', reason: 'denied' });
+          start.emit('chat', {
+            type: 'chat/toolCallConfirmed',
+            turnId: held.id,
+            toolCallId,
+            approved: false,
+            reason: 'denied',
+            ...(optionId === undefined ? {} : { selectedOptionId: optionId }),
+          });
+        }
+        handle.onConfirm?.(toolCallId, approved, optionId);
+      },
+      answer: (requestId, accepted, answers, response) => {
+        const held = open;
+        if (held === undefined) return false;
+        const asked = held.asked.find((one) => {
+          const request = one.part['request'] as Bag | undefined;
+          return one.part['kind'] === 'inputRequest' && request?.['id'] === requestId;
+        });
+        if (asked === undefined) return false;
+        const verdict = response ?? (accepted ? 'accept' : 'decline');
+        asked.part['response'] = verdict;
+        // The answers the request was given travel with it, so the state a
+        // client reads while the back session settles says what was answered.
+        const request = asked.part['request'] as Bag;
+        if (verdict === 'accept' && Object.keys(answers).length > 0) {
+          const known = typeof request['answers'] === 'object' && request['answers'] !== null
+            ? request['answers'] as Bag
+            : {};
+          request['answers'] = { ...known, ...answers };
+        }
+        handle.onAnswer?.(requestId, accepted, answers, verdict);
+        return true;
+      },
 
       // No runtime switch and no MCP servers, so all three refuse. False is a
       // real answer: a control that reported success and changed nothing would

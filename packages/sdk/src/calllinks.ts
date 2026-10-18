@@ -8,6 +8,11 @@ import type { Bag } from './types/common.js';
  * whole content - neither of which this host otherwise holds, because the
  * backend keeps its own turns. It is fed from `dispatch`, the one funnel every
  * chat action passes through, the backend's own emitter included.
+ *
+ * A call's content may name a chat of another session rather than a worker of
+ * this one - a bot's main turn links its back session's chat that way - and
+ * the index keeps that link the same as any other: what a `subagent` content
+ * names is the call's chat, wherever it lives.
  */
 export interface CallLinks {
   /** Fold one action dispatched on a chat into the index. */
@@ -16,6 +21,8 @@ export interface CallLinks {
   turnOf(chat: string): string | undefined;
   /** What a call's `content` last held, when the call is one the index keeps. */
   contentOf(chat: string, toolCallId: string): Bag[] | undefined;
+  /** The chat a call's `subagent` content links, when it names one. */
+  linkOf(chat: string, toolCallId: string): string | undefined;
   /** Set a call's content, which also makes it one the index keeps. */
   hold(chat: string, toolCallId: string, content: Bag[]): void;
   /** Drop one call. */
@@ -30,6 +37,22 @@ export interface CallLinks {
 const isSpawning = (action: Bag): boolean => {
   const meta = action._meta;
   return typeof meta === 'object' && meta !== null && (meta as Bag).toolKind === 'subagent';
+};
+
+/**
+ * The chat a list of content links, when it links one.
+ *
+ * A `subagent` content is a call saying which chat it is working with. The
+ * first one is the link; nothing here asks whose session that chat is in,
+ * because a worker's is this session's and a bot's back chat is another's.
+ */
+export const linkIn = (content: unknown): string | undefined => {
+  if (!Array.isArray(content)) return undefined;
+  for (const one of content as Bag[]) {
+    const resource = typeof one === 'object' && one !== null && one.type === 'subagent' ? one.resource : undefined;
+    if (typeof resource === 'string' && resource !== '') return resource;
+  }
+  return undefined;
 };
 
 /** The key one call is held under: its chat and its id. */
@@ -75,6 +98,7 @@ export function createCallLinks(): CallLinks {
     },
     turnOf: (chat) => turns.get(chat),
     contentOf: (chat, toolCallId) => calls.get(aboutCall(chat, toolCallId)),
+    linkOf: (chat, toolCallId) => linkIn(calls.get(aboutCall(chat, toolCallId))),
     hold(chat, toolCallId, content) {
       calls.set(aboutCall(chat, toolCallId), content);
     },
