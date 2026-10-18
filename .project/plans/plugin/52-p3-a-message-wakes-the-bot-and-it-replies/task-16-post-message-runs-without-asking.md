@@ -1,6 +1,6 @@
 ---
 title: post_message runs without asking
-status: todo
+status: implemented
 depends: [task-04-post-message-ends-the-main-turn.md]
 layer: "packages/sdk, packages/agent-claude, packages/bot"
 refs:
