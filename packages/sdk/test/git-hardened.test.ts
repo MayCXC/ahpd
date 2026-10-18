@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, wr
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { gitChanges } from '../src/changes.js';
 import { gitBranches } from '../src/repo/git.js';
 import { gitArgv } from '../src/repo/hardened.js';
@@ -51,12 +52,14 @@ it('spells the flags before the folder, and --ignore-submodules after a subcomma
   ]);
 });
 
-it('runs the worktree port\'s git hardened', async () => {
+// The next three run a `git` that is a `#!/bin/sh` script first on `PATH`: a
+// POSIX shell outside a terminal, which Windows has not.
+it.skipIf(!posix)('runs the worktree port\'s git hardened', async () => {
   await gitWorktrees().dirty(root);
   expect(calls()).toEqual([`${HARDENED} -C ${root} status --ignore-submodules --porcelain`]);
 });
 
-it('runs the changes source\'s git hardened', async () => {
+it.skipIf(!posix)('runs the changes source\'s git hardened', async () => {
   await gitChanges().refresh?.(root);
   const said = calls();
   expect(said.length).toBeGreaterThan(0);
@@ -64,7 +67,7 @@ it('runs the changes source\'s git hardened', async () => {
   expect(said.find((one) => one.includes(' status '))).toContain('status --ignore-submodules');
 });
 
-it('runs the branch facts\' git hardened', async () => {
+it.skipIf(!posix)('runs the branch facts\' git hardened', async () => {
   await gitBranches().refresh?.(root);
   const said = calls();
   expect(said.length).toBeGreaterThan(0);

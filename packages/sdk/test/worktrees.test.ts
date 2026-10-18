@@ -8,6 +8,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { gitWorktrees, worktreesOf } from '../src/repo/worktrees.js';
 import { memorySessions } from '../src/sessions.js';
 import { fileResources } from '../src/resources.js';
+import { localPath, uriOf } from '../src/fileuri.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { ComputerPort, MachineSource } from '../src/types/computers.js';
 import type { GitDir, Worktrees } from '../src/types/worktrees.js';
@@ -186,7 +187,7 @@ const spoken = async (
   const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
     snapshot: { state: { defaultChat: string; workingDirectories: string[] } };
   }).snapshot.state;
-  const where = (state.workingDirectories[0] ?? '').replace('file://', '');
+  const where = localPath(state.workingDirectories[0] ?? '');
   await say(client, state.defaultChat, 't1');
   await client.handle({ method: 'unsubscribe', params: { channel: uri } });
   return { where, chat: state.defaultChat };
@@ -198,7 +199,7 @@ describe('a session with a working tree of its own', () => {
     const { client } = await joined(root);
     const offered = await client.handle({
       method: 'resolveSessionConfig',
-      params: { channel: 'ahp-root://', provider: 'echo', workingDirectories: [`file://${project(root)}`] },
+      params: { channel: 'ahp-root://', provider: 'echo', workingDirectories: [uriOf(project(root))] },
     }) as { schema: { properties: Record<string, { enum?: string[] }> }; values: Record<string, string> };
     expect(offered.schema.properties.isolation?.enum).toEqual(['folder', 'worktree']);
     // The branches it actually has, with the one it is on first: a picker that
@@ -218,7 +219,7 @@ describe('a session with a working tree of its own', () => {
     const bare = await joined(plain);
     const nothing = await bare.client.handle({
       method: 'resolveSessionConfig',
-      params: { channel: 'ahp-root://', provider: 'echo', workingDirectories: [`file://${plain}`] },
+      params: { channel: 'ahp-root://', provider: 'echo', workingDirectories: [uriOf(plain)] },
     }) as { schema: { properties?: Record<string, unknown> } };
     // Not a repository, so there is no isolation to offer and the control is
     // absent rather than present with one value.
@@ -234,14 +235,14 @@ describe('a session with a working tree of its own', () => {
       params: {
         channel: uri,
         provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
     const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    const where = state.workingDirectories[0]?.replace('file://', '') ?? '';
+    const where = localPath(state.workingDirectories[0] ?? '');
     expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
     expect(existsSync(join(where, 'tracked.txt'))).toBe(true);
 
@@ -271,14 +272,14 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
     const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    const where = state.workingDirectories[0]?.replace('file://', '') ?? '';
+    const where = localPath(state.workingDirectories[0] ?? '');
     // `<root>/<repo>/<name>`, `<repo>` the repository folder's own name.
     expect(where).toBe(join(under, 'project', 'rooted'));
     // A tree of the repository and not a folder beside it: git is the one that
@@ -300,14 +301,14 @@ describe('a session with a working tree of its own', () => {
         params: {
           channel: 'ahp-session:/carried',
           provider: 'echo',
-          workingDirectories: [`file://${project(root)}`],
+          workingDirectories: [uriOf(project(root))],
           config: { isolation: 'worktree', branch: 'main', worktreeIncludeFiles: sent },
         },
       });
       const state = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/carried' } }) as {
         snapshot: { state: { workingDirectories: string[] } };
       }).snapshot.state;
-      const where = state.workingDirectories[0]?.replace('file://', '') ?? '';
+      const where = localPath(state.workingDirectories[0] ?? '');
       // In the worktree and not in the project it came from, which is the whole
       // assertion: the original has a `.env` already.
       expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
@@ -339,7 +340,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeIncludeFiles: '.env' },
       },
     });
@@ -390,14 +391,14 @@ describe('a session with a working tree of its own', () => {
       params: {
         channel: 'ahp-session:/odd',
         provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeIncludeFiles: ['.env', 7] },
       },
     });
     const state = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/odd' } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    const where = state.workingDirectories[0]?.replace('file://', '') ?? '';
+    const where = localPath(state.workingDirectories[0] ?? '');
     expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
     // The pattern that was a pattern still arrived.
     expect(readFileSync(join(where, '.env'), 'utf8')).toBe('SECRET=1\n');
@@ -411,13 +412,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeSymlinkFolders: ['node_modules'] },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     /*
      * A link, and not a copy.
      *
@@ -443,13 +444,13 @@ describe('a session with a working tree of its own', () => {
         method: 'createSession',
         params: {
           channel: uri, provider: 'echo',
-          workingDirectories: [`file://${project(root)}`],
+          workingDirectories: [uriOf(project(root))],
           config: { isolation: 'worktree', branch: 'main', worktreeSymlinkFolders: [pattern] },
         },
       });
-      const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+      const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
         snapshot: { state: { workingDirectories: string[] } };
-      }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+      }).snapshot.state.workingDirectories[0] ?? '');
       expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
       // Nothing linked, and the checkout's own file left where git put it: a
       // bad pattern is not a reason a session will not start.
@@ -467,13 +468,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeSymlinkFolders: ['node_modules'] },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     /*
      * Both, and this is why the patterns are matched by git rather than by the
      * shallow glob the include copy uses. `node_modules/` means every directory
@@ -494,13 +495,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeSymlinkFolders: ['../elsewhere', 'node_modules'] },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     // One pattern a person should not have been able to send is not a reason to
     // refuse the one beside it, and not a reason the session will not start.
     expect(lstatSync(join(where, 'node_modules')).isSymbolicLink()).toBe(true);
@@ -515,7 +516,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
@@ -562,7 +563,7 @@ describe('a session with a working tree of its own', () => {
     // where the reference host resolves the whole config on creation.
     await client.handle({
       method: 'createSession',
-      params: { channel: uri, provider: 'echo', workingDirectories: [`file://${project(root)}`] },
+      params: { channel: uri, provider: 'echo', workingDirectories: [uriOf(project(root))] },
     });
     const config = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: {
@@ -607,7 +608,7 @@ describe('a session with a working tree of its own', () => {
       method: 'sessionConfigCompletions',
       params: {
         channel: 'ahp-root://', provider: 'echo',
-        workingDirectory: `file://${project(root)}`,
+        workingDirectory: uriOf(project(root)),
         property: 'branch', query: 'feature',
       },
     }) as { items: { value: string; label: string }[] };
@@ -626,7 +627,7 @@ describe('a session with a working tree of its own', () => {
       method: 'sessionConfigCompletions',
       params: {
         channel: 'ahp-root://', provider: 'echo',
-        workingDirectory: `file://${project(root)}`,
+        workingDirectory: uriOf(project(root)),
         property: 'branch', query: 'reducer',
       },
     }) as { items: { value: string }[] };
@@ -648,7 +649,7 @@ describe('a session with a working tree of its own', () => {
       method: 'resolveSessionConfig',
       params: {
         channel: 'ahp-root://', provider: 'echo',
-        workingDirectory: `file://${project(root)}`,
+        workingDirectory: uriOf(project(root)),
         config: { isolation },
       },
     }) as { schema: { properties: Record<string, { enumDynamic?: boolean; readOnly?: boolean }> } }).schema.properties;
@@ -678,7 +679,7 @@ describe('a session with a working tree of its own', () => {
      */
     const answered = await client.handle({
       method: 'resolveSessionConfig',
-      params: { channel: 'ahp-root://', provider: 'echo', workingDirectory: `file://${project(root)}` },
+      params: { channel: 'ahp-root://', provider: 'echo', workingDirectory: uriOf(project(root)) },
     }) as { schema: { properties: Record<string, { enum?: string[] }> } };
     expect(answered.schema.properties.isolation?.enum).toEqual(['folder', 'worktree']);
     expect(answered.schema.properties.branch?.enum).toContain('main');
@@ -692,7 +693,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'folder' },
       },
     });
@@ -714,13 +715,13 @@ describe('a session with a working tree of its own', () => {
     const state = await until(
       client,
       uri,
-      (held) => (held.workingDirectories?.[0] ?? '') !== `file://${project(root)}`,
+      (held) => (held.workingDirectories?.[0] ?? '') !== uriOf(project(root)),
     );
     expect(state.config.values.isolation).toBe('worktree');
     // In a tree of its own, beside the repository, and not in the repository.
     const where = state.workingDirectories?.[0] ?? '';
-    expect(where.startsWith(`file://${worktreesOf(project(root))}`)).toBe(true);
-    expect(where).not.toBe(`file://${project(root)}`);
+    expect(where.startsWith(uriOf(worktreesOf(project(root))))).toBe(true);
+    expect(where).not.toBe(uriOf(project(root)));
   });
 
   it('does not start over for an answer it already has', async () => {
@@ -731,7 +732,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'folder' },
       },
     });
@@ -752,7 +753,7 @@ describe('a session with a working tree of its own', () => {
     const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories?: string[] } };
     }).snapshot.state;
-    expect(state.workingDirectories?.[0]).toBe(`file://${project(root)}`);
+    expect(state.workingDirectories?.[0]).toBe(uriOf(project(root)));
   });
 
   it('refuses to move one that has already been spoken in', async () => {
@@ -763,7 +764,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'folder' },
       },
     });
@@ -789,7 +790,7 @@ describe('a session with a working tree of its own', () => {
     const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories?: string[] } };
     }).snapshot.state;
-    expect(state.workingDirectories?.[0]).toBe(`file://${project(root)}`);
+    expect(state.workingDirectories?.[0]).toBe(uriOf(project(root)));
   });
 
   it('puts a client\'s own prefix in front of the branch it makes', async () => {
@@ -800,13 +801,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', worktreeBranchPrefix: 'softov/' },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     // `agents/` is the built-in prefix and the client's goes in front of it,
     // so the branch sorts where the person's other tools expect it to.
     const on = execFileSync('git', ['-C', where, 'rev-parse', '--abbrev-ref', 'HEAD']).toString().trim();
@@ -821,13 +822,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'release', worktreeCreateNewBranch: 'false' },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     // Isolated in a directory of its own, and on the branch that was picked
     // rather than one made for it.
     expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
@@ -843,14 +844,14 @@ describe('a session with a working tree of its own', () => {
       params: {
         channel: 'ahp-session:/plain',
         provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'folder' },
       },
     });
     const state = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/plain' } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    expect(state.workingDirectories[0]).toBe(`file://${project(root)}`);
+    expect(state.workingDirectories[0]).toBe(uriOf(project(root)));
     expect(existsSync(worktreesOf(project(root)))).toBe(false);
   });
 
@@ -862,13 +863,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     expect(existsSync(where)).toBe(true);
     const branch = branchOf(where);
 
@@ -886,13 +887,13 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     expect(where.startsWith(worktreesOf(project(root)))).toBe(true);
     // An afternoon's work nobody committed, which is the one thing here a
     // daemon cannot judge the value of.
@@ -921,7 +922,7 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: uri, provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
@@ -957,17 +958,17 @@ describe('a session with a working tree of its own', () => {
       method: 'createSession',
       params: {
         channel: 'ahp-session:/outside', provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main' },
       },
     });
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { workingDirectories: string[] }[];
     };
-    const where = listed.items[0]?.workingDirectories[0]?.replace(/^file:\/\//, '') ?? '';
+    const where = localPath(listed.items[0]?.workingDirectories[0] ?? '');
     expect(where).not.toBe(project(root));
     const seen = await client.handle({
-      method: 'resourceList', params: { channel: 'ahp-root://', uri: `file://${where}` },
+      method: 'resourceList', params: { channel: 'ahp-root://', uri: uriOf(where) },
     }) as { entries: { name: string }[] };
     expect(seen.entries.map((e) => e.name)).toContain('.git');
   });
@@ -1014,7 +1015,7 @@ describe('an archived session\'s tree', () => {
         method: 'createSession',
         params: {
           channel, provider: 'echo',
-          workingDirectories: [`file://${project(root)}`],
+          workingDirectories: [uriOf(project(root))],
           config: { isolation: 'worktree', branch: 'main', ...config },
         },
       });
@@ -1391,11 +1392,11 @@ describe('a worktree the window holds a handle on', () => {
     const { client } = await joined(root, worktrees);
     await client.handle({
       method: 'createSession',
-      params: { channel: uri, provider: 'echo', workingDirectories: [`file://${project(root)}`], config: { isolation: 'worktree', branch: 'main' } },
+      params: { channel: uri, provider: 'echo', workingDirectories: [uriOf(project(root))], config: { isolation: 'worktree', branch: 'main' } },
     });
-    const where = ((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+    const where = localPath((await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
       snapshot: { state: { workingDirectories: string[] } };
-    }).snapshot.state.workingDirectories[0] ?? '').replace('file://', '');
+    }).snapshot.state.workingDirectories[0] ?? '');
     return { client, where };
   };
   it('says so on initialize, and answers the session\'s tree by handle', async () => {
@@ -1406,7 +1407,7 @@ describe('a worktree the window holds a handle on', () => {
     expect(said._meta?.['vscode.detachedWorktrees']).toBe(true);
     await expect(client.handle({ method: 'vscode/createAgentHostDetachedWorktree', params: { session: 'ahp-session:/nobody', prompt: 'x' } }))
       .rejects.toMatchObject({ code: -32602, message: 'Session not found: ahp-session:/nobody' });
-    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/plain', provider: 'echo', workingDirectories: [`file://${project(root)}`] } });
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/plain', provider: 'echo', workingDirectories: [uriOf(project(root))] } });
     await expect(client.handle({ method: 'vscode/createAgentHostDetachedWorktree', params: { session: 'ahp-session:/plain', prompt: 'x' } }))
       .rejects.toMatchObject({ message: 'Session is not configured for worktree isolation: ahp-session:/plain' });
   });
@@ -1415,7 +1416,7 @@ describe('a worktree the window holds a handle on', () => {
     const root = repository();
     const { client, where } = await isolated(root, 'ahp-session:/held');
     const { handle, resource } = await client.handle({ method: 'vscode/createAgentHostDetachedWorktree', params: { session: 'ahp-session:/held', prompt: 'port it' } }) as { handle: string; resource: string };
-    expect(resource).toBe(`file://${where}`);
+    expect(resource).toBe(uriOf(where));
     const branch = branchOf(where);
     await client.handle({ method: 'vscode/claimAgentHostDetachedWorktree', params: { handle } });
     await expect(client.handle({ method: 'vscode/claimAgentHostDetachedWorktree', params: { handle: 'nobody' } }))
@@ -1544,7 +1545,7 @@ describe('the git directory a machine for an isolated session is handed', () => 
       params: {
         channel: 'ahp-session:/borrowed',
         provider: 'echo',
-        workingDirectories: [`file://${project(root)}`],
+        workingDirectories: [uriOf(project(root))],
         config: { isolation: 'worktree', branch: 'main', computer: 'disposable:box' },
       },
     });

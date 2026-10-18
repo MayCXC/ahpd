@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { metaKeys } from '../../../tools/wire.mjs';
+import { posix } from '../../../tools/posix.ts';
 import { gitChanges } from '../src/changes.js';
 import type { ChangeWords, ChangeWordsMode, ChangesetOperationContext } from '../src/types/changes.js';
 
@@ -372,7 +373,9 @@ describe('what a resource target may name', () => {
     return { repo, dir: join(repo, 'sub') };
   };
 
-  it('refuses a target above the folder, by `..`, by a decoded one and by a symlink', async () => {
+  // A link to a file is a symbolic link a Windows runner may not be allowed to
+  // make: that privilege is Developer Mode or an administrator.
+  it.skipIf(!posix)('refuses a target above the folder, by `..`, by a decoded one and by a symlink', async () => {
     const { repo, dir } = nested();
     symlinkSync(join(repo, 'top.txt'), join(dir, 'link.txt'));
     const refused = 'That file is not in this directory.';
@@ -383,7 +386,9 @@ describe('what a resource target may name', () => {
     expect(porcelain(repo)).toContain(' M sub/inside.txt');
   });
 
-  it('stages a link inside the folder as the link, not the file it points at', async () => {
+  // A link to a file is a symbolic link a Windows runner may not be allowed to
+  // make: that privilege is Developer Mode or an administrator.
+  it.skipIf(!posix)('stages a link inside the folder as the link, not the file it points at', async () => {
     const { repo, dir } = nested();
     symlinkSync('inside.txt', join(dir, 'alias.txt'));
     await operate(dir, 'stage', `file://${dir}/alias.txt`);

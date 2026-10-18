@@ -3,6 +3,7 @@ import { chmodSync, mkdtempSync, readFileSync, rmSync, utimesSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { gitChanges } from '../src/changes.js';
 
 /*
@@ -55,7 +56,9 @@ const recording = (): string => {
   return log;
 };
 
-it('runs every background git read with GIT_OPTIONAL_LOCKS=0', async () => {
+// The `git` this case puts first on `PATH` is a `#!/bin/sh` script, and it is
+// found with `sh -c`: a POSIX shell outside a terminal, which Windows has not.
+it.skipIf(!posix)('runs every background git read with GIT_OPTIONAL_LOCKS=0', async () => {
   const dir = repository();
   const log = recording();
   const source = gitChanges();

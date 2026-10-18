@@ -15,6 +15,7 @@ import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, w
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { fileUsage } from '../src/usage.js';
 import type { ComputerTime, ModelCall, ModelUse, UsageEntry } from '../src/types/usage.js';
 
@@ -308,7 +309,9 @@ it('says so and keeps nothing of a record that names no day, rather than chargin
   expect(existsSync(join(folder, 'whatev-model.jsonl'))).toBe(false);
 });
 
-it('makes its folder, and writes usage nobody but its owner may read', async () => {
+// `0600` is a POSIX file mode. Windows keeps only a read-only flag, so there
+// is no owner-only for this to read.
+it.skipIf(!posix)('makes its folder, and writes usage nobody but its owner may read', async () => {
   expect(existsSync(folder)).toBe(false);
   const usage = fileUsage({ folder });
   expect(existsSync(folder)).toBe(true);

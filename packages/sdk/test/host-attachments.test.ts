@@ -20,6 +20,7 @@ import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { createHost } from '../src/host.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -179,7 +180,9 @@ const png = (label = 'pasted.png'): Bag => ({
   data: PNG.toString('base64'),
 });
 
-it('writes an embedded image to a file the message names', async () => {
+// `0400` is a POSIX file mode. Windows keeps only a read-only flag, so there
+// is no read-only-for-everyone for this to read.
+it.skipIf(!posix)('writes an embedded image to a file the message names', async () => {
   const said = saidNothing();
   const { dir, turn, state } = await serving(said);
   await turn({ type: 'chat/turnStarted', turnId: 't1', message: { text: 'what is this', attachments: [png()] } });

@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, st
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { readJson, readJsonObject, writeJsonAtomic } from '../src/jsonfile.js';
 
 /*
@@ -94,12 +95,16 @@ describe('writeJsonAtomic', () => {
     expect(existsSync(`${at('a.json')}.${String(process.pid)}.tmp`)).toBe(false);
   });
 
-  it('makes the file owner-only, because what is written this way names who may use what', () => {
+  // `0600` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no owner-only for this to read.
+  it.skipIf(!posix)('makes the file owner-only, because what is written this way names who may use what', () => {
     writeJsonAtomic(at('a.json'), { secrets: {} });
     expect(statSync(at('a.json')).mode & 0o777).toBe(0o600);
   });
 
-  it('is owner-only even when a readable temp at its own name was left behind', () => {
+  // `0600` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no owner-only for this to read.
+  it.skipIf(!posix)('is owner-only even when a readable temp at its own name was left behind', () => {
     // What a process that had this pid before left world-readable. `mode` is
     // applied when a file is created and not when one is opened, so a write
     // that opened this temp would keep its 0644 - and the rename puts that on
@@ -112,12 +117,16 @@ describe('writeJsonAtomic', () => {
     expect(statSync(at('a.json')).mode & 0o777).toBe(0o600);
   });
 
-  it('creates the file at the mode a caller names instead', () => {
+  // `0644` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no mode for this to read.
+  it.skipIf(!posix)('creates the file at the mode a caller names instead', () => {
     writeJsonAtomic(at('a.json'), { any: 'body' }, { mode: 0o644 });
     expect(statSync(at('a.json')).mode & 0o777).toBe(0o644);
   });
 
-  it('makes the folder first, always, and at the mode a caller names for it', () => {
+  // `0700` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no mode for this to read.
+  it.skipIf(!posix)('makes the folder first, always, and at the mode a caller names for it', () => {
     const nested = join(dir, 'one', 'two', 'a.json');
     writeJsonAtomic(nested, {});
     expect(readFileSync(nested, 'utf8')).toBe('{}\n');

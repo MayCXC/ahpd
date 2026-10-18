@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync, symlinkSync, mkdirSync, writeFileSync, readFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { createHost } from '../src/host.js';
 import { fileResources, pathOf, uriOf } from '../src/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -161,7 +162,10 @@ it('lets exactly one concurrent matching etag write update a file', async () => 
   expect(['0', '1', '2', '3', '4', '5', '6', '7']).toContain(text('shared.txt'));
 });
 
-it('identifies links when resolving without following them', async () => {
+// A link to a file, and a dangling link, are symbolic links a Windows runner
+// may not be allowed to make: that privilege is Developer Mode or an
+// administrator.
+it.skipIf(!posix)('identifies links when resolving without following them', async () => {
   const held = await client();
   mkdirSync(join(root, 'target-directory'));
   writeFileSync(join(root, 'target-file.txt'), 'target');
@@ -181,8 +185,9 @@ it('writes through a directory symlink, as the reference host does', async () =>
   const held = await client();
   // There is no served set to point out of any more: a link to a directory
   // elsewhere on the machine is a directory elsewhere on the machine, and a
-  // write under it lands there.
-  symlinkSync(outside, join(root, 'link'));
+  // write under it lands there. A junction on Windows, as the source makes
+  // one: a directory link there needs a privilege the runner may not have.
+  symlinkSync(outside, join(root, 'link'), process.platform === 'win32' ? 'junction' : 'dir');
   await put(held, 'link/escaped.txt', { data: 'through' });
   expect(readFileSync(join(outside, 'escaped.txt'), 'utf8')).toBe('through');
 });
@@ -293,7 +298,10 @@ it('writes without asking, and still answers a client that asks', async () => {
   })).toEqual({});
 });
 
-it('refuses final file links for writes and copies, including dangling ones', async () => {
+// A link to a file, and a dangling link, are symbolic links a Windows runner
+// may not be allowed to make: that privilege is Developer Mode or an
+// administrator.
+it.skipIf(!posix)('refuses final file links for writes and copies, including dangling ones', async () => {
   const held = await client();
   const target = join(outside, 'target.txt');
   writeFileSync(target, 'outside');
@@ -340,7 +348,9 @@ it('refuses malformed or remote file URIs without treating them as local paths',
   expect(pathOf('file://localhost/tmp/local')).toBe('/tmp/local');
 });
 
-it('says why a directory or a link cannot be written, rather than reporting an errno', async () => {
+// The link here is a link to a file, which a Windows runner may not be allowed
+// to make, and `ELOOP` from `O_NOFOLLOW` is a POSIX answer besides.
+it.skipIf(!posix)('says why a directory or a link cannot be written, rather than reporting an errno', async () => {
   /*
    * The refusals are the flags' doing - `O_NOFOLLOW` answers `ELOOP` and a
    * directory opened for writing answers `EISDIR` - and both used to reach the

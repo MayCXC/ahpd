@@ -2,6 +2,7 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { githubPullRequests } from '../src/repo/github.js';
 
 /*
@@ -63,7 +64,9 @@ describe('the pull requests of a branch', () => {
     await expect(githubPullRequests().forBranch({ owner: 'softov', repo: 'ahpd' }, 'main', 'bad', '/tmp')).rejects.toThrow('401');
   });
 
-  it('asks gh without a token, and reads its spelling of a state', async () => {
+  // `fakeGh` puts a `#!/bin/sh` script first on `PATH`, and the host runs it:
+  // a POSIX shell outside a terminal, which Windows has not.
+  it.skipIf(!posix)('asks gh without a token, and reads its spelling of a state', async () => {
     const dir = fakeGh(JSON.stringify([
       { url: 'https://github.com/softov/ahpd/pull/7', state: 'OPEN', title: 'The fix', updatedAt: '2026-09-12T00:00:00Z' },
       { url: 'https://github.com/softov/ahpd/pull/9', state: 'MERGED', updatedAt: '2026-09-13T00:00:00Z' },
@@ -78,7 +81,9 @@ describe('the pull requests of a branch', () => {
       .toBe('pr list --repo softov/ahpd --head fix/kqueue --state all --limit 10 --json url,state,title,updatedAt');
   });
 
-  it('says what gh said when gh could not answer', async () => {
+  // `fakeGh` puts a `#!/bin/sh` script first on `PATH`, and the host runs it:
+  // a POSIX shell outside a terminal, which Windows has not.
+  it.skipIf(!posix)('says what gh said when gh could not answer', async () => {
     const dir = fakeGh('[]', 4);
     await expect(githubPullRequests().forBranch({ owner: 'softov', repo: 'ahpd' }, 'main', undefined, dir)).rejects.toThrow('not logged in');
   });
@@ -123,7 +128,9 @@ describe('one pull request by its page', () => {
     await expect(githubPullRequests().byUrl?.('https://github.com/softov/ahpd/pull/9', 'bad', '/tmp')).rejects.toThrow('401');
   });
 
-  it('asks gh without a token, and reads its spelling of a state', async () => {
+  // `fakeGh` puts a `#!/bin/sh` script first on `PATH`, and the host runs it:
+  // a POSIX shell outside a terminal, which Windows has not.
+  it.skipIf(!posix)('asks gh without a token, and reads its spelling of a state', async () => {
     const dir = fakeGh(JSON.stringify({ url: 'https://github.com/softov/ahpd/pull/9', state: 'MERGED', title: 'The fix' }));
     expect(await githubPullRequests().byUrl?.('https://github.com/softov/ahpd/pull/9', undefined, dir))
       .toEqual({ url: 'https://github.com/softov/ahpd/pull/9', state: 'merged', title: 'The fix' });

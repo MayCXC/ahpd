@@ -476,7 +476,10 @@ describe('the folders a window vouched for, read as the folders they name', () =
   const outside = join(ROOT, 'outside');
   mkdirSync(below, { recursive: true });
   mkdirSync(outside, { recursive: true });
-  symlinkSync(outside, join(inside, 'link'));
+  // A junction on Windows, as the source makes one: a directory link there is
+  // a reparse point, and one made without the type needs a privilege the
+  // runner may not have.
+  symlinkSync(outside, join(inside, 'link'), process.platform === 'win32' ? 'junction' : 'dir');
   /** What a window pushes when it trusts these folders and no others. */
   const vouching = (folders: string[]): unknown => ({ enabled: true, trustedUris: folders.map(uriOf) });
 

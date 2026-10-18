@@ -17,6 +17,7 @@ import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, statSync, wri
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { filePolicies, memoryPolicies } from '../src/policies.js';
 import { RpcError } from '../src/rpc.js';
 import type { Measure, Policies, Policy, PolicyLimit } from '../src/types/policies.js';
@@ -314,7 +315,9 @@ describe('the file policies are kept in', () => {
     expect(existsSync(`${file}.${process.pid}.tmp`)).toBe(false);
   });
 
-  it('writes the file owner-only, because it names who may use what', async () => {
+  // `0600` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no owner-only for this to read.
+  it.skipIf(!posix)('writes the file owner-only, because it names who may use what', async () => {
     const store = filePolicies({ file });
     await store.put(rows()[0] as Policy);
 
@@ -323,7 +326,9 @@ describe('the file policies are kept in', () => {
     expect(statSync(file).mode & 0o777).toBe(0o600);
   });
 
-  it('is owner-only even when a readable temp at its own name was left behind', async () => {
+  // `0600` is a POSIX file mode. Windows keeps only a read-only flag, so there
+  // is no owner-only for this to read.
+  it.skipIf(!posix)('is owner-only even when a readable temp at its own name was left behind', async () => {
     // What a process that had this pid before left world-readable. `mode` is
     // applied when a file is created and not when one is opened, so a write that
     // opens this temp keeps its 0644 - and the rename puts that on the real file.

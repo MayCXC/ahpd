@@ -2,6 +2,7 @@ import { mkdirSync, mkdtempSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { claude, claudeExecutablePath } from '../../agent-claude/src/claude.js';
 import { cofoldAgent } from '../../agent-cofold/src/agent.js';
 
@@ -42,7 +43,10 @@ it('Claude mounts the host CLI where the docs always put it, when asked for', ()
   expect((needs.claudeExecutable as { file: string }).file).toBe(claudeExecutablePath());
 });
 
-it('Claude follows the CLI symlink when asked, so a host update is picked up', () => {
+// The link the CLI is reached by is a link to a file, which a Windows runner
+// may not be allowed to make: that privilege is Developer Mode or an
+// administrator.
+it.skipIf(!posix)('Claude follows the CLI symlink when asked, so a host update is picked up', () => {
   const home = temp();
   const version = join(home, '.local', 'share', 'claude', 'versions', '9.9.9');
   mkdirSync(version, { recursive: true });

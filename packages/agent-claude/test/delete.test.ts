@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { claude } from '../src/claude.js';
 import { forgetSession, transcriptOf } from '../src/catalog.js';
 
@@ -103,7 +104,10 @@ it('refuses an id that is not a filename', () => {
   expect(transcriptOf('a/b', ran)).toBeUndefined();
 });
 
-it('raises a delete that failed, rather than reporting a session as gone', async () => {
+// A folder made unwritable with `0555` is a POSIX file mode. Windows keeps
+// only a read-only flag and lets the delete through, so the refusal this reads
+// never comes.
+it.skipIf(!posix)('raises a delete that failed, rather than reporting a session as gone', async () => {
   written(ONE);
   // Findable and not removable: the file is still there after the SDK gives
   // up, which is what says this was not a not-found.

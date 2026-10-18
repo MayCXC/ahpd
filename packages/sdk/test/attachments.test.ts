@@ -16,6 +16,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:f
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { partsOf, SNAPSHOT_TAG } from '../src/attachments.js';
 import type { Bag } from '../src/types/common.js';
 import type { MessageAttachment } from '../src/types/session.js';
@@ -189,7 +190,9 @@ it('names text too long to inline, and text in a file somebody is editing', asyn
   expect(text(inWorkspace)).toBe(`The user provided the following references:\n- ${mine}`);
 });
 
-it('names a directory, a pipe and a file that is not there', async () => {
+// A pipe is a POSIX file, made with `mkfifo`, and the mode on it is a POSIX
+// file mode. Windows has neither.
+it.skipIf(!posix)('names a directory, a pipe and a file that is not there', async () => {
   const dir = temp();
   const folder = join(dir, 'a-folder');
   mkdirSync(folder);

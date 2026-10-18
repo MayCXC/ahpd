@@ -17,6 +17,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { resolve, write } from '../src/resources.js';
 import type { Write } from '../src/types/resources.js';
 
@@ -45,7 +46,11 @@ beforeEach(() => { root = mkdtempSync(join(tmpdir(), 'ahpd-write-')); });
 afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
 for (const one of fixture.cases) {
-  it(one.name, async () => {
+  // A fixture whose `before` is a symbolic link needs a link to a file, which
+  // a Windows runner may not be allowed to make: that privilege is Developer
+  // Mode or an administrator.
+  const needsFileLink = typeof one.before === 'object' && 'symlinkTo' in one.before;
+  it.skipIf(!posix && needsFileLink)(one.name, async () => {
     const relative = one.path ?? 'file.txt';
     const at = join(root, relative);
     mkdirSync(dirname(at), { recursive: true });
