@@ -50,6 +50,7 @@ export const declareStatus = (registry: Registry<object>, served?: ServedFacts):
       ...(found.startFolder === undefined ? {} : { startFolder: found.startFolder }),
       startedAt: found.startedAt,
       ...(found.automations === undefined ? {} : { automations: found.automations }),
+      ...(found.service === undefined ? {} : { service: found.service }),
     }, text);
   },
 });

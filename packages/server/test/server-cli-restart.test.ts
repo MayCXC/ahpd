@@ -6,7 +6,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { alive, announced, BACKEND, cli, config, foreground, freePort, gone, home, INITIALIZE, KEPT, knock, put, recordOf, rpc, signalled, SKIPS, SLOW_STOP, spawned } from './cli.js';
+import { alive, announced, BACKEND, cli, config, fakeSystemctl, foreground, freePort, gone, home, INITIALIZE, KEPT, knock, put, recordOf, rpc, signalled, SKIPS, SLOW_STOP, spawned, supervised, systemctlAsked } from './cli.js';
 
 describe('start, stop and status', () => {
   it('restarts a started daemon over HTTP with the line it was started with', async () => {
@@ -221,6 +221,57 @@ describe('start, stop and status', () => {
   it('leaves a foreground daemon to the default for either restart signal, which ends it', async () => {
     expect(await signalled('SIGHUP')).toBe('SIGHUP');
     expect(await signalled('SIGUSR2')).toBe('SIGUSR2');
+  }, 60000);
+
+  /*
+   * A daemon a service manager holds, from both ends: `ahpd stop` asks the
+   * manager and nothing else, and a restart asked over HTTP is handed to the
+   * manager, which is the one that starts the next daemon. The machine this
+   * runs on has no systemd user session, so the manager is the stand-in that
+   * says what it was asked and does what the case names.
+   */
+  it('stops a supervised daemon by asking the service manager for it', async () => {
+    const daemon = await supervised();
+    // The manager is what stops it: the half of `systemctl stop` that matters
+    // here is the signal the real one sends the daemon it holds.
+    const stopped = await cli(['stop'], { env: fakeSystemctl(`kill -TERM ${String(daemon.pid)}`) });
+    expect({ code: stopped.code, stderr: stopped.stderr }).toEqual({ code: 0, stderr: '' });
+    expect(stopped.stdout).toBe(`Stopped ${daemon.url} (pid ${String(daemon.pid)}).\n`);
+    expect(systemctlAsked()).toEqual(['--user', 'stop', 'ahpd']);
+    // It went, so no kill was needed, and the record went with it: a daemon
+    // still there is one the manager is still stopping, which is said and not
+    // forced.
+    await gone(daemon.pid);
+    expect(alive(daemon.pid)).toBe(false);
+    expect(existsSync(join(home, 'ahpd', 'daemon.json'))).toBe(false);
+  }, 60000);
+
+  it('hands a restarted supervised daemon to the service manager, and starts nothing itself', async () => {
+    put({ http: true, plugins: [BACKEND], connectionToken: 'abc' });
+    const daemon = await supervised(['--config-file', config, '--connection-token', 'abc'], fakeSystemctl());
+    const api = `http://127.0.0.1:${new URL(daemon.url).port}/api/restart`;
+
+    const answered = await fetch(api, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer abc' },
+      body: '{}',
+    });
+    expect(answered.status).toBe(200);
+    expect(await answered.json()).toEqual({ restarting: true, pid: daemon.pid });
+
+    // The stop the restart begins with is the manager's, so no successor is
+    // started from here, and the record goes before it is asked: the daemon the
+    // manager starts next serves this same configuration folder.
+    await gone(daemon.pid);
+    expect(await daemon.ended).toBe(0);
+    expect(existsSync(join(home, 'ahpd', 'daemon.json'))).toBe(false);
+    expect(systemctlAsked()).toEqual(['--user', '--no-block', 'restart', 'ahpd']);
+    // A daemon a manager started writes no log file: its own words go where the
+    // unit sends them, which is this case's pipe.
+    expect(daemon.said()).toContain('restart: handed to the service manager');
+    // The stand-in does not start one, and neither did the daemon.
+    await new Promise((wait) => { setTimeout(wait, 500); });
+    expect(announced().filter(alive)).toEqual([]);
   }, 60000);
 
   it('says none is running to restart', async () => {

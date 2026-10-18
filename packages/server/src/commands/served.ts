@@ -41,6 +41,8 @@ export interface ServedRunning {
   startedAt: string;
   /** Where automations are kept and whether their schedules fire. */
   automations?: string;
+  /** The service manager that started this daemon, when one did. */
+  service?: 'systemd' | 'launchd';
 }
 
 /** What a served command reads instead of the request. */

@@ -32,6 +32,7 @@ import { declarePaths } from './paths.js';
 import { declarePlugin } from './plugin.js';
 import { declareProxy } from './proxy.js';
 import { declareRun } from './run.js';
+import { declareService } from './service.js';
 import { declareStart } from './start.js';
 import { declareStatus } from './status.js';
 import { declareStop } from './stop.js';
@@ -59,6 +60,7 @@ export const cliRegistry = (): Registry<object> => {
   declareStop(registry);
   declareRestart(registry);
   declareStatus(registry);
+  declareService(registry);
   declareConfig(registry);
   declareConfigure(registry);
   declareUser(registry);

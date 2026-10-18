@@ -210,6 +210,11 @@ describe('deliver', () => {
       timeoutMs: 1000,
       now: () => 0,
       piped: true,
+      // The record names no service, so no manager is asked on this path.
+      manager: {
+        stop: () => Promise.reject(new Error('no service manager holds this record')),
+        restart: () => Promise.reject(new Error('no service manager holds this record')),
+      },
     };
     await expect(restartAtTerminal(false, steps)).rejects
       .toThrow('pid 7, which the record names, is gone; nothing was restarted.');

@@ -45,6 +45,41 @@ The new daemon keeps the old one's environment variables and working folder. To 
 
 From another machine: `ahpd --remote <url> restart`. See [Remote access](REMOTE.md#run-commands-from-another-machine).
 
+## Service
+
+`ahpd service install` hands the daemon to the service manager of this machine, so it starts at login and is started again after a crash. On Linux that is a systemd user unit, and on macOS a LaunchAgent. Neither needs sudo: both files belong to this user.
+
+```bash
+ahpd service install
+ahpd status
+```
+
+```
+ahpd on ws://127.0.0.1:8787 (pid 48213), started 2026-10-16T09:12:04.881Z, under systemd
+```
+
+What it writes is one file that runs the same daemon as `ahpd` with no command, for the configuration file of this install. A service starts in your home folder, so a run with no `paths` serves the home folder, the way a terminal opened there would.
+
+| Platform | File |
+| --- | --- |
+| Linux | `~/.config/systemd/user/ahpd.service` |
+| macOS | `~/Library/LaunchAgents/dev.ahpd.daemon.plist` |
+
+While the service holds the daemon, `ahpd stop` and `ahpd restart` go through the manager rather than sending a signal: to the file, a signal is a crash, and the manager would start the daemon again. The log is where the manager puts it: the journal on Linux, and `daemon.log` on macOS.
+
+```bash
+journalctl --user -u ahpd -f        # Linux
+tail -f ~/.config/ahpd/daemon.log   # macOS
+```
+
+::: info Environment
+The file gets the `PATH` of the shell that ran `service install`, so the agents this host starts find their own runtimes. The daemon's own interpreter is written in full, so a `node` from nvm needs no `PATH` of its own.
+:::
+
+After an upgrade, run `ahpd service install` again: it writes the file for the new binary and starts the daemon from it. `ahpd service uninstall` stops the daemon, takes the service out of the list this machine starts at login, and removes the file.
+
+`service install` is refused while a daemon from `ahpd start` runs - stop that one first.
+
 ## Served folders
 
 The daemon serves the folders in `paths`. With none, it serves the folder it started in.

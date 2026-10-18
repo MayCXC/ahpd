@@ -43,7 +43,7 @@ import {
   usageMethods,
   usageProvider,
 } from '@ahpd/sdk';
-import { CONTROL_ENV, DETACHED_ENV, forget, running, start as startDaemon, sweepTemps } from '../daemon.js';
+import { CONTROL_ENV, DETACHED_ENV, SERVICE_ENV, claim, forget, recordOf, running, serviceIn, start as startDaemon, sweepTemps } from '../daemon.js';
 import { controlIn, controlServer } from '../control.js';
 import type { ControlServer } from '../control.js';
 import { here } from '../ask.js';
@@ -57,6 +57,7 @@ import { fileRecords } from '../records.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
 import { pty } from '../pty.js';
+import { realManager } from '../service.js';
 import { migrateAutomations, scheduledAutomations } from '../scheduled.js';
 import { fileEnablement } from '../enablement.js';
 import { filesOf, lineFor, writerFor } from '../wire.js';
@@ -209,6 +210,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   const control = controlIn(process.env[CONTROL_ENV]);
   delete process.env[CONTROL_ENV];
+  /*
+   * Whether a service manager started this process, and which one. Taken out of
+   * the environment at once like the two above, so a shell a session runs
+   * inherits none of them.
+   */
+  const service = serviceIn(process.env[SERVICE_ENV]);
+  delete process.env[SERVICE_ENV];
 
   /*
    * Whether a clock is running, decided once and then said out loud.
@@ -420,6 +428,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       ...(options.startFolder === undefined ? {} : { startFolder: options.startFolder }),
       startedAt,
       automations: memory ? 'in memory, schedules do not fire' : `in ${automationsDir()}, schedules fire`,
+      // The manager that started this process, so a served `ahpd status` says
+      // what a local one says about the same daemon.
+      ...(service === undefined ? {} : { service }),
     }),
     turning: () => turning(),
     usage: () => metered,
@@ -1092,8 +1103,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * says it on stderr, because its stdout is the wire: a reader there is parsing
    * frames, and a status line would be the one frame nothing sent.
    */
+  /*
+   * What this host says about itself, built first and written once.
+   *
+   * One write, so a reader of a log that several daemons write to takes a block
+   * as one daemon's; and held in a variable, because a supervised daemon writes
+   * its own record out of these lines rather than reading its own log back.
+   */
   const say = options.stdio ? process.stderr : process.stdout;
-  say.write(
+  const announcement =
     `${options.stdio ? 'ahpd over stdio' : `ahpd on ws://${urlHost(listener.host)}:${listener.port}`} (${listener.runtime}), sessions in ${options.paths.join(', ')}\n`
     // Where the API is, when there is one: on this port, or on the one
     // `http.port` bound. Its own line, and `http://` rather than `ws://`, so
@@ -1148,9 +1166,31 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // What a plugin asked to have said, in the order the plugins were loaded,
     // and last so the lines `daemon.ts` matches keep the places it expects.
     + said.map((line) => `${line}\n`).join('')
-    + (checkingUpdates(options.updateCheck) ? updateLine(manifest()) ?? '' : ''),
-  );
+    + (checkingUpdates(options.updateCheck) ? updateLine(manifest()) ?? '' : '');
+  say.write(announcement);
   announced = true;
+
+  /*
+   * The record of a daemon a service manager started.
+   *
+   * `ahpd start` writes the record of the child it spawned, because the parent
+   * is the one that waits for the announcement. A unit or an agent spawns the
+   * daemon itself and knows nothing of records, so a supervised daemon writes
+   * its own, at the same moment and from the same lines.
+   *
+   * The record is one configuration directory's, so another daemon already
+   * holding it is one this process cannot serve beside. A stamp and an exit is
+   * what says so, rather than a thrown error: a process with listeners open is
+   * not ended by one, and a daemon left holding the port with no record is the
+   * failure a log read afterwards cannot see.
+   */
+  if (service !== undefined) {
+    const other = claim(recordOf(announcement, process.pid, token, undefined, undefined, service));
+    if (other !== undefined) {
+      stamp(`Another daemon is already running: ${other.url} (pid ${String(other.pid)}). Stop it with ahpd stop, then start this one again.`);
+      process.exit(1);
+    }
+  }
 
   /*
    * Ask npm, later and in the background.
@@ -1220,6 +1260,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     log: stamp,
     exit: (code) => process.exit(code),
     later: (step) => { setTimeout(step, 0); },
+    /*
+     * A daemon a service manager holds is restarted through it: the manager
+     * starts the next daemon from the unit or the agent, and a successor this
+     * process spawned would be in the same cgroup as this one, where the stop
+     * job the restart begins with would end it too. A daemon started by a
+     * terminal has no manager to ask.
+     */
+    ...(service === undefined ? {} : { hand: (): Promise<void> => realManager().restart(service) }),
   });
   // From here a `shutdown` request runs the way down, as the control pipe does.
   wayDown = way.shutdown;
@@ -1245,6 +1293,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    */
   restart = checkedRestart(
     async (line) => {
+      /*
+       * A supervised daemon was started with no line of its own: the line is
+       * the unit's or the agent's, and the manager starts the next daemon with
+       * it. There is nothing here to read, and nothing for a check to ask.
+       */
+      if (service !== undefined) return undefined;
       const token = secret(await optionsOfLine(line)).token;
       await successorTakes(line);
       return token;

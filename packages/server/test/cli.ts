@@ -7,7 +7,7 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer, type AddressInfo } from 'node:net';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
@@ -19,6 +19,8 @@ export const MAIN = 'packages/server/src/main.ts';
 export const BACKEND = join(import.meta.dirname, 'fixtures', 'plugin-echo');
 /** A directory holding an `npm` that says one line and leaves the code `FAKE_NPM_EXIT` names. */
 export const FAKE_NPM = join(import.meta.dirname, 'fixtures', 'npm-fake');
+/** A directory holding a `systemctl` that says what it was asked and does what the case names. */
+export const FAKE_SYSTEMCTL = join(import.meta.dirname, 'fixtures', 'systemctl-fake');
 /** A registry nothing listens on, so an install's manifest check is left to the fake npm. */
 export const NO_REGISTRY = 'http://127.0.0.1:1';
 export const fakeNpm = (code: number): Record<string, string> => ({
@@ -26,6 +28,33 @@ export const fakeNpm = (code: number): Record<string, string> => ({
   npm_config_registry: NO_REGISTRY,
   FAKE_NPM_EXIT: String(code),
 });
+
+/**
+ * The environment a case that runs under a service manager runs in: a stand-in
+ * `systemctl` on the `PATH`, which says what it was asked and then does what
+ * `does` names - the signal the real manager sends the daemon it holds, and
+ * nothing else.
+ *
+ * The stand-in is copied into this case's directory and made executable there,
+ * because the file in git carries the mode it was committed with and this one
+ * is run by its name off the `PATH`.
+ */
+export const fakeSystemctl = (does = ''): Record<string, string> => {
+  const bin = join(home, 'bin');
+  mkdirSync(bin, { recursive: true });
+  const stand = join(bin, 'systemctl');
+  copyFileSync(join(FAKE_SYSTEMCTL, 'systemctl'), stand);
+  chmodSync(stand, 0o755);
+  return {
+    PATH: `${bin}:${process.env['PATH'] ?? ''}`,
+    SYSTEMCTL_LOG: join(home, 'systemctl.log'),
+    SYSTEMCTL_DO: does,
+  };
+};
+
+/** What that stand-in was asked, one argument per line and in order. */
+export const systemctlAsked = (): string[] =>
+  readFileSync(join(home, 'systemctl.log'), 'utf8').split('\n').filter((one) => one !== '');
 
 export interface Said {
   code: number | null;
@@ -183,8 +212,67 @@ export const knock = (url: string): Promise<string> => new Promise((resolve) => 
   socket.on('error', (error: Error) => { resolve(error.message); });
 });
 
-export const recordOf = (): { pid: number; url: string; connectUrl?: string; argv?: string[] } =>
-  JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as { pid: number; url: string };
+/** The record a daemon writes about itself, as a case reads it. */
+export interface Recorded {
+  pid: number;
+  url: string;
+  paths: string[];
+  startedAt: string;
+  connectUrl?: string;
+  argv?: string[];
+  automations?: string;
+  service?: string;
+}
+
+export const recordOf = (): Recorded =>
+  JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as Recorded;
+
+/** A daemon a service manager started: its pid, where it is, and how it ends. */
+export interface Supervised {
+  pid: number;
+  url: string;
+  /** The code the process left, which is what the manager reads. */
+  ended: Promise<number | null>;
+  /** What it said outside the protocol, so far. */
+  said: () => string;
+  kill: () => void;
+}
+
+/**
+ * A daemon as a service manager starts one: in the foreground, with the
+ * variable such a manager sets, and up until the case ends it.
+ *
+ * A daemon spawned by `ahpd start` has a parent that waits for its
+ * announcement and writes the record; this one is started by nobody and writes
+ * its own, which is the whole difference this is here to drive. It answers once
+ * that record names it, so a case has a pid and a URL to work with. `env` is
+ * what else a case puts in its environment, such as the stand-in manager it
+ * will ask.
+ */
+export const supervised = async (args: readonly string[] = [], env: Record<string, string> = {}): Promise<Supervised> => {
+  const child = spawn(
+    process.execPath,
+    [MAIN, '--port', '0', '--plugin', BACKEND, '--sessions', 'memory', '--automations', 'memory', '--no-update-check', ...args],
+    { cwd: REPO, env: daemonEnv({ AHPD_SERVICE: 'systemd', ...env }), stdio: ['pipe', 'pipe', 'pipe'] },
+  );
+  child.stdin.end();
+  const pid = child.pid as number;
+  spawned.push(pid);
+  let said = '';
+  child.stdout.on('data', (chunk: Buffer) => { said += String(chunk); });
+  child.stderr.on('data', (chunk: Buffer) => { said += String(chunk); });
+  const ended = new Promise<number | null>((done) => { child.once('exit', (code) => { done(code); }); });
+  const until = Date.now() + 20000;
+  let record: { pid: number; url: string } | undefined;
+  while (Date.now() < until) {
+    try { record = recordOf(); }
+    catch { record = undefined; }
+    if (record?.pid === pid) return { pid, url: record.url, ended, said: () => said, kill: () => { child.kill('SIGKILL'); } };
+    await new Promise((wait) => { setTimeout(wait, 50); });
+  }
+  child.kill('SIGKILL');
+  throw new Error(`the daemon never wrote its own record:\n${said}`);
+};
 
 /** A backend whose catalogue is a file under the daemon's path, so it survives a restart. */
 export const KEPT = join(import.meta.dirname, 'fixtures', 'plugin-kept', 'index.ts');

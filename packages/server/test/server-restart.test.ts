@@ -25,6 +25,7 @@ import type { InPlace, LifecycleSteps } from '../src/commands/restart.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
 import type { ControlledSignal, Running } from '../src/daemon.js';
+import type { Manager, Service } from '../src/service.js';
 import { apiHandler } from '../src/http.js';
 
 const AUTHORITY = '127.0.0.1:9350';
@@ -149,6 +150,33 @@ describe('POST /api/restart', () => {
     expect(refused.status).toBe(409);
     expect((await refused.json() as { message: string }).message).toContain('ahpd stop');
     expect(api.restarts).toEqual([]);
+  });
+
+  /*
+   * A supervised daemon is served too, and its record holds no line: the line
+   * is the unit's or the agent's, and the daemon answers the request and hands
+   * the restart to the manager rather than starting a successor of its own.
+   */
+  it('restarts a supervised daemon, which has no line of its own to start again', async () => {
+    started({ service: 'systemd' }, null);
+    const api = await served();
+    const answered = await api.post({});
+    expect(answered.status).toBe(200);
+    expect(await answered.json()).toEqual({ restarting: true, pid: process.pid });
+    expect(api.restarts).toEqual([undefined]);
+  });
+
+  it('still refuses a supervised restart while a turn runs, unless it is forced', async () => {
+    started({ service: 'launchd' }, null);
+    const api = await served(['ahp-session:/a']);
+    const refused = await api.post({});
+    expect(refused.status).toBe(409);
+    expect((await refused.json() as { message: string }).message).toContain('ahp-session:/a');
+    expect(api.restarts).toEqual([]);
+
+    const forced = await api.post({ force: true });
+    expect(forced.status).toBe(200);
+    expect(api.restarts).toEqual([undefined]);
   });
 
   it('is the deployment token\'s alone', async () => {
@@ -400,13 +428,82 @@ describe('lifecycle', () => {
     await settle();
     expect(said).toEqual(['down', 'forget', 'Could not restart it: it was stopped first, so none was started.', 'exit 0']);
   });
+
+  /*
+   * A supervised daemon's own restart, served or signalled: the manager starts
+   * the next one, so this process starts nothing. Its record goes before the
+   * manager is asked - the daemon coming up serves the same configuration
+   * folder and refuses to run beside a record naming a live daemon - and the
+   * exit is a clean one, which no `Restart=on-failure` unit starts again.
+   */
+  it('hands a supervised restart to the manager, starts no successor, and exits 0', async () => {
+    const said: string[] = [];
+    const way = lifecycle({
+      down: () => { said.push('down'); return Promise.resolve(); },
+      start: async () => { said.push('start'); return { pid: 7, url: '', connectUrl: '', paths: [], startedAt: '' }; },
+      stop: () => { said.push('stop'); },
+      forget: () => { said.push('forget'); },
+      log: (line) => { said.push(line); },
+      exit: (code) => { said.push(`exit ${String(code)}`); },
+      later: (step) => { step(); },
+      hand: async () => { said.push('hand systemd'); },
+    });
+    way.restart(ARGV);
+    await settle();
+    expect(said).toEqual(['down', 'forget', 'hand systemd', 'restart: handed to the service manager', 'exit 0']);
+  });
+
+  it('logs why and exits 1 when the manager would not take the restart', async () => {
+    const said: string[] = [];
+    const way = lifecycle({
+      down: () => Promise.resolve(),
+      start: async () => { said.push('start'); return { pid: 7, url: '', connectUrl: '', paths: [], startedAt: '' }; },
+      stop: () => {},
+      forget: () => { said.push('forget'); },
+      log: (line) => { said.push(line); },
+      exit: (code) => { said.push(`exit ${String(code)}`); },
+      later: (step) => { step(); },
+      hand: () => Promise.reject(new Error('systemctl --user --no-block restart ahpd failed: Job for ahpd.service failed')),
+    });
+    way.restart(ARGV);
+    await settle();
+    // Nothing is listening by then and the manager did not take it, so the exit
+    // is the failure one: this process does not stay up serving nothing.
+    expect(said).toEqual(['forget', 'Could not restart it: systemctl --user --no-block restart ahpd failed: Job for ahpd.service failed', 'exit 1']);
+  });
 });
 
-/** A record naming `pid`, with or without the line it was started with. */
-const recordFor = (pid: number, argv: string[] | null = ARGV): Running => ({
+/** A record naming `pid`, with or without the line it was started with, and the manager that holds it. */
+const recordFor = (pid: number, argv: string[] | null = ARGV, service?: Service): Running => ({
   pid, url: `ws://127.0.0.1:${String(9000 + pid)}`, connectUrl: `ws://127.0.0.1:${String(9000 + pid)}/`,
-  paths: ['/x'], startedAt: '', ...(argv === null ? {} : { argv }),
+  paths: ['/x'], startedAt: '', ...(argv === null ? {} : { argv }), ...(service === undefined ? {} : { service }),
 });
+
+/**
+ * The manager of a machine a case asks, and what it was asked in order.
+ *
+ * `then` is what the manager does when it is asked: the real one stops and
+ * starts a process, and a case stands in for that by writing the record the
+ * daemon it started would have written.
+ */
+const asked = (then: (verb: 'stop' | 'restart', service: Service) => void = () => {}) => {
+  const calls: string[] = [];
+  const manager: Manager = {
+    stop: async (service) => { calls.push(`stop ${service}`); then('stop', service); },
+    restart: async (service) => { calls.push(`restart ${service}`); then('restart', service); },
+  };
+  return { calls, manager };
+};
+
+/**
+ * The manager of a machine a case never reaches: no record written without a
+ * service is one a manager is asked about. It rejects rather than doing
+ * nothing, because a call to it is a case that went the wrong way.
+ */
+const noManager: Manager = {
+  stop: () => Promise.reject(new Error('no service manager holds this record')),
+  restart: () => Promise.reject(new Error('no service manager holds this record')),
+};
 
 describe('the daemon, told to restart by a signal', () => {
   const answer = async (forced: boolean, over: { recorded?: Running | undefined; turning?: string[]; piped?: boolean } = {}) => {
@@ -586,6 +683,7 @@ describe('restartAtTerminal', () => {
       timeoutMs: 5000,
       now: () => clock.at,
       piped,
+      manager: noManager,
     };
     return { state, steps };
   };
@@ -751,6 +849,41 @@ describe('restartAtTerminal', () => {
       return false;
     });
     expect((await restartAtTerminal(false, steps)).pid).toBe(8);
+  });
+
+  /*
+   * A daemon a service manager holds is restarted through it. The manager has
+   * the line this one runs - a supervised daemon has none of its own - and the
+   * record the daemon that comes next writes itself is what says it is up.
+   */
+  it('asks the manager to restart a supervised daemon, and answers the record that came back', async () => {
+    const { state, steps } = faked(recordFor(7, null, 'systemd'));
+    // What the real manager does, in one line: the daemon it started writes its
+    // own record, which is what the terminal is waiting for.
+    const { calls, manager } = asked((_verb, service) => { state.record = recordFor(8, null, service); });
+    const begun = await restartAtTerminal(false, { ...steps, manager });
+    expect(calls).toEqual(['restart systemd']);
+    expect(state.signals).toEqual([]);
+    expect(begun.pid).toBe(8);
+    expect(begun.service).toBe('systemd');
+  });
+
+  it('says what the manager said, when it would not restart one', async () => {
+    const { steps } = faked(recordFor(7, null, 'launchd'));
+    const manager: Manager = {
+      stop: () => Promise.reject(new Error('a restart asks for a restart')),
+      restart: () => Promise.reject(new Error('launchctl kickstart -k gui/1000/dev.ahpd.daemon failed: Could not find service')),
+    };
+    await expect(restartAtTerminal(false, { ...steps, manager }))
+      .rejects.toThrow('Could not restart it under launchd: launchctl kickstart -k gui/1000/dev.ahpd.daemon failed: Could not find service');
+  });
+
+  it('gives up on a supervised daemon that did not come back, and says to look', async () => {
+    const { state, steps } = faked(recordFor(7, null, 'systemd'));
+    const { manager } = asked();
+    await expect(restartAtTerminal(false, { ...steps, manager })).rejects.toThrow('It did not come back within 5 seconds; run ahpd status.');
+    // Bounded by the clock, one wait each second it was given.
+    expect(state.waits).toBe(6);
   });
 });
 

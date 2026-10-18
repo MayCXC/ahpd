@@ -7,6 +7,8 @@ import { connect } from 'node:net';
 import { basename, dirname, join } from 'node:path';
 import { readJson, writeJsonAtomic } from '@ahpd/sdk';
 import { daemonLog, daemonPath, ensureConfigDir } from './config.js';
+import { realManager } from './service.js';
+import type { Manager, Service } from './service.js';
 
 /**
  * Where a daemon on Windows takes a stop and a restart, and the key that proves
@@ -74,6 +76,13 @@ export interface Running {
    * and from a record an older daemon wrote.
    */
   control?: Control;
+  /**
+   * The service manager that started this daemon and keeps it running. Present
+   * only for a daemon a unit or an agent started, which is the one case where
+   * the two verbs reach it through that manager rather than by a signal; absent
+   * from a record a daemon from `ahpd start` wrote, and from an older one.
+   */
+  service?: Service;
 }
 
 /**
@@ -101,6 +110,29 @@ export const DETACHED_ENV = 'AHPD_DETACHED';
  * runs does not inherit either.
  */
 export const CONTROL_ENV = 'AHPD_CONTROL';
+
+/**
+ * Set in the environment of a daemon a service manager starts: which manager
+ * that is, `systemd` or `launchd`, as the unit or the agent writes it.
+ *
+ * A daemon started that way was not spawned by `start`, so no record of it
+ * exists until it writes one itself. The child reads this and deletes it at
+ * once, the way it takes the two above, so a shell a session runs inherits
+ * none of the three.
+ */
+export const SERVICE_ENV = 'AHPD_SERVICE';
+
+/**
+ * The manager named in the environment of a supervised daemon, or nothing.
+ *
+ * A value this code does not know is read as no manager at all: the manager
+ * only changes how the two verbs reach the daemon, and a signal reaches one
+ * that `ahpd start` spawned just as well - so a name from a newer ahpd leaves a
+ * daemon that stops and statuses as any other rather than one that will not
+ * start under its own unit.
+ */
+export const serviceIn = (value: string | undefined): Running['service'] =>
+  (value === 'systemd' || value === 'launchd' ? value : undefined);
 
 /** The name every control pipe starts with, before the random part. */
 const PIPE_PREFIX = '\\\\.\\pipe\\ahpd-';
@@ -277,8 +309,19 @@ export function readyUrl(origin: string, token?: string): string {
  * given in its environment. It is nowhere else in the record, and no line the
  * verbs print comes from it: the key belongs in the 0600 file and nowhere a log
  * would hold it.
+ *
+ * `service` is what a supervised daemon read out of its own environment, and is
+ * given by the daemon itself: a record of a daemon a manager started is written
+ * by that daemon, and not by the manager, which knows nothing of records.
  */
-export function recordOf(announced: string, pid: number, token?: string, argv?: string[], control?: Control): Running {
+export function recordOf(
+  announced: string,
+  pid: number,
+  token?: string,
+  argv?: string[],
+  control?: Control,
+  service?: Running['service'],
+): Running {
   const url = /ws:\/\/[^\s,]+/.exec(announced)?.[0] ?? announced;
   const automations = /^automations (.+)$/m.exec(announced)?.[1]?.trim();
   const api = apiOf(announced);
@@ -297,6 +340,7 @@ export function recordOf(announced: string, pid: number, token?: string, argv?: 
     ...(argv !== undefined ? { argv } : {}),
     ...(skipped.length > 0 ? { skipped } : {}),
     ...(control === undefined ? {} : { control }),
+    ...(service === undefined ? {} : { service }),
   };
 }
 
@@ -377,9 +421,14 @@ export function announcementOf(log: string, pid: number): string | undefined {
  * Built from `url` alone, which is the token-free origin: a record dump would
  * print `connectUrl` and with it the secret. The line is a function so a test
  * can hold it to that.
+ *
+ * The manager comes last, because it is the one thing here that is about the
+ * machine rather than the daemon, and because a daemon from `ahpd start` has
+ * none and its line is left as it was.
  */
-export function statusLine(record: Pick<Running, 'url' | 'pid' | 'startedAt'>): string {
-  return `ahpd on ${record.url} (pid ${String(record.pid)}), started ${record.startedAt}`;
+export function statusLine(record: Pick<Running, 'url' | 'pid' | 'startedAt' | 'service'>): string {
+  const held = record.service === undefined ? '' : `, under ${record.service}`;
+  return `ahpd on ${record.url} (pid ${String(record.pid)}), started ${record.startedAt}${held}`;
 }
 
 /**
@@ -672,6 +721,12 @@ export interface StopSteps {
   /** How long the daemon is given to go, before it is killed. */
   waitMs: number;
   now(): number;
+  /**
+   * The service manager of this machine, asked instead of `signal` for a record
+   * that names one. A case with no manager in it passes one that throws: no
+   * record those cases write names a service.
+   */
+  manager: Manager;
 }
 
 /** What a stop did: the record it stopped, and whether it had to be killed. */
@@ -691,6 +746,7 @@ const realStop = (): StopSteps => ({
   wait: () => new Promise((done) => { setTimeout(done, STOP_POLL_MS); }),
   waitMs: STOP_WAIT_MS,
   now: () => Date.now(),
+  manager: realManager(),
 });
 
 /** Whether that pid went within the limit, looking once every poll interval. */
@@ -701,6 +757,26 @@ const goneWithin = async (pid: number, steps: StopSteps): Promise<boolean> => {
     if (steps.now() >= limit) return false;
     await steps.wait();
   }
+};
+
+/**
+ * A stop of a daemon a service manager holds: the manager is asked, and the
+ * same process is waited for.
+ *
+ * Nothing here is killed, and the kill the wait would otherwise fall back to is
+ * not sent: the manager does its own, and a daemon this process SIGKILLed under
+ * a unit with `Restart=on-failure` is one the unit starts again, so the stop
+ * would read as a restart. A process still there when the manager has answered
+ * is one the manager is still stopping, which is said rather than forced.
+ */
+const stoppedUnderService = async (found: Running, service: Service, steps: StopSteps): Promise<StopOutcome> => {
+  await steps.manager.stop(service);
+  if (!await goneWithin(found.pid, steps)) {
+    throw new Error(`${service} did not stop pid ${String(found.pid)} within ${String(steps.waitMs / 1000)} seconds.`);
+  }
+  // Only the record of the daemon stopped: a successor may have claimed it since.
+  forget([found.pid]);
+  return { record: found, killed: false };
 };
 
 /**
@@ -716,6 +792,9 @@ const goneWithin = async (pid: number, steps: StopSteps): Promise<boolean> => {
 export async function stop(steps: StopSteps = realStop()): Promise<StopOutcome | undefined> {
   const found = running();
   if (!found) return undefined;
+  // A daemon a service manager holds is stopped through it, and never by a
+  // signal: the manager is what keeps it running.
+  if (found.service !== undefined) return stoppedUnderService(found, found.service, steps);
   let asked = true;
   try { await steps.signal(found); }
   catch (error) {

@@ -16,6 +16,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { announcementOf, claim, controlFor, deliver, forget, logSince, readyUrl, recordOf, rewritePaths, running, start, statusLine, stop } from '../src/daemon.js';
 import { automationStatePath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
 import type { Control, Running } from '../src/daemon.js';
+import type { Manager } from '../src/service.js';
 
 const REPO = join(import.meta.dirname, '../../..');
 const MAIN = 'packages/server/src/main.ts';
@@ -233,8 +234,28 @@ describe('the record on disk', () => {
     expect(line).not.toContain('connectUrl');
   });
 
-  /** A record naming `pid`, alive for as long as that process is. */
-  const naming = (pid: number): Running => ({ pid, url: `ws://127.0.0.1:${String(pid % 60000)}`, connectUrl: '', paths: [], startedAt: '' });
+  it('names the service manager holding it, and says nothing where none does', () => {
+    const record: Running = { pid: 42, url: 'ws://127.0.0.1:9187', connectUrl: '', paths: [], startedAt: '2026-09-19T00:00:00.000Z', service: 'launchd' };
+    expect(statusLine(record)).toBe('ahpd on ws://127.0.0.1:9187 (pid 42), started 2026-09-19T00:00:00.000Z, under launchd');
+    // A daemon from `ahpd start` is held by nobody, and its line is what it was.
+    expect(statusLine({ pid: 42, url: 'ws://127.0.0.1:9187', startedAt: '2026-09-19T00:00:00.000Z' }))
+      .toBe('ahpd on ws://127.0.0.1:9187 (pid 42), started 2026-09-19T00:00:00.000Z');
+  });
+
+  /** A record naming `pid`, alive for as long as that process is, held by `service` when one does. */
+  const naming = (pid: number, service?: 'systemd' | 'launchd'): Running => ({
+    pid, url: `ws://127.0.0.1:${String(pid % 60000)}`, connectUrl: '', paths: [], startedAt: '',
+    ...(service === undefined ? {} : { service }),
+  });
+  /**
+   * The manager of a machine a case does not need one for: no record written
+   * below names a service unless the case says so. It throws rather than doing
+   * nothing, because a call to it is a case that went the wrong way.
+   */
+  const noManager: Manager = {
+    stop: () => Promise.reject(new Error('no service manager holds this record')),
+    restart: () => Promise.reject(new Error('no service manager holds this record')),
+  };
   const onDisk = (): number | undefined => (existsSync(join(home, 'ahpd', 'daemon.json'))
     ? (JSON.parse(readFileSync(join(home, 'ahpd', 'daemon.json'), 'utf8')) as Running).pid
     : undefined);
@@ -324,6 +345,7 @@ describe('the record on disk', () => {
         wait: () => new Promise((done) => { setTimeout(done, 10); }),
         waitMs: 10_000,
         now: () => Date.now(),
+        manager: noManager,
       });
       // It went, so no kill: and its record was on disk at every look while it was there.
       expect(answer).toEqual({ record: expect.objectContaining({ pid }), killed: false });
@@ -350,6 +372,7 @@ describe('the record on disk', () => {
         wait: () => new Promise((done) => { setTimeout(done, 10); }),
         waitMs: 300,
         now: () => Date.now(),
+        manager: noManager,
       });
       expect(answer).toEqual({ record: expect.objectContaining({ pid }), killed: true });
       expect(onDisk()).toBeUndefined();
@@ -370,6 +393,7 @@ describe('the record on disk', () => {
       wait: () => { throw new Error('the wait went past the limit'); },
       waitMs: 0,
       now: () => 0,
+      manager: noManager,
     });
     expect(answer).toEqual({ record: expect.objectContaining({ pid: process.pid }), killed: true });
     expect(onDisk()).toBeUndefined();
@@ -384,6 +408,7 @@ describe('the record on disk', () => {
       wait: () => { throw new Error('nothing is left to wait for'); },
       waitMs: 10_000,
       now: () => 0,
+      manager: noManager,
     });
     expect(answer).toEqual({ record: expect.objectContaining({ pid: process.pid }), killed: false });
     expect(onDisk()).toBeUndefined();
@@ -398,9 +423,185 @@ describe('the record on disk', () => {
       wait: () => { throw new Error('a stop that was never asked waits for nothing'); },
       waitMs: 10_000,
       now: () => 0,
+      manager: noManager,
     })).rejects.toThrow('did not answer the stop request');
     expect(onDisk()).toBe(process.pid);
   });
+
+  /*
+   * A daemon a service manager holds is the manager's to stop: a signal to it
+   * would be a crash the manager answers by starting it again, and a SIGKILL
+   * under a unit that restarts on failure is a stop that reads as a restart.
+   */
+  it('stops a supervised daemon through its manager, and sends it no signal', async () => {
+    put(naming(process.pid, 'systemd'));
+    /** What the manager was asked, in order. */
+    const asked: string[] = [];
+    // The manager is what stops it, so the process goes with that call and not
+    // with anything this case does.
+    let there = true;
+    const answer = await stop({
+      signal: () => { throw new Error('a supervised daemon is never signalled'); },
+      kill: () => { throw new Error('a supervised daemon is never killed'); },
+      alive: () => there,
+      wait: () => { there = false; return Promise.resolve(); },
+      waitMs: 10_000,
+      now: () => 0,
+      manager: {
+        stop: (service) => { asked.push(`stop ${service}`); return Promise.resolve(); },
+        restart: () => Promise.reject(new Error('a stop does not restart')),
+      },
+    });
+    expect(asked).toEqual(['stop systemd']);
+    expect(answer).toEqual({ record: expect.objectContaining({ pid: process.pid }), killed: false });
+    expect(onDisk()).toBeUndefined();
+  });
+
+  it('says what the manager has not done yet, rather than forcing a daemon it holds', async () => {
+    put(naming(process.pid, 'launchd'));
+    await expect(stop({
+      signal: () => { throw new Error('a supervised daemon is never signalled'); },
+      kill: () => { throw new Error('a supervised daemon is never killed'); },
+      alive: () => true,
+      wait: () => Promise.resolve(),
+      waitMs: 0,
+      now: () => 0,
+      manager: { stop: () => Promise.resolve(), restart: () => Promise.reject(new Error('a stop does not restart')) },
+    })).rejects.toThrow(`launchd did not stop pid ${String(process.pid)} within 0 seconds.`);
+    // It is still running, so its record is still the one thing saying where.
+    expect(onDisk()).toBe(process.pid);
+  });
+
+  /*
+   * The daemon a service manager starts.
+   *
+   * `ahpd start` writes the record of the daemon it spawned, because the child
+   * cannot: the parent is the one that waits for the announcement. A unit or an
+   * agent spawns the daemon itself and knows nothing about records, so a
+   * supervised daemon writes its own, with the manager that holds it named.
+   */
+  const BACKEND = join(import.meta.dirname, 'fixtures', 'plugin-echo');
+  const ENV_PLUGIN = join(import.meta.dirname, 'fixtures', 'plugin-env', 'index.ts');
+
+  /** Wait, briefly, for something a process that was just spawned writes. */
+  const until = async (ready: () => boolean): Promise<void> => {
+    const limit = Date.now() + 20000;
+    while (!ready() && Date.now() < limit) await new Promise((wait) => { setTimeout(wait, 50); });
+  };
+
+  /**
+   * A daemon as a service manager would start it: in the foreground, with the
+   * variable such a manager sets, and up until the case kills it - because the
+   * record it wrote is its own, and the next reader clears the record of a
+   * process that has gone.
+   */
+  const supervised = (argv: readonly string[] = [], env: Record<string, string> = {}): {
+    pid: number;
+    said: () => string;
+    ended: Promise<number | null>;
+    kill: () => void;
+  } => {
+    const child = spawn(
+      process.execPath,
+      [MAIN, '--port', '0', '--plugin', BACKEND, '--sessions', 'memory', '--automations', 'memory', '--no-update-check', ...argv],
+      {
+        cwd: REPO,
+        env: {
+          ...process.env,
+          XDG_CONFIG_HOME: home,
+          CI: '1',
+          NODE_OPTIONS: '--conditions development --import ./scripts/dev.mjs',
+          AHPD_SERVICE: 'systemd',
+          ...env,
+        },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      },
+    );
+    child.stdin.end();
+    let said = '';
+    child.stdout.on('data', (chunk: Buffer) => { said += String(chunk); });
+    child.stderr.on('data', (chunk: Buffer) => { said += String(chunk); });
+    return {
+      pid: child.pid as number,
+      said: () => said,
+      ended: new Promise((done) => { child.on('exit', (code) => { done(code); }); }),
+      kill: () => { child.kill('SIGKILL'); },
+    };
+  };
+
+  /** One verb as a process, over this case's configuration directory. */
+  const verb = (args: readonly string[]): Promise<{ code: number | null; stdout: string; stderr: string }> => {
+    const child = spawn(process.execPath, [MAIN, ...args], {
+      cwd: REPO,
+      env: { ...process.env, XDG_CONFIG_HOME: home, CI: '1', NODE_OPTIONS: '--conditions development --import ./scripts/dev.mjs' },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    child.stdin.end();
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk: Buffer) => { stdout += String(chunk); });
+    child.stderr.on('data', (chunk: Buffer) => { stderr += String(chunk); });
+    return new Promise((done) => {
+      const timer = setTimeout(() => { child.kill(); }, 20000);
+      child.on('exit', (code) => { clearTimeout(timer); done({ code, stdout, stderr }); });
+    });
+  };
+
+  it('writes its own record when a service manager starts it, naming that manager', async () => {
+    const daemon = supervised();
+    try {
+      await until(() => running() !== undefined);
+      const found = running();
+      // Its own pid, not the pid of anything that started it: there is nothing
+      // else in the picture, which is the whole difference from `ahpd start`.
+      expect(found?.pid).toBe(daemon.pid);
+      expect(found?.service).toBe('systemd');
+      expect(found?.url).toMatch(/^ws:\/\/127\.0\.0\.1:\d+$/u);
+    }
+    finally { daemon.kill(); }
+  }, 30000);
+
+  it('takes AHPD_SERVICE out of a supervised daemon, so a session\'s shell never has it', async () => {
+    const daemon = supervised(['--plugin', ENV_PLUGIN]);
+    try {
+      await until(() => daemon.said().includes('AHPD_SERVICE '));
+      expect(daemon.said()).toContain('AHPD_SERVICE unset');
+    }
+    finally { daemon.kill(); }
+  }, 30000);
+
+  it('stops with a conflict when another daemon already holds the record', async () => {
+    const first = supervised();
+    try {
+      await until(() => running() !== undefined);
+      const second = supervised();
+      expect(await second.ended).toBe(1);
+      expect(second.said()).toContain('Another daemon is already running');
+      // The record is the first daemon's, and the one that refused wrote none.
+      expect(running()?.pid).toBe(first.pid);
+    }
+    finally { first.kill(); }
+  }, 30000);
+
+  it('names the manager in `status --json`, and never the token', async () => {
+    put({
+      pid: process.pid,
+      url: 'ws://127.0.0.1:9187',
+      connectUrl: 'ws://127.0.0.1:9187/?tkn=secret',
+      paths: [],
+      startedAt: '2026-09-19T00:00:00.000Z',
+      service: 'systemd',
+    });
+    const said = await verb(['status', '--json']);
+    expect(said.code).toBe(0);
+    expect(JSON.parse(said.stdout)).toEqual({
+      pid: process.pid,
+      url: 'ws://127.0.0.1:9187',
+      paths: [],
+      startedAt: '2026-09-19T00:00:00.000Z',
+      service: 'systemd',
+    });
+  }, 30000);
 
   it('clears the temp file a writer that is gone left, and keeps a live writer\'s and another user\'s', () => {
     const left = join(home, 'ahpd', `daemon.json.${String(NEVER)}.tmp`);

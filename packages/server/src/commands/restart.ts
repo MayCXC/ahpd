@@ -18,6 +18,8 @@ import type { Command, Registry } from '@cofold/commands';
 import { daemonLog } from '../config.js';
 import { READY_TIMEOUT_MS, deliver, logSince, running, throughPipe } from '../daemon.js';
 import type { ControlledSignal, Running } from '../daemon.js';
+import { realManager } from '../service.js';
+import type { Manager, Service } from '../service.js';
 import { conflict } from './options.js';
 import type { ServedFacts } from './served.js';
 
@@ -103,6 +105,10 @@ const busy = (turning: string[]): string => `A turn is running in ${turning.join
 const notRestartable = (record: Running | undefined, self: number): string | undefined => {
   if (record === undefined) return FOREGROUND;
   if (record.pid !== self) return notRecorded(record.pid);
+  // A daemon a service manager holds has no line of its own: the line is the
+  // one the unit or the agent runs, and the manager starts the next daemon
+  // with it.
+  if (record.service !== undefined) return undefined;
   if (record.argv === undefined) return OLDER;
   return undefined;
 };
@@ -171,6 +177,60 @@ export async function restartInPlace(argv: string[], steps: InPlace): Promise<vo
   }
 }
 
+/** What a restart handed to the service manager is done with, so it can be driven without a process. */
+export interface Managed {
+  /** Take the listeners and the host down, as a shutdown does. */
+  close(): Promise<void>;
+  /** Ask the manager that holds this daemon to stop it and start it again. */
+  hand(): Promise<void>;
+  /** Drop this daemon's record. */
+  forget(): void;
+  log(line: string): void;
+  exit(code: number): void;
+}
+
+/** What the daemon writes once the manager has the restart. */
+const HANDED = 'restart: handed to the service manager';
+
+/**
+ * Stop this daemon and let the service manager start it again.
+ *
+ * No successor is started here and no line is read: the line this daemon was
+ * started with is the manager's own, and the manager is what starts the next
+ * daemon with it. The record goes before the manager is asked, because the
+ * daemon that comes up next serves this same configuration folder and reads a
+ * record still naming this process as a live daemon beside it. A way down or a
+ * call that failed exits 1: nothing is listening by then, and an exit of zero
+ * is one the unit's own policy leaves stopped.
+ */
+export async function restartUnderManager(steps: Managed): Promise<void> {
+  /** As a shutdown does: a record that is not this daemon's to remove, or cannot be, is not a way up. */
+  const drop = (): void => {
+    try { steps.forget(); }
+    catch { /* the record names another daemon, or cannot be removed */ }
+  };
+  try {
+    await steps.close();
+  }
+  catch (error) {
+    drop();
+    steps.log(`${COULD_NOT}${wordsOf(error)}`);
+    steps.exit(1);
+    return;
+  }
+  drop();
+  try {
+    await steps.hand();
+  }
+  catch (error) {
+    steps.log(`${COULD_NOT}${wordsOf(error)}`);
+    steps.exit(1);
+    return;
+  }
+  steps.log(HANDED);
+  steps.exit(0);
+}
+
 /** A daemon's two ways down: a stop, and a restart. */
 export interface Lifecycle {
   /** SIGINT and SIGTERM: down once, then exit; during a restart, the restart gives way and leaves nothing running. */
@@ -190,6 +250,14 @@ export interface LifecycleSteps extends Omit<InPlace, 'close' | 'stopped' | 'sta
   down(): Promise<void>;
   /** Run that after the answer in hand has gone. */
   later(step: () => void): void;
+  /**
+   * Ask the service manager that holds this daemon to stop it and start it
+   * again, set only by a daemon a manager started. A restart of one of those is
+   * the manager's, not this process's: the daemon it starts next would be in
+   * the unit's own cgroup, and the stop job the restart begins with ends
+   * everything left in it.
+   */
+  hand?(): Promise<void>;
 }
 
 /**
@@ -246,18 +314,28 @@ export function lifecycle(steps: LifecycleSteps): Lifecycle {
       if (going !== undefined) conflict('It is stopping.');
       restarting = true;
       steps.later(() => {
-        void restartInPlace(argv, {
-          close: () => {
-            going = steps.down();
-            return going;
-          },
-          stopped: () => stopAsked,
-          start: (line) => steps.start(line, token),
-          stop: steps.stop,
-          forget: steps.forget,
-          log: steps.log,
-          exit: steps.exit,
-        });
+        const close = (): Promise<void> => {
+          going = steps.down();
+          return going;
+        };
+        const hand = steps.hand;
+        void (hand === undefined
+          ? restartInPlace(argv, {
+              close,
+              stopped: () => stopAsked,
+              start: (line) => steps.start(line, token),
+              stop: steps.stop,
+              forget: steps.forget,
+              log: steps.log,
+              exit: steps.exit,
+            })
+          : restartUnderManager({
+              close,
+              hand,
+              forget: steps.forget,
+              log: steps.log,
+              exit: steps.exit,
+            }));
       });
     },
   };
@@ -441,11 +519,20 @@ export interface AtTerminal {
   wait(): Promise<void>;
   /** How long the daemon is given to answer the signal. */
   receiptMs: number;
-  /** How long the successor is given, from the daemon's `STARTING` line. */
+  /**
+   * How long the successor is given: from the daemon's `STARTING` line, or from
+   * the manager's call for a daemon a manager holds.
+   */
   timeoutMs: number;
   now(): number;
   /** Whether `signal` reaches the daemon through its control pipe, so its answer names the pipe. */
   piped: boolean;
+  /**
+   * The service manager of this machine, asked instead of a signal for a record
+   * that names one: the manager is what starts that daemon, and a signal to it
+   * is a crash the manager would answer by starting it again.
+   */
+  manager: Manager;
 }
 
 /** The terminal's restart against the real record, log and process table. */
@@ -468,6 +555,7 @@ const realTerminal = (): AtTerminal => ({
   timeoutMs: SUCCESSOR_WAIT_MS,
   now: () => Date.now(),
   piped: throughPipe(),
+  manager: realManager(),
 });
 
 /** Why a signal to the recorded pid could not be sent, in words. */
@@ -475,6 +563,36 @@ const unsignalled = (pid: number, error: unknown): string => {
   const code = (error as { code?: unknown }).code;
   if (code === 'ESRCH') return `pid ${String(pid)}, which the record names, is gone; nothing was restarted.`;
   return `Could not signal pid ${String(pid)}: ${wordsOf(error)}`;
+};
+
+/**
+ * Ask the service manager to restart the daemon it holds, and answer the record
+ * of the one that came back in its place.
+ *
+ * Nothing is started from here and no signal is sent: the line this daemon was
+ * started with is the unit's or the agent's, and the manager starts the next
+ * daemon with it. The successor is read off the record rather than the log,
+ * because this is not the daemon's own successor but the manager's, and the
+ * record it writes itself is what says it is up - the record `ahpd status`
+ * reads. The old daemon's record goes on the way down, so a record naming
+ * another pid is the new one, and one still naming the old pid after
+ * `timeoutMs` is a daemon that did not come back.
+ */
+const restartedUnderService = async (record: Running, service: Service, steps: AtTerminal): Promise<Running> => {
+  try {
+    await steps.manager.restart(service);
+  }
+  catch (error) {
+    conflict(`Could not restart it under ${service}: ${wordsOf(error)}`);
+  }
+  const until = steps.now() + steps.timeoutMs;
+  for (;;) {
+    const now = steps.running();
+    if (now !== undefined && now.pid !== record.pid) return now;
+    if (steps.now() > until) break;
+    await steps.wait();
+  }
+  return conflict(`It did not come back within ${String(steps.timeoutMs / 1000)} seconds; run ahpd status.`);
 };
 
 /**
@@ -486,10 +604,16 @@ const unsignalled = (pid: number, error: unknown): string => {
  * `stopping` handlers; then `timeoutMs` from its `STARTING` line. Only this
  * signal's kind of answer is read, and once its receipt is in, a refusal is
  * another terminal's. A daemon that went without an answer ends the wait.
+ *
+ * A record that names a service manager is not one of these: that daemon is
+ * restarted through the manager, since a signal to it is a crash the manager
+ * answers by starting it again.
  */
 export async function restartAtTerminal(force: boolean, steps: AtTerminal): Promise<Running> {
   const record = steps.running();
   if (record === undefined) conflict('None running in the background; a daemon run in the foreground is restarted where it runs.');
+  const service = record.service;
+  if (service !== undefined) return restartedUnderService(record, service, steps);
   if (record.argv === undefined) conflict(OLDER);
   const signal = force ? FORCED_SIGNAL : RESTART_SIGNAL;
   const came = cameBy(steps.piped, force);
