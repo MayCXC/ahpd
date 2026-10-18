@@ -228,6 +228,7 @@ Reference: [00-host.md](host/00-host.md)
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
+| [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | planned 2026-10-18 | - | - |
 
 Next free number in `host`: `97`.
 
