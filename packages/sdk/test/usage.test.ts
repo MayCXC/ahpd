@@ -78,6 +78,23 @@ it('charges a pool what one model call cost, in every measure it carries', async
   expect(await usage.total('user:maria', month.from, month.until)).toEqual({});
 });
 
+it('counts a turn once, by the record that opened it', async () => {
+  const usage = fileUsage({ folder });
+  for (const turn of ['t1', 't2']) {
+    for (const round of [0, 1, 2]) {
+      await usage.record(modelUse('2026-10-04T10:00:00.000Z', ['p'], { input: 10 }, {
+        turn,
+        ...(round === 0 ? { opens: true as const } : {}),
+      }));
+    }
+  }
+
+  // Three records a turn is still one turn, and every record is a call.
+  expect(await usage.total('p', month.from, month.until)).toEqual({
+    tokens: 60, input: 60, calls: 6, turns: 2,
+  });
+});
+
 /*
  * The two costs a record carries, and the split of each.
  *

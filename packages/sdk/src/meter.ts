@@ -32,6 +32,8 @@ interface Held {
   reported?: Bag;
   /** What the last report that has already been written said. */
   billed?: Bag;
+  /** Whether the turn has had a record, so only the first of them opens it. */
+  opened?: true;
 }
 
 /** What the meter needs to know about the work it is metering. */
@@ -224,12 +226,17 @@ export const meter = (options: MeterOptions): Meter => {
    */
   const finished = new Set<string>();
 
-  /** One turn's record, written and left to settle behind the port. */
-  const write = (turn: string, held: Held): void => {
+  /**
+   * One turn's record, written and left to settle behind the port.
+   *
+   * `reported` is what this record says the turn used, which is the turn's own
+   * sum unless a report is written on its own, and the first record written
+   * for a turn is the one that opens it.
+   */
+  const write = (turn: string, held: Held, reported: Bag = held.reported ?? {}): void => {
     const owner = options.senderOf(turn) ?? options.owner();
     const scope = options.scope();
     const computer = options.computer?.();
-    const reported = held.reported ?? {};
     const name = typeof reported.model === 'string' ? reported.model : held.model;
     /*
      * An agent's harness calls its model itself, so the figure it reports is
@@ -255,12 +262,14 @@ export const meter = (options: MeterOptions): Meter => {
       session: options.session,
       chat: options.chat,
       turn,
+      ...(held.opened === true ? {} : { opens: true as const }),
       agent: options.agent,
       ...(computer === undefined ? {} : { computer }),
       model: { ...usedBy(reported), name: name ?? '' },
       ...(billed === undefined ? {} : { cost: billed, providerCost: billed }),
       pools: poolsOf(owner, scope),
     };
+    held.opened = true;
     void options.usage.record(entry).catch((error: unknown) => {
       options.onProblem?.(`${options.session}: could not keep what ${turn} used: ${error instanceof Error ? error.message : String(error)}`);
     });
@@ -304,7 +313,7 @@ export const meter = (options: MeterOptions): Meter => {
       }
       held.reported = usage;
       if (options.per !== 'report') return;
-      write(turn, { ...held, reported: addition(usage, held.billed) });
+      write(turn, held, addition(usage, held.billed));
       held.billed = usage;
     },
     ended: (turn) => {

@@ -81,6 +81,14 @@ export interface ModelCall {
 export interface ModelUse extends UsageBase {
   kind: 'model';
   model: ModelCall;
+  /**
+   * The first record the meter wrote for its turn.
+   *
+   * A turn is written once at its end, or once per report, and only the first
+   * of those records opens it, so a total counts turns rather than records. A
+   * proxy call sets none, because a proxy call is not a turn.
+   */
+  opens?: true;
 }
 
 /** One stretch a computer was up, charged to the machine's owner. */
@@ -120,6 +128,8 @@ export interface UsageTotal {
   cache?: number;
   /** Model calls. */
   calls?: number;
+  /** Turns, each counted once by the record that opened it. */
+  turns?: number;
   /** Computer time, in hours. */
   hours?: number;
 }

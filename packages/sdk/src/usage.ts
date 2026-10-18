@@ -33,11 +33,12 @@ interface Measured {
   output: number;
   cache: number;
   calls: number;
+  turns: number;
   hours: number;
 }
 
 const none = (): Measured => ({
-  usd: 0, providerUsd: 0, inputUsd: 0, outputUsd: 0, tokens: 0, input: 0, output: 0, cache: 0, calls: 0, hours: 0,
+  usd: 0, providerUsd: 0, inputUsd: 0, outputUsd: 0, tokens: 0, input: 0, output: 0, cache: 0, calls: 0, turns: 0, hours: 0,
 });
 
 /** Add one measure to another, in place. */
@@ -51,6 +52,7 @@ const addTo = (sum: Measured, what: Measured): void => {
   sum.output += what.output;
   sum.cache += what.cache;
   sum.calls += what.calls;
+  sum.turns += what.turns;
   sum.hours += what.hours;
 };
 
@@ -66,6 +68,7 @@ const reported = (sum: Measured): UsageTotal => {
   if (sum.output !== 0) out.output = sum.output;
   if (sum.cache !== 0) out.cache = sum.cache;
   if (sum.calls !== 0) out.calls = sum.calls;
+  if (sum.turns !== 0) out.turns = sum.turns;
   if (sum.hours !== 0) out.hours = sum.hours;
   return out;
 };
@@ -184,13 +187,15 @@ export function fileUsage(options: FileUsageOptions): Usage {
         output,
         cache,
         calls: 1,
+        // A turn is the one record that opened it, however many records follow.
+        turns: entry.opens === true ? 1 : 0,
         hours: 0,
       };
     }
     const span = counted(entry.seconds) / HOUR_S;
     return {
       usd: 0, providerUsd: 0, inputUsd: 0, outputUsd: 0, tokens: 0, input: 0, output: 0, cache: 0, calls: 0,
-      hours: span > 0 ? span : 0,
+      turns: 0, hours: span > 0 ? span : 0,
     };
   };
 

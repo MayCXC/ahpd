@@ -309,6 +309,8 @@ it('writes one record for a turn that completed, saying what its last report sai
     session: 'meter:/metered',
     chat: 'ahp-chat://default/bWV0ZXI6L21ldGVyZWQ',
     turn: 't1',
+    // The turn is written once here, and that record opens it.
+    opens: true,
     agent: 'meter',
     model: { name: 'anthropic/opus-5', input: 100, output: 20, cache: { read: 5, write: 7 } },
     // The harness's own figure, as both what is charged and what was reported.
@@ -596,6 +598,8 @@ it('writes one record per report where the host was asked for that', async () =>
   expect(usage.entries.every((one) => one.cost?.currency === 'usd' && one.cost.from === 'harness')).toBe(true);
   // Each belongs to the turn and to the person who sent it.
   expect(usage.entries.every((one) => one.turn === 't1' && one.owner === 'user:ana')).toBe(true);
+  // Three records are one turn: only the first of them opens it.
+  expect(usage.entries.map((one) => one.opens)).toEqual([true, undefined, undefined]);
 });
 
 it('writes the reports of a turn that never said it began, per report', async () => {
@@ -621,6 +625,8 @@ it('writes the reports of a turn that never said it began, per report', async ()
     { name: 'anthropic/opus-5', input: 60, output: 15, cache: { read: 5, write: 7 } },
   ]);
   expect(usage.entries.every((one) => one.turn === 't1' && one.owner === 'user:ana')).toBe(true);
+  // The report that stood for the turn's start opened it, and its follower did not.
+  expect(usage.entries.map((one) => one.opens)).toEqual([true, undefined]);
 });
 
 it('writes a count that went down as the value it is now', async () => {
