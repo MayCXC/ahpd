@@ -21,7 +21,7 @@ refs:
   - "[code://packages/agent-claude/src/session/query.ts#L305-L308](../../../../packages/agent-claude/src/session/query.ts#L305-L308) - Claude appends `instructions` to its preset prompt"
   - "[code://packages/agent-pi/src/session.ts#L736-L755](../../../../packages/agent-pi/src/session.ts#L736-L755) - pi takes `start.instructions`"
   - "[code://packages/agent-cofold/src/turnagent.ts#L295-L297](../../../../packages/agent-cofold/src/turnagent.ts#L295-L297) - cofold takes `start.instructions`"
-  - "[code://docs/sdk/TOOLS.md#L104-L114](../../../../docs/sdk/TOOLS.md#L104-L114) - \"The wording a session is given\""
+  - "[code://docs/sdk/TOOLS.md#L104-L118](../../../../docs/sdk/TOOLS.md#L104-L118) - \"The wording a session is given\""
   - "file:///github/agent-host-protocol/types/channels-session/state.ts#L1105-L1131 - `RuleCustomization`, with `description`, `alwaysApply` and `globs`"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/copilot/copilotAgent.ts#L7793-L7802 - VS Code's Copilot agent turns a rule into an `instructions` entry"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/copilot/copilotSessionLauncher.ts#L1174 - VS Code hands the plugin instruction folders to Copilot"
@@ -41,7 +41,7 @@ A client can then give standing instructions, such as how to format an answer fo
 
 - `rg -n "instructions" packages/sdk/src/host packages/sdk/src/types` - `Start.instructions` comes from the host tools only.
 - `rg -n "RULE_SUFFIX|rulesIn|part\('rule'" packages/sdk/src/pluginparts.ts` - rules are listed by file name, with no frontmatter.
-- `rg -n "instructions" packages/agent-*/src` - Claude, pi and cofold take it, and ACP does not.
+- `rg -n "instructions" packages/agent-*/src` - Claude, pi and cofold take it, and ACP puts it at the start of the first prompt.
 - `rg -n "CustomizationType.Rule|instructionDirectories" /github/externals/vscode/src/vs/platform/agentHost` - the VS Code route for a rule.
 
 ### Runtime path
@@ -54,7 +54,7 @@ A client can then give standing instructions, such as how to format an answer fo
 
 - `part` lists a rule with its name and URI only, so the host cannot tell an always-apply rule.
 - `instructions(uri)` reads `ctx.contributing` only, and never the session's plugins.
-- ACP has no system prompt, so an ACP backend cannot take a rule.
+- ACP has no system prompt, so an ACP backend puts a rule at the start of the first prompt.
 - VS Code's Copilot agent hands every plugin rule to Copilot, and VS Code's Claude agent hands none.
 
 ## Answers
@@ -66,7 +66,7 @@ A client can then give standing instructions, such as how to format an answer fo
 | Host tool instructions come first, and rule bodies follow them | (defaulted: the host's own wording keeps its place) | 02 |
 | Only a rule with `alwaysApply: true` applies | Softov, 2026-10-16, chose "`alwaysApply: true` only" for "Which rules apply?" | 01, 02 |
 | A rule goes in at the session start, and the restart on a moved plugin set refreshes it | Softov, 2026-10-16, chose "at session start" for "When does a rule reach the agent?" | 02 |
-| A backend with no system prompt logs once that it ignores the rules | Softov, 2026-10-16, chose "log once" for "A backend with no system prompt (ACP)?" | 02 |
+| An ACP backend puts the rules at the start of the first prompt, and logs that once | Softov, 2026-10-18, chose "Keep it, fix the words" for "Since the first prompt is the only way to instruct an ACP session, keep that route?" | 02, 03 |
 | The rules have a length limit, and a rule over it is dropped | Softov, 2026-10-16, chose "yes, and drop a rule that is over it" for "A size limit?" | 02 |
 | The limit is 4096 characters of a rule's body, counted per rule | Softov, 2026-10-16, chose "4096 characters" | 02 |
 
@@ -81,7 +81,7 @@ A client can then give standing instructions, such as how to format an answer fo
 | --- | --- | --- |
 | [01 - A rule part carries its frontmatter](task-01-a-rule-part-carries-its-frontmatter.md) | implemented | - |
 | [02 - A client rule joins the instructions](task-02-a-client-rule-joins-the-instructions.md) | implemented | 01 |
-| [03 - The docs say how a client adds a rule](task-03-the-docs-say-how-a-client-adds-a-rule.md) | todo | 02 |
+| [03 - The docs say how a client adds a rule](task-03-the-docs-say-how-a-client-adds-a-rule.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -91,8 +91,8 @@ A client can then give standing instructions, such as how to format an answer fo
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose. `instructions(uri)` carries the host tools' wording, then the body of each client rule that always applies. A rule over 4096 characters is dropped and logged by name. The ACP backend logs at a chat's start that it left them out.
-- **Next action:** build task 03, the docs paragraph in `docs/sdk/TOOLS.md:104-114` and `pnpm -s docs:build`.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose. `instructions(uri)` carries the host tools' wording, then the body of each client rule that always applies. A rule over 4096 characters is dropped and logged by name. The ACP backend puts them at the start of the first prompt, and logs that once. Task 03 implemented 2026-10-18. `TOOLS.md` says which client rules apply, the limit, and what each backend does with them.
+- **Next action:** run the final verification checklist, then write `implemented.md` and set the plan to built.
 - **Open questions:** none.
 - **Watch out for:**
   - `instructions(uri)` holds the host tools' own wording. The remote origin instruction has its own route, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.

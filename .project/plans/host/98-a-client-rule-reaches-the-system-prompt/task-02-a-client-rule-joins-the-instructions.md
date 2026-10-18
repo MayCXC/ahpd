@@ -42,7 +42,7 @@ A rule over the length limit is dropped, and a backend with no system prompt log
 
 ## Resume
 
-- **Done so far:** built 2026-10-16 with Softov's 4096 characters. `instructions(uri)` hands the host tools' own wording first. Then it hands the body of each client rule of the session that says `alwaysApply: true`. It reads the rules off the copies this host made (`pluginCopies`). A body over `RULE_MOST` (4096) is dropped and named in the log. The ACP backend's `create` logs once at the start of a chat that it left the instructions out. Four tests in `client-plugins-session.test.ts` cover a rule with the field, a rule without it, a rule over the limit and a client that leaves.
+- **Done so far:** built 2026-10-16 with Softov's 4096 characters. `instructions(uri)` hands the host tools' own wording first. Then it hands the body of each client rule of the session that says `alwaysApply: true`. It reads the rules off the copies this host made (`pluginCopies`). A body over `RULE_MOST` (4096) is dropped and named in the log. The ACP backend's `create` logs once at the start of a chat, and the first prompt carries the instructions. Four tests in `client-plugins-session.test.ts` cover a rule with the field, a rule without it, a rule over the limit and a client that leaves.
 - **Files:** `packages/sdk/src/host/tooling.ts`, `packages/sdk/src/types/agent.ts`, `packages/agent-acp/src/agent.ts`, `packages/sdk/test/client-plugins-session.test.ts`, and this task's row in `plan.md` with the limit row in its Answers table. 
 - **Next action:** build task 03, the paragraph in `docs/sdk/TOOLS.md:104-114` and `pnpm -s docs:build`.
 - **Open questions:** none.
