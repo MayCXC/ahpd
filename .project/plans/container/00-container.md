@@ -11,6 +11,8 @@ The `@ahpd/computer` plugin makes and reaches machines, the SDK carries the `com
 
 - [`code://packages/computer`](../../../packages/computer) - the provider behind `computer://<id>` and the `computers` port; its entry point is [`code://packages/computer/src/plugin.ts`](../../../packages/computer/src/plugin.ts).
 - [`code://packages/computer/src/runtime.ts`](../../../packages/computer/src/runtime.ts) - the `docker` runtime: list, inspect, run, start, stop, remove and exec, all by the `ahpd.computer=1` label.
+- [`code://packages/computer/src/ssh.ts`](../../../packages/computer/src/ssh.ts) - the `ssh` runtime: boxes listed in the options, each verb one `ssh -T` with the remote command quoted for the box's shell.
+- [`code://packages/computer/src/router.ts`](../../../packages/computer/src/router.ts) - the router that serves several runtimes on one host, and `spellMachineId` and `parseMachineId`, the one place an id is `<runtime>.<name>`.
 - [`code://packages/computer/src/devcontainer.ts`](../../../packages/computer/src/devcontainer.ts) - the Dev Container CLI runner and the relay launcher: `up` with the two id labels, the host inside, and the relay's pipes.
 - [`code://packages/computer/src/owners.ts`](../../../packages/computer/src/owners.ts) - `computers.json` beside the daemon's config, which holds the owner of a machine the CLI made.
 - [`code://packages/sdk/src/nested.ts`](../../../packages/sdk/src/nested.ts) - the proxy a `runsNested` backend gets: an `ahpd --stdio` inside the machine, reached as a client.
@@ -26,7 +28,7 @@ The `@ahpd/computer` plugin makes and reaches machines, the SDK carries the `com
 ## Runtimes
 
 A profile's `runtime` names what makes the machine: `docker`, `ssh`, `libvirt` or `proxmox`, each with its own options, per [One computer: provider, the runtime named for what makes the machine](./05-p11-a-vm-is-made-for-a-machine/plan.md).
-`docker` is the one built; the container/05 plans add the others.
+`docker` and `ssh` are built; container/05 p8 and p11 add the others.
 A machine id records which runtime made it, so several runtimes can serve one host.
 
 ## One computer, two recipes
@@ -63,4 +65,4 @@ The real CLI is checked by hand; `@devcontainers/cli` 0.89.0 and Docker 29.6.2 a
 
 - An adopted container gets none of what the override config carries - read-only needs, `containerEnv`, limits, the name and agents labels - because it was made before this host knew the folder; container/03 task 15 records the choice.
 - The relay serves `vscode/devContainers/isDockerAvailable`, `connect`, `disconnect` and `relaySend`, not `stop` and `remove`.
-- Only the `docker` runtime exists.
+- Only the `docker` and `ssh` runtimes exist; `libvirt` and `proxmox` are container/05 p11.
