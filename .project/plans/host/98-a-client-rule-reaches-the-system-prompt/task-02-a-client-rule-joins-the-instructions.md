@@ -1,6 +1,6 @@
 ---
 title: A client rule joins the instructions
-status: todo
+status: implemented
 depends: [task-01-a-rule-part-carries-its-frontmatter.md]
 layer: "sdk, agent-acp"
 refs:
@@ -41,3 +41,13 @@ A rule over the length limit is dropped, and a backend with no system prompt log
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16 with Softov's 4096 characters. `instructions(uri)` now hands the host tools' own wording first and then the body of each of the session's client rules that says `alwaysApply: true`, read off the copies this host made (`pluginCopies`) rather than off what a client announced. A body over `RULE_MOST` (4096) is dropped and named in the log. `Start.instructions`' doc in `packages/sdk/src/types/agent.ts` names the rules, and the ACP backend's `create` logs at the start of a chat that many instructions were left out - once, rather than on every turn. Four tests in `client-plugins-session.test.ts`: the always-apply rule is in the start, a rule without the field is not, one over the limit is not and is logged by name, and a rule is gone from the start after its client leaves.
+- **Files:** `packages/sdk/src/host/tooling.ts`, `packages/sdk/src/types/agent.ts`, `packages/agent-acp/src/agent.ts`, `packages/sdk/test/client-plugins-session.test.ts`, and this task's row in `plan.md` with the limit row in its Answers table. Nothing is committed, and `packages/sdk/test/fixtures/wire.jsonl` is left dirty by the vitest run.
+- **Next action:** build task 03, the paragraph in `docs/sdk/TOOLS.md:104-114` and `pnpm -s docs:build`.
+- **Open questions:** none.
+- **Watch out for:**
+  - `spawn.ts:673` reads `ctx.instructions(uri)` twice, once to decide whether the field is there and once for its value, so a start with a rule over the limit writes that line twice. `spawn.ts` is not in this task's Files and was left as it is; the log line is one per read of `instructions`.
+  - The rules are added by `pluginCopies(uri)` and not by `pluginsFor(uri, chatUri)`, which writes down what a chat began with and is therefore only callable where a chat URI is at hand. `pluginsFor` is `pluginCopies` plus the set of servers a client switched off, so the directories a rule is read from are the same ones the backend is handed.
+  - The ACP line has no test: this task's Files name `client-plugins-session.test.ts` alone, and nothing in `packages/agent-acp/test` starts a session with `instructions` on it.
+  - `instructions(uri)` holds the host tools' own wording alone, and the remote origin instruction is a route of its own, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.

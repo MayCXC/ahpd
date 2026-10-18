@@ -1,6 +1,6 @@
 ---
 title: A rule part carries its frontmatter
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -38,3 +38,11 @@ The host also keeps the rule's body for task 02.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `rulesIn` reads each rule file once, so a rule part carries `description`, `alwaysApply` and `globs` off its frontmatter. The part is built in one place, and `rulesOf(dir, uri)` hands each rule's body over beside its part, out of the wire shape, for task 02.
+- **Files:** `packages/sdk/src/pluginparts.ts`, `packages/sdk/test/pluginparts.test.ts`, and this task's two rows in `plan.md`. Nothing is committed, and `packages/sdk/test/fixtures/wire.jsonl` is left dirty by the vitest run.
+- **Next action:** build task 02.
+- **Open questions:** none.
+- **Watch out for:** one choice the plan did not make:
+  - The frontmatter is read by a small reader in `pluginparts.ts`: the two `---` lines, a `key: value` at the left margin, a quoted text, a `true` or `false`, and a list written between brackets or down a line at a time. Step 1 says to reuse the parser `pluginparts.ts` reads other frontmatter with, and it reads none: the host's YAML parser is `@cofold/yaml` in `packages/server`, and `.project/rules/the-sdk-depends-only-on-the-protocol.md` keeps any second package out of the sdk.
+  - A rule whose frontmatter never closes is the bad frontmatter of the test. Nothing can be read out of it, so it carries no field and its whole text is the body.

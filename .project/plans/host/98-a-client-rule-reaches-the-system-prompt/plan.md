@@ -1,7 +1,7 @@
 ---
 title: A client rule reaches the system prompt
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -68,6 +68,7 @@ A client can then give standing instructions, such as how to format an answer fo
 | A rule goes in at the session start, and the restart on a moved plugin set refreshes it | Softov, 2026-10-16, chose "at session start" for "When does a rule reach the agent?" | 02 |
 | A backend with no system prompt logs once that it ignores the rules | Softov, 2026-10-16, chose "log once" for "A backend with no system prompt (ACP)?" | 02 |
 | The rules have a length limit, and a rule over it is dropped | Softov, 2026-10-16, chose "yes, and drop a rule that is over it" for "A size limit?" | 02 |
+| The limit is 4096 characters of a rule's body, counted per rule | Softov, 2026-10-16, chose "4096 characters" | 02 |
 
 ## Proposed architecture
 
@@ -78,8 +79,8 @@ A client can then give standing instructions, such as how to format an answer fo
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A rule part carries its frontmatter](task-01-a-rule-part-carries-its-frontmatter.md) | todo | - |
-| [02 - A client rule joins the instructions](task-02-a-client-rule-joins-the-instructions.md) | todo | 01 |
+| [01 - A rule part carries its frontmatter](task-01-a-rule-part-carries-its-frontmatter.md) | implemented | - |
+| [02 - A client rule joins the instructions](task-02-a-client-rule-joins-the-instructions.md) | implemented | 01 |
 | [03 - The docs say how a client adds a rule](task-03-the-docs-say-how-a-client-adds-a-rule.md) | todo | 02 |
 
 ## Risks and tradeoffs
@@ -90,13 +91,14 @@ A client can then give standing instructions, such as how to format an answer fo
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers.
-- **Next action:** build task 01.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose: `instructions(uri)` carries the host tools' wording and then the body of each client rule that always applies, a rule over 4096 characters is dropped and logged by name, `Start.instructions`' doc names the rules, and the ACP backend logs at a chat's start that it left them out.
+- **Next action:** build task 03, the docs paragraph in `docs/sdk/TOOLS.md:104-114` and `pnpm -s docs:build`.
 - **Open questions:** none.
 - **Watch out for:**
-  - `instructions(uri)` also feeds the remote origin instruction, so keep that order.
-  - A rule from a client that leaves the session must leave the next start.
-  - The number for the length limit is not chosen. Task 02 proposes one in Resume and asks before it builds it.
+  - `instructions(uri)` holds the host tools' own wording, and the remote origin instruction is a route of its own, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.
+  - A rule from a client that leaves the session must leave the next start, which the restart a moved plugin set causes is what delivers.
+  - `spawn.ts:673` reads `ctx.instructions(uri)` twice for one start, so a dropped rule is logged twice. It is outside task 02's Files and is left as it is.
+  - Task 01 read the frontmatter with a small reader in `pluginparts.ts` rather than a YAML package, which `.project/rules/the-sdk-depends-only-on-the-protocol.md` keeps out of the sdk. The reader is named in that task's Resume.
 
 ## Final verification checklist
 
