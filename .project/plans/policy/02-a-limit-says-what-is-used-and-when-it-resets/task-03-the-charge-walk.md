@@ -1,6 +1,6 @@
 ---
 title: The charge walk says which rows pay, whether they have room, and their keys
-status: todo
+status: implemented
 depends: [task-01-the-store-keeps-its-days-in-the-usage-timezone.md, task-02-a-total-counts-the-turns.md]
 layer: "sdk"
 refs:
@@ -51,7 +51,7 @@ Nothing here is wired into the host.
 20. Skip a row with no limit in the measure, so the measure keeps walking.
 21. Add the keys of a `cap` row in the measure, and refuse when it has no room, and walk on.
 22. Add the keys of the first other row in the measure with room, and stop the walk there.
-23. Refuse the measure when every row that limits it has no room.
+23. Record a measure with no key when every row that limits it has no room.
 24. Leave a measure no candidate limits with no key, which is a measure only recorded.
 25. Refuse with the first row that closed the walk, the limit that closed it, and the period.
 26. Word the refusal as `A3 has no room: 100 / 100 usd this week`, with `in total` for `total`.
@@ -78,4 +78,21 @@ Nothing here is wired into the host.
 - `pnpm -s typecheck` and vitest over `packages/sdk` pass.
 
 ## Resume
+
+Implemented 2026-10-18, not reviewed.
+
+- `packages/sdk/src/charge.ts` holds `COUNTED`, `keysOf`, `limitsOf`, `chargeFor`, `PayOrder` and the refusal sentence.
+- `COUNTED` is `usd`, `tokens` and `calls` for `model`, `usd`, `tokens` and `turns` for `agent`, and nothing for `computer`.
+- `keysOf` answers `policy:<id>/<measure>` for `shared`, `policy:<id>/<measure>/user:<id>` for `each`, and `pool:<name>/...` for a row naming a pool.
+- `limitsOf` answers each limit with `counted`, `used`, `from`, `resets` and `ends`, and an `each` limit read without a person with `members`.
+- `chargeFor` walks each counted measure in `COUNTED` order over the candidates sorted by scope level and then by `payOrder`, which defaults to `ending`.
+- `scoped` is exported from `decide.ts`, and the walk filters the decision's candidates with it.
+- The index exports `chargeFor`, `COUNTED`, `keysOf`, `limitsOf` and their types.
+
+The first step 23 refused examples 14, 18, 28 and 30, whose validation says another row pays.
+Softov chose on 2026-10-18 that another row pays, and step 23 now says so.
+A measure whose limiting rows are all closed is recorded with no key.
+The walk refuses only when no measure finds a payer.
+
+Tests: `charge.test.ts` is new, 25 cases over the draft's store and a `memoryUsage` filled to each example's state.
 

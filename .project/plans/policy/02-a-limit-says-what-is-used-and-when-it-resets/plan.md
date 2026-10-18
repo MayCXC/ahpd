@@ -87,6 +87,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | `policy:read` reads every row's limits with every member, and a person reads the limits whose scope holds them, with only their own `each` figure, when `policies.ownLimits` is on, which is the default | Softov, 2026-10-17, asked "Who may read a policy's limits with used and reset?": "policy:read with a host config to enable see its own, default on" | 05 |
 | The check walks each measure on its own: a row with no limits takes every measure, a row with no limit in a measure is skipped for it, a closed row spills to the next, and a `cap` row is counted and never pays | the rules draft, "A charge rule", "Answered 2026-10-01" | 03 |
 | A row has room only while every counted limit has room, so a row closed in one measure pays no other measure | the rules draft, "Limits", example 14 | 03 |
+| A measure whose limiting rows are all closed is recorded with no key, and the walk refuses only when no measure finds a payer | Softov, 2026-10-18, asked whether A2 pays when A3 closes: "Yes, A2 pays" | 03 |
 | The keys are `policy:<id>/<measure>` for `shared`, `policy:<id>/<measure>/user:<id>` for `each`, and `pool:<name>/...` for a row that names a `pool` | [the decision](../../../decisions/a-limit-counts-the-records-tagged-with-its-key.md) | 03 |
 | The check is before the work and the record after it, so two turns that start together can both go past the amount | the rules draft, "Answered 2026-10-01" | 03, 04 |
 | A period begins at 00:00 in `usage.timezone`: the day, the week on Monday, the month on the 1st, and resets at the next one; `total` counts from the row's `from` and never resets | the rules draft, "Answered 2026-10-01"; [code://packages/sdk/src/usage.ts#L766-L770](../../../../packages/sdk/src/usage.ts#L766-L770) | 01, 03 |
@@ -111,7 +112,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | --- | --- | --- |
 | [01 - The periods are one module, and the store keeps its days in the usage timezone](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) | implemented | - |
 | [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | implemented | - |
-| [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | todo | 01, 02 |
+| [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | implemented | 01, 02 |
 | [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | todo | 03 |
 | [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | todo | 03 |
 | [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | todo | 04, 05 |
@@ -126,8 +127,8 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Resume state
 
-- **Done so far:** 2026-10-17, tasks 01 and 02 are implemented.
-- **Next action:** [task-03-the-charge-walk.md](task-03-the-charge-walk.md).
+- **Done so far:** 2026-10-18, tasks 01, 02 and 03 are implemented.
+- **Next action:** [task-04-a-turn-and-a-proxy-call-are-charged.md](task-04-a-turn-and-a-proxy-call-are-charged.md).
 - **Open questions:** none.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
