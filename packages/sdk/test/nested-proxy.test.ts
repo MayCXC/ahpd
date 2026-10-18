@@ -1,10 +1,10 @@
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
-import { uriOf } from '../src/fileuri.js';
+import { posixUriOf, uriOf } from '../src/fileuri.js';
 import { createPeer, receive } from '../src/rpc.js';
 import { nestedAgent } from '../src/nested.js';
 import { fileSessions } from '../src/sessions.js';
@@ -852,11 +852,13 @@ it('the inner session works at the path the folder has inside the machine', asyn
     plugins: ['@ahpd/agent-cofold'],
     start: async () => ({ host: host.proc, workingDirectory: '/workspaces/app/x' }),
     timeoutMs: 500,
-  }).create(start(emit, '/srv/app/x'));
+  }).create(start(emit, resolve('/srv/app/x')));
   await until(() => created(host) !== undefined);
-  expect(created(host)?.params.workingDirectories).toEqual([uriOf('/workspaces/app/x')]);
-  // A client outside still reads the folder it named.
-  expect(session.workingDirectories()).toEqual([uriOf('/srv/app/x')]);
+  // The folder inside is the machine's own POSIX path, whatever this host is:
+  // a Windows host must not put its drive in front of it.
+  expect(created(host)?.params.workingDirectories).toEqual([posixUriOf('/workspaces/app/x')]);
+  // A client outside still reads the folder it named, a path on this host.
+  expect(session.workingDirectories()).toEqual([uriOf(resolve('/srv/app/x'))]);
   session.close();
 });
 
