@@ -583,6 +583,18 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      */
     const directory = dirOf(uri);
     const chats = ctx.heldChats(idOf(uri));
+    /*
+     * And the checkpoints its turns left in that folder, which are commits
+     * under a ref of the session's own: nothing else will ever point at them,
+     * so a repository that keeps the refs keeps them for ever.
+     *
+     * A source that cannot remove them is not a session that stays: what is
+     * left behind is a ref in somebody's repository, not a row.
+     */
+    if (directory !== undefined) {
+      try { await options.changes?.removeCheckpoints?.(directory, idOf(uri)); }
+      catch { /* the session goes either way */ }
+    }
     if (held !== undefined) teardown(held, uri);
     else await deletedInside(uri);
     let failure = await deleted(uri, agent, directory);

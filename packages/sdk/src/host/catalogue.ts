@@ -3,6 +3,7 @@ import { accountKey } from './root.js';
 import { Status, idFor, idOf } from '../catalog.js';
 import { localPath } from '../fileuri.js';
 import type { Summary, SummaryChat } from '../types/catalog.js';
+import type { ChangesSummary } from '../types/changes.js';
 import type { Agent, Listed } from '../types/agent.js';
 import type { Account } from '../types/probe.js';
 import type { Bag } from '../types/common.js';
@@ -50,6 +51,14 @@ export interface Catalogue {
   activityOf(held: Held): string | undefined;
   sessionAdded(uri: string): void;
   summaryMoved(uri: string): void;
+  /**
+   * Read what the session did, keep it, and say its row moved.
+   *
+   * Called where the session's tree is checkpointed - the start of a session
+   * and the end of each of its turns - which is the only moment the answer can
+   * have changed.
+   */
+  summaryKept(uri: string): Promise<void>;
   forgetSent(uri: string): void;
   activeSessionsMoved(): void;
   learnModels(uri: string): void;
@@ -421,8 +430,36 @@ export function createCatalogue(ctx: HostContext): Catalogue {
 
   /** The diff stat of a folder with nothing changed. */
   const NO_CHANGES = { files: 0, additions: 0, deletions: 0 };
-  /** The diff stat a catalogue row carries, which a session's own state does not. */
+  /**
+   * Which of the two counts a session's row carries.
+   *
+   * The reference host's `getSummaryChangesetKind`: a session that works in a
+   * tree of its own is counted by its branch, and one in a folder somebody
+   * chose is counted by its own checkpoints. Read from the worktree record
+   * rather than from the config that asked for one, because this is the value
+   * that outlives a restart: the record is written where the tree is made and
+   * the config is only ever said to a session while it runs.
+   */
+  const summaryKindOf = (uri: string): 'branch' | 'session' =>
+    (ctx.worktreeOf(uri) === undefined ? 'session' : 'branch');
+  /**
+   * The diff stat a catalogue row carries, which a session's own state does not.
+   *
+   * The session's own counts where the host has read them, and the directory's
+   * where it has not: a row is built synchronously and reading the session's
+   * own takes git, so what goes in a row is what was read the last time the
+   * counts moved.
+   *
+   * A session nothing has been read for is a session this host is not running
+   * - one listed from a backend's own record - and the directory's counts are
+   * the whole of what is known about it. Those two answers are not the same
+   * thing said twice: a session whose tree was committed in has counts of
+   * nothing, and the directory it committed in has counts of nothing for
+   * nobody in particular.
+   */
   const changesOf = (uri: string): Bag => {
+    const read = kept.changes(idOf(uri));
+    if (read !== undefined) return read.files ? { changes: read } : {};
     const dir = ctx.dirOf(uri);
     const summary = dir === undefined ? undefined : options.changes?.summary(dir);
     return summary?.files ? { changes: summary } : {};
@@ -513,8 +550,9 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * fallback is that one field rather than silence. Silence is what this did
    * before, and it was exactly the case that needed saying: marking a row read
    * is something somebody does from the catalogue, to a session nobody has
-   * opened. Its diff stat goes with it, which is the directory's and is known
-   * without any process: a listed row's counts are read after it was listed.
+   * opened. Its diff stat goes with it, which costs no process to read: it is
+   * the session's own where `summaryKept` has read one, and the directory's
+   * otherwise.
    *
    * And nothing at all is sent when the row is the row that went out last,
    * because the five callers of this are reached on every turn, every tool
@@ -526,7 +564,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
   const summaryMoved = (uri: string): void => {
     const summary = summaryOf(uri);
     /*
-     * Zero counts when the folder has none, rather than no key: a partial
+     * Zero counts when there are none to send, rather than no key: a partial
      * without `changes` is a row whose counts did not move, and a client then
      * keeps the last counts it drew after everything was committed.
      */
@@ -564,6 +602,39 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     if (lastSent.get(uri) === said) return;
     lastSent.set(uri, said);
     ctx.broadcast(ROOT, 'root/sessionSummaryChanged', { channel: ROOT, session: uri, changes });
+  };
+  /**
+   * Read whatever the session did, keep it, and say the row moved.
+   *
+   * What `changesOf` reads is written here, at the one moment it can have
+   * moved: the end of a turn, which is when the tree is checkpointed and the
+   * two ends of a session's work - the baseline it started from and the turn
+   * it just finished - are both on disk. Called where the checkpoint is taken
+   * rather than where a row is built, because reading it is a `git diff` and a
+   * catalogue of a hundred rows is asked a hundred times per listing.
+   *
+   * The session's own id, and not its URI: the checkpoints are commits under
+   * `refs/agents/<id>`, which is the name the session is checkpointed under.
+   *
+   * A source that cannot answer for a session is left as it was rather than
+   * written down as nothing, so a row nobody could read for keeps whatever it
+   * had. That is every source with no `sessionSummary`, and every directory
+   * that is not a repository.
+   */
+  const summaryKept = async (uri: string): Promise<void> => {
+    const dir = ctx.dirOf(uri);
+    if (dir === undefined) return;
+    const source = options.changes;
+    let read: ChangesSummary | undefined;
+    try {
+      read = summaryKindOf(uri) === 'branch'
+        ? await source?.branchSummary?.(dir, ctx.worktreeOf(uri)?.base)
+        : await source?.sessionSummary?.(dir, idOf(uri));
+    }
+    catch { /* a count that could not be read is the count that was there */ return; }
+    if (read === undefined) return;
+    kept.setChanges(idOf(uri), read);
+    summaryMoved(uri);
   };
   /**
    * Fill in the models, once there is a CLI to ask.
@@ -1099,7 +1170,7 @@ export function createCatalogue(ctx: HostContext): Catalogue {
   return {
     statusOf, startedBy, chatSummary, movable, running, movableMoved, chatsReordered, subagentSummary, restoredSubagentSummary,
     chatCatalogOf,
-    activityOf, sessionAdded, summaryMoved, forgetSent, activeSessionsMoved, learnModels, learnAccount,
+    activityOf, sessionAdded, summaryMoved, summaryKept, forgetSent, activeSessionsMoved, learnModels, learnAccount,
     listing, adopt, rowAdded, liveRows, allRows, rowsMoved, waitingFor, readStored,
   };
 }

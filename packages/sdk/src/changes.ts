@@ -6,10 +6,11 @@ import { lstat, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type {
-  ChangeWords, ChangesSummary, ChangesetFile, ChangesetOperation, ChangesetOperationResult, ChangesetSource, ChangesetState,
+  ChangeWords, ChangesSummary, ChangesetFile, ChangesetOperation, ChangesetOperationResult, ChangesetScope, ChangesetSource, ChangesetState,
 } from './types/changes.js';
 import type { PullRequests } from './types/github.js';
 import { commitPrompt, cutDiff, pullRequestPrompt, splitWords } from './changewords.js';
+import { baselineOf, capture, latestOf, removeAll } from './checkpoints.js';
 import { gitArgv } from './repo/hardened.js';
 import { uriOf } from './fileuri.js';
 import { INVALID_PARAMS } from './rpc.js';
@@ -165,12 +166,25 @@ const BEFORE = 'ahp-git:';
 const escaped = (path: string): string => path.split('/').map(encodeURIComponent).join('/');
 
 /**
- * A modified file's `before`, as `ahp-git://head/<absolute path>`.
+ * A file's `before`, as `ahp-git://head/<absolute path>`.
  *
- * `head` is there so the authority is never empty: a client that parses and
- * re-prints a URI drops an empty authority's `//`.
+ * The authority is the commit the side is read from, and `head` is the last
+ * one. A branch's rows are read from the merge base instead, which is a commit
+ * with no name anybody gave it, so it is written as the sha itself.
+ *
+ * `head` rather than nothing, so the authority is never empty: a client that
+ * parses and re-prints a URI drops an empty authority's `//`.
  */
-const beforeUri = (dir: string, path: string): string => `${BEFORE}//head${escaped(`${dir}/${path}`)}`;
+const beforeUri = (dir: string, path: string, at = 'head'): string => `${BEFORE}//${at}${escaped(`${dir}/${path}`)}`;
+
+/**
+ * The tree with nothing in it, as git names it.
+ *
+ * What a branch is compared against in a repository that has no commit: a
+ * worktree cut from an empty one, where every file is new. The hash is git's
+ * own and the object needs no writing - git answers for it in any repository.
+ */
+const EMPTY_TREE = '4b825dc642cb6eb9a060e54bf8d69288fbee4904';
 
 /**
  * A URI as its authority and its decoded path segments, or nothing when it does not parse.
@@ -214,7 +228,86 @@ const CAPTURED = 'ahp-edit:';
 interface Captured {
   before?: string;
   after?: string;
+  /**
+   * The lines git counted between the two, where this pair came out of a diff.
+   *
+   * `counted` of the two texts answers a poorer question - it sorts lines into
+   * two sets and cannot see which of them moved - so where git has already
+   * said, what it said is what a row carries.
+   */
+  counts?: { added: number; removed: number };
 }
+
+/** The lines one captured pair is worth. */
+const countsOf = (sides: Captured): { added: number; removed: number } =>
+  sides.counts ?? counted(sides.before ?? '', sides.after ?? '');
+
+/**
+ * The line counts of a diff, by path from the repository's root.
+ *
+ * `git diff --numstat -z` answers `added<TAB>removed<TAB>path` per record, NUL
+ * between records: the tabs are *inside* a record and only the separator is
+ * NUL, which is the whole point of `-z` - a path may contain a tab, and it may
+ * contain a newline, and neither ends the record.
+ */
+const numstatOf = (said: string): Map<string, { added: number; removed: number; movedFrom?: string }> => {
+  const counts = new Map<string, { added: number; removed: number; movedFrom?: string }>();
+  const records = said.split('\0');
+  for (let i = 0; i < records.length; i++) {
+    const record = records[i] as string;
+    if (record === '') continue;
+    const [rawAdded, rawRemoved, path] = record.split('\t');
+    // `-` on both sides is a binary file, which has no lines to count.
+    const added = Number(rawAdded);
+    const removed = Number(rawRemoved);
+    /*
+     * A rename writes an empty path and then two records of its own, the old
+     * name and the new. The counts are the new name's - it is the file the
+     * working tree has - and the old name is kept beside them, because a side
+     * of it is read under the name the file had.
+     */
+    let named: string | undefined;
+    let movedFrom: string | undefined;
+    if (path === undefined || path === '') {
+      movedFrom = records[i + 1];
+      i += 2;
+      named = records[i];
+    }
+    else {
+      named = path;
+    }
+    if (named === undefined || named === '') continue;
+    counts.set(named, {
+      added: Number.isFinite(added) ? added : 0,
+      removed: Number.isFinite(removed) ? removed : 0,
+      ...(movedFrom !== undefined && movedFrom !== '' ? { movedFrom } : {}),
+    });
+  }
+  return counts;
+};
+
+/**
+ * The paths a `--name-status` diff touched, with the letter git gave each.
+ *
+ * `A` is a file the other side did not have, `D` one it has and this side does
+ * not, `M` both, and `R` a rename, which is two records: the name the file came
+ * from and then the one it has now. `-z` separates the two with NUL rather than
+ * a tab, so a path holding either is still one record.
+ */
+const statusesOf = (said: string): { path: string; status: string; movedFrom?: string }[] => {
+  const records = said.split('\0');
+  const found: { path: string; status: string; movedFrom?: string }[] = [];
+  for (let i = 0; i < records.length; i++) {
+    const status = records[i] as string;
+    if (status === '') continue;
+    const moved = /^[RC]/.test(status);
+    const first = records[++i];
+    const path = moved ? records[++i] : first;
+    if (path === undefined || path === '') continue;
+    found.push({ path, status, ...(moved && first !== undefined ? { movedFrom: first } : {}) });
+  }
+  return found;
+};
 
 /**
  * The verbs this source offers, declared once.
@@ -521,15 +614,27 @@ export function gitChanges(): ChangesetSource {
   };
 
   /**
+   * The same rows, with the ticks a client has made on them.
+   *
+   * A tick is a reader's note about a diff they are working through, so it is
+   * per session and per scope: a file ticked in one turn is not ticked in the
+   * session's whole, and the branch a worktree is on is a third list again.
+   */
+  const withTicks = (session: string, scope: string, files: ChangesetFile[]): ChangesetFile[] => {
+    const ticked = reviewed.get(reviewKey(session, scope));
+    if (ticked === undefined || ticked.size === 0) return files;
+    return files.map((file) => (ticked.has(file.id) ? { ...file, reviewed: true } : file));
+  };
+
+  /**
    * Captured sides as the protocol's rows, with both sides fetchable.
    *
    * Minting a URI and remembering what is behind it are the same act, so they
    * are done in the same place: a row that names content nothing can resolve
    * is a row that opens onto an error.
    */
-  const rowsOf = (session: string, turn: string, files: Map<string, Captured>): ChangesetFile[] => {
-    const ticked = reviewed.get(reviewKey(session, turn));
-    return [...files].map(([path, sides]) => {
+  const rowsOf = (session: string, turn: string, files: Map<string, Captured>): ChangesetFile[] =>
+    withTicks(session, turn, [...files].map(([path, sides]) => {
       /*
        * One builder, because this URI is three things at once: the row's `id`,
        * the key a tick is remembered under, and what a client hands back. A
@@ -548,13 +653,101 @@ export function gitChanges(): ChangesetSource {
           // says a creation by leaving the side out rather than by a word.
           ...(sides.before ? { before: { uri, content: { uri: before } } } : {}),
           ...(sides.after !== undefined ? { after: { uri, content: { uri: after } } } : {}),
-          diff: counted(sides.before ?? '', sides.after ?? ''),
+          diff: countsOf(sides),
         },
-        // Absent is not-yet-reviewed, which is what the protocol says a
-        // missing value means, so only a tick is worth sending.
-        ...(ticked?.has(uri) ? { reviewed: true } : {}),
       };
-    });
+    }));
+
+  /**
+   * Every file that differs between two commits, with both sides of it.
+   *
+   * The paths are the repository root's, as `look` reads them, so a change
+   * elsewhere in the repository is dropped the same way. A rename is read
+   * under the name it came from on the `before` side, which is what makes
+   * reverting that row put the file back rather than remove it.
+   *
+   * The map is keyed by the file's own path, which is what a row's URI and
+   * what a revert are named by.
+   */
+  const sidesBetween = async (dir: string, from: string, to: string): Promise<Map<string, Captured> | undefined> => {
+    const said = await git(dir, ['diff', '--numstat', '-z', from, to]);
+    // A directory that is not a repository, or a ref git will not resolve.
+    if (said === undefined) return undefined;
+    const counts = numstatOf(said);
+    const prefix = (await git(dir, ['rev-parse', '--show-prefix']))?.trim() ?? '';
+    const files = new Map<string, Captured>();
+    for (const [atRoot, count] of counts) {
+      if (!atRoot.startsWith(prefix)) continue;
+      const path = `${dir}/${atRoot.slice(prefix.length)}`;
+      /*
+       * A side git cannot read is a side the file did not have: `git show`
+       * fails for a path one of the two commits does not hold, and that is
+       * exactly what a creation and a deletion are made of.
+       */
+      const before = await git(dir, ['show', `${from}:${count.movedFrom ?? atRoot}`]);
+      const after = await git(dir, ['show', `${to}:${atRoot}`]);
+      files.set(path, {
+        ...(before !== undefined ? { before } : {}),
+        ...(after !== undefined ? { after } : {}),
+        counts: { added: count.added, removed: count.removed },
+      });
+    }
+    return files;
+  };
+
+  /**
+   * The sessions whose own two commits are known, held until they move.
+   *
+   * Reading the difference costs a `git diff` and a `git show` per side, and
+   * three callers want the same one at nearly the same moment: the scope's
+   * rows, the summary a row carries, and whether the scope can be reverted.
+   * The two commits it was computed from are held with it, so a later call
+   * over the same pair is answered without reading any of it again.
+   */
+  const fromCheckpoints = new Map<string, { from: string; to: string; files: Map<string, Captured> }>();
+
+  /**
+   * What a session did, as the difference between two of its checkpoints.
+   *
+   * Its baseline and the last turn it finished, which are the two ends of a
+   * conversation. Nothing where either is missing, and nothing where they are
+   * the same commit: the baseline is what `latestOf` answers until a turn has
+   * ended, and a turn that is running *now* is in no checkpoint yet - so the
+   * edit tracker answers until one is, which is the fallback the reference
+   * host takes for a turn with no checkpoint pair.
+   */
+  const inCheckpoints = async (dir: string, session: string): Promise<Map<string, Captured> | undefined> => {
+    const from = await baselineOf(dir, session);
+    const to = from === undefined ? undefined : await latestOf(dir, session);
+    if (from === undefined || to === undefined || from === to) {
+      fromCheckpoints.delete(session);
+      return undefined;
+    }
+    const known = fromCheckpoints.get(session);
+    if (known !== undefined && known.from === from && known.to === to) return known.files;
+    const files = await sidesBetween(dir, from, to);
+    if (files === undefined) {
+      fromCheckpoints.delete(session);
+      return undefined;
+    }
+    fromCheckpoints.set(session, { from, to, files });
+    return files;
+  };
+
+  /** A session's changes: its checkpoints where they answer, the tracker where they do not. */
+  const sessionFiles = async (dir: string, session: string): Promise<Map<string, Captured>> =>
+    await inCheckpoints(dir, session) ?? across(session);
+
+  /** Those files as a row's counts. */
+  const summaryOf = (files: Map<string, Captured>): ChangesSummary => {
+    let additions = 0;
+    let deletions = 0;
+    for (const sides of files.values()) {
+      const counts = countsOf(sides);
+      additions += counts.added;
+      deletions += counts.removed;
+    }
+    return { files: files.size, additions, deletions };
   };
 
   /**
@@ -565,7 +758,9 @@ export function gitChanges(): ChangesetSource {
    * else that survives - git only ever knows what the tree looks like now.
    */
   const capturedFor = (session: string, scope: string): Map<string, Captured> | undefined => {
-    if (scope === 'session') return across(session);
+    // The checkpoints where they have been read, since a file a terminal
+    // command wrote is in one of them and in nothing the tracker was told.
+    if (scope === 'session') return fromCheckpoints.get(session)?.files ?? across(session);
     if (scope.startsWith('compare/')) {
       const [from, to] = scope.slice('compare/'.length).split('/');
       if (!from || !to) return undefined;
@@ -597,35 +792,7 @@ export function gitChanges(): ChangesetSource {
     const prefix = (await git(dir, ['rev-parse', '--show-prefix']))?.trim() ?? '';
 
     /** Line counts per path, for the files git can already diff. */
-    const counts = new Map<string, { added: number; removed: number }>();
-    const numstat = await git(dir, ['diff', '--numstat', '-z', 'HEAD']) ?? '';
-    /*
-     * `added<TAB>removed<TAB>path` per record, NUL between records.
-     *
-     * The tabs are *inside* a record and only the separator is NUL, which is
-     * the whole point of `-z`: a path may contain a tab, and it may contain a
-     * newline, and neither ends the record. A rename writes an empty path and
-     * then two records of its own, old name and new.
-     */
-    const counted = numstat.split('\0');
-    for (let i = 0; i < counted.length; i++) {
-      const record = counted[i] as string;
-      if (record === '') continue;
-      const [rawAdded, rawRemoved, path] = record.split('\t');
-      // `-` on both sides is a binary file, which has no lines to count.
-      const added = Number(rawAdded);
-      const removed = Number(rawRemoved);
-      const named = path === '' || path === undefined
-        // A rename: the two records after this one are the old and new names,
-        // and it is the new one the working tree has.
-        ? (i += 2, counted[i] as string | undefined)
-        : path;
-      if (!named) continue;
-      counts.set(named, {
-        added: Number.isFinite(added) ? added : 0,
-        removed: Number.isFinite(removed) ? removed : 0,
-      });
-    }
+    const counts = numstatOf(await git(dir, ['diff', '--numstat', '-z', 'HEAD']) ?? '');
 
     const files: ChangesetFile[] = [];
     const summary: ChangesSummary = { files: 0, additions: 0, deletions: 0 };
@@ -688,6 +855,122 @@ export function gitChanges(): ChangesetSource {
       summary.files = (summary.files ?? 0) + 1;
       summary.additions = (summary.additions ?? 0) + count.added;
       summary.deletions = (summary.deletions ?? 0) + count.removed;
+    }
+    return { files, summary };
+  };
+
+  /**
+   * The commit a branch's changes are read from: where it left its base.
+   *
+   * The fork point, which is what makes the difference the branch's own work:
+   * everything the base has done since is on both sides of it. The remote's
+   * copy of the base is preferred where there is one, because a local `main` is
+   * often behind what the person actually forked from, and then the local name,
+   * and then `HEAD` - a base this repository has never had, or one with no
+   * history in common, leaves the working tree as the only side there is. The
+   * empty tree is the last of them, for a repository with no commit at all,
+   * where every file is new.
+   *
+   * Always a commit-ish, so a branch scope that was offered is always one that
+   * can be answered.
+   */
+  const mergeBaseOf = async (dir: string, base: string): Promise<string> => {
+    const remote = `refs/remotes/origin/${base}`;
+    const named = /^[0-9a-f]{40}$/i.test(base) || await git(dir, ['show-ref', '--verify', '--quiet', remote]) === undefined
+      ? base
+      : `origin/${base}`;
+    for (const against of [named, 'HEAD']) {
+      const found = (await git(dir, ['merge-base', 'HEAD', against]))?.trim();
+      if (found !== undefined && found !== '') return found;
+    }
+    return EMPTY_TREE;
+  };
+
+  /**
+   * A branch's changes: everything since the fork point, as the tree stands.
+   *
+   * Which is not what `look` answers. `git status` never mentions a file that
+   * was committed on the branch - it is not a change of the working tree - so a
+   * session that put its work into commits would show nothing at all. The
+   * difference from the fork point is asked of git directly, with the working
+   * tree as its second side, so committed and uncommitted work land in one
+   * list, which is what the branch of a worktree is.
+   *
+   * Untracked files are the exception, and the reason `git status` is read at
+   * all: no diff names a file git has never been told about. Every line of one
+   * is an addition, counted from the file rather than from git.
+   *
+   * Nothing here is held: the second side is the working tree, which changes
+   * without anything of this source's asking.
+   */
+  const branchLook = async (dir: string, against: string): Promise<{ files: ChangesetFile[]; summary: ChangesSummary } | undefined> => {
+    const status = await git(dir, ['status', '--porcelain=v1', '-z', '--untracked-files=all']);
+    if (status === undefined) return undefined;
+    const prefix = (await git(dir, ['rev-parse', '--show-prefix']))?.trim() ?? '';
+    const counts = numstatOf(await git(dir, ['diff', '--numstat', '-z', '--diff-filter=ADMR', against]) ?? '');
+    const statuses = statusesOf(await git(dir, ['diff', '--name-status', '-z', '--diff-filter=ADMR', against]) ?? '');
+
+    const files: ChangesetFile[] = [];
+    const summary: ChangesSummary = { files: 0, additions: 0, deletions: 0 };
+    /**
+     * One row, and its lines added to the whole.
+     *
+     * Every row is the same three things - the name the `before` side is read
+     * under, whether there is a side on disk, and the lines between them - so
+     * the paths a row is named by are worked out once.
+     */
+    const row = (path: string, before: string | undefined, after: boolean, count: { added: number; removed: number }): void => {
+      const uri = uriOf(`${dir}/${path}`);
+      files.push({
+        id: uri,
+        edit: {
+          /*
+           * The side git holds, read lazily: it is behind an `ahp-git:` URI
+           * naming the commit, so a diff of four hundred files costs one
+           * `git diff` rather than four hundred reads of blobs nobody opens.
+           */
+          ...(before === undefined ? {} : {
+            before: { uri: uriOf(`${dir}/${before}`), content: { uri: beforeUri(dir, before, against) } },
+          }),
+          ...(after ? { after: { uri, content: { uri } } } : {}),
+          diff: { added: count.added, removed: count.removed },
+        },
+      });
+      summary.files = (summary.files ?? 0) + 1;
+      summary.additions = (summary.additions ?? 0) + count.added;
+      summary.deletions = (summary.deletions ?? 0) + count.removed;
+    };
+
+    for (const one of statuses) {
+      if (!one.path.startsWith(prefix)) continue;
+      const path = one.path.slice(prefix.length);
+      const count = counts.get(one.path) ?? { added: 0, removed: 0 };
+      /*
+       * The name the `before` side is read under. A rename keeps the name it
+       * came from - so reading that side shows a move rather than a file that
+       * is all new - and an addition has no name at all. A rename whose source
+       * is outside this directory is an addition here, since nothing inside it
+       * is where the file was.
+       */
+      const movedFrom = one.movedFrom !== undefined && one.movedFrom.startsWith(prefix)
+        ? one.movedFrom.slice(prefix.length)
+        : undefined;
+      const before = movedFrom ?? (one.status.startsWith('A') || one.status.startsWith('R') ? undefined : path);
+      // And `D` is the one with no side on disk: the base's copy of it is the
+      // whole of the difference.
+      row(path, before, !one.status.startsWith('D'), count);
+    }
+    /*
+     * And the files git was never told about, which no diff names. Only `??`:
+     * a tracked path that moved is in the diff above, and counting it here as
+     * well would say it twice.
+     */
+    for (const record of status.split('\0')) {
+      if (!record.startsWith('?? ') || !record.slice(3).startsWith(prefix)) continue;
+      const path = record.slice(3 + prefix.length);
+      // A file's last newline ends its last line rather than starting one, and
+      // `lines` counts it that way.
+      row(path, undefined, true, { added: await lines(`${dir}/${path}`), removed: 0 });
     }
     return { files, summary };
   };
@@ -1054,8 +1337,8 @@ export function gitChanges(): ChangesetSource {
   };
 
   return {
-    scopes: (dir, session) => {
-      const scopes = held.has(dir)
+    scopes: (dir, session, base) => {
+      const scopes: ChangesetScope[] = held.has(dir)
         ? [{
           id: 'uncommitted',
           label: 'Uncommitted Changes',
@@ -1066,19 +1349,37 @@ export function gitChanges(): ChangesetSource {
           // is bookkeeping about a thing that has moved.
         }]
         : [];
+      /*
+       * Branch Changes, for a session that was cut from a branch.
+       *
+       * It goes beside the working tree rather than among the scopes below,
+       * because it is not the conversation's: a session that has not said
+       * anything yet is still on a branch, and the branch is what its work will
+       * be judged by. A session in a directory rather than a worktree passes no
+       * base and is offered none - there is no branch of its own to show.
+       */
+      if (base !== undefined && held.has(dir)) {
+        scopes.push({
+          id: 'branch',
+          label: 'Branch Changes',
+          description: 'Show all changes made on this branch',
+          changeKind: 'branch',
+          reviewable: true,
+        });
+      }
       const turns = seen.get(session);
       if (!turns || turns.size === 0) return scopes;
       // The working tree first. A client that shows one changeset shows the
       // first, VS Code opens it, and `commit` is offered on the working tree
-      // alone - so the session's own changes must not come before it. "This
-      // Session" stays in the picker, and what a *conversation* changed is
+      // alone - so the session's own changes must not come before it. "Session
+      // Changes" stays in the picker, and what a *conversation* changed is
       // still the one that belongs beside a conversation.
       return [
         ...scopes,
         {
           id: 'session',
-          label: 'This Session',
-          description: 'Everything this conversation changed',
+          label: 'Session Changes',
+          description: 'Show all changes made in this session',
           changeKind: 'session',
           reviewable: true,
         },
@@ -1101,14 +1402,20 @@ export function gitChanges(): ChangesetSource {
       ];
     },
 
-    state: async (dir, session, scope) => {
+    state: async (dir, session, scope, base) => {
       if (scope === 'uncommitted') {
         const found = held.get(dir) ?? await look(dir);
         if (!found) return undefined;
         return { status: 'ready', files: found.files };
       }
+      if (scope === 'branch') {
+        const against = base === undefined ? undefined : await mergeBaseOf(dir, base);
+        const found = against === undefined ? undefined : await branchLook(dir, against);
+        if (found === undefined) return undefined;
+        return { status: 'ready', files: withTicks(session, scope, found.files) };
+      }
       if (scope === 'session') {
-        const files = across(session);
+        const files = await sessionFiles(dir, session);
         if (files.size === 0) return { status: 'ready', files: [] };
         return { status: 'ready', files: rowsOf(session, 'session', files) };
       }
@@ -1221,13 +1528,48 @@ export function gitChanges(): ChangesetSource {
       proposed.delete(uri);
     },
 
+    /*
+     * The session's own trees, committed where nobody's branch can see them.
+     *
+     * A turn's changeset is what the tools the session saw wrote, which is not
+     * what a terminal command wrote and is nothing at all after a restart. A
+     * checkpoint is the tree itself, so two of them are a difference that
+     * survives both.
+     */
+    checkpoint: (dir, session, turn) => capture(dir, session, turn),
+
+    /** And the refs of a session that is gone, which nothing else would remove. */
+    removeCheckpoints: (dir, session) => removeAll(dir, session),
+
     summary: (dir) => held.get(dir)?.summary,
+
+    /*
+     * What the session itself did, which is not what the folder holds.
+     *
+     * The counts that belong to a row: a commit in the folder takes the
+     * uncommitted ones to nothing, and two sessions in one folder share them.
+     */
+    sessionSummary: async (dir, session) => summaryOf(await sessionFiles(dir, session)),
+
+    /*
+     * And what the branch a worktree is on has, which is what a row of that
+     * session carries instead: the base was chosen when the tree was cut, and
+     * everything since it - committed or not - is the work of that session and
+     * nobody else's, since the directory is its own.
+     */
+    branchSummary: async (dir, base) => {
+      const against = base === undefined ? undefined : await mergeBaseOf(dir, base);
+      const found = against === undefined ? undefined : await branchLook(dir, against);
+      return found?.summary;
+    },
 
     /*
      * The `before` side, out of git rather than off the disk.
      *
      * `git show HEAD:<path>` is what the file was at the last commit, which is
-     * the only place that version still exists.
+     * the only place that version still exists - and a branch's rows name the
+     * fork point instead, which is a commit of this source's choosing and the
+     * only place *its* version of the file still exists.
      */
     read: async (uri) => {
       /*
@@ -1245,10 +1587,17 @@ export function gitChanges(): ChangesetSource {
         return text === undefined ? undefined : { data: text, encoding: 'utf-8' };
       }
       if (!uri.startsWith(BEFORE)) return undefined;
-      // `head`, or an empty authority, which a client prints as `ahp-git:/<path>`
-      // or `ahp-git:///<path>`.
+      /*
+       * `head`, or an empty authority, which a client prints as `ahp-git:/<path>`
+       * or `ahp-git:///<path>`, or a commit this source named itself - the fork
+       * point a branch's rows are read from. Nothing else: whatever the
+       * authority holds is handed to git, and a URI from a client is not a
+       * reason to run one.
+       */
       const parts = partsOf(uri);
-      if (parts === undefined || (parts.authority !== 'head' && parts.authority !== '')) return undefined;
+      if (parts === undefined) return undefined;
+      const at = parts.authority === '' ? 'head' : parts.authority;
+      if (at !== 'head' && !/^[0-9a-f]{40}$/.test(at)) return undefined;
       const rest = parts.segments.join('/');
       // The directory is the longest known one this URI starts with: a path
       // has slashes and so does a directory, and splitting on the first one
@@ -1260,9 +1609,9 @@ export function gitChanges(): ChangesetSource {
       const path = rest.slice(dir.length + 1);
       // `./` names the path from the directory rather than from the root, which
       // differs for a directory below the repository's root.
-      const data = await git(dir, ['show', `HEAD:./${path}`]);
-      // A file that is not in HEAD has no before, and empty is the truthful
-      // answer for one: it did not exist.
+      const data = await git(dir, ['show', `${at === 'head' ? 'HEAD' : at}:./${path}`]);
+      // A file that commit does not have has no before, and empty is the
+      // truthful answer for one: on that side it did not exist.
       return { data: data ?? '', encoding: 'utf-8' };
     },
 

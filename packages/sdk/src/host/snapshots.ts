@@ -192,7 +192,7 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       // Somebody reads this directory's changesets now, so the source watches
       // what only git writes: staging, committing and checking out elsewhere.
       startWatchingDir(at.dir);
-      const state = await options.changes?.state(at.dir, at.owner, at.scope);
+      const state = await options.changes?.state(at.dir, at.owner, at.scope, at.base);
       if (!state) throw new RpcError(-32001, `No changeset at ${channel}`);
       // The verbs, alongside the files. Omitted when there are none, which
       // the protocol asks for and which is what a changeset with nothing to

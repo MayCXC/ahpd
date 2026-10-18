@@ -310,6 +310,16 @@ export interface ChangesetOperationResult {
 export type ChangesetWatch = (() => void) & { ready?: Promise<void> };
 
 /**
+ * The turn a session's baseline is checkpointed under.
+ *
+ * What a session changed is a difference between two of its own commits, and
+ * the first of them is the tree as the session found it - before a turn had
+ * run, so it is named as one no backend would name a turn: a checkpoint lives
+ * at `refs/agents/<session>/checkpoints/turn/<turn>`.
+ */
+export const BASELINE_TURN = '0';
+
+/**
  * Where a host's file changes come from.
  *
  * A port, like the filesystem and the shell, and for the sharpest version of
@@ -326,12 +336,49 @@ export interface ChangesetSource {
    * rather than a directory's - what *this conversation* changed is not what
    * the working tree looks like, and a directory with three sessions in it has
    * three different answers.
+   *
+   * `base` is the branch the session's worktree was cut from, and is what
+   * makes the branch scope answerable at all: a session that runs in a
+   * directory rather than in a worktree of its own passes none and is offered
+   * no branch of its own. What the branch scope holds is everything since that
+   * branch and this one parted, which includes work that has been committed.
    */
-  scopes(dir: string, session: string): ChangesetScope[];
-  /** The state behind one of them. */
-  state(dir: string, session: string, scope: string): Promise<ChangesetState | undefined>;
+  scopes(dir: string, session: string, base?: string): ChangesetScope[];
+  /**
+   * The state behind one of them.
+   *
+   * `base` comes with the branch scope as it does with {@link scopes}, since
+   * the scope alone says which branch a session was cut from and the source
+   * cannot read that from the directory.
+   */
+  state(dir: string, session: string, scope: string, base?: string): Promise<ChangesetState | undefined>;
   /** The roll-up for a catalogue row, cheap enough to ask per row. */
   summary(dir: string): ChangesSummary | undefined;
+  /**
+   * The roll-up of one session's own work, which is not the directory's.
+   *
+   * What {@link summary} answers is the working tree: a commit takes it to
+   * nothing, and two sessions in one folder share it. This is what the session
+   * did - the difference between its baseline checkpoint and the last turn it
+   * finished, or the edit tracker where it has no checkpoints, which is a
+   * folder that is not a repository and a turn that has not ended. A source
+   * without it answers nothing, and a caller falls back to `summary`.
+   */
+  sessionSummary?(dir: string, session: string): Promise<ChangesSummary>;
+  /**
+   * And the roll-up of the branch a session's worktree is on.
+   *
+   * Which is what a row of *that* session carries, the way a session in a
+   * directory carries {@link sessionSummary}: a worktree is the session's own
+   * and nobody else's, so everything since it was cut - committed or not - is
+   * its work, and there is no second session in there to share it with.
+   *
+   * `base` is the branch it was cut from, as {@link scopes} is given, and a
+   * source given none answers nothing: a session in a directory has no branch
+   * of its own to count. Undefined is also the answer where the directory is
+   * not a repository, which is the same case as `sessionSummary`.
+   */
+  branchSummary?(dir: string, base?: string): Promise<ChangesSummary | undefined>;
   /**
    * Content behind a ref this source minted.
    *
@@ -341,6 +388,34 @@ export interface ChangesetSource {
    * filesystem instead.
    */
   read?(uri: string): Promise<{ data: string; encoding: string } | undefined>;
+  /**
+   * Write the tree as it is now as a commit of the session's own.
+   *
+   * What makes a session's changes the session's. The `uncommitted` diff says
+   * what a working tree looks like, which is not what a conversation did: a
+   * commit takes it to zero, and two sessions in one folder have the same
+   * answer. A checkpoint is the tree at a moment only this session knows about
+   * - `turn` is {@link BASELINE_TURN} before its first turn runs, and a turn's
+   * own id once that turn has ended - so the difference between two of them is
+   * the session's own work, whatever wrote it.
+   *
+   * Nothing happens in a directory that is not a repository, and the person's
+   * branch, index and working tree are never touched. Like `refresh`, this is
+   * a read of the directory that writes only what is the session's: a failure
+   * is a checkpoint that is not there, not a rejection.
+   *
+   * `session` is the session's own id, which is what names those refs and
+   * what a later `removeCheckpoints` is given.
+   */
+  checkpoint?(dir: string, session: string, turn: string): Promise<void>;
+  /**
+   * The checkpoints of a session that is gone, and the refs that name them.
+   *
+   * Nothing else will ever point at those commits, so a repository that keeps
+   * the refs keeps them for ever. Called when the host removes the session, on
+   * the directory it ran in.
+   */
+  removeCheckpoints?(dir: string, session: string): Promise<void>;
   /** Look again, answering whether anything moved. */
   refresh?(dir: string): Promise<boolean>;
   /**

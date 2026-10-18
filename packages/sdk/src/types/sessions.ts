@@ -1,4 +1,5 @@
 import type { Scope } from '../scopes.js';
+import type { ChangesSummary } from './changes.js';
 import type { Owner } from './usage.js';
 
 /**
@@ -365,6 +366,25 @@ export interface SessionStore {
   workingDirectory?(id: string): string | undefined;
   /** Record it, or forget it with `undefined`. */
   setWorkingDirectory?(id: string, value: string | undefined): void;
+  /**
+   * What this session's own work added and removed, or nothing where it was
+   * never read.
+   *
+   * The counts a catalogue row carries, which are the session's and not its
+   * directory's: two sessions in one folder did different work, and a commit
+   * takes neither of them to nothing. Reading them takes git - they are a
+   * difference between two of the session's own checkpoints - so they are read
+   * where they move rather than where a row is built, and kept here because
+   * the row of a session this host is not running has nowhere else to read
+   * them from.
+   *
+   * Nothing is not zero: a session nothing has been read for falls back to
+   * what its directory says, and a session that was read and did nothing is
+   * one the host has an answer for.
+   */
+  changes(id: string): ChangesSummary | undefined;
+  /** Record it, or forget it with `undefined`. */
+  setChanges(id: string, value: ChangesSummary | undefined): void;
   /**
    * What the agent recorded as worth coming back to, or nothing where it
    * recorded nothing.

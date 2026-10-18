@@ -39,7 +39,7 @@ const MODES = new Set<string>(['session-title', 'forced', 'model', 'agent']);
 export interface Changesets {
   dirOf(uri: string): string | undefined;
   catalogueOf(uri: string, dir: string): Bag[];
-  changesetAt(channel: string): { owner: string; scope: string; dir: string } | undefined;
+  changesetAt(channel: string): { owner: string; scope: string; dir: string; base?: string } | undefined;
   changesetOf(channel: string, uri: string): boolean;
   operationsOf(channel: string): Bag[];
   operationsMoved(uri: string): void;
@@ -71,6 +71,18 @@ export function createChangesets(ctx: HostContext): Changesets {
   };
 
   /**
+   * The branch a session's worktree was cut from, where it has one.
+   *
+   * `HEAD` is what this host records for a session it gave no base to - the
+   * tree continues whatever the repository was on - and it names a branch to
+   * compare against no more than an empty string would.
+   */
+  const baseOf = (uri: string): string | undefined => {
+    const base = worktreeOf(uri)?.base;
+    return base === undefined || base === 'HEAD' ? undefined : base;
+  };
+
+  /**
    * The changesets a session advertises, as catalogue entries.
    *
    * One builder, because there are two places that say them - a session's
@@ -79,7 +91,7 @@ export function createChangesets(ctx: HostContext): Changesets {
    * that vanished when anything changed.
    */
   const catalogueOf = (uri: string, dir: string): Bag[] =>
-    (options.changes?.scopes(dir, uri) ?? []).map((scope) => ({
+    (options.changes?.scopes(dir, uri, baseOf(uri)) ?? []).map((scope) => ({
       label: scope.label,
       uriTemplate: `${uri}/changeset/${scope.id}`,
       changeKind: scope.changeKind,
@@ -94,14 +106,19 @@ export function createChangesets(ctx: HostContext): Changesets {
    *
    * `<sessionUri>/changeset/<scope>` split back into its two halves, which is
    * wanted in four places now. Undefined for a URI that is not one.
+   *
+   * The base branch comes with it, because it is the session's and not the
+   * directory's: a scope named in a URI is answered against it, and by the
+   * time the state is read the session may be gone.
    */
-  const changesetAt = (channel: string): { owner: string; scope: string; dir: string } | undefined => {
+  const changesetAt = (channel: string): { owner: string; scope: string; dir: string; base?: string } | undefined => {
     const cut = channel.indexOf('/changeset/');
     if (cut <= 0) return undefined;
     const owner = channel.slice(0, cut);
     const dir = dirOf(owner);
     if (dir === undefined) return undefined;
-    return { owner, scope: channel.slice(cut + '/changeset/'.length), dir };
+    const base = baseOf(owner);
+    return { owner, scope: channel.slice(cut + '/changeset/'.length), dir, ...(base === undefined ? {} : { base }) };
   };
 
   /**
@@ -387,7 +404,7 @@ export function createChangesets(ctx: HostContext): Changesets {
    */
   const operationContext = (asked: string, dir: string): ChangesetOperationContext => {
     const uri = heldAs(asked);
-    const base = worktreeOf(uri)?.base;
+    const base = baseOf(uri);
     const git = (options.directories?.meta(dir) as { git?: Record<string, unknown> } | undefined)?.git;
     const facts = githubFacts.get(dir) as { pullRequestUrls?: string[]; pullRequestBranchName?: string } | undefined;
     const owner = git?.githubOwner;
@@ -401,7 +418,7 @@ export function createChangesets(ctx: HostContext): Changesets {
     const words = changeWordsOf(uri, dir, held, lead);
     const conversation = conversationOf(lead);
     return {
-      ...(base !== undefined && base !== 'HEAD' ? { base } : {}),
+      ...(base === undefined ? {} : { base }),
       ...(github !== undefined ? { github } : {}),
       ...(facts?.pullRequestUrls !== undefined && facts.pullRequestBranchName === git?.branchName ? { pullRequest: true } : {}),
       ...(lead !== undefined && lead.allTurns().length === 0 ? { unused: true } : {}),
@@ -571,7 +588,7 @@ export function createChangesets(ctx: HostContext): Changesets {
         }
         let settled = false;
         try {
-          const state = await options.changes?.state(at.dir, at.owner, at.scope);
+          const state = await options.changes?.state(at.dir, at.owner, at.scope, at.base);
           if (state) {
             const operations = operationsOf(channel);
             told(channel, state, operations);

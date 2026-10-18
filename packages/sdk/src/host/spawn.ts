@@ -14,6 +14,7 @@ import { chatUriFor, subagentChatUri } from './channels.js';
 import { CLOSING } from './common.js';
 import { chatFlag, sessionFollows, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
+import { BASELINE_TURN } from '../types/changes.js';
 import type { Bag } from '../types/common.js';
 import type { Agent } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
@@ -137,7 +138,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     dispatch, log, described, links, resumedSessions,
     sessionHolding, respell, dirOf, operationsMoved, refreshWatched, refreshFacts,
     fire, charged, senders, senderOf, sentBy, forgetSender, enteredIn, inMachine, bringBackOf,
-    contributedDefaults, runningSchema, chatSummary, subagentSummary, summaryMoved, learnModels,
+    contributedDefaults, runningSchema, chatSummary, subagentSummary, summaryMoved, summaryKept, learnModels,
     learnAccount, movableMoved,
   } = ctx;
 
@@ -521,6 +522,22 @@ export function createSpawn(ctx: HostContext): Spawn {
       kept.setProvider(own, agent.provider);
       keepFolder(own, sessions.get(uri)?.workingDirectory);
     }
+  };
+
+  /**
+   * The session's tree, written down as a commit of its own.
+   *
+   * A source with no checkpoints is a source that answers the session's
+   * changes from what it saw the tools write, which is what every host did
+   * before there were any - so nothing here is required of one, and a source
+   * that fails at it is the same case: the counts come from somewhere else and
+   * the session is untouched.
+   */
+  const checkpointOf = async (dir: string, uri: string, turn: string): Promise<void> => {
+    try {
+      await options.changes?.checkpoint?.(dir, idOf(uri), turn);
+    }
+    catch { /* a checkpoint that is not there is a count from somewhere else */ }
   };
 
   const spawn = (
@@ -1035,8 +1052,11 @@ export function createSpawn(ctx: HostContext): Spawn {
         // watching only the list is the one that most needs telling.
         summaryMoved(uri);
         /*
-         * And a finished turn is when the branch is worth asking about again:
-         * the agent may have changed it, or somebody may have in a terminal.
+         * And a turn that ended is when the branch is worth asking about
+         * again: the agent may have changed it, or somebody may have in a
+         * terminal. A turn that failed is one of those, and the files it wrote
+         * before it died are as much the session's work as a finished turn's -
+         * a tree left uncommitted by a failure is a tree nobody can see.
          *
          * The machine's own commits first, where the session is in one: a
          * machine that commits in a git directory of its own leaves the host's
@@ -1046,11 +1066,22 @@ export function createSpawn(ctx: HostContext): Spawn {
          * A session in no machine has nothing to fetch, and its facts are read
          * without waiting for an answer nobody was asked for.
          */
-        if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled') {
+        if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled' || action.type === 'chat/error') {
           const dir = dirOf(uri);
           if (dir !== undefined) {
-            if (enteredIn.get(uri) === undefined) refreshFacts(dir);
-            else void bringBackOf(uri).then(() => { refreshFacts(dir); });
+            /*
+             * The tree first, since what a session changed is a difference
+             * between two of them: the counts read next are read against the
+             * turn just written down, and the facts after those are read
+             * against the same tree - so a row that moved because of the turn
+             * says so once rather than once per answer.
+             */
+            void checkpointOf(dir, uri, turn)
+              .then(() => summaryKept(uri))
+              .then(() => {
+                if (enteredIn.get(uri) === undefined) refreshFacts(dir);
+                else void bringBackOf(uri).then(() => { refreshFacts(dir); });
+              });
           }
         }
         // A turn starting or ending is the whole of what disables and re-enables
@@ -1191,6 +1222,22 @@ export function createSpawn(ctx: HostContext): Spawn {
     // it after a restart. Only on a change, so a chat started again in the
     // same folder writes nothing.
     keepFolder(idOf(uri), held.workingDirectory);
+    /*
+     * And the tree it found there, before its first turn can change it.
+     *
+     * The baseline is what a session's own changes are measured from, so it is
+     * written as the session starts and left alone from then on - a session
+     * started again finds the ref already there. This is the one road to a
+     * running backend, so it is the one place every session is given one.
+     *
+     * The session's counts are read behind it, so that a row says what this
+     * session did rather than what its folder holds: until a turn has ended
+     * the two ends of that are the baseline and itself, which is a difference
+     * of nothing and the right answer for a session that has done nothing yet.
+     */
+    if (held.workingDirectory !== undefined) {
+      void checkpointOf(held.workingDirectory, uri, BASELINE_TURN).then(() => summaryKept(uri));
+    }
     /*
      * The name it had before, when it is being created again.
      *

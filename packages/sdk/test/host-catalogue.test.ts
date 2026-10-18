@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Status } from '../src/catalog.js';
+import { fileSessions, memorySessions } from '../src/sessions.js';
 import type { Request } from '../src/types/rpc.js';
+import type { HostOptions } from '../src/types/host.js';
 import {
   claude, createHost, machine, resetSdk, actions, emit, hello, open, peer,
   sdk, serving, sessionQueries, settle, running,
@@ -1180,5 +1185,195 @@ describe('a summary that did not change', () => {
     finally {
       vi.useRealTimers();
     }
+  });
+});
+
+/*
+ * What the counts in a row are.
+ *
+ * What a session did, and not what the folder it worked in happens to hold:
+ * two sessions in one directory did different work, and a commit takes neither
+ * of them to nothing. So a row counts the session's own tree - the difference
+ * between its baseline and the last turn it finished, or everything since the
+ * branch of a worktree of its own was cut - and the answer is kept where the
+ * next daemon reads it again.
+ */
+describe("a row's counts are the session's own", () => {
+  type Client = Awaited<ReturnType<typeof running>>['client'];
+  /** The folder every session here works in, which two of them share. */
+  const FOLDER = '/home/softov';
+
+  let made: string[] = [];
+  afterEach(() => {
+    for (const dir of made) rmSync(dir, { recursive: true, force: true });
+    made = [];
+  });
+
+  /** The `changes` a session has been sent, in order. */
+  const rowsMoved = (p: ReturnType<typeof peer>, session: string): Record<string, unknown>[] => p.notes
+    .filter((n) => n.method === 'root/sessionSummaryChanged')
+    .map((n) => n.params as { session: string; changes: Record<string, unknown> })
+    .filter((n) => n.session === session)
+    .map((n) => n.changes);
+
+  /** The counts a session's row carried last. */
+  const countsOf = (p: ReturnType<typeof peer>, session: string) =>
+    rowsMoved(p, session).at(-1)?.changes as { files?: number; additions?: number; deletions?: number } | undefined;
+
+  /**
+   * A source whose counts are the session's, with a directory's of its own.
+   *
+   * Two sessions in one folder have to come out as two different numbers, so
+   * the folder is given a third one: a row that took the folder's answer, or
+   * its neighbour's, is a row these cases can tell apart from the right one.
+   */
+  const ownWork = (counts: Record<string, number>, branch?: number) => ({
+    scopes: () => [{ id: 'session', label: 'Session Changes', changeKind: 'session' as const }],
+    state: async () => ({ status: 'ready' as const, files: [] }),
+    summary: (_dir: string) => ({ files: 99, additions: 99, deletions: 99 }),
+    sessionSummary: async (_dir: string, session: string) => ({ files: counts[session] ?? 0 }),
+    ...(branch === undefined ? {} : { branchSummary: async () => ({ files: branch }) }),
+    refresh: async () => true,
+  });
+
+  /** One turn in a chat, started and cancelled: a turn that ended, either way. */
+  const turn = async (client: Client, chatUri: string, turnId = 't1') => {
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId, message: { text: 'go' } } },
+    });
+    await settle();
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/turnCancelled', turnId } },
+    });
+    // The counts are read behind the checkpoint of that turn, which is two
+    // answers away - and a row nobody waited for is a row a test cannot read.
+    await settle(12);
+  };
+
+  /**
+   * One turn in a chat the agent fails at the end of.
+   *
+   * A failure is the agent's to report, so this is what its own CLI says
+   * rather than an action a client may send: the host turns it into the
+   * `chat/error` that ends the turn.
+   */
+  const failed = async (client: Client, chatUri: string, turnId = 't1') => {
+    client.handle({
+      method: 'dispatchAction',
+      params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId, message: { text: 'go' } } },
+    });
+    await settle();
+    await emit({ type: 'result', subtype: 'error_during_execution', is_error: true, errors: ['the agent died'], duration_ms: 12 });
+    await settle(12);
+  };
+
+  /** A session in a folder, with one turn behind it: when its counts are read. */
+  const opened = async (client: Client, name: string, folder = FOLDER) => {
+    const uri = `ahp-session:/${name}`;
+    await client.handle({
+      method: 'createSession',
+      params: { channel: uri, provider: 'claude', workingDirectories: [`file://${folder}`] },
+    });
+    const state = ((await client.handle({ method: 'subscribe', params: { channel: uri } })) as {
+      snapshot: { state: { defaultChat: string } };
+    }).snapshot.state;
+    await client.handle({ method: 'subscribe', params: { channel: state.defaultChat } });
+    await turn(client, state.defaultChat);
+    return { uri, chatUri: state.defaultChat };
+  };
+
+  /** A host with one session in it that has done one turn. */
+  const turned = async (over: Partial<HostOptions>, name: string, folder = FOLDER) => {
+    const host = serving(FOLDER, [], over);
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+    const at = await opened(client, name, folder);
+    return { host, client, peer: p, ...at };
+  };
+
+  it('gives two sessions in one folder the counts each of them did', async () => {
+    const source = ownWork({ one: 3, two: 5 });
+    const host = serving(FOLDER, [], { changes: source });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
+
+    await opened(client, 'one');
+    await opened(client, 'two');
+
+    expect(countsOf(p, 'claude:/one')).toMatchObject({ files: 3 });
+    expect(countsOf(p, 'claude:/two')).toMatchObject({ files: 5 });
+    // And the folder's own counts, which both of them are working in, are
+    // neither session's: a row that took those would say 99 for each of them.
+    expect(source.summary(FOLDER)).toMatchObject({ files: 99 });
+  });
+
+  it('gives a worktree session its branch changes', async () => {
+    const source = ownWork({ live: 3 }, 7);
+    const store = memorySessions();
+    // The tree this session was given: the record is what says a row is
+    // counted by a branch, and it is the record that outlives the run.
+    store.setWorktree('live', { repository: FOLDER, path: `${FOLDER}/tree`, base: 'main' });
+    const { peer: p } = await turned({ changes: source, sessions: store }, 'live');
+
+    // Its own work is three files and its branch holds seven, and the row is
+    // the branch: everything since the tree was cut is this session's work,
+    // committed or not, since the directory is its own and nobody else's.
+    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 7 });
+  });
+
+  it('moves a row with the work the turn it just ran did', async () => {
+    let files = 2;
+    const source = { ...ownWork({ live: 2 }), sessionSummary: async () => ({ files }) };
+    const { client, peer: p, chatUri } = await turned({ changes: source }, 'live');
+    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 2 });
+
+    files = 6;
+    await turn(client, chatUri, 't2');
+    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 6 });
+  });
+
+  it('moves a row with the work a turn did before it failed', async () => {
+    let files = 2;
+    const source = { ...ownWork({ live: 2 }), sessionSummary: async () => ({ files }) };
+    const { client, peer: p, chatUri } = await turned({ changes: source }, 'live');
+    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 2 });
+
+    // The turn wrote three more files and then the agent died. What it wrote
+    // is still the session's work, so its row moves the way a finished turn's
+    // does: a row left at the counts of the turn before is a client drawing
+    // work nobody can see.
+    files = 5;
+    await failed(client, chatUri, 't2');
+    expect(countsOf(p, 'claude:/live')).toMatchObject({ files: 5 });
+  });
+
+  it("reads a row's counts back from the store after a restart", async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'ahpd-counts-'));
+    made.push(dir);
+    const first = await turned({ changes: ownWork({ live: 4 }), sessions: fileSessions({ dir }) }, 'live');
+    expect(countsOf(first.peer, 'claude:/live')).toMatchObject({ files: 4 });
+    // Written after the change rather than during it, so the next store is
+    // given a tick to have a file to read.
+    await settle();
+
+    // The daemon stops here, and starts again over the folder of sessions it
+    // left: the session is not running in the new one, so its row has nothing
+    // but what was written down.
+    sdk.sessions.push({ sessionId: 'live', summary: 'Live', lastModified: 1, cwd: FOLDER });
+    const again = serving(FOLDER, [], { changes: ownWork({ live: 4 }), sessions: fileSessions({ dir }) });
+    const p = peer();
+    const client = again.accept(p);
+    await client.handle(hello(['0.9.0']));
+    const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
+      items: { resource: string; changes?: { files?: number } }[];
+    };
+
+    // The folder says 99 of its own; what comes back is what the session was
+    // measured at before the daemon stopped.
+    expect(listed.items.find((one) => one.resource === 'claude:/live')?.changes?.files).toBe(4);
   });
 });

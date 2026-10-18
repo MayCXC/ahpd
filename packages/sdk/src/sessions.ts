@@ -5,6 +5,7 @@ import { join, sep } from 'node:path';
 import { readJson, writeJsonAtomic } from './jsonfile.js';
 import { asCreatedBy, asOrigin } from './remotesession.js';
 import type { Scope } from './scopes.js';
+import type { ChangesSummary } from './types/changes.js';
 import type { CreatedBy, NestedRecord, PullRequestBaseline, RemoteOrigin, SessionStore, StoredChat, StoredWorktree } from './types/sessions.js';
 import type { Owner } from './types/usage.js';
 import { ownerOf } from './values.js';
@@ -140,6 +141,8 @@ export function memorySessions(): SessionStore & Held {
     setAutoArchivedAt: (id, value) => { patch(id, { autoArchivedAt: value === '' ? undefined : value }); },
     workingDirectory: (id) => rows.get(id)?.workingDirectory,
     setWorkingDirectory: (id, value) => { patch(id, { workingDirectory: value === '' ? undefined : value }); },
+    changes: (id) => rows.get(id)?.changes,
+    setChanges: (id, value) => { patch(id, { changes: value }); },
     nestedSessions: () => [...rows.entries()]
       .flatMap(([id, held]) => held.nested === undefined ? [] : [[id, held.nested] as [string, NestedRecord]]),
     artifacts: (id) => rows.get(id)?.artifacts,
@@ -253,6 +256,7 @@ export function memorySessions(): SessionStore & Held {
         ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
         ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
         ...(held.autoArchivedAt === undefined ? {} : { autoArchivedAt: held.autoArchivedAt }),
+        ...(held.changes === undefined ? {} : { changes: held.changes }),
       };
     },
     forget: (id) => { rows.delete(id); },
@@ -319,6 +323,30 @@ const worktreeOf = (value: unknown): StoredWorktree | undefined => {
     path: held.path,
     base: held.base,
     ...(held.branch === undefined ? {} : { branch: held.branch }),
+  };
+};
+
+/**
+ * A session's own counts as the file wrote them, or nothing where it wrote
+ * none.
+ *
+ * A count is a number or it is not there at all: anything else is ignored
+ * rather than guessed at, as every other field of a row is. An object with
+ * nothing countable in it is not a summary, so a row written by something that
+ * meant something else reads as a session whose counts were never read.
+ */
+const countsOf = (value: unknown): ChangesSummary | undefined => {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const held = value as ChangesSummary;
+  const count = (one: unknown): number | undefined => (typeof one === 'number' && Number.isFinite(one) ? one : undefined);
+  const files = count(held.files);
+  const additions = count(held.additions);
+  const deletions = count(held.deletions);
+  if (files === undefined && additions === undefined && deletions === undefined) return undefined;
+  return {
+    ...(files === undefined ? {} : { files }),
+    ...(additions === undefined ? {} : { additions }),
+    ...(deletions === undefined ? {} : { deletions }),
   };
 };
 
@@ -403,6 +431,7 @@ interface Row {
   workingDirectory?: string | undefined;
   worktree?: StoredWorktree | undefined;
   autoArchivedAt?: string | undefined;
+  changes?: ChangesSummary | undefined;
 }
 
 /**
@@ -420,7 +449,7 @@ const empty = (row: Row): boolean =>
   && row.chatFlags === undefined
   && row.parent === undefined && row.nested === undefined && row.chats === undefined
   && row.remoteOrigin === undefined && row.createdBy === undefined && row.worktree === undefined
-  && row.autoArchivedAt === undefined;
+  && row.autoArchivedAt === undefined && row.changes === undefined;
 
 /**
  * What is persisted for one session: a `Row` as the file holds it.
@@ -465,6 +494,8 @@ interface Saved {
   worktree?: StoredWorktree;
   /** When the host archived the session because its pull requests were merged. */
   autoArchivedAt?: string;
+  /** What this session's own work added and removed, as it was last read. */
+  changes?: ChangesSummary;
 }
 
 /**
@@ -605,6 +636,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       ...(held.workingDirectory === undefined ? {} : { workingDirectory: held.workingDirectory }),
       ...(held.worktree === undefined ? {} : { worktree: held.worktree }),
       ...(held.autoArchivedAt === undefined ? {} : { autoArchivedAt: held.autoArchivedAt }),
+      ...(held.changes === undefined ? {} : { changes: held.changes }),
     };
   };
 
@@ -774,6 +806,10 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
       if (typeof row.autoArchivedAt === 'string' && !Number.isNaN(Date.parse(row.autoArchivedAt))) {
         inner.setAutoArchivedAt(row.id, row.autoArchivedAt);
       }
+      // What the session's own work was when it was last read, which is what
+      // its row carries until something reads it again.
+      const changes = countsOf(row.changes);
+      if (changes !== undefined) inner.setChanges(row.id, changes);
     }
   };
 
@@ -815,6 +851,8 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     setAutoArchivedAt: (id, value) => { touched(id, () => { inner.setAutoArchivedAt(id, value); }); },
     workingDirectory: (id) => inner.workingDirectory(id),
     setWorkingDirectory: (id, value) => { touched(id, () => { inner.setWorkingDirectory(id, value); }); },
+    changes: (id) => inner.changes(id),
+    setChanges: (id, value) => { touched(id, () => { inner.setChanges(id, value); }); },
     artifacts: (id) => inner.artifacts(id),
     setArtifacts: (id, values) => { touched(id, () => { inner.setArtifacts(id, values); }); },
     pullRequests: (id) => inner.pullRequests(id),
