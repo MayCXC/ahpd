@@ -1,7 +1,7 @@
 ---
 title: A limit says how much it allows, how much is used and when it resets, and a turn or a proxy call is refused when no row has room
 domain: policy
-status: planned
+status: active
 priority: high
 created: 2026-10-17
 revalidated: 2026-10-17

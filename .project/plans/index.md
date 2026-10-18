@@ -359,7 +359,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p5 - A bot is made with its AGENTS.md](plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md) | medium | dropped 2026-10-17; moved into 52 p3 tasks 10 and 11 | 52 p3 | - |
 | [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |
 | [52 p7 - A manager bot edits only its own folder](plugin/52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, host 100 p2, host 101 | - |
-| [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 1 implemented | 52 p3 | - |
+| [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 01, 02, 05 and 06 implemented | 52 p3 | - |
 
 Next free number in `plugin`: `52`.
 
@@ -468,7 +468,7 @@ Reference: [00-policy.md](policy/00-policy.md)
 | Plan | Priority | Status | Requires | Blocks |
 | --- | --- | --- | --- | --- |
 | [01 - A policy says who may use which agent, model and computer](policy/01-a-policy-says-who-may-use-what/plan.md) | high | built 2026-10-02 ([implemented.md](policy/01-a-policy-says-who-may-use-what/implemented.md)) | host 36 | policy 02, proxy 02 |
-| [02 - A limit says how much it allows, how much is used and when it resets](policy/02-a-limit-says-what-is-used-and-when-it-resets/plan.md) | high | planned 2026-10-17 | policy 01, usage 02 | policy 03, ahpw budget view |
+| [02 - A limit says how much it allows, how much is used and when it resets](policy/02-a-limit-says-what-is-used-and-when-it-resets/plan.md) | high | active 2026-10-17; tasks 01-02 implemented | policy 01, usage 02 | policy 03, ahpw budget view |
 | [04 - The policy form reads its choices from the manifest](policy/04-policy-form-reads-choices-from-manifest/plan.md) | medium | built 2026-10-06 ([implemented.md](policy/04-policy-form-reads-choices-from-manifest/implemented.md)); reviewed and merged 2026-10-06 | policy 01 | ahpapp policy/01 |
 
 Next free number in `policy`: `05` (`03` is held for hours, sessions and the cancel during a turn; charge rules take `05`).
