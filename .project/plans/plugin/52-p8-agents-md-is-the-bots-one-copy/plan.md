@@ -52,15 +52,17 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A plugin reads YAML with the host's `parseYaml` and `stringifyYaml`, and has no YAML dependency of its own | Softov, 2026-10-17, "Server could expose the yaml call for plugins right?", then "plan and implement" | 06 |
 | An edit to a computer bot while the computer is offline waits, and the next back session start writes it | Softov, 2026-10-17, "Its possible to make like a pending sync? For when offline?" | 03 |
 | All the data of one bot is in `bots/<slug>/`, and a delete removes that folder | Softov, 2026-10-17, chose "One folder per bot" for "Deleting a bot leaves its rows in bot-chats/ and bot-sessions/, its chat logs, and its folder. Which fix?" | 05 |
+| The record is `bots/<slug>/bot.md` in a `file` collection, and the chat and session rows are the collections `bots/<slug>/chats` and `bots/<slug>/sessions` | Softov, 2026-10-17, chose "Update and build" for "Update p8 task 05 to this design (collections at a subpath, three per bot) and build it?" | 05 |
+| Task 03 waits, and task 04 does not wait for it | Softov, 2026-10-17, chose "Leave task 03 for later" | 03, 04 |
 
 ## Tasks
 
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - AGENTS.md has parts the UI owns](task-01-agents-md-has-parts-the-ui-owns.md) | implemented | - |
-| [02 - A bot's persona is read from and written to its AGENTS.md](task-02-the-persona-is-read-from-agents-md.md) | todo | 01, 06 |
+| [02 - A bot's persona is read from and written to its AGENTS.md](task-02-the-persona-is-read-from-agents-md.md) | implemented | 01, 06 |
 | [03 - An edit to a computer bot waits for the computer](task-03-an-edit-to-a-computer-bot-waits.md) | todo | 02 |
-| [04 - The docs say where a bot's persona is](task-04-the-docs-say-where-the-persona-is.md) | todo | 02, 03, 05 |
+| [04 - The docs say where a bot's persona is](task-04-the-docs-say-where-the-persona-is.md) | todo | 02, 05 |
 | [05 - A bot's data is one folder](task-05-a-bots-data-is-one-folder.md) | todo | 02 |
 | [06 - AGENTS.md uses the host's YAML](task-06-agents-md-uses-the-hosts-yaml.md) | implemented | 01 |
 
@@ -72,9 +74,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-17. Tasks 01 and 06 are implemented: the parser and the writer are in `packages/bot/src/agents.ts`, and the default text is in `packages/bot/src/template.ts`. `readAgents` and `writeAgents` take a `Yaml` first argument, which task 02 passes from the plugin context. The provider does not use them yet.
-- **Next action:** build [task-02-the-persona-is-read-from-agents-md.md](task-02-the-persona-is-read-from-agents-md.md).
+- **Done so far:** planned 2026-10-17. Tasks 01, 02 and 06 are implemented. The parser and the writer are in `packages/bot/src/agents.ts`, and the default text is in `packages/bot/src/template.ts`. `AGENTS.md` is the one copy of a bot's persona. A make writes the file from the template, and an edit writes the UI's parts into it. The store keeps no persona in a record it puts. At load, the store moves the persona of an older record into its file.
+- **Next action:** build [task-05-a-bots-data-is-one-folder.md](task-05-a-bots-data-is-one-folder.md). Task 03 waits for a later session.
 - **Open questions:**
   1. The text of the default template - proposed: the text in task 01, which Softov refines.
-  2. How a plugin keeps records in `bots/<slug>/` - proposed: `records` takes a path of slugs under the plugin's own collection.
-- **Watch out for:** a bot's `AGENTS.md` today has no frontmatter. Task 02 moves its parts into the new layout and keeps the bot's own text. `@cofold/yaml` stays in `packages/bot/package.json` as a `devDependency` for `bot-agents.test.ts` only; the runtime takes YAML from the plugin context.
+- **Watch out for:** read a bot through the store's `BotRecord` or `fromAgents`, and never as a raw collection record. A computer bot keeps its persona in its record until task 03. A store with no YAML writes no file and keeps the persona in the record. The `bots` collection keeps `body: 'instructions'`, because an older record has its instructions in the Markdown body. `@cofold/yaml` is a `devDependency` of `packages/bot` for the tests only.

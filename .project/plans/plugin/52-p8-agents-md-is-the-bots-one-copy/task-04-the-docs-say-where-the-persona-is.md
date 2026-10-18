@@ -1,7 +1,7 @@
 ---
 title: The docs say where a bot's persona is
 status: todo
-depends: [task-02-the-persona-is-read-from-agents-md.md, task-03-an-edit-to-a-computer-bot-waits.md, task-05-a-bots-data-is-one-folder.md]
+depends: [task-02-the-persona-is-read-from-agents-md.md, task-05-a-bots-data-is-one-folder.md]
 layer: "docs"
 refs:
   - "[code://docs/plugins/BOTS.md](../../../../docs/plugins/BOTS.md) - the bot docs"
