@@ -1,7 +1,7 @@
 ---
 title: The Windows run finishes clean
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -82,9 +82,9 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A spawn opens no console window](task-01-a-spawn-opens-no-console-window.md) | todo | - |
-| [02 - A mount with a drive is a mount](task-02-a-mount-with-a-drive-is-a-mount.md) | todo | - |
-| [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | todo | - |
+| [01 - A spawn opens no console window](task-01-a-spawn-opens-no-console-window.md) | implemented | - |
+| [02 - A mount with a drive is a mount](task-02-a-mount-with-a-drive-is-a-mount.md) | implemented | - |
+| [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | implemented | - |
 | [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | todo | 03 |
 | [05 - ahpd config runs on Windows](task-05-ahpd-config-runs-on-windows.md) | todo | 03 |
 
@@ -95,10 +95,10 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-18 from the Windows session's report.
-- **Next action:** build tasks 01, 02 and 03.
+- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
+- **Next action:** task 03 step 2 - push the branch through a PR and read the Windows job's log. That is Softov's. Its failures are tasks 04 and 05.
 - **Open questions:** none.
-- **Watch out for:** this host cannot run Windows. Each Windows check is a CI run or Softov's Windows machine.
+- **Watch out for:** this host cannot run Windows. Each Windows check is a CI run or Softov's Windows machine. Task 02's two cases ask `mountParts` directly: a drive path cannot exist on this host. The end-to-end check and `nested-start.test.ts` are for the Windows run.
 
 ## Final verification checklist
 

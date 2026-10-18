@@ -1,6 +1,6 @@
 ---
 title: The Windows job runs to the end
-status: todo
+status: implemented
 depends: []
 layer: CI
 refs:
@@ -25,3 +25,9 @@ The Windows job runs every unit test, so its log lists every failure.
 ## Validation
 
 - The Windows job ends without exit 124.
+
+## Resume
+
+Step 1 only, implemented 2026-10-18. `.github/workflows/ci.yml:93` reads `timeout 600 pnpm test:unit` in the `check-windows` job, with a comment saying why the bound is longer than `check`'s. The `check` and `processes` jobs keep `timeout 300`.
+
+Step 2 is not done here: pushing the branch through a PR and reading the Windows job's log is Softov's. So step 3 recorded nothing, and the Validation above is not checked. Tasks 04 and 05 wait for that log.
