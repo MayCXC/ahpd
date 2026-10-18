@@ -114,7 +114,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | implemented | - |
 | [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | implemented | 01, 02 |
 | [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | todo | 03 |
-| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | todo | 03 |
+| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | implemented | 03 |
 | [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | todo | 04, 05 |
 
 ## Risks and tradeoffs
@@ -127,9 +127,10 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Resume state
 
-- **Done so far:** 2026-10-18, tasks 01, 02 and 03 are implemented.
+- **Done so far:** 2026-10-18, tasks 01, 02, 03 and 05 are implemented.
 - **Next action:** [task-04-a-turn-and-a-proxy-call-are-charged.md](task-04-a-turn-and-a-proxy-call-are-charged.md).
-- **Open questions:** none.
+- **Open questions:** task 05 passes `ownLimits: true`, because its configuration key arrives with task 04.
+  `config.ts` and `options.ts` are not in task 05's Files.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
   The store and the provider must have the same zone, and `run.ts` and `ahpd usage` give it to both.
