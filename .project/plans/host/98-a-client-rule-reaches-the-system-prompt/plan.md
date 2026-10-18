@@ -91,11 +91,11 @@ A client can then give standing instructions, such as how to format an answer fo
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose: `instructions(uri)` carries the host tools' wording and then the body of each client rule that always applies, a rule over 4096 characters is dropped and logged by name, `Start.instructions`' doc names the rules, and the ACP backend logs at a chat's start that it left them out.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose. `instructions(uri)` carries the host tools' wording, then the body of each client rule that always applies. A rule over 4096 characters is dropped and logged by name. The ACP backend logs at a chat's start that it left them out.
 - **Next action:** build task 03, the docs paragraph in `docs/sdk/TOOLS.md:104-114` and `pnpm -s docs:build`.
 - **Open questions:** none.
 - **Watch out for:**
-  - `instructions(uri)` holds the host tools' own wording, and the remote origin instruction is a route of its own, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.
+  - `instructions(uri)` holds the host tools' own wording. The remote origin instruction has its own route, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.
   - A rule from a client that leaves the session must leave the next start, which the restart a moved plugin set causes is what delivers.
   - `spawn.ts:673` reads `ctx.instructions(uri)` twice for one start, so a dropped rule is logged twice. It is outside task 02's Files and is left as it is.
   - Task 01 read the frontmatter with a small reader in `pluginparts.ts` rather than a YAML package, which `.project/rules/the-sdk-depends-only-on-the-protocol.md` keeps out of the sdk. The reader is named in that task's Resume.

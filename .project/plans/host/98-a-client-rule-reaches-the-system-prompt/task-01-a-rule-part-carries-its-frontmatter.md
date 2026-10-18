@@ -44,5 +44,5 @@ The host also keeps the rule's body for task 02.
 - **Next action:** build task 02.
 - **Open questions:** none.
 - **Watch out for:** one choice the plan did not make:
-  - The frontmatter is read by a small reader in `pluginparts.ts`: the two `---` lines, a `key: value` at the left margin, a quoted text, a `true` or `false`, and a list written between brackets or down a line at a time. Step 1 says to reuse the parser `pluginparts.ts` reads other frontmatter with, and it reads none: the host's YAML parser is `@cofold/yaml` in `packages/server`, and `.project/rules/the-sdk-depends-only-on-the-protocol.md` keeps any second package out of the sdk.
+  - A small reader in `pluginparts.ts` reads the frontmatter. It reads the two `---` lines, a `key: value`, a quoted text, a boolean and a list. Step 1 says to reuse the parser of `pluginparts.ts`, but that file had none. The host's YAML parser is `@cofold/yaml` in `packages/server`, and `.project/rules/the-sdk-depends-only-on-the-protocol.md` keeps it out of the sdk.
   - A rule whose frontmatter never closes is the bad frontmatter of the test. Nothing can be read out of it, so it carries no field and its whole text is the body.
