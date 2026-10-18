@@ -47,7 +47,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
 | [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; passed on Windows 2026-10-16 | - | - |
 | [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | planned 2026-10-16 | - | daemon 27 task 04 |
-| [32 - A failure has a JSON shape under --json](daemon/32-a-failure-has-a-json-shape/plan.md) | medium | planned 2026-10-16 | cofold commands 06 | - |
+| [32 - A failure has a JSON shape under --json](daemon/32-a-failure-has-a-json-shape/plan.md) | medium | active 2026-10-18; tasks 01 to 04 implemented | cofold commands 06 | - |
 | [33 - ahpd's checks pass on Windows](daemon/33-ahpds-checks-pass-on-windows/plan.md) | medium | planned 2026-10-16; parent of p1 to p5 | - | - |
 | [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
 | [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
