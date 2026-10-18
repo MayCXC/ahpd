@@ -1,6 +1,6 @@
 ---
 title: Claude keeps its own tools on a setting
-status: todo
+status: implemented
 depends: [task-03-claude-uses-the-host-tools.md]
 layer: "agent-claude"
 refs:
@@ -34,3 +34,9 @@ When Claude keeps its own tools, ahpd starts Claude Code with `CLAUDE_CODE_ENABL
 - `pnpm vitest run packages/agent-claude/test` passes.
 
 ## Resume
+
+- **Done so far:** every step. `enableTasks` is a declaration in `options.ts` with the fallback `true`, and a property of a preset in `optionsSchema`. `query.ts` reads it in `taskToolsEnv()`, which sets `CLAUDE_CODE_ENABLE_TASKS=1` when the session keeps Claude's own tools, on the host and in a machine alike. `hostHoldsTasks()` is shared by that function and `denyOption()`, so the two settings cannot disagree about whose list it is.
+- **Files:** `packages/agent-claude/src/options.ts`, `packages/agent-claude/src/plugin.ts`, `packages/agent-claude/src/session/query.ts`, `packages/agent-claude/test/agent-claude-tasks.test.ts`, `packages/agent-claude/test/agent-claude-declarations.test.ts`, `packages/agent-claude/test/agent-claude-presets.test.ts`.
+- **Next action:** task 05.
+- **Open questions:** none.
+- **Watch out for:** a preset's `env` gives the variable its value, and the session does not write over it. A machine's environment is the variant's own keys, so the variable is added there rather than to the daemon's environment. Four cases in `agent-claude-presets.test.ts` now expect the variable in a machine, because those sessions keep their own tools - no `task_add` is offered.

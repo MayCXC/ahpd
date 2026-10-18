@@ -1,6 +1,6 @@
 ---
 title: Claude's own task calls write the plan
-status: todo
+status: implemented
 depends: [task-02-the-sessions-plan-takes-a-harness-list.md, task-04-claude-keeps-its-own-tools-on-a-setting.md]
 layer: "agent-claude"
 refs:
@@ -36,3 +36,9 @@ When Claude keeps its own tools, each `TodoWrite`, `TaskCreate` and `TaskUpdate`
 - `pnpm vitest run packages/agent-claude/test` passes.
 
 ## Resume
+
+- **Done so far:** every step. `session/tasks.ts` translates `TodoWrite` as a whole list and `TaskCreate` and `TaskUpdate` as one change each, and hands them to `ctx.options.planUpdate`. `TaskCreate` waits for its result, where `tool_use_result` carries `{ task: { id, subject } }`. `stream.ts` calls the translation on a complete `tool_use` block and on the result, and `query.ts` now passes the frame's `tool_use_result` through `results`. Nothing is handed when `hostHoldsTasks` says the host's tools are in place.
+- **Files:** `packages/agent-claude/src/session/tasks.ts`, `packages/agent-claude/src/session/stream.ts`, `packages/agent-claude/src/session/query.ts`, `packages/agent-claude/src/options.ts`, `packages/agent-claude/src/claude.ts`, `packages/sdk/src/types/session.ts`, `packages/agent-claude/test/agent-claude-tasks.test.ts`.
+- **Next action:** task 06.
+- **Open questions:** none.
+- **Watch out for:** the seam task 01 added stopped at `Start`. `SessionOptions` had no `planUpdate` and `claude.ts` did not carry it, so this task adds both. `hostHoldsTasks` moved to `options.ts` so the query and the translation read one rule. A `TaskUpdate` id is read as `taskId`, `id` or `task_id`. Claude Code repairs the last two before it runs the call, and the stream keeps the model's spelling. `TaskCreate` is handed only once, from its result: a call whose result carries no `task.id` writes nothing.
