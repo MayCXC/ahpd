@@ -64,7 +64,7 @@ restart -> listing: backends list their paths -> the store's recorded sessions w
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The listing looks up recorded sessions](task-01-the-listing-looks-up-recorded-sessions.md) | todo | - |
+| [01 - The listing looks up recorded sessions](task-01-the-listing-looks-up-recorded-sessions.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -72,10 +72,15 @@ restart -> listing: backends list their paths -> the store's recorded sessions w
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-18.
-- **Next action:** build task 01.
+- **Done so far:** The plan was written 2026-10-18.
+  Task 01 is implemented, with 6 tests.
+  A listing asks the backends' `find` about each recorded session in a folder that no backend read.
+  The gates and the sdk suite pass.
+- **Next action:** None, since task 01 is the plan's only task. Nothing is set to `done`, and the index is untouched.
 - **Open questions:** none.
 - **Watch out for:** the lookups run after the backends answer, because `read` is only known then. Run them at the same time with `Promise.all`, and fold them in a fixed order.
+  Each pass makes one `find` per recorded session outside the paths.
+  A session whose record names no folder is not looked up.
 
 ## Final verification checklist
 

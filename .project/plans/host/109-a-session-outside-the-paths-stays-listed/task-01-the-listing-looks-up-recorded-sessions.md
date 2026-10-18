@@ -1,6 +1,6 @@
 ---
 title: The listing looks up recorded sessions
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -46,4 +46,22 @@ It finds the row with `agent.find(id, { workingDirectory })`, asking the recorde
 
 ## Resume
 
-Not started.
+- **Done so far:** Built 2026-10-18.
+  The store type has an optional `recordedFolders()` that lists each recorded session id with the folder it ran in.
+  The memory store and the file store answer it.
+  A session whose record names no folder is not one the method returns.
+  `listing` asks each backend's `find` about every recorded session whose folder no answered backend read.
+  The recorded provider is asked first, then the other agents, as `findOf` does.
+  The lookups run at once with `Promise.all` and are folded in the order of the ids.
+  A session this host runs, one a backend offered, one already in `found` and a nested one are not looked up.
+  A lookup that throws or finds nothing adds no row, and the record stays.
+  The review added two things that the listed rows already do.
+  `recordedChats` reads each looked-up id first, so a chat's backend id is never listed as a session.
+  A row whose recorded agent is not loaded keeps that provider and waits for it.
+  Six tests are in `packages/sdk/test/host-catalogue-recorded.test.ts`: the restart, the two refreshes, the worktree, the listed session, the chat's backend id and the lookup that throws.
+  The gates pass: build, typecheck, boundary, schema and the sdk suite at 3096 passed, 1 skipped.
+- **Next action:** none.
+  Task 01 is the plan's only task, and nothing is set to `done`.
+- **Open questions:** none.
+- **Watch out for:** Each pass makes one `find` per recorded session outside the paths, as the plan's risks say.
+  `read` does not name a subfolder of a served path, but a backend lists that session, so it is skipped.
