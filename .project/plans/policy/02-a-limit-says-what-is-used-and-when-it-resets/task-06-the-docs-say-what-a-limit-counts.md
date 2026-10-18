@@ -1,6 +1,6 @@
 ---
 title: The docs say what a limit counts and how a client reads it
-status: todo
+status: implemented
 depends: [task-04-a-turn-and-a-proxy-call-are-charged.md, task-05-a-client-reads-each-limit.md]
 layer: "docs"
 refs:
@@ -35,3 +35,12 @@ The docs say how a limit is counted, which row pays, how a client reads a limit,
 
 ## Resume
 
+Implemented 2026-10-18, not reviewed.
+
+- `POLICY.md` has "How a limit is counted": the walk, `policies.payOrder`, the keys, the refusal and the two reads. The `policy://A2/limits` example carries a shared `used` and an `each` member list. "What waits" replaces "What this does not yet enforce".
+- `USAGE.md` has the policy keys, `opens` and `turns`, the days in `usage.timezone`, and `usage://limits`.
+- `HOST.md` has `policies.payOrder`, `policies.ownLimits` and `usage.timezone` cutting the store's days, and names `usage://limits` among the scheme's reads.
+- `pnpm -s build` and `pnpm -s docs:build` pass. `rg -n "payOrder|ownLimits|opens|usage://limits" packages docs` finds each name in the code.
+- `lint-prose.mjs` finds nothing in the three `.project` files this task changed. The three docs report long sentences and are not lint-clean; no changed line has an em dash or a hard wrap.
+
+Open question: `docs/server/REFERENCE.md` is generated from the built server by `reference.data.ts` and holds no hand-written text, so the two keys cannot be added there. The generated `policies` description already names `payOrder` and `ownLimits`. `usage.timezone` cutting the store's days is in `HOST.md` and `USAGE.md`. The generated `usage` description still says only where a day and a week start. Changing that sentence is a code change, which this task does not make.

@@ -116,7 +116,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | implemented | 01, 02 |
 | [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | implemented | 03 |
 | [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | implemented | 03 |
-| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | todo | 04, 05 |
+| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | implemented | 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -128,9 +128,9 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Resume state
 
-- **Done so far:** 2026-10-18, tasks 01 to 05 are implemented. `ownLimits` reads `policies.ownLimits`.
-- **Next action:** [task-06-the-docs-say-what-a-limit-counts.md](task-06-the-docs-say-what-a-limit-counts.md).
-- **Open questions:** none.
+- **Done so far:** 2026-10-18, tasks 01 to 06 are implemented. `ownLimits` reads `policies.ownLimits`. Task 06 wrote the limits section in `POLICY.md`, the policy keys and `usage://limits` in `USAGE.md`, and `payOrder`, `ownLimits` and the store's days in `HOST.md`.
+- **Next action:** review task 06, then run the final verification checklist.
+- **Open questions:** `docs/server/REFERENCE.md` is generated from the built server, so `policies.payOrder` and `policies.ownLimits` are written in `HOST.md` instead. The generated `usage` description does not say the store's days are cut in `usage.timezone`.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
   The store and the provider must have the same zone, and `run.ts` and `ahpd usage` give it to both.
