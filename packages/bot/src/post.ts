@@ -61,6 +61,12 @@ export function postMessage(wake: Wake): HostTool {
      * the name is kept with the session, so a restart offers it again.
      */
     optIn: true,
+    /*
+     * The reply is the back session's own work, so nobody is asked to approve
+     * it. A confirmation would ask the person to allow the answer they are
+     * waiting on, and a deny list a session carries still refuses it.
+     */
+    confirm: false,
     instruction: POST_INSTRUCTION,
     /*
      * An answer for the model either way rather than a throw: posting into a

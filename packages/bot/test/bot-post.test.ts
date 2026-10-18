@@ -309,6 +309,9 @@ it('is offered only to a session that names it, with the rule that it is the rep
   // tool, a restart included: the names are kept with the session, a request's
   // instructions are not.
   expect(tool.optIn).toBe(true);
+  // The reply is the back session's own work, so no person is asked to approve
+  // the answer they are waiting on.
+  expect(tool.confirm).toBe(false);
   expect(tool.instruction).toContain('main chat');
   expect(tool.instruction).toMatch(/send_message starts a turn in another session and does not reply/);
 });

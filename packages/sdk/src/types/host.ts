@@ -689,6 +689,18 @@ export interface HostTool {
    */
   effects?: ToolEffects;
   /**
+   * Whether a person is asked before this tool runs.
+   *
+   * `false` says the tool is the session's own ordinary work and a backend runs
+   * it without a confirmation; absent says nothing, and the backend's own policy
+   * decides as it always has. It is the tool's claim about itself, and a deny
+   * list still wins over it: a tool somebody has forbidden stays refused,
+   * whatever the tool says. `post_message` is what it is for - a bot's reply to
+   * the message that woke the session, where a question would ask a person to
+   * confirm the answer they are waiting on.
+   */
+  confirm?: boolean;
+  /**
    * Whether this tool does more than a session's ordinary work.
    *
    * The tool's own claim, and the host's permission decides: a tool that sets

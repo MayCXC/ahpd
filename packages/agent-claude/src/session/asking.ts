@@ -191,6 +191,17 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     const already = settled(toolName);
     if (already === 'allow') return { behavior: 'allow', updatedInput: raw };
     if (already === 'deny') return { behavior: 'deny', message: `${toolName} is denied for this session` };
+    /*
+     * A host tool that says nobody is asked about it.
+     *
+     * Read after the lists, so a deny still refuses it: the flag is the host's
+     * claim about the tool, and a deny list is a person's answer about it.
+     * The CLI calls a contributed tool by the name of the server offering it,
+     * so both the bound tools and the call are read under that name. Nothing
+     * is announced for a call nobody was asked about, as with an allow list.
+     */
+    const offered = ctx.offering.find((one) => one.owner === undefined && `mcp__ahp__${one.definition.name}` === toolName);
+    if (offered?.confirm === false) return { behavior: 'allow', updatedInput: raw };
     const about = bag(asked);
     /*
      * The SDK's own abort for this call, which is the one thing that says the

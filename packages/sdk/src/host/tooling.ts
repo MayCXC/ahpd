@@ -1769,6 +1769,7 @@ export function createTooling(ctx: HostContext): Tooling {
           }
         },
         ...(one.effects !== undefined ? { effects: frozenCopy(one.effects) } : {}),
+        ...(one.confirm !== undefined ? { confirm: one.confirm } : {}),
         ...(one.deferLoading !== undefined ? { deferLoading: one.deferLoading } : {}),
       }];
     }),

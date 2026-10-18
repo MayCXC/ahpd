@@ -89,6 +89,14 @@ export interface BoundTool {
    */
   effects?: ToolEffects;
   /**
+   * Whether a person is asked before this tool runs, carried from the
+   * `HostTool` that contributed it.
+   *
+   * `false` is a tool a backend runs without a confirmation; absent leaves the
+   * backend's own policy in force. A deny list still wins over it.
+   */
+  confirm?: boolean;
+  /**
    * The client that runs this one, when it is a client's rather than the host's.
    *
    * A client announces what it provides on `SessionActiveClient.tools`, and
