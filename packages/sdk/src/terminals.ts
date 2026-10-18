@@ -173,6 +173,21 @@ const flagOf = (kind: ShellKind): string[] =>
   kind === 'powershell' ? ['-NoProfile', '-Command'] : kind === 'cmd' ? ['/d', '/s', '/c'] : ['-c'];
 
 /**
+ * What PowerShell runs after a command, so the command's exit code is its own.
+ *
+ * `-Command` exits 0 or 1 by `$?` and drops a program's own code: `node -e
+ * "process.exit(7)"` ends the shell with 1. This exits with `$LASTEXITCODE`
+ * when the line failed on a program, and 1 when it failed on a cmdlet, which
+ * sets no code. On a line of its own, so a comment at the end of the command
+ * does not swallow it.
+ */
+const PS_EXIT = 'if (-not $?) { exit $(if ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }) }';
+
+/** The line as the shell of `kind` is given it, with what it needs around it. */
+const shellLine = (kind: ShellKind, line: string): string =>
+  kind === 'powershell' ? `${line}\n${PS_EXIT}` : kind === 'cmd' ? `"${line}"` : line;
+
+/**
  * An argv as one line for the shell of `kind`.
  *
  * PowerShell needs `&` in front of it: without the call operator, a quoted
@@ -288,7 +303,7 @@ export function createTerminal(
    * both arrive broken without this. The spawn is told the argv is verbatim
    * for the same reason, and both are what Node's own `shell: true` does.
    */
-  const args = line === undefined ? [] : [...flagOf(kind), kind === 'cmd' ? `"${line}"` : line];
+  const args = line === undefined ? [] : [...flagOf(kind), shellLine(kind, line)];
   const environment: Record<string, string | undefined> = {
     // The operator's map over the daemon's own environment, which is what
     // makes a service unit with a private `XDG_CONFIG_HOME` reach its shells.
@@ -615,11 +630,13 @@ export function createTerminal(
       child?.stdin.end();
       // The group, not the shell: detached, its children outlive it otherwise.
       // Only when there is a pid to name it - see the interrupt above.
+      /*
+       * No pid is a shell that never started, so there is nothing to end. Not
+       * `child.kill()` either: on Windows Node throws `kill EINVAL` for a
+       * process that was never spawned, and `close` must not throw.
+       */
       const group = child?.pid;
-      if (group === undefined) {
-        child?.kill();
-        return;
-      }
+      if (group === undefined) return;
       // Windows: the tree, by pid, which is what `/T` is for - see `endTree`.
       if (windows) { endTree(group); return; }
       try { process.kill(-group, 'SIGKILL'); }

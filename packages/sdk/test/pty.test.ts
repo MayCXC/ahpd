@@ -1,5 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SpawnOptions } from 'node:child_process';
+import { join, resolve } from 'node:path';
+import { uriOf } from '../src/fileuri.js';
 import { shellOf, shellTerminals } from '../src/terminals.js';
 import type { SpawnShell } from '../src/terminals.js';
 import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
@@ -51,6 +53,17 @@ const opened = (pty?: SpawnPty) => {
 
 /** An OSC sequence, the way a shell integration script writes one. */
 const osc = (body: string) => `\u001b]${body}\u0007`;
+
+/**
+ * `/tmp`, absolute on this system: `F:\tmp` on Windows, where a path with no
+ * drive is not absolute. The URIs a case sends and expects are built from it,
+ * so they name a real path on either system.
+ */
+const tmp = resolve('/tmp');
+
+/** What PowerShell is given for `line`: the line, then a line keeping its exit code. */
+const psLine = (line: string) =>
+  `${line}\nif (-not $?) { exit $(if ($LASTEXITCODE) { $LASTEXITCODE } else { 1 }) }`;
 
 /*
  * Which shell a terminal starts when nobody named one.
@@ -135,11 +148,11 @@ describe('the arguments a command reaches the shell with', () => {
     // A line arrives as it was typed: a `!` command in the composer is already
     // PowerShell, and quoting it would look for a program named after it.
     expect(started('pwsh.exe', { command: 'echo hi' })?.args)
-      .toEqual(['-NoProfile', '-Command', 'echo hi']);
+      .toEqual(['-NoProfile', '-Command', psLine('echo hi')]);
     // An argv is quoted word by word behind the call operator, which is what
     // makes a quoted path a program to run rather than a string to print.
     expect(started('powershell.exe', { command: 'C:\\tools\\it\'s.exe', args: ['a b'] })?.args)
-      .toEqual(['-NoProfile', '-Command', "& 'C:\\tools\\it''s.exe' 'a b'"]);
+      .toEqual(['-NoProfile', '-Command', psLine("& 'C:\\tools\\it''s.exe' 'a b'")]);
   });
 
   it('gives cmd.exe /d /s /c, one line in the outer quotes its /s strips', () => {
@@ -216,7 +229,7 @@ describe('the line a pipe spawn is given', () => {
 
   it('leaves PowerShell and a POSIX shell to the runtime, as they were', () => {
     const powershell = launched('pwsh.exe', { command: 'echo hi' });
-    expect(powershell?.args).toEqual(['-NoProfile', '-Command', 'echo hi']);
+    expect(powershell?.args).toEqual(['-NoProfile', '-Command', psLine('echo hi')]);
     // Escaped by Node, the way it always has been: both read those escapes.
     expect(powershell?.options.windowsVerbatimArguments).toBeUndefined();
     expect(launched('/bin/sh', { command: 'echo hi' })?.args).toEqual(['-c', 'echo hi']);
@@ -258,11 +271,12 @@ describe('a shell under a pseudoterminal', () => {
   it('follows the shell into another directory', () => {
     const { spawn, say } = fakePty();
     const { seen } = opened(spawn);
-    say(osc('7;file://box/tmp/elsewhere'));
+    const elsewhere = uriOf(join(tmp, 'elsewhere'));
+    say(osc(`7;${elsewhere.replace('file://', 'file://box')}`));
     const moved = seen.find((one) => one.type === 'terminal/cwdChanged') as { cwd?: string } | undefined;
     // The host part of the URI is dropped: the path is on this machine, and
     // that is what a client opens.
-    expect(moved?.cwd).toBe('file:///tmp/elsewhere');
+    expect(moved?.cwd).toBe(elsewhere);
   });
 
   it('reads a directory whose name was encoded, and answers it encoded', () => {
@@ -270,16 +284,19 @@ describe('a shell under a pseudoterminal', () => {
     const { seen } = opened(spawn);
     const moved = () => seen.filter((one) => one.type === 'terminal/cwdChanged').map((one) => one.cwd);
 
-    say(osc('7;file://box/tmp/my%20dir'));
+    const mine = uriOf(join(tmp, 'my dir'));
+    const elsewhere = uriOf(join(tmp, 'elsewhere'));
+    say(osc(`7;${mine.replace('file://', 'file://box')}`));
     // The same directory written the other way, then a real move. The terminal
     // holds the path, so the second spelling is not a move - and that is the
     // only way to see that what is held is the path rather than the URI's text.
-    say(osc('7;file:///tmp/my dir'));
-    say(osc('7;file:///tmp/elsewhere'));
+    say(osc(`7;${mine.replaceAll('%20', ' ')}`));
+    say(osc(`7;${elsewhere}`));
 
     // Decoded on the way in and encoded on the way out: a client sent
     // `file:///tmp/my dir` reads a folder called `my dir` only if it decodes.
-    expect(moved()).toEqual(['file:///tmp/my%20dir', 'file:///tmp/elsewhere']);
+    expect(mine).toContain('my%20dir');
+    expect(moved()).toEqual([mine, elsewhere]);
   });
 
   it('still passes the bytes through, because a client is drawing them', () => {
