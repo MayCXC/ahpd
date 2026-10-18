@@ -6,7 +6,7 @@ import { pluginHost } from '../../sdk/src/plugins.js';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
-import { backSessions, rowId } from '../src/names.js';
+import { backSessions, chatsOf, rowId, sessionsOf } from '../src/names.js';
 import { apply, defaults, optionsSchema } from '../src/plugin.js';
 import { postMessage } from '../src/post.js';
 import { botStore } from '../src/store.js';
@@ -110,9 +110,10 @@ async function sitting(record: BotRecord = bot(), absent: MainTurnAbsence = 'pos
     () => {},
   );
   await store.put(record);
-  const chats = await records.collection('bot-chats');
+  const chats = await records.collection(chatsOf(record.id));
   await chats.put({ id: rowId([record.id, PERSON]), bot: record.id, owner: PERSON, chat: CHAT });
-  const backs = backSessions(await records.collection('bot-sessions'));
+  const backsRows = await records.collection(sessionsOf(record.id));
+  const backs = backSessions(() => backsRows);
 
   /** The default chat of each back session, by the session's URI. */
   const at = new Map<string, string>();
@@ -133,7 +134,7 @@ async function sitting(record: BotRecord = bot(), absent: MainTurnAbsence = 'pos
 
   const wake = botWake({
     store,
-    chats,
+    chats: () => chats,
     backs,
     sessions,
     // What a first wake writes into the folder: the real plugin fills the

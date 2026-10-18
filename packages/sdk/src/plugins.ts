@@ -25,7 +25,7 @@ import { idOf, schemeOf } from './catalog.js';
 import { frozenCopy } from './frozen.js';
 import { holds } from './users.js';
 import { createPair } from './pair.js';
-import { isRecordSlug, RECORD_SLUG } from './records.js';
+import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from './records.js';
 import type { Pair } from './pair.js';
 import { reason } from './values.js';
 import { readSecret } from './vault.js';
@@ -985,8 +985,8 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
      * collection after the fold has run.
      */
     records(name, wanted) {
-      if (typeof name !== 'string' || !isRecordSlug(name)) {
-        throw new Error(miss(by, 'records', String(name), `a slug, ${RECORD_SLUG}`));
+      if (typeof name !== 'string' || !isRecordPath(name)) {
+        throw new Error(miss(by, 'records', String(name), `one to three slugs joined by /, ${RECORD_PATH}`));
       }
       if (wanted !== undefined && (typeof wanted !== 'object' || wanted === null || Array.isArray(wanted))) {
         throw new Error(miss(by, 'records', name, 'opened with an options object, or with nothing'));
@@ -994,12 +994,24 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (wanted?.body !== undefined && typeof wanted.body !== 'string') {
         throw new Error(miss(by, 'records', 'body', 'a field name, or nothing'));
       }
-      const held = claims.get(name);
+      if (wanted?.file !== undefined && (typeof wanted.file !== 'string' || !isRecordSlug(wanted.file))) {
+        throw new Error(miss(by, 'records', String(wanted.file), `a file name, ${RECORD_SLUG}, or nothing`));
+      }
+      /*
+       * The claim is on the first slug: a plugin that opens `bots` owns every
+       * path under it, so the collections one bot's data is kept in are the
+       * folder owner's to open and nobody else's.
+       */
+      const first = name.split('/')[0] ?? name;
+      const held = claims.get(first);
       if (held !== undefined && held !== by) {
         throw new Error(miss(by, 'records', name, `a collection no other plugin opened; plugin ${held} opened it`));
       }
-      claims.set(name, by);
-      return collection(name, wanted?.body === undefined ? {} : { body: wanted.body });
+      claims.set(first, by);
+      return collection(name, {
+        ...(wanted?.body === undefined ? {} : { body: wanted.body }),
+        ...(wanted?.file === undefined ? {} : { file: wanted.file }),
+      });
     },
     /*
      * Checked here and started there.

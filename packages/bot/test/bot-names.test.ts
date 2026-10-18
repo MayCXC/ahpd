@@ -11,7 +11,7 @@ import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { holds } from '../../sdk/src/users.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { backSessions, named, rowId, userOf, whose } from '../src/names.js';
+import { backSessions, chatsOf, named, rowId, sessionsOf, userOf, whose } from '../src/names.js';
 import { apply } from '../src/plugin.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
@@ -204,8 +204,9 @@ it('answers a read of a main chat with the session a read of the bot gives', asy
   // path under it answers.
   expect(String((await record(ana, 'bot://motion/ana'))['chat'])).toBe(hers);
 
-  // And it is a session this host holds, of the plugin's own provider.
-  const rows = await (await records.collection('bot-chats')).find({ owner: 'user:ana' });
+  // And it is a session this host holds, of the plugin's own provider, in the
+  // chat rows of the bot's own folder.
+  const rows = await (await records.collection(chatsOf('motion'))).find({ owner: 'user:ana' });
   expect(rows.map((row) => row['chat'])).toEqual([hers]);
 });
 
@@ -259,9 +260,11 @@ it('answers a back session by its name, and lists the names', async () => {
   }));
 
   // A name is what task 03 writes down when a message wakes a session, and
-  // nothing else has put one there yet.
-  const rows = await records.collection('bot-sessions');
-  const backs = backSessions(rows);
+  // nothing else has put one there yet. One collection per bot: the rows of
+  // `other` are in the folder of `other`, which is nobody's here to be shown.
+  const own = await records.collection(sessionsOf('motion'));
+  const elsewhere = await records.collection(sessionsOf('other'));
+  const backs = backSessions((bot) => (bot === 'other' ? elsewhere : own));
   await backs.put('motion', 'ana', 'work', 'ahp-session:/woken');
   await backs.put('motion', 'ana', 'reviews', 'ahp-session:/second');
   // Another person's, and another bot's, which are neither hers to be shown.

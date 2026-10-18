@@ -24,8 +24,8 @@ import type { BotStore } from './store.js';
  * The name is the bot's `session`, which is `work` unless somebody chose
  * another, and it may hold `{turn}`: the turn id of the message takes that
  * word's place, so a bot whose name holds it starts a session per message
- * instead of continuing one. The name is looked up in the `bot-sessions` rows
- * of task 01, and a row whose session this host no longer has - a daemon that
+ * instead of continuing one. The name is looked up in the bot's own `sessions`
+ * rows, and a row whose session this host no longer has - a daemon that
  * restarted - is a back session started again and written over.
  *
  * What the message becomes is not only the person's words: a context block in
@@ -61,9 +61,16 @@ export interface Looked {
 export interface WakeSeams {
   /** The bots, whose record names the back session. */
   store: BotStore;
-  /** The `bot-chats` rows, which say which bot a main chat is with and whose it is. */
-  chats: RecordCollection;
-  /** The `bot-sessions` rows, which say which session a name is on. */
+  /**
+   * The main chat rows of one bot, which say which bot a chat is with and whose
+   * it is.
+   *
+   * One collection per bot, in `bots/<slug>/chats`, so a message finds the bot
+   * it was said to by asking each bot's collection for the row that names its
+   * chat.
+   */
+  chats(bot: string): RecordCollection;
+  /** The bot's own `sessions` rows, which say which session a name is on. */
   backs: BackSessions;
   /** This host's sessions, where a back session is looked for and started. */
   sessions: BotSessions;
@@ -232,21 +239,25 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
   /**
    * The bot a main chat is with, and whose the chat is.
    *
-   * The `bot-chats` row is what answers both, and it is found by the session the
-   * message was said in rather than by anything the message carries: a message
-   * is text a person typed, and only the chat it was typed in says who they are
-   * talking to. A chat with no row is a chat this plugin did not open - one a
-   * client started by itself - and nothing about it says which bot it is for.
+   * Each bot's own `chats` collection is asked for the row that names the
+   * session, and the row answers both: a main chat is one person's with one
+   * bot, and where the rows live is which bot it was said to. The session the
+   * message was said in is what it is found by, rather than anything the
+   * message carries: a message is text a person typed, and only the chat it was
+   * typed in says who they are talking to. A chat no row names is a chat this
+   * plugin did not open - one a client started by itself - and nothing about it
+   * says which bot it is for.
    */
   const chatOf = async (session: string): Promise<{ bot: BotRecord; owner: Owner } | undefined> => {
     await seams.store.ready();
-    const row = (await seams.chats.find({ chat: session }))[0];
-    if (row === undefined) return undefined;
-    const slug = typeof row['bot'] === 'string' ? row['bot'] : '';
-    const held = row['owner'];
-    const bot = seams.store.get(slug);
-    if (bot === undefined || typeof held !== 'string') return undefined;
-    return { bot, owner: held as Owner };
+    for (const bot of seams.store.all()) {
+      const row = (await seams.chats(bot.id).find({ chat: session }))[0];
+      if (row === undefined) continue;
+      const held = row['owner'];
+      if (typeof held !== 'string') return undefined;
+      return { bot, owner: held as Owner };
+    }
+    return undefined;
   };
 
   /**

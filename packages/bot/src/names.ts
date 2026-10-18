@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { join } from 'node:path';
 import type { Owner, RecordCollection } from '@ahpd/sdk';
 
 /**
@@ -16,12 +17,31 @@ import type { Owner, RecordCollection } from '@ahpd/sdk';
  * host with no users directory is named after the machine.
  *
  * The `<name>` is a person's to choose, and a session URI is the host's to
- * mint, so the two are kept as one row in the `bot-sessions` collection: the
- * row is what says which session a name is on today.
+ * mint, so the two are kept as one row in the collection `bots/<slug>/sessions`:
+ * the row is what says which session a name is on today.
+ *
+ * Everything about one bot is in `<configDir>/bots/<slug>/`, so a delete of the
+ * bot is a delete of one folder: its record, its main chat rows, its back
+ * session rows and its chat logs all go with it.
  */
 
-/** The collection each back session's name and session URI is kept in. */
-export const SESSIONS = 'bot-sessions';
+/** The folder a bot's own data is under, inside the daemon's configuration folder. */
+export const BOTS_DIR = 'bots';
+
+/** The collection one bot's main chat rows are kept in. */
+export const chatsOf = (slug: string): string => `${BOTS_DIR}/${slug}/chats`;
+
+/** The collection one bot's back session rows are kept in, which this file reads. */
+export const sessionsOf = (slug: string): string => `${BOTS_DIR}/${slug}/sessions`;
+
+/** The folder one bot's chat logs are kept in. */
+export const logsOf = (configDir: string, slug: string): string => join(configDir, BOTS_DIR, slug, 'logs');
+
+/** The folder the chat rows were kept in before each bot had a folder of its own. */
+export const LEGACY_CHATS = 'bot-chats';
+
+/** The folder the back session rows were kept in before each bot had a folder of its own. */
+export const LEGACY_SESSIONS = 'bot-sessions';
 
 /** One back session, as it is kept: the three words that name it, and the session they are on. */
 export type BackSession = {
@@ -132,21 +152,27 @@ export interface BackSessions {
   list(bot: string, user: string): Promise<string[]>;
 }
 
-/** The seam over one `bot-sessions` collection. */
-export const backSessions = (rows: RecordCollection): BackSessions => ({
+/**
+ * The seam over the collections one bot's back session rows are kept in.
+ *
+ * One collection per bot, because one folder per bot: `rows` answers the
+ * collection `bots/<slug>/sessions` of the bot it is asked about, and opens it
+ * the first time a name of that bot is read or written.
+ */
+export const backSessions = (rows: (bot: string) => RecordCollection): BackSessions => ({
   get: async (bot, user, name) => {
-    const row = await rows.get(rowId([bot, user, name]));
+    const row = await rows(bot).get(rowId([bot, user, name]));
     const held = row?.['session'];
     return typeof held === 'string' && held !== '' ? held : undefined;
   },
 
   put: async (bot, user, name, session) => {
     const row: BackSession = { id: rowId([bot, user, name]), bot, user, name, session };
-    await rows.put(row);
+    await rows(bot).put(row);
   },
 
   list: async (bot, user) => {
-    const found = await rows.find({ bot, user });
+    const found = await rows(bot).find({ bot, user });
     return found
       .map((row) => row['name'])
       .filter((name): name is string => typeof name === 'string' && name !== '')

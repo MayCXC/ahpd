@@ -151,7 +151,7 @@ it('answers a sync call with the turn status and no text, in the plugin chat', a
 
   // One thread and one chat: both calls are turns in the one chat the plugin's
   // read of the bot answered, which is where the bot answers through.
-  const rows = await (await records.collection('bot-chats')).find({ owner: 'plugin:webhook' });
+  const rows = await (await records.collection('bots/motion/chats')).find({ owner: 'plugin:webhook' });
   expect(rows).toHaveLength(1);
   const threads = await (await records.collection('webhook-threads')).list();
   expect(threads).toHaveLength(1);
@@ -195,5 +195,5 @@ it('answers 409 and names the grants when the plugin is answered no chat', async
     && line.includes('bot:chat') && line.includes('session:create'))).toBe(true);
   expect(await (await records.collection('webhook-threads')).list()).toEqual([]);
   // The read answered the record alone: no chat of the plugin's was started.
-  expect(await (await records.collection('bot-chats')).list()).toEqual([]);
+  expect(await (await records.collection('bots/motion/chats')).list()).toEqual([]);
 });

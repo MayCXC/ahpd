@@ -2,6 +2,7 @@ import { appendFileSync, mkdirSync, readFileSync, readdirSync, statSync } from '
 import { join } from 'node:path';
 import { Status, idOf, uriOf } from '@ahpd/sdk';
 import type { Agent, Bag, Listed, MessageFrom, Session, Start } from '@ahpd/sdk';
+import { BOTS_DIR, logsOf } from './names.js';
 import type { BotRecord } from './record.js';
 import type { BotStore } from './store.js';
 
@@ -28,11 +29,11 @@ import type { BotStore } from './store.js';
  * ends.
  *
  * What this backend is for is the *log*: one JSON line per moment under
- * `<configDir>/bot-chats/` - a line when a turn begins, a line when it ends
- * with its response, and a line for each message steered into an open turn.
- * Nothing about a chat is kept in memory past the process that made it, so
- * `list`, `find` and `transcript` read the folder and there is no index that
- * could fall out of step with it.
+ * `<configDir>/bots/<slug>/logs/`, in the folder of the bot the chat is with -
+ * a line when a turn begins, a line when it ends with its response, and a line
+ * for each message steered into an open turn. Nothing about a chat is kept in
+ * memory past the process that made it, so `list`, `find` and `transcript` read
+ * the folders and there is no index that could fall out of step with them.
  */
 
 /**
@@ -189,14 +190,27 @@ export interface TurnHandle {
 /** The provider id a chat is registered and named under. */
 export const CHAT_PROVIDER = 'bot-chat';
 
-/** The folder the chats are kept in, under the daemon's own configuration. */
-export const CHATS_DIR = 'bot-chats';
-
 /** What a chat's log file is named with. */
 const LOG = '.jsonl';
 
 /** The file one chat's log is in. */
 const fileOf = (dir: string, id: string): string => join(dir, `${encodeURIComponent(id)}${LOG}`);
+
+/**
+ * Every bot's logs folder under this daemon's configuration, to be read.
+ *
+ * One folder per bot, because one bot's chats are part of what its own folder
+ * holds. A bot whose folder has no `logs/` is simply not found in: a bot nobody
+ * has talked to has no log, which is not an error.
+ */
+const logDirs = (configDir: string): string[] => {
+  try {
+    return readdirSync(join(configDir, BOTS_DIR), { withFileTypes: true })
+      .filter((one) => one.isDirectory())
+      .map((one) => logsOf(configDir, one.name));
+  }
+  catch { return []; }
+};
 
 /**
  * The id a log file's name holds, or nothing when the name is not one.
@@ -420,9 +434,6 @@ export function turns(session: string): TurnHandle {
  * resumed one alike.
  */
 export function botChatAgent(configDir: string, store: BotStore, heard?: (message: ChatMessage, handle: TurnHandle) => void): Agent {
-  /** The folder every chat of this daemon is under. */
-  const dir = join(configDir, CHATS_DIR);
-
   /**
    * One chat: the turns it holds and the bot it is a chat with.
    *
@@ -430,7 +441,7 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
    * after a restart, or because a client opened a row it was not holding -
    * opens on what was said in it rather than on an empty conversation.
    */
-  function chat(start: Start, bot: BotRecord, id: string, mark: Bag): Session {
+  function chat(start: Start, bot: BotRecord, id: string, mark: Bag, dir: string): Session {
     const turns: ChatTurn[] = logAt(fileOf(dir, id))?.turns ?? [];
     let modified = new Date().toISOString();
     let draft: Bag | undefined;
@@ -1114,16 +1125,21 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
     }),
     defaults: () => ({}),
 
-    /** Every chat this daemon has a log for, read off the folder. */
+    /** Every chat this daemon has a log for, read off each bot's `logs/` folder. */
     list: async (): Promise<Listed[]> => {
       // The records first, as a read of `bot://` does: a row's name and folder
       // are the bot's, and the cache holding them is filled by this.
       await store.ready();
-      let names: string[];
-      try { names = readdirSync(dir); }
-      catch { return []; }
+      const found: { dir: string; name: string }[] = [];
+      for (const dir of logDirs(configDir)) {
+        let names: string[];
+        try { names = readdirSync(dir); }
+        catch { continue; }
+        for (const name of names) found.push({ dir, name });
+      }
+      found.sort((one, other) => (one.name < other.name ? -1 : one.name > other.name ? 1 : 0));
       const rows: Listed[] = [];
-      for (const name of names.sort()) {
+      for (const { dir, name } of found) {
         const id = idOfFile(name);
         if (id === undefined) continue;
         const row = rowOf(dir, id, store);
@@ -1134,7 +1150,11 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
 
     find: async (id) => {
       await store.ready();
-      return rowOf(dir, id, store);
+      for (const dir of logDirs(configDir)) {
+        const row = rowOf(dir, id, store);
+        if (row !== undefined) return row;
+      }
+      return undefined;
     },
 
     /**
@@ -1143,7 +1163,13 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
      * What makes a row openable. Undefined is a real answer: it is a chat this
      * host has no log for.
      */
-    transcript: async (id) => logAt(fileOf(dir, id))?.turns,
+    transcript: async (id) => {
+      for (const dir of logDirs(configDir)) {
+        const turns = logAt(fileOf(dir, id))?.turns;
+        if (turns !== undefined) return turns;
+      }
+      return undefined;
+    },
 
     create: (start) => {
       const asked = start.settings['bot'];
@@ -1158,7 +1184,7 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
       if (bot === undefined) throw new Error(`There is no bot ${slug}.`);
       // The id the conversation is kept under: the one this chat was resumed
       // by, which is how a chat opens on its own log again.
-      return chat(start, bot, start.resume ?? idOf(start.uri), markOf(bot));
+      return chat(start, bot, start.resume ?? idOf(start.uri), markOf(bot), logsOf(configDir, bot.id));
     },
   };
 }

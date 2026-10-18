@@ -63,12 +63,29 @@ it('refuses a second plugin that opens the same name, and the first keeps its co
   expect(await held.list()).toEqual([{ id: 'one' }]);
 });
 
-it('refuses a collection name that is not a slug', () => {
+it('takes a collection name of up to three slugs joined by /, and refuses any other', () => {
   const host = pluginHost('fixture', context(), { records: () => memoryRecords() }).host;
   expect(() => host.records('Bots')).toThrow(/fixture.*records.*Bots.*slug/);
-  expect(() => host.records('a/b')).toThrow(/slug/);
+  expect(() => host.records('a/B/c')).toThrow(/slug/);
+  expect(() => host.records('a/b/c/d')).toThrow(/slug/);
+  expect(() => host.records('a//b')).toThrow(/slug/);
   expect(() => host.records('')).toThrow(/slug/);
   expect(() => host.records('bots', { body: 1 } as never)).toThrow(/body/);
+  expect(() => host.records('bots/x/chats', { file: 'A File' })).toThrow(/file name/);
+  expect(() => host.records('bots/x/chats')).not.toThrow();
+});
+
+it('keeps the claim on the first slug, so a path under a collection is the opener\'s', async () => {
+  const store = memoryRecords();
+  const collections = new Map<string, string>();
+  const first = pluginHost('first', context(), { records: () => store, collections }).host;
+  const second = pluginHost('second', context(), { records: () => store, collections }).host;
+
+  first.records('bots');
+  expect(() => second.records('bots/ana/chats')).toThrow(/plugin first opened it/);
+  const chats = first.records('bots/ana/chats');
+  await chats.put({ id: 'one', bot: 'ana' });
+  expect(await chats.list()).toEqual([{ id: 'one', bot: 'ana' }]);
 });
 
 it('refuses each call when the host has no records port', async () => {

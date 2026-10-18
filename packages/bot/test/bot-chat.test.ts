@@ -11,7 +11,8 @@ import { fileResources } from '../../sdk/src/resources.js';
 import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { botChatAgent, CHATS_DIR, CHAT_PROVIDER, turns } from '../src/chat.js';
+import { botChatAgent, CHAT_PROVIDER, turns } from '../src/chat.js';
+import { BOTS_DIR } from '../src/names.js';
 import { apply } from '../src/plugin.js';
 import { botStore } from '../src/store.js';
 import type { ChatMessage } from '../src/chat.js';
@@ -208,8 +209,8 @@ async function backend(configDir: string, records: ReturnType<typeof memoryRecor
 const refusalOf = async (run: Promise<unknown>): Promise<{ code?: number; message: string }> =>
   run.then(() => { throw new Error('the call was allowed'); }, (error: { code?: number; message: string }) => error);
 
-/** One line of a chat's log, as it was written. */
-const lines = (configDir: string, id: string): Bag[] => readFileSync(join(configDir, CHATS_DIR, `${id}.jsonl`), 'utf8')
+/** One line of a chat's log, as it was written, in the folder of the bot it is with. */
+const lines = (configDir: string, id: string, bot = 'backer'): Bag[] => readFileSync(join(configDir, BOTS_DIR, bot, 'logs', `${id}.jsonl`), 'utf8')
   .split('\n')
   .filter((line) => line.trim() !== '')
   .map((line) => JSON.parse(line) as Bag);

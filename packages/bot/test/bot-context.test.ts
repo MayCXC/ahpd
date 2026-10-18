@@ -5,7 +5,7 @@ import { expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { botChatAgent } from '../src/chat.js';
 import { contextBlock, timeWithOffset } from '../src/context.js';
-import { backSessions, rowId } from '../src/names.js';
+import { backSessions, chatsOf, rowId, sessionsOf } from '../src/names.js';
 import { botStore } from '../src/store.js';
 import { botWake } from '../src/wake.js';
 import type { ChatMessage, TurnHandle } from '../src/chat.js';
@@ -104,9 +104,10 @@ async function sitting(record: BotRecord = bot()) {
     () => {},
   );
   await store.put(record);
-  const chats = await records.collection('bot-chats');
+  const chats = await records.collection(chatsOf(record.id));
   await chats.put({ id: rowId([record.id, PERSON]), bot: record.id, owner: PERSON, chat: CHAT });
-  const backs = backSessions(await records.collection('bot-sessions'));
+  const backsRows = await records.collection(sessionsOf(record.id));
+  const backs = backSessions(() => backsRows);
 
   /** The default chat of each back session, by the session's URI. */
   const at = new Map<string, string>();
@@ -130,7 +131,7 @@ async function sitting(record: BotRecord = bot()) {
 
   const wake = botWake({
     store,
-    chats,
+    chats: () => chats,
     backs,
     sessions,
     // What a first wake writes into the folder: the real plugin fills the

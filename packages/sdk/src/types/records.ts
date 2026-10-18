@@ -37,6 +37,15 @@ export interface CollectionOptions {
    * reads it as any other field.
    */
   body?: string;
+  /**
+   * The file the record is kept in, for a collection in a folder of its own.
+   *
+   * A store that writes files keeps record `<id>` at `<name>/<id>/<file>.md`
+   * when this is named, and at `<name>/<id>.md` when it is not. A plugin uses
+   * it to give a folder of a record's own to the data that belongs beside it,
+   * so one delete takes all of it.
+   */
+  file?: string;
 }
 
 /**
@@ -66,6 +75,13 @@ export interface RecordCollection {
  * over with `registerRecords(store, 'replace')`.
  */
 export interface RecordStore {
-  /** Open one collection, by a slug name. */
+  /**
+   * Open one collection, by a name.
+   *
+   * A name is one slug, or a path of up to three slugs joined by `/`, such as
+   * `bots/motion/chats`. A store that writes files keeps a path as that many
+   * folders, so a plugin can put everything about one record in a folder of
+   * its own.
+   */
   collection(name: string, options?: CollectionOptions): Promise<RecordCollection>;
 }

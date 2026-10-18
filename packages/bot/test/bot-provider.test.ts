@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, expect, it } from 'vitest';
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
+import { fileRecords } from '../../server/src/records.js';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
 import { memoryRecords } from '../../sdk/src/records.js';
@@ -96,6 +97,10 @@ const peer = (): Peer => ({
  *
  * `people` is false for the host with no users directory, where no connection
  * is anybody: the one host whose writer and reader are both absent.
+ *
+ * `files` keeps the records in files under the configuration folder, as a
+ * running daemon does, rather than in memory; `prepare` writes whatever was
+ * there before the plugin loads, which is how an older layout is set up.
  */
 function made(
   tokens: Record<string, Grant[]> = {},
@@ -103,17 +108,21 @@ function made(
   over: Partial<HostOptions> = {},
   people = true,
   extra: Agent[] = [],
+  files = false,
+  prepare?: (configDir: string, bots: string) => void,
 ) {
   const root = mkdtempSync(join(tmpdir(), 'ahpd-bot-'));
   loose.push(root);
   /** Where a bot's own folder goes, which is the plugin's `root` option. */
   const bots = join(root, 'bots');
+  /** The daemon's own configuration, which is where the records are kept. */
+  const configDir = join(root, 'config');
   const context: LoaderContext = {
     path: root,
     paths: [root],
     version: sdkVersion(),
     hostName: 'test',
-    configDir: join(root, 'config'),
+    configDir,
     log: () => {},
     say: () => {},
     // The host's YAML, which a bot's `AGENTS.md` is read and written with: the
@@ -125,18 +134,24 @@ function made(
   // off the host rather than held by the plugin, so the two are the same store
   // a running daemon would hand it.
   const sessions = memorySessions();
-  // The record store in place of a folder: the plugin keeps its bots in two
-  // collections of this, as a running daemon keeps them in `fileRecords`. Read
+  // The record store in place of a folder by default: the plugin keeps its bots
+  // in collections of this. With `files` it is the daemon's own, so what the
+  // plugin reads and writes is on the disk in the layout a daemon keeps. Read
   // live off the host, the way the sessions are, so the plugin and the host
   // hold the same one.
-  const records = memoryRecords();
+  const records = files ? fileRecords(configDir) : memoryRecords();
   /** The problems the plugin reported while the host ran. */
   const reported: string[] = [];
   const { host: plugin, contribution } = pluginHost('bot', context, {
     sessions: () => sessions,
     records: () => records,
     problem: (line) => { reported.push(line); },
+    // The grant a wake's start of a back session asks for, which the daemon's
+    // entry for this plugin holds: a bot's work runs in the bot's own folder,
+    // and a folder is trusted only where the plugin may ask for that.
+    grants: ['session:trust'],
   });
+  prepare?.(configDir, bots);
   apply(plugin, { root: bots });
 
   const base: HostOptions = {
@@ -149,7 +164,7 @@ function made(
     ...over,
   };
   const { options, problems } = foldHostOptions(base, [contribution]);
-  return { host: createHost(options), bots, root, problems, reported, sessions, records };
+  return { host: createHost(options), bots, root, configDir, problems, reported, sessions, records };
 }
 
 type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
@@ -1125,6 +1140,129 @@ it('answers a reader who may not chat with the record alone', async () => {
   const listed = got(await call(rob, 'listSessions', { channel: ROOT }));
   const items = (listed['items'] ?? []) as Bag[];
   expect(items.map((one) => String(one['resource'])).filter((one) => one.startsWith('bot-chat:/'))).toEqual([]);
+});
+
+/*
+ * One bot, one folder.
+ *
+ * All the data of one bot is `<configDir>/bots/<slug>/`: its record is
+ * `bot.md`, its main chat rows are in `chats/`, its back session rows in
+ * `sessions/` and its chat logs in `logs/`. A delete removes that folder, and
+ * the bot's work folder under the plugin root is not part of it and stays.
+ */
+
+it('keeps a bot, its chat rows, its back session rows and its logs in bots/<slug>/', async () => {
+  const { host, bots, configDir, reported } = made(
+    { soft: ['bot:*', 'chat:*', 'session:create', 'session:state', 'session:write'] }, {}, {}, true, [], true,
+  );
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  // The record is the file of the bot's own folder.
+  const folder = join(configDir, 'bots', 'motion');
+  expect(readFileSync(join(folder, 'bot.md'), 'utf8')).toContain('id: motion');
+
+  // A read opens the main chat, whose row is in the folder beside the record.
+  const read = await record(soft, 'bot://motion');
+  const session = String(read['chat']);
+  const chats = readdirSync(join(folder, 'chats'));
+  expect(chats).toHaveLength(1);
+  expect(readFileSync(join(folder, 'chats', String(chats[0])), 'utf8')).toContain(`chat: ${session}`);
+
+  // A message wakes the back session behind the chat: the row that names the
+  // session, and the log of the chat, are in the same folder.
+  const opened = got(await call(soft, 'subscribe', { channel: session })) as { snapshot: { state: Bag } };
+  const channel = String(opened.snapshot.state['defaultChat']);
+  got(await call(soft, 'dispatchAction', {
+    channel,
+    action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hello' } },
+  }));
+  await vi.waitFor(() => {
+    expect(reported).toEqual([]);
+    expect(readdirSync(join(folder, 'logs'))).toHaveLength(1);
+    expect(readdirSync(join(folder, 'sessions'))).toHaveLength(1);
+  });
+
+  // The work folder is not data of the daemon's, and is untouched.
+  expect(existsSync(join(bots, 'motion', 'AGENTS.md'))).toBe(true);
+});
+
+it('moves an older layout into each bot\'s folder at load, and keeps the instructions in its body', async () => {
+  const { host, bots, configDir } = made(
+    { soft: ['bot:*', 'session:create'] },
+    {},
+    {},
+    true,
+    [],
+    true,
+    (configDir, bots) => {
+      // The record of an older daemon: `bots/<slug>.md`, with the persona still
+      // in its body rather than in the bot's `AGENTS.md`.
+      mkdirSync(join(configDir, 'bots'), { recursive: true });
+      writeFileSync(join(configDir, 'bots', 'motion.md'), [
+        '---',
+        'id: motion',
+        'name: Motion',
+        'labels: []',
+        'body: robot',
+        'color: red',
+        'session: work',
+        `workspace: ${join(bots, 'motion')}`,
+        'owner: user:soft',
+        'createdAt: 2026-10-11T00:00:00.000Z',
+        'updatedAt: 2026-10-11T00:00:00.000Z',
+        '---',
+        'Be brief.',
+      ].join('\n'));
+      // And the rows and the log, in the two collections they shared.
+      mkdirSync(join(configDir, 'bot-chats'));
+      writeFileSync(join(configDir, 'bot-chats', 'old-chat.md'), [
+        '---', 'id: old-chat', 'bot: motion', 'owner: user:soft', 'chat: bot-chat:/old', '---', '',
+      ].join('\n'));
+      writeFileSync(join(configDir, 'bot-chats', 'old.jsonl'),
+        `${JSON.stringify({ id: 't1', message: { text: 'hi' }, _meta: { bot: 'motion' } })}\n`);
+      mkdirSync(join(configDir, 'bot-sessions'));
+      writeFileSync(join(configDir, 'bot-sessions', 'old-back.md'), [
+        '---', 'id: old-back', 'bot: motion', 'user: soft', 'name: work', 'session: ahp-session:/old', '---', '',
+      ].join('\n'));
+    },
+  );
+
+  // The record moved, and its body is still the instructions: the file was
+  // renamed rather than read and written back.
+  const folder = join(configDir, 'bots', 'motion');
+  const recordFile = join(folder, 'bot.md');
+  expect(readFileSync(recordFile, 'utf8')).toContain('Be brief.');
+  expect(existsSync(join(configDir, 'bots', 'motion.md'))).toBe(false);
+  expect(readdirSync(join(folder, 'chats'))).toEqual(['old-chat.md']);
+  expect(readdirSync(join(folder, 'sessions'))).toEqual(['old-back.md']);
+  expect(readdirSync(join(folder, 'logs'))).toEqual(['old.jsonl']);
+
+  // A read moves the persona into the bot's `AGENTS.md`, which is its one copy.
+  const soft = await as(host, 'soft');
+  const read = await record(soft, 'bot://motion');
+  expect(read['instructions']).toBe('Be brief.');
+  expect(readFileSync(recordFile, 'utf8')).not.toContain('Be brief.');
+  expect(readFileSync(join(bots, 'motion', 'AGENTS.md'), 'utf8')).toContain('Be brief.');
+});
+
+it('deletes a bot by removing bots/<slug>/, and keeps its work folder', async () => {
+  const { host, bots, configDir } = made({ soft: ['bot:*', 'session:create'] }, {}, {}, true, [], true);
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+  // A read, so the folder holds a chat row beside the record.
+  await record(soft, 'bot://motion');
+
+  const folder = join(configDir, 'bots', 'motion');
+  expect(readdirSync(folder).sort()).toEqual(['bot.md', 'chats']);
+  const work = join(bots, 'motion', 'AGENTS.md');
+  expect(existsSync(work)).toBe(true);
+
+  expect(await call(soft, 'resourceDelete', { uri: 'bot://motion' })).toEqual({ result: {} });
+
+  expect(existsSync(folder)).toBe(false);
+  // The folder a bot works in is the operator's, not data of the daemon's.
+  expect(existsSync(work)).toBe(true);
 });
 
 it('takes a write that carries a chat back, and keeps none of it', async () => {

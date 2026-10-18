@@ -1,15 +1,18 @@
 /**
  * The daemon's record store: each record one Markdown file a person can edit.
  *
- * A collection is the folder `<configDir>/<name>/`, and a record is `<id>.md`
- * in it - the fields as YAML frontmatter and the collection's body field as
- * the Markdown body.
+ * A collection is the folder `<configDir>/<name>/`, where a name may be a path
+ * of slugs, and a record is `<id>.md` in it - the fields as YAML frontmatter
+ * and the collection's body field as the Markdown body. A collection opened
+ * with a `file` keeps each record in a folder of its own instead:
+ * `<name>/<id>/<file>.md`, so everything that belongs to one record can sit
+ * beside its file and one delete can take the folder.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, watch as watchPath, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
-import { isRecord, isRecordSlug, readJson, reason, RECORD_SLUG } from '@ahpd/sdk';
+import { isRecord, isRecordPath, isRecordSlug, readJson, reason, RECORD_PATH, RECORD_SLUG } from '@ahpd/sdk';
 import type { CollectionOptions, RecordChange, RecordCollection, RecordStore, StoredRecord } from '@ahpd/sdk';
 
 /** How the daemon's record store is built. */
@@ -117,10 +120,28 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
   const opened = new Map<string, RecordCollection>();
 
   const open = (name: string, wanted: CollectionOptions): RecordCollection => {
-    const folder = join(dir, name);
+    const folder = join(dir, ...name.split('/'));
     const body = wanted.body;
-    const fileOf = (id: string): string => join(folder, `${id}.md`);
+    /** The file each record is kept in, for a collection that gives it a folder. */
+    const file = wanted.file;
+    /** The folder one record is kept in: its own for a `file` collection, the collection's otherwise. */
+    const folderOf = (id: string): string => (file === undefined ? folder : join(folder, id));
+    const fileOf = (id: string): string => join(folderOf(id), file === undefined ? `${id}.md` : `${file}.md`);
     mkdirSync(folder, { recursive: true, mode: 0o700 });
+
+    /**
+     * The ids this collection has in its folder now.
+     *
+     * A `file` collection is listed from the subfolders that hold its file, and
+     * every other subfolder is somebody else's: a bot's `chats`, `sessions` and
+     * `logs` live beside its `bot.md` and are not records of this collection.
+     */
+    const idsHere = (): string[] => (file === undefined
+      ? idsIn(folder, '.md')
+      : readdirSync(folder, { withFileTypes: true })
+        .filter((one) => one.isDirectory() && isRecordSlug(one.name))
+        .map((one) => one.name)
+        .filter((id) => existsSync(join(folder, id, `${file}.md`))));
 
     /** Every record this collection holds, by id. */
     const held = new Map<string, StoredRecord>();
@@ -154,11 +175,13 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
      *
      * Renamed to `<id>.json.migrated` once its Markdown file is written, which
      * is what says it has been read. A file that cannot be read is left as it
-     * is and reported.
+     * is and reported. Only a collection whose records are files of the
+     * collection's own folder can have any: a `file` collection is new to this
+     * store, so it has none to convert.
      */
-    for (const id of idsIn(folder, '.json')) {
-      const file = fileOf(id);
-      if (existsSync(file)) continue;
+    for (const id of file === undefined ? idsIn(folder, '.json') : []) {
+      const target = fileOf(id);
+      if (existsSync(target)) continue;
       const source = join(folder, `${id}.json`);
       const read = readJson(source);
       if (!read.ok) {
@@ -170,7 +193,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
         continue;
       }
       try {
-        written(file, recordFile(read.value as StoredRecord, body));
+        written(target, recordFile(read.value as StoredRecord, body));
         renameSync(source, `${source}.migrated`);
       }
       catch (error) {
@@ -178,7 +201,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
       }
     }
 
-    for (const id of idsIn(folder, '.md')) {
+    for (const id of idsHere()) {
       const text = textOf(fileOf(id));
       if (text === undefined) continue;
       known.set(id, text);
@@ -210,27 +233,88 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
     };
 
     const pending = new Map<string, ReturnType<typeof setTimeout>>();
-    try {
-      const watcher = watchPath(folder, (_event, changed) => {
-        // A temporary file, another name, or no name at all is not a record.
-        if (changed === null || changed === undefined) return;
-        const named = String(changed);
-        if (!named.endsWith('.md')) return;
-        const id = named.slice(0, -'.md'.length);
-        if (!isRecordSlug(id)) return;
-        clearTimeout(pending.get(id));
-        const timer = setTimeout(() => {
-          pending.delete(id);
-          reread(id);
-        }, WINDOW);
-        timer.unref();
-        pending.set(id, timer);
-      });
-      watcher.on('error', (error) => { said(`records ${name}: ${folder} is no longer watched: ${reason(error)}`); });
-      watcher.unref();
+
+    /** One file read again once its events have settled. */
+    const queue = (id: string): void => {
+      clearTimeout(pending.get(id));
+      const timer = setTimeout(() => {
+        pending.delete(id);
+        reread(id);
+      }, WINDOW);
+      timer.unref();
+      pending.set(id, timer);
+    };
+
+    /** Watch the folder one record is in, for a `file` collection. Nothing to do for the others. */
+    let watchRecord: (id: string) => void = () => {};
+
+    if (file === undefined) {
+      try {
+        const watcher = watchPath(folder, (_event, changed) => {
+          // A temporary file, another name, or no name at all is not a record.
+          if (changed === null || changed === undefined) return;
+          const named = String(changed);
+          if (!named.endsWith('.md')) return;
+          const id = named.slice(0, -'.md'.length);
+          if (!isRecordSlug(id)) return;
+          queue(id);
+        });
+        watcher.on('error', (error) => { said(`records ${name}: ${folder} is no longer watched: ${reason(error)}`); });
+        watcher.unref();
+      }
+      catch (error) {
+        said(`records ${name}: ${folder} cannot be watched, so an edit there is read at the next start: ${reason(error)}`);
+      }
     }
-    catch (error) {
-      said(`records ${name}: ${folder} cannot be watched, so an edit there is read at the next start: ${reason(error)}`);
+    else {
+      /*
+       * Each record's folder is watched, because that is where its file is. A
+       * folder made by this store is watched after its write, so an edit a
+       * person makes afterwards is a change like any other.
+       */
+      const watched = new Map<string, ReturnType<typeof watchPath>>();
+      watchRecord = (id: string): void => {
+        if (watched.has(id)) return;
+        try {
+          const watcher = watchPath(folderOf(id), (_event, changed) => {
+            if (changed === null || changed === undefined) return;
+            if (String(changed) !== `${file}.md`) return;
+            queue(id);
+          });
+          // A record folder removed by hand ends its watch; the collection's watch reads the removal.
+          watcher.on('error', () => { watched.delete(id); });
+          watcher.unref();
+          watched.set(id, watcher);
+        }
+        catch (error) {
+          said(`records ${name}: ${folderOf(id)} cannot be watched, so an edit there is read at the next start: ${reason(error)}`);
+        }
+      };
+      for (const id of held.keys()) watchRecord(id);
+
+      /*
+       * The collection's folder is watched too, for a record folder made or
+       * removed by hand: a new one is watched and read, and a removed one is
+       * read as gone.
+       */
+      try {
+        const watcher = watchPath(folder, (_event, changed) => {
+          if (changed === null || changed === undefined) return;
+          const id = String(changed);
+          if (!isRecordSlug(id)) return;
+          if (existsSync(folderOf(id))) watchRecord(id);
+          else {
+            watched.get(id)?.close();
+            watched.delete(id);
+          }
+          queue(id);
+        });
+        watcher.on('error', (error) => { said(`records ${name}: ${folder} is no longer watched: ${reason(error)}`); });
+        watcher.unref();
+      }
+      catch (error) {
+        said(`records ${name}: ${folder} cannot be watched, so a record folder made there is read at the next start: ${reason(error)}`);
+      }
     }
 
     return {
@@ -249,11 +333,13 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
         }
         const text = recordFile(record, body);
         const kept = readRecordFile(text, body);
-        mkdirSync(folder, { recursive: true, mode: 0o700 });
+        mkdirSync(folderOf(record.id), { recursive: true, mode: 0o700 });
         written(fileOf(record.id), text);
         known.set(record.id, text);
         const type = held.has(record.id) ? 'updated' : 'added';
         held.set(record.id, kept);
+        // A record new to a `file` collection has a folder new to the watch.
+        if (type === 'added') watchRecord(record.id);
         told({ id: record.id, type });
       },
       remove: async (id) => {
@@ -274,8 +360,14 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
 
   return {
     collection: async (name, wanted = {}) => {
-      if (typeof name !== 'string' || !isRecordSlug(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_SLUG}`);
-      if (RESERVED_COLLECTIONS.has(name)) throw new Error(`${name} is not a collection name: the daemon keeps its own files in that folder`);
+      if (typeof name !== 'string' || !isRecordPath(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_PATH}`);
+      // A path is refused by its first slug: `sessions` is the daemon's own
+      // folder, and so is everything under it.
+      const first = name.split('/')[0] ?? name;
+      if (RESERVED_COLLECTIONS.has(first)) throw new Error(`${name} is not a collection name: the daemon keeps its own files in that folder`);
+      if (wanted.file !== undefined && (typeof wanted.file !== 'string' || !isRecordSlug(wanted.file))) {
+        throw new Error(`records ${name}: ${String(wanted.file)} is not a file name: ${RECORD_SLUG}`);
+      }
       let one = opened.get(name);
       if (one === undefined) {
         one = open(name, wanted);

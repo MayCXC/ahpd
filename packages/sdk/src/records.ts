@@ -275,6 +275,9 @@ export const recordsProvider = (scheme: string, records: Records, changed?: () =
 /** What a collection name and a record id are, as a refusal says it. */
 export const RECORD_SLUG = 'lowercase letters, digits and dashes, one to forty of them, starting with a letter';
 
+/** What a collection's path is, as a refusal says it. */
+export const RECORD_PATH = 'one to three slugs joined by /, each lowercase letters, digits and dashes, one to forty of them, starting with a letter';
+
 /**
  * Whether this is a collection name or a record id.
  *
@@ -284,18 +287,33 @@ export const RECORD_SLUG = 'lowercase letters, digits and dashes, one to forty o
 export const isRecordSlug = (slug: string): boolean => /^[a-z][a-z0-9-]{0,39}$/.test(slug);
 
 /**
+ * Whether this is a collection name: one slug, or up to three joined by `/`.
+ *
+ * A path lets a plugin keep the collections that belong to one record under a
+ * folder of that record's own - `bots/<slug>/chats` beside `bots/<slug>/bot` -
+ * so a delete of the record takes all of its data with it.
+ */
+export const isRecordPath = (name: string): boolean => name.split('/').every(isRecordSlug)
+  && name.split('/').length <= 3;
+
+/**
  * A record store that keeps every collection in memory, for the life of the
  * process.
  *
  * What a test and a host with no folder want. Each record is kept and answered
  * as a copy, so a caller that changes a record it holds changes nothing here.
+ * A path is a key like any other, and a `file` changes nothing: every record
+ * has a folder here already.
  */
 export const memoryRecords = (): RecordStore => {
   const collections = new Map<string, { held: Map<string, StoredRecord>; watchers: Set<(change: RecordChange) => void> }>();
 
   return {
-    collection: async (name) => {
-      if (typeof name !== 'string' || !isRecordSlug(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_SLUG}`);
+    collection: async (name, wanted = {}) => {
+      if (typeof name !== 'string' || !isRecordPath(name)) throw new Error(`${String(name)} is not a collection name: ${RECORD_PATH}`);
+      if (wanted.file !== undefined && (typeof wanted.file !== 'string' || !isRecordSlug(wanted.file))) {
+        throw new Error(`records ${name}: ${String(wanted.file)} is not a file name: ${RECORD_SLUG}`);
+      }
       let one = collections.get(name);
       if (one === undefined) {
         one = { held: new Map(), watchers: new Set() };

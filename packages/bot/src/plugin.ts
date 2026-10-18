@@ -1,11 +1,13 @@
+import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
 import { expandHome, reason, Status } from '@ahpd/sdk';
 import { botAsk } from './ask.js';
 import { botCatalogue, CATALOGUE_SCHEME } from './catalogue.js';
 import { botChatAgent } from './chat.js';
 import { prepareAgentsTemplate } from './folder.js';
-import { backSessions, SESSIONS } from './names.js';
+import { backSessions, BOTS_DIR, chatsOf, LEGACY_CHATS, LEGACY_SESSIONS, sessionsOf } from './names.js';
 import { postMessage } from './post.js';
-import { botProvider, CHATS } from './provider.js';
+import { botProvider } from './provider.js';
 import { isSlug } from './record.js';
 import { botStore } from './store.js';
 import { agentsTextOf, LAST_CHATS } from './template.js';
@@ -13,7 +15,7 @@ import { botWake, isMainTurnAbsence } from './wake.js';
 import type { Yaml } from './agents.js';
 import type { BotRecord } from './record.js';
 import type { MainTurnAbsence } from './wake.js';
-import type { Bag, Plugin, PluginPeer } from '@ahpd/sdk';
+import type { Bag, Plugin, PluginPeer, RecordCollection } from '@ahpd/sdk';
 import type { BotSessions } from './provider.js';
 
 /**
@@ -24,6 +26,12 @@ import type { BotSessions } from './provider.js';
  * and the folder bots work in as its one option. The records are kept in the
  * host's own record store rather than under the option: what a bot *is* belongs
  * to the host, and where it works is the operator's to choose.
+ *
+ * All the data of one bot is in `<configDir>/bots/<slug>/`: its record is
+ * `bot.md`, its main chat rows are in `chats/`, its back session rows in
+ * `sessions/` and its chat logs in `logs/`. A delete removes that folder, and
+ * the bot's work folder under the plugin root - `<root>/<slug>` by default - is
+ * not in it and stays.
  *
  * A bot's `AGENTS.md` is the one copy of its persona: a read takes `name`,
  * `description` and `instructions` from the file, and a make or an edit writes
@@ -78,6 +86,171 @@ const CLIENT = 'ahpd-bot';
 
 /** How long a dispatch waits for the host's echo before it goes on as taken, in milliseconds. */
 const ECHO_MS = 10_000;
+
+/** The collection the tombstone of each deleted bot is kept in. */
+const GONE = 'bots-gone';
+
+/** The file a bot's own record is kept in, inside its folder. */
+const BOT_FILE = 'bot';
+
+/** The files of one folder, or none when there is no folder. */
+const filesIn = (folder: string): string[] => {
+  try {
+    return readdirSync(folder, { withFileTypes: true }).filter((one) => one.isFile()).map((one) => one.name);
+  }
+  catch {
+    return [];
+  }
+};
+
+/** A file's frontmatter as a mapping, read with the host's YAML, or nothing. */
+const fieldsIn = (text: string, yaml: Yaml): Bag | undefined => {
+  const opened = /^---[ \t]*\r?\n/.exec(text);
+  if (opened === null) return undefined;
+  const rest = text.slice(opened[0].length);
+  const closed = /^---[ \t]*(?:\r?\n|$)/m.exec(rest);
+  if (closed === null) return undefined;
+  try {
+    const parsed = yaml.parseYaml(rest.slice(0, closed.index));
+    return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) ? parsed as Bag : undefined;
+  }
+  catch {
+    return undefined;
+  }
+};
+
+/** The slug one row of an older collection names, or nothing when it cannot be read. */
+const botOfRow = (file: string, yaml: Yaml): string | undefined => {
+  let text: string;
+  try {
+    text = readFileSync(file, 'utf8');
+  }
+  catch {
+    return undefined;
+  }
+  const bot = fieldsIn(text, yaml)?.['bot'];
+  return typeof bot === 'string' && isSlug(bot) ? bot : undefined;
+};
+
+/** The slug the first line of an older chat log names, or nothing when it cannot be read. */
+const botOfLog = (file: string): string | undefined => {
+  let text: string;
+  try {
+    text = readFileSync(file, 'utf8');
+  }
+  catch {
+    return undefined;
+  }
+  const line = text.split('\n').find((one) => one.trim() !== '');
+  if (line === undefined) return undefined;
+  try {
+    const said = JSON.parse(line) as Bag;
+    const meta = said['_meta'];
+    const bot = typeof meta === 'object' && meta !== null && !Array.isArray(meta) ? (meta as Bag)['bot'] : undefined;
+    return typeof bot === 'string' && isSlug(bot) ? bot : undefined;
+  }
+  catch {
+    return undefined;
+  }
+};
+
+/**
+ * Move the data an older daemon kept into the folder each bot has now.
+ *
+ * Everything about one bot is `<configDir>/bots/<slug>/`: its record is
+ * `bot.md`, its main chat rows are in `chats/`, its back session rows in
+ * `sessions/` and its logs in `logs/`. Before that, the record was
+ * `bots/<slug>.md`, and the rows and logs were in the two collections
+ * `bot-chats/` and `bot-sessions/`.
+ *
+ * This runs at load, before anything opens one of those collections: the
+ * record store reads a collection's folder when it opens it, so a file moved
+ * afterwards would be one it never saw. Each file is moved by `rename`, so a
+ * daemon that dies between two of them does the rest at the next load rather
+ * than leaving a copy behind; a file that is already where it goes is left
+ * where it is.
+ *
+ * A bot that has a tombstone in `bots-gone` is one that was deleted, so what
+ * is left of it goes rather than moving into a folder the delete would have
+ * removed. A file the move cannot place - it names no bot, or its name is not
+ * a bot's - is left where it is and reported, and nothing is deleted on a
+ * guess.
+ */
+export function moveData(configDir: string, yaml: Yaml, problem: (line: string) => void): void {
+  const bots = join(configDir, BOTS_DIR);
+  const dead = new Set(filesIn(join(configDir, GONE))
+    .filter((name) => name.endsWith('.md'))
+    .map((name) => name.slice(0, -'.md'.length)));
+
+  /** Move one file into a folder of a bot's, or say why it stayed. */
+  const into = (from: string, folder: string, name: string, relative: string): void => {
+    const target = join(folder, name);
+    if (existsSync(target)) {
+      problem(`${relative} was left where it is: ${target} is already there`);
+      return;
+    }
+    try {
+      mkdirSync(folder, { recursive: true, mode: 0o700 });
+      renameSync(from, target);
+    }
+    catch (error) {
+      problem(`${relative} was not moved: ${reason(error)}`);
+    }
+  };
+
+  /** Move one legacy row or log into the folder of its bot, or drop it where that bot is gone. */
+  const place = (path: string, relative: string, slug: string | undefined, collection: string, name: string): void => {
+    if (slug === undefined) {
+      problem(`${relative} was left where it is: it names no bot`);
+      return;
+    }
+    if (dead.has(slug)) {
+      rmSync(path, { force: true });
+      return;
+    }
+    into(path, join(bots, slug, collection), name, relative);
+  };
+
+  /*
+   * A tombstoned bot's folder and record go first, so nothing of a deleted
+   * bot is moved into a folder and then read as a bot that is there.
+   */
+  for (const slug of dead) {
+    rmSync(join(bots, slug), { recursive: true, force: true });
+    rmSync(join(bots, `${slug}.md`), { force: true });
+  }
+
+  // The record of each bot: `bots/<slug>.md` is now `bots/<slug>/bot.md`.
+  for (const name of filesIn(bots)) {
+    if (!name.endsWith('.md')) continue;
+    const slug = name.slice(0, -'.md'.length);
+    if (!isSlug(slug)) {
+      problem(`${join(BOTS_DIR, name)} was left where it is: ${slug} is not a bot's name`);
+      continue;
+    }
+    if (dead.has(slug)) continue;
+    into(join(bots, name), join(bots, slug), `${BOT_FILE}.md`, join(BOTS_DIR, name));
+  }
+
+  // The main chat rows and the chat logs, which shared one folder.
+  const chats = join(configDir, LEGACY_CHATS);
+  for (const name of filesIn(chats)) {
+    const path = join(chats, name);
+    const relative = join(LEGACY_CHATS, name);
+    if (name.endsWith('.md')) place(path, relative, botOfRow(path, yaml), 'chats', name);
+    else if (name.endsWith('.jsonl')) place(path, relative, botOfLog(path), 'logs', name);
+    else problem(`${relative} was left where it is: it is not a chat row or a log`);
+  }
+
+  // The back session rows.
+  const sessions = join(configDir, LEGACY_SESSIONS);
+  for (const name of filesIn(sessions)) {
+    const path = join(sessions, name);
+    const relative = join(LEGACY_SESSIONS, name);
+    if (name.endsWith('.md')) place(path, relative, botOfRow(path, yaml), 'sessions', name);
+    else problem(`${relative} was left where it is: it is not a session row`);
+  }
+}
 
 /** Dispatches actions on the plugin's connection, and hears whether the host took each one. */
 interface Dispatcher {
@@ -212,28 +385,52 @@ export const apply: Plugin['apply'] = (host, options) => {
     stringifyYaml: (value) => host.stringifyYaml(value),
   };
   /*
+   * The data of the bots an older daemon kept, moved into each bot's folder
+   * before any collection opens on the folder it reads. A move that cannot
+   * place a file reports it and goes on; nothing of this stops the plugin.
+   */
+  moveData(host.configDir, yaml, (line) => { host.problem(`${name}: ${line}`); });
+  /*
    * The bots, over the record store the host keeps them in. It reads and writes
    * each bot's `AGENTS.md`, and moves the parts of a record an older daemon
    * wrote into the file on the first load; it is built after the templates and
-   * the YAML because it needs both for that move.
+   * the YAML because it needs both for that move. A bot's record is
+   * `bots/<slug>/bot.md`, so everything about one bot is in one folder.
    */
   const store = botStore(
-    host.records('bots', { body: 'instructions' }),
-    host.records('bots-gone'),
+    host.records(BOTS_DIR, { body: 'instructions', file: BOT_FILE }),
+    host.records(GONE),
     (line) => { host.problem(`${name}: ${line}`); },
     { yaml, agents },
   );
+  /**
+   * One collection of one bot's, opened the first time that bot's data is
+   * touched.
+   *
+   * Opened once and kept, so a call that writes a row and a call that reads it
+   * back answer the same collection: the main chat a read of a bot writes is
+   * the one a wake of its chat finds.
+   */
+  const byName = new Map<string, RecordCollection>();
+  const collection = (which: string): RecordCollection => {
+    let one = byName.get(which);
+    if (one === undefined) {
+      one = host.records(which);
+      byName.set(which, one);
+    }
+    return one;
+  };
   /*
    * One row per bot and person, holding the chat they talk in. What makes a
    * read of `bot://` answer the same chat the second time as the first.
    */
-  const chats = host.records(CHATS);
+  const chats = (bot: string): RecordCollection => collection(chatsOf(bot));
   /*
    * One row per back session: the bot, the person and the name a message
    * addresses, and the session that name is on. What makes a name a session a
    * person can come back to, rather than one started again every time.
    */
-  const backs = backSessions(host.records(SESSIONS));
+  const backs = backSessions((bot) => collection(sessionsOf(bot)));
   /*
    * The plugin's own connection to this host, opened by the first message that
    * needs one.
@@ -281,6 +478,7 @@ export const apply: Plugin['apply'] = (host, options) => {
   host.on('users_changed', () => { catalogue.recompute(); });
   host.registerResourceProvider('bot', botProvider({
     root,
+    botsDir: join(host.configDir, BOTS_DIR),
     store,
     catalogue,
     hostName: host.hostName,

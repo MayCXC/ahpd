@@ -1,4 +1,5 @@
-import { resolve, sep } from 'node:path';
+import { rmSync } from 'node:fs';
+import { join, resolve, sep } from 'node:path';
 import { RpcError } from '@ahpd/sdk';
 import { covers, ownerOfPrincipal } from '@ahpd/sdk';
 import { CHAT_PROVIDER } from './chat.js';
@@ -49,12 +50,13 @@ import type {
  * chat with that bot. Who may chat is who may read it and then either holds
  * `bot:chat` or owns it, and a reader who may not is answered the record alone.
  * The chat is started the first time one is asked for, kept against the bot and
- * the person in the `bot-chats` collection, so the next read is the same chat.
+ * the person in the bot's own `chats` collection, so the next read is the same
+ * chat.
  *
  * The paths under a bot are those chats: a read of `bot://<slug>/<user>` answers
  * `chat`, the same session a read of the bot hands that person, and a read of
  * `bot://<slug>/<user>/<name>` answers `session`, the session that name was
- * started as - kept per name in the `bot-sessions` collection. Neither is part
+ * started as - kept per name in the bot's own `sessions` collection. Neither is part
  * of the record, so neither is answered to everybody who may read the bot: a
  * person's chats are the person's, the bot's owner's and this host's.
  *
@@ -75,16 +77,6 @@ import type {
  */
 
 /**
- * The collection one row per bot and person is kept in.
- *
- * A record store puts collection `x` at `<configDir>/x/`, which is the folder
- * the `bot-chat` provider keeps its logs in too: one chat's row and the log it
- * is about are two files side by side, and a person reading the folder sees
- * which chat each log belongs to.
- */
-export const CHATS = 'bot-chats';
-
-/**
  * The sessions this host keeps, as much of them as a bot is about.
  *
  * Read through the host rather than held here, the way `store` lives beside the
@@ -102,12 +94,26 @@ export interface BotSessions {
 export interface BotOptions {
   /** The folder a bot's own workspace is under, as `<root>/<slug>`. */
   root: string;
+  /**
+   * The folder the record store keeps the bots in, `<configDir>/bots`.
+   *
+   * Every bot's data is in `<botsDir>/<slug>/`: the record is `bot.md`, the
+   * main chat rows are in `chats/`, the back session rows in `sessions/` and
+   * the logs in `logs/`. A delete of a bot removes that folder, which is the
+   * whole of what the daemon kept of it.
+   */
+  botsDir: string;
   /** Where the records are kept. */
   store: BotStore;
   /** The host's sessions, where the chat a read opens is started. */
   sessions: BotSessions;
-  /** The index of bot and person to the chat the person talks to that bot in. */
-  chats: RecordCollection;
+  /**
+   * The main chat rows of one bot, in the collection `bots/<slug>/chats`.
+   *
+   * A call opens or answers the same collection each time, so the row a read
+   * of the bot writes is the one a wake of its chat finds.
+   */
+  chats(bot: string): RecordCollection;
   /** The index of bot, person and name to the session that name is on. */
   backSessions: BackSessions;
   /**
@@ -508,7 +514,8 @@ export function botProvider(options: BotOptions): BotProvider {
    */
   const chatOf = async (bot: BotRecord, whose: Owner): Promise<string> => {
     const id = chatRow(bot.id, whose);
-    const row = await options.chats.get(id);
+    const rows = options.chats(bot.id);
+    const row = await rows.get(id);
     const held = row?.['chat'];
     if (typeof held === 'string' && await options.sessions.owner(held) !== undefined) return held;
     const running = starting.get(id);
@@ -522,7 +529,7 @@ export function botProvider(options: BotOptions): BotProvider {
       config: { bot: bot.id },
       title: bot.name,
     }).then(async (chat) => {
-      await options.chats.put({ id, bot: bot.id, owner: whose, chat });
+      await rows.put({ id, bot: bot.id, owner: whose, chat });
       return chat;
     });
     starting.set(id, begun);
@@ -798,6 +805,15 @@ export function botProvider(options: BotOptions): BotProvider {
       if (bot === undefined) throw absent(uri);
       if (!mayWrite(bot, owner, reader)) throw notYours(bot);
       await store.remove(held.slug);
+      /*
+       * The folder, which is the whole of what the daemon kept of the bot: the
+       * record, its main chat rows, its back session rows and its logs. The
+       * tombstone is written first, so a delete that fails here is a bot that
+       * is gone with its rows still on disk rather than a name made again.
+       *
+       * The work folder under the plugin root is not in here, so it survives.
+       */
+      rmSync(join(options.botsDir, held.slug), { recursive: true, force: true });
       told('deleted', bot);
       options.catalogue?.remove(bot);
     },

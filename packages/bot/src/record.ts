@@ -107,8 +107,8 @@ export interface BotKept {
    * The name of the back session a message to it wakes.
    *
    * The session itself is not here: a name is what a person writes, and the
-   * session a name is on is a row in the `bot-sessions` collection, because a
-   * session URI is the host's to mint and is not the same one twice.
+   * session a name is on is a row in the bot's own `sessions` collection,
+   * because a session URI is the host's to mint and is not the same one twice.
    */
   session: string;
   /** The folder it works in, which is its own and never moves. */

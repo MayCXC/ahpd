@@ -91,6 +91,58 @@ describe('fileRecords', () => {
     expect(await again.find({ owner: 'ana' })).toEqual([{ id: 'other', name: 'Other', owner: 'ana', instructions: '' }]);
   });
 
+  it('keeps each record of a file collection in a folder of its own, and lists it after a restart', async () => {
+    const bots = await store().collection('bots', { file: 'bot', body: 'instructions' });
+    await bots.put(bot);
+    // Another folder beside the record file, which is not a record of this
+    // collection: a bot's chats sit beside its `bot.md`.
+    mkdirSync(join(dir, 'bots', 'helper', 'chats'));
+
+    expect(readFileSync(join(dir, 'bots', 'helper', 'bot.md'), 'utf8')).toBe(recordFile(bot, 'instructions'));
+    const again = await store().collection('bots', { file: 'bot', body: 'instructions' });
+    expect((await again.list()).map((one) => one.id)).toEqual(['helper']);
+    expect(await again.get('helper')).toEqual(bot);
+    expect(problems).toEqual([]);
+  });
+
+  it('tells a watcher of a hand edit of a file collection record', async () => {
+    const bots = await store().collection('bots', { file: 'bot', body: 'instructions' });
+    const changes = heard(bots);
+    await bots.put(bot);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(changes).toEqual([{ id: 'helper', type: 'added' }]);
+
+    writeFileSync(join(dir, 'bots', 'helper', 'bot.md'), recordFile({ ...bot, name: 'Edited' }, 'instructions'));
+    await vi.waitFor(() => { expect(changes).toHaveLength(2); });
+    expect(changes[1]).toEqual({ id: 'helper', type: 'updated' });
+    expect(await bots.get('helper')).toEqual({ ...bot, name: 'Edited' });
+  });
+
+  it('tells a watcher of a file collection record folder made and removed by hand', async () => {
+    const bots = await store().collection('bots', { file: 'bot', body: 'instructions' });
+    const changes = heard(bots);
+
+    mkdirSync(join(dir, 'bots', 'helper'));
+    writeFileSync(join(dir, 'bots', 'helper', 'bot.md'), recordFile(bot, 'instructions'));
+    await vi.waitFor(() => { expect(changes).toEqual([{ id: 'helper', type: 'added' }]); });
+    expect(await bots.get('helper')).toEqual(bot);
+
+    rmSync(join(dir, 'bots', 'helper'), { recursive: true });
+    await vi.waitFor(() => { expect(changes).toHaveLength(2); });
+    expect(changes[1]).toEqual({ id: 'helper', type: 'deleted' });
+    expect(await bots.get('helper')).toBeUndefined();
+  });
+
+  it('opens a collection at a path of slugs, in a folder under the first', async () => {
+    const chats = await store().collection('bots/helper/chats');
+    await chats.put({ id: 'row-1', bot: 'helper', chat: 'session:1' });
+
+    expect(existsSync(join(dir, 'bots', 'helper', 'chats', 'row-1.md'))).toBe(true);
+    const again = await store().collection('bots/helper/chats');
+    expect(await again.get('row-1')).toEqual({ id: 'row-1', bot: 'helper', chat: 'session:1' });
+  });
+
   it('refuses a record whose id is not a slug, and a body that is not text', async () => {
     const bots = await store().collection('bots', { body: 'instructions' });
 
@@ -104,6 +156,9 @@ describe('fileRecords', () => {
     writeFileSync(join(dir, 'sessions', 'abc.json'), JSON.stringify({ id: 'abc' }));
 
     await expect(store().collection('sessions')).rejects.toThrow('the daemon keeps its own files');
+    // A path is refused by its first slug: everything under `sessions` is the
+    // daemon's own too.
+    await expect(store().collection('sessions/abc/chats')).rejects.toThrow('the daemon keeps its own files');
     await expect(store().collection('usage')).rejects.toThrow('the daemon keeps its own files');
     // The automations folder is one of them since an automation is a file
     // there, so a collection of that name would be the daemon's own automations

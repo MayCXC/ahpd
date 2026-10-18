@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { memoryRecords } from '../../sdk/src/records.js';
-import { backSessions, rowId } from '../src/names.js';
+import { backSessions, chatsOf, rowId, sessionsOf } from '../src/names.js';
 import { botStore } from '../src/store.js';
 import { botWake, sessionFor } from '../src/wake.js';
 import type { ChatMessage, TurnHandle } from '../src/chat.js';
@@ -17,10 +17,10 @@ import type { Owner } from '../../sdk/src/types/usage.js';
  * A message said to a bot wakes the back session its record names.
  *
  * What is checked here is the road between the two sessions: the name a bot's
- * record gives, the session that name is on - found in the `bot-sessions` rows,
- * or started and written down - the turn the message becomes there, and the main
- * turn left open while it is answered. Nothing is refused here, so nothing ends
- * a main turn but a notice naming a cause.
+ * record gives, the session that name is on - found in the bot's own `sessions`
+ * rows, or started and written down - the turn the message becomes there, and
+ * the main turn left open while it is answered. Nothing is refused here, so
+ * nothing ends a main turn but a notice naming a cause.
  *
  * The host's own halves are stubs: what starts a session, what reads one's chat
  * and state, and what carries an action are all the plugin's, and `plugin.ts` is
@@ -109,9 +109,10 @@ async function sitting(record: BotRecord = bot()) {
     () => {},
   );
   await store.put(record);
-  const chats = await records.collection('bot-chats');
+  const chats = await records.collection(chatsOf(record.id));
   await chats.put({ id: rowId([record.id, PERSON]), bot: record.id, owner: PERSON, chat: CHAT });
-  const backs = backSessions(await records.collection('bot-sessions'));
+  const backsRows = await records.collection(sessionsOf(record.id));
+  const backs = backSessions(() => backsRows);
 
   /** The default chat of each back session, by the session's URI. */
   const at = new Map<string, string>();
@@ -143,7 +144,7 @@ async function sitting(record: BotRecord = bot()) {
 
   const wake = botWake({
     store,
-    chats,
+    chats: () => chats,
     backs,
     sessions,
     // What a first wake writes into the folder: the real plugin fills the
