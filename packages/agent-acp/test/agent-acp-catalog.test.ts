@@ -502,6 +502,74 @@ it('says nothing for a mode the client set itself', async () => {
   expect(session.settings().permissionMode).toBe('code');
 });
 
+it('opens a session in the mode it was started with', async () => {
+  const { agent, log } = backend();
+  // The fixture starts in `ask` and offers `ask` and `code`, so a session asked
+  // for `code` is one the server has to be moved into.
+  const { session, watch } = start(agent, 'asked', { settings: { permissionMode: 'code' } });
+  await runTurn(session, watch, 't1', 'hi');
+
+  expect(requests(log).find((one) => one.method === 'session/set_mode')?.params)
+    .toMatchObject({ sessionId: session.agentId(), modeId: 'code' });
+  expect(session.settings().permissionMode).toBe('code');
+  expect(configOf(session).values.permissionMode).toBe('code');
+  // The mode in force is the one that was asked for, so the update the server
+  // answers the request with is not a change a client is told about.
+  expect(changed(watch).filter((one) => 'permissionMode' in one)).toEqual([]);
+});
+
+it('opens a session in its asked mode through the server mode option', async () => {
+  const { agent, log } = backend(['--modes']);
+  const { session, watch } = start(agent, 'asked-option', { settings: { permissionMode: 'code' } });
+  await runTurn(session, watch, 't1', 'hi');
+
+  // A server naming the mode as an option of its own is moved through that
+  // option, which is the newer account of what the legacy modes carry.
+  expect(requests(log).find((one) => one.method === 'session/set_config_option')?.params)
+    .toMatchObject({ configId: 'mode', value: 'code' });
+  expect(requests(log).some((one) => one.method === 'session/set_mode')).toBe(false);
+  expect(configOf(session).values.permissionMode).toBe('code');
+  expect(changed(watch).filter((one) => 'permissionMode' in one)).toEqual([]);
+});
+
+it('sends nothing for a session that asks for the mode the server is already in', async () => {
+  const { agent, log } = backend();
+  const { session, watch } = start(agent, 'asked-same', { settings: { permissionMode: 'ask' } });
+  await runTurn(session, watch, 't1', 'hi');
+
+  expect(requests(log).some((one) => one.method === 'session/set_mode')).toBe(false);
+  expect(requests(log).some((one) => one.method === 'session/set_config_option')).toBe(false);
+  expect(configOf(session).values.permissionMode).toBe('ask');
+});
+
+it('leaves a session in the server mode when the one it asked for is not offered', async () => {
+  const { agent, log } = backend();
+  const { session, watch } = start(agent, 'asked-unknown', { settings: { permissionMode: 'plan' } });
+  await runTurn(session, watch, 't1', 'hi');
+
+  // The server serves the modes, and one it did not name is a request it would
+  // refuse - so the session opens in the mode the server is in.
+  expect(requests(log).some((one) => one.method === 'session/set_mode')).toBe(false);
+  expect(session.settings().permissionMode).toBe('ask');
+  expect(configOf(session).values.permissionMode).toBe('ask');
+});
+
+it('sends the mode again when the server is opened after a death', async () => {
+  const { agent, log } = backend();
+  const { session, watch } = start(agent, 'died-mode');
+  await runTurn(session, watch, 't1', 'hi');
+  // A mode a person set after the open, which a server that starts fresh has
+  // no memory of.
+  expect(await session.setConfig?.('permissionMode', 'code')).toBe(true);
+  await runTurn(session, watch, 't2', 'die now');
+  await runTurn(session, watch, 't3', 'hi again');
+
+  const sets = requests(log).filter((one) => one.method === 'session/set_mode');
+  expect(sets).toHaveLength(2);
+  expect(sets.at(-1)?.params).toMatchObject({ modeId: 'code' });
+  expect(configOf(session).values.permissionMode).toBe('code');
+});
+
 it('reports a command the server advertises as a customization', async () => {
   const { agent } = backend();
   const { session, watch } = start(agent, 'commands');
