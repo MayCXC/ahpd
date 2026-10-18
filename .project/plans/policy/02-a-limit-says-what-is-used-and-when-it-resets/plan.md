@@ -110,7 +110,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The periods are one module, and the store keeps its days in the usage timezone](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) | todo | - |
-| [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | todo | - |
+| [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | implemented | - |
 | [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | todo | 01, 02 |
 | [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | todo | 03 |
 | [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | todo | 03 |
@@ -126,8 +126,8 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-store-keeps-its-days-in-the-usage-timezone.md](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) and [task-02-a-total-counts-the-turns.md](task-02-a-total-counts-the-turns.md), which do not depend on each other.
+- **Done so far:** 2026-10-17 - task 02, where a record the meter writes first for its turn carries `opens`, and a total counts those records as `turns`, in both metering modes.
+- **Next action:** [task-01-the-store-keeps-its-days-in-the-usage-timezone.md](task-01-the-store-keeps-its-days-in-the-usage-timezone.md), which task 03 needs beside task 02.
 - **Open questions:** none.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
