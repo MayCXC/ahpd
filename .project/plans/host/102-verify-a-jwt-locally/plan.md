@@ -1,7 +1,7 @@
 ---
 title: Verify a JWT locally
 domain: host
-status: planned
+status: active
 priority: low
 created: 2026-10-16
 revalidated: 2026-10-16

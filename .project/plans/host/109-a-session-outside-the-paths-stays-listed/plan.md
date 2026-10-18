@@ -1,7 +1,7 @@
 ---
 title: A session outside the paths stays listed
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-18
 revalidated: 2026-10-18

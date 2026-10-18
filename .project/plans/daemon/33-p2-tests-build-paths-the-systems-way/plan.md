@@ -1,7 +1,7 @@
 ---
 title: Tests build paths the system's way
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16

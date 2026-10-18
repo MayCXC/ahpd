@@ -46,14 +46,14 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
 | [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; passed on Windows 2026-10-16 | - | - |
-| [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | planned 2026-10-16 | - | daemon 27 task 04 |
+| [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | active 2026-10-16; tasks 01 to 05 implemented | - | daemon 27 task 04 |
 | [32 - A failure has a JSON shape under --json](daemon/32-a-failure-has-a-json-shape/plan.md) | medium | active 2026-10-18; tasks 01 to 04 implemented | cofold commands 06 | - |
 | [33 - ahpd's checks pass on Windows](daemon/33-ahpds-checks-pass-on-windows/plan.md) | medium | planned 2026-10-16; parent of p1 to p5 | - | - |
-| [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
-| [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
-| [33 p3 - POSIX-only tests say why they skip](daemon/33-p3-posix-only-tests-say-why-they-skip/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
+| [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented | 33 | 33 p4 |
+| [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | active 2026-10-18; tasks 01 to 02 implemented | 33 | 33 p4 |
+| [33 p3 - POSIX-only tests say why they skip](daemon/33-p3-posix-only-tests-say-why-they-skip/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented | 33 | 33 p4 |
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5 | - |
-| [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | planned 2026-10-16 | 33 | 33 p4 |
+| [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented, task 04 todo | 33 | 33 p4 |
 
 Next free number in `daemon`: `31`.
 
@@ -211,7 +211,7 @@ Reference: [00-host.md](host/00-host.md)
 | [95 - An automation moves as VS Code's file](host/95-an-automation-moves-as-vscodes-file/plan.md) | medium | built 2026-10-16 | - | - |
 | [96 - A plain request tests the token](host/96-a-plain-request-tests-the-token/plan.md) | medium | active; tasks 01-02 implemented and reviewed; the browser check remains | - | ahpw sign-in |
 | [97 - An unchanged client set is echoed back](host/97-an-unchanged-client-set-is-echoed-back/plan.md) | medium | built 2026-10-16 | - | - |
-| [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | planned 2026-10-16 | - | - |
+| [98 - A client rule reaches the system prompt](host/98-a-client-rule-reaches-the-system-prompt/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented | - | - |
 | [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | 101 |
 | [100 p1 - A command is split and matched](host/100-p1-a-command-is-split-and-matched/plan.md) | medium | planned 2026-10-16 | 100 | 100 p2, 100 p3 |
@@ -221,14 +221,14 @@ Reference: [00-host.md](host/00-host.md)
 | [100 p5 - pi and cofold ask only for unmatched commands](host/100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
 | [100 p6 - The docs name the terminal rules](host/100-p6-the-docs-name-the-terminal-rules/plan.md) | medium | planned 2026-10-16 | 100 p1 to p5 | - |
 | [101 - A rule makes a tool call ask every time](host/101-a-rule-makes-a-tool-call-ask-every-time/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
-| [102 - Verify a JWT locally](host/102-verify-a-jwt-locally/plan.md) | low | planned 2026-10-16 | - | - |
-| [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | planned 2026-10-16 | - | - |
+| [102 - Verify a JWT locally](host/102-verify-a-jwt-locally/plan.md) | low | active 2026-10-16; tasks 01 to 05 implemented | - | - |
+| [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | active 2026-10-16; tasks 01 to 06 implemented | - | - |
 | [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
-| [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | planned 2026-10-18 | - | - |
+| [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented | - | - |
 
 Next free number in `host`: `97`.
 
