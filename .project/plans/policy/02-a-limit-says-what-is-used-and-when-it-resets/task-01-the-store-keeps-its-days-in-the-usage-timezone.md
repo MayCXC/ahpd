@@ -1,6 +1,6 @@
 ---
 title: The periods are one module, and the store keeps its days in the usage timezone
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -51,3 +51,22 @@ One sdk module answers the start of the current day, week and month in a zone, a
 
 ## Resume
 
+Implemented 2026-10-17, not reviewed.
+
+- `packages/sdk/src/periods.ts` holds the zoned helpers out of `usage.ts`, without a change.
+- `periodOf` answers `{ from, resets? }` for `day`, `week`, `month` and `total`.
+- `fileUsage` resolves `timezone` once, and keeps each record under its day in that zone.
+- `total`, `records` and `groups` compare `from` and `until` as days in that zone.
+- A bare date is the day it names, and an instant is the day it falls on in the zone.
+- The file a record goes in is still named by its UTC month.
+- `spansOf` reads its three starts from `periodOf`.
+- `run.ts` gives `fileUsage` the zone.
+
+Outside the task's Files: `packages/server/src/commands/usage.ts` gives the store of `ahpd usage` the same zone.
+Without it, that store keeps days in the system zone while its provider cuts periods in the configured one.
+
+Tests: `periods.test.ts` is new, and covers the end of a month and the end of a year.
+`usage.test.ts` has the zoned cases in `America/Campo_Grande`, and the file of a record at the end of a month.
+Three earlier cases written in UTC days now name `timezone: 'UTC'`.
+One case runs only when the system zone is UTC, because no zone means the system's own.
+`usage-scheme.test.ts` gives the store and the provider the same zone, as `run.ts` does.

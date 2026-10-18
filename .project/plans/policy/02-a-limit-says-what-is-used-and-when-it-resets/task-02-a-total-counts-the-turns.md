@@ -44,12 +44,13 @@ With `per: 'turn'` or `per: 'report'`, one turn is one in `turns`.
 
 ## Resume
 
-Implemented 2026-10-17.
-`ModelUse` has `opens?: true`, which marks the first record the meter wrote for its turn, and `UsageTotal` has `turns?: number`, which stays absent when no record opened a turn.
-`measured` adds 1 to `turns` for a record with `opens` and 0 for any other, and `Measured`, `none`, `addTo` and `reported` carry the measure, so `total`, `groups` and the periods all answer it.
-The meter keeps `Held.opened`, and `write` takes the report the record says the turn used (the turn's own sum unless a report is written on its own), so `per: 'turn'` opens the turn with its one record and `per: 'report'` opens it with its first report and no later one. A report that arrives for a turn that never said it began opens it once through the same flag. The proxy's records are untouched and carry no `opens`.
+Implemented 2026-10-17, not reviewed.
 
-Validation: `packages/sdk/test/usage.test.ts` records two turns of three records each and reads `turns: 2`, `calls: 6`. `packages/sdk/test/usage-meter.test.ts` asserts `opens: true` on the one record of a `per: 'turn'` turn, `[true, undefined, undefined]` for a `per: 'report'` turn of three reports, and `[true, undefined]` for the reports of a turn that never said it began.
-Gates: `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `git diff --quiet tools/` and vitest over the listed packages with `--maxWorkers=2 --testTimeout=10000` all pass (311 files, 5363 tests).
-Outside the task's Files: the suite rewrote `packages/sdk/test/fixtures/wire.jsonl` (host endpoint, config keys and fresh ids), as it does on every run; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl` if it is not wanted in the commit.
+- `ModelUse` has `opens?: true`, and `UsageTotal` has `turns?: number`.
+- `measured` counts 1 in `turns` for a record with `opens`, and `none`, `addTo` and `reported` carry the measure.
+- The meter keeps `Held.opened`, and `write` sets `opens` on the first record of a turn only.
+- `write` takes the report a record says, so `per: 'report'` keeps the flag on the turn itself.
+- The proxy's records carry no `opens`.
 
+Tests: `usage.test.ts` totals two turns of three records as `turns: 2` and `calls: 6`.
+`usage-meter.test.ts` checks `opens` with `per: 'turn'`, with `per: 'report'`, and for a turn that never said it began.
