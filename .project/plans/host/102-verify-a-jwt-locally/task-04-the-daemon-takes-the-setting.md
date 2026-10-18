@@ -1,6 +1,6 @@
 ---
 title: The daemon takes the setting
-status: todo
+status: implemented
 depends: [task-02-the-directory-asks-the-issuer-iss-names.md]
 layer: server
 refs:
@@ -36,7 +36,7 @@ The daemon reads the JWT setting and the audience, and hands them to the directo
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `Config.issuerVerify` is a key beside `issuer`, with `IssuerVerify` as its type; `serverFields.issuerVerify` carries `enum: ['userinfo', 'jwt', 'auto']` and `cli: { value: 'userinfo|jwt|auto' }`, so the file, the flag and the help all say the three words; `Options.issuerVerify` is read through `given` and passed to `fileUsers` beside `audience: advertisedResource()`, which is the sign-in record's `resource`. A record's own `issuerVerify` is read where that issuer is built, in `users.ts`'s `modeOf`. Tests: the enum case in `config-check.test.ts` (a refused value, and a number off the list) and the read-through case, which now carries `issuerVerify: 'jwt'` from the file onto the options.
+- **Next action:** none; task 05 is the docs.
 - **Open questions:** none.
-- **Watch out for:** a record may name its own issuer and `issuerVerify`; read both where that issuer is built.
+- **Watch out for:** an unknown value is refused by the schema rather than by a `stop()` beside `--issuer`: the schema refuses the file and the flag in one place and names the file and the key, `<file>: issuerVerify must be one of userinfo, jwt, auto`, while a `stop()` would have to be written twice and would not check the file at all. `user add` cannot set a record's own `issuerVerify`, so the file is the way to write one.

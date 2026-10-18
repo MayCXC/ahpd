@@ -1,6 +1,6 @@
 ---
 title: The docs say how a JWT is checked
-status: todo
+status: implemented
 depends: [task-03-the-tokens-exp-ends-the-sign-in.md, task-04-the-daemon-takes-the-setting.md]
 layer: docs
 refs:
@@ -34,7 +34,7 @@ The docs say when the host checks a JWT itself, what it checks, and what it does
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `AUTHENTICATION.md` has a `### Checking a token here` section under "An issuer": the setting and its default, the three values, what `jwt` checks (the algorithm, the signature, `typ`, `iss`, `aud`, `exp` and `nbf`, the subject), what `exp` does to a live sign-in, what a revocation does not do, and why GitHub is `userinfo` or `auto` and never `jwt`. The configuration key list gained `issuerVerify` beside `issuer`, and `USERS.md` gained the setting beside `--issuer` in "Sign in with GitHub or OpenID Connect". `issuers.ts`'s header now names both checks instead of saying neither verifies a JWT.
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** keep each file's own style.
+- **Watch out for:** the prose linter's 25-word rule is applied to the sentences added, not to the file, which reports its own long sentences either way. The key list in `AUTHENTICATION.md` is outside this task's line range and was added because a setting documented without its key is a setting nobody finds.

@@ -1,6 +1,6 @@
 ---
 title: An issuer checks a JWT against its key set
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -45,7 +45,7 @@ It returns the subject, the claims and the expiry, or nothing.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Open questions:** none.
-- **Watch out for:** ES256 signatures in a JWT are raw `r || s`, which WebCrypto takes as it is.
+- **Done so far:** every step. `issuers.ts` holds the `ALGORITHMS` table (RS256, PS256, ES256, EdDSA), `SKEW` (60s) and `REFETCH_MS` (60s), `split()` and the exported `jwtIssuer(token)` that reads `iss` untrusted, `checked()` which refuses an algorithm off the table, a `typ` other than `at+jwt`/`JWT`, a token that is not three parts, an empty signature, a missing key, an unsigned signature, a wrong `iss`/`exp`/`nbf`/`aud` and a missing `sub`, and `oidcIssuer`'s `published()`/`keyFor()` which cache the key set by `kid` and read it again only for an unknown `kid`, at most once a minute. `Issuer.verify(token, audience)` returns `subject`, the whole `claims` and `expiresAt` from `exp`. Eleven cases in the JWT section of `users-issuer.test.ts`, keys generated in the case.
+- **Next action:** task 02. `Users.verify` still asks every issuer in order; nothing calls `verify` yet.
+- **Open questions:** two readings the task left open, both taken permissively and both flagged in the report. A token with no `exp` at all is accepted (nothing to compare, so nothing to refuse) rather than refused; a header naming no `typ` is accepted as `at+jwt`. A `kid` that is absent is placed only against a set of exactly one key.
+- **Watch out for:** ES256 signatures in a JWT are raw `r || s`, which WebCrypto takes as it is. The key set must be published as `{ keys: [...] }` - a bare JWK is not one, and a test that answers with one fails as a missing key rather than as a bad signature.

@@ -1,6 +1,6 @@
 ---
 title: The token's exp ends the sign-in
-status: todo
+status: implemented
 depends: [task-02-the-directory-asks-the-issuer-iss-names.md]
 layer: sdk
 refs:
@@ -36,7 +36,7 @@ A sign-in with a JWT ends at the earlier of the token's `exp` and the client's `
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Open questions:** none.
-- **Watch out for:** the timer exists for the host resource only; check a resource with its own issuer too.
+- **Done so far:** every step. `authenticate` on the host's own resource sets `principalUntil` to the earlier of `held.expiresAt` and `Date.now() + expiresIn * 1000`, arms the `expire` timer from that, and deletes `principalUntil` only when neither clock exists. The sign-in log names the credential as the shorter end when it is. Two fake-clock cases in `users-host.test.ts`: a credential ending before the client's `expiresIn`, and one ending after it.
+- **Next action:** task 04. `Principal.expiresAt` was already added and set in task 02; nothing else reads it.
+- **Open questions:** the two-clock rule has no case for a *revoked* token, which is the risk the plan already names - a token revoked before `exp` still stands until `exp`.
+- **Watch out for:** the timer exists for the host resource only; check a resource with its own issuer too. The client path below still uses `expiresIn` alone, because a backend's token is never checked here and so carries no expiry of its own.
