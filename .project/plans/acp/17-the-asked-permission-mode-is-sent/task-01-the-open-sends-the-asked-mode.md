@@ -1,6 +1,6 @@
 ---
 title: The open sends the asked mode
-status: todo
+status: implemented
 depends: []
 layer: "packages/agent-acp"
 refs:
@@ -41,3 +41,20 @@ Every open path sends the asked `permissionMode` when the server offers it and i
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
 
 ## Resume
+
+Implemented 2026-10-18, not reviewed.
+
+- `config.ts` has `sendAskedMode(held, asked)` on `ctx`, beside `setConfig`.
+- It returns for a value that is not a string, the mode in force, or a mode the server does not offer.
+- It reads the offered modes from the `mode` option, or else from `ctx.modes.availableModes`.
+- It puts the asked mode in `settings` before the request, so the server's echo is no news.
+- It sends `setSessionConfigOption` on the `mode` option, or `setSessionMode` for legacy modes.
+- On a failure it restores the server's mode and logs the reason through `ctx.options.log`.
+- `opening.ts` reads `settings.permissionMode` at the top of the open, before any learn call.
+- It calls the send after the learn calls on the fork, resume and new paths, before `onHandshake`.
+
+No tests were added, because task 02 writes them.
+A check by hand with a script outside the repository sent `set_config_option` on a `--modes` server and `set_mode` on a legacy one.
+A mode the server does not offer sent nothing, and no `session/configChanged` was emitted.
+
+Gates: schema, build, typecheck, boundary, `tools/` and vitest pass (312 files, 5382 passed, 1 skipped).
