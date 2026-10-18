@@ -88,12 +88,23 @@ describe('user', () => {
   }, 30000);
 
   it('names the sub-commands of a bare verb and of one it does not have', async () => {
-    for (const args of [['user'], ['user', 'toy', '--users', users], ['--json', 'user']]) {
+    for (const args of [['user'], ['user', 'toy', '--users', users]]) {
       const said = await cli(args);
       expect(said.code).toBe(2);
       expect(said.stderr).toBe('ahpd: user takes list, add, rm, token, member or primary.\n');
       expect(said.stdout).toBe('');
     }
+  });
+
+  it('writes the group hint as one JSON line under --json', async () => {
+    const said = await cli(['--json', 'user']);
+    expect(said.code).toBe(2);
+    expect(said.stdout).toBe('');
+    expect(JSON.parse(said.stderr)).toEqual({
+      message: 'user takes list, add, rm, token, member or primary.',
+      kind: 'argument',
+      exitCode: 2,
+    });
   });
 
   it('refuses add and rm without an id', async () => {
@@ -219,12 +230,23 @@ describe('plugin', () => {
   });
 
   it('names the sub-commands of a bare verb and of one it does not have', async () => {
-    for (const args of [['plugin'], ['plugin', 'toy', '--config-file', config], ['--json', 'plugin']]) {
+    for (const args of [['plugin'], ['plugin', 'toy', '--config-file', config]]) {
       const said = await cli(args);
       expect(said.code).toBe(2);
       expect(said.stderr).toBe('ahpd: plugin takes list, update, config, install, remove, enable or disable.\n');
       expect(said.stdout).toBe('');
     }
+  });
+
+  it('writes the group hint as one JSON line under --json', async () => {
+    const said = await cli(['--json', 'plugin']);
+    expect(said.code).toBe(2);
+    expect(said.stdout).toBe('');
+    expect(JSON.parse(said.stderr)).toEqual({
+      message: 'plugin takes list, update, config, install, remove, enable or disable.',
+      kind: 'argument',
+      exitCode: 2,
+    });
   });
 
   it('still answers --help for a group', async () => {

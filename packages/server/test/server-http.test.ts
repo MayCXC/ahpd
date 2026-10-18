@@ -997,6 +997,29 @@ describe('--remote', () => {
     expect(existsSync(join(cache, 'ahpd', 'remote'))).toBe(false);
   }, 30000);
 
+  it('writes the token failure as one JSON line under --json, and keeps exit 2', async () => {
+    const said = await cli(['--json', '--remote', 'http://127.0.0.1:9', 'status']);
+    expect(said.code).toBe(2);
+    expect(said.stdout).toBe('');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(said.stderr)).toEqual({
+      message: 'http://127.0.0.1:9 needs a token: pass --token, --token-file or AHPD_TOKEN.',
+      kind: 'argument',
+      exitCode: 2,
+    });
+  });
+
+  it('exits 4 under --json when the daemon cannot be reached', async () => {
+    const said = await cli(['--json', '--remote', 'http://127.0.0.1:1', '--token', 'abc12345', 'status']);
+    expect(said.code).toBe(4);
+    expect(said.stdout).toBe('');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    const failure = JSON.parse(said.stderr) as { message: string; kind: string; exitCode: number };
+    expect(failure.kind).toBe('unavailable');
+    expect(failure.exitCode).toBe(4);
+    expect(failure.message).toContain('Cannot read the command surface from http://127.0.0.1:1');
+  });
+
   it('reads the token from AHPD_TOKEN too', async () => {
     const { one, url } = await remote();
     const said = await cli(['--remote', url, 'status'], { AHPD_TOKEN: 'root-secret' });

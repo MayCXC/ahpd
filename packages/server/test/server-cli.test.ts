@@ -56,6 +56,36 @@ describe('what a person types first', () => {
   });
 });
 
+describe('a failure under --json', () => {
+  it('writes one JSON line, and keeps the exit code a thrown failure has', async () => {
+    const said = await cli(['--json', 'plugin', 'show', 'nothing']);
+    expect(said.code).toBe(2);
+    expect(said.stdout).toBe('');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(said.stderr)).toEqual({
+      message: 'plugin takes list, update, config, install, remove, enable or disable.',
+      kind: 'argument',
+      exitCode: 2,
+    });
+  });
+
+  it('keeps the status result on stdout and writes the failure to stderr', async () => {
+    const said = await cli(['status', '--json']);
+    expect(said.code).toBe(1);
+    expect(said.stdout).toBe('{"running":false}\n');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(said.stderr)).toEqual({ message: 'None running.', kind: 'conflict', exitCode: 1 });
+  });
+
+  it('keeps the stop result on stdout and writes the failure to stderr', async () => {
+    const said = await cli(['stop', '--json']);
+    expect(said.code).toBe(1);
+    expect(said.stdout).toBe('{"stopped":false}\n');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(said.stderr)).toEqual({ message: 'None running.', kind: 'conflict', exitCode: 1 });
+  });
+});
+
 describe('completion and values', () => {
   it('completes the foreground run flags', async () => {
     const said = await cli(['__complete', '--', '--po']);
@@ -275,7 +305,8 @@ describe('reaching a daemon elsewhere', () => {
 
   it('warns about a cleartext token for a scheme in either case', async () => {
     const said = await cli(['--remote', 'HTTP://127.0.0.2:9', '--token', 'abc12345', 'status']);
-    expect(said.code).toBe(2);
+    // Nothing answers on the port, so the remote surface failure is `unavailable`.
+    expect(said.code).toBe(4);
     expect(said.stderr).toContain('the token travels in cleartext');
   }, 20000);
 

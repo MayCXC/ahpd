@@ -19,7 +19,8 @@
 import { readFileSync } from 'node:fs';
 import { ArgumentError, exitCodeFor, fullyNamed, isFlag, literalPrefix, matchCommand, optionNotes, optionTable, optionsOf, tokenize, visible } from '@cofold/commands';
 import type { Command, OptionSpec, Runner } from '@cofold/commands';
-import { Program, renderDefinitions, runEntry, styleFor } from '@cofold/terminal';
+import { failureOf, Program, renderDefinitions, runEntry, styleFor, writeFailure } from '@cofold/terminal';
+import type { OutputMode } from '@cofold/terminal';
 import { cliRegistry, remoteRegistry } from './commands/registry.js';
 import { programGlobals } from './commands/options.js';
 import { CHECK_LINE_ENV } from './commands/restart.js';
@@ -39,6 +40,36 @@ import { version } from './version.js';
 const ON_MACHINE = /^https?:\/\/(?:127\.0\.0\.1|\[::1\]|localhost)(?::\d+)?(?:[/?#]|$)/iu;
 
 const argv0 = process.argv.slice(2);
+
+/*
+ * The mode of the whole line, read before the program exists.
+ *
+ * The remote surface and the credential are read before `tokenize`, so a
+ * failure there has no parsed mode to ask: the literal word is the whole
+ * answer, and nothing after `--` is an option.
+ */
+const mode: OutputMode = requestsJson(argv0) ? 'json' : 'plain';
+
+/**
+ * A failure this file writes before `runEntry` runs.
+ *
+ * The shape is `@cofold/terminal`'s, so a failure here and one written by
+ * `runEntry` are the same JSON line under `--json`, and the same line of
+ * today without it.
+ */
+function fail(error: unknown): never {
+  writeFailure({ err: (text) => { process.stderr.write(text); } }, 'ahpd', failureOf(error), mode);
+  process.exit(exitCodeFor(error));
+}
+
+/** Whether the words ask for JSON; the same reading `runEntry` makes. */
+function requestsJson(argv: readonly string[]): boolean {
+  for (const word of argv) {
+    if (word === '--') return false;
+    if (word === '--json') return true;
+  }
+  return false;
+}
 
 /*
  * A check run: this binary started with the line a restart is about to start
@@ -76,8 +107,7 @@ else {
     registry = await remoteRegistry({ url: remoteUrl, token, refresh });
   }
   catch (error: unknown) {
-    process.stderr.write(`ahpd: ${error instanceof Error ? error.message : String(error)}\n`);
-    process.exit(2);
+    fail(error);
   }
 }
 
@@ -104,15 +134,13 @@ function tokenFor(argv: readonly string[], url: string): string {
   const inline = readGlobal(argv, '--token');
   const file = readGlobal(argv, '--token-file');
   if (inline !== undefined && file !== undefined) {
-    process.stderr.write('ahpd: pass --token or --token-file, not both.\n');
-    process.exit(2);
+    fail(new ArgumentError('pass --token or --token-file, not both.'));
   }
   let held: string | undefined;
   if (file !== undefined) {
     try { held = readFileSync(file, 'utf8'); }
     catch {
-      process.stderr.write(`ahpd: no token file at ${file}.\n`);
-      process.exit(2);
+      fail(new ArgumentError(`no token file at ${file}.`));
     }
   }
   else held = inline ?? process.env['AHPD_TOKEN'];
@@ -120,8 +148,7 @@ function tokenFor(argv: readonly string[], url: string): string {
   // secret cannot disagree about the space around it.
   const token = held?.trim();
   if (token !== undefined && token !== '') return token;
-  process.stderr.write(`ahpd: ${url} needs a token: pass --token, --token-file or AHPD_TOKEN.\n`);
-  process.exit(2);
+  fail(new ArgumentError(`${url} needs a token: pass --token, --token-file or AHPD_TOKEN.`));
 }
 
 /**
@@ -186,9 +213,8 @@ const asked = tokens.options['--help'] === true || tokens.options['--version'] =
  * `ahpd plugin` is a person asking what `plugin` does, and the program would
  * answer `unknown command "plugin"`, naming the word they already typed. The
  * list is read off the visible commands under that word, so it says what exists
- * rather than repeating a sentence kept by hand. It is refused as any usage
- * failure is: the program's name before the sentence on stderr, and the exit
- * code an `ArgumentError` has, whatever the output mode.
+ * rather than repeating a sentence kept by hand. It is refused through `fail`,
+ * so it has the JSON shape under `--json` and the line of today without it.
  */
 const first = tokens.words[0];
 if (!asked && first !== undefined && matchCommand(program.commands, tokens.words) === null) {
@@ -198,9 +224,7 @@ if (!asked && first !== undefined && matchCommand(program.commands, tokens.words
     .map((command) => literalPrefix(command)[1])
     .filter((word): word is string => word !== undefined))];
   if (subs.length > 0 && !subs.includes(tokens.words[1] ?? '')) {
-    const refused = new ArgumentError(`${first} takes ${subs.slice(0, -1).join(', ')}${subs.length > 1 ? ' or ' : ''}${subs.at(-1) ?? ''}.`);
-    process.stderr.write(`${program.name}: ${refused.message}\n`);
-    process.exit(exitCodeFor(refused));
+    fail(new ArgumentError(`${first} takes ${subs.slice(0, -1).join(', ')}${subs.length > 1 ? ' or ' : ''}${subs.at(-1) ?? ''}.`));
   }
 }
 /*
