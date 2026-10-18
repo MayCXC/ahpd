@@ -42,7 +42,8 @@ const refsOf = (input: Record<string, unknown>): string[] => {
 /** The scope an input names, or a refusal where it names neither a folder nor a bot. */
 const requiredScope = (input: Record<string, unknown>): PlanScope => {
   const scope = scopeOf(input.scope);
-  if (scope === undefined) {
+  // A session's plan is the translation's, and no tool makes one: the tools take a folder or a bot.
+  if (scope === undefined || scope.kind === 'session') {
     throw new RpcError(INVALID_PARAMS, 'scope is a folder or a bot: {"kind":"folder","folder":"/srv/work"} or {"kind":"bot","bot":"pilot"}');
   }
   return scope;
@@ -192,7 +193,7 @@ export function planTools(store: TaskStore): HostTool[] {
           throw new RpcError(INVALID_PARAMS, `status is one of ${PLAN_STATUSES.join(', ')}, and ${JSON.stringify(status)} is not`);
         }
         const scope = input.scope === undefined ? undefined : scopeOf(input.scope);
-        if (input.scope !== undefined && scope === undefined) {
+        if (input.scope !== undefined && (scope === undefined || scope.kind === 'session')) {
           throw new RpcError(INVALID_PARAMS, 'scope is a folder or a bot: {"kind":"folder","folder":"/srv/work"} or {"kind":"bot","bot":"pilot"}');
         }
         const plans = (await store.plans()).filter((one) =>

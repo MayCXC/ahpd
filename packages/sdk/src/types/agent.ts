@@ -5,7 +5,7 @@ import type { CommandShell } from '../commandautoapprover.js';
 import type { Bag } from './common.js';
 import type { FileEdit } from './changes.js';
 import type { WireTurn } from './wire.js';
-import type { Emit, Session, SubagentChat, SubagentRequest } from './session.js';
+import type { Emit, PlanUpdate, Session, SubagentChat, SubagentRequest } from './session.js';
 import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
@@ -454,6 +454,20 @@ export interface Start {
    * turn that is only findable by the id the client sent.
    */
   onTurnRecorded?(turnId: string, transcriptId: string): void;
+  /**
+   * A harness's own task list, or one change to it, out of this backend.
+   *
+   * The backend is the only thing that sees its harness's task calls, so it
+   * brings them here rather than making every plugin learn a harness's format.
+   * A tool that rewrites its list whole sends `entries`; one that names a
+   * single task sends `change`. The host raises `plan_update` with it, and what
+   * becomes of it is a plugin's business.
+   *
+   * Optional both ways, like `onFileEdit`: a backend whose harness keeps no
+   * task list never calls it, and a host with no plugin listening does nothing
+   * with the call.
+   */
+  planUpdate?(update: PlanUpdate): void;
   /**
    * The account this backend's harness is signed in as, once it is known.
    *

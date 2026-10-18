@@ -16,6 +16,7 @@
 import type { SessionInputRequestKind } from '@microsoft/agent-host-protocol';
 
 import type { PluginContext } from './plugin.js';
+import type { PlanUpdate } from './session.js';
 import type { Owner } from './usage.js';
 
 /**
@@ -34,6 +35,7 @@ export type EventName =
   | 'turn_end'
   | 'message'
   | 'tool_call'
+  | 'plan_update'
   | 'input_needed_set'
   | 'input_needed_removed'
   | 'client_connect'
@@ -194,6 +196,27 @@ export interface ToolCallEvent {
   error?: string;
 }
 
+/**
+ * A harness's own task list, or one change to it, handed over by its backend.
+ *
+ * The backend is the only thing that sees a harness's task calls, so it brings
+ * them here rather than making every plugin learn a harness's format. What
+ * becomes of them is a plugin's business.
+ */
+export type PlanUpdateEvent = PlanUpdate & {
+  type: 'plan_update';
+  /** The session channel URI. */
+  session: string;
+  /** The chat channel URI. */
+  chat: string;
+  /** The harness that wrote it, as its backend's `provider`. */
+  harness: string;
+  /** The session's title, where the backend has one yet. */
+  title?: string;
+  /** Who sent the turn, where the host can name somebody. */
+  sender?: Owner;
+};
+
 /** A client that connected and introduced itself. */
 export interface ClientConnectEvent {
   type: 'client_connect';
@@ -306,6 +329,7 @@ export type HostEvent =
   | TurnEndEvent
   | MessageEvent
   | ToolCallEvent
+  | PlanUpdateEvent
   | InputNeededSetEvent
   | InputNeededRemovedEvent
   | ClientConnectEvent

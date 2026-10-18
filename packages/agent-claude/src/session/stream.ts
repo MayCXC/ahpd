@@ -3,6 +3,7 @@ import type { StringOrMarkdown } from '@microsoft/agent-host-protocol';
 import type { Bag, OnWire } from '@ahpd/sdk';
 import { bag, list, str } from './common.js';
 import type { SessionContext } from './context.js';
+import { createTasks } from './tasks.js';
 import { lineOf, pastLineOf, titleOf, toolInputOf } from '../input.js';
 import { toolMetaOf } from '../kinds.js';
 import { ranOn } from '../models.js';
@@ -31,7 +32,7 @@ export interface Stream {
   /** The canonical assistant message, after its deltas have been drawn. */
   assistant: (message: Bag, parent?: string) => void;
   /** One `result`: what the call cost and how the run ended. */
-  results: (message: Bag, parent?: string) => void;
+  results: (message: Bag, parent?: string, structured?: unknown) => void;
   /** What each model round being streamed has said so far, by scope. */
   rounds: Map<string, { answered: boolean; stopped?: string }>;
   /** The line each call's row draws once it has ended, by its call id, made from its input. */
@@ -39,6 +40,7 @@ export interface Stream {
 }
 
 export function createStream(ctx: SessionContext): Stream {
+  const tasks = createTasks(ctx);
   /**
    * The MCP server a tool belongs to, out of its name.
    *
@@ -319,6 +321,9 @@ export function createStream(ctx: SessionContext): Stream {
         const open = scope.parts.get(id);
         if (open !== undefined && str(bag(open.toolCall).status) !== 'streaming') continue;
         const name = str(block.name) ?? 'tool';
+        // Claude's own task tools, as the session's plan. After the guard
+        // above, so a message that arrives more than once writes once.
+        tasks.called(str(turn.id) ?? '', id, name, bag(block.input));
         const line = lineOf(name, bag(block.input));
         ctx.pastLines.set(id, pastLineOf(name, bag(block.input)));
         const input = toolInputOf(name, bag(block.input));
@@ -460,16 +465,20 @@ export function createStream(ctx: SessionContext): Stream {
     }
   };
 
-  const results = (message: Bag, parent = ''): void => {
+  const results = (message: Bag, parent = '', structured?: unknown): void => {
     const scope = ctx.scopeFor(parent);
     if (scope.waiting !== undefined) {
-      scope.waiting.push(() => { results(message, parent); });
+      scope.waiting.push(() => { results(message, parent, structured); });
       return;
     }
     for (const raw of list(message.content)) {
       const block = bag(raw);
       if (str(block.type) !== 'tool_result') continue;
       const id = str(block.tool_use_id);
+      // Where a `TaskCreate` learns the id the harness gave the task, from the
+      // structured output beside its result. Before the part is looked up: a
+      // create whose call never reached this stream still made a task.
+      if (id !== undefined) tasks.ended(id, structured);
       /*
        * A worker that spoke before the call that spawned it was recorded.
        *

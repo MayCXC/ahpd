@@ -774,6 +774,15 @@ export function createSpawn(ctx: HostContext): Spawn {
      * session has always had, and only the `false` a request asked for is there.
      */
     const userSettings = kept.userSettings?.(idOf(uri));
+    /*
+     * The session as the backend built it, once it has been built.
+     *
+     * The start handed to `create` carries a callback that reads the session's
+     * title, and the title lives on the object that callback is part of
+     * creating - so the object is held here, where the callback can reach it
+     * once the backend answers.
+     */
+    let titled: Session | undefined;
     const session = used.create({
       uri,
       chatUri,
@@ -880,6 +889,26 @@ export function createSpawn(ctx: HostContext): Spawn {
        * brings the call id and the words, and everything else is this.
        */
       subagent: (toolCallId: string, request: SubagentRequest) => openSubagent(uri, chatUri, toolCallId, request),
+      /*
+       * A harness's own task list, raised for whoever is listening.
+       *
+       * The backend brings the list because it is the only thing that sees the
+       * harness's calls; the sender is read here because it is the host's to
+       * know, and the turn the list names is what the host recorded it under.
+       */
+      planUpdate: (update) => {
+        const sender = senderOf(update.turn);
+        const title = titled?.title().trim() ?? '';
+        void fire({
+          type: 'plan_update',
+          session: uri,
+          chat: chatUri,
+          harness: agent.provider,
+          ...(title === '' ? {} : { title }),
+          ...update,
+          ...(sender === undefined ? {} : { sender }),
+        });
+      },
       emit: (channel, action) => {
         const where = channel === 'chat' ? chatUri : uri;
         /*
@@ -1237,6 +1266,7 @@ export function createSpawn(ctx: HostContext): Spawn {
        */
       onAccount: (account) => { learnAccount(agent.provider, account); },
     });
+    titled = session;
     const held = sessions.get(uri) ?? {
       agent,
       chats: new Map<string, Session>(),

@@ -104,6 +104,12 @@ describe('the plan tools', () => {
       goal: 'Nothing.',
       scope: '/srv/work',
     })).rejects.toThrow('scope is a folder or a bot');
+    // A session's plan is the translation's, and no tool makes one.
+    await expect(run('plan_create', {
+      title: 'Nowhere',
+      goal: 'Nothing.',
+      scope: { kind: 'session', session: 'one' },
+    })).rejects.toThrow('scope is a folder or a bot');
   });
 
   it('changes a plan\'s title and status, and refuses an unknown status or plan', async () => {
@@ -141,6 +147,7 @@ describe('the plan tools', () => {
     expect(await run('plan_list', { scope: { kind: 'folder', folder: '/srv/work' } })).toBe('p1, active, Work');
     expect(await run('plan_list', { scope: { kind: 'bot', bot: 'pilot' } })).toBe('p2, draft, Pilot');
     expect(await run('plan_list', { scope: { kind: 'folder', folder: '/srv/elsewhere' } })).toBe('No plans.');
+    await expect(run('plan_list', { scope: { kind: 'session', session: 'one' } })).rejects.toThrow('scope is a folder or a bot');
     await expect(run('plan_list', { status: 'open' })).rejects.toThrow('status is one of draft, active, done, dropped');
   });
 

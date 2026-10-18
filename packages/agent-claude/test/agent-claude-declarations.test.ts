@@ -97,7 +97,7 @@ it('leaves the output style to the flag settings, which the CLI takes live', () 
 });
 
 it('holds a preset to the declared fields, and names the one that does not hold', () => {
-  expect(presetSchema({ sandbox: 'on', thinking: 'disabled', outputStyle: 'concise', env: { A: 'b' }, extraArgs: { flag: null } }, 'options.presets.work'))
+  expect(presetSchema({ sandbox: 'on', thinking: 'disabled', hostTasks: false, outputStyle: 'concise', env: { A: 'b' }, extraArgs: { flag: null } }, 'options.presets.work'))
     .toBeUndefined();
   expect(presetSchema({ temperature: 1 }, 'options.presets.work'))
     .toBe('options.presets.work.temperature is not an option a preset holds');
@@ -108,7 +108,7 @@ it('holds a preset to the declared fields, and names the one that does not hold'
 });
 
 it('says what an option is when nothing named one', () => {
-  expect(optionDefaults()).toEqual({ thinking: 'adaptive' });
+  expect(optionDefaults()).toEqual({ thinking: 'adaptive', hostTasks: true, enableTasks: true });
 });
 
 it('builds a session query from the declared values of its preset', async () => {

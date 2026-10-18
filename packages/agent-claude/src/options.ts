@@ -13,7 +13,7 @@
  * those drifted once already.
  */
 
-import type { Bag } from '@ahpd/sdk';
+import type { Bag, BoundTool } from '@ahpd/sdk';
 import { bag, fromEnvRef, secretRef } from '@ahpd/sdk';
 import { modelsProblem } from './models.js';
 
@@ -89,6 +89,57 @@ export const thinking: Declaration = {
 };
 
 /**
+ * The task tools Claude Code offers itself, which `hostTasks` leaves to the host.
+ *
+ * The tasks plugin offers `task_add` in their place, and a host tool is one road
+ * into the list the host keeps and every session shares.
+ */
+export const OWN_TASK_TOOLS = ['TodoWrite', 'TaskCreate', 'TaskUpdate', 'TaskList', 'TaskGet'] as const;
+
+/**
+ * Whether Claude leaves its own task tools to the host's.
+ *
+ * On by default. A session denies its own list only when the host offers the
+ * tasks plugin's `task_add`, because a host without it has nothing to put in
+ * their place. The setting is read where the query's deny list is built rather
+ * than turned into a query option of its own.
+ */
+export const hostTasks: Declaration = {
+  schema: {
+    type: 'boolean',
+    description: "Leave Claude's own task tools to the host's, when the host offers task_add. On by default.",
+  },
+  fallback: true,
+};
+
+/**
+ * Whether the host holds the task list instead of Claude.
+ *
+ * The tasks plugin's `task_add` is the tool that takes the five away, and
+ * `hostTasks` is the setting that lets it. Both are needed: a host with no
+ * task tool has nothing to put in their place. Read where the query is built
+ * and where Claude's own calls would be translated, so the two cannot disagree
+ * about whose list it is.
+ */
+export const hostHoldsTasks = (values: Bag, offering: BoundTool[]): boolean =>
+  values['hostTasks'] !== false && offering.some((one) => one.definition.name === 'task_add');
+
+/**
+ * Whether Claude's own task tools are turned on when Claude keeps them.
+ *
+ * On by default, and read where the CLI's environment is built: a session that
+ * keeps its own tools is started with `CLAUDE_CODE_ENABLE_TASKS=1`, unless a
+ * preset's own `env` gives the variable a value.
+ */
+export const enableTasks: Declaration = {
+  schema: {
+    type: 'boolean',
+    description: "Turn Claude's own task tools on when Claude keeps them. On by default.",
+  },
+  fallback: true,
+};
+
+/**
  * The voice the CLI answers in.
  *
  * The one option here the CLI takes live rather than at startup: it is in the
@@ -153,7 +204,7 @@ export const extraArgs: Declaration = {
 };
 
 /** Every declared option, by the name a preset gives it. */
-export const DECLARED: Record<string, Declaration> = { sandbox, thinking, outputStyle, env, extraArgs };
+export const DECLARED: Record<string, Declaration> = { sandbox, thinking, hostTasks, enableTasks, outputStyle, env, extraArgs };
 
 /**
  * What a preset holds beside the declared options, by the name it gives them.

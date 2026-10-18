@@ -94,11 +94,13 @@ describe('a plan record', () => {
       .toBe('the status is "open", which is not one of draft, active, done, dropped');
   });
 
-  it('takes a scope of a folder or a bot and refuses anything else', () => {
+  it('takes a scope of a folder, a bot or a session and refuses anything else', () => {
     expect(checkPlan(plan({ scope: { kind: 'folder', folder: '/srv/work' } }))).toBeUndefined();
     expect(checkPlan(plan({ scope: { kind: 'bot', bot: 'pilot' } }))).toBeUndefined();
-    expect(checkPlan({ ...plan(), scope: { kind: 'team', team: 'backend' } })).toBe('scope is neither a folder nor a bot');
-    expect(checkPlan({ ...plan(), scope: '/srv/work' })).toBe('scope is neither a folder nor a bot');
+    expect(checkPlan(plan({ scope: { kind: 'session', session: 'one' } }))).toBeUndefined();
+    expect(checkPlan({ ...plan(), scope: { kind: 'session', session: '' } })).toBe('a session scope has no session');
+    expect(checkPlan({ ...plan(), scope: { kind: 'team', team: 'backend' } })).toBe('scope is neither a folder, a bot nor a session');
+    expect(checkPlan({ ...plan(), scope: '/srv/work' })).toBe('scope is neither a folder, a bot nor a session');
   });
 
   it('keeps its goal as the long text, and a reviewed verdict', () => {

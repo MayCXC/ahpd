@@ -16,7 +16,7 @@ import type { Bag } from '../src/types/common.js';
 import type { HostEvent } from '../src/types/events.js';
 import type { HostOptions, ToolCall } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
-import type { Session } from '../src/types/session.js';
+import type { PlanUpdate, Session } from '../src/types/session.js';
 import type { SessionAction, SessionInputRequest, SessionState } from '@microsoft/agent-host-protocol';
 import type { Grant, Principal, Users } from '../src/types/users.js';
 import { ROOT } from '../src/host.js';
@@ -2760,5 +2760,137 @@ describe('a customization switched for one session', () => {
     // And nothing was kept, so the skill stays as the backend reports it.
     const plugin = await one.plugin();
     expect((plugin?.children as Record<string, unknown>[])[0]?.enablement).toBeUndefined();
+  });
+});
+
+/*
+ * A harness's own list, handed to the host by its backend.
+ *
+ * The backend sees the harness's task call and the host sees who made it, so
+ * the event is the seam: a plugin hears the list once, with the session it
+ * belongs to, without either side learning the other's format.
+ */
+describe('a harness list handed to the host', () => {
+  const ana: Principal = { id: 'ana', roles: [], can: () => true };
+
+  /** The example backend, with the start it was handed kept so a test can speak through it. */
+  const speaking = (untitled = false) => {
+    const base = echo({ path: '/home/softov', pace: 60 });
+    const heard: HostEvent[] = [];
+    let update: Start['planUpdate'];
+    let backendChat = '';
+    const agent: Agent = {
+      ...base,
+      provider: 'echo',
+      displayName: 'Echo backend',
+      create: (start: Start) => {
+        update = start.planUpdate;
+        backendChat = start.chatUri;
+        const inner = base.create(start);
+        // A backend that has nothing to call its session yet.
+        return untitled ? { ...inner, title: () => '' } : inner;
+      },
+    };
+    const context = (): LoaderContext => ({
+      path: '/home/softov', paths: ['/home/softov'], version: sdkVersion(), hostName: 'test',
+      configDir: '/home/softov', log: () => {}, say: () => {},
+    });
+    const { host: plugin, contribution } = pluginHost('probe', context());
+    plugin.on('plan_update', (event) => { heard.push(event); });
+    const { options } = foldHostOptions({
+      path: '/home/softov',
+      agents: [agent],
+      // A directory, because `sender` is what the host knows and not the backend.
+      users: {
+        resource: { resource: 'ahpd://users', resource_name: 'ahpd users', authorization_servers: [], required: false },
+        verify: async () => ana,
+      } as unknown as Users,
+    }, [contribution]);
+    return {
+      host: createHost(options),
+      heard,
+      /** The chat URI the backend itself was given. */
+      backendChat: () => backendChat,
+      /** Hand the host an update, once a session has started. */
+      say: (said: PlanUpdate) => {
+        if (update === undefined) throw new Error('no session was started');
+        update(said);
+      },
+    };
+  };
+
+  /** One session, its chat, and one turn a person sent in it. */
+  const opened = async (untitled = false) => {
+    const { host, heard, say, backendChat } = speaking(untitled);
+    const client = host.accept(peer(), ana);
+    await client.handle(hello(['0.9.0']));
+    await client.handle({ method: 'createSession', params: { channel: 'ahp-session:/list', provider: 'echo' } });
+    // The chat a client addresses, which is the one the client named it by.
+    const chat = 'ahp-chat:/list';
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: chat, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'plan it' } } },
+    });
+    await settle();
+    return { heard, say, chat: backendChat() };
+  };
+
+  it('hands a whole list with the session and the sender of the turn', async () => {
+    const { heard, say, chat } = await opened();
+    say({
+      turn: 't1',
+      tool: 'TodoWrite',
+      entries: [
+        { text: 'Read the plan', status: 'completed', priority: 'high' },
+        { text: 'Write the tasks', status: 'in_progress' },
+        { text: 'Leave the rest', status: 'pending', priority: 'low' },
+      ],
+    });
+    await settle();
+
+    expect(heard).toHaveLength(1);
+    expect(heard[0]).toMatchObject({
+      type: 'plan_update',
+      session: 'echo:/list',
+      chat,
+      turn: 't1',
+      harness: 'echo',
+      tool: 'TodoWrite',
+      sender: 'user:ana',
+      // The session took the turn's text as its title.
+      title: 'plan it',
+      entries: [
+        { text: 'Read the plan', status: 'completed', priority: 'high' },
+        { text: 'Write the tasks', status: 'in_progress' },
+        { text: 'Leave the rest', status: 'pending', priority: 'low' },
+      ],
+    });
+  });
+
+  it('hands one change with the harness id', async () => {
+    const { heard, say } = await opened();
+    say({ turn: 't1', tool: 'TaskUpdate', change: { id: '3', status: 'completed', text: 'Ship it' } });
+    await settle();
+
+    expect(heard).toHaveLength(1);
+    expect(heard[0]).toMatchObject({
+      type: 'plan_update',
+      session: 'echo:/list',
+      turn: 't1',
+      harness: 'echo',
+      tool: 'TaskUpdate',
+      change: { id: '3', status: 'completed', text: 'Ship it' },
+    });
+    expect(heard[0]).not.toHaveProperty('entries');
+  });
+
+  it('leaves the title off a session that has none', async () => {
+    const { heard, say } = await opened(true);
+    say({ turn: 't1', tool: 'TodoWrite', entries: [{ text: 'One step', status: 'pending' }] });
+    await settle();
+
+    expect(heard).toHaveLength(1);
+    expect(heard[0]).toMatchObject({ type: 'plan_update', session: 'echo:/list' });
+    expect(heard[0]).not.toHaveProperty('title');
   });
 });

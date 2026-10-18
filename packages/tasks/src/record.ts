@@ -132,8 +132,15 @@ export interface BotScope {
   bot: string;
 }
 
+/** A plan of a session: it holds the list a harness wrote in that session. */
+export interface SessionScope {
+  kind: 'session';
+  /** The session it belongs to, by id. */
+  session: string;
+}
+
 /** Where a plan belongs. A plan outlives the session that made it. */
-export type PlanScope = FolderScope | BotScope;
+export type PlanScope = FolderScope | BotScope | SessionScope;
 
 /**
  * What the `plans` collection keeps of one plan.
@@ -144,7 +151,7 @@ export type PlanScope = FolderScope | BotScope;
 export interface PlanRecord {
   /** The id, `p<n>`, counted up in the collection. */
   id: string;
-  /** The folder or bot it belongs to. */
+  /** The folder, bot or session it belongs to. */
   scope: PlanScope;
   /** What the plan is, in one line. */
   title: string;
@@ -212,7 +219,7 @@ const checkStamp = (value: unknown, where: string): string | undefined => {
   return undefined;
 };
 
-/** The scope a value names, or nothing when it names neither a folder nor a bot. */
+/** The scope a value names, or nothing when it names no folder, bot or session. */
 export function scopeOf(value: unknown): PlanScope | undefined {
   if (!isObject(value)) return undefined;
   if (value.kind === 'folder' && typeof value.folder === 'string' && value.folder !== '') {
@@ -221,15 +228,19 @@ export function scopeOf(value: unknown): PlanScope | undefined {
   if (value.kind === 'bot' && typeof value.bot === 'string' && value.bot !== '') {
     return { kind: 'bot', bot: value.bot };
   }
+  if (value.kind === 'session' && typeof value.session === 'string' && value.session !== '') {
+    return { kind: 'session', session: value.session };
+  }
   return undefined;
 }
 
-/** Why a scope is neither a folder nor a bot, or nothing when it is one. */
+/** Why a scope is not one of the three, or nothing when it is one. */
 const checkScope = (value: unknown): string | undefined => {
   if (scopeOf(value) !== undefined) return undefined;
   if (isObject(value) && value.kind === 'folder') return 'a folder scope has no folder';
   if (isObject(value) && value.kind === 'bot') return 'a bot scope has no bot';
-  return 'scope is neither a folder nor a bot';
+  if (isObject(value) && value.kind === 'session') return 'a session scope has no session';
+  return 'scope is neither a folder, a bot nor a session';
 };
 
 /** One line for a plan in a listing: its id, its status and its title. */

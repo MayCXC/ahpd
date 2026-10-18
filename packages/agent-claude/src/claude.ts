@@ -643,6 +643,8 @@ export function claude(options: ClaudeOptions): Agent {
       ...(start.onEditProposed ? { onEditProposed: start.onEditProposed } : {}),
       ...(start.onEditSettled ? { onEditSettled: start.onEditSettled } : {}),
       ...(start.onTurnRecorded ? { onTurnRecorded: start.onTurnRecorded } : {}),
+      // A harness's own task list, carried through as the host raised it for.
+      ...(start.planUpdate ? { planUpdate: start.planUpdate } : {}),
       ...(start.onHandshake ? { onHandshake: start.onHandshake } : {}),
       // The host's worker-chat seam, carried through unchanged: this backend
       // names a call and what the harness said about it, and the host opens

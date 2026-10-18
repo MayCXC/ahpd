@@ -32,13 +32,27 @@ Everyone sees every task and may change every one, for now. The stamps say who d
 | Field | What it is |
 | --- | --- |
 | `id` | `p<n>`, counted up in the collection. The host mints it |
-| `scope` | Where it belongs: `{"kind":"folder","folder":"/srv/work"}` or `{"kind":"bot","bot":"pilot"}` |
+| `scope` | Where it belongs: `{"kind":"folder","folder":"/srv/work"}`, `{"kind":"bot","bot":"pilot"}` or `{"kind":"session","session":"one"}` |
 | `title` | What the plan is, in one line |
 | `goal` | What the plan is for, in Markdown. It is the record's body |
 | `status` | `draft`, `active`, `done` or `dropped` |
 | `refs` | Links and references the plan needs |
 
 A plan starts as a `draft`. A task names its plan and a plan does not list its tasks: `plan_show` finds them.
+
+## A harness's own list
+
+A Claude or ACP session may also write the session's plan from the list its harness keeps. The backend is the only thing that sees the harness's calls, so it hands the host the whole list or one change to it, the host raises `plan_update`, and this plugin writes it. No task tool takes part.
+
+The plan is the session's: its scope is `{"kind":"session","session":"one"}`, it is called by the session's title, and `Session one` until the session has one, when a later list renames it. The goal stays empty, because a harness's list says nothing about what the plan is for. Every turn of the session writes the same plan, so the list survives the turn that sent it.
+
+A whole list matches each entry to a task of the plan by its text, taking the first task with that text no earlier entry took. An entry that matches none is a new task, `todo`, with `source` naming the tool and no id, because a whole list names no id. A step the list no longer holds is `dropped` rather than removed, so the record stays as the history of what the harness asked for. A list cleared after every step was `done` drops nothing: that is a harness tidying up, not a plan nobody wants.
+
+The four harness statuses map as `pending` to `todo`, `in_progress` to `doing`, `completed` to `done` and `deleted` to `dropped`. A priority is the same `high`, `medium` or `low` a host task has, and an entry that names none leaves the task at `medium`. A translated task keeps `source`, the tool that wrote it and the id the harness gave it where there is one.
+
+A single change names the task by the harness's id, in `change.id`, and finds the task whose `source.id` is that. A change to a task the plan does not hold needs the text it carries to add one; a change with no text is refused. A change with no status leaves the status where it is, and a task it adds starts `todo`.
+
+A Claude session writes a whole list with `TodoWrite`, and one change with `TaskCreate` or `TaskUpdate`, when it keeps its own tools (`hostTasks: false`). An ACP session writes a whole list with each `plan` update, which is the road a `codex-acp` session takes.
 
 ## The stamps
 

@@ -30,6 +30,7 @@ const AUTOMATIONS = 'ahp-automations://';
 
 const EVENT_NAMES: readonly EventName[] = [
   'session_start', 'session_end', 'session_opened', 'turn_start', 'turn_end', 'message', 'tool_call',
+  'plan_update',
   'input_needed_set', 'input_needed_removed',
   'client_connect', 'client_disconnect', 'authenticated', 'automation_fire',
   'resource_write', 'terminal_open', 'log',
