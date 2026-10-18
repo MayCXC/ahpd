@@ -168,6 +168,15 @@ importers:
         specifier: ^1.1.0-beta40
         version: 1.1.0
 
+  packages/tasks:
+    devDependencies:
+      '@ahpd/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+      '@cofold/agents':
+        specifier: ^0.4.0
+        version: 0.4.0
+
   packages/tunnel-devtunnel:
     devDependencies:
       '@ahpd/sdk':

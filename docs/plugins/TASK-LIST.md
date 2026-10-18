@@ -1,0 +1,153 @@
+# The task list
+
+`@ahpd/tasks` keeps one list of tasks and plans on the host, for every agent and every person. A task is a record of the `tasks` collection and a plan is a record of `plans`, so the list survives a restart and is read by whoever opens it. Every session is offered the same host tools, so a Claude, a pi and a cofold session work the same list - [How the tools reach a session](#how-the-tools-reach-a-session).
+
+Everyone sees every task and may change every one, for now. The stamps say who did what, and a later version may narrow that.
+
+## The task
+
+| Field | What it is |
+| --- | --- |
+| `id` | `t<n>`, counted up in the collection. The host mints it |
+| `title` | What the task is, in one line |
+| `status` | Where it is: `todo`, `doing`, `blocked`, `review`, `done` or `dropped` |
+| `priority` | How urgent it is: `high`, `medium` or `low`. `medium` where absent |
+| `labels` | Words a client groups tasks by |
+| `topic` | What the task is about, where one word says it |
+| `plan` | The plan it belongs to, by plan id. Absent for a task in the flat list |
+| `bot` | The bot it belongs to, by slug |
+| `folder` | The folder it was made in, as text |
+| `session` | The session it was made in, as text, so removing the session leaves a valid task |
+| `blockedBy` | Task ids that must be `done` before this one is ready |
+| `active` | What is being done right now, in one line, while the status is `doing` |
+| `note` | One line about where the task stands |
+| `refs` | Links and references the task needs |
+| `source` | On a translated task only: `{ tool, id }`, the tool that wrote it and the id it has in that harness |
+| `body` | The long text of the task, in Markdown. It is the record's body |
+
+`todo` is where a task starts. A task moves by `task_set`, and the host stamps the move.
+
+## The plan
+
+| Field | What it is |
+| --- | --- |
+| `id` | `p<n>`, counted up in the collection. The host mints it |
+| `scope` | Where it belongs: `{"kind":"folder","folder":"/srv/work"}` or `{"kind":"bot","bot":"pilot"}` |
+| `title` | What the plan is, in one line |
+| `goal` | What the plan is for, in Markdown. It is the record's body |
+| `status` | `draft`, `active`, `done` or `dropped` |
+| `refs` | Links and references the plan needs |
+
+A plan starts as a `draft`. A task names its plan and a plan does not list its tasks: `plan_show` finds them.
+
+## The stamps
+
+A task has five stamps, each with `at`, `by` and `in`: when it was written, who the call was by, and the session it was made in.
+
+| Stamp | When the host writes it |
+| --- | --- |
+| `created` | With `task_add`, once |
+| `approved` | With `task_approve`, and again each time somebody approves it |
+| `started` | At the first `doing`, and never again |
+| `finished` | Once, at the first of `review`, `done` or `dropped` |
+| `reviewed` | With `task_review`, and again on each review. It may carry a `verdict` of `approved` or `changes` |
+
+A plan has four: `created`, `approved`, `finished` and `reviewed`. `finished` is stamped at the first move to `done` or `dropped`.
+
+The host writes every stamp from the call: no tool takes a stamp as input, so a model cannot say when a task started or who approved it. `by` is the person behind the call, the session's owner where nobody is behind it, and `host` where the session has no owner either. `in` is the session the call was made in, as text.
+
+## The tools
+
+Each tool answers in one line per item, so a model reads a list in a turn rather than a tree of JSON. Tasks answer `id, status, priority, title` and plans answer `id, status, title`.
+
+| Tool | Inputs | What it does |
+| --- | --- | --- |
+| `plan_create` | `title`, `goal`, `scope`, `refs` | Makes a plan, `draft`, with a `created` stamp |
+| `plan_set` | `plan`, `title`, `status` | Changes a plan's title or status |
+| `plan_show` | `plan` | Answers the plan and one line per task that names it |
+| `plan_list` | `scope`, `status` | Lists plans, filtered |
+| `task_add` | `title`, and any of `priority`, `labels`, `topic`, `plan`, `bot`, `folder`, `session`, `blockedBy`, `active`, `note`, `refs`, `body` | Makes a task, `todo`, with a `created` stamp. A new task is always `todo` |
+| `task_set` | `task`, and any of the fields `task_add` takes, `status` among them | Changes the fields it names. Stamps `started` and `finished` at the first move to those statuses, and clears `active` when the task leaves `doing` |
+| `task_list` | `status`, `approved`, `ready`, `by`, `since` | Lists tasks, filtered |
+| `plan_approve` | `plan` | Stamps a plan `approved`. Needs `task:approve` |
+| `task_approve` | `task` | Stamps a task `approved`. Needs `task:approve` |
+| `task_review` | `task`, `verdict` | Stamps a task `reviewed`, with `approved` or `changes` where a verdict is given. Asks no grant |
+
+`task_list` reads its filters against a whole task. `by` and `since` match any of the five stamps, so a task appears under the person who created it, approved it or touched its start, finish or review. `ready` is a `todo` task whose every `blockedBy` task is `done`, and, with approval on, one that has an `approved` stamp.
+
+## The task record
+
+Each task is a file of the host's record store, its fields as YAML frontmatter and its `body` as the Markdown below. A plan is kept the same way, with `goal` as the body.
+
+```md
+---
+id: t1
+title: Read the plan
+status: doing
+priority: high
+labels:
+  - docs
+topic: tasks
+plan: p1
+bot: pilot
+folder: /srv/work
+session: ahp-session:/one
+blockedBy: []
+refs: []
+active: Reading the plan
+created:
+  at: 2026-10-18T10:00:00.000Z
+  by: ana
+  in: ahp-session:/one
+approved:
+  at: 2026-10-18T10:01:00.000Z
+  by: bob
+  in: ahp-session:/two
+started:
+  at: 2026-10-18T10:02:00.000Z
+  by: ana
+  in: ahp-session:/one
+---
+
+The long text of the task.
+```
+
+A record that is not a task - a field of the wrong type, an id that is not `t<n>`, a status or a priority that is not one of those above - is reported and left out of the list.
+
+## The approve grant
+
+`plan_approve` and `task_approve` ask the person behind the call for `task:approve`. A role of that one grant is the smallest way to let somebody approve:
+
+```json
+{
+  "roles": {
+    "approver": ["task:approve"]
+  },
+  "users": [
+    { "id": "ana", "roles": ["approver"], "token": "sha256:…" }
+  ]
+}
+```
+
+A host with no user directory has nobody to ask, and its tools act as they always did. Under one, a turn nobody sent - a host's own, or one reached after its turn ended - holds no grant and cannot approve. `task_review` asks for none, so a session may review without holding the approve grant.
+
+## The settings
+
+```json
+{
+  "plugins": [
+    { "name": "@ahpd/tasks", "options": { "requireApproval": true, "sweepAfterDays": 30 } }
+  ]
+}
+```
+
+| Option | Default | What it does |
+| --- | --- | --- |
+| `requireApproval` | `false` | Whether `task_set` refuses to move a task to `doing` until it has an `approved` stamp. `ready` in `task_list` also asks for one |
+| `sweepAfterDays` | absent | How many days a `done` or `dropped` plan is kept, with the tasks that name it. Absent keeps it forever, which is the default |
+
+The sweep looks once when the plugin is applied and then every hour. It removes a finished plan and every task that names it, once the newest stamp among them is older than the setting. A plan that is `draft` or `active` never goes.
+
+## How the tools reach a session
+
+The plugin registers each tool with `host.registerTool`, and the host folds it into the tools every session is offered. A harness needs no change: pi gets the tool as a pi tool and cofold as a host tool, and both call the same `run` on the same list.

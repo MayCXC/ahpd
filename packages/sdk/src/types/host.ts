@@ -803,6 +803,18 @@ export interface ToolCall {
   /** The turn the call is running in, when the chat has one running. */
   turn(): string | undefined;
   /**
+   * Who is behind this call: a person's id, a session's owner, or `host`.
+   *
+   * Read from the sender of the turn the call is running in, which is the only
+   * thing that carries a person: a window outlives the turn it sent, and a
+   * tool reached after that turn ended has nobody to name. Where no turn is
+   * running, or the one that is was sent by nobody this host knows, the
+   * session's owner answers, and where the session has no owner the host
+   * itself is the name. A stamp written from a call always names something,
+   * and never the model that asked for it.
+   */
+  person(): string | undefined;
+  /**
    * Whether this call may do that here.
    *
    * Always true on a host with no users directory, where there is nobody to

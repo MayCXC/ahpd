@@ -1344,6 +1344,26 @@ export function createTooling(ctx: HostContext): Tooling {
   };
 
   /**
+   * Who a stamp names for a call in one chat.
+   *
+   * The turn's sender is the only thing that carries a person, so it answers
+   * first, as the person this host knows behind that owner where it knows
+   * them. A root turn is the host itself rather than somebody, and so is a
+   * call with no turn running: the session's owner answers there, and `host`
+   * where the session has no owner either. A name is always answered, because
+   * a stamp that says nobody cannot be acted on.
+   */
+  const personOfCall = (uri: string, chatUri: string): string => {
+    const turn = activeTurnOf(chatUri);
+    const sender = turn === undefined ? undefined : senderOf(turn);
+    if (sender !== undefined) {
+      return sender.startsWith('root:') ? 'host' : principalFor(sender)?.id ?? sender;
+    }
+    const owner = kept.owner(idOf(uri));
+    return owner === undefined || owner.startsWith('root:') ? 'host' : owner;
+  };
+
+  /**
    * The turn a tool is about to begin, written down as the calling turn's.
    *
    * A tool that begins a turn in another chat begins it for whoever sent the
@@ -1372,6 +1392,7 @@ export function createTooling(ctx: HostContext): Tooling {
     chat: chatUri,
     ...providerOf(uri, provider),
     turn: () => activeTurnOf(chatUri),
+    person: () => personOfCall(uri, chatUri),
     may: (grant) => mayDo(chatUri, grant),
     refusal: (grant) => refusalOf(chatUri, grant),
     /*
