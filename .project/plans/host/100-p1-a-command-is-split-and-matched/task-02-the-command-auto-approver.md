@@ -1,6 +1,6 @@
 ---
 title: The command auto approver
-status: todo
+status: implemented
 depends: [task-01-a-command-line-is-split.md]
 layer: sdk
 refs:
@@ -37,7 +37,12 @@ It takes `split` as an argument.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `CommandAutoApprover`, `CommandApprovalOptions`, the rule compiler and the two matchers are in `packages/sdk/src/commandautoapprover.ts`, exported from `packages/sdk/src/index.ts`. `packages/sdk/test/commandautoapprover.test.ts` is new, 45 cases, all passing. `matchCommands` denies an in-place sed, as upstream's `_matchSubCommands` does.
+- **Next action:** the review of this task.
 - **Open questions:** none.
-- **Watch out for:** a deny rule means "ask" for the caller, not "refuse"; the result names stay VS Code's.
+- **Watch out for:** a deny rule means "ask" for the caller, not "refuse"; the result names stay VS Code's. The sed check denies before an allow rule is read, so no allow rule can lift it.
+- **Ported from VS Code's test file:** the empty line, the unknown command, the forwarded rules and the `null` entry. Also the empty table, the prefix and regex keys and the endless-loop key. Also `matchCommandLine` in both directions, the transient variable and the shell state mutations. Also the compound line, the splitter as an argument and the PowerShell case-insensitivity. Also the PowerShell `(` slice and the casing of a command-line rule. Also the git sub-commands, the git writes, the git grep pager options and the case of `-C`.
+- **Ported too, now that the tables are here:** the sort rules and the compress-program abbreviations, and the sed scripts that execute or write. The in-place sed forms and their exact-allow-rule case. The PowerShell cmdlets the table names, their case-insensitivity, and the refusal to match a cmdlet by its verb.
+- **Ported with this reading's answer:** `Write-Host $(Get-Date)` is `noMatch` here where upstream approves it by walking the subexpression. A script block is `noMatch` where upstream denies what it finds inside. Both are the same "ask", under a different name.
+- **Not ported, with why.** The `evaluate` result-shape cases, because `evaluate` returns the result string. The option sets that forward the git table alone, because the three tables are not exported; the default table carries their entries. The predicate cases (`isWriteDestApproved`), because the write check here is a folder and its edit patterns. The tree-sitter and initialization cases, because this file has no grammar. `Write-Host hi>../../outside.txt`, where upstream reads one argument and approves it; this reading sees a redirect and asks.
+- **Departed from the plan:** `evaluate` returns a `CommandApprovalResult` string rather than an `{ result, autoApproveRuleResolvable }` pair. The plan names the three results and nothing else, and the second field is upstream's, for a dialog. The parse-safety rule lives in `splitCommand`, because this reading is the parser.
