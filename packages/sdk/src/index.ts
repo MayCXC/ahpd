@@ -101,5 +101,10 @@ export { uriFor, idFor, idOf, Status, statusOf, activityOf, titleFrom } from './
 export type { Activity, StatusBits } from './catalog.js';
 export { tail, older, PAGE } from './paging.js';
 export { callTimes, withCallTimes, startOf } from './timing.js';
+export { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES, splitCommand } from './commandautoapprover.js';
+export type {
+  CommandApprovalOptions, CommandApprovalResult, CommandShell, CommandSplit, CommandSplitter,
+  TerminalAutoApprovePatterns, TerminalAutoApproveRuleValue, TerminalAutoApproveRules,
+} from './commandautoapprover.js';
 
 export type * from './types/index.js';
