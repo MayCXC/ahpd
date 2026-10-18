@@ -334,13 +334,6 @@ export interface HostOptions {
    */
   policiesPayOrder?: PayOrder;
   /**
-   * Whether a person reads the limits whose scope holds them.
-   *
-   * On by default. A host that turns it off answers a person only the general
-   * figures, and an operator holding `policy:read` reads every row either way.
-   */
-  policiesOwnLimits?: boolean;
-  /**
    * Tools this host contributes to every session it runs.
    *
    * The protocol's `serverTools`: tools that are the *host's* rather than a

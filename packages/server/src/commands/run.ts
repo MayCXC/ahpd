@@ -859,10 +859,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // said otherwise.
     policies,
     policiesCheck: options.policiesCheck,
-    // Which row of one scope pays first, and whether a person reads the limits
-    // that hold them. `policies.payOrder` and `policies.ownLimits`.
+    // Which row of one scope pays first: `policies.payOrder`.
     policiesPayOrder: options.policiesPayOrder,
-    policiesOwnLimits: options.policiesOwnLimits,
     /*
      * When, as well as what.
      *
@@ -910,10 +908,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     usage: store,
     ...(options.usageTimezone === undefined ? {} : { timezone: options.usageTimezone }),
     // The rows `usage://limits` answers. A person reads the limits their scopes
-    // hold while `policies.ownLimits` is on, which is its default; the setting
-    // has no configuration key yet, so the default is what is passed.
+    // hold while `policies.ownLimits` is on, which is its default.
     policies,
-    ownLimits: true,
+    ownLimits: options.policiesOwnLimits,
     // The titles a pool is named with, read from the same directory the gate asks.
     ...(users === undefined ? {} : { titles: users }),
     onProblem: (message) => process.stdout.write(`${message}\n`),
