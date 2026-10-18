@@ -1,6 +1,6 @@
 ---
 title: A test opens a session in its asked mode
-status: todo
+status: implemented
 depends: [task-01-the-open-sends-the-asked-mode.md]
 layer: "packages/agent-acp"
 refs:

@@ -446,7 +446,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [14 - An ACP prompt reads a referenced file only within the limits, and a queued message keeps its attachments](acp/14-a-referenced-file-is-read-within-the-limits/plan.md) | high | built 2026-10-07 ([implemented.md](acp/14-a-referenced-file-is-read-within-the-limits/implemented.md)) | host 68 | - |
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
 | [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
-| [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | planned 2026-10-16 | - | - |
+| [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | active 2026-10-18; tasks 01-02 implemented | - | - |
 
 Next free number in `acp`: `17`.
 
