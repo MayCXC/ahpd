@@ -627,6 +627,41 @@ describe('the session tools, which an install may switch off', () => {
     expect((await push({ sessionTools: null })).map((one) => one.name)).toContain('list_sessions');
     expect(await offered(client, uri)).toContain('list_sessions');
   });
+
+  it('stay off as the line set them when a push names neither key', async () => {
+    // The file holds no session tool key, so only the host's option says off.
+    const held: Record<string, unknown> = {};
+    const rootConfig: NonNullable<HostOptions['rootConfig']> = {
+      schema: () => ({
+        type: 'object',
+        properties: {
+          sessionTools: { type: 'boolean', title: 'Session tools', description: 'Offer the session tools.' },
+          closedChats: { type: 'string', enum: ['hidden', 'delete'], title: 'Closed chats', description: 'What closing a chat does.' },
+        },
+      }),
+      values: async () => ({ ...held }),
+      write: async (values) => {
+        for (const [key, one] of Object.entries(values)) held[key] = one;
+        return {};
+      },
+    };
+    const host = createHost({
+      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), tools: hostTools(),
+      rootConfig, sessionTools: false,
+    });
+    const p = peer();
+    const client = host.accept(p);
+    await client.handle(hello(['0.9.0'], { initialSubscriptions: [ROOT] }));
+    const uri = 'ahp-session:/line';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude' } });
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+
+    p.notes.length = 0;
+    await client.handle({ method: 'dispatchAction', params: { channel: ROOT, action: { type: 'root/configChanged', config: { closedChats: 'delete' } } } });
+    await settle();
+    expect(actions(p, uri).filter((one) => one.action.type === 'session/serverToolsChanged')).toHaveLength(0);
+    expect(await offered(client, uri)).toEqual(HOST_OWN);
+  });
 });
 
 describe('the MCP servers a session is offered', () => {
