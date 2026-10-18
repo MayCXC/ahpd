@@ -1,6 +1,6 @@
 ---
 title: The paths the Windows run found
-status: todo
+status: implemented
 depends: []
 layer: sdk, server
 refs:
@@ -29,3 +29,15 @@ The two path cases that the Windows run of 2026-10-18 found pass on Windows.
 
 - Both cases pass on Windows.
 - The sdk and server tests pass on Linux.
+
+## Resume
+
+Done 2026-10-18. Not reviewed.
+
+`sessiontools.test.ts` needed no change. Task 02 had already built the spaced folder with `join(tmpdir(), ...)` and its URIs with `uriOf` after the Windows run at `71166379` that this task cites. The three workspace forms the case sends all resolve to one path under Node's Windows rules, checked through `pathToFileURL` and `fileURLToPath` with the `windows` option.
+`config-layers.test.ts` expects `resolve('/trees')` in place of the literal `/trees`, because `options.ts` resolves a typed root and Windows answers the current drive's root instead of `/`.
+
+Gates run: `pnpm -s schema`, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
+Vitest on `config-layers.test.ts` and `sessiontools.test.ts` with `--maxWorkers=2 --testTimeout=10000`: 47 tests pass.
+
+The Windows half of Validation cannot run here: this host is Linux and the `check-windows` job is not built. A run of p1's job, or Softov's Windows machine, is the check for both cases.
