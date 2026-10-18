@@ -68,10 +68,10 @@ The terminal tests run on Windows instead of skipping.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A terminal picks a Windows shell](task-01-a-terminal-picks-a-windows-shell.md) | todo | - |
-| [02 - A command runs in PowerShell](task-02-a-command-runs-in-powershell.md) | todo | 01 |
-| [03 - A terminal stops on Windows](task-03-a-terminal-stops-on-windows.md) | todo | 02 |
-| [04 - The terminal tests run on Windows](task-04-the-terminal-tests-run-on-windows.md) | todo | 03 |
+| [01 - A terminal picks a Windows shell](task-01-a-terminal-picks-a-windows-shell.md) | implemented | - |
+| [02 - A command runs in PowerShell](task-02-a-command-runs-in-powershell.md) | implemented | 01 |
+| [03 - A terminal stops on Windows](task-03-a-terminal-stops-on-windows.md) | implemented | 02 |
+| [04 - The terminal tests run on Windows](task-04-the-terminal-tests-run-on-windows.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -80,10 +80,10 @@ The terminal tests run on Windows instead of skipping.
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 with Softov's answer.
-- **Next action:** build task 01 when p1's Windows job runs.
-- **Open questions:** none.
-- **Watch out for:** under `shell: bash` on the runner, `SHELL` names a Git Bash path. On Windows it is not read.
+- **Done so far:** planned 2026-10-16 with Softov's answer. Tasks 01, 02 and 03 implemented 2026-10-16. `shellOf` picks the Windows shell. A command reaches it as `-NoProfile -Command` with PowerShell quoting, as `/d /s /c` with `cmd.exe` quoting, or as `-c` as before. `cmd.exe`'s line is wrapped in outer quotes and passed verbatim, which is what Node's `shell: true` does. `^C` and `close` end the shell's tree on Windows with `taskkill /pid <pid> /T /F`. They do not signal a negative pid. Task 04 implemented 2026-10-18. Its files came from the tree in place of p1's list. Every command sent to a real shell was checked. The two tests that passed `command: 'true'` now pass `echo`. The gates pass, and the sdk suite passes 3006 with `--maxWorkers=2 --testTimeout=10000`.
+- **Next action:** none in this plan. What is left is p1's Windows job, which must run before the validation of tasks 03 and 04 can be checked.
+- **Open questions:** task 03 step 1 asked for `taskkill /pid <pid> /T` to be tried on the runner. The runner is Linux and has no `taskkill`, so nothing was observed. `^C` runs the same `/T /F` call. Whether `/T` alone would stop a command under pipes is unverified until the Windows job runs.
+- **Watch out for:** under `shell: bash` on the runner, `SHELL` names a Git Bash path. On Windows it is not read. Task 04 took its files from the tree because p1's list does not exist. The POSIX `cwd` values in those files (`file:///tmp`, `file:///home/softov`) are p2's, and they keep these files from passing on Windows until p2 lands.
 
 ## Final verification checklist
 

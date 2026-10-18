@@ -1,6 +1,6 @@
 ---
 title: The terminal tests run on Windows
-status: todo
+status: implemented
 depends: [task-03-a-terminal-stops-on-windows.md]
 layer: sdk
 refs:
@@ -32,3 +32,17 @@ A command in them is one that PowerShell and a POSIX shell both run.
 - The sdk tests pass on Linux.
 
 ## Resume
+
+Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` pass. The sdk suite passes 3004 tests with `--maxWorkers=2 --testTimeout=10000`.
+
+Step 1 takes files from p1's list. p1 is not built. No Windows job is in `.github/workflows/ci.yml`, and the parent plan's Resume has no list. The files were taken from the tree instead, the departure this task depends on. The sdk test files that start `shellTerminals` are twelve, plus `support/host.ts`. Two more, `host-terminals.test.ts` and `host-tools.test.ts`, reach the real store through `machine()`, so they are in scope too.
+
+Steps 2 and 3 found almost nothing to change. The commands sent to a real shell are `echo`, `pwd`, `sleep`, `sleep 30`, `exit 3`, `exit 5`, `git commit -am x`, `process.execPath`, and `echo` with `args` in the ACP fixture. All of them are commands PowerShell runs as well: `pwd`, `sleep` and `echo` are aliases there, and the arithmetic in `echo OWNER-$((1+1))` is a PowerShell subexpression. Two tests passed `command: 'true'`, which is a POSIX program and not a PowerShell command, so both now pass `echo`: `host-tools.test.ts` and `host-close.test.ts`.
+
+Step 4 had no work. No test compares shell output exactly. The comparisons are `toContain`, `includes`, or the ACP fixture's `.trim()`, so a `\r\n` does not reach any of them.
+
+Validation: the sdk tests pass on Linux. The first half, that the Windows job passes these files, cannot be checked here: there is no Windows job. These files also carry POSIX `cwd` values (`file:///tmp`, `file:///home/softov`), which are p2's to fix and keep the files from passing until p2 lands.
+
+The first full run failed one case in `nested-proxy.test.ts` under load. It passed alone, and the second full run passed all 3004.
+
+The suite rewrote `packages/sdk/test/fixtures/wire.jsonl` again. The restore was denied here, so Softov reverts it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

@@ -1,6 +1,6 @@
 ---
 title: A command runs in PowerShell
-status: todo
+status: implemented
 depends: [task-01-a-terminal-picks-a-windows-shell.md]
 layer: sdk
 refs:
@@ -39,3 +39,17 @@ The spawn opens no console window.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs`, `git diff --quiet tools/` and `pnpm -s exec vitest run packages/sdk` pass, 3001 tests.
+
+Files changed:
+- `packages/sdk/src/terminals.ts` - `kindOf` names the kind from the shell's file name (`pwsh`/`pwsh.exe`/`powershell`/`powershell.exe`, `cmd`/`cmd.exe`, everything else POSIX). `flagOf` gives PowerShell `-NoProfile -Command`, `cmd.exe` `/d /s /c` and a POSIX shell `-c`. `argvLine` quotes each word. PowerShell gets doubled single quotes behind `&`. `cmd.exe` gets double quotes. POSIX gets the form as before. `psQuoted` and `cmdQuoted` sit beside `quoted`. `WINDOWS` is read once. The pipe spawn sets `windowsHide: true` and leaves `detached` off on Windows.
+- `packages/sdk/test/pty.test.ts` - four cases. PowerShell with a line and with an argv holding `it's`. `cmd.exe` with a line and with an argv. A POSIX shell with both. No flag at all with no command. The fake pty now records the shell and the argv it was started with, which is where a case reads them.
+
+Two things this task does not decide:
+- Nothing checks `windowsHide` or the missing `detached`. Both are options to a real `spawn`. A case here runs on Linux, where the pipe path starts a real process. The Validation names only the arguments.
+- A kind is read with the runtime's own `basename`, so a case names a file (`pwsh.exe`) rather than a `C:\...` path. A Windows path splits on Windows, which is the machine the branch is for.
+
+Fixed 2026-10-18: `cmd.exe` was handed a broken line. Node's spawn turns an argv into a Windows command line with backslash escapes for inner quotes, and `cmd.exe` reads no such escape. So `"C:\Program Files\tool.exe"` and a typed `echo "a"` both arrived broken. Both paths now do what Node's own `shell: true` does. The pipe spawn wraps the line in double quotes and sets `windowsVerbatimArguments: true`, which `/s` strips. The pty path hands `node-pty` the whole line as one string, which it passes verbatim on Windows. `packages/sdk/src/types/terminals.ts` widened `SpawnPty`'s args to `string[] | string` for that, and the server's cast and the test fake still fit. A new `SpawnShell` seam, in the style of `RunQuietly`, is how a case reads the pipe spawn's options. PowerShell and POSIX quoting is unchanged. `pty.test.ts` has the one-line `cmd.exe` cases and the new pipe case. The gates and the sdk suite pass, 3006 tests.
+
+The suite rewrote `packages/sdk/test/fixtures/wire.jsonl` again. The restore was denied here, so Softov reverts it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

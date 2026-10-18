@@ -1,6 +1,6 @@
 ---
 title: A terminal picks a Windows shell
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -40,3 +40,17 @@ Off Windows it answers as now.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 
 ## Resume
+
+Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs`, `git diff --quiet tools/` and `pnpm -s exec vitest run packages/sdk` pass.
+
+Files changed:
+- `packages/sdk/src/terminals.ts` - `windowsShell` reads `%ProgramFiles%\PowerShell\7\pwsh.exe`, then `pwsh.exe` on `PATH`, then `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`, then `ComSpec`, then `cmd.exe`. `shellOf` is exported. It takes the asked shell, the platform, the environment and the file check. It reads `SHELL` only off Windows. The title comes from `basename`.
+- `packages/sdk/test/pty.test.ts` - seven cases. PowerShell 7 installed. PowerShell 7 on `PATH`. The Windows PowerShell. `ComSpec` and then `cmd.exe`. `SHELL` not read. `SHELL` then `/bin/sh` off Windows. The asked shell wins on either system.
+
+Past the Files section, and why:
+- `shellOf` also takes the platform. The task names the environment and the file check. Without the platform, a build that runs on Linux cannot exercise the Windows branch at all. The Validation asks for four cases on `win32`. `packages/server/src/install.ts`'s `launch` is the same shape.
+- `packages/sdk/src/host/terminals.ts:86`, `docs/sdk/TERMINALS.md:45` and `docs/sdk/USERS.md:378` each said the daemon's shell is `$SHELL` and then `/bin/sh` and no more, which the Windows branch makes false.
+
+The suite rewrote `packages/sdk/test/fixtures/wire.jsonl` (the endpoint line and the `ahpd.` `_meta` lines). The restore was denied here, so Softov reverts it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+
+`pnpm -s exec vitest run packages/sdk` on a loaded box timed out three machine tests at 5s; `--maxWorkers=2 --testTimeout=10000` passes all 2997.
