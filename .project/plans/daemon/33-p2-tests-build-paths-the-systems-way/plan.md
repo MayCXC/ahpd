@@ -63,8 +63,8 @@ agent-claude finds the user's folders on Windows.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - agent-claude's tests build their paths](task-01-agent-claudes-tests-build-their-paths.md) | todo | - |
-| [02 - The sdk's tests build their paths](task-02-the-sdks-tests-build-their-paths.md) | todo | - |
+| [01 - agent-claude's tests build their paths](task-01-agent-claudes-tests-build-their-paths.md) | implemented | - |
+| [02 - The sdk's tests build their paths](task-02-the-sdks-tests-build-their-paths.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -72,9 +72,9 @@ agent-claude finds the user's folders on Windows.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16.
-- **Next action:** build task 01 when p1's failure list is in the parent.
-- **Open questions:** none.
+- **Done so far:** drafted 2026-10-16, planned 2026-10-16, and both tasks implemented 2026-10-18.
+- **Next action:** run the Windows job with p1's checks and these two tasks, and read the failures it lists.
+- **Open questions:** p1 is not built, so the failing tests by file are unknown. Both tasks derived their files from the plan's refs and p3's and p5's Resumes.
 - **Watch out for:** a fixture file under `test/fixtures` holds POSIX URIs that VS Code sent. It stays as it is.
 
 ## Final verification checklist
