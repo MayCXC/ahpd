@@ -107,7 +107,8 @@ export interface Options {
    */
   usagePer: 'turn' | 'report';
   /**
-   * The zone a day and a week start in, as `Intl` names it.
+   * The zone a day and a week start in, and the store keeps its days in, as
+   * `Intl` names it.
    *
    * Absent is the system's own zone. A week that begins on the system's Monday
    * day is what this is for, so it has no flag, as a zone is a fact about where
@@ -596,7 +597,7 @@ export const serverFields = {
       per: { type: 'string', enum: ['turn', 'report'] },
       timezone: { type: 'string' },
     },
-    description: 'How a turn is written down: per "turn" writes one record when the turn ends, which is the default, and per "report" writes one record for every usage report a turn sends. timezone names, as Intl names one, the zone a day and a week start in, and is the system\'s own zone when it is absent. Set in the configuration file only.',
+    description: 'How a turn is written down: per "turn" writes one record when the turn ends, which is the default, and per "report" writes one record for every usage report a turn sends. timezone names, as Intl names one, the zone a day and a week start in and the zone the store keeps its days in, and is the system\'s own zone when it is absent. Set in the configuration file only.',
   },
   wire: {
     type: 'string',

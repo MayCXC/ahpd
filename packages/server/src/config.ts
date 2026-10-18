@@ -51,7 +51,8 @@ export interface UsageSetting {
   /** `turn` writes one record when a turn ends, `report` one per report. */
   per?: 'turn' | 'report';
   /**
-   * The zone a day and a week start in, as `Intl` names one.
+   * The zone a day and a week start in, and the store keeps its days in, as
+   * `Intl` names one.
    *
    * Absent is the system's own. It is what makes a week begin on Monday where
    * the deployment is rather than where the reader happens to be.
