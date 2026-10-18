@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
 import { memoryRecords } from '../../sdk/src/records.js';
@@ -93,6 +94,9 @@ function made(tokens: Record<string, Grant[]> = {}, people = true) {
     configDir: join(root, 'config'),
     log: () => {},
     say: () => {},
+    // The host's YAML, which a bot's `AGENTS.md` is read and written with.
+    parseYaml,
+    stringifyYaml,
   };
   const sessions = memorySessions();
   const records = memoryRecords();

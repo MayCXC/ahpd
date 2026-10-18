@@ -268,11 +268,16 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
       /*
        * The folder before the session, because the session starts in it and
        * reads what is there: a bot whose `AGENTS.md` has not been written yet
-       * is one that starts without its rules. The text is the bot's template
-       * filled with its words, so a bot made without instructions still gets a
-       * file, one that tells it to ask what it is for. A write that fails is
-       * the caller's refusal, which is the same notice a start the host
-       * refused gets - the person is waiting either way.
+       * is one that starts without its rules.
+       *
+       * A make writes the file already, so what this normally finds is a folder
+       * that has one and is left alone - it is the `wx` in `prepareFolder` that
+       * keeps a file the bot or its owner changed. It still writes a file where
+       * there is none: a make whose write failed, and a folder a person emptied.
+       * The text is the same the make uses, so the file is the one a bot made
+       * today would have had. A write that fails is the caller's refusal, which
+       * is the same notice a start the host refused gets - the person is waiting
+       * either way.
        *
        * Not for a bot that works in a computer: its folder is the machine's,
        * made there when the session starts, and a folder written here would be

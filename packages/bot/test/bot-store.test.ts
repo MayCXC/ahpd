@@ -1,10 +1,15 @@
-import { expect, it } from 'vitest';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, expect, it } from 'vitest';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { memoryRecords } from '../../sdk/src/records.js';
 import { backSessions } from '../src/names.js';
 import { botProvider } from '../src/provider.js';
 import { botStore } from '../src/store.js';
 import type { BotProvider } from '../src/provider.js';
 import type { BotStore } from '../src/store.js';
+import type { BotRecord } from '../src/record.js';
 import type { RecordCollection, RecordStore, StoredRecord } from '../../sdk/src/types/records.js';
 import type { Write } from '../../sdk/src/types/resources.js';
 
@@ -32,6 +37,18 @@ const held = async (collection: RecordCollection, id: string): Promise<StoredRec
   return one;
 };
 
+/** The YAML a bot's `AGENTS.md` is read and written with, which the host gives a plugin. */
+const yaml = { parseYaml, stringifyYaml };
+
+/**
+ * The `AGENTS.md` a bot with no file is given here.
+ *
+ * A template, in the shape a bot's file has, filled with its words - what the
+ * plugin's own seam makes from the default file.
+ */
+const agents = async (one: BotRecord): Promise<string> =>
+  `# ${one.name}\n\n## Instructions\n\n${one.instructions ?? ''}\n`;
+
 /** A record as the `bots` collection holds one, with the parts a bot needs. */
 const bot = (id: string, rest: Record<string, unknown> = {}): StoredRecord => ({
   id,
@@ -39,30 +56,46 @@ const bot = (id: string, rest: Record<string, unknown> = {}): StoredRecord => ({
   labels: [],
   body: 'robot',
   color: 'red',
-  workspace: `/tmp/bots/${id}`,
+  workspace: join(root, 'bots', id),
   owner: 'user:soft',
   createdAt: '2026-10-11T00:00:00.000Z',
   updatedAt: '2026-10-11T00:00:00.000Z',
   ...rest,
 });
 
+/** A temporary root, so no case writes into a folder a person actually has. */
+let root = '';
+let loose: string[] = [];
+beforeEach(() => {
+  loose = [];
+  root = mkdtempSync(join(tmpdir(), 'ahpd-bot-store-'));
+  loose.push(root);
+});
+afterEach(() => {
+  for (const dir of loose) rmSync(dir, { recursive: true, force: true });
+  loose = [];
+});
+
 /** A provider over one store, and the two collections behind it. */
 async function made() {
   const records: RecordStore = memoryRecords();
   const problems: string[] = [];
-  const bots: RecordCollection = await records.collection('bots', { body: 'instructions' });
+  const folder = join(root, 'bots');
+  const bots: RecordCollection = await records.collection('bots');
   const graves: RecordCollection = await records.collection('bots-gone');
-  const store: BotStore = botStore(bots, graves, (line) => problems.push(line));
+  const store: BotStore = botStore(bots, graves, (line) => problems.push(line), { yaml, agents });
   const provider = botProvider({
-    root: '/tmp/bots',
+    root: folder,
     store,
     sessions: { owner: async () => undefined, start: async () => 'echo:/one' },
     chats: await records.collection('bot-chats'),
     backSessions: backSessions(await records.collection('bot-sessions')),
     hostName: 'test',
     templates: { text: async () => undefined, lastChats: 10 },
+    yaml,
+    agents,
   });
-  return { records, bots, graves, store, provider, problems };
+  return { records, bots, graves, store, provider, problems, folder };
 }
 
 it('keeps a bot in the collection, and answers it from the cache', async () => {
@@ -78,12 +111,20 @@ it('keeps a bot in the collection, and answers it from the cache', async () => {
   expect(problems).toEqual([]);
 });
 
-it('writes the record whole, with the body field the plugin named', async () => {
-  const { bots, provider } = await made();
+it('writes the record without its persona, which is the file\'s', async () => {
+  const { bots, provider, folder } = await made();
 
-  await provider.write('bot://motion', said({ name: 'Motion', instructions: 'Be brief.' }));
+  await provider.write('bot://motion', said({ name: 'Motion', body: 'robot', instructions: 'Be brief.' }));
 
-  expect(await bots.get('motion')).toMatchObject({ id: 'motion', name: 'Motion', instructions: 'Be brief.' });
+  // The record keeps what the file cannot say, and the persona is written into
+  // the `AGENTS.md` the make leaves in the bot's folder.
+  const kept = await bots.get('motion');
+  expect(kept).not.toHaveProperty('name');
+  expect(kept).not.toHaveProperty('instructions');
+  expect(kept).toMatchObject({ id: 'motion', body: 'robot', workspace: join(folder, 'motion') });
+  const file = readFileSync(join(folder, 'motion', 'AGENTS.md'), 'utf8');
+  expect(file).toContain('name: Motion');
+  expect(file).toContain('Be brief.');
 });
 
 it('leaves a tombstone where a bot is deleted, and refuses to make it again', async () => {
@@ -109,9 +150,10 @@ it('reads the collections back, as a daemon that started again does', async () =
   // A second store over the same collections, which is what a restart is.
   const problems: string[] = [];
   const again = botStore(
-    await records.collection('bots', { body: 'instructions' }),
+    await records.collection('bots'),
     await records.collection('bots-gone'),
     (line) => problems.push(line),
+    { yaml, agents },
   );
   await again.ready();
 
@@ -123,7 +165,7 @@ it('reads the collections back, as a daemon that started again does', async () =
 it('reports a record that is not a bot, and keeps every other one', async () => {
   const { bots, store, problems } = await made();
   await bots.put(bot('motion'));
-  await bots.put(bot('broken', { name: '' }));
+  await bots.put(bot('broken', { color: 'chartreuse' }));
 
   await store.ready();
 
@@ -218,7 +260,7 @@ it('leaves a bot alone when a hand edit changes its workspace', async () => {
   await new Promise((resolve) => { setTimeout(resolve, 5); });
 
   expect(heard).toEqual([]);
-  expect(store.get('motion')).toMatchObject({ workspace: '/tmp/bots/motion' });
+  expect(store.get('motion')).toMatchObject({ workspace: join(root, 'bots', 'motion') });
   expect(problems.join('\n')).toMatch(/motion changed workspace/);
 });
 

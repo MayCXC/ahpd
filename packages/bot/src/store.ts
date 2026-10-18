@@ -1,15 +1,21 @@
-import { BOT_BODIES, DEFAULT_SESSION, isBotColor, isSlug } from './record.js';
-import type { BotRecord } from './record.js';
-import type { RecordChange, RecordCollection } from '@ahpd/sdk';
+import { makeFolder, partsOf, readAgentsFile, withAgents, writeAgentsFile } from './folder.js';
+import { BOT_BODIES, DEFAULT_SESSION, isBotColor, isSlug, withoutParts } from './record.js';
+import type { Yaml } from './agents.js';
+import type { BotRecord, KeptBot } from './record.js';
+import type { RecordChange, RecordCollection, StoredRecord } from '@ahpd/sdk';
 
 /**
  * The bots this daemon keeps, in the record store the host gave it.
  *
- * The `bots` collection holds one record per bot, with `instructions` as its
- * body - the field a person writes in the Markdown half of the file. A bot is a
- * record somebody is looking at rather than a tree anybody edits, so a record
- * per bot is what lets a person read one, copy one between hosts, and see at a
- * glance what this daemon holds.
+ * The `bots` collection holds one record per bot, and the record is what its
+ * `AGENTS.md` cannot say: the folder it works in, its owner, the body and
+ * colour it is drawn with, the session a message wakes. Its persona - `name`,
+ * `description`, `instructions` - is the file's, and the file is the one copy.
+ *
+ * A record made before that was true still has the persona in it. It is moved
+ * into the file on the first load: the file is written with those parts, a file
+ * that had none gets a frontmatter on top of the text it already had, and the
+ * record is put back without them.
  *
  * A deleted slug leaves a tombstone in `bots-gone`. The slug is what a client
  * has the address of, so a bot deleted and made again under the same name would
@@ -68,12 +74,18 @@ export interface BotStore {
  * Two keys are filled in rather than checked, because a bot with no word for
  * them and a bot whose word nobody has read are the same bot: the body it is
  * drawn with, and the name of the back session a message wakes.
+ *
+ * The persona is optional here: a record this host wrote has none, because the
+ * file is its one copy, and one an older daemon wrote still carries it. What to
+ * answer is decided where the file is read, in `withAgents`.
  */
-const kept = (said: unknown): BotRecord | undefined => {
+const kept = (said: unknown): KeptBot | undefined => {
   if (typeof said !== 'object' || said === null || Array.isArray(said)) return undefined;
   const one = said as Record<string, unknown>;
   if (typeof one['id'] !== 'string' || !isSlug(one['id'])) return undefined;
-  if (typeof one['name'] !== 'string' || one['name'].trim() === '') return undefined;
+  for (const key of ['name', 'description', 'instructions']) {
+    if (one[key] !== undefined && typeof one[key] !== 'string') return undefined;
+  }
   if (typeof one['workspace'] !== 'string' || typeof one['owner'] !== 'string') return undefined;
   if (typeof one['createdAt'] !== 'string' || typeof one['updatedAt'] !== 'string') return undefined;
   if (!isBotColor(one['color'])) return undefined;
@@ -90,7 +102,7 @@ const kept = (said: unknown): BotRecord | undefined => {
    */
   const session = typeof one['session'] === 'string' && one['session'].trim() !== '' ? one['session'].trim() : DEFAULT_SESSION;
   const rest: Record<string, unknown> = { ...one, body, session };
-  return rest as unknown as BotRecord;
+  return rest as unknown as KeptBot;
 };
 
 /** Whether two records say the same thing, whatever order their fields are in. */
@@ -104,6 +116,22 @@ const same = (one: BotRecord, other: BotRecord): boolean => {
 };
 
 /**
+ * What the store reads a bot's folder with.
+ *
+ * Both are the plugin's own seams rather than anything this file does for
+ * itself: the YAML is the host's, and the filled template is read from the
+ * `templates` collection and the default file. A store given neither - as the
+ * cases that build one over records alone do - keeps each record's parts in the
+ * cache and writes no file.
+ */
+export interface BotStoreSeams {
+  /** The YAML a bot's `AGENTS.md` is read and written with. */
+  yaml?: Yaml;
+  /** The `AGENTS.md` a bot with no file is given: its template, filled with its words. */
+  agents?(bot: BotRecord): Promise<string>;
+}
+
+/**
  * The bots in one record store, over the `bots` and `bots-gone` collections.
  *
  * `onProblem` is told about each record that was there and could not be used,
@@ -113,6 +141,7 @@ export function botStore(
   bots: RecordCollection,
   graves: RecordCollection,
   onProblem: (line: string) => void,
+  seams: BotStoreSeams = {},
 ): BotStore {
   /** Every bot this store has read, by slug. */
   const held = new Map<string, BotRecord>();
@@ -169,19 +198,70 @@ export function botStore(
       onProblem(`bots/${change.id} is not a bot record; the bot was left as it was`);
       return;
     }
-    const before = held.get(one.id);
-    if (before !== undefined && before.owner !== one.owner) {
-      onProblem(`bots/${one.id} changed owner; the bot was left as it was`);
+    // The record's parts where it still carries some - the older copy a load
+    // moves - and the file's everywhere else. A hand edit of the record alone
+    // therefore answers with the persona the bot's own file has.
+    const bot = withAgents(seams.yaml, one);
+    const before = held.get(bot.id);
+    if (before !== undefined && before.owner !== bot.owner) {
+      onProblem(`bots/${bot.id} changed owner; the bot was left as it was`);
       return;
     }
-    if (before !== undefined && before.workspace !== one.workspace) {
-      onProblem(`bots/${one.id} changed workspace; the bot was left as it was`);
+    if (before !== undefined && before.workspace !== bot.workspace) {
+      onProblem(`bots/${bot.id} changed workspace; the bot was left as it was`);
       return;
     }
     // A write of what is already here moved nothing, and is not a change.
-    if (before !== undefined && same(before, one)) return;
-    held.set(one.id, one);
-    heard?.({ type: before === undefined ? 'added' : 'updated', bot: one, before });
+    if (before !== undefined && same(before, bot)) return;
+    held.set(bot.id, bot);
+    heard?.({ type: before === undefined ? 'added' : 'updated', bot, before });
+  };
+
+  /** Whether this record is from before the file was the one copy: it still carries a part. */
+  const older = (one: KeptBot): boolean =>
+    one.computer === undefined
+    && (one.name !== undefined || one.description !== undefined || one.instructions !== undefined);
+
+  /**
+   * Move an older record's parts into its `AGENTS.md`, and put the record back
+   * without them.
+   *
+   * A folder that has a file keeps every byte the bot wrote: the parts go into
+   * its frontmatter and its Instructions section, and the rest stays below. A
+   * folder with no file is made with the bot's template, filled with its words,
+   * which is the file a bot made today would have had from its first moment.
+   *
+   * The record is put back only once the file has the parts: a write that
+   * failed leaves the record as the copy, and the next load tries again rather
+   * than dropping the persona between the two.
+   */
+  const move = async (one: KeptBot, yaml: Yaml): Promise<BotRecord> => {
+    const bot = withAgents(yaml, one);
+    try {
+      const parts = partsOf(bot);
+      if (readAgentsFile(bot.workspace, yaml) !== undefined) {
+        writeAgentsFile(bot.workspace, yaml, parts);
+      }
+      else if (seams.agents !== undefined) {
+        makeFolder(bot.workspace, await seams.agents(bot), yaml, parts);
+      }
+      else {
+        writeAgentsFile(bot.workspace, yaml, parts);
+      }
+      // This store's own put, dropped from the watch the way every other put
+      // is: the record says what the cache already does.
+      writing.add(bot.id);
+      try {
+        await bots.put(withoutParts(bot));
+      }
+      finally {
+        writing.delete(bot.id);
+      }
+    }
+    catch (error) {
+      onProblem(`bots/${bot.id} was not moved into its AGENTS.md: ${String(error)}`);
+    }
+    return bot;
   };
 
   /**
@@ -203,13 +283,17 @@ export function botStore(
         onProblem(`bots/${change.id} could not be read: ${String(error)}`);
       });
     });
+    const yaml = seams.yaml;
     for (const said of await bots.list()) {
       const one = kept(said);
       if (one === undefined) {
         onProblem(`bots/${said.id} is not a bot record; it was left out`);
         continue;
       }
-      held.set(one.id, one);
+      // A record made before the file was the one copy is moved into its file
+      // here, once, rather than at every read: the next daemon to load it finds
+      // a record with no parts.
+      held.set(one.id, yaml !== undefined && older(one) ? await move(one, yaml) : withAgents(yaml, one));
     }
     // A tombstone is a record too, and only its id is read: it says which slug
     // was a bot, never what that bot was.
@@ -231,10 +315,18 @@ export function botStore(
     ready,
     onChange: (one) => { heard = one; },
     put: async (record) => {
+      // The file has the parts by now - the provider wrote them before it got
+      // here - so the record keeps what the file cannot say. A bot on a computer
+      // keeps its parts, because this host cannot reach its file, and so does
+      // every bot of a store with no YAML: a store that writes no file has no
+      // other copy to keep them in.
+      const stored: StoredRecord = record.computer === undefined && seams.yaml !== undefined
+        ? withoutParts(record)
+        : { ...record };
       writing.add(record.id);
       try {
         // The collection first: a write that failed is a cache that never moved.
-        await bots.put({ ...record });
+        await bots.put(stored);
       }
       finally {
         writing.delete(record.id);

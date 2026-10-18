@@ -1,5 +1,5 @@
 import { RpcError } from '@ahpd/sdk';
-import type { Bag, Owner } from '@ahpd/sdk';
+import type { Bag, Owner, StoredRecord } from '@ahpd/sdk';
 
 /**
  * What a bot is, and what a body may say about one.
@@ -72,22 +72,29 @@ export type BotBody = string;
 /** One of `BOT_COLORS`, or a hex colour kept as `#rrggbb` in lowercase. */
 export type BotColor = (typeof BOT_COLORS)[number] | `#${string}`;
 
-/** One bot, as it is kept and as a read answers it. */
-export interface BotRecord {
+/**
+ * What the `bots` collection keeps of one bot: everything the host writes down.
+ *
+ * The persona is not here. `name`, `description` and `instructions` are the
+ * parts of the bot's `AGENTS.md` (see `agents.ts`), and the file is their one
+ * copy: a record that carried them would be a second copy, out of step the
+ * first time the bot rewrote its own file. What is left is what the file
+ * cannot say - the folder, the owner, the body it is drawn with, the session a
+ * message wakes.
+ *
+ * A bot on a computer is the one exception, and only until an edit can reach
+ * that computer: its folder is not on this host, so its record keeps the parts
+ * it was made with as the last copy there is.
+ */
+export interface BotKept {
   /** The slug: the URI path, and the name of the folder this bot works in. */
   id: string;
-  /** What a person called it. */
-  name: string;
   /** Words a client groups bots by. */
   labels: string[];
-  /** One line about it, for a list of bots. */
-  description?: string;
   /** Which body it is drawn with. */
   body: BotBody;
   /** Which colour it is drawn in. */
   color: BotColor;
-  /** What it was asked to be, in its own words, for whoever it answers. */
-  instructions?: string;
   /** The template a chat with it would open with, by name. Absent is the plugin's default. */
   template?: string;
   /** The backend a session of it runs on, where a bot chooses one. */
@@ -114,6 +121,42 @@ export interface BotRecord {
   createdAt: string;
   /** When it was last written. */
   updatedAt: string;
+}
+
+/**
+ * One bot, as a read answers it: the kept fields and the parts its `AGENTS.md`
+ * owns.
+ *
+ * The parts are read from the file each time a bot is answered, so an edit the
+ * bot made to its own file shows on the next read. A bot whose folder has no
+ * file answers the parts an older record kept, and a slug as its name.
+ */
+export interface BotRecord extends BotKept {
+  /** What a person called it: the file's `name`, or the slug where the file names none. */
+  name: string;
+  /** One line about it, for a list of bots, where the file says one. */
+  description?: string;
+  /** What it was asked to be, in its own words, where the file says one. */
+  instructions?: string;
+}
+
+/** A record as it was written, with whatever parts an older one kept, before its file is read. */
+export type KeptBot = BotKept & Partial<Pick<BotRecord, 'name' | 'description' | 'instructions'>>;
+
+/**
+ * The record with the parts its `AGENTS.md` owns taken out.
+ *
+ * What the `bots` collection keeps. A record that carried the parts would be a
+ * second copy of them, and one that goes stale the first time the bot edits
+ * its own file. A bot on a computer is the caller's exception: its file is not
+ * on this host, so what it was made with is all this host has.
+ */
+export function withoutParts(bot: BotRecord): StoredRecord {
+  const taken: StoredRecord = { ...bot };
+  delete taken['name'];
+  delete taken['description'];
+  delete taken['instructions'];
+  return taken;
 }
 
 /**

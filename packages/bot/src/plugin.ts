@@ -10,6 +10,8 @@ import { isSlug } from './record.js';
 import { botStore } from './store.js';
 import { agentsTextOf, LAST_CHATS } from './template.js';
 import { botWake, isMainTurnAbsence } from './wake.js';
+import type { Yaml } from './agents.js';
+import type { BotRecord } from './record.js';
 import type { MainTurnAbsence } from './wake.js';
 import type { Bag, Plugin, PluginPeer } from '@ahpd/sdk';
 import type { BotSessions } from './provider.js';
@@ -23,9 +25,15 @@ import type { BotSessions } from './provider.js';
  * host's own record store rather than under the option: what a bot *is* belongs
  * to the host, and where it works is the operator's to choose.
  *
- * `instructions` is the collection's body, so it is the Markdown half of the
- * file a person edits, and every other field is frontmatter above it. A
- * template is a record of the `templates` collection, whose body is `text`.
+ * A bot's `AGENTS.md` is the one copy of its persona: a read takes `name`,
+ * `description` and `instructions` from the file, and a make or an edit writes
+ * them there. The `bots` collection keeps the rest of the record, and a record
+ * an older daemon wrote without a file behind it is moved into the file at load
+ * rather than left as a second copy. The file is read and written with the
+ * host's own YAML, given to the plugin rather than imported, so the package
+ * keeps no YAML dependency of its own.
+ *
+ * A template is a record of the `templates` collection, whose body is `text`.
  * The default `AGENTS.md` template is a file of its own, under
  * `<configDir>/templates/bots/`: this writes it at load when it is absent, and
  * a person may edit it after. It is not a record, because it is the one text
@@ -161,11 +169,6 @@ export const apply: Plugin['apply'] = (host, options) => {
   catch (error) {
     host.problem(`${name}: the default AGENTS.md template was not written: ${reason(error)}`);
   }
-  const store = botStore(
-    host.records('bots', { body: 'instructions' }),
-    host.records('bots-gone'),
-    (line) => { host.problem(`${name}: ${line}`); },
-  );
   const asked_ = options.lastChats;
   const lastChats = typeof asked_ === 'number' && Number.isInteger(asked_) && asked_ >= 1 ? asked_ : defaults.lastChats;
   /*
@@ -191,6 +194,35 @@ export const apply: Plugin['apply'] = (host, options) => {
     },
     lastChats,
   };
+  /*
+   * The `AGENTS.md` a bot with no file is given: the template record it names,
+   * or the default file under the configuration folder, filled with its words.
+   * Read per bot rather than kept, because a template is a file a person edits.
+   * A make and a wake both take it, so the file a bot starts with is the one a
+   * first wake would have made.
+   */
+  const agents = (bot: BotRecord): Promise<string> => agentsTextOf(bot, templates, host.configDir);
+  /*
+   * The YAML the host reads its own files with, passed on so a bot's `AGENTS.md`
+   * means here what it means in the store: the plugin imports no YAML parser,
+   * and a host that gives none gives the plugin one that refuses.
+   */
+  const yaml: Yaml = {
+    parseYaml: (text) => host.parseYaml(text),
+    stringifyYaml: (value) => host.stringifyYaml(value),
+  };
+  /*
+   * The bots, over the record store the host keeps them in. It reads and writes
+   * each bot's `AGENTS.md`, and moves the parts of a record an older daemon
+   * wrote into the file on the first load; it is built after the templates and
+   * the YAML because it needs both for that move.
+   */
+  const store = botStore(
+    host.records('bots', { body: 'instructions' }),
+    host.records('bots-gone'),
+    (line) => { host.problem(`${name}: ${line}`); },
+    { yaml, agents },
+  );
   /*
    * One row per bot and person, holding the chat they talk in. What makes a
    * read of `bot://` answer the same chat the second time as the first.
@@ -253,6 +285,8 @@ export const apply: Plugin['apply'] = (host, options) => {
     catalogue,
     hostName: host.hostName,
     templates,
+    yaml,
+    agents,
     chats,
     backSessions: backs,
     sessions,
@@ -269,12 +303,11 @@ export const apply: Plugin['apply'] = (host, options) => {
     backs,
     sessions,
     /*
-     * The bot's `AGENTS.md`, made when its folder is first prepared: the
-     * template record it names, or the default file under the configuration
-     * folder, filled with its words. Read per wake rather than kept, because a
-     * template is a file a person edits.
+     * The bot's `AGENTS.md`, made when its folder is first prepared: the same
+     * text a make writes, so a folder a make missed - one whose write failed -
+     * is given the file a first wake would have made.
      */
-    agents: (bot) => agentsTextOf(bot, templates, host.configDir),
+    agents,
     /*
      * A back session's chat, and whether a turn is running in it: the two
      * things a message needs, both read off the session's own state, which is

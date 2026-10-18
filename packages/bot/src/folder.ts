@@ -1,6 +1,9 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { readAgents, writeAgents } from './agents.js';
 import { AGENTS_TEMPLATE_FOLDER, agentsTemplatePath, DEFAULT_AGENTS_TEMPLATE } from './template.js';
+import type { AgentsParts, Yaml } from './agents.js';
+import type { BotRecord, KeptBot } from './record.js';
 
 /**
  * What a bot's folder holds, and the default template that makes it.
@@ -16,10 +19,15 @@ import { AGENTS_TEMPLATE_FOLDER, agentsTemplatePath, DEFAULT_AGENTS_TEMPLATE } f
  * written whether or not there is an `AGENTS.md` yet.
  *
  * Nothing is written over. A file a person, or the bot itself, put there is the
- * one that stays: this runs before every start of a back session, and a bot
- * that wrote its own rules would otherwise lose them on the next message. The
- * same holds for the default template file: it is written by the plugin at
- * load where it is absent, and a person's edit is what stays.
+ * one that stays: `prepareFolder` runs before every start of a back session,
+ * and a bot that wrote its own rules would otherwise lose them on the next
+ * message. The same holds for the default template file: it is written by the
+ * plugin at load where it is absent, and a person's edit is what stays.
+ *
+ * The two writes that do replace something are the ones a person asked for:
+ * `makeFolder` is a make, which has no file to keep, and `writeAgentsFile` is
+ * an edit in the UI, which changes only the parts the UI owns. What a read
+ * answers is `fromAgents`: the file's parts, joined onto the record.
  */
 
 /** The file a bot's rules are in. */
@@ -64,4 +72,131 @@ export function prepareFolder(folder: string, agents: string): void {
   mkdirSync(folder, { recursive: true });
   written(join(folder, CLAUDE_FILE), '@AGENTS.md\n');
   written(join(folder, AGENTS_FILE), agents.endsWith('\n') ? agents : `${agents}\n`);
+}
+
+/**
+ * Make the folder a bot was made in, with its `AGENTS.md` from the template.
+ *
+ * The file is written at the make rather than at the first wake, so a bot has
+ * its rules from the moment it exists - and an edit in the UI has a file to
+ * edit. The template's text is passed through `writeAgents`, which sets the
+ * parts the UI owns: the default template already names them, and a template
+ * of a person's own that does not gets a frontmatter and an Instructions
+ * section on top, with its text below.
+ *
+ * Nothing is written over, as `prepareFolder`: a folder that already has a file
+ * (a slug made again after a crash between the two writes) keeps it.
+ */
+export function makeFolder(folder: string, agents: string, yaml: Yaml, parts: AgentsParts): void {
+  mkdirSync(folder, { recursive: true });
+  written(join(folder, CLAUDE_FILE), '@AGENTS.md\n');
+  const text = agents.endsWith('\n') ? agents : `${agents}\n`;
+  written(join(folder, AGENTS_FILE), writeAgents(yaml, text, parts));
+}
+
+/** The parts one bot's `AGENTS.md` says, or nothing where its folder has no file. */
+export function readAgentsFile(folder: string, yaml: Yaml): AgentsParts | undefined {
+  try {
+    return readAgents(yaml, readFileSync(join(folder, AGENTS_FILE), 'utf8'));
+  }
+  catch {
+    // No file, or one this host cannot read: both are a bot whose parts only
+    // its record can answer.
+    return undefined;
+  }
+}
+
+/**
+ * Write the parts into a bot's `AGENTS.md`, keeping everything else it says.
+ *
+ * What an edit in the UI is: the frontmatter keys and the Instructions section
+ * are replaced, and the bot's own writing - other sections, other keys -
+ * survives. A folder with no file gets one, which is what an edit to a bot
+ * whose file was removed does.
+ */
+export function writeAgentsFile(folder: string, yaml: Yaml, parts: AgentsParts): void {
+  mkdirSync(folder, { recursive: true });
+  let text = '';
+  try { text = readFileSync(join(folder, AGENTS_FILE), 'utf8'); }
+  catch {
+    // No file yet: the parts are the whole of it.
+  }
+  writeFileSync(join(folder, AGENTS_FILE), writeAgents(yaml, text, parts));
+}
+
+/** The parts a bot answers with, as the writer takes them. A missing line is written empty. */
+export const partsOf = (bot: BotRecord): AgentsParts => ({
+  version: undefined,
+  name: bot.name,
+  description: bot.description ?? '',
+  instructions: bot.instructions ?? '',
+});
+
+/** The words of the parts, where a file and a record are joined into one bot. */
+interface Words {
+  name?: string | undefined;
+  description?: string | undefined;
+  instructions?: string | undefined;
+}
+
+/** The words one record carries, which are the older copy a load is moving. */
+const saidOf = (bot: KeptBot): Words => ({
+  name: bot.name,
+  description: bot.description,
+  instructions: bot.instructions,
+});
+
+/** A line of a file or a record, where it says anything. */
+const nonEmpty = (said: string | undefined): string | undefined => {
+  if (typeof said !== 'string') return undefined;
+  const held = said.trim();
+  return held === '' ? undefined : held;
+};
+
+/**
+ * One bot from a record and two sets of words, the first found winning.
+ *
+ * The kept fields are the record's; the name falls back to the slug, which is
+ * the one name a bot always has. A description or an instructions section that
+ * neither set has is left out rather than answered empty: a bot whose file
+ * dropped its section is a bot with no instructions, not one with an empty
+ * sentence.
+ */
+const joined = (bot: KeptBot, first: Words, second: Words): BotRecord => {
+  const { name, description, instructions, ...kept } = bot;
+  const line = nonEmpty(first.description) ?? nonEmpty(second.description);
+  const rules = nonEmpty(first.instructions) ?? nonEmpty(second.instructions);
+  return {
+    ...kept,
+    name: nonEmpty(first.name) ?? nonEmpty(second.name) ?? bot.id,
+    ...(line === undefined ? {} : { description: line }),
+    ...(rules === undefined ? {} : { instructions: rules }),
+  };
+};
+
+/**
+ * One record as a bot, with the parts its `AGENTS.md` has where the record
+ * says none of its own.
+ *
+ * The record's parts are the older copy - what a bot made before the file was
+ * the one copy has - so they win where they are there: this is also the join a
+ * load moves that copy with. A bot on a computer has no folder here, and its
+ * record is all this host knows of it.
+ */
+export function withAgents(yaml: Yaml | undefined, bot: KeptBot): BotRecord {
+  if (yaml === undefined || bot.computer !== undefined) return joined(bot, saidOf(bot), {});
+  return joined(bot, saidOf(bot), readAgentsFile(bot.workspace, yaml) ?? {});
+}
+
+/**
+ * One bot as a read answers it now, with the parts its file has today.
+ *
+ * The file is the one copy, so it wins over what the store last read: an edit
+ * the bot made to its own file shows on the next read, without anything having
+ * to notice the write. A folder with no file answers the parts the record had.
+ */
+export function fromAgents(yaml: Yaml, bot: BotRecord): BotRecord {
+  if (bot.computer !== undefined) return bot;
+  const file = readAgentsFile(bot.workspace, yaml);
+  return file === undefined ? bot : joined(bot, file, saidOf(bot));
 }

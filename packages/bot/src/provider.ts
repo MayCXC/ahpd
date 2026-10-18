@@ -1,13 +1,14 @@
-import { mkdirSync } from 'node:fs';
 import { resolve, sep } from 'node:path';
 import { RpcError } from '@ahpd/sdk';
 import { covers, ownerOfPrincipal } from '@ahpd/sdk';
 import { CHAT_PROVIDER } from './chat.js';
+import { fromAgents, makeFolder, partsOf, writeAgentsFile } from './folder.js';
 import { named, rowId, userOf, whose } from './names.js';
 import {
   BOT_BODIES, BOT_COLORS, checkRecord, DEFAULT_SESSION, isSlug, TURN_WORD,
 } from './record.js';
 import { DEFAULT_TEMPLATE, templateOf } from './template.js';
+import type { Yaml } from './agents.js';
 import type { BackSessions } from './names.js';
 import type { BotCatalogue } from './catalogue.js';
 import type { BotRecord } from './record.js';
@@ -25,6 +26,13 @@ import type {
  * every resource has. A write to `bot://<slug>` with `createOnly` makes one and
  * a write with `ifMatch` edits it, a read answers its record, a list answers
  * the bots the reader may see, and a delete leaves a tombstone behind.
+ *
+ * The record is what the bot's `AGENTS.md` cannot say: the folder it works in,
+ * its owner, the body and colour it is drawn with, the session a message wakes.
+ * Its `name`, `description` and `instructions` are the file's, so a read puts
+ * those parts on the record from the file, and a make or an edit writes them to
+ * the file. An edit the bot made to its own file is therefore what the next read
+ * answers, and the record never carries a second copy to go stale.
  *
  * A bot's own address is the slug, and a read of it answers the record. Under it
  * are the chats: `bot://<slug>/<user>` is one person's main chat with the bot,
@@ -116,6 +124,17 @@ export interface BotOptions {
   catalogue?: BotCatalogue;
   /** The templates a bot may name, read to refuse one that is not there. */
   templates: BotTemplates;
+  /** The YAML a bot's `AGENTS.md` is read and written with. */
+  yaml: Yaml;
+  /**
+   * The `AGENTS.md` a bot with no file is given: its template, filled with its
+   * words.
+   *
+   * A make has no file to keep, so the file it leaves behind is the one its
+   * template names, filled with what it was made as - not the bare parts an
+   * edit writes, which would lose the sections a template adds.
+   */
+  agents(bot: BotRecord): Promise<string>;
 }
 
 /**
@@ -634,8 +653,12 @@ export function botProvider(options: BotOptions): BotProvider {
       await store.ready();
       const held = at(uri);
       if (held.slug === '') throw absent(uri);
-      const bot = store.get(held.slug);
-      if (bot === undefined) throw absent(uri);
+      const known = store.get(held.slug);
+      if (known === undefined) throw absent(uri);
+      // The file's parts, read now rather than answered from the cache: an edit
+      // the bot made to its own file shows on the next read, without anything
+      // having to notice the write.
+      const bot = fromAgents(options.yaml, known);
       if (held.leaf === '') {
         const answered = mayChat(bot, reader)
           ? { ...bot, chat: await chatOf(bot, reader === undefined ? self : ownerOfPrincipal(reader)) }
@@ -685,7 +708,10 @@ export function botProvider(options: BotOptions): BotProvider {
         throw new RpcError(-32602, `${slug} is not a bot's name: lowercase letters, digits and a dash, starting with a letter`);
       }
 
-      const existing = store.get(slug);
+      // The file's parts over the record's: an edit that names no persona is
+      // editing the bot as it is now, not as the store last read it.
+      const known = store.get(slug);
+      const existing = known === undefined ? undefined : fromAgents(options.yaml, known);
       if (existing !== undefined && !mayWrite(existing, owner, reader)) throw notYours(existing);
       if (existing === undefined && store.gone(slug)) {
         throw new RpcError(-32010, `${slug} was a bot here once; choose another name`);
@@ -727,14 +753,23 @@ export function botProvider(options: BotOptions): BotProvider {
         updatedAt: now,
       };
       /*
-       * A make leaves a folder behind, and starts nothing else.
+       * The file is written before the record, because the file is the one copy
+       * of the persona: a record written over a file that never got the parts
+       * would be the only copy of them, which is the thing this removes.
        *
-       * The folder is where a bot works, so a bot that was made has one whether
-       * or not anybody has talked to it yet: on this host that is a directory to
-       * make, and in a computer the folder rides along as the working directory
-       * of whatever runs there and the machine makes it.
+       * A make leaves a folder behind with its `AGENTS.md` in it, from the
+       * template filled with the bot's words, so the file a bot has from its
+       * first moment is the one a first wake would have made. An edit writes the
+       * parts into the file that is there and keeps everything else it says.
+       *
+       * A bot on a computer has no folder on this host, so it is the one bot
+       * whose record keeps the parts: its file is on a machine this write does
+       * not reach.
        */
-      if (existing === undefined && record.computer === undefined) mkdirSync(record.workspace, { recursive: true });
+      if (record.computer === undefined) {
+        if (existing === undefined) makeFolder(record.workspace, await options.agents(record), options.yaml, partsOf(record));
+        else writeAgentsFile(record.workspace, options.yaml, partsOf(record));
+      }
       await store.put(record);
       told(existing === undefined ? 'added' : 'updated', record);
       options.catalogue?.put(record, existing);

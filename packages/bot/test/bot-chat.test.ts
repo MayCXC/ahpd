@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { Status } from '../../sdk/src/catalog.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
@@ -84,6 +85,8 @@ function made() {
     configDir,
     log: () => {},
     say: () => {},
+    parseYaml,
+    stringifyYaml,
   };
   const sessions = memorySessions();
   const records = memoryRecords();
@@ -187,10 +190,13 @@ const stateOf = async (client: Client): Promise<Bag> => {
  * backend, so the guard behind that refusal is a method only this can call.
  */
 async function backend(configDir: string, records: ReturnType<typeof memoryRecords>, heard?: Parameters<typeof botChatAgent>[2]) {
+  // With the host's YAML, so the name a chat is titled with comes from the bot's
+  // own `AGENTS.md`, which is where a bot's persona lives.
   const store = botStore(
-    await records.collection('bots', { body: 'instructions' }),
+    await records.collection('bots'),
     await records.collection('bots-gone'),
     () => {},
+    { yaml: { parseYaml, stringifyYaml } },
   );
   // A chat is started by a read of `bot://`, which is what loads the store by
   // the time a `create` asks it for a bot. A test asking it directly waits.

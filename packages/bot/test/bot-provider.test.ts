@@ -1,7 +1,8 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
+import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { createHost, ROOT } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
 import { memoryRecords } from '../../sdk/src/records.js';
@@ -115,6 +116,10 @@ function made(
     configDir: join(root, 'config'),
     log: () => {},
     say: () => {},
+    // The host's YAML, which a bot's `AGENTS.md` is read and written with: the
+    // daemon gives its own, and a test gives the parser the other tests use.
+    parseYaml,
+    stringifyYaml,
   };
   // The sessions this host keeps, which is where a chat is started: read live
   // off the host rather than held by the plugin, so the two are the same store
@@ -293,15 +298,17 @@ it('makes a bot in a hex colour, and reads it back after a restart', async () =>
   expect(await record(soft, 'bot://motion')).toMatchObject({ color: '#2f6fdf' });
 
   // A daemon that starts again reads the collection, and a hex colour is a
-  // colour there too.
+  // colour there too. Its persona comes from the file, as any other read is
+  // answered, so the name survives a daemon that never saw the make.
   const problems: string[] = [];
   const held = botStore(
-    await records.collection('bots', { body: 'instructions' }),
+    await records.collection('bots'),
     await records.collection('bots-gone'),
     (line) => problems.push(line),
+    { yaml: { parseYaml, stringifyYaml } },
   );
   await held.ready();
-  expect(held.get('motion')).toMatchObject({ color: '#2f6fdf' });
+  expect(held.get('motion')).toMatchObject({ color: '#2f6fdf', name: 'Motion' });
   expect(problems).toEqual([]);
 });
 
@@ -355,6 +362,157 @@ it('edits a bot, keeping the slug it was made with', async () => {
   // and the maker, which a write is not a way to change.
   expect(await write(soft, 'bot://motion', { name: 'Moved', id: 'other' })).toMatchObject({ code: -32602 });
   expect(await write(soft, 'bot://motion', { name: 'Moved', owner: 'user:ana' })).toMatchObject({ code: -32602 });
+});
+
+/*
+ * The persona is the file's.
+ *
+ * A bot's `AGENTS.md` is the one copy of its `name`, `description` and
+ * `instructions`: a make writes the template filled with them, an edit writes
+ * them into the file that is there, and a read answers what the file says. The
+ * record keeps what the file cannot - the folder, the owner, the body and
+ * colour, the session a message wakes - and never a second copy that would go
+ * stale the first time the bot rewrote its own file.
+ */
+it('writes a bot\'s persona into its AGENTS.md, and keeps none of it in the record', async () => {
+  const { host, bots, records } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+
+  await write(soft, 'bot://motion', {
+    name: 'Motion', description: 'Moves things', instructions: 'Be calm',
+  }, { createOnly: true });
+
+  // The file a make leaves is its template, filled and with the parts set: the
+  // same file a first wake would have made, there from the moment it exists.
+  const written = readFileSync(join(bots, 'motion', 'AGENTS.md'), 'utf8');
+  expect(written).toContain('name: Motion');
+  expect(written).toContain('description: Moves things');
+  expect(written).toContain('## Instructions');
+  expect(written).toContain('Be calm');
+  expect(readFileSync(join(bots, 'motion', 'CLAUDE.md'), 'utf8')).toBe('@AGENTS.md\n');
+
+  // And the record has no persona at all: what is there is what the file
+  // cannot say.
+  const kept = await (await records.collection('bots')).get('motion');
+  expect(kept).not.toHaveProperty('name');
+  expect(kept).not.toHaveProperty('description');
+  expect(kept).not.toHaveProperty('instructions');
+  expect(kept).toMatchObject({
+    id: 'motion', labels: [], owner: 'user:soft', session: 'work', workspace: join(bots, 'motion'),
+  });
+
+  // An edit in the UI writes the parts it owns and leaves the rest of the file
+  // as it was, so the template's own section survives it.
+  expect(await write(soft, 'bot://motion', { name: 'Moved', instructions: 'Be louder' })).toEqual({ result: {} });
+  const edited = readFileSync(join(bots, 'motion', 'AGENTS.md'), 'utf8');
+  expect(edited).toContain('name: Moved');
+  expect(edited).toContain('Be louder');
+  expect(edited).not.toContain('Be calm');
+  expect(edited).toContain('## How you work');
+  expect(await record(soft, 'bot://motion')).toMatchObject({
+    name: 'Moved', description: 'Moves things', instructions: 'Be louder',
+  });
+});
+
+it('answers a read from the bot\'s own file, so its own edit shows on the next read', async () => {
+  const { host, bots } = made({ soft: ['bot:*', 'session:create'] });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+
+  // The bot rewrote its own file, which is the thing no record can follow
+  // without being a second copy: the file is read at each read of the bot.
+  writeFileSync(join(bots, 'motion', 'AGENTS.md'), [
+    '---',
+    'version: 1',
+    'name: Renamed',
+    'description: What it calls itself',
+    '---',
+    '',
+    '## Instructions',
+    '',
+    'Say less.',
+    '',
+  ].join('\n'));
+
+  expect(await record(soft, 'bot://motion')).toMatchObject({
+    name: 'Renamed',
+    description: 'What it calls itself',
+    instructions: 'Say less.',
+  });
+});
+
+/** An older record, as a daemon before the file was the one copy wrote it. */
+const olderRecord = (folder: string) => ({
+  id: 'older',
+  name: 'Older',
+  description: 'An old bot',
+  instructions: 'Be careful',
+  labels: [],
+  body: 'robot',
+  color: 'red',
+  session: 'work',
+  workspace: folder,
+  owner: 'user:soft',
+  createdAt: '2026-10-11T00:00:00.000Z',
+  updatedAt: '2026-10-11T00:00:00.000Z',
+});
+
+it('moves an older record\'s parts into the AGENTS.md it already has, and keeps its text', async () => {
+  const { host, bots, records } = made({ soft: ['bot:*', 'session:create'] });
+  const folder = join(bots, 'older');
+  mkdirSync(folder, { recursive: true });
+  writeFileSync(join(folder, 'AGENTS.md'), '# Our rules\n\nAsk before pushing.\n');
+  await (await records.collection('bots')).put(olderRecord(folder));
+
+  const soft = await as(host, 'soft');
+  // The persona is answered from the record that carried it, then from the file
+  // it was moved into.
+  const read = await record(soft, 'bot://older');
+  expect(read).toMatchObject({ name: 'Older', description: 'An old bot', instructions: 'Be careful\n\n# Our rules\n\nAsk before pushing.' });
+
+  // The file got a frontmatter and an Instructions section on top of what the
+  // bot had written, and every byte of it is still there.
+  const file = readFileSync(join(folder, 'AGENTS.md'), 'utf8');
+  expect(file.startsWith('---\n')).toBe(true);
+  expect(file).toContain('name: Older');
+  expect(file).toContain('description: An old bot');
+  expect(file).toContain('## Instructions');
+  expect(file).toContain('Be careful');
+  expect(file).toContain('# Our rules');
+  expect(file).toContain('Ask before pushing.');
+
+  // And the record was put back without the parts, so the next load finds none
+  // to move.
+  const kept = await (await records.collection('bots')).get('older');
+  expect(kept).not.toHaveProperty('name');
+  expect(kept).not.toHaveProperty('description');
+  expect(kept).not.toHaveProperty('instructions');
+  expect(kept).toMatchObject({ id: 'older', color: 'red', workspace: folder });
+});
+
+it('makes the AGENTS.md of an older record whose folder has none, from its template', async () => {
+  const { host, bots, records } = made({ soft: ['bot:*', 'session:create'] });
+  const folder = join(bots, 'older');
+  await (await records.collection('bots')).put(olderRecord(folder));
+  expect(existsSync(folder)).toBe(false);
+
+  const soft = await as(host, 'soft');
+  expect(await record(soft, 'bot://older')).toMatchObject({
+    name: 'Older', description: 'An old bot', instructions: 'Be careful',
+  });
+
+  // A folder with no file gets the file a bot made today has: the template,
+  // filled with its words, and the line that makes Claude read it.
+  const file = readFileSync(join(folder, 'AGENTS.md'), 'utf8');
+  expect(file.startsWith('---\n')).toBe(true);
+  expect(file).toContain('name: Older');
+  expect(file).toContain('Be careful');
+  expect(file).toContain('## How you work');
+  expect(readFileSync(join(folder, 'CLAUDE.md'), 'utf8')).toBe('@AGENTS.md\n');
+
+  const kept = await (await records.collection('bots')).get('older');
+  expect(kept).not.toHaveProperty('name');
+  expect(kept).not.toHaveProperty('instructions');
 });
 
 it('leaves a tombstone where a bot was deleted', async () => {
@@ -747,7 +905,7 @@ it('takes the name of a back session, and fills one a bot named none of', async 
 
   // A file written before a bot named one is read as a bot that named none: the
   // store fills the name in, so nothing that reads a bot has to know the default.
-  await (await records.collection('bots', { body: 'instructions' })).put({
+  await (await records.collection('bots')).put({
     id: 'older',
     name: 'Older',
     labels: [],
@@ -983,7 +1141,7 @@ it('takes a write that carries a chat back, and keeps none of it', async () => {
 
   // None of it is kept, and the chat it was given is still the one it answers
   // with - a chat is not something a write can move.
-  const kept = await (await records.collection('bots', { body: 'instructions' })).get('motion');
+  const kept = await (await records.collection('bots')).get('motion');
   expect(kept).not.toHaveProperty('chat');
   expect((await record(soft, 'bot://motion'))['chat']).toBe(read['chat']);
 });
