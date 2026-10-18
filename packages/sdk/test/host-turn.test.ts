@@ -634,7 +634,8 @@ describe('what the client is told about its own turn', () => {
 describe('one tool call, one row', () => {
   /** A turn with a `Bash` call the agent has already announced. */
   async function calling() {
-    const started = await running();
+    // `ls` and `sleep` are in VS Code's table, which would approve them: no table, so the call asks.
+    const started = await running({ terminalAutoApproveDefaults: 'none' });
     started.client.handle({
       method: 'dispatchAction',
       params: { channel: started.uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'run it' } } },
