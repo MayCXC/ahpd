@@ -1,6 +1,6 @@
 ---
 title: The terminal tests run on Windows
-status: implemented
+status: todo
 depends: [task-03-a-terminal-stops-on-windows.md]
 layer: sdk
 refs:
@@ -46,3 +46,18 @@ Validation: the sdk tests pass on Linux. The first half, that the Windows job pa
 The first full run failed one case in `nested-proxy.test.ts` under load. It passed alone, and the second full run passed all 3004.
 
 The suite rewrote `packages/sdk/test/fixtures/wire.jsonl` again. The restore was denied here, so Softov reverts it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+
+**Windows run, 2026-10-18, on Windows 10 (Node 24.12.0), at `71166379` plus this fix.**
+`pnpm exec vitest run packages/sdk/test/pty.test.ts` passes 26 of 26 on Windows.
+At `71166379` it failed 4: two OSC 7 cases, one exit code and one `close`.
+CI run 39109275334 failed 9, but it ran `bf3dba63`, which is before `3328b293`; the other 5 were fixed by `3328b293`.
+What was fixed:
+- `close` threw `kill EINVAL` for a shell that never started. On Windows, Node throws that from `child.kill()` when the child has no pid. `close` now returns when there is no pid, since there is nothing to end.
+- A command run through PowerShell exited 1 where the program exited 7. `-Command` exits 0 or 1 by `$?`. `terminals.ts` now adds a line after the command that exits with `$LASTEXITCODE`, or 1 for a failed cmdlet. This is a product fix: a `!` command's exit code was wrong on Windows.
+- The two OSC 7 cases sent `file:///tmp/...`, which has no drive on Windows. They now build their URIs with `uriOf` from `resolve('/tmp')`, as p3 did in `worktrees.test.ts`.
+No case in `pty.test.ts` runs a POSIX-only command any more, so none skips.
+`host-terminals.test.ts` and `sessiontools.test.ts` still fail 3 cases each on Windows, with or without this fix, so this task's validation is not met yet:
+- `host-terminals`, "starts a shell where the client said" and "reports the directory it is in": `EPERM` removing the test's temp folder. Probably the shell still holds the folder as its working directory when the cleanup runs. This is a terminal on Windows, so it is this task's.
+- `host-terminals`, "runs a command typed during a turn": `Cannot read properties of undefined (reading 'success')`. Cause not read yet.
+- `sessiontools`, "matches a directory with a space": the filter answers `[]`. A path case, p2's.
+- `sessiontools`, "refuses a call with no turn running" and "refuses the 51st session": the second times out at 5 s. Cause not read yet.

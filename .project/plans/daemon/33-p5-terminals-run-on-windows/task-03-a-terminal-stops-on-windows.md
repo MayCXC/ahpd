@@ -39,7 +39,16 @@ Neither one signals a negative pid.
 
 Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs`, `git diff --quiet tools/` and `pnpm -s exec vitest run packages/sdk` pass, 3004 tests.
 
-**Step 1, and what it found: nothing.** The runner this was built on is Linux. `taskkill` is a Windows executable that is not there. The try could not run, and no tree was watched stopping. Step 2 says to end the interrupt with what step 1 found. Step 1 found nothing, so this is the one place the task does not decide. **What was done instead:** `^C` runs `taskkill /pid <pid> /T /F`. This is the same tree-ending form the Answers table gives for `close`. `/T` on its own asks each process to close. A process with no window to close stays running, and then `^C` stops nothing. If the Windows job shows that `/T` alone does stop a command under pipes, drop `/F` from the interrupt's call in `endTree` and nowhere else. This is said here and not guessed at silently. The Windows job gives the answer. E1: `^C` and `close` are the same call on Windows. POSIX's difference between an interrupt and a kill has nothing to draw it with there.
+**Step 1, answered 2026-10-18 on Windows 10 (Node 24.12.0), at `71166379`.**
+A shell was started as `createTerminal` starts one: pipes, `windowsHide`, not detached.
+It ran a long command: `node -e` with a 60-second timer under `pwsh`, and `ping -n 60` under `pwsh` and under `cmd.exe`.
+`taskkill /pid <pid> /T` without `/F` stopped nothing in all three.
+Each process in the tree, `conhost.exe` and the command, refused with "This process can only be terminated forcefully (with /F option)".
+The shell refused because "one or more child processes of this process were still running".
+Three seconds later the shell and its command were all still running.
+`taskkill /pid <pid> /T /F` ended the whole tree in all three, and the shell exited with code 1.
+So `^C` and `close` both keep `/T /F`, and `endTree` does not change.
+E1: `^C` and `close` are the same call on Windows. POSIX's difference between an interrupt and a kill has nothing to draw it with there.
 
 Files changed:
 - `packages/sdk/src/terminals.ts` - `RunQuietly` and the real `quietly`. `quietly` is `spawn` with both pipes ignored and an `error` listener. `endTree(pid)` runs `taskkill /pid <pid> /T /F`. `createTerminal` and `shellTerminals` take `platform` and `run`. They read `windows` from the platform, not from `process` once at the top. `^C` and `close` take the Windows branch by pid. The POSIX branches and the no-pid guard are unchanged.
