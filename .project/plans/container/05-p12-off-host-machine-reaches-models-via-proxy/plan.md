@@ -71,6 +71,7 @@ session disposed -> token dropped
 | What | Source | Task |
 | --- | --- | --- |
 | The proxy is one way for a machine off this host to reach its models, not the only way; a remote ahpd with its own key or Claude subscription still runs | Softov, 2026-10-14, asked to build task 03: "as the only way a remote ahpd it by proxy calls. so its wrong" | 01, 02 |
+| A machine uses its own harness and configuration by default; a profile setting picks the proxy instead | Softov, 2026-10-18, "using the harness and configuration that are on the host first.. we see about proxy in another moment. since it can be like configurable" | 01, 02 |
 | The listener is proxy/02's and is not planned here | proxy 01's Resume state, "Next action: the proxy listener plan" | 01, 02 |
 | The token is minted in the nested start, keyed by session URI, and dropped in `removeSession`, so a create, a resume, a chat restart and an automation each get one | (defaulted: the nested start is the one road every nested session takes) | 01 |
 | The proxy URL is the port's answer, `ComputerPort.proxyUrl?(id)`; `ssh.ts` opens the `-R` with `-o ExitOnForwardFailure=yes` | (defaulted: only the runtime knows how its machine is reached, and a forward that failed must fail the start) | 02 |
@@ -107,8 +108,8 @@ session disposed -> token dropped
 
 - **Done so far:** drafted 2026-10-02, planned 2026-10-03, back to draft 2026-10-14. Task 03 is dropped: it made the proxy the only way a remote machine reaches its models.
 - **Next action:** none until the computer plans are next. Then answer the open question and amend tasks 01, 02 and 04.
-- **Open questions:** how a machine or a profile chooses the proxy instead of its own credentials.
-- **Watch out for:** p8, p10 and p11 still assume the proxy is the only way. Amend them with this plan. The ssh `-R` forward and `proxyForward` answers still hold for a machine that uses the proxy. Do not plan or build the listener here; it is proxy/02's.
+- **Open questions:** the name and values of the profile setting that picks the proxy.
+- **Watch out for:** p8, p10 and p11 no longer wait for this plan. The ssh `-R` forward and `proxyForward` answers still hold for a machine that uses the proxy. Do not plan or build the listener here; it is proxy/02's.
 
 ## Final verification checklist
 

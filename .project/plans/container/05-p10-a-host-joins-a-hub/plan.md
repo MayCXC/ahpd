@@ -7,7 +7,6 @@ created: 2026-09-26
 revalidated: 2026-10-04
 requires:
   - plans/container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md
-  - plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md
   - plans/daemon/13-ahpd-restart/plan.md
 changes: []
 creates: []
@@ -76,7 +75,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 | The hub is an `AhpClient` to the node's host over a joined socket, through `NestedOptions.start`; the relay is not a raw pipe of a client's frames | the proxy at [`code://packages/sdk/src/nested.ts#L340-L393`](../../../../packages/sdk/src/nested.ts#L340-L393) already speaks AHP to the inner host | 02 |
 | A node is listed by `@ahpd/computer`, beside every other runtime | one `computers` port per host | 04 |
 | The node's sessions resume after a restart of either side, by the inner transcript id | [A nested session is resumed by resuming the inner transcript by id](../04-a-cofold-session-in-a-computer/plan.md); daemon/13 | 05 |
-| Model keys stay on the hub; a node's session reaches models through p12 | p12 | 04 |
+| A node's session uses the node's own harness and configuration; reaching models through the hub's proxy is a later option of p12 | Softov, 2026-10-18, "using the harness and configuration that are on the host first.. we see about proxy in another moment. since it can be like configurable" | 04 |
 | A relayed session that waits sends a push through the hub, to the devices that created or opened it there | Softov, 2026-10-11, to "Push 01: which waiting sessions should send a notification to a phone?": "for now created or openned here... but do not forget the subhost relay" | 02 |
 | A node is a `node:` resource scheme with `node:read` and `node:write`; `node:write` adds a node and mints its token, removes it and drops it; a node's token opens the join door and nothing else | Softov, 2026-10-03, asked "is a node a `node:` scheme, or rows under `computer:`?": "a `node:` scheme with node:read/node:write" | 03 |
 | For now one control socket per node and one data socket per session, so each session's transport is the proxy's own and needs no multiplexing | Softov, 2026-10-03, asked "one socket per session, or one carrying every session?": "as proposed" | 01, 02 |
@@ -115,7 +114,7 @@ hub: lists computer://<node> -> session there -> nestedAgent(start = node socket
 ## Resume state
 
 - **Done so far:** nothing; planned 2026-10-02.
-- **Next action:** [task-03-a-node-has-a-token.md](task-03-a-node-has-a-token.md), once p9 and p12 are built.
+- **Next action:** [task-03-a-node-has-a-token.md](task-03-a-node-has-a-token.md), once p9 is built.
 - **Open questions:** none; the one asked before task 05 was answered 2026-10-13.
 - **Watch out for:** container/04 tasks 11 and 15 and p9 task 05 change how a nested session closes and resumes; a profile that names a node to make machines on is not planned, see [deferred.md](deferred.md).
 

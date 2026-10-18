@@ -7,7 +7,6 @@ created: 2026-10-02
 revalidated: 2026-10-03
 requires:
   - plans/container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md
-  - plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md
   - plans/container/05-p8-a-profile-on-another-docker/plan.md
   - plans/container/05-p3-parts-are-built-from-one-versions-file/plan.md
   - plans/container/05-p5-agents-run-from-their-parts/plan.md
@@ -119,7 +118,7 @@ remove -> virsh destroy + undefine --remove-all-storage -> stretch written to th
 ## Resume state
 
 - **Done so far:** nothing; drafted 2026-10-02, planned 2026-10-03.
-- **Next action:** [task-01-dev02-runs-libvirt.md](task-01-dev02-runs-libvirt.md), once Softov has installed libvirt on dev02; the code waits for p9 and p12.
+- **Next action:** [task-01-dev02-runs-libvirt.md](task-01-dev02-runs-libvirt.md), once Softov has installed libvirt on dev02; the code waits for p9.
 - **Open questions:** none.
 - **Watch out for:** dev02 has `/dev/kvm` and Docker but no libvirt installed yet; installing libvirt there (task 01 step 1) is Softov's step, before task 01's validation and before any by-hand check here; p3's `hashOf` is the tag, so a template built before p3 lands has no name; a libvirt on this host could share the folder by virtiofs instead of a clone, which is left open, see [deferred.md](deferred.md).
 

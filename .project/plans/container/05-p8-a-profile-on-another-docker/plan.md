@@ -9,7 +9,6 @@ requires:
   - plans/container/05-p5-agents-run-from-their-parts/plan.md
   - plans/container/05-p7-a-worktree-brings-its-repository/plan.md
   - plans/container/05-p9-an-ssh-machine-runs-a-nested-host/plan.md
-  - plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md
 changes: []
 creates: []
 decisions:
@@ -120,9 +119,9 @@ session on disposable:<profile> -> create on that Docker: no bind mounts, copies
 ## Resume state
 
 - **Done so far:** nothing; planned 2026-10-02.
-- **Next action:** [task-01-a-profile-names-its-docker.md](task-01-a-profile-names-its-docker.md), once p9 task 01 and p12 are built.
+- **Next action:** [task-01-a-profile-names-its-docker.md](task-01-a-profile-names-its-docker.md), once p9 task 01 is built.
 - **Open question (ask before task 03):** a session with `isolation: folder` on a remote profile has no worktree branch of its own, and its folder may have another branch checked out - (a) refuse `isolation: folder` on a remote profile with a sentence, or (b) bring the work back to a side branch named for the session and leave merging to the person?
-- **Watch out for:** the `clone` route puts a git credential in the box for the clone command only, and needs the vault (vault/01-p1 task 04) to name it; the `bundle` route needs neither; a git credential helper that asks this host is needed only if an agent must reach the remote itself, and waits until one does; a folder that is not a repository has no clone; it is refused here, and copying it in stays in [the idea](../../../ideas/more-computer-runtimes.md); p7's git directory mount does not apply on another Docker; p12 must land first, or a profile's `needs` would carry a key to dev02.
+- **Watch out for:** the `clone` route puts a git credential in the box for the clone command only, and needs the vault (vault/01-p1 task 04) to name it; the `bundle` route needs neither; a git credential helper that asks this host is needed only if an agent must reach the remote itself, and waits until one does; a folder that is not a repository has no clone; it is refused here, and copying it in stays in [the idea](../../../ideas/more-computer-runtimes.md); p7's git directory mount does not apply on another Docker; the box runs with its own harness and configuration, and task 02 refuses a credential need from this host, so no key of this host reaches dev02.
 
 ## Final verification checklist
 

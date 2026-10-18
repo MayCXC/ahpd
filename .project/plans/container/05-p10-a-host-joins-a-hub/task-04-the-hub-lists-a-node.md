@@ -22,7 +22,7 @@ refs:
 
 1. A node's id is `node.<name>`, through p9 task 01's `spellMachineId`.
 2. A node is owned by the host and its up time is metered from the registry's connect and drop events: a stretch opens when its control socket connects and closes when it drops. p9 task 01's metering function for a runtime that only lists takes reachability events, and a listing is one source of them; the node registry is another, so a node is metered exactly and not only when a listing runs.
-3. The nested start carries p12's token and proxy URL, so no key reaches the node; how they travel waits on p12's open question.
+3. Send no model key in the nested start, because the node uses its own configuration.
 
 ## Validation
 
