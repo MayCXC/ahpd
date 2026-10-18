@@ -71,8 +71,8 @@ The job's log names each test that fails, so p2 and p3 fix a known list.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01, 02 and 03 implemented 2026-10-16 and not reviewed. Task 03's job is written and the workflow parses, but its first run is not read: steps 6 to 9 want a push, which the session that built it does not make.
-- **Next action:** push the branch, or open a pull request against `main`, so the `check-windows` job runs. Then read that run and record, in task 03's Resume, whether `timeout` ran under Git Bash, and, in the parent plan's Resume, the failing tests by file.
+- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01, 02 and 03 implemented 2026-10-16 and not reviewed. Task 03's job is written and the workflow parses. Its first run is not read, because steps 6 to 9 need a push.
+- **Next action:** push the branch, or open a pull request against `main`, so the `check-windows` job runs. Then read that run. Record in task 03's Resume whether `timeout` ran under Git Bash. Record the failing tests by file in the parent plan's Resume.
 - **Open questions:** whether Git Bash on `windows-latest` has `timeout`. Task 03 step 7 answers it from the run.
 - **Watch out for:** a checkout on Windows needs `core.longpaths`, as `DEVELOPER.md` says. Task 03's job sets it before the checkout, and a hand clone does not.
 

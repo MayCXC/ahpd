@@ -41,13 +41,13 @@ File by file:
 
 Judgement calls the plan does not decide:
 
-- `ROOT` keeps the separator `new URL('..', ...)` ends in, because `fileURLToPath` of a URL with a trailing slash returns a path with one and the previous `.pathname` did too. Both uses take it: `join` normalizes it away, and `file.slice(ROOT.length)` lands on the first segment either way, so the reported file paths are unchanged.
+- `ROOT` keeps the trailing separator of `new URL('..', ...)`, as the previous `.pathname` did. Both uses take it: `join` normalizes it away, and `file.slice(ROOT.length)` lands on the first segment either way, so the reported file paths are unchanged.
 
 Validation:
 
 - `pnpm boundary` exits 0 and prints the same eleven packages, each `none undeclared`.
 - `pnpm -s build`, `pnpm -s typecheck` and `node tools/schema.mjs` each exit 0, and `git diff --quiet tools/` is clean.
-- The second item of the Validation - the boundary step of task 03's Windows job - cannot be read here: it needs a push, and task 03 step 6 asks Softov for one.
+- The second item of the Validation is the boundary step of task 03's Windows job. It needs a push, which task 03 step 6 asks Softov for.
 
 Left:
 
