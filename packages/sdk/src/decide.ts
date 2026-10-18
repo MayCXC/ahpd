@@ -98,7 +98,7 @@ const askedFor = (kind: PolicyKind, asked: Asked): string => {
  * is how somebody in no team is covered by a host-wide policy and by nothing
  * else.
  */
-const scoped = (row: Policy, principal: Principal, scope: Scope | undefined): boolean => {
+export const scoped = (row: Policy, principal: Principal, scope: Scope | undefined): boolean => {
   if (row.scope === 'all') return true;
   const at = row.scope.indexOf(':');
   const what = row.scope.slice(0, at);

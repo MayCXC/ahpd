@@ -81,6 +81,8 @@ export { secretRef, fromEnvRef, scopeOf, readSecret, readSecrets } from './vault
 export type { SecretScope } from './vault.js';
 export { decide } from './decide.js';
 export type { Asked, Decision } from './decide.js';
+export { chargeFor, COUNTED, keysOf, limitsOf } from './charge.js';
+export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, PayOrder } from './charge.js';
 export { fileUsers, grantProblem, signInRecord } from './users.js';
 export type { FileUserOptions } from './users.js';
 export { peopleChannels, peopleProviders } from './people.js';

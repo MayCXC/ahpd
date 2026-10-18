@@ -12,8 +12,8 @@
  * is a name several rows draw from one total under. They are different things
  * under one word, so both are spelled out here.
  *
- * Nothing here enforces anything. `pool`, `cap` and `limits` are stored and
- * read by nobody.
+ * `pool`, `cap` and `limits` are stored here and enforced nowhere in this file:
+ * `charge.ts` is the walk that reads them, and nothing in there changes a row.
  */
 
 /** What a row is about: the proxy's model calls, a harness, or a machine. */
