@@ -518,7 +518,7 @@ it('refuses a token another key signed, which is what a forged one is', async ()
   expect(await issuer.verify?.(`${held.slice(0, at)}.`, AUDIENCE)).toBeUndefined();
 });
 
-it('refuses an expired token, one not yet good, and one for another audience', async () => {
+it('refuses an expired token, one with no end, one not yet good, and one for another audience', async () => {
   const key = await minted('ES256');
   const { fetch } = answering(idp(key.published));
   const issuer = oidcIssuer({ issuer: ISSUER, fetch });
@@ -526,6 +526,7 @@ it('refuses an expired token, one not yet good, and one for another audience', a
 
   expect(await issuer.verify?.(await key.token({ exp: now - 3600 }), AUDIENCE)).toBeUndefined();
   expect(await issuer.verify?.(await key.token({ nbf: now + 600 }), AUDIENCE)).toBeUndefined();
+  expect(await issuer.verify?.(await key.token({ exp: undefined }), AUDIENCE)).toBeUndefined();
   // An ID token is a JWT too, and the audience is what keeps it from signing in.
   expect(await issuer.verify?.(await key.token({ aud: 'the-client' }), AUDIENCE)).toBeUndefined();
   expect(await issuer.verify?.(await key.token({ aud: undefined }), AUDIENCE)).toBeUndefined();

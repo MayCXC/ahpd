@@ -293,7 +293,9 @@ const checked = async (
   if (iss === undefined || !sameIssuer(iss, wanted.issuer)) return undefined;
   const now = Date.now();
   const exp = seconds(held.claims, 'exp');
-  if (exp !== undefined && now > exp * 1000 + SKEW) return undefined;
+  // A token with no end is refused too: an access token carries one, and a
+  // sign-in checked here has nothing else to end it by.
+  if (exp === undefined || now > exp * 1000 + SKEW) return undefined;
   const nbf = seconds(held.claims, 'nbf');
   if (nbf !== undefined && now + SKEW < nbf * 1000) return undefined;
   if (!meantFor(held.claims['aud'], wanted.audience)) return undefined;
@@ -302,7 +304,7 @@ const checked = async (
   return {
     subject,
     claims: held.claims,
-    ...(exp === undefined ? {} : { expiresAt: exp * 1000 }),
+    expiresAt: exp * 1000,
   };
 };
 

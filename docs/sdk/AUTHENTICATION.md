@@ -125,7 +125,7 @@ or `--issuer-verify jwt`. The three values are `userinfo`, `jwt` and `auto`. `us
 - **`typ`**, which must be `at+jwt` or `JWT`, or absent.
 - **`iss`**, which must name an issuer this host already knows: the configured one, or one a record names. A token naming any other is refused with no request at all, under every value of this setting. No issuer is an authority on a token another one minted.
 - **`aud`**, which must hold the identifier this host advertises for its own sign-in, the resource a client was told to sign in against. That is what keeps an ID token, which is a JWT the same issuer signs, from signing anybody in.
-- **`exp`** and **`nbf`**, with a minute of allowance either way for a clock that is out by a little.
+- **`exp`** and **`nbf`**, with a minute of allowance either way for a clock that is out by a little. A token with no `exp` is refused.
 - **The subject**, which must name a record's `id`, exactly as it must over `userinfo`.
 
 `rolesFrom` reads its claim from that same answer, so a sign-in checked here is one request for a key set and none for the person.
