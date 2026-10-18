@@ -338,8 +338,19 @@ export const computerNeeds = (action: Record<string, unknown>): Grant | undefine
  * a window's answer about the folders that window has opened, and kept in the
  * shared record the last window to connect decided what every session on the
  * host loads from its project.
+ *
+ * The three terminal and edit rules are the same answer about what a window
+ * lets its agent do without asking: kept in the shared record, the last window
+ * to connect would decide every session's approvals, and a session is started
+ * by one window rather than by whatever connected last.
  */
-export const PER_CONNECTION = new Set(['defaultShell', 'workspaceTrust']);
+export const PER_CONNECTION = new Set([
+  'defaultShell',
+  'workspaceTrust',
+  'terminalAutoApproveEnabled',
+  'terminalAutoApproveRules',
+  'editAutoApprovePatterns',
+]);
 
 /**
  * Whether this connection is somebody who may read the daemon's own settings.

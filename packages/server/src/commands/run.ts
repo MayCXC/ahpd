@@ -772,6 +772,15 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      */
     ...(options.shellEnv === undefined ? {} : { shellEnv: options.shellEnv }),
     /*
+     * The rules a session's commands are matched against when its window
+     * pushed none.
+     *
+     * Handed on rather than defaulted here: `vscode` is what the key means
+     * when the file says nothing, and the host reads an absent one the same
+     * way.
+     */
+    terminalAutoApproveDefaults: options.terminalAutoApproveDefaults,
+    /*
      * How long the host gathers a streamed delta before it sends it.
      *
      * Left off rather than defaulted here, for the reason above: the host's

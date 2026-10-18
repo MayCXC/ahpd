@@ -333,9 +333,9 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
          * Kept twice, because the keys are two kinds.
          *
          * What changed is who *acts* on a key. `PER_CONNECTION` names the
-         * person's - `defaultShell` today - and those are also written to
-         * this connection, which is the only place anything reads them from
-         * now. `rootConfig`'s copy is display state and nothing opens a shell
+         * person's - the shell, the trust and the command rules a window
+         * pushes - and those are also written to this connection, which is the
+         * only place anything reads them from now. `rootConfig`'s copy is display state and nothing opens a shell
          * with it. So two people on one daemon each get their own, and the
          * paths with no connection in hand take the daemon's own shell and
          * nobody's preference at all.

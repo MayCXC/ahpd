@@ -288,6 +288,19 @@ export interface Config {
    */
   shellEnv?: ShellEnv;
   /**
+   * The rules a session's shell commands are matched against when the window
+   * that started it pushed none.
+   *
+   * `vscode`, the default, is VS Code's own terminal auto-approve table, so a
+   * command the reference client approves runs without asking. `none` approves
+   * no command, so every one asks, which is what a deployment that would rather
+   * review each command runs with.
+   *
+   * Only a window that pushed no rules falls back to this: one that pushed an
+   * empty table has said what it approves, and it approves nothing.
+   */
+  terminalAutoApproveDefaults?: 'vscode' | 'none';
+  /**
    * How long a streamed delta waits for the next one before it is sent.
    *
    * Milliseconds, a whole number from 0 to 1000. Within the window the deltas

@@ -317,6 +317,49 @@ it('keeps a pushed workspaceTrust on the connection that pushed it', async () =>
   expect(theirs.values.workspaceTrust).toBeUndefined();
 });
 
+it('keeps the three approval keys on the connection that pushed them', async () => {
+  const { signedIn, rootOf } = served();
+  const ana = await signedIn('admin', 'ana');
+  const ben = await signedIn('admin', 'ben');
+  const pushed = {
+    terminalAutoApproveEnabled: true,
+    terminalAutoApproveRules: { 'make test': true },
+    editAutoApprovePatterns: { '**/*': true },
+  };
+  await ana.client.handle({
+    method: 'dispatchAction',
+    params: { channel: ROOT, action: { type: 'root/configChanged', config: pushed } },
+  });
+  await settle();
+  // A window's command rules are the window's, like its trust and its shell: a
+  // session is started by one window, and the last client to connect must not
+  // decide the rules of every session on the host.
+  const mine = (await rootOf(ana.client)).config as { values: Record<string, unknown> };
+  expect(mine.values).toMatchObject(pushed);
+  const theirs = (await rootOf(ben.client)).config as { values: Record<string, unknown> };
+  expect(theirs.values.terminalAutoApproveEnabled).toBeUndefined();
+  expect(theirs.values.terminalAutoApproveRules).toBeUndefined();
+  expect(theirs.values.editAutoApprovePatterns).toBeUndefined();
+});
+
+it('takes the three approval keys from a member, needing no config:change', async () => {
+  const { signedIn, rootOf, heardOnRoot } = served(false);
+  const member = await signedIn('member', 'member');
+  const pushed = { terminalAutoApproveRules: { 'make test': true }, editAutoApprovePatterns: { '**/*': true } };
+  await member.client.handle({
+    method: 'dispatchAction',
+    params: { channel: ROOT, action: { type: 'root/configChanged', config: pushed } },
+  });
+  await settle();
+  // No rejection: the keys describe what this window's own sessions may run,
+  // and saying so is not changing the host.
+  expect(heardOnRoot(member.heard)).toEqual([
+    expect.objectContaining({ action: { type: 'root/configChanged', config: pushed } }),
+  ]);
+  const { values } = (await rootOf(member.client)).config as { values: Record<string, unknown> };
+  expect(values).toMatchObject(pushed);
+});
+
 it('declares changeWords with its four modes and the session title as the default', async () => {
   const { signedIn, rootOf } = served();
   const admin = await signedIn('admin', 'admin');

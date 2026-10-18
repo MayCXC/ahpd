@@ -498,6 +498,18 @@ export interface HostOptions {
    */
   shellEnv?: ShellEnv;
   /**
+   * The rules a session's shell commands are matched against when its owner's
+   * window pushed none.
+   *
+   * `vscode`, the default, is VS Code's terminal auto-approve table, so a
+   * session whose window has not pushed a table runs the commands the
+   * reference client approves. `none` approves no command, for a deployment
+   * that would rather ask about each one. A window that pushed an empty table
+   * is not folded into this: it said what it approves, and it approves
+   * nothing.
+   */
+  terminalAutoApproveDefaults?: 'vscode' | 'none';
+  /**
    * How long a turn asked for a commit message or a pull request's words is
    * waited for, in milliseconds.
    *
