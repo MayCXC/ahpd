@@ -316,6 +316,21 @@ it('is offered only to a session that names it, with the rule that it is the rep
   expect(tool.instruction).toMatch(/send_message starts a turn in another session and does not reply/);
 });
 
+it('asks with the question tool, and in the post when there is none', () => {
+  const tool = postMessage(botWake({} as never));
+  const instruction = String(tool.instruction ?? '');
+
+  // The rule is about asking, not about any one harness's tool: a session that
+  // has a question tool asks with it, and the question - and the answer - stay
+  // in the main chat, where task 06 shows it. A harness with no such tool says
+  // its question in the reply it posts.
+  expect(instruction).toMatch(/ask with your question tool/);
+  expect(instruction).toMatch(/no question tool asks in the text it posts/);
+  // Each harness names its own, so naming one here would be wrong for every
+  // other, and the rule would be read as being about that tool alone.
+  expect(instruction).not.toMatch(/AskUserQuestion/);
+});
+
 it('gives mainTurnPostMessageAbsent a default of post, and declares it', () => {
   expect(defaults.mainTurnPostMessageAbsent).toBe('post');
   expect(optionsSchema.properties).toHaveProperty('mainTurnPostMessageAbsent');

@@ -33,8 +33,12 @@ import type { Wake } from './wake.js';
  * looks like answering - it puts words where somebody will read them - but it
  * starts a turn somewhere else, and the person in the main chat is not reached
  * by it.
+ *
+ * The question tool is not named, because each harness names its own: the rule
+ * is that a question is asked with the harness's tool, which is what task 06
+ * shows in the main chat, and a harness with none asks in the text it posts.
  */
-export const POST_INSTRUCTION = 'A person is waiting in the main chat for your reply to the message that woke this session. Only post_message answers them: call it once, when the answer is ready, and the text you give it becomes their reply. send_message starts a turn in another session and does not reply to the person waiting, so do not use it to answer.';
+export const POST_INSTRUCTION = 'A person is waiting in the main chat for your reply to the message that woke this session. Only post_message answers them: call it once, when the answer is ready, and the text you give it becomes their reply. When you need an answer from them before you can reply, ask with your question tool: it puts the question in the main chat and brings their answer back here. A harness with no question tool asks in the text it posts. send_message starts a turn in another session and does not reply to the person waiting, so do not use it to answer.';
 
 export function postMessage(wake: Wake): HostTool {
   return {
