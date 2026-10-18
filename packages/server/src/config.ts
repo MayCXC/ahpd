@@ -76,6 +76,21 @@ export interface PoliciesSetting {
    * anything starts refusing.
    */
   check?: boolean;
+  /**
+   * Which row of one scope pays first when several can.
+   *
+   * `ending` uses the row that ends soonest first, `regular` the rows with no
+   * `until`, and `extra` the rows with one, the newest `from` first. Defaults
+   * to `ending`, so temporary credit is spent before regular credit.
+   */
+  payOrder?: 'ending' | 'regular' | 'extra';
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * Defaults to `true`: a person sees the limits that apply to them, with only
+   * their own figure for a limit every member has their own total of.
+   */
+  ownLimits?: boolean;
 }
 
 /**

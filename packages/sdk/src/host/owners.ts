@@ -1,6 +1,8 @@
 import { namesOf, scopeFor } from '../scopes.js';
+import { chargeFor } from '../charge.js';
 import { decide } from '../decide.js';
 import { idOf } from '../catalog.js';
+import { zoneOf } from '../periods.js';
 import { ownerOfPrincipal } from '../values.js';
 import type { Scope, ScopeAnswer } from '../scopes.js';
 import type { Asked } from '../decide.js';
@@ -10,6 +12,20 @@ import type { Owner } from '../types/usage.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 import type { HostContext } from './context.js';
+
+/**
+ * What a check answered: the refusal it gave, or the keys the work is charged
+ * under.
+ *
+ * A caller that did not ask to be charged gets neither, which is the ordinary
+ * case for a host with the check off or no store to read.
+ */
+export interface Checked {
+  /** Why the work is refused, when it is. */
+  refusal?: string;
+  /** The policy keys the work's records carry, when the check charged it. */
+  pools?: string[];
+}
 
 /** Whose work a session is, what it is charged to, and who may run it. */
 export interface Owners {
@@ -28,13 +44,21 @@ export interface Owners {
     principal: Principal | undefined,
     scope: Scope | undefined,
     what: { kind: PolicyKind; asked: Asked }[],
-  ): Promise<string | undefined>;
+    charge?: PolicyKind,
+  ): Promise<Checked>;
+  keysOf(turn: string): string[] | undefined;
+  keepKeys(turn: string, keys: readonly string[]): void;
+  forgetKeys(turn: string): void;
+  moveKeys(from: string, to: string): void;
   scoping(principal: Principal | undefined): { properties: Bag; defaults: Record<string, string> };
   settle(uri: string, where: string | undefined, config: Record<string, unknown>, principal?: Principal): Promise<void>;
 }
 
 export function createOwners(ctx: HostContext): Owners {
-  const { options, kept } = ctx;
+  const { options, kept, log } = ctx;
+
+  /** The zone the charge walk cuts its periods in, which is the store's own. */
+  const zone = zoneOf(options.usageTimezone, log);
 
   /** What each session's work is charged to, refusal included, by session uri. */
   const charged = new Map<string, ScopeAnswer | undefined>();
@@ -115,6 +139,34 @@ export function createOwners(ctx: HostContext): Owners {
    */
   const sentBy = new Map<string, Connection>();
 
+  /**
+   * The policy keys each running turn is charged under, by the turn's id.
+   *
+   * The check chooses them before the turn's first record is written and is
+   * not asked again while it runs, because the cost is not split across rows
+   * during a turn. They are kept here rather than with the sender because the
+   * meter asks for them when it writes, and let go of when the turn ends.
+   */
+  const turnKeys = new Map<string, string[]>();
+
+  /** The keys this turn's records carry, or nothing where its check chose none. */
+  const keysOf = (turn: string): string[] | undefined => turnKeys.get(turn);
+
+  /** Keep what a turn's check chose, before any of its records is written. */
+  const keepKeys = (turn: string, keys: readonly string[]): void => { turnKeys.set(turn, [...keys]); };
+
+  /** Let go of a turn's keys, when it ends or is refused after its check. */
+  const forgetKeys = (turn: string): void => { turnKeys.delete(turn); };
+
+  /** Move a queued message's keys to the turn it became, which is a new id. */
+  const moveKeys = (from: string, to: string): void => {
+    if (from === to) return;
+    const held = turnKeys.get(from);
+    if (held === undefined) return;
+    turnKeys.delete(from);
+    turnKeys.set(to, held);
+  };
+
   /** Let go of who sent a turn or a queued message, out of both maps, by its id. */
   const forgetSender = (id: string): void => {
     senders.delete(id);
@@ -128,9 +180,16 @@ export function createOwners(ctx: HostContext): Owners {
    */
   const forgetSendersIn = (chat: Bag): void => {
     const active = chat.activeTurn as Bag | undefined;
-    if (typeof active?.id === 'string') forgetSender(active.id);
+    if (typeof active?.id === 'string') {
+      forgetSender(active.id);
+      forgetKeys(active.id);
+    }
     const queued = Array.isArray(chat.queuedMessages) ? chat.queuedMessages as Bag[] : [];
-    for (const one of queued) if (typeof one?.id === 'string') forgetSender(one.id);
+    for (const one of queued) {
+      if (typeof one?.id !== 'string') continue;
+      forgetSender(one.id);
+      forgetKeys(one.id);
+    }
   };
 
   /**
@@ -148,7 +207,8 @@ export function createOwners(ctx: HostContext): Owners {
   };
 
   /**
-   * The refusal this work would be given, or nothing when there is none to give.
+   * The refusal this work would be given, or the keys its records are charged
+   * under.
    *
    * Three ways there is nothing, and all three are the ordinary case: the
    * switch is off, there is no store to read, or there is no person behind the
@@ -160,6 +220,12 @@ export function createOwners(ctx: HostContext): Owners {
    * harness, the machine and the model it named. Each one is checked in turn and
    * the first refusal is the answer, so what comes back names what refused it.
    *
+   * `charge` names the kind whose allowed decision is then walked for room: a
+   * turn asks for `agent` and keeps the keys for its records; a session asks
+   * for none, so nothing is limited at its creation. With no usage store there
+   * is nothing to read the walk's totals from, so no key is chosen and nothing
+   * is refused on a limit.
+   *
    * A store that cannot be read refuses the work rather than letting it through,
    * because a check that failed open is not a check.
    */
@@ -167,19 +233,29 @@ export function createOwners(ctx: HostContext): Owners {
     principal: Principal | undefined,
     scope: Scope | undefined,
     what: { kind: PolicyKind; asked: Asked }[],
-  ): Promise<string | undefined> => {
+    charge?: PolicyKind,
+  ): Promise<Checked> => {
     const store = options.policies;
-    if (options.policiesCheck !== true || store === undefined || principal === undefined) return undefined;
+    if (options.policiesCheck !== true || store === undefined || principal === undefined) return {};
+    const usage = options.usage;
+    let pools: string[] | undefined;
     for (const one of what) {
       try {
         const decision = await decide(store, principal, scope, one.kind, one.asked);
-        if (!decision.allowed) return decision.refusal.message;
+        if (!decision.allowed) return { refusal: decision.refusal.message };
+        if (charge !== one.kind || usage === undefined) continue;
+        const walked = await chargeFor(decision, one.kind, principal, scope, usage, {
+          zone,
+          ...(options.policiesPayOrder === undefined ? {} : { payOrder: options.policiesPayOrder }),
+        });
+        if (!walked.allowed) return { refusal: walked.refusal.message };
+        pools = [...(pools ?? []), ...walked.pools];
       }
       catch (error) {
-        return `no policy could be read, so ${one.kind} is refused: ${error instanceof Error ? error.message : String(error)}`;
+        return { refusal: `no policy could be read, so ${one.kind} is refused: ${error instanceof Error ? error.message : String(error)}` };
       }
     }
-    return undefined;
+    return pools === undefined ? {} : { pools };
   };
 
   /**
@@ -245,5 +321,6 @@ export function createOwners(ctx: HostContext): Owners {
   return {
     charged, ownerFor, principals, principalFor, forWhom, senders, senderOf, sentBy,
     forgetSender, forgetSendersIn, charge, checked, scoping, settle,
+    keysOf, keepKeys, forgetKeys, moveKeys,
   };
 }

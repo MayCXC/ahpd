@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
-import type { IssuerVerify, McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
+import type { IssuerVerify, McpServer, PayOrder, PluginSpec, ShellEnv } from '@ahpd/sdk';
 import type { Config, HttpSetting, RoutesSetting } from '../config.js';
 import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
 import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
@@ -121,6 +121,21 @@ export interface Options {
    * deployment rather than about one run.
    */
   policiesCheck: boolean;
+  /**
+   * Which row of one scope pays first when several can.
+   *
+   * `policies.payOrder` in the file, `ending` unless it says otherwise. It has
+   * no flag, for the same reason `check` has none: which credit is spent first
+   * is the deployment's, not one run's.
+   */
+  policiesPayOrder: PayOrder;
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * `policies.ownLimits` in the file, `true` unless it says otherwise. It has
+   * no flag, as who may read a row's limits is the deployment's.
+   */
+  policiesOwnLimits: boolean;
   /** A file every frame is appended to, both directions, one JSON line each. */
   wire?: string;
   /**
@@ -586,8 +601,10 @@ export const serverFields = {
     type: 'object',
     properties: {
       check: { type: 'boolean' },
+      payOrder: { type: 'string', enum: ['ending', 'regular', 'extra'] },
+      ownLimits: { type: 'boolean' },
     },
-    description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it. Off by default, and the rows are written and listed either way. Set in the configuration file only.',
+    description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it, and refuses a turn or a proxy call whose limits have no room left. Off by default, and the rows are written and listed either way. payOrder says which row of one scope pays first: ending (the default), regular or extra. ownLimits, true by default, lets a person read the limits that apply to them. Set in the configuration file only.',
   },
   http: {
     type: ['object', 'boolean'],
@@ -1120,6 +1137,8 @@ const noCwd = input['noCwd'] === true;
     usagePer: given('usage')?.per ?? 'turn',
     ...(usageZone === undefined ? {} : { usageTimezone: usageZone }),
     policiesCheck: given('policies')?.check ?? false,
+    policiesPayOrder: given('policies')?.payOrder ?? 'ending',
+    policiesOwnLimits: given('policies')?.ownLimits ?? true,
     ...(wire === undefined ? {} : { wire }),
     ...(http === undefined ? {} : { http }),
     ...(routes === undefined ? {} : { routes }),

@@ -19,6 +19,7 @@ import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
 import type { Policies } from './policies.js';
+import type { PayOrder } from '../charge.js';
 import type { RecordStore } from './records.js';
 import type { Vault } from './vault.js';
 import type { Peer, Request } from './rpc.js';
@@ -287,6 +288,13 @@ export interface HostOptions {
    */
   usagePer?: 'turn' | 'report';
   /**
+   * The zone a day, a week and a month start in, as `Intl` names one.
+   *
+   * It is the zone the usage store cuts its days in, so the charge walk reads
+   * its periods over the same days the store keeps. Absent is the system's own.
+   */
+  usageTimezone?: string;
+  /**
    * Where this host keeps the policies that say who may use what.
    *
    * Left out, there is nothing to check and nothing a client may write.
@@ -317,6 +325,21 @@ export interface HostOptions {
    * a host with no users directory: those have no person to check.
    */
   policiesCheck?: boolean;
+  /**
+   * Which row of one scope pays first when several can, while the check runs.
+   *
+   * `ending` uses the row that ends soonest first, `regular` the rows with no
+   * `until`, and `extra` the rows with one, the newest `from` first. Defaults
+   * to `ending`.
+   */
+  policiesPayOrder?: PayOrder;
+  /**
+   * Whether a person reads the limits whose scope holds them.
+   *
+   * On by default. A host that turns it off answers a person only the general
+   * figures, and an operator holding `policy:read` reads every row either way.
+   */
+  policiesOwnLimits?: boolean;
   /**
    * Tools this host contributes to every session it runs.
    *

@@ -407,11 +407,13 @@ export function createMachines(ctx: HostContext): Machines {
     owner?: Owner,
   ): Promise<string | undefined> => {
     const machine = machineFor(config);
-    const refused = await checked(principal, scope, [
+    // A session is checked but not charged: nothing is spent until its first
+    // turn, so the limits are read there rather than here.
+    const { refusal } = await checked(principal, scope, [
       { kind: 'agent', asked: { agent: provider, computer: machine } },
       { kind: 'computer', asked: { computer: machine } },
     ]);
-    if (refused !== undefined) return refused;
+    if (refusal !== undefined) return refusal;
     const named = computerId(config.computer);
     return named === undefined
       ? undefined

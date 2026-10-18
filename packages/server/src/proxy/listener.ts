@@ -18,7 +18,9 @@
  */
 
 import type { RequestHandler } from '@cofold/remote';
-import { decide, type Cost, type ModelUse, type Owner, type Policies, type Scope, type Usage, type Users } from '@ahpd/sdk';
+import {
+  chargeFor, decide, type Cost, type ModelUse, type Owner, type PayOrder, type Policies, type Scope, type Usage, type Users,
+} from '@ahpd/sdk';
 import { foreign, guarded, isUnder, json, originRefusal, PROXY_PREFIX, type ApiOrigins } from '../http.js';
 import { callerName, callerOf, type ProxyCaller, type SessionCaller } from './caller.js';
 import {
@@ -57,6 +59,10 @@ export interface ProxyOptions {
   policies?: Policies;
   /** Whether policies are checked: `policies.check`. */
   policiesCheck?: boolean;
+  /** Which row of one scope pays first: `policies.payOrder`, `ending` unless said. */
+  policiesPayOrder?: PayOrder;
+  /** The zone the checked periods are cut in, which is the store's: `usage.timezone`. */
+  usageTimezone?: string;
   /** Where a call is recorded, read per call because a plugin may replace the store. */
   usage?(): Usage | undefined;
   /** What this host is called, for the work root does: `root:<hostName>`. */
@@ -210,14 +216,39 @@ const NEVER_ARRIVED = new Set([
 
 /**
  * The pools one record is charged to: the owner, the team and the project,
- * each only when the record has it. The same spelling
- * the agent meter charges under.
+ * each only when the record has it, then the keys the check chose. The same
+ * spelling the agent meter charges under, and a key already named is added
+ * once.
  */
-const poolsOf = (owner: Owner | undefined, scope: Scope | undefined): string[] => [
-  ...(owner === undefined ? [] : [owner]),
-  ...(scope === undefined ? [] : [`team:${scope.team}`]),
-  ...(scope?.project === undefined ? [] : [`project:${scope.team}:${scope.project}`]),
-];
+const poolsOf = (owner: Owner | undefined, scope: Scope | undefined, keys?: readonly string[]): string[] => {
+  const pools = [
+    ...(owner === undefined ? [] : [owner]),
+    ...(scope === undefined ? [] : [`team:${scope.team}`]),
+    ...(scope?.project === undefined ? [] : [`project:${scope.team}:${scope.project}`]),
+  ];
+  for (const key of keys ?? []) if (!pools.includes(key)) pools.push(key);
+  return pools;
+};
+
+/**
+ * The zone `usage.timezone` names, or the system's own when it is absent or
+ * cannot be read.
+ *
+ * The usage store cuts its days in this zone, so a walked period reads the days
+ * the store kept. An unreadable name is said by the store itself at startup,
+ * and the system's zone is what both fall back to.
+ */
+const zoneOf = (wanted: string | undefined): string => {
+  const here = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (wanted === undefined || wanted.trim() === '') return here;
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: wanted }).format(new Date());
+    return wanted;
+  }
+  catch {
+    return here;
+  }
+};
 
 /**
  * What a call costs by the entry's price, in dollars per million tokens.
@@ -361,26 +392,53 @@ const chargedAs = (caller: ProxyCaller, options: ProxyOptions, proxy: ProxyConfi
   };
 };
 
+/** What the checking of one candidate entry answers, and what its record carries. */
+interface EntryCheck {
+  /** Why the entry is refused, or nothing when it may be called. */
+  allowed(entry: ModelEntry): Promise<string | undefined>;
+  /** The keys that entry's record is charged under, once it was allowed. */
+  keysOf(entry: ModelEntry): string[] | undefined;
+}
+
 /**
  * The policy a route is held to for one caller and one name, or nothing.
  *
  * Only with the checks on, a store, and a person behind the call. A store that
  * cannot be read refuses, as the host's own check does: a check that failed
  * open is not a check.
+ *
+ * After an allowed decision the entry is walked for room, the same way a turn
+ * is, and a row with no room refuses the entry with its sentence. The keys the
+ * walk chose are kept for the entry, because the record is written for the
+ * candidate that answered rather than for the name. With no usage store there
+ * is no total to read, so no key is chosen and nothing is refused on a limit.
+ * A listing passes `zone` as `undefined`: it asks only whether the policy
+ * allows the name, so a model at its limit stays listed and its call is refused.
  */
-const policyFor = (options: ProxyOptions, charged: Charged, name: string) => {
+const policyFor = (options: ProxyOptions, charged: Charged, name: string, zone: string | undefined): EntryCheck | undefined => {
   const store = options.policies;
   const principal = charged.principal;
   if (options.policiesCheck !== true || store === undefined || principal === undefined) return undefined;
-  return async (entry: ModelEntry): Promise<string | undefined> => {
+  const kept = new Map<ModelEntry, string[]>();
+  const allowed = async (entry: ModelEntry): Promise<string | undefined> => {
     try {
       const decision = await decide(store, principal, charged.scope, 'model', { model: name, proxy: entry.provider });
-      return decision.allowed ? undefined : decision.refusal.message;
+      if (!decision.allowed) return decision.refusal.message;
+      const usage = options.usage?.();
+      if (usage === undefined || zone === undefined) return undefined;
+      const walked = await chargeFor(decision, 'model', principal, charged.scope, usage, {
+        zone,
+        ...(options.policiesPayOrder === undefined ? {} : { payOrder: options.policiesPayOrder }),
+      });
+      if (!walked.allowed) return walked.refusal.message;
+      kept.set(entry, walked.pools);
+      return undefined;
     }
     catch (error) {
       return `no policy could be read, so model is refused: ${error instanceof Error ? error.message : String(error)}`;
     }
   };
+  return { allowed, keysOf: (entry) => kept.get(entry) };
 };
 
 /** Why one candidate was left, for the log. */
@@ -400,6 +458,9 @@ type Attempt =
  */
 export function proxyHandler(options: ProxyOptions): RequestHandler {
   const say = (line: string): void => { options.onProblem?.(line); };
+  // One zone for every check, read once because it does not move while the
+  // daemon runs and the store cuts its days in it.
+  const zone = zoneOf(options.usageTimezone);
   const headersTimeout = options.headersTimeoutMs ?? HEADERS_TIMEOUT_MS;
   const idleTimeout = options.idleTimeoutMs ?? IDLE_TIMEOUT_MS;
   const maxBody = options.maxBodyBytes ?? MAX_BODY_BYTES;
@@ -475,8 +536,8 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
 
     const proxy = options.proxy();
     const charged = chargedAs(caller, options, proxy);
-    const allowed = policyFor(options, charged, name);
-    const routed = await route(proxy, name, dialect, { ...(options.env === undefined ? {} : { env: options.env }), ...(allowed === undefined ? {} : { allowed }) });
+    const check = policyFor(options, charged, name, zone);
+    const routed = await route(proxy, name, dialect, { ...(options.env === undefined ? {} : { env: options.env }), ...(check === undefined ? {} : { allowed: check.allowed }) });
     if ('refusal' in routed) return refuse(routed.refusal);
 
     const at = new Date().toISOString();
@@ -532,7 +593,12 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
       }
       if (response.status >= 400 || left.length > 0) said(`${candidate.provider} answered ${String(response.status)}`);
       return streamed(request, dialect, response, controller, (tokens, providerCost) => {
-        record(options, charged, { at, name, candidate, tokens, ...(providerCost === undefined ? {} : { providerCost }) });
+        const pools = check?.keysOf(candidate.entry);
+        record(options, charged, {
+          at, name, candidate, tokens,
+          ...(providerCost === undefined ? {} : { providerCost }),
+          ...(pools === undefined ? {} : { pools }),
+        });
       }, (why) => { say(`proxy: ${who} ${name}: ${candidate.provider} ${why}`); });
     }
     // Unreachable: a route answers at least one candidate.
@@ -621,9 +687,9 @@ export function proxyHandler(options: ProxyOptions): RequestHandler {
     const charged = chargedAs(called.caller, options, proxy);
     const names: string[] = [];
     for (const name of Object.keys(proxy.models)) {
-      const allowed = policyFor(options, charged, name);
+      const check = policyFor(options, charged, name, undefined);
       for (const one of DIALECTS) {
-        const routed = await route(proxy, name, one, { ...(options.env === undefined ? {} : { env: options.env }), ...(allowed === undefined ? {} : { allowed }) });
+        const routed = await route(proxy, name, one, { ...(options.env === undefined ? {} : { env: options.env }), ...(check === undefined ? {} : { allowed: check.allowed }) });
         if ('candidates' in routed) { names.push(name); break; }
       }
     }
@@ -657,6 +723,8 @@ interface Answered {
   tokens: Tokens;
   /** The cost its answer reported, when the provider gave one. */
   providerCost?: Cost;
+  /** The policy keys the check chose for this entry, when it was charged. */
+  pools?: string[];
 }
 
 /**
@@ -688,7 +756,7 @@ const record = (options: ProxyOptions, charged: Charged, call: Answered): void =
     model: { name: call.name, provider: call.candidate.provider, ...call.tokens },
     ...(cost === undefined ? {} : { cost }),
     ...(provider === undefined ? {} : { providerCost: provider }),
-    pools: poolsOf(charged.owner, charged.scope),
+    pools: poolsOf(charged.owner, charged.scope, call.pools),
   };
   void Promise.resolve()
     .then(() => store.record(entry))

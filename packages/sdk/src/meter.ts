@@ -54,6 +54,13 @@ export interface MeterOptions {
   computer?: () => string | undefined;
   /** Who sent a turn, or nobody where this host did not start it. */
   senderOf(turn: string): Owner | undefined;
+  /**
+   * The policy keys the turn's check chose, or nothing where it charged none.
+   *
+   * Read for every record of the turn, because with `per: 'report'` there is
+   * more than one and every one of them is charged the same way.
+   */
+  keysOf?(turn: string): readonly string[] | undefined;
   /** Whose the session's work is, for a turn nobody sent. */
   owner(): Owner | undefined;
   /** The team and project it is charged under, where it was told one. */
@@ -190,13 +197,18 @@ const addition = (now: Bag, before: Bag | undefined): Bag => {
  *
  * Each is named only when the record has it, so work with no owner and no scope
  * is charged to no pool rather than to one whose name says nothing. A project
- * pool is told from a team pool by its prefix, never by counting colons.
+ * pool is told from a team pool by its prefix, never by counting colons. The
+ * policy keys come after them, and a key already named is added once.
  */
-const poolsOf = (owner: Owner | undefined, scope: Scope | undefined): string[] => [
-  ...(owner === undefined ? [] : [owner]),
-  ...(scope === undefined ? [] : [`team:${scope.team}`]),
-  ...(scope?.project === undefined ? [] : [`project:${scope.team}:${scope.project}`]),
-];
+const poolsOf = (owner: Owner | undefined, scope: Scope | undefined, keys?: readonly string[]): string[] => {
+  const pools = [
+    ...(owner === undefined ? [] : [owner]),
+    ...(scope === undefined ? [] : [`team:${scope.team}`]),
+    ...(scope?.project === undefined ? [] : [`project:${scope.team}:${scope.project}`]),
+  ];
+  for (const key of keys ?? []) if (!pools.includes(key)) pools.push(key);
+  return pools;
+};
 
 /** How many ended turns are remembered, so that many late reports can be metered no further. */
 const ENDS_KEPT = 1024;
@@ -267,7 +279,7 @@ export const meter = (options: MeterOptions): Meter => {
       ...(computer === undefined ? {} : { computer }),
       model: { ...usedBy(reported), name: name ?? '' },
       ...(billed === undefined ? {} : { cost: billed, providerCost: billed }),
-      pools: poolsOf(owner, scope),
+      pools: poolsOf(owner, scope, options.keysOf?.(turn)),
     };
     held.opened = true;
     void options.usage.record(entry).catch((error: unknown) => {
