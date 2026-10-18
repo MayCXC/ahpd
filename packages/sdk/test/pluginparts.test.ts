@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
 import { uriOf } from '../src/fileuri.js';
-import { partsOf } from '../src/pluginparts.js';
+import { partsOf, rulesOf } from '../src/pluginparts.js';
 
 /*
  * What a plugin holds, read off a copy of it.
@@ -57,6 +57,77 @@ it('lists every kind of part, in the order a client reads them', () => {
       state: { kind: 'stopped' },
     },
   ]);
+  gone(dir);
+});
+
+it('reads a rule\'s frontmatter onto its part, and keeps the body beside it', () => {
+  const dir = place({
+    '.claude-plugin/plugin.json': '{}',
+    'rules/style.mdc': [
+      '---',
+      'description: House style',
+      'alwaysApply: true',
+      'globs:',
+      '  - "src/**/*.ts"',
+      '  - test/**',
+      '---',
+      '',
+      'Indent with tabs.',
+      '',
+    ].join('\n'),
+  });
+
+  // The three fields a rule's part can carry are the frontmatter's, so a client
+  // that reads a rule is told what it is for and whether it applies always.
+  expect(partsOf(dir, uriOf(dir))).toEqual([
+    {
+      type: 'rule',
+      id: at(dir, 'rules/style.mdc'),
+      uri: at(dir, 'rules/style.mdc'),
+      name: 'style',
+      description: 'House style',
+      alwaysApply: true,
+      globs: ['src/**/*.ts', 'test/**'],
+    },
+  ]);
+  // The body is the words an agent is told, and it is no field of the part: the
+  // file is read once, and the body is handed over beside the part it made.
+  expect(rulesOf(dir, uriOf(dir))?.map((one) => one.body)).toEqual(['Indent with tabs.']);
+  gone(dir);
+});
+
+it('gives a rule written with no frontmatter no field of its own', () => {
+  const dir = place({
+    '.claude-plugin/plugin.json': '{}',
+    'rules/plain.instructions.md': 'Always answer in Portuguese.\n',
+  });
+
+  // A rule is a part with a name and a file whether or not it says anything
+  // about itself, and this one says nothing.
+  expect(partsOf(dir, uriOf(dir))).toEqual([
+    {
+      type: 'rule',
+      id: at(dir, 'rules/plain.instructions.md'),
+      uri: at(dir, 'rules/plain.instructions.md'),
+      name: 'plain',
+    },
+  ]);
+  expect(rulesOf(dir, uriOf(dir))?.map((one) => one.body)).toEqual(['Always answer in Portuguese.']);
+  gone(dir);
+});
+
+it('treats a rule whose frontmatter never closes as one that has none', () => {
+  const dir = place({
+    '.claude-plugin/plugin.json': '{}',
+    'rules/open.mdc': '---\nalwaysApply: true\n',
+  });
+
+  // Nothing can be read out of a frontmatter with no closing line, so the rule
+  // carries no field and its whole text is the body.
+  expect(partsOf(dir, uriOf(dir))).toEqual([
+    { type: 'rule', id: at(dir, 'rules/open.mdc'), uri: at(dir, 'rules/open.mdc'), name: 'open' },
+  ]);
+  expect(rulesOf(dir, uriOf(dir))?.map((one) => one.body)).toEqual(['---\nalwaysApply: true']);
   gone(dir);
 });
 

@@ -20,9 +20,14 @@
  * reads the file the host would. A server has no file of its own - several sit
  * in one - so the URI of the file that declares it carries the server's name in
  * a fragment, which is what tells two servers of one file apart.
+ *
+ * A rule is read past its name: its file's frontmatter becomes fields of its
+ * part - what the rule is for, whether it always applies, and the files it
+ * applies to - and the text below it is kept beside the part rather than in it,
+ * because a client is told what a rule is for and not the words of it.
  */
 
-import { existsSync, readdirSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, extname, isAbsolute, join, relative, sep } from 'node:path';
 import { readJsonObject } from './jsonfile.js';
 import { isRecord, strings } from './values.js';
@@ -32,6 +37,18 @@ import type { Bag } from './types/common.js';
 interface Found {
   readonly name: string;
   readonly path: string;
+}
+
+/**
+ * One rule as its file was read: what it is called, the fields its frontmatter
+ * writes, and the text below it.
+ *
+ * The body is the words an agent is told, which is no part of what a client
+ * reads of the rule: it is kept beside the part rather than on it.
+ */
+interface Rule extends Found {
+  readonly fields: Bag;
+  readonly body: string;
 }
 
 /** Where one format keeps its manifest, and the hooks file it reads when the manifest names none. */
@@ -177,12 +194,99 @@ const ruleSuffix = (path: string): string | undefined => {
   return undefined;
 };
 
-/** The rule files of a component, each named without its suffix. */
-const rulesIn = (places: readonly string[]): Found[] =>
+/** The line a rule's frontmatter opens and closes with. */
+const FENCE = '---';
+
+/** One field of a frontmatter, as `key: value`, at the left margin where a frontmatter's own fields sit. */
+const FIELD = /^([A-Za-z_][\w.-]*):[ \t]*(.*)$/;
+
+/** One item of a list written down a line at a time, as `- value`, indented under the field it is for. */
+const ITEM = /^[ \t]+-[ \t]+(.*)$/;
+
+/** A written value without the quotes around it, where it is written with any. */
+const unquoted = (written: string): string => {
+  const quoted = /^(['"])(.*)\1$/.exec(written);
+  return quoted === null ? written : (quoted[2] as string);
+};
+
+/** One frontmatter value as it is written: a list between brackets, a `true` or `false`, and anything else text. */
+const valueOf = (written: string): string | boolean | string[] => {
+  const bracketed = /^\[(.*)\]$/.exec(written);
+  if (bracketed !== null) {
+    return (bracketed[1] as string).split(',').map((one) => unquoted(one.trim())).filter((one) => one !== '');
+  }
+  if (written === 'true') return true;
+  if (written === 'false') return false;
+  return unquoted(written);
+};
+
+/** The `- item` lines directly under a field, which is how a list is written one line at a time. */
+const itemsUnder = (lines: readonly string[], from: number): string[] => {
+  const items: string[] = [];
+  for (const line of lines.slice(from)) {
+    const item = ITEM.exec(line);
+    if (item === null) break;
+    items.push(unquoted((item[1] as string).trim()));
+  }
+  return items;
+};
+
+/** The fields a run of frontmatter lines writes, each with the value under it. */
+const fieldsIn = (lines: readonly string[]): Bag => {
+  const fields: Bag = {};
+  for (const [at, line] of lines.entries()) {
+    const field = FIELD.exec(line);
+    if (field === null) continue;
+    const key = field[1] as string;
+    const written = (field[2] as string).trim();
+    // A field with nothing after its colon holds the list written under it, or
+    // nothing at all where no list follows - which is a comment, or a mapping
+    // this host reads none of.
+    if (written === '') {
+      const items = itemsUnder(lines, at + 1);
+      if (items.length > 0) fields[key] = items;
+      continue;
+    }
+    fields[key] = valueOf(written);
+  }
+  return fields;
+};
+
+/**
+ * A rule file's frontmatter as the fields it writes, and the text below it.
+ *
+ * Every field the frontmatter writes is read, and the three the protocol names
+ * are the ones a part keeps. The body is that text without the blank space
+ * around it, because it is the words an agent is told rather than a file. A
+ * file that does not open with a `---` line, or that never closes one, is a
+ * rule no frontmatter can be read out of: it carries no field and its whole
+ * text is the body, which is the same answer a rule written with no frontmatter
+ * gives.
+ */
+const readRule = (path: string): { fields: Bag; body: string } => {
+  let text: string;
+  try { text = readFileSync(path, 'utf8'); }
+  catch { return { fields: {}, body: '' }; }
+  const lines = text.replace(/\r\n/g, '\n').split('\n');
+  if ((lines[0] ?? '').trim() !== FENCE) return { fields: {}, body: text.trim() };
+  const closes = lines.findIndex((line, at) => at > 0 && line.trim() === FENCE);
+  if (closes === -1) return { fields: {}, body: text.trim() };
+  return { fields: fieldsIn(lines.slice(1, closes)), body: lines.slice(closes + 1).join('\n').trim() };
+};
+
+/** The fields a rule's part carries, off the frontmatter it wrote and only where it wrote one. */
+const ruleFields = (fields: Bag): Bag => ({
+  ...(typeof fields.description === 'string' ? { description: fields.description } : {}),
+  ...(typeof fields.alwaysApply === 'boolean' ? { alwaysApply: fields.alwaysApply } : {}),
+  ...(Array.isArray(fields.globs) && fields.globs.length > 0 ? { globs: fields.globs } : {}),
+});
+
+/** The rule files of a component, each named without its suffix and each read once. */
+const rulesIn = (places: readonly string[]): Rule[] =>
   namedFiles(filesAt(places), (path) => {
     const suffix = ruleSuffix(path);
     return suffix === undefined ? undefined : basename(path).slice(0, -suffix.length);
-  });
+  }).map((one) => ({ ...one, ...readRule(one.path) }));
 
 /**
  * The skills a plugin holds, each named after the directory its `SKILL.md` is in.
@@ -290,6 +394,54 @@ const serversOf = (dir: string, format: Format, section: unknown): Found[] => {
   return [...found.values()].sort(byName);
 };
 
+/** The format a copy is in and its manifest read, or nothing where the format is not one this host reads. */
+const heldFormat = (dir: string): { format: Format; manifest: Bag } | undefined => {
+  const format = FORMATS.find((one) => existsSync(join(dir, one.manifest)));
+  if (format === undefined) return undefined;
+  const read = readJsonObject(join(dir, format.manifest));
+  return { format, manifest: read.ok ? read.value : {} };
+};
+
+/**
+ * What one file of a copy is called: the copy's URI, then the file's path under
+ * it, one URI segment at a time.
+ *
+ * A folder or a file is named in a URI as an escaped segment, so the name goes
+ * in escaped: a file called `my agent.md` is `my%20agent.md`, which is what a
+ * reader of the part's URI opens. A directory handed over with a trailing slash
+ * would otherwise name every part of it with two.
+ */
+const namerOf = (dir: string, uri: string): ((path: string) => string) => {
+  const base = uri.endsWith('/') ? uri.slice(0, -1) : uri;
+  return (path) => `${base}/${relative(dir, path).split(sep).map(encodeURIComponent).join('/')}`;
+};
+
+/** One part named by its file, which is a part with a file of its own: everything but a server. */
+const partOf = (type: string, one: Found, at: (path: string) => string, fields: Bag = {}): Bag => {
+  const where = at(one.path);
+  return { type, id: where, uri: where, name: one.name, ...fields };
+};
+
+/** The rules of a copy: the part a client reads of each, and the body an agent is told. */
+const rulesWith = (dir: string, manifest: Bag, at: (path: string) => string): { part: Bag; body: string }[] =>
+  rulesIn(placesFor(dir, 'rules', manifest.rules)).map((one) => ({
+    part: partOf('rule', one, at, ruleFields(one.fields)),
+    body: one.body,
+  }));
+
+/**
+ * The rules a plugin's copy holds, each with the part a client reads of it and
+ * the body an agent is told, or nothing where its format is not one this host
+ * reads - the same answer `partsOf` gives for such a copy.
+ *
+ * The body is what the host builds the system prompt from, and a part carries
+ * none of it, so a caller that wants the words asks for them here.
+ */
+export function rulesOf(dir: string, uri: string): { part: Bag; body: string }[] | undefined {
+  const held = heldFormat(dir);
+  return held === undefined ? undefined : rulesWith(dir, held.manifest, namerOf(dir, uri));
+}
+
 /**
  * The parts a plugin holds, or nothing where its format is not one this host reads.
  *
@@ -308,29 +460,10 @@ const serversOf = (dir: string, format: Format, section: unknown): Found[] => {
  * file reached by two of the manifest's places is listed once.
  */
 export function partsOf(dir: string, uri: string): Bag[] | undefined {
-  const format = FORMATS.find((one) => existsSync(join(dir, one.manifest)));
-  if (format === undefined) return undefined;
-  const read = readJsonObject(join(dir, format.manifest));
-  const manifest: Bag = read.ok ? read.value : {};
-
-  // The URI a part hangs under. A directory handed over with a trailing slash
-  // would otherwise name every part of it with two.
-  const base = uri.endsWith('/') ? uri.slice(0, -1) : uri;
-  /**
-   * What one file of this copy is called: the copy's URI, then the file's path
-   * under it, one URI segment at a time.
-   *
-   * A folder or a file is named in a URI as an escaped segment, so the name goes
-   * in escaped: a file called `my agent.md` is `my%20agent.md`, which is what a
-   * reader of the part's URI opens.
-   */
-  const at = (path: string): string =>
-    `${base}/${relative(dir, path).split(sep).map(encodeURIComponent).join('/')}`;
-  /** One part named by its file, which is a part with a file of its own: everything but a server. */
-  const part = (type: string, one: Found): Bag => {
-    const where = at(one.path);
-    return { type, id: where, uri: where, name: one.name };
-  };
+  const held = heldFormat(dir);
+  if (held === undefined) return undefined;
+  const { format, manifest } = held;
+  const at = namerOf(dir, uri);
   /**
    * One server's part.
    *
@@ -355,7 +488,9 @@ export function partsOf(dir: string, uri: string): Bag[] | undefined {
 
   const agents = markdownIn(placesFor(dir, 'agents', manifest.agents));
   const skills = skillsOf(dir, placesFor(dir, 'skills', manifest.skills));
-  const rules = rulesIn(placesFor(dir, 'rules', manifest.rules));
+  // A rule's part is built where its body is read, so that the two are read off
+  // the file once and a rule part is built in one place only.
+  const rules = rulesWith(dir, manifest, at);
   const hooks = hooksIn(dir, format, manifest.hooks);
   const servers = serversOf(dir, format, manifest.mcpServers);
 
@@ -366,10 +501,10 @@ export function partsOf(dir: string, uri: string): Bag[] | undefined {
     listed.add(one.id as string);
     parts.push(one);
   };
-  for (const one of agents) add(part('agent', one));
-  for (const one of skills) add(part('skill', one));
-  for (const one of rules) add(part('rule', one));
-  for (const one of hooks) add(part('hook', one));
+  for (const one of agents) add(partOf('agent', one, at));
+  for (const one of skills) add(partOf('skill', one, at));
+  for (const one of rules) add(one.part);
+  for (const one of hooks) add(partOf('hook', one, at));
   for (const one of servers) add(server(one));
   return parts;
 }

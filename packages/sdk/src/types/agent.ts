@@ -254,10 +254,11 @@ export interface Start {
    * What the host wants the model told, beside the backend's own prompt.
    *
    * The host's tools' own instructions first, one entry per tool that carries
-   * one, and then what the session's request adds: a request may name a tool
-   * only its session has, so what it says belongs after the tools every session
-   * is told about. A backend that can add to its system prompt adds these; one
-   * that cannot gets them in the first message instead.
+   * one, then one per client rule of the session that always applies, and then
+   * what the session's request adds: a request may name a tool only its session
+   * has, so what it says belongs after the tools every session is told about. A
+   * backend that can add to its system prompt adds these; one that cannot gets
+   * them in the first message instead.
    */
   instructions?: string[];
   /**

@@ -3,7 +3,7 @@ import { idOf } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { frozenCopy } from '../frozen.js';
 import { readJsonObject } from '../jsonfile.js';
-import { partsOf } from '../pluginparts.js';
+import { partsOf, rulesOf } from '../pluginparts.js';
 import { bodyText } from '../records.js';
 import { SEND_REMOTE_MESSAGE } from '../remotesession.js';
 import { SESSION_TOOL_NAMES } from '../tools/session.js';
@@ -46,6 +46,17 @@ const MAX_CREATED_CHATS = 50;
 
 /** VS Code's `maxSentMessages`: how many messages one tree may send. */
 const MAX_SENT_MESSAGES = 100;
+
+/**
+ * The most of one client rule's body this host puts in a system prompt, in characters.
+ *
+ * A rule is standing words: every turn of every chat in the session carries
+ * them, so a rule of this length is about a thousand tokens on each of them. A
+ * rule over it is dropped rather than shortened, because half of an instruction
+ * is words nobody wrote - and it is dropped with its name in the log, so a
+ * client can see that it was.
+ */
+const RULE_MOST = 4096;
 
 /**
  * What one session tree may make, and what it is told when it has.
@@ -310,7 +321,12 @@ export interface Tooling {
    * `provider` is the agent they are bound for, which each call carries.
    */
   boundTools(uri: string, chatUri: string, provider?: string): BoundTool[];
-  /** What the host's tools want the model told, in the order the tools are offered. */
+  /**
+   * What the model is told when a chat of this session begins.
+   *
+   * The host's tools' own wording, in the order the tools are offered, and
+   * then the bodies of the session's client rules that always apply.
+   */
   instructions(uri: string): string[];
   /**
    * What one turn of a session is given, for the backend to read when it begins.
@@ -1787,19 +1803,47 @@ export function createTooling(ctx: HostContext): Tooling {
     (Array.isArray(client.tools) ? client.tools : []).some((tool) => bag(tool).name === SEND_REMOTE_MESSAGE));
 
   /**
-   * What the host's tools want the model told, in the order the tools are offered.
+   * The bodies of the session's client rules that always apply.
    *
-   * An opt-in tool this session did not name is not among them: an instruction
-   * about a tool the model has not been offered is an instruction it cannot
-   * follow.
+   * Read off the copies this host made of the clients' plugins, so these are
+   * the client's own words and not this host's. A rule that does not say
+   * `alwaysApply: true` is left out: such a rule is one an agent reads where it
+   * applies, and this host has no turn to decide that for.
+   *
+   * Read when a chat starts rather than kept, because the copies move with the
+   * session's clients and a start is the only moment they are handed over.
+   */
+  const rulesTold = (uri: string): string[] => pluginCopies(uri).flatMap((path) =>
+    (rulesOf(path, uriOf(path)) ?? []).flatMap(({ part, body }) => {
+      // A rule with nothing written in it says nothing to a model.
+      if (part.alwaysApply !== true || body === '') return [];
+      if (body.length > RULE_MOST) {
+        log(`the rule ${str(part.name) ?? path} in ${path} is over ${String(RULE_MOST)} characters, so it was dropped`);
+        return [];
+      }
+      return [body];
+    }));
+
+  /**
+   * What the model is told when a chat of this session begins.
+   *
+   * The host's tools first, in the order the tools are offered, and the
+   * session's client rules after them: what a tool wants said about itself is
+   * this host's own wording, and a rule is a client's standing instruction
+   * that holds whatever the tools happen to be. An opt-in tool this session
+   * did not name is not among them: an instruction about a tool the model has
+   * not been offered is an instruction it cannot follow.
    */
   const instructions = (uri: string): string[] => {
     const named = namedBy(uri);
-    return ctx.contributing.flatMap((one) => {
-      if (one.optIn === true && !named.includes(one.definition.name)) return [];
-      if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
-      return one.instruction === undefined ? [] : [one.instruction];
-    });
+    return [
+      ...ctx.contributing.flatMap((one) => {
+        if (one.optIn === true && !named.includes(one.definition.name)) return [];
+        if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
+        return one.instruction === undefined ? [] : [one.instruction];
+      }),
+      ...rulesTold(uri),
+    ];
   };
 
   /**

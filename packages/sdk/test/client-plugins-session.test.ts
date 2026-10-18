@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
 import { clientPluginsIn } from '../src/clientplugins.js';
+import { chatUriFor } from '../src/host/channels.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
 import type { Peer } from '../src/types/rpc.js';
@@ -46,6 +47,20 @@ const PARTED: Record<string, string> = {
     mcpServers: { one: { type: 'stdio', command: 'bin/one' }, two: { type: 'stdio', command: 'bin/two' } },
   }),
 };
+
+/** A rule long enough to be over the limit this host puts on one. */
+const OVER = 'over the top. '.repeat(400);
+
+/** A plugin in the format this host reads, holding a rule of each kind that matters. */
+const RULED: Record<string, string> = {
+  [`${PLUGIN}/.claude-plugin/plugin.json`]: '{"name":"one"}',
+  [`${PLUGIN}/rules/always.mdc`]: '---\nalwaysApply: true\n---\n\nAnswer in one line.',
+  [`${PLUGIN}/rules/sometimes.mdc`]: '---\ndescription: when the answer is a table\n---\n\nSay so before the table.',
+  [`${PLUGIN}/rules/over.mdc`]: `---\nalwaysApply: true\n---\n\n${OVER}`,
+};
+
+const ALWAYS = 'Answer in one line.';
+const SOMETIMES = 'Say so before the table.';
 
 const dirs: string[] = [];
 afterEach(() => {
@@ -89,15 +104,24 @@ function peer(tree: Record<string, string>, gone: Set<string> = new Set()): Peer
   };
 }
 
-/** One host, its own directory, and the calls its backend took to switch a customization. */
+/**
+ * One host, its own directory, and what its backend was handed when it started.
+ *
+ * `given` is what each start was told, one entry per start: a chat started
+ * again is a start, which is the only way a session's rules reach a backend
+ * that began before they did.
+ */
 function serving(withPort = true) {
   const dir = mkdtempSync(join(tmpdir(), 'ahpd-client-plugins-'));
   dirs.push(dir);
   const toggled: { id: string; enabled: boolean }[] = [];
+  const given: (string[] | undefined)[] = [];
+  const lines: string[] = [];
   const base = echo({ path: dir, pace: 0 });
   const agent: Agent = {
     ...base,
     create: (start) => {
+      given.push(start.instructions);
       const session = base.create(start);
       session.setCustomizationEnabled = (id, enabled) => {
         toggled.push({ id, enabled });
@@ -110,9 +134,10 @@ function serving(withPort = true) {
   served = createHost({
     path: dir,
     agents: [agent],
+    onEvent: (line) => lines.push(line),
     ...(withPort ? { clientPlugins: clientPluginsIn(join(dir, 'copies'), () => served.clients) } : {}),
   });
-  return { served, dir, toggled };
+  return { served, dir, toggled, given, lines };
 }
 
 async function joins(held: ReturnType<typeof serving>['served'], clientId: string, tree: Record<string, string> = {}, gone?: Set<string>) {
@@ -176,6 +201,38 @@ async function withPlugin(tree: Record<string, string>, announced: Record<string
   await announce(b.client, [{ type: 'plugin', uri: PLUGIN, nonce: 'n1', ...announced }]);
   await settle();
   return a;
+}
+
+/** One turn on a chat, which is also where a chat whose plugins moved starts again. */
+async function turn(
+  client: { handle(r: { method: string; params: Record<string, unknown> }): Promise<unknown> },
+  chat: string,
+  id: string,
+): Promise<void> {
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: chat, action: { type: 'chat/turnStarted', turnId: id, message: { text: 'hello' } } },
+  });
+  await settle();
+}
+
+/**
+ * One client's plugin holding rules, a session that has it, and the chat it talks on.
+ *
+ * The chat is subscribed to before the plugin arrives, because the start worth
+ * reading is the one a moved plugin set causes - and that start happens under
+ * the first turn sent after it moved.
+ */
+async function withRules(tree: Record<string, string> = RULED) {
+  const held = serving();
+  const a = await session(held.served);
+  const chat = chatUriFor(URI);
+  await a.client.handle({ method: 'subscribe', params: { channel: chat } });
+  const b = await joins(held.served, 'plugin', tree);
+  await b.client.handle({ method: 'subscribe', params: { channel: URI } });
+  await announce(b.client, [{ type: 'plugin', uri: PLUGIN, nonce: 'n1' }]);
+  await settle();
+  return { ...held, b, chat, start: () => turn(a.client, chat, `t${String(held.given.length)}`) };
 }
 
 it('watches a client plugin load, then reports it beside the backend\'s own', async () => {
@@ -373,4 +430,54 @@ it('takes a client\'s plugins away with the client', async () => {
   // The plugin is one client's, and it goes when that client does - which is
   // also the only thing that can still reach the files it was copied from.
   expect(listed().at(-1)).not.toContain('plugin');
+});
+
+it('gives the session\'s always-apply rule to the backend at its start', async () => {
+  const { given, start } = await withRules();
+  await start();
+
+  const told = given.at(-1) ?? [];
+  expect(told).toContain(ALWAYS);
+  // The rules follow the host's own wording rather than replacing it: what a
+  // tool says about itself is this host's, and a client's rule is beside it.
+  expect(told.at(-1)).toBe(ALWAYS);
+});
+
+it('leaves out a rule that does not say alwaysApply', async () => {
+  const { given, start } = await withRules();
+  await start();
+
+  const told = given.at(-1) ?? [];
+  // The rule is a rule of the same plugin, read from the same copy, and the one
+  // thing that keeps it out is the field it does not carry.
+  expect(told).not.toContain(SOMETIMES);
+  expect(told).toContain(ALWAYS);
+});
+
+it('drops a rule over the limit, and names it in the log', async () => {
+  const { given, lines, start } = await withRules();
+  await start();
+
+  const told = given.at(-1) ?? [];
+  expect(told.some((one) => one.startsWith('over the top.'))).toBe(false);
+  expect(told).toContain(ALWAYS);
+  // Dropped rather than shortened, and said out loud: the client that wrote it
+  // has no other way to learn that its rule was not read.
+  expect(lines.some((line) => line.startsWith('the rule over in ') && line.endsWith('so it was dropped'))).toBe(true);
+});
+
+it('takes a rule away with the client that published it', async () => {
+  const { given, b, start } = await withRules();
+  await start();
+  expect(given.at(-1)).toContain(ALWAYS);
+
+  const before = given.length;
+  b.client.handle({ method: 'unsubscribe', params: { channel: URI } });
+  await settle();
+  await start();
+
+  // The copy is gone with the client, so the chat starts again - and with
+  // nothing of it, a rule having nowhere else to be left behind.
+  expect(given.length).toBeGreaterThan(before);
+  expect(given.at(-1) ?? []).not.toContain(ALWAYS);
 });
