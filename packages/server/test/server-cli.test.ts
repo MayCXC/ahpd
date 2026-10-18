@@ -69,6 +69,18 @@ describe('a failure under --json', () => {
     });
   });
 
+  it('writes the same JSON line for a failure the program refuses', async () => {
+    const said = await cli(['--json', 'nosuch']);
+    expect(said.code).toBe(2);
+    expect(said.stdout).toBe('');
+    expect(said.stderr.trim().split('\n')).toHaveLength(1);
+    expect(JSON.parse(said.stderr)).toEqual({
+      message: 'unknown command "nosuch". Try ahpd --help',
+      kind: 'argument',
+      exitCode: 2,
+    });
+  });
+
   it('keeps the status result on stdout and writes the failure to stderr', async () => {
     const said = await cli(['status', '--json']);
     expect(said.code).toBe(1);
