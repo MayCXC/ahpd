@@ -59,6 +59,11 @@ describe('a wrong value on a known key', () => {
   it('refuses a value outside an enum', () => {
     expect(refusal({ automations: 'disk' })).toBe(`${config}: automations must be one of file, memory`);
     expect(refusal({ sessions: 'disk' })).toBe(`${config}: sessions must be one of file, memory`);
+    // A way of checking tokens this host does not have, refused rather than
+    // taken as the default: an operator who misspelled `jwt` meant it. Anything
+    // off the list reads the same way, the words named before the type.
+    expect(refusal({ issuerVerify: 'keys' })).toBe(`${config}: issuerVerify must be one of userinfo, jwt, auto`);
+    expect(refusal({ issuerVerify: 5 })).toBe(`${config}: issuerVerify must be one of userinfo, jwt, auto`);
   });
 
   it('refuses a boolean given as a string', () => {
@@ -165,6 +170,7 @@ describe('a valid file', () => {
       users: join(home, 'users.json'),
       resource: 'https://ahpd.test/',
       issuer: 'github',
+      issuerVerify: 'jwt',
       trustToken: true,
       advancedTools: true,
       sessionTools: true,
@@ -188,6 +194,7 @@ describe('a valid file', () => {
       users: join(home, 'users.json'),
       resource: 'https://ahpd.test/',
       issuer: 'github',
+      issuerVerify: 'jwt',
       trustToken: true,
       advancedTools: true,
       sessionTools: true,
@@ -219,6 +226,9 @@ describe('a valid file', () => {
       port: 9187, host: '127.0.0.1', open: false, trustToken: false, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url',
       automations: 'file', sessions: 'file', usagePer: 'turn', plugins: [], updateCheck: true, warnings: [],
     });
+    // Absent rather than defaulted here, for the same reason: a host that says
+    // nothing asks the issuer's userinfo, which is where it started.
+    expect(folded({}).issuerVerify).toBeUndefined();
   });
 
   it('serves the current folder, or only what is named under --no-cwd', () => {

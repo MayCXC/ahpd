@@ -6,7 +6,7 @@ import { isIPv6 } from 'node:net';
 import { homedir } from 'node:os';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { resolveConfig, type ResolvedConfig } from '@cofold/config';
-import { isShellName, issuerKind, reason, type McpServer, type PluginSpec, type ShellEnv } from '@ahpd/sdk';
+import { isShellName, issuerKind, reason, type IssuerVerify, type McpServer, type PluginSpec, type ShellEnv } from '@ahpd/sdk';
 import type { ProxySetting } from './proxy/providers.js';
 
 /**
@@ -173,6 +173,22 @@ export interface Config {
    * that acquires tokens through an OAuth provider has a provider to resolve.
    */
   issuer?: string;
+  /**
+   * How a token from that issuer is checked: `userinfo`, `jwt` or `auto`.
+   *
+   * `userinfo`, the default, is what this host has always done and the only way
+   * an opaque token can be read: the token is carried to the issuer's endpoint
+   * and the endpoint says who it belongs to. `jwt` checks a token here instead,
+   * against the key set the issuer publishes, which is what an operator turns
+   * on for a provider whose tokens this host can check itself - the token's own
+   * `exp` then ends the sign-in, and no request about the token is made. `auto`
+   * checks here first and asks the endpoint for a token the keys cannot answer.
+   *
+   * A record that names its own issuer may carry its own setting, which is what
+   * lets one person sign in through a provider of their own that is checked
+   * differently from the rest.
+   */
+  issuerVerify?: IssuerVerify;
   /**
    * Whether a person's connection token authorizes them as well as admits them.
    *

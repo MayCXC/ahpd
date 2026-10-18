@@ -33,9 +33,13 @@ const RECORD = {
 /** The same record with the field the format defaults to, which is what a real directory sends. */
 const REQUIRED = { ...RECORD, required: true };
 
-const directory = (good = 'good-token', resource: Users['resource'] = RECORD): Users => ({
+const directory = (good = 'good-token', resource: Users['resource'] = RECORD, expiresAt?: number): Users => ({
   resource,
-  verify: async (token) => (token === good ? { id: 'ana', roles: ['admin'], can: () => true } : undefined),
+  // `expiresAt` is what a token checked here carries: the `exp` its issuer
+  // put on it, which an endpoint asked about a token knows nothing about.
+  verify: async (token) => (token === good
+    ? { id: 'ana', roles: ['admin'], can: () => true, ...(expiresAt === undefined ? {} : { expiresAt }) }
+    : undefined),
   list: async () => [{ id: 'ana', roles: ['admin'], grants: ['*:*'] as const, trusted: false }],
   grantsOfRoles: async () => [],
   grantsOfPerson: async () => undefined,
@@ -221,6 +225,59 @@ it('takes the credential away when it runs out, and says so', async () => {
         reason: 'expired',
       },
     }]);
+  }
+  finally {
+    vi.useRealTimers();
+  }
+});
+
+it('ends the sign-in at the token\'s own exp, when that comes first', async () => {
+  vi.useFakeTimers();
+  try {
+    const { host } = served({ users: directory('good-token', RECORD, Date.now() + 10_000) });
+    const wire = peer();
+    const client = host.accept(wire);
+    await hello(client);
+    await client.handle({
+      method: 'authenticate',
+      params: { channel: ROOT, resource: RECORD.resource, token: 'good-token', expiresIn: 600 },
+    });
+
+    // The client asked for ten minutes and the credential has ten seconds:
+    // nothing is said while the credential is good, and the client's own clock
+    // is not the one that ends it.
+    await vi.advanceTimersByTimeAsync(9_000);
+    expect(wire.notes.filter((one) => one.method === 'auth/required')).toEqual([]);
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(wire.notes.filter((one) => one.method === 'auth/required')).toEqual([{
+      method: 'auth/required',
+      params: {
+        channel: ROOT,
+        resource: expect.objectContaining({ resource: RECORD.resource }),
+        reason: 'expired',
+      },
+    }]);
+  }
+  finally {
+    vi.useRealTimers();
+  }
+});
+
+it('keeps the client\'s expiry when the token is good for longer than it asked', async () => {
+  vi.useFakeTimers();
+  try {
+    const { host } = served({ users: directory('good-token', RECORD, Date.now() + 600_000) });
+    const wire = peer();
+    const client = host.accept(wire);
+    await hello(client);
+    await client.handle({
+      method: 'authenticate',
+      params: { channel: ROOT, resource: RECORD.resource, token: 'good-token', expiresIn: 30 },
+    });
+
+    // The earlier of the two, and the credential's ten minutes are not it.
+    await vi.advanceTimersByTimeAsync(30_000);
+    expect(wire.notes.filter((one) => one.method === 'auth/required')).toHaveLength(1);
   }
   finally {
     vi.useRealTimers();

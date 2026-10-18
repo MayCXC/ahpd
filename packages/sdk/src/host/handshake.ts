@@ -606,15 +606,35 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
         connection.principal = held;
         principals.set(`user:${held.id}`, held);
         if (ownId(connection.clientId)) holders.set(connection.clientId, held.id);
-        if (expiresIn !== undefined) {
-          connection.principalUntil = Date.now() + expiresIn * 1000;
+        /*
+         * When the sign-in ends, which is the earlier of two clocks.
+         *
+         * The client says how long it means to stay, and the credential says
+         * how long it is good for - a token this host checked itself carries
+         * its issuer's `exp`, and one past that is a credential the issuer
+         * would refuse. A connection left open on one would be a person this
+         * host still believes and the issuer no longer does, so the earlier of
+         * the two is when they stop being signed in. Neither is always there:
+         * a client that says nothing and a token with no expiry leave the
+         * other to decide, and neither leaves the connection unending.
+         */
+        const said = expiresIn === undefined ? undefined : Date.now() + expiresIn * 1000;
+        const until = said === undefined
+          ? held.expiresAt
+          : held.expiresAt === undefined ? said : Math.min(said, held.expiresAt);
+        if (until === undefined) delete connection.principalUntil;
+        else {
+          connection.principalUntil = until;
           expire(resource);
         }
-        else delete connection.principalUntil;
         // A person's id rather than the clientId, which is the thing about
         // this connection that was actually checked.
         void fire({ type: 'authenticated', client: held.id, resource });
-        log(`${held.id} signed in${expiresIn !== undefined ? `, for ${expiresIn}s` : ''}`);
+        // The credential's end is named when it is the shorter one, so a log
+        // that says how long the client asked for does not read as how long
+        // the sign-in lasts.
+        const short = until !== undefined && (said === undefined || until < said) ? ', no longer than its credential' : '';
+        log(`${held.id} signed in${expiresIn !== undefined ? `, for ${expiresIn}s` : ''}${short}`);
         return {};
       }
       /*

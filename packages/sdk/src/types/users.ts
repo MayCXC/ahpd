@@ -80,6 +80,16 @@ export interface Principal {
    */
   trusted?: boolean;
   /**
+   * When what they signed in with stops being good, in epoch milliseconds,
+   * when anything said.
+   *
+   * The token's own `exp`, and only for a token this host checked itself: an
+   * issuer asked over `userinfo` answers who somebody is and not until when, so
+   * a sign-in through one ends with the connection and nothing else. Absent is
+   * the whole of what a principal built by hand in a test carries.
+   */
+  readonly expiresAt?: number;
+  /**
    * The teams and projects their work may be charged to, as written.
    *
    * A question about what they may do is `can`; this is about who pays, and it
@@ -119,6 +129,19 @@ export interface Named {
 }
 
 /**
+ * How a token from one issuer is checked.
+ *
+ * `userinfo` is what this host has always done: the token is carried to the
+ * issuer's endpoint and the endpoint says who it belongs to, which is the only
+ * way GitHub's opaque tokens can be read at all. `jwt` checks the token here,
+ * against the key set the issuer publishes, so a sign-in makes no request of
+ * its own once that set has been read and the token's own `exp` is what ends
+ * it. `auto` checks here first and falls back to the endpoint, for an issuer
+ * whose tokens are of both kinds.
+ */
+export type IssuerVerify = 'userinfo' | 'jwt' | 'auto';
+
+/**
  * One person, as the directory holds them.
  *
  * `token` is the hash and never the secret. A record may exist with no token at
@@ -155,6 +178,14 @@ export interface UserRecord {
    * does nothing for one.
    */
   rolesFrom?: string;
+  /**
+   * How this record's own issuer is checked, when it is not the host's way.
+   *
+   * Read only when the record names an `issuer` of its own: a record that signs
+   * in through the host's default is checked the way the host says. Absent, the
+   * host's setting applies here too.
+   */
+  issuerVerify?: IssuerVerify;
   /** Whether a connection token of theirs authorizes them, over the host's default. */
   trustToken?: boolean;
   /**
@@ -187,6 +218,14 @@ export interface IssuerAnswer {
   readonly subject: string;
   /** Everything the endpoint said, field by field, unread unless a record names one. */
   readonly claims: Record<string, unknown>;
+  /**
+   * When the token stops being good, in epoch milliseconds, when it says.
+   *
+   * The token's own `exp`, which an issuer that checks a token here is the only
+   * one that can answer: an endpoint asked about a token knows nothing beyond
+   * the answer it gives, and says nothing here.
+   */
+  readonly expiresAt?: number;
 }
 
 /**
@@ -212,6 +251,19 @@ export interface Issuer {
    * network it cannot reach.
    */
   who(token: string): Promise<IssuerAnswer | undefined>;
+  /**
+   * Who a token belongs to, checked here against this issuer's own keys.
+   *
+   * Absent for an issuer whose tokens cannot be checked here at all, which is
+   * one with no key set to check them against: GitHub's are opaque, and there
+   * is nothing to fetch. An issuer that has one is checked with the token
+   * itself and no request, so a sign-in still works while the issuer is down.
+   *
+   * `audience` is the identifier the token has to have been issued for, which
+   * is the resource the person is signing in against: the one claim that keeps
+   * a token minted for another audience from being a credential here.
+   */
+  verify?(token: string, audience: string): Promise<IssuerAnswer | undefined>;
 }
 
 /** What the file holds: the roles this install defines, and the people. */

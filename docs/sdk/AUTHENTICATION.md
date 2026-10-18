@@ -108,6 +108,34 @@ A client resolves a provider for that identifier, obtains a token, and pushes it
 }
 ```
 
+### Checking a token here
+
+That is `userinfo`, the default: the host carries the token to the issuer's endpoint and takes the subject from the answer. An issuer whose tokens are JWTs can be checked here instead, with no request about the token at all:
+
+```json
+{ "issuer": "https://login.example.com", "issuerVerify": "jwt" }
+```
+
+or `--issuer-verify jwt`. The three values are `userinfo`, `jwt` and `auto`. `userinfo` is the default and what this host has always done. `jwt` checks the token here and asks the issuer nothing. `auto` checks it here first, and asks the endpoint for a token the keys cannot answer. Anything else refuses the start, in the file and on the command line alike. A record that names its own issuer may carry its own `issuerVerify`. So one person can sign in through a provider checked differently from the rest.
+
+`jwt` reads the key set the issuer publishes at `jwks_uri`, in the same discovery document as `userinfo`, and checks the token against it. An unknown `kid` reads the set again, at most once a minute. That covers a key rotated in since the set was last read. What is checked:
+
+- **`alg`**, which must be RS256, PS256, ES256 or EdDSA. `none` and the HMAC algorithms are refused by name. A key set is published, so an `HS256` token is one anybody can sign.
+- **The signature**, against the key the header's `kid` names, or the only key in the set when it names none.
+- **`typ`**, which must be `at+jwt` or `JWT`, or absent.
+- **`iss`**, which must name an issuer this host already knows: the configured one, or one a record names. A token naming any other is refused with no request at all, under every value of this setting. No issuer is an authority on a token another one minted.
+- **`aud`**, which must hold the identifier this host advertises for its own sign-in, the resource a client was told to sign in against. That is what keeps an ID token, which is a JWT the same issuer signs, from signing anybody in.
+- **`exp`** and **`nbf`**, with a minute of allowance either way for a clock that is out by a little.
+- **The subject**, which must name a record's `id`, exactly as it must over `userinfo`.
+
+`rolesFrom` reads its claim from that same answer, so a sign-in checked here is one request for a key set and none for the person.
+
+A token's `exp` is then the sign-in's own end. It is kept beside the client's `expiresIn`, and the earlier of the two is what ends it. So a sign-in cannot outlive the token it was made with. `auth/required` with `reason: 'expired'` goes to that connection when the earlier one passes, the same as when only `expiresIn` was given. The startup log says a sign-in is no longer than its credential when `exp` is the shorter of the two.
+
+What checking here does not see is a revocation. A token the provider withdrew still checks out until its `exp` passes, where `userinfo` would have seen it on that one call. That is the trade the setting makes, and it is why it is a setting.
+
+GitHub issues opaque tokens and publishes no key set, so there is nothing there to check. A host that set `jwt` on `github` would refuse every GitHub token. `auto` is what takes both: a token with no signature to check goes to the endpoint, and a JWT is checked here. A host that only ever takes GitHub tokens wants the default, and needs no setting at all.
+
 ### An issuer per person
 
 The `issuer` key is the **default**: a record that names one of its own uses that instead. So one host can take a GitHub login for one person and a token from a company identity provider for another, without a second daemon
@@ -250,6 +278,7 @@ The root state is one per host, so it cannot be filtered wholesale without givin
 - `users` - the user directory file. Absent, there are no people: every gate this host has is inert and the connection token is the whole of who may be here.
 - `resource` - the https identifier this host advertises for its own sign-in. Default: derived from `host` and `port`.
 - `issuer` - an authorization server whose tokens this host also accepts: `github`, or an OpenID Connect issuer URL this host may reach. Default: none, so only secrets this host minted are checked.
+- `issuerVerify` - how a token from that issuer is checked: `userinfo`, `jwt` or `auto`. Default `userinfo`. A record's own `issuerVerify` overrides it.
 - `trustToken` - `true` trusts every person's connection token as their authorization. Off by default. A record's own `trustToken` overrides it.
 
 A relative `users`, `connectionTokenFile`, `worktreesRoot` or `paths` entry is resolved against the directory of the configuration file that set it, not the working directory.

@@ -3,9 +3,9 @@ import { readFileSync, watch as watchPath } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import { readJson, writeJsonAtomic } from './jsonfile.js';
 import { same } from './listen.js';
-import { issuerFrom } from './issuers.js';
+import { issuerFrom, jwtIssuer, sameIssuer } from './issuers.js';
 import { covers, membership } from './scopes.js';
-import type { Grant, Issuer, Named, Principal, UserFile, UserRecord, Users } from './types/users.js';
+import type { Grant, Issuer, IssuerVerify, Named, Principal, UserFile, UserRecord, Users } from './types/users.js';
 import { strings } from './values.js';
 
 /**
@@ -34,6 +34,17 @@ const BUILT_IN: Record<string, Grant[]> = {
   // neither a file nor a shell nor a session of their own.
   guest: ['session:read', 'automation:read'],
 };
+
+/**
+ * How a token is checked, as a configuration or a record spells it.
+ *
+ * The rule is here because both halves of it are: a record's own `issuerVerify`
+ * is read by this directory, and the daemon's `issuerVerify` key is the same
+ * three words. Anything else answers nothing, so a caller refuses the start -
+ * or, for a record, says so and checks it the way the host says.
+ */
+export const issuerVerifyOf = (value: unknown): IssuerVerify | undefined =>
+  value === 'userinfo' || value === 'jwt' || value === 'auto' ? value : undefined;
 
 /** A role by name from a table of roles, reading only the table's own keys, so `constructor` names no role. */
 const roleIn = (table: Record<string, Grant[]> | undefined, name: string): Grant[] | undefined =>
@@ -393,6 +404,27 @@ export interface FileUserOptions {
    */
   issuerFor?(name: string): Issuer | undefined;
   /**
+   * How a token from an issuer is checked, for every issuer a record does not
+   * give a setting of its own.
+   *
+   * `userinfo` by default, which is what this host has always done and the only
+   * way an opaque token can be read. `jwt` and `auto` reach for the key set the
+   * issuer publishes, and are what an operator turns on when their provider
+   * issues tokens this host can check itself.
+   */
+  issuerVerify?: IssuerVerify;
+  /**
+   * The identifier a JWT has to have been issued for, when it is not the one
+   * the sign-in record names.
+   *
+   * A token checked here is refused unless its `aud` holds this, which is what
+   * keeps a token minted for another resource - an ID token for a dashboard,
+   * a token for a different host - from being a credential here. It defaults to
+   * the `resource` of the record this directory advertises, which is the
+   * identifier a client was told to get its token for.
+   */
+  audience?: string;
+  /**
    * Whether a person's connection token authorizes them, for every record that
    * does not say otherwise.
    *
@@ -661,6 +693,17 @@ export function fileUsers(options: FileUserOptions): Users {
           users: (Array.isArray(held.users) ? held.users : [])
             .filter((one): one is UserRecord => typeof one === 'object' && one !== null && typeof (one as UserRecord).id === 'string')
             .map((one) => {
+              /*
+               * The record's own way of checking its issuer, read the way the
+               * read reads everything: a value this host does not have is said
+               * once and dropped rather than taken for the default, because an
+               * operator whose `jwt` was misspelled would otherwise be told
+               * nothing while every token of theirs went to the endpoint.
+               */
+              const verify = issuerVerifyOf(one.issuerVerify);
+              if (one.issuerVerify !== undefined && verify === undefined) {
+                once(`${options.path}: user ${one.id} names issuerVerify ${JSON.stringify(one.issuerVerify)}, which this host does not have; it is checked the default way`);
+              }
               const record: UserRecord = {
                 id: one.id,
                 roles: strings(one.roles),
@@ -669,6 +712,7 @@ export function fileUsers(options: FileUserOptions): Users {
                 // them the next time anything wrote to it.
                 ...(typeof one.issuer === 'string' && one.issuer !== '' ? { issuer: one.issuer } : {}),
                 ...(typeof one.rolesFrom === 'string' && one.rolesFrom !== '' ? { rolesFrom: one.rolesFrom } : {}),
+                ...(verify === undefined ? {} : { issuerVerify: verify }),
                 ...(typeof one.trustToken === 'boolean' ? { trustToken: one.trustToken } : {}),
                 // And these two, as the file spelled them. Checked below and
                 // held as written, because the file is written back from what
@@ -731,6 +775,17 @@ export function fileUsers(options: FileUserOptions): Users {
   };
 
   /**
+   * The identifier a token checked here has to have been issued for.
+   *
+   * The `resource` of the record this directory advertises, which is the
+   * identifier a client was told to acquire its token for: a token the same
+   * issuer minted for another resource is a token for that resource and not a
+   * credential here.
+   */
+  const audience = (): string =>
+    options.audience ?? String((options.resource ?? DEFAULT_RESOURCE)['resource'] ?? DEFAULT_RESOURCE.resource);
+
+  /**
    * One call to `onChange` for each open `watch`, held back until the changes
    * stop for `SETTLE` milliseconds.
    *
@@ -788,7 +843,7 @@ export function fileUsers(options: FileUserOptions): Users {
    * is refused on the next command rather than the next connection, and a role
    * change is in force at the same point.
    */
-  const principalOf = (record: UserRecord, fromIssuer: string[] = []): Principal => {
+  const principalOf = (record: UserRecord, fromIssuer: string[] = [], expiresAt?: number): Principal => {
     // Said once, as the record is verified, so a role that nothing defines is
     // in the log even though every command resolves the roles again below -
     // and said only here, because a complaint per command is a log nobody
@@ -835,6 +890,9 @@ export function fileUsers(options: FileUserOptions): Users {
       // the door asks once per connection, and the person's answer does not
       // change while their socket is open.
       trusted: record.trustToken ?? trustAll,
+      // Stamped like `trusted`, and for the same reason: it is what the token
+      // said at the moment it was checked, and the token is not kept.
+      ...(expiresAt === undefined ? {} : { expiresAt }),
       /*
        * The memberships and the primary, re-read rather than stamped.
        *
@@ -908,24 +966,99 @@ export function fileUsers(options: FileUserOptions): Users {
        *
        * The host's default is asked first, then each issuer a record names, in
        * the order the file lists them, and the first subject that names a
-       * record wins. Which provider minted a token is not something the token
-       * says, so a host with several issuers shows it to more than one; the
-       * order is the whole of what decides which.
+       * record wins. An opaque token does not say which provider minted it, so
+       * a host with several issuers shows it to more than one; the order is the
+       * whole of what decides which. A token that is a JWT does say, and takes
+       * the branch below instead.
        */
       const peopleAt = (name: string): UserRecord[] =>
         (file.users ?? []).filter((one) => issuerNameOf(one) === name);
-      const names = [
+      // The host's default first, then each name the file writes, in its order.
+      // A name nobody signs in through is left out rather than reported: it is
+      // an entry to fix, and not a question this token asked.
+      const names = [...new Set([
         ...(options.issuer === undefined ? [] : [options.issuer]),
         ...(file.users ?? []).flatMap((one) => (one.issuer === undefined ? [] : [one.issuer])),
-      ];
-      for (const name of new Set(names)) {
-        const people = peopleAt(name);
-        if (people.length === 0) continue;
+      ])].filter((name) => peopleAt(name).length > 0);
+
+      /**
+       * How a token from one issuer is checked here.
+       *
+       * The setting of the record that names that issuer, when it carries one,
+       * and the host's otherwise: which is what makes turning this on once a
+       * decision for the deployment, and one record the exception.
+       */
+      const modeOf = (name: string): IssuerVerify =>
+        (file.users ?? []).find((one) => one.issuer === name && one.issuerVerify !== undefined)?.issuerVerify
+          ?? options.issuerVerify
+          ?? 'userinfo';
+
+      /**
+       * The person a token belongs to, checked here by the issuer that signed
+       * it, or nothing.
+       *
+       * Nothing is the answer for a token that does not check out and for an
+       * issuer that cannot check one at all - one with no key set to check it
+       * against - because the question this asked was whether the token is
+       * good, and a refusal to answer is not a yes.
+       */
+      const checked = async (name: string, held: string): Promise<Principal | undefined> => {
+        const answer = await adapterFor(name)?.verify?.(held, audience());
+        if (answer === undefined) return undefined;
+        const record = peopleAt(name).find((one) => one.id === answer.subject);
+        if (record === undefined) return undefined;
+        // The claim is read from the same answer, so a sign-in checked here is
+        // one request for a key set and none for the person.
+        return principalOf(record, rolesFromClaim(record, answer.claims), answer.expiresAt);
+      };
+
+      /*
+       * A token that is a JWT says which issuer signed it, and that is the one
+       * asked. `iss` is read here before any of it is verified, and is not
+       * believed: it picks a name out of the ones this host already knows.
+       *
+       * A token naming an issuer that is not here is nobody's token here, and
+       * is answered with no request at all: the issuers that are would each be
+       * shown a token another issuer minted, and none of them could say who it
+       * belongs to. That is the answer under every setting, `userinfo`
+       * included, because no setting makes an unrelated issuer an authority on
+       * a token.
+       */
+      const claimed = jwtIssuer(token);
+      const at = claimed === undefined
+        ? undefined
+        : names.find((name) => {
+          const issuer = adapterFor(name);
+          // Compared as the issuer spells itself, so a name configured without
+          // the trailing slash its metadata uses is still one issuer.
+          return issuer !== undefined && sameIssuer(issuer.id, claimed);
+        });
+      if (claimed !== undefined && at === undefined) return undefined;
+      if (at !== undefined) {
+        const mode = modeOf(at);
+        if (mode !== 'userinfo') {
+          const who = await checked(at, token);
+          if (who !== undefined) return who;
+          // `jwt` is the whole of what such a token may be checked with: an
+          // operator who asked for it asked for the endpoint not to be asked,
+          // which is the request the setting is there to remove.
+          if (mode === 'jwt') return undefined;
+          // `auto` carries on, which is what an issuer publishing no key set -
+          // and one whose key set cannot be reached - falls through to.
+        }
+      }
+      for (const name of names) {
+        // An issuer checked here is never asked over `userinfo`, whatever the
+        // token is: the mode is what an operator set to stop that request, and
+        // a token this host cannot check is one it does not accept. So a host
+        // that checks every issuer here asks nobody, and an opaque token is
+        // then nobody's rather than shown around.
+        if (modeOf(name) === 'jwt') continue;
         const issuer = adapterFor(name);
         if (issuer === undefined) continue;
         const answer = await issuer.who(token);
         if (answer === undefined) continue;
-        found = people.find((one) => one.id === answer.subject);
+        found = peopleAt(name).find((one) => one.id === answer.subject);
         if (found !== undefined) {
           // The claim is read from the same answer, so a sign-in is one
           // question to the issuer and not two.

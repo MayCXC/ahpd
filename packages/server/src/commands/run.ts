@@ -292,7 +292,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       // where a record's own issuer is written and the directory is what reads
       // it. A record that names none uses the host's name, passed below.
       resource: signInRecord(advertisedResource()),
+      // The identifier a token checked here has to have been issued for, which
+      // is the one a client was told to sign in against.
+      audience: advertisedResource(),
       ...(options.issuer === undefined ? {} : { issuer: options.issuer }),
+      ...(options.issuerVerify === undefined ? {} : { issuerVerify: options.issuerVerify }),
       trustToken: options.trustToken,
       onProblem: (line) => process.stderr.write(`${line}\n`),
     });

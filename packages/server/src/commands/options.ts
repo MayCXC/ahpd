@@ -18,7 +18,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { ArgumentError, CofoldError, check, type Field, type JsonSchema, type OptionSpec } from '@cofold/commands';
 import { isRecord, secretRef } from '@ahpd/sdk';
-import type { McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
+import type { IssuerVerify, McpServer, PluginSpec, ShellEnv } from '@ahpd/sdk';
 import type { Config, HttpSetting, RoutesSetting } from '../config.js';
 import { asSpec, configDir, configPath, loadConfig, shellEnvProblems } from '../config.js';
 import { nameOf, pluginIdOf, pluginIdsOf } from '../plugins.js';
@@ -64,6 +64,8 @@ export interface Options {
   origins?: string[];
   /** An authorization server whose tokens this host also accepts. */
   issuer?: string;
+  /** How a token from that issuer is checked, absent when the deployment said nothing. */
+  issuerVerify?: IssuerVerify;
   /** Whether a person's connection token authorizes them as well as admits them. */
   trustToken: boolean;
   /** Whether a tool that declares `advancedPermission` is offered to sessions. */
@@ -477,6 +479,12 @@ export const serverFields = {
     type: 'string',
     description: 'An authorization server whose tokens are also accepted: github, or an OpenID Connect issuer.',
     cli: { value: 'GITHUB|URL' },
+  },
+  issuerVerify: {
+    type: 'string',
+    enum: ['userinfo', 'jwt', 'auto'],
+    description: 'How a token from --issuer is checked: userinfo asks the issuer what the token means, jwt checks it against the keys the issuer publishes, and auto takes the first reading that a token shaped like a JWT allows and userinfo for the rest. Default: userinfo.',
+    cli: { value: 'userinfo|jwt|auto' },
   },
   trustToken: {
     type: 'boolean',
@@ -1065,6 +1073,7 @@ const noCwd = input['noCwd'] === true;
   const resource = given('resource');
   const origins = (given('origins') ?? []).map((entry) => originOf(entry, input['origins'] === undefined ? source('origins') : undefined));
   const issuer = given('issuer');
+  const issuerVerify = given('issuerVerify');
   const wire = given('wire');
   const clientToolTimeoutMs = given('clientToolTimeoutMs');
   const shellEnv = given('shellEnv');
@@ -1092,6 +1101,7 @@ const noCwd = input['noCwd'] === true;
     ...(resource === undefined ? {} : { resource }),
     ...(origins.length === 0 ? {} : { origins }),
     ...(issuer === undefined ? {} : { issuer }),
+    ...(issuerVerify === undefined ? {} : { issuerVerify }),
     trustToken: given('trustToken') ?? false,
     advancedTools: given('advancedTools') ?? false,
     sessionTools: given('sessionTools') ?? true,
