@@ -35,6 +35,7 @@ const faker = (name: string, over: Partial<ComputerRuntime> = {}): ComputerRunti
   inspect: async () => undefined,
   state: async () => undefined,
   agents: async () => undefined,
+  parts: async () => undefined,
   owner: async () => undefined,
   how: async () => undefined,
   hostCommand: async () => undefined,

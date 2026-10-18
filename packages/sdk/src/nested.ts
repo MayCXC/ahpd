@@ -43,7 +43,7 @@ import type { AhpTransport, Subscription, TransportFrame } from '@microsoft/agen
 import { chatReducer, rootReducer, sessionReducer, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
 import type { ChatAction, ChatState, RootAction, RootState, SessionAction, SessionState, StateAction } from '@microsoft/agent-host-protocol';
 import { idOf } from './catalog.js';
-import { uriOf } from './fileuri.js';
+import { posixUriOf, uriOf } from './fileuri.js';
 import { subagentChatUri } from './host/channels.js';
 import { ANSWER_TIMEOUT } from './rpc.js';
 import { computerId } from './computers.js';
@@ -197,6 +197,10 @@ const startInside = async (asked: NestedAsked): Promise<NestedStarted> => {
   if (spawn === undefined) throw new Error(`There is no computer called computer://${asked.id}`);
   const host = startProcess(spawn.command, spawn.args, {
     stdio: ['pipe', 'pipe', 'pipe'],
+    // On Windows the command is a console program - `ssh.exe`, `docker.exe` -
+    // and a daemon has no console, so without this each session opens a window
+    // that stays for as long as the session runs.
+    windowsHide: true,
     ...(spawn.env === undefined ? {} : { env: { ...process.env, ...spawn.env } }),
     ...(spawn.cwd === undefined ? {} : { cwd: spawn.cwd }),
   }) as unknown as NestedHost;
@@ -355,8 +359,15 @@ const holds = (list: unknown, id: string): boolean => Array.isArray(list) && lis
   return held.id === id || holds(held.children, id);
 });
 
-/** A `file://` URI for a path, as a session's working directories are spelled. */
-const fileUri = (path: string): string => uriOf(path);
+/**
+ * A `file://` URI for a path, as a session's working directories are spelled.
+ *
+ * A path that starts with `/` is a POSIX path, and is spelled as one on any
+ * host: the folder inside a machine is the machine's, and a Windows host that
+ * read `/home/me/work` by its own rules handed the inner host
+ * `file:///C:/home/me/work`, which names nothing there.
+ */
+const fileUri = (path: string): string => (path.startsWith('/') ? posixUriOf(path) : uriOf(path));
 
 /**
  * One proxied session.
@@ -810,6 +821,19 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
     innerProvider = servedAs((root?.agents ?? []).map((agent) => agent.provider));
     innerSession = `${innerProvider}:/${sessionId}`;
     innerChat = defaultChatFor(innerSession);
+    /*
+     * This host's trust in the session's folder, carried to the folder inside.
+     *
+     * The host inside reads trust from the client connected to it, which is
+     * this proxy, and a proxy that said nothing is a client that trusts
+     * nothing: an ACP agent there was refused in every machine. Trust stays the
+     * person's: only a folder this host's client vouched for is vouched for
+     * inside, and only the one folder the session works in there. Sent on the
+     * same stream before the create, so the create reads it.
+     */
+    if (inside !== undefined && start.workingDirectory !== undefined && start.trusted?.(start.workingDirectory) === true) {
+      held.dispatch(ROOT, { type: 'root/configChanged', config: { workspaceTrust: { enabled: true, trustedUris: [inside] } } } as unknown as StateAction);
+    }
     const make = async (): Promise<void> => {
       /*
        * Nothing is made for a session that is already being removed.

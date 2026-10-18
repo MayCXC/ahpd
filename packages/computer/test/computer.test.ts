@@ -71,6 +71,7 @@ const fake = () => {
     // is doing, which agents it was prepared for, and whose it is.
     state: async (id) => (held.get(id) === undefined ? undefined : 'running'),
     agents: async (id) => (held.get(id) === undefined ? undefined : []),
+    parts: async (id) => (held.get(id) === undefined ? undefined : []),
     owner: async (id) => (held.get(id) === undefined ? undefined : {}),
     run: async (spec) => {
       calls.push(`run ${spec.name} ${spec.image} ${spec.cpus ?? '-'} ${spec.memory ?? '-'} ${spec.label}${spec.mounts === undefined ? '' : ` v=${spec.mounts.join(',')}`}${spec.workdir === undefined ? '' : ` w=${spec.workdir}`}`);

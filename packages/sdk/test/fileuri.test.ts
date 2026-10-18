@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { localPath, uriOf } from '../src/fileuri.js';
+import { localPath, posixUriOf, uriOf } from '../src/fileuri.js';
 
 /*
  * The one reader and the one writer for `file:` URIs.
@@ -79,5 +79,14 @@ describe('localPath', () => {
 describe('uriOf', () => {
   it('encodes the URI a client reads back', () => {
     expect(uriOf('/home/a/my dir')).toBe('file:///home/a/my%20dir');
+  });
+});
+
+describe('posixUriOf', () => {
+  it('spells a path on a POSIX machine the same on every host', () => {
+    // A Windows host reading `/home/a` by its own rules would put its drive in
+    // front, and the folder inside a machine is not on this host's drive.
+    expect(posixUriOf('/home/a/my dir')).toBe('file:///home/a/my%20dir');
+    expect(posixUriOf('/a/C#/x?y')).toBe('file:///a/C%23/x%3Fy');
   });
 });

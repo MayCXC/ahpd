@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
+import { machineRefusal } from '../../sdk/src/computers.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { raise } from '../../sdk/src/plugins.js';
@@ -242,6 +243,10 @@ it('answers what a box is, what it is doing and who prepared and owns it', async
   // Nobody here made the box, so there is no owner it can answer, and the host
   // is where the plugin's own record ends.
   expect(await one.owner('dev02')).toEqual({});
+
+  // A box is listed rather than made, so no part was mounted into it: its ahpd
+  // and its agents are the ones installed on it, and there is nothing to check.
+  expect(await one.parts('dev02')).toBeUndefined();
 
   // A name this host does not serve is not a machine, which is the answer every
   // one of the four gives.
@@ -679,6 +684,30 @@ it('says which machines are off this host, so a session in one runs nested', asy
   // machine this host makes machines on is not.
   expect(options.computers?.remote?.('ssh.dev02')).toBe(true);
   expect(options.computers?.remote?.('box')).toBe(false);
+});
+
+/** An agent that needs the ahpd part, the way cofold and pi do in a machine of ours. */
+const partAgent = {
+  provider: 'parted',
+  displayName: 'Parted backend',
+  schema: () => ({}),
+  defaults: () => ({}),
+  machine: (): Record<string, MachineNeed> => ({ ahpd: { part: 'ahpd', required: true } }),
+  create: () => { throw new Error('not started in this test'); },
+} as unknown as Agent;
+
+it('lets an agent that needs a part into a box, which brings its own ahpd', async () => {
+  const { options, problems } = await load(
+    { machines: { dev02: { destination: 'dev02' } } },
+    { agents: [partAgent] },
+  );
+  expect(problems).toEqual([]);
+
+  // A part is an image mounted when a machine is made, and a box is never made,
+  // so reading its missing parts from a record it does not have would refuse
+  // every such agent on every box.
+  expect(await options.computers?.partsMissing?.('ssh.dev02', 'parted')).toBeUndefined();
+  expect(await machineRefusal(options.computers, 'ssh.dev02', 'parted', 'parted:/one')).toBeUndefined();
 });
 
 it('refuses a command in the box when a value there is the vault own, and writes none of it', async () => {

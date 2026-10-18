@@ -86,3 +86,13 @@ export const localPath = (value: string): string => {
 
 /** A path, back as the URI a client sends and receives. */
 export const uriOf = (path: string): string => pathToFileURL(path).href;
+
+/**
+ * A path on a POSIX machine, as a URI, whatever system this host is.
+ *
+ * `uriOf` reads a path by this host's rules, and on Windows those resolve
+ * `/home/me/work` against the current drive into `file:///C:/home/me/work`: a
+ * folder on a box this host reaches is not one of this host's paths. Node's
+ * `windows` option is from 22.1.
+ */
+export const posixUriOf = (path: string): string => pathToFileURL(path, { windows: false }).href;

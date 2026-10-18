@@ -14,7 +14,7 @@ import type { VaultRead } from './secrets.js';
 import { manifestOf } from './manifest.js';
 import { ensureParts, readParts, refusedWithout } from './parts.js';
 import type { FolderAnswer, Profile } from './manifest.js';
-import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, partsHeld, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
+import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
 import type { ComputerRuntime, DockerOptions, Machine, MachineSpec } from './runtime.js';
 import { routed, spellMachineId } from './router.js';
 import type { Routed } from './router.js';
@@ -1617,7 +1617,8 @@ export const apply: Plugin['apply'] = (host, options) => {
     agents: async (id) => made.agents(id),
     /*
      * And the parts the asking agent needs that the machine was made without,
-     * from its `ahpd.parts` label.
+     * from its runtime's own answer. A runtime that mounts no parts, an ssh
+     * box among them, answers nothing, and nothing is checked.
      *
      * Each part need is named as it was for the machine: the value its profile
      * or this plugin's option gives it, else the agent's own. A need whose value
@@ -1625,14 +1626,14 @@ export const apply: Plugin['apply'] = (host, options) => {
      * the agent wrote it.
      */
     partsMissing: async (id, provider) => {
+      const has = await made.parts(id);
       const held = await made.inspect(id);
       const needs = host.machineNeeds(provider);
-      if (held === undefined || needs === undefined) return undefined;
+      if (has === undefined || held === undefined || needs === undefined) return undefined;
       const key = profileOf(held);
       const profile = key === undefined ? undefined : profiles?.[key];
       const plain = (values: Record<string, string | SecretRef> | undefined): Record<string, string> =>
         Object.fromEntries(Object.entries(values ?? {}).filter((entry): entry is [string, string] => typeof entry[1] === 'string'));
-      const has = partsHeld(held);
       const wanted: string[] = [];
       for (const [need, one] of Object.entries(needs)) {
         if (!('part' in one)) continue;

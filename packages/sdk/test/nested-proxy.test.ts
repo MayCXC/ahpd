@@ -860,6 +860,38 @@ it('the inner session works at the path the folder has inside the machine', asyn
   session.close();
 });
 
+it('carries this host trust in the session folder to the folder inside, and only then', async () => {
+  /** The trust pushes a scripted host was sent, in order. */
+  const pushed = (host: ReturnType<typeof scripted>): unknown[] => host.messages
+    .filter((message) => message.method === 'dispatchAction' && (message.params?.action as Bag | undefined)?.type === 'root/configChanged')
+    .map((message) => ((message.params?.action as Bag).config as Bag).workspaceTrust);
+
+  const trusted = serving([PROVIDER]);
+  const one = nestedAgent(backend(), {
+    plugins: ['@ahpd/agent-acp'],
+    start: async () => ({ host: trusted.proc, workingDirectory: '/home/me/work' }),
+    timeoutMs: 500,
+  }).create({ ...start(recorder().emit, '/srv/app/x'), trusted: (folder: string) => folder === '/srv/app/x' } as Start);
+  await until(() => created(trusted) !== undefined);
+  // The host inside reads trust from its client, which is this proxy: the one
+  // folder the session works in there, and it is pushed before the create.
+  expect(pushed(trusted)).toEqual([{ enabled: true, trustedUris: ['file:///home/me/work'] }]);
+  const order = trusted.messages.map((message) => message.method);
+  expect(order.indexOf('dispatchAction')).toBeLessThan(order.indexOf('createSession'));
+  one.close();
+
+  // A folder nobody here vouched for vouches for nothing inside either.
+  const untrusted = serving([PROVIDER]);
+  const two = nestedAgent(backend(), {
+    plugins: ['@ahpd/agent-acp'],
+    start: async () => ({ host: untrusted.proc, workingDirectory: '/home/me/work' }),
+    timeoutMs: 500,
+  }).create({ ...start(recorder().emit, '/srv/app/x'), trusted: () => false } as Start);
+  await until(() => created(untrusted) !== undefined);
+  expect(pushed(untrusted)).toEqual([]);
+  two.close();
+});
+
 it('a variant the inner host does not serve ends the session naming it, and an agent it serves is created there', async () => {
   const variant = serving(['claude']);
   const first = recorder();
