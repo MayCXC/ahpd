@@ -1,6 +1,6 @@
 ---
 title: Shell and signal tests skip on Windows
-status: todo
+status: implemented
 depends: [task-01-one-helper-names-a-posix-only-case.md]
 layer: sdk
 refs:
@@ -35,3 +35,22 @@ A test that names `/bin/sh` only as a value runs on both systems.
 - The sdk tests on Linux skip nothing new.
 
 ## Resume
+
+Done 2026-10-18. Not reviewed.
+
+Four files run a `#!/bin/sh` script as a program on `PATH`. None of them is in the CI failure list, because the run timed out at 300 s before it reached them. They are in the plan's Reconnaissance, so they are built here.
+
+- `packages/sdk/test/git-locks.test.ts`: one case, skipped. It finds git with `sh -c 'command -v git'` and puts a `#!/bin/sh` git first on `PATH`.
+- `packages/sdk/test/changes-locks.test.ts`: one case, skipped. Same setup, for the changes source.
+- `packages/sdk/test/git-hardened.test.ts`: three cases skipped. The first case only checks `gitArgv` and still runs. The three run a `#!/bin/sh` git on `PATH`.
+- `packages/sdk/test/github.test.ts`: three cases skipped. The API cases still run. The three run a `#!/bin/sh` gh on `PATH`.
+
+`it.skipIf(!posix)` comes from `../../../tools/posix.ts`. Each skip has a line above it saying it needs a POSIX shell outside a terminal. On Linux `posix` is true, so nothing is skipped there.
+
+No signal case was skipped. `nested-process.test.ts` sends real signals but `test:unit` excludes it, so the Windows job never runs it. `pty.test.ts` starts `shellTerminals` and is p5's. The signals in `nested-proxy.test.ts` and `container-relay.test.ts` are stubs, not signals sent to a process.
+
+`/bin/sh` as a `defaultShell` value stays unchanged, as step 5 says. That is `users-gate-dispatch.test.ts`, `users-gate-names.test.ts` and `session-fixed-key.test.ts`.
+
+Gates run: `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` pass. Vitest on `packages/sdk` with `--maxWorkers=2 --testTimeout=10000`: 149 files and 2990 tests pass.
+
+`packages/sdk/test/fixtures/wire.jsonl` was rewritten by the run and could not be restored: `git checkout --` and `git restore` are both denied in this mode. It needs `git checkout -- packages/sdk/test/fixtures/wire.jsonl` from Softov.

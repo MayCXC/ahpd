@@ -66,9 +66,9 @@ A test that fails on Windows for another cause is fixed, not skipped.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - One helper names a POSIX-only case](task-01-one-helper-names-a-posix-only-case.md) | todo | - |
-| [02 - Shell and signal tests skip on Windows](task-02-shell-and-signal-tests-skip-on-windows.md) | todo | 01 |
-| [03 - Mode, link and worktree tests](task-03-mode-link-and-worktree-tests.md) | todo | 01 |
+| [01 - One helper names a POSIX-only case](task-01-one-helper-names-a-posix-only-case.md) | implemented | - |
+| [02 - Shell and signal tests skip on Windows](task-02-shell-and-signal-tests-skip-on-windows.md) | implemented | 01 |
+| [03 - Mode, link and worktree tests](task-03-mode-link-and-worktree-tests.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -76,9 +76,9 @@ A test that fails on Windows for another cause is fixed, not skipped.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16.
-- **Next action:** build task 01 when p1's failure list is in the parent.
-- **Open questions:** none.
+- **Done so far:** drafted 2026-10-16, planned 2026-10-16. Task 01 built 2026-10-16: `tools/posix.ts` holds `posix`. Task 02 built 2026-10-18: four files that run a `#!/bin/sh` script as a program skip on Windows. Task 03 built 2026-10-18. `worktrees.test.ts` builds URIs with `uriOf` and reads them with `localPath`. The mode cases skip. Folder links are junctions on Windows. The file-link cases skip.
+- **Next action:** rerun the `check-windows` job and read its log for the skip count. Then fix the path and URI failures in the files that task 03's Resume names. That is p2's cause. p1 is still unbuilt: `.github/workflows/ci.yml` has no `windows-latest` job. Its list came from the run on main, 39104272911, which timed out at 300 s and is partial.
+- **Open questions:** whether this plan's file set is confirmed by p1's run or derived from the code. Tasks 02 and 03 derived it from the code and the plan's refs, since the run's list stops at 300 s. The plan's Reconnaissance counts still do not match the code. It counts 10 files for `sh -c` or `/bin/sh` under `packages/sdk/test`, but `git grep` finds 8. It counts 21 for `chmodSync` or `mode: 0o` across the two suites, but `git grep` finds 10.
 - **Watch out for:** a `describe.skipIf` around a file skips its setup too. Put the skip around the cases, not the imports.
 
 ## Final verification checklist
