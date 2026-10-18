@@ -27,6 +27,8 @@ interface Held {
   nested(id: string): NestedRecord | undefined;
   setNested(id: string, value: NestedRecord | undefined): void;
   nestedSessions(): [string, NestedRecord][];
+  /** Every session with a recorded folder, by id, and the folder it ran in. */
+  recordedFolders(): [string, string][];
   workingDirectory(id: string): string | undefined;
   setWorkingDirectory(id: string, value: string | undefined): void;
   worktree(id: string): StoredWorktree | undefined;
@@ -145,6 +147,10 @@ export function memorySessions(): SessionStore & Held {
     setChanges: (id, value) => { patch(id, { changes: value }); },
     nestedSessions: () => [...rows.entries()]
       .flatMap(([id, held]) => held.nested === undefined ? [] : [[id, held.nested] as [string, NestedRecord]]),
+    // A session whose record names no folder is left out: a folder is where a
+    // listing would ask a backend to look, and there is none to name.
+    recordedFolders: () => [...rows.entries()]
+      .flatMap(([id, held]) => held.workingDirectory === undefined ? [] : [[id, held.workingDirectory] as [string, string]]),
     artifacts: (id) => rows.get(id)?.artifacts,
     setArtifacts: (id, values) => { patch(id, { artifacts: values.length === 0 ? undefined : values }); },
     pullRequests: (id) => rows.get(id)?.pullRequests,
@@ -841,6 +847,7 @@ export function fileSessions(options: FileSessionOptions): SessionStore {
     nested: (id) => inner.nested(id),
     setNested: (id, value) => { touched(id, () => { inner.setNested(id, value); }); },
     nestedSessions: () => inner.nestedSessions(),
+    recordedFolders: () => inner.recordedFolders(),
     remoteOrigin: (id) => inner.remoteOrigin?.(id),
     setRemoteOrigin: (id, value) => { touched(id, () => { inner.setRemoteOrigin?.(id, value); }); },
     createdBy: (id) => inner.createdBy?.(id),

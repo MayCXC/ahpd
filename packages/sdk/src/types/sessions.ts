@@ -313,6 +313,17 @@ export interface SessionStore {
   /** Every nested session recorded, by id. */
   nestedSessions?(): [string, NestedRecord][];
   /**
+   * Every session recorded with a folder, by id, and the folder it ran in.
+   *
+   * A backend lists the paths it serves and nothing else, so a session that
+   * ran elsewhere - a bot's own folder, a git worktree - is one no listing has
+   * offered. A listing reads this to ask each backend about those sessions by
+   * id, with the folder the record names. Optional: a store without it lists
+   * no such session after a restart, and a session whose record names no
+   * folder is not one here.
+   */
+  recordedFolders?(): [string, string][];
+  /**
    * Where this session was sent from, or nothing for a session this host
    * began itself.
    *

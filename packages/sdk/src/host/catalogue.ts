@@ -826,6 +826,46 @@ export function createCatalogue(ctx: HostContext): Catalogue {
       found.push(adopt(reader, { id, title, createdAt, modifiedAt, workingDirectories }, agent === undefined ? record.provider : undefined));
     }
     /*
+     * The sessions the store recorded in a folder no backend read.
+     *
+     * A backend lists the paths it serves and nothing else, so a session that
+     * ran elsewhere - a bot's own folder, a git worktree - is one no listing
+     * has ever offered. Its record is what says it happened, and `find` is how
+     * a backend answers about one session by id, told the folder it ran in.
+     * Asked after the backends have answered, because `read` is only known
+     * then, and all at once: each lookup is one backend reading one file.
+     *
+     * A session this host is running or a backend already offered is not
+     * asked again, and a nested one is listed above. A lookup that throws or
+     * finds nothing adds no row, and the record stays - the same rule `gone`
+     * keeps.
+     */
+    const unread = (kept.recordedFolders?.() ?? []).filter(([id, folder]) =>
+      !claimed.has(id) && !offered.has(id) && !read.has(folder)
+      && kept.nested?.(id) === undefined && !found.some((one) => idFor(one.resource) === id));
+    // Read as the offered ids are, so a chat recorded under one of these ids
+    // claims its backend id before that id is looked up as a session.
+    for (const [id] of unread) recordedChats(id);
+    for (const own of chatBackends()) claimed.add(own);
+    const strays = unread.filter(([id]) => !claimed.has(id));
+    const looked = await Promise.all(strays.map(async ([id, folder]) => {
+      const recorded = kept.provider(id);
+      const asked = [...agents.values()].filter((agent) => agent.find !== undefined);
+      const order = recorded === undefined
+        ? asked
+        : [...asked.filter((agent) => agent.provider === recorded), ...asked.filter((agent) => agent.provider !== recorded)];
+      for (const agent of order) {
+        const row = await agent.find?.(id, { workingDirectory: folder }).catch(() => undefined);
+        if (row !== undefined) return { agent, row };
+      }
+      return undefined;
+    }));
+    for (const one of looked) {
+      if (one === undefined) continue;
+      const recorded = kept.provider(one.row.id);
+      found.push(adopt(one.agent, one.row, recorded !== undefined && !agents.has(recorded) ? recorded : undefined));
+    }
+    /*
      * What a refusing backend had last time, kept as it was.
      *
      * A backend that did not answer said nothing about its sessions, and this
