@@ -1,7 +1,7 @@
 ---
 title: The service manager starts the daemon
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -92,11 +92,11 @@ ahpd service install -> unit file from the config -> systemctl --user enable --n
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A supervised daemon writes its record](task-01-a-supervised-daemon-writes-its-record.md) | todo | - |
-| [02 - Stop and restart ask the manager](task-02-stop-and-restart-ask-the-manager.md) | todo | 01 |
-| [03 - Service install writes a systemd unit](task-03-service-install-writes-a-systemd-unit.md) | todo | 01, 02 |
-| [04 - Service install writes a LaunchAgent](task-04-service-install-writes-a-launch-agent.md) | todo | 01, 02 |
-| [05 - The docs say how to run it as a service](task-05-the-docs-say-how-to-run-as-a-service.md) | todo | 03, 04 |
+| [01 - A supervised daemon writes its record](task-01-a-supervised-daemon-writes-its-record.md) | implemented | - |
+| [02 - Stop and restart ask the manager](task-02-stop-and-restart-ask-the-manager.md) | implemented | 01 |
+| [03 - Service install writes a systemd unit](task-03-service-install-writes-a-systemd-unit.md) | implemented | 01, 02 |
+| [04 - Service install writes a LaunchAgent](task-04-service-install-writes-a-launch-agent.md) | implemented | 01, 02 |
+| [05 - The docs say how to run it as a service](task-05-the-docs-say-how-to-run-as-a-service.md) | implemented | 03, 04 |
 
 ## Relations
 
@@ -114,10 +114,20 @@ ahpd service install -> unit file from the config -> systemctl --user enable --n
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-16. Softov answered the open questions on 2026-10-16.
-- **Next action:** [task-01-a-supervised-daemon-writes-its-record.md](task-01-a-supervised-daemon-writes-its-record.md).
+- **Done so far:** the plan, 2026-10-16, and every task built and passing on 2026-10-16: 01, 02 and 03, then 04 and 05. Softov answered the open questions on 2026-10-16. On review (2026-10-18) `service install` now resolves a relative `--config-file` to a full path, with a test.
+- **Next action:** Softov reviews the tasks; then each task is `done`.
+The checks at the end of this file need a systemd user session and a Mac. Neither task could run them here.
 - **Open questions:** none.
-- **Watch out for:** `runForeground` removes `AHPD_DETACHED` from the environment at once, so a shell of a session does not inherit it. Do the same with `AHPD_SERVICE`. One config folder holds one record. `claim` refuses a live daemon that is not the one it replaces.
+- **Watch out for:**
+`runForeground` removes `AHPD_DETACHED` from the environment at once, so a session shell does not inherit it. Do the same with `AHPD_SERVICE`.
+One config folder holds one record.
+`claim` refuses a live daemon that is not the one it replaces.
+The announcement is one write that starts at the first column. `announcementOf` reads it back with `^ahpd on ws://`, so an indented line is a daemon no `start` finds.
+A supervised daemon's record holds no line. `stop` and `restart` must choose the manager from the record before they read `argv`.
+A restart of a supervised daemon starts its successor with the manager, not in this process.
+`service install` waits on the record, because a supervised daemon writes no log file.
+A unit is a file the daemon does not parse, so it names `process.execPath` and the configuration file in full.
+`installStarts` says whether the manager's install starts the service. The command restarts after writing the file only where it does not.
 
 ## Final verification checklist
 
