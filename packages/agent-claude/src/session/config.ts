@@ -149,6 +149,14 @@ export interface Config {
   setShellInit: (value: unknown) => true | string;
   /** The `PreToolUse` hook that puts the operator's environment and that script in front of a command. */
   sourceFirst: HookCallback;
+  /**
+   * The command a call was written as, before `sourceFirst` put the operator's
+   * lines in front of it, by the call's id.
+   *
+   * The owner's rules match the line the model wrote, and `canUseTool` is
+   * handed the rewritten input: this is where the original is kept for it.
+   */
+  unprefixed: Map<string, string>;
   methods: {
     setConfig: (key: string, value: unknown) => true | string | Promise<true | string>;
     settings: () => Record<string, unknown>;
@@ -173,6 +181,16 @@ export function createConfig(ctx: SessionContext): Config {
    */
   const initScript = join(tmpdir(), `ahpd-shell-init-${crypto.randomUUID()}.sh`);
   let sourced = false;
+  /*
+   * What each rewritten command was before the operator's lines were put in
+   * front of it, by the call's id.
+   *
+   * The hook is told the id of the call it is rewriting, and `canUseTool` is
+   * told the same id when the CLI asks about it. Kept between the two so the
+   * owner's rules match the line the model wrote rather than the one the
+   * session runs.
+   */
+  const unprefixed = new Map<string, string>();
   /*
    * The operator's environment, as the lines that go in front of every
    * command.
@@ -208,6 +226,8 @@ export function createConfig(ctx: SessionContext): Config {
     const before = [environment, sourced ? sourcing(initScript) : ''].filter((one) => one !== '').join('\n');
     // Nothing to put in front of it: the command goes as the client wrote it.
     if (before === '') return {};
+    // Kept for the question the CLI asks about this call after the hook runs.
+    unprefixed.set(input.tool_use_id, command);
     return { hookSpecificOutput: { hookEventName: 'PreToolUse', updatedInput: { ...given, command: `${before}\n${command}` } } };
   };
 
@@ -284,5 +304,5 @@ export function createConfig(ctx: SessionContext): Config {
     settings: () => ({ ...ctx.settings, ...(ctx.chosen ? { model: ctx.chosen } : {}) }),
   };
 
-  return { initScript, setShellInit, sourceFirst, methods };
+  return { initScript, setShellInit, sourceFirst, unprefixed, methods };
 }

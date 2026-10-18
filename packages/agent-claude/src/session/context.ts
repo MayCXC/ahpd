@@ -1,5 +1,5 @@
 import type { query } from '@anthropic-ai/claude-agent-sdk';
-import type { Activity, Bag, BoundTool, Session, SessionOptions, ShellEnv, SubagentChat, SubagentRequest } from '@ahpd/sdk';
+import type { Activity, Bag, BoundTool, Session, SessionOptions, ShellEnv, Start, SubagentChat, SubagentRequest } from '@ahpd/sdk';
 import type { Asked, Spawned } from '../spawn.js';
 import type { Asking } from './asking.js';
 import type { ClientTools } from './clienttools.js';
@@ -83,6 +83,15 @@ export interface ClaudeSessionOptions extends SessionOptions {
    * answer an absent `Start.trusted` is: untrusted.
    */
   trusted?: (folder: string) => boolean;
+  /**
+   * Whether this session's shell commands are approved by its owner's rules,
+   * carried from `Start`.
+   *
+   * The rules are the connection's that started the session: what a window
+   * allows is that window's. Absent is a host that says nothing, and a command
+   * line no rule could read is a call that asks.
+   */
+  getAutoApproval?: Start['getAutoApproval'];
   /**
    * Whether this session loads the settings of the person who runs the daemon,
    * carried from `Start`. Absent is yes.

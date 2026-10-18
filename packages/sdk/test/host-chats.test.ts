@@ -531,7 +531,8 @@ describe('more than one chat in a session', () => {
   });
 
   it('says a session is waiting when any of its chats is', async () => {
-    const { client, uri } = await running();
+    // `ls` and `sleep` are in VS Code's table, which would approve them: no table, so the call asks.
+    const { client, uri } = await running({ terminalAutoApproveDefaults: 'none' });
     await client.handle({ method: 'createChat', params: { channel: uri, chat: second } });
     client.handle({
       method: 'dispatchAction',

@@ -56,7 +56,8 @@ describe('driving a turn', () => {
 
     /** A Bash call asked about with these suggestions, and the frames that describe it. */
     const asking = async (suggestions?: unknown[]) => {
-      const { client, peer: p, uri, chatUri } = await running();
+      // `ls` and `sleep` are in VS Code's table, which would approve them: no table, so the call asks.
+      const { client, peer: p, uri, chatUri } = await running({ terminalAutoApproveDefaults: 'none' });
       client.handle({
         method: 'dispatchAction',
         params: { channel: uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },
@@ -371,7 +372,8 @@ describe('driving a turn', () => {
   });
 
   it('settles the blocked promise when the turn is cancelled', async () => {
-    const { client, uri } = await running();
+    // `ls` and `sleep` are in VS Code's table, which would approve them: no table, so the call asks.
+    const { client, uri } = await running({ terminalAutoApproveDefaults: 'none' });
     client.handle({
       method: 'dispatchAction',
       params: { channel: uri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'hi' } } },

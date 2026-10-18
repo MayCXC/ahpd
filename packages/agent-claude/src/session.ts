@@ -275,6 +275,8 @@ export function createSession(options: ClaudeSessionOptions): Session {
       ctx.ended.clear();
       ctx.pastLines.clear();
       ctx.answeredInputs.clear();
+      // The lines the shell hook kept for the questions that never came.
+      config.unprefixed.clear();
       ctx.spawning.clear();
       ctx.background.clear();
       // What was running and what each chat was told about it. A session being
