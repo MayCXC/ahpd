@@ -163,7 +163,7 @@ const serversFor = (
 const AUTH_REQUIRED = RequestError.authRequired().code;
 
 export function createOpening(ctx: SessionContext): Opening {
-  const { options, provider, start, where, replay } = ctx;
+  const { options, provider, settings, start, where, replay } = ctx;
 
   /**
    * The host's own tools, as the one HTTP server this session hands its agent.
@@ -320,6 +320,13 @@ export function createOpening(ctx: SessionContext): Opening {
     ctx.loading = true;
     const pending = (async () => {
       /*
+       * The mode this session asked for, read before the open learns the
+       * server's own: `learnModes` and `learnOffers` write the server's
+       * current mode over `settings.permissionMode`, and the send needs the
+       * value the session was started with rather than the server's answer.
+       */
+      const asked = settings.permissionMode;
+      /*
        * A folder the host did not vouch for, and an agent that loads the
        * folder's own hooks and settings unchecked.
        *
@@ -463,6 +470,7 @@ export function createOpening(ctx: SessionContext): Opening {
         ctx.learnModes(copied.modes);
         ctx.learnOffers(copied.configOptions);
         ctx.learnModels(copied);
+        await ctx.sendAskedMode({ connection, sessionId: copied.sessionId }, asked);
       }
       else if (reopen !== undefined) {
         /*
@@ -498,6 +506,7 @@ export function createOpening(ctx: SessionContext): Opening {
         ctx.learnModes(taken.modes);
         ctx.learnOffers(taken.configOptions);
         ctx.learnModels(taken);
+        await ctx.sendAskedMode({ connection, sessionId: reopen }, asked);
       }
       else {
         const created = await connection.newSession({
@@ -509,6 +518,7 @@ export function createOpening(ctx: SessionContext): Opening {
         ctx.learnModes(created.modes);
         ctx.learnOffers(created.configOptions);
         ctx.learnModels(created);
+        await ctx.sendAskedMode({ connection, sessionId: created.sessionId }, asked);
       }
       /*
        * The server has now said what it serves, so the host can read

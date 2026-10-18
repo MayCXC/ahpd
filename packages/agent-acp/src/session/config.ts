@@ -13,6 +13,7 @@ export interface Config {
   offersChanged(list: SessionConfigOption[]): void;
   schemaOf(): Bag;
   chooseModel(held: { connection: AcpConnection; sessionId: string }, chosen: Chosen | undefined): Promise<void>;
+  sendAskedMode(held: { connection: AcpConnection; sessionId: string }, asked: unknown): Promise<void>;
   models: Session['models'];
   setConfig: NonNullable<Session['setConfig']>;
 }
@@ -385,6 +386,52 @@ export function createConfig(ctx: SessionContext): Config {
     return `${provider}: ${key} is not a config key this backend serves`;
   };
 
+  /**
+   * Send the mode the session asked for, where the server offers it.
+   *
+   * `settings.permissionMode` is read before the open learns the server's own
+   * state, because `learnModes` and `learnOffers` write the server's current
+   * mode over it; the value reaches here as the one the session asked for. It
+   * is sent only where the server names it and sits elsewhere, through the
+   * same order `setConfig` uses: the `mode` option where the server named one,
+   * the legacy modes otherwise.
+   *
+   * The value is put in force before the request goes out, so the server's own
+   * update echoing it back is not news, and put back with the server's mode if
+   * the request fails: a session running in another mode is better than no
+   * session, so the failure is a line in the log rather than a failed open.
+   */
+  const sendAskedMode = async (
+    held: { connection: AcpConnection; sessionId: string },
+    asked: unknown,
+  ): Promise<void> => {
+    if (typeof asked !== 'string' || asked === settings.permissionMode) return;
+    const option = modeOption();
+    const offered = option === undefined
+      ? ctx.modes?.availableModes.map((one) => one.id) ?? []
+      : choicesOf(option).map((one) => one.value);
+    if (!offered.includes(asked)) return;
+    const before = settings.permissionMode;
+    settings.permissionMode = asked;
+    try {
+      if (option === undefined) {
+        await held.connection.setSessionMode({ sessionId: held.sessionId, modeId: asked });
+        if (ctx.modes !== undefined) ctx.modes = { ...ctx.modes, currentModeId: asked };
+      }
+      else {
+        learnOffers((await held.connection.setSessionConfigOption({
+          sessionId: held.sessionId,
+          configId: option.id,
+          value: asked,
+        })).configOptions);
+      }
+    }
+    catch (why: unknown) {
+      settings.permissionMode = before;
+      ctx.options.log?.(`${provider}: the session asked for permissionMode "${asked}" and the server did not take it: ${messageOf(why)}`);
+    }
+  };
+
   return {
     learnModes,
     learnOffers,
@@ -393,6 +440,7 @@ export function createConfig(ctx: SessionContext): Config {
     offersChanged,
     schemaOf,
     chooseModel,
+    sendAskedMode,
     models,
     setConfig,
   };
