@@ -1,6 +1,6 @@
 ---
 title: Session Changes come from the checkpoints
-status: todo
+status: implemented
 depends:
   - task-01-a-turn-leaves-a-checkpoint.md
 layer: sdk
@@ -43,3 +43,8 @@ Without a checkpoint, it is the edit tracker of today, as VS Code's `auto` strat
 - `pnpm -s typecheck` and the sdk vitest suite pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `changes.ts` reads the session's own two commits (`baselineOf`, `latestOf`), diffs them with `git diff --numstat -z` and reads each side with `git show`, holding the answer per session until the commits move; the numstat parse `look` had is now one helper both use. `Session Changes` is VS Code's label and description, `sessionSummary` is on `ChangesetSource`, and the tracker answers where there is no checkpoint answer. 5 tests in `test/checkpoints.test.ts`. Gates: `build`, `typecheck`, `boundary`, `node tools/schema.mjs` and `git diff --quiet tools/` pass; sdk vitest 150 files, 2989 tests pass.
+- **Next action:** [task-03-a-worktree-session-has-branch-changes.md](task-03-a-worktree-session-has-branch-changes.md).
+- **Open questions:** none.
+- **Watch out for:** a scope where the newest checkpoint is the baseline - a turn that has not ended - falls back to `across`, which is VS Code's "no checkpoint pair" rule; the task did not decide that case. `capturedFor` reads the *held* answer rather than running git, because `operations` is synchronous and asks it on every operation list. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

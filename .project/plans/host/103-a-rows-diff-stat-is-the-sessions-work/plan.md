@@ -96,12 +96,12 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A turn leaves a checkpoint](task-01-a-turn-leaves-a-checkpoint.md) | todo | - |
-| [02 - Session Changes come from the checkpoints](task-02-session-changes-come-from-checkpoints.md) | todo | 01 |
-| [03 - A worktree session has Branch Changes](task-03-a-worktree-session-has-branch-changes.md) | todo | - |
-| [04 - A row's changes are the session's summary](task-04-a-rows-changes-are-the-sessions-summary.md) | todo | 02, 03 |
-| [05 - A failed turn moves the counts](task-05-a-failed-turn-moves-the-counts.md) | todo | 04 |
-| [06 - The docs say what a row counts](task-06-the-docs-say-what-a-row-counts.md) | todo | 04 |
+| [01 - A turn leaves a checkpoint](task-01-a-turn-leaves-a-checkpoint.md) | implemented | - |
+| [02 - Session Changes come from the checkpoints](task-02-session-changes-come-from-checkpoints.md) | implemented | 01 |
+| [03 - A worktree session has Branch Changes](task-03-a-worktree-session-has-branch-changes.md) | implemented | - |
+| [04 - A row's changes are the session's summary](task-04-a-rows-changes-are-the-sessions-summary.md) | implemented | 02, 03 |
+| [05 - A failed turn moves the counts](task-05-a-failed-turn-moves-the-counts.md) | implemented | 04 |
+| [06 - The docs say what a row counts](task-06-the-docs-say-what-a-row-counts.md) | implemented | 04 |
 
 ## Risks and tradeoffs
 
@@ -111,10 +111,10 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-16. Softov answered the open questions on 2026-10-16.
-- **Next action:** [task-01-a-turn-leaves-a-checkpoint.md](task-01-a-turn-leaves-a-checkpoint.md).
+- **Done so far:** the plan, 2026-10-16; Softov answered the open questions on 2026-10-16. Task 01 built 2026-10-16: `checkpoints.ts`, the two port methods, the captures in `spawn.ts` and the removal in `lifecycle.ts`, with 5 tests. Task 02 built 2026-10-16: the `session` scope is a diff of the session's own checkpoints, with `sessionSummary` on the port. Task 03 built 2026-10-16: `mergeBaseOf` and `branchLook`, the `branch` scope with `branchSummary`, `state`'s fourth argument and the base on `changesetAt`, with 5 tests. Task 04 built 2026-10-16: `summaryKindOf` and the summary kept per session in the store (`changes`/`setChanges`, in memory and on disk), `changesOf` reading it, `summaryKept` and the `spawn.ts` calls at the baseline and at every turn's end, with 4 tests. Task 05 built 2026-10-16: `chat/error` joins the turn end in `spawn.ts`, with 1 test. Task 06 built 2026-10-16: `docs/sdk/SESSIONS.md` says what a row's `changes` counts, both kinds, the checkpoint refs and the fallback for a folder with no git. Gates and the sdk suite pass (2999 tests).
+- **Next action:** none - every task is implemented. Nothing is set to `done`, and `.project/plans/index.md` is untouched, as asked. The sdk's files under `git status` are the plan's work, uncommitted; `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite and wants `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
 - **Open questions:** none.
-- **Watch out for:** the idea's line refs are stale; use the refs above. `look` stays: the `uncommitted` scope and the folder's facts read it.
+- **Watch out for:** the idea's line refs are stale; use the refs above. `look` stays: the `uncommitted` scope and the folder's facts read it. Task 01's Files list names no site for the baseline or for the removal, so the baseline is captured at `spawn.ts`'s session start and the removal is a `removeCheckpoints` on the port, called from `removeSession`. Task 03's Files list names only `scopes` taking the base, so `state` takes it as a fourth argument and `changesetAt` carries it - the source cannot read a session's base off the directory, and `state` is reached by a channel URI. Task 04 wants that base for a worktree row's counts, and `branchSummary?(dir, base?)` is how it gets them. Task 04's Files list names no site for the turn-end wiring, so `summaryKept` is called from `spawn.ts` where the tree is checkpointed (the baseline and every turn's end), and the kind is read from the persisted worktree record rather than from an `isolation` config value, which this host only ever says to a running session. `summaryKept` passes `idOf(uri)` to `sessionSummary` because that is what the checkpoints are committed under; the port's other readers pass the channel URI. Fault to report rather than fix: `changes.ts` reads a session's files under two keys - the changeset `state` arrives with the channel URI (`at.owner`, the same spelling `observe` keys the edit tracker by) and `sessionSummary` with the id - so a live session's `session` scope never sees the checkpoints, a row's counts never see the tracker, and the risk note below for a folder that is not a repository leans on the tracker. No task decides which spelling is canonical. Task 05's refs point at lines tasks 01 and 04 have moved; the turn end it means is the one that checkpoints, `spawn.ts:1016`. `packages/sdk/test/changes-refresh.test.ts`'s `announces the session's counts` case now passes on a timing: its row gains the session's own zero counts a moment after it asserts the directory's 1, and the test asserts before that lands (measured with a temporary probe, three moves in the row). `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
 
 ## Final verification checklist
 

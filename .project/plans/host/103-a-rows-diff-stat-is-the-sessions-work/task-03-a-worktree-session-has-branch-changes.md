@@ -1,6 +1,6 @@
 ---
 title: A worktree session has Branch Changes
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -39,3 +39,8 @@ It is the diff from the merge base of the base branch to the working tree, with 
 - `pnpm -s typecheck` and the sdk vitest suite pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `changes.ts` has `mergeBaseOf` - the fork point, preferring `refs/remotes/origin/<base>`, then the local base, then `HEAD`, then the empty tree - and `branchLook`, which reads `git diff --numstat` and `--name-status` against that commit plus the `??` files out of `git status`. The `branch` scope is offered when a base is passed and git answered for the directory, `state` answers it, and `branchSummary(dir, base)` is on the port; `read` now takes a 40-hex authority so a row's `before` side is read from that commit lazily. `host/changesets.ts` passes `worktreeOf(uri)?.base` (through a new `baseOf`, which is also what `operationContext` uses) into `scopes`, and carries the base on `changesetAt` so `state` gets it in `snapshots.ts` and `contentMoved`. 5 tests in `test/changes-branch.test.ts`. Gates: `build`, `typecheck`, `boundary`, `node tools/schema.mjs` (508 definitions) and `git diff --quiet tools/` pass; sdk vitest 151 files, 2994 tests pass.
+- **Next action:** [task-04-a-rows-changes-are-the-sessions-summary.md](task-04-a-rows-changes-are-the-sessions-summary.md).
+- **Open questions:** none of the task's own; three things it does not decide, answered as noted under *Watch out for*.
+- **Watch out for:** three places the task was silent and a choice was made, worth a reviewer's eye. (1) `state` takes the base as a fourth argument and `changesetAt` returns it, because the source cannot read a session's base branch off the directory and `state` is reached by a channel URI with no session record beside it; the Files list names only `scopes`. (2) `branchSummary?(dir, base?)` has no session parameter, since a worktree holds one session. (3) The branch scope offers no operations and no REVERT - `operations` answers none for it, because every verb this source has is about the working tree or a captured turn, and neither is what the branch scope is - and it is `reviewable`, which the task also does not decide. The scope is appended after `uncommitted` and before `session`. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.

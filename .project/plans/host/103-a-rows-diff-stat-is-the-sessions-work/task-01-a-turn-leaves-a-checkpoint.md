@@ -1,6 +1,6 @@
 ---
 title: A turn leaves a checkpoint
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -42,3 +42,8 @@ Neither commit moves the person's branch, index or working tree.
 - `pnpm -s build`, `pnpm -s typecheck` and the sdk vitest suite pass.
 
 ## Resume
+
+- **Done so far:** built 2026-10-16. `packages/sdk/src/checkpoints.ts` - the baseline under `turn/0`, a commit per finished turn, written with `GIT_INDEX_FILE` so the person's branch, index and working tree do not move, one capture at a time per session. `ChangesetSource` has `checkpoint` and `removeCheckpoints`; `changes.ts` answers both from the module. `spawn.ts` captures at a turn end before it reads the folder again, and at the session start; `lifecycle.ts` removes the refs in `removeSession`. 5 tests in `test/checkpoints.test.ts`. Gates: `build`, `typecheck`, `boundary`, `node tools/schema.mjs` (508 definitions) and `git diff --quiet tools/` pass; sdk vitest 150 files, 2984 tests pass.
+- **Next action:** [task-02-session-changes-come-from-checkpoints.md](task-02-session-changes-come-from-checkpoints.md).
+- **Open questions:** none.
+- **Watch out for:** the Files list names a site for the turn end only, so two things were placed where the code allows and are worth a look: the step 4 baseline is captured in `spawn.ts`'s session start at `keepFolder`, and step 7's removal is `removeCheckpoints?(dir, session)` on the port, called from `removeSession`. `packages/sdk/test/fixtures/wire.jsonl` is dirty from the suite; restore it with `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
