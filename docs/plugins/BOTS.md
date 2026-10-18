@@ -15,45 +15,48 @@ A bot is not a backend of its own. It names whichever harness the host already h
 | `body` | Which body it is drawn with. Any word: the fifteen below are the suggestions |
 | `color` | Which colour it is drawn in: one of the eleven below, or a hex colour `#rrggbb` |
 | `instructions` | What it was asked to be, in its own words |
-| `template` | The template a chat with it would open with, by name. Absent is the default template - [The template](#the-template) |
+| `template` | The template a chat with it would open with, and the text its `AGENTS.md` is made from, by name. Absent is the default template - [The template](#the-template) |
 | `harness` | The backend a session of it runs on, where a bot chooses one |
 | `model` | The model it asks for |
 | `preset` | The session preset it starts from. Where one is set it wins over `harness` and `model` |
 | `workspace` | The folder it works in, under `root`. Its own, and never moved |
+| `session` | The name of the back session a message wakes. `work` where absent, and a name with `{turn}` in it starts one session per message |
 | `computer` | The machine it runs in, where it names one |
 | `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a holder of `*:*` may name any owner, this host's own `root:<host>` among them. A body naming anybody else is refused `-32009`, and an edit may not move it. Any `root:` is this host, whatever name follows it: one a make names is written under the host's name today, and a renamed machine keeps its bots. The manifest gives this host's own owner as a `const` in `owner`, so a client sends it as given |
 | `chat` | The reader's own chat with this bot. Answered by a read and never obeyed: it is a different conversation for each reader, so what a body carries is not kept - [The chat](#the-chat) |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
-A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`. A bot has no session, so a body that names `session` is refused like any other key it does not have.
+Three of the fields in that table are the `AGENTS.md`'s rather than `bot.md`'s: `name`, `description` and `instructions`. The file is their one copy, a read answers them from it, and a make or an edit writes them there - [The persona](#the-persona). Everything else that is the bot's is in the record file; `chat` belongs to the reader, and is not kept in the record.
 
-## The file
+A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`.
 
-Each bot is one file a person can edit: `<configDir>/bots/<slug>.md`, the fields as YAML frontmatter between two `---` lines and `instructions` as the Markdown below them. The file name is the `id`, and a file whose frontmatter names another one is reported and left out.
+## The record file
+
+Each bot has a folder of its own in the daemon's configuration, `<configDir>/bots/<slug>/`. Its record is `bot.md`, the fields as YAML frontmatter between two `---` lines; the host writes nothing below them. The folder name is the `id`, and a record whose frontmatter names another one is reported and left out. The bot's rows and logs are in that folder too - [Options](#options) says where.
 
 ```md
 ---
 id: motion
-name: Motion
 labels:
   - review
   - ci
-description: Reads pull requests and says what would break.
 body: robot
 color: teal
 harness: claude
 model: claude-sonnet-5
+session: work
 workspace: /srv/bots/motion
 owner: user:soft
 createdAt: 2026-10-11T09:00:00.000Z
 updatedAt: 2026-10-11T09:00:00.000Z
 ---
-You review pull requests. Say what would break, in one paragraph.
 ```
 
-A record an older daemon left as `<slug>.json` is converted when the daemon starts: the Markdown file is written beside it, and the `.json` file is renamed `<slug>.json.migrated`, which is what says it has been read. Both files stay where they are, and only the Markdown one is read from then on.
+A daemon that starts after an upgrade moves what an older one left: `bots/<slug>.md` becomes `bots/<slug>/bot.md`, and the rows and logs in `bot-chats/` and `bot-sessions/` move into the folder of their bot. A file the move cannot place is reported and left where it is, and what is left of a deleted bot is removed.
 
-A file a person edits is read while the daemon runs, and the change reaches watchers and the catalogue as any other edit does. Two fields an edit by hand may not change:
+A record made before `AGENTS.md` was the one copy of a bot's persona still carries its parts. A load moves them into the file and puts the record back without them - [The persona](#the-persona).
+
+A `bot.md` a person edits is read while the daemon runs, and the change reaches watchers and the catalogue as any other edit does. Two fields an edit by hand may not change:
 
 | Field | What happens |
 | --- | --- |
@@ -61,6 +64,48 @@ A file a person edits is read while the daemon runs, and the change reaches watc
 | `workspace` | The bot keeps its folder, and the change is reported |
 
 A file that is not a bot record - a field of the wrong type, or a colour that is neither one of the eleven nor `#rrggbb` - is reported in the same way, and the bot reads as it did before the edit.
+
+## The persona
+
+A bot's persona - its `name`, `description` and `instructions` - is its `AGENTS.md`, in the bot's work folder. The folder starts at `<root>/<slug>`, which is `~/.bots/<slug>` by default, so the file is `<root>/<slug>/AGENTS.md` - [The folder](#the-folder). The file is the one copy: a read answers those three fields from it, and a make or an edit writes them there. The wire shape does not change, so a client sends and receives them on the record as it always did.
+
+The file has a frontmatter and an `## Instructions` section, and everything else in it is the bot's own writing:
+
+```md
+---
+version: 1
+name: Motion
+description: Reads pull requests and says what would break.
+---
+
+## Instructions
+
+You review pull requests. Say what would break, in one paragraph.
+
+## How you work
+
+This file is your rules. You are Motion, a persistent bot assistant on `ahpd`, and this folder is yours. Answer as Motion, not as the model or the program that runs you. The frontmatter and the Instructions section are your owner's. You may change them only when your owner asks.
+
+If the Instructions section does not say what you are for, ask the person who talks to you. Ask what work you do, for whom, and what you must never do. Then write their answers in the Instructions section.
+```
+
+| Part | Who edits it |
+| --- | --- |
+| `version`, `name` and `description` in the frontmatter | The UI, on a make or an edit |
+| The text under `## Instructions`, up to the next `##` heading or the end of the file | The UI, on a make or an edit |
+| Everything else: other frontmatter keys, other sections, comments | The bot |
+
+`version` names the layout of the file, so a reader can tell an older one from a newer one. A write that names no version keeps the one the file names, and writes 1 where it names none.
+
+The UI changes only the parts in that table. A make or an edit replaces those frontmatter keys and the text of that section, and keeps every other byte of the file: a key a person or the bot put there, another section, a comment. The rest of the file is the bot's, and the bot may rewrite any of it.
+
+A part the file does not have reads empty. A bot that removed its Instructions section is a bot with no instructions, and the next edit writes the section again. A read takes the parts from the file each time, so an edit the bot makes to its own file is what the next read answers. A watch and the catalogue hear a change to `bot.md`; a change to `AGENTS.md` alone is answered by the next read of the bot.
+
+`CLAUDE.md` sits beside it with the one line `@AGENTS.md`, because Claude reads that name and not `AGENTS.md`; the import makes the two names one document.
+
+A make fills the bot's template into the file: the `templates` record it names, or the default `AGENTS.md` template at `<configDir>/templates/bots/AGENTS.md`, which the daemon writes at load where it is absent and a person may edit. The filled text is copied into the bot's folder, once; an edit to the template reaches the next bot made and no bot that exists. A folder that already has an `AGENTS.md` keeps it, because the file is the bot's from its first moment.
+
+A bot on a computer keeps its `AGENTS.md` on that computer. The host reads and writes it through the computer while the computer is online, and keeps the last parts it read in the record, which are what a read answers while the computer is offline. An edit made while the computer is offline waits in the record; the next start of a back session writes it to the file, and the record keeps it as the last parts read.
 
 ## The slug
 
@@ -72,6 +117,8 @@ A slug is fixed when the bot is made and an edit cannot move it. A deleted slug 
 
 A bot works in a folder of its own, `<root>/<slug>` unless the body named one, where `root` is the plugin's option and starts at `~/.bots`. No two bots share a folder and an edit never moves one: two bots in one tree would be two of them working over each other, so a body naming a folder another bot has is refused `-32602`. The folder is made when the bot is made, so a bot has one whether or not anybody has talked to it yet.
 
+Its `AGENTS.md` is in that folder, with `CLAUDE.md` beside it - [The persona](#the-persona). A delete removes the daemon's own data for the bot, `<configDir>/bots/<slug>/`, and leaves the work folder and its `AGENTS.md` where they are: what a bot worked on is the person's to keep.
+
 ## Bodies and colours
 
 The suggested bodies are `robot`, `humanoid`, `alien`, `gumbo`, `circle`, `semicircle`, `smash`, `square`, `triangle`, `pentagon`, `hexagon`, `drop`, `bean`, `cloud` and `ghost`. A body is a tag, so any other word is kept too, and a client draws a body it does not know with one of its own. A make with no body gets one of the fifteen at random. The colours are `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple`, `pink`, `brown`, `grey` and `black`. A colour may also be a hex colour, `#rrggbb`, which the host keeps in lowercase; `#fff` and `2f6fdf` are refused.
@@ -80,7 +127,7 @@ A make that names neither gets a body at random and the first colour.
 
 ## The chat
 
-A person talks to a bot in a **chat**: one session of the `bot-chat` provider per bot and person. That provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bot-chats/`, so a chat is still readable after a daemon restarts.
+A person talks to a bot in a **chat**: one session of the `bot-chat` provider per bot and person. That provider runs no model - a turn ends in the call that starts it - and keeps each turn as one JSON line under `<configDir>/bots/<slug>/logs/`, so a chat is still readable after a daemon restarts.
 
 A chat is opened by a **read**. `resourceRead bot://<slug>` answers the record with one more key, `chat`, the URI of the reader's own conversation with that bot, and the first read by a reader who may chat starts it and keeps the row. Reading the same bot again answers the same chat, and two people reading one bot are answered two different chats.
 
@@ -94,7 +141,7 @@ A chat's log is the whole of its state. Nothing about a chat is kept in memory p
 
 ## The template
 
-A bot may name a `template`, which is what a chat with it would open with. A bot that names none gets the default one the plugin ships:
+A bot may name a `template`, which is what a chat with it would open with and the text its `AGENTS.md` is made from - [The persona](#the-persona). A bot that names none gets the default one the plugin ships:
 
 ```text
 You are {{name}}. {{description}}
@@ -115,7 +162,9 @@ You are {{name}}. {{description}}
 
 A word that is not in this table is left as it was written.
 
-A template is a record in the `templates` collection, so the daemon keeps each one as a file: `<configDir>/templates/<name>.md`. Its frontmatter holds `title`, and its body is the text:
+The default `AGENTS.md` template is a second text, and it is a file rather than a record: `<configDir>/templates/bots/AGENTS.md`, written at load where it is absent and edited by hand. A bot's `AGENTS.md` is the text its `template` names, or that file, filled with `{{name}}`, `{{description}}` and `{{instructions}}` - [The persona](#the-persona). A word outside those three, `{{chats}}` among them, is left as it was written, because the file is the bot's rules rather than the opening of a conversation.
+
+A named template is a record in the `templates` collection, so the daemon keeps each one as a file: `<configDir>/templates/<name>.md`. Its frontmatter holds `title`, and its body is the text:
 
 ```markdown
 ---
@@ -127,7 +176,7 @@ You are {{name}}. {{instructions}}
 
 A bot names it as `template: short`. A make or an edit that names a template that does not exist is refused `-32602`, with a sentence that names it. An edit that does not name `template` passes even when the bot's template was deleted, and the bot keeps the name.
 
-Nothing fills a template yet. A chat runs no model, so there is no first turn for one to open, and what a template reaches is decided with the work a bot does.
+Nothing fills a chat template yet. A chat runs no model, so there is no first turn for one to open, and what a template reaches is decided with the work a bot does.
 
 ## Who may do what
 
@@ -219,7 +268,7 @@ An edit that asks for a harness, leaving everything else as it was:
 { "plugins": [{ "name": "@ahpd/bot", "options": { "root": "/srv/bots" } }] }
 ```
 
-The records are kept beside the daemon's own configuration, one file per bot in `<configDir>/bots/` - [The file](#the-file) shows one - and the tombstones in `<configDir>/bots-gone/`. The templates are in `<configDir>/templates/`. The chats are in `<configDir>/bot-chats/`: one row per bot and person, and beside it the log of the chat that row names. A plugin that takes the record store over keeps them wherever that store keeps them.
+All the data of one bot is in `<configDir>/bots/<slug>/`: its record is `bot.md` - [The record file](#the-record-file) shows one - its main chat rows are in `chats/`, its back session rows in `sessions/`, and its chat logs in `logs/`. A delete removes that folder. The tombstones are in `<configDir>/bots-gone/`. Named templates are in `<configDir>/templates/<name>.md`, and the default `AGENTS.md` template is `<configDir>/templates/bots/AGENTS.md`. A bot's `AGENTS.md` is not in the configuration folder: it is in the bot's work folder, which the `root` option places - [The persona](#the-persona). A plugin that takes the record store over keeps the records and the tombstones wherever that store keeps them; the work folder and its `AGENTS.md` stay where they are.
 
 ## See also
 
