@@ -7,6 +7,7 @@ created: 2026-10-16
 revalidated: 2026-10-18
 requires:
   - plans/plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md
+  - plans/plugin/52-p11-a-bot-has-a-private-session/plan.md
 changes: []
 creates: []
 refs:
@@ -19,7 +20,7 @@ refs:
 
 A group chat is a session of the chat provider with a member list of people and bots.
 Only members see the chat and send to it, in every client, VS Code included.
-`@<slug>` in a person's message wakes that bot, and a bot's own post wakes nobody.
+`@<slug>` in a person's message wakes that bot's private session, after a delay, and a bot's own post wakes nobody.
 A person or a bot makes a group chat, and a bot posts to a group chat it names.
 
 ## Reconnaissance
@@ -46,6 +47,6 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Next action:** ask the open questions, then write the tasks.
 - **Open questions:**
   1. Who may add a member - proposed: the chat's owner.
-  2. May a bot read a group where nobody mentioned it - proposed: no, a wake gets only the messages since its last post.
+  2. May a bot read a group where nobody mentioned it - proposed: no, a wake gets the last messages the mention template names.
   3. How a bot names the group to post to - proposed: a `chat` argument on `post_message`, limited to group chats where the bot is a member.
 - **Watch out for:** a message in a group is text from a person the bot's owner may not trust. Name security tests for it.

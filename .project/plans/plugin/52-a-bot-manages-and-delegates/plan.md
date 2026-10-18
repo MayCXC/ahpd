@@ -64,7 +64,7 @@ person -> bot-chat session (no model) -> fire bot message -> automation -> wake 
 | A direct chat needs a grant of its own, not only `bot:read` | Softov, 2026-10-16, chose "A grant of its own" for "Who may open a direct chat with Backer?" | p2 |
 | A person's turn stays open until the bot calls `post_message` | Softov, 2026-10-16, chose "Turn stays open" | p3 |
 | The bot plugin keeps its own index of bot plus person to chat, and the record holds no session | Softov, 2026-10-16, chose "Bot provider's own index" | p2 |
-| A wake with no person behind it starts a new session per fire | Softov, 2026-10-16, chose "No, new per fire" for "Does Backer also keep one session of its own?" | p3, p6 |
+| A bot has one private session, and a wake with no person behind it goes there | Softov, 2026-10-18, "each bot will have its own private session.. no one can chat on it.. only system instructions or wake automations." | p11 |
 | Only `@<slug>` wakes a bot in a group chat | Softov, 2026-10-16, chose "Only @backer" | p4 |
 | The host's bot rules go in as a system prompt where the harness takes one | Softov, 2026-10-16, chose "System prompt where possible" | p3 |
 | A group chat is a session for now, with members on it, and VS Code can chat in it | Softov, 2026-10-16, "can be a session for now, but we can control who access? so vs code could chat on it?", then chose "Members on the chat session" | p4 |
@@ -97,6 +97,7 @@ Child plans, each for one part.
 | [p8 - AGENTS.md is the bot's one copy](../52-p8-agents-md-is-the-bots-one-copy/plan.md) | bot | planned | p3 |
 | [p9 - Front and Back are chats of one session](../52-p9-front-and-back-are-chats-of-one-session/plan.md) | bot | draft | p3, host/107 |
 | [p10 - A bot changes bots with a tool](../52-p10-a-bot-changes-bots-with-a-tool/plan.md) | bot | draft | p8 |
+| [p11 - A bot has a private session](../52-p11-a-bot-has-a-private-session/plan.md) | bot | draft | p9 |
 
 ## Risks and tradeoffs
 

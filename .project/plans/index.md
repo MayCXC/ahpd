@@ -352,17 +352,18 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
 | [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
 | [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | built 2026-10-16 ([implemented.md](plugin/51-a-plugin-id-is-a-slug/implemented.md)) | daemon 19 | ahpw `/plugins/web/` |
-| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p10 | plugin 49 | - |
+| [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p11 | plugin 49 | - |
 | [52 p1 - The host keeps one task list](plugin/52-p1-the-host-keeps-one-task-list/plan.md) | medium | draft 2026-10-16; questions answered, tasks not written | 52 | - |
 | [52 p2 - A bot chat is a session with no harness](plugin/52-p2-a-bot-chat-is-a-session-with-no-harness/plan.md) | medium | built 2026-10-16 | 52 | 52 p3 |
 | [52 p3 - A message wakes the bot and it replies](plugin/52-p3-a-message-wakes-the-bot-and-it-replies/plan.md) | medium | active 2026-10-17; 16 tasks, 11 implemented | 52 p2 | 52 p4, 52 p6, 52 p7, 52 p8 |
-| [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |
+| [52 p4 - A group chat has members and mentions](plugin/52-p4-a-group-chat-has-members-and-mentions/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, 52 p11 | - |
 | [52 p5 - A bot is made with its AGENTS.md](plugin/52-p5-a-bot-is-made-with-its-agents-file/plan.md) | medium | dropped 2026-10-17; moved into 52 p3 tasks 10 and 11 | 52 p3 | - |
 | [52 p6 - A bot wakes when a session it started finishes](plugin/52-p6-a-bot-wakes-when-a-session-it-started-finishes/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3 | - |
 | [52 p7 - A manager bot edits only its own folder](plugin/52-p7-a-manager-bot-edits-only-its-own-folder/plan.md) | medium | draft 2026-10-16; tasks not written | 52 p3, host 100 p2, host 101 | - |
 | [52 p8 - AGENTS.md is the bot's one copy](plugin/52-p8-agents-md-is-the-bots-one-copy/plan.md) | medium | active 2026-10-17; 6 tasks, 01, 02, 05 and 06 implemented | 52 p3 | - |
 | [52 p9 - Front and Back are chats of one session](plugin/52-p9-front-and-back-are-chats-of-one-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p3, host 107 | - |
 | [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p8 | - |
+| [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p9 | 52 p4 |
 
 Next free number in `plugin`: `52`.
 
