@@ -113,6 +113,10 @@ Every tool may carry an `instruction`, which a backend that can add to its syste
 
 `deferLoading` is a host-side hint and never on the wire: it says the harness may hide this tool behind tool search. The artifact tools set it the way the reference does - `add_artifact_or_reference`, which the instruction names, is never deferred, and removing and listing one are, because the model reaches them through the discovery that instruction points at. A tool that says nothing leaves the harness's own default in force.
 
+Beside the tools' own wording, a session carries the rules of the clients in it. A client publishes a plugin on `SessionActiveClient.customizations`, and this host copies it; a rule in that copy is a `.mdc` or `.instructions.md` file, and only one whose frontmatter says `alwaysApply: true` applies. The rest are rules an agent reads where they apply, which is a decision this host has no turn to make. The body of each that applies joins `Start.instructions` after the host tools' own, with its frontmatter left behind. A body over 4096 characters is dropped, and the log names the rule.
+
+Claude appends the instructions to its preset prompt, and pi and cofold add them to the prompt they start with. An ACP server keeps its own system prompt, so the chat's first prompt opens with the words as text instead. The rules are read when a chat starts, so a change reaches the next start, and a plugin set that moves restarts the chat between turns.
+
 ## How a model reaches them
 
 A backend that can call the host's tools in process is handed them as `Start.tools`, and the harness's own server is what the model sees them through: by name they are all `mcp__ahp__*`, whether they came from this host or from a client.

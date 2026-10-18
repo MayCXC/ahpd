@@ -185,15 +185,14 @@ export function acpAgent(options: AcpOptions): Agent {
       /*
        * What the host wanted told and this backend cannot tell.
        *
-       * An ACP server owns its system prompt, so the words a start carries are
-       * read by nobody here: the tools arrive as the server lists them, and a
-       * rule a client published is not a tool at all. Written where a chat
-       * starts rather than where a turn does, so a conversation of many turns
-       * says it once.
+       * An ACP server owns its system prompt, so the words a start carries
+       * open the chat's first prompt as text instead, which `turn.ts` writes.
+       * Said where a chat starts rather than where a turn does, so a
+       * conversation of many turns says it once.
        */
       const told = start.instructions ?? [];
       if (told.length > 0) {
-        options.log?.(`${provider}: ${String(told.length)} instruction(s) for the model were left out, because an ACP server keeps its own system prompt`);
+        options.log?.(`${provider}: ${String(told.length)} instruction(s) for the model open the first prompt, because an ACP server keeps its own system prompt`);
       }
       return acpSession(options, start);
     },
