@@ -65,6 +65,7 @@ Softov's run on Windows 10 reported 17 failures in agent-claude and about 200 in
 | The Windows job reports and does not block a merge until p2, p3 and p5 land; p4 makes it block | Softov, 2026-10-16, chose "Report only until p2 and p3 land, then p4 makes it required" for "How does the Windows job start?" | p1, p4 |
 | Only the `check` job runs on Windows | Softov, 2026-10-16, chose "`check` only" for "Which jobs run on Windows?" | p1 |
 | The plan is a parent with five children | (defaulted: the work passes eight tasks) | - |
+| A sixth child, p6, takes the Windows run's findings that p2 and p5 do not cover | Softov, 2026-10-18, chose "New child plan p6" for "Where should the Windows session's daemon/33 findings go?" | p6 |
 | The domain is daemon | (defaulted: no domain covers the repository's own checks, and daemon owns the build) | - |
 
 ## Proposed architecture
@@ -81,8 +82,9 @@ Child plans, each for one cause.
 | [p1 - A Windows job runs the checks](../33-p1-a-windows-job-runs-the-checks/plan.md) | scripts, CI | planned | - |
 | [p2 - Tests build paths the system's way](../33-p2-tests-build-paths-the-systems-way/plan.md) | sdk, agent-claude | planned | p1 |
 | [p3 - POSIX-only tests say why they skip](../33-p3-posix-only-tests-say-why-they-skip/plan.md) | sdk, agent-claude | planned | p1 |
-| [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | planned | p2, p3, p5 |
+| [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | planned | p2, p3, p5, p6 |
 | [p5 - Terminals run on Windows](../33-p5-terminals-run-on-windows/plan.md) | sdk | planned | p1 |
+| [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | planned | p1 |
 
 ## Risks and tradeoffs
 
