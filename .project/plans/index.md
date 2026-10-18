@@ -227,6 +227,7 @@ Reference: [00-host.md](host/00-host.md)
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
+| [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
 
 Next free number in `host`: `97`.
 
