@@ -468,9 +468,10 @@ Reference: [00-policy.md](policy/00-policy.md)
 | Plan | Priority | Status | Requires | Blocks |
 | --- | --- | --- | --- | --- |
 | [01 - A policy says who may use which agent, model and computer](policy/01-a-policy-says-who-may-use-what/plan.md) | high | built 2026-10-02 ([implemented.md](policy/01-a-policy-says-who-may-use-what/implemented.md)) | host 36 | policy 02, proxy 02 |
+| [02 - A limit says how much it allows, how much is used and when it resets](policy/02-a-limit-says-what-is-used-and-when-it-resets/plan.md) | high | planned 2026-10-17 | policy 01, usage 02 | policy 03, ahpw budget view |
 | [04 - The policy form reads its choices from the manifest](policy/04-policy-form-reads-choices-from-manifest/plan.md) | medium | built 2026-10-06 ([implemented.md](policy/04-policy-form-reads-choices-from-manifest/implemented.md)); reviewed and merged 2026-10-06 | policy 01 | ahpapp policy/01 |
 
-Next free number in `policy`: `05` (`02` and `03` are held for limit enforcement).
+Next free number in `policy`: `05` (`03` is held for hours, sessions and the cancel during a turn; charge rules take `05`).
 
 ## proxy
 
