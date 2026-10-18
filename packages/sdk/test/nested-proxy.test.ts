@@ -1050,6 +1050,10 @@ const madeAndStopped = async (dir: string, port: ReturnType<typeof scriptedPort>
   const first = await restartable(dir, port.computers);
   await first.client.handle({ method: 'createSession', params: { channel: 'ahp-session:/kept', provider: PROVIDER, config: { computer: 'computer://box' } } });
   await until(() => port.read().length > 0, 1000);
+  // And the copy inside, which the proxy's subscribe writes a moment after the
+  // create: a close that won that race left the machine holding nothing, and
+  // every case here reads what the machine holds.
+  await until(() => port.stored().length > 0, 1000);
   await first.client.handle({ method: 'dispatchAction', params: { channel: 'ahp-session:/kept', clientSeq: 1, action: { type: 'session/titleChanged', title: 'In the box' } } });
   await first.host.close();
 };
