@@ -13,7 +13,7 @@ refs:
 
 A host that loads `@ahpd/agent-pi` and `@ahpd/agent-acp` with the shipped `pi` preset registers the id `pi` twice.
 The plugin that loads second loses the id, and its agent is not offered.
-Found while checking container/05 p9 task 06, 2026-10-18: the ACP preset had to be keyed `pi-acp` with its `command` written out, so both agents were offered.
+Found while checking container/05 p9 task 06 on 2026-10-18. The ACP preset had to be keyed `pi-acp` with its `command` written out, so that both agents were offered.
 
 ## Cause
 

@@ -316,8 +316,8 @@ This host never makes, starts, stops or removes one: it lists it, runs commands 
 ```json
 { "plugins": [{ "name": "@ahpd/computer", "options": { "ssh": { "machines": {
   "deb": {
-    "destination": "softov@10.60.66.4",
-    "workdir": "/home/softov/work",
+    "destination": "me@box.example",
+    "workdir": "/home/me/work",
     "host": ["sh", "-c", ". \"$HOME/.keys\" && exec ahpd \"$@\"", "ahpd"]
   }
 } } } }] }

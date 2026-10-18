@@ -27,7 +27,7 @@ refs:
 
 ## Resume
 Done 2026-10-18.
-`docs/plugins/COMPUTERS.md` has an "ssh machines" section: the option with one example, every field, the id and a policy glob, what the box needs, what runs there and what an ssh machine cannot do.
+`docs/plugins/COMPUTERS.md` has an "ssh machines" section with the option, one example, every field, the id and a policy glob. It also says what the box needs, what runs there and what an ssh machine cannot do.
 Every option named is one of `optionsSchema`'s `ssh` fields in [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts).
-What the box needs is task 06's run, not step 2's guess: the box keeps its backends' options in its own file, `ahpd` must be on a non-interactive `PATH`, and its model credentials stay on the box with or without p12.
+What the box needs comes from task 06's run, not from step 2's guess. The box keeps its backends' options in its own file, and `ahpd` must be on a non-interactive `PATH`. Its model credentials stay on the box with or without p12.
 `00-container.md` names `ssh.ts` and `router.ts`, and says `docker` and `ssh` are built.

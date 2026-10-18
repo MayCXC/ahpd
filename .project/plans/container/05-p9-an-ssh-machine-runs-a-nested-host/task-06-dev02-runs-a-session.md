@@ -31,7 +31,7 @@ dev02 runs ahpd installed by hand, is listed in this host's options as an ssh ma
 Done 2026-10-18, by hand, from a Windows 10 host (Node 24.12.0) to a Debian 13 VM.
 
 **Departure: the box is not dev02.**
-dev02's name does not resolve from the Windows host, so the box was a new Debian 13 VM on Proxmox, `deb-test` at `softov@10.60.66.4` (VM 201 on `pve-cgr`), 8 cores, 8 GB.
+dev02's name does not resolve from the Windows host, so the box was a new Debian 13 VM on Proxmox. It is `deb-test` at `softov@10.60.66.4` (VM 201 on `pve-cgr`), with 8 cores and 8 GB.
 It is listed as `ssh.deb`.
 
 **Versions.**
@@ -51,7 +51,7 @@ It is listed as `ssh.deb`.
 agent-acp on both hosts has `presets: { "pi-acp": { "name": "Pi (ACP)", "command": "pi-acp" } }`, keyed `pi-acp` because agent-pi already holds `pi`: [an-acp-preset-and-a-native-agent-share-one-id.md](../../../problems/an-acp-preset-and-a-native-agent-share-one-id.md).
 
 **Set by hand on the box.**
-- This host's public key in `~/.ssh/authorized_keys`, and the box's host key accepted once from this host, since `BatchMode=yes` refuses both a password and an unknown key.
+- This host's public key in `~/.ssh/authorized_keys`, and the box's host key accepted once from this host. `BatchMode=yes` refuses both a password and an unknown key.
 - Node 22 or later system-wide, not by nvm, so a non-interactive ssh finds `ahpd`.
 - The model keys in `~/.keys`, mode 600.
 - cofold: `model: "cofold/deepseek/deepseek-chat"`, `baseUrl: "https://openrouter.ai/api/v1"`, `apiKey: { "$secret": "host:openrouter" }` in the box's vault. cofold splits a model at its first `/`, so the `cofold/` prefix sends OpenRouter the whole `deepseek/deepseek-chat`.
@@ -69,10 +69,10 @@ agent-acp on both hosts has `presets: { "pi-acp": { "name": "Pi (ACP)", "command
 - `computer://ssh.deb` is listed in the web UI's machine picker.
 - cofold, pi and Claude each answered a turn from the web UI with the box's own `/` and `/home/softov/work`.
 - Pi (ACP) answered from a script client that pushes `workspaceTrust`: `Linux deb-test 6.12.113+deb13-amd64`, `/home/softov/work`. From the web UI it is refused, because this host runs `@ahpd/web` 0.4.0, and trust is pushed from 0.5.0 (ahpw `src/bridges/trust.ts`).
-- No command line on this host holds a key or a token; the nested `ssh.exe` lines hold the folder, the `sh` wrapper and the plugin name.
+- No command line on this host holds a key or a token. The nested `ssh.exe` lines hold the folder, the `sh` wrapper and the plugin name.
 - A cofold session told `PELICAN-42`, then `ahpd restart`, then asked from a new connection, answered `PELICAN-42` with both turns held.
 - `usage/2026-10-computer.jsonl` holds five stretches for `ssh.deb`, owner `root:DESKTOP-887VL4D`, 3.49 hours, each closed when the daemon stopped.
-- `resourceWrite` of `{ "runtime": "ssh" }` to `computer://newbox` and to `computer://ssh.newbox` is refused: "A machine is not made on ssh here; this host makes machines on docker, and ssh is one it only lists".
+- `resourceWrite` of `{ "runtime": "ssh" }` to `computer://newbox` and to `computer://ssh.newbox` is refused. The refusal reads "A machine is not made on ssh here; this host makes machines on docker, and ssh is one it only lists".
 
 **Left for others.**
 - The Linux gates (`pnpm test`) were not run; on Windows the computer suite fails 144 cases with and without this branch.

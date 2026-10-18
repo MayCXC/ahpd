@@ -24,12 +24,12 @@ A `--plugin` the file does not list loads with no options, as before.
 
 ## Consequences
 
-Every nested host, on an ssh box, a Docker machine with a configuration volume or a joined node, loads its backends as its own file sets them up.
+Every nested host loads its backends as its own file sets them up. That is true on an ssh box, a Docker machine with a configuration volume, or a joined node.
 A person's one-run `--plugin` of a configured plugin keeps that plugin's options.
 A run that wants a configured plugin bare now needs `--plugin-option` or another configuration file.
 
 ## Options
 
 - The box's nested host started with no `--plugin`, so it loads the box's whole plugin list.
-  It lost because it loads plugins the session does not use, and a missing plugin fails with a vaguer sentence than "this host has no such plugin".
+  It lost because it loads plugins the session does not use. Also, a missing plugin fails with a vaguer sentence than "this host has no such plugin".
   Softov, 2026-10-18, asked "Where should the fix go?": "Server keeps options".

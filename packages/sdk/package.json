@@ -47,7 +47,7 @@
     "README.md"
   ],
   "engines": {
-    "node": ">=22"
+    "node": ">=22.1"
   },
   "scripts": {
     "prepack": "tsc -p .",

@@ -151,7 +151,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 
 ## Resume state
 
-- **Done so far:** every task is done. Task 06 ran 2026-10-18 from a Windows host to a Debian 13 VM listed as `ssh.deb`, not dev02, and fixed six bugs on the way; its Resume has the run. Four reads of Docker's record wait in [deferred.md](deferred.md).
+- **Done so far:** every task is done. Task 06 ran 2026-10-18 from a Windows host to a Debian 13 VM listed as `ssh.deb`, not dev02. It fixed six bugs on the way, and its Resume has the run. Four reads of Docker's record wait in [deferred.md](deferred.md).
 - **Next action:** run `pnpm test` on Linux for branch `windows/container-05-p9`, then write `implemented.md`, set `status: built` and update the index row. The Windows run cannot answer that gate: the computer suite fails 144 cases there with and without this branch.
 - **Watch out for:** `ssh:dev02` is not a usable id, because `new URL('computer://ssh:dev02')` reads the colon as a port, so the separator is a dot; a policy matches a runtime with `computer: ["ssh.*"]`; a local docker name that holds a dot is refused at create; p8, p10 and p11 spell their ids through task 01's functions; container/04 tasks 11 (resume by id), 14 (the inner working directory), 15 (close waits for dispose) and 17 (a backend names its plugin) must land first, or a nested session on the box starts in a path the box does not have and never resumes; container/04 task 15 makes close wait for `disposeSession`, which task 05 here must not undo for a session that is ending because this host is stopping; claude/15 loads a plugin once with presets as variants, so the box's ahpd needs the same plugin options to serve a preset.
 
