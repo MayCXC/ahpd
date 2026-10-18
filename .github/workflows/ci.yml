@@ -87,8 +87,10 @@ jobs:
       - run: pnpm typecheck
         shell: bash
 
+      # Longer than `check`'s bound: the Windows run has never finished inside
+      # 300 s, and a bound it runs into reports no failures at all.
       - name: Tests
-        run: timeout 300 pnpm test:unit
+        run: timeout 600 pnpm test:unit
         shell: bash
 
       # Last, because it is the slowest and the only one that writes anything.

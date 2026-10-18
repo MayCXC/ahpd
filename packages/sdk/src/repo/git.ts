@@ -36,7 +36,7 @@ export function gitBranches(): DirectoryFacts {
   /** Run git in a directory and answer what it said, or nothing at all. */
   const git = (dir: string, args: string[]): Promise<string | undefined> =>
     new Promise((answer) => {
-      execFile('git', gitArgv(dir, args), { timeout: 2000, env: quiet() }, (error, out) => {
+      execFile('git', gitArgv(dir, args), { timeout: 2000, env: quiet(), windowsHide: true }, (error, out) => {
         answer(error ? undefined : out.toString().trim());
       });
     });

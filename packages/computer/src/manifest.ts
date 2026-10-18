@@ -558,8 +558,8 @@ const CPUS = /^\d+(?:\.\d+)?$/;
 /** A Docker memory limit: a number, optionally with a unit. */
 const MEMORY = /^\d+(?:\.\d+)?\s?(?:[kmgt]b?)?$/i;
 
-/** A bind mount, as `source:target` or `source:target:ro`. */
-const MOUNT = /^[^:\s]+:[^:\s]+(?::ro)?$/;
+/** A bind mount, as `source:target` or `source:target:ro`, with a Windows drive allowed on the source. */
+const MOUNT = /^(?:[A-Za-z]:)?[^:\s]+:[^:\s]+(?::ro)?$/;
 
 /** One string field, or nothing when the body said nothing usable. */
 const said = (held: Record<string, unknown>, key: string): string | undefined => {
@@ -567,8 +567,25 @@ const said = (held: Record<string, unknown>, key: string): string | undefined =>
   return typeof value === 'string' && value.trim() !== '' ? value.trim() : undefined;
 };
 
+/**
+ * A mount's source and target.
+ *
+ * A Windows source starts with a drive letter, `C:\work`, and that colon comes
+ * before the one dividing the pair. The separator is therefore the first colon
+ * after the drive rather than the first colon in the string, which would read
+ * `C:\work:/work` as the source `C` and the target `\work:/work`. A `:ro`
+ * suffix belongs to neither part.
+ */
+export const mountParts = (mount: string): { source: string; target: string } => {
+  const drive = /^[A-Za-z]:/.exec(mount);
+  const at = mount.indexOf(':', drive === null ? 0 : drive[0].length);
+  if (at === -1) return { source: mount, target: '' };
+  const end = mount.endsWith(':ro') ? mount.length - ':ro'.length : mount.length;
+  return { source: mount.slice(0, at), target: mount.slice(at + 1, end) };
+};
+
 /** Where a `source:target[:ro]` mount lands inside the machine. */
-const targetOf = (mount: string): string => mount.split(':')[1] ?? '';
+const targetOf = (mount: string): string => mountParts(mount).target;
 
 /**
  * The host side of a mount, which has to be an absolute path that is there.
@@ -580,8 +597,11 @@ const targetOf = (mount: string): string => mount.split(':')[1] ?? '';
  * exiting.
  */
 const sourceOf = (mount: string, said: string): void => {
-  const source = mount.split(':')[0] ?? '';
-  if (!source.startsWith('/')) {
+  const { source } = mountParts(mount);
+  // A drive letter is absolute on Windows and nowhere else, so that is the
+  // platform the longer check is for.
+  const absolute = source.startsWith('/') || (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(source));
+  if (!absolute) {
     throw new RpcError(-32602, `${said} names ${source}, which is not an absolute path on this host`);
   }
   if (!existsSync(source)) {

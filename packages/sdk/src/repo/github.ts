@@ -65,7 +65,7 @@ export function githubPullRequests(): PullRequests {
       execFile('gh', [
         'pr', 'list', '--repo', `${owner}/${repo}`, '--head', branch, '--state', 'all',
         '--limit', String(MOST), '--json', 'url,state,title,updatedAt',
-      ], { cwd, timeout: 10_000, maxBuffer: 1 << 20 }, (error, out, bad) => {
+      ], { cwd, timeout: 10_000, maxBuffer: 1 << 20, windowsHide: true }, (error, out, bad) => {
         if (error) {
           refuse(new Error(bad.toString().trim() || error.message));
           return;
@@ -114,7 +114,7 @@ export function githubPullRequests(): PullRequests {
 
   const oneByGh = (url: string, cwd: string): Promise<PullRequest | undefined> =>
     new Promise((answer, refuse) => {
-      execFile('gh', ['pr', 'view', url, '--json', 'url,state,title'], { cwd, timeout: 10_000, maxBuffer: 1 << 20 }, (error, out, bad) => {
+      execFile('gh', ['pr', 'view', url, '--json', 'url,state,title'], { cwd, timeout: 10_000, maxBuffer: 1 << 20, windowsHide: true }, (error, out, bad) => {
         if (error) {
           refuse(new Error(bad.toString().trim() || error.message));
           return;
@@ -157,7 +157,7 @@ export function githubPullRequests(): PullRequests {
       execFile('gh', [
         'pr', 'create', '--repo', `${owner}/${repo}`, '--head', wanted.head, '--base', wanted.base,
         '--title', wanted.title, '--body', wanted.body, ...(wanted.draft ? ['--draft'] : []),
-      ], { cwd, timeout: 30_000, maxBuffer: 1 << 20 }, (error, out, bad) => {
+      ], { cwd, timeout: 30_000, maxBuffer: 1 << 20, windowsHide: true }, (error, out, bad) => {
         if (error) {
           refuse(new Error(bad.toString().trim() || error.message));
           return;

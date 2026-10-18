@@ -40,7 +40,7 @@ const linksIn = async (path: string, said: string, linked: readonly string[]): P
  */
 const git = (dir: string, args: string[], ms = 60_000, stdin?: string): Promise<string> =>
   new Promise((resolve, reject) => {
-    const child = execFile('git', gitArgv(dir, args), { timeout: ms, maxBuffer: 8 << 20 }, (error, out, bad) => {
+    const child = execFile('git', gitArgv(dir, args), { timeout: ms, maxBuffer: 8 << 20, windowsHide: true }, (error, out, bad) => {
       if (!error) return resolve(out.toString());
       // git's own message, not node's: "fatal: a branch named x already
       // exists" is something a person can act on and `Command failed` is not.

@@ -328,7 +328,7 @@ const workspacePackages = (root: string): string[] => {
 const packOf = (root: string, name: string, into: string): { name: string; bytes: Buffer } => {
   const at = workspaceDir(root, name);
   if (at === undefined) throw new Error(`${root} has no ${name}, so the ahpd part cannot be built from this checkout`);
-  const packed = spawnSync('pnpm', ['pack', '--pack-destination', into], { cwd: at, encoding: 'utf8' });
+  const packed = spawnSync('pnpm', ['pack', '--pack-destination', into], { cwd: at, encoding: 'utf8', windowsHide: true });
   if (packed.status !== 0) {
     const said = (packed.stderr.trim() || packed.stdout.trim()).split('\n').slice(-3).join(' ');
     throw new Error(`pnpm pack could not pack ${name}, which the release workflow runs after pnpm build: ${said}`);

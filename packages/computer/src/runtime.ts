@@ -11,6 +11,7 @@ import type { MadeNeed } from './owners.js';
 import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
+import { mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
 import type { ArchiveEntry, MadePart, Tarball } from './parts.js';
 import type { Cli, CliOptions, Reach } from './devcontainer.js';
@@ -885,6 +886,9 @@ const ran = (options: CommandOptions, args: string[], input?: Buffer, env?: Reco
     stdio: [input === undefined ? 'ignore' : 'pipe', 'pipe', 'pipe'],
     env: { ...process.env, ...(options.env ?? {}), ...(env ?? {}) },
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+    // No console window on Windows, where each run of the command would open
+    // one over whatever the daemon is drawing.
+    windowsHide: true,
   });
   let stdout = '';
   let stderr = '';
@@ -1213,8 +1217,8 @@ export const machineDirectory = (found: Record<string, unknown>): string | undef
  * a read-only mount goes in the override config's `mounts` instead.
  */
 const cliMount = (mount: string): string => {
-  const [source, target] = mount.split(':');
-  return `type=bind,source=${source ?? ''},target=${target ?? ''}`;
+  const { source, target } = mountParts(mount);
+  return `type=bind,source=${source},target=${target}`;
 };
 
 /** Whether a mount is the read-only one, which the override config carries. */
@@ -1351,9 +1355,7 @@ const overrideOf = (spec: MachineSpec, config: Record<string, unknown>, route?: 
     held.mounts = [
       ...(Array.isArray(held.mounts) ? (held.mounts as unknown[]) : []),
       ...readOnly.map((mount) => {
-        const at = mount.slice(0, -':ro'.length).lastIndexOf(':');
-        const source = mount.slice(0, at);
-        const target = mount.slice(at + 1, -':ro'.length);
+        const { source, target } = mountParts(mount);
         return `type=bind,source=${source},target=${target},readonly`;
       }),
       ...volumes.map((part) => `type=volume,source=${volumeOf(part)},target=${partTarget(part.id)},readonly`),
@@ -2381,6 +2383,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, ...(options.env ?? {}), ...into.env },
       ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
+      windowsHide: true,
     });
     let stderr = '';
     child.stderr?.setEncoding('utf8');
@@ -2414,7 +2417,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * answer.
    */
   const hostGit = (tree: string, args: string[]): { code: number; stdout: string; stderr: string } => {
-    const held = spawnSync('git', gitArgv(tree, args), { encoding: 'utf8' });
+    const held = spawnSync('git', gitArgv(tree, args), { encoding: 'utf8', windowsHide: true });
     return { code: held.status ?? 1, stdout: held.stdout ?? '', stderr: held.stderr ?? '' };
   };
 

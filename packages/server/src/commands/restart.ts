@@ -399,6 +399,9 @@ export async function successorTakes(argv: readonly string[]): Promise<void> {
     env: { ...process.env, [CHECK_LINE_ENV]: '1' },
     timeout: CHECK_WAIT_MS,
     killSignal: 'SIGKILL',
+    // No console window on Windows, where this is a second `node.exe` and the
+    // daemon that starts it has no console of its own.
+    windowsHide: true,
   });
   const answer = await new Promise<{ code: number | null; said: string }>((done) => {
     let said = '';

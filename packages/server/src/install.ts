@@ -104,7 +104,7 @@ export const launch = (
 /** The default runner: the program on PATH, its standard error passed through as it comes. */
 export const run: Runner = (program, argv) => new Promise((done) => {
   const started = launch(program, argv, process.platform, process.env, process.execPath, existsSync);
-  const child = spawn(started.command, started.args, { stdio: ['inherit', 2, 'pipe'], shell: started.shell });
+  const child = spawn(started.command, started.args, { stdio: ['inherit', 2, 'pipe'], shell: started.shell, windowsHide: true });
   let stderr = '';
   let settled = false;
   const finish = (answer: Ran): void => {

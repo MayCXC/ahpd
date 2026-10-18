@@ -27,7 +27,7 @@ const SELF = fileURLToPath(import.meta.url);
  * repeated here once the child has survived it. A crash is then an exit code.
  */
 const loadable = (): boolean => {
-  const probe = spawnSync(process.execPath, [SELF, '--probe'], { stdio: 'ignore' });
+  const probe = spawnSync(process.execPath, [SELF, '--probe'], { stdio: 'ignore', windowsHide: true });
   return probe.status === 0;
 };
 

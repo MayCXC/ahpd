@@ -465,6 +465,9 @@ export const runCli = (cli: Cli, argv: string[]): Promise<{ code: number; stdout
     const child = spawn(cli.command, [...cli.args, ...argv], {
       stdio: ['ignore', 'pipe', 'pipe'],
       env: { ...process.env, ...(cli.env ?? {}) },
+      // No console window on Windows, where the CLI is a console program and
+      // this daemon has no console for it to open one in.
+      windowsHide: true,
     });
     let stdout = '';
     let stderr = '';
@@ -786,7 +789,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
     const held = asked.get(key);
     if (held !== undefined) return held;
     const answer = new Promise<boolean>((resolve) => {
-      const child = spawn(program, argv, { stdio: 'ignore', env: where() });
+      const child = spawn(program, argv, { stdio: 'ignore', env: where(), windowsHide: true });
       child.once('error', () => resolve(false));
       child.once('close', (code) => resolve(code === 0));
     });
@@ -801,7 +804,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
       // Echoed first, as the reference does: a person watching a container
       // build should see the command whose output follows.
       sink.output(`$ ${[command, ...argv].map(quote).join(' ')}\n`);
-      const child = spawn(command, argv, { stdio: ['ignore', 'pipe', 'pipe'], env: where() });
+      const child = spawn(command, argv, { stdio: ['ignore', 'pipe', 'pipe'], env: where(), windowsHide: true });
       let stdout = '';
       let stderr = '';
       // The CLI echoes the `docker run` it builds at info level, which carries
@@ -863,6 +866,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
       const child = spawn(docker.command, [...docker.args, ...argv], {
         stdio: ['ignore', 'pipe', 'pipe'],
         env: { ...process.env, ...(docker.env ?? {}), ...env, ...values },
+        windowsHide: true,
       });
       let stdout = '';
       let stderr = '';
@@ -1114,7 +1118,7 @@ export const devContainer = (options: DevContainerOptions = {}): ContainerPort =
       const child = spawn(
         docker.command,
         [...docker.args, ...argv],
-        { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...(docker.env ?? {}), ...env, ...values } },
+        { stdio: ['pipe', 'pipe', 'pipe'], env: { ...process.env, ...(docker.env ?? {}), ...env, ...values }, windowsHide: true },
       );
       live.set(one.connectionId, child);
 
