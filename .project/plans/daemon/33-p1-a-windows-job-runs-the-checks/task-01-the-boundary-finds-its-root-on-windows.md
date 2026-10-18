@@ -1,6 +1,6 @@
 ---
 title: The boundary finds its root on Windows
-status: todo
+status: implemented
 depends: []
 layer: scripts
 refs:
@@ -29,3 +29,26 @@ refs:
 - The Windows job of task 03 passes its boundary step.
 
 ## Resume
+
+Done 2026-10-16. Every step is built.
+
+`ROOT` is a filesystem path now, so the script reads the packages on Windows.
+
+File by file:
+
+- `scripts/boundary.mjs` - `fileURLToPath` is added to a new `node:url` import (step 1), and line 23 is `fileURLToPath(new URL('..', import.meta.url))` (step 2). The same shape as `tools/test-tmpdir.ts:29` and `vitest.config.ts`.
+- Step 3: line 23 was the only pathname in the script. Nothing else reads a URL as a path, so nothing else changed.
+
+Judgement calls the plan does not decide:
+
+- `ROOT` keeps the separator `new URL('..', ...)` ends in, because `fileURLToPath` of a URL with a trailing slash returns a path with one and the previous `.pathname` did too. Both uses take it: `join` normalizes it away, and `file.slice(ROOT.length)` lands on the first segment either way, so the reported file paths are unchanged.
+
+Validation:
+
+- `pnpm boundary` exits 0 and prints the same eleven packages, each `none undeclared`.
+- `pnpm -s build`, `pnpm -s typecheck` and `node tools/schema.mjs` each exit 0, and `git diff --quiet tools/` is clean.
+- The second item of the Validation - the boundary step of task 03's Windows job - cannot be read here: it needs a push, and task 03 step 6 asks Softov for one.
+
+Left:
+
+- Nothing is committed, as asked.

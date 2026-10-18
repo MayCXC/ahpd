@@ -61,9 +61,9 @@ The job's log names each test that fails, so p2 and p3 fix a known list.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The boundary finds its root on Windows](task-01-the-boundary-finds-its-root-on-windows.md) | todo | - |
-| [02 - The test scripts run in both shells](task-02-the-test-scripts-run-in-both-shells.md) | todo | - |
-| [03 - A Windows job runs the checks](task-03-a-windows-job-runs-the-checks.md) | todo | 01, 02 |
+| [01 - The boundary finds its root on Windows](task-01-the-boundary-finds-its-root-on-windows.md) | implemented | - |
+| [02 - The test scripts run in both shells](task-02-the-test-scripts-run-in-both-shells.md) | implemented | - |
+| [03 - A Windows job runs the checks](task-03-a-windows-job-runs-the-checks.md) | implemented | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -71,10 +71,10 @@ The job's log names each test that fails, so p2 and p3 fix a known list.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16.
-- **Next action:** build task 01.
-- **Open questions:** none.
-- **Watch out for:** a checkout on Windows needs `core.longpaths`, as `DEVELOPER.md` says.
+- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01, 02 and 03 implemented 2026-10-16 and not reviewed. Task 03's job is written and the workflow parses, but its first run is not read: steps 6 to 9 want a push, which the session that built it does not make.
+- **Next action:** push the branch, or open a pull request against `main`, so the `check-windows` job runs. Then read that run and record, in task 03's Resume, whether `timeout` ran under Git Bash, and, in the parent plan's Resume, the failing tests by file.
+- **Open questions:** whether Git Bash on `windows-latest` has `timeout`. Task 03 step 7 answers it from the run.
+- **Watch out for:** a checkout on Windows needs `core.longpaths`, as `DEVELOPER.md` says. Task 03's job sets it before the checkout, and a hand clone does not.
 
 ## Final verification checklist
 
