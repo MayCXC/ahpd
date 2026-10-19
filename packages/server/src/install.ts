@@ -140,7 +140,7 @@ export class NpmFailure extends Error {
 }
 
 /** The failure of one npm call, with its standard error as the reason, or its exit code when it said nothing. */
-const npmFailed = (failed: string, done: Ran): NpmFailure => {
+export const npmFailed = (failed: string, done: Ran): NpmFailure => {
   const why = done.stderr.trim();
   return new NpmFailure(failed, why === '' ? `exit ${String(done.code)}` : why);
 };
@@ -498,6 +498,18 @@ const SDK = '@ahpd/sdk';
 
 /** Why `@ahpd/sdk` is refused when it is named to install or update. */
 const SDK_IS_NOT_A_PLUGIN = `${SDK} is not a plugin: ahpd installs it at the daemon's version with every install and update.`;
+
+/**
+ * The packages installed from the registry in the plugin root, in the order
+ * the file lists them, `@ahpd/sdk` aside: the ones a daemon update moves.
+ *
+ * A package from a path, a link, a git or a URL is left as installed, so it is
+ * not one an update has a version to check: the person chose what it points at.
+ */
+export const registryPluginsIn = (root: string): string[] =>
+  dependenciesIn(root)
+    .filter(([name, spec]) => name !== SDK && fromRegistry(spec))
+    .map(([name]) => name);
 
 /**
  * The npm arguments that put `@ahpd/sdk` at the daemon's version beside the

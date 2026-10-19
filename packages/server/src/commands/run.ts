@@ -51,6 +51,7 @@ import { offerConfigure, askToServe } from './configure.js';
 import { agentPluginsDir, automationsDir, automationsPath, automationStatePath, configDir, configPath, customizationStatePath, daemonLog, hostId, isIdentifier, namedIssuer, policiesPath, sessionsDir, sessionsPath, signInIdentifier, urlHost, vaultPath } from '../config.js';
 import { API_PREFIX, apiHandler, json, listenApi, plainRequests, pluginRoutes, withoutApi, type ApiListener, type ApiOrigins } from '../http.js';
 import { servedRegistry, type ServedFacts } from './served.js';
+import { updateMethod } from './update.js';
 import { proxyHandler } from '../proxy/listener.js';
 import { loadPlugins } from '../plugins.js';
 import { fileRecords } from '../records.js';
@@ -447,6 +448,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     vault: () => held,
     automations: () => kept,
     restart: (argv, force) => restart(argv, force),
+    // The Windows update's own way down: the helper it started runs npm once
+    // this process is gone, so there is no successor to start from here.
+    down: () => { wayDown?.(); },
   };
   /*
    * The port the API answers on: its own when `http.port` gave it one, and the
@@ -929,6 +933,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   base.methods = {
     ...base.methods,
     ...Object.fromEntries(Object.entries(usageMethods(usageScheme)).map(([name, method]) => [name, { by: 'ahpd', name, method }])),
+    /*
+     * The update the desk asks for over AHP: the command's own steps, served by
+     * this daemon so the restart is its own and waits for the answer to go.
+     */
+    'x-ahpd/update': { by: 'ahpd', name: 'x-ahpd/update', method: updateMethod(facts) },
   };
 
   /*
@@ -1333,8 +1342,21 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
        * A supervised daemon was started with no line of its own: the line is
        * the unit's or the agent's, and the manager starts the next daemon with
        * it. There is nothing here to read, and nothing for a check to ask.
+       *
+       * `ahpd update` is the one caller that hands one anyway: it passes this
+       * daemon's own words so the binary npm just installed is asked whether it
+       * takes them, before the manager is asked to start it. Nothing is started
+       * from that line - the manager starts the daemon - so only the check runs.
        */
-      if (service !== undefined) return undefined;
+      if (service !== undefined) {
+        if (line === undefined) return undefined;
+        await successorTakes(line);
+        return undefined;
+      }
+      // An unsupervised record always has its line: `notRestartable` refused it
+      // otherwise. Read as a guard, so a record that lost it is refused rather
+      // than parsed as no options at all.
+      if (line === undefined) throw new Error('The recorded line is missing; run ahpd stop and ahpd start.');
       const token = secret(await optionsOfLine(line)).token;
       await successorTakes(line);
       return token;

@@ -1,6 +1,6 @@
 ---
 title: Update checks and refuses
-status: todo
+status: implemented
 depends:
   - task-01-the-update-finds-its-install-place.md
 layer: server
@@ -48,3 +48,21 @@ refs:
 - `pnpm -s build`, `pnpm -s typecheck`, `node tools/schema.mjs` and the server vitest suite pass.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`declareUpdate` is `daemon.update`, with the CLI pattern `update`, `POST /update`, the inputs `version`, `check` and `force`, `config:write`, the effect `change`, and `deploymentTokenOnly: 'update the daemon'`.
+The body runs in `oneAtATime`.
+
+`planUpdate` in `selfupdate.ts` answers `{current, latest, place}` or `{current, latest, why}`.
+It asks npm's `dist-tags` for the latest when no version is named. A target `newer` does not put after the running version is refused. Then it reuses `notRestartable` and `busy` from `restart.ts`, and last reads `installPlace`.
+`--check` answers `{current, latest, may: true}`, or `{current, latest, may: false, why}`.
+
+Departures:
+- `restart.ts` exports `FOREGROUND`, `busy` and `notRestartable`, which were private, so the update gives the same words.
+- `served.ts` registers the command beside `registry.ts`, because the served registry is built there.
+- `declareUpdate` takes an optional `UpdateFacts`, as `declarePlugin` takes `ServedFacts`, so a case can hand it a record, the turns, the registry and the install place.
+- A terminal cannot see running turns, so it passes none; the daemon refuses a turn when the restart is signalled (task 03).
+- The non-check path answers the plan for now. Task 03 replaces it with the install, the plugin move and the restart.
+
+The nine cases in `server-update.test.ts` pass against a local registry server. The server suite passes, 1206 tests in 59 files, and build, typecheck and the schema are clean.

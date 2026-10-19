@@ -28,8 +28,13 @@ declare module '@cofold/commands' {
   }
 }
 
-/** What a person is told when a command belongs to the deployment alone. */
-const deploymentOnly = (id: string, what: string): string =>
+/**
+ * What a person is told when a command belongs to the deployment alone.
+ *
+ * Shared with the commands that are served over AHP as well as over HTTP, whose
+ * method checks the owner itself and says the same sentence this does.
+ */
+export const deploymentOnly = (id: string, what: string): string =>
   `${id} may not ${what} here; only the deployment token may`;
 
 export function checkScopes(request: AuthorizeRequest): void {

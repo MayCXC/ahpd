@@ -1,6 +1,58 @@
 # Upgrade
 
 ```bash
+ahpd update
+```
+
+`ahpd update` installs the newest `@ahpd/server` where this one is installed. It moves every plugin to the new `@ahpd/sdk` and starts the daemon again. It refuses before it installs anything when the result would be a daemon that cannot start, or a plugin that cannot load.
+
+| Flag | Does |
+| --- | --- |
+| `--check` | Say the running and the latest version, and whether the update may run. Installs nothing |
+| `--version 0.13.0` | Install that version instead of npm's latest. It has to be newer than the running one |
+| `--force` | Update while a turn runs, and go on when a plugin has no version for the new sdk |
+
+## What it does
+
+1. npm installs `@ahpd/server@<version>` where this ahpd already is. A global install is `-g --prefix <prefix>`, and a project folder is `--prefix <folder>`.
+2. Each plugin in the plugin root moves to the newest version whose `@ahpd/sdk` range admits the new daemon.
+3. The new binary is asked whether it takes the recorded flags, then the daemon restarts as `ahpd restart` does.
+
+## Refusals
+
+Each of these is refused before anything is installed:
+
+- a checkout or a linked package, because npm did not put that folder there
+- a daemon in the foreground, which cannot start itself again
+- a running turn, unless `--force`
+- a plugin with no version that admits the new sdk, unless `--force`
+- a version that is not newer than the running one, since that is not an update
+
+The answer names the refusal, and the daemon keeps running. `--check` answers the same refusals as `why`, beside `may: false`.
+
+## HTTP and AHP
+
+An update replaces the code the daemon runs. Over HTTP and AHP it is the deployment's own token and never a person. A person's token is refused with 403, and a person's AHP call with `-32009`.
+
+```bash
+curl http://127.0.0.1:9187/api/update \
+  -X POST \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "content-type: application/json" \
+  -d '{"check": true}'
+```
+
+`x-ahpd/update` takes the same three fields: `version`, `check` and `force`.
+
+## Windows
+
+Windows locks the native module the daemon runs, so npm cannot replace it while the daemon is up. `ahpd update` answers, stops the daemon, and a helper outside the install does the rest. The helper waits for the daemon to go, runs npm, moves the plugins and starts the daemon with the recorded flags. Each step goes to `daemon.log`. A failed npm starts the old version again.
+
+## By hand
+
+An install the update refuses can still be upgraded by hand:
+
+```bash
 npm i -g @ahpd/server
 ahpd plugin update all
 ahpd restart

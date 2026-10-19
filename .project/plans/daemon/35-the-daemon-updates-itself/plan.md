@@ -90,6 +90,7 @@ ahpd update / POST /api/update / x-ahpd/update
 | On Linux and macOS the answer comes after the install and the plugin move, so an npm failure is the answer | (defaulted: the old daemon still runs when npm fails, so the caller can be told) | 03 |
 | On Windows the answer comes before the daemon stops, and a failure after that goes to the daemon log | (defaulted: nothing that answers is running while npm runs) | 05 |
 | A supervised daemon checks the new binary with its own argv, because it has no recorded line | (defaulted: a check that is skipped lets a broken install take the unit down) | 03 |
+| The Windows helper waits for the daemon to stop for as long as that takes, and logs once after 60 seconds | Softov, 2026-10-19, chose the recommended answer for "What should the Windows helper do when the daemon takes more than 60 s to stop?" | 05 |
 | The update runs in `oneAtATime`, with the plugin commands | the desk's request, 2026-10-18 | 02 |
 
 ## Proposed architecture
@@ -106,12 +107,12 @@ ahpd update / POST /api/update / x-ahpd/update
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The update finds its install place](task-01-the-update-finds-its-install-place.md) | todo | - |
-| [02 - Update checks and refuses](task-02-update-checks-and-refuses.md) | todo | 01 |
-| [03 - Update installs, moves the plugins and restarts](task-03-update-installs-moves-plugins-and-restarts.md) | todo | 02 |
-| [04 - AHP calls the update](task-04-ahp-calls-the-update.md) | todo | 03 |
-| [05 - Windows installs after the daemon stops](task-05-windows-installs-after-the-daemon-stops.md) | todo | 03 |
-| [06 - The docs say how to update](task-06-the-docs-say-how-to-update.md) | todo | 03, 04, 05 |
+| [01 - The update finds its install place](task-01-the-update-finds-its-install-place.md) | implemented | - |
+| [02 - Update checks and refuses](task-02-update-checks-and-refuses.md) | implemented | 01 |
+| [03 - Update installs, moves the plugins and restarts](task-03-update-installs-moves-plugins-and-restarts.md) | implemented | 02 |
+| [04 - AHP calls the update](task-04-ahp-calls-the-update.md) | implemented | 03 |
+| [05 - Windows installs after the daemon stops](task-05-windows-installs-after-the-daemon-stops.md) | implemented | 03 |
+| [06 - The docs say how to update](task-06-the-docs-say-how-to-update.md) | implemented | 03, 04, 05 |
 
 ## Relations
 
@@ -130,15 +131,19 @@ ahpd update / POST /api/update / x-ahpd/update
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-18, with Softov's five answers.
-- **Next action:** [task-01-the-update-finds-its-install-place.md](task-01-the-update-finds-its-install-place.md).
+- **Done so far:** the plan, 2026-10-18, with Softov's five answers; tasks 01 through 06, 2026-10-19. Every task is implemented and none is reviewed.
+- **Next action:** a review of tasks 01 through 06, then the final verification checklist below.
 - **Open questions:** none.
 - **Watch out for:**
 `checkScopes` returns early for the `cli` surface, so the deployment token check applies over HTTP only.
-An AHP method does not pass through `checkScopes`, so task 04 checks the owner itself.
+`x-ahpd/update` is served by `base.methods` in `run.ts`, and it checks the caller's owner itself, since an AHP method does not pass through `checkScopes`.
+The method and the command share `runUpdate()` in `commands/update.ts`.
 `successorTakes` runs `process.argv[1]`, which is the same path after the install, with the new files.
 A supervised daemon has no recorded line.
 `plugin update` pins `@ahpd/sdk` at the running daemon's version, so the update passes the new version.
+On Windows the install runs in `updater.ts` after the daemon goes, and the helper may not import this package.
+The Windows check by hand is still open in task 05.
+`docs/server/UPGRADE.md` keeps the upgrade by hand for an install the update refuses.
 Never write `CHANGELOG.md`, which is generated.
 
 ## Final verification checklist

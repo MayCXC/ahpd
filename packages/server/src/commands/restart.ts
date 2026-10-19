@@ -95,14 +95,17 @@ const COULD_NOT_STOP = 'Could not stop cleanly: ';
 const STOPPING = 'stopping';
 const STOPPED = 'stopped';
 
-const FOREGROUND = 'This daemon runs in the foreground, not from ahpd start; restart it where it runs.';
+export const FOREGROUND = 'This daemon runs in the foreground, not from ahpd start; restart it where it runs.';
 const notRecorded = (pid: number): string =>
   `The record names pid ${String(pid)}, not this daemon; restart this one where it runs.`;
 const OLDER = 'This daemon was started by an older ahpd, which did not record its line; run ahpd stop and ahpd start.';
-const busy = (turning: string[]): string => `A turn is running in ${turning.join(', ')}; pass --force to restart anyway.`;
+export const busy = (turning: readonly string[]): string => `A turn is running in ${turning.join(', ')}; pass --force to restart anyway.`;
 
-/** Why the daemon `self`, with that record, is not one a restart may start again, or nothing. */
-const notRestartable = (record: Running | undefined, self: number): string | undefined => {
+/**
+ * Why the daemon `self`, with that record, is not one a restart may start
+ * again, or nothing. Shared with `ahpd update`, which refuses the same ways.
+ */
+export const notRestartable = (record: Running | undefined, self: number): string | undefined => {
   if (record === undefined) return FOREGROUND;
   if (record.pid !== self) return notRecorded(record.pid);
   // A daemon a service manager holds has no line of its own: the line is the
@@ -438,7 +441,7 @@ export async function successorTakes(argv: readonly string[]): Promise<void> {
  * ends.
  */
 export const checkedRestart = (
-  read: (argv: string[]) => Promise<string | undefined>,
+  read: (argv: string[] | undefined) => Promise<string | undefined>,
   turning: () => string[],
   way: Pick<Lifecycle, 'restart'>,
   hold: (why: string | undefined) => void,
@@ -679,6 +682,16 @@ export async function restartAtTerminal(force: boolean, steps: AtTerminal): Prom
   const last = log.trim().split('\n').slice(-10).join('\n');
   return conflict(`${why} The log's last lines:\n${last}`);
 }
+
+/**
+ * The restart `ahpd restart` runs at a terminal, against this machine's record,
+ * log and process table.
+ *
+ * Shared with `ahpd update`, which runs the same restart after it has answered:
+ * the signal, the answer read in the log and the successor it names are one
+ * path, not two that would have to agree.
+ */
+export const restartFromTerminal = (force: boolean): Promise<Running> => restartAtTerminal(force, realTerminal());
 
 export const declareRestart = (registry: Registry<object>, served?: ServedFacts): Command => registry.action({
   id: 'daemon.restart',

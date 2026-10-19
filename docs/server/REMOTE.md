@@ -92,7 +92,7 @@ The deployment's connection token may run everything. A person's token needs the
 | `vault list` | `config:read` for `host:`; `team:write` for the team's; own |
 | `vault set`, `vault delete` | `config:write` for `host:`; `team:write` for the team's; own |
 | `automation export` / `automation import` | `automation:list` / `automation:create` |
-| `plugin install`, `remove`, `update`, `config`, `enable`, `disable`, `restart` | deployment token only |
+| `plugin install`, `remove`, `update`, `config`, `enable`, `disable`, `restart`, and `ahpd update` | deployment token only |
 
 One thing a remote client reads is not a command and so has no row here: the account each agent bills to, which is a value of the root config rather than an `ahpd` verb, needs `account:read` and is shown to nobody else - [HOST.md](../sdk/HOST.md#grants) has that row.
 
