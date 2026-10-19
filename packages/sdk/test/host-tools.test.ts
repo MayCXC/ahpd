@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionReducer } from '@microsoft/agent-host-protocol';
 import { clientPluginsIn } from '../src/clientplugins.js';
@@ -29,10 +30,18 @@ vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/c
 
 beforeEach(resetSdk);
 
+/**
+ * This test's own folder, as the host's.
+ *
+ * A summary names only a folder that is there, so the host has to run in one
+ * that exists on whichever machine runs the test.
+ */
+const HERE = fileURLToPath(new URL('.', import.meta.url)).replace(/\/$/, '');
+
 describe('tools the host contributes', () => {
   const withTools = async (tools = hostTools()) => {
     const host = createHost({
-      path: '/home/softov', agents: [claude({ paths: ['/home/softov'] })], ...machine(), tools,
+      path: HERE, agents: [claude({ paths: [HERE] })], ...machine(), tools,
     });
     const p = peer();
     const client = host.accept(p);
@@ -147,7 +156,7 @@ describe('tools the host contributes', () => {
       expect(said.session).toBe(held);
       expect(said.openLink).toBe('agent-host-session://claude/served');
       expect(said.status).toBe('idle');
-      expect(said.workingDirectory).toBe('file:///home/softov');
+      expect(said.workingDirectory).toBe(uriOf(HERE));
     });
 
     it('sends a message into another session, and it starts a turn there as the agent\'s', async () => {
@@ -195,7 +204,7 @@ describe('tools the host contributes', () => {
       const { client, peer: p } = await withTools();
       await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } });
       const said = await call('create_session', {
-        relationship: 'independent', workspace: '/home/softov', title: 'Port the makefile', prompt: 'port it', worktree: false,
+        relationship: 'independent', workspace: HERE, title: 'Port the makefile', prompt: 'port it', worktree: false,
       });
       expect(said).toMatch(/^New session created \(agent-host-session:\/\/claude\/[0-9a-f-]+\)\.$/);
       await settle();
@@ -204,7 +213,7 @@ describe('tools the host contributes', () => {
       expect(summary?.title).toBe('Port the makefile');
       // Held under its provider's name, as a client's `createSession` is.
       expect(summary?.resource).toMatch(/^claude:\/[0-9a-f-]+$/);
-      expect(summary?.workingDirectories).toEqual(['file:///home/softov']);
+      expect(summary?.workingDirectories).toEqual([uriOf(HERE)]);
       // Its first turn, as the creating agent's.
       const chat = (await client.handle({ method: 'subscribe', params: { channel: summary?.resource } }) as {
         snapshot: { state: { defaultChat: string } };

@@ -1,6 +1,6 @@
 ---
 title: The summary names only folders that are there
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -40,3 +40,19 @@ The store record and `wheres` keep every folder.
 - Run the gates.
 
 ## Resume
+
+- **Done so far:** Built 2026-10-19.
+  `directoriesThere` in `packages/sdk/src/host/catalogue.ts` keeps a URI that is not `file:` and a `file:` URI whose `localPath` is a directory.
+  It uses `statSync` with `throwIfNoEntry: false`, and a check that throws keeps the folder.
+  `summaryOf`, the summary `adopt` returns and the rows `liveRows` builds pass `workingDirectories` through it.
+  `wheres.set` and the store record still take `row.workingDirectories`, so an opened session names the folder and the record keeps it.
+  The filter reads the disk when a summary is built, so a folder made again is named again by the next listing.
+  Four tests are in `packages/sdk/test/catalogue-gone-folder.test.ts`.
+  They cover the removed folder, with the record and the opened session keeping it.
+  They also cover the folder made again, a URI that names another machine, and a running session's summary after `session/titleChanged`, and its listing row.
+  The gates pass: build, typecheck, boundary, schema, the sdk suite at 3232 passed and 2 skipped, and the server suite at 1236 passed.
+- **Next action:** none.
+  Task 01 is the plan's only task, and nothing is set to `done`.
+- **Open questions:** none.
+- **Watch out for:** a session inside a computer can report a machine path as a `file:` URI.
+  The summary leaves it out, because the path is not on this host.
