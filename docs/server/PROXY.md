@@ -2,17 +2,17 @@
 
 The proxy lets a person point their own tool, Claude Code or a script, at this host and call a model by its `<maker>/<name>` with their ahpd token. The host picks the provider, calls it with the provider's own key, and streams the answer back unchanged. Policies say who may call which model, and each call is recorded against the caller's pools.
 
-The providers and the model names are the `proxy` key of the configuration; `ahpd proxy list` shows them. This page is about calling them.
+The providers and the model names are the `modelProxy` key of the configuration; `ahpd proxy list` shows them. This page is about calling them.
 
 ## Turning it on
 
-The proxy is served under `/v1` on the listener that carries the [HTTP API](REMOTE.md#http-api), and only while `http` is on:
+The proxy is served under `/v1` on the listener that carries the [HTTP API](REMOTE.md#http-api), and only while `httpApi` is on:
 
 ```json
-{ "http": true }
+{ "httpApi": true }
 ```
 
-With `http.port` it moves with `/api` to the API's own port. With `http` off, `/v1` answers 404 as `/api` does.
+With `httpApi.port` it moves with `/api` to the API's own port. With `httpApi` off, `/v1` answers 404 as `/api` does.
 
 ## Pointing a tool at it
 
@@ -47,7 +47,7 @@ A session's own token is answered as that session, when the host hands sessions 
 
 ## How a name is routed
 
-The body's `model` is a `<maker>/<name>` from the `proxy.models` table. The call goes to the first entry of that name, in the file's order, whose provider:
+The body's `model` is a `<maker>/<name>` from the `modelProxy.models` table. The call goes to the first entry of that name, in the file's order, whose provider:
 
 1. accepts the dialect the call came in,
 2. is allowed by policy, when `policies.check` is on, and
@@ -109,7 +109,7 @@ A record carries two costs. `providerCost` is what the provider reported, when i
 A session whose harness calls the proxy is recorded twice: once by the session meter (`source: "agent"`) and once here (`source: "proxy"`), linked by session, chat and turn. A session's call is also policy-checked here as its owner. To turn the proxy's half off:
 
 ```json
-{ "proxy": { "sessionCalls": "skip" } }
+{ "modelProxy": { "sessionCalls": "skip" } }
 ```
 
 `record` is the default.

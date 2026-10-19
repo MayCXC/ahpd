@@ -52,11 +52,11 @@ Turn it on to run the `ahpd` commands over HTTP:
 ::: code-group
 
 ```json [Same port]
-{ "http": true }
+{ "httpApi": true }
 ```
 
 ```json [Own port]
-{ "http": { "port": 9188, "host": "127.0.0.1" } }
+{ "httpApi": { "port": 9188, "host": "127.0.0.1" } }
 ```
 
 :::

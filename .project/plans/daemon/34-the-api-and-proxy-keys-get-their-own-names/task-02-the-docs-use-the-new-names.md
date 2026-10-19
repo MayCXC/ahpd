@@ -1,6 +1,6 @@
 ---
 title: The docs use the new names
-status: todo
+status: implemented
 depends:
   - task-01-the-daemon-reads-the-new-names.md
 layer: "docs"
@@ -34,3 +34,12 @@ The docs show only the new names, and the upgrade page says how to rename the tw
 - `node /home/softov/.claude/skills/do-spec/scripts/lint-prose.mjs` passes on the plan files.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`PROXY.md`, `REMOTE.md` and `CONFIGURE.md` name `httpApi` and `modelProxy` in their text and in each JSON example. `UPGRADE.md` has a "Renamed keys" section naming the old key, the new one and the warning a person sees. The search also found `HOST.md`, `POLICY.md` and `PLUGINS.md` naming the keys, so those use the new names too. The `proxy` grant, `proxy:call`, the policy `proxy` match type, the `source: "proxy"` usage records and the MCP `http` server type are untouched.
+
+Departures:
+- `docs/sdk/HOST.md`, `docs/sdk/POLICY.md` and `docs/plugins/PLUGINS.md` are updated beside the four files the task lists. Step 1 searches all of `docs/`, and those pages name the configuration keys.
+
+`rg -n '"http":|"proxy":' docs --glob '*.md'` finds nothing. `pnpm -s docs:build` passes.

@@ -97,7 +97,7 @@ afterEach(async () => {
  *
  * Resolved once the announcement names the WebSocket origin, which is the first
  * moment there is anything to ask; the API's own port is read off the `http on`
- * line when there is one, so `http.port: 0` works.
+ * line when there is one, so `httpApi.port: 0` works.
  */
 const daemon = (value: unknown, args: string[] = [], env: Record<string, string> = {}): Promise<Daemon> => new Promise((resolve, reject) => {
   writeFileSync(config, JSON.stringify(value));
@@ -231,7 +231,7 @@ describe('a malformed request', () => {
   }, 30000);
 
   it('answers 400 with the API on, and the daemon keeps answering', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const said = await raw(one.port, 'GET /api/status HTTP/1.1\r\nHost: a b\r\nConnection: close\r\n\r\n');
     expect(said.startsWith('HTTP/1.1 400')).toBe(true);
     const after = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret');
@@ -239,7 +239,7 @@ describe('a malformed request', () => {
   }, 30000);
 
   it('answers 400 for a path that is not a valid percent-encoding', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const said = await raw(one.port, 'POST /api/user/add/%E0%A4%A HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
     expect(said.startsWith('HTTP/1.1 400')).toBe(true);
     const after = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret');
@@ -249,19 +249,19 @@ describe('a malformed request', () => {
 
 describe('a foreign request', () => {
   it('refuses an Origin that is not the daemon\'s', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const said = await raw(one.port, `GET /api/status HTTP/1.1\r\nHost: 127.0.0.1:${String(one.port)}\r\nOrigin: https://evil.example\r\nAuthorization: Bearer root-secret\r\nConnection: close\r\n\r\n`);
     expect(status(said)).toBe(403);
   }, 30000);
 
   it('refuses a Host that is not the daemon\'s', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const said = await raw(one.port, `GET /api/status HTTP/1.1\r\nHost: evil.example:${String(one.port)}\r\nAuthorization: Bearer root-secret\r\nConnection: close\r\n\r\n`);
     expect(status(said)).toBe(403);
   }, 30000);
 
   it('refuses a body that is not JSON', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const response = await fetch(`http://127.0.0.1:${String(one.port)}/api/user/add/x`, {
       method: 'POST',
       headers: { 'content-type': 'application/x-www-form-urlencoded', authorization: 'Bearer root-secret' },
@@ -271,7 +271,7 @@ describe('a foreign request', () => {
   }, 30000);
 
   it('refuses a request that names no Host', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const said = await raw(one.port, 'GET /api/status HTTP/1.0\r\nAuthorization: Bearer root-secret\r\nConnection: close\r\n\r\n');
     expect(status(said)).toBe(403);
     const after = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret');
@@ -279,7 +279,7 @@ describe('a foreign request', () => {
   }, 30000);
 
   it('answers a loopback name and the address', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const named = await raw(one.port, `GET /api/cli-manifest HTTP/1.1\r\nHost: localhost:${String(one.port)}\r\nConnection: close\r\n\r\n`);
     expect(status(named)).toBe(200);
     const addressed = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`);
@@ -288,7 +288,7 @@ describe('a foreign request', () => {
 
   it('answers the host a resource names', async () => {
     const one = await daemon(
-      { http: true, resource: 'https://ahpd.example.com/', plugins: [BACKEND] },
+      { httpApi: true,resource: 'https://ahpd.example.com/', plugins: [BACKEND] },
       ['--connection-token', 'root-secret'],
     );
     const said = await raw(one.port, 'GET /api/cli-manifest HTTP/1.1\r\nHost: ahpd.example.com\r\nConnection: close\r\n\r\n');
@@ -305,11 +305,11 @@ const guarded = async (): Promise<{ one: Daemon; member: string; admin: string; 
   const admin = await directory.mint('root');
   // The people file is passed as a flag and is not named by the configuration,
   // so a served `user` verb has to take it from the daemon, not from the file.
-  const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret', '--users', usersFile]);
+  const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret', '--users', usersFile]);
   return { one, member, admin, token: 'root-secret' };
 };
 
-describe('http in the configuration', () => {
+describe('httpApi in the configuration', () => {
   it('answers /api with 404 when it is off', async () => {
     const one = await daemon({ plugins: [BACKEND] });
     expect(one.apiPort).toBe(-1);
@@ -317,8 +317,8 @@ describe('http in the configuration', () => {
     expect(response.status).toBe(404);
   });
 
-  it('serves the manifest on the daemon port when http is true', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+  it('serves the manifest on the daemon port when httpApi is true', async () => {
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     expect(one.apiPort).toBe(one.port);
     const response = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret');
     expect(response.status).toBe(200);
@@ -327,8 +327,8 @@ describe('http in the configuration', () => {
     expect(manifest.commands.map((command) => command.id)).toContain('daemon.status');
   });
 
-  it('moves the API to its own listener when http.port is set', async () => {
-    const one = await daemon({ http: { port: 0 }, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+  it('moves the API to its own listener when httpApi.port is set', async () => {
+    const one = await daemon({ httpApi: { port: 0 }, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     expect(one.apiPort).toBeGreaterThan(0);
     expect(one.apiPort).not.toBe(one.port);
     // The API's listener answers, and the daemon's own port says there is none.
@@ -336,8 +336,8 @@ describe('http in the configuration', () => {
     expect((await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret')).status).toBe(404);
   }, 30000);
 
-  it('refuses http with no token and no users', async () => {
-    writeFileSync(config, JSON.stringify({ http: true, plugins: [BACKEND] }));
+  it('refuses httpApi with no token and no users', async () => {
+    writeFileSync(config, JSON.stringify({ httpApi: true,plugins: [BACKEND] }));
     const said = await cli(['--config-file', config, '--port', '0']);
     expect(said.code).toBe(2);
     expect(said.stderr).toContain('--connection-token');
@@ -345,15 +345,15 @@ describe('http in the configuration', () => {
     expect(said.stderr).toContain('--users');
   }, 20000);
 
-  it('refuses http with --without-connection-token', async () => {
-    writeFileSync(config, JSON.stringify({ http: true, plugins: [BACKEND] }));
+  it('refuses httpApi with --without-connection-token', async () => {
+    writeFileSync(config, JSON.stringify({ httpApi: true,plugins: [BACKEND] }));
     const said = await cli(['--config-file', config, '--port', '0', '--without-connection-token']);
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain('http needs a credential: pass --connection-token, --connection-token-file or --users.');
+    expect(said.stderr).toContain('httpApi needs a credential: pass --connection-token, --connection-token-file or --users.');
   }, 20000);
 
   it('starts with a users directory and no deployment token', async () => {
-    const one = await daemon({ http: true, users: usersFile, plugins: [BACKEND] });
+    const one = await daemon({ httpApi: true,users: usersFile, plugins: [BACKEND] });
     expect(one.apiPort).toBe(one.port);
   }, 30000);
 });
@@ -371,10 +371,10 @@ const frame = (port: number, token: string, text: string): Promise<string> => ne
 const hasIPv6Loopback = (): boolean =>
   Object.values(networkInterfaces()).some((list) => (list ?? []).some((one) => one.family === 'IPv6' && one.internal));
 
-describe('http.host', () => {
+describe('httpApi.host', () => {
   it('binds the API where it says, and the announcement names that host', async () => {
     const one = await daemon(
-      { http: { port: 0, host: '127.0.0.1' }, plugins: [BACKEND] },
+      { httpApi: { port: 0, host: '127.0.0.1' }, plugins: [BACKEND] },
       ['--host', '0.0.0.0', '--connection-token', 't'],
     );
     expect(one.host).toBe('0.0.0.0');
@@ -391,7 +391,7 @@ describe('http.host', () => {
   }, 30000);
 
   it.skipIf(!hasIPv6Loopback())('answers an IPv6 bind by its bracketed name', async () => {
-    const one = await daemon({ http: { port: 0, host: '::1' }, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: { port: 0, host: '::1' }, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     expect(one.apiPort).toBeGreaterThan(0);
     const said = await rawAt('::1', one.apiPort, `GET /api/cli-manifest HTTP/1.1\r\nHost: [::1]:${String(one.apiPort)}\r\nAuthorization: Bearer root-secret\r\nConnection: close\r\n\r\n`);
     expect(status(said)).toBe(200);
@@ -404,18 +404,18 @@ describe('http.host', () => {
     expect(remote.stdout).toContain(String(one.child.pid));
   }, 40000);
 
-  it('refuses http.host without an http.port', async () => {
-    writeFileSync(config, JSON.stringify({ http: { host: '127.0.0.1' }, plugins: [BACKEND] }));
+  it('refuses httpApi.host without an httpApi.port', async () => {
+    writeFileSync(config, JSON.stringify({ httpApi: { host: '127.0.0.1' }, plugins: [BACKEND] }));
     const said = await cli(['--config-file', config, '--port', '0', '--connection-token', 't']);
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain('http.host');
+    expect(said.stderr).toContain('httpApi.host');
   }, 20000);
 
-  it('refuses an http.host that is not a string', async () => {
-    writeFileSync(config, JSON.stringify({ http: { port: 0, host: 5 }, plugins: [BACKEND] }));
+  it('refuses an httpApi.host that is not a string', async () => {
+    writeFileSync(config, JSON.stringify({ httpApi: { port: 0, host: 5 }, plugins: [BACKEND] }));
     const said = await cli(['--config-file', config, '--port', '0', '--connection-token', 't']);
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain('http.host');
+    expect(said.stderr).toContain('httpApi.host');
   }, 20000);
 });
 
@@ -607,7 +607,7 @@ describe('a request signs in', () => {
     await directory.add('root', ['admin']);
     const admin = await directory.mint('root');
     const one = await daemon(
-      { http: true, plugins: [BACKEND] },
+      { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret', '--users', usersFile],
       fakeNpm({ FAKE_NPM_LOG: log, FAKE_NPM_LANDS: 'left-pad 1.3.0' }),
     );
@@ -649,7 +649,7 @@ describe('a request signs in', () => {
     await directory.add('keeper', ['keeper']);
     const keeper = await directory.mint('keeper');
     const one = await daemon(
-      { http: true, plugins: [BACKEND] },
+      { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret', '--users', usersFile],
     );
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/user/list`, keeper);
@@ -668,7 +668,7 @@ describe('a request signs in', () => {
     const pat = await directory.mint('pat');
     const ada = await directory.mint('ada');
     const one = await daemon(
-      { http: true, plugins: [BACKEND] },
+      { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret', '--users', usersFile],
     );
     const base = `http://127.0.0.1:${String(one.port)}/api`;
@@ -709,7 +709,7 @@ describe('a request signs in', () => {
   }, 30000);
 
   it('answers while a served install is holding npm', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm({ FAKE_NPM_SLEEP: '2' }));
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm({ FAKE_NPM_SLEEP: '2' }));
     const installing = post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
     // Inside npm by now: the fake waits two seconds before it says anything.
     await new Promise((wait) => setTimeout(wait, 400));
@@ -725,7 +725,7 @@ describe('a request signs in', () => {
   it('runs two served installs one after the other, and names both', async () => {
     const log = join(home, 'npm.log');
     const one = await daemon(
-      { http: true, plugins: [BACKEND] },
+      { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret'],
       fakeNpm({ FAKE_NPM_SLEEP: '1', FAKE_NPM_LOG: log }),
     );
@@ -745,7 +745,7 @@ describe('a request signs in', () => {
 
   it('keeps npm\'s reason in a served install that fails', async () => {
     const one = await daemon(
-      { http: true, plugins: [BACKEND] },
+      { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret'],
       fakeNpm({ FAKE_NPM_EXIT: '1', FAKE_NPM_STDERR: 'npm error code E404' }),
     );
@@ -755,7 +755,7 @@ describe('a request signs in', () => {
   }, 30000);
 
   it('tells a served install to restart the daemon that answered', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm());
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm());
     const answered = await post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
     expect(answered.status).toBe(200);
     expect((await answered.json() as { restart?: boolean }).restart).toBe(true);
@@ -766,7 +766,7 @@ describe('a request signs in', () => {
     await directory.add('root', ['admin']);
     const admin = await directory.mint('root');
     const one = await daemon(
-      { http: true, plugins: [BACKEND], connectionToken: 'the-config-secret' },
+      { httpApi: true,plugins: [BACKEND], connectionToken: 'the-config-secret' },
       ['--connection-token', 'root-secret', '--users', usersFile],
     );
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/config`, admin);
@@ -784,7 +784,7 @@ describe('a request signs in', () => {
   }, 30000);
 
   it('answers the running daemon for status, with its own pid', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const response = await get(`http://127.0.0.1:${String(one.port)}/api/status`, 'root-secret');
     expect(response.status).toBe(200);
     expect((await response.json() as { pid: number }).pid).toBe(one.child.pid);
@@ -802,7 +802,7 @@ describe('a request signs in', () => {
 
 describe('what a served command reads', () => {
   it('answers the daemon\'s own configuration file', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/config`, 'root-secret');
     expect(answered.status).toBe(200);
     expect((await answered.json() as { path: string }).path).toBe(config);
@@ -810,7 +810,7 @@ describe('what a served command reads', () => {
 
   it('answers the daemon\'s own path when its file is gone, and no other file', async () => {
     writeFileSync(join(home, 'ahpd', 'config.json'), JSON.stringify({ port: 1234 }));
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     rmSync(config);
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/config`, 'root-secret');
     expect(answered.status).toBe(200);
@@ -821,7 +821,7 @@ describe('what a served command reads', () => {
 
   it('answers a write-only option as set and any other as the file holds it', async () => {
     const one = await daemon(
-      { http: true, plugins: [BACKEND, { name: SECRET, options: { apiKey: 'SECRETKEY1', region: 'eu' } }] },
+      { httpApi: true,plugins: [BACKEND, { name: SECRET, options: { apiKey: 'SECRETKEY1', region: 'eu' } }] },
       ['--connection-token', 'root-secret'],
     );
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/config`, 'root-secret');
@@ -840,7 +840,7 @@ describe('what a served command reads', () => {
     await directory.add('rea', ['reader']);
     const reader = await directory.mint('rea');
     const one = await daemon(
-      { http: true, plugins: [BACKEND, { name: SECRET, options: { apiKey: 'SECRETKEY1', region: 'eu' } }] },
+      { httpApi: true,plugins: [BACKEND, { name: SECRET, options: { apiKey: 'SECRETKEY1', region: 'eu' } }] },
       ['--connection-token', 'root-secret', '--users', usersFile],
     );
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/plugin/list`, reader);
@@ -863,7 +863,7 @@ describe('what a served command reads', () => {
     const reader = await directory.mint('rea');
     const one = await daemon(
       {
-        http: true,
+        httpApi: true,
         plugins: [
           'git+https://someone:PAT12345@example.com/x.git',
           { name: 'git+https://someone:PAT12345@example.com/y.git' },
@@ -891,7 +891,7 @@ describe('what a served command reads', () => {
   }, 30000);
 
   it('ignores the query on plugin list, and the daemon keeps running', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const query = `http://127.0.0.1:${String(one.port)}/api/plugin/list?noPlugins=true&plugins=x&plugins=y`;
     const answered = await get(query, 'root-secret');
     expect(answered.status).toBe(200);
@@ -906,7 +906,7 @@ describe('what a served command reads', () => {
   it('does not read a configuration file the request names', async () => {
     const secret = join(home, 'secret.json');
     writeFileSync(secret, JSON.stringify({ plugins: ['TOPSECRET'] }));
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const answered = await get(
       `http://127.0.0.1:${String(one.port)}/api/plugin/list?configFile=${encodeURIComponent(secret)}`,
       'root-secret',
@@ -932,7 +932,7 @@ describe('what a served command reads', () => {
   }, 30000);
 
   it('answers a daemon with no users file with a sentence, and keeps running', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/user/list`, 'root-secret');
     expect(answered.status).toBeGreaterThanOrEqual(400);
     expect((await answered.json() as { message: string }).message).toContain('users file');
@@ -941,7 +941,7 @@ describe('what a served command reads', () => {
   }, 30000);
 
   it('publishes no path field on any command', async () => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     const answered = await get(`http://127.0.0.1:${String(one.port)}/api/cli-manifest`, 'root-secret');
     const manifest = await answered.json() as { commands: { options: { name: string }[] }[] };
     const names = manifest.commands.flatMap((command) => command.options.map((option) => option.name));
@@ -955,7 +955,7 @@ describe('what a served command reads', () => {
 describe('--remote', () => {
   /** One daemon on loopback with a token, and the URL it answers on. */
   const remote = async (): Promise<{ one: Daemon; url: string }> => {
-    const one = await daemon({ http: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
+    const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret']);
     return { one, url: `http://127.0.0.1:${String(one.port)}` };
   };
 
@@ -1076,7 +1076,7 @@ describe('--remote', () => {
     // A wildcard bind answers on every address, but `resource` is what makes
     // the address one of the daemon's own names for the Origin and Host check.
     const one = await daemon(
-      { http: true, resource: `https://${address}/`, plugins: [BACKEND] },
+      { httpApi: true,resource: `https://${address}/`, plugins: [BACKEND] },
       ['--host', '0.0.0.0', '--connection-token', 'root-secret'],
     );
     const said = await cli(['--remote', `http://${address}:${String(one.port)}`, '--token', 'root-secret', 'status']);
@@ -1099,7 +1099,7 @@ describe('--remote', () => {
     mkdirSync(serving);
     mkdirSync(added);
     const one = await daemon(
-      { http: true, paths: [serving], plugins: [BACKEND] },
+      { httpApi: true,paths: [serving], plugins: [BACKEND] },
       ['--connection-token', 'root-secret'],
     );
     const url = `http://127.0.0.1:${String(one.port)}`;

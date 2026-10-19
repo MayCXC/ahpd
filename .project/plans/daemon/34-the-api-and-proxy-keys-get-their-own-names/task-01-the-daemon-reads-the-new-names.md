@@ -1,6 +1,6 @@
 ---
 title: The daemon reads the new names
-status: todo
+status: implemented
 depends: []
 layer: "packages/server"
 refs:
@@ -43,3 +43,18 @@ It still reads the old names, and warns at start for each one it finds.
 - The gates pass.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`config.ts` declares `httpApi` and `modelProxy`. It exports `RENAMED_KEYS` and `oldNameOf`. `loadConfig` copies the old value under the new name. It removes the old one from the merged values. Each one it mapped returns a warning: `http is now httpApi; rename it in <file>.`
+
+A file holding both names throws the sentence the plan's Answers table asks for, naming both keys and the old one to remove. `sourceOf` falls back to the old name, so an error about a mapped key still names the file that set it. `LoadedConfig` gained `warnings`, and `optionsFrom` appends them to `Options.warnings`, which `run.ts` and `start.ts` already print with the other start warnings.
+
+`options.ts` renames both fields, `FILE_ONLY`, the proxy check and `httpOf`'s messages. The field titles are "HTTP API" and "Model proxy". `optionsFrom` returns `httpApi` and `modelProxy`, and `run.ts`, `commands/proxy.ts` and `proxy/providers.ts` read those names. `rootconfig.ts` lists `httpApi` and `modelProxy` in `DAEMON_KEYS`. It answers an old name under the new one. A write of either key removes the old name from the file, and leaves every other key as it was.
+
+Departures:
+- `modelProxy` is added to `DAEMON_KEYS`; `proxy` was not there before. The task says to rename the keys in `DAEMON_KEYS`. The plan's checklist asks the settings page to show `modelProxy`, so the key had to be added rather than renamed.
+- The both-names refusal throws from `config.ts` rather than going through `stop` in `options.ts`, because the read is where both names are visible. The message is the one the tests pin.
+- `ProxyOptions.proxy()` in `proxy/listener.ts` keeps its name. It is the handler's accessor rather than a configuration key, and `run.ts` passes `() => options.modelProxy` to it.
+
+Tests: `config-check.test.ts` (66), `server-root-config.test.ts` (52), `server-http.test.ts` (65), `server-cli.test.ts` (33), `server-cli-restart.test.ts` (12), `plugin-route.test.ts` (21), `proxy-listener.test.ts` (26) and `proxy-list.test.ts` (5) pass. The whole server suite passes, 1235 tests in 61 files. Build, typecheck and the schema are clean.

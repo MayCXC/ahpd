@@ -425,13 +425,13 @@ const daemon = (config: unknown, env: Record<string, string> = {}): Promise<Daem
   });
 });
 
-describe('the daemon serves /v1 beside /api, and only while http is on', () => {
-  it('answers a call on its own port with http on, never printing the provider\'s key', async () => {
+describe('the daemon serves /v1 beside /api, and only while httpApi is on', () => {
+  it('answers a call on its own port with httpApi on, never printing the provider\'s key', async () => {
     const fake = await okProvider();
     const one = await daemon({
-      http: true,
+      httpApi: true,
       plugins: [BACKEND],
-      proxy: {
+      modelProxy: {
         providers: { fake: { endpoint: fake.endpoint, accepts: ['openai-chat'], key: { env: 'FAKE_PROVIDER_KEY' } } },
         models: { 'fake/model': [{ provider: 'fake', id: 'fake-model' }]},
       },
@@ -456,14 +456,14 @@ describe('the daemon serves /v1 beside /api, and only while http is on', () => {
 
   it('moves /v1 with /api to the API\'s own port', async () => {
     const fake = await okProvider();
-    const one = await daemon({ http: { port: 0 }, plugins: [BACKEND], proxy: table(fake.endpoint) });
+    const one = await daemon({ httpApi: { port: 0 }, plugins: [BACKEND], modelProxy: table(fake.endpoint) });
     expect(one.apiPort).toBeGreaterThan(0);
     expect((await send(one.apiPort, CHAT, { headers: asRoot, body: CALL })).status).toBe(200);
     const moved = await send(one.port, CHAT, { headers: asRoot, body: CALL });
     expect(moved.status).toBe(404);
   }, 30000);
 
-  it('answers /v1 with the 404 /api gets while http is off', async () => {
+  it('answers /v1 with the 404 /api gets while httpApi is off', async () => {
     const one = await daemon({ plugins: [BACKEND] });
     const v1 = await send(one.port, MESSAGES, { headers: asRoot, body: CALL });
     expect(v1.status).toBe(404);

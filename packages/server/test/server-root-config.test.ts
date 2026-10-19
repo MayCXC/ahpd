@@ -68,7 +68,7 @@ describe('the daemon keys root config carries', () => {
   it('are the fourteen of them, and none of the others', () => {
     const { schema } = port();
     const properties = (schema() as { properties: Record<string, unknown> }).properties;
-    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'pullRequestLookup', 'wire', 'mcpServers']);
+    expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'httpApi', 'routes', 'modelProxy', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'pullRequestLookup', 'wire', 'mcpServers']);
     for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'trustToken', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
       expect(Object.keys(properties)).not.toContain(key);
     }
@@ -111,8 +111,8 @@ describe('the schema a client reads', () => {
     expect(written['mcpServers']).toMatchObject({ type: 'object', title: 'MCP servers' });
   });
 
-  it('gives http one type, its two settings, and their descriptions with their bounds as words', () => {
-    expect(properties()['http']).toMatchObject({
+  it('gives httpApi one type, its two settings, and their descriptions with their bounds as words', () => {
+    expect(properties()['httpApi']).toMatchObject({
       type: 'object',
       title: 'HTTP API',
       properties: {
@@ -144,34 +144,72 @@ describe('the schema a client reads', () => {
   });
 });
 
-describe('the http key', () => {
+describe('the httpApi key', () => {
   it('is one type, and a stored true is answered as the object it stands for', async () => {
-    put({ http: true });
+    put({ httpApi: true });
     const root = daemonRootConfig(optionsFrom({ configFile: config }));
-    expect(await root.values()).toEqual({ http: {} });
+    expect(await root.values()).toEqual({ httpApi: {} });
     // Nobody wrote, so the file still holds what it held.
-    expect(held()).toEqual({ http: true });
+    expect(held()).toEqual({ httpApi: true });
   });
 
-  it('answers no http at all for a stored false', async () => {
-    put({ http: false });
+  it('answers no httpApi at all for a stored false', async () => {
+    put({ httpApi: false });
     const root = daemonRootConfig(optionsFrom({ configFile: config }));
     expect(await root.values()).toEqual({});
   });
 
   it('stores the object a client writes, and takes the key back for a null', async () => {
-    put({ http: true });
+    put({ httpApi: true });
     const root = daemonRootConfig(optionsFrom({ configFile: config }));
-    expect(await root.write({ http: { port: 8081 } })).toEqual({ restartNeeded: true });
-    expect(held()).toEqual({ http: { port: 8081 } });
-    await root.write({ http: null });
+    expect(await root.write({ httpApi: { port: 8081 } })).toEqual({ restartNeeded: true });
+    expect(held()).toEqual({ httpApi: { port: 8081 } });
+    await root.write({ httpApi: null });
     expect(held()).toEqual({});
   });
 
   it('is still checked against the file\'s own schema, bound and all', async () => {
     const root = port();
-    await expect(root.write({ http: { port: 70000 } })).rejects.toThrow('http.port must be an integer');
+    await expect(root.write({ httpApi: { port: 70000 } })).rejects.toThrow('httpApi.port must be an integer');
     expect(held()).toEqual({ port: 9187, host: '127.0.0.1', paths: ['/from-file'] });
+  });
+
+  it('answers an old name under the new one, and a write removes the old name', async () => {
+    put({ http: true });
+    const root = daemonRootConfig(optionsFrom({ configFile: config }));
+    expect(await root.values()).toEqual({ httpApi: {} });
+    await root.write({ httpApi: { port: 8081 } });
+    expect(held()).toEqual({ httpApi: { port: 8081 } });
+  });
+
+  it('takes the old name back with the key when the client sends a null', async () => {
+    put({ http: true });
+    const root = daemonRootConfig(optionsFrom({ configFile: config }));
+    await root.write({ httpApi: null });
+    expect(held()).toEqual({});
+  });
+});
+
+describe('the modelProxy key', () => {
+  it('answers the model proxy the file holds, under its new name', async () => {
+    put({ modelProxy: { sessionCalls: 'skip' } });
+    const root = daemonRootConfig(optionsFrom({ configFile: config }));
+    expect(await root.values()).toEqual({ modelProxy: { sessionCalls: 'skip' } });
+  });
+
+  it('answers an old name under the new one, and a write removes the old name', async () => {
+    put({ proxy: { sessionCalls: 'skip' } });
+    const root = daemonRootConfig(optionsFrom({ configFile: config }));
+    expect(await root.values()).toEqual({ modelProxy: { sessionCalls: 'skip' } });
+    expect(await root.write({ modelProxy: { sessionCalls: 'record' } })).toEqual({ restartNeeded: true });
+    expect(held()).toEqual({ modelProxy: { sessionCalls: 'record' } });
+  });
+
+  it('takes the old name back with the key when the client sends a null', async () => {
+    put({ proxy: { sessionCalls: 'skip' } });
+    const root = daemonRootConfig(optionsFrom({ configFile: config }));
+    await root.write({ modelProxy: null });
+    expect(held()).toEqual({});
   });
 });
 

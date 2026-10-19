@@ -15,7 +15,7 @@ import type { Field, JsonSchema } from '@cofold/commands';
 import { check } from '@cofold/commands';
 import type { PluginSpec, RootConfigPort } from '@ahpd/sdk';
 import { scopeOf, secretRef } from '@ahpd/sdk';
-import { asSpec, configPath } from './config.js';
+import { asSpec, configPath, oldNameOf } from './config.js';
 import { SET, keyed, maskValue } from './commands/config.js';
 import { checkConfig, configSchema, mcpServerSchema, mcpServers, serverFields, type ConfigKey, type Options } from './commands/options.js';
 import { oneAtATime, readEntry, writeEntry } from './install.js';
@@ -29,7 +29,7 @@ import { optionsSchemaLoaded } from './plugins.js';
  * left out on purpose: a form that could change them would be a form that could
  * take the door off its hinges and leave nothing behind that would open it.
  */
-const DAEMON_KEYS = ['paths', 'port', 'host', 'http', 'routes', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'pullRequestLookup', 'wire', 'mcpServers'] as const;
+const DAEMON_KEYS = ['paths', 'port', 'host', 'httpApi', 'routes', 'modelProxy', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'pullRequestLookup', 'wire', 'mcpServers'] as const;
 
 /**
  * The keys this daemon can apply while it runs.
@@ -49,6 +49,21 @@ const flagOf = (key: ConfigKey): string => {
 
 /** Whether two values would be written the same way, which is all this asks. */
 const same = (one: unknown, other: unknown): boolean => JSON.stringify(one) === JSON.stringify(other);
+
+/**
+ * The key a value is stored under: the new name when the file has it, and the
+ * old one when that is all the file carries.
+ *
+ * The read side answers an old name under the new one, so a client sees one
+ * key whatever the file was written with. The write side still edits the file
+ * in place, and removes the old name only when that setting is written, so a
+ * key the client never touched keeps the spelling it had.
+ */
+const heldName = (held: Record<string, unknown>, key: string): string | undefined => {
+  if (Object.hasOwn(held, key)) return key;
+  const was = oldNameOf(key);
+  return was !== undefined && Object.hasOwn(held, was) ? was : undefined;
+};
 
 /** The types a property may be, which is the five the protocol declares. */
 const TYPES = ['string', 'number', 'boolean', 'array', 'object'];
@@ -236,12 +251,13 @@ export function daemonRootConfig(
    * those answer as set and the rest of the server is answered as it was
    * written - the same mask a plugin's own options go through.
    *
-   * `http` is the object a client reads, whatever way the file spells it out:
-   * `true` is on with every default, which is the object with nothing in it.
+   * `httpApi` is the object a client reads, whatever way the file spells it
+   * out: `true` is on with every default, which is the object with nothing in
+   * it.
    */
   const answered = (key: string, value: unknown): unknown => {
     if (key === 'mcpServers') return maskValue({ type: 'object', additionalProperties: mcpServerSchema }, value);
-    if (key === 'http') return value === true ? {} : value;
+    if (key === 'httpApi') return value === true ? {} : value;
     return value;
   };
 
@@ -293,11 +309,12 @@ export function daemonRootConfig(
         properties: {
           ...Object.fromEntries(DAEMON_KEYS.map((key) => {
             const said = serverFields[key].description;
-            const overrode = typed[key] !== undefined && !same(typed[key], held[key]);
+            const name = heldName(held, key);
+            const overrode = typed[key] !== undefined && !same(typed[key], name === undefined ? undefined : held[name]);
             const mapped = conforming(key, configSchema.properties[key]);
-            // `http` is one type whatever order the field names them in: a
+            // `httpApi` is one type whatever order the field names them in: a
             // file may hold `true` or `false`, and a client reads the object.
-            if (key === 'http') mapped['type'] = 'object';
+            if (key === 'httpApi') mapped['type'] = 'object';
             return [key, overrode
               ? { ...mapped, description: `${said} This run was started with ${flagOf(key)}, so what is here is not what this daemon is using.` }
               : mapped];
@@ -310,10 +327,14 @@ export function daemonRootConfig(
     values: () => {
       const held = readEntry(file);
       // A stored `false` is the key switched off, which holding no value at
-      // all already says. Every other shape is answered as the file holds it.
-      const carried = DAEMON_KEYS.filter((key) => Object.hasOwn(held, key) && !(key === 'http' && held[key] === false));
+      // all already says. Every other shape is answered as the file holds it,
+      // under the new name whichever of the two the file spells it with.
+      const carried = DAEMON_KEYS.filter((key) => {
+        const name = heldName(held, key);
+        return name !== undefined && !(key === 'httpApi' && held[name] === false);
+      });
       return {
-        ...Object.fromEntries(carried.map((key) => [key, answered(key, held[key])])),
+        ...Object.fromEntries(carried.map((key) => [key, answered(key, held[heldName(held, key) as string])])),
         ...Object.fromEntries(entries(held).map(({ key, name, spec }) => [key, pluginKey(name, spec).value])),
       };
     },
@@ -330,9 +351,12 @@ export function daemonRootConfig(
         if (!key.startsWith('plugins.')) {
           restartNeeded = restartNeeded || !LIVE.has(key);
           // `null` is how a client says a key is taken back, as it is everywhere
-          // else on the root channel.
+          // else on the root channel. The old name goes with it: the two are one
+          // setting, and a file that kept the old one would still say it is on.
           if (value === null || value === undefined) {
             delete held[key];
+            const was = oldNameOf(key);
+            if (was !== undefined) delete held[was];
             continue;
           }
           /*
@@ -348,6 +372,10 @@ export function daemonRootConfig(
             continue;
           }
           held[key] = value;
+          // A write is under the new name, and the old one has no other place
+          // here: leaving it beside would make the next start refuse the file.
+          const was = oldNameOf(key);
+          if (was !== undefined) delete held[was];
           continue;
         }
         // A plugin's contributions are folded in when the host is built, so

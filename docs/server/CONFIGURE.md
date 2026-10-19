@@ -41,7 +41,7 @@ A relative path in `paths`, `worktreesRoot`, `users` or `connectionTokenFile` is
 ~/.config/ahpd/config.json   →   the file $AHPD_CONFIG names   →   flags
 ```
 
-Each one overrides the one to its left, key by key. An object such as `http` merges. A list such as `paths` or `plugins` is replaced whole.
+Each one overrides the one to its left, key by key. An object such as `httpApi` merges. A list such as `paths` or `plugins` is replaced whole.
 
 | Want | Use |
 | --- | --- |
@@ -87,6 +87,6 @@ An unknown key is logged and ignored:
 | `automations` | `--automations` | `file` | `memory` keeps automations until exit, and fires no schedule |
 | `wire` | `--wire` | | Log every frame to this file, for debugging |
 
-Keys with no flag: `http`, `proxy`, `usage`, `policies`, `mcpServers`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
+Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `mcpServers`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
 
 [Reference](REFERENCE.md) has every key.

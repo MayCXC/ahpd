@@ -103,7 +103,7 @@ The store and the switch are separate. A daemon that is switched off, or that ha
 | --- | --- | --- |
 | A session is created | `agent`, for the harness and the machine asked for; then `computer`, for that machine | The users gate's `-32009`, naming the policy |
 | A turn starts | `agent`, for the harness, the session's machine and the model the turn named; then the agent limits | The same, on the action's rejection reason, or the limit sentence below |
-| A proxy call ([PROXY.md](../server/PROXY.md)) | `model`, for the name called and each provider entry that serves it, and the model limits; the first entry allowed is called | 403 in the caller's dialect, naming the row; a session's call is checked as the person it runs for unless `proxy.sessionCalls` is `skip` |
+| A proxy call ([PROXY.md](../server/PROXY.md)) | `model`, for the name called and each provider entry that serves it, and the model limits; the first entry allowed is called | 403 in the caller's dialect, naming the row; a session's call is checked as the person it runs for unless `modelProxy.sessionCalls` is `skip` |
 
 The session's checks run **before** the machine is made, so a refused session leaves nothing behind.
 
