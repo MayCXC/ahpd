@@ -30,6 +30,15 @@ describe('localPath', () => {
     expect(localPath('file:///a/100%')).toBe('/a/100%');
   });
 
+  it('reads a drive written straight after the scheme as part of the path, with either slash', () => {
+    // `file://C:\work`, as a Windows path pasted into a URI, had no slash and
+    // was read as no path at all; `file://C:/work` lost its drive.
+    const drive = localPath('file:///C:/work/project');
+    expect(localPath('file://C:/work/project')).toBe(drive);
+    expect(localPath('file://C:\\work\\project')).toBe(drive);
+    expect(localPath('file://c:\\work')).toBe(localPath('file:///c:/work'));
+  });
+
   it('drops an authority, because the path is on this machine', () => {
     expect(localPath('file://host/a/b')).toBe('/a/b');
   });

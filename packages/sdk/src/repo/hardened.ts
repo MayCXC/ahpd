@@ -26,5 +26,8 @@ export const gitArgv = (dir: string, args: readonly string[]): string[] => {
   const own = subcommand !== undefined && IGNORES_SUBMODULES.has(subcommand)
     ? [...args.slice(0, at + 1), '--ignore-submodules', ...args.slice(at + 1)]
     : [...args];
+  // `git -C ''` runs in the current folder: a folder lost on the way here would
+  // run git in whatever repository this process was started in.
+  if (dir === '') throw new Error(`git ${own.join(' ')} was given no folder to run in`);
   return [...GIT_HARDENED, '-C', dir, ...own];
 };

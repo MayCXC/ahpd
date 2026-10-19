@@ -27,6 +27,14 @@ const SCHEME = 'file://';
 const pathPart = (value: string): string => {
   const rest = value.slice(SCHEME.length);
   if (rest.indexOf('/') === 0) return rest;
+  /*
+   * A drive letter right after the scheme is a Windows path written into a
+   * URI by hand, `file://C:/work` or `file://C:\work`, not an authority. Read
+   * as one, the drive was dropped, and a path with only backslashes had no
+   * slash at all and was read as no path, which git then took as the current
+   * folder.
+   */
+  if (/^[a-zA-Z]:([\\/]|$)/.test(rest)) return `/${rest.replaceAll('\\', '/')}`;
   const slash = rest.indexOf('/');
   return slash === -1 ? '' : rest.slice(slash);
 };
