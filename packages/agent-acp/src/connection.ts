@@ -169,6 +169,9 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
      * this server off the daemon's own group.
      */
     detached: true,
+    // A daemon on Windows has no console, and a console program it starts
+    // opens a window of its own without this.
+    windowsHide: true,
   });
   // Drained rather than inherited: a server that chatters on stderr must not
   // block on a full pipe, and it must not write into the daemon's own output.

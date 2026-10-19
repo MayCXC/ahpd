@@ -156,6 +156,9 @@ export const spawnInside = (
         // session is to see travelled in the descriptor as `-e` flags.
         ...(moved.env === undefined ? {} : { env: { ...process.env, ...moved.env } }),
         stdio: ['pipe', 'pipe', 'inherit'],
+        // No console window on Windows: the daemon has no console for one to
+        // belong to, and without this each session opens its own.
+        windowsHide: true,
       }));
     },
     (error: unknown) => {

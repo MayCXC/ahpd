@@ -520,6 +520,9 @@ export async function start(argv: string[], self: string, token?: string, replac
       [DETACHED_ENV]: '1',
       ...(control === undefined ? {} : { [CONTROL_ENV]: JSON.stringify(control) }),
     },
+    // No console window on Windows, where the detached daemon is a console
+    // program and the one that started it has no console to lend it.
+    windowsHide: true,
   });
   child.unref();
   closeSync(log);

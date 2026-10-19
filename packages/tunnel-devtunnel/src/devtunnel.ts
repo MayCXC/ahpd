@@ -55,7 +55,12 @@ const install = [
 
 /** The default runner: the CLI, on this machine, without holding the event loop. */
 export const run: Runner = (args) => new Promise<Result>((done, fail) => {
-  const child = spawn('devtunnel', [...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+  const child = spawn('devtunnel', [...args], {
+    stdio: ['ignore', 'pipe', 'pipe'],
+    // No console window on Windows: the CLI is a console program, and the
+    // daemon that runs it has no console for one to belong to.
+    windowsHide: true,
+  });
   let stdout = '';
   let stderr = '';
   child.stdout.setEncoding('utf8').on('data', (chunk: string) => { stdout += chunk; });
@@ -67,7 +72,7 @@ export const run: Runner = (args) => new Promise<Result>((done, fail) => {
 });
 
 /** The default spawner, for the one command that does not end. */
-export const start: Spawner = (args) => spawn('devtunnel', [...args], { stdio: ['ignore', 'pipe', 'pipe'] });
+export const start: Spawner = (args) => spawn('devtunnel', [...args], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
 
 const why = (done: Result): string => {
   const ended = done.signal !== null

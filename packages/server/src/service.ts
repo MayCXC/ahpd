@@ -320,7 +320,7 @@ export type Run = (command: string, argv: readonly string[]) => Promise<Runned>;
 
 /** The default: the command by its name, on the `PATH` this process has. */
 export const run: Run = (command, argv) => new Promise((done) => {
-  const child = spawn(command, argv, { stdio: ['ignore', 'ignore', 'pipe'] });
+  const child = spawn(command, argv, { stdio: ['ignore', 'ignore', 'pipe'], windowsHide: true });
   let said = '';
   child.stderr.on('data', (chunk: Buffer) => { said += String(chunk); });
   // A command that is not there has no words of its own, so the failure to

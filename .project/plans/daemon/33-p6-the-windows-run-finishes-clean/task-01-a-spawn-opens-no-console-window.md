@@ -1,6 +1,6 @@
 ---
 title: A spawn opens no console window
-status: todo
+status: implemented
 depends: []
 layer: sdk, server, computer, agent-acp, agent-claude, tunnel-devtunnel
 refs:
@@ -40,3 +40,31 @@ Every process that ahpd starts sets `windowsHide: true`, so a Windows daemon ope
 
 - The search in step 1 finds no call without `windowsHide`.
 - The gates pass on Linux.
+
+## Resume
+
+Implemented 2026-10-18. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The touched cases pass on Linux. That is 190 in the sdk files, 271 in the server, agent-claude and tunnel files, and 147 in the computer and agent-acp files.
+
+Files changed:
+- `packages/agent-acp/src/connection.ts:160` - `windowsHide` on the ACP server's spawn.
+- `packages/agent-claude/src/spawn.ts:154` - `windowsHide` on Claude's spawn.
+- `packages/computer/src/devcontainer.ts` - `windowsHide` on `runCli` and on the four spawns inside the dev container backend.
+- `packages/computer/src/gitdir.ts:444` - `windowsHide` on `seedOf`'s `spawnSync('git', ...)`.
+- `packages/computer/src/parts.ts:331` - `windowsHide` on `packOf`'s `spawnSync('pnpm', ...)`.
+- `packages/computer/src/runtime.ts` - `windowsHide` on both `spawn` calls and the `spawnSync('git', ...)` in `hostGit`.
+- `packages/sdk/src/changes.ts:64,79` - `windowsHide` on both git calls.
+- `packages/sdk/src/checkpoints.ts:31` - `windowsHide` on the git call.
+- `packages/sdk/src/repo/git.ts:39` - `windowsHide` on the git call.
+- `packages/sdk/src/repo/github.ts` - `windowsHide` on all three `gh` calls.
+- `packages/sdk/src/repo/worktrees.ts:43` - `windowsHide` on the git call.
+- `packages/server/src/commands/restart.ts:397` - `windowsHide` on the restart's spawn.
+- `packages/server/src/daemon.ts:515` - `windowsHide` on the daemon's spawn.
+- `packages/server/src/install.ts:107` - `windowsHide` on the install's spawn.
+- `packages/server/src/pty.ts:30` - `windowsHide` on the `--probe` spawn.
+- `packages/server/src/service.ts:323` - `windowsHide` on the service's spawn.
+- `packages/tunnel-devtunnel/src/devtunnel.ts` - `windowsHide` on both `devtunnel` spawns.
+
+Past the Files section: step 3's search found three spawns the list does not name. They are the three above at `gitdir.ts:444`, `parts.ts:331` and `pty.ts:30`. They are in the change. `packages/computer/src/ssh.ts:180`, `packages/sdk/src/terminals.ts:37,420` and `packages/sdk/src/nested.ts:198` already set the option and are unchanged.
+
+The search in step 1 now answers every `spawn`, `spawnSync`, `execFile` and `execFileSync` call in `packages/*/src` with `windowsHide: true`. `fork` is not imported anywhere in `src`. Nothing Windows-only was run: this host is Linux, so the console window itself is for task 03's run or Softov's machine.

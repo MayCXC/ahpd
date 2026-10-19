@@ -441,7 +441,7 @@ export interface GitSeed {
  */
 export const seedOf = (root: string): GitSeed => {
   const said = (args: string[]): string | undefined => {
-    const held = spawnSync('git', gitArgv(root, args), { encoding: 'utf8' });
+    const held = spawnSync('git', gitArgv(root, args), { encoding: 'utf8', windowsHide: true });
     const text = held.status === 0 && typeof held.stdout === 'string' ? held.stdout.trim() : '';
     return text === '' ? undefined : text;
   };

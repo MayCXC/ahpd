@@ -32,6 +32,9 @@ const git = (dir: string, args: string[], env?: NodeJS.ProcessEnv): Promise<stri
       timeout: 30_000,
       maxBuffer: 32 * 1024 * 1024,
       env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', ...env },
+      // No console window on Windows, where each checkpoint's `git.exe` would
+      // open one.
+      windowsHide: true,
     }, (error, out) => answer(error ? undefined : out.toString()));
   });
 
