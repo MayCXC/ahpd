@@ -58,7 +58,9 @@ const branched = (): string => {
   return dir;
 };
 
-describe('what a branch has since it was cut', () => {
+// Every case here is a dozen git processes, about two seconds on Windows alone
+// and past the default beside the rest of the suite.
+describe('what a branch has since it was cut', { timeout: 20_000 }, () => {
   it('shows the two commits and the file that is not one as one list', async () => {
     const dir = branched();
     const source = gitChanges();
