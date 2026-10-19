@@ -320,6 +320,15 @@ export interface SessionOptions {
    * `plan_update` with them. Absent on a host that passes no such callback.
    */
   planUpdate?(update: PlanUpdate): void;
+  /**
+   * Whether the host draws this session's Plan call itself.
+   *
+   * `Start.plan` handed down: a backend that reads it keeps its harness's own
+   * list out of the turn, because the host draws the one call with the lines a
+   * plugin gives it. What the harness still knows is brought here through
+   * `planUpdate` either way.
+   */
+  plan?: boolean;
   /** Called once the agent has reported what it can do. */
   onHandshake?(): void;
 }

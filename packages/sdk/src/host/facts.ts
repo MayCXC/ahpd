@@ -2,6 +2,7 @@ import { ARTIFACTS_META, artifactsIn, isGitHubLink, recordArtifact } from '../to
 import { idOf } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { CREATED_BY_META, REMOTE_ORIGIN_META, SPAWN_DEPTH_META, depthOf } from '../remotesession.js';
+import { reason } from '../values.js';
 import type { Bag } from '../types/common.js';
 import type { HostContext } from './context.js';
 
@@ -20,6 +21,7 @@ export interface Facts {
   refreshPullRequests(dir: string): Promise<boolean>;
   readFacts(dir: string): Promise<boolean>;
   refreshFacts(dir: string): void;
+  sessionMetaChanged(uri: string): void;
 }
 
 export function createFacts(ctx: HostContext): Facts {
@@ -27,6 +29,33 @@ export function createFacts(ctx: HostContext): Facts {
     options, sessions, owners, connections, worktreeOf, githubFacts, kept, log, lent, dispatch,
     dirOf, leadOf, changesetAt, changesetOf, catalogueOf, contentMoved, operationsMoved, heldAs,
   } = ctx;
+
+  /**
+   * The keys plugins add to a session's `_meta`.
+   *
+   * Asked on every composition rather than kept, because the value is the
+   * plugin's own and a copy here would be a second answer to what it says. A
+   * reader that throws costs its key and not the map: `session/metaChanged`
+   * carries the whole of it, and a plugin that cannot answer must not take the
+   * directory's facts with it.
+   */
+  const pluginMeta = (uri: string): Bag => {
+    const values: Bag = {};
+    for (const served of options.sessionMeta ?? []) {
+      for (const one of served.keys) {
+        let value: unknown;
+        try {
+          value = one.read(uri);
+        }
+        catch (error) {
+          log(`plugin ${served.by}: the value of ${one.key} for ${uri} was not read: ${reason(error)}`);
+          continue;
+        }
+        if (value !== undefined) values[one.key] = value;
+      }
+    }
+    return values;
+  };
 
   /**
    * The session's `_meta`, whole.
@@ -38,8 +67,11 @@ export function createFacts(ctx: HostContext): Facts {
    * other's.
    */
   const metaOf = (uri: string): Bag | undefined => {
+    const added = pluginMeta(uri);
     const dir = dirOf(uri);
-    if (dir === undefined) return undefined;
+    // A session in no directory still has what its plugins say about it, which
+    // is the one part of the map that does not come from where it works.
+    if (dir === undefined) return Object.keys(added).length === 0 ? undefined : added;
     const meta = options.directories?.meta(dir);
     const base = worktreeOf(uri)?.base;
     const git = typeof (meta as { git?: unknown } | undefined)?.git === 'object'
@@ -65,13 +97,17 @@ export function createFacts(ctx: HostContext): Facts {
           associatedPullRequestUrls: baseline.associatedPullRequestUrls,
         }),
       };
-    if (told === undefined && facts === undefined && artifacts === undefined) return undefined;
+    if (told === undefined && facts === undefined && artifacts === undefined && Object.keys(added).length === 0) return undefined;
     // The folder the state belongs to, and the key it is published under. One
     // string for both, so a client that reads the key it was given and a
     // client that derives the key from the working directory arrive at the
     // same entry.
     const folder = uriOf(dir);
     return {
+      // A plugin's keys first, so the directory's facts win a collision: the
+      // plugin's key is its own name and this host's answer about where the
+      // session is.
+      ...added,
       ...told,
       /*
        * The same state under the three names it is read by: `githubData`
@@ -171,8 +207,8 @@ export function createFacts(ctx: HostContext): Facts {
      * it - a host with no users directory has no person to name.
      *
      * Read before the early return below, because a session in no directory is
-     * exactly the one that still says whose it is, and `metaOf` answers only
-     * for a session that is somewhere.
+     * exactly the one that still says whose it is, and its owner is no fact of
+     * where it is.
      */
     const owner = kept.owner(idOf(uri));
     /*
@@ -212,7 +248,7 @@ export function createFacts(ctx: HostContext): Facts {
       ...(made === undefined ? {} : { [CREATED_BY_META]: made }),
     };
     if (dir === undefined) {
-      const meta = { ...byAgent, ...sent, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
+      const meta = { ...byAgent, ...pluginMeta(uri), ...sent, ...(owner === undefined ? {} : { 'ahpd.owner': owner }) };
       return Object.keys(meta).length === 0 ? {} : { _meta: meta };
     }
     /*
@@ -545,9 +581,26 @@ export function createFacts(ctx: HostContext): Facts {
   const refreshFacts = (dir: string): void => {
     void readFacts(dir);
   };
+  /**
+   * A plugin's key moved for one session.
+   *
+   * `session/metaChanged` carries the whole map, so the one place that composes
+   * it answers for the plugin too; the row moves with it, as it does when the
+   * directory's facts move.
+   */
+  const sessionMetaChanged = (uri: string): void => {
+    const meta = metaOf(uri);
+    dispatch(uri, { type: 'session/metaChanged', ...(meta ? { _meta: meta } : {}) });
+    ctx.summaryMoved(uri);
+  };
+  // A plugin announces a change through the host it was applied to, which is
+  // built after it and not before: `apply` returns a contribution and the
+  // daemon folds it.
+  for (const served of options.sessionMeta ?? []) served.changed = sessionMetaChanged;
 
   return {
     describes, setArtifacts, captureBaseline, recordPullRequest, metaMoved, dirOfFile, wroteThrough,
     refreshWatched, startWatchingDir, stopUnwatched, refreshPullRequests, readFacts, refreshFacts,
+    sessionMetaChanged,
   };
 }

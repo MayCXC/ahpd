@@ -368,7 +368,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p8 | - |
 | [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p9 | 52 p4 |
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
-| [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | planned 2026-10-18; 5 tasks | 52 p1 | - |
+| [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 todo | 52 p1 | - |
 
 Next free number in `plugin`: `52`.
 

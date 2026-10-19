@@ -647,6 +647,9 @@ export function claude(options: ClaudeOptions): Agent {
       ...(start.onTurnRecorded ? { onTurnRecorded: start.onTurnRecorded } : {}),
       // A harness's own task list, carried through as the host raised it for.
       ...(start.planUpdate ? { planUpdate: start.planUpdate } : {}),
+      // And whether the host draws the turn's Plan call, so the TodoWrite rows
+      // do not become a second one.
+      ...(start.plan === true ? { plan: true } : {}),
       ...(start.onHandshake ? { onHandshake: start.onHandshake } : {}),
       // The host's worker-chat seam, carried through unchanged: this backend
       // names a call and what the harness said about it, and the host opens

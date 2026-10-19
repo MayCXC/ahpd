@@ -3,11 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
-import { uriOf } from '@ahpd/sdk';
+import { memoryRecords, uriOf } from '@ahpd/sdk';
 import { createHost } from '../../sdk/src/host.js';
 import { foldHostOptions, pluginHost } from '../../sdk/src/plugins.js';
 import { sdkVersion } from '../../sdk/src/version.js';
 import { shellTerminals } from '../../sdk/src/terminals.js';
+import { apply as applyTasks, name as tasksName } from '../../tasks/src/plugin.js';
 import { acpAgent } from '../src/index.js';
 import { anyone, signIn } from './people.js';
 import type { PlanUpdateEvent } from '../../sdk/src/types/events.js';
@@ -72,11 +73,30 @@ const context = (path: string): LoaderContext => ({
 });
 
 /** A connected client with one ACP session, and a plugin hearing `plan_update`. */
-async function planning() {
+async function planning(withTasks = false, hang = false) {
   const path = mkdtempSync(join(tmpdir(), 'ahpd-acp-plan-'));
   const heard: PlanUpdateEvent[] = [];
   const probe = pluginHost('probe', context(path));
   probe.host.on('plan_update', (event) => { heard.push(event); });
+  const contributions = [probe.contribution];
+  if (withTasks) {
+    const records = memoryRecords();
+    const tasks = pluginHost(tasksName, context(path), { records: () => records });
+    await applyTasks(tasks.host, {});
+    tasks.seal();
+    contributions.push(tasks.contribution);
+  }
+  if (hang) {
+    /*
+     * A plugin that hears a plan update and never settles, which is what the
+     * cap exists for. It is added after the tasks plugin because listeners run
+     * in order: a hang before the write would stop the list being written at
+     * all, and the test needs the row drawn and the ending held.
+     */
+    const stuck = pluginHost('stuck', context(path));
+    stuck.host.on('plan_update', () => new Promise<void>(() => {}));
+    contributions.push(stuck.contribution);
+  }
   const { options } = foldHostOptions({
     path,
     agents: [acpAgent({ command: process.execPath, args: [FIXTURE], provider: 'acp' })],
@@ -85,7 +105,7 @@ async function planning() {
     // And somebody for this window to be, without whom its session has no owner
     // and so no folder it can be told is trusted.
     users: anyone(),
-  }, [probe.contribution]);
+  }, contributions);
   const host = createHost(options);
   const p = peer();
   const client = host.accept(p);
@@ -138,6 +158,14 @@ const planCalls = (p: ReturnType<typeof peer>, chatUri: string, turnId: string):
   actions(p, chatUri)
     .filter((e) => e.action.toolCallId === `${turnId}:plan` && String(e.action.type).startsWith('chat/toolCall'))
     .map((e) => String(e.action.type));
+
+/** What the plan call last showed, one line per step. */
+const planContent = (p: ReturnType<typeof peer>, chatUri: string, turnId: string): string[] => {
+  const changes = actions(p, chatUri).filter((e) =>
+    e.action.toolCallId === `${turnId}:plan` && String(e.action.type) === 'chat/toolCallContentChanged');
+  const last = changes[changes.length - 1]?.action.content;
+  return (Array.isArray(last) ? last : []).map((one) => String((one as { text?: unknown }).text ?? ''));
+};
 
 it('hands a plan update as the whole list, with each status and priority', async () => {
   const { client, peer: p, chatUri, heard } = await planning();
@@ -204,3 +232,44 @@ it('keeps the turn\'s one Plan call while the list goes to the host', async () =
     'chat/toolCallComplete',
   ]);
 });
+
+it('draws the Plan call from the host\'s tasks when the tasks plugin holds them', async () => {
+  const { client, peer: p, chatUri, heard } = await planning(true);
+  begin(client, chatUri, 't1', 'plan it');
+  await until(() => heard.length >= 2);
+  await until(() => finished(p, chatUri, 1));
+
+  // The bridge draws none of its own: one row, opened once and completed by
+  // the turn ending, whose lines are the session's tasks rather than the
+  // entries the server sent.
+  const calls = planCalls(p, chatUri, 't1');
+  expect(calls.filter((type) => type === 'chat/toolCallStart')).toHaveLength(1);
+  expect(calls.filter((type) => type === 'chat/toolCallComplete')).toHaveLength(1);
+  expect(calls[0]).toBe('chat/toolCallStart');
+  expect(calls[1]).toBe('chat/toolCallReady');
+  expect(calls[calls.length - 1]).toBe('chat/toolCallComplete');
+  expect(planContent(p, chatUri, 't1')).toEqual([
+    '- [x] Read the file',
+    '- [ ] Write the answer',
+  ]);
+});
+
+it('ends the turn after the cap when a plan update never settles', async () => {
+  const { client, peer: p, chatUri } = await planning(true, true);
+  begin(client, chatUri, 't1', 'plan it');
+
+  // The tasks plugin drew the row; the stuck one never will settle. The turn
+  // end waits out the cap rather than the turn never ending, and the row is
+  // still completed before it.
+  await until(() => finished(p, chatUri, 1), 8000);
+
+  const calls = planCalls(p, chatUri, 't1');
+  expect(calls.filter((type) => type === 'chat/toolCallStart')).toHaveLength(1);
+  expect(calls.filter((type) => type === 'chat/toolCallComplete')).toHaveLength(1);
+  expect(planContent(p, chatUri, 't1')).toEqual([
+    '- [x] Read the file',
+    '- [ ] Write the answer',
+  ]);
+  const all = types(p, chatUri);
+  expect(all.indexOf('chat/toolCallComplete')).toBeLessThan(all.indexOf('chat/turnComplete'));
+}, 20000);

@@ -54,6 +54,45 @@ A single change names the task by the harness's id, in `change.id`, and finds th
 
 A Claude session writes a whole list with `TodoWrite`, and one change with `TaskCreate` or `TaskUpdate`, when it keeps its own tools (`hostTasks: false`). An ACP session writes a whole list with each `plan` update, which is the road a `codex-acp` session takes.
 
+## What a client sees
+
+The list reaches a client on three surfaces, and all three are views of the same records: nothing a client reads is written anywhere else.
+
+### The Plan call
+
+A turn shows one Plan call, drawn by the host from the session's plan: the plan whose scope is `{"kind":"session","session":"one"}`, plus the tasks whose `session` field names it. The call's content is one line per task, `- [x] <title>` for `done` and `- [ ] <title>` for every other status. The host opens the call on the first change to the plan in the turn, rewrites its content on each later change, and completes it as the turn ends.
+
+When no plugin gives the host lines, a backend draws its own call as it did before. When one does, the host tells the backend with `Start.plan`, so an ACP bridge draws no Plan call of its own and a Claude session writes no `TodoWrite` row: one turn, one call.
+
+### The open count
+
+A session's `_meta` carries `ahpd.tasks`, the number of its open tasks:
+
+```json
+{ "ahpd.tasks": { "open": 2 } }
+```
+
+A session's tasks are the tasks of its plan and the tasks whose `session` names it. Every status but `done` and `dropped` counts, so a task that is `blocked` or in `review` is open. A session no task names has no key. When a count moves the host sends `session/metaChanged` with the whole `_meta` map, and the session's row moves with it.
+
+### The plan channel
+
+One plan is one channel URI, `x-ahpd-plans://<plan id>`. A client subscribes to a plan and is answered with the plan and the tasks that name it; after that each change is one action.
+
+The state is `{ plan: PlanRecord, tasks: TaskRecord[] }`, the records above as the store holds them. Four actions follow it:
+
+| Action | When the client gets it |
+| --- | --- |
+| `{ type: 'x-ahpd-plans/taskAdded', task: TaskRecord }` | A task of the plan was made |
+| `{ type: 'x-ahpd-plans/taskSet', task: TaskRecord }` | A task of the plan changed |
+| `{ type: 'x-ahpd-plans/taskRemoved', taskId: string }` | A task left the plan, and `taskId` is the one it had |
+| `{ type: 'x-ahpd-plans/set', plan: PlanRecord }` | The plan itself changed |
+
+A subscribe needs `session:read`, which every built-in role holds. A client cannot dispatch an action to the channel: the records are the only writer, so a change made through a tool, a translation or a hand edit is the one the channel sends.
+
+A URI under the scheme with no plan behind it is refused rather than answered with an empty state. A task is published to the plan it now names. A removed task is the one action with no record to carry, so it says the id it had: the sweep removes a finished plan's tasks this way, and the channel the removal goes to is the one the task was last seen on.
+
+The channel is an `x-ahpd` extension and not part of the protocol yet. [The proposal](../../.project/proposals/agent-host-protocol-plan-channel.md) is the text for filing it upstream.
+
 ## The stamps
 
 A task has five stamps, each with `at`, `by` and `in`: when it was written, who the call was by, and the session it was made in.

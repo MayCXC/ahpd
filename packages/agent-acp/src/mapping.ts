@@ -547,7 +547,10 @@ export function mapUpdate(
      */
     case 'plan':
       planUpdate?.({ turn: turn.turnId, tool: 'plan', entries: update.entries.map(planEntryOf) });
-      return plan(turn, update.entries);
+      // A turn holds one Plan call, and the host draws the one a plugin gives
+      // the lines for. The entries still go up, because they are how that
+      // list moves; only the bridge's own call is left out.
+      return turn.hostPlan === true ? [] : plan(turn, update.entries);
 
     /*
      * Everything else - a user echo, a mode or command catalogue - is a variant

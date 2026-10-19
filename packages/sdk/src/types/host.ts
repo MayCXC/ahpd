@@ -12,7 +12,7 @@ import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../enablement.js';
-import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod } from './plugin.js';
+import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -139,6 +139,22 @@ export interface HostOptions {
    * `publish` and `subscribers` when it is created.
    */
   channels?: Record<string, ServedChannel>;
+  /**
+   * The plugin that draws a session's Plan call, if one does.
+   *
+   * The fold fills this from `registerPlan`, and one plugin holds it: a turn
+   * shows one Plan call. The host sets `changed` on it when it is created, and
+   * without one each backend draws the call from its own list.
+   */
+  plan?: ServedPlan;
+  /**
+   * The keys plugins add to a session's `_meta`, one entry per plugin.
+   *
+   * The fold fills this from `registerSessionMeta`, and `metaOf` composes every
+   * key into the map a snapshot and `session/metaChanged` carry. The host sets
+   * each entry's `changed` when it is created.
+   */
+  sessionMeta?: ServedSessionMeta[];
   /**
    * The `x-` commands the daemon and plugins serve, by name.
    *

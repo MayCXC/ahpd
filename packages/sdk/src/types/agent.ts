@@ -497,6 +497,19 @@ export interface Start {
    * belongs to a resource and nothing else about it.
    */
   credentials?: Record<string, string>;
+  /**
+   * Whether the host draws this session's Plan call itself.
+   *
+   * A plugin may draw the call from the host's own task list, and a turn shows
+   * one call: a backend that reads this must keep its harness's own list out of
+   * the turn rather than draw a second. What the harness still knows is brought
+   * to the host through `planUpdate`, which is how the list the host draws
+   * changes.
+   *
+   * Absent is a host that draws no call, and a backend draws its own as it
+   * always did.
+   */
+  plan?: boolean;
 }
 
 /**

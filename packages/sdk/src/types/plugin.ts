@@ -331,6 +331,68 @@ export interface ServedChannel {
 }
 
 /**
+ * What a plugin's Plan call says for a session.
+ *
+ * One line per step, checked where the step is done and unchecked otherwise, in
+ * the order the plugin wants them shown. The host asks for the lines each time
+ * the plugin says the list moved, so a list rewritten mid-turn is redrawn
+ * rather than appended to, and a change still being drawn when the turn ends
+ * delays that ending until the row is on the session.
+ */
+export type PlanReader = (uri: string) => Promise<string[]>;
+
+/**
+ * One plugin's Plan call, and where its changes reach the host.
+ *
+ * Built by the plugin host and carried through the fold rather than copied, for
+ * the same reason `ServedChannel` is: the plugin holds this object, and the
+ * host sets `changed` on it once it exists.
+ */
+export interface ServedPlan {
+  /** The plugin that registered it. */
+  by: string;
+  /** The lines of the call for one session, read when asked. */
+  read: PlanReader;
+  /** Where a change is announced, set by the host once it exists. */
+  changed?: (uri: string) => Promise<void>;
+}
+
+/**
+ * What a plugin's key in a session's `_meta` says for one session.
+ *
+ * Read inside `metaOf`, which composes a session's `_meta` for a snapshot, a
+ * replay and `session/metaChanged` alike, and which is synchronous - so the
+ * reader answers with what it already holds rather than with a promise. A
+ * reader with nothing to say answers `undefined`, and the key is left out.
+ */
+export type SessionMetaReader = (uri: string) => unknown;
+
+/** One key a plugin adds to a session's `_meta`. */
+export interface SessionMetaKey {
+  /** The key in `_meta`, such as `ahpd.tasks`. */
+  key: string;
+  /** The value for one session. */
+  read: SessionMetaReader;
+}
+
+/**
+ * One plugin's keys in a session's `_meta`, and where their changes reach the
+ * host.
+ *
+ * Built by the plugin host and carried through the fold rather than copied, for
+ * the same reason `ServedChannel` is: the plugin holds this object, and the
+ * host sets `changed` on it once it exists.
+ */
+export interface ServedSessionMeta {
+  /** The plugin that registered them. */
+  by: string;
+  /** The keys, in the order `registerSessionMeta` was called. */
+  keys: SessionMetaKey[];
+  /** Where a change is announced, set by the host once it exists. */
+  changed?: (uri: string) => void;
+}
+
+/**
  * A command a plugin or the daemon serves, under an `x-` name of its own.
  *
  * A client sends it as any other request, and what `handle` answers is the
@@ -786,6 +848,45 @@ export interface PluginHost extends PluginContext {
    * of the chat's first turn. A worker chat and a changeset chat are not asked.
    */
   registerChatPreamble(preamble: ChatPreamble): void;
+  /**
+   * Draw the session's Plan call from this plugin.
+   *
+   * A turn holds one Plan call, so one plugin draws it: a second registration
+   * is a collision the fold reports, and the first keeps the call. The host
+   * reads the lines each time `planChanged` names the session, and draws them
+   * in place of the backend's own list - a backend that is told `Start.plan`
+   * keeps its own list to itself. A read still running when the turn ends holds
+   * that ending back until the row is drawn, or for two seconds.
+   */
+  registerPlan(read: PlanReader): void;
+  /**
+   * The plugin's lines for a session moved.
+   *
+   * The host reads them again and redraws the Plan call of any turn open in the
+   * session's chats. The promise settles once the rows are drawn, so a plugin
+   * whose write must reach the session before the turn ends can wait on it.
+   * Refused until a host is built over the plugin, because there is nothing to
+   * redraw before then.
+   */
+  planChanged(uri: string): Promise<void>;
+  /**
+   * Add one key to the `_meta` of every session.
+   *
+   * The reader is asked each time the host composes a session's `_meta`, so it
+   * answers with the value the session has now or with `undefined` while it has
+   * none. A key is registered once by one plugin: a second registration of the
+   * same key is a collision the fold reports. `sessionMetaChanged` says a
+   * value moved.
+   */
+  registerSessionMeta(key: string, read: SessionMetaReader): void;
+  /**
+   * The plugin's value for a session moved.
+   *
+   * The host composes the session's `_meta` again, with every producer's part,
+   * and sends it as `session/metaChanged`. Refused until a host is built over
+   * the plugin, because there is nothing to send before then.
+   */
+  sessionMetaChanged(uri: string): void;
   /** Set `HostOptions.terminals`, or take the daemon's over with `'replace'`. */
   registerTerminals(store: PortOf<'terminals'>, when?: 'replace'): void;
   /** Set `HostOptions.changes`, or take the daemon's over with `'replace'`. */
@@ -1083,6 +1184,20 @@ export interface Contribution {
   routes?: Route;
   /** The chat preambles this plugin registered, in registration order. */
   preambles: ChatPreamble[];
+  /**
+   * The Plan call this plugin draws, when it draws one.
+   *
+   * Carried through rather than copied, so the object `pluginHost` built is the
+   * one the host fills in. Absent, the backend draws its own call.
+   */
+  plan?: ServedPlan;
+  /**
+   * The keys this plugin adds to a session's `_meta`, when it adds any.
+   *
+   * Carried through rather than copied, for the same reason `plan` is: the
+   * object `pluginHost` built is the one the host fills in.
+   */
+  sessionMeta?: ServedSessionMeta;
 }
 
 /** One plugin that was resolved and imported, before or after it was applied. */
