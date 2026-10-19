@@ -70,8 +70,17 @@ const settle = async (times = 8): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
-const until = async (ready: () => boolean, tries = 200): Promise<void> => {
-  for (let i = 0; i < tries && !ready(); i++) await settle(1);
+/*
+ * Wait for a condition by the clock, and fail when it never holds. A count of
+ * zero-delay ticks ran out on a busy Windows runner before a file was written,
+ * and the case went on as though the wait had been answered.
+ */
+const until = async (ready: () => boolean, ms = 3000): Promise<void> => {
+  const deadline = Date.now() + ms;
+  while (!ready()) {
+    if (Date.now() >= deadline) throw new Error(`still waiting after ${ms} ms`);
+    await new Promise((r) => { setImmediate(r); });
+  }
 };
 
 /** What the scripted session was handed, kept so a case can read it. */

@@ -23,6 +23,16 @@ export default defineConfig({
   test: {
     globalSetup: ['./tools/test-tmpdir.ts'],
     /*
+     * Twenty seconds on Windows, five elsewhere.
+     *
+     * Starting a process on Windows takes several times what it takes on
+     * Linux, and the suite starts thousands - git, shells, fixture servers. The
+     * cases that do so sit near five seconds there, and a different few of
+     * them crossed it on each run of a busy runner. Linux keeps the default,
+     * so a case that grows slow is still caught where it is cheap to see.
+     */
+    testTimeout: process.platform === 'win32' ? 20_000 : 5_000,
+    /*
      * cofold's packages, through this runner rather than node's own loader.
      *
      * An externalized dependency keeps node's module cache, which `vi.resetModules()`

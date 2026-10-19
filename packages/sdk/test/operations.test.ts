@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { changesetReducer } from '@microsoft/agent-host-protocol';
 import { createHost } from '../src/host.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -353,7 +353,9 @@ it('hands the source the request\'s _meta and what the host knows, and passes a 
 
 it('disables the verbs while a turn is running, and refuses one sent anyway', async () => {
   const { source } = scripted();
-  const { client, peer: p, uri, chatUri, changeset } = await watching(source, 40);
+  // A second between the echo's chunks, so the turn is still running through
+  // every check below however busy the machine is.
+  const { host, client, peer: p, uri, chatUri, changeset } = await watching(source, 1000);
   await client.handle({
     method: 'resourceRequest', params: { channel: 'ahp-root://', uri: `file://${DIR}`, write: true },
   });
@@ -361,13 +363,14 @@ it('disables the verbs while a turn is running, and refuses one sent anyway', as
     method: 'dispatchAction',
     params: { channel: chatUri, action: { type: 'chat/turnStarted', turnId: 't1', message: { text: 'go' } } },
   });
-  await settle(4);
 
   // Said without being asked: nothing inside the changeset moved, so a turn
   // starting is only visible to a client if the host says it.
-  const announced = actions(p, changeset).filter((one) => one.type === 'changeset/operationsChanged').pop();
-  const offered = announced?.operations as Record<string, unknown>[] | undefined;
-  expect(offered?.every((one) => one.status === 'disabled')).toBe(true);
+  await vi.waitFor(() => {
+    const announced = actions(p, changeset).filter((one) => one.type === 'changeset/operationsChanged').pop();
+    const offered = announced?.operations as Record<string, unknown>[] | undefined;
+    expect(offered?.every((one) => one.status === 'disabled')).toBe(true);
+  }, { timeout: 3000 });
 
   const busy = await refused(client.handle({
     method: 'invokeChangesetOperation', params: { channel: changeset, operationId: 'commit' },
@@ -377,6 +380,7 @@ it('disables the verbs while a turn is running, and refuses one sent anyway', as
   // on.
   expect(busy.code).toBe(-32004);
   expect(busy.message).toContain(uri);
+  await host.close();
 });
 
 it('lists the changesets on the session channel, and not on a catalogue row', async () => {

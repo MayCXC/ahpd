@@ -196,14 +196,7 @@ const spoken = async (
   return { where, chat: state.defaultChat };
 };
 
-/**
- * Room for the cases that make a host and a tree: each runs a dozen git
- * commands, and a process start on a Windows runner costs many times what it
- * does on Linux.
- */
-const GIT_HEAVY = { timeout: 15_000 };
-
-describe('a session with a working tree of its own', GIT_HEAVY, () => {
+describe('a session with a working tree of its own', () => {
   it('offers the choice only where there is a repository to make one in', async () => {
     const root = repository();
     const { client } = await joined(root);
@@ -985,7 +978,7 @@ describe('a session with a working tree of its own', GIT_HEAVY, () => {
   });
 });
 
-describe('an archived session\'s tree', GIT_HEAVY, () => {
+describe('an archived session\'s tree', () => {
   /*
    * Archive gives a clean tree back and keeps its branch; unarchive, or a
    * wake of the archived session, puts it back at the same path on the same
@@ -1395,7 +1388,7 @@ describe('an archived session\'s tree', GIT_HEAVY, () => {
   });
 });
 
-describe('a worktree the window holds a handle on', GIT_HEAVY, () => {
+describe('a worktree the window holds a handle on', () => {
   /*
    * The reference window's dev container flow, mapped onto trees this host
    * already makes: a handle names the session's tree, the window claims it,

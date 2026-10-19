@@ -642,8 +642,7 @@ describe("VS Code's limits on spawning and messaging", () => {
     // runaway agent does not spend what another session may make.
     const elsewhere = await started(client, 'elsewhere');
     expect(said(await spawn(elsewhere.at, 'its own child'))).toMatch(/^New session created \(/);
-    // Fifty-one sessions made through a host: about seven seconds on Windows.
-  }, 20_000);
+  });
 
   it('refuses the 51st chat in one tree, by either tool that makes one', async () => {
     const client = await top();
