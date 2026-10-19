@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, realpathSync, writeFileSync, existsSync, lstatSync, mkdirSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -27,8 +28,10 @@ import type { HostOptions } from '../src/types/host.js';
 
 let made: string[] = [];
 
-afterEach(() => {
-  for (const dir of made) rmSync(dir, { recursive: true, force: true });
+afterEach(async () => {
+  // Awaited, with retries: on Windows a git a case started can hold a folder
+  // for a moment after the case is over.
+  for (const dir of made) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   made = [];
 });
 
@@ -193,7 +196,14 @@ const spoken = async (
   return { where, chat: state.defaultChat };
 };
 
-describe('a session with a working tree of its own', () => {
+/**
+ * Room for the cases that make a host and a tree: each runs a dozen git
+ * commands, and a process start on a Windows runner costs many times what it
+ * does on Linux.
+ */
+const GIT_HEAVY = { timeout: 15_000 };
+
+describe('a session with a working tree of its own', GIT_HEAVY, () => {
   it('offers the choice only where there is a repository to make one in', async () => {
     const root = repository();
     const { client } = await joined(root);
@@ -975,7 +985,7 @@ describe('a session with a working tree of its own', () => {
   });
 });
 
-describe('an archived session\'s tree', () => {
+describe('an archived session\'s tree', GIT_HEAVY, () => {
   /*
    * Archive gives a clean tree back and keeps its branch; unarchive, or a
    * wake of the archived session, puts it back at the same path on the same
@@ -1385,7 +1395,7 @@ describe('an archived session\'s tree', () => {
   });
 });
 
-describe('a worktree the window holds a handle on', () => {
+describe('a worktree the window holds a handle on', GIT_HEAVY, () => {
   /*
    * The reference window's dev container flow, mapped onto trees this host
    * already makes: a handle names the session's tree, the window claims it,

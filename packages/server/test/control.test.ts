@@ -2,9 +2,9 @@
  * The pipe a daemon on Windows takes a stop and a restart on.
  *
  * The request path is `node:net` on both platforms, and the pipe name is a
- * parameter, so every case here drives it over a unix socket path: nothing in
- * this file needs Windows, and the half that does - that the path is a named
- * pipe there - is checked by hand on a machine that has one.
+ * parameter, so every case here drives it over a unix socket path where there
+ * is one, and over the named pipe a start would make on Windows, which cannot
+ * listen on a path in a folder.
  */
 
 import { mkdtempSync, rmSync } from 'node:fs';
@@ -26,8 +26,8 @@ beforeEach(() => {
 });
 afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
-/** A control whose pipe is a unix socket path, which is what a machine here can hold. */
-const here = (): Control => controlFor('win32', socket) as Control;
+/** A control this machine can listen on: a unix socket path, or on Windows a pipe of the kind a start makes. */
+const here = (): Control => controlFor('win32', process.platform === 'win32' ? undefined : socket) as Control;
 
 /** One line to the control, and the daemon closing the connection after it. */
 const send = (control: Control, line: string): Promise<void> => new Promise((done, fail) => {

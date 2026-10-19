@@ -23,6 +23,17 @@ export default function setup(): () => void {
   process.env.TMPDIR = run;
   process.env.TEMP = run;
   process.env.TMP = run;
+  /*
+   * And no line-ending conversion in any repository a test makes. Git for
+   * Windows ships `core.autocrlf=true` in its system config, so a file a test
+   * committed as `a\n` comes back from a checkout as `a\r\n`: git doing what
+   * that machine asked, and a test of ahpd's own behaviour reading the
+   * machine's instead. The command-line form of config outranks every file.
+   */
+  const count = Number(process.env.GIT_CONFIG_COUNT ?? '0');
+  process.env[`GIT_CONFIG_KEY_${String(count)}`] = 'core.autocrlf';
+  process.env[`GIT_CONFIG_VALUE_${String(count)}`] = 'false';
+  process.env.GIT_CONFIG_COUNT = String(count + 1);
   return () => {
     rmSync(run, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     /*

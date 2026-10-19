@@ -57,6 +57,9 @@ const of = (notes: Note[], type: string): Bag[] =>
 const readyFor = (notes: Note[], callId: string): Bag | undefined =>
   of(notes, 'chat/toolCallReady').find((action) => action.toolCallId === callId);
 
+/** The shell cofold runs a command through, which is the one its rules are read for. */
+const SHELL = process.platform === 'win32' ? 'powershell' : 'bash';
+
 /** The tool call a shell command reaches the run as. */
 const shell = (command: string) => [
   { toolCalls: [{ name: 'shell_exec', input: { command }, callId: 'c1' }] },
@@ -91,7 +94,7 @@ it('runs a shell command the owner\'s rules allow, without asking', async () => 
   session.begin('t1', 'run it');
   await when(() => ended(notes));
 
-  expect(asked).toEqual([{ kind: 'shell', line: 'echo hi', shell: 'bash' }]);
+  expect(asked).toEqual([{ kind: 'shell', line: 'echo hi', shell: SHELL }]);
   // Nothing was drawn: a call nobody was asked about is not a question that
   // was answered, and the row says the approval came from a rule.
   expect(of(notes, 'session/inputNeededSet')).toEqual([]);
@@ -107,7 +110,7 @@ it('asks for a shell command no rule matches', async () => {
   session.begin('t1', 'run it');
   await when(() => of(notes, 'session/inputNeededSet').length > 0);
 
-  expect(asked).toEqual([{ kind: 'shell', line: 'echo hi', shell: 'bash' }]);
+  expect(asked).toEqual([{ kind: 'shell', line: 'echo hi', shell: SHELL }]);
   expect((of(notes, 'session/inputNeededSet')[0]?.request as Bag).kind).toBe('toolConfirmation');
   session.confirm('c1', true);
   await when(() => ended(notes));

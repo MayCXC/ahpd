@@ -165,6 +165,33 @@ const BEFORE = 'ahp-git:';
 /** A path with each of its segments percent-encoded and its slashes kept. */
 const escaped = (path: string): string => path.split('/').map(encodeURIComponent).join('/');
 
+const windows = process.platform === 'win32';
+
+/**
+ * A native path as a URI's path holds it: slash-separated, from a leading slash.
+ *
+ * A Windows path written in as it is, `C:\a\b`, has no slash at all: it is one
+ * encoded segment, and with no slash before it the drive runs into the
+ * authority. `/C:/a/b` is how a `file:` URI holds the same path, and the form
+ * a client prints back.
+ */
+const slashed = (path: string): string => {
+  if (!windows) return path;
+  const forward = path.replaceAll('\\', '/');
+  return forward.startsWith('/') ? forward : `/${forward}`;
+};
+
+/** A URI's path back as the native path it names: `/C:/a/b` is `C:\a\b`. */
+const unslashed = (path: string): string =>
+  windows && /^\/[a-zA-Z]:/.test(path) ? path.slice(1).replaceAll('/', '\\') : path;
+
+/**
+ * A path as it is compared. Windows names a file the same in any case, and VS
+ * Code prints a URI back with its drive letter lowercased, so a side minted
+ * under `C:` is asked for under `c:`.
+ */
+const folded = (path: string): string => (windows ? path.toLowerCase() : path);
+
 /**
  * A file's `before`, as `ahp-git://head/<absolute path>`.
  *
@@ -175,7 +202,7 @@ const escaped = (path: string): string => path.split('/').map(encodeURIComponent
  * `head` rather than nothing, so the authority is never empty: a client that
  * parses and re-prints a URI drops an empty authority's `//`.
  */
-const beforeUri = (dir: string, path: string, at = 'head'): string => `${BEFORE}//${at}${escaped(`${dir}/${path}`)}`;
+const beforeUri = (dir: string, path: string, at = 'head'): string => `${BEFORE}//${at}${escaped(`${slashed(dir)}/${path}`)}`;
 
 /**
  * The tree with nothing in it, as git names it.
@@ -481,7 +508,7 @@ export function gitChanges(): ChangesetSource {
   /** The text held for a captured side, by `sideKey` of its session, turn, phase and path. */
   const kept = new Map<string, string>();
   const sideKey = (session: string, turn: string, phase: string, path: string): string =>
-    [session, turn, phase, path].join('\u0000');
+    [session, turn, phase, folded(path)].join('\u0000');
 
   /**
    * The text a confirmation is previewing, by the URI it is served under.
@@ -520,7 +547,7 @@ export function gitChanges(): ChangesetSource {
    */
   const capturedUri = (session: string, turn: string, path: string, phase: string): string =>
     `${CAPTURED}//turn/${Buffer.from(session, 'utf8').toString('base64url')}`
-    + `/${encodeURIComponent(turn)}/${encodeURIComponent(phase)}${escaped(path)}`;
+    + `/${encodeURIComponent(turn)}/${encodeURIComponent(phase)}${escaped(slashed(path))}`;
 
   /**
    * A proposed side, as `ahp-edit://pending/<session>/<call>/<path>`.
@@ -533,7 +560,7 @@ export function gitChanges(): ChangesetSource {
    */
   const pendingUri = (session: string, toolCallId: string, path: string): string =>
     `${CAPTURED}//pending/${Buffer.from(session, 'utf8').toString('base64url')}`
-    + `/${encodeURIComponent(toolCallId)}${escaped(path)}`;
+    + `/${encodeURIComponent(toolCallId)}${escaped(slashed(path))}`;
 
   /**
    * The `kept` key an `ahp-edit:` URI names, or nothing when no side is held under it.
@@ -561,7 +588,7 @@ export function gitChanges(): ChangesetSource {
     for (let at = 1; at < rest.length; at++) {
       const phase = rest[at] as string;
       if (phase !== 'before' && phase !== 'after') continue;
-      const key = sideKey(session, rest.slice(0, at).join('/'), phase, `/${rest.slice(at + 1).join('/')}`);
+      const key = sideKey(session, rest.slice(0, at).join('/'), phase, unslashed(`/${rest.slice(at + 1).join('/')}`));
       if (kept.has(key)) return key;
     }
     return undefined;
@@ -1603,10 +1630,10 @@ export function gitChanges(): ChangesetSource {
       // has slashes and so does a directory, and splitting on the first one
       // would name neither.
       const dir = [...held.keys()]
-        .filter((known) => rest.startsWith(`${known}/`))
+        .filter((known) => folded(rest).startsWith(folded(`${slashed(known)}/`)))
         .sort((a, b) => b.length - a.length)[0];
       if (dir === undefined) return undefined;
-      const path = rest.slice(dir.length + 1);
+      const path = rest.slice(slashed(dir).length + 1);
       // `./` names the path from the directory rather than from the root, which
       // differs for a directory below the repository's root.
       const data = await git(dir, ['show', `${at === 'head' ? 'HEAD' : at}:./${path}`]);

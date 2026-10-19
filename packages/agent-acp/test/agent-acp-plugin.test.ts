@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
 import { describePlugin, loadPlugins, pluginIdsOf } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -35,6 +35,7 @@ let loose: string | undefined;
 afterEach(() => {
   if (loose !== undefined) rmSync(loose, { recursive: true, force: true });
   loose = undefined;
+  vi.unstubAllEnvs();
 });
 
 const peer = (): Peer & { notes: { method: string; params: unknown }[] } => {
@@ -49,9 +50,15 @@ const peer = (): Peer & { notes: { method: string; params: unknown }[] } => {
   };
 };
 
-/** Let the subprocess's work finish, up to a point; the fixture never sleeps. */
-const until = async (check: () => boolean, times = 3000): Promise<void> => {
-  for (let i = 0; i < times; i++) {
+/**
+ * Let the subprocess's work finish, up to a point; the fixture never sleeps.
+ *
+ * By the clock rather than by the count: a 1 ms timer is about 15 ms on
+ * Windows, where three thousand of them outlast the test's own timeout.
+ */
+const until = async (check: () => boolean, ms = 3000): Promise<void> => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
     if (check()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
@@ -202,6 +209,11 @@ it('lists a manifest, its title, and the id its entry exports', async () => {
 });
 
 it('contributes one backend per preset, from one load', async () => {
+  // The codex preset signs in with a key when the daemon has one, and the
+  // scripted server offers no sign-in: a key on the machine running the tests
+  // is not part of the case.
+  vi.stubEnv('CODEX_API_KEY', undefined);
+  vi.stubEnv('OPENAI_API_KEY', undefined);
   const { options, loaded, problems } = await load([
     spec({ copilot: { name: 'Copilot' }, codex: { name: 'Codex' } }),
   ]);

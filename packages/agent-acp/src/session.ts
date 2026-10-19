@@ -23,7 +23,7 @@
  * have yet.
  */
 
-import { resolve } from 'node:path';
+import { resolve, sep } from 'node:path';
 import { activityOf, statusOf, uriOf } from '@ahpd/sdk';
 import type { Bag, Session, Start } from '@ahpd/sdk';
 import { bag, UNTITLED } from './session/common.js';
@@ -73,7 +73,8 @@ export function acpSession(options: AcpOptions, start: Start): Session {
   const directories = [where, ...(start.additional ?? [])].map((one) => resolve(one));
   const inside = (path: string): boolean => {
     const full = resolve(path);
-    return directories.some((dir) => full === dir || full.startsWith(`${dir}/`));
+    // The system's separator: `resolve` answers `C:\work` on Windows, never `C:/work`.
+    return directories.some((dir) => full === dir || full.startsWith(dir.endsWith(sep) ? dir : `${dir}${sep}`));
   };
 
   /** What it is doing, and the one handle that says it. */
