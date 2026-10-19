@@ -85,8 +85,15 @@ An unknown key is logged and ignored:
 | `sessionResidencyLimit` | `--session-residency-limit` | `10` | Most sessions loaded at once |
 | `closedChats` | `--closed-chats` | `hidden` | `delete` removes a closed chat from the backend |
 | `automations` | `--automations` | `file` | `memory` keeps automations until exit, and fires no schedule |
+| `terminalAutoApproveDefaults` | `--terminal-auto-approve-defaults` | `vscode` | The rules for a session whose window pushed none; `none` approves no command. See [Terminal rules](#terminal-rules) |
 | `wire` | `--wire` | | Log every frame to this file, for debugging |
 
-Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `mcpServers`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
+Keys with no flag: `httpApi`, `modelProxy`, `usage`, `policies`, `mcpServers`, `commandParser`. Flags with no key: `--no-plugins`, `--no-cwd`, `--plugin-option`, `--stdio`, `--config-file`.
 
 [Reference](REFERENCE.md) has every key.
+
+## Terminal rules
+
+`terminalAutoApproveDefaults` says which rules a session's shell commands are matched against when the window that started it pushed none. `vscode`, the default, is VS Code's terminal auto-approve table, so the commands it approves by default run without a question. `none` approves no command, so every one asks. A window that pushed an empty table approves nothing, and it is not folded into this default.
+
+`commandParser` names a `.js` or `.ts` module whose default export reads a shell command before the rules match it. It answers `(line, shell) => ({ subCommands, writeDests, unanalyzable })`, or `undefined` for a line it cannot read, which asks. The sdk's own splitter is used when the key is absent. A path is relative to the configuration file. The module is imported by file URL as a plugin is. A file that does not import, or whose default export is not a function, stops the start. As with `plugins`, naming a module runs its code in the daemon with the daemon's permissions. A `.ts` module needs Node 22.18 or newer, Bun, or Deno, which strip types as they load.

@@ -121,7 +121,7 @@ Child plans, each scoped to one package or two.
 | [p3 - Another parser replaces the splitter](../100-p3-another-parser-replaces-the-splitter/plan.md) | sdk, server | planned | p1 |
 | [p4 - Claude and ACP ask only for unmatched commands](../100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | agent-claude, agent-acp | planned | p2 |
 | [p5 - pi and cofold ask only for unmatched commands](../100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | agent-pi, agent-cofold | planned | p2 |
-| [p6 - The docs name the terminal rules](../100-p6-the-docs-name-the-terminal-rules/plan.md) | docs | planned | p3, p4, p5 |
+| [p6 - The docs name the terminal rules](../100-p6-the-docs-name-the-terminal-rules/plan.md) | docs | implemented | p3, p4, p5 |
 
 ## Risks and tradeoffs
 

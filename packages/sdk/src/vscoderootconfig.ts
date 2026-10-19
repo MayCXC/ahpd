@@ -14,19 +14,24 @@ import type { ConfigPropertySchema } from '@microsoft/agent-host-protocol';
  * contributes the literal it resolves to. The two keys whose default comes
  * from `src/vs/platform/chat/common/chatSettings.ts` name that file as a URL.
  *
- * This host acts on two of them, `globalAutoApproveEnabled` and
- * `eligibleForAutoApproval`. The rest are declared so that a client can draw
- * them and so that a push of one is kept and read back rather than refused;
- * what is acted on is in `docs/sdk/AHP.md`.
+ * This host acts on five of them: `globalAutoApproveEnabled` and
+ * `eligibleForAutoApproval`, which are one setting for every connection, and
+ * `terminalAutoApproveEnabled`, `terminalAutoApproveRules` and
+ * `editAutoApprovePatterns`, which are the connection's own and are read from
+ * the connection that owns the session. The rest are declared so that a client
+ * can draw them and so that a push of one is kept and read back rather than
+ * refused; what is acted on is in `docs/sdk/AHP.md`.
  */
 
 /**
  * The properties VS Code's own agent host declares for the keys it pushes.
  *
  * Keyed by the config key, so `ROOT_CONFIG_SCHEMA` spreads the whole map into
- * its own `properties`. The two keys here this host reads are
- * `globalAutoApproveEnabled`, which `trust.ts` asks before a tool call runs,
- * and `eligibleForAutoApproval`, which `host/spawn.ts` asks before it.
+ * its own `properties`. Five keys here this host reads: `globalAutoApproveEnabled`,
+ * which `trust.ts` asks before a tool call runs; `eligibleForAutoApproval`,
+ * which `host/spawn.ts` asks before it; and `terminalAutoApproveEnabled`,
+ * `terminalAutoApproveRules` and `editAutoApprovePatterns`, which
+ * `host/spawn.ts` reads from the connection that owns the session.
  *
  * `workspaceTrust` is not here: it is declared beside `defaultShell` in
  * `host/root.ts`, because both belong to the connection that pushed them.

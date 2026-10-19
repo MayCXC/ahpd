@@ -263,15 +263,16 @@ export function createRoot(ctx: HostContext): Root {
    * setting. The host's own keys come after, so a clash would resolve to the
    * host's reading of the same key (there is none).
    *
-   * Nine of them are read by this host: `defaultShell` and `workspaceTrust`
+   * Ten of them are read by this host: `defaultShell` and `workspaceTrust`
    * below, which belong to the connection that pushed them, the three
    * terminal and edit rules among VS Code's own, which belong there for the
    * same reason and are what `spawn.ts` answers `getAutoApproval` from,
    * `globalAutoApproveEnabled`, which `trust.ts` asks before a tool call runs,
-   * and this host's own `changeWords`, which says where a commit message and a
-   * pull request's words come from, with `clientQueueBytes` and `replayBytes`
-   * beside it, which bound what this host holds for a client that is not
-   * reading (`limits.ts`). The rest are declared and nothing more, which is
+   * `eligibleForAutoApproval`, which `spawn.ts` asks per tool before a call
+   * runs, and this host's own `changeWords`, which says where a commit message
+   * and a pull request's words come from, with `clientQueueBytes` and
+   * `replayBytes` beside it, which bound what this host holds for a client that
+   * is not reading (`limits.ts`). The rest are declared and nothing more, which is
    * what a client needs and all it gets.
    */
   const ROOT_CONFIG_SCHEMA = {
