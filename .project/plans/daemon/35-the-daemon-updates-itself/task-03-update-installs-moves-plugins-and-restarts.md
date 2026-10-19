@@ -1,6 +1,6 @@
 ---
 title: Update installs, moves the plugins and restarts
-status: todo
+status: implemented
 depends:
   - task-02-update-checks-and-refuses.md
 layer: server
@@ -49,3 +49,19 @@ On Linux and macOS, `ahpd update` installs the new `@ahpd/server`, moves every p
 - `pnpm -s build`, `pnpm -s typecheck` and the server vitest suite pass.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed, and the Debian check by hand is open.
+
+`checkPlugins` in `selfupdate.ts` asks `fittingVersion` for each registry plugin against the target before npm runs. It refuses with the words of `noFit`, or with `--force` says the refusal and answers the plugin as left. `installServer` runs `npm install -g --prefix <prefix>` for a global place, with `--allow-scripts=node-pty` when npm answers 11.16 or later, and `npm install --prefix <dir>` for a prefix place. `movePlugins` is `updatePlugins('all')` with the target, so `@ahpd/sdk` moves too.
+
+The command answers `{from, to, restarting: true, plugins, left}` after the plugin check, the install, the plugin move and the successor check. A served daemon's check and restart are its own `ServedFacts.restart`, which defers until the answer has gone. A terminal's successor check runs before the answer, and its restart runs on the next turn of the loop, through `restartFromTerminal`.
+
+Departures:
+- `install.ts` exports `npmFailed` and `registryPluginsIn`, which were private.
+- `restart.ts` exports `restartFromTerminal`, and the read `checkedRestart` takes now accepts `string[] | undefined`, since a supervised record has no line.
+- `run.ts` checks a line supplied to a supervised daemon's restart, which is how the update passes the daemon's own argv. `daemon.restart` still passes none, and nothing is checked there.
+- `UpdateFacts` gained `configDir`, `run`, `npmVersion`, `takes`, `restart` and `ownArgv`.
+- A terminal updating a supervised daemon runs no successor check: the unit's line is not one the terminal knows. A served daemon knows its own arguments, and checks them.
+- The plugin move is the real `updatePlugins` in the cases. npm is the only fake. It leaves the packages where the call's own `--prefix` says.
+
+The ten new cases in `server-update.test.ts` pass, and the whole server suite passes, 1216 tests in 59 files. Build, typecheck and the schema are clean. The Debian check by hand is left open for the final checklist.

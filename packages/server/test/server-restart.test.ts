@@ -593,7 +593,7 @@ describe('checkedRestart', () => {
     const asked: [string[], string | undefined][] = [];
     const read: string[][] = [];
     const held: (string | undefined)[] = [];
-    const restart = checkedRestart(async (argv) => { read.push(argv); expect(asked).toEqual([]); return 'xyz'; }, () => [], {
+    const restart = checkedRestart(async (argv) => { read.push(argv ?? []); expect(asked).toEqual([]); return 'xyz'; }, () => [], {
       restart: (argv, token) => { asked.push([argv, token]); },
     }, (why) => { held.push(why); });
     await restart(ARGV, false);

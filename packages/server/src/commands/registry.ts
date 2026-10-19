@@ -40,6 +40,7 @@ import { declareTeams } from './teams.js';
 import { declareUsage } from './usage.js';
 import { declareVault } from './vault.js';
 import { declareRestart } from './restart.js';
+import { declareUpdate } from './update.js';
 import { declareUser } from './user.js';
 import { checkScopes } from './scopes.js';
 
@@ -59,6 +60,7 @@ export const cliRegistry = (): Registry<object> => {
   declareStart(registry);
   declareStop(registry);
   declareRestart(registry);
+  declareUpdate(registry);
   declareStatus(registry);
   declareService(registry);
   declareConfig(registry);

@@ -8,6 +8,7 @@
 | `ahpd stop` | Stop it, and wait up to 30 s |
 | `ahpd restart` | Stop and start again with the same flags |
 | `ahpd restart --force` | Restart even while a turn runs |
+| `ahpd update` | Move to a newer ahpd and restart it. See [Upgrade](UPGRADE.md) |
 
 `start` takes the same flags as `ahpd`. A bad flag is refused before anything starts.
 

@@ -1,6 +1,6 @@
 ---
 title: The update finds its install place
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -37,3 +37,13 @@ refs:
 - `pnpm -s build`, `pnpm -s typecheck` and the server vitest suite pass.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`version.ts` walks for the manifest once and answers the root beside the name and version, through `packageRoot`.
+`selfupdate.ts` has `Place`, `installPlace` and its `PlaceFacts`, so a case hands it a made folder, a platform and its own folder checks.
+A root whose real path differs is refused as a link. A root that is not `<dir>/node_modules/@ahpd/server` is refused as a checkout. Both say one sentence naming the root and to update by hand.
+`<prefix>/lib/node_modules/@ahpd/server` on Linux and macOS is a global install under `<prefix>`.
+`<prefix>/node_modules/@ahpd/server` with `<prefix>/package.json` is a prefix install under `<prefix>`, and without one on Windows is a global install there.
+
+The six cases in `selfupdate-place.test.ts` pass. The server suite passes, 1197 tests in 58 files, and build and typecheck are clean.

@@ -76,6 +76,7 @@ describe('the command registry', () => {
     expect(scopes('plugin.remove')).toEqual(['config:write']);
     expect(scopes('plugin.update')).toEqual(['config:write']);
     expect(scopes('daemon.restart')).toEqual(['config:write']);
+    expect(scopes('daemon.update')).toEqual(['config:write']);
     expect(scopes('paths.list')).toEqual(['config:read']);
     const only = (id: string): string | undefined => registry.find(id)?.meta?.deploymentTokenOnly;
     for (const id of ['paths.add', 'paths.remove']) {
@@ -87,6 +88,7 @@ describe('the command registry', () => {
     for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset']) expect(only(id)).toBe("change a plugin's options");
     for (const id of ['plugin.enable', 'plugin.disable']) expect(only(id)).toBe('enable or disable a plugin');
     expect(only('daemon.restart')).toBe('restart the daemon');
+    expect(only('daemon.update')).toBe('update the daemon');
     for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset', 'plugin.enable', 'plugin.disable']) {
       expect(scopes(id)).toEqual(['config:write']);
     }
@@ -772,6 +774,7 @@ describe('what a served command says it does', () => {
       ['daemon.config', 'read', null],
       ['daemon.restart', 'change', null],
       ['daemon.status', 'read', null],
+      ['daemon.update', 'change', null],
       // A folder is served or it is not, so `add` creates one; a `remove` takes
       // one out of the list and takes nothing off the disk, so it changes the row
       // it names rather than removing it.

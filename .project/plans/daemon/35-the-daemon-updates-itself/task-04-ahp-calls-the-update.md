@@ -1,6 +1,6 @@
 ---
 title: AHP calls the update
-status: todo
+status: implemented
 depends:
   - task-03-update-installs-moves-plugins-and-restarts.md
 layer: server
@@ -37,3 +37,15 @@ A client sends `x-ahpd/update` with `{version?, check?, force?}` and gets the sa
 - `pnpm -s build`, `pnpm -s typecheck` and the server vitest suite pass.
 
 ## Resume
+
+Done 2026-10-19. Every step is built, and every case the Validation names passes. Not reviewed.
+
+`updateMethod()` in `commands/update.ts` is the `PluginMethod` for `x-ahpd/update`, granted `config:write`. It refuses a caller that carries a `reader`, or an owner that names somebody other than `root:`, with an `RpcError` carrying the words `deploymentOnly` gives. The root connection calls `runUpdate()` in `oneAtATime`. It is the same plan, plugin check, install, plugin move and successor check the command runs, and it answers the same value. The restart is `served.restart`, which defers itself until the answer has gone, as it does for the API. `run.ts` serves the method from `base.methods` by `ahpd`, beside the usage methods.
+
+Departures:
+- `commands/scopes.ts` exports `deploymentOnly`, which was private, so the method says the same sentence the API does.
+- The body of `declareUpdate` was factored into `runUpdate()`, so the two surfaces are one path. The command catches and answers with `conflict`. The method answers `-32603` for a failed step and `-32009` for the owner refusal, the code `admit` and the usage methods use.
+- The method also refuses a request that carries a `reader`, which is a person or a plugin. The owner alone would not refuse a plugin's owner when a host has no users directory and no owner to name. A daemon with no users directory has no owner to name at all, so its connection, which is the host itself, is let in.
+- The params are read as the command's own input is: a string `version` and `check` or `force` that is `true`. No shape refusal is added, because the sdk does not export `INVALID_PARAMS` to the server.
+
+The four new cases in `host-update-method.test.ts` pass, through a host in this process with a users file. A person who holds `config:write` is refused, the root connection gets the check, and the root connection gets the update and the daemon's own restart. A failed npm answers `-32603` and asks for no restart. The whole server suite passes, 1220 tests in 60 files. Build, typecheck and the schema are clean.

@@ -20,6 +20,7 @@ import { declarePlugin } from './plugin.js';
 import { declareProxy } from './proxy.js';
 import { declareRestart } from './restart.js';
 import { declareStatus } from './status.js';
+import { declareUpdate } from './update.js';
 import { declareTeams } from './teams.js';
 import { declareUsage } from './usage.js';
 import { declareVault } from './vault.js';
@@ -82,6 +83,13 @@ export interface ServedFacts {
    * and the daemon runs on.
    */
   restart(argv: string[], force: boolean): void | Promise<void>;
+  /**
+   * Take this daemon down without a successor, once the answer in hand has
+   * gone: what the Windows update does, because the helper it starts runs npm
+   * only after this process is gone and starts the next daemon itself. Absent
+   * before the daemon is up.
+   */
+  down?(): void;
 }
 
 /** The declarations a daemon serves, bound to the daemon's own facts. */
@@ -98,5 +106,6 @@ export const servedRegistry = (facts: ServedFacts): Registry<object> => {
   declareVault(registry, facts);
   declareAutomation(registry, facts);
   declareRestart(registry, facts);
+  declareUpdate(registry, facts);
   return registry;
 };
