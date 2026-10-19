@@ -1,6 +1,6 @@
 ---
 title: Claude asks for a matched tool
-status: todo
+status: implemented
 depends: [task-01-the-rule-is-read-in-the-approval-check.md]
 layer: agent-claude
 refs:
@@ -55,7 +55,7 @@ The question offers no `allow-always` option, and the hook returns no `updatedPe
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-19. The confirmation `canUseTool` awaited is now `askPerson` in `asking.ts`, and both `canUseTool` and the new `ruleFirst` hook await it. The hook reads the rule for every `PreToolUse` call and returns `{}` at once for a tool the rule does not name. For a named tool it puts the question with no suggestions, so the card offers approve or deny and nothing to keep. It then answers `allow` or `deny` with the person's answer, and in `dontAsk` it answers `deny` without a question. It never returns `updatedInput`, so `sourceFirst`'s rewrite of a command stays. `canUseTool` skips `settled` for a matched tool and answers from `ruledBy` when the hook was already asked, so a person is asked once. `query.ts` registers the hook with a one-day `timeout`. Tests: `packages/agent-claude/test/agent-claude-autoapproval.test.ts` (20), plus one hook-list expectation in `agent-claude-background-work.test.ts`. The whole agent-claude suite passes (39 files, 362 tests).
+- **Next action:** build [task-03-acp-asks-for-a-matched-tool.md](task-03-acp-asks-for-a-matched-tool.md).
 - **Open questions:** none.
-- **Watch out for:** the `Bash` hook `sourceFirst` must keep running; the new hook adds to it.
+- **Watch out for:** steps 2 to 5 could not be run here. This machine has the CLI as a native binary, and no network for the hooks guide. So the checks of hook `allow` and `deny` in `bypassPermissions`, in auto mode and for an `allowedTools` entry are open. So are the checks of a second `canUseTool` call, of how two `PreToolUse` answers merge, and of the default timeout. What `sdk.d.ts` confirms: `HookCallbackMatcher.timeout` counts seconds, `permissionDecision` takes `allow`, `deny`, `ask` and `defer`, and `PreToolUseHookSpecificOutput` may carry `updatedInput`. The implementation is defensive: the hook never rewrites the input, and `ruledBy` answers a later `canUseTool` call. `AskUserQuestion` is left to its own question, which departs from the task's "every tool": the answer to that tool is its input.

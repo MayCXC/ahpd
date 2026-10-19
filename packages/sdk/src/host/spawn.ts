@@ -19,12 +19,12 @@ import { chatFlag, sessionFollows, startsRead } from './chatactions.js';
 import { sameFolder, trusted } from './trust.js';
 import { BASELINE_TURN } from '../types/changes.js';
 import type { Bag } from '../types/common.js';
-import type { Agent, AutoApprovalKind, Start } from '../types/agent.js';
+import type { Agent, AutoApproval, AutoApprovalKind, Start } from '../types/agent.js';
 import type { Connection } from '../types/host.js';
 import type { Session, SubagentChat, SubagentRequest } from '../types/session.js';
 import type { MessageAttachment } from '@microsoft/agent-host-protocol';
 import type { ResourceStore } from '../types/resources.js';
-import type { RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
+import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { Move } from './lifecycle.js';
 import type { HostContext } from './context.js';
 
@@ -112,6 +112,31 @@ const PLAN_HOLD_MS = 2000;
 
 /** The actions that end a turn, which hold a plan update in flight behind them. */
 const ENDINGS = new Set(['chat/turnComplete', 'chat/turnCancelled', 'chat/error']);
+
+/**
+ * Whether the operator's rule makes a tool ask every time.
+ *
+ * `eligibleForAutoApproval` is VS Code's map of tool name to boolean, kept in
+ * root config, and `false` is the one value that asks. An exact name is read
+ * first and answers on its own: a `true` there keeps the tool eligible even
+ * when its server is named with `false`. A name that is not there falls back
+ * to `<server>/*`, one key for every tool of that server - the part of the
+ * name before its first slash.
+ *
+ * A value that is not a boolean is not the `false` that asks, and a rule that
+ * is not an object names nothing: both leave the call as it was. The rule is
+ * read where it is kept on each call rather than remembered at a start, so a
+ * push reaches a session already running.
+ */
+const asksForTool = (rootConfig: Record<string, unknown>, tool: string): boolean => {
+  const held = rootConfig.eligibleForAutoApproval;
+  if (held === null || typeof held !== 'object' || Array.isArray(held)) return false;
+  const rules = held as Record<string, unknown>;
+  if (Object.hasOwn(rules, tool)) return rules[tool] === false;
+  const slash = tool.indexOf('/');
+  if (slash <= 0) return false;
+  return rules[`${tool.slice(0, slash)}/*`] === false;
+};
 
 /**
  * The host's store, as one session's backend is handed it.
@@ -775,12 +800,17 @@ export function createSpawn(ctx: HostContext): Spawn {
      * the session goes, so a token reaches the tools of the session it was
      * handed to and nothing else.
      */
-    const toolsServer = (ask?: { runClient?: RunClientTool; toolsChanged?: ToolsChanged }): ToolsEndpoint | undefined => {
+    const toolsServer = (ask?: {
+      runClient?: RunClientTool;
+      toolsChanged?: ToolsChanged;
+      mayRun?: MayRunTool;
+    }): ToolsEndpoint | undefined => {
       if (bare) return undefined;
       const opened = options.toolsServers?.open(
         ctx.boundTools(uri, chatUri, agent.provider),
         ask?.runClient,
         ask?.toolsChanged,
+        ask?.mayRun,
       );
       if (opened === undefined) return undefined;
       const held = ctx.served.get(uri) ?? [];
@@ -830,13 +860,20 @@ export function createSpawn(ctx: HostContext): Spawn {
       return trusted(vouched, sender.config?.workspaceTrust, sender.trustedFolders);
     };
     /*
-     * Whether a command this session runs is answered by its owner's rules.
+     * Whether a command or tool this session runs is answered by its owner's
+     * rules, or asks every time because the operator said so.
      *
-     * Read from the same connection `trustedBy` reads, and for the same
-     * reason: what a window lets its agent run without asking is that window's
-     * answer, and a turn somebody else sends into this session is not theirs
-     * to widen. A start nobody's connection asked for has no rules at all,
-     * which is a command that asks.
+     * The operator's `eligibleForAutoApproval` rule is read first, and without
+     * a connection: it is the host's setting rather than a window's, so it
+     * applies to every session on the host, an automation's among them. A tool
+     * it names is `ask`, which is a call that asks every time and offers no
+     * "always" option - before any terminal rule could approve it.
+     *
+     * The terminal rules are read from the same connection `trustedBy` reads,
+     * and for the same reason: what a window lets its agent run without asking
+     * is that window's answer, and a turn somebody else sends into this
+     * session is not theirs to widen. A start nobody's connection asked for
+     * has no terminal rules at all, which is a command that asks.
      *
      * The rules and the edit patterns are the connection's own push. A window
      * that pushed no rules gets what the daemon's setting applies - VS Code's
@@ -844,11 +881,15 @@ export function createSpawn(ctx: HostContext): Spawn {
      * empty object is a table with nothing in it, not a window that never
      * spoke.
      *
-     * Only `approved` is an answer. A command a deny rule named, and a line no
+     * Only `approved` is an approval. A command a deny rule named, and a line no
      * rule could read, are both `undefined`, which leaves the backend to ask.
      */
-    const getAutoApproval = (kind: AutoApprovalKind, line: string, shell: CommandShell): ToolCallConfirmationReason | undefined => {
-      if (kind !== 'shell' || sender === undefined) return undefined;
+    const getAutoApproval = (kind: AutoApprovalKind, line: string, shell?: CommandShell, tool?: string): AutoApproval | undefined => {
+      /* The tool's name: its own for `tool`, and the one that runs the line for `shell`. */
+      const named = kind === 'tool' ? line : tool;
+      if (named !== undefined && asksForTool(ctx.rootConfig, named)) return 'ask';
+      if (kind === 'tool') return undefined;
+      if (shell === undefined || sender === undefined) return undefined;
       if (options.users !== undefined) {
         const who = ctx.ownerFor(sender);
         if (who === undefined || who !== kept.owner(idOf(uri))) return undefined;

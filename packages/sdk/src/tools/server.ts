@@ -63,6 +63,20 @@ export type RunClientTool = (
   meta: Record<string, unknown> | undefined,
 ) => Promise<ClientCallAnswer>;
 
+/**
+ * Asked before this server runs a tool, and whether it may.
+ *
+ * A backend that is in the path of every call asks its own question and has no
+ * use for this. An ACP agent calls this server over HTTP with its client out of
+ * the path, so the server itself is the only place a person can be asked before
+ * the tool runs - the backend supplies the question, and a `false` answer is the
+ * call refused, with the model told so in the tool's own result.
+ */
+export type MayRunTool = (
+  tool: BoundTool,
+  input: Record<string, unknown>,
+) => Promise<boolean> | boolean;
+
 /** One session's endpoint, as a backend is handed it. */
 export interface ToolsEndpoint {
   /** Where the server is, absolute, on the host's own listener. */
@@ -112,9 +126,15 @@ export interface ToolsServers {
    * `runClient` is the backend's, for the tools in this list that it owns - a
    * backend with none to run passes nothing and a `tools/call` for one is
    * refused, which is what it was before. `toolsChanged` is how it wants to
-   * hear that the list moved, and leaving it out is `list`.
+   * hear that the list moved, and leaving it out is `list`. `mayRun` is asked
+   * before a call is run at all, and answers whether it may.
    */
-  open(tools: BoundTool[], runClient?: RunClientTool, toolsChanged?: ToolsChanged): ToolsEndpoint | undefined;
+  open(
+    tools: BoundTool[],
+    runClient?: RunClientTool,
+    toolsChanged?: ToolsChanged,
+    mayRun?: MayRunTool,
+  ): ToolsEndpoint | undefined;
   /** Answer a request for one of the endpoints open here, or nothing for a path that is not one. */
   request(request: Request): Promise<Response | undefined>;
 }
@@ -156,6 +176,8 @@ interface Serving {
   tools: BoundTool[];
   runClient: RunClientTool | undefined;
   toolsChanged: ToolsChanged;
+  /** Asked before a call is run, for a backend that cannot be in the path. */
+  mayRun: MayRunTool | undefined;
   /** The `GET` streams open on this path, for a list change to go down. */
   streams: Set<ReadableStreamDefaultController<Uint8Array>>;
 }
@@ -197,6 +219,19 @@ const answered = async (serving: Serving, said: Message, info: { name: string; v
   const found = serving.tools.find((one) => one.definition.name === String(params.name));
   if (found === undefined) return failure(said.id, INVALID_PARAMS, `No tool named ${String(params.name)}`);
   const input = (params.arguments ?? {}) as Record<string, unknown>;
+  /*
+   * The backend's question, before either branch runs anything.
+   *
+   * A refusal is a failed call rather than a failed request, like a tool that
+   * throws: the model is the one that made the call, so the sentence belongs in
+   * the content it reads.
+   */
+  if (serving.mayRun !== undefined && !(await serving.mayRun(found, input))) {
+    return result(said.id, {
+      content: [{ type: 'text', text: `${String(params.name)} was declined by a person` }],
+      isError: true,
+    });
+  }
   /*
    * A tool that throws is a failed call and not a failed request: the model is
    * the one that has to be told, so the sentence goes in the content with
@@ -252,7 +287,7 @@ export const toolServers = (options: ToolsServerOptions): ToolsServers => {
   const info = { name: options.name ?? 'ahpd', version: options.version ?? '0' };
 
   return {
-    open: (tools, runClient, toolsChanged) => {
+    open: (tools, runClient, toolsChanged, mayRun) => {
       const origin = options.origin();
       if (origin === undefined) return undefined;
       const path = `${TOOLS_PREFIX}/${crypto.randomUUID()}`;
@@ -262,6 +297,7 @@ export const toolServers = (options: ToolsServerOptions): ToolsServers => {
         tools,
         runClient,
         toolsChanged: toolsChanged ?? 'list',
+        mayRun,
         streams: new Set(),
       });
       return {

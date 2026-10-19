@@ -192,7 +192,17 @@ which is a different complaint from an action nobody has served.
 The schema a client draws its controls from holds three kinds of key: the ones VS Code's client pushes, this host's own, and the daemon's.
 `packages/sdk/src/vscoderootconfig.ts` holds the first, one property per key as VS Code's agent host declares it at `7516b04bc94`, out of `common/agentHostSchema.ts`, `common/agentMerge.ts` and `common/automationConfig.ts`.
 Two entries resolve a constant from `src/vs/platform/chat/common/chatSettings.ts` and write the literal it holds, naming the file by URL.
-This host acts on `defaultShell`, on `workspaceTrust` through the connection that pushed it, on `globalAutoApproveEnabled`, and on three of its own: `changeWords`, which says where a commit message and a pull request's words come from, `clientQueueBytes` and `replayBytes`, which bound what the host holds for a client that is not reading ([A client that stops reading](#a-client-that-stops-reading)); nothing else it declares changes what it does.
+This host acts on `defaultShell`, on `workspaceTrust` through the connection that pushed it, on `globalAutoApproveEnabled`, on `eligibleForAutoApproval`, and on three of its own: `changeWords`, which says where a commit message and a pull request's words come from, `clientQueueBytes` and `replayBytes`, which bound what the host holds for a client that is not reading ([A client that stops reading](#a-client-that-stops-reading)); nothing else it declares changes what it does.
+`eligibleForAutoApproval` is VS Code's map of tool name to boolean, where `false` means the tool asks every time.
+It is the host's own key, kept for every connection rather than one, and setting it needs `config:change`.
+A key names one tool exactly, or every tool of a server through `<server>/*`.
+A tool this host offers is `ahp/<name>` in every backend.
+A backend's own tool keeps its own name, such as Claude's `Bash` or pi's `bash`.
+A matched call asks in every backend and every permission mode, `bypassPermissions` included.
+A `dontAsk` session refuses the call instead of asking.
+The question offers no "always" option, so an answer applies to that call alone.
+cofold may still hold an approval it remembered before the rule was set, and the host cannot revoke that memory.
+An ACP agent decides itself whether to ask about its own tools, so the rule reaches only the MCP tools this host serves it.
 The rest are declared so that a client can draw each one. A value pushed for one reads back as a setting, not as an unknown key.
 The description on such a key describes VS Code's agent host, not this one. `automationsEnabled` reads as a promise, and automations here run whatever it says.
 Three keys VS Code declared before 1.140 are not declared here, because 1.140 dropped them: `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration`.

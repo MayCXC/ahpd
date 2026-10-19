@@ -241,6 +241,8 @@ export const createRuns = (ctx: SessionContext): Runs => {
       displayNameOf: (name) => ctx.offered.find((one) => one.definition.name === name)?.definition.title ?? name,
       ownerOf: (name) => ctx.offered.find((one) => one.definition.name === name)?.owner,
       cancelled: () => false,
+      // No `asksEveryTime`: a replay rebuilds what was asked then, and the
+      // rules of now do not shape a past question.
     });
     ctx.activeMapping = mapping;
 

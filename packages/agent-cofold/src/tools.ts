@@ -22,6 +22,16 @@ import type { Bag, BoundTool } from '@ahpd/sdk';
  */
 type CofoldInput = Parameters<typeof createTool>[0]['input'];
 
+/**
+ * A call's tool as the operator's `eligibleForAutoApproval` rule names it.
+ *
+ * A tool the host offered is `ahp/<name>`, which is the name Claude and ACP
+ * give the same tool on the host's MCP server, so one rule reaches it in every
+ * backend. cofold's own tools keep their own names.
+ */
+export const ruleName = (offered: readonly BoundTool[], name: string): string =>
+  offered.some((one) => one.definition.name === name) ? `ahp/${name}` : name;
+
 /** The host offered this tool's schema, or an empty object for one that has none. */
 const inputOf = (bound: BoundTool): CofoldInput => {
   const schema = bound.definition.inputSchema;

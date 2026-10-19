@@ -1,3 +1,4 @@
+import type { HookCallback } from '@anthropic-ai/claude-agent-sdk';
 import type { StringOrMarkdown } from '@microsoft/agent-host-protocol';
 import type { Bag } from '@ahpd/sdk';
 import { bag, list, str } from './common.js';
@@ -57,6 +58,42 @@ const KEPT_IN: Record<string, string> = {
 };
 
 /**
+ * A call's tool as the operator's rule names it.
+ *
+ * The CLI names an MCP tool `mcp__<server>__<tool>`, which is the same name
+ * `stream.ts` reads a call's server back from. The rule is VS Code's, built
+ * from `<server>/<tool>`, so that is the name the host is asked about; a tool
+ * the CLI runs itself keeps its own name, which is what the rule names for it.
+ */
+const referenceName = (toolName: string): string => {
+  const named = /^mcp__(.+?)__(.+)$/.exec(toolName);
+  return named === null ? toolName : `${named[1]}/${named[2]}`;
+};
+
+/** What a person's answer to a held question settles, in the SDK's terms. */
+type Held = { behavior: 'allow'; updatedInput: Bag; updatedPermissions?: unknown[] } | { behavior: 'deny'; message: string };
+
+/** What the question both callers await needs to know about one call. */
+interface Question {
+  /** The tool's name, as the CLI calls it. */
+  toolName: string;
+  /** The input the call would run with, as the caller was handed it. */
+  raw: Bag;
+  /** The agent's own id for the call, which is also the question's. */
+  callId: string;
+  /** The subagent the call runs in, when it is one. */
+  agentId?: string;
+  /** The SDK's own abort for the call. */
+  signal?: AbortSignal;
+  /** What the SDK suggested be kept, which the question offers as "always". */
+  suggestions: unknown[];
+  /** The confirmation's title, when the SDK gave one. */
+  title?: string;
+  /** What the call is called on the card, when the SDK gave a name. */
+  displayName?: string;
+}
+
+/**
  * What a set of the SDK's permission suggestions does, in one line.
  *
  * The label of the "always" choice, so it says what is kept and where: the
@@ -113,6 +150,14 @@ export interface Asking {
   answeredInputs: Map<string, Bag>;
   /** The SDK’s own gate between a tool call and the host that runs it. */
   canUseTool: (toolName: string, raw: Bag, asked?: Bag) => Promise<unknown>;
+  /**
+   * The `PreToolUse` hook that asks for a tool the operator's rule names.
+   *
+   * `canUseTool` is only consulted by the modes that would ask anyway, and an
+   * allow list or auto mode skips it, so this is the one place a matched call
+   * reaches a person in every mode.
+   */
+  ruleFirst: HookCallback;
   /**
    * Drop the preview of one call, or of every call this session is holding.
    *
@@ -177,77 +222,39 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     return undefined;
   };
 
-  const canUseTool = async (toolName: string, raw: Bag, asked?: Bag): Promise<unknown> => {
-    /*
-     * Answered from the lists, before anybody is asked.
-     *
-     * The SDK was handed the same lists when the query was built, so in the
-     * ordinary case it never calls this at all. This is what makes a list set
-     * *during* a session take effect: the query cannot be told, and this can.
-     * Nothing is announced either way - a tool nobody was asked about is not
-     * a question that was answered, and drawing one would put a row on screen
-     * for a decision made before the turn began.
-     */
-    const already = settled(toolName);
-    if (already === 'allow') return { behavior: 'allow', updatedInput: raw };
-    if (already === 'deny') return { behavior: 'deny', message: `${toolName} is denied for this session` };
-    /*
-     * A host tool that says nobody is asked about it.
-     *
-     * Read after the lists, so a deny still refuses it: the flag is the host's
-     * claim about the tool, and a deny list is a person's answer about it.
-     * The CLI calls a contributed tool by the name of the server offering it,
-     * so both the bound tools and the call are read under that name. Nothing
-     * is announced for a call nobody was asked about, as with an allow list.
-     */
-    const offered = ctx.offering.find((one) => one.owner === undefined && `mcp__ahp__${one.definition.name}` === toolName);
-    if (offered?.confirm === false) return { behavior: 'allow', updatedInput: raw };
-    const about = bag(asked);
-    /*
-     * The SDK's own abort for this call, which is the one thing that says the
-     * question has stopped mattering: the turn was interrupted, or the CLI
-     * that asked is gone.
-     *
-     * A signal already aborted is answered before anything is held, because a
-     * question raised now is one nobody could ever answer - the entry would go
-     * on the chat and stay there until the turn ended.
-     */
-    const signal = about.signal as AbortSignal | undefined;
+  /*
+   * What the rule hook already answered, by the call it answered for.
+   *
+   * The hook runs before the CLI decides whether a call reaches `canUseTool`
+   * at all, so in most modes the entry is never read. It is kept for the modes
+   * that would have asked anyway: a hook's answer can still be followed by the
+   * CLI's own question, and the person must not be asked a second time.
+   * Bounded, because the modes the hook alone answers for would otherwise keep
+   * one entry per matched call for the session's whole life.
+   */
+  const ruledBy = new Map<string, 'allow' | 'deny'>();
+  const RULED_HELD = 256;
+  const remember = (callId: string, answer: 'allow' | 'deny'): void => {
+    ruledBy.set(callId, answer);
+    if (ruledBy.size > RULED_HELD) ruledBy.delete(ruledBy.keys().next().value!);
+  };
+
+  /**
+   * Put one call to a person, and settle on their answer.
+   *
+   * `canUseTool` awaits this as the CLI's own question; the rule hook awaits it
+   * for a tool the operator's rule names, in the modes where `canUseTool` is
+   * never reached. Both get the same entry, the same preview and the same
+   * answer, so the two roads to a person are one question rather than two that
+   * have to be kept alike.
+   *
+   * A call the SDK has already cancelled is answered before a question is put:
+   * the entry would go on the chat and stay there, and its caller is a call the
+   * SDK has abandoned.
+   */
+  const askPerson = async (asked: Question): Promise<Held> => {
+    const { toolName, raw, callId: id, agentId, signal, suggestions } = asked;
     if (signal?.aborted === true) return { behavior: 'deny', message: CANCELLED };
-    /*
-     * The agent's own id for this call.
-     *
-     * Not one of this host's making. The assistant message opens the call
-     * under this id, and a confirmation that invented its own put a second
-     * row beside it for the same command - and answered under a name the
-     * client had never been given, so approving did nothing.
-     *
-     * Read here rather than inside the question, because the question's
-     * preview is made before it is put and is held under this id.
-     */
-    const id = str(about.toolUseID) ?? `req-${Date.now()}`;
-    /*
-     * A shell command the owner's rules already allow.
-     *
-     * The host answers from the rules the window that started this session
-     * pushed, and only an approval reaches here: a command a rule denied and a
-     * line no rule could read both answer nothing, and the question is put as
-     * it always was. The line read is the one the model wrote, which
-     * `sourceFirst` kept under this call's id when it put the operator's
-     * environment in front of it; the input this callback was handed is the
-     * rewritten one. Read after the abort, because a cancelled call is not one
-     * to approve. Nothing is announced either, as with an allow list: the row
-     * the assistant message carries is already `not-needed`, and there is no
-     * question for a client to draw.
-     */
-    if (toolName === 'Bash') {
-      const written = ctx.unprefixed.get(id);
-      ctx.unprefixed.delete(id);
-      const command = written ?? str(raw.command);
-      if (command !== undefined && (await ctx.options.getAutoApproval?.('shell', command, 'bash')) === 'not-needed') {
-        return { behavior: 'allow', updatedInput: raw };
-      }
-    }
     /*
      * The edit the tool would make, drawn on the card before it is approved.
      *
@@ -266,7 +273,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     const shown = writing === undefined ? undefined : await ctx.options.onEditProposed?.(id, writing.path, writing.apply);
     const edits: Bag | undefined = shown === undefined ? undefined : { items: [shown] };
     if (edits !== undefined) previews.add(id);
-    return await new Promise((settle) => {
+    return await new Promise<Held>((settle) => {
       /*
        * Settled once, by whoever gets here first.
        *
@@ -276,7 +283,7 @@ export function createAsking(ctx: SessionContext): Asking {  /**
        * listener left behind would fire on a later abort and settle a question
        * that is no longer anybody's.
        */
-      const done = (result: unknown): void => {
+      const done = (result: Held): void => {
         signal?.removeEventListener('abort', cancelled);
         settle(result);
       };
@@ -301,20 +308,18 @@ export function createAsking(ctx: SessionContext): Asking {  /**
        *
        * A permission ask from inside a subagent belongs on that subagent's
        * chat, against the call it is for - not on the lead chat, where it
-       * would read as a question about the parent's own work. The SDK hands
-       * the subagent's id on `agentID`; a call whose frames already arrived is
+       * would read as a question about the parent's own work. The caller hands
+       * the subagent's id as `agentId`; a call whose frames already arrived is
        * joined by its own id, which is the fallback that also works for a
        * harness that says nothing about the subagent.
        */
-      const agentId = str(about.agentID);
-      const callId = str(about.toolUseID);
-      const scope = (callId !== undefined ? ctx.scopeOfCall(callId) : undefined)
+      const scope = ctx.scopeOfCall(id)
         ?? (agentId !== undefined ? ctx.byAgent.get(agentId) : undefined)
         ?? ctx.mainScope;
       if (agentId !== undefined && scope.chat !== undefined) ctx.byAgent.set(agentId, scope);
       const turn = ctx.openTurn(scope);
       /*
-       * A spawning call, recorded from the input this callback was handed.
+       * A spawning call, recorded from the input the caller was handed.
        *
        * `canUseTool` is given the whole input, and the SDK runs it as soon as
        * that input is complete - which for a call confirmed while it was still
@@ -322,8 +327,8 @@ export function createAsking(ctx: SessionContext): Asking {  /**
        * message then skips the call because it is no longer streaming. A
        * worker whose spawn is only recorded there would have no chat at all.
        */
-      if ((toolName === 'Task' || toolName === 'Agent') && callId !== undefined) {
-        ctx.recordSpawn(callId, bag(raw), scope, str(turn.id));
+      if (toolName === 'Task' || toolName === 'Agent') {
+        ctx.recordSpawn(id, bag(raw), scope, str(turn.id));
       }
       /** Where a question about this call is drawn: the worker's chat, or the lead. */
       const where = scope.chat?.uri ?? ctx.options.chatUri;
@@ -349,11 +354,11 @@ export function createAsking(ctx: SessionContext): Asking {  /**
        */
       ctx.holdCall(id);
       const input = toolInputOf(toolName, raw);
-      const displayName = str(about.displayName) ?? toolName;
+      const displayName = asked.displayName ?? toolName;
       // The card reads the row's line; the CLI's own sentence is its title.
       const invocationMessage = lineOf(toolName, raw);
       ctx.pastLines.set(id, pastLineOf(toolName, raw));
-      const confirmationTitle = str(about.title) ?? `Run ${displayName}?`;
+      const confirmationTitle = asked.title ?? `Run ${displayName}?`;
 
       // The call the assistant message opened, if it arrived first. Which of
       // the two comes first is the CLI's business; either order is one call.
@@ -372,7 +377,6 @@ export function createAsking(ctx: SessionContext): Asking {  /**
        * Allow once, the "always" the suggestions describe, and deny. With no
        * suggestion there is nothing to keep and the call is approve or deny.
        */
-      const suggestions = list(about.suggestions);
       const options: Bag[] | undefined = suggestions.length === 0 ? undefined : [
         { id: 'allow-once', label: 'Allow once', kind: 'approve', group: 1 },
         { id: 'allow-always', label: keptLabel(suggestions), kind: 'approve', group: 1 },
@@ -433,6 +437,192 @@ export function createAsking(ctx: SessionContext): Asking {  /**
       ctx.inputNeededSet(entry);
       ctx.touch();
     });
+  };
+
+  const canUseTool = async (toolName: string, raw: Bag, asked?: Bag): Promise<unknown> => {
+    const about = bag(asked);
+    /*
+     * The agent's own id for this call.
+     *
+     * Not one of this host's making. The assistant message opens the call
+     * under this id, and a confirmation that invented its own put a second
+     * row beside it for the same command - and answered under a name the
+     * client had never been given, so approving did nothing.
+     *
+     * Read here rather than inside the question, because the question's
+     * preview is made before it is put and is held under this id.
+     */
+    const id = str(about.toolUseID) ?? `req-${Date.now()}`;
+    /*
+     * The rule hook's answer, when it was already asked.
+     *
+     * The hook runs before the CLI gets here, and in the modes that would not
+     * have asked it is the only one that runs at all. In the modes that would,
+     * the person has answered this call once and the CLI must not put it
+     * again. Read before anything else: the answer is a person's, and the
+     * lists below are only other answers about the same tool.
+     */
+    const ruled = ruledBy.get(id);
+    if (ruled !== undefined) {
+      ruledBy.delete(id);
+      return ruled === 'allow' ? { behavior: 'allow', updatedInput: raw } : { behavior: 'deny', message: DECLINED };
+    }
+    /*
+     * The operator's rule, read for every call before anything else.
+     *
+     * A match means the call asks every time, so the lists, a host tool's own
+     * `confirm` and the terminal rules are all skipped: each is a way not to
+     * ask, and the rule is the operator saying to ask. Read without a
+     * connection, because the rule is the host's rather than a window's.
+     */
+    const matched = ctx.options.getAutoApproval?.('tool', referenceName(toolName)) === 'ask';
+    if (!matched) {
+      /*
+       * Answered from the lists, before anybody is asked.
+       *
+       * The SDK was handed the same lists when the query was built, so in the
+       * ordinary case it never calls this at all. This is what makes a list set
+       * *during* a session take effect: the query cannot be told, and this can.
+       * Nothing is announced either way - a tool nobody was asked about is not
+       * a question that was answered, and drawing one would put a row on screen
+       * for a decision made before the turn began.
+       */
+      const already = settled(toolName);
+      if (already === 'allow') return { behavior: 'allow', updatedInput: raw };
+      if (already === 'deny') return { behavior: 'deny', message: `${toolName} is denied for this session` };
+      /*
+       * A host tool that says nobody is asked about it.
+       *
+       * Read after the lists, so a deny still refuses it: the flag is the host's
+       * claim about the tool, and a deny list is a person's answer about it.
+       * The CLI calls a contributed tool by the name of the server offering it,
+       * so both the bound tools and the call are read under that name. Nothing
+       * is announced for a call nobody was asked about, as with an allow list.
+       */
+      const offered = ctx.offering.find((one) => one.owner === undefined && `mcp__ahp__${one.definition.name}` === toolName);
+      if (offered?.confirm === false) return { behavior: 'allow', updatedInput: raw };
+    }
+    /*
+     * The SDK's own abort for this call, which is the one thing that says the
+     * question has stopped mattering: the turn was interrupted, or the CLI
+     * that asked is gone.
+     *
+     * A signal already aborted is answered before anything is held, because a
+     * question raised now is one nobody could ever answer - the entry would go
+     * on the chat and stay there until the turn ended.
+     */
+    const signal = about.signal as AbortSignal | undefined;
+    if (signal?.aborted === true) return { behavior: 'deny', message: CANCELLED };
+    const agentId = str(about.agentID);
+    const title = str(about.title);
+    const displayName = str(about.displayName);
+    /*
+     * A matched call, put where a harness that asks anyway would reach it.
+     *
+     * The hook normally asks first and this callback is never called. When it
+     * is, the question is the same one - approve or deny - with no suggestion
+     * kept: the rule is that the call asks every time, and a suggestion is a
+     * way to stop asking.
+     */
+    if (matched) {
+      return await askPerson({
+        toolName,
+        raw,
+        callId: id,
+        suggestions: [],
+        ...(agentId !== undefined ? { agentId } : {}),
+        ...(signal !== undefined ? { signal } : {}),
+        ...(title !== undefined ? { title } : {}),
+        ...(displayName !== undefined ? { displayName } : {}),
+      });
+    }
+    /*
+     * A shell command the owner's rules already allow.
+     *
+     * The host answers from the rules the window that started this session
+     * pushed, and only an approval reaches here: a command a rule denied and a
+     * line no rule could read both answer nothing, and the question is put as
+     * it always was. The line read is the one the model wrote, which
+     * `sourceFirst` kept under this call's id when it put the operator's
+     * environment in front of it; the input this callback was handed is the
+     * rewritten one. Read after the abort, because a cancelled call is not one
+     * to approve. Nothing is announced either, as with an allow list: the row
+     * the assistant message carries is already `not-needed`, and there is no
+     * question for a client to draw.
+     */
+    if (toolName === 'Bash') {
+      const written = ctx.unprefixed.get(id);
+      ctx.unprefixed.delete(id);
+      const command = written ?? str(raw.command);
+      if (command !== undefined && (await ctx.options.getAutoApproval?.('shell', command, 'bash', toolName)) === 'not-needed') {
+        return { behavior: 'allow', updatedInput: raw };
+      }
+    }
+    return await askPerson({
+      toolName,
+      raw,
+      callId: id,
+      suggestions: list(about.suggestions),
+      ...(agentId !== undefined ? { agentId } : {}),
+      ...(signal !== undefined ? { signal } : {}),
+      ...(title !== undefined ? { title } : {}),
+      ...(displayName !== undefined ? { displayName } : {}),
+    });
+  };
+
+  /**
+   * The `PreToolUse` hook that asks for a tool the operator's rule names.
+   *
+   * The one road that reaches a person in every mode: `canUseTool` is not
+   * consulted in `bypassPermissions`, in auto mode or for a tool on the
+   * `allowedTools` list, and the CLI's own `ask` is the prompt those skip. So
+   * this answers `allow` or `deny` itself, with what the person said.
+   *
+   * `updatedInput` is never returned. Another hook on the same event may have
+   * rewritten the input - `sourceFirst` does for `Bash` - and a rewrite from
+   * here would be this hook's guess at what the call should run.
+   *
+   * `dontAsk` refuses without a question, because refusing is that mode's
+   * answer: the rule adds questions and takes none of the mode's answers away.
+   */
+  const ruleFirst: HookCallback = async (input, _toolUseID, options) => {
+    if (input.hook_event_name !== 'PreToolUse') return {};
+    const toolName = input.tool_name;
+    /*
+     * A question is not a tool call to confirm.
+     *
+     * `AskUserQuestion` asks its own question, and the answers it is handed are
+     * its input: a confirmation answered here would settle the question on the
+     * chat and then run the tool with nothing the person said.
+     */
+    if (toolName === 'AskUserQuestion') return {};
+    if (ctx.options.getAutoApproval?.('tool', referenceName(toolName)) !== 'ask') return {};
+    const callId = input.tool_use_id;
+    if (ctx.settings.permissionMode === 'dontAsk') {
+      remember(callId, 'deny');
+      return {
+        hookSpecificOutput: {
+          hookEventName: 'PreToolUse',
+          permissionDecision: 'deny',
+          permissionDecisionReason: `${toolName} would need approval and the mode is dontAsk`,
+        },
+      };
+    }
+    const answered = await askPerson({
+      toolName,
+      raw: bag(input.tool_input),
+      callId,
+      suggestions: [],
+      ...(options?.signal !== undefined ? { signal: options.signal } : {}),
+    });
+    remember(callId, answered.behavior);
+    return {
+      hookSpecificOutput: {
+        hookEventName: 'PreToolUse',
+        permissionDecision: answered.behavior,
+        permissionDecisionReason: answered.behavior === 'allow' ? 'Approved by a person' : answered.message,
+      },
+    };
   };
 
   /**
@@ -627,5 +817,5 @@ export function createAsking(ctx: SessionContext): Asking {  /**
     },
   };
 
-  return { pending, answeredInputs, canUseTool, settleEdits, methods };
+  return { pending, answeredInputs, canUseTool, ruleFirst, settleEdits, methods };
 }

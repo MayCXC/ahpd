@@ -419,10 +419,20 @@ export function createQuery(ctx: SessionContext): Query {
        */
       ...(ctx.chosen && ctx.chosen !== 'default' ? { model: ctx.chosen } : {}),
       // Before every shell command, the operator's environment and any client
-      // script in force; on every prompt, what the host asked said on that
-      // turn; and at the end of each turn, what the CLI still has in hand.
+      // script in force; before every call, the question for a tool the
+      // operator's rule names; on every prompt, what the host asked said on
+      // that turn; and at the end of each turn, what the CLI still has in hand.
       hooks: {
-        PreToolUse: [{ matcher: 'Bash', hooks: [ctx.sourceFirst] }],
+        PreToolUse: [
+          { matcher: 'Bash', hooks: [ctx.sourceFirst] },
+          /*
+           * No matcher, so every tool reaches it and the hook itself reads the
+           * rule. A day, because a person may take one: the CLI's default
+           * timeout is far shorter than an answer can be, and a hook that gave
+           * up would leave the question on the chat and the call refused.
+           */
+          { hooks: [ctx.ruleFirst], timeout: 24 * 60 * 60 },
+        ],
         UserPromptSubmit: [{ hooks: [giveHostInstructions] }],
         Stop: [{ hooks: [keepStopped] }],
       },

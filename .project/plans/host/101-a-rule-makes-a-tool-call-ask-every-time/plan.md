@@ -1,7 +1,7 @@
 ---
 title: A rule makes a tool call ask every time
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -80,6 +80,7 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 | The host keeps no answer; the rule is read on each call | [decision](../../../decisions/each-backend-offers-its-options-unless-a-rule-asks.md) | 01 |
 | The rule is a host root config key `eligibleForAutoApproval`, set under `config:change` | Softov, 2026-10-16, chose "a host root config key" for "Where the rule lives" | 01, 06 |
 | A rule matches VS Code's map, with `<server>/<tool>` and `<server>/*` keys | Softov, 2026-10-16, chose "VS Code's map" for "What a rule matches" | 01 |
+| A tool the host offers is `ahp/<name>` to the rule in every backend, the name Claude and ACP give it | (defaulted: the goal says one rule asks in every backend) | 04, 05 |
 | The rule wins over every mode, `bypassPermissions` included, and `dontAsk` refuses the call | Softov, 2026-10-16, chose "the rule wins over every mode" for "What the permission mode does" | 02-05 |
 | A new decision supersedes "each backend offers its own approval options" and holds the exception | Softov, 2026-10-16, chose "a decision that amends it" for "Whether a decision is needed"; [decision](../../../decisions/each-backend-offers-its-options-unless-a-rule-asks.md) | 01 |
 | One check on `Start`, shared with host/100, with this rule first | Softov, 2026-10-16, chose "one check on `Start`" for "How this plan relates to host/100" | 01 |
@@ -97,12 +98,12 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The rule is read in the approval check](task-01-the-rule-is-read-in-the-approval-check.md) | todo | host/100 p2 task 01 |
-| [02 - Claude asks for a matched tool](task-02-claude-asks-for-a-matched-tool.md) | todo | 01 |
-| [03 - ACP asks for a matched tool](task-03-acp-asks-for-a-matched-tool.md) | todo | 01 |
-| [04 - pi asks for a matched tool](task-04-pi-asks-for-a-matched-tool.md) | todo | 01 |
-| [05 - cofold asks for a matched tool](task-05-cofold-asks-for-a-matched-tool.md) | todo | 01 |
-| [06 - The docs name the rule](task-06-the-docs-name-the-rule.md) | todo | 02, 03, 04, 05 |
+| [01 - The rule is read in the approval check](task-01-the-rule-is-read-in-the-approval-check.md) | implemented | host/100 p2 task 01 |
+| [02 - Claude asks for a matched tool](task-02-claude-asks-for-a-matched-tool.md) | implemented | 01 |
+| [03 - ACP asks for a matched tool](task-03-acp-asks-for-a-matched-tool.md) | implemented | 01 |
+| [04 - pi asks for a matched tool](task-04-pi-asks-for-a-matched-tool.md) | implemented | 01 |
+| [05 - cofold asks for a matched tool](task-05-cofold-asks-for-a-matched-tool.md) | implemented | 01 |
+| [06 - The docs name the rule](task-06-the-docs-name-the-rule.md) | implemented | 02, 03, 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -114,15 +115,15 @@ operator sets the rule -> root config -> Start.<check> (host/100) -> backend ask
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from `ideas/a-rule-makes-a-tool-call-ask-every-time.md`. Softov answered the five questions 2026-10-16. The decision is written. Task 02 changed 2026-10-16: the hook answers `allow` or `deny`.
-- **Next action:** build host/100 p2 task 01, then [task-01-the-rule-is-read-in-the-approval-check.md](task-01-the-rule-is-read-in-the-approval-check.md).
+- **Done so far:** drafted 2026-10-16 from `ideas/a-rule-makes-a-tool-call-ask-every-time.md`. Softov answered the five questions 2026-10-16. The decision is written. Task 02 changed 2026-10-16: the hook answers `allow` or `deny`. Task 01 implemented 2026-10-19: the root key, its matcher and the `'ask'` answer in the check. Task 02 implemented 2026-10-19: the Claude hook that asks for a matched tool in every mode. Task 03 implemented 2026-10-19: the ACP question offers only the once options, and the host's MCP server asks before it runs a matched tool. Task 04 implemented 2026-10-19: pi reads the rule first in `decide`, in every mode. Task 05 implemented 2026-10-19: cofold offers no session choice for a matched tool, and a restart consults no rules. Task 06 implemented 2026-10-19: `docs/sdk/AHP.md` names the rule, its reach and its limits.
+- **Next action:** the final verification checklist, then a review.
 - **Open questions:** none.
 - **Watch out for:** in VS Code a terminal deny rule also means "ask". It is not this rule: it is a match on the command line and it still offers "always".
 
 ## Final verification checklist
 
-- [ ] A matched call asks in each backend, in every permission mode, and `dontAsk` refuses it.
-- [ ] No backend offers or remembers an "always" answer for a matched call.
-- [ ] An unmatched call behaves as before host/101.
-- [ ] `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
-- [ ] `plans/index.md` updated.
+- [x] A matched call asks in each backend, in every permission mode, and `dontAsk` refuses it.
+- [x] No backend offers or remembers an "always" answer for a matched call.
+- [x] An unmatched call behaves as before host/101.
+- [x] `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
+- [x] `plans/index.md` updated.

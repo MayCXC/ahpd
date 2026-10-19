@@ -42,7 +42,7 @@ const advertised = <T>(capability: T | null | undefined): boolean =>
  * it is: `ahp` is the name the in-process server carries, and a server that
  * already has one by that name is being told about the same tools twice.
  */
-const HOST_TOOLS = 'ahp';
+export const HOST_TOOLS = 'ahp';
 
 /**
  * The hosts that name this machine itself, wherever the address is read.
@@ -183,6 +183,10 @@ export function createOpening(ctx: SessionContext): Opening {
    * client's tools, and a client arriving mid-turn is the ordinary case rather
    * than a rare one. A deployment that would rather its agents re-listed than
    * be interrupted sets `list`.
+   *
+   * `mayRun` goes with it because the agent calls that server directly: a call
+   * never passes through this bridge, so the server is the one place a person
+   * can be asked before a tool of the host's runs.
    */
   let endpoint: ToolsEndpoint | undefined;
   let asked = false;
@@ -191,6 +195,7 @@ export function createOpening(ctx: SessionContext): Opening {
       endpoint = start.toolsServer?.({
         runClient: ctx.ranByClient,
         toolsChanged: options.toolsChanged ?? 'notify',
+        mayRun: ctx.askTool,
       });
       asked = true;
     }

@@ -2,6 +2,7 @@ import type { RunCommand } from '@cofold/agents';
 import { bag } from '@ahpd/sdk';
 import type { Bag, Session } from '@ahpd/sdk';
 import type { SessionContext } from './context.js';
+import { ruleName } from './tools.js';
 
 /** What a person is told the model was told when they turn a tool down. */
 const DECLINED = 'The person declined this action';
@@ -144,10 +145,11 @@ export const createPauses = (
    * Answer an approval the owner's rules already allow, and say whether it did.
    *
    * cofold raises `approval.requested` when its policy would put a call to a
-   * person, so this runs only where the run itself asked. A command line no
-   * rule matched, one a rule denied, one the input does not name and a host
-   * that says nothing all answer false, and the question is opened as it would
-   * have been.
+   * person, so this runs only where the run itself asked. A tool the operator's
+   * rule names is never answered here, whatever a terminal rule says of its
+   * command: it asks every time. A command line no rule matched, one a rule
+   * denied, one the input does not name and a host that says nothing all answer
+   * false, and the question is opened as it would have been.
    *
    * The approval goes back for this one command, without `alwaysApprove`:
    * cofold keeps that for a person's session-wide choice, and the host keeps no
@@ -156,7 +158,9 @@ export const createPauses = (
    * `not-needed`, as it does for a call nobody was asked about.
    */
   const autoApprove = async (requestId: string, name: string, input: unknown): Promise<boolean> => {
+    // Only a command line has a terminal rule that could answer it.
     if (name !== 'shell_exec') return false;
+    if (start.getAutoApproval?.('tool', name) === 'ask') return false;
     const command = bag(input).command;
     if (typeof command !== 'string') return false;
     if ((await start.getAutoApproval?.('shell', command, shellOf())) !== 'not-needed') return false;
@@ -177,12 +181,20 @@ export const createPauses = (
        * same id it arrived with, the decision is said back because nothing in a
        * client applies its own dispatch, and the answer goes into the run. An
        * approval that picked `allow-session` is sent with `alwaysApprove`, which
-       * cofold keeps for this session and tool.
+       * cofold keeps for this session and tool - unless the operator's rule
+       * names the tool, because a matched call asks every time.
        */
       confirm: (toolCallId, approved, optionId) => {
         const held = [...pending.values()].find((one) => one.kind === 'approval' && one.callId === toolCallId);
         if (held === undefined) return;
         const picked = held.options?.find((one) => one.id === optionId && one.kind === (approved ? 'approve' : 'deny'));
+        /*
+         * The tool's name as the entry was built with it. A question rebuilt by
+         * a replay may still carry the session choice, so the rule is read here
+         * rather than assumed from the options.
+         */
+        const called = bag(held.entry.toolCall).toolName;
+        const matched = typeof called === 'string' && start.getAutoApproval?.('tool', ruleName(ctx.offered, called)) === 'ask';
         /*
          * A decline ends the call without a result, so the file it announced as
          * changing is settled here, where the call id is still known: the run's
@@ -218,7 +230,7 @@ export const createPauses = (
           ...(picked === undefined ? {} : { selectedOptionId: picked.id }),
         });
         route(approved
-          ? { type: 'approve', requestId: held.requestId, ...(picked?.id === 'allow-session' ? { alwaysApprove: true } : {}) }
+          ? { type: 'approve', requestId: held.requestId, ...(picked?.id === 'allow-session' && !matched ? { alwaysApprove: true } : {}) }
           : { type: 'deny', requestId: held.requestId, reason: DECLINED });
         ctx.touch();
       },

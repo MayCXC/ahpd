@@ -10,7 +10,7 @@ import type { ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { Account, Offered } from './probe.js';
 import type { ResourceStore } from './resources.js';
 import type { StartTerminals } from './terminals.js';
-import type { RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
+import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { ComputerPort } from './computers.js';
 import type { MachineNeed } from './machine.js';
 import type { ShellEnv } from '../shellenv.js';
@@ -144,7 +144,18 @@ export interface SessionAt {
 }
 
 /** The kinds of tool call the host's approval check answers for. */
-export type AutoApprovalKind = 'shell';
+export type AutoApprovalKind = 'shell' | 'tool';
+
+/**
+ * What the host's approval check says about one tool call.
+ *
+ * `not-needed` is host/100's: the rules the owner's window pushed approved the
+ * call, so it runs without asking. `ask` is this plan's: the operator's
+ * `eligibleForAutoApproval` rule names the tool, so the call asks every time
+ * and the question offers no "always" option. `undefined` says the check has
+ * no answer, which leaves the backend to ask as it would have.
+ */
+export type AutoApproval = ToolCallConfirmationReason | 'ask';
 
 /** How the host asks a backend to start a session. */
 export interface Start {
@@ -200,16 +211,31 @@ export interface Start {
    * is, the same one `trusted` reads: what a window allows is that window's,
    * and a turn somebody else sends into the session is not theirs to allow. A
    * start no connection asked for - an automation, a host tool, a daemon coming
-   * back up - has no rules at all, which is a call that asks.
+   * back up - has no terminal rules at all, which is a command that asks.
    *
-   * `not-needed` is the whole of an approval. A call a rule denied and a
-   * command line no rule could read are both `undefined`, which leaves the
-   * backend to ask as it would have without this field. `shell` is a command
-   * line, matched against the rules and edit patterns the owner's window
-   * pushed. Absent is a host that says nothing, and a backend must read that as
-   * a call that asks.
+   * The operator's rule is read first and without a connection, because it is
+   * the host's own setting rather than a window's: `eligibleForAutoApproval`
+   * names tools whose calls ask every time. A matched call is `ask`, whatever
+   * permission mode or terminal rule would otherwise let it run, and the
+   * question it is answered with must offer no "always" option. A rule matches
+   * a tool named exactly, and every tool of a server through `<server>/*`.
+   *
+   * `shell` is a command line, and `shell` the shell that runs it. `tool` is
+   * the backend's name for the tool that runs the line, where the backend has
+   * one to give: it is matched against the operator's rule before the terminal
+   * rules the owner's window pushed, so a rule that names the shell wins over
+   * a terminal rule that approves the line.
+   *
+   * `tool` is a call that is not a command line, and `line` is its tool's name:
+   * matched against the same rule, `ask` when it names the tool and nothing
+   * otherwise.
+   *
+   * `not-needed` is the whole of an approval. A command line no rule could read
+   * is `undefined`, which leaves the backend to ask as it would have without
+   * this field. Absent is a host that says nothing, and a backend must read
+   * that as a call that asks.
    */
-  getAutoApproval?: (kind: AutoApprovalKind, line: string, shell: CommandShell) => ToolCallConfirmationReason | undefined;
+  getAutoApproval?: (kind: AutoApprovalKind, line: string, shell?: CommandShell, tool?: string) => AutoApproval | undefined;
   /**
    * Whether this session loads the settings of the person who runs the daemon.
    *
@@ -324,9 +350,15 @@ export interface Start {
    * process: a `tools/call` for a tool with an `owner` goes there instead of
    * being refused. `toolsChanged` is what it wants done when the session's tools
    * move - `notify` for a `list_changed` on an open stream, `list` to leave it
-   * to the next `tools/list` - and leaving it out is `list`.
+   * to the next `tools/list` - and leaving it out is `list`. `mayRun` is asked
+   * before a call is run, which is how a backend that is not in the path of a
+   * call still puts a question to a person.
    */
-  toolsServer?(options?: { runClient?: RunClientTool; toolsChanged?: ToolsChanged }): ToolsEndpoint | undefined;
+  toolsServer?(options?: {
+    runClient?: RunClientTool;
+    toolsChanged?: ToolsChanged;
+    mayRun?: MayRunTool;
+  }): ToolsEndpoint | undefined;
   /**
    * How long this host lets one of a session's client calls wait.
    *

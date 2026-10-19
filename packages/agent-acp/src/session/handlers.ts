@@ -9,6 +9,7 @@ import type {
   CreateTerminalResponse,
   KillTerminalRequest,
   KillTerminalResponse,
+  PermissionOption,
   PermissionOptionKind,
   ReadTextFileRequest,
   ReadTextFileResponse,
@@ -24,16 +25,25 @@ import type {
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
 import { str } from '@ahpd/sdk';
-import type { Bag, OpenedTerminal, Session } from '@ahpd/sdk';
+import type { Bag, BoundTool, OpenedTerminal, Session } from '@ahpd/sdk';
 import { confirmationOptions, contentOf, mapUpdate, questionsFor, typedOf } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
 import { bag } from './common.js';
+import { HOST_TOOLS } from './opening.js';
 import type { SessionContext } from './context.js';
 
 /** Everything the server sends this session: its updates, its requests and the answers to them. */
 export interface Handlers {
   receivedUpdate(sessionId: string, update: SessionUpdate): void;
   askPermission(request: RequestPermissionRequest): Promise<PermissionAnswer>;
+  /**
+   * Whether a tool the host serves may run, asked before the tools server runs
+   * it.
+   *
+   * The agent calls that server directly, so this is the one place a question
+   * about such a call can be put before the tool has already done its work.
+   */
+  askTool(tool: BoundTool, input: Record<string, unknown>): Promise<boolean>;
   askElicitation(request: CreateElicitationRequest, signal?: AbortSignal): Promise<CreateElicitationResponse>;
   heardElicitationComplete(notification: CompleteElicitationNotification): void;
   answerElicitation(requestId: string, accepted: boolean, answers: Bag, response?: 'accept' | 'decline' | 'cancel'): boolean;
@@ -48,6 +58,28 @@ export interface Handlers {
   settlePermissions(): void;
   confirm: Session['confirm'];
 }
+
+/**
+ * The name the operator's rule matches a tool call by.
+ *
+ * A tool of an MCP server is `mcp__<server>__<tool>` on the wire, and a rule
+ * names it `<server>/<tool>`, as VS Code does. Everything else is its own name.
+ */
+const referenceName = (toolName: string): string => {
+  const named = /^mcp__(.+?)__(.+)$/.exec(toolName);
+  return named === null ? toolName : `${named[1]}/${named[2]}`;
+};
+
+/**
+ * A permission request's options less the ones that would keep an answer.
+ *
+ * A rule that makes a tool ask every time leaves a person nothing to keep, so
+ * the "always" choices a server offered are left out of what the card draws. A
+ * server offering no once option of a kind then leaves that answer `cancelled`,
+ * which is the rule's own answer rather than an "always" the person never gave.
+ */
+const onlyOnce = (options: readonly PermissionOption[]): PermissionOption[] =>
+  options.filter((one) => one.kind === 'allow_once' || one.kind === 'reject_once');
 
 export function createHandlers(ctx: SessionContext): Handlers {
   const { emit, provider, start, where, doing, touch, seeds, replay, permissions, terminals, elicitations } = ctx;
@@ -296,12 +328,27 @@ export function createHandlers(ctx: SessionContext): Handlers {
    * policy from a single answer - and a server with no once option of that
    * kind is answered `cancelled`, because selecting an `always` is a decision
    * the person did not make.
+   *
+   * A tool the operator's rule names is the exception: its question offers the
+   * once options alone, so the card has nothing on it that would keep an
+   * answer.
    */
   const askPermission = async (request: RequestPermissionRequest): Promise<PermissionAnswer> => {
     const option = (kind: PermissionOptionKind): string | undefined =>
       request.options.find((one) => one.kind === kind)?.optionId;
     const allow = option('allow_once');
     const reject = option('reject_once');
+    /*
+     * The rule, read before the server's own options.
+     *
+     * A tool the rule names is one a person answers on every call, so the
+     * "always" choices the server offered are not put to them and a remembered
+     * one never applies. Read without an await, because the question has to be
+     * on the session before an update that arrives behind this request can
+     * ready the call itself.
+     */
+    const called = request.toolCall.name ?? request.toolCall.title ?? request.toolCall.toolCallId;
+    const matched = start.getAutoApproval?.('tool', referenceName(called)) === 'ask';
     /*
      * A shell command the owner's rules already allow.
      *
@@ -313,14 +360,17 @@ export function createHandlers(ctx: SessionContext): Handlers {
      * it always was. The server's `allow_once` is selected rather than an
      * "always", which would change this session's policy from one command;
      * a server offering no `allow_once` is not answered by the check at all.
+     *
+     * A call the rule names is not the shell check's: the rule wins over every
+     * terminal allow, so its question is put anyway.
      */
-    if (request.toolCall.kind === 'execute') {
+    if (!matched && request.toolCall.kind === 'execute') {
       const command = str(bag(request.toolCall.rawInput).command);
       if (command !== undefined && (await start.getAutoApproval?.('shell', command, 'bash')) === 'not-needed') {
         if (allow !== undefined) return { optionId: allow };
       }
     }
-    const offered = confirmationOptions(request.options);
+    const offered = confirmationOptions(matched ? onlyOnce(request.options) : request.options);
     const toolCallId = request.toolCall.toolCallId;
     const requestId = `${toolCallId}:permission`;
 
@@ -418,6 +468,41 @@ export function createHandlers(ctx: SessionContext): Handlers {
     doing('Waiting on you');
     touch();
     return answered;
+  };
+
+  /** How many questions this bridge has raised about a tool it serves. */
+  let questioned = 0;
+
+  /**
+   * Whether a tool the host serves may run, asked by the tools server first.
+   *
+   * The agent calls the host's tools over the MCP server this session handed
+   * it, so the call never passes through this bridge and the server has to be
+   * the one that asks. A tool the rule does not name answers at once, which is
+   * every call in a session with no rule. A tool it names is put to a person
+   * with one approval and one refusal and nothing to keep, named as the agent
+   * spells that server's tools, and the person's answer is the server's.
+   */
+  const askTool = async (tool: BoundTool, input: Record<string, unknown>): Promise<boolean> => {
+    const name = tool.definition.name;
+    if (start.getAutoApproval?.('tool', `${HOST_TOOLS}/${name}`) !== 'ask') return true;
+    questioned += 1;
+    const answered = await askPermission({
+      sessionId: ctx.acpSessionId ?? '',
+      toolCall: {
+        toolCallId: `mcp-question-${questioned}`,
+        title: tool.definition.title ?? name,
+        name: `mcp__${HOST_TOOLS}__${name}`,
+        kind: 'other',
+        status: 'pending',
+        rawInput: input,
+      },
+      options: [
+        { optionId: 'approve', name: 'Approve', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+    return answered !== 'cancelled' && answered.optionId === 'approve';
   };
 
   /** How many forms this session has asked for, for the ones with no name of their own. */
@@ -682,6 +767,7 @@ export function createHandlers(ctx: SessionContext): Handlers {
   return {
     receivedUpdate,
     askPermission,
+    askTool,
     readTextFile,
     writeTextFile,
     openTerminal,
