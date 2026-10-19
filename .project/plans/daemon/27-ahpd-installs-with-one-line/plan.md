@@ -1,12 +1,12 @@
 ---
 title: ahpd installs with one line
 domain: daemon
-status: draft
+status: planned
 priority: medium
 created: 2026-10-15
 revalidated: 2026-10-15
 refs:
-  - "[code://packages/server/package.json#L38-L40](../../../../packages/server/package.json#L38-L40) - `engines.node` is `>=22`, the floor that the script checks"
+  - "[code://packages/server/package.json#L38-L40](../../../../packages/server/package.json#L38-L40) - `engines.node` is `>=22.1`, the floor that the script checks"
   - "[code://packages/server/src/pty.ts](../../../../packages/server/src/pty.ts) - node-pty is optional, so a failed native build is a warning"
   - "[code://packages/server/src/commands/configure.ts](../../../../packages/server/src/commands/configure.ts) - `ahpd configure`, the onboarding step"
   - "[code://docs/server/INSTALL.md](../../../../docs/server/INSTALL.md) - the install page that gets the one line"
@@ -59,6 +59,10 @@ curl | bash -> install.sh -> node >= 22 -> npm prefix -> npm install -g @ahpd/se
 | `--uninstall` runs `ahpd stop` first | Softov, 2026-10-16, chose the recommended answer for "What does `--uninstall` do when a daemon runs?" | 04 |
 | `--uninstall` leaves the npm prefix `~/.npm-global` | Softov, 2026-10-16, chose the recommended answer for "Does `--uninstall` undo the npm prefix `~/.npm-global` that the script set?" | 04 |
 | `--uninstall` runs `ahpd service uninstall` first, before `ahpd stop` and the npm step, when a service exists | Softov, 2026-10-16, chose the recommended answer for "Does `--uninstall` remove the service of daemon/31 when one is installed?" | 04 |
+| The package that the script installs is a flag, `--package` (`-Package`, `AHPD_PACKAGE`), with `@ahpd/server` from npm as the default; the CI job uses the default | Softov, 2026-10-19, to "What does the CI install job install?" - "can it be a flag? default to npm?" | 01, 02 |
+| The script tests live in `scripts/install/test/` | Softov, 2026-10-19, chose the recommended answer for "Where do the install script tests live?" | 01, 02 |
+| `install.ps1` asks, then runs `winget install OpenJS.NodeJS.LTS`, when Node is missing | Softov, 2026-10-19, chose the recommended answer for "On Windows, how does install.ps1 get Node when it is missing?" | 02 |
+| The ahpio-site build reads the scripts from the newest `v*` tag of `softov/ahpd`, so the site serves only released scripts | Softov, 2026-10-19, to "Where does the ahpio-site build read the install scripts from?" - "The newest v* tag" | 03 |
 
 ## Proposed architecture
 
@@ -75,18 +79,18 @@ curl | bash -> install.sh -> node >= 22 -> npm prefix -> npm install -g @ahpd/se
   8. On a TTY and without `--no-onboard`, run `ahpd configure` with stdin from `/dev/tty`.
 - **Bun** - `--runtime bun` finds `bun` and installs with `bun add -g @ahpd/server`. node-pty under Bun needs its own install step.
 - **Uninstall** - `--uninstall` stops the daemon, removes the service, the package and the PATH line, and keeps `~/.config/ahpd` unless `--purge` is given. INSTALL.md names the one line and the steps by hand.
-- **Flags** - `--version <v>`, `--runtime node|bun`, `--no-onboard`, `--dry-run`, `--verbose`, `--help`. PowerShell: `-Version`, `-Runtime`, `-NoOnboard`, `-DryRun`.
+- **Flags** - `--version <v>`, `--package <spec>`, `--runtime node|bun`, `--no-onboard`, `--dry-run`, `--verbose`, `--help`. PowerShell: `-Version`, `-Package`, `-Runtime`, `-NoOnboard`, `-DryRun`.
 - **Tests** - `AHPD_INSTALL_NO_RUN=1` lets a test source the script. CI runs it in a clean container with no Node, with Node 20, and with Node 22.
 - **Source-of-truth files** - `scripts/install/install.sh`, `scripts/install/install.ps1`.
 
 ## Tasks
 
-Tasks are written when the plan moves to `planned`. The proposal is:
-
-1. `install.sh`, with its test in CI.
-2. `install.ps1`, with its test on the Windows runner.
-3. The ahpio-site build copies the scripts, and INSTALL.md and GET-STARTED.md lead with the one line.
-4. [The install script uninstalls](task-04-the-install-script-uninstalls.md), with `--uninstall` and `--purge`.
+| Task | Status | Depends on |
+| --- | --- | --- |
+| [01 - install.sh installs ahpd](task-01-install-sh-installs-ahpd.md) | todo | - |
+| [02 - install.ps1 installs ahpd](task-02-install-ps1-installs-ahpd.md) | todo | 01 |
+| [03 - The site serves the scripts, and the docs lead with them](task-03-the-site-serves-the-scripts-and-the-docs-lead-with-them.md) | todo | 01, 02 |
+| [04 - The install script uninstalls](task-04-the-install-script-uninstalls.md) | todo | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -96,8 +100,8 @@ Tasks are written when the plan moves to `planned`. The proposal is:
 
 ## Resume state
 
-- **Done so far:** the proposal and the research, 2026-10-15. Task 04 and its answers, 2026-10-16.
-- **Next action:** write tasks 01 to 03 and move the plan to `planned`.
+- **Done so far:** the proposal and the research, 2026-10-15. Task 04 and its answers, 2026-10-16. Tasks 01 to 03 written 2026-10-19.
+- **Next action:** Softov's answers to the open questions, then [task 01](task-01-install-sh-installs-ahpd.md).
 - **Open questions:** none.
 - **Watch out for:** `irm | iex` cannot pass parameters, so each flag needs an environment twin. Under `iex`, `exit` closes the person's window; use `throw`.
 

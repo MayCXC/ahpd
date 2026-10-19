@@ -42,8 +42,8 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [24 - A first Windows run starts and stops cleanly](daemon/24-a-first-windows-run-starts-and-stops-cleanly/plan.md) | high | built 2026-10-13 ([implemented.md](daemon/24-a-first-windows-run-starts-and-stops-cleanly/implemented.md)); passed on Windows 2026-10-13 | - | - |
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | active 2026-10-14; task 01 implemented; checked on Windows 2026-10-14; the review remains | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
-| [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | draft 2026-10-15; task 04 planned 2026-10-16, tasks 01-03 still to write | - | - |
-| [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | draft 2026-10-15 | - | 29 |
+| [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | planned 2026-10-19; tasks 01 to 04 todo | - | - |
+| [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | planned 2026-10-19; tasks 01 to 03 todo | 27 | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
 | [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | active; task 01 implemented and reviewed; passed on Windows 2026-10-16 | - | - |
 | [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | active 2026-10-16; tasks 01 to 05 implemented | - | daemon 27 task 04 |
@@ -231,7 +231,7 @@ Reference: [00-host.md](host/00-host.md)
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
-| [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
+| [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | planned 2026-10-19; tasks 01 to 06 todo | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | active 2026-10-19; task 01 implemented | - | - |
 
@@ -372,7 +372,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p10 - A bot changes bots with a tool](plugin/52-p10-a-bot-changes-bots-with-a-tool/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p8 | - |
 | [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p9 | 52 p4 |
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
-| [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 todo | 52 p1 | - |
+| [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
 
 Next free number in `plugin`: `52`.
 

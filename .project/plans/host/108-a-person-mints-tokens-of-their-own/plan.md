@@ -1,20 +1,23 @@
 ---
 title: A person mints tokens of their own
 domain: host
-status: draft
+status: planned
 priority: medium
 created: 2026-10-18
-revalidated: 2026-10-18
+revalidated: 2026-10-19
 requires: []
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/users.ts#L890-L900](../../../../packages/sdk/src/users.ts#L890-L900) - `verify`, which compares a token with the one hash on each record"
-  - "[code://packages/sdk/src/users.ts#L1142-L1151](../../../../packages/sdk/src/users.ts#L1142-L1151) - `mint`, which replaces a person's one hash"
-  - "[code://packages/sdk/src/users.ts#L853](../../../../packages/sdk/src/users.ts#L853) - `can`, where a principal's grants are read"
-  - "[code://packages/sdk/src/types/users.ts#L124-L133](../../../../packages/sdk/src/types/users.ts#L124-L133) - `UserRecord.token`, one hash per person"
-  - "[code://packages/server/src/commands/user.ts#L218-L240](../../../../packages/server/src/commands/user.ts#L218-L240) - `user token`, which needs `user:write` and is bounded by the caller's grants"
-  - "[code://packages/server/src/proxy/listener.ts#L371-L385](../../../../packages/server/src/proxy/listener.ts#L371-L385) - `policyFor`, the proxy's check of a caller"
+  - "[code://packages/sdk/src/users.ts#L948-L957](../../../../packages/sdk/src/users.ts#L948-L957) - `verify`, which compares a token with the one hash on each record"
+  - "[code://packages/sdk/src/users.ts#L1275-L1284](../../../../packages/sdk/src/users.ts#L1275-L1284) - `mint`, which replaces a person's one hash"
+  - "[code://packages/sdk/src/users.ts#L910-L916](../../../../packages/sdk/src/users.ts#L910-L916) - `standing` and `can`, where a principal's grants are read on each call"
+  - "[code://packages/sdk/src/types/users.ts#L152-L156](../../../../packages/sdk/src/types/users.ts#L152-L156) - `UserRecord.token`, one hash per person"
+  - "[code://packages/server/src/commands/user.ts#L218-L247](../../../../packages/server/src/commands/user.ts#L218-L247) - `user token`, which needs `user:write` and is bounded by the caller's grants"
+  - "[code://packages/server/src/commands/user.ts#L303-L334](../../../../packages/server/src/commands/user.ts#L303-L334) - `user primary`, free for one's own record and `user:write` for another's"
+  - "[code://packages/sdk/src/usage.ts#L982-L1020](../../../../packages/sdk/src/usage.ts#L982-L1020) - `usageMethods`, AHP methods that let a reader in for their own records"
+  - "[code://packages/server/src/proxy/caller.ts#L99-L106](../../../../packages/server/src/proxy/caller.ts#L99-L106) - the proxy's check of a caller, which asks `standing` and `can`"
+  - "[code://packages/server/src/proxy/listener.ts#L418](../../../../packages/server/src/proxy/listener.ts#L418) - `policyFor`, which charges a call to the principal's id"
 ---
 
 ## Goal
@@ -31,7 +34,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Runtime path
 
 ```
-person signs in -> token mint (grants, label) -> secret shown once -> hash on the record -> a call with the secret -> verify finds the token -> principal with the token's grants only
+person signs in -> token mint (grants, label) -> secret shown once -> hash in the tokens file -> a call with the secret -> verify finds the token -> principal with the grants that the token and the person both hold
 ```
 
 ### Gaps
@@ -45,19 +48,61 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash on th
 
 | What | Source | Task |
 | --- | --- | --- |
-| A person mints tokens over their connection, more than one each | Softov, 2026-10-18, "the user be able to generate as many as wanted (or like limited to host key...)" | - |
-| A token holds all of the person's grants or a subset of them | Softov, 2026-10-18, "All access or a refined set of access?" | - |
-| A token can be limited to proxy calls and used on another computer | Softov, 2026-10-18, "a user could generate a token that only make proxy calls. and use on its computer" | - |
-| A token never holds a grant its person does not hold | (defaulted: the same rule as a bot in plugin 52 p10, "the bot can't do more than its owner") | - |
+| A person mints tokens over their connection, more than one each | Softov, 2026-10-18, "the user be able to generate as many as wanted (or like limited to host key...)" | 04, 05 |
+| A token holds all of the person's grants or a subset of them | Softov, 2026-10-18, "All access or a refined set of access?" | 01 |
+| A token can be limited to proxy calls and used on another computer | Softov, 2026-10-18, "a user could generate a token that only make proxy calls. and use on its computer" | 02 |
+| A token never holds a grant its person does not hold | (defaulted: the same rule as a bot in plugin 52 p10, "the bot can't do more than its owner") | 01, 02 |
+| The host key `tokensPerPerson`, default 10, and a mint past it is refused | Softov, 2026-10-19, "How many tokens may one person hold?": "Host key, default 10" | 01, 03 |
+| An optional expiry at mint, and no expiry by default | Softov, 2026-10-19, "Does a token expire?": "Optional expiry at mint" | 01, 02 |
+| An operator lists and revokes a person's tokens with `user:write`, bounded as `user token` is, and sees labels and grants, never a secret | Softov, 2026-10-19, "Can an operator list and revoke a person's tokens?": "Yes, with user:write" | 04, 05 |
+| Each check reads the grants that the person and the token both hold now | Softov, 2026-10-19, "When a person loses a grant, does a token that holds it lose it too?": "Yes, checked each call" | 02 |
+| The one token on a user record stays as the person's full token, and the users file does not change | Softov, 2026-10-19, "The one token a user record holds today: does it stay, as the person's full token?": "Stays as the full token" | 01 |
+| A token without `grants` holds every grant of its person, read at each check | (defaulted: "all access" from the 2026-10-18 answer, kept live rather than copied) | 01, 02 |
+| A token signs in with its person's id, so usage and policies charge the person | (defaulted: a token is the person on another computer) | 02 |
+| The three calls on `Users` are optional, as `watch` is | (defaulted: a directory that is not a file may keep no tokens) | 01 |
+| `ahpd user rm` removes the person's tokens too | (defaulted: a person added again with the same id gets no old token back) | 01 |
+| Commands `ahpd token mint`, `list` and `rm`, and the AHP methods `x-ahpd/tokens/mint`, `list` and `revoke` | (defaulted: the HTTP API and the AHP connection, as `vault` and `usage` serve both) | 04, 05 |
+| The tokens file is `<users file without .json>.tokens.json` in the folder of the users file, with no configuration key | Softov, 2026-10-19, "host/108: where does the host keep the tokens a person mints?": "Beside the users file (Recommended)" | 01 |
+| A minted token cannot mint, list or revoke tokens; only the person's full sign-in can | Softov, 2026-10-19, "host/108: may a minted token mint, list or revoke tokens?": "No, full sign-in only (Recommended)" | 04, 05 |
+
+## Proposed architecture
+
+- **Data flow** - a mint writes a `TokenRecord` with the hash to the tokens file. `verify` reads the users file and the tokens file, and compares the hash with each entry in one pass.
+- **State flow** - each call reads the tokens file, as it reads the users file. A revoke or an expiry is in force on the next call.
+- **Layer responsibilities** - sdk: the tokens file, the limit, `verify` and the narrowed principal, and the AHP methods · server: the key, the commands and the wiring.
+- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts)
+
+## Tasks
+
+| Task | Status | Depends on |
+| --- | --- | --- |
+| [01 - the directory keeps tokens](task-01-the-directory-keeps-tokens.md) | todo | - |
+| [02 - a token signs in narrowed](task-02-a-token-signs-in-narrowed.md) | todo | 01 |
+| [03 - the tokens per person key](task-03-the-tokens-per-person-key.md) | todo | 01 |
+| [04 - the token commands](task-04-the-token-commands.md) | todo | 02, 03 |
+| [05 - the token methods over AHP](task-05-the-token-methods-over-ahp.md) | todo | 02 |
+| [06 - the docs name tokens](task-06-the-docs-name-tokens.md) | todo | 04, 05 |
+
+## Risks and tradeoffs
+
+- `verify` reads a second file on each call - the file is small, and the users file is already read the same way.
+- A token without `grants` follows its person, so a new role widens it - that is "all access", and a narrow token names its grants.
+- A stolen token works until a revoke or its expiry - the person sees it in `token list` and revokes it.
 
 ## Resume state
 
-- **Done so far:** draft written 2026-10-18. No tasks yet.
-- **Next action:** ask the open questions, then write the tasks.
-- **Open questions:**
-  1. The limit on tokens per person - proposed: a host key, `tokensPerPerson`, default 10.
-  2. Does a token end - proposed: an optional expiry at mint, and no expiry by default.
-  3. Can the operator list and revoke a person's tokens - proposed: yes, with `user:write`, bounded as `user token` is.
-  4. Does a token keep a grant its person loses - proposed: no, each check reads the grants both of them hold.
-  5. Does the existing one token per record stay - proposed: yes, as the person's full token, so no users file changes.
-- **Watch out for:** a token's secret is shown once and kept only as its hash, like `mint` today. `verify` compares every hash, so the time it takes does not tell which one matched.
+- **Done so far:** draft written 2026-10-18. Questions answered and tasks written 2026-10-19.
+- **Next action:** [task-01-the-directory-keeps-tokens.md](task-01-the-directory-keeps-tokens.md).
+- **Open questions:** none.
+- **Watch out for:**
+  - A token's secret is shown once, and only its hash is kept, as `mint` does today.
+  - `verify` compares every hash in one pass and keeps the match, so the time it takes does not tell which hash matched.
+  - A token never holds a grant its person lacks: a mint refuses one, and `can` asks the person and the token on each call.
+  - A revoked or expired token fails on the next call: `standing` and `can` read the tokens file each time.
+  - `ahpd user rm` removes the person's tokens, or a person added again with the same id gets the old tokens back.
+
+## Final verification checklist
+
+- [ ] Every task is `done` or `dropped`.
+- [ ] A `proxy:write` token reaches the proxy from another computer, and is refused at the HTTP API.
+- [ ] `plans/index.md` updated.

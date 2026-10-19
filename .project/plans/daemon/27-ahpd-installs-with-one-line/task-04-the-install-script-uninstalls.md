@@ -1,7 +1,7 @@
 ---
 title: The install script uninstalls
 status: todo
-depends: []
+depends: [task-01-install-sh-installs-ahpd.md, task-02-install-ps1-installs-ahpd.md]
 layer: scripts
 refs:
   - "[idea: the install script uninstalls](https://github.com/softov/ahpd/blob/5e5f35ce034f24747bd952d4dfdadf2763740cbb/.project/ideas/the-install-script-uninstalls.md) - `--uninstall` and `--purge`"
