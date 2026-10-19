@@ -79,6 +79,14 @@ const enums = (values: readonly string[]): Record<string, unknown> => ({ enum: [
 const choice = (title: string, description: string, values: readonly string[]): Record<string, unknown> =>
   ({ type: 'string', title, description, ...enums(values) });
 
+/**
+ * A field a body may also send as `null`, which `checkPolicy` reads as absent:
+ * a put removes the field that way, so the schema a form validates with takes
+ * it as well as the value a row keeps.
+ */
+const nullable = (field: Record<string, unknown>): Record<string, unknown> =>
+  ({ ...field, type: [field.type, 'null'] });
+
 /** Every measure there is, in the order the kinds name them. */
 const ALL_MEASURES = [...new Set(KINDS.flatMap((kind) => MEASURES[kind]))];
 
@@ -114,16 +122,16 @@ const manifest: Record<string, unknown> = {
       description: 'What it applies to. Values of one type are alternatives and values of different types must all hold. A type left out allows any value of it.',
       type: 'object',
       properties: {
-        model: lines('Models', '`<maker>/<name>`, where `*` stands for any run of characters within the value.'),
-        proxy: lines('Proxies', 'Which provider the model may be called through. `model` rows only.'),
-        agent: lines('Agents', 'The harness, as `claude`, `pi`, `cofold` or `acp:<server>`.'),
-        computer: lines('Computers', 'The machine, as the `computers` port names it.'),
+        model: nullable(lines('Models', '`<maker>/<name>`, where `*` stands for any run of characters within the value.')),
+        proxy: nullable(lines('Proxies', 'Which provider the model may be called through. `model` rows only.')),
+        agent: nullable(lines('Agents', 'The harness, as `claude`, `pi`, `cofold` or `acp:<server>`.')),
+        computer: nullable(lines('Computers', 'The machine, as the `computers` port names it.')),
       },
     },
     limits: {
       title: 'Limits',
       description: 'How much may be used. Every limit must have room.',
-      type: 'array',
+      type: ['array', 'null'],
       items: {
         type: 'object',
         properties: {
@@ -134,10 +142,10 @@ const manifest: Record<string, unknown> = {
         },
       },
     },
-    pool: line('Pool', 'A name several rows draw from one total under.'),
-    cap: { type: 'boolean', title: 'Cap', description: 'Count usage without charging it.' },
-    from: line('From', 'When the row starts, as an ISO 8601 instant or a `YYYY-MM-DD` day.'),
-    until: line('Until', 'When the row ends, as an ISO 8601 instant or a `YYYY-MM-DD` day. A bare day includes all of it.'),
+    pool: nullable({ type: 'string', title: 'Pool', description: 'A name several rows draw from one total under.' }),
+    cap: nullable({ type: 'boolean', title: 'Cap', description: 'Count usage without charging it.' }),
+    from: nullable(line('From', 'When the row starts, as an ISO 8601 instant or a `YYYY-MM-DD` day.')),
+    until: nullable(line('Until', 'When the row ends, as an ISO 8601 instant or a `YYYY-MM-DD` day. A bare day includes all of it.')),
   },
   required: ['scope', 'kind', 'effect', 'match'],
   allOf: narrowed,
