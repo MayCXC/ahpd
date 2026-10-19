@@ -87,6 +87,7 @@ function keptTool(tool: HostTool): HostTool {
 const PORT_KEYS = [
   'resources', 'terminals', 'changes', 'directories', 'worktrees',
   'github', 'automations', 'sessions', 'diagnostics', 'computers', 'containers', 'usage', 'policies', 'vault', 'records',
+  'commandParser',
 ] as const satisfies readonly PortKey[];
 
 /*
@@ -1288,6 +1289,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     registerPolicies: (policies, when) => { setPort('policies', 'registerPolicies', policies, when); },
     registerVault: (vault, when) => { setPort('vault', 'registerVault', vault, when); },
     registerRecords: (store, when) => { setPort('records', 'registerRecords', store, when); },
+    registerCommandParser: (split, when) => { setPort('commandParser', 'registerCommandParser', split, when); },
     registerRoute(handler) {
       open();
       checkRoute(handler, by);
