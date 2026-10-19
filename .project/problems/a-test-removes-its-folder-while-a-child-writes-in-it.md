@@ -1,0 +1,36 @@
+---
+title: A test removes its folder while a child process still writes in it
+status: open
+date: 2026-10-18
+severity: minor
+refs:
+  - "[code://packages/agent-acp/test/agent-acp-ports.test.ts#L87-L95](../../packages/agent-acp/test/agent-acp-ports.test.ts#L87-L95) - the teardown that failed in the policy/02 gates"
+  - "[code://packages/server/test/server-cli-service.test.ts](../../packages/server/test/server-cli-service.test.ts) - the test that failed on CI"
+  - https://github.com/softov/ahpd/actions/runs/39122204393 - the CI run that failed and then passed on a second run
+---
+
+## Symptom
+
+`rmSync(path, { recursive: true, force: true })` fails with `ENOTEMPTY` in a test teardown.
+On 2026-10-18 it failed `service install > names a relative configuration file in full` on CI for `61dbaeea`.
+On the same day it failed `answers with the option the person picked, and says which` in the policy/02 gates.
+Both tests pass when they run again, and the ACP test passes three times out of three alone.
+
+## Cause
+
+Unknown.
+The likely cause is a child process that writes a file in the folder after the teardown starts to remove it.
+The ACP teardown waits for one line in `requests.jsonl`, but not for the fake agent to exit.
+
+## Impact
+
+A full test run fails at random, so a red CI run or gate run needs a second run before it says anything.
+
+## Workaround
+
+Run the failed job or the failed test again.
+
+## Fix
+
+Wait for the child process to exit before the teardown removes its folder.
+Or retry the removal with `maxRetries` and `retryDelay`, which `rmSync` takes for this error.
