@@ -1,6 +1,6 @@
 ---
 title: null clears pool and cap
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -36,3 +36,8 @@ refs:
 - Run the gates.
 
 ## Resume
+
+- **Done so far:** `checkPolicy` reads `null` for `pool` and `cap` as absent, the way `edgeOf` reads the ends of a window. The row it answers leaves the field out. In the manifest, `nullable` adds `null` to the type of every field the check reads it for. So a form that validates a body does not refuse a `null` the check accepts. `docs/sdk/POLICY.md` says a field sent as `null` is removed. The tests are in `packages/sdk/test/policy-scheme.test.ts`. `removes a pool and a cap a put sends as null` sends `null` for each field and reads the row back after each write. `still refuses a pool that is not a string or null, and a cap that is not a boolean` covers the two refusals. The last assertions of `accepts each kind's own body and refuses a choice the kind does not take` cover the schema. The file passes 21 tests, and `packages/sdk/test/policies.test.ts` passes 26.
+- **Next action:** none for this task; task 02 follows.
+- **Open questions:** none.
+- **Watch out for:** `from`, `until`, `limits` and the lists under `match` take `null` in the manifest too. The check already removed them on `null`, and the doc sentence names them.

@@ -198,6 +198,32 @@ it('keeps what a body does not name, so a read and a write back changes nothing'
   expect(await read('M1')).toEqual(round);
 });
 
+it('removes a pool and a cap a put sends as null', async () => {
+  const { policy } = served();
+  await policy.write('policy://M1', body(row({ pool: 'shared-llm', cap: true })));
+  expect(await read('M1')).toMatchObject({ pool: 'shared-llm', cap: true });
+
+  // A null is absent, as the ends of a window are: the body takes the field
+  // away rather than storing a stand-in.
+  await policy.write('policy://M1', body({ pool: null }));
+  expect(await read('M1')).not.toHaveProperty('pool');
+  expect(await read('M1')).toMatchObject({ cap: true });
+
+  await policy.write('policy://M1', body({ cap: null }));
+  const held = await read('M1');
+  expect(held).not.toHaveProperty('pool');
+  expect(held).not.toHaveProperty('cap');
+});
+
+it('still refuses a pool that is not a string or null, and a cap that is not a boolean', async () => {
+  const { policy, store } = served();
+  await expect(policy.write('policy://M1', body({ ...row(), pool: 5 })))
+    .rejects.toMatchObject({ code: -32602, message: expect.stringContaining('pool') });
+  await expect(policy.write('policy://M1', body({ ...row(), cap: 'yes' })))
+    .rejects.toMatchObject({ code: -32602, message: expect.stringContaining('cap') });
+  expect(await store.list()).toEqual([]);
+});
+
 it('refuses a body that is not a row, with the sentence the port would give', async () => {
   const { policy, store } = served();
   for (const text of ['not json', '[]', '"a policy"']) {
@@ -346,6 +372,11 @@ it('accepts each kind\'s own body and refuses a choice the kind does not take', 
   // rather than by the check.
   expect(validate({ ...bodies[2], limits: [{ amount: 1, measure: 'usd', period: 'day', pool: 'shared' }] })).toBe(false);
   expect(validate({ ...bodies[0], match: { model: ['deepseek/*'], agent: ['claude'] } })).toBe(false);
+
+  // A null removes a field, so the schema a form validates with takes it too.
+  expect(validate({ ...bodies[0], pool: null, cap: null }), JSON.stringify(validate.errors)).toBe(true);
+  expect(validate({ ...bodies[0], from: null, until: null, limits: null }), JSON.stringify(validate.errors)).toBe(true);
+  expect(validate({ ...bodies[0], match: { model: null } }), JSON.stringify(validate.errors)).toBe(true);
 });
 
 /*
