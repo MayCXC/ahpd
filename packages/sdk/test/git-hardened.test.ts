@@ -52,6 +52,10 @@ it('spells the flags before the folder, and --ignore-submodules after a subcomma
   ]);
 });
 
+it('refuses no folder, which git would read as the folder this process runs in', () => {
+  expect(() => gitArgv('', ['worktree', 'add', '-b', 'agents/x', '/w'])).toThrow('was given no folder to run in');
+});
+
 // The next three run a `git` that is a `#!/bin/sh` script first on `PATH`: a
 // POSIX shell outside a terminal, which Windows has not.
 it.skipIf(!posix)('runs the worktree port\'s git hardened', async () => {
