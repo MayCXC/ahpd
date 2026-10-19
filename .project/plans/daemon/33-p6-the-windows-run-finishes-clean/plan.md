@@ -72,6 +72,7 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 | A mount source may start with a drive letter, and the separator is the first `:` after it | (defaulted: the smallest change that reads `C:\work:/work`) | 02 |
 | The Windows job's bound goes from 300 s to 600 s, inside the job's 15 minutes | (defaulted: the job is cut off, not stuck) | 03 |
 | A test's removal of its folder retries with `maxRetries` | (defaulted: Node's own retry for `EBUSY` and `EPERM`) | 04 |
+| A tree's removal finds its links among the ignored entries too | (defaulted: on Windows a junction is a folder to git) | 06 |
 
 ## Proposed architecture
 
@@ -87,6 +88,7 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 | [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | implemented | - |
 | [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | implemented | 03 |
 | [05 - ahpd config runs on Windows](task-05-ahpd-config-runs-on-windows.md) | todo | 03 |
+| [06 - An archive leaves the checkout's linked folders](task-06-an-archive-leaves-the-checkouts-linked-folders.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -95,7 +97,7 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
+- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18; tasks 04 and 06 implemented 2026-10-19 on Softov's Windows machine. An ACP server is stopped on Windows, and what it leaves running is ended after it exits. A tree's removal no longer deletes the checkout's `node_modules` through a junction. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
 - **Next action:** task 03 step 2 - push the branch through a PR and read the Windows job's log. That is Softov's. Its failures are tasks 04 and 05.
 - **Open questions:** none.
 - **Watch out for:** this host cannot run Windows. Each Windows check is a CI run or Softov's Windows machine. Task 02's two cases ask `mountParts` directly: a drive path cannot exist on this host. The end-to-end check and `nested-start.test.ts` are for the Windows run.

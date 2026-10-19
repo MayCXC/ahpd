@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, realpathSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,7 +13,13 @@ import { fileURLToPath } from 'node:url';
  * `TMPDIR`, so all three name the run's folder.
  */
 export default function setup(): () => void {
-  const run = mkdtempSync(join(tmpdir(), 'ahpd-test-run-'));
+  /*
+   * By its long name. A Windows runner's temp folder is an 8.3 short one
+   * (`C:\Users\RUNNER~1\...`), and git answers every path by its long name, so
+   * a test comparing a folder it made with one git named would be comparing
+   * two spellings of the same place.
+   */
+  const run = realpathSync.native(mkdtempSync(join(tmpdir(), 'ahpd-test-run-')));
   process.env.TMPDIR = run;
   process.env.TEMP = run;
   process.env.TMP = run;

@@ -18,6 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
+import { localPath, uriOf as fileUriOf } from '../src/fileuri.js';
 import { Status } from '../src/catalog.js';
 import { memorySessions } from '../src/sessions.js';
 import { gitWorktrees } from '../src/repo/worktrees.js';
@@ -192,7 +193,7 @@ const hosting = async (setup: Setup = {}) => {
     const channel = `ahp-session:/${name}`;
     await client.handle({
       method: 'createSession',
-      params: { channel, provider: 'echo', workingDirectories: [`file://${where}`], config },
+      params: { channel, provider: 'echo', workingDirectories: [fileUriOf(where)], config },
     });
     return channel;
   };
@@ -215,7 +216,7 @@ const hosting = async (setup: Setup = {}) => {
       await client.handle({ method: 'unsubscribe', params: { channel: chat } });
       await client.handle({ method: 'unsubscribe', params: { channel } });
     })();
-    return { where: (state.workingDirectories[0] ?? '').replace('file://', ''), chat, done };
+    return { where: localPath(state.workingDirectories[0] ?? ''), chat, done };
   };
   /** Archive or unarchive a session, as a person does. */
   const archive = (channel: string, isArchived: boolean) => client.handle({

@@ -285,7 +285,8 @@ describe('a session with a working tree of its own', () => {
     // A tree of the repository and not a folder beside it: git is the one that
     // knows, and the session runs in what it made.
     expect(existsSync(join(where, 'tracked.txt'))).toBe(true);
-    expect(execFileSync('git', ['-C', project(root), 'worktree', 'list']).toString()).toContain(where);
+    // git lists a Windows path with forward slashes.
+    expect(execFileSync('git', ['-C', project(root), 'worktree', 'list']).toString()).toContain(where.replaceAll('\\', '/'));
   });
 
   it('brings along the files a checkout leaves behind', async () => {
@@ -905,7 +906,7 @@ describe('a session with a working tree of its own', () => {
     expect(existsSync(join(where, 'unsaved.txt'))).toBe(true);
     // Still a worktree of the repository, so `git worktree list` finds it.
     const listed = execFileSync('git', ['-C', project(root), 'worktree', 'list']).toString();
-    expect(listed).toContain(where);
+    expect(listed).toContain(where.replaceAll('\\', '/'));
   });
 
   it('takes a clean worktree away with a session deleted after a restart', async () => {
@@ -1071,6 +1072,9 @@ describe('an archived session\'s tree', () => {
     await archive(one.channel, true);
     await logged(`removed ${one.where}`);
     expect(existsSync(one.where)).toBe(false);
+    // The link went, and what it pointed at did not: on Windows a junction
+    // left in the tree is a folder git deletes the contents of.
+    expect(readFileSync(join(project(root), 'node_modules', 'dep', 'index.js'), 'utf8')).toBe('installed\n');
 
     await archive(one.channel, false);
     await logged(`put ${one.where} back on ${branch}`);

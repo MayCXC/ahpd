@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { inflateRawSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
+import { localPath, uriOf } from '../src/fileuri.js';
 import { debugLogs } from '../src/debuglogs.js';
 import { crc32, zip } from '../src/zip.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -89,7 +90,7 @@ describe('collecting logs', () => {
     expect(got.entries).toEqual([{ path: 'agenthost/daemon.log', size: 8 }, { path: 'events.jsonl', size: 3000 }]);
     expect(got.uncompressedSize).toBe(3008);
     expect(got.resource.startsWith('file://')).toBe(true);
-    const archive = got.resource.slice('file://'.length);
+    const archive = localPath(got.resource);
     expect(got.size).toBe(statSync(archive).size);
     // Read whole through the chunk reader, which is how a window elsewhere gets it.
     let position = 0;
@@ -103,16 +104,16 @@ describe('collecting logs', () => {
     expect(Buffer.concat(parts).equals(readFileSync(archive))).toBe(true);
     expect(unzipped(archive).get('events.jsonl')?.length).toBe(3000);
     // Only what this collector made: the reader is not a way to read any file.
-    await expect(logs.read(`file://${join(dir, 'daemon.log')}`, 0)).rejects.toThrow('Unknown or expired');
+    await expect(logs.read(uriOf(join(dir, 'daemon.log')), 0)).rejects.toThrow('Unknown or expired');
     await expect(logs.read(got.resource, -1)).rejects.toThrow('Invalid debug-log artifact position');
     // A directory stays where it is, and goes when the collector lets go.
     const opened = await logs.collect([{ path: 'agenthost/daemon.log', from: join(dir, 'daemon.log') }], 'directory');
     expect(opened.kind).toBe('directory');
-    expect(readFileSync(join(opened.resource.slice('file://'.length), 'agenthost', 'daemon.log'), 'utf8')).toBe('started\n');
+    expect(readFileSync(join(localPath(opened.resource), 'agenthost', 'daemon.log'), 'utf8')).toBe('started\n');
     expect(opened.providerLogsIncluded).toBe(false);
     await logs.close();
     expect(() => statSync(archive)).toThrow();
-    expect(() => statSync(opened.resource.slice('file://'.length))).toThrow();
+    expect(() => statSync(localPath(opened.resource))).toThrow();
   });
 });
 
@@ -141,8 +142,8 @@ describe('what the window asks', () => {
     expect(join_.said._meta?.['vscode.getAgentHostSessionStateFile.chat']).toBe(true);
     await join_.client.handle({ method: 'createSession', params: { channel: 'ahp-session:/one', provider: 'echo' } });
     const state = (await join_.client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/one' } }) as { snapshot: { state: { defaultChat: string } } }).snapshot.state;
-    expect(await join_.client.handle({ method: 'vscode/getAgentHostSessionStateFile', params: { session: 'ahp-session:/one' } })).toEqual({ resource: `file://${join(dir, 'one.jsonl')}` });
-    expect(await join_.client.handle({ method: 'vscode/getAgentHostSessionStateFile', params: { session: 'ahp-session:/one', chat: state.defaultChat } })).toEqual({ resource: `file://${join(dir, 'one.jsonl')}` });
+    expect(await join_.client.handle({ method: 'vscode/getAgentHostSessionStateFile', params: { session: 'ahp-session:/one' } })).toEqual({ resource: uriOf(join(dir, 'one.jsonl')) });
+    expect(await join_.client.handle({ method: 'vscode/getAgentHostSessionStateFile', params: { session: 'ahp-session:/one', chat: state.defaultChat } })).toEqual({ resource: uriOf(join(dir, 'one.jsonl')) });
     expect(asked.at(-1)).toEqual({ id: 'one', directory: dir });
     await expect(join_.client.handle({ method: 'vscode/getAgentHostSessionStateFile', params: { session: 'ahp-session:/one', chat: 'ahp-chat://x/nobody' } }))
       .rejects.toMatchObject({ code: -32602, message: 'chat must belong to the requested Agent Session' });
@@ -171,14 +172,14 @@ describe('what the window asks', () => {
     const chunk = await client.handle({ method: 'vscode/readAgentHostDebugLogsChunk', params: { resource: got.resource, position: 0 } }) as { data: string; eof: boolean };
     expect(chunk.eof).toBe(true);
     expect(Buffer.from(chunk.data, 'base64').readUInt32LE(0)).toBe(0x04034b50);
-    rmSync(got.resource.slice('file://'.length), { force: true });
+    rmSync(localPath(got.resource), { force: true });
     // Without a session, the host's own and nothing of any backend's.
     const own = await client.handle({ method: 'vscode/collectAgentHostDebugLogs', params: { kind: 'directory' } }) as { entries: { path: string }[]; providerLogsIncluded: boolean; resource: string };
     expect(own.entries.map((one) => one.path)).toEqual(['agenthost/daemon.log']);
     expect(own.providerLogsIncluded).toBe(false);
-    rmSync(own.resource.slice('file://'.length), { recursive: true, force: true });
+    rmSync(localPath(own.resource), { recursive: true, force: true });
     await expect(client.handle({ method: 'vscode/collectAgentHostDebugLogs', params: { kind: 'tarball' } })).rejects.toMatchObject({ code: -32602 });
-    await expect(client.handle({ method: 'vscode/readAgentHostDebugLogsChunk', params: { resource: `file://${join(dir, 'daemon.log')}`, position: 0 } })).rejects.toMatchObject({ code: -32602 });
+    await expect(client.handle({ method: 'vscode/readAgentHostDebugLogsChunk', params: { resource: uriOf(join(dir, 'daemon.log')), position: 0 } })).rejects.toMatchObject({ code: -32602 });
   });
 
   it('describes the network from here, and probes one endpoint', async () => {
