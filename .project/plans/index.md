@@ -223,7 +223,7 @@ Reference: [00-host.md](host/00-host.md)
 | [100 p4 - Claude and ACP ask only for unmatched commands](host/100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-18; task 01 and task 02 implemented | 100 p2 | - |
 | [100 p5 - pi and cofold ask only for unmatched commands](host/100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-19; task 01 and task 02 implemented | 100 p2 | - |
 | [100 p6 - The docs name the terminal rules](host/100-p6-the-docs-name-the-terminal-rules/plan.md) | medium | planned 2026-10-16 | 100 p1 to p5 | - |
-| [101 - A rule makes a tool call ask every time](host/101-a-rule-makes-a-tool-call-ask-every-time/plan.md) | medium | planned 2026-10-16 | 100 p2 | - |
+| [101 - A rule makes a tool call ask every time](host/101-a-rule-makes-a-tool-call-ask-every-time/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented | 100 p2 | - |
 | [102 - Verify a JWT locally](host/102-verify-a-jwt-locally/plan.md) | low | active 2026-10-16; tasks 01 to 05 implemented | - | - |
 | [103 - A row's diff stat is the session's own work](host/103-a-rows-diff-stat-is-the-sessions-work/plan.md) | medium | active 2026-10-16; tasks 01 to 06 implemented | - | - |
 | [104 - A session switch on a built-in stays](host/104-a-session-switch-on-a-builtin-stays/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |

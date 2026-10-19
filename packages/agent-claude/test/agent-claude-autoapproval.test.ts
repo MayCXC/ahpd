@@ -2,19 +2,19 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it, vi } from 'vitest';
-import { bag } from '@ahpd/sdk';
+import { bag, str } from '@ahpd/sdk';
 import type { Bag, Start } from '@ahpd/sdk';
 
 /*
- * A shell command the owner's rules already allow.
+ * A shell command the owner's rules already allow, and a tool the operator's
+ * rule makes ask every time.
  *
  * `Start.getAutoApproval` is the host's answer to "does this run without
- * asking?", and `canUseTool` is the one place this backend sits between the
- * CLI and a question. An approved command is allowed before anything is held,
- * so no client draws a confirmation; a command the check says nothing about
- * asks as it always did. The check is read from the line the model wrote: the
- * shell hook keeps it per call, so a `shellEnv` or shell init script prefix is
- * not what the owner's rules are matched against.
+ * asking?". For a command, `canUseTool` is the one place this backend sits
+ * between the CLI and a question; an approved command is allowed before
+ * anything is held, so no client draws a confirmation. For a tool the
+ * operator's rule names, a `PreToolUse` hook asks instead, in every mode, and
+ * the question offers no "always" option.
  */
 
 const sdk = vi.hoisted(() => ({
@@ -52,7 +52,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 const { createSession } = await import('../src/session.js');
 
 /** What the check is asked, in one line each. */
-type Asked = { kind: string; line: string; shell: string }[];
+type Asked = { kind: string; line: string; shell: string | undefined; tool: string | undefined }[];
 
 /** The host's answer to "does this run without asking?", in one line each. */
 type Check = NonNullable<Start['getAutoApproval']>;
@@ -63,13 +63,14 @@ const settle = async (times = 30): Promise<void> => {
 
 /** A session with the owner's check, and what it said on the wire. */
 async function sessionWith(check?: Check, settings: Bag = {}, shellEnv?: Record<string, string>): Promise<{
+  session: ReturnType<typeof createSession>;
   canUseTool: NonNullable<typeof sdk.canUseTool>;
   options: Bag;
   sent: Bag[];
 }> {
   sdk.frames = [];
   const sent: Bag[] = [];
-  createSession({
+  const session = createSession({
     uri: 'ahp-session:/autoapprove',
     chatUri: 'ahp-chat:/autoapprove',
     cwd: mkdtempSync(join(tmpdir(), 'ahpd-autoapprove-')),
@@ -79,7 +80,7 @@ async function sessionWith(check?: Check, settings: Bag = {}, shellEnv?: Record<
     ...(shellEnv === undefined ? {} : { shellEnv }),
   });
   await settle();
-  return { canUseTool: sdk.canUseTool!, options: sdk.options!, sent };
+  return { session, canUseTool: sdk.canUseTool!, options: sdk.options!, sent };
 }
 
 /** The commands a session's check approves, and what it was asked. */
@@ -87,12 +88,62 @@ const approving = (approved: string[]): { asked: Asked; check: Check } => {
   const asked: Asked = [];
   return {
     asked,
-    check: (kind, line, shell) => {
-      asked.push({ kind, line, shell });
+    check: (kind, line, shell, tool) => {
+      asked.push({ kind, line, shell, tool });
+      return kind === 'shell' && approved.includes(line) ? 'not-needed' as NonNullable<ReturnType<Check>> : undefined;
+    },
+  };
+};
+
+/**
+ * A check that names these tools, and approves these command lines.
+ *
+ * The operator's rule names tools; the owner's terminal rules approve lines.
+ * One fake answers both, so a test reads which question was put and in what
+ * order.
+ */
+const naming = (tools: string[], approved: string[] = []): { asked: Asked; check: Check } => {
+  const asked: Asked = [];
+  return {
+    asked,
+    check: (kind, line, shell, tool) => {
+      asked.push({ kind, line, shell, tool });
+      if (kind === 'tool') return tools.includes(line) ? 'ask' as NonNullable<ReturnType<Check>> : undefined;
       return approved.includes(line) ? 'not-needed' as NonNullable<ReturnType<Check>> : undefined;
     },
   };
 };
+
+/** A `PreToolUse` hook, as the SDK calls it. */
+type Hook = (input: Bag, toolUseID?: string, options?: { signal: AbortSignal }) => Promise<Bag>;
+
+/** The hook that asks for a tool the operator's rule names. */
+const ruleHook = (options: Bag): Hook =>
+  ((((options.hooks as Bag).PreToolUse as Bag[])[1] as Bag).hooks as Hook[])[0] as Hook;
+
+/** The hook that puts the operator's environment in front of a command. */
+const shellHook = (options: Bag): Hook =>
+  ((((options.hooks as Bag).PreToolUse as Bag[])[0] as Bag).hooks as Hook[])[0] as Hook;
+
+/** What the rule hook said, as the SDK reads it. */
+const decisionOf = (answer: Bag): string | undefined =>
+  str(bag(answer.hookSpecificOutput).permissionDecision);
+
+/** What the rule hook gave as its reason. */
+const reasonOf = (answer: Bag): string | undefined =>
+  str(bag(answer.hookSpecificOutput).permissionDecisionReason);
+
+/** One confirmation's ready action, as a client reads it. */
+const readyOf = (sent: Bag[], id: string): Bag | undefined =>
+  sent.find((one) => one.type === 'chat/toolCallReady' && one.toolCallId === id);
+
+/** The read call the rule is asked about, under one id. */
+const readCall = (id: string): Bag => ({
+  hook_event_name: 'PreToolUse',
+  tool_name: 'Read',
+  tool_input: { file_path: '/tmp/one' },
+  tool_use_id: id,
+});
 
 it('runs a command the owner\'s rules allow, without asking', async () => {
   const { asked, check } = approving(['make test']);
@@ -100,21 +151,21 @@ it('runs a command the owner\'s rules allow, without asking', async () => {
 
   expect(await canUseTool('Bash', { command: 'make test' }, { toolUseID: 'toolu_allowed' }))
     .toEqual({ behavior: 'allow', updatedInput: { command: 'make test' } });
-  // The line is read for bash, which is the one shell the CLI's tool is.
-  expect(asked).toEqual([{ kind: 'shell', line: 'make test', shell: 'bash' }]);
+  // The rule is read for the tool too, and it names no tool; then the line is
+  // read for bash, which is the one shell the CLI's tool is.
+  expect(asked).toEqual([
+    { kind: 'tool', line: 'Bash', shell: undefined, tool: undefined },
+    { kind: 'shell', line: 'make test', shell: 'bash', tool: 'Bash' },
+  ]);
   // Nothing was drawn: a call nobody was asked about is not a question that
   // was answered, and a client is not left holding a confirmation for it.
   expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toEqual([]);
   expect(sent.filter((one) => one.type === 'chat/toolCallReady')).toEqual([]);
 });
 
-/** The session's `PreToolUse` hook, as the SDK would call it. */
-type Hook = (input: Bag) => Promise<Bag>;
-
 it('matches the line the model wrote, not the one the shell prefix made', async () => {
   const { asked, check } = approving(['make test']);
   const { canUseTool, options } = await sessionWith(check, {}, { SAY: 'b' });
-  const hook = (((options.hooks as Bag).PreToolUse as Bag[])[0]?.hooks as Hook[])[0] as Hook;
 
   /*
    * What the CLI does first: the hook puts the operator's environment in
@@ -122,13 +173,16 @@ it('matches the line the model wrote, not the one the shell prefix made', async 
    * handed. The rules are the owner's about the command, and the command is
    * the one the model wrote.
    */
-  const hooked = await hook({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_env', tool_input: { command: 'make test' } });
+  const hooked = await shellHook(options)({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_env', tool_input: { command: 'make test' } });
   const rewritten = bag(bag(hooked.hookSpecificOutput).updatedInput);
   expect(rewritten.command).toBe("export SAY='b'\nmake test");
 
   expect(await canUseTool('Bash', rewritten, { toolUseID: 'toolu_env' }))
     .toEqual({ behavior: 'allow', updatedInput: rewritten });
-  expect(asked).toEqual([{ kind: 'shell', line: 'make test', shell: 'bash' }]);
+  expect(asked).toEqual([
+    { kind: 'tool', line: 'Bash', shell: undefined, tool: undefined },
+    { kind: 'shell', line: 'make test', shell: 'bash', tool: 'Bash' },
+  ]);
 });
 
 it('asks for a command no rule matches', async () => {
@@ -161,13 +215,15 @@ it('asks when the host offers no check at all', async () => {
   expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toHaveLength(1);
 });
 
-it('asks the check only about a shell command', async () => {
+it('asks the check about every tool, and about a command\'s line', async () => {
   const { asked, check } = approving(['anything']);
   const { canUseTool, sent } = await sessionWith(check);
 
   void canUseTool('Read', { file_path: '/tmp/one' }, { toolUseID: 'toolu_read' });
   await settle();
-  expect(asked).toEqual([]);
+  // A tool that is not a shell has no line to match, so the check is asked
+  // its one question: is this tool named by the rule?
+  expect(asked).toEqual([{ kind: 'tool', line: 'Read', shell: undefined, tool: undefined }]);
   expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toHaveLength(1);
 });
 
@@ -186,8 +242,134 @@ it('still answers a call the SDK has already cancelled', async () => {
   const { canUseTool } = await sessionWith(check);
   const signal = AbortSignal.abort();
 
-  // An aborted call is not one to approve, so the check is never asked.
+  // An aborted call is not one to approve, so no question is put and no line
+  // is read. The rule is still asked whether this tool is one it names.
   expect(await canUseTool('Bash', { command: 'make test' }, { toolUseID: 'toolu_aborted', signal }))
     .toEqual({ behavior: 'deny', message: 'Cancelled' });
+  expect(asked).toEqual([{ kind: 'tool', line: 'Bash', shell: undefined, tool: undefined }]);
+});
+
+it.each(['default', 'acceptEdits', 'auto', 'bypassPermissions'])(
+  'asks for a tool the rule names, in %s mode',
+  async (permissionMode) => {
+    const { asked, check } = naming(['Read']);
+    const { session, options, sent } = await sessionWith(check, { permissionMode });
+
+    const waiting = ruleHook(options)(readCall('toolu_read'));
+    await settle();
+    // The rule is read under the name the rule keys on, and the question is
+    // on the chat whatever mode would otherwise have skipped it.
+    expect(asked).toEqual([{ kind: 'tool', line: 'Read', shell: undefined, tool: undefined }]);
+    expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toHaveLength(1);
+    // No "always" is offered, so the answer cannot be kept as a rule.
+    expect(readyOf(sent, 'toolu_read')?.options).toBeUndefined();
+
+    session.confirm('toolu_read', true);
+    expect(decisionOf(await waiting)).toBe('allow');
+  });
+
+it('refuses a matched tool in dontAsk without a question', async () => {
+  const { asked, check } = naming(['Read']);
+  const { options, sent } = await sessionWith(check, { permissionMode: 'dontAsk' });
+
+  const answer = await ruleHook(options)(readCall('toolu_read'));
+  expect(decisionOf(answer)).toBe('deny');
+  expect(reasonOf(answer)).toContain('dontAsk');
+  expect(asked).toEqual([{ kind: 'tool', line: 'Read', shell: undefined, tool: undefined }]);
+  // Refusing is this mode's answer, and the rule does not take it away.
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toEqual([]);
+});
+
+it('asks once, and canUseTool does not put the question again', async () => {
+  const { check } = naming(['Read']);
+  const { session, canUseTool, options, sent } = await sessionWith(check);
+
+  const waiting = ruleHook(options)(readCall('toolu_read'));
+  await settle();
+  session.confirm('toolu_read', true);
+  expect(decisionOf(await waiting)).toBe('allow');
+
+  // The CLI's own question, if it comes after the hook's, is answered from
+  // what the person said rather than put a second time.
+  expect(await canUseTool('Read', { file_path: '/tmp/one' }, { toolUseID: 'toolu_read' }))
+    .toEqual({ behavior: 'allow', updatedInput: { file_path: '/tmp/one' } });
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toHaveLength(1);
+});
+
+it('answers canUseTool with the person\'s refusal as well', async () => {
+  const { check } = naming(['Read']);
+  const { session, canUseTool, options } = await sessionWith(check);
+
+  const waiting = ruleHook(options)(readCall('toolu_read'));
+  await settle();
+  session.confirm('toolu_read', false);
+  const answer = await waiting;
+  expect(decisionOf(answer)).toBe('deny');
+  expect(reasonOf(answer)).toBe('The person declined this action');
+  expect(await canUseTool('Read', { file_path: '/tmp/one' }, { toolUseID: 'toolu_read' }))
+    .toEqual({ behavior: 'deny', message: 'The person declined this action' });
+});
+
+it('does not let an allow list answer for a matched tool', async () => {
+  const { check } = naming(['Read']);
+  const { canUseTool, sent } = await sessionWith(check, { permissions: { allow: ['Read'], deny: [] } });
+
+  // No hook ran here, so this is the callback's own road: a matched tool asks
+  // even though the session already said to stop asking about it.
+  void canUseTool('Read', { file_path: '/tmp/one' }, { toolUseID: 'toolu_listed' });
+  await settle();
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toHaveLength(1);
+});
+
+it('runs a matched Bash command with the input sourceFirst wrote', async () => {
+  const { check } = naming(['Bash']);
+  const { session, canUseTool, options } = await sessionWith(check, {}, { SAY: 'b' });
+
+  const hooked = await shellHook(options)({ hook_event_name: 'PreToolUse', tool_use_id: 'toolu_bash', tool_input: { command: 'make test' } });
+  const rewritten = bag(bag(hooked.hookSpecificOutput).updatedInput);
+
+  const waiting = ruleHook(options)({ hook_event_name: 'PreToolUse', tool_name: 'Bash', tool_input: { command: 'make test' }, tool_use_id: 'toolu_bash' });
+  await settle();
+  session.confirm('toolu_bash', true);
+  expect(decisionOf(await waiting)).toBe('allow');
+
+  // The answer the CLI gets keeps the hook's rewrite: the rule hook returns no
+  // input of its own, so what `sourceFirst` wrote is what the command runs as.
+  expect(await canUseTool('Bash', rewritten, { toolUseID: 'toolu_bash' }))
+    .toEqual({ behavior: 'allow', updatedInput: rewritten });
+});
+
+it('names an MCP tool as <server>/<tool>, the name the rule matches', async () => {
+  const { asked, check } = naming(['tracker/move']);
+  const { session, options } = await sessionWith(check);
+
+  const waiting = ruleHook(options)({ hook_event_name: 'PreToolUse', tool_name: 'mcp__tracker__move', tool_input: { id: 1 }, tool_use_id: 'toolu_mcp' });
+  await settle();
+  expect(asked).toEqual([{ kind: 'tool', line: 'tracker/move', shell: undefined, tool: undefined }]);
+  session.confirm('toolu_mcp', false);
+  expect(decisionOf(await waiting)).toBe('deny');
+});
+
+it('returns at once for a tool the rule does not name', async () => {
+  const { asked, check } = naming([]);
+  const { options, sent } = await sessionWith(check);
+
+  expect(await ruleHook(options)(readCall('toolu_read'))).toEqual({});
+  expect(asked).toEqual([{ kind: 'tool', line: 'Read', shell: undefined, tool: undefined }]);
+  expect(sent.filter((one) => one.type === 'session/inputNeededSet')).toEqual([]);
+});
+
+it('leaves AskUserQuestion to its own question', async () => {
+  const { asked, check } = naming(['AskUserQuestion']);
+  const { options } = await sessionWith(check);
+
+  // Its answer is the tool's input: a confirmation here would settle the
+  // question and then run the tool with nothing the person said.
+  expect(await ruleHook(options)({
+    hook_event_name: 'PreToolUse',
+    tool_name: 'AskUserQuestion',
+    tool_input: { questions: [] },
+    tool_use_id: 'toolu_question',
+  })).toEqual({});
   expect(asked).toEqual([]);
 });

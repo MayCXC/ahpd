@@ -1,6 +1,6 @@
 ---
 title: The rule is read in the approval check
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -40,7 +40,7 @@ This task needs host/100 p2 task 01.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-19. `eligibleForAutoApproval` is declared in `vscoderootconfig.ts` as VS Code declares it, where `false` means ask. It is a host key: a member's push is refused for want of `config:change`, and an admin's is echoed. `Start.getAutoApproval` takes a kind, `'shell'` or `'tool'`, plus the optional shell and the tool that runs a line. It answers `AutoApproval | undefined`, and the new `'ask'` is the rule's answer. The check reads the rule before the terminal rules, without a connection. It matches an exact key first and then `<server>/*`. A `shell` call whose tool is named asks even when a terminal rule approves the line. Tests: `packages/sdk/test/autoapproval.test.ts` (8) and `packages/sdk/test/root-config.test.ts` (31). The whole sdk suite passes (163 files, 3228 tests).
+- **Next action:** task 02 reads the new answer for a tool in the Claude backend.
 - **Open questions:** none.
-- **Watch out for:** VS Code's value `false` means "always ask"; keep that sense.
+- **Watch out for:** VS Code's value `false` means "always ask"; keep that sense. A `true`, a missing key and a value that is not a boolean all leave the tool as it was.

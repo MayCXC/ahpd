@@ -190,7 +190,7 @@ it('declares every key VS Code pushes, as VS Code declares it', async () => {
    * `common/agentHostSchema.ts`, `common/agentMerge.ts` and
    * `common/automationConfig.ts`.
    *
-   * `workspaceTrust` is one of the 43 and is declared by host/66 p1 instead,
+   * `workspaceTrust` is one of the 44 and is declared by host/66 p1 instead,
    * which its own case reads. The two whose default is a constant of another
    * file are checked below, because copying them is copying a value.
    */
@@ -206,7 +206,7 @@ it('declares every key VS Code pushes, as VS Code declares it', async () => {
     'migrateLegacyCopilotCliEnabled', 'sessionCatalogEnabled', 'showExternalSessions',
     'autoArchiveMergedSessionsAfterDays', 'autoDeleteArchivedMergedSessionsAfterDays',
     'copilotMultiRootEnabled', 'claudeMultiRootEnabled', 'codexMultiRootEnabled',
-    'editAutoApprovePatterns', 'terminalAutoApproveRules',
+    'editAutoApprovePatterns', 'terminalAutoApproveRules', 'eligibleForAutoApproval',
     'agentMerge.enabled', 'agentMerge.addressReviews', 'agentMerge.fixCI',
     'agentMerge.resolveConflicts', 'agentMerge.mergePullRequest', 'agentMerge.mergeMethod',
     'agentMerge.replyAttribution', 'automationsEnabled', 'automationRunTimeoutMinutes',
@@ -340,6 +340,53 @@ it('keeps the three approval keys on the connection that pushed them', async () 
   expect(theirs.values.terminalAutoApproveEnabled).toBeUndefined();
   expect(theirs.values.terminalAutoApproveRules).toBeUndefined();
   expect(theirs.values.editAutoApprovePatterns).toBeUndefined();
+});
+
+it('declares eligibleForAutoApproval as VS Code does, and keeps it for the whole host', async () => {
+  const { signedIn, rootOf, heardOnRoot } = served(false);
+  const admin = await signedIn('admin', 'admin');
+  const member = await signedIn('member', 'member');
+
+  /*
+   * The property is `chat.tools.eligibleForAutoApproval`'s,
+   * `chat.shared.contribution.ts:881` at `a959ba62444`, under the name this
+   * host reads: a map of tool name to boolean, where `false` means the call
+   * asks every time. `additionalProperties` is the value each member carries.
+   * `propertyNames`, which the setting fills with the names a client draws, is
+   * not copied: a rule for a tool this host has never heard of is still a rule.
+   */
+  const { schema } = (await rootOf(admin.client)).config as { schema: { properties: Record<string, Record<string, unknown>> } };
+  expect(schema.properties.eligibleForAutoApproval).toEqual({
+    type: 'object',
+    title: 'Eligible for Auto Approval',
+    description: "Controls which tools are eligible for automatic approval. Tools set to 'false' will always present a confirmation and will never offer the option to auto-approve. The default behavior (or setting a tool to 'true') may result in the tool offering auto-approval options.",
+    default: {},
+    additionalProperties: { type: 'boolean', title: 'Eligible' },
+  });
+
+  const rules = { 'tracker/create': false };
+  const push = async (client: Client): Promise<void> => {
+    await client.handle({
+      method: 'dispatchAction',
+      params: { channel: ROOT, action: { type: 'root/configChanged', config: { eligibleForAutoApproval: rules } } },
+    });
+    await settle();
+  };
+
+  // A rule about every session's tool calls is the host's, not one window's:
+  // saying it changes what everybody's sessions do, so it needs config:change.
+  await push(member.client);
+  expect(heardOnRoot(member.heard)).toEqual([
+    expect.objectContaining({ rejectionReason: expect.stringContaining('config:change') }),
+  ]);
+
+  await push(admin.client);
+  expect(heardOnRoot(admin.heard)).toEqual([
+    expect.objectContaining({ action: { type: 'root/configChanged', config: { eligibleForAutoApproval: rules } } }),
+  ]);
+  // Kept in the host's half, so the member that could not push it reads it.
+  const held = (await rootOf(member.client)).config as { values: Record<string, unknown> };
+  expect(held.values.eligibleForAutoApproval).toEqual(rules);
 });
 
 it('takes the three approval keys from a member, needing no config:change', async () => {

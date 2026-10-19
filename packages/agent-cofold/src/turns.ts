@@ -5,7 +5,7 @@ import type { Bag, Chosen, MessageAttachment, MessageFrom, Ran, Session } from '
 import { modelReferenceOf } from './agent.js';
 import { mapTurn } from './mapping.js';
 import type { TurnMapping } from './mapping.js';
-import { toolCallPart, toolReadyAction, toolStartAction } from './tools.js';
+import { ruleName, toolCallPart, toolReadyAction, toolStartAction } from './tools.js';
 import { AGENT_ID } from './turnagent.js';
 import type { SessionContext } from './context.js';
 
@@ -158,6 +158,9 @@ export const createTurns = (
       displayNameOf: (name) => ctx.offered.find((one) => one.definition.name === name)?.definition.title ?? name,
       ownerOf: (name) => ctx.offered.find((one) => one.definition.name === name)?.owner,
       cancelled: () => ctx.cancelRequested,
+      // The operator's rule, read when a call is put to a person: a matched
+      // tool's question offers no session choice cofold would remember.
+      asksEveryTime: (name) => start.getAutoApproval?.('tool', ruleName(ctx.offered, name)) === 'ask',
       ...(reference !== undefined ? { model: reference } : {}),
     });
     ctx.activeMapping = mapping;

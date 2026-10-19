@@ -1,6 +1,6 @@
 ---
 title: The docs name the rule
-status: todo
+status: implemented
 depends: [task-02-claude-asks-for-a-matched-tool.md, task-03-acp-asks-for-a-matched-tool.md, task-04-pi-asks-for-a-matched-tool.md, task-05-cofold-asks-for-a-matched-tool.md]
 layer: docs
 refs:
@@ -28,7 +28,7 @@ The docs say what the rule does, who sets it, and where an ACP agent is out of i
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-19. `docs/sdk/AHP.md` lists `eligibleForAutoApproval` among the keys the host acts on. A paragraph there says it is host-wide and needs `config:change`. It matches one tool or a server's `<server>/*`, asks in every backend and mode, refuses in `dontAsk`, and offers no "always". It also says the host cannot revoke an approval cofold remembered before the rule was set. An ACP agent's own tools are out of reach, so the rule reaches only the MCP tools the host serves it. The prose lint on `docs/sdk` shows the same findings as before. They are the em dashes at 183, 210, 245, 285, 301, 314, 324, 330 and 339, and the long lines at 195, 384 and 947.
+- **Next action:** the final verification checklist, then a review.
 - **Open questions:** none.
-- **Watch out for:** keep each file's own style.
+- **Watch out for:** `AHP.md` is hard-wrapped at 80 columns, so the new paragraph is wrapped to match.

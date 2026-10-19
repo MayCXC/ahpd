@@ -83,9 +83,13 @@ function backend() {
   return { agent, start: (): Start | undefined => start };
 }
 
-/** What the last start's check says about a command line. */
-const approval = (start: Start | undefined, line: string): string | undefined =>
-  start?.getAutoApproval?.('shell', line, 'bash');
+/** What the last start's check says about a command line, run by one tool. */
+const approval = (start: Start | undefined, line: string, tool?: string): string | undefined =>
+  start?.getAutoApproval?.('shell', line, 'bash', tool);
+
+/** What the last start's check says about a call that is not a command line. */
+const toolApproval = (start: Start | undefined, name: string): string | undefined =>
+  start?.getAutoApproval?.('tool', name);
 
 /** A host with a people directory, and one connection per token. */
 function serving(terminalAutoApproveDefaults: 'vscode' | 'none' = 'vscode') {
@@ -194,4 +198,60 @@ it('asks every command when the window turned the check off', async () => {
   // Turned back on, the rules it pushed while off are still its rules.
   await pushing(ana, { terminalAutoApproveEnabled: true });
   expect(approval(start(), 'make test')).toBe('not-needed');
+});
+
+it('asks for a tool the rule names, in every session', async () => {
+  const { signedIn, pushing, opening, start } = serving();
+  const ana = await signedIn('admin', 'ana');
+  const bo = await signedIn('admin-two', 'bo');
+  await pushing(ana, { eligibleForAutoApproval: { 'tracker/create': false, 'mail/send': true } });
+  await opening(ana, 'ana-one');
+
+  expect(toolApproval(start(), 'tracker/create')).toBe('ask');
+  // `true` is eligible, which is the same as saying nothing about it.
+  expect(toolApproval(start(), 'mail/send')).toBeUndefined();
+  expect(toolApproval(start(), 'tracker/close')).toBeUndefined();
+
+  // The rule is the host's, not the window's: a session another window starts
+  // is asked too, unlike the terminal rules above.
+  await opening(bo, 'bo-one');
+  expect(toolApproval(start(), 'tracker/create')).toBe('ask');
+});
+
+it('matches a whole server with `/*`, and an exact key wins', async () => {
+  const { signedIn, pushing, opening, start } = serving();
+  const ana = await signedIn('admin', 'ana');
+  await pushing(ana, { eligibleForAutoApproval: { 'tracker/*': false, 'tracker/read': true } });
+  await opening(ana, 'ana-one');
+
+  expect(toolApproval(start(), 'tracker/create')).toBe('ask');
+  expect(toolApproval(start(), 'tracker/close')).toBe('ask');
+  // The exact key is read before the server's wildcard, as VS Code reads it.
+  expect(toolApproval(start(), 'tracker/read')).toBeUndefined();
+  expect(toolApproval(start(), 'mail/send')).toBeUndefined();
+});
+
+it('asks for a shell the rule names, before a terminal rule answers', async () => {
+  const { signedIn, pushing, opening, start } = serving();
+  const ana = await signedIn('admin', 'ana');
+  await pushing(ana, {
+    terminalAutoApproveRules: { 'ls -la': true },
+    eligibleForAutoApproval: { Bash: false },
+  });
+  await opening(ana, 'ana-one');
+
+  // The terminal rule approves the line, and the tool it runs under is one
+  // that asks every time.
+  expect(approval(start(), 'ls -la', 'Bash')).toBe('ask');
+  // A line under a tool the rule does not name is answered by the terminal
+  // rules, as before.
+  expect(approval(start(), 'ls -la', 'pwsh')).toBe('not-needed');
+  // Without a tool to name - a backend that does not pass one - the rule has
+  // nothing to match and the terminal rules answer.
+  expect(approval(start(), 'ls -la')).toBe('not-needed');
+  // And the rule is not the terminal check: turning that check off leaves the
+  // named tool asking.
+  await pushing(ana, { terminalAutoApproveEnabled: false });
+  expect(approval(start(), 'ls -la', 'pwsh')).toBeUndefined();
+  expect(approval(start(), 'ls -la', 'Bash')).toBe('ask');
 });

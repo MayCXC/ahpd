@@ -83,6 +83,16 @@ export interface TurnMappingOptions {
    * cancelled rather than complete.
    */
   cancelled(): boolean;
+  /**
+   * Whether the operator's rule makes this tool ask every time.
+   *
+   * Read when a call is put to a person, so a matched question offers no
+   * "allow for this session". cofold keeps such a choice itself, per session
+   * and tool, and would answer the next ask for that tool with it without
+   * asking anybody. A replay passes none: the rules of now do not decide what
+   * was asked then.
+   */
+  asksEveryTime?(name: string): boolean;
 }
 
 /** One turn's event translation. */
@@ -531,11 +541,15 @@ export function mapTurn(options: TurnMappingOptions): TurnMapping {
           /*
            * Allow once, allow this tool for the rest of the session, or deny.
            * The session choice is one cofold keeps itself, per session and
-           * tool, and answers the next ask for that tool with.
+           * tool, and answers the next ask for that tool with. A tool the
+           * operator's rule names is offered no such choice: cofold would skip
+           * a question the host cannot see.
            */
           const choices: Bag[] = [
             { id: 'allow-once', label: 'Allow once', kind: 'approve', group: 1 },
-            { id: 'allow-session', label: `Allow ${displayName} for this session`, kind: 'approve', group: 1 },
+            ...(options.asksEveryTime?.(event.name) === true
+              ? []
+              : [{ id: 'allow-session', label: `Allow ${displayName} for this session`, kind: 'approve', group: 1 }]),
             { id: 'deny', label: 'Deny', kind: 'deny', group: 2 },
           ];
           call.status = 'pending-confirmation';

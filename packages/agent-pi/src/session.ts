@@ -399,12 +399,24 @@ export function piSession(
   /**
    * What to do about one call: run it, ask a person, or refuse it.
    *
-   * The modes are the siblings' six. A shell command the owner's rules already
-   * allow is taken out of the ones a mode would ask about; the check narrows
-   * the questions and adds none, so a mode that refuses a call still refuses
-   * it and a mode that runs one still runs it without consulting the rules.
+   * The operator's rule is read first, by the tool's name, because it is the
+   * host's setting rather than a window's: a matched call is `ask` in every
+   * mode, `bypassPermissions` included, and `dontAsk`, which never asks,
+   * refuses it. Otherwise the modes are the siblings' six. A shell command the
+   * owner's rules already allow is taken out of the ones a mode would ask
+   * about; the check narrows the questions and adds none, so a mode that
+   * refuses a call still refuses it and a mode that runs one still runs it
+   * without consulting the rules.
    */
   const decide = async (toolName: string, input: Bag): Promise<ToolCallEventResult | 'ask' | undefined> => {
+    // A tool the host offered is `ahp/<name>` to the rule, the name Claude and
+    // ACP give it on the host's MCP server; pi's own tools keep their own.
+    const ruled = offering.some((one) => one.definition.name === toolName) ? `ahp/${toolName}` : toolName;
+    if (start.getAutoApproval?.('tool', ruled) === 'ask') {
+      return modeOf(settings.permissionMode) === 'dontAsk'
+        ? { block: true, reason: `${toolName} would need approval and the mode is dontAsk` }
+        : 'ask';
+    }
     const effects = effectsOf(toolName);
     /** Whether the modes that ask before a change ask about this call. */
     const asks = (): boolean => {
