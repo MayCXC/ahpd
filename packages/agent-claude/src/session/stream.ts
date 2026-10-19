@@ -190,9 +190,15 @@ export function createStream(ctx: SessionContext): Stream {
        */
       if (kind === 'tool_use') {
         const id = str(block.id) ?? `${of}:${String(event.index)}`;
+        const name = str(block.name) ?? 'tool';
+        /*
+         * The host draws the turn's Plan call from its own list, so Claude's
+         * own list is not a row of its own. The call still runs and its result
+         * is still read; only the row a client would draw is left out.
+         */
+        if (ctx.options.plan === true && name === 'TodoWrite') return;
         scope.calling.set(key, id);
         if (scope.parts.has(id)) return;
-        const name = str(block.name) ?? 'tool';
         // Whose tool it is, when it is an MCP server's. The reducer refuses
         // `chat/toolCallAuthRequired` on a call with no MCP contributor, so
         // this is also what makes a sign-in mid-call sayable at all.
@@ -324,6 +330,12 @@ export function createStream(ctx: SessionContext): Stream {
         // Claude's own task tools, as the session's plan. After the guard
         // above, so a message that arrives more than once writes once.
         tasks.called(str(turn.id) ?? '', id, name, bag(block.input));
+        /*
+         * The host draws the turn's Plan call from its own list, so Claude's
+         * own list is not a row of its own. The call still runs and its result
+         * is still read; only the row a client would draw is left out.
+         */
+        if (ctx.options.plan === true && name === 'TodoWrite') continue;
         const line = lineOf(name, bag(block.input));
         ctx.pastLines.set(id, pastLineOf(name, bag(block.input)));
         const input = toolInputOf(name, bag(block.input));

@@ -70,6 +70,7 @@ export function createTurn(ctx: SessionContext): Turn {
       },
       state: 'complete',
       updates: [],
+      ...(start.plan === true ? { hostPlan: true } : {}),
     };
     emit('chat', {
       type: 'chat/turnStarted',
@@ -324,6 +325,7 @@ export function createTurn(ctx: SessionContext): Turn {
         turnId,
         parts: turn.responseParts as Bag[],
         calls: new Map(),
+        ...(start.plan === true ? { hostPlan: true } : {}),
         reach: {
           within: inside,
           changed: (path, before) => {

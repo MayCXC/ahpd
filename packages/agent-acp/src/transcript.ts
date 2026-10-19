@@ -54,6 +54,7 @@ export function turnsOf(session: WatchedSession): TranscriptTurn[] {
       turnId: watched.turnId,
       parts: [],
       calls: new Map(),
+      ...(watched.hostPlan === true ? { hostPlan: true } : {}),
     };
     for (const { update, at } of watched.updates) mapUpdate(replay, update, at);
     // The plan is closed by the turn ending rather than by an update of its own,
@@ -103,7 +104,7 @@ export function turnsOf(session: WatchedSession): TranscriptTurn[] {
  * no turn ids and no times for a replay, so the id is this process's and the
  * time is when the replay was heard.
  */
-export function replayedTurns(updates: SessionUpdate[], at: string): WatchedTurn[] {
+export function replayedTurns(updates: SessionUpdate[], at: string, hostPlan = false): WatchedTurn[] {
   const turns: WatchedTurn[] = [];
   let open: WatchedTurn | undefined;
   /** Whether anything the agent said has gone into the turn being built. */
@@ -117,6 +118,7 @@ export function replayedTurns(updates: SessionUpdate[], at: string): WatchedTurn
         message: { text: '' },
         state: 'complete',
         updates: [],
+        ...(hostPlan ? { hostPlan: true } : {}),
       };
       turns.push(open);
       answered = false;

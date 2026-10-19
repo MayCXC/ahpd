@@ -15,7 +15,7 @@ import type { Agent } from './types/agent.js';
 import type { SessionConfigAnswerer } from './types/completions.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from './types/events.js';
 import type { HostOptions, HostTool } from './types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginHost, PluginStarts, ServedChannel, ServedMethod, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginHost, PluginStarts, SessionMetaKey, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from './types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from './types/records.js';
 import type { SessionStore } from './types/sessions.js';
 import type { Usage } from './types/usage.js';
@@ -334,6 +334,27 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    */
   const channels: Record<string, ServedChannel> = { ...base.channels };
   /*
+   * The one Plan call a turn shows, and who draws it.
+   *
+   * A turn holds one call, so a second registration is a collision and is
+   * reported: the first keeps the call and the second draws nothing.
+   */
+  let plan: ServedPlan | undefined = base.plan;
+  let planBy = base.plan === undefined ? undefined : 'the daemon';
+  /*
+   * The keys plugins add to a session's `_meta`, and who adds each.
+   *
+   * Seeded from the base for the same reason the ports are, and one key has one
+   * producer: a second one is a collision and is reported, because
+   * `session/metaChanged` carries the map whole and two producers of one key
+   * would overwrite each other.
+   */
+  const sessionMeta: ServedSessionMeta[] = [...(base.sessionMeta ?? [])];
+  const metaKeys = new Map<string, string>();
+  for (const served of base.sessionMeta ?? []) {
+    for (const one of served.keys) metaKeys.set(one.key, 'the daemon');
+  }
+  /*
    * The served commands, by name, and who holds each. Seeded from the base, so
    * a plugin is told when the daemon already serves one.
    */
@@ -414,6 +435,38 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
       }
       commands.set(name, contribution.by);
       methods[name] = served;
+    }
+
+    if (contribution.plan !== undefined) {
+      if (plan !== undefined) {
+        problems.push(`plugin ${contribution.by} registers a plan, which ${planBy === 'the daemon' ? 'the daemon' : `plugin ${planBy}`} already draws`);
+        continue;
+      }
+      plan = contribution.plan;
+      planBy = contribution.by;
+    }
+
+    if (contribution.sessionMeta !== undefined) {
+      const held: SessionMetaKey[] = [];
+      for (const one of contribution.sessionMeta.keys) {
+        const ownerOfKey = metaKeys.get(one.key);
+        if (ownerOfKey !== undefined) {
+          problems.push(`plugin ${contribution.by} adds _meta key ${one.key}, which ${ownerOfKey === 'the daemon' ? 'the daemon' : `plugin ${ownerOfKey}`} already adds`);
+          continue;
+        }
+        metaKeys.set(one.key, contribution.by);
+        held.push(one);
+      }
+      if (held.length > 0) {
+        /*
+         * The same object the plugin holds, with the keys that collided taken
+         * out of it: the host sets `changed` on this object when it is built,
+         * and the plugin announces through it, so a copy would leave the
+         * announcement with nowhere to go.
+         */
+        contribution.sessionMeta.keys = held;
+        sessionMeta.push(contribution.sessionMeta);
+      }
     }
   }
 
@@ -510,6 +563,8 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
   if (Object.keys(channels).length > 0) options.channels = channels;
   if (Object.keys(methods).length > 0) options.methods = methods;
+  if (plan !== undefined) options.plan = plan;
+  if (sessionMeta.length > 0) options.sessionMeta = sessionMeta;
 
   /*
    * The routes, by plugin name.
@@ -1161,6 +1216,63 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
           throw new Error(`plugin ${by}: ${reason(error)}`);
         }
       });
+    },
+    /*
+     * One plan per plugin, and the fold arbitrates between plugins. The object
+     * is carried through, so the host fills `changed` in and a change the
+     * plugin announces reaches it.
+     */
+    registerPlan(read) {
+      open();
+      if (typeof read !== 'function') {
+        throw new Error(miss(by, 'registerPlan', 'the reader', 'a function answering the lines of one session\'s plan'));
+      }
+      if (contribution.plan !== undefined) {
+        throw new Error(miss(by, 'registerPlan', 'a plan', 'registered only once'));
+      }
+      contribution.plan = { by, read };
+    },
+    planChanged(uri) {
+      const served = contribution.plan;
+      if (served === undefined) {
+        throw new Error(miss(by, 'planChanged', uri, 'a session whose plan this plugin draws; call registerPlan first'));
+      }
+      const changed = served.changed;
+      if (changed === undefined) {
+        throw new Error(miss(by, 'planChanged', 'the change', 'announced once a host is built over this plugin'));
+      }
+      return changed(uri);
+    },
+    /*
+     * One plugin's keys, many of them, and the fold arbitrates between plugins.
+     * The object is carried through, so the host fills `changed` in and a value
+     * the plugin says moved reaches it.
+     */
+    registerSessionMeta(key, read) {
+      open();
+      if (typeof key !== 'string' || key.trim() === '') {
+        throw new Error(miss(by, 'registerSessionMeta', 'the key', 'a non-empty string'));
+      }
+      if (typeof read !== 'function') {
+        throw new Error(miss(by, 'registerSessionMeta', 'the reader', 'a function answering the value of that key for one session'));
+      }
+      if (contribution.sessionMeta === undefined) contribution.sessionMeta = { by, keys: [] };
+      const held = contribution.sessionMeta;
+      if (held.keys.some((one) => one.key === key)) {
+        throw new Error(miss(by, 'registerSessionMeta', key, 'registered only once'));
+      }
+      held.keys.push({ key, read });
+    },
+    sessionMetaChanged(uri) {
+      const served = contribution.sessionMeta;
+      if (served === undefined) {
+        throw new Error(miss(by, 'sessionMetaChanged', uri, 'a session whose _meta this plugin adds to; call registerSessionMeta first'));
+      }
+      const changed = served.changed;
+      if (changed === undefined) {
+        throw new Error(miss(by, 'sessionMetaChanged', 'the change', 'announced once a host is built over this plugin'));
+      }
+      changed(uri);
     },
     registerTerminals: (store, when) => { setPort('terminals', 'registerTerminals', store, when); },
     registerChanges: (source, when) => { setPort('changes', 'registerChanges', source, when); },

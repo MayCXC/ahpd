@@ -1,6 +1,6 @@
 ---
 title: The docs say how a client sees the list
-status: todo
+status: implemented
 depends: [task-01-the-plan-call-is-drawn-from-the-host.md, task-02-a-sessions-meta-counts-its-open-tasks.md, task-03-the-plan-channel-holds-a-plan.md]
 layer: "docs"
 refs:
@@ -27,3 +27,8 @@ refs:
 - The docs match the code of tasks 01 to 03.
 
 ## Resume
+
+- **Done so far:** `docs/plugins/TASK-LIST.md` has a `What a client sees` section with three parts. It gives the turn's one Plan call and `Start.plan`. It gives `_meta['ahpd.tasks']` as `{ open: n }`, with the statuses it counts. It gives the `x-ahpd-plans` channel with its URI, grant, state and the four actions in a table, `taskRemoved` with `taskId` among them, and the sample `{ "ahpd.tasks": { "open": 2 } }`. It says the channel is an `x-ahpd` extension and links the proposal.
+- **Next action:** none for this task.
+- **Open questions:** none.
+- **Watch out for:** the action names in the docs, `packages/tasks/src/channel.ts` and the proposal are one set. A rename is a change to all three.

@@ -1,6 +1,6 @@
 ---
 title: A session's _meta counts its open tasks
-status: todo
+status: implemented
 depends: []
 layer: "sdk, tasks"
 refs:
@@ -38,3 +38,8 @@ A session's `_meta` holds the count of its open tasks, and a client hears a new 
 - `pnpm vitest run packages/tasks/test packages/sdk/test` passes.
 
 ## Resume
+
+- **Done so far:** `registerSessionMeta(key, read)` and `sessionMetaChanged(uri)` are in the plugin host. The fold keeps the served object it was given. A copy would leave the host's `changed` on the copy and the registration's check on the original. `metaOf` composes each registered key into the session's `_meta`. The tasks plugin registers `ahpd.tasks` as `{ open: n }` and recounts on each change to the two collections. It announces each session whose count moved. `packages/tasks/test/tasks-meta.test.ts` and the new case in `plugin-validate.test.ts` pass.
+- **Next action:** none for this task.
+- **Open questions:** none. The count is kept from the records, so it is a view of them, as planned.
+- **Watch out for:** the first recount fills the counts without announcing, because a host composes `_meta` from the map when it is read. Only a count that moves announces `session/metaChanged`, and a session no task names has no key at all.

@@ -141,6 +141,11 @@ describe('pluginHost', () => {
     expect(options.tools?.map((one) => one.definition.name)).toEqual(['legacy']);
   });
 
+  it('refuses a session _meta reader that is not a function, naming the reader', () => {
+    const { host } = pluginHost('alpha', context());
+    expect(() => host.registerSessionMeta('ahpd.tasks', {} as never)).toThrow(/alpha.*registerSessionMeta.*reader/);
+  });
+
   it('refuses a resources store with no list, and terminals with no create', () => {
     const { host } = pluginHost('alpha', context());
     expect(() => host.registerResources({} as never)).toThrow(/list/);

@@ -181,6 +181,7 @@ against its contract before it is recorded.
 | `registerRoute(handler)` | register, open key | one HTTP route served on this host's own listener, under `/plugins/<name>/` |
 | `registerTriggerType(definition)` | register, open key | one event trigger type an automation may be saved with, listed beside the host's own `session` and `watch` |
 | `registerChatPreamble(preamble)` | append | text the host puts before the first turn of each chat a person or a tool opens |
+| `registerSessionMeta(key, read)` | register, open key | one key in every session's `_meta`, answered synchronously for a session URI; `sessionMetaChanged(uri)` announces a new value |
 | `registerClose(close)` | register, open key | one function the host runs when it closes, once its sessions have closed and before its stores do |
 
 ### A route authenticates its own caller
