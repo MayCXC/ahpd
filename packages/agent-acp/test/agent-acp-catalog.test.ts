@@ -28,6 +28,13 @@ import type { AcpOptions, AcpTurn } from '../src/types.js';
 
 const FIXTURE = fileURLToPath(new URL('./fixtures/acp-server.mjs', import.meta.url));
 
+/**
+ * How long a test that waits on a server's close may take. Windows has no
+ * SIGTERM, so a server still running after its stdin closes is ended only
+ * once the connection's five-second grace is over.
+ */
+const CLOSES_MS = 15_000;
+
 /** Everything this file made, so each case leaves nothing behind. */
 const made: string[] = [];
 const started: Session[] = [];
@@ -848,7 +855,7 @@ it('leaves no server behind after reading a session back', async () => {
   // The read spawned a server of its own, and a read is not a session.
   await until(() => !running(pid));
   expect(running(pid)).toBe(false);
-});
+}, CLOSES_MS);
 
 it('answers a second read of the same session from the record, and spawns nothing', async () => {
   const { agent, log } = backend();
@@ -1351,7 +1358,7 @@ it('leaves no process behind when a session closes', async () => {
   // and the SIGTERM reaches both.
   await until(() => !running(pid));
   expect(running(pid)).toBe(false);
-});
+}, CLOSES_MS);
 
 /** Whether a pid is still a process this user could signal. */
 const running = (pid: number): boolean => {

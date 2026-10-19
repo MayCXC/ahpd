@@ -1,7 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memorySessions } from '../src/sessions.js';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -362,8 +363,11 @@ describe('the pull request a create-pr recorded', () => {
   const KEY = 'agentHost/sessionArtifacts';
   const URL = 'https://github.com/softov/ahpd/pull/1';
   const here: string[] = [];
-  afterEach(() => {
-    for (const dir of here) rmSync(dir, { recursive: true, force: true });
+  afterEach(async () => {
+    // Awaited rather than sync: on Windows a folder stays held until what the
+    // test opened there is let go, which happens on the event loop a sync
+    // retry blocks.
+    for (const dir of here) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     here.length = 0;
   });
 

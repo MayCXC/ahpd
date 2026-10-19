@@ -85,7 +85,7 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 | [01 - A spawn opens no console window](task-01-a-spawn-opens-no-console-window.md) | implemented | - |
 | [02 - A mount with a drive is a mount](task-02-a-mount-with-a-drive-is-a-mount.md) | implemented | - |
 | [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | implemented | - |
-| [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | todo | 03 |
+| [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | implemented | 03 |
 | [05 - ahpd config runs on Windows](task-05-ahpd-config-runs-on-windows.md) | todo | 03 |
 
 ## Risks and tradeoffs

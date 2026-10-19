@@ -18,7 +18,7 @@ export default function setup(): () => void {
   process.env.TEMP = run;
   process.env.TMP = run;
   return () => {
-    rmSync(run, { recursive: true, force: true });
+    rmSync(run, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     /*
      * And the checkout is not a place a run writes in.
      *

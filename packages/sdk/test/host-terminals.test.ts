@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Agent, McpServer, Start } from '../src/types/agent.js';
@@ -425,7 +426,7 @@ describe('a shell on this machine', () => {
       // exists - so nothing starts there at all.
       expect(await spoken(p, uri, join(dir, 'my dir'))).toContain(join(dir, 'my dir'));
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -450,7 +451,7 @@ describe('a shell on this machine', () => {
       expect(found.snapshot.state.cwd).toBe(uriOf(where));
       expect(localPath(found.snapshot.state.cwd)).toBe(where);
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
