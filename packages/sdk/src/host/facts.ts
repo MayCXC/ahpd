@@ -1,3 +1,4 @@
+import { sep } from 'node:path';
 import { ARTIFACTS_META, artifactsIn, isGitHubLink, recordArtifact } from '../tools/artifacts.js';
 import { idOf } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
@@ -336,7 +337,8 @@ export function createFacts(ctx: HostContext): Facts {
       if (dir !== undefined) dirs.add(dir);
     }
     return [...dirs]
-      .filter((dir) => path === dir || path.startsWith(`${dir}/`))
+      // The system's separator, which is what `localPath` answers in.
+      .filter((dir) => path === dir || path.startsWith(dir.endsWith(sep) ? dir : `${dir}${sep}`))
       .sort((a, b) => b.length - a.length)[0];
   };
 

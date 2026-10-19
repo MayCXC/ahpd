@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { metaKeys } from '../../../tools/wire.mjs';
 import { posix } from '../../../tools/posix.ts';
+import { uriOf } from '../src/fileuri.js';
 import { gitChanges } from '../src/changes.js';
 import type { ChangeWords, ChangeWordsMode, ChangesetOperationContext } from '../src/types/changes.js';
 
@@ -81,8 +82,8 @@ describe('staging, as the changeset reports it', () => {
     const source = gitChanges();
     const state = await source.state?.(dir, 'ahp-session:/s', 'uncommitted');
     const meta = Object.fromEntries((state?.files ?? []).map((file) => [file.id, file._meta]));
-    expect(meta[`file://${dir}/tracked.txt`]).toEqual({ 'ahpd.staged': true, 'ahpd.unstaged': false });
-    expect(meta[`file://${dir}/fresh.txt`]).toEqual({ 'ahpd.staged': false, 'ahpd.unstaged': true });
+    expect(meta[uriOf(join(dir, 'tracked.txt'))]).toEqual({ 'ahpd.staged': true, 'ahpd.unstaged': false });
+    expect(meta[uriOf(join(dir, 'fresh.txt'))]).toEqual({ 'ahpd.staged': false, 'ahpd.unstaged': true });
   });
 
   it('says both when a staged file changed again, because a commit form must not hide half', async () => {
@@ -118,7 +119,7 @@ describe('staging, as the changeset reports it', () => {
     const source = gitChanges();
     const state = await source.state?.(dir, 'ahp-session:/s', 'uncommitted');
     const rows = state?.files ?? [];
-    expect(rows.map((one) => one.id)).toEqual([`file://${dir}/new.txt`]);
+    expect(rows.map((one) => one.id)).toEqual([uriOf(join(dir, 'new.txt'))]);
     expect(rows[0]?._meta).toEqual({ 'ahpd.staged': true, 'ahpd.unstaged': false });
   });
 
@@ -134,7 +135,7 @@ describe('staging, as the changeset reports it', () => {
     const source = gitChanges();
     const state = await source.state?.(dir, 'ahp-session:/s', 'uncommitted');
     const rows = state?.files ?? [];
-    expect(rows.map((one) => one.id)).toEqual([`file://${dir}/new.txt`]);
+    expect(rows.map((one) => one.id)).toEqual([uriOf(join(dir, 'new.txt'))]);
     expect(rows[0]?.edit.after).toBeDefined();
   });
 });
@@ -157,8 +158,8 @@ describe('a session in a subfolder of its repository', () => {
     const { dir, sub } = nested();
     const state = await gitChanges().state?.(sub, 'ahp-session:/s', 'uncommitted');
     const rows = state?.files ?? [];
-    expect(rows.map((one) => one.id)).toEqual([`file://${dir}/sub/new.txt`]);
-    expect(rows[0]?.edit.after?.uri).toBe(`file://${dir}/sub/new.txt`);
+    expect(rows.map((one) => one.id)).toEqual([uriOf(join(dir, 'sub', 'new.txt'))]);
+    expect(rows[0]?.edit.after?.uri).toBe(uriOf(join(dir, 'sub', 'new.txt')));
     expect(rows[0]?.edit.diff).toEqual({ added: 3, removed: 0 });
   });
 
@@ -168,7 +169,7 @@ describe('a session in a subfolder of its repository', () => {
     const source = gitChanges();
     await source.refresh?.(sub);
     const state = await source.state?.(sub, 'ahp-session:/s', 'uncommitted');
-    const row = (state?.files ?? []).find((one) => one.id === `file://${dir}/sub/kept.txt`);
+    const row = (state?.files ?? []).find((one) => one.id === uriOf(join(dir, 'sub', 'kept.txt')));
     expect(row?.edit.diff).toEqual({ added: 1, removed: 0 });
     const before = row?.edit.before?.content?.uri;
     expect(before).toBeDefined();

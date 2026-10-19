@@ -108,7 +108,7 @@ async function talking(options: { changes?: ChangesetSource; tools?: HostTool[] 
   });
   await client.handle({
     method: 'createSession',
-    params: { channel: uri, provider: 'acp', workingDirectories: [`file://${path}`] },
+    params: { channel: uri, provider: 'acp', workingDirectories: [uriOf(path)] },
   });
   /*
    * The chat, read rather than assumed.
@@ -681,7 +681,7 @@ it('shows a call\'s terminal and diff content, and records the diff in the chang
   // and there is no before here because no URI names what a file used to be.
   expect(content[1]).toEqual({
     type: 'fileEdit',
-    after: { uri: `file://${join(path, 'painted.txt')}`, content: { uri: `file://${join(path, 'painted.txt')}` } },
+    after: { uri: uriOf(join(path, 'painted.txt')), content: { uri: uriOf(join(path, 'painted.txt')) } },
   });
 
   // And the turn's changeset holds both of its sides, the before side being

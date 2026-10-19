@@ -7,7 +7,8 @@
  */
 import { spawn } from 'node:child_process';
 import { createServer, type AddressInfo } from 'node:net';
-import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, copyFileSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
@@ -77,12 +78,19 @@ beforeEach(() => {
   wire = join(home, 'wire.jsonl');
   writeFileSync(config, '{}\n');
 });
-afterEach(() => {
-  for (const pid of [...spawned.splice(0), ...announced()]) {
+afterEach(async () => {
+  const pids = [...spawned.splice(0), ...announced()];
+  for (const pid of pids) {
     try { process.kill(pid, 'SIGKILL'); }
     catch { /* it was already gone, which is what was wanted */ }
   }
-  rmSync(home, { recursive: true, force: true });
+  /*
+   * Gone before the folder is removed. A kill is sent, not waited on, and a
+   * daemon still dying writes into `home` while the removal walks it, which
+   * the removal answers with ENOTEMPTY.
+   */
+  for (const pid of pids) await gone(pid);
+  await rm(home, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 /**

@@ -88,9 +88,15 @@ const RECORD: Running = {
   argv: ['--port', '9350'],
 };
 
-/** A global install this test makes up: the shape is what `installPlace` reads, and no folder is touched. */
+/**
+ * A global install this test makes up: the shape is what `installPlace` reads, and no folder is touched.
+ *
+ * A Linux machine's, on any system the suite runs on: these cases are the
+ * install that runs in this process, and Windows hands it to a helper instead,
+ * which its own case drives.
+ */
 const install = (): PlaceFacts => ({
-  root: join(home, 'npm-prefix', 'lib', 'node_modules', '@ahpd', 'server'),
+  root: '/usr/local/lib/node_modules/@ahpd/server',
   platform: 'linux',
   real: (path) => path,
   exists: () => false,
@@ -305,7 +311,7 @@ describe('the install and the restart', () => {
       npmVersion: async () => '11.16.0',
     });
     expect(npm.calls[0]).toEqual([
-      'install', '-g', '--allow-scripts=node-pty', '--prefix', join(home, 'npm-prefix'), `@ahpd/server@${LATEST}`,
+      'install', '-g', '--allow-scripts=node-pty', '--prefix', '/usr/local', `@ahpd/server@${LATEST}`,
     ]);
     expect(answer?.data).toMatchObject({ from: CURRENT, to: LATEST, restarting: true });
   });
@@ -318,22 +324,22 @@ describe('the install and the restart', () => {
       npmVersion: async () => '11.15.9',
     });
     expect(npm.calls[0]).toEqual([
-      'install', '-g', '--prefix', join(home, 'npm-prefix'), `@ahpd/server@${LATEST}`,
+      'install', '-g', '--prefix', '/usr/local', `@ahpd/server@${LATEST}`,
     ]);
   });
 
   it('installs a project ahpd with --prefix alone, and never --allow-scripts', async () => {
-    const project = join(home, 'project');
+    const project = '/home/ana/project';
     const npm = fakeNpm();
     await update({ version: LATEST }, {
       configDir: plugins({}),
       run: npm.runner,
       npmVersion: async () => '12.0.0',
       place: {
-        root: join(project, 'node_modules', '@ahpd', 'server'),
+        root: `${project}/node_modules/@ahpd/server`,
         platform: 'linux',
         real: (path) => path,
-        exists: (path) => path === join(project, 'package.json'),
+        exists: (path) => path === `${project}/package.json`,
       },
     });
     expect(npm.calls[0]).toEqual(['install', '--prefix', project, `@ahpd/server@${LATEST}`]);

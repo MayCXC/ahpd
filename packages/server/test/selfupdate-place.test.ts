@@ -8,9 +8,9 @@
  * two it cannot replace, and both are refused with the same sentence naming the
  * folder that would have to be updated by hand.
  *
- * The Windows cases are paths a Windows machine would have, with the folder
+ * The layout cases are paths the machine they name would have, with the folder
  * checks answered by the test: the layout is what is being read, and it does not
- * change because the suite runs on Linux.
+ * change with the system the suite runs on. The refusals read real folders.
  */
 
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
@@ -39,10 +39,11 @@ const refusal = (work: () => unknown): string => {
 
 describe('the install place', () => {
   it('answers the prefix of a global install on Linux and macOS', () => {
-    const prefix = join(root, 'usr-local');
-    const server = manifestIn(join(prefix, 'lib', 'node_modules', '@ahpd', 'server'));
+    const prefix = '/usr/local';
+    const server = '/usr/local/lib/node_modules/@ahpd/server';
     for (const platform of ['linux', 'darwin'] as const) {
-      expect(installPlace({ root: server, platform })).toEqual({ kind: 'global', prefix });
+      expect(installPlace({ root: server, platform, exists: () => false, real: (path) => path }))
+        .toEqual({ kind: 'global', prefix });
     }
   });
 
@@ -56,16 +57,16 @@ describe('the install place', () => {
   });
 
   it('answers a folder with its own package.json as a prefix install', () => {
-    const folder = join(root, 'project');
-    const server = manifestIn(join(folder, 'node_modules', '@ahpd', 'server'));
-    manifestIn(folder);
-    expect(installPlace({ root: server, platform: 'linux' })).toEqual({ kind: 'prefix', prefix: folder });
+    const exists = (path: string): boolean => path.endsWith('package.json');
+    const folder = '/home/ana/project';
+    const server = '/home/ana/project/node_modules/@ahpd/server';
+    expect(installPlace({ root: server, platform: 'linux', exists, real: (path) => path }))
+      .toEqual({ kind: 'prefix', prefix: folder });
 
     // The same layout on Windows is a project too when the folder says so, and
     // a global install only when it does not.
     const windows = 'C:\\work\\project';
     const windowsServer = 'C:\\work\\project\\node_modules\\@ahpd\\server';
-    const exists = (path: string): boolean => path.endsWith('package.json');
     expect(installPlace({ root: windowsServer, platform: 'win32', exists, real: (path) => path }))
       .toEqual({ kind: 'prefix', prefix: windows });
   });
@@ -75,7 +76,8 @@ describe('the install place', () => {
     mkdirSync(install, { recursive: true });
     const elsewhere = manifestIn(join(root, 'source'));
     const link = join(install, 'server');
-    symlinkSync(elsewhere, link, 'dir');
+    // A junction on Windows, which needs no privilege and resolves as a link does.
+    symlinkSync(elsewhere, link, process.platform === 'win32' ? 'junction' : 'dir');
 
     const said = refusal(() => installPlace({ root: link, platform: 'linux' }));
     expect(said).toContain(link);

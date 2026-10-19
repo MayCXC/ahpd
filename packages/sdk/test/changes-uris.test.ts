@@ -91,7 +91,7 @@ const encodeFast = (value: string, isPath: boolean, isAuthority: boolean): strin
   return out + encodeURIComponent(native);
 };
 
-/** `_asFormatted(URI.parse(uri), false)`, with the windows drive letter rule and a userinfo left out. */
+/** `_asFormatted(URI.parse(uri), false)`, with a userinfo left out. */
 const vscode = (uri: string): string => {
   const match = vscodeParts.exec(uri);
   if (!match) return '';
@@ -109,7 +109,10 @@ const vscode = (uri: string): string => {
       ? encodeFast(authority, false, true)
       : encodeFast(authority.slice(0, colon), false, true) + authority.slice(colon);
   }
-  if (path) out += encodeFast(path, true, false);
+  // A Windows drive letter is printed lowercase, `/C:/x` or `C:/x`, whatever the scheme.
+  const drive = /^(\/?)([A-Z]):/.exec(path);
+  const printed = drive === null ? path : `${drive[1] ?? ''}${(drive[2] ?? '').toLowerCase()}:${path.slice(drive[0].length)}`;
+  if (printed) out += encodeFast(printed, true, false);
   if (query) out += `?${encodeFast(query, false, false)}`;
   if (fragment) out += `#${encodeFast(fragment, false, false)}`;
   return out;
@@ -122,8 +125,18 @@ describe('the normaliser, against VS Code run on the same URIs', () => {
     expect(vscode('ahp-edit://cofold%3A%2FAbc-123/turn-1/before/w/x.md')).toBe('ahp-edit://cofold:/abc-123/turn-1/before/w/x.md');
     expect(vscode('ahp-git://head/github/ahpd/docs/AHP.md')).toBe('ahp-git://head/github/ahpd/docs/AHP.md');
     expect(vscode('ahp-edit://turn/cofold%3A%2FAbc-123/t1/before/w/x.md')).toBe('ahp-edit://turn/cofold%3A/Abc-123/t1/before/w/x.md');
+    expect(vscode('ahp-git://head/C%3A/w/x.md')).toBe('ahp-git://head/c%3A/w/x.md');
   });
 });
+
+/**
+ * A path as a URI's path holds it, as the host writes one: `/C:/a/b` for a
+ * Windows path, and a POSIX one as it is.
+ */
+const uriPath = (path: string): string => {
+  const forward = path.replaceAll('\\', '/');
+  return forward.startsWith('/') ? forward : `/${forward}`;
+};
 
 /** The text `read` answers for a URI, or `undefined`. */
 const text = async (source: ReturnType<typeof gitChanges>, uri: string): Promise<string | undefined> =>
@@ -145,11 +158,12 @@ describe('ahp-git:, a modified file as HEAD has it', () => {
     const dir = repository();
     const source = gitChanges();
     await source.refresh?.(dir);
-    expect(await text(source, `ahp-git:${dir}/docs/AHP.md`)).toBe('committed ahp\n');
-    expect(await text(source, `ahp-git://${dir}/docs/AHP.md`)).toBe('committed ahp\n');
-    expect(await text(source, `ahp-git://head${dir}/docs/AHP.md`)).toBe('committed ahp\n');
-    expect(await text(source, `ahp-git:${dir}/docs/a%20file%20#1.md`)).toBe('committed spaced\n');
-    expect(await text(source, `ahp-git://${dir}/docs/a file #1.md`)).toBe('committed spaced\n');
+    const at = uriPath(dir);
+    expect(await text(source, `ahp-git:${at}/docs/AHP.md`)).toBe('committed ahp\n');
+    expect(await text(source, `ahp-git://${at}/docs/AHP.md`)).toBe('committed ahp\n');
+    expect(await text(source, `ahp-git://head${at}/docs/AHP.md`)).toBe('committed ahp\n');
+    expect(await text(source, `ahp-git:${at}/docs/a%20file%20#1.md`)).toBe('committed spaced\n');
+    expect(await text(source, `ahp-git://${at}/docs/a file #1.md`)).toBe('committed spaced\n');
   });
 });
 
@@ -258,7 +272,7 @@ describe('ahp-edit:, a turn\'s captured sides', () => {
   it('still resolves a side minted with the session as the authority, sent back as given', async () => {
     const file = join(scratch(), 'a file #1.md');
     const { source } = await captured('cofold:/Abc-123', 't1', file);
-    const old = `ahp-edit://${encodeURIComponent('cofold:/Abc-123')}/${encodeURIComponent('t1')}/before${file}`;
+    const old = `ahp-edit://${encodeURIComponent('cofold:/Abc-123')}/${encodeURIComponent('t1')}/before${uriPath(file)}`;
     expect(await text(source, old)).toBe('as found\n');
   });
 });

@@ -1,3 +1,4 @@
+import { normalize } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import type {
   AvailableCommand,
@@ -203,9 +204,13 @@ export function createHandlers(ctx: SessionContext): Handlers {
      * still in flight would find it already changed, and the turn ends after both.
      */
     const turnId = ctx.mapping?.turnId;
-    if (turnId !== undefined) await start.onFileEdit?.(turnId, request.path, 'before');
-    await store.write(uriOf(request.path), { data: request.content, encoding: 'utf-8', mode: 'truncate' });
-    if (turnId !== undefined) await start.onFileEdit?.(turnId, request.path, 'after');
+    // In the system's own spelling, as every other row of the changeset is: a
+    // server on Windows may join a path with `/`, and one file named two ways
+    // is two rows.
+    const path = normalize(request.path);
+    if (turnId !== undefined) await start.onFileEdit?.(turnId, path, 'before');
+    await store.write(uriOf(path), { data: request.content, encoding: 'utf-8', mode: 'truncate' });
+    if (turnId !== undefined) await start.onFileEdit?.(turnId, path, 'after');
     return {};
   };
 

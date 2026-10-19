@@ -622,11 +622,11 @@ it('lists the sessions the server lists, mapping the fields the contract wants',
     title: 'One',
     createdAt: '2026-01-01T00:00:00.000Z',
     modifiedAt: '2026-01-01T00:00:00.000Z',
-    workingDirectories: ['file:///tmp/one'],
+    workingDirectories: [uriOf('/tmp/one')],
   });
   // A row with no title falls back to its id, and one with no timestamp to now.
   expect(rows?.[1]?.title).toBe('listed-2');
-  expect(rows?.[1]?.workingDirectories).toEqual(['file:///tmp/two', 'file:///tmp/two-b']);
+  expect(rows?.[1]?.workingDirectories).toEqual([uriOf('/tmp/two'), uriOf('/tmp/two-b')]);
   expect(Number.isNaN(Date.parse(String(rows?.[1]?.createdAt)))).toBe(false);
 });
 
@@ -757,7 +757,7 @@ it('answers the watched record for a command that does not start, and nothing el
     title: 'Kept',
     createdAt: expect.any(String),
     modifiedAt: expect.any(String),
-    workingDirectories: ['file:///tmp'],
+    workingDirectories: [uriOf('/tmp')],
   });
   expect(await agent.find?.('nobody')).toBeUndefined();
 });

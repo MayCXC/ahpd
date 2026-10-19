@@ -14,6 +14,7 @@
  * throwing, so a 1.5 server does not fail a 1.4 bridge.
  */
 
+import { normalize } from 'node:path';
 import type { ContentBlock, Diff, PermissionOption, PlanEntry, SessionUpdate, ToolCall, ToolCallStatus, ToolCallUpdate } from '@agentclientprotocol/sdk';
 import { bag, callTimes, str, strings, uriOf, withCallTimes } from '@ahpd/sdk';
 import type { Bag, HarnessPlanEntry, PlanUpdate } from '@ahpd/sdk';
@@ -341,9 +342,12 @@ const heldContent = (part: Bag | undefined): Bag[] => {
  * never given.
  */
 const fileEdit = (turn: AcpTurn, diff: Diff): Bag => {
-  const uri = uriOf(diff.path);
-  if (turn.reach !== undefined && turn.reach.within(diff.path)) {
-    turn.reach.changed(diff.path, diff.oldText ?? undefined);
+  // In the system's own spelling, as the write's capture is: a server on
+  // Windows may join a path with `/`, and one file named two ways is two rows.
+  const path = normalize(diff.path);
+  const uri = uriOf(path);
+  if (turn.reach !== undefined && turn.reach.within(path)) {
+    turn.reach.changed(path, diff.oldText ?? undefined);
   }
   return { type: 'fileEdit', after: { uri, content: { uri } } };
 };
