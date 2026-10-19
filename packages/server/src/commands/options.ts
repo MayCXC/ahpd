@@ -86,6 +86,15 @@ export interface Options {
   shellEnv?: ShellEnv;
   /** The rules a session's commands are matched against when its window pushed none. */
   terminalAutoApproveDefaults: 'vscode' | 'none';
+  /**
+   * A module whose default export reads a session's shell commands, as the
+   * file's `commandParser` names it.
+   *
+   * Absent is the sdk's own splitter. The path is absolute, made so against the
+   * file that set it. It has no flag: naming a module is the deployment's
+   * decision, and the module runs in this process when the daemon starts.
+   */
+  commandParser?: string;
   /** How long a streamed delta waits in the host before it is sent, absent when the deployment said nothing. */
   deltaWindowMs?: number;
   /** Minutes of quiet before a session's agent is let go, absent when the deployment said nothing. */
@@ -557,6 +566,11 @@ export const serverFields = {
     enum: ['vscode', 'none'],
     description: 'The rules a session\'s shell commands are matched against when the window that started it pushed none: vscode uses VS Code\'s terminal auto-approve table, none approves no command.',
   },
+  commandParser: {
+    type: 'string',
+    title: 'Command parser',
+    description: 'A .js or .ts module whose default export reads a shell command before the rules match it, as (line, shell) => ({ subCommands, writeDests, unanalyzable }) or undefined for a line it cannot read. A path is relative to the configuration file. A .ts module needs Node 22.18 or newer, Bun, or Deno, which strip types as they load. Set in the configuration file only.',
+  },
   deltaWindowMs: {
     type: 'integer',
     minimum: 0,
@@ -671,7 +685,7 @@ export const serverFields = {
 } satisfies Record<string, Field>;
 
 /** The fields only the configuration file sets, which have no flag. */
-const FILE_ONLY = ['httpApi', 'routes', 'usage', 'modelProxy', 'policies', 'mcpServers', 'shellEnv'] as const;
+const FILE_ONLY = ['httpApi', 'routes', 'usage', 'modelProxy', 'policies', 'mcpServers', 'shellEnv', 'commandParser'] as const;
 
 /** The flags that mean something only when typed, which the file does not set. */
 const TYPED_ONLY = ['stdio', 'configFile', 'noPlugins', 'noCwd', 'pluginOptions'] as const;
@@ -1116,6 +1130,8 @@ const noCwd = input['noCwd'] === true;
   const wire = given('wire');
   const clientToolTimeoutMs = given('clientToolTimeoutMs');
   const shellEnv = given('shellEnv');
+  // File-only, and already absolute: `anchored` resolved it against the file.
+  const commandParser = file.commandParser;
   const deltaWindowMs = given('deltaWindowMs');
   const sleepAfterMinutes = given('sleepAfterMinutes');
   const sessionResidencyLimit = given('sessionResidencyLimit');
@@ -1151,6 +1167,7 @@ const noCwd = input['noCwd'] === true;
     ...(clientToolTimeoutMs === undefined ? {} : { clientToolTimeoutMs }),
     ...(shellEnv === undefined ? {} : { shellEnv }),
     terminalAutoApproveDefaults: given('terminalAutoApproveDefaults') ?? 'vscode',
+    ...(commandParser === undefined ? {} : { commandParser }),
     ...(deltaWindowMs === undefined ? {} : { deltaWindowMs }),
     ...(sleepAfterMinutes === undefined ? {} : { sleepAfterMinutes }),
     ...(sessionResidencyLimit === undefined ? {} : { sessionResidencyLimit }),

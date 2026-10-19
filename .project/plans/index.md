@@ -220,7 +220,7 @@ Reference: [00-host.md](host/00-host.md)
 | [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | 101 |
 | [100 p1 - A command is split and matched](host/100-p1-a-command-is-split-and-matched/plan.md) | medium | active 2026-10-16; tasks 01 to 04 implemented | 100 | 100 p2, 100 p3 |
 | [100 p2 - A session gets its owner's command check](host/100-p2-a-session-gets-its-owners-command-check/plan.md) | medium | built 2026-10-18 | 100 p1 | 100 p4, 100 p5, 101 |
-| [100 p3 - Another parser replaces the splitter](host/100-p3-another-parser-replaces-the-splitter/plan.md) | medium | planned 2026-10-16 | 100 p1 | - |
+| [100 p3 - Another parser replaces the splitter](host/100-p3-another-parser-replaces-the-splitter/plan.md) | medium | active 2026-10-19; tasks 01 to 03 implemented | 100 p1 | - |
 | [100 p4 - Claude and ACP ask only for unmatched commands](host/100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-18; task 01 and task 02 implemented | 100 p2 | - |
 | [100 p5 - pi and cofold ask only for unmatched commands](host/100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-19; task 01 and task 02 implemented | 100 p2 | - |
 | [100 p6 - The docs name the terminal rules](host/100-p6-the-docs-name-the-terminal-rules/plan.md) | medium | planned 2026-10-16 | 100 p1 to p5 | - |
@@ -233,7 +233,7 @@ Reference: [00-host.md](host/00-host.md)
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented | - | - |
-| [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | planned 2026-10-19 | - | - |
+| [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | active 2026-10-19; task 01 implemented | - | - |
 
 Next free number in `host`: `97`.
 
@@ -483,7 +483,7 @@ Reference: [00-policy.md](policy/00-policy.md)
 | [01 - A policy says who may use which agent, model and computer](policy/01-a-policy-says-who-may-use-what/plan.md) | high | built 2026-10-02 ([implemented.md](policy/01-a-policy-says-who-may-use-what/implemented.md)) | host 36 | policy 02, proxy 02 |
 | [02 - A limit says how much it allows, how much is used and when it resets](policy/02-a-limit-says-what-is-used-and-when-it-resets/plan.md) | high | active 2026-10-17; tasks 01-06 implemented | policy 01, usage 02 | policy 03, ahpw budget view |
 | [04 - The policy form reads its choices from the manifest](policy/04-policy-form-reads-choices-from-manifest/plan.md) | medium | built 2026-10-06 ([implemented.md](policy/04-policy-form-reads-choices-from-manifest/implemented.md)); reviewed and merged 2026-10-06 | policy 01 | ahpapp policy/01 |
-| [05 - A put clears pool and cap, and a client imports the limits type](policy/05-a-put-clears-pool-and-cap/plan.md) | medium | planned 2026-10-19 | policy 02 | ahpw policy editor |
+| [05 - A put clears pool and cap, and a client imports the limits type](policy/05-a-put-clears-pool-and-cap/plan.md) | medium | active 2026-10-19; tasks 01 and 02 implemented | policy 02 | ahpw policy editor |
 
 Next free number in `policy`: `05` (`03` is held for hours, sessions and the cancel during a turn; charge rules take `05`).
 

@@ -88,7 +88,7 @@ export type { FileUserOptions } from './users.js';
 export { peopleChannels, peopleProviders } from './people.js';
 export type { PeopleChannels, PeopleProvider } from './people.js';
 export { policyChannels, policyProviders } from './policy.js';
-export type { PolicyChannels, PolicyProvider } from './policy.js';
+export type { PolicyChannels, PolicyLimits, PolicyProvider } from './policy.js';
 export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './recordschannel.js';
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './recordschannel.js';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './scopes.js';

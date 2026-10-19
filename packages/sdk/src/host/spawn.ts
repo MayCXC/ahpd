@@ -1,7 +1,7 @@
 import { chatReducer } from '@microsoft/agent-host-protocol';
 import type { ChatAction, ChatState, SessionInputRequestKind, ToolCallConfirmationReason } from '@microsoft/agent-host-protocol';
-import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../commandautoapprover.js';
-import type { CommandShell, TerminalAutoApprovePatterns, TerminalAutoApproveRules } from '../commandautoapprover.js';
+import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES, splitCommand } from '../commandautoapprover.js';
+import type { CommandShell, CommandSplit, CommandSplitter, TerminalAutoApprovePatterns, TerminalAutoApproveRules } from '../commandautoapprover.js';
 import { RpcError, INTERNAL_ERROR } from '../rpc.js';
 import { reason } from '../values.js';
 import { computerId, computersFor } from '../computers.js';
@@ -583,10 +583,48 @@ export function createSpawn(ctx: HostContext): Spawn {
   };
 
   /*
+   * Whether a value is a reading the rules can be applied to.
+   *
+   * All three members are required. A parser that leaves one off is not one
+   * this file knows how to read, and treating a missing `unanalyzable` as
+   * `false` would approve a line on a guess.
+   */
+  const isCommandSplit = (value: unknown): value is CommandSplit => {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+    const held = value as Record<string, unknown>;
+    return Array.isArray(held['subCommands'])
+      && held['subCommands'].every((one) => typeof one === 'string')
+      && Array.isArray(held['writeDests'])
+      && held['writeDests'].every((one) => typeof one === 'string')
+      && typeof held['unanalyzable'] === 'boolean';
+  };
+
+  /*
+   * The reading the rules are applied to: the port's, or the sdk's own when
+   * nobody named another.
+   *
+   * The port is code this host did not write, so a throw or a value that is
+   * not a `CommandSplit` is read as a line nobody could read. That is the same
+   * answer `splitCommand` gives for a line it cannot parse, and it asks rather
+   * than approving on a reading the port did not actually give.
+   */
+  const splitForRules: CommandSplitter = (line, shell) => {
+    const parser = options.commandParser;
+    if (parser === undefined) return splitCommand(line, shell);
+    try {
+      const read: unknown = parser(line, shell);
+      return isCommandSplit(read) ? read : undefined;
+    }
+    catch {
+      return undefined;
+    }
+  };
+
+  /*
    * The rules that answer a shell command, one for every session this host
    * starts: it keeps no state, so one is the same as one a session.
    */
-  const approver = new CommandAutoApprover();
+  const approver = new CommandAutoApprover(splitForRules);
 
   /*
    * The Plan call the host draws, one per turn.

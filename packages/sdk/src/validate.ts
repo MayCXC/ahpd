@@ -157,6 +157,19 @@ const PORT_MEMBERS: Record<PortKey, Record<string, Kind>> = {
   policies: { list: 'function', get: 'function', put: 'function', remove: 'function' },
   vault: { get: 'function', set: 'function', delete: 'function', list: 'function' },
   records: { collection: 'function' },
+  // The value is the parser itself rather than an object with members, so the
+  // kind is said in `PORT_ITSELF` below and there is nothing to list here.
+  commandParser: {},
+};
+
+/**
+ * The ports whose value is itself the thing, rather than an object with
+ * members.
+ *
+ * A function has no members to read, so a port holding one is tested whole.
+ */
+const PORT_ITSELF: Partial<Record<PortKey, Kind>> = {
+  commandParser: 'function',
 };
 
 /** The method each port is reached through, for a message that names what was called. */
@@ -176,11 +189,17 @@ export const PORT_METHOD: Record<PortKey, string> = {
   policies: 'registerPolicies',
   vault: 'registerVault',
   records: 'registerRecords',
+  commandParser: 'registerCommandParser',
 };
 
 /** Check one port registration against the contract its key names. */
 export const checkPort = (key: PortKey, value: unknown, by: string): void => {
   const method = PORT_METHOD[key];
+  const itself = PORT_ITSELF[key];
+  if (itself !== undefined) {
+    if (!right(value, itself)) throw new Error(miss(by, method, key, itself));
+    return;
+  }
   const object = asObject(value, by, method, key);
   for (const [member, expected] of Object.entries(PORT_MEMBERS[key])) {
     if (!right(object[member], expected)) throw new Error(miss(by, method, member, expected));

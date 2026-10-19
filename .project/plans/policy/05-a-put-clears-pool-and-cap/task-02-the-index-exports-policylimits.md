@@ -1,6 +1,6 @@
 ---
 title: The index exports PolicyLimits
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -28,3 +28,8 @@ A client imports `PolicyLimits` from `@ahpd/sdk`.
 - Run the gates.
 
 ## Resume
+
+- **Done so far:** `packages/sdk/src/index.ts` exports `PolicyLimits` beside `PolicyChannels` and `PolicyProvider`, so a client types what `policy://<id>/limits` answers by importing it from `@ahpd/sdk`. `pnpm -s typecheck`, `pnpm boundary` and `node tools/schema.mjs` pass.
+- **Next action:** none.
+- **Open questions:** none.
+- **Watch out for:** `usage.ts` already used the type inside the sdk. This task adds only the public export, and the type itself is unchanged.

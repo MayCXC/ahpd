@@ -1,7 +1,7 @@
 ---
 title: A gone folder leaves the session summary
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -63,7 +63,7 @@ worktree removed outside ahpd -> session kept -> listing or summaryOf -> working
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the summary names only folders that are there](task-01-the-summary-names-only-folders-that-are-there.md) | todo | - |
+| [01 - the summary names only folders that are there](task-01-the-summary-names-only-folders-that-are-there.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -73,10 +73,19 @@ worktree removed outside ahpd -> session kept -> listing or summaryOf -> working
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-summary-names-only-folders-that-are-there.md](task-01-the-summary-names-only-folders-that-are-there.md).
+- **Done so far:** Built 2026-10-19.
+  Task 01 is implemented, with 4 tests.
+  `directoriesThere` in `catalogue.ts` keeps a URI that is not `file:` and a `file:` URI whose `localPath` is a directory.
+  `summaryOf`, the summary `adopt` returns and the rows `liveRows` builds pass `workingDirectories` through it.
+  The store record and `wheres` keep every folder, so an opened session still names it.
+  A folder made again is named again by the next listing.
+  `docs/sdk/SESSIONS.md` says a summary leaves out a folder that is not there.
+  The gates pass: build, typecheck, boundary, schema, the sdk suite at 3232 passed and 2 skipped, and the server suite at 1236 passed.
+- **Next action:** none.
+  Task 01 is the plan's only task, and nothing is set to `done`.
 - **Open questions:** none.
-- **Watch out for:** `summaryOf` also builds the live snapshot, so the snapshot and the row stay the same. A session inside a computer can name a folder that is not on this host. Read how plugin 11 names it before the filter touches it.
+- **Watch out for:** `summaryOf`, `adopt` and `liveRows` each build a summary, and all three pass `workingDirectories` through the filter.
+  A session inside a computer can report a machine path as a `file:` URI. The summary leaves it out, because the path is not on this host.
 
 ## Final verification checklist
 

@@ -209,10 +209,14 @@ export function checkPolicy(body: unknown): Policy {
     throw wrong('from', 'is before the until the row names, and that body has them the other way round');
   }
 
-  if (typeof held.pool !== 'undefined' && typeof held.pool !== 'string') {
+  // A null is absent, as the ends of a window are: a body removes the field by
+  // sending it as one, and the row below leaves it out.
+  if (held.pool !== undefined && held.pool !== null && typeof held.pool !== 'string') {
     throw wrong('pool', 'is a name rows share a total under');
   }
-  if (typeof held.cap !== 'undefined' && typeof held.cap !== 'boolean') throw wrong('cap', 'is true or false');
+  if (held.cap !== undefined && held.cap !== null && typeof held.cap !== 'boolean') {
+    throw wrong('cap', 'is true or false');
+  }
 
   return {
     id,

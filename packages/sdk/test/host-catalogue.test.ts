@@ -1,9 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Status } from '../src/catalog.js';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
 import type { Request } from '../src/types/rpc.js';
 import type { HostOptions } from '../src/types/host.js';
@@ -218,17 +219,20 @@ describe('a session that already happened', () => {
   });
 
   it('names the folder its catalogue row listed, not the host\'s', async () => {
-    sdk.sessions.push({ ...older, cwd: '/github/s2cmd' });
+    // A summary names only a folder that is there, so the row's is this test's
+    // own, which exists on whichever machine runs it.
+    const here = dirname(fileURLToPath(import.meta.url));
+    sdk.sessions.push({ ...older, cwd: here });
     const client = open();
     await client.handle(hello(['0.9.0']));
     const listed = await client.handle({ method: 'listSessions', params: {} }) as {
       items: { resource: string; workingDirectories: string[] }[];
     };
-    expect(listed.items[0]?.workingDirectories).toEqual([uriOf('/github/s2cmd')]);
+    expect(listed.items[0]?.workingDirectories).toEqual([uriOf(here)]);
     const opened = (await client.handle({ method: 'subscribe', params: { channel: listed.items[0]?.resource } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    expect(opened.workingDirectories).toEqual([uriOf('/github/s2cmd')]);
+    expect(opened.workingDirectories).toEqual([uriOf(here)]);
   });
 
   it('resumes rather than replays when somebody says something', async () => {

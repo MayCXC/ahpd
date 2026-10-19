@@ -360,12 +360,25 @@ export interface Config {
    * The plugins to load, in the order they apply.
    *
    * Every entry is a package or a path, and naming one runs its code in this
-   * process with this process's permissions. That makes this the one key whose
-   * value is code rather than a setting, which is why the file holding it is
-   * owner-readable for the same reason the token file is, and why a malformed
-   * entry refuses the start rather than being skipped.
+   * process with this process's permissions. That makes this and `commandParser`
+   * the two keys whose value is code rather than a setting, which is why the
+   * file holding it is owner-readable for the same reason the token file is,
+   * and why a malformed entry refuses the start rather than being skipped.
    */
   plugins?: PluginSpec[];
+  /**
+   * A module whose default export reads a session's shell commands.
+   *
+   * A path, resolved against the file that names it. The module's default
+   * export is called as `(line, shell)` and answers the split the rules are
+   * matched against, or `undefined` for a line it cannot read. The sdk's own
+   * splitter is the reader when this key is absent.
+   *
+   * A `.ts` module needs a runtime that strips types as it loads: Node 22.18 or
+   * newer, Bun, or Deno. As with `plugins`, naming a module runs its code in
+   * this process with this process's permissions.
+   */
+  commandParser?: string;
   /**
    * Ask npm whether a newer version exists, six hours apart. `false` never
    * asks. The daemon has no terminal, so this key is how it is switched off
@@ -657,7 +670,8 @@ export interface LoadedConfig {
 
 /**
  * `values` with every relative path made absolute against the directory of the
- * file that set it: `paths`, `worktreesRoot`, `users` and `connectionTokenFile`.
+ * file that set it: `paths`, `worktreesRoot`, `users`, `connectionTokenFile`
+ * and `commandParser`.
  * A plugin spec is left as written, for the loader to try against the working
  * directory and then the configuration directory. A value of the wrong type is
  * left as it is for the schema to refuse.
@@ -668,7 +682,7 @@ const anchored = (values: Record<string, unknown>, sourceOf: (key: string) => st
     const file = sourceOf(key);
     return file === undefined || isAbsolute(path) ? path : resolve(dirname(file), path);
   };
-  for (const key of ['users', 'connectionTokenFile', 'worktreesRoot']) {
+  for (const key of ['users', 'connectionTokenFile', 'worktreesRoot', 'commandParser']) {
     const value = out[key];
     if (typeof value === 'string') out[key] = at(key, value);
   }
