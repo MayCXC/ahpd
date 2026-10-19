@@ -177,6 +177,7 @@ against its contract before it is recorded.
 | `registerUsage(usage, when?)` | set | where records are kept and what a pool has been charged: `record`, `total`, `pools` and `records`, all four |
 | `registerPolicies(policies, when?)` | set | where policies are kept: `list`, `get`, `put` and `remove`, all four |
 | `registerVault(vault, when?)` | set | where this host's secrets are kept: `get`, `set`, `delete` and `list`, all four |
+| `registerCommandParser(split, when?)` | set | reads a shell command before the terminal rules match it: `(line, shell)` in, `{ subCommands, writeDests, unanalyzable }` or `undefined` out |
 | `registerRecords(store, when?)` | set | where every plugin's records are kept: `collection(name, options)` |
 | `registerRoute(handler)` | register, open key | one HTTP route served on this host's own listener, under `/plugins/<name>/` |
 | `registerTriggerType(definition)` | register, open key | one event trigger type an automation may be saved with, listed beside the host's own `session` and `watch` |
@@ -714,6 +715,16 @@ An id is unique across the store rather than per scope, because `policy://<id>` 
 `filePolicies({ file })` is the store that ships with the SDK and the daemon's own is `policies.json` in the config folder; take it over with `registerPolicies(yours, 'replace')` for a sqlite or a postgresql several daemons share. Nothing here is read until the daemon is switched on, so a plugin taking the port over changes where the rows are kept and not whether they bind.
 
 The row, the scheme and the switch are in [POLICY.md](../sdk/POLICY.md).
+
+### What a command parser has to answer
+
+`registerCommandParser(split)` contributes `HostOptions.commandParser`, the reader a host uses to split a shell command line before its terminal rules match it. A host with no parser from a plugin and none from the configuration reads with the sdk's own `splitCommand`. A parser is a plugin saying it reads a line better.
+
+The value is one function, `(line, shell) => CommandSplit | undefined`, where `shell` is `'bash'` or `'powershell'` and `CommandSplit` is `{ subCommands, writeDests, unanalyzable }`. `subCommands` are the commands the line runs, in order. The call is approved only when the rules allow every one of them and deny none. `writeDests` are the paths the line redirects a write to. A write is allowed only when its path is inside the session's working folder and `editAutoApprovePatterns` matches it. `unanalyzable` says the line could not be read as a whole, and a line with it asks.
+
+Answer `undefined` for a line the parser cannot read: the call asks. A parser that throws, and a value that is not shaped like `CommandSplit`, are both treated as that same `undefined`. A broken parser thus asks for every command rather than approving one. The rules then check what the parser answered, and a deny rule asks rather than refusing the call. A `sed` that writes in place and a command that sets a variable for itself are denied when the parser names them.
+
+The port is held by one party. A second plugin that sets it is refused unless it passes `'replace'`. When the configuration's `commandParser` key named a module, a plugin that sets the port without `'replace'` refuses the start rather than winning by load order. The configuration's module and `registerCommandParser` are two ways to answer the same question, and [CONFIGURE.md](../server/CONFIGURE.md#terminal-rules) describes the key.
 
 ### What is not a kind
 

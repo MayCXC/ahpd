@@ -66,6 +66,8 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | `worktreesRoot` | directory | `<repo>.worktrees` beside each repository | Where session worktrees are kept |
 | `clientToolTimeoutMs` | integer, milliseconds | `600000` (ten minutes) | How long a tool call a client runs may wait for that client. `0` waits for ever |
 | `shellEnv` | an object of variable name to text or `null` | none | The environment every shell this host starts is given. A client that needs a variable in one session sets `shellInitScripts` instead |
+| `terminalAutoApproveDefaults` | `vscode` or `none` | `vscode` | The rules a session's shell commands are matched against when the window that started it pushed none. `vscode` is VS Code's table, `none` approves no command - [AHP.md](AHP.md#root--4-of-4) |
+| `commandParser` | file path | unset | A `.js` or `.ts` module whose default export splits a shell command before the terminal rules match it. A path is relative to the configuration file - [PLUGINS.md](../plugins/PLUGINS.md#what-a-command-parser-has-to-answer) |
 | `deltaWindowMs` | integer, `0` to `1000` | `75` | How long a turn's streamed text is gathered before it is sent. `0` sends every delta as it arrives |
 | `sleepAfterMinutes` | integer, minutes | `30`; `0` never | How long a session with nothing in hand stays loaded before its agent is let go. It wakes when something needs it - [SESSIONS.md](SESSIONS.md#sleep-and-wake) |
 | `sessionResidencyLimit` | integer | `10`; `0` sets no limit | How many sessions are loaded at most. Over it, the least recently used quiet session is let go first |
@@ -123,7 +125,7 @@ An entry that is neither shape, or that is missing the one its own `type` needs,
 
 ## Root config
 
-Root config is not a file. It is the record a client pushes to `ahp-root://` with `root/configChanged`, kept per host, and read back on every root state. Three kinds of key live in it. The host's own are the ones this host acts on. The settings VS Code's agent host declares are declared here in full and read back, though only `globalAutoApproveEnabled` changes what this host does. The daemon's are the keys of `config.json` a client may edit.
+Root config is not a file. It is the record a client pushes to `ahp-root://` with `root/configChanged`, kept per host, and read back on every root state. Three kinds of key live in it. The host's own are the ones this host acts on. The settings VS Code's agent host declares are declared here in full and read back, though only five change what this host does: `globalAutoApproveEnabled`, `eligibleForAutoApproval`, `terminalAutoApproveEnabled`, `terminalAutoApproveRules` and `editAutoApprovePatterns`. The daemon's are the keys of `config.json` a client may edit.
 
 The host's own schema is two keys, and it is what a client draws its controls from. A key in the schema is a promise that pushing it changes something.
 
@@ -132,11 +134,11 @@ The host's own schema is two keys, and it is what a client draws its controls fr
 | `defaultShell` | absolute path | the system shell | The shell a host-managed terminal opens |
 | `workspaceTrust` | `{ "enabled": bool, "trustedUris": [uri] }` | none | Which folders the window that pushed it trusts. `readOnly`: the window pushes it, it is not a control |
 
-Beside them the schema declares every key VS Code's agent host declares at `7516b04bc94`. They come from `packages/sdk/src/vscoderootconfig.ts`, each with the property VS Code gives it: `telemetryLevel`, `globalAutoApproveEnabled`, `showExternalSessions`, `agentMerge.*` and the rest. Only one of those is read here: `globalAutoApproveEnabled`, which `trust.ts` asks before a tool call runs. The rest are declared and nothing more. A client draws its settings pane from the schema, so a key it cannot find is a control it cannot draw.
+Beside them the schema declares every key VS Code's agent host declares at `7516b04bc94`. They come from `packages/sdk/src/vscoderootconfig.ts`, each with the property VS Code gives it: `telemetryLevel`, `globalAutoApproveEnabled`, `showExternalSessions`, `agentMerge.*` and the rest. Five of those are read here: `globalAutoApproveEnabled`, which `trust.ts` asks before a tool call runs; `eligibleForAutoApproval`, which `host/spawn.ts` asks; and `terminalAutoApproveEnabled`, `terminalAutoApproveRules` and `editAutoApprovePatterns`, which `host/spawn.ts` reads from the connection that owns the session. The rest are declared and nothing more. A client draws its settings pane from the schema, so a key it cannot find is a control it cannot draw.
 
 Three keys VS Code declared before 1.140 are not declared: `artifactToolsCompactPrompts`, `deferredTitleGeneration` and `activeAgentTitleGeneration`. The artifact tools carry one wording, and every session runs under the deferred title strategy.
 
-`defaultShell` and `workspaceTrust` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last. The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
+`defaultShell`, `workspaceTrust`, `terminalAutoApproveEnabled`, `terminalAutoApproveRules` and `editAutoApprovePatterns` are **per connection**: they are kept on the connection that pushed them, and a connection reads its own back rather than whatever was pushed last. The terminal rules a session runs under are its owner's connection's, which is the connection whose turn started or restarted the backend. The rest are one setting for the whole host. The declaration is decision [The root config declares every key VS Code pushes, as the reference declares it, and refuses a key nobody declares](../../.project/decisions/root-config-declares-what-vscode-pushes-and-refuses-the-rest.md). The refusal of a key nobody declared is decided there too.
 
 One value is in `config.values` and in no schema at all: the account each agent's harness is signed in as, under `vscode.codexAccount` for Codex - the key VS Code's window reads the account of its own host's Codex agent from - and `ahpd.<provider>Account` for every other backend. Nobody declares it and so no client can push one, which is the point: the host writes it when a probe answers with an account or a running session reports one, and a client that writes to the key is refused like any other key nobody declared. The email in it is the operator's own, so a connection that is not root and does not hold `account:read` is shown no account value at all, in the state it subscribes to and in every change after it.
 
@@ -169,7 +171,7 @@ The verbs that read or change this host's own settings, one line each. The rest 
 | Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` and `plugin list` commands|
 | Change a host-wide root config key | `config:change` | `root/configChanged`, and a `replace` - `config:write` covers it |
 | Push `workspaceTrust` | `trust:push` | The same action, when every key it carries is a connection's own - `trust:write` covers it |
-| Push only `defaultShell` | none, but a sign-in | It changes nothing anybody else reads |
+| Push only `defaultShell` or a terminal key | none, but a sign-in | It changes nothing anybody else reads |
 | Read the account an agent bills to | `account:read` | `seesAccount`, on the root state a connection subscribes to and on every `root/configChanged` after it |
 | Stop the daemon | `config:change` | The `shutdown` command|
 | Edit the configuration over HTTP | `config:write` | `GET /api/config`, and the `plugin` verbs that write - the deployment token only, for those |

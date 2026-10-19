@@ -1,6 +1,6 @@
 ---
 title: The docs name the terminal rules
-status: todo
+status: implemented
 depends: []
 layer: docs
 refs:
@@ -37,7 +37,7 @@ The docs name the three keys, the daemon settings `terminalAutoApproveDefaults` 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-19. `docs/sdk/AHP.md` names the three keys in the acted-on list, and `root/configChanged` now says five keys are connection-owned rather than two. It says whose rules apply, what a rule is, that a deny asks, and how a write redirect is checked. Only an approved command is `confirmed: not-needed`. `docs/server/CONFIGURE.md` has a `Terminal rules` section for `terminalAutoApproveDefaults` and `commandParser`, and `commandParser` joined the no-flag list. `docs/plugins/PLUGINS.md` has `registerCommandParser` in the register table and `What a command parser has to answer` beside the other ports. `packages/sdk/src/vscoderootconfig.ts`'s header names the five keys this host reads. `packages/sdk/src/host/root.ts` says ten and includes `eligibleForAutoApproval`. `docs/sdk/HOST.md` names all five keys read, the five per-connection keys, and the grants row for a terminal key.
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** keep each file's own style; find where the plugin ports are described before you pick the file.
+- **Watch out for:** the Files list said `docs/sdk/HOST.md` for the plugin method, but the plan's Answers row puts it in the plugin host docs. It is in `docs/plugins/PLUGINS.md`, where `registerPolicies` and `registerVault` already are, and HOST.md carries the `commandParser` configuration key and links to the section. PLUGINS.md mixes hard-wrapped and one-sentence-per-line sections, so the new section follows the newer one-sentence-per-line style. The prose lint reports only findings that were already in AHP.md, HOST.md and PLUGINS.md; CONFIGURE.md is clean.
