@@ -316,40 +316,40 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   /*
    * The HTTP API, when the configuration asked for one.
    *
-   * The same registry the terminal renders, under `/api`: `http: true` puts it
-   * on this listener beside the WebSocket, and `http.port` puts it on one of
-   * its own. Off, the daemon still answers plain requests so `/api` is a 404
+   * The same registry the terminal renders, under `/api`: `httpApi: true` puts
+   * it on this listener beside the WebSocket, and `httpApi.port` puts it on one
+   * of its own. Off, the daemon still answers plain requests so `/api` is a 404
    * rather than the 426 this listener gives everything else.
    *
    * Built before the socket is opened, because a shared port is handed to
    * `listen` as its request handler and a port of its own has to be bound
    * before the announcement names it.
    */
-  if (options.http !== undefined && options.stdio) {
-    stop('http needs a listening port, and --stdio serves one connection on this process\'s own pipes.');
+  if (options.httpApi !== undefined && options.stdio) {
+    stop('httpApi needs a listening port, and --stdio serves one connection on this process\'s own pipes.');
   }
   /*
    * A host with no gate is not one the API may be served from.
    *
    * With neither a deployment token nor a directory there is nothing to hold a
-   * request against, so `http` here would be an administration surface anybody
-   * who reaches the port may drive.
+   * request against, so `httpApi` here would be an administration surface
+   * anybody who reaches the port may drive.
    */
-  if (options.http !== undefined && token === undefined && users === undefined) {
-    stop('http needs a credential: pass --connection-token, --connection-token-file or --users.');
+  if (options.httpApi !== undefined && token === undefined && users === undefined) {
+    stop('httpApi needs a credential: pass --connection-token, --connection-token-file or --users.');
   }
   if (options.routes !== undefined && options.stdio) {
     stop('routes needs a listening port, and --stdio serves one connection on this process\'s own pipes.');
   }
-  const ownPort = options.http?.port;
+  const ownPort = options.httpApi?.port;
   /** The port of the routes' own listener, when `routes.port` gives them one. */
   const routesPort = options.routes?.port;
   // The routes' own listener binds where `routes.host` says, and on the
   // daemon's address otherwise.
   const routesHost = options.routes?.host ?? options.host;
-  // The API's own listener binds where `http.host` says, and on the daemon's
-  // address otherwise.
-  const apiHost = options.http?.host ?? options.host;
+  // The API's own listener binds where `httpApi.host` says, and on the
+  // daemon's address otherwise.
+  const apiHost = options.httpApi?.host ?? options.host;
   /*
    * What this host's work cost: a folder of monthly JSONL files beside the
    * sessions and the automations.
@@ -453,12 +453,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     down: () => { wayDown?.(); },
   };
   /*
-   * The port the API answers on: its own when `http.port` gave it one, and the
-   * daemon's otherwise. Read per request, because both listeners are bound
+   * The port the API answers on: its own when `httpApi.port` gave it one, and
+   * the daemon's otherwise. Read per request, because both listeners are bound
    * after the handler is built.
    */
   let apiBoundPort = 0;
-  const api = options.http === undefined ? undefined : apiHandler({
+  const api = options.httpApi === undefined ? undefined : apiHandler({
     registry: servedRegistry(facts),
     ...(token === undefined ? {} : { token }),
     ...(users === undefined ? {} : { users }),
@@ -482,12 +482,12 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   });
   /*
    * The model proxy, under `/v1` in front of the API on whichever listener
-   * carries it, and only while `http` is on. Its providers and model
+   * carries it, and only while `httpApi` is on. Its providers and model
    * names are the configuration read at startup; the environment, the users
    * file and the usage store are read per call.
    */
   const served = api === undefined ? undefined : proxyHandler({
-    proxy: () => options.proxy,
+    proxy: () => options.modelProxy,
     ...(token === undefined ? {} : { token }),
     ...(users === undefined ? {} : { users }),
     policies,
@@ -520,7 +520,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   };
   // On the daemon's own port: a session's tools endpoint where it is, then a
   // plugin's route where it is, then the proxy and the API where they are, the
-  // 404 that says they are not where `http.port` moved them, and the answer to
+  // 404 that says they are not where `httpApi.port` moved them, and the answer to
   // a token everywhere else.
   const below = withoutApi(doorOf(door), ownPort === undefined ? served : undefined);
   /*
@@ -1159,7 +1159,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const announcement =
     `${options.stdio ? 'ahpd over stdio' : `ahpd on ws://${urlHost(listener.host)}:${listener.port}`} (${listener.runtime}), sessions in ${options.paths.join(', ')}\n`
     // Where the API is, when there is one: on this port, or on the one
-    // `http.port` bound. Its own line, and `http://` rather than `ws://`, so
+    // `httpApi.port` bound. Its own line, and `http://` rather than `ws://`, so
     // `daemon.ts` keeps reading the origin off the line above.
     + (api === undefined ? '' : `http on http://${urlHost(apiHost)}:${apiListener?.port ?? listener.port}${API_PREFIX}\n`)
     // Where the routes are, when `routes.port` gave them a listener of their own.

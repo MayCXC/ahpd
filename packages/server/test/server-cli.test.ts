@@ -281,16 +281,16 @@ describe('the flags of a run', () => {
     expect(said.stderr).toContain('--resource must be an https URL');
   }, 20000);
 
-  it('refuses an http.host that names no address', async () => {
-    const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { http: { port: 0, host: '' } } });
+  it('refuses an httpApi.host that names no address', async () => {
+    const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { httpApi: { port: 0, host: '' } } });
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain(`${config}: http.host must be text matching ^\\S+$`);
+    expect(said.stderr).toContain(`${config}: httpApi.host must be text matching ^\\S+$`);
   }, 20000);
 
-  it('refuses an http.host with space around the address', async () => {
-    const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { http: { port: 0, host: ' 127.0.0.1 ' } } });
+  it('refuses an httpApi.host with space around the address', async () => {
+    const said = await cli(['--config-file', config, '--connection-token', 't'], { config: { httpApi: { port: 0, host: ' 127.0.0.1 ' } } });
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain(`${config}: http.host must be text matching ^\\S+$`);
+    expect(said.stderr).toContain(`${config}: httpApi.host must be text matching ^\\S+$`);
   }, 20000);
 });
 
@@ -324,7 +324,7 @@ describe('reaching a daemon elsewhere', () => {
 
   it('takes space around the token from --token and AHPD_TOKEN as it does from a file', async () => {
     // The API on, so `--remote` has a manifest and a route to reach.
-    put({ http: true, plugins: [BACKEND] });
+    put({ httpApi: true, plugins: [BACKEND] });
     const began = await cli([
       'start', '--config-file', config, '--port', '0', '--connection-token', 'abc', '--no-update-check',
     ]);

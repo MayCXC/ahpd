@@ -83,6 +83,13 @@ describe('the layers', () => {
     expect(loaded.sourceOf('automations')).toBe(user);
   });
 
+  it('names both files when one holds a key by its old name and the other by its new one', () => {
+    write(user, { proxy: {} });
+    write(environment, { modelProxy: {} });
+    process.env['AHPD_CONFIG'] = environment;
+    expect(() => loadConfig()).toThrow(`${user} holds proxy and ${environment} holds modelProxy, and they name the same setting: remove proxy, the old name of modelProxy.`);
+  });
+
   it('refuses a $AHPD_CONFIG that names no file', () => {
     process.env['AHPD_CONFIG'] = join(elsewhere, 'nowhere.json');
     expect(() => loadConfig()).toThrow('nowhere.json');

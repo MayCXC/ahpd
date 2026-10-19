@@ -10,7 +10,7 @@ import { alive, announced, BACKEND, cli, config, fakeSystemctl, foreground, free
 
 describe('start, stop and status', () => {
   it('restarts a started daemon over HTTP with the line it was started with', async () => {
-    put({ http: true, plugins: [BACKEND] });
+    put({ httpApi: true, plugins: [BACKEND] });
     const began = await cli([
       'start', '--config-file', config, '--port', '0', '--connection-token', 'abc',
       '--sessions', 'memory', '--automations', 'memory', '--no-update-check',
@@ -247,7 +247,7 @@ describe('start, stop and status', () => {
   }, 60000);
 
   it('hands a restarted supervised daemon to the service manager, and starts nothing itself', async () => {
-    put({ http: true, plugins: [BACKEND], connectionToken: 'abc' });
+    put({ httpApi: true, plugins: [BACKEND], connectionToken: 'abc' });
     const daemon = await supervised(['--config-file', config, '--connection-token', 'abc'], fakeSystemctl());
     const api = `http://127.0.0.1:${new URL(daemon.url).port}/api/restart`;
 

@@ -70,13 +70,13 @@ export interface ProxySetting {
   sessionCalls?: SessionCalls;
 }
 
-/** What `proxy.sessionCalls` may say. */
+/** What `modelProxy.sessionCalls` may say. */
 export const SESSION_CALLS = ['record', 'skip'] as const;
 
 /** One of those. */
 export type SessionCalls = (typeof SESSION_CALLS)[number];
 
-/** What `proxy` reads as once the file is over the built-ins. */
+/** What `modelProxy` reads as once the file is over the built-ins. */
 export interface ProxyConfiguration {
   /** Every provider, the built-ins with the file's over them. */
   providers: Record<string, ProxyProvider>;
@@ -193,19 +193,19 @@ const held = (value: unknown, schema: JsonSchema, label: string, into: string[])
 export const proxyProblems = (setting: unknown): string[] => {
   const problems: string[] = [];
   if (setting === undefined) return problems;
-  held(setting, proxySchema, 'proxy', problems);
+  held(setting, proxySchema, 'modelProxy', problems);
 
   const given = isRecord(setting) && isRecord(setting['providers']) ? setting['providers'] : {};
   const named = isRecord(setting) && isRecord(setting['models']) ? setting['models'] : {};
   for (const [id, provider] of Object.entries(given)) {
-    held(provider, providerSchema, `proxy.providers.${id}`, problems);
+    held(provider, providerSchema, `modelProxy.providers.${id}`, problems);
   }
   const served = new Map<string, ModelEntry[]>();
   for (const [name, entries] of Object.entries(named)) {
-    held(entries, { type: 'array' }, `proxy.models.${name}`, problems);
+    held(entries, { type: 'array' }, `modelProxy.models.${name}`, problems);
     if (!Array.isArray(entries)) continue;
     // Each entry is held on its own, so the sentence names which one it was.
-    entries.forEach((entry, index) => { held(entry, modelEntrySchema, `proxy.models.${name}[${String(index)}]`, problems); });
+    entries.forEach((entry, index) => { held(entry, modelEntrySchema, `modelProxy.models.${name}[${String(index)}]`, problems); });
     served.set(name, entries as ModelEntry[]);
   }
   // A shape the schema has already refused is not read further: a rule that
@@ -214,10 +214,10 @@ export const proxyProblems = (setting: unknown): string[] => {
 
   const known = { ...BUILT_IN_PROVIDERS, ...given };
   for (const [name, entries] of served) {
-    if (!MODEL_NAME.test(name)) problems.push(`proxy.models.${name} is not a model name: write it as <maker>/<name>`);
+    if (!MODEL_NAME.test(name)) problems.push(`modelProxy.models.${name} is not a model name: write it as <maker>/<name>`);
     for (const entry of entries) {
       if (!Object.hasOwn(known, entry.provider)) {
-        problems.push(`proxy.models.${name} names ${entry.provider}, which is not a provider`);
+        problems.push(`modelProxy.models.${name} names ${entry.provider}, which is not a provider`);
       }
     }
   }

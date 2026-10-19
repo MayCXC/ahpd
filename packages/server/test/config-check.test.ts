@@ -76,8 +76,8 @@ describe('a wrong value on a known key', () => {
     expect(refusal({ paths: '/work' })).toBe(`${config}: paths must be a list of text`);
   });
 
-  it('refuses an http.port out of range, naming the nested key', () => {
-    expect(refusal({ http: { port: 70000 } })).toBe(`${config}: http.port must be an integer between 0 and 65535`);
+  it('refuses an httpApi.port out of range, naming the nested key', () => {
+    expect(refusal({ httpApi: { port: 70000 } })).toBe(`${config}: httpApi.port must be an integer between 0 and 65535`);
   });
 
   it('refuses a delta window longer than a second, and one that is not a whole number', () => {
@@ -85,12 +85,12 @@ describe('a wrong value on a known key', () => {
     expect(refusal({ deltaWindowMs: 7.5 })).toBe(`${config}: deltaWindowMs must be an integer between 0 and 1000`);
   });
 
-  it('refuses an http that is neither a switch nor an object', () => {
-    expect(refusal({ http: 'on' })).toContain(`${config}: http must be`);
+  it('refuses an httpApi that is neither a switch nor an object', () => {
+    expect(refusal({ httpApi: 'on' })).toContain(`${config}: httpApi must be`);
   });
 
-  it('refuses an http.host that names no address', () => {
-    expect(refusal({ http: { port: 0, host: '' } })).toContain(`${config}: http.host must be`);
+  it('refuses an httpApi.host that names no address', () => {
+    expect(refusal({ httpApi: { port: 0, host: '' } })).toContain(`${config}: httpApi.host must be`);
   });
 
   it('refuses a usage.per that is neither a turn nor a report', () => {
@@ -126,9 +126,9 @@ describe('a wrong value on a known key', () => {
     expect(folded({}).terminalAutoApproveDefaults).toBe('vscode');
   });
 
-  it('refuses http.host without http.port', () => {
-    expect(refusal({ http: { host: '127.0.0.1' } })).toContain('http.host');
-    expect(refusal({ http: { host: '127.0.0.1' } })).toContain('http.port');
+  it('refuses httpApi.host without httpApi.port', () => {
+    expect(refusal({ httpApi: { host: '127.0.0.1' } })).toContain('httpApi.host');
+    expect(refusal({ httpApi: { host: '127.0.0.1' } })).toContain('httpApi.port');
   });
 
   it('refuses a plugins entry that is not a spec', () => {
@@ -189,7 +189,7 @@ describe('a valid file', () => {
       sessions: 'memory',
       usage: { per: 'report' },
       wire: join(home, 'wire.jsonl'),
-      http: { port: 0, host: '127.0.0.1' },
+      httpApi: { port: 0, host: '127.0.0.1' },
       plugins: ['a', { name: 'b', options: { x: 1 }, enabled: false }],
       updateCheck: false,
     });
@@ -213,15 +213,15 @@ describe('a valid file', () => {
       sessions: 'memory',
       usagePer: 'report',
       wire: join(home, 'wire.jsonl'),
-      http: { port: 0, host: '127.0.0.1' },
+      httpApi: { port: 0, host: '127.0.0.1' },
       plugins: ['a', { name: 'b', options: { x: 1 }, enabled: false }],
       updateCheck: false,
     });
   });
 
-  it('takes http true as the daemon\'s own listener and false as off', () => {
-    expect(folded({ http: true }).http).toEqual({});
-    expect(folded({ http: false }).http).toBeUndefined();
+  it('takes httpApi true as the daemon\'s own listener and false as off', () => {
+    expect(folded({ httpApi: true }).httpApi).toEqual({});
+    expect(folded({ httpApi: false }).httpApi).toBeUndefined();
   });
 
   it('is under every flag that was typed', () => {
@@ -267,9 +267,9 @@ describe('the schema', () => {
     }
   });
 
-  it('gives http no flag', () => {
-    expect(Object.keys(flagFields)).not.toContain('http');
-    expect(Object.keys(serverFields)).toContain('http');
+  it('gives httpApi no flag', () => {
+    expect(Object.keys(flagFields)).not.toContain('httpApi');
+    expect(Object.keys(serverFields)).toContain('httpApi');
   });
 
   it('gives usage no flag either', () => {
@@ -386,19 +386,19 @@ describe('the shellEnv key', () => {
   });
 });
 
-describe('the proxy key', () => {
+describe('the modelProxy key', () => {
   it('is there without any configuration, as the three built-in providers', () => {
-    expect(folded({}).proxy.providers).toEqual({
+    expect(folded({}).modelProxy.providers).toEqual({
       openrouter: { endpoint: 'https://openrouter.ai/api/v1', accepts: ['openai-chat'], key: { env: 'OPENROUTER_API_KEY' } },
       anthropic: { endpoint: 'https://api.anthropic.com', accepts: ['anthropic-messages'], key: { env: 'ANTHROPIC_API_KEY' } },
       openai: { endpoint: 'https://api.openai.com/v1', accepts: ['openai-chat'], key: { env: 'OPENAI_API_KEY' } },
     });
-    expect(folded({}).proxy.models).toEqual({});
+    expect(folded({}).modelProxy.models).toEqual({});
   });
 
   it('adds a provider that is not built in, and the model names that use it', () => {
     const options = folded({
-      proxy: {
+      modelProxy: {
         providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: {
           'deepseek/deepseek-v4.1-flash': [{ provider: 'local-vllm', id: 'deepseek-v4.1-flash', price: { input: 0.2, output: 0.8 } }],
@@ -407,9 +407,9 @@ describe('the proxy key', () => {
       },
     });
     expect(options.warnings).toEqual([]);
-    expect(Object.keys(options.proxy.providers)).toEqual(['openrouter', 'anthropic', 'openai', 'local-vllm']);
-    expect(options.proxy.providers['local-vllm']).toEqual({ endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] });
-    expect(options.proxy.models).toEqual({
+    expect(Object.keys(options.modelProxy.providers)).toEqual(['openrouter', 'anthropic', 'openai', 'local-vllm']);
+    expect(options.modelProxy.providers['local-vllm']).toEqual({ endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] });
+    expect(options.modelProxy.models).toEqual({
       'deepseek/deepseek-v4.1-flash': [{ provider: 'local-vllm', id: 'deepseek-v4.1-flash', price: { input: 0.2, output: 0.8 } }],
       'anthropic/fable-5': [{ provider: 'anthropic', id: 'fable-5' }],
     });
@@ -417,54 +417,54 @@ describe('the proxy key', () => {
 
   it('replaces a built-in whole, so its key can be another variable', () => {
     const gateway = { endpoint: 'https://gateway.test/anthropic', accepts: ['anthropic-messages'], key: { env: 'GATEWAY_KEY' } };
-    const options = folded({ proxy: { providers: { anthropic: gateway } } });
-    expect(options.proxy.providers['anthropic']).toEqual(gateway);
+    const options = folded({ modelProxy: { providers: { anthropic: gateway } } });
+    expect(options.modelProxy.providers['anthropic']).toEqual(gateway);
     // The other two are untouched by a file that names one.
-    expect(Object.keys(options.proxy.providers)).toEqual(['openrouter', 'anthropic', 'openai']);
+    expect(Object.keys(options.modelProxy.providers)).toEqual(['openrouter', 'anthropic', 'openai']);
   });
 
   it('refuses a model naming a provider that is not there, built in or added', () => {
-    expect(refusal({ proxy: { models: { 'anthropic/fable-5': [{ provider: 'nowhere', id: 'fable-5' }] } } }))
-      .toBe(`${config}: proxy.models.anthropic/fable-5 names nowhere, which is not a provider`);
+    expect(refusal({ modelProxy: { models: { 'anthropic/fable-5': [{ provider: 'nowhere', id: 'fable-5' }] } } }))
+      .toBe(`${config}: modelProxy.models.anthropic/fable-5 names nowhere, which is not a provider`);
   });
 
   it('refuses a model name that is not <maker>/<name>', () => {
     for (const name of ['fable-5', 'anthropic/', '/fable-5', 'a/b/c']) {
-      expect(refusal({ proxy: { models: { [name]: [{ provider: 'anthropic', id: 'fable-5' }] } } }))
-        .toBe(`${config}: proxy.models.${name} is not a model name: write it as <maker>/<name>`);
+      expect(refusal({ modelProxy: { models: { [name]: [{ provider: 'anthropic', id: 'fable-5' }] } } }))
+        .toBe(`${config}: modelProxy.models.${name} is not a model name: write it as <maker>/<name>`);
     }
   });
 
   it('refuses a provider with no accepts, or one it does not speak', () => {
-    expect(refusal({ proxy: { providers: { x: { endpoint: 'http://x.test', accepts: [] } } } }))
-      .toBe(`${config}: proxy.providers.x.accepts must be a list of one of anthropic-messages, openai-chat`);
-    expect(refusal({ proxy: { providers: { x: { endpoint: 'http://x.test', accepts: ['grpc'] } } } }))
-      .toBe(`${config}: proxy.providers.x.accepts must be one of anthropic-messages, openai-chat`);
+    expect(refusal({ modelProxy: { providers: { x: { endpoint: 'http://x.test', accepts: [] } } } }))
+      .toBe(`${config}: modelProxy.providers.x.accepts must be a list of one of anthropic-messages, openai-chat`);
+    expect(refusal({ modelProxy: { providers: { x: { endpoint: 'http://x.test', accepts: ['grpc'] } } } }))
+      .toBe(`${config}: modelProxy.providers.x.accepts must be one of anthropic-messages, openai-chat`);
   });
 
   it('refuses a provider with no endpoint, and a key that is not a variable name', () => {
-    expect(refusal({ proxy: { providers: { x: { accepts: ['openai-chat'] } } } }))
-      .toBe(`${config}: proxy.providers.x.endpoint is required`);
-    expect(refusal({ proxy: { providers: { x: { endpoint: 'http://x.test', accepts: ['openai-chat'], key: {} } } } }))
-      .toBe(`${config}: proxy.providers.x.key.env is required`);
+    expect(refusal({ modelProxy: { providers: { x: { accepts: ['openai-chat'] } } } }))
+      .toBe(`${config}: modelProxy.providers.x.endpoint is required`);
+    expect(refusal({ modelProxy: { providers: { x: { endpoint: 'http://x.test', accepts: ['openai-chat'], key: {} } } } }))
+      .toBe(`${config}: modelProxy.providers.x.key.env is required`);
   });
 
   it('refuses a model entry with no provider, or with a provider that is not text', () => {
-    expect(refusal({ proxy: { models: { 'anthropic/fable-5': [{ id: 'fable-5' }] } } }))
-      .toBe(`${config}: proxy.models.anthropic/fable-5[0].provider is required`);
-    expect(refusal({ proxy: { models: { 'anthropic/fable-5': { provider: 'anthropic', id: 'fable-5' } } } }))
-      .toBe(`${config}: proxy.models.anthropic/fable-5 must be a list`);
+    expect(refusal({ modelProxy: { models: { 'anthropic/fable-5': [{ id: 'fable-5' }] } } }))
+      .toBe(`${config}: modelProxy.models.anthropic/fable-5[0].provider is required`);
+    expect(refusal({ modelProxy: { models: { 'anthropic/fable-5': { provider: 'anthropic', id: 'fable-5' } } } }))
+      .toBe(`${config}: modelProxy.models.anthropic/fable-5 must be a list`);
   });
 
   it('reads sessionCalls as record when absent, takes skip, and refuses another value by name', () => {
-    expect(folded({}).proxy.sessionCalls).toBe('record');
-    expect(folded({ proxy: { sessionCalls: 'skip' } }).proxy.sessionCalls).toBe('skip');
-    expect(refusal({ proxy: { sessionCalls: 'always' } })).toBe(`${config}: proxy.sessionCalls must be one of record, skip`);
+    expect(folded({}).modelProxy.sessionCalls).toBe('record');
+    expect(folded({ modelProxy: { sessionCalls: 'skip' } }).modelProxy.sessionCalls).toBe('skip');
+    expect(refusal({ modelProxy: { sessionCalls: 'always' } })).toBe(`${config}: modelProxy.sessionCalls must be one of record, skip`);
   });
 
-  it('refuses a proxy that is not an object', () => {
-    expect(refusal({ proxy: 'on' })).toBe(`${config}: proxy must be an object`);
-    expect(refusal({ proxy: [] })).toBe(`${config}: proxy must be an object`);
+  it('refuses a modelProxy that is not an object', () => {
+    expect(refusal({ modelProxy: 'on' })).toBe(`${config}: modelProxy must be an object`);
+    expect(refusal({ modelProxy: [] })).toBe(`${config}: modelProxy must be an object`);
   });
 });
 
@@ -487,6 +487,34 @@ const run = (value: unknown): Promise<{ code: number | null; stderr: string }> =
   return new Promise((done) => { child.on('close', (code) => { done({ code, stderr }); }); });
 };
 
+describe('a key that was renamed', () => {
+  it('is read under its new name, with a warning naming the file to change', () => {
+    const options = folded({ http: true, proxy: { sessionCalls: 'skip' } });
+    expect(options.warnings).toEqual([
+      `http is now httpApi; rename it in ${config}.`,
+      `proxy is now modelProxy; rename it in ${config}.`,
+    ]);
+    expect(options.httpApi).toEqual({});
+    expect(options.modelProxy.sessionCalls).toBe('skip');
+  });
+
+  it('warns about nothing when the file already uses the new names', () => {
+    expect(folded({ httpApi: true, modelProxy: { sessionCalls: 'skip' } }).warnings).toEqual([]);
+  });
+
+  it('stops the start when the file holds both names for one key', () => {
+    expect(refusal({ http: true, httpApi: true }))
+      .toBe(`${config} holds both http and httpApi, and they name the same setting: remove http, the old name of httpApi.`);
+    expect(refusal({ proxy: {}, modelProxy: {} }))
+      .toBe(`${config} holds both proxy and modelProxy, and they name the same setting: remove proxy, the old name of modelProxy.`);
+  });
+
+  it('names the new key in every message about it', () => {
+    expect(refusal({ httpApi: { port: 70000 } })).toContain('httpApi.port');
+    expect(refusal({ modelProxy: { sessionCalls: 'always' } })).toContain('modelProxy.sessionCalls');
+  });
+});
+
 describe('the daemon', () => {
   it('starts with an unknown key and says so in its log', async () => {
     const said = await run({ plugin: [] });
@@ -501,9 +529,16 @@ describe('the daemon', () => {
     expect(said.stderr).toContain(`${config}: port must be an integer`);
   }, 20000);
 
-  it('starts with a proxy that adds a provider and a model name', async () => {
+  it('says in its log that an old name is now the new one', async () => {
+    const said = await run({ proxy: { sessionCalls: 'skip' } });
+    expect(said.code).toBe(0);
+    expect(said.stderr).toContain(`proxy is now modelProxy; rename it in ${config}.`);
+    expect(said.stderr).toContain('ahpd over stdio');
+  }, 20000);
+
+  it('starts with a modelProxy that adds a provider and a model name', async () => {
     const said = await run({
-      proxy: {
+      modelProxy: {
         providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: { 'deepseek/deepseek-v4.1-flash': [{ provider: 'local-vllm', id: 'deepseek-v4.1-flash' }] },
       },
@@ -513,8 +548,8 @@ describe('the daemon', () => {
   }, 20000);
 
   it('refuses to start when a model names a provider that is not there', async () => {
-    const said = await run({ proxy: { models: { 'anthropic/fable-5': [{ provider: 'nowhere', id: 'fable-5' }] } } });
+    const said = await run({ modelProxy: { models: { 'anthropic/fable-5': [{ provider: 'nowhere', id: 'fable-5' }] } } });
     expect(said.code).toBe(2);
-    expect(said.stderr).toContain(`${config}: proxy.models.anthropic/fable-5 names nowhere, which is not a provider`);
+    expect(said.stderr).toContain(`${config}: modelProxy.models.anthropic/fable-5 names nowhere, which is not a provider`);
   }, 20000);
 });

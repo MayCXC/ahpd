@@ -73,7 +73,7 @@ describe('proxy list at the terminal', () => {
 
   it('adds a provider the configuration names, with its model names', async () => {
     put({
-      proxy: {
+      modelProxy: {
         providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: {
           'anthropic/fable-5': [
@@ -105,7 +105,7 @@ describe('proxy list at the terminal', () => {
     const had = process.env['LOCAL_VLLM_KEY'];
     process.env['LOCAL_VLLM_KEY'] = 'sk-should-never-appear';
     try {
-      put({ proxy: { providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'], key: { env: 'LOCAL_VLLM_KEY' } } } } });
+      put({ modelProxy: { providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'], key: { env: 'LOCAL_VLLM_KEY' } } } } });
       const said = await run();
       expect(said.plain).toContain('key set: true (LOCAL_VLLM_KEY)');
       expect(said.plain).not.toContain('sk-should-never-appear');
@@ -140,7 +140,7 @@ describe('proxy list, served', () => {
 
   it('answers the daemon\'s own providers and model names', async () => {
     put({
-      proxy: {
+      modelProxy: {
         providers: { 'local-vllm': { endpoint: 'http://localhost:8000/v1', accepts: ['openai-chat'] } },
         models: { 'deepseek/deepseek-v4.1-flash': [{ provider: 'local-vllm', id: 'deepseek-v4.1-flash' }] },
       },

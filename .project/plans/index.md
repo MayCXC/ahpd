@@ -55,7 +55,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented, task 04 todo | 33 | 33 p4 |
 | [33 p6 - The Windows run finishes clean](daemon/33-p6-the-windows-run-finishes-clean/plan.md) | medium | active 2026-10-18; tasks 01 to 04 and 06 to 09 implemented, task 05 todo | 33 | 33 p4 |
-| [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | planned 2026-10-18 | - | - |
+| [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | active 2026-10-19; tasks 01 and 02 implemented | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | planned 2026-10-18; 6 tasks implemented, 0 done | daemon 09, daemon 13 | - |
 
 Next free number in `daemon`: `36`.
@@ -232,6 +232,7 @@ Reference: [00-host.md](host/00-host.md)
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented | - | - |
+| [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | planned 2026-10-19 | - | - |
 
 Next free number in `host`: `97`.
 

@@ -77,8 +77,8 @@ export const declareProxy = (registry: Registry<object>, served?: ServedFacts): 
   ...(served === undefined ? { input: flagFields } : {}),
   run: (context) => {
     const proxy: ProxyConfiguration = served === undefined
-      ? optionsFrom(context.input as Readonly<Record<string, unknown>>).proxy
-      : served.options.proxy;
+      ? optionsFrom(context.input as Readonly<Record<string, unknown>>).modelProxy
+      : served.options.modelProxy;
     const rows: ProviderRow[] = Object.entries(proxy.providers).map(([id, provider]) => ({
       id,
       endpoint: provider.endpoint,
