@@ -160,7 +160,22 @@ export const createRuns = (ctx: SessionContext): Runs => {
    */
   const read = (live: RunHandle, mapping: TurnMapping, turnId: string): void => {
     void (async () => {
-      for await (const event of live.events) await apply(mapping, turnId, event);
+      for await (const event of live.events) {
+        /*
+         * A shell command the owner's rules already allow.
+         *
+         * cofold pauses the run and asks on `approval.requested`, which the
+         * mapping would turn into a question. An approval is answered before
+         * that, so no entry is raised, no row is moved to
+         * `pending-confirmation` and no request is held; the run's own
+         * `tool.started` then readies the call `not-needed`, as it does for one
+         * nobody was asked about. Only the live stream is checked: a replay
+         * rebuilds what was asked then, whatever the rules say now.
+         */
+        if (event.type === 'approval.requested'
+          && await ctx.autoApprove(event.requestId, event.name, event.input)) continue;
+        await apply(mapping, turnId, event);
+      }
     })();
   };
 

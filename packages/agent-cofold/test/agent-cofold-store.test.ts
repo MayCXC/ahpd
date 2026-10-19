@@ -627,6 +627,42 @@ it('reopens a paused run through start.resume without replaying the input', asyn
   expect(messages.filter((one: Message) => one.role === 'user' && textOf(one) === 'hi')).toHaveLength(1);
 });
 
+it('replays a paused shell command as the question it was, whatever the rules say now', async () => {
+  const { root, sweep } = place();
+  const asks: Partial<Policy> = {
+    decide: ({ tool }) => (tool.name === 'shell_exec' ? { behavior: 'ask' } : { behavior: 'allow' }),
+  };
+
+  // The first process pauses on a command its host had no rule for.
+  const first = backend(root, createFakeModel({
+    script: [{ toolCalls: [{ name: 'shell_exec', input: { command: 'echo hi' }, callId: 'call-1' }] }],
+    stream: true,
+  }), asks);
+  const before = open(first, 'rules', sweep);
+  before.session.begin('t1', 'hi');
+  await until(() => before.view.said('session', 'session/inputNeededSet') !== undefined);
+  await pausedRun(root, 'rules');
+
+  // The restarted host now has a rule that allows the command.
+  const asked: string[] = [];
+  const second = backendOf(await restart(), root, createFakeModel({ script: [{ text: 'done' }], stream: true }), asks);
+  const after = open(second, 'rules', sweep, {
+    resume: 'rules',
+    getAutoApproval: (_kind, line) => {
+      asked.push(line);
+      return 'not-needed' as NonNullable<ReturnType<NonNullable<Start['getAutoApproval']>>>;
+    },
+  });
+  await until(() => after.view.said('session', 'session/inputNeededSet') !== undefined);
+
+  // The replay asks again and never consults the rules for what was asked then.
+  expect((after.view.said('session', 'session/inputNeededSet')?.request as Bag | undefined)?.kind).toBe('toolConfirmation');
+  expect(asked).toEqual([]);
+  after.session.confirm('call-1', false);
+  await until(() => ended(after.view));
+  expect(ended(after.view)).toBe(true);
+});
+
 it('answers a request the replay announced before the resumed run had a handle', async () => {
   /*
    * The window this pins is small and real: a `start.resume` replays the run's
