@@ -61,6 +61,11 @@ const titleOf = (key: string): string => key
   .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
   .join(' ');
 
+/** The patterns a person reads in words, by the pattern; any other is said as written. */
+const PATTERN_WORDS: Readonly<Record<string, string>> = {
+  '^\\S+$': 'Has no spaces.',
+};
+
 /**
  * What a bound says, as the one sentence the description carries instead.
  *
@@ -73,7 +78,9 @@ const boundOf = (of: Record<string, unknown>): string | undefined => {
   if (typeof least === 'number' && typeof most === 'number') return `Between ${least} and ${most}.`;
   if (typeof least === 'number') return `At least ${least}.`;
   if (typeof most === 'number') return `At most ${most}.`;
-  return typeof of['pattern'] === 'string' ? `Matches ${of['pattern']}.` : undefined;
+  const pattern = of['pattern'];
+  if (typeof pattern !== 'string') return undefined;
+  return PATTERN_WORDS[pattern] ?? `Matches ${pattern}.`;
 };
 
 /** The one type a schema is sent as. */

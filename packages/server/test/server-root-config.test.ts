@@ -111,13 +111,13 @@ describe('the schema a client reads', () => {
     expect(written['mcpServers']).toMatchObject({ type: 'object', title: 'MCP servers' });
   });
 
-  it('gives http one type, its two settings, and their bounds as words', () => {
+  it('gives http one type, its two settings, and their descriptions with their bounds as words', () => {
     expect(properties()['http']).toMatchObject({
       type: 'object',
       title: 'HTTP API',
       properties: {
-        port: { type: 'number', title: 'Port', description: 'Between 0 and 65535.' },
-        host: { type: 'string', title: 'Host', description: 'Matches ^\\S+$.' },
+        port: { type: 'number', title: 'Port', description: "The port of the API's own listener. Absent serves the API on the daemon's port. Between 0 and 65535." },
+        host: { type: 'string', title: 'Host', description: "The address the API's own listener binds. Needs a port. Has no spaces." },
       },
     });
   });

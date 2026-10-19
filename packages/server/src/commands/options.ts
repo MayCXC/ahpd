@@ -618,8 +618,8 @@ export const serverFields = {
     type: ['object', 'boolean'],
     title: 'HTTP API',
     properties: {
-      port: { type: 'integer', title: 'Port', minimum: 0, maximum: 65535 },
-      host: { type: 'string', title: 'Host', pattern: '^\\S+$' },
+      port: { type: 'integer', title: 'Port', description: "The port of the API's own listener. Absent serves the API on the daemon's port.", minimum: 0, maximum: 65535 },
+      host: { type: 'string', title: 'Host', description: "The address the API's own listener binds. Needs a port.", pattern: '^\\S+$' },
     },
     description: "Serve the HTTP API: true under /api on the daemon's own listener, or an object whose port gives it a listener of its own and whose host binds that listener. Set in the configuration file only.",
   },
@@ -627,8 +627,8 @@ export const serverFields = {
     type: 'object',
     title: 'Plugin routes',
     properties: {
-      port: { type: 'integer', title: 'Port', minimum: 0, maximum: 65535 },
-      host: { type: 'string', title: 'Host', pattern: '^\\S+$' },
+      port: { type: 'integer', title: 'Port', description: "The port of the routes' own listener. Absent serves the routes on the daemon's port.", minimum: 0, maximum: 65535 },
+      host: { type: 'string', title: 'Host', description: "The address the routes' own listener binds. Needs a port.", pattern: '^\\S+$' },
     },
     description: "Where the plugins' routes are served. Absent is the daemon's own port. A port gives them a listener of their own that serves nothing else, and a host binds that listener. Set in the configuration file only.",
   },
