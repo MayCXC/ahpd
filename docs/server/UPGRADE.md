@@ -64,6 +64,19 @@ ahpd restart
 0.6 had Claude built in, so an old `config.json` names no plugin. Run `ahpd plugin install @ahpd/agent-claude` once after the upgrade.
 :::
 
+## Renamed keys
+
+`http` is now `httpApi`, and `proxy` is now `modelProxy`. A file written with the old names still starts, and the daemon prints one warning for each:
+
+```
+http is now httpApi; rename it in /home/you/.config/ahpd/config.json.
+proxy is now modelProxy; rename it in /home/you/.config/ahpd/config.json.
+```
+
+Rename the keys in `config.json` to stop the warnings. A file that holds both names of one key is refused, because the two name the same setting.
+
+The `proxy` grant, the `proxy:call` operation and the `proxy` match type of a policy keep their names.
+
 ## Update check
 
 The daemon asks npm every six hours if a newer `@ahpd/server` exists. `ahpd start` and `ahpd status` then say so:

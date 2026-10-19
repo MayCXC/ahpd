@@ -330,7 +330,7 @@ export interface Config {
    * listener of its own. Absent is off, which is what every install that never
    * asked for an API keeps.
    */
-  http?: boolean | HttpSetting;
+  httpApi?: boolean | HttpSetting;
   /** Where the plugins' routes are served. Absent is the daemon's own listener. */
   routes?: RoutesSetting;
   /**
@@ -344,7 +344,7 @@ export interface Config {
    * not built in. A key is named by the environment variable holding it and is
    * never written here.
    */
-  proxy?: ProxySetting;
+  modelProxy?: ProxySetting;
   /**
    * The MCP servers every session is offered, by the name a person gave them.
    *
@@ -626,6 +626,23 @@ export const updatePath = (): string => join(configDir(), 'update.json');
 /** Make sure the directory is there, so a write into it can succeed. */
 export const ensureConfigDir = (): void => { mkdirSync(configDir(), { recursive: true }); };
 
+/**
+ * The settings that were renamed, each with the name it has now.
+ *
+ * The old name is still read, so a file written before the rename keeps
+ * working, and the daemon says which name to use rather than rewriting the
+ * file behind the person. A file holding both names is refused: they are one
+ * setting, and which of them wins is not something to guess.
+ */
+export const RENAMED_KEYS = [
+  { was: 'http', now: 'httpApi' },
+  { was: 'proxy', now: 'modelProxy' },
+] as const;
+
+/** The name a setting had before it was renamed, or nothing when it was not. */
+export const oldNameOf = (key: string): string | undefined =>
+  RENAMED_KEYS.find((one) => one.now === key)?.was;
+
 /** The configuration as it was read: the merged values, the files and who set what. */
 export interface LoadedConfig {
   /** Every file merged, later winning, with relative paths made absolute. Unchecked. */
@@ -634,6 +651,8 @@ export interface LoadedConfig {
   files: string[];
   /** The file that set a key, or nothing when no file did. */
   sourceOf(key: string): string | undefined;
+  /** What a person should change about the file, one line each. */
+  warnings: string[];
 }
 
 /**
@@ -677,11 +696,40 @@ export function loadConfig(named?: string): LoadedConfig {
   catch (error) {
     throw new Error(error instanceof Error ? error.message : String(error));
   }
-  const sourceOf = (key: string): string | undefined => resolved.sourceOf(key);
+  /*
+   * The old names are read under the new ones, and the file is left as it is.
+   *
+   * A file with both names for one setting is refused rather than resolved:
+   * they are one setting, and which of the two a person meant is not something
+   * the daemon can guess. The sentence names the old one to remove.
+   */
+  const read = resolved.values as Record<string, unknown>;
+  const values: Record<string, unknown> = { ...read };
+  const warnings: string[] = [];
+  for (const { was, now } of RENAMED_KEYS) {
+    if (read[was] === undefined) continue;
+    const where = resolved.sourceOf(was) ?? 'the configuration';
+    if (read[now] !== undefined) {
+      const other = resolved.sourceOf(now) ?? 'the configuration';
+      throw new Error(other === where
+        ? `${where} holds both ${was} and ${now}, and they name the same setting: remove ${was}, the old name of ${now}.`
+        : `${where} holds ${was} and ${other} holds ${now}, and they name the same setting: remove ${was}, the old name of ${now}.`);
+    }
+    delete values[was];
+    values[now] = read[was];
+    warnings.push(`${was} is now ${now}; rename it in ${where}.`);
+  }
+  const sourceOf = (key: string): string | undefined => {
+    const now = resolved.sourceOf(key);
+    if (now !== undefined) return now;
+    const was = oldNameOf(key);
+    return was === undefined ? undefined : resolved.sourceOf(was);
+  };
   return {
-    values: anchored(resolved.values as Record<string, unknown>, sourceOf),
+    values: anchored(values, sourceOf),
     files: resolved.layers.map((layer) => layer.path),
     sourceOf,
+    warnings,
   };
 }
 

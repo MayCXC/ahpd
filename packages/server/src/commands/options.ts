@@ -148,7 +148,7 @@ export interface Options {
    * moves it to a listener of its own. It has no flag, because the
    * decision put it in the configuration.
    */
-  http?: HttpSetting;
+  httpApi?: HttpSetting;
   /**
    * Where the plugins' routes are served.
    *
@@ -157,7 +157,7 @@ export interface Options {
    */
   routes?: RoutesSetting;
   /** The providers this proxy calls and the model names that point at them. */
-  proxy: ProxyConfiguration;
+  modelProxy: ProxyConfiguration;
   /**
    * The MCP servers every session is offered, and the ones that were skipped.
    *
@@ -614,7 +614,7 @@ export const serverFields = {
     },
     description: 'Whether the policies saying who may use which agent, model and computer are enforced: check refuses a session and a turn that no policy allows, naming the policy that refused it, and refuses a turn or a proxy call whose limits have no room left. Off by default, and the rows are written and listed either way. payOrder says which row of one scope pays first: ending (the default), regular or extra. ownLimits, true by default, lets a person read the limits that apply to them. Set in the configuration file only.',
   },
-  http: {
+  httpApi: {
     type: ['object', 'boolean'],
     title: 'HTTP API',
     properties: {
@@ -632,8 +632,9 @@ export const serverFields = {
     },
     description: "Where the plugins' routes are served. Absent is the daemon's own port. A port gives them a listener of their own that serves nothing else, and a host binds that listener. Set in the configuration file only.",
   },
-  proxy: {
+  modelProxy: {
     ...proxySchema,
+    title: 'Model proxy',
     description: 'The providers this proxy calls and the model names that point at them: providers are keyed by the id a model entry names, and a model name is written <maker>/<name> with the entries serving it. An entry under a built-in id replaces it whole. A key is named by the environment variable holding it, never written here. sessionCalls is record (the default) or skip: whether a call made with a session\'s own token is policy-checked and recorded by the proxy. Set in the configuration file only.',
   },
   mcpServers: {
@@ -670,7 +671,7 @@ export const serverFields = {
 } satisfies Record<string, Field>;
 
 /** The fields only the configuration file sets, which have no flag. */
-const FILE_ONLY = ['http', 'routes', 'usage', 'proxy', 'policies', 'mcpServers', 'shellEnv'] as const;
+const FILE_ONLY = ['httpApi', 'routes', 'usage', 'modelProxy', 'policies', 'mcpServers', 'shellEnv'] as const;
 
 /** The flags that mean something only when typed, which the file does not set. */
 const TYPED_ONLY = ['stdio', 'configFile', 'noPlugins', 'noCwd', 'pluginOptions'] as const;
@@ -881,12 +882,12 @@ export const servedPluginWriteFields = {
  * `<file>: <key> must be ...`, naming the file `source` says set it. A key it
  * does not name answers one line, and the caller carries on without it.
  *
- * `proxy` is checked further than the schema reaches, because whether a model
- * name's provider exists is only known once the file's providers are over the
- * built-ins. That is a bad value rather than an unknown key, so it stops the
- * start the same way one does. `shellEnv` is checked the same way for the same
- * reason: its names and values are held on their own, because the schema
- * cannot say that an object is a map.
+ * `modelProxy` is checked further than the schema reaches, because whether a
+ * model name's provider exists is only known once the file's providers are
+ * over the built-ins. That is a bad value rather than an unknown key, so it
+ * stops the start the same way one does. `shellEnv` is checked the same way for
+ * the same reason: its names and values are held on their own, because the
+ * schema cannot say that an object is a map.
  */
 export function checkConfig(file: object, source: (key: string) => string): string[] {
   const warnings: string[] = [];
@@ -902,23 +903,23 @@ export function checkConfig(file: object, source: (key: string) => string): stri
       stop(`${source(key)}: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-  const problems = proxyProblems((file as Config).proxy);
-  if (problems.length > 0) stop(problems.map((one) => `${source('proxy')}: ${one}`).join('\n'));
+  const problems = proxyProblems((file as Config).modelProxy);
+  if (problems.length > 0) stop(problems.map((one) => `${source('modelProxy')}: ${one}`).join('\n'));
   const shellEnvBad = shellEnvProblems((file as Config).shellEnv);
   if (shellEnvBad.length > 0) stop(shellEnvBad.map((one) => `${source('shellEnv')}: ${one}`).join('\n'));
   return warnings;
 }
 
 /**
- * `http` as a run takes it: `true` is the daemon's own listener, `false` and
+ * `httpApi` as a run takes it: `true` is the daemon's own listener, `false` and
  * absent are off. `host` binds the API's own listener and has none to bind
  * without a `port`, so it is refused on its own.
  */
-const httpOf = (value: Config['http'], source: string): HttpSetting | undefined => {
+const httpOf = (value: Config['httpApi'], source: string): HttpSetting | undefined => {
   if (value === undefined || value === false) return undefined;
   if (value === true) return {};
   if (value.host !== undefined && value.port === undefined) {
-    return stop(`${source}: http.host names the API's own listener, so it needs an http.port to bind.`);
+    return stop(`${source}: httpApi.host names the API's own listener, so it needs an httpApi.port to bind.`);
   }
   return value;
 };
@@ -990,7 +991,7 @@ export function optionsFrom(input: Readonly<Record<string, unknown>>): Options {
   // A server this run cannot offer is warned about rather than refused, so the
   // file's other keys are read whatever one entry says.
   const mcp = mcpServers(file.mcpServers, source);
-  const warnings = [...checkConfig(file, source), ...mcp.warnings];
+  const warnings = [...checkConfig(file, source), ...mcp.warnings, ...loaded.warnings];
   const noPlugins = input['noPlugins'] === true;
 const noCwd = input['noCwd'] === true;
 
@@ -1119,9 +1120,9 @@ const noCwd = input['noCwd'] === true;
   const sleepAfterMinutes = given('sleepAfterMinutes');
   const sessionResidencyLimit = given('sessionResidencyLimit');
   const usageZone = given('usage')?.timezone;
-  const http = httpOf(file.http, source('http'));
+  const httpApi = httpOf(file.httpApi, source('httpApi'));
   const routes = routesOf(file.routes, source('routes'));
-  const proxy = proxyConfiguration(given('proxy'));
+  const modelProxy = proxyConfiguration(given('modelProxy'));
 
   return {
     port: given('port') ?? 9187,
@@ -1162,9 +1163,9 @@ const noCwd = input['noCwd'] === true;
     policiesPayOrder: given('policies')?.payOrder ?? 'ending',
     policiesOwnLimits: given('policies')?.ownLimits ?? true,
     ...(wire === undefined ? {} : { wire }),
-    ...(http === undefined ? {} : { http }),
+    ...(httpApi === undefined ? {} : { httpApi }),
     ...(routes === undefined ? {} : { routes }),
-    proxy,
+    modelProxy,
     mcpServers: mcp.servers,
     plugins,
     noPlugins,

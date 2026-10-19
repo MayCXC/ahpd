@@ -227,11 +227,11 @@ describe('a route with http off', () => {
   });
 });
 
-describe('a route with http on', () => {
+describe('a route with httpApi on', () => {
   let one: Daemon;
 
   beforeAll(async () => {
-    one = await daemon({ http: true, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
+    one = await daemon({ httpApi: true, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
   }, 40000);
 
   it('answers beside the API, on the same port', async () => {
@@ -257,8 +257,8 @@ describe('a route with http on', () => {
     })).status).toBe(200);
   });
 
-  it('leaves the API on its own listener when http.port names one', async () => {
-    const apart = await daemon({ http: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
+  it('leaves the API on its own listener when httpApi.port names one', async () => {
+    const apart = await daemon({ httpApi: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
     // The route is served on the daemon's port, and the API is not there.
     expect((await hook(apart.port, `${PREFIX}/hook`, 'a=1')).status).toBe(200);
     expect((await fetch(`http://127.0.0.1:${String(apart.port)}/api/status`)).status).toBe(404);
@@ -302,7 +302,7 @@ describe('routes on a port of their own', () => {
   let routes: number;
 
   beforeAll(async () => {
-    one = await daemon({ http: true, routes: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
+    one = await daemon({ httpApi: true, routes: { port: 0 }, plugins: [BACKEND, ROUTE] }, ['--connection-token', 'root-secret']);
     routes = routesPortOf(one);
   }, 40000);
 

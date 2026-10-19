@@ -265,7 +265,7 @@ export interface ApiListener {
 }
 
 /**
- * The API on its own port, for `http.port`.
+ * The API on its own port, for `httpApi.port`.
  *
  * Bound before the daemon announces itself, so a port that is taken refuses the
  * start rather than leaving a daemon whose API is missing. `port: 0` is the OS

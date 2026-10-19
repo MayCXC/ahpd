@@ -1,7 +1,7 @@
 ---
 title: The API and proxy keys get their own names
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -56,6 +56,7 @@ client form -> root/configChanged -> rootconfig.ts writes the new name and remov
 | An old name gives a warning at start that names the new key | Softov, 2026-10-18, same answer | 01 |
 | A file with both names for one key stops the start, with a message that names both | (defaulted: two values for one setting have no right answer) | 01 |
 | A write from a client writes the new name, and removes the old name from the file | (defaulted: else the next start reads both names) | 01 |
+| The settings page shows `modelProxy`, so a client can edit the providers and model names | Softov, 2026-10-19, chose "Keep it on" for "Should `modelProxy` be on the settings page?" | 01 |
 | The `proxy` grant and the `proxy` match type of a policy keep their names | (defaulted: they are not configuration keys, and a rename would change roles and policies) | 01 |
 
 ## Proposed architecture
@@ -70,8 +71,8 @@ client form -> root/configChanged -> rootconfig.ts writes the new name and remov
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the daemon reads the new names](task-01-the-daemon-reads-the-new-names.md) | todo | - |
-| [02 - the docs use the new names](task-02-the-docs-use-the-new-names.md) | todo | 01 |
+| [01 - the daemon reads the new names](task-01-the-daemon-reads-the-new-names.md) | implemented | - |
+| [02 - the docs use the new names](task-02-the-docs-use-the-new-names.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -81,16 +82,16 @@ client form -> root/configChanged -> rootconfig.ts writes the new name and remov
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** task 01.
+- **Done so far:** tasks 01 and 02 are implemented. The daemon reads, writes and warns about the new names, and the docs use them.
+- **Next action:** review the two tasks, then the plan is done.
 - **Open questions:** none.
 - **Watch out for:** `rootconfig.ts` edits the file in place, beside keys it does not touch.
 
 ## Final verification checklist
 
-- [ ] A file with `http` and `proxy` starts, and the daemon warns once for each key.
-- [ ] A file with `httpApi` and `modelProxy` starts with no warning.
-- [ ] A file with `http` and `httpApi` stops with a message that names both.
-- [ ] A client save of the HTTP API writes `httpApi` and removes `http`.
-- [ ] The settings page shows `httpApi` and `modelProxy`, and no `http` or `proxy`.
-- [ ] The gates pass.
+- [x] A file with `http` and `proxy` starts, and the daemon warns once for each key.
+- [x] A file with `httpApi` and `modelProxy` starts with no warning.
+- [x] A file with `http` and `httpApi` stops with a message that names both.
+- [x] A client save of the HTTP API writes `httpApi` and removes `http`.
+- [x] The settings page shows `httpApi` and `modelProxy`, and no `http` or `proxy`.
+- [x] The gates pass.
