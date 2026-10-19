@@ -55,8 +55,9 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented, task 04 todo | 33 | 33 p4 |
 | [33 p6 - The Windows run finishes clean](daemon/33-p6-the-windows-run-finishes-clean/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented, tasks 04 to 05 todo | 33 | 33 p4 |
+| [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | planned 2026-10-18; 6 tasks todo | daemon 09, daemon 13 | - |
 
-Next free number in `daemon`: `31`.
+Next free number in `daemon`: `36`.
 
 ## host
 
