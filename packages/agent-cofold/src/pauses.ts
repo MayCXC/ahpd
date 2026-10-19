@@ -41,6 +41,14 @@ const answersOf = (answers: Bag): Record<string, string | string[]> => {
 /** What a stopped turn offers the other areas. */
 export interface Pauses {
   stop: (reason: string) => void;
+  /**
+   * Answer an approval the owner's rules already allow, and say whether it did.
+   *
+   * Reads the call cofold paused on, and answers the run itself when the
+   * command line is one the rules approve. False leaves the question to be
+   * opened as it would have been.
+   */
+  autoApprove: (requestId: string, name: string, input: unknown) => Promise<boolean>;
 }
 
 export const createPauses = (
@@ -122,8 +130,43 @@ export const createPauses = (
     stopNow(reason);
   };
 
+  /**
+   * The shell cofold runs a command through.
+   *
+   * `shell_exec` runs one command through the platform's own shell, which is
+   * what cofold's `DEFAULT_SHELL` names: PowerShell on Windows and bash
+   * everywhere else. The check's two shells are those two, so a line is
+   * matched against the rules of the shell that will run it.
+   */
+  const shellOf = (): 'bash' | 'powershell' => (process.platform === 'win32' ? 'powershell' : 'bash');
+
+  /**
+   * Answer an approval the owner's rules already allow, and say whether it did.
+   *
+   * cofold raises `approval.requested` when its policy would put a call to a
+   * person, so this runs only where the run itself asked. A command line no
+   * rule matched, one a rule denied, one the input does not name and a host
+   * that says nothing all answer false, and the question is opened as it would
+   * have been.
+   *
+   * The approval goes back for this one command, without `alwaysApprove`:
+   * cofold keeps that for a person's session-wide choice, and the host keeps no
+   * approval of its own - the rules are read again on the next call. Nothing
+   * is said on the wire here. The run's own `tool.started` readies the row
+   * `not-needed`, as it does for a call nobody was asked about.
+   */
+  const autoApprove = async (requestId: string, name: string, input: unknown): Promise<boolean> => {
+    if (name !== 'shell_exec') return false;
+    const command = bag(input).command;
+    if (typeof command !== 'string') return false;
+    if ((await start.getAutoApproval?.('shell', command, shellOf())) !== 'not-needed') return false;
+    route({ type: 'approve', requestId });
+    return true;
+  };
+
   return {
     stop,
+    autoApprove,
     methods: {
       /**
        * Answer a tool call the run is waiting on.

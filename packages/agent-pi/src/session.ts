@@ -378,11 +378,33 @@ export function piSession(
     (typeof input.path === 'string' ? input.path : input.cwd);
 
   /**
+   * Whether the owner's rules already allow this shell call.
+   *
+   * The host answers from the rules the window that started this session
+   * pushed, and only an approval reaches here: a rule that denied the line, a
+   * line no rule could read and a host that says nothing all answer
+   * `undefined`, and the question is put as it always was. `bash` and
+   * `powershell` are pi's two shells and the check's two, and each carries its
+   * own rules; the command is the one the model wrote, which is the input pi
+   * is about to run. A call whose input names no command line is not one the
+   * check can read, so it asks.
+   */
+  const allowedByRule = async (toolName: string, input: Bag): Promise<boolean> => {
+    const shell = toolName === 'bash' ? 'bash' : toolName === 'powershell' ? 'powershell' : undefined;
+    const command = input.command;
+    if (shell === undefined || typeof command !== 'string') return false;
+    return (await start.getAutoApproval?.('shell', command, shell)) === 'not-needed';
+  };
+
+  /**
    * What to do about one call: run it, ask a person, or refuse it.
    *
-   * The modes are the siblings' six.
+   * The modes are the siblings' six. A shell command the owner's rules already
+   * allow is taken out of the ones a mode would ask about; the check narrows
+   * the questions and adds none, so a mode that refuses a call still refuses
+   * it and a mode that runs one still runs it without consulting the rules.
    */
-  const decide = (toolName: string, input: Bag): ToolCallEventResult | 'ask' | undefined => {
+  const decide = async (toolName: string, input: Bag): Promise<ToolCallEventResult | 'ask' | undefined> => {
     const effects = effectsOf(toolName);
     /** Whether the modes that ask before a change ask about this call. */
     const asks = (): boolean => {
@@ -396,28 +418,35 @@ export function piSession(
       return false;
     };
     const onEffects = (): ToolCallEventResult | 'ask' | undefined => (asks() ? 'ask' : undefined);
-    switch (modeOf(settings.permissionMode)) {
-      case 'bypassPermissions':
-        return undefined;
-      case 'plan':
-        return effects.writes === true || effects.destructive === true
-          ? { block: true, reason: `${toolName} would change something and the mode is plan` }
-          : onEffects();
-      case 'auto':
-        return effects.destructive === true ? 'ask' : undefined;
-      case 'acceptEdits':
-        // An edit is a write that does not destroy, and only one that names a
-        // path inside the working directory is let through.
-        return effects.writes === true && effects.destructive !== true && insideWorkspace(input.path)
-          ? undefined
-          : onEffects();
-      case 'dontAsk':
-        return asks()
-          ? { block: true, reason: `${toolName} would need approval and the mode is dontAsk` }
-          : undefined;
-      default:
-        return onEffects();
-    }
+    const byMode = (): ToolCallEventResult | 'ask' | undefined => {
+      switch (modeOf(settings.permissionMode)) {
+        case 'bypassPermissions':
+          return undefined;
+        case 'plan':
+          return effects.writes === true || effects.destructive === true
+            ? { block: true, reason: `${toolName} would change something and the mode is plan` }
+            : onEffects();
+        case 'auto':
+          return effects.destructive === true ? 'ask' : undefined;
+        case 'acceptEdits':
+          // An edit is a write that does not destroy, and only one that names a
+          // path inside the working directory is let through.
+          return effects.writes === true && effects.destructive !== true && insideWorkspace(input.path)
+            ? undefined
+            : onEffects();
+        case 'dontAsk':
+          return asks()
+            ? { block: true, reason: `${toolName} would need approval and the mode is dontAsk` }
+            : undefined;
+        default:
+          return onEffects();
+      }
+    };
+    const decided = byMode();
+    // Only an ask is narrowed: a refusal is a mode's answer about the call,
+    // and a run is one nobody was going to be asked about.
+    if (decided !== 'ask') return decided;
+    return (await allowedByRule(toolName, input)) ? undefined : 'ask';
   };
 
   /*
@@ -470,7 +499,7 @@ export function piSession(
       });
     };
 
-    const decided = decide(event.toolName, input);
+    const decided = await decide(event.toolName, input);
     if (decided === 'ask') {
       const title = `Run ${displayName}?`;
       return await new Promise<ToolCallEventResult | undefined>((settle) => {
