@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
@@ -27,7 +28,8 @@ beforeEach(() => {
   file = join(root, 'a.txt');
   writeFileSync(file, 'on disk');
 });
-afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+// Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+afterEach(async () => { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); });
 
 export const peer = (): Peer => ({ send: () => {}, notify: () => {}, request: async () => ({}), answered: () => {}, close: () => {} });
 

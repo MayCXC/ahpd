@@ -6,6 +6,7 @@ import type { RecordChange, RecordCollection } from '@ahpd/sdk';
 import { echo } from '../../../examples/echo/agent.js';
 import { loadPlugins } from '../src/plugins.js';
 import { fileRecords, readRecordFile, recordFile } from '../src/records.js';
+import { posix } from '../../../tools/posix.ts';
 
 /*
  * The daemon's record store: a folder per collection, a Markdown file per
@@ -75,7 +76,8 @@ describe('fileRecords', () => {
     const file = join(dir, 'bots', 'helper.md');
     const text = readFileSync(file, 'utf8');
     expect(text.endsWith('---\nAnswer briefly.\n\nUse the tools: a, b.\n\n')).toBe(true);
-    expect(statSync(file).mode & 0o777).toBe(0o600);
+    // A POSIX mode, which Windows has none of.
+    if (posix) expect(statSync(file).mode & 0o777).toBe(0o600);
     expect(await bots.get('helper')).toEqual(bot);
   });
 

@@ -6,6 +6,7 @@ import { createHost, fileSessions } from '@ahpd/sdk';
 import type { AutomationStore, Bag, CapturedPlugin, Peer } from '@ahpd/sdk';
 import { echo } from '../../../examples/echo/agent.js';
 import { scheduledAutomations } from '../src/scheduled.js';
+import { posix } from '../../../tools/posix.ts';
 
 /*
  * The half `memoryAutomations` deliberately does not have: a clock, and the
@@ -387,7 +388,9 @@ describe('across a restart', () => {
     expect(store.get(ONE)?.customizations).toEqual([{ id: 'p2', uri: 'file:///copies/two', name: 'two', type: 'plugin' }]);
   });
 
-  it('writes the file owner-only, because it names whose work an automation is', () => {
+  // A POSIX mode, which Windows has none of.
+
+  it.skipIf(!posix)('writes the file owner-only, because it names whose work an automation is', () => {
     const clock = clockwork();
     const one = scheduledAutomations({ dir: folder, state, now: clock.now, timer: clock.timer });
     one.create(ONE, nightly());
@@ -399,7 +402,9 @@ describe('across a restart', () => {
     expect(statSync(state).mode & 0o777).toBe(0o600);
   });
 
-  it('is owner-only even when a readable temp at its own name was left behind', () => {
+  // A POSIX mode, which Windows has none of.
+
+  it.skipIf(!posix)('is owner-only even when a readable temp at its own name was left behind', () => {
     /*
      * The state file is written twice for one change - once when the clock is
      * caught up and once with the stamp - and the last of the two is what

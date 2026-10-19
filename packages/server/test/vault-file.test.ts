@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { fileVault } from '../src/vault.js';
+import { posix } from '../../../tools/posix.ts';
 
 let dir: string;
 let file: string;
@@ -43,7 +44,9 @@ it('is read again on every call, so a second vault over the same file sees what 
   await expect(two.list()).resolves.toEqual(['host:x', 'host:y']);
 });
 
-it('makes the file at a mode only its owner may read', async () => {
+// A POSIX mode, which Windows has none of.
+
+it.skipIf(!posix)('makes the file at a mode only its owner may read', async () => {
   await fileVault({ file }).set('host:x', 'a-token');
   expect(statSync(file).mode & 0o777).toBe(0o600);
 
@@ -54,7 +57,9 @@ it('makes the file at a mode only its owner may read', async () => {
   expect(statSync(file).mode & 0o777).toBe(0o600);
 });
 
-it('writes the file private even when a readable temp at its own name was left behind', async () => {
+// A POSIX mode, which Windows has none of.
+
+it.skipIf(!posix)('writes the file private even when a readable temp at its own name was left behind', async () => {
   await fileVault({ file }).set('host:x', 'a-token');
   // What a process that had this pid before left world-readable. `mode` is
   // applied when a file is created and not when one is opened, so a write that

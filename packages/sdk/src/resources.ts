@@ -34,7 +34,20 @@ const CONFLICT = -32011;
 export const pathOf = (uri: string): string => {
   if (!uri.startsWith('file:')) return uri;
   if (!uri.startsWith('file:/')) throw new RpcError(REFUSED, `${uri} is not an absolute path`);
-  try { return fileURLToPath(uri); }
+  /*
+   * A URI naming another machine is refused on every system. Node refuses one
+   * on Linux, and on Windows reads `file://server/share` as a network path - a
+   * read that makes this host connect to whatever server a client named, and
+   * sign in to it as the person running the daemon.
+   */
+  let url: URL;
+  try { url = new URL(uri); }
+  catch { throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`); }
+  if (url.host !== '' && url.host !== 'localhost') throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`);
+  // A path with no drive, on Windows, by POSIX rules: Node's Windows reader
+  // refuses `file:///etc/x` as not absolute, which is a path on this drive.
+  const driveless = process.platform === 'win32' && !/^\/[A-Za-z]:/.test(url.pathname);
+  try { return fileURLToPath(uri, driveless ? { windows: false } : undefined); }
   catch { throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`); }
 };
 

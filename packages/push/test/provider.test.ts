@@ -11,6 +11,7 @@ import type { PushProvider } from '../src/provider.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { Write } from '../../sdk/src/types/resources.js';
+import { posix } from '../../../tools/posix.ts';
 
 /*
  * The `push:` scheme, over the devices one daemon keeps.
@@ -70,7 +71,9 @@ it('keeps a device a client registered, and reads it back', async () => {
   expect(resolved).toMatchObject({ uri: 'push://devices/phone-1', type: 'file' });
 });
 
-it('writes the devices at a mode only their owner may read', async () => {
+// A POSIX mode, which Windows has none of.
+
+it.skipIf(!posix)('writes the devices at a mode only their owner may read', async () => {
   const where = dir();
   const provider = pushProvider({ store: deviceStore(where, () => {}) });
   await provider.write('push://devices/phone-1', body({ token: TOKEN, platform: 'android' }), undefined, 'phone');

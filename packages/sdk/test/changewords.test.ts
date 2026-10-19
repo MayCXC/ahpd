@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -28,8 +29,9 @@ import type { Session } from '../src/types/session.js';
  */
 
 let made: string[] = [];
-afterEach(() => {
-  for (const dir of made) rmSync(dir, { recursive: true, force: true });
+// Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+afterEach(async () => {
+  for (const dir of made) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   made = [];
 });
 

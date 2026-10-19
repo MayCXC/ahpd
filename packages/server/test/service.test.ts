@@ -10,6 +10,7 @@
  */
 
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { SERVICE_ENV } from '../src/daemon.js';
 import {
@@ -126,11 +127,11 @@ describe('serviceOn', () => {
 describe('installFile', () => {
   it('writes the unit under the configuration home, and the agent where launchd reads it', () => {
     expect(installFile('systemd')).toBe(unitFile());
-    expect(installFile('systemd')).toMatch(/systemd\/user\/ahpd\.service$/u);
+    expect(installFile('systemd').endsWith(join('systemd', 'user', 'ahpd.service'))).toBe(true);
     // The agent folder is launchd's own, and not the configuration home: an
     // agent anywhere else is one nothing loads.
     expect(installFile('launchd')).toBe(agentFile());
-    expect(agentFile()).toBe(`${homedir()}/Library/LaunchAgents/${LABEL}.plist`);
+    expect(agentFile()).toBe(join(homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`));
   });
 });
 

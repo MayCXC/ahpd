@@ -18,6 +18,13 @@ describe('localPath', () => {
     expect(localPath(uriOf(path))).toBe(path);
   });
 
+  it('decodes a URI with no drive on any system, so an escape is never left as text', () => {
+    // On Windows, Node's own reader refuses a path with no drive as not
+    // absolute, and the escapes were left in: `%23` was then encoded again.
+    expect(localPath('file:///home/me/a%23b')).toBe('/home/me/a#b');
+    expect(localPath('file:///home/me/my%20dir')).toBe('/home/me/my dir');
+  });
+
   it('hands anything that is not a URI back unchanged, because callers get paths too', () => {
     expect(localPath('/plain/path')).toBe('/plain/path');
     expect(localPath('my dir')).toBe('my dir');

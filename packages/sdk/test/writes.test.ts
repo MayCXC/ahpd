@@ -319,7 +319,8 @@ it.skipIf(!posix)('refuses final file links for writes and copies, including dan
 
 it('round-trips file names without decoding a literal percent sign', async () => {
   const held = await client();
-  const names = ['literal%20name.txt', 'literal name.txt', 'percent%.txt', 'hash#.txt', 'query?.txt', 'ação.txt'];
+  // `?` is not a character a Windows file name may hold, so that name is POSIX's alone.
+  const names = ['literal%20name.txt', 'literal name.txt', 'percent%.txt', 'hash#.txt', ...(posix ? ['query?.txt'] : []), 'ação.txt'];
   for (const name of names) {
     const path = join(root, name);
     expect(pathOf(path)).toBe(path);

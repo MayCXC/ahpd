@@ -9,6 +9,10 @@ import {
   resetSdk, actions, claude, createHost, emit, gitChanges, hello, hostTools, machine,
  peer, sdk, sessionQueries, settle,
 } from './support/host.js';
+import { uriOf } from '../src/fileuri.js';
+
+/** The folder the hosts here serve, as its URI on this system: `file:///C:/home/softov` on Windows. */
+const HOME = uriOf('/home/softov');
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
@@ -102,8 +106,8 @@ describe('what GitHub knows about the branch', () => {
      * `project.uri` already spells it, so the key the host publishes and the
      * string a client looks it up by are one string.
      */
-    expect(state._meta?.workingDirectoryKeys).toEqual({ 'file:///home/softov': 'file:///home/softov' });
-    expect(state._meta?.githubData).toEqual({ 'file:///home/softov': state._meta?.github });
+    expect(state._meta?.workingDirectoryKeys).toEqual({ [HOME]: HOME });
+    expect(state._meta?.githubData).toEqual({ [HOME]: state._meta?.github });
     // Asked as the person who lent the token.
     expect(asked.at(-1)?.token).toBe('gho_x');
     await client.handle({ method: 'subscribe', params: { channel: 'ahp-root://' } });
@@ -129,8 +133,8 @@ describe('what GitHub knows about the branch', () => {
     expect(meta?.git?.branchName).toBe('fix/kqueue');
     // The frame carries the whole map, so the per-folder keys move with it -
     // or a producer that wrote its own part would have erased the git facts.
-    expect(meta?.workingDirectoryKeys).toEqual({ 'file:///home/softov': 'file:///home/softov' });
-    expect(meta?.githubData?.['file:///home/softov']?.pullRequestState).toBe('merged');
+    expect(meta?.workingDirectoryKeys).toEqual({ [HOME]: HOME });
+    expect(meta?.githubData?.[HOME]?.pullRequestState).toBe('merged');
     const row = p.notes.filter((n) => n.method === 'root/sessionSummaryChanged').at(-1);
     const rowMeta = (row?.params as {
       changes: {
@@ -142,8 +146,8 @@ describe('what GitHub knows about the branch', () => {
       };
     }).changes._meta;
     expect(rowMeta?.github?.pullRequestState).toBe('merged');
-    expect(rowMeta?.workingDirectoryKeys).toEqual({ 'file:///home/softov': 'file:///home/softov' });
-    expect(rowMeta?.githubData?.['file:///home/softov']?.pullRequestState).toBe('merged');
+    expect(rowMeta?.workingDirectoryKeys).toEqual({ [HOME]: HOME });
+    expect(rowMeta?.githubData?.[HOME]?.pullRequestState).toBe('merged');
   });
 
   it('names the owner and repository alone when the branch has no pull request, and keeps what it held when GitHub does not answer', async () => {
@@ -189,8 +193,8 @@ describe('what GitHub knows about the branch', () => {
     expect((state._meta?.github as { initialPullRequestUrls?: unknown }).initialPullRequestUrls).toEqual([]);
     expect((state._meta?.github as { associatedPullRequestUrls?: unknown }).associatedPullRequestUrls).toEqual([]);
     // And the same empty baseline is a captured answer per folder too.
-    expect(state._meta?.githubData?.['file:///home/softov']).toBe(state._meta?.github);
-    expect((state._meta?.githubData?.['file:///home/softov'] as { initialPullRequestUrls?: unknown }).initialPullRequestUrls)
+    expect(state._meta?.githubData?.[HOME]).toBe(state._meta?.github);
+    expect((state._meta?.githubData?.[HOME] as { initialPullRequestUrls?: unknown }).initialPullRequestUrls)
       .toEqual([]);
   });
 

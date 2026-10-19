@@ -75,8 +75,14 @@ export const localPath = (value: string): string => {
    * decode differently from one without.
    */
   const escaped = path.replaceAll('#', '%23').replaceAll('?', '%3F');
+  /*
+   * A path with no drive, on Windows, by POSIX rules. Node's Windows reader
+   * refuses `file:///home/me` as not absolute, and the refusal left its
+   * escapes undecoded, so a `%23` came back as text and was encoded again.
+   */
+  const driveless = process.platform === 'win32' && !/^\/[A-Za-z]:/.test(path);
   try {
-    const decoded = fileURLToPath(`${SCHEME}${escaped}`);
+    const decoded = fileURLToPath(`${SCHEME}${escaped}`, driveless ? { windows: false } : undefined);
     /*
      * A NUL is not a path. `%00` decodes to one, and a string carrying one is
      * a comparison and a log line nothing can read, so the text it came from

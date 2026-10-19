@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, normalize } from 'node:path';
+import { posix } from '../../../tools/posix.ts';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createFakeModel } from '@cofold/agents/testing';
 import type { RunEvent } from '@cofold/agents';
@@ -649,8 +650,9 @@ it('titles a row by the subject cofold sent rather than the model spelling', asy
   expect(titled('c1')).toBe('a.txt');
   // The memory index is the file a call with no path acts on.
   expect(titled('c2')).toBe('MEMORY.md');
-  // A path outside the workspace has no name relative to it, so it stays whole.
-  expect(titled('c3')).toBe(join(away, 'secret'));
+  // A path outside the workspace has no name relative to it, so it stays
+  // whole, in the separators cofold spells it with: `/` on Windows too.
+  expect(normalize(String(titled('c3')))).toBe(join(away, 'secret'));
   rmSync(dir, { recursive: true, force: true });
   rmSync(away, { recursive: true, force: true });
 });
@@ -829,7 +831,8 @@ it('sends the after for an edit still waiting when the turn is cancelled', async
   rmSync(dir, { recursive: true, force: true });
 });
 
-it('kills a cancelled shell command and the child it started', async () => {
+// A bash command line; on Windows cofold runs PowerShell.
+it.skipIf(!posix)('kills a cancelled shell command and the child it started', async () => {
   const dir = place();
   const { session, v } = await open({
     script: [{ toolCalls: [call('shell_exec', { command: 'sleep 30 & echo $! > child.pid; wait' })] }, { text: 'done' }],
@@ -881,7 +884,8 @@ it('keeps the tools for a session with no working directory', async () => {
   const done = completeFor(v, 'c1');
   expect(done?.result).toMatchObject({ success: true });
   // No directory named, so the command runs in the daemon's own.
-  expect(JSON.stringify((done?.result as Bag).content)).toContain(process.cwd());
+  const said = ((done?.result as Bag).content as { text?: string }[]).map((one) => one.text ?? '').join('');
+  expect(said).toContain(process.cwd());
   rmSync(dir, { recursive: true, force: true });
 });
 
@@ -903,6 +907,11 @@ interface Row {
   first?: { name: string; input: unknown; callId: string };
   call(at: { workspace: string; away: string }): { name: string; input: unknown; callId: string };
   expect: Record<Mode, Outcome>;
+  /**
+   * A row that needs a link to a file, which Windows makes only with a
+   * privilege and does not write through when it dangles.
+   */
+  posixOnly?: true;
 }
 
 const ROWS: Row[] = [
@@ -936,13 +945,15 @@ const ROWS: Row[] = [
   {
     what: 'an edit through a symlink out of the workspace',
     call: (at) => {
-      symlinkSync(at.away, join(at.workspace, 'link'), 'dir');
+      // A junction on Windows, which links a folder with no privilege.
+      symlinkSync(at.away, join(at.workspace, 'link'), posix ? 'dir' : 'junction');
       return call('write_file', { path: 'link/x.txt', content: 'x' });
     },
     expect: { default: 'ask', acceptEdits: 'ask', plan: 'deny', auto: 'ask', bypassPermissions: 'run', dontAsk: 'deny' },
   },
   {
     what: 'an edit through a dangling symlink whose target is outside',
+    posixOnly: true,
     call: (at) => {
       symlinkSync(join(at.away, 'new.txt'), join(at.workspace, 'dl'));
       return call('write_file', { path: 'dl', content: 'x' });
@@ -951,6 +962,7 @@ const ROWS: Row[] = [
   },
   {
     what: 'an edit through a dangling link whose target has .. after a symlink out of the workspace',
+    posixOnly: true,
     call: (at) => {
       mkdirSync(join(at.away, 'sub'));
       symlinkSync(join(at.away, 'sub'), join(at.workspace, 'sublink'), 'dir');
@@ -1019,9 +1031,11 @@ async function outcomeOf(mode: Mode, row: Row): Promise<Outcome> {
   return outcome;
 }
 
-it.each(ROWS.map((row) => [row.what, row] as const))('%s: every mode answers as the table says', async (_what, row) => {
-  for (const mode of PERMISSION_MODES) {
-    const got = await outcomeOf(mode, row);
-    expect(got, `${row.what} under ${mode}`).toBe(row.expect[mode]);
-  }
-});
+for (const row of ROWS) {
+  it.skipIf(row.posixOnly === true && !posix)(`${row.what}: every mode answers as the table says`, async () => {
+    for (const mode of PERMISSION_MODES) {
+      const got = await outcomeOf(mode, row);
+      expect(got, `${row.what} under ${mode}`).toBe(row.expect[mode]);
+    }
+  });
+}

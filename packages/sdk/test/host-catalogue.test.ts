@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Status } from '../src/catalog.js';
+import { uriOf } from '../src/fileuri.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
 import type { Request } from '../src/types/rpc.js';
 import type { HostOptions } from '../src/types/host.js';
@@ -223,11 +224,11 @@ describe('a session that already happened', () => {
     const listed = await client.handle({ method: 'listSessions', params: {} }) as {
       items: { resource: string; workingDirectories: string[] }[];
     };
-    expect(listed.items[0]?.workingDirectories).toEqual(['file:///github/s2cmd']);
+    expect(listed.items[0]?.workingDirectories).toEqual([uriOf('/github/s2cmd')]);
     const opened = (await client.handle({ method: 'subscribe', params: { channel: listed.items[0]?.resource } }) as {
       snapshot: { state: { workingDirectories: string[] } };
     }).snapshot.state;
-    expect(opened.workingDirectories).toEqual(['file:///github/s2cmd']);
+    expect(opened.workingDirectories).toEqual([uriOf('/github/s2cmd')]);
   });
 
   it('resumes rather than replays when somebody says something', async () => {

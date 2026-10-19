@@ -22,6 +22,7 @@ import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { createHost } from '../src/host.js';
+import { uriOf } from '../src/fileuri.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
@@ -198,7 +199,7 @@ it.skipIf(!posix)('writes an embedded image to a file the message names', async 
 
   const attachment = first(sent(first(said.begun)));
   expect(attachment.type).toBe('resource');
-  expect(attachment.uri).toBe(`file://${file}`);
+  expect(attachment.uri).toBe(uriOf(file));
   expect(attachment.label).toBe('pasted.png');
   expect(attachment.contentType).toBe('image/png');
   expect((attachment._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });
@@ -210,7 +211,7 @@ it.skipIf(!posix)('writes an embedded image to a file the message names', async 
   const turns = [...(chat.turns as Bag[]), ...(chat.activeTurn === undefined ? [] : [chat.activeTurn as Bag])];
   const turnWith = turns.find((one) => (one.message as Bag).attachments !== undefined) as Bag;
   const seen = first((turnWith.message as Bag).attachments as Bag[]);
-  expect(seen.uri).toBe(`file://${file}`);
+  expect(seen.uri).toBe(uriOf(file));
   expect((seen._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });
 });
 
@@ -238,8 +239,8 @@ it('writes each attachment of a message to its own file', async () => {
   const handed = sent(first(said.begun));
   const image = handed.find((one) => String(one.uri).endsWith('.png')) as Bag;
   const note = handed.find((one) => String(one.uri).endsWith('.txt')) as Bag;
-  expect(image.uri).toBe(`file://${join(folder, names.find((one) => one.endsWith('.png')) as string)}`);
-  expect(note.uri).toBe(`file://${join(folder, text)}`);
+  expect(image.uri).toBe(uriOf(join(folder, names.find((one) => one.endsWith('.png')) as string)));
+  expect(note.uri).toBe(uriOf(join(folder, text)));
 });
 
 it('names the file inside the folder whatever the label says', async () => {
@@ -271,7 +272,7 @@ it('reads a file only the client has, and leaves one this host has as it came', 
       text: 'these',
       attachments: [
         { type: 'resource', label: 'elsewhere.png', uri: 'file:///nowhere/elsewhere.png', contentType: 'image/png' },
-        { type: 'resource', label: 'mine.png', uri: `file://${here}`, contentType: 'image/png' },
+        { type: 'resource', label: 'mine.png', uri: uriOf(here), contentType: 'image/png' },
       ],
     },
   });
@@ -287,10 +288,10 @@ it('reads a file only the client has, and leaves one this host has as it came', 
   const handed = sent(first(said.begun));
   const elsewhere = handed.find((one) => one.label === 'elsewhere.png') as Bag;
   const mine = handed.find((one) => one.label === 'mine.png') as Bag;
-  expect(elsewhere.uri).toBe(`file://${join(folder, first(names))}`);
+  expect(elsewhere.uri).toBe(uriOf(join(folder, first(names))));
   expect((elsewhere._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });
   // A file this host already holds is the user's own and is left where it is.
-  expect(mine).toEqual({ type: 'resource', label: 'mine.png', uri: `file://${here}`, contentType: 'image/png' });
+  expect(mine).toEqual({ type: 'resource', label: 'mine.png', uri: uriOf(here), contentType: 'image/png' });
 });
 
 it('asks no client for a file above the size it will fetch', async () => {
@@ -357,7 +358,7 @@ it('hands a queued and a steering message their attachments', async () => {
   const queued = first(sent(first(said.queued)));
   const steered = first(sent(first(said.steered)));
   // Both are files inside the session's own folder, which is the whole of it.
-  expect(names.map((one) => `file://${join(folder, one)}`).sort())
+  expect(names.map((one) => uriOf(join(folder, one))).sort())
     .toEqual([String(queued.uri), String(steered.uri)].sort());
   expect((queued._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });
   expect((steered._meta as Bag)[TAG]).toEqual({ isSnapshot: true, contentType: 'image/png' });
