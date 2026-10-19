@@ -65,7 +65,7 @@ agent-claude finds the user's folders on Windows.
 | --- | --- | --- |
 | [01 - agent-claude's tests build their paths](task-01-agent-claudes-tests-build-their-paths.md) | implemented | - |
 | [02 - The sdk's tests build their paths](task-02-the-sdks-tests-build-their-paths.md) | implemented | - |
-| [03 - The paths the Windows run found](task-03-the-paths-the-windows-run-found.md) | todo | - |
+| [03 - The paths the Windows run found](task-03-the-paths-the-windows-run-found.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -73,9 +73,9 @@ agent-claude finds the user's folders on Windows.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, planned 2026-10-16, and both tasks implemented 2026-10-18.
-- **Next action:** task 03, from the Windows run of 2026-10-18.
-- **Open questions:** p1 is not built, so the failing tests by file are unknown. Both tasks derived their files from the plan's refs and p3's and p5's Resumes.
+- **Done so far:** drafted 2026-10-16, planned 2026-10-16, and tasks 01, 02 and 03 implemented 2026-10-18.
+- **Next action:** a run of p1's Windows job, which confirms task 03's two cases.
+- **Open questions:** whether those two cases pass on Windows. This host is Linux, so neither task 03's Windows half nor its sibling tasks' can be checked here. The `sessiontools` case was fixed by task 02 after the Windows run at `71166379` that named it.
 - **Watch out for:** a fixture file under `test/fixtures` holds POSIX URIs that VS Code sent. It stays as it is.
 
 ## Final verification checklist

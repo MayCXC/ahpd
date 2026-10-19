@@ -50,7 +50,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [32 - A failure has a JSON shape under --json](daemon/32-a-failure-has-a-json-shape/plan.md) | medium | active 2026-10-18; tasks 01 to 04 implemented | cofold commands 06 | - |
 | [33 - ahpd's checks pass on Windows](daemon/33-ahpds-checks-pass-on-windows/plan.md) | medium | planned 2026-10-16; parent of p1 to p6 | - | - |
 | [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented | 33 | 33 p4 |
-| [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | active 2026-10-18; tasks 01 to 02 implemented, task 03 todo | 33 | 33 p4 |
+| [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented | 33 | 33 p4 |
 | [33 p3 - POSIX-only tests say why they skip](daemon/33-p3-posix-only-tests-say-why-they-skip/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented | 33 | 33 p4 |
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | active 2026-10-16; tasks 01 to 03 implemented, task 04 todo | 33 | 33 p4 |

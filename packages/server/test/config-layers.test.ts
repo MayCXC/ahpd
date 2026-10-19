@@ -10,7 +10,7 @@
 import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { optionsFrom } from '../src/commands/options.js';
 import { loadConfig } from '../src/config.js';
@@ -167,7 +167,7 @@ describe('a relative path', () => {
     write(user, { worktreesRoot: 'from-file' });
     expect(optionsFrom({ worktreesRoot: 'trees' }).worktreesRoot).toBe(join(process.cwd(), 'trees'));
     // And an absolute one is already where it says, wherever it was typed.
-    expect(optionsFrom({ worktreesRoot: '/trees' }).worktreesRoot).toBe('/trees');
+    expect(optionsFrom({ worktreesRoot: '/trees' }).worktreesRoot).toBe(resolve('/trees'));
   });
 
   it('leaves the worktrees root absent when nothing named one', () => {
