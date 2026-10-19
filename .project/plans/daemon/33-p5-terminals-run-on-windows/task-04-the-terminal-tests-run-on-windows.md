@@ -1,6 +1,6 @@
 ---
 title: The terminal tests run on Windows
-status: todo
+status: implemented
 depends: [task-03-a-terminal-stops-on-windows.md]
 layer: sdk
 refs:
@@ -61,3 +61,13 @@ No case in `pty.test.ts` runs a POSIX-only command any more, so none skips.
 - `host-terminals`, "runs a command typed during a turn": `Cannot read properties of undefined (reading 'success')`. Cause not read yet.
 - `sessiontools`, "matches a directory with a space": the filter answers `[]`. A path case, p2's.
 - `sessiontools`, "refuses a call with no turn running" and "refuses the 51st session": the second times out at 5 s. Cause not read yet.
+
+**Windows run, 2026-10-19, on Softov's Windows machine in the runner-like setup.**
+`host-terminals.test.ts` passes 24 of 24, `pty.test.ts` and `shellenv.test.ts` pass, and `conformance.test.ts` passes.
+`sessiontools.test.ts` passes since p6 task 12.
+What was fixed:
+- "starts a shell where the client said" and "reports the directory it is in": the shell still had the folder as its working directory, and Windows does not remove that folder. Each case now disposes its terminal before the cleanup.
+- "runs a command typed during a turn": the case waited for any `chat/turnComplete`, and the first turn's arrived before PowerShell had run the queued command. `ended` takes a turn id, and the case waits for the command's own turn.
+- `pty.test.ts`, `shellenv.test.ts` and `conformance.test.ts` started a shell in `/tmp`, which Windows does not have, and Node reported the missing folder as `spawn pwsh.exe ENOENT`. They start it in `tmpdir()`.
+- `users-gate-dispatch.test.ts` and `users-gate-names.test.ts` left shells running in the folder their cleanup removed. The helpers' `host` keeps every host it made, and the cleanup closes each first.
+No case skips.

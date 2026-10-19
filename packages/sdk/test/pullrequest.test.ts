@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { uriOf } from '../src/fileuri.js';
 import { gitChanges } from '../src/changes.js';
 import type { ChangesetOperationContext } from '../src/types/changes.js';
 import type { NewPullRequest, PullRequest } from '../src/types/github.js';
@@ -109,7 +110,7 @@ describe('preparing a pull request', () => {
       autoMergeAllowed: false,
       mergeMethods: [],
       agentMergeAvailable: false,
-      context: { workingDirectory: `file://${dir}`, repository: 'softov/ahpd', branchName: 'fix/kqueue', baseBranchName: 'main' },
+      context: { workingDirectory: uriOf(dir), repository: 'softov/ahpd', branchName: 'fix/kqueue', baseBranchName: 'main' },
     });
     // Nothing moved: still dirty, nothing pushed, nobody asked GitHub.
     expect(git(dir, 'status', '--porcelain')).not.toBe('');

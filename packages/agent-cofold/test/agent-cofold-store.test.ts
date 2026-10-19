@@ -180,7 +180,7 @@ it('lists a session that was created and torn down, with its workspace and title
   expect(listed?.[0]).toMatchObject({
     id: 'one',
     title: 'remember the number 41',
-    workingDirectories: [`file://${sweep}`],
+    workingDirectories: [uriOf(sweep)],
   } satisfies Partial<Listed>);
   // The timestamps are the store's, so a row says when the conversation moved.
   expect(Date.parse(String(listed?.[0]?.createdAt))).not.toBeNaN();

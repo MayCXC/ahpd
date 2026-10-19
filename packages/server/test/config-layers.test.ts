@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { optionsFrom } from '../src/commands/options.js';
 import { loadConfig } from '../src/config.js';
@@ -216,7 +217,8 @@ const cli = (args: string[], cwd: string, env: Record<string, string> = {}): Pro
       ...process.env,
       XDG_CONFIG_HOME: home,
       CI: '1',
-      NODE_OPTIONS: `--conditions development --import ${join(REPO, 'scripts/dev.mjs')}`,
+      // A URL, which `--import` needs for an absolute path on Windows.
+      NODE_OPTIONS: `--conditions development --import ${pathToFileURL(join(REPO, 'scripts/dev.mjs')).href}`,
       ...env,
     },
     stdio: ['pipe', 'pipe', 'pipe'],

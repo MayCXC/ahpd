@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { isShellName, shellEnvOf, type ShellEnv } from '../src/shellenv.js';
 import { shellTerminals } from '../src/terminals.js';
@@ -39,7 +40,8 @@ describe('isShellName', () => {
 const printed = async (asked: { shellEnv?: ShellEnv; env?: Record<string, string | undefined> }): Promise<string> => {
   const terminal = shellTerminals({ ...(asked.shellEnv === undefined ? {} : { shellEnv: asked.shellEnv }) }).create({
     uri: 'ahp-terminal:/shellenv',
-    cwd: '/tmp',
+    // A folder that is there on every system: a missing one fails the spawn.
+    cwd: tmpdir(),
     claim: { kind: 'client', clientId: 'probe' },
     command: process.execPath,
     args: ['-e', 'process.stdout.write(JSON.stringify(process.env[process.argv[1]] ?? null))', 'AHP_TEST_ENV'],

@@ -42,11 +42,12 @@ describe('a command typed into the conversation', () => {
     return { host, client, peer: p, uri, chatUri };
   };
 
-  /** Wait for the turn to end, however it ended. */
-  const ended = async (p: ReturnType<typeof peer>, chatUri: string) => {
+  /** Wait for a turn to end, however it ended: the named one, or any. */
+  const ended = async (p: ReturnType<typeof peer>, chatUri: string, turnId?: string) => {
     for (let i = 0; i < 80; i++) {
       await new Promise((r) => { setTimeout(r, 25); });
-      if (actions(p, chatUri).some((e) => e.action.type === 'chat/turnComplete')) break;
+      if (actions(p, chatUri).some((e) => e.action.type === 'chat/turnComplete'
+        && (turnId === undefined || e.action.turnId === turnId))) break;
     }
     return actions(p, chatUri).map((e) => e.action);
   };
@@ -255,7 +256,9 @@ describe('a command typed into the conversation', () => {
     expect(actions(p, chatUri).some((e) => e.action.type === 'chat/toolCallStart')).toBe(false);
 
     await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 5 });
-    const done = await ended(p, chatUri);
+    // The command's own turn: the one in front of it ends first, and a shell
+    // can take longer to start than that one took to end.
+    const done = await ended(p, chatUri, 't2');
     /*
      * Run, not asked. The command waited as text so a client could see it, and
      * handing `!echo queued-command` to the CLI on its turn is exactly what
@@ -425,6 +428,8 @@ describe('a shell on this machine', () => {
       // `my%20dir`, which is not the one the client picked and not one that
       // exists - so nothing starts there at all.
       expect(await spoken(p, uri, join(dir, 'my dir'))).toContain(join(dir, 'my dir'));
+      // Windows keeps a folder a process is in, so the shell goes before the folder.
+      await client.handle({ method: 'disposeTerminal', params: { channel: uri } });
     } finally {
       await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
@@ -450,6 +455,8 @@ describe('a shell on this machine', () => {
       // called `C`, which is not either.
       expect(found.snapshot.state.cwd).toBe(uriOf(where));
       expect(localPath(found.snapshot.state.cwd)).toBe(where);
+      // Windows keeps a folder a process is in, so the shell goes before the folder.
+      await client.handle({ method: 'disposeTerminal', params: { channel: uri } });
     } finally {
       await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }

@@ -17,6 +17,7 @@
  *   the host reporting what it did.
  */
 
+import { resolve } from 'node:path';
 import { chatReducer } from '@microsoft/agent-host-protocol';
 import type { AnnotationsState, ChatAction, SessionInputRequestKind, ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { WireTurn } from './types/wire.js';
@@ -180,9 +181,12 @@ export function createHost(options: HostOptions): Host {
    * backend may learn about a directory after this host started.
    */
   const browsable = (): string[] => {
-    const found = new Set<string>([options.path]);
+    // Resolved, so each folder is spelled as a session's folder comes back
+    // from its URI: `/home/me` is `C:\home\me` on Windows, and the facts read
+    // for one are looked up under the other.
+    const found = new Set<string>([resolve(options.path)]);
     for (const agent of options.agents) {
-      for (const dir_ of agent.directories?.() ?? []) found.add(dir_);
+      for (const dir_ of agent.directories?.() ?? []) found.add(resolve(dir_));
     }
     return [...found];
   };

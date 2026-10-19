@@ -486,7 +486,7 @@ export function botProvider(options: BotOptions): BotProvider {
 
   /** The folder a bot works in, or the refusal a folder another bot has is owed. */
   const workspaceFor = (slug: string, asked: string | undefined, existing?: BotRecord): string => {
-    const workspace = asked ?? existing?.workspace ?? `${root}/${slug}`;
+    const workspace = asked ?? existing?.workspace ?? join(root, slug);
     // A named folder is one under `root`: the plugin makes it, and a maker
     // names folders only where the plugin's own are kept.
     if (asked !== undefined && existing === undefined && !resolve(asked).startsWith(`${resolve(root)}${sep}`)) {

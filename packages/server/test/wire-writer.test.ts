@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { filesOf, lineFor, writerFor } from '../src/wire.js';
 import type { Capture } from '../src/wire.js';
+import { posix } from '../../../tools/posix.ts';
 
 let home: string;
 let at: string;
@@ -138,12 +139,15 @@ describe('the capture file itself', () => {
    * A capture holds every token a client sent in `authenticate`, so it is
    * the one file this daemon writes that is nobody else's to read.
    */
-  it('is readable only by its owner when it is new', () => {
+  // A POSIX mode, which Windows has none of.
+  it.skipIf(!posix)('is readable only by its owner when it is new', () => {
     writerFor(at)(said(JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'authenticate', params: { token: 'sesame' } })));
     expect(statSync(at).mode & 0o777).toBe(0o600);
   });
 
-  it('is readable only by its owner when a previous run left it 0644', () => {
+  // A POSIX mode, which Windows has none of.
+
+  it.skipIf(!posix)('is readable only by its owner when a previous run left it 0644', () => {
     // The mode on create says nothing about a file that is already there, so
     // a capture left at the umask's mode is one this has to put right itself.
     writeFileSync(at, '', { mode: 0o644 });
@@ -152,7 +156,9 @@ describe('the capture file itself', () => {
     expect(statSync(at).mode & 0o777).toBe(0o600);
   });
 
-  it('is readable only by its owner after a roll', () => {
+  // A POSIX mode, which Windows has none of.
+
+  it.skipIf(!posix)('is readable only by its owner after a roll', () => {
     // The rolled-into file is a new one, made by the umask rather than by the
     // writer, and it holds the same tokens as the one before it.
     const write = writerFor(at, { maxFileSizeBytes: 400 });

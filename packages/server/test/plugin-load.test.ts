@@ -140,6 +140,8 @@ describe('one plugin named twice', () => {
 });
 
 describe('loadPlugins log', () => {
+  /** A path as a pattern matches it: a Windows path's backslashes are escapes otherwise. */
+  const literal = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const logged = async (specs: PluginSpec[]) => {
     const lines: string[] = [];
     const result = await loadPlugins(specs, { base: base(), configDir: fixtures, cwd: here, log: (line) => { lines.push(line); } });
@@ -152,9 +154,9 @@ describe('loadPlugins log', () => {
     expect(loaded.map((one) => one.name)).toEqual(['hello', 'alike']);
     expect(lines).toHaveLength(4);
     expect(lines[0]).toBe('plugin plugin-hello loading');
-    expect(lines[1]).toMatch(new RegExp(`^plugin hello from ${join(fixtures, 'plugin-hello', 'index.ts')} in \\d+ ms$`));
+    expect(lines[1]).toMatch(new RegExp(`^plugin hello from ${literal(join(fixtures, 'plugin-hello', 'index.ts'))} in \\d+ ms$`));
     expect(lines[2]).toBe('plugin plugin-alike loading');
-    expect(lines[3]).toMatch(new RegExp(`^plugin alike from ${join(fixtures, 'plugin-alike', 'index.ts')} in \\d+ ms$`));
+    expect(lines[3]).toMatch(new RegExp(`^plugin alike from ${literal(join(fixtures, 'plugin-alike', 'index.ts'))} in \\d+ ms$`));
   });
 
   it('logs a plugin whose apply throws starting, and says in its problem how long it took', async () => {
@@ -170,7 +172,7 @@ describe('loadPlugins log', () => {
 
     expect(lines).toEqual(['plugin plugin-explodes loading']);
     expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatch(new RegExp(`^plugin plugin-explodes could not be imported from ${join(fixtures, 'plugin-explodes', 'index.ts')} in \\d+ ms: .*the explodes fixture throws when imported`));
+    expect(problems[0]).toMatch(new RegExp(`^plugin plugin-explodes could not be imported from ${literal(join(fixtures, 'plugin-explodes', 'index.ts'))} in \\d+ ms: .*the explodes fixture throws when imported`));
   });
 });
 

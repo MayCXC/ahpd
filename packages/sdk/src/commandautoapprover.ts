@@ -614,10 +614,16 @@ const globRegexOf = (pattern: string): RegExp => {
  * the whole of what a write is allowed by.
  */
 const patternsAllow = (path: string, patterns: TerminalAutoApprovePatterns): boolean => {
+  // In the patterns' own separators. A pattern is written with `/`, and on
+  // Windows a path has `\`: the denial `.git` pattern never matched
+  // `C:\repo\.git\config` while the allow-all one did, so a denial was never
+  // read there. Only on Windows, where a backslash is a separator and not a
+  // character a name may hold.
+  const spelled = process.platform === 'win32' ? path.replaceAll('\\', '/') : path;
   const entries = Object.entries(patterns)
     .map(([pattern, approved]) => ({ regex: globRegexOf(pattern), approved }));
-  if (entries.some((one) => one.approved === false && one.regex.test(path))) return false;
-  return entries.some((one) => one.approved === true && one.regex.test(path));
+  if (entries.some((one) => one.approved === false && one.regex.test(spelled))) return false;
+  return entries.some((one) => one.approved === true && one.regex.test(spelled));
 };
 
 /** A destination whose name a shell finishes reading rather than the text: a variable, a substitution, a home directory. */

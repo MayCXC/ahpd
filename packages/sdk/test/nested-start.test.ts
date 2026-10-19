@@ -137,7 +137,8 @@ it('starts the host a profile names, and ahpd when it names none', async () => {
 
   // A machine that is not there is nothing, the same answer `how` gives.
   expect(await computers.nested('gone', { plugins: ['@ahpd/agent-cofold'] })).toBeUndefined();
-});
+  // Four machines made through the scripted docker, each a node process: about five seconds on Windows.
+}, 20_000);
 
 it('answers the path inside the machine the session folder is mounted at', async () => {
   loose = mkdtempSync(join(tmpdir(), 'ahpd-nested-inside-'));

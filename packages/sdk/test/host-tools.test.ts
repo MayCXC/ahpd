@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { sessionReducer } from '@microsoft/agent-host-protocol';
@@ -36,7 +37,7 @@ beforeEach(resetSdk);
  * A summary names only a folder that is there, so the host has to run in one
  * that exists on whichever machine runs the test.
  */
-const HERE = fileURLToPath(new URL('.', import.meta.url)).replace(/\/$/, '');
+const HERE = dirname(fileURLToPath(import.meta.url));
 
 describe('tools the host contributes', () => {
   const withTools = async (tools = hostTools()) => {
@@ -359,19 +360,19 @@ describe('tools the host contributes', () => {
       });
       await settle();
       const said = await call('set_workspace', { workspaceFolder: 'file:///tmp', isolation: false });
-      expect(said).toContain('Workspace will be set to file:///tmp after this turn ends');
+      expect(said).toContain(`Workspace will be set to ${uriOf('/tmp')} after this turn ends`);
       // Nothing moved yet: the turn is still running.
       expect(actions(p, uri).some((one) => one.action.type === 'session/workingDirectoryReplaced')).toBe(false);
       await emit({ type: 'result', subtype: 'success', is_error: false, duration_ms: 4 });
       await settle(8);
       const moved = actions(p, uri).find((one) => one.action.type === 'session/workingDirectoryReplaced');
-      expect(moved?.action.directory).toBe('file:///tmp');
+      expect(moved?.action.directory).toBe(uriOf('/tmp'));
       // Restarted there, resumed, and told so in a turn the window will not
       // draw as somebody's request, will list under a label rather than the
       // prompt, and will still credit with the file changes made in it: the
       // reference host's own continuation turn, key for key.
       const restarted = sessionQueries().at(-1);
-      expect(restarted?.options.cwd).toBe('/tmp');
+      expect(restarted?.options.cwd).toBe(resolve('/tmp'));
       const notice = actions(p, chatUri).filter((one) => one.action.type === 'chat/turnStarted').at(-1);
       expect(notice?.action.message).toMatchObject({
         origin: { kind: 'systemNotification' },
@@ -381,7 +382,7 @@ describe('tools the host contributes', () => {
           'vscode.chat.workspaceContinuation': true,
         },
       });
-      expect(String((notice?.action.message as { text: string }).text)).toContain('/tmp');
+      expect(String((notice?.action.message as { text: string }).text)).toContain(resolve('/tmp'));
     });
 
     it('names a folder with a # in the worktree message as a valid URI', async () => {
@@ -411,9 +412,9 @@ describe('tools the host contributes', () => {
       });
       await settle();
       const worktree = await call('set_workspace', { workspaceFolder: 'file:///home/softov/a%23b', isolation: true });
-      expect(worktree).toContain('An isolated worktree will be created from file:///home/softov/a%23b and set as the workspace');
+      expect(worktree).toContain(`An isolated worktree will be created from ${uriOf('/home/softov/a#b')} and set as the workspace`);
       const direct = await call('set_workspace', { workspaceFolder: '/home/softov/a#b', isolation: false });
-      expect(direct).toContain('Workspace will be set to file:///home/softov/a%23b after this turn ends');
+      expect(direct).toContain(`Workspace will be set to ${uriOf('/home/softov/a#b')} after this turn ends`);
     });
   });
 
@@ -832,8 +833,9 @@ describe('the MCP servers a session is offered', () => {
   };
 
   const dirs: string[] = [];
-  afterEach(() => {
-    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  // Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+  afterEach(async () => {
+    for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   /** Settle until something is true, giving it real time to happen. */
@@ -2203,8 +2205,9 @@ describe('a customization switched for every session or a folder', () => {
   };
 
   const dirs: string[] = [];
-  afterEach(() => {
-    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  // Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+  afterEach(async () => {
+    for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   /** Settle until something is true, giving it real time to happen. */
@@ -2652,8 +2655,9 @@ describe('a customization switched for one session', () => {
   };
 
   const dirs: string[] = [];
-  afterEach(() => {
-    for (const dir of dirs.splice(0)) rmSync(dir, { recursive: true, force: true });
+  // Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+  afterEach(async () => {
+    for (const dir of dirs.splice(0)) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   /**

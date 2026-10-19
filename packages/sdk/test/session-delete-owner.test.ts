@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
 import { memorySessions } from '../src/sessions.js';
@@ -20,7 +21,8 @@ import type { Principal, Users } from '../src/types/users.js';
  * the one case that must not go through is a member deleting a colleague's.
  */
 
-const DIR = '/tmp/ahpd-delete-owner';
+// Resolved, as the host spells the folder it serves: `C:\tmp\...` on Windows.
+const DIR = resolve('/tmp/ahpd-delete-owner');
 const RECORD = {
   resource: 'ahpd://users',
   resource_name: 'ahpd users',

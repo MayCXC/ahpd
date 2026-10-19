@@ -1154,6 +1154,15 @@ export const claimedOf = (found: Record<string, unknown>): ReturnType<typeof cla
 export const devcontainerFolder = (found: Record<string, unknown>): string | undefined =>
   folderLabelOf(found);
 
+const windowsHost = process.platform === 'win32';
+
+/**
+ * A host path as `within` compares it. On Windows the separators are one and
+ * the case is not a difference, as Windows itself reads a path; elsewhere the
+ * path is its own text, since a backslash is a character a name may hold.
+ */
+const spelledOnHost = (path: string): string => (windowsHost ? path.replaceAll('\\', '/').toLowerCase() : path);
+
 /**
  * Where a path on this host is inside one machine, or nothing.
  *
@@ -1180,11 +1189,13 @@ export const within = (held: Record<string, unknown>, path: string): string | un
     if (typeof mount !== 'object' || mount === null) continue;
     const { Source: source, Destination: target } = mount as Record<string, unknown>;
     if (typeof source !== 'string' || typeof target !== 'string' || source === '' || target === '') continue;
-    if (path !== source && !path.startsWith(source.endsWith('/') ? source : `${source}/`)) continue;
+    const [asked, mounted] = [spelledOnHost(path), spelledOnHost(source)];
+    if (asked !== mounted && !asked.startsWith(mounted.endsWith('/') ? mounted : `${mounted}/`)) continue;
     if (best === undefined || source.length > best.source.length) best = { source, target };
   }
   if (best === undefined) return undefined;
-  const rest = path.slice(best.source.length);
+  // The rest in the machine's separators: it is a path inside, which is POSIX.
+  const rest = windowsHost ? path.slice(best.source.length).replaceAll('\\', '/') : path.slice(best.source.length);
   if (rest === '') return best.target;
   return `${best.target.endsWith('/') ? best.target.slice(0, -1) : best.target}${rest}`;
 };

@@ -10,6 +10,7 @@ import { memoryRecords } from '../../sdk/src/records.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { memorySessions } from '../../sdk/src/sessions.js';
 import { sdkVersion } from '../../sdk/src/version.js';
+import { uriOf } from '../../sdk/src/fileuri.js';
 import { holds } from '../../sdk/src/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { apply } from '../src/plugin.js';
@@ -1096,7 +1097,7 @@ it('answers a read with the reader\'s own chat, and the same chat again', async 
   // the bot, and hers: it is the same session she would have started herself.
   expect(await row(ana, chat)).toMatchObject({
     title: 'Motion',
-    workingDirectories: [`file://${join(bots, 'motion')}`],
+    workingDirectories: [uriOf(join(bots, 'motion'))],
   });
   expect(sessions.owner(idIn(chat))).toBe('user:ana');
 

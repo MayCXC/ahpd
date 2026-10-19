@@ -16,9 +16,10 @@
 
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
+import { uriOf } from '../src/fileuri.js';
 import { fileSessions } from '../src/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
@@ -172,7 +173,8 @@ it('puts the file into the machine after it is written and before the turn', asy
   expect(copy.id).toBe('box');
   expect(copy.paths).toHaveLength(1);
   // The path the message names, which is the one the host wrote the bytes to.
-  expect(first(copy.paths)).toMatch(new RegExp(`^${join(dir, 'attachments', 'one')}/.*\\.png$`));
+  expect(dirname(first(copy.paths))).toBe(join(dir, 'attachments', 'one'));
+  expect(first(copy.paths).endsWith('.png')).toBe(true);
   expect(first(copy.hex)).toBe(PNG.toString('hex'));
 
   // Written first, then handed over, and only then the turn: a copy asked for
@@ -182,7 +184,7 @@ it('puts the file into the machine after it is written and before the turn', asy
   // could not make.
   expect(lines.some((one) => one.includes('computers:'))).toBe(false);
   const handed = first(attached(first(turns)));
-  expect(handed.uri).toBe(`file://${first(copy.paths)}`);
+  expect(handed.uri).toBe(uriOf(first(copy.paths)));
 });
 
 it('puts each session\'s own file into the machine the two share', async () => {
@@ -201,9 +203,9 @@ it('puts each session\'s own file into the machine the two share', async () => {
   expect(said.put[1]?.paths).toContainEqual(expect.stringContaining(join('attachments', 'two')));
   expect(first(said.put).paths).not.toEqual(said.put[1]?.paths);
   for (const copy of said.put) expect(first(copy.hex)).toBe(PNG.toString('hex'));
-  // And each session's turn names the file that is in its own folder.
-  expect(String(first(attached(turns[0] as Bag)).uri)).toContain(join('attachments', 'one'));
-  expect(String(first(attached(turns[1] as Bag)).uri)).toContain(join('attachments', 'two'));
+  // And each session's turn names the file that is in its own folder, in a URI's own slashes.
+  expect(String(first(attached(turns[0] as Bag)).uri)).toContain('attachments/one');
+  expect(String(first(attached(turns[1] as Bag)).uri)).toContain('attachments/two');
 });
 
 it('says so in a line when a copy fails, and runs the turn anyway', async () => {

@@ -186,11 +186,12 @@ const unslashed = (path: string): string =>
   windows && /^\/[a-zA-Z]:/.test(path) ? path.slice(1).replaceAll('/', '\\') : path;
 
 /**
- * A path as it is compared. Windows names a file the same in any case, and VS
- * Code prints a URI back with its drive letter lowercased, so a side minted
- * under `C:` is asked for under `c:`.
+ * A path as it is compared. Windows names a file the same in any case and with
+ * either separator, and VS Code prints a URI back with its drive letter
+ * lowercased, so a side minted under `C:` is asked for under `c:`, and a path a
+ * checkpoint joined with `/` is the file a URI names with its own.
  */
-const folded = (path: string): string => (windows ? path.toLowerCase() : path);
+const folded = (path: string): string => (windows ? path.replaceAll('/', '\\').toLowerCase() : path);
 
 /**
  * A file's `before`, as `ahp-git://head/<absolute path>`.

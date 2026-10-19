@@ -25,8 +25,8 @@ const sdk = vi.hoisted(() => {
     asked: [] as string[],
     /** What the CLI says about a model it will not take. */
     refuses: {} as Record<string, string>,
-    /** How long each model takes to be taken, so a switch can be waited on. */
-    takes: {} as Record<string, number>,
+    /** What each model waits on before it is taken, so a switch is held until a case lets it go. */
+    takes: {} as Record<string, Promise<void>>,
     reset() {
       feed.held = [];
       feed.wake = undefined;
@@ -59,8 +59,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
       setModel: async (model?: string) => {
         const said = String(model);
         sdk.asked.push(said);
-        const wait = sdk.takes[said] ?? 0;
-        if (wait > 0) await new Promise((resolve) => { setTimeout(resolve, wait); });
+        await sdk.takes[said];
         const why = sdk.refuses[said];
         if (why !== undefined) throw new Error(why);
       },
@@ -163,8 +162,10 @@ it('runs on a model the CLI takes, and says which one, as before', async () => {
 
 it('holds the queue behind a turn that is switching models, and sends the prompts in order', async () => {
   const { session, prompts } = await open();
-  // Long enough that the queue is still waiting on it a few ticks later.
-  sdk.takes.slow = 25;
+  // Held until the case lets it go, rather than for a time: a count of ticks
+  // on Windows can outlast any short wait.
+  let release = (): void => {};
+  sdk.takes.slow = new Promise<void>((resolve) => { release = resolve; });
 
   session.begin('t1', 'first', { id: 'slow' });
   session.queue('q1', 'second');
@@ -177,6 +178,7 @@ it('holds the queue behind a turn that is switching models, and sends the prompt
   expect(session.chatState().activeTurn).toBeUndefined();
   expect(session.chatState().queuedMessages).toMatchObject([{ id: 'q1' }]);
 
+  release();
   await settle(60);
   // The switch has gone through and the first turn is running alone. A turn
   // naming no model skips the wait entirely, so this is where it would have

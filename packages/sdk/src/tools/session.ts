@@ -1,4 +1,4 @@
-import { posix } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import { Status, idOf } from '../catalog.js';
 import { localPath, uriOf } from '../fileuri.js';
 import { flag, optional, required, when } from '../toolinput.js';
@@ -296,12 +296,13 @@ const modelMeant = (at: ToolCall, asked: string | undefined, tool: string, provi
  * Resolved, because a model writes `..` and the host says back and writes down
  * one folder under one name: `/repo/../elsewhere` is `/elsewhere`, and a path
  * that keeps its `..` is compared against a window's trusted folders as the
- * text it was written as rather than as the folder it names.
+ * text it was written as rather than as the folder it names. By this host's
+ * rules, so a Windows host takes `C:\repo` and its URI, which POSIX rules
+ * refused or resolved against the current folder.
  */
 const pathOf = (value: string): string | undefined => {
-  if (value.startsWith('file://')) return posix.resolve(localPath(value).replace(/\/+$/, '') || '/');
-  if (value.startsWith('/')) return posix.resolve(value.replace(/\/+$/, '') || '/');
-  return undefined;
+  const path = value.startsWith('file://') ? localPath(value) : value;
+  return path !== '' && isAbsolute(path) ? resolve(path) : undefined;
 };
 
 /**

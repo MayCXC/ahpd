@@ -15,10 +15,10 @@ import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { hostname } from 'node:os';
 import { isAbsolute, resolve } from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { pathToFileURL } from 'node:url';
 import { output } from '@cofold/commands';
 import type { Command, CommandContext, Registry } from '@cofold/commands';
-import { bag, ownerOfPrincipal } from '@ahpd/sdk';
+import { bag, localPath, ownerOfPrincipal } from '@ahpd/sdk';
 import type { AutomationEntry, AutomationStore, Bag, Owner, Principal } from '@ahpd/sdk';
 import {
   automationToBlueprint,
@@ -74,16 +74,14 @@ export interface ListedAutomation {
   enabled: boolean;
 }
 
-/** The folder a working directory names: a path for a `file:` URI, the text otherwise. */
+/**
+ * The folder a working directory names: a path for a `file:` URI, the text
+ * otherwise. The sdk's reader, which reads every shape a URI arrives in - one
+ * with no drive on Windows among them, which Node's own refuses.
+ */
 const folderOfDirectory = (directory: unknown): string | undefined => {
   if (typeof directory !== 'string' || directory === '') return undefined;
-  if (!directory.startsWith('file:')) return directory;
-  try {
-    return fileURLToPath(directory);
-  }
-  catch {
-    return directory;
-  }
+  return localPath(directory);
 };
 
 /** One trigger as `automation list` shows it. */

@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach } from 'vitest';
@@ -27,7 +28,13 @@ beforeEach(() => {
   file = join(root, 'a.txt');
   writeFileSync(file, 'on disk');
 });
-afterEach(() => { rmSync(root, { recursive: true, force: true }); });
+/** The hosts a case made, closed before its folder goes: a shell one left running keeps it on Windows. */
+const made: ReturnType<typeof createHost>[] = [];
+// Awaited, with retries: on Windows a process the case started can hold the folder a moment longer.
+afterEach(async () => {
+  for (const one of made.splice(0)) await one.close();
+  await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
+});
 
 export const peer = (): Peer => ({ send: () => {}, notify: () => {}, request: async () => ({}), answered: () => {}, close: () => {} });
 
@@ -91,12 +98,16 @@ export const directory = (tokens: Record<string, Grant[]>): Users => ({
   mint: async () => '',
 });
 
-export const host = (extra: Partial<HostOptions> = {}) => createHost({
-  path: root,
-  agents: [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }],
-  resources: fileResources(),
-  ...extra,
-});
+export const host = (extra: Partial<HostOptions> = {}) => {
+  const one = createHost({
+    path: root,
+    agents: [{ ...echo({ path: root, pace: 0 }), provider: 'base', displayName: 'Base' }],
+    resources: fileResources(),
+    ...extra,
+  });
+  made.push(one);
+  return one;
+};
 
 export const hello = (client: ReturnType<ReturnType<typeof createHost>['accept']>, clientId = 'probe') => client.handle({
   method: 'initialize',

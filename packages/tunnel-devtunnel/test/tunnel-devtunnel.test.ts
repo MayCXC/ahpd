@@ -16,6 +16,7 @@ import {
 import { create, find, prepare, run as runCli, TunnelError } from '../src/devtunnel.js';
 import type { Result, Runner } from '../src/devtunnel.js';
 import { forward } from '../src/forward.js';
+import { posix } from '../../../tools/posix.ts';
 import { apply } from '../src/plugin.js';
 
 /*
@@ -147,7 +148,9 @@ it('still fails on a port error that is not a conflict', async () => {
   await expect(prepare({ tunnelId: 'made', labels: [] }, false, run)).rejects.toThrow(/Unauthorized/);
 });
 
-it('lets the daemon go on while the CLI talks to the service', async () => {
+// POSIX-only: the stand-in CLI is a shell script, and on Windows `spawn` runs
+// only a `devtunnel.exe`. The runner it checks is the same on every system.
+it.skipIf(!posix)('lets the daemon go on while the CLI talks to the service', async () => {
   // One real `devtunnel` call takes seconds; a runner that waited for it
   // synchronously expired every timer the daemon had running, cofold's
   // catalogue fetch among them.

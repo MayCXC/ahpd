@@ -957,7 +957,9 @@ describe('a turn and a restart that is stopping the daemon', () => {
    * by watching what the host says is running.
    */
   const quiet = async (host: ReturnType<typeof createHost>): Promise<void> => {
-    for (let i = 0; i < 200 && host.turning().length > 0; i++) await settle(1);
+    // By the clock: a tick is about 15 ms on Windows and about 1 ms elsewhere.
+    const until = Date.now() + 5000;
+    while (Date.now() < until && host.turning().length > 0) await settle(1);
   };
 
   it('refuses a turn started while it stops, rather than having the close end one', async () => {
@@ -1000,7 +1002,8 @@ describe('a turn and a restart that is stopping the daemon', () => {
   });
 
   it('takes turns again when a running one refuses the restart', async () => {
-    const { host, client, said, chat } = await live(50);
+    // Long enough to outlast `settle`, which is eight ticks: about 125 ms on Windows.
+    const { host, client, said, chat } = await live(500);
     await say(client, chat, 'busy', 't1');
     // As the host spells it, which is the name a refusal names it by.
     const running = host.turning();
