@@ -52,19 +52,21 @@ describe('where the agent works', () => {
   });
 
   it('reports where it actually is, not where the host was started', async () => {
-    const client = await opened(['/brb_main/src']);
+    // A summary names only a folder that is there, so this one has to exist on
+    // whichever machine runs the test.
+    const client = await opened([REPO]);
     await client.handle({
       method: 'createSession',
       params: {
         channel: 'ahp-session:/a',
         provider: 'claude',
-        workingDirectories: ['file:///brb_main/src'],
+        workingDirectories: [uriOf(REPO)],
       },
     });
     const listed = await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } }) as {
       items: { workingDirectories: string[] }[];
     };
-    expect(listed.items[0]?.workingDirectories).toEqual([uriOf('/brb_main/src')]);
+    expect(listed.items[0]?.workingDirectories).toEqual([uriOf(REPO)]);
   });
 
   it('runs one anywhere the client names, the way the reference host does', async () => {
