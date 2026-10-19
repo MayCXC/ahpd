@@ -53,6 +53,7 @@ agent-claude finds the user's folders on Windows.
 | A test builds its expected path with `join`, `localPath` or `pathToFileURL` | (defaulted: the code under test does the same) | 01, 02 |
 | agent-claude reads `os.homedir()`, and a test still sets `HOME` on POSIX | (defaulted: `os.homedir()` reads `HOME` first on POSIX) | 01 |
 | A path literal stays where nothing converts it | (defaulted: the smallest change) | 01, 02 |
+| The test run's temp folder is named by its long name, and git's paths are passed through `resolve` | (defaulted: git answers long names with forward slashes) | 04 |
 
 ## Proposed architecture
 
@@ -66,6 +67,7 @@ agent-claude finds the user's folders on Windows.
 | [01 - agent-claude's tests build their paths](task-01-agent-claudes-tests-build-their-paths.md) | implemented | - |
 | [02 - The sdk's tests build their paths](task-02-the-sdks-tests-build-their-paths.md) | implemented | - |
 | [03 - The paths the Windows run found](task-03-the-paths-the-windows-run-found.md) | implemented | - |
+| [04 - The paths a runner's temp folder found](task-04-the-paths-a-runners-temp-folder-found.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -73,7 +75,7 @@ agent-claude finds the user's folders on Windows.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, planned 2026-10-16, and tasks 01, 02 and 03 implemented 2026-10-18.
+- **Done so far:** drafted 2026-10-16, planned 2026-10-16, tasks 01, 02 and 03 implemented 2026-10-18, and task 04 implemented 2026-10-19 on Softov's Windows machine.
 - **Next action:** a run of p1's Windows job, which confirms task 03's two cases.
 - **Open questions:** whether those two cases pass on Windows. This host is Linux, so neither task 03's Windows half nor its sibling tasks' can be checked here. The `sessiontools` case was fixed by task 02 after the Windows run at `71166379` that named it.
 - **Watch out for:** a fixture file under `test/fixtures` holds POSIX URIs that VS Code sent. It stays as it is.

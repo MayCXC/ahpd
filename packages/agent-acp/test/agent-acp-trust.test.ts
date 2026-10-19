@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,9 +24,12 @@ const FIXTURE = fileURLToPath(new URL('./fixtures/acp-server.mjs', import.meta.u
 const made: string[] = [];
 const started: Session[] = [];
 
-afterEach(() => {
-  for (const session of started.splice(0)) session.close();
-  for (const path of made.splice(0)) rmSync(path, { recursive: true, force: true });
+afterEach(async () => {
+  // The close awaited, and the removal too: on Windows a folder stays held
+  // until the server in it is gone, and the release happens on the event loop
+  // a sync retry blocks.
+  for (const session of started.splice(0)) await session.close();
+  for (const path of made.splice(0)) await rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
 });
 
 /** The subprocess's work finishing, up to a point. */

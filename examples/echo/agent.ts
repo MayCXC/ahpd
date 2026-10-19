@@ -1,5 +1,6 @@
+import { join } from 'node:path';
 import type { Turn } from '@microsoft/agent-host-protocol';
-import { idOf } from '@ahpd/sdk';
+import { idOf, uriOf } from '@ahpd/sdk';
 import type { Agent, Bag, Listed, MessageFrom, Session, Start, WireTurn } from '@ahpd/sdk';
 
 /**
@@ -226,7 +227,7 @@ export function echo(options: EchoOptions): Agent {
       status,
       title: () => title,
       modifiedAt: () => modified,
-      workingDirectories: () => [`file://${where}`],
+      workingDirectories: () => [uriOf(where)],
 
       sessionState: () => ({
         // No `resource`: it is declared on `SessionSummary` and not on
@@ -237,7 +238,7 @@ export function echo(options: EchoOptions): Agent {
         lifecycle: 'ready',
         defaultChat: start.chatUri,
         chats: [{ resource: start.chatUri, title }],
-        workingDirectories: [`file://${where}`],
+        workingDirectories: [uriOf(where)],
         customizations: start.seedCustomizations ?? [],
         ...(activity !== undefined ? { activity } : {}),
         // The schema *and* what is in force. A client reads
@@ -399,7 +400,7 @@ export function echo(options: EchoOptions): Agent {
       customizations: [{
         type: 'directory',
         id: 'directory:commands',
-        uri: `file://${options.path}/.echo/commands`,
+        uri: uriOf(join(options.path, '.echo', 'commands')),
         name: 'commands',
         contents: 'prompt',
         enabled: true,
@@ -410,7 +411,7 @@ export function echo(options: EchoOptions): Agent {
           type: 'prompt',
           id: 'command:shout',
           name: 'shout',
-          uri: `file://${options.path}/.echo/commands/shout.md`,
+          uri: uriOf(join(options.path, '.echo', 'commands', 'shout.md')),
           enabled: true,
           description: 'Say the rest of this line loudly',
         }],
@@ -425,7 +426,7 @@ export function echo(options: EchoOptions): Agent {
       title: session.title,
       createdAt: session.createdAt,
       modifiedAt: session.modifiedAt,
-      workingDirectories: [`file://${dir}`],
+      workingDirectories: [uriOf(dir)],
     })),
 
     /**

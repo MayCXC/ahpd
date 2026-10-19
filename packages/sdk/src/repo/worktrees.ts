@@ -2,31 +2,37 @@
 
 import { execFile } from 'node:child_process';
 import { tmpdir } from 'node:os';
-import { basename, dirname, isAbsolute, join, relative } from 'node:path';
+import { basename, dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { cp, lstat, mkdir, mkdtemp, readdir, readlink, realpath, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import type { Worktree, Worktrees } from '../types/worktrees.js';
 import { gitArgv } from './hardened.js';
 
 /**
- * The untracked entries of a `status --porcelain` answer that are links this
- * host made: a link, whose last segment is one of the `linked` folder names.
+ * The untracked or ignored entries of a `status --porcelain` answer that are
+ * links this host made: a link, whose last segment is one of the `linked`
+ * folder names.
  *
  * The links read as untracked when `.gitignore` names the folder in its
  * directory form, and they are not anybody's work. Only while each is still a
- * link: a real folder at that name is.
+ * link: a real folder at that name is. Ignored too, for Windows: there a link
+ * is a junction, which git takes for the folder it points at, and so for one
+ * the directory pattern ignores.
  */
 const linksIn = async (path: string, said: string, linked: readonly string[]): Promise<string[]> => {
   const names = new Set(linked.map((one) => one.replace(/\/+$/, '')));
   if (names.size === 0) return [];
   const found: string[] = [];
   for (const line of said.split('\n')) {
-    if (!line.startsWith('?? ')) continue;
+    if (!line.startsWith('?? ') && !line.startsWith('!! ')) continue;
     const entry = line.slice(3).replace(/\/+$/, '');
     if (!names.has(entry.slice(entry.lastIndexOf('/') + 1))) continue;
     if (await lstat(join(path, entry)).then((info) => info.isSymbolicLink(), () => false)) found.push(entry);
   }
   return found;
 };
+
+/** `junction` on Windows, for the reason `link` gives. */
+const linkType = process.platform === 'win32' ? 'junction' : 'dir';
 
 /**
  * Run git, and answer what it said. Rejects with git's own words.
@@ -89,7 +95,9 @@ export function gitWorktrees(): Worktrees {
     repository: async (dir) => {
       const found = await git(dir, ['rev-parse', '--show-toplevel'], 5_000).catch(() => undefined);
       const root = found?.trim();
-      return root === undefined || root === '' ? undefined : root;
+      // git writes a Windows path with forward slashes; this host's own
+      // spelling is what every caller compares it with.
+      return root === undefined || root === '' ? undefined : resolve(root);
     },
 
     gitDir: async (dir) => {
@@ -115,7 +123,7 @@ export function gitWorktrees(): Worktrees {
       }
       const [common, own, top] = said.split('\n').map((line) => line.trim());
       if (common === undefined || common === '' || own === undefined || own === '' || top === undefined || top === '') return undefined;
-      return { gitDir: common, worktreeDir: own, repository: top };
+      return { gitDir: resolve(common), worktreeDir: resolve(own), repository: resolve(top) };
     },
 
     branches: async (repository) => {
@@ -218,15 +226,22 @@ export function gitWorktrees(): Worktrees {
        * with anything untracked in it, and that refusal is still the guard
        * for everything else. Put back when it refuses, so a tree that stays
        * is the tree it was.
+       *
+       * The ignored entries as well, by the folder that matched and not its
+       * contents. On Windows a link left in place is a folder to git, and
+       * `worktree remove` deletes what is inside it: the checkout's own
+       * `node_modules`, through the junction.
        */
-      const said = linked.length === 0 ? '' : await git(path, ['status', '--porcelain', '--untracked-files=all'], 10_000).catch(() => '');
+      const said = linked.length === 0
+        ? ''
+        : await git(path, ['status', '--porcelain', '--untracked-files=all', '--ignored=matching'], 10_000).catch(() => '');
       const links: { entry: string; target: string }[] = [];
       for (const entry of await linksIn(path, said, linked)) {
         links.push({ entry, target: await readlink(join(path, entry)) });
       }
       for (const { entry } of links) await rm(join(path, entry));
       await git(repository, ['worktree', 'remove', path]).catch(async (error: unknown) => {
-        for (const { entry, target } of links) await symlink(target, join(path, entry)).catch(() => undefined);
+        for (const { entry, target } of links) await symlink(target, join(path, entry), linkType).catch(() => undefined);
         throw error;
       });
       /*
@@ -439,5 +454,5 @@ const link = async (from: string, to: string, folder: string): Promise<void> => 
 
   if (await lstat(target).then(() => true, () => false)) return;
   await mkdir(dirname(target), { recursive: true });
-  await symlink(source, target, process.platform === 'win32' ? 'junction' : 'dir');
+  await symlink(source, target, linkType);
 };

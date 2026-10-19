@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, parse } from 'node:path';
 import { echo } from '../../../examples/echo/agent.js';
@@ -170,7 +171,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
       expect(found.encoding).toBe('base64');
       expect(Buffer.from(found.data, 'base64')).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x00, 0x01, 0xff]));
     } finally {
-      rmSync(root, { recursive: true, force: true });
+      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -231,7 +232,7 @@ describe('the host\'s filesystem, as far as a client may see it', () => {
       })).resolves.toEqual({});
       expect(readFileSync(join(where, 'written.txt'), 'utf8')).toBe('x');
     } finally {
-      rmSync(where, { recursive: true, force: true });
+      await rm(where, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -300,7 +301,7 @@ describe('completing an at-sign', () => {
       // it back: unencoded, the attachment reads as a file called `ahpd%20files`.
       expect(file?.attachment.uri).toBe(uriOf(join(dir, 'notes.txt')));
     } finally {
-      rmSync(dir, { recursive: true, force: true });
+      await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     }
   });
 
@@ -767,8 +768,11 @@ describe('more than one directory', () => {
 
 describe('the repository a session\'s machine is handed', () => {
   let dirs: string[] = [];
-  afterEach(() => {
-    for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+  afterEach(async () => {
+    // Awaited rather than sync: on Windows a folder stays held until what the
+    // test opened there is let go, which happens on the event loop a sync
+    // retry blocks.
+    for (const dir of dirs) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     dirs = [];
   });
 
@@ -869,8 +873,11 @@ describe('the repository a session\'s machine is handed', () => {
  */
 describe('a session entering a folder nobody vouched for', () => {
   let dirs: string[] = [];
-  afterEach(() => {
-    for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
+  afterEach(async () => {
+    // Awaited rather than sync: on Windows a folder stays held until what the
+    // test opened there is let go, which happens on the event loop a sync
+    // retry blocks.
+    for (const dir of dirs) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     dirs = [];
   });
 

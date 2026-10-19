@@ -1,6 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { existsSync, mkdtempSync, rmSync, writeFileSync, type FSWatcher } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it, vi } from 'vitest';
@@ -55,8 +56,11 @@ const CHANGESET = 'ahp-session:/s/changeset/uncommitted';
 const URI = 'ahp-session:/s';
 
 let made: string[] = [];
-afterEach(() => {
-  for (const dir of made) rmSync(dir, { recursive: true, force: true });
+afterEach(async () => {
+  // Awaited rather than sync: on Windows a folder stays held until what the
+  // test opened there is let go, which happens on the event loop a sync
+  // retry blocks.
+  for (const dir of made) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   made = [];
 });
 

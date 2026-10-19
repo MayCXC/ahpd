@@ -9,7 +9,7 @@
  * for arrives at the one for that.
  */
 
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { Readable, Writable } from 'node:stream';
 import { PROTOCOL_VERSION, client, methods, ndJsonStream } from '@agentclientprotocol/sdk';
@@ -88,6 +88,57 @@ const STDERR_BYTES = 8 * 1024;
 const KILL_GRACE_MS = 5000;
 
 /**
+ * Windows, which has no process group to signal and no SIGTERM to send: a
+ * negative pid there throws, and the server and what it started were never
+ * stopped. Its tree is ended with `taskkill` instead.
+ */
+const windows = process.platform === 'win32';
+
+/**
+ * End what a server left running on Windows, once it has exited.
+ *
+ * A server that exits when its stdin closes leaves what it started running:
+ * there is no group, and `taskkill /T` follows a living parent. Windows keeps a
+ * process's parent id after the parent has gone, so the server's descendants
+ * are found by it afterwards, kept to those started since the server was, so a
+ * pid the system has since handed to another program is never one of them.
+ * One read of the process list, and only after the server is gone.
+ */
+const endLeftovers = (root: number, since: number): void => {
+  execFile(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-Command',
+      'Get-CimInstance Win32_Process | ForEach-Object { "$($_.ProcessId) $($_.ParentProcessId) $(([DateTimeOffset]$_.CreationDate).ToUnixTimeMilliseconds())" }'],
+    { windowsHide: true, timeout: 10_000 },
+    (error, out) => {
+      // A list that could not be read leaves nothing to end, as before.
+      if (error !== null) return;
+      const all: { pid: number; parent: number; started: number }[] = [];
+      for (const line of out.split(/\r?\n/)) {
+        const [pid, parent, started] = line.trim().split(' ').map(Number);
+        if (pid !== undefined && parent !== undefined && started !== undefined && !Number.isNaN(started)) {
+          all.push({ pid, parent, started });
+        }
+      }
+      const left: number[] = [];
+      const next = [root];
+      while (next.length > 0) {
+        const parent = next.pop() as number;
+        for (const one of all) {
+          if (one.parent === parent && one.started >= since && one.pid !== root && !left.includes(one.pid)) {
+            left.push(one.pid);
+            next.push(one.pid);
+          }
+        }
+      }
+      for (const pid of left) {
+        execFile('taskkill', ['/pid', String(pid), '/F'], { windowsHide: true }, () => {});
+      }
+    },
+  );
+};
+
+/**
  * Where a server says it reports its sign-in at all.
  *
  * ACP reserves `_meta` for extensions of its own, and this key is
@@ -157,6 +208,9 @@ const exited = (command: string, code: number | null, signal: NodeJS.Signals | n
  * token does not have to be repeated in a configuration.
  */
 export function connectAcp(options: AcpConnectionOptions): AcpConnection {
+  // A second early, as a process's own start time is read back to the
+  // millisecond and the two clocks need not agree on the last one.
+  const spawnedAt = Date.now() - 1000;
   const child = spawn(options.command, options.args ?? [], {
     env: { ...process.env, ...options.env },
     ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
@@ -166,9 +220,10 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
      * Detached is what makes the close reach what the server started rather
      * than the one process: everything it spawns inherits this group, and a
      * signal to the group reaches all of it. It also keeps a signal meant for
-     * this server off the daemon's own group.
+     * this server off the daemon's own group. On Windows `detached` is a
+     * console of its own instead, so it is left off, as a terminal leaves it.
      */
-    detached: true,
+    ...(windows ? {} : { detached: true }),
     // A daemon on Windows has no console, and a console program it starts
     // opens a window of its own without this.
     windowsHide: true,
@@ -386,9 +441,20 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
    * The negative pid is the group the server leads, because it was spawned
    * detached. A group that has already gone is not a failure to report: the
    * point of the signal was that the process is over.
+   *
+   * On Windows the closed stdin is the only polite ask, so a SIGTERM sends
+   * nothing more, and a SIGKILL ends the server's tree with `taskkill`: `/T`
+   * for what it started, `/F` because a process with no window ignores a
+   * request to close.
    */
   const signal = (how: NodeJS.Signals): void => {
     if (child.pid === undefined) return;
+    if (windows) {
+      if (how === 'SIGKILL') {
+        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { stdio: 'ignore', windowsHide: true }).on('error', () => {});
+      }
+      return;
+    }
     try {
       process.kill(-child.pid, how);
     }
@@ -477,6 +543,9 @@ export function connectAcp(options: AcpConnectionOptions): AcpConnection {
       finally {
         clearTimeout(kill);
       }
+      // In the background: the close is over once the server is, and what it
+      // left is ended a moment later.
+      if (windows && child.pid !== undefined) endLeftovers(child.pid, spawnedAt);
     },
   };
 }

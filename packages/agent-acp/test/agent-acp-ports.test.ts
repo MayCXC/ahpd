@@ -1,4 +1,5 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -90,7 +91,10 @@ afterEach(async () => {
   }
   for (const path of made.splice(0)) {
     await listed(join(path, 'requests.jsonl'));
-    rmSync(path, { recursive: true, force: true });
+    // Awaited rather than sync: on Windows the folder is held until the host
+    // has let go of what it opened there, which happens on the event loop a
+    // sync retry blocks.
+    await rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   }
 });
 
