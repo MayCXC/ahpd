@@ -80,11 +80,11 @@ it('cofold declares its harness configuration, wherever it is read from', () => 
     // file has under `~/.config`.
     expect(needs.cofoldState).toEqual({
       state: '/ahpd/cofold',
-      seed: [{ source: '/srv/config/cofold/config.json', target: 'cofold/config.json' }],
+      seed: [{ source: join('/srv/config', 'cofold', 'config.json'), target: 'cofold/config.json' }],
       description: expect.stringMatching(/provider/),
     });
     expect(needs.cofoldConfig).toMatchObject({
-      file: '/srv/config/cofold/config.json',
+      file: join('/srv/config', 'cofold', 'config.json'),
       // Mounted for a profile that keeps state on the host, at the same fixed
       // target, which `COFOLD_CONFIG` then points at, so a cofold host inside
       // the machine finds the same provider keys whatever user the image runs

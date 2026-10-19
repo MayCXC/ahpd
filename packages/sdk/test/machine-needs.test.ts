@@ -66,7 +66,7 @@ it('fills a need from the profile, then the option, then the agent default', () 
 
 it('expands a leading ~ and leaves everything else alone', () => {
   expect(expandHome('~', '/home/me')).toBe('/home/me');
-  expect(expandHome('~/.claude', '/home/me')).toBe('/home/me/.claude');
+  expect(expandHome('~/.claude', '/home/me')).toBe(join('/home/me', '.claude'));
   expect(expandHome('/srv/claude', '/home/me')).toBe('/srv/claude');
   // Not a home: `~user` needs a passwd lookup, and a `~` inside a path is a
   // legal file name.

@@ -11,7 +11,7 @@ import { computerMethods, computerProvider } from './provider.js';
 import { patternOf } from './reference.js';
 import { madeAgain, namedAgain, revealed, scopedTo, vaultNamed, withDefaults } from './secrets.js';
 import type { VaultRead } from './secrets.js';
-import { manifestOf } from './manifest.js';
+import { absoluteOnHost, manifestOf } from './manifest.js';
 import { ensureParts, readParts, refusedWithout } from './parts.js';
 import type { FolderAnswer, Profile } from './manifest.js';
 import { adoptedDevContainer, disposableOf, dockerRuntime, hostOf, inTurn, isRunning, machineDirectory, madeUnderBind, profileOf, roomFor, sessionOf, stateVolumeOf, within } from './runtime.js';
@@ -630,7 +630,7 @@ export const apply: Plugin['apply'] = (host, options) => {
    */
   const containerFolders = words(held.folders);
   for (const one of containerFolders ?? []) {
-    if (!one.startsWith('/')) {
+    if (!absoluteOnHost(one)) {
       throw new Error(`plugin ${name}: devcontainer.folders are absolute paths on this host, and ${one} is not one`);
     }
   }
@@ -1711,7 +1711,7 @@ export const apply: Plugin['apply'] = (host, options) => {
       const devPrefix = 'devcontainer://';
       if (asked.source.startsWith(devPrefix)) {
         const folder = asked.source.slice(devPrefix.length).trim();
-        if (!folder.startsWith('/')) {
+        if (!absoluteOnHost(folder)) {
           throw new Error(`devcontainer:// names a folder on this host, and ${folder} is not an absolute path`);
         }
         const answer = folderFor(folder);

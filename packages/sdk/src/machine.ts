@@ -15,7 +15,7 @@
 
 import { existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { basename, join } from 'node:path';
+import { basename, isAbsolute, join } from 'node:path';
 import type { MachineNeed, ResolvedNeed, ResolvedSeed, Seed, StateMode } from './types/machine.js';
 import { secretRef } from './vault.js';
 
@@ -63,7 +63,8 @@ const PROTOTYPE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
  */
 const seedsOf = (name: string, seeds: Seed[], home: string): ResolvedSeed[] => seeds.map((seed) => {
   const source = expandHome(seed.source, home);
-  if (!source.startsWith('/')) {
+  // This host's path, by this host's rule: `C:\work` is absolute on Windows.
+  if (!isAbsolute(source)) {
     throw new Error(`machine need ${name} seeds ${seed.source}, and a seed is an absolute host path`);
   }
   const target = seed.target ?? basename(source);
@@ -195,7 +196,9 @@ export function resolveNeeds(
      * on this host - so a machine made that way is a machine nobody wrote. An
      * environment variable's value is not a path and is not checked here.
      */
-    if (!value.startsWith('/')) {
+    // By this host's rule, since it is this host's path; the state directory
+    // above is the machine's, which is why that one is read as POSIX.
+    if (!isAbsolute(value)) {
       throw new Error(`machine need ${name} is ${value} (from ${from(where)}), and a path a machine is made with is absolute`);
     }
     if ('source' in need) {

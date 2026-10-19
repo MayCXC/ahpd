@@ -714,10 +714,16 @@ it('takes the options the schema checked as they are', () => {
 
 // A machine ---------------------------------------------------------------
 
-/** The daemon's `HOME` and `PI_CODING_AGENT_DIR` for one case, put back after it. */
+/**
+ * The daemon's home and `PI_CODING_AGENT_DIR` for one case, put back after it.
+ *
+ * `USERPROFILE` beside `HOME`, since that is the one `os.homedir()` reads on
+ * Windows: without it, the case reads the home of the person running it.
+ */
 const withHome = <T>(home: string, agentDir: string | undefined, run: () => T): T => {
-  const before = { HOME: process.env.HOME, PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR };
+  const before = { HOME: process.env.HOME, USERPROFILE: process.env.USERPROFILE, PI_CODING_AGENT_DIR: process.env.PI_CODING_AGENT_DIR };
   process.env.HOME = home;
+  process.env.USERPROFILE = home;
   if (agentDir === undefined) delete process.env.PI_CODING_AGENT_DIR;
   else process.env.PI_CODING_AGENT_DIR = agentDir;
   try { return run(); }
@@ -799,7 +805,7 @@ it('seeds from PI_CODING_AGENT_DIR when the daemon has it', () => {
   const home = mkdtempSync(join(tmpdir(), 'ahpd-pi-home-'));
   const needs = withHome(home, '/srv/pi', () => piAgent({}, ['/tmp/pi-machine']).machine?.() ?? {});
   expect((needs.piState as { seed: { source: string }[] }).seed.map((one) => one.source))
-    .toEqual(['/srv/pi/settings.json', '/srv/pi/models.json']);
+    .toEqual([join('/srv/pi', 'settings.json'), join('/srv/pi', 'models.json')]);
   expect(needs.piAgentDirectory).toMatchObject({ directory: '/srv/pi' });
 });
 

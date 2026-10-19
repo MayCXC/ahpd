@@ -17,6 +17,7 @@ import { announcementOf, claim, controlFor, deliver, forget, logSince, readyUrl,
 import { automationStatePath, isIdentifier, hostId, namedIssuer, personalUrl, policiesPath, signInIdentifier, vaultPath } from '../src/config.js';
 import type { Control, Running } from '../src/daemon.js';
 import type { Manager } from '../src/service.js';
+import { posix } from '../../../tools/posix.ts';
 
 const REPO = join(import.meta.dirname, '../../..');
 const MAIN = 'packages/server/src/main.ts';
@@ -289,7 +290,8 @@ describe('the record on disk', () => {
     expect(onDisk()).toBe(process.ppid);
   });
 
-  it('leaves a record a successor claimed while a stop was signalling the daemon it read', async () => {
+  // A stop delivered as a SIGTERM; on Windows a stop goes over the control pipe, which control.test drives.
+  it.skipIf(!posix)('leaves a record a successor claimed while a stop was signalling the daemon it read', async () => {
     const sleeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
     const pid = sleeper.pid as number;
     put(naming(pid));
@@ -328,7 +330,8 @@ describe('the record on disk', () => {
     return { pid: held.pid as number, held };
   };
 
-  it('waits for the process to go, and forgets the record after it is gone', async () => {
+  // A stop delivered as a SIGTERM, which only POSIX has.
+  it.skipIf(!posix)('waits for the process to go, and forgets the record after it is gone', async () => {
     const sleeper = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)'], { stdio: 'ignore' });
     const pid = sleeper.pid as number;
     put(naming(pid));
@@ -356,7 +359,8 @@ describe('the record on disk', () => {
     finally { sleeper.kill('SIGKILL'); }
   }, 15000);
 
-  it('kills a process that never answered the request, and forgets its record', async () => {
+  // A child that ignores a SIGTERM, which only POSIX can.
+  it.skipIf(!posix)('kills a process that never answered the request, and forgets its record', async () => {
     const { pid, held } = await stuck();
     put(naming(pid));
     try {
@@ -603,7 +607,8 @@ describe('the record on disk', () => {
     });
   }, 30000);
 
-  it('clears the temp file a writer that is gone left, and keeps a live writer\'s and another user\'s', () => {
+  // Pid 1 answering EPERM, which is POSIX's way of saying another user holds it.
+  it.skipIf(!posix)('clears the temp file a writer that is gone left, and keeps a live writer\'s and another user\'s', () => {
     const left = join(home, 'ahpd', `daemon.json.${String(NEVER)}.tmp`);
     const live = join(home, 'ahpd', `daemon.json.${String(process.ppid)}.tmp`);
     // Pid 1 answers `EPERM` to anybody but root, and is there either way.
@@ -629,10 +634,23 @@ describe('the record on disk', () => {
     }
   });
 
-  /** A child that says where it is and stays up, which is what a daemon does. */
+  /**
+   * A child that says where it is and stays up, which is what a daemon does.
+   *
+   * And goes when it is asked to, over the control pipe where `start` handed it
+   * one, as a daemon on Windows does: a signal does not reach it there, and a
+   * child nobody can stop outlives the case.
+   */
   const announcer = (): string => {
     const child = join(home, 'announce.mjs');
-    writeFileSync(child, "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\n`); setInterval(() => {}, 1000);\n");
+    writeFileSync(child, [
+      "import { createServer } from 'node:net';",
+      "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\n`);",
+      'const control = process.env.AHPD_CONTROL;',
+      "if (control !== undefined) createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(JSON.parse(control).pipe);",
+      'setInterval(() => {}, 1000);',
+      '',
+    ].join('\n'));
     return child;
   };
   const logAt = (name: string): string => join(home, 'ahpd', name);
@@ -669,11 +687,11 @@ describe('the record on disk', () => {
   }, 15000);
 
   /*
-   * On this platform the signals reach a daemon, so nothing names a pipe: the
-   * record has no `control`, and the child is handed no `AHPD_CONTROL` to read.
-   * The Windows half of this is checked by hand, on a machine that has win32.
+   * Where the signals reach a daemon, nothing names a pipe: the record has no
+   * `control`, and the child is handed no `AHPD_CONTROL` to read. POSIX only,
+   * since that is where the signals reach it; the case below is Windows'.
    */
-  it('records no control where the signals reach the daemon, and tells the child nothing', async () => {
+  it.skipIf(!posix)('records no control where the signals reach the daemon, and tells the child nothing', async () => {
     const child = join(home, 'announce-env.mjs');
     writeFileSync(child, "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\ncontrol ${process.env.AHPD_CONTROL ?? 'none'}\\n`); setInterval(() => {}, 1000);\n");
     const record = await start([], child);
@@ -682,6 +700,23 @@ describe('the record on disk', () => {
       expect(readFileSync(logAt('daemon.log'), 'utf8')).toContain('control none');
     }
     finally { await stop(); }
+  }, 15000);
+
+  // Windows only: there a signal does not reach the daemon, and the pipe is how a stop does.
+  it.skipIf(posix)('records the control on Windows, hands it to the child, and stops the child over it', async () => {
+    const child = join(home, 'announce-pipe.mjs');
+    writeFileSync(child, [
+      "import { createServer } from 'node:net';",
+      'const control = JSON.parse(process.env.AHPD_CONTROL);',
+      "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\ncontrol ${control.pipe}\\n`);",
+      "createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(control.pipe);",
+      'setInterval(() => {}, 1000);',
+      '',
+    ].join('\n'));
+    const record = await start([], child);
+    expect(record.control?.pipe).toMatch(/^\\\\\.\\pipe\\/u);
+    expect(readFileSync(logAt('daemon.log'), 'utf8')).toContain(`control ${record.control?.pipe ?? ''}`);
+    expect((await stop())?.killed).toBe(false);
   }, 15000);
 
   it('stops the child it started when its record cannot be written', async () => {
@@ -733,8 +768,8 @@ describe('the record on disk', () => {
       api: 'http://127.0.0.1:9187',
     });
     // It holds the connect URL, which is the origin with the token in it, so it
-    // is owner-only where it is written again.
-    expect(statSync(file()).mode & 0o777).toBe(0o600);
+    // is owner-only where it is written again: a POSIX mode, which Windows has none of.
+    if (posix) expect(statSync(file()).mode & 0o777).toBe(0o600);
   });
 
   it('leaves the record of another daemon alone', () => {
@@ -775,7 +810,8 @@ describe('hostId', () => {
     expect(hostId()).toBe(first);
   });
 
-  it('keeps the file to the person who owns this configuration', () => {
+  // A POSIX mode, which Windows has none of.
+  it.skipIf(!posix)('keeps the file to the person who owns this configuration', () => {
     hostId();
     expect(statSync(join(home, 'ahpd', 'host-id')).mode & 0o777).toBe(0o600);
   });
@@ -792,7 +828,8 @@ describe('hostId', () => {
    * the daemon that made it, so a new id is the same as saying every machine
    * this daemon made belongs to nobody.
    */
-  it('refuses a file it cannot read rather than writing a new id over it', () => {
+  // A file made unreadable by its mode, which Windows does not honour.
+  it.skipIf(!posix)('refuses a file it cannot read rather than writing a new id over it', () => {
     mkdirSync(join(home, 'ahpd'), { recursive: true });
     const file = join(home, 'ahpd', 'host-id');
     const said = randomUUID();

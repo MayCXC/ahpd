@@ -84,7 +84,8 @@ Child plans, each for one cause.
 | [p3 - POSIX-only tests say why they skip](../33-p3-posix-only-tests-say-why-they-skip/plan.md) | sdk, agent-claude | planned | p1 |
 | [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | planned | p2, p3, p5, p6 |
 | [p5 - Terminals run on Windows](../33-p5-terminals-run-on-windows/plan.md) | sdk | planned | p1 |
-| [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | planned | p1 |
+| [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | active | p1 |
+| [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | planned | p6 |
 
 ## Risks and tradeoffs
 
