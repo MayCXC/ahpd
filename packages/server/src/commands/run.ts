@@ -10,9 +10,10 @@
 
 import { hostname } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import type { AutomationStore, DoorOptions, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   clientPluginsIn,
   createHost,
@@ -36,6 +37,7 @@ import {
   overStdio,
   peopleChannels,
   raise,
+  reason,
   servedRecords,
   shellTerminals,
   signInRecord,
@@ -186,6 +188,47 @@ export const wholeFiles = (users?: string): string[] => [
   join(configDir(), 'computers.json'),
   vaultPath(),
 ];
+
+/**
+ * The reader a `commandParser` module exports, or the start stops.
+ *
+ * Imported by file URL, as a plugin is, so a relative path was already made
+ * absolute against the file that named it. A file that cannot be imported, or
+ * one whose default export is not a function, refuses the start: the key names
+ * code this daemon runs, and a parser nobody can call would leave every command
+ * asking with no sentence saying why.
+ */
+export async function commandParserFrom(file: string): Promise<CommandSplitter> {
+  let module: unknown;
+  try {
+    module = await import(pathToFileURL(file).href);
+  }
+  catch (error) {
+    stop(`commandParser names ${file}, which could not be imported: ${reason(error)}`);
+  }
+  const parser = (module as { default?: unknown }).default;
+  if (typeof parser !== 'function') {
+    stop(`commandParser names ${file}, whose default export is not a function. Export the reader as \`export default (line, shell) => split\`.`);
+  }
+  return parser as CommandSplitter;
+}
+
+/**
+ * The sentence a configured parser and a plugin that also set the port answer,
+ * or nothing when only one of them did.
+ *
+ * Two readers of one line is one too many, and the configuration's module is
+ * the deployment's own, so a plugin that sets the port over it refuses the
+ * start rather than winning by load order. `'replace'` is how the plugin says
+ * it meant to take it over. With no configured parser this answers nothing:
+ * the fold's own rule for two plugins is what applies then.
+ */
+export const parserConflict = (named: boolean, contributions: readonly Contribution[]): string | undefined => {
+  if (!named) return undefined;
+  const other = contributions.find((one) => one.ports.commandParser !== undefined && one.ports.commandParser.replace !== true);
+  if (other === undefined) return undefined;
+  return `plugin ${other.by} also sets commandParser, which "commandParser" in the configuration already set; pass 'replace' to take it over`;
+};
 
 /**
  * One host, one working directory, one port.
@@ -620,6 +663,20 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   stamp('start: terminals');
   const terminalBinding = await pty();
 
+  /*
+   * The reader `commandParser` names, if the deployment named one.
+   *
+   * Imported before the host is built, and by the same rule a plugin module is:
+   * naming one runs its code in this process. A file that does not import, or
+   * one that exports no reader, is refused here rather than left to the first
+   * command line, where nobody would see the reason.
+   */
+  let commandParser: CommandSplitter | undefined;
+  if (options.commandParser !== undefined) {
+    stamp('start: parser');
+    commandParser = await commandParserFrom(options.commandParser);
+  }
+
   const base: HostOptions = {
     path: options.paths[0] as string,
     /*
@@ -784,6 +841,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * way.
      */
     terminalAutoApproveDefaults: options.terminalAutoApproveDefaults,
+    /*
+     * The reader a configured module exports, which takes the sdk's own
+     * splitter's place.
+     *
+     * Left off when the file names no module, because the host's own splitter
+     * is the same answer and one place should hold it.
+     */
+    ...(commandParser === undefined ? {} : { commandParser }),
     /*
      * How long the host gathers a streamed delta before it sends it.
      *
@@ -972,7 +1037,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
-  const { options: folded, problems, loaded, routes: registered } = await loadPlugins(options.plugins, {
+  const { options: folded, contributions, problems, loaded, routes: registered } = await loadPlugins(options.plugins, {
     base,
     paths: options.paths,
     configDir: configDir(),
@@ -989,6 +1054,16 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     },
   });
   for (const problem of problems) stamp(problem);
+
+  /*
+   * A plugin that also set the reader, over the module the file named.
+   *
+   * The fold keeps the daemon's own and reports the plugin, but two readers of
+   * one line is a configuration that says two things, so this one refuses the
+   * start rather than running on the reader the operator did not write.
+   */
+  const clash = parserConflict(options.commandParser !== undefined, contributions);
+  if (clash !== undefined) stop(clash);
 
   /*
    * The routes the plugins registered, served on this listener.

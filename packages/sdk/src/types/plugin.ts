@@ -489,7 +489,8 @@ export type PortKey =
   | 'usage'
   | 'policies'
   | 'vault'
-  | 'records';
+  | 'records'
+  | 'commandParser';
 
 /**
  * What one port key holds.
@@ -948,6 +949,17 @@ export interface PluginHost extends PluginContext {
    * database several daemons share moves every plugin's records with one call.
    */
   registerRecords(store: PortOf<'records'>, when?: 'replace'): void;
+  /**
+   * Set `HostOptions.commandParser`, or take the daemon's over with `'replace'`.
+   *
+   * The reader `getAutoApproval` uses to split a command line before the
+   * terminal rules match it. A host with no plugin and no configuration entry
+   * reads with the sdk's own splitter, so a plugin that registers one is
+   * saying it reads a command line better. The value is one function, `(line,
+   * shell) => CommandSplit | undefined`; `undefined` says the line could not
+   * be read, and the call asks.
+   */
+  registerCommandParser(split: PortOf<'commandParser'>, when?: 'replace'): void;
   /**
    * Serve one HTTP route, on this host's own listener, under this plugin's name.
    *

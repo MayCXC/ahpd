@@ -1,7 +1,7 @@
 ---
 title: Another parser replaces the splitter
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -70,9 +70,9 @@ plugin apply() -> registerCommandParser(split) / config key -> import(module).de
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The parser is a port](task-01-the-parser-is-a-port.md) | todo | - |
-| [02 - A plugin registers a command parser](task-02-a-plugin-registers-a-command-parser.md) | todo | 01 |
-| [03 - A config key loads a parser module](task-03-a-config-key-loads-a-parser-module.md) | todo | 02 |
+| [01 - The parser is a port](task-01-the-parser-is-a-port.md) | implemented | - |
+| [02 - A plugin registers a command parser](task-02-a-plugin-registers-a-command-parser.md) | implemented | 01 |
+| [03 - A config key loads a parser module](task-03-a-config-key-loads-a-parser-module.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -80,13 +80,13 @@ plugin apply() -> registerCommandParser(split) / config key -> import(module).de
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan.
-- **Next action:** [task-01-the-parser-is-a-port.md](task-01-the-parser-is-a-port.md).
+- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-19: `commandParser` is a port in `HostOptions` and `PortKey`, `getAutoApproval` reads through it, and a throw or a wrong-shaped answer asks. Task 02 implemented 2026-10-19: `registerCommandParser(split, when?)` sets the port through `setPort`, `validate.ts` checks it as a function, and a plugin's parser reaches the check. Task 03 implemented 2026-10-19: `commandParser` in the configuration file names a module by a path relative to that file. The daemon imports it by file URL and hands it to the host. It refuses the start when the default export is not a function, or when a plugin also sets the port without `'replace'`.
+- **Next action:** review the three tasks, then set the plan to done.
 - **Open questions:** none.
 - **Watch out for:** the port is the seam for both loaders; p1's approver must not import the splitter directly.
 
 ## Final verification checklist
 
-- [ ] A plugin's parser and a hook module each replace the splitter.
-- [ ] `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
-- [ ] `plans/index.md` updated.
+- [x] A plugin's parser and a hook module each replace the splitter.
+- [x] `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary` pass.
+- [x] `plans/index.md` updated.

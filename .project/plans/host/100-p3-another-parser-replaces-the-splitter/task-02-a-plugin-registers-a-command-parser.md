@@ -1,6 +1,6 @@
 ---
 title: A plugin registers a command parser
-status: todo
+status: implemented
 depends: [task-01-the-parser-is-a-port.md]
 layer: sdk
 refs:
@@ -36,7 +36,8 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** steps 1 to 5, 2026-10-19. `registerCommandParser(split, when?)` is on `PluginHost` in `packages/sdk/src/types/plugin.ts`, beside `registerRecords`, with the doc saying what the reader is and what `replace` does. Its implementation in `packages/sdk/src/plugins.ts` calls `setPort('commandParser', 'registerCommandParser', split, when)`. `packages/sdk/src/validate.ts` names the method in `PORT_METHOD`, the members in `PORT_MEMBERS` (none, since the value is a function) and the kind in the new `PORT_ITSELF` map. `packages/sdk/test/commandparser.test.ts` gained the five cases of this task. The fold names the parser. A plugin's parser reaches the check. A non-function is refused naming the plugin and the method. A second registration by one plugin is refused. Two plugins without `replace` give one problem that names both and keeps the first. The file is 8 cases, all passing; the sdk suite is 3236 passed and 2 skipped.
+- **Next action:** [task-03-a-config-key-loads-a-parser-module.md](task-03-a-config-key-loads-a-parser-module.md).
 - **Open questions:** none.
-- **Watch out for:** `checkPort` may check the shape of each port; give it the one for a function.
+- **Watch out for:** `checkPort` reads a port as an object with members, and a parser is a function. The `PORT_ITSELF` branch in `checkPort` is what lets this port be checked at all, and it returns before `asObject` runs.
+- **Departed from the plan:** none beyond task 01's `PORT_KEYS`, `PORT_METHOD`, `PORT_MEMBERS` and `PORT_ITSELF` additions. Those are the same four the compile-time exhaustiveness checks need for any new `PortKey`.
