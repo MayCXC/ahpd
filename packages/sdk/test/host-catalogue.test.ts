@@ -1100,7 +1100,9 @@ describe('a summary that did not change', () => {
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
     // Reading the directory at boot is one read of it, and the summary that
-    // comes out is the row's `status` and its counts and nothing else.
+    // comes out is the row's `status` and its counts and nothing else. Waited
+    // for by the clock: a read on Windows outlasts a count of ticks.
+    await vi.waitFor(() => { expect(rowsMoved(p, 'claude:/old')).not.toHaveLength(0); }, { timeout: 3000 });
     await settle(12);
     expect(rowsMoved(p, 'claude:/old')).toHaveLength(1);
     expect(rowsMoved(p, 'claude:/old')[0]).toMatchObject({ status: 1, changes: { files: 4 } });
@@ -1109,6 +1111,7 @@ describe('a summary that did not change', () => {
     // the source reports, which is the same answer for a working tree nobody
     // touched.
     await client.handle({ method: 'subscribe', params: { channel: 'claude:/old/changeset/uncommitted' } });
+    await vi.waitFor(() => { expect(counted_.watching).toHaveLength(1); }, { timeout: 3000 });
     await settle(12);
     const read = rowsMoved(p, 'claude:/old').length;
     expect(counted_.watching).toHaveLength(1);
@@ -1141,17 +1144,17 @@ describe('a summary that did not change', () => {
     const client = host.accept(p);
     await client.handle(hello(['0.9.0'], { initialSubscriptions: ['ahp-root://'] }));
     await client.handle({ method: 'listSessions', params: { channel: 'ahp-root://' } });
-    await settle(12);
-    expect(rowsMoved(p, 'claude:/old').at(-1)).toMatchObject({ changes: { files: 4 } });
+    await vi.waitFor(() => { expect(rowsMoved(p, 'claude:/old').at(-1)).toMatchObject({ changes: { files: 4 } }); }, { timeout: 3000 });
 
     // Everything committed: the folder has no changes, and the partial has to
     // say so, because a partial without `changes` keeps the client's old counts.
     await client.handle({ method: 'subscribe', params: { channel: 'claude:/old/changeset/uncommitted' } });
-    await settle(12);
+    await vi.waitFor(() => { expect(counted_.watching).toHaveLength(1); }, { timeout: 3000 });
     files = 0;
     counted_.watching[0]?.();
-    await settle(12);
-    expect(rowsMoved(p, 'claude:/old').at(-1)?.changes).toEqual({ files: 0, additions: 0, deletions: 0 });
+    await vi.waitFor(() => {
+      expect(rowsMoved(p, 'claude:/old').at(-1)?.changes).toEqual({ files: 0, additions: 0, deletions: 0 });
+    }, { timeout: 3000 });
   });
 
   it('sends the first move of a session re-created under the same URI', async () => {

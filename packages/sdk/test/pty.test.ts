@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { SpawnOptions } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { uriOf } from '../src/fileuri.js';
 import { shellOf, shellTerminals } from '../src/terminals.js';
@@ -333,7 +334,9 @@ describe('a shell opened with a command', () => {
     env?: Record<string, string | undefined>;
   }): Terminal => shellTerminals().create({
     uri: 'ahp-terminal:/opened',
-    cwd: '/tmp',
+    // A folder that is there on every system: a missing one fails the spawn,
+    // which Node reports as the shell not being found.
+    cwd: tmpdir(),
     claim: { kind: 'session', session: 'ahp-session:/one', chat: 'ahp-chat:/one' },
     command: asked.command,
     ...(asked.args !== undefined ? { args: asked.args } : {}),
@@ -420,7 +423,7 @@ describe('a terminal ended by hand', () => {
   const on = (platform: string, shell: string, run?: (program: string, argv: string[]) => void) =>
     shellTerminals({ platform, ...(run === undefined ? {} : { run }) }).create({
       uri: 'ahp-terminal:/ended',
-      cwd: '/tmp',
+      cwd: tmpdir(),
       shell,
       claim,
       emit: () => {},

@@ -6,6 +6,7 @@ import { Status } from '../../sdk/src/catalog.js';
 import type { Bag, BoundTool, Start } from '../../sdk/src/types/index.js';
 import { piAgent } from '../src/agent.js';
 import { driveCall, opened, root, settled } from './fake-pi.js';
+import { posix } from '../../../tools/posix.ts';
 
 /**
  * The tool call statuses a client would show, folded from the actions.
@@ -336,7 +337,8 @@ it('decides each mode the way the siblings do', async () => {
 
 it('judges a path where pi will use it, not where the string points', async () => {
   const elsewhere = mkdtempSync(join(tmpdir(), 'ahpd-pi-out-'));
-  symlinkSync(elsewhere, join(root, 'link'));
+  // A junction on Windows, which links a folder with no privilege and resolves as a link does.
+  symlinkSync(elsewhere, join(root, 'link'), posix ? 'dir' : 'junction');
   try {
     expect(await verdict('acceptEdits', 'write', { path: '~/.bashrc' })).toBe('ask');
     expect(await verdict('acceptEdits', 'write', { path: '@/etc/x' })).toBe('ask');

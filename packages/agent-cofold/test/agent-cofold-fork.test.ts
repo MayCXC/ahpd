@@ -24,19 +24,31 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  * than continuing from the wrong place.
  */
 
-/** Let the run's zero-delay work finish, up to a point; no wall-clock waiting on a real model. */
-const until = async (check: () => boolean, times = 400): Promise<void> => {
-  for (let i = 0; i < times; i++) {
-    if (check()) return;
-    await new Promise((r) => { setTimeout(r, 0); });
+/*
+ * Let the run's work finish, up to a point; no waiting on a real model.
+ *
+ * Bounded by the clock and polled with `setImmediate`, not counted in timer
+ * ticks: a zero-delay timer on Windows can take fifteen milliseconds, which
+ * made a count of ticks the slowest part of every case. A wait that runs out
+ * fails, so a condition that can never hold is not passed by waiting.
+ */
+const WAIT_MS = 3000;
+const tick = (): Promise<void> => new Promise((r) => { setImmediate(r); });
+
+const until = async (check: () => boolean): Promise<void> => {
+  const deadline = Date.now() + WAIT_MS;
+  while (!check()) {
+    if (Date.now() >= deadline) throw new Error(`still waiting after ${WAIT_MS} ms`);
+    await tick();
   }
 };
 
 /** The same, for a condition only the store or an async read can answer. */
-const untilAsync = async (check: () => Promise<boolean>, times = 400): Promise<void> => {
-  for (let i = 0; i < times; i++) {
-    if (await check()) return;
-    await new Promise((r) => { setTimeout(r, 0); });
+const untilAsync = async (check: () => Promise<boolean>): Promise<void> => {
+  const deadline = Date.now() + WAIT_MS;
+  while (!(await check())) {
+    if (Date.now() >= deadline) throw new Error(`still waiting after ${WAIT_MS} ms`);
+    await tick();
   }
 };
 
@@ -372,6 +384,8 @@ it('forks through the host, from the source chat into a chat of its own', async 
     method: 'createChat',
     params: { channel: through.uri, chat: forkedChat, source: { kind: 'fork', chat: through.chatUri, turnId: 't2' } },
   });
+  // Watched as a client watches it, which is what tells `say` its turn ended.
+  await through.client.handle({ method: 'subscribe', params: { channel: forkedChat } });
 
   const store = createFileStore({ root });
   // The cut is a store call the session makes before its first turn, so the

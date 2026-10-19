@@ -403,7 +403,7 @@ const recordOf = (found) => ({
   // form spells read-only as a third `:ro` and nothing else is read-only, so a
   // scripted machine that leaves the mode off is one writing where it is bound.
   Mounts: (found.mounts ?? []).map((one) => {
-    const [source, target, mode] = one.split(':');
+    const [source, target, mode] = mountParts(one);
     return { Type: 'bind', Source: source, Destination: target, RW: mode !== 'ro' };
   }),
 });
@@ -584,7 +584,7 @@ if (verb === 'run' || verb === 'create') {
    */
   const targets = new Set();
   for (const mount of [...mounts, ...typed.map((one) => `:${field(one, 'target')}`)]) {
-    const target = mount.split(':')[1];
+    const target = mountParts(mount)[1];
     if (targets.has(target)) {
       keep();
       process.stderr.write(`Error response from daemon: Duplicate mount point: ${target}\n`);
@@ -645,8 +645,8 @@ if (verb === 'cp') {
     const found = named(String(said).slice(0, at));
     const path = String(said).slice(at + 1);
     for (const mount of found?.mounts ?? []) {
-      const [source, target] = String(mount).split(':');
-      if (!source.startsWith('/') && (path === target || path.startsWith(`${target}/`))) {
+      const [source, target] = mountParts(String(mount));
+      if (!source.startsWith('/') && !/^[A-Za-z]:/.test(source) && (path === target || path.startsWith(`${target}/`))) {
         return { volume: (held.volumes ??= {})[source] ??= { files: [] }, rest: path.slice(target.length + 1) };
       }
     }
@@ -934,4 +934,14 @@ if (verb !== 'exec') {
   keep();
   process.stderr.write(`the scripted docker does not answer ${String(verb)}\n`);
   process.exit(2);
+}
+
+/**
+ * A `-v` mount's source, target and mode. A drive letter is part of the
+ * source, as docker on Windows reads it: `C:\work:/work` is one source.
+ */
+function mountParts(one) {
+  const drive = /^[A-Za-z]:[\\/]/.test(one) ? one.slice(0, 2) : '';
+  const [source, target, mode] = one.slice(drive.length).split(':');
+  return [`${drive}${source}`, target, mode];
 }

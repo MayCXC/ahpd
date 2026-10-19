@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
+import { uriOf } from '../src/fileuri.js';
 import { chatUriFor } from '../src/host/channels.js';
 import { wakeMessage } from '../src/wakemessage.js';
 import { RECORD, directory } from './users-gate-helpers.js';
@@ -95,9 +96,15 @@ const bag = (value: unknown): Bag => (typeof value === 'object' && value !== nul
 const runsOf = (store: AutomationStore, resource: string = AUTOMATION): Bag[] =>
   (store.get(resource)?.runs ?? []).map(bag);
 
-/** Yield between looks until `done` says so, so a fast run is not timed by ticks. */
-const until = async (done: () => boolean, what: string, tries = 600): Promise<void> => {
-  for (let i = 0; i < tries; i++) {
+/**
+ * Yield between looks until `done` says so, so a fast run is not timed by ticks.
+ *
+ * By the clock rather than by the count: a 1 ms timer is about 15 ms on
+ * Windows, where six hundred of them outlast the case.
+ */
+const until = async (done: () => boolean, what: string, ms = 3000): Promise<void> => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
     if (done()) return;
     await new Promise((r) => { setTimeout(r, 1); });
   }
@@ -343,8 +350,8 @@ it('wakes on a session in the folder the rule names, and on one a run made', asy
   const { client, chatUri, cli } = await live({ automations: store });
   // The session these tests drive works in the host's own directory, which is
   // what its events say about it.
-  store.create(MINE, watchingOnly({ folders: ['file:///home/softov'] }));
-  store.create(HERS, watchingOnly({ folders: ['file:///work/elsewhere'] }));
+  store.create(MINE, watchingOnly({ folders: [uriOf('/home/softov')] }));
+  store.create(HERS, watchingOnly({ folders: [uriOf('/work/elsewhere')] }));
 
   await fails(client, chatUri, 't1', cli);
   await until(() => runsOf(store, MINE).length === 1, 'the run for the folder');

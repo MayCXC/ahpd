@@ -1,3 +1,4 @@
+import { tmpdir } from 'node:os';
 import { beforeEach, expect, it, vi } from 'vitest';
 import {
   changesetReducer, chatReducer, isActionKnownToVersion, rootReducer, sessionReducer, terminalReducer,
@@ -80,6 +81,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 const { createHost } = await import('../src/host.js');
 const { claude } = await import('../../agent-claude/src/claude.js');
 const { shellTerminals } = await import('../src/terminals.js');
+const { uriOf } = await import('../src/fileuri.js');
 const { echo } = await import('../../../examples/echo/agent.js');
 
 function peer(): Peer & { notes: { method: string; params: unknown }[] } {
@@ -463,7 +465,9 @@ it('sends a background request to a 0.9.0 connection', () => {
 });
 
 it('reduces a terminal, from the bytes a shell wrote', async () => {
-  const host = createHost({ path: '/tmp', agents: [claude({ paths: ['/tmp'] })], terminals: shellTerminals() });
+  // A folder that is there on every system: a missing one fails the shell's spawn.
+  const where = tmpdir();
+  const host = createHost({ path: where, agents: [claude({ paths: [where] })], terminals: shellTerminals() });
   const p = peer();
   const client = host.accept(p);
   await client.handle({
@@ -473,7 +477,7 @@ it('reduces a terminal, from the bytes a shell wrote', async () => {
   const uri = 'ahp-terminal:/one';
   await client.handle({
     method: 'createTerminal',
-    params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: 'file:///tmp' },
+    params: { channel: uri, claim: { kind: 'client', clientId: 'probe' }, cwd: uriOf(where) },
   });
   const first = await client.handle({ method: 'subscribe', params: { channel: uri } }) as { snapshot: { state: unknown } };
   dispatch(client, uri, { type: 'terminal/input', data: 'echo conformance-marker\n' });

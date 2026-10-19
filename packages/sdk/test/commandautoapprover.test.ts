@@ -2,6 +2,7 @@ import { mkdtempSync, mkdirSync, realpathSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
 import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/commandautoapprover.js';
 import type {
   CommandApprovalOptions, CommandSplitter, TerminalAutoApprovePatterns, TerminalAutoApproveRules,
@@ -435,7 +436,8 @@ describe('a write redirect', () => {
   mkdirSync(join(folder, '.git'));
   mkdirSync(join(root, 'elsewhere'));
   writeFileSync(join(root, 'elsewhere', 'out.txt'), '');
-  symlinkSync(join(root, 'elsewhere'), join(folder, 'link'));
+  // A junction on Windows, which links a folder with no privilege and resolves as a link does.
+  symlinkSync(join(root, 'elsewhere'), join(folder, 'link'), posix ? 'dir' : 'junction');
   afterAll(() => rmSync(root, { recursive: true, force: true }));
 
   /** The edit patterns a client pushes, as `editAutoApprovePatterns` writes them. */

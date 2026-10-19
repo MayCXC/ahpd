@@ -108,8 +108,8 @@ describe('what a session leaves in its folder', () => {
     const dir = repository();
     await captureBaseline(dir, 's1');
     // What a terminal tool of the agent does, and what the edit tracker of a
-    // session never sees.
-    execFileSync('/bin/sh', ['-c', 'printf "from a shell\\n" > shell.txt'], { cwd: dir });
+    // session never sees: a file written behind its back, on any system.
+    writeFileSync(join(dir, 'shell.txt'), 'from a shell\n');
     await captureTurn(dir, 's1', '1');
 
     const at = await latestOf(dir, 's1');
@@ -184,8 +184,8 @@ describe('what a session changed', () => {
     const mine = await source.state(dir, 's1', 'session');
     const theirs = await source.state(dir, 's2', 'session');
 
-    expect(mine?.files.map((one) => one.id)).toEqual([uriOf(`${dir}/one.txt`)]);
-    expect(theirs?.files.map((one) => one.id)).toEqual([uriOf(`${dir}/two.txt`)]);
+    expect(mine?.files.map((one) => one.id)).toEqual([uriOf(join(dir, 'one.txt'))]);
+    expect(theirs?.files.map((one) => one.id)).toEqual([uriOf(join(dir, 'two.txt'))]);
     // A file the session created is read from the checkpoint that has it, as
     // a creation: no `before` side, and every line of it an addition.
     const after = mine?.files[0]?.edit.after?.content.uri;
