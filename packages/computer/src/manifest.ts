@@ -588,6 +588,17 @@ export const mountParts = (mount: string): { source: string; target: string } =>
 const targetOf = (mount: string): string => mountParts(mount).target;
 
 /**
+ * Whether a path is an absolute one on this host, the side a folder, a mount's
+ * source and a dev container's folder are named on.
+ *
+ * A drive letter is absolute on Windows and nowhere else, so that is the
+ * platform the longer check is for. A path inside the machine is POSIX
+ * whatever the host is, and is not read with this.
+ */
+export const absoluteOnHost = (path: string): boolean =>
+  path.startsWith('/') || (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(path));
+
+/**
  * The host side of a mount, which has to be an absolute path that is there.
  *
  * Checked at create rather than at load, so a folder made after the daemon
@@ -598,10 +609,7 @@ const targetOf = (mount: string): string => mountParts(mount).target;
  */
 const sourceOf = (mount: string, said: string): void => {
   const { source } = mountParts(mount);
-  // A drive letter is absolute on Windows and nowhere else, so that is the
-  // platform the longer check is for.
-  const absolute = source.startsWith('/') || (process.platform === 'win32' && /^[A-Za-z]:[\\/]/.test(source));
-  if (!absolute) {
+  if (!absoluteOnHost(source)) {
     throw new RpcError(-32602, `${said} names ${source}, which is not an absolute path on this host`);
   }
   if (!existsSync(source)) {
@@ -794,7 +802,7 @@ const devcontainerOf = (
     if (!required) return undefined;
     throw new RpcError(-32602, 'source says a dev container, and that body names no folder to read a devcontainer.json from');
   }
-  if (!folder.startsWith('/')) {
+  if (!absoluteOnHost(folder)) {
     throw new RpcError(-32602, `devcontainer names a folder on this host, and ${folder} is not an absolute path`);
   }
   const answer = defaults.folderFor?.(folder);
@@ -999,7 +1007,7 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
       : `This host takes its folders from its profiles, and that body names its own; its profiles are ${names.join(', ')}`);
   }
   const folder = askedFolder ?? profile.folder;
-  if (folder !== undefined && !folder.startsWith('/')) {
+  if (folder !== undefined && !absoluteOnHost(folder)) {
     throw new RpcError(-32602, `folder is an absolute path on this host, and ${folder} is not one`);
   }
   if (folder !== undefined && !existsSync(folder)) {

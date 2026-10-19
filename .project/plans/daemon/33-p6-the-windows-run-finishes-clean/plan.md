@@ -77,6 +77,8 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 | Every git of a test run has `core.autocrlf=false`, set once in the global setup | (defaulted: one place, and the code under test's git reads it too) | 08 |
 | The suite's timeout stays 5 s; the git-heavy worktree blocks get 15 s | (defaulted: the other timeouts on the runner each had a cause) | 08 |
 | The in-process update is tested as a Linux machine's install, in POSIX paths | (defaulted: Windows hands the install to a helper, which has its own case) | 09 |
+| A test that is POSIX by nature skips on Windows with `it.skipIf(!posix)` and its reason beside it | (defaulted: the p3 pattern) | 10 |
+| A host path is absolute by the host's rule; a path inside the machine stays POSIX | (defaulted: a machine is Linux whatever the host is) | 11 |
 
 ## Proposed architecture
 
@@ -96,6 +98,8 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 | [07 - A changeset names Windows paths](task-07-a-changeset-names-windows-paths.md) | implemented | 03 |
 | [08 - A test reads nothing of the machine it runs on](task-08-a-test-reads-nothing-of-the-machine-it-runs-on.md) | implemented | 03 |
 | [09 - The update and control tests run on Windows](task-09-the-update-and-control-tests-run-on-windows.md) | implemented | 03 |
+| [10 - The daemon tests stop what they start](task-10-the-daemon-tests-stop-what-they-start.md) | implemented | 03 |
+| [11 - A host path is absolute by the host's rule](task-11-a-host-path-is-absolute-by-the-hosts-rule.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -104,7 +108,7 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18; tasks 04 and 06 implemented 2026-10-19 on Softov's Windows machine. An ACP server is stopped on Windows, and what it leaves running is ended after it exits. A tree's removal no longer deletes the checkout's `node_modules` through a junction. Tasks 07, 08 and 09 implemented 2026-10-19: a changeset's sides and a write through the host name Windows paths, a test no longer reads the machine's git config or keys, and the update and control tests run on Windows. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
+- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18; tasks 04 and 06 implemented 2026-10-19 on Softov's Windows machine. An ACP server is stopped on Windows, and what it leaves running is ended after it exits. A tree's removal no longer deletes the checkout's `node_modules` through a junction. Tasks 07, 08 and 09 implemented 2026-10-19: a changeset's sides and a write through the host name Windows paths, a test no longer reads the machine's git config or keys, and the update and control tests run on Windows. Tasks 10 and 11 implemented 2026-10-19: the daemon tests stop what they start, and a host path is absolute by the host's rule. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
 - **Next action:** task 03 step 2 - push the branch through a PR and read the Windows job's log. That is Softov's. Its failures are tasks 04 and 05.
 - **Open questions:** none.
 - **Watch out for:** this host cannot run Windows. Each Windows check is a CI run or Softov's Windows machine. Task 02's two cases ask `mountParts` directly: a drive path cannot exist on this host. The end-to-end check and `nested-start.test.ts` are for the Windows run.
