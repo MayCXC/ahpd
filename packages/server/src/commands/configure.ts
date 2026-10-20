@@ -24,8 +24,10 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve, sep } from 'node:path';
 import { output } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
+import { isRecord } from '@ahpd/sdk';
 import { ask, answering, confirm, here, type Term } from '../ask.js';
 import { asSpec, configDir, configPath } from '../config.js';
+import { AGENT_PLUGIN, agentLines, alsoLines, findAgents, findAlso, findRuntimes, missingLines, runtimeLines } from '../found.js';
 import { installPlugins, readEntry, run as runProgram, writeEntry, type Runner } from '../install.js';
 import { isNamed, nameOf, pluginIdOf } from '../plugins.js';
 import type { Fetch } from '../update.js';
@@ -35,9 +37,10 @@ import { serverFields, stop, type Options } from './options.js';
 /**
  * The backends this daemon can be given, and the package each is.
  *
- * ACP is not here because it has no presets to offer yet: asked about now it
- * would be a name and an install that answers nothing until one is written. The
- * order is the one a person is most likely to want them in.
+ * These are the native backends, which each run an agent in this process. The
+ * ACP agents are not here: they all run through `@ahpd/agent-acp`, and
+ * `configure` offers each one whose command it finds on PATH. The order is the
+ * one a person is most likely to want them in.
  */
 const BACKENDS = [
   { name: 'Claude', package: '@ahpd/agent-claude' },
@@ -63,6 +66,8 @@ export interface ConfigureOptions {
   term: Term;
   /** How npm is run. */
   run: Runner;
+  /** The PATH text the runtimes and agents are looked up on. Defaults to this process's own. */
+  path?: string;
   /** How the registry is asked whether a package is a plugin. */
   fetch: Fetch;
   /** One line of this command's own output. */
@@ -118,6 +123,33 @@ const switched = (list: unknown[], name: string, enabled: boolean): unknown[] =>
 });
 
 /**
+ * The `@ahpd/agent-acp` entry with one preset switched on, and nothing else changed.
+ *
+ * A string entry becomes an object because a preset is an option, and an option
+ * needs a place to sit. Every other option the entry holds is kept, as is every
+ * other preset: taking one agent is not a reason to drop the arguments somebody
+ * wrote for another. The first agent taken on a first run makes the entry.
+ */
+const takePreset = (list: unknown[], id: string): unknown[] => {
+  const at = list.findIndex((entry) => {
+    const spec = asSpec(entry);
+    return spec !== undefined && isNamed(spec, AGENT_PLUGIN);
+  });
+  const preset = { [id]: {} };
+  if (at === -1) return [...list, { name: AGENT_PLUGIN, options: { presets: preset } }];
+  const spec = asSpec(list[at]);
+  if (spec === undefined) return list;
+  const entry: Record<string, unknown> = typeof spec === 'string'
+    ? { name: spec }
+    : { ...list[at] as Record<string, unknown>, name: spec.name };
+  const options = isRecord(entry.options) ? entry.options : {};
+  const presets = isRecord(options['presets']) ? options['presets'] : {};
+  const next = [...list];
+  next[at] = { ...entry, options: { ...options, presets: { ...presets, ...preset } } };
+  return next;
+};
+
+/**
  * Ask every question, write the file, and install what was asked for.
  *
  * The file is written before npm runs, because a plugin that will not install is
@@ -146,6 +178,37 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
     if (keep) backends.push(backend.package);
     if (was) plugins = switched(plugins, backend.package, keep);
   }
+
+  /*
+   * What this machine has, and the agents on it.
+   *
+   * The lines come before the questions that follow, so a person reads which
+   * runtime ahpd will use and which agent commands are there before deciding
+   * anything. An agent that is not installed is not a question: it is listed
+   * after the questions with the vendor's line for this system, and nothing
+   * more is said about it. A found agent the file already names is shown as
+   * configured and not asked about again.
+   */
+  const platform = process.platform;
+  const path = options.path ?? process.env.PATH ?? '';
+  const runtimes = await findRuntimes({ run: options.run, path, platform });
+  for (const line of runtimeLines(runtimes)) options.say(line);
+
+  const found = await findAgents({ run: options.run, path, platform }, held.plugins);
+  const taken: string[] = [];
+  if (answering(options.term)) {
+    for (const line of agentLines(found.agents)) options.say(line);
+  }
+  for (const line of alsoLines(await findAlso({ run: options.run, path, platform }))) options.say(line);
+  if (answering(options.term)) {
+    for (const one of found.agents) {
+      if (one.configured) continue;
+      if (!await confirm(`${one.agent.name}?`, true, options.term)) continue;
+      taken.push(one.agent.id);
+      plugins = takePreset(plugins, one.agent.id);
+    }
+  }
+  for (const line of missingLines(found.missing, platform)) options.say(line);
 
   const host = await ask('Host', typeof held.host === 'string' ? held.host : '127.0.0.1', options.term);
   const typedPort = await ask('Port', String(typeof held.port === 'number' ? held.port : 9187), options.term);
@@ -230,7 +293,12 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
   writeEntry(options.configFile, held);
   options.say(`Wrote ${options.configFile}.`);
 
-  const missing = backends.filter((one) => !installed.has(one));
+  const missing = [
+    ...backends.filter((one) => !installed.has(one)),
+    // The package every taken agent runs through, installed with them rather
+    // than before the questions, because a first run has no entry for it yet.
+    ...(taken.length > 0 && !installed.has(AGENT_PLUGIN) ? [AGENT_PLUGIN] : []),
+  ];
   if (missing.length > 0) {
     await installPlugins(missing, {
       configDir: options.configDir, configFile: options.configFile,

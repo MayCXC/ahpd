@@ -56,6 +56,17 @@ export const optionsSchema = {
           base: { type: 'string', description: 'The shipped preset this one takes, for a key that is not itself one.' },
           name: { type: 'string', description: 'What a client reads instead of the id, which is this key. Defaults to the preset name, and to the key.' },
           command: { type: 'string', description: 'The program to spawn as the ACP server.' },
+          install: {
+            type: 'object',
+            properties: {
+              all: { type: 'string', description: 'A line that installs it on every system the vendor supports.' },
+              linux: { type: 'string', description: 'The install line on Linux.' },
+              darwin: { type: 'string', description: 'The install line on macOS.' },
+              win32: { type: 'string', description: 'The install line on Windows.' },
+            },
+            description: "How to install this agent, by system, as the vendor's own docs give it. A system's key wins over all, and a system with no line is left to page.",
+          },
+          page: { type: 'string', description: "The vendor's install page, for a system the install lines do not cover." },
           args: { type: 'array', items: { type: 'string' }, description: 'The arguments to give it, replacing the preset\'s own.' },
           env: { type: 'object', additionalProperties: envValue, description: "Environment variables merged over the daemon's own for the child, by variable name. A variable is a credential wherever the server keeps one, so each answers <set>; a value written { \"$secret\": \"host:<name>\" } is read from the vault when this load runs." },
           cwd: { type: 'string', description: "The directory the server runs in; the session's working directory when absent." },
@@ -106,7 +117,7 @@ const changedOf = (value: unknown): ToolsChanged | undefined =>
   value === 'notify' || value === 'list' ? value : undefined;
 
 /** The keys that belong to a preset rather than to the load, and are refused above one. */
-const PER_PRESET = ['command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model', 'authenticate', 'honoursTrust', 'machine'] as const;
+const PER_PRESET = ['command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model', 'authenticate', 'honoursTrust', 'machine', 'install', 'page'] as const;
 
 /**
  * One preset's `machine`, with every `{ fromEnv }` read and every `$secret` kept.

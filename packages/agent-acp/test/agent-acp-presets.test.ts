@@ -1,10 +1,11 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { readSecret, type Vault } from '@ahpd/sdk';
+import { knownAgents, readSecret, type Vault } from '@ahpd/sdk';
 import type { PluginHost } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { name, optionsOf } from '../src/plugin.js';
+import { presets as shipped } from '../src/presets.js';
 import type { AcpOptions } from '../src/types.js';
 
 /*
@@ -103,6 +104,30 @@ it('gives each key of presets an agent of its own, under the shipped row it name
   expect(merged[0]?.env).toEqual({ X: '1' });
 });
 
+it('lists the same agents as the sdk, with the same commands', () => {
+  expect(Object.keys(shipped).sort()).toEqual(Object.keys(knownAgents).sort());
+  for (const [id, row] of Object.entries(shipped)) {
+    const agent = knownAgents[id];
+    expect(agent, `${id} has no row in knownAgents`).toBeDefined();
+    expect(row.command).toBe(agent?.command);
+    expect(row.name).toBe(agent?.name);
+  }
+});
+
+it('accepts install and page on a preset, and runs the same command', async () => {
+  const presets = {
+    codex: {
+      install: { all: 'npm i -g @agentclientprotocol/codex-acp' },
+      page: 'https://www.npmjs.com/package/@agentclientprotocol/codex-acp',
+    },
+  };
+  const { loaded, problems } = await load({ presets });
+  expect(problems).toEqual([]);
+  expect(loaded.map((one) => one.name)).toEqual([name]);
+  const merged = await mergedOf({ presets });
+  expect(merged[0]?.command).toBe('codex-acp');
+});
+
 it('marks every agent a preset registers a variant', async () => {
   const agents = await agentsOf({ presets: { codex: {}, mine: { command: 'mine' } } });
   expect(agents.map((one) => [one.provider, one.variant])).toEqual([['codex', true], ['mine', true]]);
@@ -162,7 +187,7 @@ it('skips a preset whose own authenticate carries no method id', async () => {
 });
 
 it('refuses a top-level option that belongs inside a preset, naming where it goes', async () => {
-  for (const key of ['command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model', 'authenticate', 'machine']) {
+  for (const key of ['command', 'args', 'env', 'cwd', 'provider', 'displayName', 'description', 'model', 'authenticate', 'machine', 'install', 'page']) {
     const value = key === 'args' || key === 'env' ? {} : key === 'authenticate' ? { methodId: 'api-key' } : 'x';
     const { loaded, problems } = await load({ presets: { codex: {} }, [key]: value });
     expect(loaded).toEqual([]);
