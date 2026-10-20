@@ -1,6 +1,6 @@
 ---
 title: What a machine answers names the host's paths
-status: todo
+status: implemented
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: computer
 refs:
@@ -34,3 +34,14 @@ A host path matched against what a machine reports is matched in the host's own 
 
 - On Windows a session's cwd under the folder starts in the matching `/c/...` path, and the tree's git commands on the host run in `C:\...`.
 - On Linux nothing changes.
+
+## Resume
+
+Done 2026-10-19, apart from step 1. Not reviewed.
+
+Step 1 needs Docker Desktop, which this machine does not have; `.project/pending/windows-machine-paths-checks.md` asks Softov for it.
+Until then `sourceOnHost` in `hostpath.ts` reads a source in either spelling Docker Desktop is known to report, `/run/desktop/mnt/host/c/...` and `/host_mnt/c/...`, as well as the host's own.
+`within`, `workdirOf` and the old-guard check compare in the host's spelling, `spellingOf` and `gitInside` use `sep`, and `hostGit` runs in `hostPathOf(tree)`.
+A worktree's `.git` naming its git directory with `/`, as git on Windows writes it, is read with `resolve`; it was refused before.
+On Softov's Windows machine, in the runner-like setup: the computer suite passes 397 with 53 skipped, the full unit suite passes, and `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The Linux half of Validation is the CI run of the branch; on Linux and macOS the pair is the path itself.

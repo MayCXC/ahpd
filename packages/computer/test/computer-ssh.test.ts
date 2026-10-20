@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -75,7 +76,9 @@ const recorded = (): string[][] => (existsSync(log())
   // A test whose box is never reached has no file, which is no calls.
   : []);
 
-it('runs the remote string on this host, and records the call as ssh was given it', () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('runs the remote string on this host, and records the call as ssh was given it', () => {
   const one = ssh(['-T', '-o', 'BatchMode=yes', '-o', 'ConnectTimeout=5', '-p', '2222', '-i', '/keys/dev02', 'dev02', '--', 'echo nested; exit 3']);
 
   // The command is a real one, and its output and code are this process's own.
@@ -88,7 +91,9 @@ it('runs the remote string on this host, and records the call as ssh was given i
   ]);
 });
 
-it('keeps the remote string whole, so what the caller wrote is what runs', () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('keeps the remote string whole, so what the caller wrote is what runs', () => {
   // One string to `sh -c` and never this program's own word splitting: the
   // quoting the runtime did survives to the shell that reads it.
   const one = ssh(['dev02', '--', 'printf "%s\\n" "a b" "c"']);
@@ -157,7 +162,9 @@ const until = async (check: () => boolean, times = 1000): Promise<void> => {
   }
 };
 
-it('lists the boxes the options name, and says why one of them is not up', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('lists the boxes the options name, and says why one of them is not up', async () => {
   const one = boxes(
     {
       dev02: { destination: 'dev02', port: '2229', identity: '/keys/dev02' },
@@ -186,7 +193,9 @@ it('lists the boxes the options name, and says why one of them is not up', async
   ].sort());
 });
 
-it('runs a command on the box in its own directory, and answers what it printed', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('runs a command on the box in its own directory, and answers what it printed', async () => {
   // A directory that is there, because the scripted ssh runs the remote string
   // on this host: a `cd` to a path no box here has is a command that failed.
   const work = join(temp(), 'srv-app');
@@ -210,7 +219,9 @@ it('runs a command on the box in its own directory, and answers what it printed'
   expect(await one.inspect('web1')).toBeUndefined();
 });
 
-it('answers what a box is, what it is doing and who prepared and owns it', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('answers what a box is, what it is doing and who prepared and owns it', async () => {
   const one = boxes({
     dev02: { destination: 'dev02', port: '2229', workdir: '/srv/app', agents: ['claude'] },
     web1: { destination: 'web1' },
@@ -256,7 +267,9 @@ it('answers what a box is, what it is doing and who prepared and owns it', async
   expect(await one.owner('nope')).toBeUndefined();
 });
 
-it('reads what a box is using from its own /proc, and nothing when it cannot', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('reads what a box is using from its own /proc, and nothing when it cannot', async () => {
   /*
    * Fixed text, so the two readings and the sums between them are this test's
    * own: two cores' worth of jiffies, then the memory, then the count.
@@ -300,7 +313,9 @@ it('reads what a box is using from its own /proc, and nothing when it cannot', a
   expect(await boxes({ web1: { destination: 'web1' } }, { SSH_FAKE_UNREACHABLE: 'web1' }).stats('web1')).toBeUndefined();
 });
 
-it('quotes a remote word so the box reads back what the caller wrote', () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('quotes a remote word so the box reads back what the caller wrote', () => {
   /*
    * The remote command is one string the box's login shell parses, so a word
    * that is not quoted is a word the box runs. Each of these is read back by a
@@ -441,7 +456,9 @@ it('serves a box in the computer: scheme, and refuses to put it in a state', asy
   await expect(provider.list('computer://ssh.web1')).rejects.toThrow(/No computer resource at computer:\/\/ssh.web1/);
 });
 
-it('charges the host for a box a listing found up and a later one found gone', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('charges the host for a box a listing found up and a later one found gone', async () => {
   const gone = join(temp(), 'gone');
   // The box is not reachable to begin with: a listing that finds nothing up
   // opens no stretch and writes nothing.
@@ -496,7 +513,9 @@ it('charges the host for a box a listing found up and a later one found gone', a
  * reaches one.
  */
 
-it('checks a box on a timer when the operator asked for an interval', async () => {
+// POSIX-only: the scripted ssh stands in for a Linux box by running the
+// remote string with `/bin/sh` on this host.
+it.skipIf(!posix)('checks a box on a timer when the operator asked for an interval', async () => {
   const gone = join(temp(), 'gone');
   writeFileSync(gone, 'dev02\n');
   const usage = meter();

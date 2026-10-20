@@ -1,3 +1,4 @@
+import { machinePathOf } from '@ahpd/sdk';
 import { spawnSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -647,7 +648,8 @@ it('reads a profile\'s gitGuard as fetch, taking bind as fetch and keeping open'
   const dir = mkdtempSync(join(tmpdir(), 'ahpd-computer-guard-'));
   loose = dir;
   repositoryAt(dir);
-  const me = `${String(process.getuid?.())}:${String(process.getgid?.())}`;
+  // Windows has no uid: a machine made there runs as its image's own user.
+  const me = process.getuid === undefined ? undefined : `${String(process.getuid())}:${String(process.getgid?.())}`;
 
   // Spelled out, and left out: both are `fetch`, the default.
   for (const [key, profile] of [
@@ -709,7 +711,7 @@ it('reads a profile\'s sessionTree as shared, and copies the tree where it says 
   const { repo } = repositoryAt(dir);
   // A volume of the machine's own, its own path marked by the name it carries.
   const ownVolume = (argv: string[]): string[] =>
-    argv.filter((one) => one.startsWith('ahpd-git-') && one.endsWith(`:${repo}`));
+    argv.filter((one) => one.startsWith('ahpd-git-') && one.endsWith(`:${machinePathOf(repo)}`));
 
   // Spelled out, and left out: both are `shared`, and the host's tree is bound
   // into the machine at its own path, with the machine's git directory in its
@@ -720,7 +722,7 @@ it('reads a profile\'s sessionTree as shared, and copies the tree where it says 
   ] as [string, Record<string, unknown>][]) {
     const { argv, error } = await guardOf(join(dir, `${key}.json`), { claude: profile });
     expect(error, key).toBeUndefined();
-    expect(argv, key).toContain(`${repo}:${repo}`);
+    expect(argv, key).toContain(`${repo}:${machinePathOf(repo)}`);
     expect(ownVolume(argv), key).toEqual([]);
   }
 
@@ -730,7 +732,7 @@ it('reads a profile\'s sessionTree as shared, and copies the tree where it says 
     claude: { image: 'node:22', disposable: true, sessionFolder: true, sessionTree: 'copy' },
   });
   expect(copied.error).toBeUndefined();
-  expect(copied.argv).not.toContain(`${repo}:${repo}`);
+  expect(copied.argv).not.toContain(`${repo}:${machinePathOf(repo)}`);
   expect(ownVolume(copied.argv)).toHaveLength(1);
 });
 
@@ -769,7 +771,7 @@ it('refuses a machine asked to copy a folder that is not a repository', async ()
     claude: { image: 'node:22', disposable: true, sessionFolder: true },
   }, join(dir, 'plain'));
   expect(shared.error).toBeUndefined();
-  expect(shared.argv).toContain(`${join(dir, 'plain')}:${join(dir, 'plain')}`);
+  expect(shared.argv).toContain(`${join(dir, 'plain')}:${machinePathOf(join(dir, 'plain'))}`);
 });
 
 /*

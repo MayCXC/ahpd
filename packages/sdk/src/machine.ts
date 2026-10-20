@@ -98,6 +98,36 @@ const PART_ID = /^[A-Za-z0-9][A-Za-z0-9_-]*$/;
 /** Where one part is mounted inside a machine. */
 export const partTarget = (id: string): string => `${PART_ROOT}/${id}`;
 
+/*
+ * A host path as it is inside a machine, and back.
+ *
+ * A machine is Linux whatever the host is. On Linux and macOS a host folder is
+ * mounted at its own path, so both directions are the path itself. On Windows
+ * no Linux path is `C:\Users\ana\proj`, so the folder is mounted at its
+ * drive-style path, `/c/Users/ana/proj`: the drive letter lowercase and the
+ * separators forward slashes. Every place a host path crosses into a machine,
+ * or a machine path comes back, goes through these two and nothing else.
+ *
+ * The platform is a parameter so both rules are tested on any host.
+ */
+
+/** A host path as it is inside a machine: `C:\a\b` is `/c/a/b` on Windows, and a POSIX path is itself. */
+export const machinePathOf = (path: string, platform: NodeJS.Platform = process.platform): string => {
+  if (platform !== 'win32') return path;
+  const drive = /^([A-Za-z]):[\\/]?(.*)$/.exec(path);
+  if (drive === null) return path.replaceAll('\\', '/');
+  const rest = (drive[2] as string).replaceAll('\\', '/').replace(/\/+$/, '');
+  return `/${(drive[1] as string).toLowerCase()}${rest === '' ? '' : `/${rest}`}`;
+};
+
+/** A machine path back as the host path it names: `/c/a/b` is `C:\a\b` on Windows, and itself elsewhere. */
+export const hostPathOf = (path: string, platform: NodeJS.Platform = process.platform): string => {
+  if (platform !== 'win32') return path;
+  const drive = /^\/([a-z])(?:\/(.*))?$/.exec(path);
+  if (drive === null) return path;
+  return `${(drive[1] as string).toUpperCase()}:\\${(drive[2] ?? '').replaceAll('/', '\\')}`;
+};
+
 /** Where a value came from, in the words a refusal uses. */
 const from = (source: 'profile' | 'option' | 'default'): string =>
   (source === 'default' ? "the agent's default" : `the ${source}`);

@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { RpcError } from '@ahpd/sdk';
-import { bodyText, partTarget, resolveNeeds } from '@ahpd/sdk';
+import { bodyText, machinePathOf, partTarget, resolveNeeds } from '@ahpd/sdk';
 import { hasDefinition } from './devcontainer.js';
 import { withRequires } from './parts.js';
 import type { SessionTree } from './gitdir.js';
@@ -1149,11 +1149,12 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
       : copies.map((one) => ({ mount: `${one.source}:${one.target}`, target: one.target, said: `the copy from ${one.source}` }))),
     // And the session's folder, at the path `mountedAt` gives, which the Docker
     // route mounts and the CLI's does not: its own file already mounts the
-    // workspace.
+    // workspace. Inside, it is at its machine path: its own on Linux and
+    // macOS, its drive-style one on Windows.
     ...(devcontainer === undefined && mountedAt !== undefined
       ? [{
-        mount: `${mountedAt}:${mountedAt}`,
-        target: mountedAt,
+        mount: `${mountedAt}:${machinePathOf(mountedAt)}`,
+        target: machinePathOf(mountedAt),
         said: defaults.repository === undefined ? `the folder ${folder}` : `the session's repository ${defaults.repository}`,
       }]
       : []),
@@ -1167,8 +1168,9 @@ export const manifestOf = (name: string, content: Write, defaults: ManifestDefau
     ...partFallbacks.map((one) => ({ mount: one.mount, target: one.target, said: `the fallback of need ${one.need}` })),
   ]);
   // A machine with a folder starts a session in it, so a host path inside the
-  // folder is the same path in there.
-  const workdir = said(held, 'workdir') ?? profile.workdir ?? folder;
+  // folder is its machine path in there. A `workdir` the body or the profile
+  // names is a path inside already.
+  const workdir = said(held, 'workdir') ?? profile.workdir ?? (folder === undefined ? undefined : machinePathOf(folder));
   if (workdir !== undefined && !workdir.startsWith('/')) {
     throw new RpcError(-32602, `workdir is an absolute path inside the computer, and ${workdir} is not one`);
   }

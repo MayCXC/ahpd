@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -380,7 +381,8 @@ const withFakePnpm = async (run: (parts: typeof import('../src/parts.js')) => Pr
 /** The scratch directories `pnpm pack` was given, as they are now. */
 const scratch = (): string[] => readdirSync(tmpdir()).filter((one) => one.startsWith('ahpd-pack-'));
 
-it('reads the tarball a pack names, by the absolute path it printed', async () => {
+// POSIX-only: the stand-in pnpm is a shell script on `PATH`, which Windows does not run.
+it.skipIf(!posix)('reads the tarball a pack names, by the absolute path it printed', async () => {
   const before = scratch();
   let source: { from: string; version?: string; hash: string } | undefined;
   await withFakePnpm(async (parts) => { source = await parts.ahpdSourceOf() as { from: string; hash: string }; });
@@ -393,7 +395,8 @@ it('reads the tarball a pack names, by the absolute path it printed', async () =
   expect(scratch().filter((one) => !before.includes(one))).toEqual([]);
 });
 
-it('reads the tarball a pack named relatively, against the directory it packed into', async () => {
+// POSIX-only: the stand-in pnpm is a shell script on `PATH`, which Windows does not run.
+it.skipIf(!posix)('reads the tarball a pack named relatively, against the directory it packed into', async () => {
   let source: { from: string; hash: string } | undefined;
   await withFakePnpm(async (parts) => { source = await parts.ahpdSourceOf() as { from: string; hash: string }; }, 'never', true);
   // A `pnpm` that names the tarball `packed-123.tgz` rather than its full path:
@@ -403,7 +406,8 @@ it('reads the tarball a pack named relatively, against the directory it packed i
   expect(source?.hash).toMatch(/^[0-9a-f]{12}$/);
 });
 
-it('asks a pack that failed again, rather than handing back the same refusal', async () => {
+// POSIX-only: the stand-in pnpm is a shell script on `PATH`, which Windows does not run.
+it.skipIf(!posix)('asks a pack that failed again, rather than handing back the same refusal', async () => {
   await withFakePnpm(async (parts) => {
     await expect(parts.ahpdSourceOf()).rejects.toThrow(/pnpm pack could not pack/);
     // The next build is a build, not the rejection the daemon was given once.
@@ -412,7 +416,8 @@ it('asks a pack that failed again, rather than handing back the same refusal', a
   }, 'first');
 });
 
-it('leaves no pack directory behind when the pack fails', async () => {
+// POSIX-only: the stand-in pnpm is a shell script on `PATH`, which Windows does not run.
+it.skipIf(!posix)('leaves no pack directory behind when the pack fails', async () => {
   const before = scratch();
   await withFakePnpm(async (parts) => {
     await expect(parts.ahpdSourceOf()).rejects.toThrow(/pnpm pack could not pack/);

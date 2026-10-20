@@ -54,7 +54,7 @@ export { toMcpContent } from './tools/mcpcontent.js';
 export { machineAsked, refuseComputer, computersFor, computerId, computerSource, machineRefusal, openComputer } from './computers.js';
 export { nestedAgent } from './nested.js';
 export type { NestedAsked, NestedHost, NestedOptions, NestedStarted } from './nested.js';
-export { resolveNeeds, expandHome, partTarget, PART_ROOT } from './machine.js';
+export { resolveNeeds, expandHome, partTarget, PART_ROOT, machinePathOf, hostPathOf } from './machine.js';
 export type { NeedSources } from './machine.js';
 export { sessionTools, wakeupTool } from './tools/session.js';
 export { fillWords } from './wakemessage.js';

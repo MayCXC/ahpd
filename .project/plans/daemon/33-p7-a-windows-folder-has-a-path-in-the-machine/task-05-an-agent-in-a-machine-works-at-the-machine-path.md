@@ -1,6 +1,6 @@
 ---
 title: An agent in a machine works at the machine path
-status: todo
+status: implemented
 depends: [task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md]
 layer: agent-claude, agent-acp
 refs:
@@ -33,3 +33,14 @@ An agent running in a machine is given the machine path as its cwd, and the path
 
 - On Windows an agent in a machine works in `/c/...`, and its edits land in the host's changeset under `C:\...`.
 - On Linux nothing changes.
+
+## Resume
+
+Done 2026-10-19. Not reviewed.
+
+Claude needed no change: its spawn hands the host folder to the port's `how`, and `within` turns it into the machine path.
+The ACP bridge sends the machine path as `cwd` in `session/new`, `session/load`, `session/resume` and `session/fork` for an agent in a machine; the catalogue's record keeps the host path, the folder a client named.
+A diff path and an `fs/read_text_file` or `fs/write_text_file` path an agent names is read through `hostPathOf`.
+Finding: an ACP server that failed its sign-in still held its folder after the session closed, on Windows; the machine test now runs in a folder no case removes.
+On Softov's Windows machine, in the runner-like setup: the computer suite passes 397 with 53 skipped, the full unit suite passes, and `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The Linux half of Validation is the CI run of the branch; on Linux and macOS the pair is the path itself.

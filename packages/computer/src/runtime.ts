@@ -3,12 +3,13 @@ import { createHash, randomUUID } from 'node:crypto';
 import { createWriteStream, lstatSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, posix } from 'node:path';
-import { gitArgv, ownerOf, partTarget } from '@ahpd/sdk';
+import { gitArgv, hostPathOf, machinePathOf, ownerOf, partTarget } from '@ahpd/sdk';
 import type { BroughtBack, Owner, ResolvedSeed, Spawn, SpawnOptions } from '@ahpd/sdk';
 import { cliOf, definitionOf, DEVCONTAINER_FOLDER, execArgv, folderLabelOf, idLabels, LOCAL_FOLDER, masked, parseUp, probeEnv, probeKept, reachOf, runCli, workdirOf } from './devcontainer.js';
 import { adoptedOf, keepProbe, probeOf } from './owners.js';
 import type { MadeNeed } from './owners.js';
 import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
+import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
 import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
 import { mountParts } from './manifest.js';
@@ -1154,15 +1155,6 @@ export const claimedOf = (found: Record<string, unknown>): ReturnType<typeof cla
 export const devcontainerFolder = (found: Record<string, unknown>): string | undefined =>
   folderLabelOf(found);
 
-const windowsHost = process.platform === 'win32';
-
-/**
- * A host path as `within` compares it. On Windows the separators are one and
- * the case is not a difference, as Windows itself reads a path; elsewhere the
- * path is its own text, since a backslash is a character a name may hold.
- */
-const spelledOnHost = (path: string): string => (windowsHost ? path.replaceAll('\\', '/').toLowerCase() : path);
-
 /**
  * Where a path on this host is inside one machine, or nothing.
  *
@@ -1187,8 +1179,9 @@ export const within = (held: Record<string, unknown>, path: string): string | un
   let best: { source: string; target: string } | undefined;
   for (const mount of mounts) {
     if (typeof mount !== 'object' || mount === null) continue;
-    const { Source: source, Destination: target } = mount as Record<string, unknown>;
-    if (typeof source !== 'string' || typeof target !== 'string' || source === '' || target === '') continue;
+    const { Source: reported, Destination: target } = mount as Record<string, unknown>;
+    if (typeof reported !== 'string' || typeof target !== 'string' || reported === '' || target === '') continue;
+    const source = sourceOnHost(reported);
     const [asked, mounted] = [spelledOnHost(path), spelledOnHost(source)];
     if (asked !== mounted && !asked.startsWith(mounted.endsWith('/') ? mounted : `${mounted}/`)) continue;
     if (best === undefined || source.length > best.source.length) best = { source, target };
@@ -1386,7 +1379,7 @@ const overrideOf = (spec: MachineSpec, config: Record<string, unknown>, route?: 
     held.workspaceMount = `source=${spec.devcontainer ?? ''},target=${spec.workdir},type=bind`;
   }
   /*
-   * With a git directory, the tree at its own path, as on the Docker route: the
+   * With a git directory, the tree at its machine path, as on the Docker route: the
    * worktree's `.git` file names the git directory by its host path, and its
    * read-only bind has to land where the file is. Under `copy` the CLI's own
    * workspace mount is the machine's volume instead: it is the checkout the
@@ -1396,12 +1389,12 @@ const overrideOf = (spec: MachineSpec, config: Record<string, unknown>, route?: 
   if (git !== undefined && spec.devcontainer !== undefined) {
     const root = spec.repository ?? spec.devcontainer;
     if (tree === 'copy') {
-      held.workspaceMount = `source=${gitVolumeOf(spec.name)},target=${git.volume ?? root},type=volume`;
-      held.workspaceFolder = git.volume ?? root;
+      held.workspaceMount = `source=${gitVolumeOf(spec.name)},target=${git.volume ?? machinePathOf(root)},type=volume`;
+      held.workspaceFolder = git.volume ?? machinePathOf(root);
     }
     else {
-      held.workspaceMount = `source=${root},target=${root},type=bind`;
-      held.workspaceFolder = spec.devcontainer;
+      held.workspaceMount = `source=${root},target=${machinePathOf(root)},type=bind`;
+      held.workspaceFolder = machinePathOf(spec.devcontainer);
     }
   }
   const runArgs = [...(Array.isArray(held.runArgs) ? (held.runArgs as string[]) : [])];
@@ -1515,7 +1508,7 @@ export const profileOf = (found: Record<string, unknown>): string | undefined =>
  * a path after that. A named volume, a state directory, a part's own mount and
  * a session's folder all answer no.
  */
-const inGitDirectory = (source: string): boolean => /(^|\/)\.git(\/|$)/.test(source);
+const inGitDirectory = (source: string): boolean => /(^|\/)\.git(\/|$)/.test(spelledOnHost(sourceOnHost(source)));
 
 /**
  * The labels every machine this host makes carries one of.
@@ -2111,12 +2104,15 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
      * branch and identity from, and the machine's git directory is `.git`
      * inside it. Under `shared` the volume is the git directory itself, mounted
      * over the host tree's own `.git`, and the tree is the host's.
+     *
+     * `root` is the tree inside the machine, and `seedOf` reads it on the host,
+     * by the host path it names: on Windows the two are spelled differently.
      */
-    const root = git.copy === true ? git.volume : spec.repository ?? spec.folder ?? spec.devcontainer;
+    const root = git.copy === true ? git.volume : machinePathOf(spec.repository ?? spec.folder ?? spec.devcontainer ?? '');
     const at = git.copy === true ? (git.volume === undefined ? undefined : posix.join(git.volume, '.git')) : git.volume;
     const objects = git.objects;
-    if (root === undefined || at === undefined || git.volume === undefined || objects === undefined) return;
-    const seed = seedOf(root);
+    if (root === undefined || root === '' || at === undefined || git.volume === undefined || objects === undefined) return;
+    const seed = seedOf(hostPathOf(root));
     const asUser = (args: string[]): Promise<string> =>
       must(['exec', ...(spec.user === undefined ? [] : ['--user', spec.user]), container, ...args]);
     const own = [`--git-dir=${at}`, `--work-tree=${root}`];
@@ -2427,8 +2423,10 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    * throwing, because a fast-forward that does not apply is a question with an
    * answer.
    */
+  // `tree` is the machine's name for it, read from its mounts; git runs on the
+  // host, in the host path it names - the same text except on Windows.
   const hostGit = (tree: string, args: string[]): { code: number; stdout: string; stderr: string } => {
-    const held = spawnSync('git', gitArgv(tree, args), { encoding: 'utf8', windowsHide: true });
+    const held = spawnSync('git', gitArgv(hostPathOf(tree), args), { encoding: 'utf8', windowsHide: true });
     return { code: held.status ?? 1, stdout: held.stdout ?? '', stderr: held.stderr ?? '' };
   };
 
@@ -3405,16 +3403,18 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
        */
       const mounted = [...new Set([
         ...(spec.mounts ?? []),
-        // The folder a session works in, at the same path, so an agent that
-        // keys its own record by the working directory finds the same key
-        // inside and out - Claude's history is one such record.
+        // The folder a session works in, at its machine path: the same path on
+        // Linux and macOS, so an agent that keys its own record by the working
+        // directory finds the same key inside and out - Claude's history is one
+        // such record - and the drive-style one on Windows, where no Linux path
+        // is the host's.
         // A folder below a repository's root brings the whole tree instead, so
         // the rest of it is not missing to git in there. Under `copy` the tree
         // is the machine's own and this is not bound at all: the volume below
         // lands at that path instead.
         ...(spec.folder === undefined || tree === 'copy'
           ? []
-          : [`${spec.repository ?? spec.folder}:${spec.repository ?? spec.folder}`]),
+          : [`${spec.repository ?? spec.folder}:${machinePathOf(spec.repository ?? spec.folder)}`]),
         // Then the git mounts: the host's objects read-only, the file a linked
         // worktree's `.git` is replaced by, and the volume the machine commits
         // into.
@@ -3558,7 +3558,8 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     },
 
     /*
-     * Host files written into a machine, each at the path it already has.
+     * Host files written into a machine, each at its machine path: the path it
+     * already has on Linux and macOS, its drive-style one on Windows.
      *
      * As root, in one command: the machine's own user cannot make the folders
      * above a path this host chose - `/home/softov/...` inside a container
@@ -3572,7 +3573,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       for (const path of paths) {
         const bytes = readFileSync(path);
         await must(
-          ['exec', '-i', '--user', '0', at, 'sh', '-c', 'mkdir -p "$(dirname "$1")" && cat > "$1" && chmod 0444 "$1"', 'sh', path],
+          ['exec', '-i', '--user', '0', at, 'sh', '-c', 'mkdir -p "$(dirname "$1")" && cat > "$1" && chmod 0444 "$1"', 'sh', machinePathOf(path)],
           undefined,
           bytes,
         );
@@ -3582,7 +3583,7 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
     /** The same paths, taken back out with whatever is under them, as root too. */
     takeOut: async (id, paths) => {
       const at = await containerOrFail(id);
-      for (const path of paths) await must(['exec', '--user', '0', at, 'rm', '-rf', path]);
+      for (const path of paths) await must(['exec', '--user', '0', at, 'rm', '-rf', machinePathOf(path)]);
     },
 
     /** What a machine committed, brought back by fetch: `bringBackOfMachine`. */

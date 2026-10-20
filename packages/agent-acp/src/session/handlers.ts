@@ -24,7 +24,7 @@ import type {
   WriteTextFileRequest,
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
-import { str } from '@ahpd/sdk';
+import { hostPathOf, str } from '@ahpd/sdk';
 import type { Bag, BoundTool, OpenedTerminal, Session } from '@ahpd/sdk';
 import { confirmationOptions, contentOf, mapUpdate, questionsFor, typedOf } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
@@ -209,7 +209,8 @@ export function createHandlers(ctx: SessionContext): Handlers {
   const readTextFile = async (request: ReadTextFileRequest): Promise<ReadTextFileResponse> => {
     const store = start.resources;
     if (store === undefined) throw new Error(`${provider}: this session has no files to read`);
-    const read = await store.read(uriOf(request.path));
+    // A path an agent in a machine names is its machine path; the store reads the host's.
+    const read = await store.read(uriOf(hostPathOf(request.path)));
     if (read.encoding !== 'utf-8') throw new Error(`${provider}: ${request.path} is not text`);
     // ACP sends `null` for absent as readily as it omits, so both mean the same.
     const line = request.line ?? undefined;
@@ -238,8 +239,9 @@ export function createHandlers(ctx: SessionContext): Handlers {
     const turnId = ctx.mapping?.turnId;
     // In the system's own spelling, as every other row of the changeset is: a
     // server on Windows may join a path with `/`, and one file named two ways
-    // is two rows.
-    const path = normalize(request.path);
+    // is two rows. A path an agent in a machine names is its machine path, and
+    // the host's is the one it names.
+    const path = normalize(hostPathOf(request.path));
     if (turnId !== undefined) await start.onFileEdit?.(turnId, path, 'before');
     await store.write(uriOf(path), { data: request.content, encoding: 'utf-8', mode: 'truncate' });
     if (turnId !== undefined) await start.onFileEdit?.(turnId, path, 'after');

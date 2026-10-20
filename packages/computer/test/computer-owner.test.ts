@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -329,7 +330,8 @@ it('forgets the record of a machine the CLI made once it is removed', async () =
   expect(JSON.parse(readFileSync(join(configDir, 'computers.json'), 'utf8'))).toEqual({});
 });
 
-it('writes the file private even when a readable scratch at its own name was left behind', () => {
+// POSIX-only: it reads a file mode, which Windows does not have.
+it.skipIf(!posix)('writes the file private even when a readable scratch at its own name was left behind', () => {
   const dir = temp();
   const configDir = join(dir, 'config');
   mkdirSync(configDir, { recursive: true });

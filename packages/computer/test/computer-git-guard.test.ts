@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -80,7 +81,8 @@ it('mounts nothing under open where the tree already holds the git directory', (
 it('says a git directory is inside the tree however the tree is reached', () => {
   const { repo, gitDir } = repository();
   const link = join(dirname(repo), 'link');
-  symlinkSync(repo, link);
+  // A junction on Windows, which links a folder with no privilege and reads as a link.
+  symlinkSync(repo, link, posix ? 'dir' : 'junction');
 
   // git answers real paths and a session's folder may be a link to the tree, so
   // the answer is on real paths: the git directory is inside either way, and

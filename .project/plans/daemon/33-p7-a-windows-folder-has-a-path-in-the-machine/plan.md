@@ -1,7 +1,7 @@
 ---
 title: A Windows folder has a path in the machine
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -86,12 +86,12 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A host path has a machine path](task-01-a-host-path-has-a-machine-path.md) | todo | - |
-| [02 - A machine mounts a folder at its machine path](task-02-a-machine-mounts-a-folder-at-its-machine-path.md) | todo | 01 |
-| [03 - What a machine answers names the host's paths](task-03-what-a-machine-answers-names-the-hosts-paths.md) | todo | 01 |
-| [04 - A nested host and its attachments cross by the pair](task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md) | todo | 01 |
-| [05 - An agent in a machine works at the machine path](task-05-an-agent-in-a-machine-works-at-the-machine-path.md) | todo | 04 |
-| [06 - The computer suite runs on a Windows machine](task-06-the-computer-suite-runs-on-a-windows-machine.md) | todo | 02, 03, 04, 05 |
+| [01 - A host path has a machine path](task-01-a-host-path-has-a-machine-path.md) | implemented | - |
+| [02 - A machine mounts a folder at its machine path](task-02-a-machine-mounts-a-folder-at-its-machine-path.md) | implemented | 01 |
+| [03 - What a machine answers names the host's paths](task-03-what-a-machine-answers-names-the-hosts-paths.md) | implemented | 01 |
+| [04 - A nested host and its attachments cross by the pair](task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md) | implemented | 01 |
+| [05 - An agent in a machine works at the machine path](task-05-an-agent-in-a-machine-works-at-the-machine-path.md) | implemented | 04 |
+| [06 - The computer suite runs on a Windows machine](task-06-the-computer-suite-runs-on-a-windows-machine.md) | implemented | 02, 03, 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -100,8 +100,8 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`.
-- **Next action:** [task-01-a-host-path-has-a-machine-path.md](task-01-a-host-path-has-a-machine-path.md).
+- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`. Tasks 01 to 06 implemented 2026-10-19 on Softov's Windows machine: a host path crosses into a machine through `machinePathOf` and back through `hostPathOf`, and the computer suite passes on Windows apart from what is POSIX by nature.
+- **Next action:** Softov runs `.project/pending/windows-machine-paths-checks.md` on Windows with Docker Desktop: it answers the open question and is task 06 step 4.
 - **Open questions:**
   1. How Docker Desktop reports a Windows bind's `Source` - proposed: read it on a Windows machine with Docker Desktop in task 03, and match both spellings if it differs.
 - **Watch out for:** on Linux and macOS the pair is the identity, so a Linux run proves nothing about the translation; only a Windows run does.

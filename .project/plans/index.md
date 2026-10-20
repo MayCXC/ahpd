@@ -55,7 +55,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | active 2026-10-16; tasks 01 to 04 implemented | 33 | 33 p4 |
 | [33 p6 - The Windows run finishes clean](daemon/33-p6-the-windows-run-finishes-clean/plan.md) | medium | active 2026-10-18; tasks 01 to 04 and 06 to 15 implemented, task 05 todo | 33 | 33 p4 |
-| [33 p7 - A Windows folder has a path in the machine](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | medium | planned 2026-10-19; tasks 01 to 06 todo | 33 p6 | - |
+| [33 p7 - A Windows folder has a path in the machine](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, the Docker Desktop check pending | 33 p6 | - |
 | [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | active 2026-10-19; tasks 01 and 02 implemented | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | planned 2026-10-18; 6 tasks implemented, 0 done | daemon 09, daemon 13 | - |
 

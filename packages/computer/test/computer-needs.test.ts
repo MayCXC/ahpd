@@ -1,3 +1,4 @@
+import { machinePathOf } from '@ahpd/sdk';
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -153,7 +154,7 @@ it('turns resolved needs into flags, a copy, a label and a same-path folder', as
     `${configJson}:/ahpd/claude/.claude.json:ro`,
     // The folder a session works in, at the same path, so the CLI keys its
     // history the same way inside and out.
-    `${folder}:${folder}`,
+    `${folder}:${machinePathOf(folder)}`,
   ]);
   expect(box.env).toEqual({ ANTHROPIC_API_KEY: 'from-the-agent' });
   // The variable reached the machine by name: the value was in docker's own
@@ -162,7 +163,7 @@ it('turns resolved needs into flags, a copy, a label and a same-path folder', as
   expect(made.slice(made.indexOf('-e'), made.indexOf('-e') + 2)).toEqual(['-e', 'ANTHROPIC_API_KEY']);
   expect(held.calls.flat().filter((one) => one.includes('from-the-agent'))).toEqual([]);
   expect(box.labels).toMatchObject({ 'ahpd.computer': '1', 'ahpd.agents': 'claude' });
-  expect(box.workdir).toBe(folder);
+  expect(box.workdir).toBe(machinePathOf(folder));
 
   // A copy-in needs the container to exist and not be running, so the machine
   // is created, then copied into, then started. The inspect and the list before
@@ -217,12 +218,12 @@ it('mounts one entry where the folder is named as a mount as well', async () => 
     args: [FIXTURE],
     env: { DOCKER_FAKE_STATE: state },
     sessionSetting: false,
-    profiles: { claude: { agents: ['claude'], folder, mounts: [`${folder}:${folder}`] } },
+    profiles: { claude: { agents: ['claude'], folder, mounts: [`${folder}:${machinePathOf(folder)}`] } },
   }, [agent('claude', {})]);
   await providerOf(options).write('computer://box', { data: JSON.stringify({ profile: 'claude' }), encoding: 'utf-8' });
 
   const held = JSON.parse(readFileSync(state, 'utf8')) as Held;
-  expect(held.machines[0]?.mounts).toEqual([`${folder}:${folder}`]);
+  expect(held.machines[0]?.mounts).toEqual([`${folder}:${machinePathOf(folder)}`]);
 });
 
 it('fills a need from the profile over the plugin option over the agent', async () => {
@@ -551,10 +552,10 @@ it('refuses a target two mounts land at, and makes one that only says it once', 
   );
 
   // The same target from the profile's own folder, which the Docker route
-  // mounts at the path it has here.
+  // mounts at its machine path.
   const withFolder = await bad(
     withAgents({ claude: { agents: ['claude'], folder: good } }),
-    [agent('claude', { claudeConfigDirectory: { directory: other, target: good, required: true } })],
+    [agent('claude', { claudeConfigDirectory: { directory: other, target: machinePathOf(good), required: true } })],
     { profile: 'claude' },
   );
   expect(withFolder.message).toMatch(/need claudeConfigDirectory and the folder .* both land at/);
@@ -1450,7 +1451,8 @@ it('mounts a part need\'s fallback when the part will not build, labelled as the
   expect(box?.labels?.['ahpd.parts']).toBe(`${at('node')},claude@host`);
   const said = lines.filter((one) => one.includes('the part claude'));
   expect(said).toHaveLength(1);
-  expect(said[0]).toMatch(new RegExp(`box is made with ${binary} mounted at /usr/local/bin/claude in place of the part claude, which could not be built: .*failed to solve`));
+  expect(said[0]).toContain(`box is made with ${binary} mounted at /usr/local/bin/claude in place of the part claude, which could not be built: `);
+  expect(said[0]).toMatch(/could not be built: .*failed to solve/);
   expect(await machineRefusal(options.computers, 'box', 'clauder', 'clauder:/one')).toBeUndefined();
 });
 

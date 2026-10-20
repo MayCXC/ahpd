@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { createHash } from 'node:crypto';
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -177,7 +178,8 @@ it('gives the seeded files to the machine’s user, and leaves a root machine’
   expect(held(rooted).calls.filter((one) => one.includes('chown') || one.includes('id'))).toEqual([]);
 });
 
-it('never follows a link inside a seeded directory, and says so once', async () => {
+// POSIX-only: it links a file, which Windows allows only with a privilege.
+it.skipIf(!posix)('never follows a link inside a seeded directory, and says so once', async () => {
   const dir = temp();
   const state = join(dir, 'docker.json');
   const skills = join(dir, 'skills');
@@ -197,7 +199,8 @@ it('never follows a link inside a seeded directory, and says so once', async () 
   ]);
 });
 
-it('follows a seed that is itself a link, once', async () => {
+// POSIX-only: it links a file, which Windows allows only with a privilege.
+it.skipIf(!posix)('follows a seed that is itself a link, once', async () => {
   const dir = temp();
   const state = join(dir, 'docker.json');
   writeFileSync(join(dir, 'real.json'), '{}');

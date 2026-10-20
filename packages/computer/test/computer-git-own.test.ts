@@ -1,3 +1,5 @@
+import { posix } from '../../../tools/posix.ts';
+import { machinePathOf } from '@ahpd/sdk';
 import { execFileSync } from 'node:child_process';
 import { existsSync, lstatSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -89,7 +91,7 @@ it('answers a main checkout the host\'s objects read-only, and its git directory
   expect(mounts.objects).toBe(MACHINE_OBJECTS);
   // And the machine's own git directory, which is a volume landed over the
   // tree's `.git`: a main checkout's is a directory, so a volume mounts there.
-  expect(mounts.volume).toBe(join(repo, '.git'));
+  expect(mounts.volume).toBe(machinePathOf(join(repo, '.git')));
   expect(mounts.gitfile).toBeUndefined();
   // Nothing else of the host's is answered, and nothing was made for it.
   expect(existsSync(join(state, GITFILE))).toBe(false);
@@ -104,7 +106,7 @@ it('answers a linked worktree the host\'s objects, a gitfile over its .git, and 
   // this host wrote stands in for the tree's `.git`.
   expect(mounts.binds).toEqual([
     { path: join(gitDir, 'objects'), target: MACHINE_OBJECTS, readOnly: true },
-    { path: join(state, GITFILE), target: join(tree, '.git'), readOnly: true },
+    { path: join(state, GITFILE), target: machinePathOf(join(tree, '.git')), readOnly: true },
   ]);
   expect(mounts.objects).toBe(MACHINE_OBJECTS);
   expect(mounts.volume).toBe(MACHINE_GIT_TARGET);
@@ -116,7 +118,8 @@ it('refuses a git directory holding a symbolic link, naming it and what it point
   const { repo, tree, gitDir, state } = twoRepositories();
   rmSync(join(gitDir, 'logs'), { recursive: true, force: true });
   mkdirSync(join(repo, 'elsewhere'));
-  symlinkSync(join(repo, 'elsewhere'), join(gitDir, 'logs'));
+  // A junction on Windows, which links a folder with no privilege and reads as a link.
+  symlinkSync(join(repo, 'elsewhere'), join(gitDir, 'logs'), posix ? 'dir' : 'junction');
 
   // git writes no link under `logs/`, and the host's own git follows one
   // wherever it points - so it is named, with what it names, and nothing is

@@ -79,7 +79,21 @@ held.calls.push(args);
 const keep = () => {
   const scratch = `${state}.${process.pid}.tmp`;
   writeFileSync(scratch, JSON.stringify(held));
-  renameSync(scratch, state);
+  /*
+   * Again on a refusal: Windows will not rename over a file another process
+   * has open, and a test reading the state between calls is one. Linux never
+   * refuses, so this loop runs once there.
+   */
+  for (let tries = 0; ; tries++) {
+    try {
+      renameSync(scratch, state);
+      return;
+    }
+    catch (error) {
+      if ((error.code !== 'EPERM' && error.code !== 'EBUSY' && error.code !== 'EACCES') || tries >= 100) throw error;
+      Atomics.wait(pause, 0, 0, 10);
+    }
+  }
 };
 
 const verb = args[0];

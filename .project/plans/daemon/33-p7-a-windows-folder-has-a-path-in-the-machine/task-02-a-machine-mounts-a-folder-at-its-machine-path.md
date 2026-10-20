@@ -1,6 +1,6 @@
 ---
 title: A machine mounts a folder at its machine path
-status: todo
+status: implemented
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: computer
 refs:
@@ -35,3 +35,12 @@ Every mount and working directory a machine is made with names the folder by its
 
 - On Windows a machine's mounts, `-w` and dev container override name `/c/...` targets and `C:\...` sources.
 - On Linux nothing in a machine's arguments changes.
+
+## Resume
+
+Done 2026-10-19. Not reviewed.
+
+The folder's mount, `-w`, the dev container's workspace mount and folder, the git mounts' targets and `seedGit`'s `--work-tree` are machine paths; every source stays the host path, and `seedOf` reads the host's tree.
+The computer tests expect each target as `machinePathOf(...)`, and a fixture standing for a machine Docker already holds names machine paths too.
+On Softov's Windows machine, in the runner-like setup: the computer suite passes 397 with 53 skipped, the full unit suite passes, and `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The Linux half of Validation is the CI run of the branch; on Linux and macOS the pair is the path itself.

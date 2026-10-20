@@ -1,3 +1,5 @@
+import { posix } from '../../../tools/posix.ts';
+import { machinePathOf } from '@ahpd/sdk';
 import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -267,7 +269,8 @@ it('makes a computer from a folder\'s devcontainer.json, and lists it by its fol
   expect(overrideOf(devState)?.config).toEqual({ image: 'base', runArgs: ['--label', 'ahpd.name=box'] });
   // Only its own user may read it while it holds environment values, and it is
   // gone once `up` is answered.
-  expect(overrideOf(devState)?.mode).toBe(0o600);
+  // POSIX-only: Windows has no file mode to hold it to.
+  if (posix) expect(overrideOf(devState)?.mode).toBe(0o600);
   expect(overrideOf(devState)?.gone).toBe(true);
   // The container the CLI reported is what the provider lists, under the name
   // the create gave it, and the folder is what the machine is read by.
@@ -743,7 +746,9 @@ it('binds one entry where a copy-in is the same bind as a need', async () => {
 /*
  * Task 05: VS Code's connect finds or makes the same computer.
  */
-it('connect twice for one folder makes one container', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('connect twice for one folder makes one container', async () => {
   const dir = temp();
   const devState = join(dir, 'dev.json');
   const dockerState = join(dir, 'docker.json');
@@ -797,7 +802,9 @@ it('connect twice for one folder makes one container', async () => {
   await answered(dockerState, 3);
 });
 
-it('installs the server in a container at the daemon\'s version, from the plugin\'s context', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('installs the server in a container at the daemon\'s version, from the plugin\'s context', async () => {
   const root = temp();
   const devState = join(root, 'dev.json');
   const dockerState = join(root, 'docker.json');
@@ -861,12 +868,12 @@ it('refuses a folder outside the list on every route, and makes one inside it', 
   await expect(provider.write('computer://box', {
     data: JSON.stringify({ devcontainer: { folder: outside } }),
     encoding: 'utf-8',
-  })).rejects.toThrow(new RegExp(`${outside} is not one of them`));
-  await expect(starting(`devcontainer://${outside}`)).rejects.toThrow(new RegExp(`${outside} is not one of them`));
+  })).rejects.toThrow(`${outside} is not one of them`);
+  await expect(starting(`devcontainer://${outside}`)).rejects.toThrow(`${outside} is not one of them`);
   await expect(loaded.containers?.connect(
     { connectionId: 'a', workspaceFolder: outside, name: 'Box' },
     silent,
-  )).rejects.toThrow(new RegExp(`${outside} is not one of them`));
+  )).rejects.toThrow(`${outside} is not one of them`);
 
   // The picker's row is gone for it and still there for the folder named.
   const rowFor = async (where: string): Promise<boolean> =>
@@ -1001,7 +1008,8 @@ it('hands every route the folder as it resolves, and refuses one that is not a p
   const dockerState = join(dir, 'docker.json');
   const folder = workspace(dir);
   const link = join(dir, 'linked');
-  symlinkSync(folder, link);
+  // A junction on Windows, which links a folder with no privilege and resolves as a link does.
+  symlinkSync(folder, link, posix ? 'dir' : 'junction');
   const there = realpathSync(link);
   const { options: loaded } = await load(optionsOf(devState, dockerState, {
     devcontainer: {
@@ -1105,7 +1113,8 @@ it('takes the override file away after a failed up, as after a good one', async 
     encoding: 'utf-8',
   })).rejects.toThrow(/would not pull/);
 
-  expect(overrideOf(devState)?.mode).toBe(0o600);
+  // POSIX-only: Windows has no file mode to hold it to.
+  if (posix) expect(overrideOf(devState)?.mode).toBe(0o600);
   expect(overrideOf(devState)?.gone).toBe(true);
   expect(dockerHeld(dockerState).machines).toEqual([]);
   await answered(dockerState, 2);
@@ -1393,7 +1402,7 @@ it('answers the container its labels already name, and refuses a second name for
   await expect(provider.write('computer://other', {
     data: JSON.stringify({ devcontainer: { folder } }),
     encoding: 'utf-8',
-  })).rejects.toThrow(new RegExp(`${folder} is already the computer box`));
+  })).rejects.toThrow(`${folder} is already the computer box`);
 
   expect(devHeld(devState).calls.filter((one) => one[0] === 'up')).toHaveLength(2);
   // Both answered the same container, the listing holds one machine, and the
@@ -1748,7 +1757,8 @@ it('mounts a worktree folder\'s git directory through the override, and runs eac
   mkdirSync(join(tree, '.devcontainer'));
   writeFileSync(join(tree, '.devcontainer', 'devcontainer.json'), '{ "image": "base" }');
   const gitDir = join(repo, '.git');
-  const me = `${String(process.getuid?.())}:${String(process.getgid?.())}`;
+  // Windows has no uid: a machine made there runs as its image's own user.
+  const me = process.getuid === undefined ? undefined : `${String(process.getuid())}:${String(process.getgid?.())}`;
 
   const { options: loaded, problems } = await loadPlugins(
     [{ name: SOURCE, options: optionsOf(devState, dockerState) }],
@@ -1776,20 +1786,20 @@ it('mounts a worktree folder\'s git directory through the override, and runs eac
    * `a-machine-commits-in-its-own-repository-and-the-host-fetches-it`.
    */
   expect(config.mounts).toEqual([
-    `type=bind,source=${gitDir}/objects,target=${MACHINE_OBJECTS},readonly`,
-    `type=bind,source=${join(dir, 'config', 'computers.gitfile')},target=${tree}/.git,readonly`,
+    `type=bind,source=${join(gitDir, 'objects')},target=${MACHINE_OBJECTS},readonly`,
+    `type=bind,source=${join(dir, 'config', 'computers.gitfile')},target=${machinePathOf(join(tree, '.git'))},readonly`,
     `type=volume,source=ahpd-git-${id},target=/opt/ahpd/git`,
   ]);
-  // The tree at its own path, so the `.git` file's bind lands on the file.
-  expect(config.workspaceMount).toBe(`source=${tree},target=${tree},type=bind`);
-  expect(config.workspaceFolder).toBe(tree);
-  expect(config.runArgs).toEqual(expect.arrayContaining(['--label', `ahpd.user=${me}`, '--label', 'ahpd.git=fetch']));
+  // The tree at its machine path, so the `.git` file's bind lands on the file.
+  expect(config.workspaceMount).toBe(`source=${tree},target=${machinePathOf(tree)},type=bind`);
+  expect(config.workspaceFolder).toBe(machinePathOf(tree));
+  expect(config.runArgs).toEqual(expect.arrayContaining([...(me === undefined ? [] : ['--label', `ahpd.user=${me}`]), '--label', 'ahpd.git=fetch']));
 
   // Every `docker exec` into it as the host user: the probe at create, the
   // seed's own git commands, and a command after.
   const how = await loaded.computers?.how(id, { command: 'true' });
   const args = how?.args ?? [];
-  expect(args[args.indexOf('-u') + 1]).toBe(me);
+  if (me !== undefined) expect(args[args.indexOf('-u') + 1]).toBe(me);
   const commands = dockerHeld(dockerState).commands;
   expect(commands.length).toBeGreaterThan(0);
   /*
@@ -1799,9 +1809,12 @@ it('mounts a worktree folder\'s git directory through the override, and runs eac
    * probe, the seed's git, and the host's own afterwards - is the host user's,
    * so the agent's files in the tree are the host user's too.
    */
-  const chowns = commands.filter((one) => one.command.includes('chown'));
-  expect(chowns.map((one) => one.user)).toEqual(['0']);
-  expect(commands.filter((one) => !one.command.includes('chown')).every((one) => one.user === me)).toBe(true);
+  // Where there is a host user: Windows has none, and its machine runs as the image's.
+  if (me !== undefined) {
+    const chowns = commands.filter((one) => one.command.includes('chown'));
+    expect(chowns.map((one) => one.user)).toEqual(['0']);
+    expect(commands.filter((one) => !one.command.includes('chown')).every((one) => one.user === me)).toBe(true);
+  }
   await client.handle({ method: 'disposeSession', params: { channel: 'ahp-session:/one' } });
   await answered(dockerState, 2);
 });

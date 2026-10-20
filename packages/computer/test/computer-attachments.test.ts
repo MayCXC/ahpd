@@ -1,3 +1,4 @@
+import { hostPathOf, machinePathOf } from '@ahpd/sdk';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -226,6 +227,9 @@ const DISPOSABLE = { claude: { title: 'Claude', image: 'node:22', disposable: tr
 /** The folder the host keeps one session's own files in, as the store names it. */
 const folderOf = (sessions: string, id: string): string => join(sessions, 'attachments', id);
 
+/** Whether a path is a `.png` under a folder inside the machine, whose separators are always `/`. */
+const underFolder = (path: string, inside: string): boolean => path.startsWith(`${inside}/`) && path.endsWith('.png');
+
 it('writes a session\'s attachment into its machine at the path the host wrote', async () => {
   const dir = temp();
   const dockerState = join(dir, 'docker.json');
@@ -248,13 +252,13 @@ it('writes a session\'s attachment into its machine at the path the host wrote',
     'sh', '-c', 'mkdir -p "$(dirname "$1")" && cat > "$1" && chmod 0444 "$1"',
   ]);
   const path = copy.command[copy.command.length - 1] as string;
-  // The path the message names, which is the one the host wrote the file to.
-  expect(path).toMatch(new RegExp(`^${folderOf(sessions, 'one')}/.*\\.png$`));
+  // At the machine path of the file the message names, which the host wrote.
+  expect(underFolder(path, machinePathOf(folderOf(sessions, 'one')))).toBe(true);
   expect(Buffer.from(copy.input ?? '', 'base64')).toEqual(PNG);
   // And the bytes crossed as a file on this host, written before the machine
   // was asked for them.
-  expect(existsSync(path)).toBe(true);
-  expect(readFileSync(path)).toEqual(PNG);
+  expect(existsSync(hostPathOf(path))).toBe(true);
+  expect(readFileSync(hostPathOf(path))).toEqual(PNG);
 
   // Nothing was mounted to make that work: a running machine takes no new
   // mount, and this one was made before the message existed.
@@ -282,8 +286,8 @@ it('writes each session\'s own file into the machine the two share', async () =>
   const paths = writes(dockerState).map((one) => one.command[one.command.length - 1] as string);
   // Each under its own session's folder, and both into the one machine: a
   // machine is nobody's, so what it is handed is per session.
-  expect(first(paths)).toMatch(new RegExp(`^${folderOf(sessions, 'one')}/.*\\.png$`));
-  expect(paths[1]).toMatch(new RegExp(`^${folderOf(sessions, 'two')}/.*\\.png$`));
+  expect(underFolder(first(paths), machinePathOf(folderOf(sessions, 'one')))).toBe(true);
+  expect(underFolder(paths[1] ?? '', machinePathOf(folderOf(sessions, 'two')))).toBe(true);
   expect(writes(dockerState).map((one) => one.id)).toEqual([made.name, made.name]);
 });
 
@@ -308,7 +312,7 @@ it('writes it into a dev container the same way', async () => {
   const copy = await written(dockerState);
   const path = copy.command[copy.command.length - 1] as string;
   expect(copy.user).toBe('0');
-  expect(path).toMatch(new RegExp(`^${folderOf(sessions, 'one')}/.*\\.png$`));
+  expect(underFolder(path, machinePathOf(folderOf(sessions, 'one')))).toBe(true);
   expect(Buffer.from(copy.input ?? '', 'base64')).toEqual(PNG);
   // And the CLI was handed no mount for the folder either.
   const config = first(devHeld(devState).overrides ?? []).config;
@@ -334,7 +338,7 @@ it('takes the folder back out of the machine when the session goes', async () =>
   // The folder this one session's files are under, removed with whatever is
   // in it: the machine outlives the session and keeps nothing of it.
   expect(removals(dockerState).map((one) => ({ user: one.user, command: one.command }))).toEqual([
-    { user: '0', command: ['rm', '-rf', folderOf(sessions, 'one')] },
+    { user: '0', command: ['rm', '-rf', machinePathOf(folderOf(sessions, 'one'))] },
   ]);
 });
 
