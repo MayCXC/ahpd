@@ -65,6 +65,7 @@ Softov's run on Windows 10 reported 17 failures in agent-claude and about 200 in
 | The Windows job reports and does not block a merge until p2, p3 and p5 land; p4 makes it block | Softov, 2026-10-16, chose "Report only until p2 and p3 land, then p4 makes it required" for "How does the Windows job start?" | p1, p4 |
 | Only the `check` job runs on Windows | Softov, 2026-10-16, chose "`check` only" for "Which jobs run on Windows?" | p1 |
 | The plan is a parent with five children | (defaulted: the work passes eight tasks) | - |
+| An eighth child, p8, takes the process tests on Windows | Softov, 2026-10-20, chose "New child plan: process tests" | p8 |
 | A sixth child, p6, takes the Windows run's findings that p2 and p5 do not cover | Softov, 2026-10-18, chose "New child plan p6" for "Where should the Windows session's daemon/33 findings go?" | p6 |
 | The domain is daemon | (defaulted: no domain covers the repository's own checks, and daemon owns the build) | - |
 
@@ -84,8 +85,9 @@ Child plans, each for one cause.
 | [p3 - POSIX-only tests say why they skip](../33-p3-posix-only-tests-say-why-they-skip/plan.md) | sdk, agent-claude | built | p1 |
 | [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | built | p2, p3, p5, p6 |
 | [p5 - Terminals run on Windows](../33-p5-terminals-run-on-windows/plan.md) | sdk | built | p1 |
-| [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | active | p1 |
-| [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | active | p6 |
+| [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | built | p1 |
+| [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | built | p6 |
+| [p8 - The process tests pass on Windows](../33-p8-the-process-tests-pass-on-windows/plan.md) | sdk, tests | active | p6 |
 
 ## Risks and tradeoffs
 
@@ -94,8 +96,8 @@ Child plans, each for one cause.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p4 are built, closed 2026-10-20. p6 and p7 are active.
-- **Next action:** finish p6 task 05 and the p7 check on Docker Desktop.
+- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p4 are built, closed 2026-10-20. p6 and p7 are built, closed 2026-10-20. p8 is active 2026-10-20: its tasks are implemented and checked on a Windows VM.
+- **Next action:** p8.
 - **Open questions:** none.
 - **Watch out for:** the release workflow runs the same checks, and it stays on Linux.
 

@@ -9,6 +9,7 @@
  * the daemon reads without touching the machine it runs on.
  */
 
+import { posix } from '../../../tools/posix.ts';
 import { spawn } from 'node:child_process';
 import type { ChildProcess } from 'node:child_process';
 import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -598,7 +599,9 @@ describe('a request signs in', () => {
     expect(asRoot.status).toBe(400);
   }, 30000);
 
-  it('serves a plugin update only to the deployment token, and answers what moved', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('serves a plugin update only to the deployment token, and answers what moved', async () => {
     writeFileSync(join(home, 'ahpd', 'package.json'), JSON.stringify({ dependencies: { 'left-pad': '^1.0.0', 'right-pad': '^1.0.0' } }));
     mkdirSync(join(home, 'ahpd', 'node_modules', 'left-pad'), { recursive: true });
     writeFileSync(join(home, 'ahpd', 'node_modules', 'left-pad', 'package.json'), JSON.stringify({ name: 'left-pad', version: '1.0.0' }));
@@ -738,7 +741,9 @@ describe('a request signs in', () => {
     expect((await get(`${base}/v1/models`, minted.secret)).status).toBe(401);
   }, 30000);
 
-  it('answers while a served install is holding npm', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('answers while a served install is holding npm', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm({ FAKE_NPM_SLEEP: '2' }));
     const installing = post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
     // Inside npm by now: the fake waits two seconds before it says anything.
@@ -752,7 +757,9 @@ describe('a request signs in', () => {
     expect((await installing).status).toBe(200);
   }, 30000);
 
-  it('runs two served installs one after the other, and names both', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('runs two served installs one after the other, and names both', async () => {
     const log = join(home, 'npm.log');
     const one = await daemon(
       { httpApi: true,plugins: [BACKEND] },
@@ -773,7 +780,9 @@ describe('a request signs in', () => {
     expect(steps).toEqual(['start', 'end', 'start', 'end']);
   }, 30000);
 
-  it('keeps npm\'s reason in a served install that fails', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('keeps npm\'s reason in a served install that fails', async () => {
     const one = await daemon(
       { httpApi: true,plugins: [BACKEND] },
       ['--connection-token', 'root-secret'],
@@ -784,7 +793,9 @@ describe('a request signs in', () => {
     expect((await answered.json() as { message: string }).message).toContain('npm error code E404');
   }, 30000);
 
-  it('tells a served install to restart the daemon that answered', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('tells a served install to restart the daemon that answered', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm());
     const answered = await post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });
     expect(answered.status).toBe(200);
@@ -1075,7 +1086,9 @@ describe('--remote', () => {
     expect(blank.code).toBe(2);
   }, 40000);
 
-  it('keeps its manifest cache private to this user', async () => {
+  // A directory's `0700` is a POSIX file mode; Windows keeps only a read-only
+  // flag, so the mode this reads is not one it can have there.
+  it.skipIf(!posix)('keeps its manifest cache private to this user', async () => {
     const { url } = await remote();
     // The run's own temporary directory, so a shared path this machine already
     // has from another day is not what the case is about.
@@ -1090,7 +1103,9 @@ describe('--remote', () => {
     expect(existsSync(join(shared, 'ahpd-remote'))).toBe(false);
   }, 30000);
 
-  it('tightens a cache directory that was already there', async () => {
+  // A directory's `0700` is a POSIX file mode; Windows keeps only a read-only
+  // flag, so the mode this reads is not one it can have there.
+  it.skipIf(!posix)('tightens a cache directory that was already there', async () => {
     const { url } = await remote();
     const at = join(cache, 'ahpd', 'remote');
     mkdirSync(at, { recursive: true });

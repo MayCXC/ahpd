@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdirSync, mkdtempSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
@@ -44,7 +45,7 @@ describe('a command typed into the conversation', () => {
 
   /** Wait for a turn to end, however it ended: the named one, or any. */
   const ended = async (p: ReturnType<typeof peer>, chatUri: string, turnId?: string) => {
-    for (let i = 0; i < 80; i++) {
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
       await new Promise((r) => { setTimeout(r, 25); });
       if (actions(p, chatUri).some((e) => e.action.type === 'chat/turnComplete'
         && (turnId === undefined || e.action.turnId === turnId))) break;
@@ -314,7 +315,7 @@ describe('a shell on this machine', () => {
 
   /** Wait for the shell to actually say something. */
   const spoken = async (p: ReturnType<typeof peer>, uri: string, want: string) => {
-    for (let i = 0; i < 60; i++) {
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
       await new Promise((r) => { setTimeout(r, 50); });
       const said = actions(p, uri)
         .filter((e) => e.action.type === 'terminal/data')
@@ -484,7 +485,7 @@ describe('a shell on this machine', () => {
       method: 'dispatchAction',
       params: { channel: uri, action: { type: 'terminal/input', data: 'exit 3\n' } },
     });
-    for (let i = 0; i < 60; i++) {
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
       await new Promise((r) => { setTimeout(r, 50); });
       if (actions(p, uri).some((e) => e.action.type === 'terminal/exited')) break;
     }
@@ -528,7 +529,7 @@ describe('a shell on this machine', () => {
       method: 'dispatchAction',
       params: { channel: uri, action: { type: 'terminal/input', data: 'exit 5\n' } },
     });
-    for (let i = 0; i < 60; i++) {
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
       await new Promise((r) => { setTimeout(r, 50); });
       if (actions(p, uri).some((e) => e.action.type === 'terminal/exited')) break;
     }
@@ -650,7 +651,7 @@ describe('interrupting a terminal', () => {
       method: 'dispatchAction',
       params: { channel: uri, action: { type: 'terminal/input', data: ETX } },
     });
-    for (let i = 0; i < 40; i++) {
+    for (const until = Date.now() + WAIT_MS; Date.now() < until;) {
       await new Promise((r) => { setTimeout(r, 50); });
       if (actions(p, uri).some((e) => e.action.type === 'terminal/exited')) break;
     }

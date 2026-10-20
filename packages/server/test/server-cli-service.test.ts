@@ -6,6 +6,7 @@
  * it does is what the case names - here, starting the daemon the unit would have
  * started.
  */
+import { posix } from '../../../tools/posix.ts';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join, relative } from 'node:path';
@@ -35,7 +36,9 @@ const unitPath = (): string => join(home, 'systemd', 'user', 'ahpd.service');
 const started = (): string =>
   `AHPD_SERVICE=systemd $(sed -n 's/^ExecStart=//p' '${unitPath()}') --port 0 --plugin ${BACKEND} --sessions memory --automations memory --no-update-check >/dev/null 2>&1 &`;
 
-describe('service install', () => {
+// A service is a systemd unit or a launchd agent, and Windows has neither:
+// `ahpd service install` refuses there, which `service.test.ts` asks directly.
+describe.skipIf(!posix)('service install', () => {
   it('writes the unit, enables it, and prints where the daemon it started is', async () => {
     const did = await cli(['service', 'install', '--config-file', config], { env: fakeSystemctl(started()) });
     expect({ code: did.code, stderr: did.stderr }).toEqual({ code: 0, stderr: '' });
@@ -105,7 +108,8 @@ describe('service install', () => {
   }, 60000);
 });
 
-describe('service uninstall', () => {
+// The same: a service to take out exists only under systemd or launchd.
+describe.skipIf(!posix)('service uninstall', () => {
   it('takes the service out, stops the daemon it held, and leaves no file', async () => {
     const installed = await cli(['service', 'install', '--config-file', config], { env: fakeSystemctl(started()) });
     expect(installed.code).toBe(0);

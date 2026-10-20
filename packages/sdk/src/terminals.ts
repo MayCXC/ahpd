@@ -132,6 +132,27 @@ const quoted = (word: string): string => `'${word.replaceAll("'", "'\\''")}'`;
 const psQuoted = (word: string): string => `'${word.replaceAll("'", "''")}'`;
 
 /**
+ * One argument escaped for the C runtime, for Windows PowerShell 5.1 to pass on.
+ *
+ * Windows PowerShell builds a program's command line by wrapping a word with
+ * whitespace in double quotes and copying the rest as it is, so a `"` inside a
+ * word ends the program's argument there, a trailing `\` escapes the closing
+ * quote, and an empty word is dropped. The C runtime's own rules undo this
+ * escape: `\"` is a quote, and backslashes count only in front of one.
+ * PowerShell 7.3 escapes the words itself, so this is for `powershell.exe`
+ * alone.
+ */
+const crtEscaped = (word: string): string => {
+  if (word === '') return '""';
+  const escaped = word.replace(/(\\*)"/g, '$1$1\\"');
+  return /\s/.test(word) ? escaped.replace(/(\\+)$/, '$1$1') : escaped;
+};
+
+/** Whether a shell is Windows PowerShell, which passes a program's words unescaped. */
+const isWindowsPowerShell = (shell: string): boolean =>
+  ['powershell', 'powershell.exe'].includes(basename(shell).toLowerCase());
+
+/**
  * One word, quoted for `cmd.exe`.
  *
  * Double quotes, which is all `cmd.exe` has. They are enough for the spaces
@@ -191,10 +212,14 @@ const shellLine = (kind: ShellKind, line: string): string =>
  * An argv as one line for the shell of `kind`.
  *
  * PowerShell needs `&` in front of it: without the call operator, a quoted
- * path is a string and the shell prints it rather than running it.
+ * path is a string and the shell prints it rather than running it. Windows
+ * PowerShell is given the words after the program escaped for the C runtime.
  */
-const argvLine = (kind: ShellKind, argv: string[]): string => {
-  if (kind === 'powershell') return ['&', ...argv.map(psQuoted)].join(' ');
+const argvLine = (kind: ShellKind, argv: string[], windowsPowerShell = false): string => {
+  if (kind === 'powershell') {
+    const [program = '', ...words] = argv;
+    return ['&', psQuoted(program), ...words.map((word) => psQuoted(windowsPowerShell ? crtEscaped(word) : word))].join(' ');
+  }
   return argv.map(kind === 'cmd' ? cmdQuoted : quoted).join(' ');
 };
 
@@ -294,7 +319,7 @@ export function createTerminal(
     ? undefined
     : options.args === undefined
       ? options.command
-      : argvLine(kind, [options.command, ...options.args]);
+      : argvLine(kind, [options.command, ...options.args], isWindowsPowerShell(shell));
   /*
    * `cmd.exe` takes its line inside one more pair of double quotes, which its
    * `/s` strips. Not decoration: Node turns an argv into a Windows command

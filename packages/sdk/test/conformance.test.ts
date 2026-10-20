@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { tmpdir } from 'node:os';
 import { beforeEach, expect, it, vi } from 'vitest';
 import {
@@ -483,7 +484,8 @@ it('reduces a terminal, from the bytes a shell wrote', async () => {
   dispatch(client, uri, { type: 'terminal/input', data: 'echo conformance-marker\n' });
   const heard = (): boolean => p.notes.some((n) => n.method === 'action'
     && JSON.stringify((n.params as { action: unknown }).action).includes('conformance-marker'));
-  for (let i = 0; i < 100 && !heard(); i++) await new Promise((r) => { setTimeout(r, 20); });
+  // Windows PowerShell takes seconds to start, so the shell is given the case's budget.
+  for (const until = Date.now() + WAIT_MS; !heard() && Date.now() < until;) await new Promise((r) => { setTimeout(r, 20); });
 
   const state = held(p, { [uri]: first.snapshot.state })[uri] as {
     content: { type: string; value?: string; output?: string }[]; isPty: boolean;
