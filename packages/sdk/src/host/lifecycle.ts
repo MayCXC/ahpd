@@ -82,6 +82,11 @@ export type Attached =
 export interface Lifecycle {
   /** A session gone, with everything it held, and the backend's own copy of it. */
   removeSession(uri: string, acting?: Principal | Owner): Promise<void>;
+  /**
+   * The sessions a restart has taken out of `sessions` and not yet put back, by
+   * uri. A listing counts them as running, so it never prunes their records.
+   */
+  respawning: Map<string, Held>;
   /** Start a session again, in the directory its config now names. */
   restart(
     uri: string,
@@ -187,6 +192,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     spawn, keepTitle, keepProvider, forgetChats,
     sessionAdded, forgetSent, activeSessionsMoved,
   } = ctx;
+
+  const respawning = new Map<string, Held>();
 
   /** The folders linked into a session's tree, from the config it was made with. */
   const linkedOf = (uri: string): string[] => symlinkFolders(kept.config(idOf(uri)) ?? decided.get(uri) ?? {});
@@ -699,6 +706,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      * place: the clients watching it there still watch it.
      */
     const previous = dirOf(uri);
+    respawning.set(uri, held);
     sessions.delete(uri);
     if (previous !== undefined && previous !== to) stopUnwatched(previous);
     try {
@@ -814,6 +822,9 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
         },
       });
       throw error;
+    }
+    finally {
+      respawning.delete(uri);
     }
     log(`restarted ${uri}${to === undefined ? '' : ` in ${to}`}`);
     /*
@@ -1719,7 +1730,7 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
   };
 
   return {
-    removeSession, restart, moveSession, restartChat, chatIdOf, deletedChat, backendsOwn, isolated,
+    removeSession, respawning, restart, moveSession, restartChat, chatIdOf, deletedChat, backendsOwn, isolated,
     shelve, restore, beginOrRun, beginTurn, modelIn, messageFrom, messageAttachments, openSession,
   };
 }
