@@ -109,14 +109,14 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 ## Resume state
 
 - **Done so far:** built 2026-10-16. Tasks 01 to 07 are done, and task 04 is ahpw commit `e500c19`. See [implemented.md](implemented.md).
-- **Next action:** the checks by hand in [linux-checks.md](../../../pending/linux-checks.md), which tick the first four checklist lines.
+- **Next action:** the two checks left in [linux-checks.md](../../../pending/linux-checks.md): the old owner, and the ahpw page in a browser. The webhook and scope checks passed on 2026-10-20.
 - **Open questions:** none.
 - **Watch out for:** a test that asserts an `@ahpd/<x>` id, such as a root config key or a `plugin @ahpd/x loading` line, changes to the slug. A spec written as `@ahpd/<x>` is a package name and stays. ahpw is a separate repository, and task 04 is committed there.
 
 ## Final verification checklist
 
-- [ ] A daemon with `@ahpd/webhook` serves `/plugins/webhook/<endpoint>`.
-- [ ] A plugin that exports `name = '@acme/x'` is skipped, and the problem line names the slug rule.
+- [x] A daemon with `@ahpd/webhook` serves `/plugins/webhook/<endpoint>`.
+- [x] A plugin that exports `name = '@acme/x'` is skipped, and the problem line names the slug rule.
 - [ ] A session saved with owner `plugin:@ahpd/bot` reads back with owner `plugin:bot`.
 - [ ] ahpw answers under `/plugins/web/`.
 - [x] `plans/index.md` updated.

@@ -19,7 +19,7 @@ A run that the first automation starts can no longer move the second one to its 
 
 - `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` exit 0. The schema is unchanged.
 - Vitest on sdk, server, agent-claude and agent-acp passes: 241 files and 4343 tests. `scheduled.test.ts` has 31 tests, and two of them are new.
-- The check by hand with a running daemon waits in [linux-checks.md](../../../pending/linux-checks.md).
+- The check by hand with a running daemon passed on 2026-10-20.
 
 ## Departures from the plan
 

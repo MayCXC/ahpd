@@ -63,11 +63,11 @@ timer -> fire -> due listener (run 1) -> store write -> onChanged -> rearm (all 
 ## Resume state
 
 - **Done so far:** built 2026-10-16. Task 01 is done: `fire` takes the whole due list before it announces any of it. See [implemented.md](implemented.md).
-- **Next action:** the check by hand in [linux-checks.md](../../../pending/linux-checks.md), which ticks the first checklist line.
+- **Next action:** none. The check by hand passed on 2026-10-20 on a second daemon: two automations due at 04:24 each started a session of their own.
 - **Open questions:** none.
 - **Watch out for:** `onChanged` must still rearm before it tells its listeners, for the reason its comment gives.
 
 ## Final verification checklist
 
-- [ ] Two automations with one schedule both run at that minute.
+- [x] Two automations with one schedule both run at that minute.
 - [x] `plans/index.md` updated.
