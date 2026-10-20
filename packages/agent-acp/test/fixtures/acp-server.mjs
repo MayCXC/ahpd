@@ -185,6 +185,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import { randomUUID } from 'node:crypto';
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 
@@ -227,14 +228,13 @@ let cwd = '/tmp';
 /**
  * The id a new session is given.
  *
- * The pid is part of it because every bridge session spawns its own server, so
- * a counter alone would name every conversation `acp-session-1` and a
- * process-wide catalogue would run them together.
+ * Unique to the conversation, as a real server's is, because every bridge
+ * session spawns its own server: a counter alone would name every conversation
+ * `acp-session-1` and a process-wide catalogue would run them together. A pid
+ * is not enough either, since Windows hands a gone process's pid to the next.
  */
-let opened = 0;
 const nextSession = () => {
-  opened += 1;
-  session = `acp-session-${process.pid}-${opened}`;
+  session = `acp-session-${randomUUID()}`;
   return session;
 };
 
