@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
 import { machinePathOf } from '@ahpd/sdk';
-import type { Agent, Bag, MachineNeed, PluginHost, Session, Vault } from '@ahpd/sdk';
+import type { Agent, Bag, MachineNeed, OpenedTerminal, OpenTerminal, PluginHost, Session, SpawnOptions, Vault } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { fileResources } from '../../sdk/src/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -423,6 +423,109 @@ it('sends no sign-in for a session on this host, which has only the daemon\'s en
   expect(requests.find((one) => one.method === 'authenticate')).toBeUndefined();
   expect(ended).toEqual(['chat/error']);
   expect(said.join('\n')).not.toContain('machine-key-value');
+});
+
+/*
+ * A terminal the server asks for: the host's terminal, and - in a session
+ * placed in a machine - the command it runs answered by `computers.how`.
+ *
+ * The fixture sends `terminal/create` at the folder the session was told, then
+ * reads the output and the exit code back through the host's terminal. On Linux
+ * and macOS the machine's path is the host's, so a spawn there succeeds either
+ * way; what these cases assert is that the command went through `how`, and that
+ * the host's terminal ran the descriptor it answered rather than the agent's
+ * own `echo`.
+ */
+const terminalIn = async (placed: boolean) => {
+  // A folder that is there and that no case removes: a server on this host runs in it.
+  const folder = join(REPO, 'packages', 'agent-acp');
+  const actions: Bag[] = [];
+  const asked: SpawnOptions[] = [];
+  const opened: OpenTerminal[] = [];
+  const agent = acpAgent({ command: process.execPath, args: [SERVER], provider: 'codex' });
+  const session = agent.create({
+    uri: `ahp-session:/terminal-${String(placed)}`,
+    chatUri: `ahp-chat:/terminal-${String(placed)}`,
+    workingDirectory: folder,
+    settings: placed ? { computer: 'computer://box' } : {},
+    trusted: () => true,
+    computers: {
+      how: async (_id: string, spawn: SpawnOptions) => {
+        asked.push(spawn);
+        // The server itself runs on this host, as the machine's descriptor for
+        // it says. The terminal is answered with a descriptor of the test's
+        // own, so what the host's terminal is handed is visibly the machine's
+        // command rather than the agent's.
+        if (spawn.command === 'echo') {
+          return { command: 'docker', args: ['exec', '-i', 'box', 'echo', 'hello from the machine'] };
+        }
+        return { command: spawn.command, args: spawn.args ?? [], ...(spawn.env === undefined ? {} : { env: spawn.env }) };
+      },
+    },
+    terminals: {
+      open: (options: OpenTerminal): OpenedTerminal => {
+        opened.push(options);
+        // What it prints depends on what it was handed, so a case that reads
+        // the prose is reading which command the host's terminal really ran.
+        const output = options.command === 'echo' ? 'hello from the shell\n' : 'hello from the machine\n';
+        return {
+          uri: `ahp-terminal:/terminal-${String(opened.length)}`,
+          output: () => ({ output, exitCode: 0 }),
+          waitForExit: async () => ({ exitCode: 0 }),
+          write: () => {},
+          resize: () => {},
+          kill: () => {},
+          release: () => {},
+        };
+      },
+    },
+    schema: () => ({ type: 'object', properties: {} }),
+    emit: (_channel: string, action: Bag) => { actions.push(action); },
+  } as never);
+  started.push(session);
+  session.begin('t1', 'term now');
+  const over = (): boolean => actions.some((one) => one.type === 'chat/turnComplete' || one.type === 'chat/error');
+  for (let i = 0; i < 3000 && !over(); i++) await new Promise((resolve) => { setTimeout(resolve, 1); });
+  const ofType = (type: string): Bag[] => actions.filter((one) => one.type === type);
+  return {
+    asked,
+    opened,
+    folder,
+    ended: actions.filter((one) => one.type === 'chat/turnComplete' || one.type === 'chat/error').map((one) => String(one.type)),
+    prose: ofType('chat/delta').map((one) => String(one.content)).join(''),
+    said: ofType('chat/error').map((one) => String(one.message)),
+  };
+};
+
+it('runs a terminal a session in a machine asks for in the machine', async () => {
+  const { asked, opened, folder, ended, prose, said } = await terminalIn(true);
+  expect(said).toEqual([]);
+  expect(ended).toEqual(['chat/turnComplete']);
+  // The port was asked for the agent's own command, with the cwd in the host's
+  // spelling: the machine's path is what the server named.
+  expect(asked.filter((one) => one.command === 'echo')).toEqual([
+    { command: 'echo', args: ['hello from the shell'], cwd: folder },
+  ]);
+  // The host's terminal ran what the port answered, not the agent's `echo`.
+  expect(opened).toHaveLength(1);
+  expect(opened[0]).toMatchObject({
+    cwd: folder,
+    command: 'docker',
+    args: ['exec', '-i', 'box', 'echo', 'hello from the machine'],
+  });
+  // And the server read that terminal's output, so the descriptor is what the
+  // host's terminal really ran rather than what it was merely told.
+  expect(prose).toContain('term=hello from the machine|exit=0');
+});
+
+it('keeps a terminal of a session on this host on the host, without asking the port', async () => {
+  const { asked, opened, folder, ended, prose, said } = await terminalIn(false);
+  expect(said).toEqual([]);
+  expect(ended).toEqual(['chat/turnComplete']);
+  // The port is there, and a session on this host never needs it.
+  expect(asked).toEqual([]);
+  expect(opened).toEqual([{ cwd: folder, command: 'echo', args: ['hello from the shell'] }]);
+  expect(prose).toContain('term=hello from the shell|exit=0');
 });
 
 /*

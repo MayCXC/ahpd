@@ -156,6 +156,30 @@ const serversFor = (
 };
 
 /**
+ * The machine this session was told to run in, as its id, or nothing.
+ *
+ * A name that cannot be reached throws rather than falling back to this host: a
+ * session that asked for a sandbox and silently ran outside one is worse than
+ * one that did not start. The reading is shared by the server's own spawn and
+ * by every terminal the server asks for, so both name the same machine - and a
+ * host with no computers port is refused for both, since neither can reach it.
+ */
+export const machineIdOf = (start: Start): string | undefined => {
+  // Trimmed and emptiness-checked in one place, because the computer plugin's
+  // schema says an empty value runs on the host and that arrives as often as
+  // an absent one does.
+  const said = machineAsked(start);
+  if (said === undefined) return undefined;
+  const named = /^computer:\/\/([^/\s]+)$/.exec(said);
+  if (named === null) throw new Error(`${said} is not a computer URI; a session runs in computer://<id>`);
+  const id = named[1] as string;
+  if (start.computers === undefined) {
+    throw new Error(`This session asked to run in ${id}, and this host has no computer plugin to run it in`);
+  }
+  return id;
+};
+
+/**
  * The JSON-RPC code the protocol's `auth_required` carries, read off the SDK
  * rather than written out, because a code this file recognises by hand is a
  * code it stops recognising if the protocol moves it.
@@ -223,15 +247,12 @@ export function createOpening(ctx: SessionContext): Opening {
    * start.
    */
   const placed = async (): Promise<Spawn | undefined> => {
-    // Trimmed and emptiness-checked in one place, because the computer plugin's
-    // schema says an empty value runs on the host and that arrives as often as
-    // an absent one does.
-    const said = machineAsked(start);
-    if (said === undefined) return undefined;
-    const named = /^computer:\/\/([^/\s]+)$/.exec(said);
-    if (named === null) throw new Error(`${said} is not a computer URI; a session runs in computer://<id>`);
-    const id = named[1] as string;
-    if (start.computers === undefined) {
+    const id = machineIdOf(start);
+    if (id === undefined) return undefined;
+    // Said again so the type knows what `machineIdOf` has already guaranteed:
+    // a session with no computers port was refused there and never reaches this.
+    const computers = start.computers;
+    if (computers === undefined) {
       throw new Error(`This session asked to run in ${id}, and this host has no computer plugin to run it in`);
     }
     /*
@@ -239,7 +260,7 @@ export function createOpening(ctx: SessionContext): Opening {
      * mean anything inside the machine are its own. The port uses the
      * machine's working directory when the caller names none.
      */
-    const spawn = await start.computers.how(id, {
+    const spawn = await computers.how(id, {
       command: options.command,
       ...(options.args === undefined ? {} : { args: options.args }),
       ...(options.env === undefined ? {} : { env: options.env }),

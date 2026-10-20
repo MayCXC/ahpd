@@ -25,11 +25,11 @@ import type {
   WriteTextFileResponse,
 } from '@agentclientprotocol/sdk';
 import { hostPathOf, str } from '@ahpd/sdk';
-import type { Bag, BoundTool, OpenedTerminal, Session } from '@ahpd/sdk';
+import type { Bag, BoundTool, OpenedTerminal, OpenTerminal, Session } from '@ahpd/sdk';
 import { confirmationOptions, contentOf, mapUpdate, questionsFor, typedOf } from '../mapping.js';
 import type { PermissionAnswer } from '../types.js';
 import { bag } from './common.js';
-import { HOST_TOOLS } from './opening.js';
+import { HOST_TOOLS, machineIdOf } from './opening.js';
 import type { SessionContext } from './context.js';
 
 /** Everything the server sends this session: its updates, its requests and the answers to them. */
@@ -257,17 +257,59 @@ export function createHandlers(ctx: SessionContext): Handlers {
     return env;
   };
 
-  /** A shell the agent asked for, opened and listed by the host. */
+  /**
+   * A shell the agent asked for, opened and listed by the host.
+   *
+   * In a session placed in a machine the command runs there: the port is asked
+   * how to reach the machine with this command, and the host's terminal runs
+   * that descriptor. The terminal is still the host's to list and watch, and
+   * only the process moves. On Linux and macOS the machine's path is the host's,
+   * so a spawn here would succeed either way - what places the command is
+   * `how`, not the path.
+   *
+   * The request's `cwd` is a machine path, so the port is given it in the host's
+   * spelling. No `cwd` at all is sent when the request names none, so the port
+   * uses the machine's own working directory, as the server's own spawn does.
+   */
   const openTerminal = async (request: CreateTerminalRequest): Promise<CreateTerminalResponse> => {
     const shells = start.terminals;
     if (shells === undefined) throw new Error(`${provider}: this session has no shells`);
     const env = environmentOf(request);
-    const handle = shells.open({
-      cwd: request.cwd ?? where,
-      command: request.command,
-      ...(request.args !== undefined && request.args.length > 0 ? { args: request.args } : {}),
-      ...(env === undefined ? {} : { env }),
-    });
+    const id = machineIdOf(start);
+    let run: OpenTerminal;
+    if (id === undefined) {
+      run = {
+        cwd: request.cwd ?? where,
+        command: request.command,
+        ...(request.args !== undefined && request.args.length > 0 ? { args: request.args } : {}),
+        ...(env === undefined ? {} : { env }),
+      };
+    }
+    else {
+      // Said again so the type knows what `machineIdOf` has already guaranteed:
+      // a session with no computers port was refused there and never reaches this.
+      const computers = start.computers;
+      if (computers === undefined) {
+        throw new Error(`This session asked to run in ${id}, and this host has no computer plugin to run it in`);
+      }
+      const how = await computers.how(id, {
+        command: request.command,
+        ...(request.args !== undefined && request.args.length > 0 ? { args: request.args } : {}),
+        ...(env === undefined ? {} : { env }),
+        ...(request.cwd === undefined || request.cwd === null ? {} : { cwd: hostPathOf(request.cwd) }),
+      });
+      if (how === undefined) throw new Error(`There is no computer called ${id}`);
+      // The host's own folder is where the descriptor's program starts; the
+      // directory the command itself works in is the machine's, in the argv
+      // `how` answered.
+      run = {
+        cwd: where,
+        command: how.command,
+        ...(how.args === undefined ? {} : { args: how.args }),
+        ...(how.env === undefined ? {} : { env: how.env }),
+      };
+    }
+    const handle = shells.open(run);
     const held: { handle: OpenedTerminal; limit?: number; exited?: boolean } = {
       handle,
       ...(typeof request.outputByteLimit === 'number' ? { limit: request.outputByteLimit } : {}),
