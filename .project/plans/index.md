@@ -454,6 +454,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [15 - An ACP question is cancelled and answered in full](acp/15-acp-question-cancelled-and-answered-in-full/plan.md) | medium | built 2026-10-13 ([implemented.md](acp/15-acp-question-cancelled-and-answered-in-full/implemented.md)) | - | - |
 | [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
 | [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | built 2026-10-19; [implemented.md](acp/17-the-asked-permission-mode-is-sent/implemented.md) | - | - |
+| [18 - More agents, with their links and their variables](acp/18-more-agents-with-their-links-and-variables/plan.md) | medium | planned | - | - |
 
 Next free number in `acp`: `17`.
 
