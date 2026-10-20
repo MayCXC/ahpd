@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
+import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/commandautoapprover.js';
 import { createHost, GATE, ROOT } from '../src/host.js';
 import { shellTerminals } from '../src/terminals.js';
 import { fileUsers } from '../src/users.js';
@@ -105,6 +106,15 @@ it('classifies a dispatch by its action, with the channel beside it', async () =
   // The one per-connection key the gate asks a grant for: the trust key asks
   // for the push, which the write group covers.
   expect(await needs(ROOT, { type: 'root/configChanged', config: { workspaceTrust: { enabled: true, trustedUris: [] } } })).toBe('trust:push');
+  // The terminal rules are the window's, except an expression of its own: a
+  // slow one would stall the host for every person. A plain key and a key from
+  // VS Code's own table still need no grant.
+  const rules = (terminalAutoApproveRules: Record<string, unknown>) =>
+    needs(ROOT, { type: 'root/configChanged', config: { terminalAutoApproveRules } });
+  expect(await rules({ 'make test': true })).toBeUndefined();
+  expect(await rules({ '/^npm\\s+audit$/': true })).toBeUndefined();
+  expect(await rules({ '/(a+)+$/': true })).toBe('config:change');
+  expect(await rules({ ...DEFAULT_TERMINAL_AUTO_APPROVE_RULES, 'my-tool': true })).toBeUndefined();
   // A file, a watch and any other `ahp-` channel are the host's own names, and
   // watching one is the grant an action no family claims is held to.
   for (const channel of ['file:///x', 'ahp-resource-watch:/x', 'ahp-sessionx:/x']) {
@@ -373,6 +383,37 @@ it('keeps the trust a connection had when a push is refused', async () => {
   await configChanged(client, { workspaceTrust: { enabled: false, trustedUris: [] } });
   expect(refusalsOf(seen)).toEqual(['ana may not trust:push here']);
   expect(await values(client)).toMatchObject({ workspaceTrust: pushed });
+});
+
+/*
+ * Pushing a terminal rule needs a grant only for an expression of the window's
+ * own.
+ *
+ * `terminalAutoApproveRules` lives on the connection, so a signed-in member may
+ * push it. But a `/.../` key the default table does not carry is a matcher that
+ * runs against every command of the sessions that connection owns, and one that
+ * does not finish stalls the daemon for every person - so it needs
+ * `config:change`.
+ */
+it('refuses a pushed regular expression from a member, and the root connection takes it', async () => {
+  const made = host({ users: directory({ m: ['file:read', 'session:read'] }) });
+  const memberSeen = watching();
+  const member = made.accept(memberSeen);
+  await hello(member, 'm'); await signIn(member, 'm');
+
+  const pushed = { terminalAutoApproveRules: { '/(a+)+$/': true } };
+  await configChanged(member, pushed);
+  expect(refusalsOf(memberSeen)).toEqual(['m may not config:change here']);
+  // A refused push is a refusal, not a stored value.
+  expect(await values(member)).not.toHaveProperty('terminalAutoApproveRules');
+
+  // The door's own connection holds every grant, so it may push the rule.
+  const rootSeen = watching();
+  const door = made.accept(rootSeen, undefined, true);
+  await hello(door);
+  await configChanged(door, pushed);
+  expect(refusalsOf(rootSeen)).toEqual([]);
+  expect(await values(door)).toMatchObject(pushed);
 });
 
 it('accepts defaultShell alone with no grant', async () => {

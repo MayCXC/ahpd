@@ -1,6 +1,6 @@
 ---
 title: A pushed regex rule needs config:change
-status: todo
+status: implemented
 depends: [task-01-the-check-reads-the-owners-connection.md]
 layer: sdk
 refs:
@@ -47,7 +47,7 @@ VS Code pushes its default keys on every connect, so a push of only those keys a
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** 2026-10-20: the key test exported from `commandautoapprover.ts`, the `config:change` answer in `dispatchNeeds`, the cases in `users-gate-dispatch.test.ts`, and both docs.
+- **Next action:** none - implemented.
 - **Open questions:** none.
 - **Watch out for:** the gate compares keys as strings. A key that only a newer VS Code table has needs `config:change`.
