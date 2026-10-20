@@ -1,6 +1,6 @@
 ---
 title: A UUID id is kept, and the automation folder is reserved
-status: implemented
+status: done
 depends: [task-05-the-docs-describe-the-file.md]
 layer: "server"
 refs:

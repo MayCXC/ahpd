@@ -1,6 +1,6 @@
 ---
 title: The store reloads a file a person edits
-status: implemented
+status: done
 depends: [task-02-the-store-keeps-markdown-files.md]
 layer: "packages/server"
 refs:

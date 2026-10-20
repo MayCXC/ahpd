@@ -1,6 +1,6 @@
 ---
 title: The docs describe the automation file
-status: implemented
+status: done
 depends: [task-04-the-store-reloads-an-edit.md]
 layer: "docs"
 refs:

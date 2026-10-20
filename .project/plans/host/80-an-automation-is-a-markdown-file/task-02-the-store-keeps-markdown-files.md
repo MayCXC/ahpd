@@ -1,6 +1,6 @@
 ---
 title: The store keeps each automation as a Markdown file
-status: implemented
+status: done
 depends: [task-01-the-store-moves-to-the-server.md]
 layer: "packages/server"
 refs:
