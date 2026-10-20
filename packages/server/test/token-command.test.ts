@@ -15,7 +15,7 @@
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Output } from '@cofold/commands';
 import { fileUsers } from '@ahpd/sdk';
 import type { Users } from '@ahpd/sdk';
@@ -24,6 +24,17 @@ import { cliRegistry } from '../src/commands/registry.js';
 import { apiOrigins } from '../src/commands/run.js';
 import { servedRegistry, type ServedFacts } from '../src/commands/served.js';
 import { apiHandler } from '../src/http.js';
+
+// The bytes a case hands the next draw, and the real source after them. A mint
+// draws its id before its secret, so a queued buffer is an id.
+const nextBytes = vi.hoisted(() => ({ waiting: [] as Buffer[] }));
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+  return {
+    ...actual,
+    randomBytes: (size: number) => nextBytes.waiting.shift() ?? actual.randomBytes(size),
+  };
+});
 
 const AUTHORITY = '127.0.0.1:9361';
 
@@ -36,7 +47,10 @@ beforeEach(() => {
   usersFile = join(home, 'users.json');
   put({ users: usersFile });
 });
-afterEach(() => { rmSync(home, { recursive: true, force: true }); });
+afterEach(() => {
+  nextBytes.waiting.length = 0;
+  rmSync(home, { recursive: true, force: true });
+});
 
 const put = (held: unknown): void => { writeFileSync(config, `${JSON.stringify(held, null, 2)}\n`); };
 
@@ -227,6 +241,26 @@ describe('token, served', () => {
 
     // The revoked secret is a credential this host no longer knows.
     expect((await call('/token/list', one.secret, directory)).status).toBe(401);
+  });
+
+  it('revokes a token whose first drawn id began with a hyphen', async () => {
+    const { directory, ana } = await people();
+    /*
+     * Base64url spells `-` once in 64 first characters, and an id that starts
+     * with one is read by `token rm` as a flag: the mint makes another id, and
+     * the token stays revocable.
+     */
+    nextBytes.waiting.push(Buffer.from([0xf8, 0, 0, 0, 0, 0]), Buffer.from([0, 0, 0, 0, 0, 0]));
+
+    const said = await call('/token/mint', ana, directory, { label: 'laptop' });
+    expect(said.status).toBe(200);
+    const one = await said.json() as Shown;
+    expect(one.id).toBe('AAAAAAAA');
+
+    const took = await call(`/token/rm/${one.id}`, ana, directory, {});
+    expect(took.status).toBe(200);
+    expect(await took.json()).toEqual({ id: 'AAAAAAAA', user: 'ana' });
+    expect(await directory.tokens!('ana')).toEqual([]);
   });
 
   it('refuses a member who names another person, or names a token of one', async () => {
