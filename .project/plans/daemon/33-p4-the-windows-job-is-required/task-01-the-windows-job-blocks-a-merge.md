@@ -1,6 +1,6 @@
 ---
 title: The Windows job blocks a merge
-status: implemented
+status: done
 depends: []
 layer: CI
 refs:

@@ -1,6 +1,6 @@
 ---
 title: Shell and signal tests skip on Windows
-status: implemented
+status: done
 depends: [task-01-one-helper-names-a-posix-only-case.md]
 layer: sdk
 refs:

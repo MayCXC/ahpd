@@ -1,7 +1,7 @@
 ---
 title: The Windows job is required
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -52,8 +52,8 @@ The Windows job fails a run when a check fails, as the Linux jobs do.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The Windows job blocks a merge](task-01-the-windows-job-blocks-a-merge.md) | implemented | - |
-| [02 - The guide says the checks run on Windows](task-02-the-guide-says-checks-run-on-windows.md) | implemented | 01 |
+| [01 - The Windows job blocks a merge](task-01-the-windows-job-blocks-a-merge.md) | done | - |
+| [02 - The guide says the checks run on Windows](task-02-the-guide-says-checks-run-on-windows.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -62,12 +62,12 @@ The Windows job fails a run when a check fails, as the Linux jobs do.
 ## Resume state
 
 - **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01 and 02 implemented 2026-10-19, after the Windows job passed on PR 30 and on `main`: the job blocks a run, and the guide says the checks run on Windows.
-- **Next action:** Softov adds `check-windows` to the branch rule, by `.project/pending/windows-branch-rule.md`.
+- **Next action:** none. Built 2026-10-20; see [implemented.md](implemented.md). The ruleset "main checks" requires `check-windows`.
 - **Open questions:** none.
 - **Watch out for:** a branch rule on GitHub names the required checks. Softov adds the new job there.
 
 ## Final verification checklist
 
-- [ ] A failed check on Windows fails the run.
-- [ ] `DEVELOPER.md` names Windows and `tools/posix.ts`.
-- [ ] `pnpm -s docs:build` passes.
+- [x] A failed check on Windows fails the run.
+- [x] `DEVELOPER.md` names Windows and `tools/posix.ts`.
+- [x] `pnpm -s docs:build` passes.

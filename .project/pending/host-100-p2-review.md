@@ -1,0 +1,36 @@
+---
+title: Review the owner's command check
+plans:
+  - plans/host/100-p2-a-session-gets-its-owners-command-check/plan.md
+---
+
+# Review the owner's command check
+
+I reviewed host/100 p2 on main at `e7b172de` on 2026-10-20. The code does what the plan says, with one security problem.
+
+## Results
+
+1. **Pass.** `getAutoApproval` in `spawn.ts` reads the connection that started the session, and only when that connection's person owns the session. A turn from another window does not widen the rules.
+2. **Pass.** A start that no connection asked for, such as an automation, has no rules, so every command asks.
+3. **Pass.** `terminalAutoApproveEnabled: false` makes every command ask, and only `approved` returns `not-needed`.
+4. **Pass.** The three keys are in `PER_CONNECTION`, so a member pushes them with no grant. `root-config.test.ts` checks that they are kept per connection.
+5. **Pass.** `terminalAutoApproveDefaults` takes `vscode` or `none`, defaults to `vscode`, and refuses any other value at start. `config-check.test.ts` covers the three cases.
+6. **Pass.** A malformed rule value is skipped: only `true`, `false` and an object with a boolean `approve` count.
+7. **Fail.** A member can push a rule key that is a slow regular expression, and the daemon stops while it matches. See [the problem](../problems/a-pushed-terminal-rule-can-stall-the-daemon.md).
+8. **Note.** Task 02 named `config.ts:247-258` and `run.ts:732-741`. The key is parsed in `commands/options.ts:572` and passed at `run.ts:845`. The plan refs are out of date, not the code.
+
+## Your choice for step 7
+
+The problem file lists three fixes. I recommend the first: a pushed `/.../` key needs `config:change`. A plain key stays free, and the daemon's own configuration can still hold any expression. Tell me which you want, and it becomes a task.
+
+## Check by hand
+
+1. Connect VS Code to the daemon with no terminal rules pushed. Ask the agent to run `ls`. It runs with no question.
+2. Ask the agent to run `rm` on a scratch file. It asks.
+3. Set `terminalAutoApproveDefaults` to `none` and restart the daemon. Ask for `ls` again. It asks.
+4. Open a second window as another person on the same session, and push `{"rm": true}` there. Ask for `rm` from that window. It still asks.
+
+## Reply
+
+- Write "pass" or what you saw for each check by hand.
+- Say which fix you want for step 7.

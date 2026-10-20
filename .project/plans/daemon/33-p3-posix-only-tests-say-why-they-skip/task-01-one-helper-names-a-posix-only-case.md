@@ -1,6 +1,6 @@
 ---
 title: One helper names a POSIX-only case
-status: implemented
+status: done
 depends: []
 layer: tools
 refs:

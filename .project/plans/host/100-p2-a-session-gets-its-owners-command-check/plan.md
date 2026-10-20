@@ -11,6 +11,8 @@ requires:
 changes: []
 creates: []
 decisions: []
+problems:
+  - problems/a-pushed-terminal-rule-can-stall-the-daemon.md
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L183](../../../../packages/sdk/src/types/agent.ts#L183) - `trusted`, the field this one sits beside"
   - "[code://packages/sdk/src/host/spawn.ts#L648-L661](../../../../packages/sdk/src/host/spawn.ts#L648-L661) - `trustedBy`, which reads the owner's connection"
@@ -80,7 +82,7 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 ## Resume state
 
 - **Done so far:** planned 2026-10-16; both tasks implemented 2026-10-18. Tests in `autoapproval.test.ts`, `root-config.test.ts` and `config-check.test.ts`.
-- **Next action:** none - implemented.
+- **Next action:** Softov's reply to [pending/host-100-p2-review.md](../../../pending/host-100-p2-review.md): the checks by hand, and the fix for the [open problem](../../../problems/a-pushed-terminal-rule-can-stall-the-daemon.md).
 - **Open questions:** none.
 - **Watch out for:** host/101 task 01 builds on `getAutoApproval`; keep its answer open for a second kind of result.
 

@@ -1,6 +1,6 @@
 ---
 title: The guide says the checks run on Windows
-status: implemented
+status: done
 depends: [task-01-the-windows-job-blocks-a-merge.md]
 layer: docs
 refs:

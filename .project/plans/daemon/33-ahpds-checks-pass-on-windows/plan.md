@@ -81,11 +81,11 @@ Child plans, each for one cause.
 | --- | --- | --- | --- |
 | [p1 - A Windows job runs the checks](../33-p1-a-windows-job-runs-the-checks/plan.md) | scripts, CI | built | - |
 | [p2 - Tests build paths the system's way](../33-p2-tests-build-paths-the-systems-way/plan.md) | sdk, agent-claude | built | p1 |
-| [p3 - POSIX-only tests say why they skip](../33-p3-posix-only-tests-say-why-they-skip/plan.md) | sdk, agent-claude | active | p1 |
-| [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | planned | p2, p3, p5, p6 |
+| [p3 - POSIX-only tests say why they skip](../33-p3-posix-only-tests-say-why-they-skip/plan.md) | sdk, agent-claude | built | p1 |
+| [p4 - The Windows job is required](../33-p4-the-windows-job-is-required/plan.md) | CI, docs | built | p2, p3, p5, p6 |
 | [p5 - Terminals run on Windows](../33-p5-terminals-run-on-windows/plan.md) | sdk | built | p1 |
 | [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | active | p1 |
-| [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | planned | p6 |
+| [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | active | p6 |
 
 ## Risks and tradeoffs
 
@@ -94,8 +94,8 @@ Child plans, each for one cause.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p6 are active, and p4 and p7 are planned.
-- **Next action:** finish p3 and p6, then build p4.
+- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p4 are built, closed 2026-10-20. p6 and p7 are active.
+- **Next action:** finish p6 task 05 and the p7 check on Docker Desktop.
 - **Open questions:** none.
 - **Watch out for:** the release workflow runs the same checks, and it stays on Linux.
 

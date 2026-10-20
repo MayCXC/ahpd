@@ -1,6 +1,6 @@
 ---
 title: Mode, link and worktree tests
-status: implemented
+status: done
 depends: [task-01-one-helper-names-a-posix-only-case.md]
 layer: sdk, agent-claude
 refs:
