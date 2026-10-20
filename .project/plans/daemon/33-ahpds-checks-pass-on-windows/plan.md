@@ -1,7 +1,7 @@
 ---
 title: ahpd's checks pass on Windows
 domain: daemon
-status: planned
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -87,7 +87,7 @@ Child plans, each for one cause.
 | [p5 - Terminals run on Windows](../33-p5-terminals-run-on-windows/plan.md) | sdk | built | p1 |
 | [p6 - The Windows run finishes clean](../33-p6-the-windows-run-finishes-clean/plan.md) | sdk, server, computer, CI | built | p1 |
 | [p7 - A Windows folder has a path in the machine](../33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | sdk, computer, agents | built | p6 |
-| [p8 - The process tests pass on Windows](../33-p8-the-process-tests-pass-on-windows/plan.md) | sdk, tests | active | p6 |
+| [p8 - The process tests pass on Windows](../33-p8-the-process-tests-pass-on-windows/plan.md) | sdk, tests | built | p6 |
 
 ## Risks and tradeoffs
 
@@ -96,16 +96,16 @@ Child plans, each for one cause.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p4 are built, closed 2026-10-20. p6 and p7 are built, closed 2026-10-20. p8 is active 2026-10-20: its tasks are implemented and checked on a Windows VM.
-- **Next action:** p8.
+- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. p1, p2 and p5 are built, closed 2026-10-19. The `check-windows` job of PR #30 passed every step on 2026-10-19, in run 39344018005. p3 and p4 are built, closed 2026-10-20. p6, p7 and p8 are built, closed 2026-10-20. The CI run of `main` after PR #49 passed every job, `check-windows` among them. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the release workflow runs the same checks, and it stays on Linux.
 
 ## Final verification checklist
 
-- [ ] The Windows job passes on a push to main.
-- [ ] Every skip names its reason in a comment beside it.
-- [ ] The terminal tests run on Windows, with no skip.
-- [ ] The Linux jobs still pass, and they skip no test that ran before.
-- [ ] `DEVELOPER.md` says the checks run on Windows.
-- [ ] `plans/index.md` updated.
+- [x] The Windows job passes on a push to main.
+- [x] Every skip names its reason in a comment beside it.
+- [x] The terminal tests run on Windows, with no skip.
+- [x] The Linux jobs still pass, and they skip no test that ran before.
+- [x] `DEVELOPER.md` says the checks run on Windows.
+- [x] `plans/index.md` updated.

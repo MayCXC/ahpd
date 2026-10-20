@@ -1,6 +1,6 @@
 ---
 title: A POSIX-only process test says why it skips
-status: implemented
+status: done
 depends: []
 layer: tests
 refs:

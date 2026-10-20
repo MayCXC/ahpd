@@ -1,6 +1,6 @@
 ---
 title: A wait by the clock has the case's budget
-status: implemented
+status: done
 depends: []
 layer: tests
 refs:

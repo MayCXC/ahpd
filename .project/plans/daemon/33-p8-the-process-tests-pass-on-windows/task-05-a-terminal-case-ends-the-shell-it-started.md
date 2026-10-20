@@ -1,6 +1,6 @@
 ---
 title: A terminal case ends the shell it started
-status: implemented
+status: done
 depends: []
 layer: tests
 refs:
