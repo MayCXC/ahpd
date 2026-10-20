@@ -117,6 +117,7 @@ ahpd service install -> unit file from the config -> systemctl --user enable --n
 - **Done so far:** the plan, 2026-10-16, and every task built and passing on 2026-10-16: 01, 02 and 03, then 04 and 05. Softov answered the open questions on 2026-10-16. On review (2026-10-18) `service install` now resolves a relative `--config-file` to a full path, with a test.
 - **Next action:** Softov reviews the tasks; then each task is `done`.
 The checks at the end of this file need a systemd user session and a Mac. Neither task could run them here.
+On Debian, every check by hand passed on 2026-10-20. The macOS checks are in [pending/daemon-31-service-checks.md](../../../pending/daemon-31-service-checks.md).
 - **Open questions:** none.
 - **Watch out for:**
 `runForeground` removes `AHPD_DETACHED` from the environment at once, so a session shell does not inherit it. Do the same with `AHPD_SERVICE`.
@@ -131,7 +132,7 @@ A unit is a file the daemon does not parse, so it names `process.execPath` and t
 
 ## Final verification checklist
 
-- [ ] On Debian, `ahpd service install` starts the daemon, `ahpd status` sees it, and a logout and a login start it again.
+- [x] On Debian, `ahpd service install` starts the daemon, `ahpd status` sees it, and a logout and a login start it again.
 - [ ] `ahpd stop` and `ahpd restart` under the service leave one daemon or none, and no second process.
 - [ ] On macOS, the same checks with the LaunchAgent.
 - [ ] `ahpd service uninstall` leaves no unit, no plist and no record.

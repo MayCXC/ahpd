@@ -16,46 +16,15 @@ daemon/31 is implemented, and its tests pass against a fake service manager. Thi
 
 Below, `ahpd` means `node packages/server/dist/main.js` in the clone. The published 0.12.0 has no `ahpd service`.
 
-## Debian: install starts the daemon
+## Debian results
 
-1. Run `ahpd service install`.
-2. Check that it prints the address and the token file, and no token.
-3. Open `~/.config/systemd/user/ahpd.service`.
-4. Check that `ExecStart` names the full path of `node`, the full path of `main.js`, and `--config-file` with a full path.
-5. Check that the unit has `Restart=on-failure` and a `PATH` line.
-6. Run `ahpd status`.
-7. Check that it shows the daemon and ends with `under systemd`.
-8. Run `journalctl --user -u ahpd`, and check that it shows the daemon's start lines.
+Softov ran the Debian sections on 2026-10-20. The log is in `/home/softov/projects/reports/daemon-31.txt`.
 
-## Debian: a login starts it again
-
-1. Log out, then log in.
-2. Run `ahpd status`.
-3. Check that it shows a daemon under systemd, with a new pid.
-
-## Debian: stop and restart leave one daemon or none
-
-1. Run `ahpd restart`.
-2. Check that `ahpd status` shows a new pid.
-3. Check that `pgrep -fa dist/main.js` shows one daemon process.
-4. Run `ahpd stop`.
-5. Check that `ahpd status` says `None running.`
-6. Check that `systemctl --user is-active ahpd` says `inactive`, and that `pgrep -fa dist/main.js` shows nothing.
-
-## Debian: install is refused beside a started daemon
-
-1. Run `ahpd service uninstall`, then `ahpd start`.
-2. Run `ahpd service install`.
-3. Check that it is refused, and that the message says to stop that daemon first.
-4. Run `ahpd stop`.
-
-## Debian: uninstall leaves nothing
-
-1. Run `ahpd service install`, then `ahpd service uninstall`.
-2. Check that `~/.config/systemd/user/ahpd.service` is gone.
-3. Check that `~/.config/ahpd/daemon.json` is gone.
-4. Check that `systemctl --user is-enabled ahpd` does not say `enabled`.
-5. Check that `pgrep -fa dist/main.js` shows nothing.
+- Install starts the daemon: pass. The output names no token file, because no token is configured.
+- Stop and restart leave one daemon or none: pass.
+- Install is refused beside a started daemon: pass.
+- Uninstall leaves nothing: pass.
+- A login starts it again: pass. After a reboot, `ahpd status` showed pid 1458 under systemd, and the pid before was 14115.
 
 ## macOS: install starts the daemon
 
@@ -92,4 +61,4 @@ Below, `ahpd` means `node packages/server/dist/main.js` in the clone. The publis
 
 ## Reply
 
-Write "pass" for each section, or what you saw. A pass ticks the matching line in the plan.
+Write "pass" for each macOS section, or what you saw. A pass ticks the matching line in the plan.
