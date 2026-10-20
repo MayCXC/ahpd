@@ -1,6 +1,6 @@
 ---
 title: The fake closes after the proxy listens
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -34,7 +34,7 @@ No server in the test process can then take the port of `gone` before the call.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** in each of the three cases, `gone` closes after `proxy` listens. The test file passed 20 of 20 runs from the repository root. `pnpm -s typecheck` passed.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the log assertions name `p0 unreachable` and `p1 unreachable`; they must not change.
