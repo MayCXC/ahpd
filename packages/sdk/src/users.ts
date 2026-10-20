@@ -1480,8 +1480,13 @@ export function fileUsers(options: FileUserOptions): Users {
       if (live.length >= limit) {
         throw new Error(`user ${user} may hold ${limit} tokens at most; revoke one before minting another`);
       }
+      /*
+       * An id that starts with `-` reads at a terminal as an option, so
+       * `token rm -abc` would be an unknown flag rather than a revoke. Base64url
+       * spells that one character in 64, so a mint makes another id for it.
+       */
       let id = randomBytes(6).toString('base64url');
-      while (tokens.some((one) => one.id === id)) id = randomBytes(6).toString('base64url');
+      while (id.startsWith('-') || tokens.some((one) => one.id === id)) id = randomBytes(6).toString('base64url');
       const secret = randomBytes(32).toString('base64url');
       const record: TokenRecord = {
         id,

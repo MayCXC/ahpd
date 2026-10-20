@@ -64,6 +64,7 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash in th
 | Commands `ahpd token mint`, `list` and `rm`, and the AHP methods `x-ahpd/tokens/mint`, `list` and `revoke` | (defaulted: the HTTP API and the AHP connection, as `vault` and `usage` serve both) | 04, 05 |
 | The tokens file is `<users file without .json>.tokens.json` in the folder of the users file, with no configuration key | Softov, 2026-10-19, "host/108: where does the host keep the tokens a person mints?": "Beside the users file (Recommended)" | 01 |
 | A minted token cannot mint, list or revoke tokens; only the person's full sign-in can | Softov, 2026-10-19, "host/108: may a minted token mint, list or revoke tokens?": "No, full sign-in only (Recommended)" | 04, 05 |
+| A minted token id never starts with `-`, so `token rm` takes it | Softov, 2026-10-20, "Main is red from the flaky token-command test (expected 400 to be 200). What should I do about it?": "Record and fix it (Recommended)" | 07 |
 
 ## Proposed architecture
 
@@ -82,6 +83,7 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash in th
 | [04 - the token commands](task-04-the-token-commands.md) | implemented | 02, 03 |
 | [05 - the token methods over AHP](task-05-the-token-methods-over-ahp.md) | implemented | 02 |
 | [06 - the docs name tokens](task-06-the-docs-name-tokens.md) | implemented | 04, 05 |
+| [07 - a token id never starts with a hyphen](task-07-a-token-id-never-starts-with-a-hyphen.md) | implemented | 04 |
 
 ## Risks and tradeoffs
 
@@ -91,8 +93,8 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash in th
 
 ## Resume state
 
-- **Done so far:** draft written 2026-10-18. Questions answered and tasks written 2026-10-19. Task 01 implemented 2026-10-19: the tokens file, the three `Users` calls and their tests. Task 02 implemented 2026-10-19: a token signs in narrowed, and revoke and expiry land on the next call. Task 03 implemented 2026-10-19: the `tokensPerPerson` key. Task 04 implemented 2026-10-19: `token mint`, `token list` and `token rm`, at the terminal and over `/api`. Task 05 implemented 2026-10-19: `x-ahpd/tokens/mint`, `list` and `revoke`, with the same checks as the commands. Task 06 implemented 2026-10-19: the server and sdk docs name the commands, the methods and `tokensPerPerson`.
-- **Next action:** none; every task is implemented. The plan is ready for review and the tasks for `done`.
+- **Done so far:** draft written 2026-10-18. Questions answered and tasks written 2026-10-19. Task 01 implemented 2026-10-19: the tokens file, the three `Users` calls and their tests. Task 02 implemented 2026-10-19: a token signs in narrowed, and revoke and expiry land on the next call. Task 03 implemented 2026-10-19: the `tokensPerPerson` key. Task 04 implemented 2026-10-19: `token mint`, `token list` and `token rm`, at the terminal and over `/api`. Task 05 implemented 2026-10-19: `x-ahpd/tokens/mint`, `list` and `revoke`, with the same checks as the commands. Task 06 implemented 2026-10-19: the server and sdk docs name the commands, the methods and `tokensPerPerson`. Task 07 implemented 2026-10-20: a minted id never starts with `-`, so `token rm` takes every id a mint hands out.
+- **Next action:** the plan is ready for review and the tasks for `done`; the hand checks in `pending/host-108-token-checks.md` remain.
 - **Open questions:** none.
 - **Watch out for:**
   - A token's secret is shown once, and only its hash is kept, as `mint` does today.

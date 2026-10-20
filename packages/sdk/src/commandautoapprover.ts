@@ -432,6 +432,17 @@ interface CompiledRules {
  */
 const withoutCaseSensitiveGroups = (pattern: string): string => pattern.replace(/(^|[^\\])((?:\\\\)*)\(\?-i:/gu, '$1$2(?:');
 
+/** A rule key written as a regular expression, `/.../flags`, and the parts it is read into. */
+const RULE_KEY = /^\/(?<pattern>.+)\/(?<flags>[dgimsuvy]*)$/u;
+
+/**
+ * Whether a key is written as a regular expression rather than as a command's prefix.
+ *
+ * The form is the one `ruleRegexOf` reads, so a key the gate treats as an
+ * expression is the key a matcher runs.
+ */
+export const isRegexRuleKey = (key: string): boolean => RULE_KEY.test(key);
+
 /**
  * A rule key as a regular expression, and whether it may be matched in another casing.
  *
@@ -448,7 +459,7 @@ const withoutCaseSensitiveGroups = (pattern: string): string => pattern.replace(
  * read the modifier gets a key that matches nothing.
  */
 const ruleRegexOf = (key: string): { readonly regex: RegExp; readonly caseSensitiveOnly: boolean } => {
-  const written = /^\/(?<pattern>.+)\/(?<flags>[dgimsuvy]*)$/u.exec(key);
+  const written = RULE_KEY.exec(key);
   const pattern = written?.groups?.['pattern'];
   if (pattern !== undefined) {
     const flags = (written?.groups?.['flags'] ?? '').replaceAll('g', '');

@@ -220,7 +220,7 @@ Reference: [00-host.md](host/00-host.md)
 | [99 - A client sees the agent account](host/99-a-client-sees-the-agent-account/plan.md) | low | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [100 - Terminal commands approved by rule](host/100-terminal-commands-approved-by-rule/plan.md) | medium | planned 2026-10-16; parent of p1 to p6; p1 and p3 to p6 built, p2 waits on its [review](../pending/host-100-p2-review.md) | - | 101 |
 | [100 p1 - A command is split and matched](host/100-p1-a-command-is-split-and-matched/plan.md) | medium | active 2026-10-16; tasks 01 to 04 implemented | 100 | 100 p2, 100 p3 |
-| [100 p2 - A session gets its owner's command check](host/100-p2-a-session-gets-its-owners-command-check/plan.md) | medium | active 2026-10-18; tasks 01 and 02 implemented, task 03 todo; reviewed 2026-10-20, [review](../pending/host-100-p2-review.md) waits on Softov | 100 p1 | 100 p4, 100 p5, 101 |
+| [100 p2 - A session gets its owner's command check](host/100-p2-a-session-gets-its-owners-command-check/plan.md) | medium | active 2026-10-20; tasks 01 to 03 implemented; reviewed 2026-10-20, [review](../pending/host-100-p2-review.md) waits on Softov | 100 p1 | 100 p4, 100 p5, 101 |
 | [100 p3 - Another parser replaces the splitter](host/100-p3-another-parser-replaces-the-splitter/plan.md) | medium | active 2026-10-19; tasks 01 to 03 implemented | 100 p1 | - |
 | [100 p4 - Claude and ACP ask only for unmatched commands](host/100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-18; task 01 and task 02 implemented | 100 p2 | - |
 | [100 p5 - pi and cofold ask only for unmatched commands](host/100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | medium | active 2026-10-19; task 01 and task 02 implemented | 100 p2 | - |
@@ -232,7 +232,7 @@ Reference: [00-host.md](host/00-host.md)
 | [105 - A synced skill is named by its plugin](host/105-a-synced-skill-is-named-by-its-plugin/plan.md) | medium | active 2026-10-16; merged, waits on the check by hand | - | - |
 | [106 - A slow client is bounded](host/106-a-slow-client-is-bounded/plan.md) | medium | built 2026-10-16 | - | - |
 | [107 - A chat is served by a backend of its own](host/107-a-chat-is-served-by-a-backend-of-its-own/plan.md) | medium | draft 2026-10-18; tasks not written | - | plugin 52 p9 |
-| [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented; [checks by hand](../pending/host-108-token-checks.md) pending | - | - |
+| [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | active 2026-10-20; tasks 01 to 07 implemented; [checks by hand](../pending/host-108-token-checks.md) pending | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented; [Ember check](../pending/host-109-ember-checks.md) pending | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
 

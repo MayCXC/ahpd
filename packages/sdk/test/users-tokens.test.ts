@@ -15,6 +15,18 @@ vi.mock('../src/listen.js', async (importOriginal) => {
   return { ...actual, same: vi.fn(actual.same) };
 });
 
+// The bytes a case hands the next call, and the real source after them. A mint
+// draws its id before its secret, so a queued buffer is an id and the unqueued
+// draw is the secret.
+const nextBytes = vi.hoisted(() => ({ waiting: [] as Buffer[] }));
+vi.mock('node:crypto', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:crypto')>();
+  return {
+    ...actual,
+    randomBytes: (size: number) => nextBytes.waiting.shift() ?? actual.randomBytes(size),
+  };
+});
+
 /*
  * The tokens a person mints for themselves, on their own.
  *
@@ -33,6 +45,7 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+  nextBytes.waiting.length = 0;
   rmSync(root, { recursive: true, force: true });
 });
 
@@ -76,6 +89,27 @@ it('mints a secret shown once and stores only its hash', async () => {
   expect(listed).toEqual([{ id: minted.id, user: 'ana', label: 'laptop', created: minted.created }]);
   expect(JSON.stringify(listed)).not.toContain(minted.secret);
   expect(JSON.stringify(listed)).not.toContain('sha256');
+});
+
+it('makes an id again when base64url spells the first with a leading hyphen', async () => {
+  // A first byte from `0xf8` to `0xfb` is spelled `-` in base64url, which a
+  // command line reads as the start of an option: `token rm -AAAAAAA` is not a revoke.
+  const hyphen = Buffer.from([0xf8, 0, 0, 0, 0, 0]);
+  expect(hyphen.toString('base64url')).toBe('-AAAAAAA');
+  nextBytes.waiting.push(hyphen, Buffer.from([0, 0, 0, 0, 0, 0]));
+
+  const users = open();
+  await users.add('ana', ['member']);
+  const minted = await users.mintToken!('ana', { label: 'laptop' });
+
+  // The second id is kept, and the secret is still 32 real bytes.
+  expect(minted.id).toBe('AAAAAAAA');
+  expect(minted.secret).toHaveLength(43);
+  expect(stored().tokens[0]?.id).toBe('AAAAAAAA');
+
+  // And the id the mint answered revokes it, which is what `token rm` takes.
+  expect(await users.revokeToken!(minted.id)).toBe(true);
+  expect(await users.tokens!('ana')).toEqual([]);
 });
 
 it('leaves the users file untouched through a mint and a revoke', async () => {
