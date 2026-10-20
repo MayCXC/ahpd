@@ -1,7 +1,7 @@
 ---
 title: A terminal an ACP agent in a machine asks for runs in the machine
 domain: acp
-status: planned
+status: active
 priority: high
 created: 2026-10-20
 revalidated: 2026-10-20
@@ -75,8 +75,8 @@ ACP server in the machine -> terminal/create (machine cwd)
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A terminal in a machine runs in the machine](task-01-a-terminal-in-a-machine-runs-in-the-machine.md) | todo | - |
-| [02 - The spec says where a machine session's terminal runs](task-02-the-spec-says-where-a-machine-sessions-terminal-runs.md) | todo | 01 |
+| [01 - A terminal in a machine runs in the machine](task-01-a-terminal-in-a-machine-runs-in-the-machine.md) | implemented | - |
+| [02 - The spec says where a machine session's terminal runs](task-02-the-spec-says-where-a-machine-sessions-terminal-runs.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -85,10 +85,10 @@ ACP server in the machine -> terminal/create (machine cwd)
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-20 from the trace on the Windows VM.
-- **Next action:** [task-01-a-terminal-in-a-machine-runs-in-the-machine.md](task-01-a-terminal-in-a-machine-runs-in-the-machine.md).
+- **Done so far:** tasks 01 and 02 implemented 2026-10-20, and their gates pass on Linux. A terminal in a placed session asks `computers.how` and opens the descriptor it answers on the host's shells. The spec and the computer docs say so.
+- **Next action:** review both tasks, then the Windows hand check with Docker Desktop.
 - **Open questions:** none.
-- **Watch out for:** on Linux and macOS a host spawn at the machine's cwd succeeds, so a test must assert the spawn went through `how`, not only that the command ran.
+- **Watch out for:** on Linux and macOS a host spawn at the machine's path succeeds, so only the `how` assertion shows the command was placed.
 
 ## Final verification checklist
 

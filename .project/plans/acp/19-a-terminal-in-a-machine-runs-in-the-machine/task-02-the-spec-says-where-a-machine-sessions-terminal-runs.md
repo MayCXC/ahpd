@@ -1,6 +1,6 @@
 ---
 title: The spec says where a machine session's terminal runs
-status: todo
+status: implemented
 depends: [task-01-a-terminal-in-a-machine-runs-in-the-machine.md]
 layer: docs
 refs:
@@ -27,3 +27,17 @@ The spec and the computer docs say that a terminal an ACP agent in a machine ask
 - `pnpm docs:build`, or the docs check the repository runs, passes.
 
 ## Resume
+
+Implemented 2026-10-20, not reviewed.
+
+- `.project/specs/agent-backends.md` names the decision in its frontmatter.
+- Under "Start carries the host's files, shells and tools", two `AND` lines say a terminal in a machine runs there through `computers.how`.
+- They also say that terminal stays the host's to list and watch.
+- The reason is two sentences, and points at the decision.
+- `docs/plugins/COMPUTERS.md` has the same two facts in its ACP row, with a link to the machine section.
+
+Validation: `pnpm docs:build` passes after `pnpm -s build`, and the spec's prose lint is clean. The prose lint on the computer docs reports long sentences elsewhere in that file. None is in the row this task changed, because the linter skips a table row.
+
+- **Next action:** none; this was the last task.
+- **Open questions:** none.
+- **Watch out for:** the row is long by nature of the table; keep new facts in new rows rather than folding them into it.

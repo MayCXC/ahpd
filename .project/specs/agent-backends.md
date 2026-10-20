@@ -14,6 +14,7 @@ decisions:
   - decisions/subagent-chats-are-restored-from-the-cli-meta-file.md
   - decisions/the-daemon-bundles-no-agent.md
   - decisions/agent-package-only-when-it-brings-a-runtime.md
+  - decisions/an-acp-agents-terminal-in-a-machine-runs-in-the-machine.md
 refs:
   - "[code://packages/agent-claude/src/options.ts#L27-L36](../../packages/agent-claude/src/options.ts#L27-L36) - `Declaration`, one Claude option with its schema and its place"
   - "[code://packages/agent-claude/src/options.ts#L156](../../packages/agent-claude/src/options.ts#L156) - `DECLARED`, the options a session and a preset share"
@@ -126,7 +127,10 @@ The reason: a capability without a handler is a request that nobody answers.
 WHEN the host starts a session on a backend
 THEN `Start.resources` is the store that the resource commands use, when the host has one
 AND `Start.terminals.open` opens a host terminal that a client can watch
+AND an ACP agent's terminal in a session placed in a machine runs in that machine, through `computers.how`
+AND that terminal is still the host's to list and watch
 AND `Start.toolsServer` opens an MCP endpoint for the host tools, when the host has a listener.
+The reason: a session that asked for a machine must not run the agent's commands on the host. A machine path is not a folder the host has - decision [an-acp-agents-terminal-in-a-machine-runs-in-the-machine](../decisions/an-acp-agents-terminal-in-a-machine-runs-in-the-machine.md).
 
 ### An ACP read loads the session once
 
