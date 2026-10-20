@@ -1,6 +1,6 @@
 ---
 title: A host path has a machine path
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -48,3 +48,12 @@ One pair of functions turns a host path into the path it has inside a machine, a
 ## Validation
 
 - `machine-paths.test.ts` passes on Linux and on Windows.
+
+## Resume
+
+Done 2026-10-19. Not reviewed.
+
+`machinePathOf` and `hostPathOf` are in `machine.ts` and exported from the sdk, with the platform as a parameter.
+`machine-paths.test.ts` checks both rules on any host.
+On Softov's Windows machine, in the runner-like setup: the computer suite passes 397 with 53 skipped, the full unit suite passes, and `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The Linux half of Validation is the CI run of the branch; on Linux and macOS the pair is the path itself.

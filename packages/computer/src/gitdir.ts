@@ -20,8 +20,9 @@
 
 import { spawnSync } from 'node:child_process';
 import { lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from 'node:fs';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
-import { gitArgv } from '@ahpd/sdk';
+import { basename, dirname, join, resolve, sep } from 'node:path';
+import { gitArgv, machinePathOf } from '@ahpd/sdk';
+import { spelledOnHost } from './hostpath.js';
 
 /**
  * The label naming the `<uid>:<gid>` every command in a machine runs as, set
@@ -164,7 +165,7 @@ const spellingOf = (root: string): (path: string) => string => {
   return (path: string): string => {
     if (real === root) return path;
     if (path === real) return root;
-    return path.startsWith(`${real}/`) ? join(root, path.slice(real.length + 1)) : path;
+    return path.startsWith(`${real}${sep}`) ? join(root, path.slice(real.length + 1)) : path;
   };
 };
 
@@ -190,8 +191,9 @@ const entryOf = (gitDir: string, root: string): string | undefined => {
   if (!found.isFile()) throw new Error(`${dotGit} is neither a file nor a directory, so the worktree it belongs to cannot be read`);
   const said = /^gitdir:\s*(.+?)\s*$/m.exec(readFileSync(dotGit, 'utf8'))?.[1];
   if (said === undefined) throw new Error(`${dotGit} names no gitdir, so the worktree it belongs to cannot be read`);
-  const entry = isAbsolute(said) ? said : resolve(root, said);
-  if (dirname(entry) !== join(gitDir, 'worktrees') || basename(entry) === '' || basename(entry).startsWith('.')) {
+  // Resolved, so the system's separators: git on Windows writes `C:/...` here.
+  const entry = resolve(root, said);
+  if (spelledOnHost(dirname(entry)) !== spelledOnHost(resolve(gitDir, 'worktrees')) || basename(entry) === '' || basename(entry).startsWith('.')) {
     throw new Error(`${dotGit} names ${entry}, which is not a worktree of ${gitDir}`);
   }
   return entry;
@@ -334,16 +336,18 @@ export const gitMounts = (gitDir: string, root: string, state: string, copy = fa
    * replace and nothing to mount the volume over. Both trees are read the same
    * way first, since the objects the machine reads are the host's either way.
    */
-  if (copy) return { binds: [mounted], volume: root, objects: MACHINE_OBJECTS, copy: true };
+  // Each target is where the machine reaches the tree: its machine path, which
+  // is the host's own on Linux and macOS and drive-style on Windows.
+  if (copy) return { binds: [mounted], volume: machinePathOf(root), objects: MACHINE_OBJECTS, copy: true };
   if (entry === undefined) {
     if (statOf(dotGit)?.isDirectory() !== true) throw new Error(`${dotGit} is not a directory, so ${here} is not the git directory of ${root}`);
-    return { binds: [mounted], volume: dotGit, objects: MACHINE_OBJECTS };
+    return { binds: [mounted], volume: machinePathOf(dotGit), objects: MACHINE_OBJECTS };
   }
   const file = gitfileIn(state);
   return {
     binds: [
       mounted,
-      { path: file, target: dotGit, readOnly: true },
+      { path: file, target: machinePathOf(dotGit), readOnly: true },
     ],
     volume: MACHINE_GIT_TARGET,
     gitfile: file,
@@ -480,7 +484,7 @@ export type GitGuard = 'fetch' | 'open';
 export const gitInside = (gitDir: string, root: string): boolean => {
   const real = realOf(root);
   const inside = realOf(gitDir);
-  return inside === real || inside.startsWith(`${real}/`);
+  return inside === real || inside.startsWith(`${real}${sep}`);
 };
 
 /**
@@ -538,11 +542,11 @@ export const runsAsHost = (gitDir: string, root: string, guard: GitGuard = 'fetc
 
 /** A bind as `docker run -v` spells it. */
 export const volumeFlagOf = (bind: GitBind): string =>
-  `${bind.path}:${bind.target ?? bind.path}${bind.readOnly ? ':ro' : ''}`;
+  `${bind.path}:${bind.target ?? machinePathOf(bind.path)}${bind.readOnly ? ':ro' : ''}`;
 
 /** A bind as the Dev Container CLI's own string spelling of a mount. */
 export const cliMountOf = (bind: GitBind): string =>
-  `type=bind,source=${bind.path},target=${bind.target ?? bind.path}${bind.readOnly ? ',readonly' : ''}`;
+  `type=bind,source=${bind.path},target=${bind.target ?? machinePathOf(bind.path)}${bind.readOnly ? ',readonly' : ''}`;
 
 /** A named volume as the Dev Container CLI's own string spelling of a mount. */
 export const cliVolumeOf = (volume: string, target: string): string =>

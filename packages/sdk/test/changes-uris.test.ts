@@ -1,8 +1,9 @@
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, realpathSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { rm } from 'node:fs/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
 import { gitChanges } from '../src/changes.js';
@@ -18,8 +19,10 @@ import { echo } from '../../../examples/echo/agent.js';
  */
 
 let made: string[] = [];
-afterEach(() => {
-  for (const dir of made) rmSync(dir, { recursive: true, force: true });
+// Awaited, with retries: on Windows a folder stays held until what the test
+// opened there is let go, which happens on the event loop.
+afterEach(async () => {
+  for (const dir of made) await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   made = [];
 });
 

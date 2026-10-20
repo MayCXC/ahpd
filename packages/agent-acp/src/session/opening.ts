@@ -1,6 +1,6 @@
 import { RequestError } from '@agentclientprotocol/sdk';
 import type { AgentCapabilities, McpServer as AcpMcpServer } from '@agentclientprotocol/sdk';
-import { machineAsked } from '@ahpd/sdk';
+import { machineAsked, machinePathOf } from '@ahpd/sdk';
 import type { Spawn, Start, ToolsEndpoint } from '@ahpd/sdk';
 import { watchSession } from '../catalog.js';
 import { connectAcp } from '../connection.js';
@@ -346,6 +346,13 @@ export function createOpening(ctx: SessionContext): Opening {
         throw new Error(`${provider}: ${where} is not a folder this host trusts, and an ACP agent loads a project's own settings and hooks from the folder it runs in; trust the folder, or set honoursTrust on this preset if its agent asks before it loads them`);
       }
       const moved = await placed();
+      /*
+       * The folder as the agent reaches it: the host's own for an agent on this
+       * host, and its machine path for one in a machine - the same text on
+       * Linux and macOS, drive-style on Windows. The catalogue's record below
+       * keeps the host's, since that is the folder a client named.
+       */
+      const told = moved === undefined ? where : machinePathOf(where);
       const connection = connectAcp({
         command: moved?.command ?? options.command,
         ...(moved !== undefined
@@ -467,7 +474,7 @@ export function createOpening(ctx: SessionContext): Opening {
         }
         const copied = await connection.forkSession({
           sessionId: start.resume,
-          cwd: where,
+          cwd: told,
           mcpServers: servers,
           ...extra,
         });
@@ -500,7 +507,7 @@ export function createOpening(ctx: SessionContext): Opening {
         }
         const request = {
           sessionId: reopen,
-          cwd: where,
+          cwd: told,
           mcpServers: servers,
           ...extra,
         };
@@ -515,7 +522,7 @@ export function createOpening(ctx: SessionContext): Opening {
       }
       else {
         const created = await connection.newSession({
-          cwd: where,
+          cwd: told,
           mcpServers: servers,
           ...extra,
         });

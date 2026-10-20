@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ContainerConnect, ContainerConnectResult, ContainerPort, ContainerSink, PluginSpec } from '@ahpd/sdk';
 import { byName } from './byname.js';
+import { sameHostPath } from './hostpath.js';
 import { userLabelOf } from './gitdir.js';
 import { IMAGE_PATH, MACHINE_PARTS, partsSaid, pathWith } from './parts.js';
 
@@ -323,7 +324,7 @@ export const workdirOf = (found: Record<string, unknown>, folder = folderLabelOf
   const mounts = Array.isArray(found.Mounts) ? found.Mounts : [];
   const one = mounts.find((mount) => {
     const held = typeof mount === 'object' && mount !== null ? mount as Record<string, unknown> : {};
-    return held.Source === folder && held.Type === 'bind';
+    return typeof held.Source === 'string' && sameHostPath(held.Source, folder) && held.Type === 'bind';
   });
   const destination = one === undefined ? undefined : (one as Record<string, unknown>).Destination;
   return typeof destination === 'string' && destination !== '' ? destination : undefined;

@@ -6,6 +6,7 @@ import { createHost } from '../src/host.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
 import { posixUriOf, uriOf } from '../src/fileuri.js';
 import { createPeer, receive } from '../src/rpc.js';
+import { machinePathOf } from '../src/machine.js';
 import { nestedAgent } from '../src/nested.js';
 import { fileSessions } from '../src/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -859,6 +860,24 @@ it('the inner session works at the path the folder has inside the machine', asyn
   expect(created(host)?.params.workingDirectories).toEqual([posixUriOf('/workspaces/app/x')]);
   // A client outside still reads the folder it named, a path on this host.
   expect(session.workingDirectories()).toEqual([uriOf(resolve('/srv/app/x'))]);
+  session.close();
+});
+
+it('works at the machine path of the folder when the port names no folder inside', async () => {
+  const host = serving([PROVIDER]);
+  const { emit } = recorder();
+  const folder = resolve('/srv/app/x');
+  const session = nestedAgent(backend(), {
+    plugins: ['@ahpd/agent-cofold'],
+    start: async () => ({ host: host.proc }),
+    timeoutMs: 500,
+  }).create(start(emit, folder));
+  await until(() => created(host) !== undefined);
+  // Its own path on Linux and macOS, and `/<drive>/...` on Windows, where the
+  // machine mounts a host folder at its drive-style path.
+  expect(created(host)?.params.workingDirectories).toEqual([posixUriOf(machinePathOf(folder))]);
+  // A client outside still reads the folder it named, a path on this host.
+  expect(session.workingDirectories()).toEqual([uriOf(folder)]);
   session.close();
 });
 

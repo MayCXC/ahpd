@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
@@ -246,7 +247,9 @@ it('refuses with the CLI\'s own words when there is no container', async () => {
     .rejects.toThrow(/reported no container/);
 });
 
-it('installs a host when the image has none, and configures it either way', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('installs a host when the image has none, and configures it either way', async () => {
   wrote({ hostPresent: false, passthrough: [process.execPath] });
   const where = sink();
   const folder = workspace();
@@ -285,7 +288,9 @@ it('installs a host when the image has none, and configures it either way', asyn
   await until(() => where.said.length > 0 || where.closed.length > 0);
 });
 
-it('pins the host it installs to the version it was given', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('pins the host it installs to the version it was given', async () => {
   wrote({ hostPresent: false, passthrough: [process.execPath] });
   const where = sink();
   await launcher({ version: '0.8.77' }).connect({ ...connect, workspaceFolder: workspace() }, where);
@@ -316,7 +321,9 @@ it('installs with the command it was given instead of the default', async () => 
   expect(shell()).toContain('echo installed');
 });
 
-it('does not install over a host the image already has', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('does not install over a host the image already has', async () => {
   wrote({ hostPresent: true, passthrough: [process.execPath] });
   await launcher().connect({ ...connect, workspaceFolder: workspace() }, sink());
   expect(shell().filter((one) => one.startsWith('npm i -g'))).toEqual([]);
@@ -325,7 +332,9 @@ it('does not install over a host the image already has', async () => {
   expect(shell().filter((one) => one.includes('plugin install'))).toHaveLength(1);
 });
 
-it('installs only the package names, leaving a path for the container', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('installs only the package names, leaving a path for the container', async () => {
   wrote({ hostPresent: true, passthrough: [process.execPath] });
   await launcher({ plugins: ['@ahpd/agent-cofold', './mounted-plugin', 'npm:@ahpd/agent-acp'] })
     .connect({ ...connect, workspaceFolder: workspace() }, sink());
@@ -336,7 +345,9 @@ it('installs only the package names, leaving a path for the container', async ()
     .toEqual([pluginInstallLine([process.execPath, HOST], ['@ahpd/agent-cofold'])]);
 });
 
-it('installs only what the configuration directory has not got, with the host\'s own command', () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('installs only what the configuration directory has not got, with the host\'s own command', () => {
   const home = mkdtempSync(join(tmpdir(), 'ahpd-plugin-line-'));
   try {
     mkdirSync(join(home, 'ahpd', 'node_modules', '@ahpd', 'agent-cofold'), { recursive: true });
@@ -361,7 +372,9 @@ it('refuses with the plugin\'s name when the container cannot install it', async
     .rejects.toThrow(/@ahpd\/agent-cofold.*404 not found/s);
 });
 
-it('carries frames both ways, and the container\'s own noise as output', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('carries frames both ways, and the container\'s own noise as output', async () => {
   wrote({ hostPresent: true, passthrough: [process.execPath] });
   const where = sink();
   const port = launcher();
@@ -403,7 +416,9 @@ it('refuses a connection whose host inside would have no backend', async () => {
   expect(read().calls).toEqual([]);
 });
 
-it('writes a frame to the host, and stops it on disconnect', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('writes a frame to the host, and stops it on disconnect', async () => {
   wrote({ hostPresent: true, passthrough: [process.execPath] });
   const plain = sink();
   const port = launcher();
@@ -426,7 +441,9 @@ it('writes a frame to the host, and stops it on disconnect', async () => {
   port.disconnect('a');
 });
 
-it('ends the host inside on close, and answers once it has gone', async () => {
+// POSIX-only: the scripted docker stands in for a Linux container by running
+// the command with `/bin/sh` on this host, and the line is quoted for it.
+it.skipIf(!posix)('ends the host inside on close, and answers once it has gone', async () => {
   wrote({ hostPresent: true, passthrough: [process.execPath] });
   const plain = sink();
   const port = launcher();

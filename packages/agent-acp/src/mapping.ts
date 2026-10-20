@@ -16,7 +16,7 @@
 
 import { normalize } from 'node:path';
 import type { ContentBlock, Diff, PermissionOption, PlanEntry, SessionUpdate, ToolCall, ToolCallStatus, ToolCallUpdate } from '@agentclientprotocol/sdk';
-import { bag, callTimes, str, strings, uriOf, withCallTimes } from '@ahpd/sdk';
+import { bag, callTimes, hostPathOf, str, strings, uriOf, withCallTimes } from '@ahpd/sdk';
 import type { Bag, HarnessPlanEntry, PlanUpdate } from '@ahpd/sdk';
 import type { AcpCall, AcpTurn, ConfirmationOption } from './types.js';
 
@@ -344,7 +344,8 @@ const heldContent = (part: Bag | undefined): Bag[] => {
 const fileEdit = (turn: AcpTurn, diff: Diff): Bag => {
   // In the system's own spelling, as the write's capture is: a server on
   // Windows may join a path with `/`, and one file named two ways is two rows.
-  const path = normalize(diff.path);
+  // A path an agent in a machine names is its machine path, read as the host's.
+  const path = normalize(hostPathOf(diff.path));
   const uri = uriOf(path);
   if (turn.reach !== undefined && turn.reach.within(path)) {
     turn.reach.changed(path, diff.oldText ?? undefined);

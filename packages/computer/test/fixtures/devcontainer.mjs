@@ -51,6 +51,25 @@ const locked = (write) => {
   }
 };
 
+/**
+ * Rename over a file, again on a refusal: Windows will not rename over a file
+ * another process has open, and a test reading the state between calls is one.
+ * Linux never refuses, so this loop runs once there.
+ */
+const replace = (from, to) => {
+  const pause = new Int32Array(new SharedArrayBuffer(4));
+  for (let tries = 0; ; tries++) {
+    try {
+      renameSync(from, to);
+      return;
+    }
+    catch (error) {
+      if ((error.code !== 'EPERM' && error.code !== 'EBUSY' && error.code !== 'EACCES') || tries >= 100) throw error;
+      Atomics.wait(pause, 0, 0, 10);
+    }
+  }
+};
+
 const args = process.argv.slice(2);
 const held = existsSync(state)
   ? JSON.parse(readFileSync(state, 'utf8'))
@@ -60,7 +79,7 @@ held.calls.push(args);
 // it half written.
 const keep = () => {
   writeFileSync(`${state}.${process.pid}`, JSON.stringify(held));
-  renameSync(`${state}.${process.pid}`, state);
+  replace(`${state}.${process.pid}`, state);
 };
 
 if (args.includes('--version')) {
@@ -155,7 +174,8 @@ if (verb === 'up') {
    * `workspaceMount` and this answers where it actually is.
    */
   const folderAt = args[args.indexOf('--workspace-folder') + 1];
-  const base = String(folderAt).split('/').filter((one) => one !== '').pop() ?? 'workspace';
+  // Either separator: the real CLI names a Windows folder by its last part too.
+  const base = String(folderAt).split(/[\\/]/).filter((one) => one !== '').pop() ?? 'workspace';
   const mounting = typeof said.workspaceMount === 'string' && said.workspaceMount !== '' ? said.workspaceMount : '';
   const target = (mounting.split(',').find((one) => one.startsWith('target=')) ?? `target=/workspaces/${base}`).slice('target='.length);
   // The host side of that mount, which a `workspaceMount` may name as a folder above the workspace.
@@ -287,7 +307,7 @@ if (verb === 'up') {
         made.containerId = known.id ?? known.name;
       }
       writeFileSync(`${docker}.${process.pid}.tmp`, JSON.stringify(record));
-      renameSync(`${docker}.${process.pid}.tmp`, docker);
+      replace(`${docker}.${process.pid}.tmp`, docker);
     });
     if (missing !== undefined) {
       process.stderr.write(`Error response from daemon: pull access denied for vsc-${base}, repository does not exist or may require 'docker login'\n`);

@@ -44,6 +44,7 @@ import { chatReducer, rootReducer, sessionReducer, SUPPORTED_PROTOCOL_VERSIONS }
 import type { ChatAction, ChatState, RootAction, RootState, SessionAction, SessionState, StateAction } from '@microsoft/agent-host-protocol';
 import { idOf } from './catalog.js';
 import { posixUriOf, uriOf } from './fileuri.js';
+import { machinePathOf } from './machine.js';
 import { subagentChatUri } from './host/channels.js';
 import { ANSWER_TIMEOUT } from './rpc.js';
 import { computerId } from './computers.js';
@@ -420,9 +421,12 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   /** The close in flight, so a second caller waits on the same one. */
   let closing: Promise<void> | undefined;
   let turn: string | undefined;
-  /** The folder this host named, and where it is inside the machine, as URIs. */
+  /**
+   * The folder this host named, and where it is inside the machine, as URIs.
+   * Inside is the folder's machine path until the port says otherwise.
+   */
   const outside = start.workingDirectory === undefined ? undefined : fileUri(start.workingDirectory);
-  let inside = outside;
+  let inside = start.workingDirectory === undefined ? undefined : fileUri(machinePathOf(start.workingDirectory));
   /** The resources the inner host asked this session's client to sign into. */
   const awaited = new Set<string>();
   /** What was asked for before the inner session existed, in order. */
@@ -485,9 +489,23 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
   /** The inner chats this session does not serve, each logged once. */
   const unserved = new Set<string>();
 
-  /** A value with every inner chat URI it carries put under its outer name. */
+  /**
+   * A file URI the inner session names, as the folder this host named.
+   *
+   * The same text on Linux and macOS, where the folder is mounted at its own
+   * path; on Windows the machine's `/c/...` is the host's `C:\...`. Anything
+   * not under the folder inside is left as it is.
+   */
+  const outerDir = (uri: string): string => {
+    if (inside === undefined || outside === undefined || inside === outside) return uri;
+    if (uri === inside) return outside;
+    if (uri.startsWith(`${inside}/`)) return `${outside}${uri.slice(inside.length)}`;
+    return uri;
+  };
+
+  /** A value with every inner chat URI it carries put under its outer name, and every file URI under the host's folder. */
   const outward = (value: unknown): unknown => {
-    if (typeof value === 'string') return outerOf.get(value) ?? value;
+    if (typeof value === 'string') return outerOf.get(value) ?? outerDir(value);
     if (Array.isArray(value)) return value.map(outward);
     if (typeof value === 'object' && value !== null) {
       return Object.fromEntries(Object.entries(value).map(([key, held]) => [key, outward(held)]));
@@ -649,14 +667,6 @@ const nestedSession = (provider: string, variant: boolean, start: Start, options
       return undefined;
     }
     return outward(action) as Bag;
-  };
-
-  /** A working directory the inner session reports, as the folder this host named. */
-  const outerDir = (uri: string): string => {
-    if (inside === undefined || outside === undefined || inside === outside) return uri;
-    if (uri === inside) return outside;
-    if (uri.startsWith(`${inside}/`)) return `${outside}${uri.slice(inside.length)}`;
-    return uri;
   };
 
   /**

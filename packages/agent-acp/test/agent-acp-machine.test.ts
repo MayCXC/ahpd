@@ -1,8 +1,10 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it, vi } from 'vitest';
+import { machinePathOf } from '@ahpd/sdk';
 import type { Agent, Bag, MachineNeed, PluginHost, Session, Vault } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { fileResources } from '../../sdk/src/resources.js';
@@ -32,10 +34,12 @@ const DOCKER = fileURLToPath(new URL('../../computer/test/fixtures/docker.mjs', 
 /** Everything this file made, so each case leaves nothing behind. */
 const made: string[] = [];
 const started: Session[] = [];
-afterEach(() => {
+// Each session closed before the folders go: a server on this host runs in
+// its folder, and Windows keeps a folder a process is in.
+afterEach(async () => {
   vi.useRealTimers();
-  for (const session of started.splice(0)) session.close();
-  for (const path of made.splice(0)) rmSync(path, { recursive: true, force: true });
+  for (const session of started.splice(0)) await session.close();
+  for (const path of made.splice(0)) await rm(path, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   delete process.env.AHPD_TEST_CODEX_KEY;
 });
 
@@ -365,9 +369,12 @@ const signedIn = async (placed: boolean) => {
   });
   const agent = acpAgent(options as NonNullable<typeof options>);
   const ended: string[] = [];
+  // A folder that is there and that no case removes: a server on this host runs in it.
+  const folder = join(REPO, 'packages', 'agent-acp');
   const session = agent.create({
     uri: `ahp-session:/signin-${String(placed)}`,
     chatUri: `ahp-chat:/signin-${String(placed)}`,
+    workingDirectory: folder,
     settings: placed ? { computer: 'computer://box' } : {},
     trusted: () => true,
     ...(placed
@@ -391,8 +398,8 @@ const signedIn = async (placed: boolean) => {
   started.push(session);
   session.begin('t1', 'hi');
   for (let i = 0; i < 3000 && ended.length === 0; i++) await new Promise((resolve) => { setTimeout(resolve, 1); });
-  const requests = readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as { method?: string });
-  return { ended, said, argv, requests, raw: readFileSync(log, 'utf8') };
+  const requests = readFileSync(log, 'utf8').trim().split('\n').filter(Boolean).map((line) => JSON.parse(line) as { method?: string; params?: Bag });
+  return { ended, said, argv, requests, folder, raw: readFileSync(log, 'utf8') };
 };
 
 it("sends a row's sign-in for a session in the machine its preset gives the variable to", async () => {
@@ -401,6 +408,14 @@ it("sends a row's sign-in for a session in the machine its preset gives the vari
   expect(ended).toEqual(['chat/turnComplete']);
   // The sign-in names a method, never the key it stands for.
   expect([...said, ...argv, raw].join('\n')).not.toContain('machine-key-value');
+});
+
+it('tells an agent in a machine the folder by its machine path', async () => {
+  const { ended, requests, folder } = await signedIn(true);
+  expect(ended).toEqual(['chat/turnComplete']);
+  // Its own path on Linux and macOS, and `/<drive>/...` on Windows, where the
+  // machine mounts a host folder at its drive-style path.
+  expect(requests.find((one) => one.method === 'session/new')?.params?.cwd).toBe(machinePathOf(folder));
 });
 
 it('sends no sign-in for a session on this host, which has only the daemon\'s environment', async () => {

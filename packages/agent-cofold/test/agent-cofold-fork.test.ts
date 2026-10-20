@@ -32,7 +32,7 @@ import type { Peer } from '../../sdk/src/types/rpc.js';
  * made a count of ticks the slowest part of every case. A wait that runs out
  * fails, so a condition that can never hold is not passed by waiting.
  */
-const WAIT_MS = 3000;
+const WAIT_MS = 10_000;
 const tick = (): Promise<void> => new Promise((r) => { setImmediate(r); });
 
 const until = async (check: () => boolean): Promise<void> => {

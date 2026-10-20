@@ -1,6 +1,6 @@
 ---
 title: A nested host and its attachments cross by the pair
-status: todo
+status: implemented
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: sdk, computer
 refs:
@@ -35,3 +35,13 @@ A nested host in a machine is told its working directory by its machine path, th
 
 - On Windows the nested host works in `/c/...`, and its URIs reach the client as `file:///C:/...`.
 - On Linux nothing changes.
+
+## Resume
+
+Done 2026-10-19. Not reviewed.
+
+The inner host is told the folder's machine path when the port names none, and `outward` maps every file URI under the folder inside back to the host's, not only `workingDirectories`.
+`putIn` and `takeOut` write and remove at `machinePathOf(path)`.
+Finding: a nested session forwards no attachments at all - `begin` takes none - so there was nothing to map inward.
+On Softov's Windows machine, in the runner-like setup: the computer suite passes 397 with 53 skipped, the full unit suite passes, and `pnpm -s typecheck` and `pnpm -s boundary` pass.
+The Linux half of Validation is the CI run of the branch; on Linux and macOS the pair is the path itself.
