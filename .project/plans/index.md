@@ -52,7 +52,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p1 - A Windows job runs the checks](daemon/33-p1-a-windows-job-runs-the-checks/plan.md) | medium | built 2026-10-19; check-windows green on PR #30; [implemented.md](daemon/33-p1-a-windows-job-runs-the-checks/implemented.md) | 33 | 33 p4 |
 | [33 p2 - Tests build paths the system's way](daemon/33-p2-tests-build-paths-the-systems-way/plan.md) | medium | built 2026-10-19; check-windows green on PR #30; [implemented.md](daemon/33-p2-tests-build-paths-the-systems-way/implemented.md) | 33 | 33 p4 |
 | [33 p3 - POSIX-only tests say why they skip](daemon/33-p3-posix-only-tests-say-why-they-skip/plan.md) | medium | active 2026-10-18; tasks 01 to 03 implemented | 33 | 33 p4 |
-| [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | planned 2026-10-16 | 33 p1, p2, p3, p5, p6 | - |
+| [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | active 2026-10-19; tasks 01 and 02 implemented | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | built 2026-10-19; check-windows green on PR #30; [implemented.md](daemon/33-p5-terminals-run-on-windows/implemented.md) | 33 | 33 p4 |
 | [33 p6 - The Windows run finishes clean](daemon/33-p6-the-windows-run-finishes-clean/plan.md) | medium | active 2026-10-18; tasks 01 to 04 and 06 to 15 implemented, task 05 todo | 33 | 33 p4 |
 | [33 p7 - A Windows folder has a path in the machine](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, the Docker Desktop check pending | 33 p6 | - |

@@ -12,7 +12,7 @@
  * `.exe` alone, because a `.cmd` shim is exactly what npm installs.
  */
 
-import { statSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import { isAbsolute, join, win32 } from 'node:path';
 
 /** What `PATHEXT` holds when the environment names none. */
@@ -48,6 +48,24 @@ const namesOf = (command: string, platform: NodeJS.Platform, env: NodeJS.Process
 };
 
 /**
+ * A file found on Windows, named as its folder holds it.
+ *
+ * Windows finds `gemini.CMD` when the file is `gemini.cmd`, since a name is the
+ * same file in any case and `PATHEXT` lists its extensions in capitals - and a
+ * setup that showed the first would name a file nobody wrote.
+ */
+const spelledAsHeld = (dir: string, name: string): string => {
+  const lower = name.toLowerCase();
+  try {
+    const held = readdirSync(dir).find((one) => one.toLowerCase() === lower);
+    return join(dir, held ?? name);
+  }
+  catch {
+    return join(dir, name);
+  }
+};
+
+/**
  * The full path of `command` on `path`, or nothing when it is not there.
  *
  * `path` is the PATH text itself, because a caller may have been given one as a
@@ -74,7 +92,7 @@ export const onPath = (
     if (dir === '') continue;
     for (const name of names) {
       const candidate = join(dir, name);
-      if (runnable(candidate, platform)) return candidate;
+      if (runnable(candidate, platform)) return platform === 'win32' ? spelledAsHeld(dir, name) : candidate;
     }
   }
   return undefined;

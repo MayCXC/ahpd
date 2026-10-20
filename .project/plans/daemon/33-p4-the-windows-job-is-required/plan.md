@@ -1,7 +1,7 @@
 ---
 title: The Windows job is required
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -52,8 +52,8 @@ The Windows job fails a run when a check fails, as the Linux jobs do.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The Windows job blocks a merge](task-01-the-windows-job-blocks-a-merge.md) | todo | - |
-| [02 - The guide says the checks run on Windows](task-02-the-guide-says-checks-run-on-windows.md) | todo | 01 |
+| [01 - The Windows job blocks a merge](task-01-the-windows-job-blocks-a-merge.md) | implemented | - |
+| [02 - The guide says the checks run on Windows](task-02-the-guide-says-checks-run-on-windows.md) | implemented | 01 |
 
 ## Risks and tradeoffs
 
@@ -61,8 +61,8 @@ The Windows job fails a run when a check fails, as the Linux jobs do.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16.
-- **Next action:** build task 01 when the Windows job passes with p2, p3 and p5.
+- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01 and 02 implemented 2026-10-19, after the Windows job passed on PR 30 and on `main`: the job blocks a run, and the guide says the checks run on Windows.
+- **Next action:** Softov adds `check-windows` to the branch rule, by `.project/pending/windows-branch-rule.md`.
 - **Open questions:** none.
 - **Watch out for:** a branch rule on GitHub names the required checks. Softov adds the new job there.
 
