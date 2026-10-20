@@ -224,7 +224,11 @@ function Get-ConfigDir {
 }
 
 function Resolve-Ahpd([string]$Folder) {
-  $command = Get-Command ahpd -CommandType Application -ErrorAction SilentlyContinue
+  # npm puts an ahpd.cmd and an extensionless shell shim side by side, and both
+  # are found; the one Windows runs is the .cmd or .exe.
+  $found = @(Get-Command ahpd -CommandType Application -ErrorAction SilentlyContinue)
+  $command = $found | Where-Object { $_.Extension -in @('.cmd', '.exe') } | Select-Object -First 1
+  if (-not $command) { $command = $found | Select-Object -First 1 }
   if ($command) { return $command.Source }
   foreach ($name in @('ahpd.cmd', 'ahpd.exe', 'ahpd')) {
     $candidate = Join-Path $Folder $name
