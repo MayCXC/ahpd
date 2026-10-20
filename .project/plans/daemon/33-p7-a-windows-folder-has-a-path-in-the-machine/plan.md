@@ -4,13 +4,16 @@ domain: daemon
 status: active
 priority: medium
 created: 2026-10-19
-revalidated: 2026-10-19
+revalidated: 2026-10-20
 requires:
   - plans/daemon/33-ahpds-checks-pass-on-windows/plan.md
 changes: []
 creates: []
 decisions:
   - decisions/on-a-windows-host-a-folder-is-mounted-at-its-drive-style-path.md
+  - decisions/a-machine-reads-the-tree-as-the-hosts-git-does.md
+  - decisions/an-open-machine-is-given-the-hosts-reading-in-its-environment.md
+  - decisions/an-open-worktree-on-windows-is-given-its-machine-path.md
 refs:
   - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - the module the sdk and the computer package share for machine paths: `expandHome`, `partTarget`, `PART_ROOT`"
   - "[code://packages/computer/src/manifest.ts#L1133-L1173](../../../../packages/computer/src/manifest.ts#L1133-L1173) - `mountedAt`, the folder's mount at its own path, and the `workdir` default"
@@ -59,7 +62,9 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 - No function turns a host path into its machine path; the only Windows-aware piece is `absoluteOnHost` in `manifest.ts`.
 - `within`, `workdirOf`, `gitInside` and `spellingOf` compare with `/` and the host spelling.
 - `outerDir` maps only `workingDirectories`; the other file URIs a nested host sends back are not mapped.
-- Not found: how Docker Desktop reports a bind's `Source` for a Windows folder in `docker inspect` (`C:\...`, or a `/run/desktop/mnt/host/c/...` path) - searched the runtime and its tests; it needs a run on a Windows machine with Docker Desktop.
+- Docker Desktop reports a Windows folder's bind `Source` as `C:\...` or as `/run/desktop/mnt/host/c/...`, both seen from one config on Docker Desktop 29.9.1; `sourceOnHost` reads both.
+- A machine's git reads a Windows folder's files as changed: Docker Desktop shows them as `0777`, and Git for Windows checks them out with CRLF under its system `core.autocrlf=true` - task 07.
+- Under `open`, a linked worktree's `.git` names its entry by a drive path the machine's git cannot open - task 08.
 
 ### Not in this plan
 
@@ -70,11 +75,15 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 | # | Decision | Rationale / source |
 | --- | --- | --- |
 | 1 | [On a Windows host, a host folder is mounted in a machine at its drive-style path](../../../decisions/on-a-windows-host-a-folder-is-mounted-at-its-drive-style-path.md) | Softov, 2026-10-19 |
+| 2 | [A machine's own git directory reads the tree as the host's git does](../../../decisions/a-machine-reads-the-tree-as-the-hosts-git-does.md) | Softov, 2026-10-20 |
+| 3 | [A machine under open is given the host's reading of the tree in its environment](../../../decisions/an-open-machine-is-given-the-hosts-reading-in-its-environment.md) | Softov, 2026-10-20 |
+| 4 | [Under open on Windows, a linked worktree's entry is named to the machine by its machine path](../../../decisions/an-open-worktree-on-windows-is-given-its-machine-path.md) | Softov, 2026-10-20 |
 
 | What | Source | Task |
 | --- | --- | --- |
 | The pair lives in `packages/sdk/src/machine.ts`, beside `partTarget`, and is exported | (defaulted: the module both packages already share for machine paths) | 01 |
 | A path inside the machine stays POSIX, and is never passed through the pair | [code://packages/computer/src/manifest.ts#L1171](../../../../packages/computer/src/manifest.ts#L1171) | 02 |
+| Tasks 07 and 08 belong to this plan; an ACP agent's terminal in a machine is acp/19 | Softov, 2026-10-20, "p7 tasks 07 and 08 (Recommended)" and "New plan (Recommended)" | 07, 08 |
 
 ## Proposed architecture
 
@@ -92,6 +101,8 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 | [04 - A nested host and its attachments cross by the pair](task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md) | implemented | 01 |
 | [05 - An agent in a machine works at the machine path](task-05-an-agent-in-a-machine-works-at-the-machine-path.md) | implemented | 04 |
 | [06 - The computer suite runs on a Windows machine](task-06-the-computer-suite-runs-on-a-windows-machine.md) | implemented | 02, 03, 04, 05 |
+| [07 - A machine reads the tree as the host's git does](task-07-a-machine-reads-the-tree-as-the-hosts-git-does.md) | implemented | 06 |
+| [08 - An open machine on a linked worktree reaches its entry on Windows](task-08-an-open-worktree-has-its-machine-path.md) | implemented | 06 |
 
 ## Risks and tradeoffs
 
@@ -100,15 +111,14 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`. Tasks 01 to 06 implemented 2026-10-19 on Softov's Windows machine: a host path crosses into a machine through `machinePathOf` and back through `hostPathOf`, and the computer suite passes on Windows apart from what is POSIX by nature.
-- **Next action:** Softov runs `.project/pending/windows-machine-paths-checks.md` on Windows with Docker Desktop: it answers the open question and is task 06 step 4.
-- **Open questions:**
-  1. How Docker Desktop reports a Windows bind's `Source` - proposed: read it on a Windows machine with Docker Desktop in task 03, and match both spellings if it differs.
+- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`. Tasks 01 to 06 implemented 2026-10-19 on Softov's Windows machine. On 2026-10-20, on a Windows VM with Docker Desktop 29.9.1: the real-Docker cases and the hand check of task 06 step 4 ran, and found what tasks 07 and 08 fix; tasks 07 and 08 implemented, and the real-Docker git cases pass there.
+- **Next action:** review tasks 01 to 08 and the CI run of the branch, then close the plan; the hand check's terminal turns wait for [acp/19](../../acp/19-a-terminal-in-a-machine-runs-in-the-machine/plan.md).
+- **Open questions:** none.
 - **Watch out for:** on Linux and macOS the pair is the identity, so a Linux run proves nothing about the translation; only a Windows run does.
 
 ## Final verification checklist
 
-- [ ] The computer suite passes on a Windows machine, apart from what is POSIX by nature.
-- [ ] A machine made from a Windows host with a folder works there, by hand, with Docker Desktop.
+- [x] The computer suite passes on a Windows machine, apart from what is POSIX by nature.
+- [x] A machine made from a Windows host with a folder works there, by hand, with Docker Desktop.
 - [ ] The Linux jobs pass.
 - [ ] `plans/index.md` updated.

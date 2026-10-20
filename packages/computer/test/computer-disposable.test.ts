@@ -1858,7 +1858,12 @@ it('mounts a worktree\'s git directory with no read-only binds where the profile
   await open('ahp-session:/one', { computer: 'disposable:claude' }, tree);
 
   const box = held(state).machines[0] as NonNullable<Held['machines'][number]>;
-  expect(box.mounts).toEqual([`${tree}:${machinePathOf(tree)}`, `${gitDir}:${machinePathOf(gitDir)}`]);
+  // On Windows the tree's `.git` names its entry by a drive path, so a file
+  // naming it by its machine path is bound over it, read-only.
+  const named = process.platform === 'win32'
+    ? [expect.stringMatching(new RegExp(`open-[0-9a-f]{12}\\.gitfile:${machinePathOf(join(tree, '.git')).replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')}:ro$`))]
+    : [];
+  expect(box.mounts).toEqual([`${tree}:${machinePathOf(tree)}`, `${gitDir}:${machinePathOf(gitDir)}`, ...named]);
   // Mounted on its own, so still the host user's.
   expect(flagValue(held(state).calls.find((one) => one[0] === 'run') ?? [], '--user')).toBe(ME);
   expect(box.labels?.['ahpd.git']).toBe('open');

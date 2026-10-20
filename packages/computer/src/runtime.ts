@@ -10,7 +10,7 @@ import { adoptedOf, keepProbe, probeOf } from './owners.js';
 import type { MadeNeed } from './owners.js';
 import { byName, DOCKER_OWN, DOCKER_OWN_PREFIX, dockerOwn } from './byname.js';
 import { sourceOnHost, spelledOnHost, windowsHost } from './hostpath.js';
-import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
+import { cliMountOf, cliVolumeOf, copyOf, gitVolumeOf, guardFor, guardedMounts, idsOfUser, MACHINE_GIT, MACHINE_USER, openReadingOf, seedOf, treeOf, userLabelOf, volumeFlagOf } from './gitdir.js';
 import type { GitGuard, GitMounts, SessionTree } from './gitdir.js';
 import { mountParts } from './manifest.js';
 import { archiveOf, FILLED_MARKER, firstFileOf, IMAGE_PATH, MACHINE_PARTS, once, partsLabel, partsSaid, pathWith, volumeOf } from './parts.js';
@@ -1367,7 +1367,11 @@ const overrideOf = (spec: MachineSpec, config: Record<string, unknown>, route?: 
       ...own,
     ];
   }
-  const plain = madeWith(spec);
+  // Under `open`, how the host's git reads the tree, as `run` gives it too.
+  const reading = guard === 'open' && spec.gitDir !== undefined && spec.devcontainer !== undefined
+    ? openReadingOf(spec.repository ?? spec.devcontainer)
+    : {};
+  const plain = { ...madeWith(spec), ...reading };
   if (Object.keys(plain).length > 0) {
     held.containerEnv = {
       ...(typeof held.containerEnv === 'object' && held.containerEnv !== null ? held.containerEnv as Record<string, string> : {}),
@@ -2087,8 +2091,9 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
    *
    * What it writes is the tree's repository and nothing more: the host's
    * objects reachable through `objects/info/alternates`, the branch the tree is
-   * on at the commit it is at, the index that commit names, and the two config
-   * values a commit needs. The commit itself is never read into the working
+   * on at the commit it is at, the index that commit names, the two config
+   * values a commit needs, and the two that say how the host's git reads the
+   * tree's files. The commit itself is never read into the working
    * tree - a `reset --hard` would rewrite the host's own files, mounted at the
    * same path - so a host change nobody committed shows up in the machine as
    * the uncommitted change it is.
@@ -2155,6 +2160,11 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
       // The identity a commit needs, and nothing else of the host's config.
       if (seed.name !== undefined) await asUser(['git', ...own, 'config', 'user.name', seed.name]);
       if (seed.email !== undefined) await asUser(['git', ...own, 'config', 'user.email', seed.email]);
+      // How the host's git reads the tree's files, so the same files are clean
+      // in here too: a Windows folder is `0777` in the machine and CRLF on disk.
+      // Before the index is made, which reads the files the way these say.
+      if (seed.filemode !== undefined) await asUser(['git', ...own, 'config', 'core.filemode', seed.filemode]);
+      if (seed.autocrlf !== undefined) await asUser(['git', ...own, 'config', 'core.autocrlf', seed.autocrlf]);
       // The branch the tree is on, at the commit it is at; a tree on no branch
       // gives a machine on none, whose work is fetched to the hidden ref only.
       if (seed.branch !== undefined) await asUser(['git', ...own, 'symbolic-ref', 'HEAD', `refs/heads/${seed.branch}`]);
@@ -3451,7 +3461,12 @@ export function dockerRuntime(options: DockerOptions): ComputerRuntime {
         else flags.push('-v', `${volumeOf(part)}:${partTarget(part.id)}:ro`);
       }
       if (spec.parts !== undefined) flags.push('--label', `${MACHINE_PARTS}=${partsLabel(parts, spec.hostParts)}`);
-      const variables = madeWith(spec);
+      // Under `open`, how the host's git reads the tree, which the machine's git
+      // would not otherwise know.
+      const reading = guard === 'open' && spec.gitDir !== undefined && spec.folder !== undefined
+        ? openReadingOf(spec.repository ?? spec.folder)
+        : {};
+      const variables = { ...madeWith(spec), ...reading };
       if (parts.length > 0) {
         variables.PATH = pathWith(parts.map((one) => one.id), spec.env?.PATH ?? await imagePath(image));
       }

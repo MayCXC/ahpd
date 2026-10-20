@@ -1,8 +1,9 @@
 import { posix } from '../../../tools/posix.ts';
+import { machinePathOf } from '@ahpd/sdk';
 import { execFileSync } from 'node:child_process';
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { basename, dirname, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { guardedMounts, gitInside, MACHINE_GIT_TARGET, runsAsHost } from '../src/gitdir.js';
 import { dockerRuntime } from '../src/runtime.js';
@@ -61,10 +62,25 @@ it('mounts the host\'s git directory read-write where the tree does not hold it,
 
   // A linked worktree's git directory is not inside the tree, so the machine
   // gets a mount of it on its own - writable, which is the whole of what `open`
-  // chooses - and no volume of its own and no gitfile.
-  expect(guardedMounts(gitDir, tree, state, 'open')).toEqual({ binds: [{ path: gitDir, readOnly: false }] });
+  // chooses - and no volume of its own. On Windows the tree's `.git` names its
+  // entry by a drive path, so a file naming it by its machine path is bound
+  // over it, read-only; elsewhere there is no gitfile.
+  const mounts = guardedMounts(gitDir, tree, state, 'open');
+  const file = mounts?.gitfile;
+  const named = process.platform === 'win32' ? [{ path: file, target: machinePathOf(join(tree, '.git')), readOnly: true }] : [];
+  expect(mounts).toEqual({ binds: [{ path: gitDir, readOnly: false }, ...named], ...(named.length > 0 ? { gitfile: file } : {}) });
   // Mounted on its own, so the machine's commands are still the host user's.
   expect(runsAsHost(gitDir, tree, 'open')).toBe(true);
+});
+
+// Windows only: elsewhere the machine path is the host's, and the tree's own `.git` is right.
+it.skipIf(process.platform !== 'win32')('names a worktree\'s entry by its machine path under open, in a file of its own', () => {
+  const { tree, gitDir, state } = repository();
+  const file = guardedMounts(gitDir, tree, state, 'open')?.gitfile ?? '';
+  expect(basename(file)).toMatch(/^open-[0-9a-f]{12}\.gitfile$/);
+  expect(readFileSync(file, 'utf8')).toBe(`gitdir: ${machinePathOf(join(gitDir, 'worktrees', basename(tree)))}\n`);
+  // The tree's own file is left as git wrote it.
+  expect(readFileSync(join(tree, '.git'), 'utf8')).toMatch(/^gitdir: [A-Za-z]:/);
 });
 
 it('mounts nothing under open where the tree already holds the git directory', () => {
@@ -96,7 +112,10 @@ it('says a git directory is inside the tree however the tree is reached', () => 
 /** The image: one with `git` in it and no entrypoint, which the runtime's `sleep infinity` would replace. */
 const IMAGE = 'node:22';
 const LABEL = 'ahpd.gitguard=1';
-const ME = `${String(process.getuid?.())}:${String(process.getgid?.())}`;
+// Windows has no uid, and a machine made there runs as the image's own user.
+const ME = process.getuid === undefined ? undefined : `${String(process.getuid())}:${String(process.getgid?.())}`;
+/** The user a machine runs as, where this host has one to give it. */
+const AS_ME = ME === undefined ? {} : { user: ME };
 
 /**
  * The budget of a case that runs a real container: a fresh runner pulls
@@ -123,14 +142,14 @@ it.skipIf(!DOCKER)('commits into the host\'s git directory from a machine its pr
   const { repo, tree, gitDir, state } = repository();
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitguard-open-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'open', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'open', ...AS_ME });
   try {
     writeFileSync(join(tree, 'src', 'tracked.txt'), 'changed in the machine\n');
     // The host's own git directory is mounted writable in the machine, so a
     // commit in there is a commit on the host - which is what `open` chooses,
     // and what `fetch`, the default, does not.
-    expect((await docker.exec(name, ['git', '-C', tree, 'add', '-A'])).code).toBe(0);
-    expect((await docker.exec(name, ['git', '-C', tree, 'commit', '-q', '-m', 'from the machine'])).code).toBe(0);
+    expect((await docker.exec(name, ['git', '-C', machinePathOf(tree), 'add', '-A'])).code).toBe(0);
+    expect((await docker.exec(name, ['git', '-C', machinePathOf(tree), 'commit', '-q', '-m', 'from the machine'])).code).toBe(0);
     expect(headOf(repo, 'work')).toContain('from the machine');
   }
   finally {

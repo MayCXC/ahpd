@@ -55,7 +55,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [33 p4 - The Windows job is required](daemon/33-p4-the-windows-job-is-required/plan.md) | medium | built 2026-10-20; ruleset "main checks" requires check-windows; [implemented.md](daemon/33-p4-the-windows-job-is-required/implemented.md) | 33 p1, p2, p3, p5, p6 | - |
 | [33 p5 - Terminals run on Windows](daemon/33-p5-terminals-run-on-windows/plan.md) | medium | built 2026-10-19; check-windows green on PR #30; [implemented.md](daemon/33-p5-terminals-run-on-windows/implemented.md) | 33 | 33 p4 |
 | [33 p6 - The Windows run finishes clean](daemon/33-p6-the-windows-run-finishes-clean/plan.md) | medium | active 2026-10-18; tasks 01 to 04 and 06 to 15 implemented, task 05 todo | 33 | 33 p4 |
-| [33 p7 - A Windows folder has a path in the machine](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, the Docker Desktop check pending | 33 p6 | - |
+| [33 p7 - A Windows folder has a path in the machine](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/plan.md) | medium | active 2026-10-20; tasks 01 to 08 implemented, checked with Docker Desktop on a Windows VM ([deferred.md](daemon/33-p7-a-windows-folder-has-a-path-in-the-machine/deferred.md)) | 33 p6 | acp 19 |
 | [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | built 2026-10-19; merged in PR #22; [implemented.md](daemon/34-the-api-and-proxy-keys-get-their-own-names/implemented.md) | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, 0 done; checks in [pending/update-checks.md](../pending/update-checks.md) | daemon 09, daemon 13 | - |
 
@@ -455,6 +455,7 @@ Worked in this order: 01, 02, plugin 18, 03, 04, 05. Then 06, 08, 09 and 10 in a
 | [16 - agent-acp is on the ACP SDK 1.8.0](acp/16-agent-acp-is-on-acp-sdk-1-8/plan.md) | medium | built 2026-10-16 ([implemented.md](acp/16-agent-acp-is-on-acp-sdk-1-8/implemented.md)) | - | - |
 | [17 - The permission mode a session asks for is sent](acp/17-the-asked-permission-mode-is-sent/plan.md) | medium | built 2026-10-19; [implemented.md](acp/17-the-asked-permission-mode-is-sent/implemented.md) | - | - |
 | [18 - More agents, with their links and their variables](acp/18-more-agents-with-their-links-and-variables/plan.md) | medium | planned | - | - |
+| [19 - A terminal an ACP agent in a machine asks for runs in the machine](acp/19-a-terminal-in-a-machine-runs-in-the-machine/plan.md) | high | planned 2026-10-20 | - | the p7 hand check's terminal turns |
 
 Next free number in `acp`: `17`.
 
