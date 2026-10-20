@@ -1,3 +1,4 @@
+import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES, isRegexRuleKey } from '../commandautoapprover.js';
 import { computerSource } from '../computers.js';
 import type { Connection } from '../types/host.js';
 import type { Grant } from '../types/users.js';
@@ -275,8 +276,11 @@ export const channelRead = (channel: string, kind: ChannelKind, served?: Grant):
  * anybody else reads, so it needs a sign-in and no grant (`undefined`) - except
  * `workspaceTrust`, which is one window's answer about the folders every
  * session of that window loads from, so pushing it needs `trust:push`, which
- * the `trust:write` group covers. Any other key, and a `replace`, changes the
- * host for everybody and needs `config:write`.
+ * the `trust:write` group covers. The terminal rules are the window's too, but
+ * a `/.../` key the default table does not carry is an expression of its own,
+ * and a slow one would stall the host for every person, so it needs
+ * `config:change`. Any other key, and a `replace`, changes the host for
+ * everybody and needs `config:write`.
  *
  * The other is `file:watch` for a channel that is neither a session's nor a
  * terminal's - a `file:` URI, a resource watch, one another client relays. An
@@ -291,9 +295,14 @@ export const channelRead = (channel: string, kind: ChannelKind, served?: Grant):
 export const dispatchNeeds = (channel: string, kind: ChannelKind, action?: Record<string, unknown>): Grant | undefined => {
   if (isRootChannel(channel)) {
     if (action?.type !== 'root/configChanged' || action.replace === true) return 'config:change';
-    const config = typeof action.config === 'object' && action.config !== null ? action.config : {};
+    const config = (typeof action.config === 'object' && action.config !== null
+      ? action.config
+      : {}) as Record<string, unknown>;
     const keys = Object.keys(config);
     if (!keys.every((key) => PER_CONNECTION.has(key))) return 'config:change';
+    const rules = config['terminalAutoApproveRules'];
+    if (typeof rules === 'object' && rules !== null
+      && Object.keys(rules).some((key) => isRegexRuleKey(key) && !Object.hasOwn(DEFAULT_TERMINAL_AUTO_APPROVE_RULES, key))) return 'config:change';
     return keys.includes('workspaceTrust') ? 'trust:push' : undefined;
   }
   return kind === 'other' && !channel.startsWith('ahp-automation') ? 'file:watch' : undefined;
