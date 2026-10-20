@@ -185,6 +185,9 @@ export const presets: Record<string, AcpPreset> = {
   devin: {
     ...rowOf('devin'),
     args: ['acp'],
+    // `devin-browser` is the one method Devin advertises; with the key set it
+    // is sent, so a session does not wait on a browser.
+    authenticate: { methodId: 'devin-browser', fromEnv: ['WINDSURF_API_KEY'] },
     machine: xdgOf('devin', ['config.json', 'mcp_config.json']),
   },
   cursor: {
@@ -203,6 +206,7 @@ export const presets: Record<string, AcpPreset> = {
     // The Amp CLI is the ACP server's own harness, so the binary that speaks
     // the protocol is this one rather than `amp` itself.
     ...rowOf('amp'),
+    env: { AMP_SKIP_UPDATE_CHECK: '1' },
     // The part holds both `amp` and `amp-acp`, and the server is told which
     // `amp` to run. Amp has no variable that moves its settings, so it has no
     // state directory here.
@@ -216,5 +220,13 @@ export const presets: Record<string, AcpPreset> = {
       env: { QWEN_HOME: '/ahpd/qwen' },
       ...stateOf('qwen', [{ source: '~/.qwen/settings.json' }]),
     },
+  },
+  cline: {
+    ...rowOf('cline'),
+    args: ['--acp'],
+  },
+  omp: {
+    ...rowOf('omp'),
+    args: ['acp'],
   },
 };

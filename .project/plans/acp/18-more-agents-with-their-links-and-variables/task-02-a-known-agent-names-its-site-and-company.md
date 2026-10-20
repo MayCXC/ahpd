@@ -1,6 +1,6 @@
 ---
 title: A known agent names its site and its company
-status: todo
+status: implemented
 depends: [task-01-cline-and-omp-are-known-agents.md]
 layer: "sdk, server"
 refs:
@@ -33,3 +33,8 @@ Every row in `knownAgents` has `site`, the agent's own page, and `company`, the 
 - `pnpm test` passes.
 
 ## Resume
+
+- **Done so far:** `KnownAgent` has a required `site` and `company`, each with a one-line comment. Every one of the fourteen rows fills both from the links table in the research file. `missingLines` in `found.ts` prints `installLine(agent, platform) ?? agent.page ?? agent.site`, so an agent with neither a line for this system nor a page is shown its site. `agents.test.ts` checks that every row has both as `https://` URLs, and `server-configure.test.ts` checks both the page and the site fallback.
+- **Next action:** none for this task.
+- **Open questions:** none.
+- **Watch out for:** `page` stays ahead of `site`, because it is the install page. `site` is the fallback only when neither a line for the system nor a page exists.

@@ -1,6 +1,6 @@
 ---
 title: A form draws the variables of a shipped preset
-status: todo
+status: implemented
 depends: [task-03-a-known-agent-lists-its-variables.md]
 layer: "agent-acp, docs"
 refs:
@@ -40,3 +40,8 @@ A key that names no shipped preset keeps today's schema.
 - By hand: open the agent-acp form in a client and see the fields of the `codex` preset.
 
 ## Resume
+
+- **Done so far:** `plugin.ts` builds the preset schema once and gives each shipped preset an entry under `presets.properties`, from `presetSchemaOf(id)`. The entry adds `title` (the row's name), `links` (`site` and `company`) and one `env` field per variable. A secret is `envValue` with the variable's description, and any other is a plain `{ type: 'string' }` with it. `env` keeps `additionalProperties: envValue`, so a person can still write a name no vendor documents. `presets.additionalProperties` is the preset schema, so a key that names no shipped preset is held to that alone. `agent-acp-presets.test.ts` checks every shipped preset has an entry, with its title, its links and its exact set of variables. It also checks a secret's `writeOnly`, a non-secret's plain string, and that cline and omp run their rows. `PLUGINS.md` says a form shows the variables and the links. The daemon still accepts the options: it ignores the keyword it does not know, and `plugin-options.test.ts` and the preset tests pass.
+- **Next action:** none for this task.
+- **Open questions:** the by-hand check in a client was not run, because there is no client on this host.
+- **Watch out for:** a non-secret variable's field carries no `secretAtUse`. So a `{ "$secret": ... }` written for one is read by the daemon at load rather than handed to the plugin. The value still arrives; only the moment it is read changes. The `title` and `links` keywords are annotations the daemon ignores, so nothing validates them.

@@ -1,7 +1,7 @@
 ---
 title: More agents, with their links and their variables
 domain: acp
-status: planned
+status: active
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -71,7 +71,8 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 | The links are a schema keyword of their own, `links`, beside the preset's `title` | (defaulted: [code://packages/agent-acp/src/plugin.ts#L36](../../../../packages/agent-acp/src/plugin.ts#L36) already adds `secretAtUse`, a keyword of its own) | 04 |
 | A variable that is not a secret is a plain string in the form, not `writeOnly` | (defaulted: a person must see a model name or a folder to check it) | 04 |
 | `ahpd configure` prints the site of an agent that is not installed and has no install line | (defaulted: `page` is printed there today, and the site is the next place to look) | 02 |
-| devin signs in with `WINDSURF_API_KEY`, amp skips its update check, pi installs a pi that pi-acp can run | (defaulted: each is what the vendor's docs say today) | 05 |
+| devin sends `devin-browser` when `WINDSURF_API_KEY` is set | Softov, 2026-10-20, to "What should the devin preset do?": "Send devin-browser" | 05 |
+| amp skips its update check, pi installs a pi that pi-acp can run | (defaulted: each is what the vendor's docs say today) | 05 |
 
 ## Proposed architecture
 
@@ -84,11 +85,11 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Cline and omp are known agents](task-01-cline-and-omp-are-known-agents.md) | todo | - |
-| [02 - A known agent names its site and its company](task-02-a-known-agent-names-its-site-and-company.md) | todo | 01 |
-| [03 - A known agent lists its variables](task-03-a-known-agent-lists-its-variables.md) | todo | 02 |
-| [04 - A form draws the variables of a shipped preset](task-04-a-form-draws-the-variables-of-a-preset.md) | todo | 03 |
-| [05 - The presets match the vendors' docs](task-05-the-presets-match-the-vendors-docs.md) | todo | 03 |
+| [01 - Cline and omp are known agents](task-01-cline-and-omp-are-known-agents.md) | implemented | - |
+| [02 - A known agent names its site and its company](task-02-a-known-agent-names-its-site-and-company.md) | implemented | 01 |
+| [03 - A known agent lists its variables](task-03-a-known-agent-lists-its-variables.md) | implemented | 02 |
+| [04 - A form draws the variables of a shipped preset](task-04-a-form-draws-the-variables-of-a-preset.md) | implemented | 03 |
+| [05 - The presets match the vendors' docs](task-05-the-presets-match-the-vendors-docs.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 
@@ -97,10 +98,13 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-cline-and-omp-are-known-agents.md](task-01-cline-and-omp-are-known-agents.md).
-- **Open questions:** none.
-- **Watch out for:** claude is not a row here; the `agent-claude` plugin drives it. Kilo, pi and codex are rows already. The arguments of an agent stay in `presets.ts`, not in its row. A third-party page gives `omp --mode acp`; the omp README gives `omp acp`, and the README wins.
+- **Done so far:** tasks 01 to 05 are implemented. `knownAgents` has `cline` and `omp`, and every row has `site`, `company` and `variables`. `missingLines` prints the site as a fallback. `optionsSchema` has an entry per shipped preset, with its title, its links and one `env` field per variable. In task 05, devin sends `devin-browser` when `WINDSURF_API_KEY` is set. Amp skips its update check, the pi row and part install pi 1.3.0, and qwen keeps `--acp` alone.
+- **Next action:** review tasks 01 to 05.
+- **Open questions:**
+  - `cline` and `omp` are not installed here, so neither handshake was read. The `cline` preset has no `authenticate` until someone reads `authMethods` from `cline --acp` and finds a method for `CLINE_API_KEY`.
+  - Kilo is a launcher for a native binary, with no source on this host. Whether it reads `OPENCODE_DISABLE_AUTOUPDATE` is still unconfirmed, so the comment in `presets.ts` stays.
+  - The by-hand check of a client form was not run, because there is no client here.
+- **Watch out for:** claude is not a row here; the `agent-claude` plugin drives it. Kilo, pi and codex are rows already. The arguments of an agent stay in `presets.ts`, not in its row. A third-party page gives `omp --mode acp`; the omp README gives `omp acp`, and the README wins. `cline` and `omp` carry no `machine`, so a session of either in a machine has no part-installed CLI.
 
 ## Final verification checklist
 

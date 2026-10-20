@@ -4,7 +4,7 @@ import { knownAgents, readSecret, type Vault } from '@ahpd/sdk';
 import type { PluginHost } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { name, optionsOf } from '../src/plugin.js';
+import { name, optionsOf, optionsSchema } from '../src/plugin.js';
 import { presets as shipped } from '../src/presets.js';
 import type { AcpOptions } from '../src/types.js';
 
@@ -16,10 +16,11 @@ import type { AcpOptions } from '../src/types.js';
  * the plugin registers one agent per preset. The cases here are the shapes that
  * takes: a shipped key, a key that takes a row by `base`, a key that writes a
  * spec of its own, a preset's own fields over the row's, the sign-in a row
- * applies once a key is there and its absence when none is, the two ways a load
- * is refused - a top-level option that belongs inside a preset, and a preset map
- * that leaves nothing to register - and the four ways one preset is not
- * registered while the others are.
+ * applies once a key is there and its absence when none is, the schema entry
+ * each shipped preset gives a form, the two ways a load is refused - a top-level
+ * option that belongs inside a preset, and a preset map that leaves nothing to
+ * register - and the four ways one preset is not registered while the others
+ * are.
  */
 
 const REPO = join(import.meta.dirname, '../../..');
@@ -112,6 +113,69 @@ it('lists the same agents as the sdk, with the same commands', () => {
     expect(row.command).toBe(agent?.command);
     expect(row.name).toBe(agent?.name);
   }
+});
+
+/** The schema a client draws a form of one shipped preset from. */
+const schemaOf = (id: string): Record<string, unknown> => {
+  const entry = optionsSchema.properties.presets.properties[id];
+  if (entry === undefined) throw new Error(`optionsSchema has no ${id}`);
+  return entry;
+};
+
+/** One shipped preset's `env` schema, which is where its vendor's variables are drawn. */
+const envSchemaOf = (id: string): { properties: Record<string, Record<string, unknown>>; additionalProperties: unknown } => {
+  const fields = schemaOf(id)['properties'];
+  const held = typeof fields === 'object' && fields !== null ? (fields as Record<string, unknown>)['env'] : undefined;
+  if (typeof held !== 'object' || held === null) throw new Error(`${id} has no env schema`);
+  return held as { properties: Record<string, Record<string, unknown>>; additionalProperties: unknown };
+};
+
+it('describes every shipped preset for a form, with its name and the sites behind it', () => {
+  const drawn = optionsSchema.properties.presets.properties;
+  expect(Object.keys(drawn).sort()).toEqual(Object.keys(shipped).sort());
+  for (const [id, row] of Object.entries(shipped)) {
+    const agent = knownAgents[id];
+    expect(agent, `${id} has no row in knownAgents`).toBeDefined();
+    const entry = schemaOf(id);
+    expect(entry['title'], `${id} has no title`).toBe(row.name);
+    expect(entry['links'], `${id} carries no links`).toEqual({ site: agent?.site, company: agent?.company });
+  }
+});
+
+it('draws one field per variable its vendor documents, and still takes a name it does not', () => {
+  for (const [id, row] of Object.entries(shipped)) {
+    const agent = knownAgents[id];
+    if (agent === undefined) throw new Error(`${id} has no row in knownAgents`);
+    const env = envSchemaOf(id);
+    expect(Object.keys(env.properties).sort(), `${id} draws another set of variables`)
+      .toEqual(agent.variables.map((one) => one.name).sort());
+    // A variable no vendor documents is still a value a person may write.
+    expect(env.additionalProperties, `${id} refuses a variable its vendor does not document`)
+      .toEqual({ type: 'string', writeOnly: true, secretAtUse: true });
+    for (const variable of agent.variables) {
+      const field = env.properties[variable.name];
+      expect(field?.['description'], `${id}.${variable.name} has no description`).toBe(variable.description);
+      // A form hides a secret, because it is one, and shows any other value.
+      expect(field?.['writeOnly'], `${id}.${variable.name} is drawn the wrong way`)
+        .toBe(variable.secret ? true : undefined);
+    }
+  }
+  // A variable that is not a secret is a plain string, so a form shows it.
+  expect(envSchemaOf('amp').properties['AMP_SKIP_UPDATE_CHECK']).toEqual({
+    type: 'string', description: '1 stops the update check',
+  });
+});
+
+it('runs cline and omp the way their rows say', async () => {
+  const merged = await mergedOf({ presets: { cline: {}, omp: {} } });
+  expect(merged.map((one) => [one.command, one.args])).toEqual([
+    ['cline', ['--acp']],
+    ['omp', ['acp']],
+  ]);
+});
+
+it('stops amp checking for updates, as the row does', async () => {
+  expect((await mergedOf({ presets: { amp: {} } }))[0]?.env).toEqual({ AMP_SKIP_UPDATE_CHECK: '1' });
 });
 
 it('accepts install and page on a preset, and runs the same command', async () => {
@@ -287,6 +351,14 @@ it('sends no sign-in for a row that needs none', async () => {
   const cursor = await mergedOf({ presets: { cursor: {} } });
   delete process.env.CURSOR_API_KEY;
   expect(cursor[0]?.authenticate).toEqual({ methodId: 'cursor_login' });
+});
+
+it('signs devin in with its one method when its key is set', async () => {
+  expect((await mergedOf({ presets: { devin: {} } }))[0]?.authenticate).toBeUndefined();
+  process.env.WINDSURF_API_KEY = 'key-devin';
+  const devin = await mergedOf({ presets: { devin: {} } });
+  delete process.env.WINDSURF_API_KEY;
+  expect(devin[0]?.authenticate).toEqual({ methodId: 'devin-browser' });
 });
 
 it('keeps hostTools plugin-wide and lets a preset set its own', async () => {

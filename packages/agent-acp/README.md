@@ -52,7 +52,7 @@ Add one entry to `plugins` in the daemon's `config.json`, and one key per ACP se
 
 Each key registers an agent of its own, under that key as the provider id, so `copilot`, `codex` and `my-agent` are three entries in the picker out of one load.
 
-The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp` and `qwen`. A key that names none of them writes a `command` of its own, and a key that names one takes its command, its arguments and its environment.
+The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`, `goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`. A key that names none of them writes a `command` of its own, and a key that names one takes its command, its arguments and its environment.
 
 Every option below is a key under `options` in the plugin's entry, and the daemon checks each value against the schema before `apply` runs.
 
@@ -90,7 +90,7 @@ Every option below is a key under `options` in the plugin's entry, and the daemo
 | `state` | `/ahpd/<id>` for a shipped preset | The absolute directory the agent keeps its configuration in, as a state volume |
 | `seed` | the agent's own host files | The host files `state` is seeded from, each `{ "source", "target", "keep", "drop" }` |
 
-Every shipped preset brings a `machine`: its CLI's part, a state directory at `/ahpd/<id>` seeded from the agent's own host files and never its login file, and the variables that point the CLI there. So a preset in a machine runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#acp-agents-in-a-machine).
+Each shipped preset that names a part brings a `machine`. It holds the CLI's part and a state directory at `/ahpd/<id>`, seeded from the agent's own host files and never its login file. It also holds the variables that point the CLI there. So a preset in a machine runs from its part on any glibc image, and signs in with the key a person adds in `machine.env`. A vault-filled key reaches only this agent's commands in the machine. `cline` and `omp` came with a row, a command and arguments but no part, so they carry no `machine`. See [ACP agents in a machine](https://github.com/softov/ahpd/blob/main/docs/plugins/COMPUTERS.md#acp-agents-in-a-machine).
 
 A per-agent option written at the top level fails the load and says where it goes now. A preset that cannot be resolved is skipped with one line naming it, and the rest register: a `base` naming no shipped preset, no `command` where one is needed, an `authenticate` with no `methodId`, a `$secret` the vault does not hold, or a `machine` that is wrongly written or reads a variable the daemon does not have. A row whose sign-in depends on a variable sends it only when the daemon's own environment or that preset's `env` has the variable, and for a session placed in a machine also when the preset's `machine.env` sets it.
 

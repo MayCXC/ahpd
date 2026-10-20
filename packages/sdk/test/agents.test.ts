@@ -1,11 +1,12 @@
 /*
  * The agents a setup can find, and the install lines it shows for them.
  *
- * Two things are worth a test: that every npm part of the machine images has a
- * row whose line names the package the part installs, and that a row answers a
- * system with its own line, the shared one, or nothing at all. The lines
- * themselves are the vendors' own, checked on the date in the source header;
- * this file is about the shape that keeps them findable.
+ * Three things are worth a test: that every npm part of the machine images has
+ * a row whose line names the package the part installs, that a row answers a
+ * system with its own line, the shared one, or nothing at all, and that a row
+ * carries the sites and the variables its vendor documents. The lines and the
+ * variables themselves are the vendors' own, checked on the date in the source
+ * header; this file is about the shape that keeps them findable.
  */
 
 import { readFileSync } from 'node:fs';
@@ -64,15 +65,50 @@ it('takes a system line over all, and gives nothing when a row has neither', () 
   const row: KnownAgent = {
     id: 'one',
     name: 'One',
+    site: 'https://one.example',
+    company: 'https://one.example',
     command: 'one',
     install: { all: 'npm i -g one', linux: 'apt install one' },
+    variables: [],
   };
   expect(installLine(row, 'linux')).toBe('apt install one');
   expect(installLine(row, 'darwin')).toBe('npm i -g one');
   expect(installLine(row, 'win32')).toBe('npm i -g one');
   expect(installLine(row, 'freebsd')).toBe('npm i -g one');
 
-  const pageOnly: KnownAgent = { id: 'two', name: 'Two', command: 'two', page: 'https://example.com/two' };
+  const pageOnly: KnownAgent = {
+    id: 'two',
+    name: 'Two',
+    site: 'https://two.example',
+    company: 'https://two.example',
+    command: 'two',
+    page: 'https://example.com/two',
+    variables: [],
+  };
   expect(installLine(pageOnly, 'linux')).toBeUndefined();
   expect(installLine(pageOnly, 'win32')).toBeUndefined();
+});
+
+it('gives every row a site and a company, both https', () => {
+  for (const [id, agent] of Object.entries(knownAgents)) {
+    expect(agent.site, `${id} has no site`).toMatch(/^https:\/\/\S+$/u);
+    expect(agent.company, `${id} has no company`).toMatch(/^https:\/\/\S+$/u);
+  }
+});
+
+it('names no variable twice in a row, and describes each one', () => {
+  for (const [id, agent] of Object.entries(knownAgents)) {
+    const names = agent.variables.map((one) => one.name);
+    expect(new Set(names).size, `${id} names a variable twice`).toBe(names.length);
+    for (const one of agent.variables) {
+      expect(one.name, `${id} has a nameless variable`).toMatch(/^[A-Z][A-Z0-9_]*$/u);
+      expect(one.description, `${id}.${one.name} has no description`).not.toBe('');
+    }
+  }
+});
+
+it('writes an id on every row, the same as its key', () => {
+  for (const [id, agent] of Object.entries(knownAgents)) {
+    expect(agent.id, `${id} carries another id`).toBe(id);
+  }
 });
