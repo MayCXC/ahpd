@@ -21,6 +21,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { createHost } from '../src/host.js';
 import { uriOf } from '../src/fileuri.js';
 import { fileSessions, memorySessions } from '../src/sessions.js';
@@ -75,7 +76,7 @@ const settle = async (times = 8): Promise<void> => {
  * zero-delay ticks ran out on a busy Windows runner before a file was written,
  * and the case went on as though the wait had been answered.
  */
-const until = async (ready: () => boolean, ms = 3000): Promise<void> => {
+const until = async (ready: () => boolean, ms = WAIT_MS): Promise<void> => {
   const deadline = Date.now() + ms;
   while (!ready()) {
     if (Date.now() >= deadline) throw new Error(`still waiting after ${ms} ms`);

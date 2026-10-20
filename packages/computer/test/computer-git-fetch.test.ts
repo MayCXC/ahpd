@@ -1,3 +1,4 @@
+import { machinePathOf } from '@ahpd/sdk';
 import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -25,7 +26,10 @@ import type { HostTool, ToolCall } from '../../sdk/src/types/host.js';
 /** The image: one with `git` in it and no entrypoint, which the runtime's `sleep infinity` would replace. */
 const IMAGE = 'node:22';
 const LABEL = 'ahpd.gitfetch=1';
-const ME = `${String(process.getuid?.())}:${String(process.getgid?.())}`;
+// Windows has no uid, and a machine made there runs as the image's own user.
+const ME = process.getuid === undefined ? undefined : `${String(process.getuid())}:${String(process.getgid?.())}`;
+/** The user a machine runs as, where this host has one to give it. */
+const AS_ME = ME === undefined ? {} : { user: ME };
 
 /**
  * The budget of a case that runs a real container: a fresh runner pulls
@@ -78,15 +82,15 @@ const repository = () => {
 const headOf = (repo: string, branch: string): string =>
   execFileSync('git', ['-C', repo, 'rev-parse', branch], { stdio: 'pipe' }).toString().trim();
 
-/** One git command in the machine, in the tree the machine was given. */
+/** One git command in the machine, in the tree the machine was given, at its path in there. */
 const inMachine = (docker: ReturnType<typeof dockerRuntime>, name: string, tree: string, args: string[]) =>
-  docker.exec(name, ['git', '-C', tree, ...args]);
+  docker.exec(name, ['git', '-C', machinePathOf(tree), ...args]);
 
 it.skipIf(!DOCKER)('gives a machine on a linked worktree no path into the host\'s git directory', async () => {
   const { repo, tree, gitDir, state } = repository();
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-worktree-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     /*
      * The link the host's own git would follow: git writes none under `logs/`,
@@ -94,18 +98,18 @@ it.skipIf(!DOCKER)('gives a machine on a linked worktree no path into the host\'
      * there at all - the git directory git answers for the tree is the host's,
      * which is not mounted.
      */
-    expect((await docker.exec(name, ['ln', '-sf', '/tmp/x', join(gitDir, 'logs', 'HEAD')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['ln', '-sf', '/tmp/x', machinePathOf(join(gitDir, 'logs', 'HEAD'))])).code).not.toBe(0);
     // Nor is any other path of it there to write to: the host's git directory
     // is mounted nowhere in the machine.
     for (const path of [join(gitDir, 'config'), join(gitDir, 'HEAD'), join(gitDir, 'refs'), join(gitDir, 'logs')]) {
-      expect((await docker.exec(name, ['touch', path])).code, path).not.toBe(0);
+      expect((await docker.exec(name, ['touch', machinePathOf(path)])).code, path).not.toBe(0);
     }
     // The host's objects are the one thing of it that reaches the machine, and
     // read-only: the machine reads the history and writes none of it.
-    expect((await docker.exec(name, ['touch', join(MACHINE_OBJECTS, 'probe')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['touch', machinePathOf(join(MACHINE_OBJECTS, 'probe'))])).code).not.toBe(0);
     // And the tree's own `.git` is a bind of a file this host wrote, so it
     // cannot be moved aside and replaced by a directory the machine fills.
-    expect((await docker.exec(name, ['mv', join(tree, '.git'), join(tree, '.old')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['mv', machinePathOf(join(tree, '.git')), machinePathOf(join(tree, '.old'))])).code).not.toBe(0);
     // The host's git directory is what it was: no reflog, no ref, no lock.
     expect(readFileSync(join(gitDir, 'config'), 'utf8')).not.toBe('');
   }
@@ -120,22 +124,22 @@ it.skipIf(!DOCKER)('gives a machine on a main checkout a git directory of its ow
   const name = `ahpd-gitfetch-checkout-${String(process.pid)}`;
   const before = readFileSync(join(gitDir, 'config'), 'utf8');
   const names = readdirSync(gitDir).sort();
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     /*
      * A main checkout's `.git` is a directory, so the machine's volume lands
      * over it: what is at that path in there is the machine's own git
      * directory, and a write in it is the machine writing in its own.
      */
-    expect((await docker.exec(name, ['touch', join(gitDir, 'probe')])).code).toBe(0);
+    expect((await docker.exec(name, ['touch', machinePathOf(join(gitDir, 'probe'))])).code).toBe(0);
     expect(existsSync(join(gitDir, 'probe'))).toBe(false);
     // The one path of the host's that reaches the machine - its objects -
     // read-only, and at a path of ahpd's own, since the tree's `.git` here is
     // the machine's.
-    expect((await docker.exec(name, ['touch', join(MACHINE_OBJECTS, 'probe')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['touch', machinePathOf(join(MACHINE_OBJECTS, 'probe'))])).code).not.toBe(0);
     // And the volume is a mount point, so the tree's `.git` cannot be moved
     // aside and replaced by a directory the machine fills.
-    expect((await docker.exec(name, ['mv', join(repo, '.git'), join(repo, '.old')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['mv', machinePathOf(join(repo, '.git')), machinePathOf(join(repo, '.old'))])).code).not.toBe(0);
     // The host's git directory is what it was: the machine wrote nothing in it.
     expect(readdirSync(gitDir).sort()).toEqual(names);
     expect(readFileSync(join(gitDir, 'config'), 'utf8')).toBe(before);
@@ -158,7 +162,7 @@ it.skipIf(!DOCKER)('gives a machine on a linked worktree the tree\'s branch, com
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-seed-tree-${String(process.pid)}`;
   const head = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // The branch the host's tree is on, at the commit the host's tree is at,
     // and nothing uncommitted: the index is the one the commit names and the
@@ -185,7 +189,7 @@ it.skipIf(!DOCKER)('gives a machine on a main checkout the branch its tree is on
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-seed-checkout-${String(process.pid)}`;
   const head = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     /*
      * A main checkout's git directory is the volume, at the tree's own `.git`:
@@ -198,8 +202,8 @@ it.skipIf(!DOCKER)('gives a machine on a main checkout the branch its tree is on
     expect((await inMachine(docker, name, repo, ['branch', '--show-current'])).output).toBe('main');
     // Read and not written: the host's objects are the one thing of its that
     // reaches the machine, and the machine's own are its own.
-    expect((await docker.exec(name, ['touch', join(MACHINE_OBJECTS, 'probe')])).code).not.toBe(0);
-    expect((await docker.exec(name, ['touch', join(gitDir, 'objects', 'probe')])).code).toBe(0);
+    expect((await docker.exec(name, ['touch', machinePathOf(join(MACHINE_OBJECTS, 'probe'))])).code).not.toBe(0);
+    expect((await docker.exec(name, ['touch', machinePathOf(join(gitDir, 'objects', 'probe'))])).code).toBe(0);
     expect(existsSync(join(gitDir, 'objects', 'probe'))).toBe(false);
   }
   finally {
@@ -267,7 +271,8 @@ const breakBranch = async (
   tree: string,
   branch: string,
 ): Promise<void> => {
-  const broken = `git -C ${tree} update-ref refs/heads/${branch} "$(printf 'tree %s\\n\\nmalformed\\n' "$(git -C ${tree} rev-parse 'HEAD^{tree}')" | git -C ${tree} hash-object -w --literally -t commit --stdin)"`;
+  const at = machinePathOf(tree);
+  const broken = `git -C ${at} update-ref refs/heads/${branch} "$(printf 'tree %s\\n\\nmalformed\\n' "$(git -C ${at} rev-parse 'HEAD^{tree}')" | git -C ${at} hash-object -w --literally -t commit --stdin)"`;
   expect((await docker.exec(name, ['sh', '-c', broken])).code).toBe(0);
 };
 
@@ -284,7 +289,7 @@ it.skipIf(!DOCKER)('brings what a machine committed back onto the host\'s branch
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-back-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A commit in the machine is in the machine's own git directory: the host's
     // branch has never heard of it, and the file the agent wrote is in the tree
@@ -317,7 +322,7 @@ it.skipIf(!DOCKER)('refuses a bundle the host\'s git cannot check, and leaves th
   const name = `ahpd-gitfetch-fsck-${String(process.pid)}`;
   const before = headOf(repo, 'work');
   const hidden = `refs/ahpd/machines/${name}/work`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     await commitIn(docker, name, tree, 'fine.txt', 'a commit git would write');
     await breakBranch(docker, name, tree, 'work');
@@ -343,7 +348,7 @@ it.skipIf(!DOCKER)('leaves the work under the hidden ref where the host\'s branc
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-behind-${String(process.pid)}`;
   const hidden = `refs/ahpd/machines/${name}/work`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     const made = await commitIn(docker, name, tree, 'agent.txt', 'from the machine');
     // A person's own commit on the branch, in the tree, while the machine was
@@ -370,7 +375,7 @@ it.skipIf(!DOCKER)('leaves the work under the hidden ref where the host has stag
   const name = `ahpd-gitfetch-staged-${String(process.pid)}`;
   const before = headOf(repo, 'work');
   const hidden = `refs/ahpd/machines/${name}/work`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // The machine's commit is a fast-forward for the host's branch, and the
     // host has something staged: moving the branch would reset the index over
@@ -408,7 +413,7 @@ it.skipIf(!DOCKER)('makes a branch on the host that the machine made and the hos
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-newbranch-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     expect((await inMachine(docker, name, tree, ['checkout', '-q', '-b', 'fix'])).code).toBe(0);
     const made = await commitIn(docker, name, tree, 'fixed.txt', 'a branch of its own');
@@ -443,7 +448,7 @@ it.skipIf(!DOCKER)('brings back every branch the machine holds, not only the one
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-everybranch-${String(process.pid)}`;
   const before = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A commit on the branch the machine was seeded with, a branch of its own
     // with a commit on that, and back to the first.
@@ -471,7 +476,7 @@ it.skipIf(!DOCKER)('answers nothing to bring back where the machine has committe
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-nothing-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A machine that has committed nothing has nothing beyond the host's own
     // commit, and git refuses to write a bundle of nothing: that is not a
@@ -500,7 +505,7 @@ it.skipIf(!DOCKER)('releases a machine with the fetch that brings its commit to 
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-release-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   const tools = computerTools(docker, { image: IMAGE, label: LABEL, max: 4, prefix: 'ahpd-gitfetch' });
   try {
     const made = await commitIn(docker, name, tree, 'released.txt', 'from the machine');
@@ -532,7 +537,7 @@ it.skipIf(!DOCKER)('brings back the commits of a stopped machine before it remov
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-stopped-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     const made = await commitIn(docker, name, tree, 'stopped.txt', 'from the machine');
     expect(made).not.toBe(before);
@@ -556,7 +561,7 @@ it.skipIf(!DOCKER)('keeps the uncommitted files of a stopped copy machine before
   const name = `ahpd-gitfetch-stopped-copy-${String(process.pid)}`;
   const kept = `refs/ahpd/machines/${name}/uncommitted`;
   const before = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', ...AS_ME });
   try {
     // What the machine committed and what it never did, both in its own
     // checkout inside the volume the removal takes with it.
@@ -582,7 +587,7 @@ it.skipIf(!DOCKER)('keeps a machine whose work cannot be brought back, and says 
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-keeps-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     await commitIn(docker, name, tree, 'fine.txt', 'a commit git would write');
     await breakBranch(docker, name, tree, 'work');
@@ -605,7 +610,7 @@ it.skipIf(!DOCKER)('release_computer answers the refusal and the machine is stil
   const { repo, tree, gitDir, state } = repository();
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-release-keeps-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   const tools = computerTools(docker, { image: IMAGE, label: LABEL, max: 4, prefix: 'ahpd-gitfetch' });
   try {
     await commitIn(docker, name, tree, 'fine.txt', 'a commit git would write');
@@ -631,7 +636,7 @@ it.skipIf(!DOCKER)('gives a machine a detached HEAD where the host\'s tree has o
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-seed-detached-${String(process.pid)}`;
   const head = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A tree on no branch is a machine on no branch, at the same commit: the
     // agent's work is fetched to the hidden ref and reaches no branch of the
@@ -662,7 +667,7 @@ it.skipIf(!DOCKER)('moves a machine to the commit the host made between turns', 
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-follow-${String(process.pid)}`;
   const seeded = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A person's commit in the tree, after the machine was made: the machine's
     // own git directory has never heard of it, and the file the person wrote
@@ -694,7 +699,7 @@ it.skipIf(!DOCKER)('moves a machine onto the branch the host checks out', async 
   const { repo, tree, gitDir, state } = repository();
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-follow-branch-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     /*
      * A person's checkout in the tree, at the same commit: the branch is the
@@ -725,7 +730,7 @@ it.skipIf(!DOCKER)('moves a machine on no branch to a commit made on a host on n
   execFileSync('git', ['-C', tree, 'checkout', '-q', '--detach'], { stdio: 'pipe' });
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-follow-detached-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     const branches = (await inMachine(docker, name, tree, ['for-each-ref', '--format=%(refname)', 'refs/heads'])).output;
     // A commit on the host's detached HEAD, the machine being detached too: the
@@ -754,7 +759,7 @@ it.skipIf(!DOCKER)('leaves a machine that holds a commit the host has not fetche
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state, log: (line) => { lines.push(line); } });
   const name = `ahpd-gitfetch-follow-unfetched-${String(process.pid)}`;
   const before = headOf(repo, 'work');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     // A commit in the machine and no fetch: it exists in the machine's own git
     // directory and nowhere else on this host, so moving the machine off it
@@ -797,7 +802,7 @@ const commitInside = async (
   file: string,
   subject: string,
 ): Promise<string> => {
-  expect((await docker.exec(name, ['sh', '-c', `printf '${subject}\\n' > ${join(tree, file)}`])).code).toBe(0);
+  expect((await docker.exec(name, ['sh', '-c', `printf '${subject}\\n' > ${machinePathOf(join(tree, file))}`])).code).toBe(0);
   expect((await inMachine(docker, name, tree, ['add', file])).code).toBe(0);
   expect((await inMachine(docker, name, tree, ['commit', '-q', '-m', subject])).code).toBe(0);
   return (await inMachine(docker, name, tree, ['rev-parse', 'HEAD'])).output;
@@ -810,7 +815,7 @@ const writeInside = async (
   path: string,
   said: string,
 ): Promise<void> => {
-  expect((await docker.exec(name, ['sh', '-c', `printf '${said}\\n' > ${path}`])).code).toBe(0);
+  expect((await docker.exec(name, ['sh', '-c', `printf '${said}\\n' > ${machinePathOf(path)}`])).code).toBe(0);
 };
 
 it.skipIf(!DOCKER)('keeps what a copy machine wrote out of the host\'s folder until the fetch brings it back', async () => {
@@ -818,7 +823,7 @@ it.skipIf(!DOCKER)('keeps what a copy machine wrote out of the host\'s folder un
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state });
   const name = `ahpd-gitfetch-copy-${String(process.pid)}`;
   const head = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', ...AS_ME });
   try {
     /*
      * The machine's checkout is its own, at the commit the host's tree is at,
@@ -863,7 +868,7 @@ it.skipIf(!DOCKER)('leaves a copy machine\'s work waiting where the host changed
   const name = `ahpd-gitfetch-copy-blocked-${String(process.pid)}`;
   const hidden = `refs/ahpd/machines/${name}/main`;
   const before = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', ...AS_ME });
   try {
     const made = await commitInside(docker, name, repo, 'src/tracked.txt', 'from the machine');
     // A person's own change to the same file in the host's tree, uncommitted:
@@ -890,7 +895,7 @@ it.skipIf(!DOCKER)('keeps what a copy machine never committed when the machine g
   const name = `ahpd-gitfetch-copy-stash-${String(process.pid)}`;
   const kept = `refs/ahpd/machines/${name}/uncommitted`;
   const before = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', ...AS_ME });
   try {
     /*
      * Work the agent did and never committed: the machine's checkout is in the
@@ -921,13 +926,13 @@ it.skipIf(!DOCKER)('moves a copy machine onto the commit the host made between t
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state, log: (line) => { lines.push(line); } });
   const name = `ahpd-gitfetch-copy-follow-${String(process.pid)}`;
   const seeded = headOf(repo, 'main');
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: repo, gitDir, gitGuard: 'fetch', sessionTree: 'copy', ...AS_ME });
   try {
     // A person's commit in the tree, after the machine was made: the machine's
     // own checkout has never heard of it.
     const moved = hostCommitIn(repo, 'host.txt', 'the host moved on');
     expect((await inMachine(docker, name, repo, ['rev-parse', 'HEAD'])).output).toBe(seeded);
-    expect((await docker.exec(name, ['test', '-e', join(repo, 'host.txt')])).code).not.toBe(0);
+    expect((await docker.exec(name, ['test', '-e', machinePathOf(join(repo, 'host.txt'))])).code).not.toBe(0);
 
     await docker.follow(name);
 
@@ -935,7 +940,7 @@ it.skipIf(!DOCKER)('moves a copy machine onto the commit the host made between t
     // is a fast-forward merge in the machine, which is what writes the file
     // there rather than only naming the commit.
     expect((await inMachine(docker, name, repo, ['rev-parse', 'HEAD'])).output).toBe(moved);
-    expect((await docker.exec(name, ['test', '-e', join(repo, 'host.txt')])).code).toBe(0);
+    expect((await docker.exec(name, ['test', '-e', machinePathOf(join(repo, 'host.txt'))])).code).toBe(0);
     expect(await inMachine(docker, name, repo, ['status', '--porcelain'])).toEqual({ output: '', code: 0 });
     expect((await inMachine(docker, name, repo, ['branch', '--show-current'])).output).toBe('main');
 
@@ -964,7 +969,7 @@ it.skipIf(!DOCKER)('leaves a machine whose fetched commit the host\'s branch doe
   const lines: string[] = [];
   const docker = dockerRuntime({ command: 'docker', label: LABEL, configDir: state, log: (line) => { lines.push(line); } });
   const name = `ahpd-gitfetch-follow-beside-${String(process.pid)}`;
-  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', user: ME });
+  await docker.run({ name, image: IMAGE, label: LABEL, folder: tree, gitDir, gitGuard: 'fetch', ...AS_ME });
   try {
     const made = await commitIn(docker, name, tree, 'agent.txt', 'from the machine');
     const moved = hostCommitIn(tree, 'host.txt', 'the host moved on');

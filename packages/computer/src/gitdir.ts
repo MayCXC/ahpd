@@ -19,6 +19,7 @@
  */
 
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { lstatSync, mkdirSync, readdirSync, readFileSync, readlinkSync, realpathSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve, sep } from 'node:path';
 import { gitArgv, machinePathOf } from '@ahpd/sdk';
@@ -62,6 +63,15 @@ export const MACHINE_OBJECTS = '/opt/ahpd/host-objects';
  * daemon keeps its own records in.
  */
 export const GITFILE = 'computers.gitfile';
+
+/**
+ * What the file ahpd writes for a linked worktree under `open` on Windows is
+ * named by: this, the first 12 hex of what it says, and `.gitfile`.
+ *
+ * One per worktree entry, since each names its own; never `GITFILE`, which is
+ * what tells a machine with a git directory of its own from the rest.
+ */
+export const OPEN_GITFILE = 'open-';
 
 /**
  * The name a machine's own git volume carries, before the machine's own.
@@ -432,6 +442,20 @@ export interface GitSeed {
   name?: string;
   /** The address a commit is made under, as the tree's own config answers it. */
   email?: string;
+  /**
+   * Whether git reads a file's executable bit, as the tree's config answers it.
+   *
+   * `false` on Windows, where Git for Windows writes it into every repository:
+   * Docker Desktop shows a Windows folder's files as `0777`, and a machine's git
+   * reading the bit would see every tracked file changed.
+   */
+  filemode?: string;
+  /**
+   * How git turns line endings, as the tree's config answers it - Git for
+   * Windows' system config says `true`, so the tree's files are CRLF on disk and
+   * LF in the commit, and a machine's git without it sees every one changed.
+   */
+  autocrlf?: string;
 }
 
 /**
@@ -440,8 +464,10 @@ export interface GitSeed {
  * Read with the hardened argv, in the tree and not in the git directory, so a
  * linked worktree answers its own branch and its own commit. Nothing here
  * writes anything, and nothing of the host's config is carried but the two
- * values a commit cannot be made without: a remote, a hooks path or an include
- * would be a path of this host's inside a machine.
+ * values a commit cannot be made without and the two that say how git reads
+ * the tree's files on disk: a remote, a hooks path or an include would be a
+ * path of this host's inside a machine - decision
+ * `a-machine-reads-the-tree-as-the-hosts-git-does`.
  */
 export const seedOf = (root: string): GitSeed => {
   const said = (args: string[]): string | undefined => {
@@ -454,11 +480,15 @@ export const seedOf = (root: string): GitSeed => {
   const commit = said(['rev-parse', 'HEAD']);
   const name = said(['config', '--get', 'user.name']);
   const email = said(['config', '--get', 'user.email']);
+  const filemode = said(['config', '--get', 'core.filemode']);
+  const autocrlf = said(['config', '--get', 'core.autocrlf']);
   return {
     ...(branch === undefined ? {} : { branch }),
     ...(commit === undefined ? {} : { commit }),
     ...(name === undefined ? {} : { name }),
     ...(email === undefined ? {} : { email }),
+    ...(filemode === undefined ? {} : { filemode }),
+    ...(autocrlf === undefined ? {} : { autocrlf }),
   };
 };
 
@@ -495,7 +525,8 @@ export const gitInside = (gitDir: string, root: string): boolean => {
  * mount is what makes the machine's directory a mount point. `state` is the
  * directory this host keeps its own records in, where a linked worktree's
  * gitfile is written. Under `open`, only the host git directory's own mount,
- * read-write, and nothing where the tree holds it.
+ * read-write, and nothing where the tree holds it - and on Windows, for a
+ * linked worktree, the file naming its entry by its machine path.
  */
 export const guardedMounts = (
   gitDir: string,
@@ -507,7 +538,56 @@ export const guardedMounts = (
   if (tree === 'copy') return gitMounts(gitDir, root, state, true);
   if (guard === 'fetch') return gitMounts(gitDir, root, state);
   const inside = gitInside(gitDir, root);
-  return inside ? undefined : { binds: [{ path: gitDir, readOnly: false }] };
+  if (inside) return undefined;
+  const binds: GitBind[] = [{ path: gitDir, readOnly: false }];
+  /*
+   * A linked worktree's `.git` names its entry by the host's path, which on
+   * Windows is a drive path the machine's git reads as relative to the tree. So
+   * there a file naming the entry by its machine path is bound over it,
+   * read-only, the way `fetch` binds its own - decision
+   * `an-open-worktree-on-windows-is-given-its-machine-path`. On Linux and macOS
+   * the two paths are one, and the tree's own file is right as it is.
+   */
+  const entry = process.platform === 'win32' ? entryOf(gitDir, root) : undefined;
+  if (entry === undefined) return { binds };
+  const file = openGitfileIn(state, entry);
+  return { binds: [...binds, { path: file, target: machinePathOf(join(root, '.git')), readOnly: true }], gitfile: file };
+};
+
+/**
+ * The gitfile an `open` machine on a linked worktree needs on Windows, written
+ * into `state` and answered: the entry, by its machine path.
+ */
+const openGitfileIn = (state: string, entry: string): string => {
+  const said = `gitdir: ${machinePathOf(entry)}\n`;
+  const file = join(state, `${OPEN_GITFILE}${createHash('sha256').update(said).digest('hex').slice(0, 12)}.gitfile`);
+  notLinked(file);
+  mkdirSync(state, { recursive: true });
+  madeFile(file, said);
+  if (statOf(file)?.isFile() !== true) throw new Error(`${file} is not a file, so there is nothing to bind over the tree's .git`);
+  return file;
+};
+
+/**
+ * How the host's git reads the tree's files, as the variables a machine's git
+ * takes config from, for a machine under `open`.
+ *
+ * Under `open` the machine reads the host's own repository config, and none of
+ * its global or system config: Git for Windows says `core.autocrlf` in its
+ * system config, so without this every CRLF file of the tree would be changed
+ * in the machine. A machine with a git directory of its own is given the same
+ * two values in its config when it is seeded instead - decision
+ * `an-open-machine-is-given-the-hosts-reading-in-its-environment`.
+ */
+export const openReadingOf = (root: string): Record<string, string> => {
+  const seed = seedOf(root);
+  const pairs = [['core.filemode', seed.filemode], ['core.autocrlf', seed.autocrlf]]
+    .filter((pair): pair is [string, string] => pair[1] !== undefined);
+  if (pairs.length === 0) return {};
+  return Object.fromEntries([
+    ['GIT_CONFIG_COUNT', String(pairs.length)],
+    ...pairs.flatMap(([key, value], at) => [[`GIT_CONFIG_KEY_${String(at)}`, key], [`GIT_CONFIG_VALUE_${String(at)}`, value]]),
+  ]);
 };
 
 /**
