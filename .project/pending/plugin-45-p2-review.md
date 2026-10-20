@@ -20,10 +20,12 @@ After a restart, the store has only the file to read. To keep the owner, the tru
 
 ## Check by hand
 
-1. In ahpapp, open a bot, then change its description in the file. The screen shows the change without a restart.
-2. In ahpapp, delete a bot. It goes from the list.
+Softov edited a bot's information in ahpw on 2026-10-20, and the bot's file took the change. That is the edit from the screen to the file. The two checks below go the other way, or delete.
+
+1. In ahpapp or ahpw, open a bot, then change its description in the file. The screen shows the change without a restart.
+2. In ahpapp or ahpw, delete a bot. It goes from the list.
 
 ## Reply
 
-- Write "pass" or what you saw for the two ahpapp checks.
+- Write "pass" or what you saw for the two checks.
 - Say how the owner is kept after a restart.
