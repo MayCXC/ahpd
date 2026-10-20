@@ -627,6 +627,20 @@ it('titles a session after the first line of what was said', async () => {
   expect(snapshot.snapshot.state.title).toBe('Fix the build');
 });
 
+it('says the title after the turn has started', async () => {
+  const model = createFakeModel({ script: [{ text: 'ok' }], stream: true });
+  const { client, peer: p, uri, chatUri } = await talking(model);
+  begin(client, chatUri, 't1', 'say hi');
+  await until(() => ended(p, chatUri));
+
+  // VS Code draws the message a second time when the title comes first.
+  const said = p.notes.filter((n) => n.method === 'action').map((n) => n.params as Note);
+  const started = said.findIndex((e) => e.channel === chatUri && e.action.type === 'chat/turnStarted');
+  const titled = said.findIndex((e) => e.channel === uri && e.action.type === 'session/titleChanged');
+  expect(started).toBeGreaterThanOrEqual(0);
+  expect(titled).toBeGreaterThan(started);
+});
+
 it('keeps a one-line message of seventy characters whole', async () => {
   const line = 'a'.repeat(70);
   const model = createFakeModel({ script: [{ text: 'ok' }], stream: true });
