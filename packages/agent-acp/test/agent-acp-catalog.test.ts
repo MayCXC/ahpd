@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { mkdtempSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -114,9 +115,15 @@ function start(agent: Agent, id: string, over: Partial<Start> = {}): { session: 
   return { session, watch };
 }
 
-/** The subprocess's work finishing, up to a point; the fixture never sleeps. */
-const until = async (check: () => boolean, times = 3000): Promise<void> => {
-  for (let i = 0; i < times; i++) {
+/**
+ * The subprocess's work finishing, up to a point; the fixture never sleeps.
+ *
+ * By the clock rather than by the count: a 1 ms timer is about 15 ms on
+ * Windows, so a count ran out before the server's five-second grace there.
+ */
+const until = async (check: () => boolean, ms = WAIT_MS): Promise<void> => {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
     if (check()) return;
     await new Promise((resolve) => { setTimeout(resolve, 1); });
   }
@@ -853,7 +860,8 @@ it('leaves no server behind after reading a session back', async () => {
   const pid = Number(readFileSync(pidFile, 'utf8'));
 
   // The read spawned a server of its own, and a read is not a session.
-  await until(() => !running(pid));
+  // Most of the case's budget: on Windows the server outlives its grace first.
+  await until(() => !running(pid), CLOSES_MS - 3_000);
   expect(running(pid)).toBe(false);
 }, CLOSES_MS);
 
@@ -1356,7 +1364,8 @@ it('leaves no process behind when a session closes', async () => {
   await session.close?.();
   // The server leads a group of its own, so the grandchild it started is in it
   // and the SIGTERM reaches both.
-  await until(() => !running(pid));
+  // Most of the case's budget: on Windows the server outlives its grace first.
+  await until(() => !running(pid), CLOSES_MS - 3_000);
   expect(running(pid)).toBe(false);
 }, CLOSES_MS);
 
