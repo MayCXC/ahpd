@@ -1,4 +1,5 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -24,7 +25,8 @@ beforeEach(resetSdk);
 
 let folder = '';
 beforeEach(() => { folder = mkdtempSync(join(tmpdir(), 'ahpd-restarting-')); });
-afterEach(() => { rmSync(folder, { recursive: true, force: true }); });
+// Awaited, with retries: on Windows the host can hold the folder a moment longer.
+afterEach(async () => { await rm(folder, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); });
 
 /** Ticks until this is true, or long enough that it plainly is not. */
 const until = async (wanted: () => boolean): Promise<void> => {
