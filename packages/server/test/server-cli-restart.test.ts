@@ -3,6 +3,7 @@
  *
  * `restart`, from the terminal and over HTTP, which starts two daemons a case.
  */
+import { posix } from '../../../tools/posix.ts';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -194,11 +195,13 @@ describe('start, stop and status', () => {
     const restarting = cli(['restart']);
     // The receipt is written before the `stopping` handler, which holds until the file exists.
     const log = join(home, 'ahpd', 'daemon.log');
+    // Windows has no SIGHUP, so a restart reaches the daemon there by its control pipe.
+    const receipt = `restart: stopping (${posix ? 'SIGHUP' : 'control pipe'})`;
     const until = Date.now() + 10000;
-    while (!readFileSync(log, 'utf8').includes('restart: stopping (SIGHUP)') && Date.now() < until) {
+    while (!readFileSync(log, 'utf8').includes(receipt) && Date.now() < until) {
       await new Promise((wait) => setTimeout(wait, 25));
     }
-    expect(readFileSync(log, 'utf8')).toContain('restart: stopping (SIGHUP)');
+    expect(readFileSync(log, 'utf8')).toContain(receipt);
     // The stop waits for the daemon to go, and this daemon is held inside the
     // `stopping` handler: the release is written from under it, so the stop
     // lands while the handler runs and then waits the handler out.
@@ -218,7 +221,8 @@ describe('start, stop and status', () => {
     expect(announced().filter(alive)).toEqual([]);
   }, 60000);
 
-  it('leaves a foreground daemon to the default for either restart signal, which ends it', async () => {
+  // Windows cannot send SIGHUP or SIGUSR2, so there is no default to leave it to.
+  it.skipIf(!posix)('leaves a foreground daemon to the default for either restart signal, which ends it', async () => {
     expect(await signalled('SIGHUP')).toBe('SIGHUP');
     expect(await signalled('SIGUSR2')).toBe('SIGUSR2');
   }, 60000);
@@ -230,7 +234,9 @@ describe('start, stop and status', () => {
    * runs on has no systemd user session, so the manager is the stand-in that
    * says what it was asked and does what the case names.
    */
-  it('stops a supervised daemon by asking the service manager for it', async () => {
+  // A service manager is systemd or launchd, and Windows has neither: the
+  // stand-in `systemctl` is a shell script, and `ahpd service install` refuses there.
+  it.skipIf(!posix)('stops a supervised daemon by asking the service manager for it', async () => {
     const daemon = await supervised();
     // The manager is what stops it: the half of `systemctl stop` that matters
     // here is the signal the real one sends the daemon it holds.
@@ -246,7 +252,8 @@ describe('start, stop and status', () => {
     expect(existsSync(join(home, 'ahpd', 'daemon.json'))).toBe(false);
   }, 60000);
 
-  it('hands a restarted supervised daemon to the service manager, and starts nothing itself', async () => {
+  // A service manager is systemd or launchd, and Windows has neither.
+  it.skipIf(!posix)('hands a restarted supervised daemon to the service manager, and starts nothing itself', async () => {
     put({ httpApi: true, plugins: [BACKEND], connectionToken: 'abc' });
     const daemon = await supervised(['--config-file', config, '--connection-token', 'abc'], fakeSystemctl());
     const api = `http://127.0.0.1:${new URL(daemon.url).port}/api/restart`;

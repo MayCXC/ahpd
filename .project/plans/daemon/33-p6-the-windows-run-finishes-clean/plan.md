@@ -1,7 +1,7 @@
 ---
 title: The Windows run finishes clean
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -91,21 +91,21 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A spawn opens no console window](task-01-a-spawn-opens-no-console-window.md) | implemented | - |
-| [02 - A mount with a drive is a mount](task-02-a-mount-with-a-drive-is-a-mount.md) | implemented | - |
-| [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | implemented | - |
-| [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | implemented | 03 |
-| [05 - ahpd config runs on Windows](task-05-ahpd-config-runs-on-windows.md) | todo | 03 |
-| [06 - An archive leaves the checkout's linked folders](task-06-an-archive-leaves-the-checkouts-linked-folders.md) | implemented | 03 |
-| [07 - A changeset names Windows paths](task-07-a-changeset-names-windows-paths.md) | implemented | 03 |
-| [08 - A test reads nothing of the machine it runs on](task-08-a-test-reads-nothing-of-the-machine-it-runs-on.md) | implemented | 03 |
-| [09 - The update and control tests run on Windows](task-09-the-update-and-control-tests-run-on-windows.md) | implemented | 03 |
-| [10 - The daemon tests stop what they start](task-10-the-daemon-tests-stop-what-they-start.md) | implemented | 03 |
-| [11 - A host path is absolute by the host's rule](task-11-a-host-path-is-absolute-by-the-hosts-rule.md) | implemented | 03 |
-| [12 - A client's path is read by the host's rules](task-12-a-clients-path-is-read-by-the-hosts-rules.md) | implemented | 03 |
-| [13 - A path is compared in the host's spelling](task-13-a-path-is-compared-in-the-hosts-spelling.md) | implemented | 03 |
-| [14 - The last three Windows cases pass](task-14-the-last-three-windows-cases-pass.md) | implemented | 03 |
-| [15 - A Windows test has twenty seconds](task-15-a-windows-test-has-twenty-seconds.md) | implemented | 03 |
+| [01 - A spawn opens no console window](task-01-a-spawn-opens-no-console-window.md) | done | - |
+| [02 - A mount with a drive is a mount](task-02-a-mount-with-a-drive-is-a-mount.md) | done | - |
+| [03 - The Windows job runs to the end](task-03-the-windows-job-runs-to-the-end.md) | done | - |
+| [04 - A test's cleanup waits for its folder](task-04-a-tests-cleanup-waits-for-its-folder.md) | done | 03 |
+| [05 - ahpd config runs on Windows](task-05-ahpd-config-runs-on-windows.md) | done | 03 |
+| [06 - An archive leaves the checkout's linked folders](task-06-an-archive-leaves-the-checkouts-linked-folders.md) | done | 03 |
+| [07 - A changeset names Windows paths](task-07-a-changeset-names-windows-paths.md) | done | 03 |
+| [08 - A test reads nothing of the machine it runs on](task-08-a-test-reads-nothing-of-the-machine-it-runs-on.md) | done | 03 |
+| [09 - The update and control tests run on Windows](task-09-the-update-and-control-tests-run-on-windows.md) | done | 03 |
+| [10 - The daemon tests stop what they start](task-10-the-daemon-tests-stop-what-they-start.md) | done | 03 |
+| [11 - A host path is absolute by the host's rule](task-11-a-host-path-is-absolute-by-the-hosts-rule.md) | done | 03 |
+| [12 - A client's path is read by the host's rules](task-12-a-clients-path-is-read-by-the-hosts-rules.md) | done | 03 |
+| [13 - A path is compared in the host's spelling](task-13-a-path-is-compared-in-the-hosts-spelling.md) | done | 03 |
+| [14 - The last three Windows cases pass](task-14-the-last-three-windows-cases-pass.md) | done | 03 |
+| [15 - A Windows test has twenty seconds](task-15-a-windows-test-has-twenty-seconds.md) | done | 03 |
 
 ## Risks and tradeoffs
 
@@ -114,17 +114,17 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18; tasks 04 and 06 implemented 2026-10-19 on Softov's Windows machine. An ACP server is stopped on Windows, and what it leaves running is ended after it exits. A tree's removal no longer deletes the checkout's `node_modules` through a junction. Tasks 07, 08 and 09 implemented 2026-10-19: a changeset's sides and a write through the host name Windows paths, a test no longer reads the machine's git config or keys, and the update and control tests run on Windows. Tasks 10 and 11 implemented 2026-10-19: the daemon tests stop what they start, and a host path is absolute by the host's rule. Task 12 implemented 2026-10-19: a client's path is read by the host's rules. Task 13 implemented 2026-10-19: a path is compared with a pattern, a key or a mount in the host's spelling, and every file the Windows run of PR 25 failed passes on its own. Task 14 implemented 2026-10-19: the Windows run of PR 29 failed three cases, and they pass. Task 15 implemented 2026-10-19: a test has twenty seconds on Windows, by Softov's decision, and the attachments wait is one by the clock. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s.
-- **Next action:** task 03 step 2 - push the branch through a PR and read the Windows job's log. That is Softov's. Its failures are tasks 04 and 05.
+- **Done so far:** planned 2026-10-18 from the Windows session's report. Tasks 01, 02 and 03 implemented 2026-10-18; tasks 04 and 06 implemented 2026-10-19 on Softov's Windows machine. An ACP server is stopped on Windows, and what it leaves running is ended after it exits. A tree's removal no longer deletes the checkout's `node_modules` through a junction. Tasks 07, 08 and 09 implemented 2026-10-19: a changeset's sides and a write through the host name Windows paths, a test no longer reads the machine's git config or keys, and the update and control tests run on Windows. Tasks 10 and 11 implemented 2026-10-19: the daemon tests stop what they start, and a host path is absolute by the host's rule. Task 12 implemented 2026-10-19: a client's path is read by the host's rules. Task 13 implemented 2026-10-19: a path is compared with a pattern, a key or a mount in the host's spelling, and every file the Windows run of PR 25 failed passes on its own. Task 14 implemented 2026-10-19: the Windows run of PR 29 failed three cases, and they pass. Task 15 implemented 2026-10-19: a test has twenty seconds on Windows, by Softov's decision, and the attachments wait is one by the clock. Every process spawn in `packages/*/src` sets `windowsHide: true`, including three the task's Files list did not name. `mountParts` in `manifest.ts` reads a drive letter as part of a mount's source, and the dev container's two mount spellings use it. The `check-windows` job's test bound is 600 s; `check` and `processes` keep 300 s. Task 05 implemented 2026-10-20 on a Windows VM: task 12's `--import` URL had already fixed its three cases, and putting the bare path back fails exactly them. Softov chose to close the plan on 2026-10-20. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none. The process tests on Windows are [p8](../33-p8-the-process-tests-pass-on-windows/plan.md).
 - **Open questions:** none.
 - **Watch out for:** this host cannot run Windows. Each Windows check is a CI run or Softov's Windows machine. Task 02's two cases ask `mountParts` directly: a drive path cannot exist on this host. The end-to-end check and `nested-start.test.ts` are for the Windows run.
 
 ## Final verification checklist
 
-- [ ] No spawn in `packages/*/src` lacks `windowsHide`.
-- [ ] `nested-start.test.ts` passes on Windows.
-- [ ] The Windows job ends without exit 124.
-- [ ] No `EBUSY` in the Windows job's log.
-- [ ] `config-layers.test.ts` passes on Windows.
-- [ ] The Linux jobs pass.
-- [ ] `plans/index.md` updated.
+- [x] No spawn in `packages/*/src` lacks `windowsHide`.
+- [x] `nested-start.test.ts` passes on Windows.
+- [x] The Windows job ends without exit 124.
+- [x] No `EBUSY` in the Windows job's log.
+- [x] `config-layers.test.ts` passes on Windows.
+- [x] The Linux jobs pass.
+- [x] `plans/index.md` updated.

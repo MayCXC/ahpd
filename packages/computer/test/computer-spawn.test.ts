@@ -18,9 +18,11 @@ import type { Asked } from '../../agent-claude/src/spawn.js';
 
 const asked: Asked = { command: 'claude', args: ['--print'], env: { CLAUDE_CONFIG_DIR: '/ahpd/claude' } };
 
-/** What the port answered, and what the spawn actually ran. */
-const ran = (command: string, args: string[]) =>
-  async (): Promise<{ command: string; args: string[] }> => ({ command, args });
+/**
+ * What the port answers: this Node running `script`, which every system has,
+ * where `cat`, `sleep` or `sh` would be POSIX alone.
+ */
+const node = (script: string): { command: string; args: string[] } => ({ command: process.execPath, args: ['-e', script] });
 
 it('holds what is written before the machine has answered', async () => {
   let release: (() => void) | undefined;
@@ -29,9 +31,9 @@ it('holds what is written before the machine has answered', async () => {
     await waited;
     // The port is handed what the SDK asked for, unchanged.
     expect(given.command).toBe('claude');
-    // `cat` stands in for the CLI: whatever reaches its stdin comes back on
+    // An echo stands in for the CLI: whatever reaches its stdin comes back on
     // stdout, so a write that was dropped is a byte that never returns.
-    return { command: 'cat', args: [] };
+    return node('process.stdin.pipe(process.stdout)');
   }, 'computer://box');
 
   // Written while the port is still thinking, which is the case that matters.
@@ -66,7 +68,7 @@ it('applies a kill that arrived before the child did', async () => {
   const waited = new Promise<void>((resolve) => { release = resolve; });
   const held = spawnInside(asked, async () => {
     await waited;
-    return { command: 'sleep', args: ['30'] };
+    return node('setTimeout(() => {}, 30000)');
   }, 'computer://box');
 
   // Abandoned during the inspect: without this the container keeps running a
@@ -81,10 +83,10 @@ it('applies a kill that arrived before the child did', async () => {
 });
 
 it('survives a child that has already gone', async () => {
-  // `true` exits at once, so the SDK's write loses the race and raises EPIPE
+  // A child that exits at once, so the SDK's write loses the race and raises EPIPE
   // on a stream nobody owns. Unhandled, that reaches the process and takes the
   // daemon down; the exit is what says what happened.
-  const held = spawnInside(asked, ran('true', []), 'computer://box');
+  const held = spawnInside(asked, async () => node(''), 'computer://box');
   const code = await new Promise<number | null>((resolve) => {
     held.on('exit', (given) => resolve(given));
   });
@@ -97,7 +99,7 @@ it('runs what the port answered, and nothing of its own', async () => {
   // The port owns the whole command; this only spawns it. A backend that
   // appended arguments of its own would run them outside the descriptor the
   // host built, which is the seam a second runtime depends on.
-  const held = spawnInside(asked, ran('sh', ['-c', 'printf ran-the-descriptor']), 'computer://box');
+  const held = spawnInside(asked, async () => node("process.stdout.write('ran-the-descriptor')"), 'computer://box');
   const back = await new Promise<string>((resolve) => {
     let seen = '';
     held.stdout.on('data', (chunk: Buffer) => { seen += chunk.toString(); });
@@ -127,7 +129,7 @@ it('fails a turn on a session whose CLI is gone, instead of thinking for ever', 
     settings: { computer: 'computer://box' },
     // A machine whose command exits at once, which is what `docker exec` does
     // for an image with no `claude` in it.
-    computers: { how: async () => ({ command: 'false', args: [] }) },
+    computers: { how: async () => node('process.exit(1)') },
     emit: (_channel: string, what: Record<string, unknown>) => {
       const type = String(what.type ?? '');
       const part = what.part as { error?: { message?: string } } | undefined;

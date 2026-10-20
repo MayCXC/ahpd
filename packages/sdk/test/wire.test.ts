@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
+import { posix } from '../../../tools/posix.ts';
+import { describe, expect, it, onTestFinished, vi } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -268,6 +269,11 @@ const strayMeta = (frame: Record<string, unknown>): string[] =>
   metaKeys(frame).filter(({ key, at }) => !announced(key, at)).map(({ key, at }) => where(key, at));
 
 it('sends nothing the protocol does not declare, and nothing short of what it requires', async () => {
+  // The claude agent names its user folders from the home, so the capture is
+  // the same whoever runs it: `HOME` where it is POSIX, `USERPROFILE` on Windows.
+  vi.stubEnv('HOME', '/home/softov');
+  vi.stubEnv('USERPROFILE', '/home/softov');
+  onTestFinished(() => { vi.unstubAllEnvs(); });
   /*
    * A plugin the daemon's own root config carries options for.
    *
@@ -598,13 +604,22 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
   let minted = 0;
   let turns = 0;
   const names = new Map<string, string>();
+  const UUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+  const named = (found: string): string => {
+    if (!names.has(found)) names.set(found, `00000000-0000-4000-8000-${String(minted++).padStart(12, '0')}`);
+    return names.get(found) as string;
+  };
   const steady = (text: string): string => text
     .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+Z/g, '2020-01-01T00:00:00.000Z')
     .replace(/"ahpd\.durationMs":\d+/g, '"ahpd.durationMs":0')
-    .replace(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g, (found) => {
-      if (!names.has(found)) names.set(found, `00000000-0000-4000-8000-${String(minted++).padStart(12, '0')}`);
-      return names.get(found) as string;
-    })
+    /*
+     * A chat's URI names its session in base64url, so a session's UUID is in
+     * there too, where the pattern below cannot see it. Decoded, mapped and
+     * encoded again, so the chat keeps naming the session it names.
+     */
+    .replace(/(ahp-chat:\/\/default\/)([A-Za-z0-9_-]+)/g, (_found, scheme: string, id: string) =>
+      `${scheme}${Buffer.from(Buffer.from(id, 'base64url').toString('utf8').replace(UUID, named)).toString('base64url')}`)
+    .replace(UUID, named)
     /*
      * And the id a backend mints from the clock when an agent speaks first,
      * which is `turn-${Date.now()}`. A generated id is mapped rather than
@@ -615,8 +630,15 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
       if (!names.has(found)) names.set(found, `turn-${turns++}`);
       return names.get(found) as string;
     });
-  mkdirSync('packages/sdk/test/fixtures', { recursive: true });
-  writeFileSync('packages/sdk/test/fixtures/wire.jsonl', `${wire.map((one) => steady(JSON.stringify(one))).join('\n')}\n`);
+  /*
+   * Written from a POSIX run only. On Windows the folders come out with a
+   * drive and the home is the person's own, which `HOME` does not move there,
+   * so the capture would carry their user name into the repository.
+   */
+  if (posix) {
+    mkdirSync('packages/sdk/test/fixtures', { recursive: true });
+    writeFileSync('packages/sdk/test/fixtures/wire.jsonl', `${wire.map((one) => steady(JSON.stringify(one))).join('\n')}\n`);
+  }
 
   /*
    * Generated rather than committed, so it cannot drift from the package.

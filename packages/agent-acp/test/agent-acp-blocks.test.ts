@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -261,7 +262,9 @@ it('names a file the client gave by URI, and does not read it', async () => {
   expect(asked.filter((uri) => uri.includes('note.txt'))).toEqual([]);
 });
 
-it('names a large file, a pipe and a device without reading them', async () => {
+// A named pipe made with `mkfifo` and the device `/dev/zero` are POSIX files,
+// and Windows has neither.
+it.skipIf(!posix)('names a large file, a pipe and a device without reading them', async () => {
   const dir = scratch();
   const big = join(dir, 'huge.bin');
   writeFileSync(big, Buffer.alloc(6 * 1024 * 1024, 7));

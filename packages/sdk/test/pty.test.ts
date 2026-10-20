@@ -156,6 +156,17 @@ describe('the arguments a command reaches the shell with', () => {
       .toEqual(['-NoProfile', '-Command', psLine("& 'C:\\tools\\it''s.exe' 'a b'")]);
   });
 
+  it('escapes the words for the C runtime under Windows PowerShell, which passes them on unescaped', () => {
+    // A quote, the backslashes in front of one, a trailing backslash in a word
+    // the shell wraps in quotes, and an empty word it would drop.
+    const args = ['say "hi"', 'a\\"b', 'C:\\some dir\\', '', 'plain'];
+    expect(started('powershell.exe', { command: 'node.exe', args })?.args)
+      .toEqual(['-NoProfile', '-Command', psLine(String.raw`& 'node.exe' 'say \"hi\"' 'a\\\"b' 'C:\some dir\\' '""' 'plain'`)]);
+    // PowerShell 7 escapes them itself, so it is given the words as they are.
+    expect(started('pwsh.exe', { command: 'node.exe', args: ['say "hi"'] })?.args)
+      .toEqual(['-NoProfile', '-Command', psLine(`& 'node.exe' 'say "hi"'`)]);
+  });
+
   it('gives cmd.exe /d /s /c, one line in the outer quotes its /s strips', () => {
     // One string rather than an argv, because `node-pty` passes a string to
     // the Windows process as it is and escapes an array for the C runtime -
@@ -429,7 +440,7 @@ describe('a terminal ended by hand', () => {
       emit: () => {},
     });
 
-  it('ends the shell\'s tree with taskkill on Windows, since there is no group to signal', () => {
+  it('ends the shell\'s tree with taskkill on Windows, since there is no group to signal', async () => {
     const ran: { program: string; argv: string[] }[] = [];
     // Node itself, which reads its standard input until it ends and so stays
     // up: a real process with a real pid, which is what `taskkill` names.
@@ -443,6 +454,10 @@ describe('a terminal ended by hand', () => {
     // The shell's own pid, and not the host's: the pid was read from the
     // child, and it is one with a process still behind it.
     expect(() => { process.kill(Number(one?.argv[1]), 0); }).not.toThrow();
+    // The stand-in ran no `taskkill`, so the shell is ended here: left running in
+    // the run's folder, it holds that folder against its removal on Windows.
+    process.kill(Number(one?.argv[1]));
+    await terminal.waitForExit();
   });
 
   it('runs no taskkill for a shell that never started', async () => {
@@ -455,14 +470,15 @@ describe('a terminal ended by hand', () => {
     expect(ran).toEqual([]);
   });
 
-  it('sends SIGKILL to the group off Windows, as it always has', () => {
+  it('sends SIGKILL to the group off Windows, as it always has', async () => {
     const killed: { pid: number; signal: string | number | undefined }[] = [];
     const spy = vi.spyOn(process, 'kill').mockImplementation((pid, signal) => {
       killed.push({ pid, signal });
       return true;
     });
+    const terminal = on('linux', process.execPath);
     try {
-      on('linux', process.execPath).close();
+      terminal.close();
       expect(killed).toHaveLength(1);
       // Negative, which is the group the shell was started in: a signal to the
       // shell alone leaves the command it started running.
@@ -471,5 +487,8 @@ describe('a terminal ended by hand', () => {
     } finally {
       spy.mockRestore();
     }
+    // The signal was caught, so the shell is ended here, as the case above ends its own.
+    process.kill(-Number(killed[0]?.pid));
+    await terminal.waitForExit();
   });
 });

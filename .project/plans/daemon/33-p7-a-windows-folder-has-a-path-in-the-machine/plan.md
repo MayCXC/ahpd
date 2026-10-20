@@ -1,7 +1,7 @@
 ---
 title: A Windows folder has a path in the machine
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-20
@@ -95,14 +95,14 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A host path has a machine path](task-01-a-host-path-has-a-machine-path.md) | implemented | - |
-| [02 - A machine mounts a folder at its machine path](task-02-a-machine-mounts-a-folder-at-its-machine-path.md) | implemented | 01 |
-| [03 - What a machine answers names the host's paths](task-03-what-a-machine-answers-names-the-hosts-paths.md) | implemented | 01 |
-| [04 - A nested host and its attachments cross by the pair](task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md) | implemented | 01 |
-| [05 - An agent in a machine works at the machine path](task-05-an-agent-in-a-machine-works-at-the-machine-path.md) | implemented | 04 |
-| [06 - The computer suite runs on a Windows machine](task-06-the-computer-suite-runs-on-a-windows-machine.md) | implemented | 02, 03, 04, 05 |
-| [07 - A machine reads the tree as the host's git does](task-07-a-machine-reads-the-tree-as-the-hosts-git-does.md) | implemented | 06 |
-| [08 - An open machine on a linked worktree reaches its entry on Windows](task-08-an-open-worktree-has-its-machine-path.md) | implemented | 06 |
+| [01 - A host path has a machine path](task-01-a-host-path-has-a-machine-path.md) | done | - |
+| [02 - A machine mounts a folder at its machine path](task-02-a-machine-mounts-a-folder-at-its-machine-path.md) | done | 01 |
+| [03 - What a machine answers names the host's paths](task-03-what-a-machine-answers-names-the-hosts-paths.md) | done | 01 |
+| [04 - A nested host and its attachments cross by the pair](task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md) | done | 01 |
+| [05 - An agent in a machine works at the machine path](task-05-an-agent-in-a-machine-works-at-the-machine-path.md) | done | 04 |
+| [06 - The computer suite runs on a Windows machine](task-06-the-computer-suite-runs-on-a-windows-machine.md) | done | 02, 03, 04, 05 |
+| [07 - A machine reads the tree as the host's git does](task-07-a-machine-reads-the-tree-as-the-hosts-git-does.md) | done | 06 |
+| [08 - An open machine on a linked worktree reaches its entry on Windows](task-08-an-open-worktree-has-its-machine-path.md) | done | 06 |
 
 ## Risks and tradeoffs
 
@@ -111,8 +111,8 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`. Tasks 01 to 06 implemented 2026-10-19 on Softov's Windows machine. On 2026-10-20, on a Windows VM with Docker Desktop 29.9.1: the real-Docker cases and the hand check of task 06 step 4 ran, and found what tasks 07 and 08 fix; tasks 07 and 08 implemented, and the real-Docker git cases pass there.
-- **Next action:** review tasks 01 to 08 and the CI run of the branch, then close the plan; the hand check's terminal turns wait for [acp/19](../../acp/19-a-terminal-in-a-machine-runs-in-the-machine/plan.md).
+- **Done so far:** planned 2026-10-19 from the survey on `a0382dc9`. Tasks 01 to 06 implemented 2026-10-19 on Softov's Windows machine. On 2026-10-20, on a Windows VM with Docker Desktop 29.9.1: the real-Docker cases and the hand check of task 06 step 4 ran, and found what tasks 07 and 08 fix; tasks 07 and 08 implemented, and the real-Docker git cases pass there. PR #43 passed every CI job and Softov merged it on 2026-10-20 and chose to close the plan. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none. The hand check's terminal turn is run again when [acp/19](../../acp/19-a-terminal-in-a-machine-runs-in-the-machine/plan.md) is built.
 - **Open questions:** none.
 - **Watch out for:** on Linux and macOS the pair is the identity, so a Linux run proves nothing about the translation; only a Windows run does.
 
@@ -120,5 +120,5 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 - [x] The computer suite passes on a Windows machine, apart from what is POSIX by nature.
 - [x] A machine made from a Windows host with a folder works there, by hand, with Docker Desktop.
-- [ ] The Linux jobs pass.
-- [ ] `plans/index.md` updated.
+- [x] The Linux jobs pass.
+- [x] `plans/index.md` updated.

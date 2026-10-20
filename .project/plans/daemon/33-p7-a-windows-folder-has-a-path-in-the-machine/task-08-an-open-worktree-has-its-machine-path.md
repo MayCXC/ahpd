@@ -1,6 +1,6 @@
 ---
 title: An open machine on a linked worktree reaches its entry on Windows
-status: implemented
+status: done
 depends: [task-06-the-computer-suite-runs-on-a-windows-machine.md]
 layer: computer
 refs:

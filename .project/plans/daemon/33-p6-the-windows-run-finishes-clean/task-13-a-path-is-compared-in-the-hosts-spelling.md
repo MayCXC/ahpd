@@ -1,6 +1,6 @@
 ---
 title: A path is compared in the host's spelling
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, computer, tests
 refs:

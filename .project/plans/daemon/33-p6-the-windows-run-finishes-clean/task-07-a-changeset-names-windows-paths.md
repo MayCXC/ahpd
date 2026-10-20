@@ -1,6 +1,6 @@
 ---
 title: A changeset names Windows paths
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, agent-acp
 refs:

@@ -1,6 +1,6 @@
 ---
 title: A nested host and its attachments cross by the pair
-status: implemented
+status: done
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: sdk, computer
 refs:

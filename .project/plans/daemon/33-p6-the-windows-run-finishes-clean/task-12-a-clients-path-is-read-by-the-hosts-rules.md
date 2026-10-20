@@ -1,6 +1,6 @@
 ---
 title: A client's path is read by the host's rules
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, server, bot, tests
 refs:

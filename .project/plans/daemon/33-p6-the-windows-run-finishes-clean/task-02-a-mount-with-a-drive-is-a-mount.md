@@ -1,6 +1,6 @@
 ---
 title: A mount with a drive is a mount
-status: implemented
+status: done
 depends: []
 layer: computer
 refs:

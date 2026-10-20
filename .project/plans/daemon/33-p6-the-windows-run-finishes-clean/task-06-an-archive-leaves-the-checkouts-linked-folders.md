@@ -1,6 +1,6 @@
 ---
 title: An archive leaves the checkout's linked folders
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk
 refs:

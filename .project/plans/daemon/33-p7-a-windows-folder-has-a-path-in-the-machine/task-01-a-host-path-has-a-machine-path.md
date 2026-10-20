@@ -1,6 +1,6 @@
 ---
 title: A host path has a machine path
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

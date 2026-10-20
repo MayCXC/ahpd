@@ -1,3 +1,4 @@
+import { posix } from '../../../tools/posix.ts';
 import { spawn as startProcess } from 'node:child_process';
 import type { ChildProcessWithoutNullStreams } from 'node:child_process';
 import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -86,8 +87,8 @@ const child = (command: string, args: string[], env: Record<string, string>): Ch
 const ahpd = (env: Record<string, string>, plugin = FIXTURE): ChildProcessWithoutNullStreams =>
   child(process.execPath, ['--conditions', 'development', '--import', './scripts/dev.mjs', ENTRY, '--stdio', '--plugin', plugin], env);
 
-/** A shell script, as a machine that is not what it should be. */
-const shell = (script: string): ChildProcessWithoutNullStreams => child('sh', ['-c', script], home());
+/** A Node script, as a machine that is not what it should be: Node is on every system, where `sh` is not. */
+const misfit = (script: string): ChildProcessWithoutNullStreams => child(process.execPath, ['-e', script], home());
 
 /** Wait for something the proxy does asynchronously, without a fixed sleep. */
 const until = async (check: () => boolean, ms = PATIENCE): Promise<void> => {
@@ -202,7 +203,7 @@ const outer = async (
 
 it('a child that exits at once ends the session with its stderr', async () => {
   const { emit, of, has } = recorder();
-  const session = proxy(() => shell('echo no such plugin >&2; exit 3')).create(start(emit));
+  const session = proxy(() => misfit("process.stderr.write('no such plugin\\n'); process.exit(3)")).create(start(emit));
   await until(() => has('session/creationFailed'));
   const said = String(of('session/creationFailed')?.error?.message);
   expect(said).toMatch(/no such plugin/);
@@ -210,12 +211,14 @@ it('a child that exits at once ends the session with its stderr', async () => {
   session.close();
 }, 30_000);
 
-it('a child that closes its stdin and keeps running ends the session with a sentence', async () => {
+// A write to a pipe its reader closed fails with EPIPE on POSIX. On Windows
+// the write is queued until the child exits, so there is nothing to see.
+it.skipIf(!posix)('a child that closes its stdin and keeps running ends the session with a sentence', async () => {
   const { emit, of, has } = recorder();
-  // Handed over once the shell has closed its stdin, so the first write is
+  // Handed over once the child has closed its stdin, so the first write is
   // the one that meets the closed pipe.
   const session = proxy(async () => {
-    const closing = shell('exec 0<&-; sleep 2');
+    const closing = misfit("require('node:fs').closeSync(0); setTimeout(() => {}, 2000)");
     await new Promise((resolve) => { setTimeout(resolve, 300); });
     return closing;
   }).create(start(emit));
@@ -451,7 +454,7 @@ it('a restart goes on once the process is gone, with its pipes still held open',
    * something lets go - so `close` says nothing for seconds, and the process's
    * own `exit` is the only word that it has gone.
    */
-  const inner = shell('sleep 8 & exit 0');
+  const inner = misfit("require('node:child_process').spawn(process.execPath, ['-e', 'setTimeout(() => {}, 8000)'], { stdio: 'inherit' }); process.exit(0)");
   const session = nestedAgent(PROVIDER, {
     plugins: [FIXTURE],
     start: async () => inner as unknown as NestedHost,
@@ -469,7 +472,9 @@ it('a restart goes on once the process is gone, with its pipes still held open',
   expect(lines.some((line) => line.includes('is still there'))).toBe(false);
 }, 30_000);
 
-it('a closed session stops an inner host that will not take SIGTERM, within the bound', async () => {
+// A process that ignores SIGTERM is a POSIX one: on Windows `kill` ends the
+// process at once whatever the signal, so the SIGKILL this waits for never comes.
+it.skipIf(!posix)('a closed session stops an inner host that will not take SIGTERM, within the bound', async () => {
   const { emit, has } = recorder();
   let inner: ChildProcessWithoutNullStreams | undefined;
   const env = { ...home(), IGNORE_SIGTERM: '1' };
@@ -496,7 +501,9 @@ it('a plugin the inner host cannot load ends the session naming it', async () =>
   session.close();
 }, 40_000);
 
-it('an inner host that cannot make its configuration directory ends the session with its EACCES line', async () => {
+// A folder made unwritable with `0500` is a POSIX file mode. Windows keeps
+// only a read-only flag, which does not stop a folder being made inside.
+it.skipIf(!posix)('an inner host that cannot make its configuration directory ends the session with its EACCES line', async () => {
   const env = home();
   const config = env.XDG_CONFIG_HOME as string;
   chmodSync(config, 0o500);

@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -76,7 +77,9 @@ const within = <T>(work: Promise<T>, ms: number): Promise<T | 'timed out'> =>
 const settled = async (): Promise<void> => { await new Promise((done) => { setTimeout(done, 5); }); };
 
 it('applies without waiting for pi, imports it once for the first list and session, and answers stateFile once it has loaded', async () => {
-  const entry = await within(import('../src/index.js'), 2000);
+  // A module that imported pi when it loaded never finishes, so this waits
+  // only as long as a cold import of the plugin can take on a slow runner.
+  const entry = await within(import('../src/index.js'), WAIT_MS);
   expect(entry).not.toBe('timed out');
   if (entry === 'timed out') return;
 

@@ -3,6 +3,7 @@
  *
  * The verbs that read and write the configuration, the users, the vault and the plugins.
  */
+import { posix } from '../../../tools/posix.ts';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -255,7 +256,9 @@ describe('plugin', () => {
     expect(said.stdout).toContain('plugin');
   });
 
-  it('remove says the configuration changed before npm fails', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('remove says the configuration changed before npm fails', async () => {
     put({ plugins: ['some-plugin'] });
     const said = await cli(['plugin', 'remove', 'some-plugin', '--config-file', config, '--yes'], { env: fakeNpm(1) });
     expect(said.code).toBe(2);
@@ -263,7 +266,9 @@ describe('plugin', () => {
     expect(readFileSync(config, 'utf8')).not.toContain('some-plugin');
   });
 
-  it('a failed npm says what failed at the terminal, and npm\'s error only as npm said it', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('a failed npm says what failed at the terminal, and npm\'s error only as npm said it', async () => {
     writeFileSync(join(home, 'ahpd', 'package.json'), JSON.stringify({ dependencies: { 'some-plugin': '^1.0.0' } }));
     put({ plugins: ['some-plugin'] });
     const env = { ...fakeNpm(1), FAKE_NPM_STDERR: 'npm error code E404' };
@@ -280,7 +285,9 @@ describe('plugin', () => {
     }
   }, 30000);
 
-  it('update --force installs each package in its own npm call', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('update --force installs each package in its own npm call', async () => {
     const dir = join(home, 'ahpd');
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ dependencies: { 'some-plugin': '^1.0.0', 'another-plugin': '^1.0.0' } }));
     const log = join(home, 'npm.log');
@@ -295,7 +302,9 @@ describe('plugin', () => {
     ]);
   }, 20000);
 
-  it('asks for a restart when an update moved only the sdk', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('asks for a restart when an update moved only the sdk', async () => {
     // Every update installs the daemon's own sdk beside the plugins, so a
     // daemon upgraded before its plugins moves the sdk on a call that moves no
     // plugin: the loaded plugins are on the old one until the daemon restarts.
@@ -320,7 +329,9 @@ describe('plugin', () => {
     expect(said.stderr).toContain('Restart the daemon to load the change: ahpd restart');
   }, 20000);
 
-  it('install --json writes only JSON', async () => {
+  // On Windows the daemon runs the npm beside its own Node, never one off the
+  // `PATH`, so the stand-in npm this case puts there is not the one that runs.
+  it.skipIf(!posix)('install --json writes only JSON', async () => {
     const said = await cli(
       ['plugin', 'install', 'some-plugin', '--no-enable', '--json', '--config-file', config],
       { env: fakeNpm(0) },
