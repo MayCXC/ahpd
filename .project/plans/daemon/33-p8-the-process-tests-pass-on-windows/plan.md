@@ -1,7 +1,7 @@
 ---
 title: The process tests pass on Windows
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-20
 revalidated: 2026-10-20
@@ -77,12 +77,12 @@ One case of `server-cli-restart`, a stop sent while a restart is stopping, expec
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A wait by the clock has the case's budget](task-01-a-wait-by-the-clock-has-the-cases-budget.md) | implemented | - |
-| [02 - A stand-in is a Node script](task-02-a-stand-in-is-a-node-script.md) | implemented | - |
-| [03 - A POSIX-only process test says why it skips](task-03-a-posix-only-process-test-says-why-it-skips.md) | implemented | - |
-| [04 - Windows PowerShell 5.1 runs an argv whole](task-04-windows-powershell-5-runs-an-argv-whole.md) | implemented | - |
-| [05 - A terminal case ends the shell it started](task-05-a-terminal-case-ends-the-shell-it-started.md) | implemented | - |
-| [06 - The wire capture is the same on every run](task-06-the-wire-capture-is-the-same-on-every-run.md) | implemented | - |
+| [01 - A wait by the clock has the case's budget](task-01-a-wait-by-the-clock-has-the-cases-budget.md) | done | - |
+| [02 - A stand-in is a Node script](task-02-a-stand-in-is-a-node-script.md) | done | - |
+| [03 - A POSIX-only process test says why it skips](task-03-a-posix-only-process-test-says-why-it-skips.md) | done | - |
+| [04 - Windows PowerShell 5.1 runs an argv whole](task-04-windows-powershell-5-runs-an-argv-whole.md) | done | - |
+| [05 - A terminal case ends the shell it started](task-05-a-terminal-case-ends-the-shell-it-started.md) | done | - |
+| [06 - The wire capture is the same on every run](task-06-the-wire-capture-is-the-same-on-every-run.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -91,13 +91,13 @@ One case of `server-cli-restart`, a stop sent while a restart is stopping, expec
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-20 from the VM run. Tasks 01 to 04 implemented 2026-10-20, and the 11 files pass on the Windows VM. Task 05 added and implemented the same day: `pty.test.ts` left a Node child in the run's folder, which failed its removal on Windows. Task 06 added and implemented the same day: the committed `wire.jsonl` held a Windows home with a real user name, and every run rewrote it; it is regenerated on Linux. `install-ps1.test.ts` sits at the Windows limit on a desktop: see [deferred.md](deferred.md).
-- **Next action:** review tasks 01 to 06 and the CI run of the branch, then close the plan.
+- **Done so far:** planned 2026-10-20 from the VM run. Tasks 01 to 04 implemented 2026-10-20, and the 11 files pass on the Windows VM. Task 05 added and implemented the same day: `pty.test.ts` left a Node child in the run's folder, which failed its removal on Windows. Task 06 added and implemented the same day: the committed `wire.jsonl` held a Windows home with a real user name, and every run rewrote it; it is regenerated on Linux. `install-ps1.test.ts` sits at the Windows limit on a desktop: see [deferred.md](deferred.md). PR #49 passed every job, and Softov merged it on 2026-10-20. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the `check-windows` runner has PowerShell 7 and Git's `usr/bin` on `PATH`, so a POSIX stand-in or a PowerShell 5.1 bug passes there; only a host without them shows it.
 
 ## Final verification checklist
 
 - [x] The 11 files pass on the Windows VM, with their skips.
-- [ ] The Linux jobs pass.
+- [x] The Linux jobs pass.
 - [x] `plans/index.md` updated.

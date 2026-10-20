@@ -1,6 +1,6 @@
 ---
 title: Windows PowerShell 5.1 runs an argv whole
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

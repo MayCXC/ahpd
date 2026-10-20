@@ -1,6 +1,6 @@
 ---
 title: The wire capture is the same on every run
-status: implemented
+status: done
 depends: []
 layer: tests
 refs:
