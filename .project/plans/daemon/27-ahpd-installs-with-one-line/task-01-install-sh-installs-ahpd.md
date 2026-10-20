@@ -1,6 +1,6 @@
 ---
 title: install.sh installs ahpd
-status: todo
+status: implemented
 depends: []
 layer: scripts
 refs:
@@ -62,7 +62,7 @@ A second run upgrades the package and its plugins, and adds no second PATH line.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Open questions:** none.
-- **Watch out for:** a piped script reads stdin from the pipe, so every question reads from `/dev/tty`. Keep the script short, because the pages show its URL for a person to read.
+- **Done so far:** `scripts/install/install.sh` parses every flag and its `AHPD_*` twin and refuses sudo. It finds Node 22.1 or later on the PATH and then in nvm, and asks on a TTY before installing nvm and Node. Without a terminal it stops with the nvm command. Under `--runtime bun` it uses `bun add -g`, and it moves to `~/.npm-global` when the global prefix is not writable. It installs with `--allow-scripts=node-pty` only on npm 11.16 or later, and warns on a node-pty build failure instead of stopping. It writes the marked PATH line once. On an upgrade it runs `ahpd plugin update all` and prints `ahpd restart`. On a TTY it runs `ahpd configure` from `/dev/tty`. It prints `ahpd service install`, and changes nothing under `--dry-run`. `scripts/install/test/install-sh.test.ts` has 14 cases over stub commands and a fake home folder, and they pass. The `install` CI job runs the script in `debian:12-slim`, `node:20-bookworm-slim` and `node:22-bookworm-slim`.
+- **Next action:** task 02, `install.ps1`.
+- **Open questions:** none. `NVM_INSTALL_URL` is pinned to `v0.40.8`, the latest nvm release on 2026-10-19.
+- **Watch out for:** a piped script reads stdin from the pipe, so every question reads from `/dev/tty`. The tests source the script with `AHPD_INSTALL_NO_RUN=1` and call `main`, so `set -euo pipefail` is in force in the test shell too. The stub `node` is first on the test PATH, so a Node on the host does not decide the result.

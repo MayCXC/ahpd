@@ -1,6 +1,6 @@
 ---
 title: install.ps1 installs ahpd
-status: todo
+status: implemented
 depends: [task-01-install-sh-installs-ahpd.md]
 layer: scripts
 refs:
@@ -49,7 +49,7 @@ It does the same steps as `install.sh`, with PowerShell names for the flags.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Open questions:** none.
-- **Watch out for:** under `iex`, `exit` closes the person's window, so use `throw`. A flag passes only as `& ([scriptblock]::Create((irm <url>))) -NoOnboard`, so every flag needs its environment twin.
+- **Done so far:** `scripts/install/install.ps1` reads every flag and its `AHPD_*` twin, and it throws instead of exiting. It finds Node 22.1 or later and asks on a terminal before installing one. A missing Node gets `winget install OpenJS.NodeJS.LTS`, and no terminal throws with that command. Under `-Runtime bun` it uses `bun add -g`. It installs with `--allow-scripts=node-pty` only on npm 11.16 or later, and warns on a failed node-pty build instead of stopping. It adds the npm folder to the user PATH once. On an upgrade it runs `ahpd plugin update all` and prints `ahpd restart`. On a terminal it runs `ahpd configure` unless `-NoOnboard`. It prints no `ahpd service install` line, and changes nothing under `-DryRun`. `scripts/install/test/install-ps1.test.ts` has 12 cases and skips unless the platform is Windows and `pwsh` is found. The `install-windows` CI job installs with Node 22. It also checks that the job stops with the winget command when the PATH has no Node.
+- **Next action:** task 04, the uninstall in both scripts.
+- **Open questions:** none beyond task 01's nvm tag.
+- **Watch out for:** under `iex`, `exit` closes the person's window, so use `throw`. A flag passes only as `& ([scriptblock]::Create((irm <url>))) -NoOnboard`, so every flag needs its environment twin. The user PATH is written with `[Environment]::SetEnvironmentVariable(..., 'User')`, which .NET implements only on Windows, which is why the tests skip elsewhere. A runner hands each step its own environment, so the `install-windows` job names the npm folder again before `ahpd --version`.

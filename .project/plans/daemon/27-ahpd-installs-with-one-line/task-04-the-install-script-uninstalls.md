@@ -1,6 +1,6 @@
 ---
 title: The install script uninstalls
-status: todo
+status: implemented
 depends: [task-01-install-sh-installs-ahpd.md, task-02-install-ps1-installs-ahpd.md]
 layer: scripts
 refs:
@@ -48,3 +48,8 @@ The configuration folder and its plugins stay, unless `--purge` (`-Purge`) is al
 - CI runs the uninstall after the install in the clean container and on the Windows runner.
 
 ## Resume
+
+- **Done so far:** `install.sh --uninstall` removes the daemon/31 service file or a record that names `service`, and stops a daemon that still runs. It removes `@ahpd/server`, or `bun remove -g` under Bun, and takes out only the marked PATH line. The npm prefix and `~/.npmrc` stay, and the configuration goes only under `--purge`. `--purge` without `--uninstall` exits 2, and `--dry-run --uninstall` prints each step and removes nothing. `install.ps1 -Uninstall` does the same with `throw`, minus the service step because daemon/31 gives Windows no service. It removes the user PATH entry by value. `docs/server/INSTALL.md` has an Uninstall section with the one line first and the by-hand steps after it. The shell tests grew to 14 cases and the PowerShell tests to 12. The CI `install` job runs the uninstall after the install and checks that `ahpd` and the PATH line are gone. `install-windows` runs `-Uninstall` and checks the shim.
+- **Next action:** task 03, which is the ahpio-site work and stays `todo` here because it is another repository.
+- **Open questions:** the task says "when `ahpd service` reports a service", and the CLI has no such verb. The script reads the daemon/31 service file, or the `service` field that `ahpd status --json` prints for a manager-started daemon, and then runs `ahpd service uninstall`.
+- **Watch out for:** the uninstall names the package, not `package@version`, because a version may be the one an upgrade replaced. A Windows PATH has no comment marker, so the uninstall removes the folder by value; the install only adds that entry when it is absent.
