@@ -1,6 +1,6 @@
 ---
 title: A token id never starts with a hyphen
-status: todo
+status: implemented
 depends: [task-04-the-token-commands.md]
 layer: sdk
 refs:
@@ -39,7 +39,10 @@ No release has token minting yet, so no kept token has such an id.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** every step. `mintToken` draws another 6-byte id while the id starts with `-` or another token holds it. `packages/sdk/test/users-tokens.test.ts` queues two ids for `randomBytes`, the first spelling `-AAAAAAA`, and sees the mint keep `AAAAAAAA`, store it and revoke it. `packages/server/test/token-command.test.ts` mints over `/api` with the same queue, then revokes the id it answered with `token rm` and expects 200. The sdk and server suites pass from the root (234 files, 4563 tests), as do `pnpm -s build`, `pnpm -s typecheck` and `pnpm boundary`.
+- **Next action:** none; every task in the plan is implemented.
 - **Open questions:** none.
-- **Watch out for:** base64url has `-` and `_`; only `-` reads as a flag.
+- **Watch out for:**
+  - base64url spells `-` in about 1 id in 64, and `_` in another 1 in 64. Only `-` reads as a flag, so only it is drawn again.
+  - Both test files stub `node:crypto`, keeping the real module under a queue. The 32-byte secret comes from the real source once the queue is empty.
+  - The server test's directory signs the three people in before the case mints a token, so the queue reaches the token's own first id.
