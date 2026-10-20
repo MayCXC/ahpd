@@ -25,6 +25,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - `commandParser`, or a plugin's `registerCommandParser`, replaces the command splitter.
 - `eligibleForAutoApproval` makes a tool ask on every call, in every backend and every permission mode.
 - A client's rules reach the agent's system prompt.
+- A pushed `/.../` rule that VS Code's default table does not carry needs `config:change`.
 
 ### Sessions and VS Code parity
 
