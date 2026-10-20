@@ -31,6 +31,8 @@ export { readJson, readJsonObject, writeJsonAtomic } from './jsonfile.js';
 export type { JsonRead, JsonObjectRead, JsonWriteOptions } from './jsonfile.js';
 export type { EachPresetOptions, FoldedOptions, HostRecording, ServedRoute } from './plugins.js';
 export { sdkVersion } from './version.js';
+export { installLine, knownAgents } from './agents.js';
+export type { KnownAgent } from './agents.js';
 export { doorOf, listen, overStdio, plainAnswer, runtime, serveRequests } from './listen.js';
 export {
   createPeer, receive, RpcError, RpcTimeout, RpcClosed, ANSWER_TIMEOUT,

@@ -37,6 +37,19 @@ export interface Ran {
   stderr: string;
 }
 
+/** How a program is run, when the caller needs more than the defaults give. */
+export interface RunOptions {
+  /**
+   * Stop the process after this many milliseconds.
+   *
+   * `SIGKILL`, so a program that ignores a polite request still goes; a caller
+   * that asks for this is one whose output is not worth waiting for.
+   */
+  timeoutMs?: number;
+  /** Keep standard output for the caller rather than passing it on. */
+  capture?: boolean;
+}
+
 /**
  * How one program is run.
  *
@@ -49,7 +62,7 @@ export interface Ran {
  * settles when the program is gone, so a caller answers whoever it serves
  * meanwhile. Replaced in tests, which is the only reason this is a value at all.
  */
-export type Runner = (program: string, argv: readonly string[]) => Promise<Ran>;
+export type Runner = (program: string, argv: readonly string[], options?: RunOptions) => Promise<Ran>;
 
 /** How one program is started: what `spawn` is given. */
 export interface Launch {
@@ -102,9 +115,15 @@ export const launch = (
 };
 
 /** The default runner: the program on PATH, its standard error passed through as it comes. */
-export const run: Runner = (program, argv) => new Promise((done) => {
+export const run: Runner = (program, argv, options = {}) => new Promise((done) => {
   const started = launch(program, argv, process.platform, process.env, process.execPath, existsSync);
-  const child = spawn(started.command, started.args, { stdio: ['inherit', 2, 'pipe'], shell: started.shell, windowsHide: true });
+  const child = spawn(started.command, started.args, {
+    stdio: options.capture === true ? ['ignore', 'pipe', 'pipe'] : ['inherit', 2, 'pipe'],
+    shell: started.shell,
+    windowsHide: true,
+    ...(options.timeoutMs === undefined ? {} : { timeout: options.timeoutMs, killSignal: 'SIGKILL' as const }),
+  });
+  let stdout = '';
   let stderr = '';
   let settled = false;
   const finish = (answer: Ran): void => {
@@ -112,15 +131,16 @@ export const run: Runner = (program, argv) => new Promise((done) => {
     settled = true;
     done(answer);
   };
+  child.stdout?.on('data', (chunk: Buffer) => { stdout += String(chunk); });
   child.stderr?.on('data', (chunk: Buffer) => {
     const text = String(chunk);
     stderr += text;
-    process.stderr.write(text);
+    if (options.capture !== true) process.stderr.write(text);
   });
   // A program that cannot be started has no words of its own, so the failure
   // to start is what the caller is told.
-  child.once('error', (error: Error) => { finish({ code: -1, stdout: '', stderr: error.message }); });
-  child.once('close', (code: number | null) => { finish({ code: code ?? -1, stdout: '', stderr }); });
+  child.once('error', (error: Error) => { finish({ code: -1, stdout, stderr: error.message }); });
+  child.once('close', (code: number | null) => { finish({ code: code ?? -1, stdout, stderr }); });
 });
 
 /**
