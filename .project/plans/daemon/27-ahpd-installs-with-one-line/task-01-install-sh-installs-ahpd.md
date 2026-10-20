@@ -15,7 +15,7 @@ refs:
 
 ## Objective
 
-`curl -fsSL https://ahpio.com/install.sh | bash` installs `@ahpd/server` without sudo, puts `ahpd` on PATH, and runs `ahpd configure` on a TTY.
+`curl -fsSL https://ahpio.com/ahpd/install.sh | bash` installs `@ahpd/server` without sudo, puts `ahpd` on PATH, and runs `ahpd configure` on a TTY.
 A second run upgrades the package and its plugins, and adds no second PATH line.
 
 ## Files

@@ -66,10 +66,9 @@ ahpd configure -> look up each command on PATH -> list what was found -> one que
 | --- | --- | --- |
 | 01 | [The sdk lists the known agents](task-01-the-sdk-lists-the-known-agents.md) | implemented |
 | 02 | [Configure finds the runtimes and agents](task-02-configure-finds-the-runtimes-and-agents.md) | implemented |
-| 03 | [The install script prints the runtime lines](task-03-the-install-script-prints-the-runtime-lines.md) | todo |
+| 03 | [The install script prints the runtime lines](task-03-the-install-script-prints-the-runtime-lines.md) | implemented |
 
 Task 01 moves from agent-acp to the sdk, because `pnpm boundary` does not let `@ahpd/server` import `@ahpd/agent-acp`.
-Task 03 starts after daemon/27 tasks 01 and 02, which create the two install scripts.
 
 ## Risks and tradeoffs
 
@@ -79,8 +78,8 @@ Task 03 starts after daemon/27 tasks 01 and 02, which create the two install scr
 
 ## Resume state
 
-- **Done so far:** the proposal, 2026-10-15. The tasks and the answers, 2026-10-19. Tasks 01 and 02 were implemented on 2026-10-19. The sdk lists the known agents with their install lines. Configure finds the runtimes and agents, asks about each agent it found, and lists the missing ones.
-- **Next action:** task 03, after daemon/27 tasks 01 and 02 create the install scripts.
+- **Done so far:** the proposal, 2026-10-15. The tasks and the answers, 2026-10-19. Tasks 01 and 02 were implemented on 2026-10-19. The sdk lists the known agents with their install lines. Configure finds the runtimes and agents, asks about each agent it found, and lists the missing ones. Task 03 was implemented on 2026-10-19: both install scripts print the Node, Bun and Deno lines before the runtime check, and INSTALL.md names them.
+- **Next action:** none. The final checklist has the one by-hand check.
 - **Open questions:** none.
 - **Watch out for:** [daemon/29](../29-ahpd-doctor-says-what-is-wrong/plan.md) uses the PATH lookup, so keep it a function of its own. `codex` has no ACP mode; its preset runs `codex-acp`. Look up the preset's command, not the product name. The version probe needs `Runner` to capture stdout and kill after 3 seconds; both are optional arguments on the runner, added in task 02.
 

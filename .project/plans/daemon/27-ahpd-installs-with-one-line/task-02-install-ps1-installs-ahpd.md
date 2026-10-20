@@ -11,7 +11,7 @@ refs:
 
 ## Objective
 
-`irm https://ahpio.com/install.ps1 | iex` installs `@ahpd/server` on Windows, puts `ahpd` on the user PATH, and runs `ahpd configure` in an interactive session.
+`irm https://ahpio.com/ahpd/install.ps1 | iex` installs `@ahpd/server` on Windows, puts `ahpd` on the user PATH, and runs `ahpd configure` in an interactive session.
 It does the same steps as `install.sh`, with PowerShell names for the flags.
 
 ## Files

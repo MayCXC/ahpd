@@ -43,7 +43,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [25 - A token file in a new folder is written](daemon/25-a-token-file-in-a-new-folder-is-written/plan.md) | high | built 2026-10-19; checked on Windows 2026-10-14; [implemented.md](daemon/25-a-token-file-in-a-new-folder-is-written/implemented.md) | - | - |
 | [26 - ahpd paths sets the served folders](daemon/26-ahpd-paths-sets-the-served-folders/plan.md) | high | built 2026-10-15 | - | - |
 | [27 - ahpd installs with one line](daemon/27-ahpd-installs-with-one-line/plan.md) | medium | active 2026-10-19; tasks 01, 02 and 04 implemented; task 03 stays todo in ahpio-site | - | - |
-| [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | active; tasks 01 and 02 implemented 2026-10-19; task 03 todo, waits on 27 | 27 | 29 |
+| [28 - Setup finds the runtimes and agents](daemon/28-setup-finds-the-runtimes-and-agents/plan.md) | medium | active; tasks 01 to 03 implemented 2026-10-19 | 27 | 29 |
 | [29 - ahpd doctor says what is wrong](daemon/29-ahpd-doctor-says-what-is-wrong/plan.md) | medium | draft 2026-10-15 | 28 | - |
 | [30 - npm says what it installs before it runs](daemon/30-npm-says-what-it-installs/plan.md) | medium | built 2026-10-19; passed on Windows 2026-10-16; [implemented.md](daemon/30-npm-says-what-it-installs/implemented.md) | - | - |
 | [31 - The service manager starts the daemon](daemon/31-the-service-manager-starts-the-daemon/plan.md) | medium | active 2026-10-16; tasks 01 to 05 implemented; checks by hand in [pending/daemon-31-service-checks.md](../pending/daemon-31-service-checks.md) | - | daemon 27 task 04 |

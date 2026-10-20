@@ -40,16 +40,18 @@ deno run -A "$(npm root -g)/@ahpd/server/dist/main.js"
 
 Node needs the optional `ws` dependency, which npm installs. Bun and Deno use their built-in servers.
 
+Before they install, `install.sh` and `install.ps1` print one line for each of Node, Bun and Deno: the version, and whether ahpd runs on it.
+
 ## Uninstall
 
 ```bash
-curl -fsSL https://ahpio.com/install.sh | bash -s -- --uninstall
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash -s -- --uninstall
 ```
 
 On PowerShell:
 
 ```powershell
-& ([scriptblock]::Create((irm https://ahpio.com/install.ps1))) -Uninstall
+& ([scriptblock]::Create((irm https://ahpio.com/ahpd/install.ps1))) -Uninstall
 ```
 
 The script removes the service if one is installed, stops a daemon that still runs, uninstalls `@ahpd/server`, and removes the PATH line it wrote. The npm prefix stays, and so does the configuration folder with the plugins in it. Add `--purge` (`-Purge` on PowerShell) to remove `~/.config/ahpd` too.
