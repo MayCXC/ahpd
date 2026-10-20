@@ -1,7 +1,7 @@
 ---
 title: A gone folder leaves the session summary
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -63,7 +63,7 @@ worktree removed outside ahpd -> session kept -> listing or summaryOf -> working
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the summary names only folders that are there](task-01-the-summary-names-only-folders-that-are-there.md) | implemented | - |
+| [01 - the summary names only folders that are there](task-01-the-summary-names-only-folders-that-are-there.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -81,16 +81,16 @@ worktree removed outside ahpd -> session kept -> listing or summaryOf -> working
   A folder made again is named again by the next listing.
   `docs/sdk/SESSIONS.md` says a summary leaves out a folder that is not there.
   The gates pass: build, typecheck, boundary, schema, the sdk suite at 3232 passed and 2 skipped, and the server suite at 1236 passed.
+  Softov reviewed the plan 2026-10-19 and approved the close, and [implemented.md](implemented.md) says what was built.
 - **Next action:** none.
-  Task 01 is the plan's only task, and nothing is set to `done`.
 - **Open questions:** none.
 - **Watch out for:** `summaryOf`, `adopt` and `liveRows` each build a summary, and all three pass `workingDirectories` through the filter.
   A session inside a computer can report a machine path as a `file:` URI. The summary leaves it out, because the path is not on this host.
 
 ## Final verification checklist
 
-- [ ] A session whose worktree is removed by hand stays listed, and its summary names no folder.
-- [ ] The folder is named again after it is made again.
-- [ ] A URI that is not `file:` is kept.
-- [ ] The gates pass.
+- [x] A session whose worktree is removed by hand stays listed, and its summary names no folder.
+- [x] The folder is named again after it is made again.
+- [x] A URI that is not `file:` is kept.
+- [x] The gates pass.
 - [ ] `plans/index.md` updated.

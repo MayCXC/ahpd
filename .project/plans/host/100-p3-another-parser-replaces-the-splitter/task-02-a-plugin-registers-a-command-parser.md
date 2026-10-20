@@ -1,6 +1,6 @@
 ---
 title: A plugin registers a command parser
-status: implemented
+status: done
 depends: [task-01-the-parser-is-a-port.md]
 layer: sdk
 refs:

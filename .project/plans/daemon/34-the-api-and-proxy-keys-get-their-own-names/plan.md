@@ -1,7 +1,7 @@
 ---
 title: The API and proxy keys get their own names
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18
@@ -71,8 +71,8 @@ client form -> root/configChanged -> rootconfig.ts writes the new name and remov
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the daemon reads the new names](task-01-the-daemon-reads-the-new-names.md) | implemented | - |
-| [02 - the docs use the new names](task-02-the-docs-use-the-new-names.md) | implemented | 01 |
+| [01 - the daemon reads the new names](task-01-the-daemon-reads-the-new-names.md) | done | - |
+| [02 - the docs use the new names](task-02-the-docs-use-the-new-names.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -82,8 +82,8 @@ client form -> root/configChanged -> rootconfig.ts writes the new name and remov
 
 ## Resume state
 
-- **Done so far:** tasks 01 and 02 are implemented. The daemon reads, writes and warns about the new names, and the docs use them.
-- **Next action:** review the two tasks, then the plan is done.
+- **Done so far:** tasks 01 and 02 implemented 2026-10-19 and merged in PR #22. Softov reviewed them and approved the close on 2026-10-19. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** `rootconfig.ts` edits the file in place, beside keys it does not touch.
 

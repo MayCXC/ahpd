@@ -24,7 +24,6 @@ Current progress and pending items only, as of 2026-10-15.
 Each of these has its tasks built and reviewed. To close one, follow its Resume state.
 
 - daemon/23: passed on Windows; it needs only the close.
-- daemon/25: checked on Windows; Softov's review remains.
 - host/33: tasks 03 and 04 are implemented.
 - host/83: p1 to p5 are built; the checks by hand of p1 to p4 remain.
 - host/86 and host/87: task 01 of each is implemented and reviewed.

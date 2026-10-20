@@ -1,6 +1,6 @@
 ---
 title: The token methods over AHP
-status: todo
+status: implemented
 depends: [task-02-a-token-signs-in-narrowed.md]
 layer: sdk
 refs:
@@ -49,3 +49,12 @@ The methods do what the commands of task 04 do, with the same checks and the sam
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step. `packages/sdk/src/tokens.ts` answers `x-ahpd/tokens/mint`, `x-ahpd/tokens/list` and `x-ahpd/tokens/revoke`, each with the `user:write` grant and a `describe`. `authorize` lets in a reader whose `token` is not set, when `params.user` is absent or their own id. A reader with `token` set is refused by `handle` with `-32009` and the task-04 sentence. Another person needs `user:write` and is bounded by that person's grants. The body repeats the check because `authorize` is asked only of a caller the grant refused. A root connection with no `user` is refused `INVALID_PARAMS`. Mint answers the `MintedToken` with its `secret`, list the records without hashes, revoke `{}`. Bad params are `INVALID_PARAMS` and directory refusals `-32009` with the directory's sentence. `index.ts` exports `tokenMethods`, and `run.ts` registers the three as `{ by: 'ahpd', name, method }` when a users directory exists.
+- **Next action:** task 06, the docs.
+- **Open questions:** none.
+- **Watch out for:**
+  - `expires` is epoch milliseconds over AHP, as a token record keeps it; the command's `--expires` takes a date and parses it first.
+  - A minted token with no `user:write` is refused by the gate before `handle` runs, with `"<id> may not user:write here"`. A minted token that holds `user:write` hears the task-04 sentence, as does every direct `handle`.
+  - Revoke takes `{ id }` and a person, never a token of another person without `user:write`; a root connection has to name that person.
+  - The three are registered only when `options.users` is set, so a host with no users file advertises no token methods.

@@ -1,6 +1,6 @@
 ---
 title: The boundary finds its root on Windows
-status: implemented
+status: done
 depends: []
 layer: scripts
 refs:
@@ -52,3 +52,5 @@ Validation:
 Left:
 
 - Nothing is committed, as asked.
+
+Closed 2026-10-19: the boundary step of the `check-windows` job passed on PR #30, in run 39344018005.

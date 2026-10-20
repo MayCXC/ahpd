@@ -1,6 +1,6 @@
 ---
 title: The plan tools
-status: implemented
+status: done
 depends: [task-02-tasks-and-plans-are-records.md, task-03-a-tool-call-names-its-person.md]
 layer: "tasks"
 refs:

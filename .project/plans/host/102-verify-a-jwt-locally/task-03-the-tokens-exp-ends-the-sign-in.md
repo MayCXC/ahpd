@@ -1,6 +1,6 @@
 ---
 title: The token's exp ends the sign-in
-status: implemented
+status: done
 depends: [task-02-the-directory-asks-the-issuer-iss-names.md]
 layer: sdk
 refs:

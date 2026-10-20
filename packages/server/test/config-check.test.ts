@@ -72,6 +72,12 @@ describe('a wrong value on a known key', () => {
     expect(refusal({ trustToken: 'yes' })).toBe(`${config}: trustToken must be true or false`);
   });
 
+  it('refuses a tokens per person that is not a whole number of 0 or more', () => {
+    expect(refusal({ tokensPerPerson: -1 })).toBe(`${config}: tokensPerPerson must be an integer >= 0`);
+    expect(refusal({ tokensPerPerson: 2.5 })).toBe(`${config}: tokensPerPerson must be an integer >= 0`);
+    expect(refusal({ tokensPerPerson: '3' })).toBe(`${config}: tokensPerPerson must be an integer >= 0`);
+  });
+
   it('refuses a string where a list of strings goes', () => {
     expect(refusal({ paths: '/work' })).toBe(`${config}: paths must be a list of text`);
   });
@@ -233,12 +239,20 @@ describe('a valid file', () => {
   it('leaves the defaults where neither says anything', () => {
     const options = folded({});
     expect(options).toMatchObject({
-      port: 9187, host: '127.0.0.1', open: false, trustToken: false, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url', terminalAutoApproveDefaults: 'vscode',
+      port: 9187, host: '127.0.0.1', open: false, trustToken: false, tokensPerPerson: 10, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url', terminalAutoApproveDefaults: 'vscode',
       automations: 'file', sessions: 'file', usagePer: 'turn', plugins: [], updateCheck: true, warnings: [],
     });
     // Absent rather than defaulted here, for the same reason: a host that says
     // nothing asks the issuer's userinfo, which is where it started.
     expect(folded({}).issuerVerify).toBeUndefined();
+  });
+
+  it('reads the tokens per person from the flag or the file, and gives ten when neither names one', () => {
+    expect(folded({}).tokensPerPerson).toBe(10);
+    expect(folded({ tokensPerPerson: 3 }).tokensPerPerson).toBe(3);
+    expect(optionsFrom({ configFile: config, tokensPerPerson: 1 }).tokensPerPerson).toBe(1);
+    // Zero is a host where nobody mints one, and is not the default.
+    expect(folded({ tokensPerPerson: 0 }).tokensPerPerson).toBe(0);
   });
 
   it('serves the current folder, or only what is named under --no-cwd', () => {

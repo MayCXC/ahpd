@@ -1,6 +1,6 @@
 ---
 title: ahpd takes @cofold/terminal 0.4
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

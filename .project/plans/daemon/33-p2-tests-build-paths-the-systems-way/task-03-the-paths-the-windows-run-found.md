@@ -1,6 +1,6 @@
 ---
 title: The paths the Windows run found
-status: implemented
+status: done
 depends: []
 layer: sdk, server
 refs:
@@ -41,3 +41,5 @@ Gates run: `pnpm -s schema`, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s b
 Vitest on `config-layers.test.ts` and `sessiontools.test.ts` with `--maxWorkers=2 --testTimeout=10000`: 47 tests pass.
 
 The Windows half of Validation cannot run here: this host is Linux and the `check-windows` job is not built. A run of p1's job, or Softov's Windows machine, is the check for both cases.
+
+Closed 2026-10-19: the `check-windows` job of PR #30 passed both cases, in run 39344018005.

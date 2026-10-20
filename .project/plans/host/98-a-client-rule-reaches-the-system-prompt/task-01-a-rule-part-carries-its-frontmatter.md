@@ -1,6 +1,6 @@
 ---
 title: A rule part carries its frontmatter
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

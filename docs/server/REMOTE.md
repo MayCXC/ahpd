@@ -86,6 +86,7 @@ The deployment's connection token may run everything. A person's token needs the
 | `config` | `config:write` |
 | `user list` | `user:read`, `role:read` |
 | `user add`, `user rm`, `user token`, `user member` | `user:write` |
+| `token mint`, `token list`, `token rm` | their own; `user:write` and that person's grants for another's |
 | `team list` / `team add`, `team rm` | `team:read` / `team:write` |
 | `project list` / `project add`, `project rm` | `project:read` / `project:write` |
 | `usage` | own pools; any pool with `usage:read` |

@@ -31,6 +31,8 @@ export { readJson, readJsonObject, writeJsonAtomic } from './jsonfile.js';
 export type { JsonRead, JsonObjectRead, JsonWriteOptions } from './jsonfile.js';
 export type { EachPresetOptions, FoldedOptions, HostRecording, ServedRoute } from './plugins.js';
 export { sdkVersion } from './version.js';
+export { installLine, knownAgents } from './agents.js';
+export type { KnownAgent } from './agents.js';
 export { doorOf, listen, overStdio, plainAnswer, runtime, serveRequests } from './listen.js';
 export {
   createPeer, receive, RpcError, RpcTimeout, RpcClosed, ANSWER_TIMEOUT,
@@ -85,6 +87,7 @@ export { chargeFor, COUNTED, keysOf, limitsOf } from './charge.js';
 export type { Charge, ChargeOptions, ChargeRefusal, LimitFigure, LimitMember, PayOrder } from './charge.js';
 export { fileUsers, grantProblem, signInRecord } from './users.js';
 export type { FileUserOptions } from './users.js';
+export { tokenMethods } from './tokens.js';
 export { peopleChannels, peopleProviders } from './people.js';
 export type { PeopleChannels, PeopleProvider } from './people.js';
 export { policyChannels, policyProviders } from './policy.js';

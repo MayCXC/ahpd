@@ -1,7 +1,7 @@
 ---
 title: A limit says how much it allows, how much is used and when it resets, and a turn or a proxy call is refused when no row has room
 domain: policy
-status: active
+status: built
 priority: high
 created: 2026-10-17
 revalidated: 2026-10-17
@@ -111,12 +111,12 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The periods are one module, and the store keeps its days in the usage timezone](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) | implemented | - |
-| [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | implemented | - |
-| [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | implemented | 01, 02 |
-| [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | implemented | 03 |
-| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | implemented | 03 |
-| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | implemented | 04, 05 |
+| [01 - The periods are one module, and the store keeps its days in the usage timezone](task-01-the-store-keeps-its-days-in-the-usage-timezone.md) | done | - |
+| [02 - A total counts the turns](task-02-a-total-counts-the-turns.md) | done | - |
+| [03 - The charge walk says which rows pay, whether they have room, and their keys](task-03-the-charge-walk.md) | done | 01, 02 |
+| [04 - A turn and a proxy call are refused at a limit, and their records carry the keys](task-04-a-turn-and-a-proxy-call-are-charged.md) | done | 03 |
+| [05 - A client reads each limit with its amount, what is used and when it resets](task-05-a-client-reads-each-limit.md) | done | 03 |
+| [06 - The docs say what a limit counts and how a client reads it](task-06-the-docs-say-what-a-limit-counts.md) | done | 04, 05 |
 
 ## Risks and tradeoffs
 
@@ -129,8 +129,9 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 ## Resume state
 
 - **Done so far:** 2026-10-18, tasks 01 to 06 are implemented. `ownLimits` reads `policies.ownLimits`. Task 06 wrote the limits section in `POLICY.md`, the policy keys and `usage://limits` in `USAGE.md`, and `payOrder`, `ownLimits` and the store's days in `HOST.md`.
-- **Next action:** review task 06, then run the final verification checklist.
-- **Open questions:** `docs/server/REFERENCE.md` is generated from the built server, so `policies.payOrder` and `policies.ownLimits` are written in `HOST.md` instead. The generated `usage` description does not say the store's days are cut in `usage.timezone`.
+- **Closed:** Softov reviewed tasks 01 to 06 on 2026-10-19, and they are done. The plan is built; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
+- **Open questions:** none. `docs/server/REFERENCE.md` is generated from the built server. Its `policies` text names `payOrder` and `ownLimits`, and commit `48d40cd9` made its `usage` text say the store keeps its days in `usage.timezone`.
 - **Watch out for:** `decide` stays the four steps of policy 01, and the walk takes its candidates.
   A policy key is never written when the check is off.
   The store and the provider must have the same zone, and `run.ts` and `ahpd usage` give it to both.
@@ -139,9 +140,9 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 
 ## Final verification checklist
 
-- [ ] The tests of task 03 hold the rules draft's examples that this plan counts.
-- [ ] A week's total in `America/Campo_Grande` holds no record from Sunday 20:00 local.
-- [ ] `policy://<id>/limits` and `usage://limits` answer the amount, the used figure, `from` and `resets`.
-- [ ] Off by default: with `policies.check` off, no record carries a policy key and nothing is refused.
-- [ ] `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and vitest pass.
+- [x] The tests of task 03 hold the rules draft's examples that this plan counts.
+- [x] A week's total in `America/Campo_Grande` holds no record from Sunday 20:00 local.
+- [x] `policy://<id>/limits` and `usage://limits` answer the amount, the used figure, `from` and `resets`.
+- [x] Off by default: with `policies.check` off, no record carries a policy key and nothing is refused.
+- [x] `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and vitest pass.
 - [ ] `plans/index.md` updated.

@@ -1,6 +1,6 @@
 ---
 title: The terminal tests run on Windows
-status: implemented
+status: done
 depends: [task-03-a-terminal-stops-on-windows.md]
 layer: sdk
 refs:
@@ -71,3 +71,5 @@ What was fixed:
 - `pty.test.ts`, `shellenv.test.ts` and `conformance.test.ts` started a shell in `/tmp`, which Windows does not have, and Node reported the missing folder as `spawn pwsh.exe ENOENT`. They start it in `tmpdir()`.
 - `users-gate-dispatch.test.ts` and `users-gate-names.test.ts` left shells running in the folder their cleanup removed. The helpers' `host` keeps every host it made, and the cleanup closes each first.
 No case skips.
+
+Closed 2026-10-19: the `check-windows` job of PR #30 passed these files, in run 39344018005.

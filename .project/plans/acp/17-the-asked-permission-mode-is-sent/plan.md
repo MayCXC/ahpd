@@ -1,7 +1,7 @@
 ---
 title: The permission mode a session asks for is sent
 domain: acp
-status: planned
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -79,8 +79,8 @@ Today the bridge writes the server's current mode over the asked one at the open
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The open sends the asked mode](task-01-the-open-sends-the-asked-mode.md) | implemented | - |
-| [02 - A test opens a session in its asked mode](task-02-a-test-opens-in-the-asked-mode.md) | implemented | 01 |
+| [01 - The open sends the asked mode](task-01-the-open-sends-the-asked-mode.md) | done | - |
+| [02 - A test opens a session in its asked mode](task-02-a-test-opens-in-the-asked-mode.md) | done | 01 |
 
 ## Risks and tradeoffs
 
@@ -90,13 +90,14 @@ Today the bridge writes the server's current mode over the asked one at the open
 ## Resume state
 
 - **Done so far:** planned 2026-10-16 from Softov's request. Task 01 is implemented 2026-10-18, not reviewed. The open sends the asked mode on every path, through `ctx.sendAskedMode` and not `setConfig`. Task 02 is implemented 2026-10-18 as five tests in `agent-acp-catalog.test.ts`. They cover both ways to set a mode, a mode in force, a mode not offered, and a reopen.
-- **Next action:** the review of tasks 01 and 02.
+- **Closed:** Softov reviewed tasks 01 and 02 on 2026-10-19, and they are done. Three of the five tests fail on the code before `d362c9ca`, and the task 02 Resume says how. The plan is built; [implemented.md](implemented.md) says what exists.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the send must not go through `setConfig`, because `setConfig` calls `ctx.open()`.
 
 ## Final verification checklist
 
-- [ ] A test: a session that asks for `code` sends it and reports `code`, with and without `--modes`.
-- [ ] A test: a session that asks for a mode the server does not offer reports the server's mode.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest on agent-acp.
+- [x] A test: a session that asks for `code` sends it and reports `code`, with and without `--modes`.
+- [x] A test: a session that asks for a mode the server does not offer reports the server's mode.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest on agent-acp.
 - [ ] `plans/index.md` updated.

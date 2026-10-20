@@ -1,6 +1,6 @@
 ---
 title: A command line is split
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
@@ -35,7 +35,7 @@ It returns `undefined` for any line it cannot read.
 ## Resume
 
 - **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `splitCommand` is in `packages/sdk/src/commandautoapprover.ts`, with the result type, the separator scan, the redirect reader, the sinks and the unanalyzable marks. `packages/sdk/test/commandsplit.test.ts` is new, 18 cases, all passing. `shouldRequireConfirmationForAutoApproveParse` is ported from VS Code, and it decides whether a line with an open PowerShell group asks.
-- **Next action:** the review of this task.
+- **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** the splitter only needs to be right when it says yes; anything unsure is `undefined` or `unanalyzable`.
 - **Departed from the plan:** readings the plan does not name, each failing closed. A `$(...)` or a backtick at the top of the line is `unanalyzable`, as one inside a quoted string is. Without that, `echo $(rm -rf /)` matched the `echo` rule and was approved. A `2` or a PowerShell `*` before a redirect is taken off the command text, because it is the shell's word and not an argument. The plan's step 3 leaves that open. A PowerShell `{...}` script block is `unanalyzable`, as a heredoc is, because the commands inside it are ones this reading does not name.

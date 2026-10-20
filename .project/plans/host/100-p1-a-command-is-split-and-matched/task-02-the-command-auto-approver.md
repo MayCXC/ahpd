@@ -1,6 +1,6 @@
 ---
 title: The command auto approver
-status: implemented
+status: done
 depends: [task-01-a-command-line-is-split.md]
 layer: sdk
 refs:
@@ -38,7 +38,7 @@ It takes `split` as an argument.
 ## Resume
 
 - **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `CommandAutoApprover`, `CommandApprovalOptions`, the rule compiler and the two matchers are in `packages/sdk/src/commandautoapprover.ts`, exported from `packages/sdk/src/index.ts`. `packages/sdk/test/commandautoapprover.test.ts` is new, 45 cases, all passing. `matchCommands` denies an in-place sed, as upstream's `_matchSubCommands` does.
-- **Next action:** the review of this task.
+- **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** a deny rule means "ask" for the caller, not "refuse"; the result names stay VS Code's. The sed check denies before an allow rule is read, so no allow rule can lift it.
 - **Ported from VS Code's test file:** the empty line, the unknown command, the forwarded rules and the `null` entry. Also the empty table, the prefix and regex keys and the endless-loop key. Also `matchCommandLine` in both directions, the transient variable and the shell state mutations. Also the compound line, the splitter as an argument and the PowerShell case-insensitivity. Also the PowerShell `(` slice and the casing of a command-line rule. Also the git sub-commands, the git writes, the git grep pager options and the case of `-C`.

@@ -1,7 +1,7 @@
 ---
 title: The docs name the terminal rules
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -56,7 +56,7 @@ docs/sdk/AHP.md -> docs/server/CONFIGURE.md -> docs/sdk/HOST.md
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The docs name the terminal rules](task-01-the-docs-name-the-terminal-rules.md) | implemented | - |
+| [01 - The docs name the terminal rules](task-01-the-docs-name-the-terminal-rules.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -64,8 +64,8 @@ docs/sdk/AHP.md -> docs/server/CONFIGURE.md -> docs/sdk/HOST.md
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-19: the three keys are in AHP.md and HOST.md. `terminalAutoApproveDefaults` and `commandParser` are in AHP.md, HOST.md and CONFIGURE.md, and `registerCommandParser` and its contract are in PLUGINS.md beside the other ports. The entries say whose rules apply, that a deny asks, how a write redirect is checked, and that only an approved command is `not-needed`.
-- **Next action:** none; the task is implemented and the plan is ready to review.
+- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-19: the three keys are in AHP.md and HOST.md. `terminalAutoApproveDefaults` and `commandParser` are in AHP.md, HOST.md and CONFIGURE.md, and `registerCommandParser` and its contract are in PLUGINS.md beside the other ports. The entries say whose rules apply, that a deny asks, how a write redirect is checked, and that only an approved command is `not-needed`. Softov reviewed the plan 2026-10-19 and approved the close, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the task file's Files list named HOST.md for the plugin method, and the Answers row named the plugin host docs. The method went to `docs/plugins/PLUGINS.md`, where the other ports are; HOST.md links there from the `commandParser` key. The prose lint reports only findings each file already had.
 

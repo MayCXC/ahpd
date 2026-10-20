@@ -1,6 +1,6 @@
 ---
 title: A command runs in PowerShell
-status: implemented
+status: done
 depends: [task-01-a-terminal-picks-a-windows-shell.md]
 layer: sdk
 refs:

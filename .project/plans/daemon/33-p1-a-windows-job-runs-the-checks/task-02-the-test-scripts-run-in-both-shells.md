@@ -1,6 +1,6 @@
 ---
 title: The test scripts run in both shells
-status: implemented
+status: done
 depends: []
 layer: scripts
 refs:
@@ -78,3 +78,5 @@ Left:
   the suite wrote it. Run `git checkout -- packages/sdk/test/fixtures/wire.jsonl` before
   committing.
 - Nothing is committed, as asked.
+
+Closed 2026-10-19: the tests step of the `check-windows` job passed on PR #30, in run 39344018005.

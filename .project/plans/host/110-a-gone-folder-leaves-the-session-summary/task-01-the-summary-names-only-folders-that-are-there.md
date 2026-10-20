@@ -1,6 +1,6 @@
 ---
 title: The summary names only folders that are there
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
@@ -52,7 +52,7 @@ The store record and `wheres` keep every folder.
   They also cover the folder made again, a URI that names another machine, and a running session's summary after `session/titleChanged`, and its listing row.
   The gates pass: build, typecheck, boundary, schema, the sdk suite at 3232 passed and 2 skipped, and the server suite at 1236 passed.
 - **Next action:** none.
-  Task 01 is the plan's only task, and nothing is set to `done`.
+  Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** a session inside a computer can report a machine path as a `file:` URI.
   The summary leaves it out, because the path is not on this host.

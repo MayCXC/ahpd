@@ -1,6 +1,6 @@
 ---
 title: The periods are one module, and the store keeps its days in the usage timezone
-status: implemented
+status: done
 depends: []
 layer: "sdk, server"
 refs:

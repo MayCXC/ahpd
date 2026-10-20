@@ -1,6 +1,6 @@
 ---
 title: The tokensPerPerson key
-status: todo
+status: implemented
 depends: [task-01-the-directory-keeps-tokens.md]
 layer: server
 refs:
@@ -47,3 +47,8 @@ The default is 10, and the daemon and the terminal both give the value to `fileU
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step. `Config.tokensPerPerson` is an optional number. `serverFields` declares it as an integer with `minimum: 0`, `cli: { value: 'N' }` and the agreed description, so the flag is `--tokens-per-person N`. `Options.tokensPerPerson` is a required number, defaulted to 10 in `optionsFrom`. `run.ts` passes it to the daemon's `fileUsers`, and the terminal's `people` helper passes the configuration file's value. `main.ts` lists the key after `trustToken`, and `DAEMON_KEYS` is unchanged.
+- **Next action:** task 04, the three token commands. Task 05 can follow either order and depends on 02.
+- **Open questions:** none.
+- **Watch out for:** a negative or fractional value is refused with `tokensPerPerson must be an integer >= 0`; the schema builds that sentence from `minimum: 0` alone.

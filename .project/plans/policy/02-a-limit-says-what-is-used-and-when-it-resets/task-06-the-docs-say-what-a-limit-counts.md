@@ -1,6 +1,6 @@
 ---
 title: The docs say what a limit counts and how a client reads it
-status: implemented
+status: done
 depends: [task-04-a-turn-and-a-proxy-call-are-charged.md, task-05-a-client-reads-each-limit.md]
 layer: "docs"
 refs:

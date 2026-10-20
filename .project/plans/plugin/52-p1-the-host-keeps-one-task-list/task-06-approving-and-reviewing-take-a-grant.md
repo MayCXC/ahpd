@@ -1,6 +1,6 @@
 ---
 title: Approving and reviewing take a grant
-status: implemented
+status: done
 depends: [task-04-the-plan-tools.md, task-05-the-task-tools.md]
 layer: "tasks"
 refs:

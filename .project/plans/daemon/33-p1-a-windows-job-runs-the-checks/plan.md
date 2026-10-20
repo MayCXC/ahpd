@@ -1,7 +1,7 @@
 ---
 title: A Windows job runs the checks
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -61,9 +61,9 @@ The job's log names each test that fails, so p2 and p3 fix a known list.
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The boundary finds its root on Windows](task-01-the-boundary-finds-its-root-on-windows.md) | implemented | - |
-| [02 - The test scripts run in both shells](task-02-the-test-scripts-run-in-both-shells.md) | implemented | - |
-| [03 - A Windows job runs the checks](task-03-a-windows-job-runs-the-checks.md) | implemented | 01, 02 |
+| [01 - The boundary finds its root on Windows](task-01-the-boundary-finds-its-root-on-windows.md) | done | - |
+| [02 - The test scripts run in both shells](task-02-the-test-scripts-run-in-both-shells.md) | done | - |
+| [03 - A Windows job runs the checks](task-03-a-windows-job-runs-the-checks.md) | done | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -71,14 +71,14 @@ The job's log names each test that fails, so p2 and p3 fix a known list.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01, 02 and 03 implemented 2026-10-16 and not reviewed. Task 03's job is written and the workflow parses. Its first run is not read, because steps 6 to 9 need a push.
-- **Next action:** push the branch, or open a pull request against `main`, so the `check-windows` job runs. Then read that run. Record in task 03's Resume whether `timeout` ran under Git Bash. Record the failing tests by file in the parent plan's Resume.
-- **Open questions:** whether Git Bash on `windows-latest` has `timeout`. Task 03 step 7 answers it from the run.
-- **Watch out for:** a checkout on Windows needs `core.longpaths`, as `DEVELOPER.md` says. Task 03's job sets it before the checkout, and a hand clone does not.
+- **Done so far:** drafted 2026-10-16, and planned 2026-10-16. Tasks 01, 02 and 03 implemented 2026-10-16, and merged to `main` in `997dda8c` on 2026-10-18. The job ran on each pull request after that. Its runs gave the failures that p2, p3, p5 and p6 fixed. On 2026-10-19 the `check-windows` job of PR #30 passed every step, in run 39344018005. Softov approved the close on 2026-10-19. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none. p4 makes the job required.
+- **Open questions:** none. Git Bash on `windows-latest` has `timeout`: the tests step runs under it and passes.
+- **Watch out for:** a checkout on Windows needs `core.longpaths`, as `DEVELOPER.md` says. The job sets it before the checkout, and a hand clone does not.
 
 ## Final verification checklist
 
-- [ ] `pnpm boundary` passes on Linux, and on Windows in the job.
-- [ ] `pnpm test:unit` leaves out the same files on Linux as before.
-- [ ] The Windows job runs, and its log names each failing test.
-- [ ] The failure list is in the parent plan's Resume.
+- [x] `pnpm boundary` passes on Linux, and on Windows in the job.
+- [x] `pnpm test:unit` leaves out the same files on Linux as before.
+- [x] The Windows job runs, and its log names each failing test.
+- [ ] The failure list is in the parent plan's Resume. Not done: p6 holds the list, from the runs of PR 7.

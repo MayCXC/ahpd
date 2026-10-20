@@ -1,6 +1,6 @@
 ---
 title: Claude asks only for unmatched commands
-status: implemented
+status: done
 depends: []
 layer: agent-claude
 refs:

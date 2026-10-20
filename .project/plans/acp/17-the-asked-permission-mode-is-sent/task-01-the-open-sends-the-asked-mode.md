@@ -1,6 +1,6 @@
 ---
 title: The open sends the asked mode
-status: implemented
+status: done
 depends: []
 layer: "packages/agent-acp"
 refs:

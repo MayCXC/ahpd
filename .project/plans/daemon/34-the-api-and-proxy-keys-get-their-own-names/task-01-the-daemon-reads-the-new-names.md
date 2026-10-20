@@ -1,6 +1,6 @@
 ---
 title: The daemon reads the new names
-status: implemented
+status: done
 depends: []
 layer: "packages/server"
 refs:
