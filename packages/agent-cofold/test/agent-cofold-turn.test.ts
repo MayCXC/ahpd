@@ -402,7 +402,7 @@ it('offers a tool whose schema carries $comment, without the comments', () => {
       list: { type: 'array', items: { type: 'string', $comment: 'item' } },
       $comment: { type: 'string' },
     },
-  } as unknown as BoundTool['definition']['inputSchema'];
+  } as unknown as NonNullable<BoundTool['definition']['inputSchema']>;
   const [tool] = cofoldTools([{ definition: { name: 'lookup', description: 'Looks a word up.', inputSchema }, run: () => 'ok' }]);
   expect(tool?.toModelDefinition().input).toEqual({
     type: 'object',
@@ -417,7 +417,7 @@ it('offers a tool whose schema carries $comment, without the comments', () => {
 it('leaves out a tool whose schema cofold refuses, and offers the rest', () => {
   const plain: BoundTool = { definition: { name: 'plain', description: 'Plain.', inputSchema: { type: 'object', properties: {} } }, run: () => 'ok' };
   const refused: BoundTool = {
-    definition: { name: 'refused', description: 'Uses $ref.', inputSchema: { type: 'object', $ref: '#/x' } as unknown as BoundTool['definition']['inputSchema'] },
+    definition: { name: 'refused', description: 'Uses $ref.', inputSchema: { type: 'object', $ref: '#/x' } as unknown as NonNullable<BoundTool['definition']['inputSchema']> },
     run: () => 'ok',
   };
   expect(cofoldTools([refused, plain]).map((one) => one.name)).toEqual(['plain']);
