@@ -53,14 +53,12 @@ jobs:
       - name: Pack each package
         run: pnpm -r exec pnpm pack --pack-destination ${{ runner.temp }}
 
-  # The same checks on Windows, where they are not all green yet. It reports
-  # what fails rather than blocking a merge, until the plans that fix what it
-  # finds have landed. Every step runs under bash, so this is the same commands
-  # as `check` rather than a second version of them.
+  # The same checks on Windows, and a failure here fails the run as one in
+  # `check` does. Every step runs under bash, so this is the same commands as
+  # `check` rather than a second version of them.
   check-windows:
     runs-on: windows-latest
     timeout-minutes: 15
-    continue-on-error: true
     steps:
       # Before the checkout: some paths under `.project/plans` are 185
       # characters long, and with the checkout folder in front they pass the 260

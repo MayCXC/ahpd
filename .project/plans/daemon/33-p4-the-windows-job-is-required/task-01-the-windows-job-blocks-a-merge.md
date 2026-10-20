@@ -1,6 +1,6 @@
 ---
 title: The Windows job blocks a merge
-status: todo
+status: implemented
 depends: []
 layer: CI
 refs:
@@ -28,3 +28,10 @@ The `check-windows` job fails a run when a check fails.
 - The pending file names the branch rule.
 
 ## Resume
+
+Done 2026-10-19. Not reviewed.
+
+The Windows job passed on PR 30 and again on `main` at `11594e43`, with no failed test.
+`continue-on-error` is gone from `check-windows`, and the comment above the job says a failure there fails the run.
+`.project/pending/windows-branch-rule.md` asks Softov to add `check-windows` to the rule for `main`.
+The first half of Validation is the next run with a failing Windows test.

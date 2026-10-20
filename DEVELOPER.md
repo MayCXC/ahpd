@@ -78,6 +78,9 @@ One restart runs at a time, and `ahpd stop` during a restart wins.
 ## The checks
 
 Every check below runs in CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) and again in the release workflow.
+CI runs them on Linux and on Windows, and a failure on either fails the run.
+On Windows the tests are `pnpm test:unit`: the daemon's command line, the HTTP server, the computer plugin and a nested host are tested on Linux only.
+A test that is POSIX by nature, such as one that sends a signal or reads a file mode, skips on Windows with `it.skipIf(!posix)` from [`tools/posix.ts`](tools/posix.ts), and says why in a comment beside it.
 
 | Command | What it checks |
 | --- | --- |
