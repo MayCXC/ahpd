@@ -55,7 +55,7 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 - A row has no list of the variables its agent reads; `env` in `optionsSchema` takes any name.
 - devin has no sign-in variable, though `devin acp` reads `WINDSURF_API_KEY`.
 - amp sets no update switch, though `AMP_SKIP_UPDATE_CHECK=1` exists.
-- The goose page and the pi package moved.
+- The pi package moved.
 
 ## Answers
 
@@ -71,7 +71,7 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 | The links are a schema keyword of their own, `links`, beside the preset's `title` | (defaulted: [code://packages/agent-acp/src/plugin.ts#L36](../../../../packages/agent-acp/src/plugin.ts#L36) already adds `secretAtUse`, a keyword of its own) | 04 |
 | A variable that is not a secret is a plain string in the form, not `writeOnly` | (defaulted: a person must see a model name or a folder to check it) | 04 |
 | `ahpd configure` prints the site of an agent that is not installed and has no install line | (defaulted: `page` is printed there today, and the site is the next place to look) | 02 |
-| devin signs in with `WINDSURF_API_KEY`, amp skips its update check, pi installs a pi that pi-acp can run, goose gets its new page | (defaulted: each is what the vendor's docs say today) | 05 |
+| devin signs in with `WINDSURF_API_KEY`, amp skips its update check, pi installs a pi that pi-acp can run | (defaulted: each is what the vendor's docs say today) | 05 |
 
 ## Proposed architecture
 

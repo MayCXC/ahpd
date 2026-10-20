@@ -16,7 +16,7 @@ A `terminal/create` from an ACP agent in a session placed in a machine runs its 
 ## Files
 
 - `UPDATE: packages/agent-acp/src/session/opening.ts:224-249` - the computer id read out of `placed` into one function both use: `machineIdOf(start): string | undefined`, which throws on a value that is not `computer://<id>` and when the host has no computers port, with the messages `placed` throws today.
-- `UPDATE: packages/agent-acp/src/session/handlers.ts:261-279` - `openTerminal`: where `machineIdOf(start)` names a machine, `await start.computers.how(id, { command, args, env, cwd: hostPathOf(request.cwd ?? <the machine's cwd>) })`, a missing descriptor thrown as `There is no computer called <id>`, and `shells.open({ cwd: where, command: how.command, args: how.args, env: how.env })`; otherwise as today.
+- `UPDATE: packages/agent-acp/src/session/handlers.ts:261-279` - `openTerminal`: where `machineIdOf(start)` names a machine, `await start.computers.how(id, { command, args, env, cwd: hostPathOf(request.cwd) })`, with no `cwd` when `request.cwd` is not set, so the port uses the machine's own directory as `placed` does, a missing descriptor thrown as `There is no computer called <id>`, and `shells.open({ cwd: where, command: how.command, args: how.args, env: how.env })`; otherwise as today.
 - `UPDATE: packages/agent-acp/test/agent-acp-machine.test.ts` - a case per side.
 
 ## Steps
