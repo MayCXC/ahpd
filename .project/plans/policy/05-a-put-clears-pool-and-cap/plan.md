@@ -1,7 +1,7 @@
 ---
 title: A put clears pool and cap, and a client imports the limits type
 domain: policy
-status: active
+status: built
 priority: medium
 created: 2026-10-19
 revalidated: 2026-10-19
@@ -61,8 +61,8 @@ put policy://<id> { pool: null } -> { ...was, ...body, id } -> checkPolicy -> re
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - null clears pool and cap](task-01-null-clears-pool-and-cap.md) | implemented | - |
-| [02 - the index exports PolicyLimits](task-02-the-index-exports-policylimits.md) | implemented | - |
+| [01 - null clears pool and cap](task-01-null-clears-pool-and-cap.md) | done | - |
+| [02 - the index exports PolicyLimits](task-02-the-index-exports-policylimits.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -71,13 +71,14 @@ put policy://<id> { pool: null } -> { ...was, ...body, id } -> checkPolicy -> re
 ## Resume state
 
 - **Done so far:** tasks 01 and 02 implemented 2026-10-19. A put with `pool: null` or `cap: null` removes the field. The manifest takes `null` for every field the check reads it for. `docs/sdk/POLICY.md` says what `null` removes, and `@ahpd/sdk` exports `PolicyLimits`.
-- **Next action:** Softov's review and merge; a release follows only after he decides.
+- **Closed:** commit `d6cab489` is on main, and Softov reviewed tasks 01 and 02 on 2026-10-19. The plan is built; [implemented.md](implemented.md) says what exists.
+- **Next action:** none in this plan. A release waits for Softov's call.
 - **Open questions:** none.
 - **Watch out for:** the manifest also takes `null` for `from`, `until`, `limits` and the lists under `match`. The check already read `null` for them, and a form must not refuse a body the host accepts.
 
 ## Final verification checklist
 
-- [ ] A put with `pool: null` or `cap: null` removes the field, and a read shows no such field.
-- [ ] `PolicyLimits` imports from `@ahpd/sdk`.
-- [ ] The gates pass.
+- [x] A put with `pool: null` or `cap: null` removes the field, and a read shows no such field.
+- [x] `PolicyLimits` imports from `@ahpd/sdk`.
+- [x] The gates pass.
 - [ ] `plans/index.md` updated.

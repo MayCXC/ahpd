@@ -1,6 +1,6 @@
 ---
 title: A Windows job runs the checks
-status: implemented
+status: done
 depends: [task-01-the-boundary-finds-its-root-on-windows.md, task-02-the-test-scripts-run-in-both-shells.md]
 layer: CI
 refs:
@@ -92,3 +92,10 @@ Left, and waiting on the push:
   deletions, the suite's own rewrite. `git checkout --` is denied in this mode. Run
   `git checkout -- packages/sdk/test/fixtures/wire.jsonl` before committing.
 - Nothing is committed, as asked.
+
+Closed 2026-10-19.
+The job ran on each pull request after `997dda8c` reached `main` on 2026-10-18.
+Step 7: `timeout` runs under Git Bash on `windows-latest`.
+p6 raised the bound to 600 s in `d607eb8f`.
+Step 8: the failures went into p6, from the runs of PR 7, and not into the parent plan's Resume.
+On PR #30 the job passed every step, in run 39344018005.

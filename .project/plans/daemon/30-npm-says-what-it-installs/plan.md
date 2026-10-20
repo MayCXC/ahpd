@@ -1,7 +1,7 @@
 ---
 title: npm says what it installs before it runs
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -44,7 +44,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A line names the packages before npm runs](task-01-a-line-names-packages-before-npm.md) | implemented | - |
+| [01 - A line names the packages before npm runs](task-01-a-line-names-packages-before-npm.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -52,14 +52,14 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16; the one task implemented 2026-10-16, not reviewed and not set to done.
-- **Next action:** the review of [task-01-a-line-names-packages-before-npm.md](task-01-a-line-names-packages-before-npm.md).
+- **Done so far:** planned 2026-10-16; the one task implemented and reviewed 2026-10-16. It passed on Windows 2026-10-16, and Softov approved the close 2026-10-19. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** a test that checks the full list of said lines needs the new line.
+- **Watch out for:** a test that checks the full list of said lines needs the line before npm.
 
 ## Final verification checklist
 
-- [ ] A test: install, update, update with `--force` and uninstall each say their line before npm runs.
-- [ ] The gates pass: build, typecheck, boundary, schema and vitest.
+- [x] A test: install, update, update with `--force` and uninstall each say their line before npm runs.
+- [x] The gates pass: build, typecheck, boundary, schema and vitest.
 - [x] By hand: `ahpd configure` on Windows prints the line before npm.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

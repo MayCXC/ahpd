@@ -1,6 +1,6 @@
 ---
 title: pi asks only for unmatched commands
-status: implemented
+status: done
 depends: []
 layer: agent-pi
 refs:

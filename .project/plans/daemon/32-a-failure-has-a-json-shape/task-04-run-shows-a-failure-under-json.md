@@ -1,6 +1,6 @@
 ---
 title: RUN.md shows a failure under --json
-status: implemented
+status: done
 depends:
   - task-02-the-failures-in-main-take-the-shape.md
   - task-03-status-and-stop-under-json-fail-once.md

@@ -1,6 +1,6 @@
 ---
 title: A line names the packages before npm runs
-status: implemented
+status: done
 depends: []
 layer: server
 refs:

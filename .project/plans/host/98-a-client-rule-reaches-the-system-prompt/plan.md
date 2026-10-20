@@ -1,7 +1,7 @@
 ---
 title: A client rule reaches the system prompt
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -79,9 +79,9 @@ A client can then give standing instructions, such as how to format an answer fo
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A rule part carries its frontmatter](task-01-a-rule-part-carries-its-frontmatter.md) | implemented | - |
-| [02 - A client rule joins the instructions](task-02-a-client-rule-joins-the-instructions.md) | implemented | 01 |
-| [03 - The docs say how a client adds a rule](task-03-the-docs-say-how-a-client-adds-a-rule.md) | implemented | 02 |
+| [01 - A rule part carries its frontmatter](task-01-a-rule-part-carries-its-frontmatter.md) | done | - |
+| [02 - A client rule joins the instructions](task-02-a-client-rule-joins-the-instructions.md) | done | 01 |
+| [03 - The docs say how a client adds a rule](task-03-the-docs-say-how-a-client-adds-a-rule.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -91,8 +91,8 @@ A client can then give standing instructions, such as how to format an answer fo
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose. `instructions(uri)` carries the host tools' wording, then the body of each client rule that always applies. A rule over 4096 characters is dropped and logged by name. The ACP backend puts them at the start of the first prompt, and logs that once. Task 03 implemented 2026-10-18. `TOOLS.md` says which client rules apply, the limit, and what each backend does with them.
-- **Next action:** run the final verification checklist, then write `implemented.md` and set the plan to built.
+- **Done so far:** drafted 2026-10-16 from the idea `a-client-adds-to-the-system-prompt.md`. Planned 2026-10-16 with Softov's answers. Task 01 implemented 2026-10-16: a rule's frontmatter reaches its part, and `rulesOf` hands the body to task 02. Task 02 implemented 2026-10-16 with the limit Softov chose. `instructions(uri)` carries the host tools' wording, then the body of each client rule that always applies. A rule over 4096 characters is dropped and logged by name. The ACP backend puts them at the start of the first prompt, and logs that once. Task 03 implemented 2026-10-18. `TOOLS.md` says which client rules apply, the limit, and what each backend does with them. Softov reviewed the plan 2026-10-19 and approved the close. Every task is done, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:**
   - `instructions(uri)` holds the host tools' own wording. The remote origin instruction has its own route, `turnInstructions`, which the backend reads at each turn. The rules join the first and not the second.
@@ -102,9 +102,9 @@ A client can then give standing instructions, such as how to format an answer fo
 
 ## Final verification checklist
 
-- [ ] A test: an always-apply rule in a client plugin is in `Start.instructions`.
-- [ ] A test: a rule without `alwaysApply: true`, and a rule over the limit, are not in it.
-- [ ] A test: a rule from a client that left is gone after the restart.
+- [x] A test: an always-apply rule in a client plugin is in `Start.instructions`.
+- [x] A test: a rule without `alwaysApply: true`, and a rule over the limit, are not in it.
+- [x] A test: a rule from a client that left is gone after the restart.
 - [ ] The gates pass: build, typecheck, boundary, schema and vitest.
 - [ ] By hand: a Claude session follows a rule from a client plugin.
 - [ ] `plans/index.md` updated.

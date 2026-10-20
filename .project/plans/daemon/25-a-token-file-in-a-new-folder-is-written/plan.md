@@ -1,7 +1,7 @@
 ---
 title: A token file in a new folder is written
 domain: daemon
-status: active
+status: built
 priority: high
 created: 2026-10-14
 revalidated: 2026-10-14
@@ -55,7 +55,7 @@ ahpd start --connection-token-file <dir>/token -> secret(options) -> no file -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - secret makes the folder before the token](task-01-secret-makes-the-folder-before-the-token.md) | implemented | - |
+| [01 - secret makes the folder before the token](task-01-secret-makes-the-folder-before-the-token.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -63,13 +63,13 @@ ahpd start --connection-token-file <dir>/token -> secret(options) -> no file -> 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-14; the one task implemented 2026-10-14, not reviewed and not set to done.
-- **Next action:** the review of [task-01-secret-makes-the-folder-before-the-token.md](task-01-secret-makes-the-folder-before-the-token.md).
+- **Done so far:** planned 2026-10-14; the one task implemented 2026-10-14, reviewed by Softov and set to done 2026-10-19. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Checked by hand:** Checked by hand on Windows 10, 2026-10-14, at 02e7c214. `ahpd start --connection-token-file <dir>/not-yet/deeper/token`, with `not-yet` absent, makes the folders and starts. The token in the file is the `tkn` in the record's `connectUrl`.
 - **Open questions:** none.
-- **Watch out for:** the build runs on Linux, so the Windows start is not exercised here. The suite rewrites `packages/sdk/test/fixtures/wire.jsonl`. Restore it before a commit.
+- **Watch out for:** ahp-desk has a workaround for this failure, which it can remove now.
 
 ## Final verification checklist
 
 - [x] On Windows, `ahpd start --connection-token-file` with a folder that does not exist starts, and the file holds the token.
-- [ ] `plans/index.md` updated.
+- [x] `plans/index.md` updated.

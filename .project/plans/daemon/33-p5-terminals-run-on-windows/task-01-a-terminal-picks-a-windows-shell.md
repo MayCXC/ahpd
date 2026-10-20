@@ -1,6 +1,6 @@
 ---
 title: A terminal picks a Windows shell
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

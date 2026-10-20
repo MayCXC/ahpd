@@ -1,6 +1,6 @@
 ---
 title: The tasks package has its settings
-status: implemented
+status: done
 depends: []
 layer: "tasks"
 refs:

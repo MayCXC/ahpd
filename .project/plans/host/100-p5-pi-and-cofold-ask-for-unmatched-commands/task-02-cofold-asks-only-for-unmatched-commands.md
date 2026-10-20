@@ -1,6 +1,6 @@
 ---
 title: cofold asks only for unmatched commands
-status: implemented
+status: done
 depends: []
 layer: agent-cofold
 refs:

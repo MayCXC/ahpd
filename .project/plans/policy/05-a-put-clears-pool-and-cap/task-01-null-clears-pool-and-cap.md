@@ -1,6 +1,6 @@
 ---
 title: null clears pool and cap
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

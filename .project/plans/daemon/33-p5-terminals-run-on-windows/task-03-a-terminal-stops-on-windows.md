@@ -1,6 +1,6 @@
 ---
 title: A terminal stops on Windows
-status: implemented
+status: done
 depends: [task-02-a-command-runs-in-powershell.md]
 layer: sdk
 refs:

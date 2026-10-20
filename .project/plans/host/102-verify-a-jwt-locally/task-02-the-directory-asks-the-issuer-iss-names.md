@@ -1,6 +1,6 @@
 ---
 title: The directory asks the issuer that iss names
-status: implemented
+status: done
 depends: [task-01-an-issuer-checks-a-jwt-against-its-keys.md]
 layer: sdk
 refs:

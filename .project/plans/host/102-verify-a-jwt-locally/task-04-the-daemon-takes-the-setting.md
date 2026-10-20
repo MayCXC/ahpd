@@ -1,6 +1,6 @@
 ---
 title: The daemon takes the setting
-status: implemented
+status: done
 depends: [task-02-the-directory-asks-the-issuer-iss-names.md]
 layer: server
 refs:

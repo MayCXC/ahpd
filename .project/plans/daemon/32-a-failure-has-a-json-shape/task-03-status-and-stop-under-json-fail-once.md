@@ -1,6 +1,6 @@
 ---
 title: Status and stop under --json keep their result
-status: implemented
+status: done
 depends:
   - task-01-ahpd-takes-cofold-terminal-0-4.md
 layer: server

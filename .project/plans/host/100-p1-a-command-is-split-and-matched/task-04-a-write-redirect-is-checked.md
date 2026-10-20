@@ -1,6 +1,6 @@
 ---
 title: A write redirect is checked
-status: implemented
+status: done
 depends: [task-02-the-command-auto-approver.md]
 layer: sdk
 refs:
@@ -36,7 +36,7 @@ Any other redirect turns `approved` into `noMatch`.
 ## Resume
 
 - **Done so far:** steps 1 to 6, 2026-10-16. `writeAllowed`, `realPathOf`, `isInside` and `patternsAllow` are in `packages/sdk/src/commandautoapprover.ts`, reached from `evaluate` through `workingDirectory` and `editPatterns`. The `a write redirect` block of `packages/sdk/test/commandautoapprover.test.ts` covers them, and all of it passes. It has a target inside the folder and one outside it, one that leaves by `..` and one under `.git`. Also one under a symbolic link out of the folder, a dynamic name, and the client's own `editAutoApprovePatterns` read from `vscoderootconfig.ts`.
-- **Next action:** the review of this task.
+- **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** a target with `..` or a symbolic link can leave the folder; resolve it before the check.
 - **Departed from the plan:** step 4 says the `false` entries are read first. That is a departure from `_matchesEditAutoApprovePatterns`, where the last entry that matches decides. Reading them first is what makes a table of the client's own order behave. The two orders give the same answer here, because the default table allows everything before it denies. Step 2 resolves a target the store does not have yet by following the links up to the nearest folder that is there. A file that does not exist is checked against the folder it would land in. A target is `noMatch` and not left to the command rules when no folder or no patterns are given. A check that cannot be made is not one that passed.

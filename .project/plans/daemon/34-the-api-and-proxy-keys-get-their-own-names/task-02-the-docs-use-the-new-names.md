@@ -1,6 +1,6 @@
 ---
 title: The docs use the new names
-status: implemented
+status: done
 depends:
   - task-01-the-daemon-reads-the-new-names.md
 layer: "docs"

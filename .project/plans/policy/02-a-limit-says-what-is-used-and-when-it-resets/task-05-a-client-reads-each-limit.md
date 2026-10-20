@@ -1,6 +1,6 @@
 ---
 title: A client reads each limit with its amount, what is used and when it resets
-status: implemented
+status: done
 depends: [task-03-the-charge-walk.md]
 layer: "sdk, server"
 refs:

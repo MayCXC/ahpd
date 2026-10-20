@@ -1,7 +1,7 @@
 ---
 title: Verify a JWT locally
 domain: host
-status: active
+status: built
 priority: low
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -99,11 +99,11 @@ authenticate(token) -> users.verify -> JWT? -> iss -> issuer's key set (cached b
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - An issuer checks a JWT against its key set](task-01-an-issuer-checks-a-jwt-against-its-keys.md) | implemented | - |
-| [02 - The directory asks the issuer that iss names](task-02-the-directory-asks-the-issuer-iss-names.md) | implemented | 01 |
-| [03 - The token's exp ends the sign-in](task-03-the-tokens-exp-ends-the-sign-in.md) | implemented | 02 |
-| [04 - The daemon takes the setting](task-04-the-daemon-takes-the-setting.md) | implemented | 02 |
-| [05 - The docs say how a JWT is checked](task-05-the-docs-say-how-a-jwt-is-checked.md) | implemented | 03, 04 |
+| [01 - An issuer checks a JWT against its key set](task-01-an-issuer-checks-a-jwt-against-its-keys.md) | done | - |
+| [02 - The directory asks the issuer that iss names](task-02-the-directory-asks-the-issuer-iss-names.md) | done | 01 |
+| [03 - The token's exp ends the sign-in](task-03-the-tokens-exp-ends-the-sign-in.md) | done | 02 |
+| [04 - The daemon takes the setting](task-04-the-daemon-takes-the-setting.md) | done | 02 |
+| [05 - The docs say how a JWT is checked](task-05-the-docs-say-how-a-jwt-is-checked.md) | done | 03, 04 |
 
 ## Risks and tradeoffs
 
@@ -114,17 +114,17 @@ authenticate(token) -> users.verify -> JWT? -> iss -> issuer's key set (cached b
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from `ideas/verify-a-jwt-locally.md`. Softov answered the six questions 2026-10-16. All five tasks are implemented and the code is committed. Task 01: `issuers.ts` checks a JWT against the key set at `jwks_uri`. `Issuer.verify(token, audience)` answers the subject, the claims and `expiresAt`. `jwtIssuer(token)` reads `iss` without trusting it. Task 02: `Users.verify` picks the issuer `iss` names. It refuses an unknown issuer with no request. It honours `issuerVerify` per issuer and carries the expiry onto the `Principal`. Task 03: `principalUntil` is the earlier of the credential's `exp` and the client's `expiresIn`. Task 04: `issuerVerify` is a daemon key beside `issuer` and a flag. It takes only `userinfo`, `jwt` and `auto`. `run.ts` hands it to `fileUsers`, with the sign-in record's `resource` as the audience. Task 05: `AUTHENTICATION.md` says what the setting is, what `jwt` checks, what `exp` ends and what a revocation does not. `USERS.md` names it beside `--issuer`. The header of `issuers.ts` names both checks. The plan is not marked built, and `plans/index.md` is untouched.
-- **Next action:** review, then merge.
+- **Done so far:** drafted 2026-10-16 from `ideas/verify-a-jwt-locally.md`. Softov answered the six questions 2026-10-16. All five tasks are implemented and the code is committed. Task 01: `issuers.ts` checks a JWT against the key set at `jwks_uri`. `Issuer.verify(token, audience)` answers the subject, the claims and `expiresAt`. `jwtIssuer(token)` reads `iss` without trusting it. Task 02: `Users.verify` picks the issuer `iss` names. It refuses an unknown issuer with no request. It honours `issuerVerify` per issuer and carries the expiry onto the `Principal`. Task 03: `principalUntil` is the earlier of the credential's `exp` and the client's `expiresIn`. Task 04: `issuerVerify` is a daemon key beside `issuer` and a flag. It takes only `userinfo`, `jwt` and `auto`. `run.ts` hands it to `fileUsers`, with the sign-in record's `resource` as the audience. Task 05: `AUTHENTICATION.md` says what the setting is, what `jwt` checks, what `exp` ends and what a revocation does not. `USERS.md` names it beside `--issuer`. The header of `issuers.ts` names both checks. Softov reviewed the plan 2026-10-19 and approved the close, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** an ID token is a JWT too. The `aud` check is what keeps it from signing in. `packages/sdk/test/fixtures/wire.jsonl` is rewritten by each suite run, so it is dirty in `git status`. `git checkout -- packages/sdk/test/fixtures/wire.jsonl` restores it. Task 02 added `Principal.expiresAt`, so task 03 reads it rather than adding it. Task 04's Files list missed `commands/options.ts` and `main.ts`. The daemon key needs `serverFields`/`Options` in the first and the key list in the help of the second. Task 05's line range covers "An issuer" and "An issuer per person" only. The key list further down was edited too.
 
 ## Final verification checklist
 
-- [ ] A JWT signed by a known key signs in, and a forged or expired one does not.
-- [ ] `none`, `HS256` and a token for another `aud` are refused.
-- [ ] A GitHub token signs in through `userinfo` as before.
-- [ ] With no `issuerVerify`, every token goes to `userinfo` as before.
-- [ ] A connection whose token passes `exp` gets `auth/required` with `expired`.
+- [x] A JWT signed by a known key signs in, and a forged or expired one does not.
+- [x] `none`, `HS256` and a token for another `aud` are refused.
+- [x] A GitHub token signs in through `userinfo` as before.
+- [x] With no `issuerVerify`, every token goes to `userinfo` as before.
+- [x] A connection whose token passes `exp` gets `auth/required` with `expired`.
 - [ ] `pnpm -s build`, `pnpm -s typecheck`, `pnpm boundary` and the vitest gate pass.
 - [ ] `plans/index.md` updated.

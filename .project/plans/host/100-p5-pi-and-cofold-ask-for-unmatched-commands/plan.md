@@ -1,7 +1,7 @@
 ---
 title: pi and cofold ask only for unmatched commands
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -57,8 +57,8 @@ decide(bash|powershell) / approval.requested(shell_exec) -> getAutoApproval -> n
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - pi asks only for unmatched commands](task-01-pi-asks-only-for-unmatched-commands.md) | implemented | - |
-| [02 - cofold asks only for unmatched commands](task-02-cofold-asks-only-for-unmatched-commands.md) | implemented | - |
+| [01 - pi asks only for unmatched commands](task-01-pi-asks-only-for-unmatched-commands.md) | done | - |
+| [02 - cofold asks only for unmatched commands](task-02-cofold-asks-only-for-unmatched-commands.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -66,8 +66,8 @@ decide(bash|powershell) / approval.requested(shell_exec) -> getAutoApproval -> n
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-19: `decide` in `packages/agent-pi/src/session.ts` is async and consults `allowedByRule` only after a mode answers `ask`. Task 02 implemented 2026-10-19: `createPauses` offers `autoApprove`, and the live read loop in `runs.ts` answers an approved `shell_exec` before the mapping opens a question. The cofold gate lives in the session, not `mapping.ts`, because the mapping is pure.
-- **Next action:** none; both tasks are implemented and the plan is ready to review.
+- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-19: `decide` in `packages/agent-pi/src/session.ts` is async and consults `allowedByRule` only after a mode answers `ask`. Task 02 implemented 2026-10-19: `createPauses` offers `autoApprove`, and the live read loop in `runs.ts` answers an approved `shell_exec` before the mapping opens a question. The cofold gate lives in the session, not `mapping.ts`, because the mapping is pure. Softov reviewed the plan 2026-10-19 and approved the close, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the check narrows questions and adds none. A mode that refuses a call still refuses it, and in pi only the `ask` verdict reaches the check. cofold's `shell_exec` input is `{ command }`. The shell is cofold's `DEFAULT_SHELL`: `powershell` on win32, `bash` elsewhere. The resume replay does not call the check, so a replay shows the questions that were asked.
 

@@ -1,6 +1,6 @@
 ---
 title: A turn and a proxy call are refused at a limit, and their records carry the keys
-status: implemented
+status: done
 depends: [task-03-the-charge-walk.md]
 layer: "sdk, server"
 refs:

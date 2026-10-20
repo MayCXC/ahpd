@@ -1,6 +1,6 @@
 ---
 title: The index exports PolicyLimits
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
