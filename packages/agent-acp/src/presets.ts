@@ -6,6 +6,12 @@
  * it needs once a key is there. A preset takes a row by naming it as its own
  * key or as its `base`, and whatever the preset writes itself wins over the row.
  *
+ * The name and the command of each row come from `knownAgents` in `@ahpd/sdk`,
+ * which the daemon also reads: a setup offers an agent it finds on PATH, and it
+ * has to look up the same command this package spawns. What is left here is what
+ * only the spawn needs - arguments, environment, sign-in and machine - because
+ * the server never starts an agent itself.
+ *
  * The rows are kept by hand rather than read from the ACP registry, which lists
  * a command and nothing else: the switch that stops an agent updating itself
  * and the variable that says it has been signed in are not in it. They were
@@ -16,7 +22,7 @@
  * Only an agent that ships an ACP server is here. Crush has none.
  */
 
-import type { Seed } from '@ahpd/sdk';
+import { knownAgents, type Seed } from '@ahpd/sdk';
 import type { AcpMachine } from './types.js';
 
 /** One shipped agent: the fields `AcpOptions` takes, less the id and the sign-in. */
@@ -64,6 +70,19 @@ export interface AcpPreset {
   machine?: AcpMachine;
 }
 
+/**
+ * The name and command of one row, from the list the daemon also reads.
+ *
+ * The row is written by hand in `knownAgents`, so a key here that names none is
+ * a mistake in this file rather than something a person typed; failing where it
+ * is read says which key instead of spawning `undefined` later.
+ */
+const rowOf = (id: string): Pick<AcpPreset, 'name' | 'command'> => {
+  const agent = knownAgents[id];
+  if (agent === undefined) throw new Error(`knownAgents has no ${id}`);
+  return { name: agent.name, command: agent.command };
+};
+
 /** A state directory at `/ahpd/<id>`, seeded from the given host paths. */
 const stateOf = (id: string, seed: Seed[]): Pick<AcpMachine, 'state' | 'seed'> => ({ state: `/ahpd/${id}`, seed });
 
@@ -84,8 +103,7 @@ const xdgOf = (id: string, files: string[]): AcpMachine => ({
 /** Every shipped row, by the key a preset names. */
 export const presets: Record<string, AcpPreset> = {
   codex: {
-    name: 'Codex',
-    command: 'codex-acp',
+    ...rowOf('codex'),
     // The `codex` CLI has no ACP mode of its own; this is Codex behind an
     // adapter, installed with `npm i -g @agentclientprotocol/codex-acp`.
     authenticate: { methodId: 'api-key', fromEnv: ['CODEX_API_KEY', 'OPENAI_API_KEY'] },
@@ -96,8 +114,7 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   gemini: {
-    name: 'Gemini',
-    command: 'gemini',
+    ...rowOf('gemini'),
     args: ['--acp'],
     machine: {
       part: 'gemini',
@@ -111,8 +128,7 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   copilot: {
-    name: 'Copilot',
-    command: 'copilot',
+    ...rowOf('copilot'),
     args: ['--acp'],
     env: { COPILOT_AUTO_UPDATE: 'false' },
     machine: {
@@ -124,23 +140,20 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   opencode: {
-    name: 'OpenCode',
-    command: 'opencode',
+    ...rowOf('opencode'),
     args: ['acp'],
     env: { OPENCODE_DISABLE_AUTOUPDATE: '1' },
     machine: xdgOf('opencode', ['opencode.json', 'agent', 'command']),
   },
   kilo: {
-    name: 'Kilo',
-    command: 'kilo',
+    ...rowOf('kilo'),
     args: ['acp'],
     // Kilo is an OpenCode fork and reads its own copy of the switch.
     env: { OPENCODE_DISABLE_AUTOUPDATE: '1' },
     machine: xdgOf('kilo', ['kilo.json', 'agent', 'command']),
   },
   goose: {
-    name: 'Goose',
-    command: 'goose',
+    ...rowOf('goose'),
     args: ['acp'],
     // A headless host has no keyring, and a session that cannot read one fails
     // its first turn rather than its start.
@@ -152,8 +165,7 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   pi: {
-    name: 'Pi',
-    command: 'pi-acp',
+    ...rowOf('pi'),
     machine: {
       part: 'pi',
       env: { PI_CODING_AGENT_DIR: '/ahpd/pi' },
@@ -162,8 +174,7 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   dsh: {
-    name: 'dsh',
-    command: 'dsh',
+    ...rowOf('dsh'),
     args: ['--profile', 'acp'],
     machine: {
       part: 'dsh',
@@ -172,14 +183,12 @@ export const presets: Record<string, AcpPreset> = {
     },
   },
   devin: {
-    name: 'Devin',
-    command: 'devin',
+    ...rowOf('devin'),
     args: ['acp'],
     machine: xdgOf('devin', ['config.json', 'mcp_config.json']),
   },
   cursor: {
-    name: 'Cursor',
-    command: 'cursor-agent',
+    ...rowOf('cursor'),
     args: ['acp'],
     // `cursor_login` is the one method Cursor advertises; with the key set it
     // signs in without a browser.
@@ -193,16 +202,14 @@ export const presets: Record<string, AcpPreset> = {
   amp: {
     // The Amp CLI is the ACP server's own harness, so the binary that speaks
     // the protocol is this one rather than `amp` itself.
-    name: 'Amp',
-    command: 'amp-acp',
+    ...rowOf('amp'),
     // The part holds both `amp` and `amp-acp`, and the server is told which
     // `amp` to run. Amp has no variable that moves its settings, so it has no
     // state directory here.
     machine: { part: 'amp', env: { AMP_CLI_PATH: 'amp' } },
   },
   qwen: {
-    name: 'Qwen Code',
-    command: 'qwen',
+    ...rowOf('qwen'),
     args: ['--acp'],
     machine: {
       part: 'qwen',

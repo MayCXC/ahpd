@@ -1,6 +1,6 @@
 ---
 title: An issuer checks a JWT against its key set
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:

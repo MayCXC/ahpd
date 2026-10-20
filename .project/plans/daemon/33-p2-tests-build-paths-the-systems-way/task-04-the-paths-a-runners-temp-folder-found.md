@@ -1,6 +1,6 @@
 ---
 title: The paths a runner's temp folder found
-status: implemented
+status: done
 depends: [task-03-the-paths-the-windows-run-found.md]
 layer: sdk, tests, examples
 refs:
@@ -45,3 +45,5 @@ On Softov's Windows machine the three files pass: 87 tests.
 `pnpm -s typecheck` passes.
 `host-merged.test.ts` has a `uriOf` of its own for echo channels, so the sdk's is imported as `fileUriOf` there.
 The Linux half of Validation is the CI run of the branch.
+
+Closed 2026-10-19: the Linux and Windows jobs of PR #30 passed, in run 39344018005.

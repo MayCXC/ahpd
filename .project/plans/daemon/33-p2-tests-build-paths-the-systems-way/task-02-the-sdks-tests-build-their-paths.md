@@ -1,6 +1,6 @@
 ---
 title: The sdk's tests build their paths
-status: implemented
+status: done
 depends: []
 layer: sdk
 refs:
@@ -62,3 +62,5 @@ Gates run: `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck` and `pn
 Vitest on `packages/sdk` with `--maxWorkers=2 --testTimeout=10000`: 160 files, 3137 tests pass and 1 skips.
 Vitest on `packages/agent-claude`: 37 files and 329 tests pass.
 The suite rewrote `packages/sdk/test/fixtures/wire.jsonl`, and the restore is denied here: Softov runs `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+
+Closed 2026-10-19: the `check-windows` job of PR #30 passed the sdk tests, in run 39344018005.

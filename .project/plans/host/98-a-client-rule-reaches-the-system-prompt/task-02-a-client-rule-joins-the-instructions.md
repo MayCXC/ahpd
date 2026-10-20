@@ -1,6 +1,6 @@
 ---
 title: A client rule joins the instructions
-status: implemented
+status: done
 depends: [task-01-a-rule-part-carries-its-frontmatter.md]
 layer: "sdk, agent-acp"
 refs:

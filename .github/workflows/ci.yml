@@ -147,3 +147,120 @@ jobs:
             exit 1
           fi
           diff -u "$RUNNER_TEMP/theirs.json" packages/sdk/test/fixtures/resource-write.json && echo "The two copies are identical."
+
+  # The one-line install, run where a person reads it: a clean container with no
+  # Node, one with a Node older than the engine floor, and one at the floor. The
+  # two without a new enough Node must stop and print the nvm command instead of
+  # installing something the daemon cannot run on.
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - image: debian:12-slim
+            outcome: stops
+          - image: node:20-bookworm-slim
+            outcome: stops
+          - image: node:22-bookworm-slim
+            outcome: installs
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      # Before the checkout: none of the slim images ships git, and the Debian
+      # one ships no curl either, and the checkout action asks for git first.
+      - name: Tools the base image does not have
+        run: apt-get update && apt-get install -y --no-install-recommends git curl ca-certificates
+
+      - uses: actions/checkout@v7
+
+      - name: The install runs
+        if: matrix.outcome == 'installs'
+        run: bash scripts/install/install.sh --no-onboard
+
+      - name: Without a new enough Node it stops
+        if: matrix.outcome == 'stops'
+        run: |
+          set -u
+          if bash scripts/install/install.sh --no-onboard > "$RUNNER_TEMP/install.log" 2>&1; then
+            echo "It installed without Node 22.1."
+            cat "$RUNNER_TEMP/install.log"
+            exit 1
+          fi
+          cat "$RUNNER_TEMP/install.log"
+          grep -F 'nvm install 22' "$RUNNER_TEMP/install.log"
+
+      - name: ahpd runs
+        if: matrix.outcome == 'installs'
+        run: ahpd --version
+
+      - name: The uninstall removes it again
+        if: matrix.outcome == 'installs'
+        run: |
+          set -u
+          bash scripts/install/install.sh --uninstall
+          if command -v ahpd >/dev/null 2>&1; then
+            echo "ahpd is still on the PATH."
+            exit 1
+          fi
+          if [ -f "$HOME/.profile" ] && grep -F '# added by the ahpd install script' "$HOME/.profile"; then
+            echo "The PATH line is still there."
+            exit 1
+          fi
+
+  # The Windows one-line install: once with a Node at the floor, and once with
+  # no Node on the PATH at all, where it must stop with the winget command
+  # rather than install something the daemon cannot run on.
+  install-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: The install runs
+        shell: pwsh
+        run: ./scripts/install/install.ps1 -NoOnboard
+
+      # The runner hands each step its own environment and does not read the
+      # user PATH back from the registry, so the folder the install wrote is
+      # named here. The test suite is what checks that the entry is in the PATH
+      # for a new session.
+      - name: ahpd runs
+        shell: pwsh
+        run: |
+          $folder = (& npm prefix -g).Trim()
+          $env:PATH = "$folder;$env:PATH"
+          ahpd --version
+
+      - name: The uninstall removes it again
+        shell: pwsh
+        run: |
+          & ./scripts/install/install.ps1 -Uninstall
+          $folder = (& npm prefix -g).Trim()
+          if (Test-Path (Join-Path $folder 'ahpd.cmd')) {
+            throw 'ahpd is still installed.'
+          }
+
+      - name: Without Node it stops with the winget command
+        shell: pwsh
+        run: |
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+          $installed = $true
+          $message = ''
+          try {
+            & ./scripts/install/install.ps1 -NoOnboard
+          } catch {
+            $installed = $false
+            $message = "$_"
+          }
+          if ($installed) {
+            throw 'It installed without Node.'
+          }
+          if ($message -notmatch 'winget install OpenJS.NodeJS.LTS') {
+            throw "Unexpected failure: $message"
+          }

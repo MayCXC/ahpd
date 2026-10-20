@@ -1,6 +1,6 @@
 ---
 title: ACP asks only for unmatched commands
-status: implemented
+status: done
 depends: []
 layer: agent-acp
 refs:

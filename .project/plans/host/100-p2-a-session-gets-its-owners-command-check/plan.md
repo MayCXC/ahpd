@@ -1,7 +1,7 @@
 ---
 title: A session gets its owner's command check
 domain: host
-status: implemented
+status: active
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16

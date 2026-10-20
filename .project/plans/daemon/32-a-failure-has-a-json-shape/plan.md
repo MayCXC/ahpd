@@ -1,7 +1,7 @@
 ---
 title: A failure has a JSON shape under --json
 domain: daemon
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -80,10 +80,10 @@ ahpd --json <words> -> main.ts (group hint, remote, token) -> runEntry -> Progra
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - ahpd takes @cofold/terminal 0.4](task-01-ahpd-takes-cofold-terminal-0-4.md) | implemented | - |
-| [02 - The failures in main.ts take the shape](task-02-the-failures-in-main-take-the-shape.md) | implemented | 01 |
-| [03 - Status and stop under --json keep their result](task-03-status-and-stop-under-json-fail-once.md) | implemented | 01 |
-| [04 - RUN.md shows a failure under --json](task-04-run-shows-a-failure-under-json.md) | implemented | 02, 03 |
+| [01 - ahpd takes @cofold/terminal 0.4](task-01-ahpd-takes-cofold-terminal-0-4.md) | done | - |
+| [02 - The failures in main.ts take the shape](task-02-the-failures-in-main-take-the-shape.md) | done | 01 |
+| [03 - Status and stop under --json keep their result](task-03-status-and-stop-under-json-fail-once.md) | done | 01 |
+| [04 - RUN.md shows a failure under --json](task-04-run-shows-a-failure-under-json.md) | done | 02, 03 |
 
 ## Relations
 
@@ -97,15 +97,15 @@ ahpd --json <words> -> main.ts (group hint, remote, token) -> runEntry -> Progra
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-16. Softov answered the open questions on 2026-10-16. Tasks 01 to 04 implemented on 2026-10-18. Task 01: `@ahpd/server` takes `@cofold/terminal` `^0.4.0`, and `server-cli.test.ts` has the `--json` failure case. Task 02: `main.ts` has one `fail` for the token, remote surface and group hint failures. It reads the mode from a literal `--json`, and an unreachable daemon exits 4. Task 03: `status` and `stop` keep their result on stdout and write the failure as JSON on stderr. Task 04: `RUN.md` shows the example and the kinds.
-- **Next action:** Softov reviews tasks 01 to 04 and sets them to done.
+- **Done so far:** the plan, 2026-10-16. Softov answered the open questions on 2026-10-16. Tasks 01 to 04 implemented on 2026-10-18, in `20edee91` on `main`. Softov reviewed them and approved the close on 2026-10-19. The plan is built: see [implemented.md](implemented.md).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** the group hint test expects a plain line on stderr with exit 2. That stays true without `--json`. The cleartext case in `server-cli.test.ts` now expects exit 4, because the remote surface failure uses `exitCodeFor`.
+- **Watch out for:** without `--json`, the group hint is a plain line on stderr with exit 2. The cleartext case in `server-cli.test.ts` expects exit 4, because the remote surface failure uses `exitCodeFor`.
 
 ## Final verification checklist
 
-- [ ] `ahpd --json plugin` writes one JSON line with the kind `argument` and exits 2.
-- [ ] `ahpd --json --remote http://127.0.0.1:1 status` writes one JSON line.
-- [ ] `ahpd status --json` with no daemon writes `{"running":false}` on stdout and one JSON failure on stderr, and exits 1.
-- [ ] Without `--json`, every failure writes the line of today.
-- [ ] `plans/index.md` updated.
+- [x] `ahpd --json plugin` writes one JSON line with the kind `argument` and exits 2.
+- [x] `ahpd --json --remote http://127.0.0.1:1 status` writes one JSON line.
+- [x] `ahpd status --json` with no daemon writes `{"running":false}` on stdout and one JSON failure on stderr, and exits 1.
+- [x] Without `--json`, every failure writes the line of today.
+- [x] `plans/index.md` updated.

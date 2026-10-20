@@ -1,6 +1,6 @@
 ---
 title: Configure finds the runtimes and agents
-status: todo
+status: implemented
 depends: [task-01-the-sdk-lists-the-known-agents.md]
 layer: server
 refs:
@@ -81,7 +81,7 @@ The table shows each agent's version, and a `claude` or `pi` found on PATH shows
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1, after task 01 is implemented.
+- **Done so far:** steps 1 to 23, 2026-10-19. `packages/server/src/onpath.ts` answers the full path of a command, with `PATHEXT` on Windows and the run bit elsewhere. `packages/server/src/found.ts` holds `findRuntimes`, `findAgents`, `findAlso` and the line builders. The version probe goes through `Runner` with `{ timeoutMs: 3000, capture: true }`. A failure or timeout shows the path. `configure.ts` prints the runtime lines and the agent table after the backend questions. It asks one question per found agent not already in `presets`, and a Yes writes `presets.<id>: {}` with the entry's other options kept. It prints "Also found" for `claude` and `pi`, and lists the missing agents with `installLine` or the page. `@ahpd/agent-acp` joins `missing` when an agent was taken. The new tests pass, and so do `pnpm boundary`, `pnpm -s build` and `pnpm -s typecheck`.
+- **Next action:** none. The by-hand check with `gemini` on PATH is left for a machine that has it.
 - **Open questions:** none.
-- **Watch out for:** some agents check for updates when they start, so `--version` can hang. The 3 second limit must stop the process, not only the wait.
+- **Watch out for:** `Runner` gained optional `RunOptions` (`timeoutMs`, `capture`) in `install.ts`, which the task's file list did not name. Without them `--version` could neither be read nor stopped. In a test, `configure` must be given `path`. The real `process.env.PATH` can hold an agent and add a question the case did not answer.

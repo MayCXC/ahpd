@@ -116,12 +116,12 @@ Child plans, each scoped to one package or two.
 
 | Plan | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [p1 - A command is split and matched](../100-p1-a-command-is-split-and-matched/plan.md) | sdk | planned | - |
+| [p1 - A command is split and matched](../100-p1-a-command-is-split-and-matched/plan.md) | sdk | built | - |
 | [p2 - A session gets its owner's command check](../100-p2-a-session-gets-its-owners-command-check/plan.md) | sdk, server | planned | p1 |
-| [p3 - Another parser replaces the splitter](../100-p3-another-parser-replaces-the-splitter/plan.md) | sdk, server | planned | p1 |
-| [p4 - Claude and ACP ask only for unmatched commands](../100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | agent-claude, agent-acp | planned | p2 |
-| [p5 - pi and cofold ask only for unmatched commands](../100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | agent-pi, agent-cofold | planned | p2 |
-| [p6 - The docs name the terminal rules](../100-p6-the-docs-name-the-terminal-rules/plan.md) | docs | implemented | p3, p4, p5 |
+| [p3 - Another parser replaces the splitter](../100-p3-another-parser-replaces-the-splitter/plan.md) | sdk, server | built | p1 |
+| [p4 - Claude and ACP ask only for unmatched commands](../100-p4-claude-and-acp-ask-for-unmatched-commands/plan.md) | agent-claude, agent-acp | built | p2 |
+| [p5 - pi and cofold ask only for unmatched commands](../100-p5-pi-and-cofold-ask-for-unmatched-commands/plan.md) | agent-pi, agent-cofold | built | p2 |
+| [p6 - The docs name the terminal rules](../100-p6-the-docs-name-the-terminal-rules/plan.md) | docs | built | p3, p4, p5 |
 
 ## Risks and tradeoffs
 
@@ -132,8 +132,8 @@ Child plans, each scoped to one package or two.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from `ideas/terminal-commands-approved-by-rule.md`. Softov answered the five questions 2026-10-16, and the plan became a parent of six children.
-- **Next action:** [p1](../100-p1-a-command-is-split-and-matched/plan.md).
+- **Done so far:** drafted 2026-10-16 from `ideas/terminal-commands-approved-by-rule.md`. Softov answered the five questions 2026-10-16, and the plan became a parent of six children. Softov approved the close of p1, p3, p4, p5 and p6 on 2026-10-19, and they are built.
+- **Next action:** the review and close of [p2](../100-p2-a-session-gets-its-owners-command-check/plan.md), which has no `implemented.md` yet.
 - **Open questions:** none.
 - **Watch out for:** the idea is stale on one point: both keys are declared already. The three keys join `PER_CONNECTION` in p2, and `root.ts` and the gate change with it.
 

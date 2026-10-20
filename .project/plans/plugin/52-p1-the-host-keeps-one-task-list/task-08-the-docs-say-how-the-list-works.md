@@ -1,6 +1,6 @@
 ---
 title: The docs say how the list works
-status: implemented
+status: done
 depends: [task-06-approving-and-reviewing-take-a-grant.md]
 layer: "docs"
 refs:

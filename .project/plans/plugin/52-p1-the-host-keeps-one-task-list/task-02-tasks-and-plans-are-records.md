@@ -1,6 +1,6 @@
 ---
 title: Tasks and plans are records
-status: implemented
+status: done
 depends: [task-01-the-tasks-package-has-its-settings.md]
 layer: "tasks"
 refs:

@@ -37,7 +37,15 @@ The `Host` may be one of the API's own names, or `127.0.0.1`, `localhost` or `[:
 
 ## Who may call
 
-The token is the deployment token, which is root, or a person's token from `ahpd user token`. `Authorization: Bearer` and `x-api-key` are both read; sending both with different values is refused.
+The token is the deployment token, which is root, or a person's token from `ahpd user token` or `ahpd token mint`. `Authorization: Bearer` and `x-api-key` are both read; sending both with different values is refused.
+
+To call the proxy from another computer, sign in once and mint a token that holds nothing else:
+
+```bash
+ahpd token mint --user ana --grant proxy:write --label laptop
+```
+
+It reaches `/v1`, and is refused at the rest of `/api`. See [Users](USERS.md#tokens-of-their-own).
 
 A person needs `proxy:call` to call and `proxy:models` to list the models. The `proxy:write` and `proxy:read` groups cover the two. The built-in `member` role holds both groups; `guest` holds neither. See [USERS.md](../sdk/USERS.md).
 

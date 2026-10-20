@@ -1,6 +1,6 @@
 ---
 title: Every harness is offered the tools
-status: implemented
+status: done
 depends: [task-06-approving-and-reviewing-take-a-grant.md]
 layer: "tasks"
 refs:

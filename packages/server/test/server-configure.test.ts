@@ -8,15 +8,17 @@
  * a fake so no case needs a registry, a network or a package.
  */
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { PassThrough, Writable } from 'node:stream';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { installLine, knownAgents, type KnownAgent } from '@ahpd/sdk';
 import { askToServe, configure, offerConfigure, type Configured } from '../src/commands/configure.js';
 import { optionsFrom } from '../src/commands/options.js';
 import { cliRegistry } from '../src/commands/registry.js';
-import type { Ran, Runner } from '../src/install.js';
+import { missingLines } from '../src/found.js';
+import type { Ran, Runner, RunOptions } from '../src/install.js';
 import type { Fetch } from '../src/update.js';
 
 /**
@@ -51,11 +53,27 @@ const terminal = (...answers: string[]) => {
 let root: string;
 let configDir: string;
 let configFile: string;
-/** Every npm call a case made, so a second run can be shown not to make one. */
-const calls: { program: string; argv: string[] }[] = [];
-const run: Runner = async (program, argv) => {
-  calls.push({ program, argv: [...argv] });
-  return { code: 0, stdout: '', stderr: '' } satisfies Ran;
+/** The only folder on PATH, so what the command finds is what a case put there. */
+let bin: string;
+/** What each stub says for `--version`, by the name it was found under. */
+const versions = new Map<string, string>();
+/** The stubs whose `--version` exits non-zero. */
+const failing = new Set<string>();
+/** The stubs whose `--version` never answers, which is what the 3 seconds are for. */
+const hanging = new Set<string>();
+/** Every program a case ran, so a second run can be shown not to make an npm call. */
+const calls: { program: string; argv: string[]; options?: RunOptions }[] = [];
+/**
+ * The runner: npm always succeeds, and a `--version` is answered from the maps
+ * above rather than by the file, which is a stub holding no code at all.
+ */
+const run: Runner = async (program, argv, options) => {
+  calls.push({ program, argv: [...argv], ...(options === undefined ? {} : { options }) });
+  if (argv[0] !== '--version') return { code: 0, stdout: '', stderr: '' } satisfies Ran;
+  const name = basename(program).replace(/\.(?:cmd|exe|bat|com)$/iu, '');
+  if (hanging.has(name)) return { code: -1, stdout: '', stderr: '' } satisfies Ran;
+  if (failing.has(name)) return { code: 1, stdout: '', stderr: 'no version' } satisfies Ran;
+  return { code: 0, stdout: `${versions.get(name) ?? ''}\n`, stderr: '' } satisfies Ran;
 };
 /**
  * A registry holding one version of `@ahpd/agent-claude`, whose `@ahpd/sdk`
@@ -74,19 +92,41 @@ beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'ahpd-configure-'));
   configDir = join(root, 'ahpd');
   configFile = join(configDir, 'config.json');
+  bin = join(root, 'bin');
   mkdirSync(configDir, { recursive: true });
+  mkdirSync(bin, { recursive: true });
   calls.length = 0;
+  versions.clear();
+  failing.clear();
+  hanging.clear();
 });
 afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 
-/** One run of `configure`, answering as the terminal gives. */
+/** One run of `configure`, answering as the terminal gives, over this case's PATH. */
 const asked = async (...answers: string[]): Promise<{ answered: Configured; said: string }> => {
   const term = terminal(...answers);
   const lines: string[] = [];
   const answered = await configure({
-    configDir, configFile, version: '0.8.0', term: term.term, run, fetch, say: (line) => { lines.push(line); },
+    configDir, configFile, version: '0.8.0', term: term.term, run, fetch, path: bin, say: (line) => { lines.push(line); },
   });
   return { answered, said: `${term.said()}${lines.join('\n')}` };
+};
+
+/** The file a stub has in `bin` on this system, where npm installs a `.cmd` on Windows. */
+const stubFile = (name: string): string => join(bin, process.platform === 'win32' ? `${name}.cmd` : name);
+
+/** A command on PATH. It is never run: the runner above answers its version. */
+const stub = (name: string, version?: string): void => {
+  writeFileSync(stubFile(name), '#!/bin/sh\n');
+  chmodSync(stubFile(name), 0o755);
+  if (version !== undefined) versions.set(name, version);
+};
+
+/** A row by id, which every case here then has for sure. */
+const row = (id: string): KnownAgent => {
+  const agent = knownAgents[id];
+  if (agent === undefined) throw new Error(`knownAgents has no ${id}`);
+  return agent;
 };
 
 const put = (held: unknown): void => { writeFileSync(configFile, `${JSON.stringify(held, null, 2)}\n`); };
@@ -144,7 +184,7 @@ it('makes the configuration folder on a first run, rather than failing on the to
   const file = join(fresh, 'config.json');
   const term = terminal('', '', '', '', '', '', '');
   const answered = await configure({
-    configDir: fresh, configFile: file, version: '0.8.0', term: term.term, run, fetch, say: () => {},
+    configDir: fresh, configFile: file, version: '0.8.0', term: term.term, run, fetch, path: bin, say: () => {},
   });
   expect(answered.paths).toEqual([process.cwd()]);
   const wrote = join(fresh, 'connection-token');
@@ -214,6 +254,132 @@ it('refuses a port that is not one, before anything is written', async () => {
 it('refuses rather than serving nothing when every folder is answered No', async () => {
   put({ paths: ['/tmp/one'] });
   await expect(asked('', '', '', '', '', '', 'n')).rejects.toThrow(/every folder/i);
+});
+
+describe('what is on PATH', () => {
+  it('asks about a found agent, and a Yes writes it under the presets of @ahpd/agent-acp', async () => {
+    stub('gemini', '0.9.0');
+    const { said } = await asked('', '', '', '', '', '', '', '');
+    expect(said).toContain('Gemini? [Y/n]: ');
+    expect(read().plugins).toEqual([
+      { name: '@ahpd/agent-acp', options: { presets: { gemini: {} } } },
+      '@ahpd/agent-claude',
+    ]);
+    // The package that runs it is installed with the backend, after the write.
+    expect(calls.some((one) => one.program === 'npm' && one.argv.includes('@ahpd/agent-acp'))).toBe(true);
+  });
+
+  it('writes no agent-acp entry and installs nothing for it when the agent is answered No', async () => {
+    stub('gemini', '0.9.0');
+    await asked('', '', '', 'n', '', '', '', '');
+    expect(read().plugins).toEqual(['@ahpd/agent-claude']);
+    expect(calls.some((one) => one.argv.includes('@ahpd/agent-acp'))).toBe(false);
+  });
+
+  it('shows a preset the file has as configured, asks nothing about it, and keeps its options', async () => {
+    put({
+      plugins: [{
+        name: '@ahpd/agent-acp',
+        options: { presets: { gemini: { model: 'flash' } }, hostTools: false },
+      }],
+    });
+    stub('gemini', '0.9.0');
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('Gemini 0.9.0 (configured, @ahpd/agent-acp)');
+    expect(said).not.toContain('Gemini? [Y/n]: ');
+    expect(read().plugins).toEqual([
+      { name: '@ahpd/agent-acp', options: { presets: { gemini: { model: 'flash' } }, hostTools: false } },
+      '@ahpd/agent-claude',
+    ]);
+  });
+
+  it('lists every agent it did not find with the line that installs it', async () => {
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('Agents not found:');
+    expect(said).toContain(`  Codex: ${installLine(row('codex'), process.platform)}`);
+    expect(said).toContain(`  OpenCode: ${installLine(row('opencode'), process.platform)}`);
+    // A row with no line for this system shows its page instead of an empty one.
+    expect(said).toContain(`  Amp: ${row('amp').page}`);
+  });
+
+  it('asks no agent question with an empty PATH, so the questions are the ones of today', async () => {
+    const { said } = await asked('', '', '', '', '', '', '');
+    for (const agent of Object.values(knownAgents)) {
+      expect(said, `${agent.name} was asked about`).not.toContain(`${agent.name}? [Y/n]: `);
+    }
+  });
+
+  it('names the runtime versions the runner gave', async () => {
+    stub('node', 'v24.21.0');
+    stub('bun', '1.2.3');
+    stub('deno', '2.0.0');
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('Node v24.21.0 (runs ahpd)');
+    expect(said).toContain('Bun 1.2.3 (runs ahpd)');
+    expect(said).toContain('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
+  });
+
+  it('says ahpd does not run on Node 20', async () => {
+    stub('node', 'v20.11.0');
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('Node v20.11.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
+  });
+
+  it('shows the version the runner gave for the agent it found', async () => {
+    stub('gemini', '0.9.0');
+    const { said } = await asked('', '', '', '', '', '', '', '');
+    expect(said).toContain('Agents found:');
+    expect(said).toContain('Gemini 0.9.0 (not configured, @ahpd/agent-acp)');
+  });
+
+  it('shows the path and no version when --version fails', async () => {
+    stub('gemini');
+    failing.add('gemini');
+    const { said } = await asked('', '', '', 'n', '', '', '', '');
+    expect(said).toContain(`Gemini at ${stubFile('gemini')} (not configured, @ahpd/agent-acp)`);
+    // The limit is what keeps an agent that checks for updates as it starts
+    // from holding up the setup, so the probe is given it.
+    const probe = calls.find((one) => one.program === stubFile('gemini') && one.argv[0] === '--version');
+    expect(probe?.options).toEqual({ timeoutMs: 3000, capture: true });
+  });
+
+  it('shows the path and no version when --version passes the 3 seconds', async () => {
+    stub('gemini');
+    hanging.add('gemini');
+    const { said } = await asked('', '', '', 'n', '', '', '', '');
+    expect(said).toContain(`Gemini at ${stubFile('gemini')} (not configured, @ahpd/agent-acp)`);
+  });
+
+  it('shows claude under Also found, and asks the three backend questions it always did', async () => {
+    stub('claude', '2.1.291');
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('Also found:');
+    expect(said).toContain('  claude 2.1.291');
+    expect(said).toContain('Claude? [Y/n]: ');
+    expect(said).toContain('cofold? [y/N]: ');
+    expect(said).toContain('pi? [y/N]: ');
+  });
+
+  it('shows an install line a preset writes for a missing agent, not the row it shipped with', async () => {
+    put({
+      plugins: [{
+        name: '@ahpd/agent-acp',
+        options: { presets: { gemini: { install: { all: 'npm i -g my-gemini' } } } },
+      }],
+    });
+    const { said } = await asked('', '', '', '', '', '', '');
+    expect(said).toContain('  Gemini: npm i -g my-gemini');
+    expect(said).not.toContain('@google/gemini-cli');
+  });
+
+  it('shows a row page for a system the row has no line for', () => {
+    const one: KnownAgent = {
+      id: 'x', name: 'X', command: 'x',
+      install: { linux: 'apt install x' },
+      page: 'https://example.com/x',
+    };
+    expect(missingLines([one], 'win32')).toEqual(['Agents not found:', '  X: https://example.com/x']);
+  });
 });
 
 describe('a start with no configuration', () => {

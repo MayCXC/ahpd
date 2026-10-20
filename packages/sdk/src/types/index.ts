@@ -42,7 +42,7 @@ export type { Claim, Terminal, TerminalOptions, SpawnPty, TerminalStore, OpenTer
 export type { GitDir, Worktree, Worktrees } from './worktrees.js';
 export type { NewPullRequest, PullRequest, PullRequests } from './github.js';
 export type { Automation, AutomationEntry, AutomationRun, AutomationStore, RunEnding, StartSession } from './automations.js';
-export type { Grant, IssuerVerify, Named, Principal, Role, UserFile, UserRecord, Users, Verb } from './users.js';
+export type { Grant, IssuerVerify, MintedToken, Named, Principal, Role, TokenRecord, UserFile, UserRecord, Users, Verb } from './users.js';
 export type { ComputerTime, Cost, ModelCall, ModelUse, Owner, Usage, UsageBase, UsageEntry, UsageGroup, UsageKey, UsageTotal } from './usage.js';
 export type {
   LimitPool, Measure, Period, Policies, Policy, PolicyEffect, PolicyKind, PolicyLimit, PolicyMatch, PolicyScope,

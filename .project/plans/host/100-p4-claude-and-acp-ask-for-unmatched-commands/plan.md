@@ -1,7 +1,7 @@
 ---
 title: Claude and ACP ask only for unmatched commands
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -59,8 +59,8 @@ canUseTool(Bash) / askPermission(execute) -> getAutoApproval -> not-needed: run 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - Claude asks only for unmatched commands](task-01-claude-asks-only-for-unmatched-commands.md) | implemented | - |
-| [02 - ACP asks only for unmatched commands](task-02-acp-asks-only-for-unmatched-commands.md) | implemented | - |
+| [01 - Claude asks only for unmatched commands](task-01-claude-asks-only-for-unmatched-commands.md) | done | - |
+| [02 - ACP asks only for unmatched commands](task-02-acp-asks-only-for-unmatched-commands.md) | done | - |
 
 ## Risks and tradeoffs
 
@@ -68,8 +68,8 @@ canUseTool(Bash) / askPermission(execute) -> getAutoApproval -> not-needed: run 
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-18, and amended the same day to read the line the model wrote. Task 02 implemented 2026-10-18.
-- **Next action:** none; both tasks are implemented and the plan is ready to review.
+- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Task 01 implemented 2026-10-18, and amended the same day to read the line the model wrote. Task 02 implemented 2026-10-18. Softov reviewed the plan 2026-10-19 and approved the close, and [implemented.md](implemented.md) says what was built.
+- **Next action:** none.
 - **Open questions:** none. Both were answered by Softov on 2026-10-18 and are recorded in the Answers table.
 - **Watch out for:** the SDK runs `PreToolUse` hooks before `canUseTool`, so the shell hook keeps the original line per `tool_use_id` and the check reads it. The ACP check reads only a call of kind `execute` with a string `rawInput.command`, the shape codex-acp 1.13.1 sends. Another agent's shape asks as it does today. The check may be async after p3; both backends await it.
 

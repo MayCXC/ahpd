@@ -1,6 +1,6 @@
 ---
 title: VS Code's default table is ported
-status: implemented
+status: done
 depends: [task-02-the-command-auto-approver.md]
 layer: sdk
 refs:
@@ -34,6 +34,6 @@ p2 uses it when no client pushed rules and the daemon setting says so.
 ## Resume
 
 - **Done so far:** steps 1 to 4, 2026-10-16, completed 2026-10-18. `DEFAULT_TERMINAL_AUTO_APPROVE_RULES` is in `packages/sdk/src/commandautoapprover.ts`, exported from `packages/sdk/src/index.ts`, with the comment of step 2 above it: the file, the line and the commit. The git, PowerShell and sort tables are in the same file. They are spread at the lines upstream spreads them, so the key order is the same. The cases are in the `VS Code's default table` block of `packages/sdk/test/commandautoapprover.test.ts`, all passing. The git rules compile on Node 22: their `(?-i:C)` groups are written `(?:C)`, and those rules match with case only.
-- **Next action:** the review of this task.
+- **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none. Each table is ported entry for entry, in order, from VS Code `a959ba62444`. `cmdDelayedExpansion.ts` is not imported by `commandAutoApprover.ts`, so nothing is ported from it.
 - **Watch out for:** the git rules carry `(?-i:C)`. The compiler writes it `(?:C)` itself, so a runtime without regular expression modifiers reads the rules. Rewriting loses the insensitive reading, so `git -c` is not approved under PowerShell. The table changes upstream; the comment names the commit so a later pass can diff it.

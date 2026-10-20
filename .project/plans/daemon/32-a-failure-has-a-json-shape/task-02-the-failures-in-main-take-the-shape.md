@@ -1,6 +1,6 @@
 ---
 title: The failures in main.ts take the shape
-status: implemented
+status: done
 depends:
   - task-01-ahpd-takes-cofold-terminal-0-4.md
 layer: server

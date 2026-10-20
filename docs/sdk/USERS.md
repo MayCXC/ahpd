@@ -319,6 +319,40 @@ refusal sentences, and answer `{}`. An id with a `/` or a `?` in it is refused,
 because no address could name it. Each command is listed on the handshake under
 `_meta['ahpd.methods']` with the grant it needs.
 
+## Tokens of their own
+
+A person signs in with their full token, or through an issuer, and mints
+tokens of their own over AHP. Each token may be limited to some of the
+person's grants, and each is revoked without touching the others.
+
+| Command | Params | Answers |
+| --- | --- | --- |
+| `x-ahpd/tokens/mint` | `user?`, `label?`, `grants?`, `expires?` | the token, with its `secret` |
+| `x-ahpd/tokens/list` | `user?` | the tokens, without their hashes |
+| `x-ahpd/tokens/revoke` | `id`, `user?` | `{}` |
+
+Each needs `user:write`. A reader without it is let in by the method's
+`authorize` for their own tokens, as the usage commands let a reader read
+their own pools. `user` names somebody else: it needs `user:write` and is
+refused for a grant that person holds and the reader does not. A root
+connection has no reader, so it has to name a person.
+
+The mint's `grants` is a list of grants the person holds now. Without one,
+the token holds every grant its person does, read at each check. `expires`
+is epoch milliseconds in the future. Without it the token does not expire.
+The answer carries the `secret` once, and the directory keeps only its
+hash. The list answers the same records without a hash or a secret.
+
+A reader that signed in with a minted token is refused all three with
+`-32009` and `A minted token cannot manage tokens; sign in as yourself.`
+Only the person's full sign-in manages tokens. The token's owner and the
+grants it holds are read on every call, so a revoke or a grant taken from
+the person is in force on the next one.
+
+A directory that keeps no tokens refuses with a sentence saying this host
+keeps none. The three are listed on the handshake under
+`_meta['ahpd.methods']` with `user:write`.
+
 ## Policies as resources
 
 What a scheme is, and which operation of it each resource method asks for, is [RESOURCES.md](RESOURCES.md). This is what this scheme carries.

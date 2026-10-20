@@ -1,7 +1,7 @@
 ---
 title: A command is split and matched
 domain: host
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-16
@@ -73,10 +73,10 @@ split(line, shell) -> { subCommands, writeDests, unanalyzable } | undefined -> C
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A command line is split](task-01-a-command-line-is-split.md) | implemented | - |
-| [02 - The command auto approver](task-02-the-command-auto-approver.md) | implemented | 01 |
-| [03 - VS Code's default table is ported](task-03-vscodes-default-table-is-ported.md) | implemented | 02 |
-| [04 - A write redirect is checked](task-04-a-write-redirect-is-checked.md) | implemented | 02 |
+| [01 - A command line is split](task-01-a-command-line-is-split.md) | done | - |
+| [02 - The command auto approver](task-02-the-command-auto-approver.md) | done | 01 |
+| [03 - VS Code's default table is ported](task-03-vscodes-default-table-is-ported.md) | done | 02 |
+| [04 - A write redirect is checked](task-04-a-write-redirect-is-checked.md) | done | 02 |
 
 ## Risks and tradeoffs
 
@@ -84,8 +84,8 @@ split(line, shell) -> { subCommands, writeDests, unanalyzable } | undefined -> C
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Tasks 01 to 04 implemented 2026-10-16 and completed 2026-10-18. Reviewed 2026-10-18, with one fix, and not set to done. `packages/sdk/src/commandautoapprover.ts` is new, with `splitCommand`, `CommandAutoApprover`, `DEFAULT_TERMINAL_AUTO_APPROVE_RULES` and the write check. All of it is exported from `packages/sdk/src/index.ts`. The two test files are new, 63 cases in all. The default table is complete: the git, PowerShell and sort tables are spread into it at the lines upstream spreads them. The sed in-place check and the parse-safety check are ported too. The git rules compile on Node 22: their `(?-i:C)` groups are written `(?:C)`.
-- **Next action:** the review of [task-01-a-command-line-is-split.md](task-01-a-command-line-is-split.md), then of tasks 02, 03 and 04.
+- **Done so far:** planned 2026-10-16 from the answers in the parent plan. Tasks 01 to 04 implemented 2026-10-16 and completed 2026-10-18. Reviewed 2026-10-18, with one fix. Softov approved the close 2026-10-19, so every task is done, and [implemented.md](implemented.md) says what was built. `packages/sdk/src/commandautoapprover.ts` is new, with `splitCommand`, `CommandAutoApprover`, `DEFAULT_TERMINAL_AUTO_APPROVE_RULES` and the write check. All of it is exported from `packages/sdk/src/index.ts`. The two test files are new, 63 cases in all. The default table is complete: the git, PowerShell and sort tables are spread into it at the lines upstream spreads them. The sed in-place check and the parse-safety check are ported too. The git rules compile on Node 22: their `(?-i:C)` groups are written `(?:C)`.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:** the approver is pure: it gets the rules, the edit rules and the working folder as arguments, and reads no config. A write target whose name holds a character the shell expands is `noMatch`, and so is a glob target under PowerShell. `unanalyzable` covers `$(...)`, a backtick, a process substitution, a heredoc, a PowerShell script block, a method call and an assignment. The git rules carry `(?-i:C)`, which the compiler rewrites to `(?:C)` so the rules read the same on every runtime. Those rules are then matched with case, so `GIT STATUS` asks under PowerShell.
 

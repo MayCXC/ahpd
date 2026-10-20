@@ -11,14 +11,14 @@ refs:
 
 ## Objective
 
-`https://ahpio.com/install.sh` and `https://ahpio.com/install.ps1` serve the scripts of this repository, and the site holds no copy that is out of date.
+`https://ahpio.com/ahpd/install.sh` and `https://ahpio.com/ahpd/install.ps1` serve the scripts of this repository, and the site holds no copy that is out of date.
 INSTALL.md and GET-STARTED.md show the one line first and keep `npm i -g` as the way by hand.
 
 ## Files
 
-- `CREATE: ../ahpio-site/scripts/install-scripts.mjs` - a step that writes `public/install.sh` and `public/install.ps1` from this repository before the build.
+- `CREATE: ../ahpio-site/scripts/install-scripts.mjs` - a step that writes `public/ahpd/install.sh` and `public/ahpd/install.ps1` from this repository before the build.
 - `UPDATE: ../ahpio-site/package.json` - a `prebuild` script that runs it.
-- `UPDATE: ../ahpio-site/.gitignore` - ignore the two copied files, so no copy is committed.
+- `UPDATE: ../ahpio-site/.gitignore` - ignore the two copied files, `ahpd/install.sh` and `ahpd/install.ps1`, so no copy is committed.
 - `UPDATE: docs/server/INSTALL.md` - the one line for each system first, with the script URL, then `npm i -g` under "By hand".
 - `UPDATE: docs/server/GET-STARTED.md` - step 1 shows the one line, and says that it runs step 2 on a terminal.
 
@@ -37,11 +37,11 @@ INSTALL.md and GET-STARTED.md show the one line first and keep `npm i -g` as the
 
 ## Validation
 
-- `npm run build` in the site writes `dist/install.sh` and `dist/install.ps1`, equal to the files in this repository.
+- `npm run build` in the site writes `dist/ahpd/install.sh` and `dist/ahpd/install.ps1`, equal to the files in this repository.
 - `npm run build` stops with an error when the step cannot read a script.
-- `git status` in the site shows no `public/install.*` file to commit.
+- `git status` in the site shows no `public/ahpd/install.*` file to commit.
 - `pnpm -s docs:build` passes, and the prose lint prints nothing new for the two pages.
-- By hand, after a deploy: `curl -fsSL https://ahpio.com/install.sh | head -1` prints the shebang.
+- By hand, after a deploy: `curl -fsSL https://ahpio.com/ahpd/install.sh | head -1` prints the shebang.
 
 ## Resume
 

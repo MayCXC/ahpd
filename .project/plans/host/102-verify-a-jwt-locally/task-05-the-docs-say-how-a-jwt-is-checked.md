@@ -1,6 +1,6 @@
 ---
 title: The docs say how a JWT is checked
-status: implemented
+status: done
 depends: [task-03-the-tokens-exp-ends-the-sign-in.md, task-04-the-daemon-takes-the-setting.md]
 layer: docs
 refs:

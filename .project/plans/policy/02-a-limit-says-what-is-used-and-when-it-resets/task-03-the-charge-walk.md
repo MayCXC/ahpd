@@ -1,6 +1,6 @@
 ---
 title: The charge walk says which rows pay, whether they have room, and their keys
-status: implemented
+status: done
 depends: [task-01-the-store-keeps-its-days-in-the-usage-timezone.md, task-02-a-total-counts-the-turns.md]
 layer: "sdk"
 refs:

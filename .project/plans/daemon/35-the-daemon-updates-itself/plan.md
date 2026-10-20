@@ -1,7 +1,7 @@
 ---
 title: The daemon updates itself
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-18
 revalidated: 2026-10-18

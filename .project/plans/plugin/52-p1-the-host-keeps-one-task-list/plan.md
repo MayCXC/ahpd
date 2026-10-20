@@ -1,7 +1,7 @@
 ---
 title: The host keeps one task list
 domain: plugin
-status: active
+status: built
 priority: medium
 created: 2026-10-16
 revalidated: 2026-10-18
@@ -109,14 +109,14 @@ The rows on what a client sees are in [p13](../52-p13-a-client-sees-the-task-lis
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - the-tasks-package-has-its-settings](task-01-the-tasks-package-has-its-settings.md) | implemented | - |
-| [02 - tasks-and-plans-are-records](task-02-tasks-and-plans-are-records.md) | implemented | 01 |
-| [03 - a-tool-call-names-its-person](task-03-a-tool-call-names-its-person.md) | implemented | - |
-| [04 - the-plan-tools](task-04-the-plan-tools.md) | implemented | 02, 03 |
-| [05 - the-task-tools](task-05-the-task-tools.md) | implemented | 02, 03 |
-| [06 - approving-and-reviewing-take-a-grant](task-06-approving-and-reviewing-take-a-grant.md) | implemented | 04, 05 |
-| [07 - every-harness-is-offered-the-tools](task-07-every-harness-is-offered-the-tools.md) | implemented | 06 |
-| [08 - the-docs-say-how-the-list-works](task-08-the-docs-say-how-the-list-works.md) | implemented | 06 |
+| [01 - the-tasks-package-has-its-settings](task-01-the-tasks-package-has-its-settings.md) | done | - |
+| [02 - tasks-and-plans-are-records](task-02-tasks-and-plans-are-records.md) | done | 01 |
+| [03 - a-tool-call-names-its-person](task-03-a-tool-call-names-its-person.md) | done | - |
+| [04 - the-plan-tools](task-04-the-plan-tools.md) | done | 02, 03 |
+| [05 - the-task-tools](task-05-the-task-tools.md) | done | 02, 03 |
+| [06 - approving-and-reviewing-take-a-grant](task-06-approving-and-reviewing-take-a-grant.md) | done | 04, 05 |
+| [07 - every-harness-is-offered-the-tools](task-07-every-harness-is-offered-the-tools.md) | done | 06 |
+| [08 - the-docs-say-how-the-list-works](task-08-the-docs-say-how-the-list-works.md) | done | 06 |
 
 ## Risks and tradeoffs
 
@@ -128,8 +128,8 @@ The rows on what a client sees are in [p13](../52-p13-a-client-sees-the-task-lis
 
 - **Done so far:** draft written 2026-10-16. Answers on the model, translation and client view recorded 2026-10-18. Tasks written 2026-10-18. The Claude, ACP and translation rows moved to p12, and the client view rows moved to p13. Open questions answered 2026-10-18. Tasks 01 to 08 are implemented. `packages/tasks` exists with its two settings, the two records, the store and the sweep, and `ToolCall` answers `person()`. All ten tools are registered, with the two approvals behind `task:approve`. pi and cofold are offered every one, and `docs/plugins/TASK-LIST.md` says what the list holds.
 - **Review fixes:** a plan gets a `finished` stamp at its first move to `done` or `dropped`. The sweep counts from the newest stamp of the plan and of its tasks. The plugin runs one tool call at a time, so two calls at once cannot share an id. The reference moved to `docs/plugins/TASK-LIST.md`, because `TASKS.md` and `tasks.md` clash on a system that ignores case.
-- **Next action:** Softov reviews tasks 01 to 08 and sets them to done.
-- **Open questions:** `task-05` step 1 says `task_add` takes every task field, and step 2 says a new task is `todo`. Step 2 was followed, so `task_add` has no `status` input. `task-07` and `task-08` say nine tools; `plan_set` makes ten, and the code and docs say ten.
+- **Closed:** Softov reviewed tasks 01 to 08 on 2026-10-19, and they are done. The plan is built; [implemented.md](implemented.md) says what exists.
+- **Next action:** none. The Claude and ACP sessions on the list are p12's, and the client view is p13's.
 - **Open questions:** none.
 - **Watch out for:** the session ids on a task must stay valid after a session is removed, so a task keeps the id as text. A plan does not list its tasks; `plan_show` finds them with `find({ plan })`. The checklist's Claude line is p12's: this plan proves pi and cofold, and p12 takes the Claude and ACP sessions.
 

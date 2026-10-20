@@ -1,6 +1,6 @@
 ---
 title: agent-claude's tests build their paths
-status: implemented
+status: done
 depends: []
 layer: agent-claude
 refs:
@@ -52,3 +52,5 @@ The `file:///dev/zero` case is now a folder named `zero`, because no two systems
 Gates run: `node tools/schema.mjs`, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 Vitest on `packages/agent-claude` with `--maxWorkers=2 --testTimeout=10000`: 37 files and 329 tests pass.
 The sdk run rewrote `packages/sdk/test/fixtures/wire.jsonl`, and the restore is denied here: Softov runs `git checkout -- packages/sdk/test/fixtures/wire.jsonl`.
+
+Closed 2026-10-19: the `check-windows` job of PR #30 passed the agent-claude tests, in run 39344018005.

@@ -1,7 +1,7 @@
 ---
 title: An ssh machine runs a nested host
 domain: container
-status: active
+status: built
 priority: medium
 created: 2026-09-26
 revalidated: 2026-10-04
@@ -152,7 +152,8 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 ## Resume state
 
 - **Done so far:** every task is done. Task 06 ran 2026-10-18 from a Windows host to a Debian 13 VM listed as `ssh.deb`, not dev02. It fixed six bugs on the way, and its Resume has the run. Four reads of Docker's record wait in [deferred.md](deferred.md).
-- **Next action:** run `pnpm test` on Linux for branch `windows/container-05-p9`, then write `implemented.md`, set `status: built` and update the index row. The Windows run cannot answer that gate: the computer suite fails 144 cases there with and without this branch.
+- **Closed:** PR 7 merged on 2026-10-18 as `1803784f`. Its CI run 39139099567 answers the `pnpm test` gate on Linux. Softov approved the close on 2026-10-19. The plan is built; [implemented.md](implemented.md) says what exists.
+- **Next action:** none. The end-to-end case and four reads of Docker's record wait in [deferred.md](deferred.md).
 - **Watch out for:** `ssh:dev02` is not a usable id, because `new URL('computer://ssh:dev02')` reads the colon as a port, so the separator is a dot; a policy matches a runtime with `computer: ["ssh.*"]`; a local docker name that holds a dot is refused at create; p8, p10 and p11 spell their ids through task 01's functions; container/04 tasks 11 (resume by id), 14 (the inner working directory), 15 (close waits for dispose) and 17 (a backend names its plugin) must land first, or a nested session on the box starts in a path the box does not have and never resumes; container/04 task 15 makes close wait for `disposeSession`, which task 05 here must not undo for a session that is ending because this host is stopping; claude/15 loads a plugin once with presets as variants, so the box's ahpd needs the same plugin options to serve a preset.
 
 ## Final verification checklist
@@ -163,5 +164,5 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 - [x] After `ahpd restart`, the session on dev02 continues its conversation.
 - [x] dev02's up time as an ssh machine is written as stretches charged to `root:<host>`, closed when it stops answering. (Seen closed when the daemon stopped.)
 - [x] A body asking for `runtime: "ssh"` is refused with a sentence: an ssh machine is listed, never made.
-- [ ] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green. (`typecheck` and `boundary` green on Windows; `pnpm test` waits for Linux.)
+- [x] `pnpm test`, `pnpm typecheck`, `pnpm boundary` green. (PR 7, CI run 39139099567 on Linux: `check` ran the boundary, `typecheck` and `test:unit`, and `processes` ran `test:processes`.)
 - [x] `docs/plugins/COMPUTERS.md`, `plans/index.md` updated.

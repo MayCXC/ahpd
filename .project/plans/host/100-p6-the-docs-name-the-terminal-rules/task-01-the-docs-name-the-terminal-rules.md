@@ -1,6 +1,6 @@
 ---
 title: The docs name the terminal rules
-status: implemented
+status: done
 depends: []
 layer: docs
 refs:
