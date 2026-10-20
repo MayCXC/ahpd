@@ -2,6 +2,46 @@
 
 ## Install
 
+::: code-group
+
+```bash [Linux, macOS]
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash
+```
+
+```powershell [Windows]
+irm https://ahpio.com/ahpd/install.ps1 | iex
+```
+
+:::
+
+The script checks for Node 22.1 or newer, installs `@ahpd/server` without sudo, adds `ahpd` to your PATH, and runs `ahpd configure` when a terminal is open. Read [install.sh](https://ahpio.com/ahpd/install.sh) or [install.ps1](https://ahpio.com/ahpd/install.ps1) before you pipe it.
+
+## Flags
+
+A pipe cannot pass a flag to `install.sh` except after `bash -s --`, and it cannot pass a parameter to `install.ps1` at all. Every flag also reads an `AHPD_*` environment variable, and on PowerShell the block form passes a parameter.
+
+| `install.sh` | `install.ps1` | Environment | What it does |
+| --- | --- | --- | --- |
+| `--version <v>` | `-Version <v>` | `AHPD_VERSION` | install this package version, the newest when omitted |
+| `--package <p>` | `-Package <p>` | `AHPD_PACKAGE` | install this package, `@ahpd/server` by default |
+| `--runtime <r>` | `-Runtime <r>` | `AHPD_RUNTIME` | `node` or `bun` |
+| `--no-onboard` | `-NoOnboard` | `AHPD_NO_ONBOARD` | do not run `ahpd configure` |
+| `--dry-run` | `-DryRun` | `AHPD_DRY_RUN` | print each step and change nothing |
+| `--verbose` | `-Verbose` | `AHPD_VERBOSE` | print each command before it runs |
+| `--help` | `-Help` | `AHPD_HELP` | print the help |
+| `--uninstall` | `-Uninstall` | `AHPD_UNINSTALL` | remove the package and the PATH line |
+| `--purge` | `-Purge` | `AHPD_PURGE` | with `--uninstall`, remove the configuration |
+
+```bash
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash -s -- --no-onboard
+```
+
+```powershell
+& ([scriptblock]::Create((irm https://ahpio.com/ahpd/install.ps1))) -NoOnboard
+```
+
+## By hand
+
 ```bash
 npm i -g @ahpd/server --allow-scripts=node-pty
 ```

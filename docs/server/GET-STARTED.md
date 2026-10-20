@@ -6,13 +6,19 @@ You need Node 22 or newer, and at least one agent for the host to run: Claude Co
 
 ## 1. Install
 
-```bash
-npm i -g @ahpd/server --allow-scripts=node-pty
+::: code-group
+
+```bash [Linux, macOS]
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash
 ```
 
-::: tip
-`--allow-scripts=node-pty` lets npm build the terminal binding. Without it, terminals still work, but without a real TTY.
+```powershell [Windows]
+irm https://ahpio.com/ahpd/install.ps1 | iex
+```
+
 :::
+
+The script installs ahpd and puts it on your PATH. On a terminal it also runs step 2, `ahpd configure`, for you. To install by hand, or to see every flag, see [Install](INSTALL.md).
 
 ## 2. Set it up
 
