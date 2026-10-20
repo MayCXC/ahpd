@@ -23,11 +23,24 @@ I reviewed host/100 p2 on main at `e7b172de` on 2026-10-20. The code does what t
 
 The problem file lists three fixes. I recommend the first: a pushed `/.../` key needs `config:change`. A plain key stays free, and the daemon's own configuration can still hold any expression. Tell me which you want, and it becomes a task.
 
+## Results by hand
+
+Softov ran the checks with a Claude session from VS Code on 2026-10-20.
+
+- Check 1 failed. `pnpm ls --depth 0` asked under the `vscode` defaults. The session has no owner, so the check never applies. See [the problem](../problems/a-claude-session-from-vs-code-has-no-owner.md).
+- Check 2 passed. `rm` on a scratch file asked.
+- Check 3 asked, as written. It shows nothing while check 1 fails, because every command asks.
+- Check 4 was not run.
+
+My first steps named `ls`. Claude Code approves `ls` and other read-only commands itself, before ahpd is asked, so `ls` cannot show the check. Auto mode also skips ahpd. The steps below use a command that only the defaults approve.
+
 ## Check by hand
 
-1. Connect VS Code to the daemon with no terminal rules pushed. Ask the agent to run `ls`. It runs with no question.
+Do these after the owner problem is fixed. Use a Claude session in Ask Before Edits mode.
+
+1. Connect VS Code to the daemon with no terminal rules pushed. Ask the agent to run `pnpm ls --depth 0`. It runs with no question.
 2. Ask the agent to run `rm` on a scratch file. It asks.
-3. Set `terminalAutoApproveDefaults` to `none` and restart the daemon. Ask for `ls` again. It asks.
+3. Set `terminalAutoApproveDefaults` to `none` and restart the daemon. Ask for `pnpm ls --depth 0` again. It asks.
 4. Open a second window as another person on the same session, and push `{"rm": true}` there. Ask for `rm` from that window. It still asks.
 
 ## Reply

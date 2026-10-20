@@ -81,11 +81,11 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 | Task | Status | Depends on |
 | --- | --- | --- |
 | [01 - The store moves to the server](task-01-the-store-moves-to-the-server.md) | done | - |
-| [02 - The store keeps each automation as a Markdown file](task-02-the-store-keeps-markdown-files.md) | implemented | 01 |
-| [03 - automations.json is converted at start](task-03-the-old-file-is-converted.md) | implemented | 02 |
-| [04 - The store reloads a file a person edits](task-04-the-store-reloads-an-edit.md) | implemented | 02 |
-| [05 - The docs describe the automation file](task-05-the-docs-describe-the-file.md) | implemented | 04 |
-| [06 - A UUID id is kept, and the automation folder is reserved](task-06-a-uuid-id-is-kept.md) | implemented | 05 |
+| [02 - The store keeps each automation as a Markdown file](task-02-the-store-keeps-markdown-files.md) | done | 01 |
+| [03 - automations.json is converted at start](task-03-the-old-file-is-converted.md) | done | 02 |
+| [04 - The store reloads a file a person edits](task-04-the-store-reloads-an-edit.md) | done | 02 |
+| [05 - The docs describe the automation file](task-05-the-docs-describe-the-file.md) | done | 04 |
+| [06 - A UUID id is kept, and the automation folder is reserved](task-06-a-uuid-id-is-kept.md) | done | 05 |
 
 ## Risks and tradeoffs
 
@@ -96,7 +96,7 @@ a person edits <id>.md -> folder watch -> readRecordFile -> the clock is armed a
 ## Resume state
 
 - **Done so far:** all six tasks are implemented, committed as `1b2b493` and `4e3756e`, and released in 0.11.0. See [implemented.md](implemented.md).
-- **Next action:** Softov reviews tasks 02 to 06; then each task is `done`.
+- **Next action:** none. Softov reviewed tasks 02 to 06 and passed the checks by hand on 2026-10-20.
 - **Open questions:** none.
 - **Watch out for:** the store is now `{ dir, state }` and no caller passes a single file. `wholeFiles` in `run.ts` names `automationStatePath()` rather than `automationsPath()`, so an old `automations.json` and its scratch are not swept. `recordFile` takes a top-level body field name, which is why the file carries a flat `message.text` key rather than a nested one. The folder is watched, so a test that leaves a store open across a temporary folder sees events from the store's own writes; the `known` map is what tells them apart. A definition read from a file is applied as a whole definition rather than as a patch, and the stamp is set before the change so the file keeps the `createdAt` it was written with. The automation folder is `<configDir>/automations`, the same shape as a plugin's record collection, so `RESERVED_COLLECTIONS` names `automations` and a plugin cannot open it - while `bots` stays open, because the bot plugin opens that collection through the same store, which is why a bot's id is still a record slug and an automation's is not. An automation's id is a file name and nothing more, so the rule is `^[a-z0-9][a-z0-9-]{0,63}$` rather than the record store's slug.
 

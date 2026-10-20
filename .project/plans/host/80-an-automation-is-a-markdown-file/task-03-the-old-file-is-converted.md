@@ -1,6 +1,6 @@
 ---
 title: automations.json is converted at start
-status: implemented
+status: done
 depends: [task-02-the-store-keeps-markdown-files.md]
 layer: "packages/server"
 refs:

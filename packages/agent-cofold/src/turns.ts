@@ -74,6 +74,19 @@ export const createTurns = (
   let takesImages = false;
 
   /**
+   * Title a session nobody has named from the first thing said in it.
+   *
+   * Said, because a client that opened the session holds the old one.
+   */
+  const retitle = (text: string): void => {
+    if (ctx.title !== 'Cofold session' || text === '') return;
+    const said = titleFrom(text, 'Cofold session');
+    if (said === ctx.title) return;
+    ctx.title = said;
+    start.emit('session', { type: 'session/titleChanged', title: said });
+  };
+
+  /**
    * Open a turn on the wire, before anything runs it.
    *
    * `chat/turnStarted` is emitted here, before `run()` is called, because the
@@ -99,20 +112,6 @@ export const createTurns = (
     if (ctx.closed || ctx.active !== undefined) return undefined;
     ctx.cancelRequested = false;
     ctx.failed = undefined;
-    /*
-     * The first message titles a session nobody has named.
-     *
-     * A message of nothing but blanks answers the fallback, which is the title
-     * already held - so nothing moves and nothing is said about it.
-     */
-    if (ctx.title === 'Cofold session' && text !== '') {
-      const said = titleFrom(text, 'Cofold session');
-      if (said !== ctx.title) {
-        ctx.title = said;
-        // Said, because a client that opened the session holds the old one.
-        start.emit('session', { type: 'session/titleChanged', title: said });
-      }
-    }
     // A model named on the turn wins over the session's, and is what the
     // usage report names; it is applied before the agent is built.
     const values: Record<string, unknown> = model === undefined ? settings : { ...settings, model: model.id };
@@ -148,6 +147,15 @@ export const createTurns = (
       message: ctx.active.message,
       ...(queuedMessageId !== undefined ? { queuedMessageId } : {}),
     });
+    /*
+     * The first message titles a session nobody has named.
+     *
+     * Said after the turn has started, as the other harnesses say it: VS Code
+     * draws the message a second time when the title comes first. A message of
+     * nothing but blanks answers the fallback, which is the title already held,
+     * so nothing moves and nothing is said about it.
+     */
+    retitle(text);
     ctx.doing('Thinking');
 
     const mapping = mapTurn({
@@ -423,13 +431,6 @@ export const createTurns = (
     if (ctx.closed || ctx.active !== undefined) return;
     ctx.cancelRequested = false;
     ctx.failed = undefined;
-    if (ctx.title === 'Cofold session' && command !== '') {
-      const said = titleFrom(command, 'Cofold session');
-      if (said !== ctx.title) {
-        ctx.title = said;
-        start.emit('session', { type: 'session/titleChanged', title: said });
-      }
-    }
     const began = Date.now();
     const toolCallId = `${turnId}:command`;
     // The call as a part, because a client that subscribes after the command
@@ -445,6 +446,7 @@ export const createTurns = (
       type: 'chat/turnStarted', turnId, startedAt: ctx.active.startedAt, message: ctx.active.message,
       ...(queuedMessageId !== undefined ? { queuedMessageId } : {}),
     });
+    retitle(command);
     start.emit('chat', toolStartAction(turnId, toolCallId, 'terminal', 'Terminal'));
     start.emit('chat', toolReadyAction(turnId, toolCallId, 'terminal', command));
     ctx.doing('Running');

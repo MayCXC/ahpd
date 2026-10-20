@@ -711,11 +711,12 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * can differ, and a row listed under either is a session this host runs
    * rather than one a backend is offering. Asked by a listing, so a running
    * session is not listed twice, and by a refresh, so the row this host built
-   * for it is not one it calls gone.
+   * for it is not one it calls gone. A session a restart is bringing back is
+   * one this host serves too: until its backend starts, no listing offers it.
    */
   const claimedIds = (): Set<string> => {
     const claimed = new Set<string>();
-    for (const [uri, held] of sessions) {
+    for (const [uri, held] of [...sessions, ...ctx.respawning]) {
       claimed.add(idFor(uri));
       for (const chat of held.chats.values()) {
         const own = chat.agentId();
