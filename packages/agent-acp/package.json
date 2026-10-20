@@ -1,6 +1,6 @@
 {
   "name": "@ahpd/agent-acp",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "type": "module",
   "description": "An AHP backend over the Agent Client Protocol: any ACP server is one provider instead of one package",
   "keywords": [
