@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryAutomations } from '../src/automations.js';
 import { uriOf } from '../src/fileuri.js';
@@ -102,7 +103,7 @@ const runsOf = (store: AutomationStore, resource: string = AUTOMATION): Bag[] =>
  * By the clock rather than by the count: a 1 ms timer is about 15 ms on
  * Windows, where six hundred of them outlast the case.
  */
-const until = async (done: () => boolean, what: string, ms = 3000): Promise<void> => {
+const until = async (done: () => boolean, what: string, ms = WAIT_MS): Promise<void> => {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (done()) return;

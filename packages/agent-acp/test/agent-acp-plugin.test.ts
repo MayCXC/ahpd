@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -56,7 +57,7 @@ const peer = (): Peer & { notes: { method: string; params: unknown }[] } => {
  * By the clock rather than by the count: a 1 ms timer is about 15 ms on
  * Windows, where three thousand of them outlast the test's own timeout.
  */
-const until = async (check: () => boolean, ms = 3000): Promise<void> => {
+const until = async (check: () => boolean, ms = WAIT_MS): Promise<void> => {
   const end = Date.now() + ms;
   while (Date.now() < end) {
     if (check()) return;

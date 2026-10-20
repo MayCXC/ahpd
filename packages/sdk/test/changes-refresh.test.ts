@@ -1,3 +1,4 @@
+import { WAIT_MS } from '../../../tools/wait.ts';
 import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { existsSync, mkdtempSync, writeFileSync, type FSWatcher } from 'node:fs';
@@ -95,7 +96,7 @@ const settle = async (times = 10): Promise<void> => {
   for (let i = 0; i < times; i++) await new Promise((r) => { setTimeout(r, 0); });
 };
 
-const waitFor = async (ready: () => Promise<boolean> | boolean, ms = 3000): Promise<void> => {
+const waitFor = async (ready: () => Promise<boolean> | boolean, ms = WAIT_MS): Promise<void> => {
   const until = Date.now() + ms;
   while (Date.now() < until) {
     if (await ready()) return;
