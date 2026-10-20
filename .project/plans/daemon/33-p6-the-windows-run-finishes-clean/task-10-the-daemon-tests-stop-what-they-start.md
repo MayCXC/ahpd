@@ -1,6 +1,6 @@
 ---
 title: The daemon tests stop what they start
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: tests
 refs:

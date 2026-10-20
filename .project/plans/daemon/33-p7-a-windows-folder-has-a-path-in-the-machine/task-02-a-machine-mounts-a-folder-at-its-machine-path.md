@@ -1,6 +1,6 @@
 ---
 title: A machine mounts a folder at its machine path
-status: implemented
+status: done
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: computer
 refs:

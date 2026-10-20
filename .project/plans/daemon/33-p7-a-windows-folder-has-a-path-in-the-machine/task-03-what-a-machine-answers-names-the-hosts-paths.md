@@ -1,6 +1,6 @@
 ---
 title: What a machine answers names the host's paths
-status: implemented
+status: done
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: computer
 refs:

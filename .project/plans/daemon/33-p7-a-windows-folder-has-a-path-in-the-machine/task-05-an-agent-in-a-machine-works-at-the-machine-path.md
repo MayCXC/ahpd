@@ -1,6 +1,6 @@
 ---
 title: An agent in a machine works at the machine path
-status: implemented
+status: done
 depends: [task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md]
 layer: agent-claude, agent-acp
 refs:

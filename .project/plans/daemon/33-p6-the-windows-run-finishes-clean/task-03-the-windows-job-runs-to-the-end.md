@@ -1,6 +1,6 @@
 ---
 title: The Windows job runs to the end
-status: implemented
+status: done
 depends: []
 layer: CI
 refs:

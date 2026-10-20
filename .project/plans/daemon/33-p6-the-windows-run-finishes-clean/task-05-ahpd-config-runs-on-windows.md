@@ -1,6 +1,6 @@
 ---
 title: ahpd config runs on Windows
-status: todo
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: server
 refs:
@@ -28,3 +28,12 @@ The three `ahpd config` and startup cases in `config-layers.test.ts` exit 0 on W
 
 - `config-layers.test.ts` passes on Windows.
 - The gates pass on Linux.
+
+## Resume
+
+Done 2026-10-20 on a Windows 10 VM, from `main` at `8ad65e71`. Not reviewed.
+
+The cause was in the test: its CLI ran under `NODE_OPTIONS=--import <drive path>`, and Node's loader takes an absolute Windows path there only as a `file:` URL, so the child exited 1 before it read any configuration.
+Task 12's commit `adfe9146` already gave `--import` a URL through `pathToFileURL`, so no source change was needed and no Windows user meets it: only the test starts ahpd with that flag.
+On the VM, `config-layers.test.ts` passes 19 of 19; with the bare path put back, exactly the three cases of this task fail.
+The `check-windows` job of PR #43 passed the file, 19 of 19.

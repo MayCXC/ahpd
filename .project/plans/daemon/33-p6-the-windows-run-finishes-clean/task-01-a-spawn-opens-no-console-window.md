@@ -1,6 +1,6 @@
 ---
 title: A spawn opens no console window
-status: implemented
+status: done
 depends: []
 layer: sdk, server, computer, agent-acp, agent-claude, tunnel-devtunnel
 refs:

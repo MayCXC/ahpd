@@ -1,6 +1,6 @@
 ---
 title: A machine reads the tree as the host's git does
-status: implemented
+status: done
 depends: [task-06-the-computer-suite-runs-on-a-windows-machine.md]
 layer: computer
 refs:

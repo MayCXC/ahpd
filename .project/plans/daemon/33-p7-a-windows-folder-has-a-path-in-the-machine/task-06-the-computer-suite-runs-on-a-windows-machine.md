@@ -1,6 +1,6 @@
 ---
 title: The computer suite runs on a Windows machine
-status: implemented
+status: done
 depends: [task-02-a-machine-mounts-a-folder-at-its-machine-path.md, task-03-what-a-machine-answers-names-the-hosts-paths.md, task-04-a-nested-host-and-its-attachments-cross-by-the-pair.md, task-05-an-agent-in-a-machine-works-at-the-machine-path.md]
 layer: tests
 refs:

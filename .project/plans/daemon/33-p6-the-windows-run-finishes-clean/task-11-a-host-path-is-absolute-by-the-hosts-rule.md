@@ -1,6 +1,6 @@
 ---
 title: A host path is absolute by the host's rule
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, computer
 refs:

@@ -1,6 +1,6 @@
 ---
 title: A test reads nothing of the machine it runs on
-status: implemented
+status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: tests
 refs:
