@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
-import { existsSync, mkdtempSync, rmSync, writeFileSync, type FSWatcher } from 'node:fs';
+import { existsSync, mkdtempSync, writeFileSync, type FSWatcher } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -727,7 +727,9 @@ it('ends quietly a re-read whose directory is removed while it runs', async () =
 
     gated = true;
     calls.watched?.();
-    rmSync(dir, { recursive: true, force: true });
+    // Awaited, with retries: on Windows the watcher can hold the folder a moment
+    // longer. The re-read waits at its gate until the release below.
+    await rm(dir, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
     release(true);
     await waitFor(() => threw);
     // Node reports an unhandled rejection once the microtasks after it have run.
