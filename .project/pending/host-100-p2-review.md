@@ -16,12 +16,8 @@ I reviewed host/100 p2 on main at `e7b172de` on 2026-10-20. The code does what t
 4. **Pass.** The three keys are in `PER_CONNECTION`, so a member pushes them with no grant. `root-config.test.ts` checks that they are kept per connection.
 5. **Pass.** `terminalAutoApproveDefaults` takes `vscode` or `none`, defaults to `vscode`, and refuses any other value at start. `config-check.test.ts` covers the three cases.
 6. **Pass.** A malformed rule value is skipped: only `true`, `false` and an object with a boolean `approve` count.
-7. **Fail.** A member can push a rule key that is a slow regular expression, and the daemon stops while it matches. See [the problem](../problems/a-pushed-terminal-rule-can-stall-the-daemon.md).
+7. **Fail.** A member can push a rule key that is a slow regular expression, and the daemon stops while it matches. Task 03 of the plan carries the fix.
 8. **Note.** Task 02 named `config.ts:247-258` and `run.ts:732-741`. The key is parsed in `commands/options.ts:572` and passed at `run.ts:845`. The plan refs are out of date, not the code.
-
-## Your choice for step 7
-
-The problem file lists three fixes. I recommend the first: a pushed `/.../` key needs `config:change`. A plain key stays free, and the daemon's own configuration can still hold any expression. Tell me which you want, and it becomes a task.
 
 ## Results by hand
 
@@ -36,7 +32,7 @@ My first steps named `ls`. Claude Code approves `ls` and other read-only command
 
 ## Check by hand
 
-Do these after the owner problem is fixed. Use a Claude session in Ask Before Edits mode.
+PR #41 fixes the owner problem, and it is on main at `43cb5c40`. Do these after you restart the daemon on that commit or later. Use a new Claude session in Ask Before Edits mode.
 
 1. Connect VS Code to the daemon with no terminal rules pushed. Ask the agent to run `pnpm ls --depth 0`. It runs with no question.
 2. Ask the agent to run `rm` on a scratch file. It asks.
@@ -46,4 +42,3 @@ Do these after the owner problem is fixed. Use a Claude session in Ask Before Ed
 ## Reply
 
 - Write "pass" or what you saw for each check by hand.
-- Say which fix you want for step 7.

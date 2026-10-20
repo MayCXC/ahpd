@@ -11,8 +11,7 @@ requires:
 changes: []
 creates: []
 decisions: []
-problems:
-  - problems/a-pushed-terminal-rule-can-stall-the-daemon.md
+problems: []
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L183](../../../../packages/sdk/src/types/agent.ts#L183) - `trusted`, the field this one sits beside"
   - "[code://packages/sdk/src/host/spawn.ts#L648-L661](../../../../packages/sdk/src/host/spawn.ts#L648-L661) - `trustedBy`, which reads the owner's connection"
@@ -62,6 +61,7 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 | The field is named `getAutoApproval`, after VS Code | (defaulted: upstream parity) | 01 |
 | The setting is `terminalAutoApproveDefaults: 'vscode' \| 'none'` | (defaulted: a name beside the VS Code keys) | 02 |
 | The check returns `not-needed` for `approved`, and nothing otherwise | (defaulted: as VS Code) | 01 |
+| A pushed `/.../` key that is not one of VS Code's default keys needs `config:change`; a plain key and a default key need no grant | Softov, 2026-10-20, chose "Defaults pass, others need grant" for "VS Code pushes its ~50 default /.../ rules on every connect. How should a member's pushed regex rule be gated?" | 03 |
 
 ## Proposed architecture
 
@@ -74,6 +74,7 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 | --- | --- | --- |
 | [01 - The check reads the owner's connection](task-01-the-check-reads-the-owners-connection.md) | implemented | - |
 | [02 - The daemon setting picks the default rules](task-02-a-daemon-setting-picks-default-rules.md) | implemented | 01 |
+| [03 - A pushed regex rule needs config:change](task-03-a-pushed-regex-rule-needs-config-change.md) | todo | 01 |
 
 ## Risks and tradeoffs
 
@@ -82,7 +83,7 @@ owner's connection -> rules, edit rules, enabled -> Start.getAutoApproval(kind, 
 ## Resume state
 
 - **Done so far:** planned 2026-10-16; both tasks implemented 2026-10-18. Tests in `autoapproval.test.ts`, `root-config.test.ts` and `config-check.test.ts`.
-- **Next action:** Softov's reply to [pending/host-100-p2-review.md](../../../pending/host-100-p2-review.md): the checks by hand, and the fix for the [open problem](../../../problems/a-pushed-terminal-rule-can-stall-the-daemon.md).
+- **Next action:** build task 03. Then Softov runs the checks by hand in [pending/host-100-p2-review.md](../../../pending/host-100-p2-review.md).
 - **Open questions:** none.
 - **Watch out for:** host/101 task 01 builds on `getAutoApproval`; keep its answer open for a second kind of result.
 
