@@ -1,6 +1,6 @@
 ---
 title: The token commands
-status: todo
+status: implemented
 depends: [task-02-a-token-signs-in-narrowed.md, task-03-the-tokens-per-person-key.md]
 layer: server
 refs:
@@ -64,3 +64,13 @@ With `--user <id>`, an operator who holds `user:write` does the same for another
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step. `packages/server/src/commands/token.ts` declares `token.mint`, `token.list` and `token.rm` with `scopes: []`, and the body decides whose tokens they are. A person's own tokens need no grant. Another person's need `user:write` and are bounded by that person's grants. A principal with `token` set is refused with the agreed sentence. A directory without the three calls refuses with a sentence saying this host keeps no tokens. At the terminal `token mint` and `token rm` require `--user`, and `token list` without one lists everybody. Served, the deployment token also has to name a person. The file and the address are the terminal's own flags; served, the daemon's are used. `servedRegistry` and `cliRegistry` declare the three after the user commands.
+- **Next action:** task 05, the token methods over AHP.
+- **Open questions:** none.
+- **Watch out for:**
+  - The field is `grants` and the flag is `--grant`, so a request body names `grants` and a line names `--grant` once per grant.
+  - `server-commands.test.ts` pins every served command's effect and resource, so its expected rows gained the three `token.*` entries.
+  - `token rm` answers conflict for an unknown id and for another person's token without `user:write`, so the answer does not say the token exists.
+  - `--expires` reads a date with `Date.parse`; the directory refuses one in the past and names its ISO spelling.
+  - The served directory's `tokensPerPerson` comes from `run.ts`; the command tests build `fileUsers` without it except where the limit is the subject.

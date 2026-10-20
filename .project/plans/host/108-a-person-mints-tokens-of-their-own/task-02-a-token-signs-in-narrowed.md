@@ -1,6 +1,6 @@
 ---
 title: A token signs in as its person, narrowed
-status: todo
+status: implemented
 depends: [task-01-the-directory-keeps-tokens.md]
 layer: sdk
 refs:
@@ -60,3 +60,15 @@ A revoked token, an expired token and a token whose person is gone fail on the n
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step, and all seven sign-in cases pass.
+- `Principal` has the optional `token` id.
+- `verify` reads the tokens file once and compares every record hash and every token hash with `same` in one pass. It keeps both matches, then rejects a token whose person is gone or whose `expires` passed.
+- `principalOf` takes the token record and sets `token` and `expiresAt`.
+- `standing` and `can` re-read the tokens file. The token has to be there, belong to the person, and be unexpired.
+- `can` asks both the person's roles and the token's grants now, with no `grants` meaning every grant of the person.
+- `users-tokens.test.ts` counts five comparisons with a `vi.mock` of `same`, for a match and for a miss.
+- `server-http.test.ts` has a proxy-only token: 403 at `user list`, 200 at `/v1/models`, and 401 after its revoke.
+- **Next action:** task 03, the `tokensPerPerson` configuration key. Task 04 depends on 02 and 03.
+- **Open questions:** none. The proxy case mints `proxy:read`, because `/v1/models` asks for `proxy:models`, which `proxy:write` does not cover.
+- **Watch out for:** a token record without `grants` is read at each check, so a role added later widens it. That is the plan's "all access"; a narrow token names its grants.

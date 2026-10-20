@@ -215,6 +215,14 @@ export interface Config {
    */
   trustToken?: boolean;
   /**
+   * How many tokens one person may mint for themselves.
+   *
+   * Ten, the default, and a mint past it is refused. Zero lets nobody mint one.
+   * A token that has expired does not count, so an old one does not hold a
+   * place. The tokens themselves are in a file beside the users file.
+   */
+  tokensPerPerson?: number;
+  /**
    * Whether a tool that declares `advancedPermission` is offered to sessions.
    *
    * False, so those tools are absent until this says otherwise: a plugin that

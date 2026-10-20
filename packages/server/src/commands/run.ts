@@ -41,6 +41,7 @@ import {
   servedRecords,
   shellTerminals,
   signInRecord,
+  tokenMethods,
   toolServers,
   usageMethods,
   usageProvider,
@@ -342,6 +343,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       ...(options.issuer === undefined ? {} : { issuer: options.issuer }),
       ...(options.issuerVerify === undefined ? {} : { issuerVerify: options.issuerVerify }),
       trustToken: options.trustToken,
+      tokensPerPerson: options.tokensPerPerson,
       onProblem: (line) => process.stderr.write(`${line}\n`),
     });
 
@@ -998,6 +1000,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   base.methods = {
     ...base.methods,
     ...Object.fromEntries(Object.entries(usageMethods(usageScheme)).map(([name, method]) => [name, { by: 'ahpd', name, method }])),
+    /*
+     * The token commands over AHP, when there is a directory that keeps tokens.
+     * A host with no users file has nobody to mint one for, so it serves none.
+     */
+    ...(users === undefined
+      ? {}
+      : Object.fromEntries(Object.entries(tokenMethods(users)).map(([name, method]) => [name, { by: 'ahpd', name, method }]))),
     /*
      * The update the desk asks for over AHP: the command's own steps, served by
      * this daemon so the restart is its own and waits for the answer to go.

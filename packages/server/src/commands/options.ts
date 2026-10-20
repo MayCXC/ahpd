@@ -68,6 +68,8 @@ export interface Options {
   issuerVerify?: IssuerVerify;
   /** Whether a person's connection token authorizes them as well as admits them. */
   trustToken: boolean;
+  /** How many tokens one person may mint for themselves. Default 10; 0 lets nobody mint one. */
+  tokensPerPerson: number;
   /** Whether a tool that declares `advancedPermission` is offered to sessions. */
   advancedTools: boolean;
   /** Whether the session tools are offered to any session at all. */
@@ -516,6 +518,12 @@ export const serverFields = {
   trustToken: {
     type: 'boolean',
     description: "A person's connection token authorizes them as well as admits them.",
+  },
+  tokensPerPerson: {
+    type: 'integer',
+    minimum: 0,
+    description: 'How many tokens one person may mint for themselves. Default 10; 0 lets nobody mint one.',
+    cli: { value: 'N' },
   },
   advancedTools: {
     type: 'boolean',
@@ -1158,6 +1166,7 @@ const noCwd = input['noCwd'] === true;
     ...(issuer === undefined ? {} : { issuer }),
     ...(issuerVerify === undefined ? {} : { issuerVerify }),
     trustToken: given('trustToken') ?? false,
+    tokensPerPerson: given('tokensPerPerson') ?? 10,
     advancedTools: given('advancedTools') ?? false,
     sessionTools: given('sessionTools') ?? true,
     sessionToolsProviders: given('sessionToolsProviders') ?? [],

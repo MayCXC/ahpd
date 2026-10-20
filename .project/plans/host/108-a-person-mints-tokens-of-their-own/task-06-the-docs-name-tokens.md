@@ -1,6 +1,6 @@
 ---
 title: The docs name a person's tokens
-status: todo
+status: implemented
 depends: [task-04-the-token-commands.md, task-05-the-token-methods-over-ahp.md]
 layer: docs
 refs:
@@ -50,3 +50,11 @@ The docs name the `tokensPerPerson` key and the three AHP methods.
 - Each command in the docs runs as written against a daemon with a users file, checked by hand.
 
 ## Resume
+
+- **Done so far:** every step. `docs/server/USERS.md` has a "Tokens of their own" section and three rows in the commands table. `docs/server/REMOTE.md` has the row for the three commands. `docs/server/PROXY.md` shows a `proxy:write` token for another computer. `docs/sdk/AUTHENTICATION.md` says what a minted token is and adds the key and the grants row. `docs/sdk/USERS.md` documents the three `x-ahpd/tokens/*` methods, their params and their answers. `docs/sdk/HOST.md` says Eight keys and names `tokensPerPerson`. `pnpm -s docs:build` passes with no dead link.
+- **Next action:** none; the plan's tasks are all implemented.
+- **Open questions:** none.
+- **Watch out for:**
+  - The server docs do not wrap; `docs/sdk/USERS.md` still wraps at 80, and the new paragraph there is wrapped to match.
+  - The prose lint reports pre-existing long sentences in `docs/server/REMOTE.md`, `docs/server/PROXY.md`, `docs/sdk/AUTHENTICATION.md`, `docs/sdk/USERS.md` and `docs/sdk/HOST.md`; every sentence this task added passes. Reformatting the rest was left alone, as the writing rules say.
+  - The commands in the docs are the ones `token-command.test.ts` runs at the terminal and over `/api`, output included.

@@ -43,6 +43,14 @@ export interface Principal {
   /** The roles the record gave them, as written. */
   readonly roles: readonly string[];
   /**
+   * The id of the minted token they signed in with, when it was one.
+   *
+   * Absent for the person's full secret, a token an issuer answered for, and
+   * a principal built by hand. A principal carrying it is a token, not the
+   * person, so it cannot mint, list or revoke tokens of its own.
+   */
+  readonly token?: string;
+  /**
    * Whether they may do that.
    *
    * A question rather than the set it is answered from: the gate asks what it
@@ -203,6 +211,43 @@ export interface UserRecord {
    * `team` or `team:project`, never `*`, and one of their memberships.
    */
   primary?: string;
+}
+
+/**
+ * A token a person minted for themselves, as the directory keeps it.
+ *
+ * The record holds the hash and never the secret: the secret is answered once,
+ * by the mint that made it, and there is nothing here to read it back from. A
+ * token's grant is never more than its person's: `can` asks the person's roles
+ * again at every check, so a role taken away takes the token's reach with it.
+ */
+export interface TokenRecord {
+  /** The id `revokeToken` takes, and what a principal signed in this way carries. */
+  id: string;
+  /** The id of the person the token was minted for. */
+  user: string;
+  /** What the person called it, when they said. */
+  label?: string;
+  /**
+   * The grants this token is limited to, each one its person held at the mint.
+   *
+   * Absent means every grant of its person, read at each check rather than
+   * copied at the mint: a token minted for everything is one a role change
+   * reaches, and one minted for a list never grows past that list.
+   */
+  grants?: Grant[];
+  /** When it was minted, in epoch milliseconds. */
+  created: number;
+  /** When it stops working, in epoch milliseconds, when it does. */
+  expires?: number;
+  /** `sha256:<hex>`, so the stored form says which hash it is. */
+  token: string;
+}
+
+/** A token as the mint answers it: the record without its hash, and the secret. */
+export interface MintedToken extends Omit<TokenRecord, 'token'> {
+  /** The secret, answered once. The directory keeps only its hash. */
+  secret: string;
 }
 
 /**
@@ -387,6 +432,27 @@ export interface Users {
   remove(id: string): Promise<boolean>;
   /** A fresh secret for one person, answered once and stored only as its hash. */
   mint(id: string): Promise<string>;
+  /**
+   * A token of their own, limited to what they hold.
+   *
+   * The secret is answered once and only its hash is stored. Every grant named
+   * is checked against the person's grants now, so a token can never be minted
+   * holding more than its person does; `expires` is epoch milliseconds and has
+   * to be in the future. Optional, like `watch`, because a directory that is
+   * not a file may keep no tokens.
+   */
+  mintToken?(
+    user: string,
+    options?: { label?: string; grants?: readonly Grant[]; expires?: number },
+  ): Promise<MintedToken>;
+  /**
+   * The tokens of one person, or of everybody, without their hashes.
+   *
+   * Ordered by `created`, so a listing reads the way the tokens were made.
+   */
+  tokens?(user?: string): Promise<Omit<TokenRecord, 'token'>[]>;
+  /** Take a token out. `true` when one was there. */
+  revokeToken?(id: string): Promise<boolean>;
   /**
    * Call `onChange` each time the directory changes: a person edits the file,
    * or this directory writes it.
