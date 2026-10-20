@@ -374,11 +374,24 @@ describe('what is on PATH', () => {
 
   it('shows a row page for a system the row has no line for', () => {
     const one: KnownAgent = {
-      id: 'x', name: 'X', command: 'x',
+      id: 'x', name: 'X',
+      site: 'https://x.example', company: 'https://x.example',
+      command: 'x',
       install: { linux: 'apt install x' },
       page: 'https://example.com/x',
+      variables: [],
     };
     expect(missingLines([one], 'win32')).toEqual(['Agents not found:', '  X: https://example.com/x']);
+  });
+
+  it('shows the site when a row has neither a line for the system nor a page', () => {
+    const one: KnownAgent = {
+      id: 'x', name: 'X',
+      site: 'https://x.example', company: 'https://x.example',
+      command: 'x',
+      variables: [],
+    };
+    expect(missingLines([one], 'win32')).toEqual(['Agents not found:', '  X: https://x.example']);
   });
 });
 

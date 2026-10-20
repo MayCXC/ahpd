@@ -246,13 +246,13 @@ export const alsoLines = (also: readonly AlsoFound[]): string[] => {
   return ['Also found:', ...also.map((one) => `  ${one.name} ${one.version ?? `at ${one.path}`}`)];
 };
 
-/** Each agent that is not installed, with the line for this system or its page. */
+/** Each agent that is not installed, with the line for this system, its page, or its site. */
 export const missingLines = (missing: readonly KnownAgent[], platform: NodeJS.Platform): string[] => {
   if (missing.length === 0) return [];
   return [
     'Agents not found:',
     ...missing.map((agent) => {
-      const line = installLine(agent, platform) ?? agent.page ?? '';
+      const line = installLine(agent, platform) ?? agent.page ?? agent.site;
       return `  ${agent.name}: ${line}`;
     }),
   ];

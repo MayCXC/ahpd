@@ -1230,13 +1230,21 @@ Each `env` variable is a machine need named `<preset>.<VARIABLE>`, here `codex.C
 A session in a machine is offered the host's tools only where the machine can reach the daemon: for now, where the endpoint's address is neither loopback nor a wildcard bind such as `0.0.0.0` or `::`. Otherwise they are left out and the log says `host tools: computer://box cannot reach the daemon at 127.0.0.1:8080, so they were left out`.
 
 The shipped presets are `codex`, `gemini`, `copilot`, `opencode`, `kilo`,
-`goose`, `pi`, `dsh`, `devin`, `cursor`, `amp` and `qwen`, so `gemini --acp`,
-`codex-acp` and `@deepseek-ai/dsh-acp` are three keys and not three packages.
+`goose`, `pi`, `dsh`, `devin`, `cursor`, `amp`, `qwen`, `cline` and `omp`, so
+`gemini --acp`, `codex-acp` and `@deepseek-ai/dsh-acp` are three keys and not
+three packages.
 Only a key that is written registers: an ACP agent's binary may not be installed
 on this host, and no shipped row is a backend anybody did not ask for. A row
 that names a key in `fromEnv` sends that sign-in only when the daemon's
 environment or the preset's `env` has the variable, and for a session placed in
 a machine also when the preset's `machine.env` sets it.
+
+Each shipped preset is described for a form: its entry under
+`presets.properties` carries the agent's `title`, `links` to its own site and to
+the company behind it, and one `env` field per variable its vendor documents. A
+secret variable is drawn without its value, and any other shows the value, so a
+model or a folder can be checked. `env` still takes a name the vendor does not
+document.
 
 The `codex` CLI has no ACP mode of its own; `codex-acp` is Codex behind an
 adapter, installed with `npm i -g @agentclientprotocol/codex-acp`. The

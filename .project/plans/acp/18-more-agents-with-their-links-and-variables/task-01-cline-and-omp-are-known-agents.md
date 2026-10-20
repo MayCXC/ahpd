@@ -1,6 +1,6 @@
 ---
 title: Cline and omp are known agents
-status: todo
+status: implemented
 depends: []
 layer: "sdk, agent-acp, docs"
 refs:
@@ -41,3 +41,8 @@ refs:
 - By hand: run `cline --acp` and `omp acp` and read the `authMethods` of each handshake.
 
 ## Resume
+
+- **Done so far:** `knownAgents` has a `cline` row: `cline`, `npm install -g cline`, page `https://cline.bot/cli`. It also has an `omp` row: `omp`, the `curl` line for linux and darwin, the `irm` line for win32, page `https://omp.sh`. Both carry the `site`, `company` and `variables` that tasks 02 and 03 make required. `presets.ts` has `cline` with `args: ['--acp']` and `omp` with `args: ['acp']`, each spreading its row. `PLUGINS.md` and `packages/agent-acp/README.md` list both keys. `agent-acp-presets.test.ts` checks the command and the arguments of each, and `agents.test.ts` checks every npm part has a row whose line names its package.
+- **Next action:** none for this task.
+- **Open questions:** step 7, and the by-hand check, are for Softov. Neither `cline` nor `omp` is installed on this host, so their handshakes were not read. The `cline` preset has no `authenticate` until someone reads `authMethods` from `cline --acp`. If it lists no method for `CLINE_API_KEY`, the preset stays as it is. `node scripts/acp-info-test.mjs -- cline --acp` answers it without a client, as does the same with `omp acp`.
+- **Watch out for:** a row now needs `site`, `company` and `variables`, so task 01 could not compile alone: all three tasks landed together. Neither preset has a `machine`, because neither row names a part, so a session in a machine gets no part-installed CLI for these two.

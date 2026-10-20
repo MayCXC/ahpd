@@ -15,7 +15,7 @@
  */
 
 import type { Plugin, PluginHost, SecretRef, Seed, ToolsChanged } from '@ahpd/sdk';
-import { bag, eachPreset, fromEnvRef, readSecrets, secretRef } from '@ahpd/sdk';
+import { bag, eachPreset, fromEnvRef, knownAgents, readSecrets, secretRef } from '@ahpd/sdk';
 import { acpAgent } from './agent.js';
 import { presets as shipped } from './presets.js';
 import type { AcpMachine, AcpOptions } from './types.js';
@@ -36,13 +36,107 @@ export const title = 'ACP';
 const envValue = { type: 'string', writeOnly: true, secretAtUse: true };
 
 /**
+ * One preset's fields, which a shipped preset and a written one are each
+ * checked against.
+ *
+ * A key that names no shipped preset is held to this and nothing else. A
+ * shipped one is held to it with the fields a form draws added: its name, its
+ * links and the variables its vendor documents.
+ */
+const presetSchema = {
+  type: 'object',
+  properties: {
+    base: { type: 'string', description: 'The shipped preset this one takes, for a key that is not itself one.' },
+    name: { type: 'string', description: 'What a client reads instead of the id, which is this key. Defaults to the preset name, and to the key.' },
+    command: { type: 'string', description: 'The program to spawn as the ACP server.' },
+    install: {
+      type: 'object',
+      properties: {
+        all: { type: 'string', description: 'A line that installs it on every system the vendor supports.' },
+        linux: { type: 'string', description: 'The install line on Linux.' },
+        darwin: { type: 'string', description: 'The install line on macOS.' },
+        win32: { type: 'string', description: 'The install line on Windows.' },
+      },
+      description: "How to install this agent, by system, as the vendor's own docs give it. A system's key wins over all, and a system with no line is left to page.",
+    },
+    page: { type: 'string', description: "The vendor's install page, for a system the install lines do not cover." },
+    args: { type: 'array', items: { type: 'string' }, description: 'The arguments to give it, replacing the preset\'s own.' },
+    env: { type: 'object', additionalProperties: envValue, description: "Environment variables merged over the daemon's own for the child, by variable name. A variable is a credential wherever the server keeps one, so each answers <set>; a value written { \"$secret\": \"host:<name>\" } is read from the vault when this load runs." },
+    cwd: { type: 'string', description: "The directory the server runs in; the session's working directory when absent." },
+    description: { type: 'string', description: 'One line about what this agent is.' },
+    model: { type: 'string', description: 'The model a session that names none runs on.' },
+    authenticate: {
+      type: 'object',
+      properties: { methodId: { type: 'string' } },
+      required: ['methodId'],
+      description: 'The sign-in to send after the handshake, as the methodId of a method the server lists in authMethods. A value naming one it does not offer fails the turn that opened.',
+    },
+    hostTools: { type: 'boolean', description: "Whether this agent's sessions are offered the host's own tools, over the plugin-wide setting." },
+    honoursTrust: { type: 'boolean', description: "Whether this agent asks before it loads a project's own settings and hooks. Absent, a session of it in a folder the host did not vouch for is refused rather than started, because ACP carries no trust field." },
+    toolsChanged: {
+      type: 'string',
+      enum: ['notify', 'list'],
+      description: "How this agent hears that the tools it listed have moved: notify holds a stream open and sends notifications/tools/list_changed down it, list says nothing and leaves it to the agent's next tools/list. Both serve the current list; defaults to notify.",
+    },
+    // Typed by `machineOf` rather than here, so a wrongly written block
+    // costs its preset and not this load. A variable's value is read
+    // where the machine is made, so a `$secret` reaches this plugin as
+    // the name it wrote.
+    machine: {
+      description: 'What a machine needs to run this agent: env, variables set only inside the machine, each a string, { fromEnv: NAME } read from the daemon\'s NAME at load, or { "$secret": "<scope>:<name>" } read when the machine is made; copy, a list of { source, target } host paths copied in; part, the id of the part its CLI comes from; state, the absolute directory it keeps its configuration in; and seed, the host files that directory is seeded from.',
+      properties: {
+        env: { additionalProperties: { writeOnly: true, secretAtUse: true }, description: 'Variables set inside the machine, by name.' },
+        copy: { description: 'Host paths copied into the machine, each { source, target }.' },
+        part: { description: "The part the agent's CLI comes from, a string naming its id in the host's versions file." },
+        state: { description: 'The absolute directory inside the machine the agent keeps its configuration in, as a state volume.' },
+        seed: { description: 'The host files the state directory is seeded from, each { source, target, keep, drop }: source the host path, target where it lands in the directory, and for a JSON file keep the top-level keys kept and drop the dotted paths removed.' },
+      },
+    },
+  },
+};
+
+/**
+ * One shipped preset's schema: the preset schema, titled with the agent's name,
+ * carrying its links, and with one `env` field per variable its vendor
+ * documents.
+ *
+ * A secret variable is drawn the way any other `env` value is, so a form never
+ * shows it; any other is a plain string, because a person has to see a model
+ * name or a folder to check it. `env` keeps its `additionalProperties`, so a
+ * person can still write a name the vendor does not document.
+ */
+const presetSchemaOf = (id: string): Record<string, unknown> => {
+  const agent = knownAgents[id];
+  if (agent === undefined) throw new Error(`knownAgents has no ${id}`);
+  const variables: Record<string, unknown> = {};
+  for (const one of agent.variables) {
+    variables[one.name] = one.secret
+      ? { ...envValue, description: one.description }
+      : { type: 'string', description: one.description };
+  }
+  return {
+    ...presetSchema,
+    title: agent.name,
+    links: { site: agent.site, company: agent.company },
+    properties: {
+      ...presetSchema.properties,
+      env: { ...presetSchema.properties.env, properties: variables },
+    },
+  };
+};
+
+/** The schema of every shipped preset, by the key a person writes. */
+const shippedSchemas = Object.fromEntries(Object.keys(shipped).map((id) => [id, presetSchemaOf(id)]));
+
+/**
  * The options `apply` receives, as a JSON Schema the daemon checks them against
  * before `apply` runs.
  *
  * `presets` is required: a load with no preset has no agent to register, which
- * is a configuration rather than a backend. What a preset holds is checked
- * inside `optionsOf`, because `additionalProperties` there carries a schema for
- * every key at once and a preset's own fields are what a person writes.
+ * is a configuration rather than a backend. Every shipped preset has an entry
+ * of its own, so a client can draw a form of its links and its variables; any
+ * other key is held to the preset schema alone. What a preset holds is checked
+ * inside `optionsOf`, because a preset's own fields are what a person writes.
  */
 export const optionsSchema = {
   type: 'object',
@@ -50,57 +144,8 @@ export const optionsSchema = {
     presets: {
       type: 'object',
       description: 'The ACP agents this one load registers, by the id clients name. A key that names a shipped preset takes it, a key that names none writes a command of its own, and each registers an agent of its own.',
-      additionalProperties: {
-        type: 'object',
-        properties: {
-          base: { type: 'string', description: 'The shipped preset this one takes, for a key that is not itself one.' },
-          name: { type: 'string', description: 'What a client reads instead of the id, which is this key. Defaults to the preset name, and to the key.' },
-          command: { type: 'string', description: 'The program to spawn as the ACP server.' },
-          install: {
-            type: 'object',
-            properties: {
-              all: { type: 'string', description: 'A line that installs it on every system the vendor supports.' },
-              linux: { type: 'string', description: 'The install line on Linux.' },
-              darwin: { type: 'string', description: 'The install line on macOS.' },
-              win32: { type: 'string', description: 'The install line on Windows.' },
-            },
-            description: "How to install this agent, by system, as the vendor's own docs give it. A system's key wins over all, and a system with no line is left to page.",
-          },
-          page: { type: 'string', description: "The vendor's install page, for a system the install lines do not cover." },
-          args: { type: 'array', items: { type: 'string' }, description: 'The arguments to give it, replacing the preset\'s own.' },
-          env: { type: 'object', additionalProperties: envValue, description: "Environment variables merged over the daemon's own for the child, by variable name. A variable is a credential wherever the server keeps one, so each answers <set>; a value written { \"$secret\": \"host:<name>\" } is read from the vault when this load runs." },
-          cwd: { type: 'string', description: "The directory the server runs in; the session's working directory when absent." },
-          description: { type: 'string', description: 'One line about what this agent is.' },
-          model: { type: 'string', description: 'The model a session that names none runs on.' },
-          authenticate: {
-            type: 'object',
-            properties: { methodId: { type: 'string' } },
-            required: ['methodId'],
-            description: 'The sign-in to send after the handshake, as the methodId of a method the server lists in authMethods. A value naming one it does not offer fails the turn that opened.',
-          },
-          hostTools: { type: 'boolean', description: "Whether this agent's sessions are offered the host's own tools, over the plugin-wide setting." },
-          honoursTrust: { type: 'boolean', description: "Whether this agent asks before it loads a project's own settings and hooks. Absent, a session of it in a folder the host did not vouch for is refused rather than started, because ACP carries no trust field." },
-          toolsChanged: {
-            type: 'string',
-            enum: ['notify', 'list'],
-            description: "How this agent hears that the tools it listed have moved: notify holds a stream open and sends notifications/tools/list_changed down it, list says nothing and leaves it to the agent's next tools/list. Both serve the current list; defaults to notify.",
-          },
-          // Typed by `machineOf` rather than here, so a wrongly written block
-          // costs its preset and not this load. A variable's value is read
-          // where the machine is made, so a `$secret` reaches this plugin as
-          // the name it wrote.
-          machine: {
-            description: 'What a machine needs to run this agent: env, variables set only inside the machine, each a string, { fromEnv: NAME } read from the daemon\'s NAME at load, or { "$secret": "<scope>:<name>" } read when the machine is made; copy, a list of { source, target } host paths copied in; part, the id of the part its CLI comes from; state, the absolute directory it keeps its configuration in; and seed, the host files that directory is seeded from.',
-            properties: {
-              env: { additionalProperties: { writeOnly: true, secretAtUse: true }, description: 'Variables set inside the machine, by name.' },
-              copy: { description: 'Host paths copied into the machine, each { source, target }.' },
-              part: { description: "The part the agent's CLI comes from, a string naming its id in the host's versions file." },
-              state: { description: 'The absolute directory inside the machine the agent keeps its configuration in, as a state volume.' },
-              seed: { description: 'The host files the state directory is seeded from, each { source, target, keep, drop }: source the host path, target where it lands in the directory, and for a JSON file keep the top-level keys kept and drop the dotted paths removed.' },
-            },
-          },
-        },
-      },
+      properties: shippedSchemas,
+      additionalProperties: presetSchema,
     },
     hostTools: { type: 'boolean', description: "Offer the host's own tools to each session as an MCP server, on by default." },
     toolsChanged: {

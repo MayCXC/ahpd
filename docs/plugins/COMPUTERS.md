@@ -126,7 +126,7 @@ A machine is also kept to the agents it was prepared for. A profile with `agents
 
 | Backend | In a machine |
 | --- | --- |
-| `@ahpd/agent-acp` | Its command runs from its part under `docker exec`, with the dev container's own user and environment when that is the machine. A terminal it asks for runs there too, through `computers.how`, and stays the host's to list and watch. Each shipped preset brings its machine, and a preset may lay its own over it with [`machine`](PLUGINS.md#a-second-worked-example-ahpdagent-acp) - see [ACP agents in a machine](#acp-agents-in-a-machine) |
+| `@ahpd/agent-acp` | Its command runs from its part under `docker exec`, with the dev container's own user and environment when that is the machine. A terminal it asks for runs there too, through `computers.how`, and stays the host's to list and watch. Each shipped preset that names a part brings its machine, and a preset may lay its own over it with [`machine`](PLUGINS.md#a-second-worked-example-ahpdagent-acp) - see [ACP agents in a machine](#acp-agents-in-a-machine) |
 | `@ahpd/agent-claude` | The Claude Code CLI runs from the `claude` part under `docker exec`, with the dev container's own user and environment when that is the machine - see [Claude Code in a machine](#claude-code-in-a-machine) |
 | `@ahpd/agent-cofold` | A whole `ahpd` from the `ahpd` part runs inside the machine with the plugin, and its frames are carried out as the session's - see below |
 | `@ahpd/agent-pi` | Runs nested the same way as cofold - see [pi in a machine](#pi-in-a-machine) |
