@@ -393,6 +393,36 @@ it('does not offer a tool a client runs, because nothing here can answer it', ()
   expect(cofoldTools([mine, theirs]).map((one) => one.name)).toEqual(['lookup']);
 });
 
+it('offers a tool whose schema carries $comment, without the comments', () => {
+  const inputSchema = {
+    type: 'object',
+    $comment: 'top',
+    properties: {
+      word: { type: 'string', $comment: 'nested' },
+      list: { type: 'array', items: { type: 'string', $comment: 'item' } },
+      $comment: { type: 'string' },
+    },
+  } as unknown as NonNullable<BoundTool['definition']['inputSchema']>;
+  const [tool] = cofoldTools([{ definition: { name: 'lookup', description: 'Looks a word up.', inputSchema }, run: () => 'ok' }]);
+  expect(tool?.toModelDefinition().input).toEqual({
+    type: 'object',
+    properties: {
+      word: { type: 'string' },
+      list: { type: 'array', items: { type: 'string' } },
+      $comment: { type: 'string' },
+    },
+  });
+});
+
+it('leaves out a tool whose schema cofold refuses, and offers the rest', () => {
+  const plain: BoundTool = { definition: { name: 'plain', description: 'Plain.', inputSchema: { type: 'object', properties: {} } }, run: () => 'ok' };
+  const refused: BoundTool = {
+    definition: { name: 'refused', description: 'Uses $ref.', inputSchema: { type: 'object', $ref: '#/x' } as unknown as NonNullable<BoundTool['definition']['inputSchema']> },
+    run: () => 'ok',
+  };
+  expect(cofoldTools([refused, plain]).map((one) => one.name)).toEqual(['plain']);
+});
+
 it('runs a !command in a shell rather than asking a model', async () => {
   const path = mkdtempSync(join(tmpdir(), 'ahpd-cofold-bang-'));
   const host = createHost({

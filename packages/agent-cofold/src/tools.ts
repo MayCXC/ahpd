@@ -32,6 +32,32 @@ type CofoldInput = Parameters<typeof createTool>[0]['input'];
 export const ruleName = (offered: readonly BoundTool[], name: string): string =>
   offered.some((one) => one.definition.name === name) ? `ahp/${name}` : name;
 
+/** The keys of a schema whose values are one schema each. */
+const ONE_SCHEMA = ['items', 'additionalProperties'] as const;
+
+/** The keys of a schema whose values are lists of schemas. */
+const SCHEMA_LISTS = ['prefixItems', 'anyOf', 'oneOf', 'allOf'] as const;
+
+/**
+ * A schema without its `$comment`s, at any depth.
+ *
+ * `$comment` is a note for whoever reads the schema, and JSON Schema says it
+ * never changes what validates. cofold refuses every keyword it does not
+ * know, and VS Code writes `$comment` into the schemas of its own tools. Only
+ * schema positions are walked, so a property that is called `$comment` stays.
+ */
+const withoutComments = (schema: unknown): unknown => {
+  if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return schema;
+  const { $comment: _, ...rest } = schema as Record<string, unknown>;
+  const properties = rest.properties;
+  if (typeof properties === 'object' && properties !== null && !Array.isArray(properties)) {
+    rest.properties = Object.fromEntries(Object.entries(properties).map(([name, one]) => [name, withoutComments(one)]));
+  }
+  for (const key of ONE_SCHEMA) if (key in rest) rest[key] = withoutComments(rest[key]);
+  for (const key of SCHEMA_LISTS) if (Array.isArray(rest[key])) rest[key] = (rest[key] as unknown[]).map(withoutComments);
+  return rest;
+};
+
 /** The host offered this tool's schema, or an empty object for one that has none. */
 const inputOf = (bound: BoundTool): CofoldInput => {
   const schema = bound.definition.inputSchema;
@@ -39,12 +65,11 @@ const inputOf = (bound: BoundTool): CofoldInput => {
   /*
    * A cast, because the protocol's `inputSchema` is a loose `{ properties?:
    * Record<string, object> }` while cofold's `JsonSchema` checks each property
-   * it will actually validate. Every host tool this host contributes is a
-   * plain object schema; anything richer is refused by cofold's own
-   * `assertSupportedSchema` when the tool is wrapped, rather than silently
-   * accepted here.
+   * it will actually validate. Anything richer than cofold holds is refused by
+   * cofold's own `assertSupportedSchema` when the tool is wrapped, rather than
+   * silently accepted here.
    */
-  return schema as unknown as CofoldInput;
+  return withoutComments(schema) as CofoldInput;
 };
 
 /**
@@ -132,11 +157,18 @@ export const cofoldTool = (bound: BoundTool, relay?: ClientToolRelay): Tool<Reco
  * execute it, and a tool that always fails is worse than an absent one,
  * because the model calls it, spends a step and reports a failure that never
  * had a chance to happen.
+ *
+ * A tool whose schema cofold refuses is left out too. The tools come from the
+ * host and from every client in the session, and one schema cofold cannot hold
+ * must not fail every turn of the session.
  */
 export const cofoldTools = (tools: BoundTool[], relay?: ClientToolRelay): Tool<Record<string, unknown>>[] =>
   tools
     .filter((bound) => bound.run !== undefined || (bound.owner !== undefined && relay !== undefined))
-    .map((bound) => cofoldTool(bound, relay));
+    .flatMap((bound) => {
+      try { return [cofoldTool(bound, relay)]; }
+      catch { return []; }
+    });
 
 /*
  * How a call a client runs is reported, read from the protocol rather than
