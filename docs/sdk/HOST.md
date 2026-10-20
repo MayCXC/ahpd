@@ -90,7 +90,7 @@ Every flag can be a key in the configuration file instead, spelled without the d
 | `plugins` | a list of specs | none | The plugins loaded at startup - [PLUGINS.md](../plugins/PLUGINS.md) |
 | `modelProxy` | see [PROXY.md](../server/PROXY.md) | none | The providers this host's model proxy calls, and the model names that point at them |
 
-Seven keys are about who may connect rather than about how the host behaves - `connectionToken`, `connectionTokenFile`, `withoutConnectionToken`, `users`, `resource`, `issuer` and `trustToken` - and they are [AUTHENTICATION.md](AUTHENTICATION.md#configuration-keys). `stdio`, `configFile`, `noPlugins`, `noCwd` and `pluginOptions` mean something only when typed, so a file that sets one is warned about and ignored.
+Eight keys are about who may connect rather than about how the host behaves. They are `connectionToken`, `connectionTokenFile`, `withoutConnectionToken`, `users`, `resource`, `issuer`, `trustToken` and `tokensPerPerson`, in [AUTHENTICATION.md](AUTHENTICATION.md#configuration-keys). `stdio`, `configFile`, `noPlugins`, `noCwd` and `pluginOptions` mean something only when typed, so a file that sets one is warned about and ignored.
 
 Each key that needs more than a line:
 

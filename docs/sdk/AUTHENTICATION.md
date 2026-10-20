@@ -20,9 +20,9 @@ How a client proves who it is. Two layers, and they are separate: the door decid
 | Where it is presented | `?tkn=` on the WebSocket URL, or a bearer header | the same, with the secret `ahpd user token` printed | the command, against the resource the host advertises |
 | What it answers | whether a socket may exist at all | that, and nothing else | who is on the other end, for a socket that arrived as nobody |
 | Identity | the host itself, when a directory is configured | nobody, unless the record sets `trustToken` | the person the directory or the issuer resolves the token to |
-| How it is revoked | rotate the token, restart, everybody reconnects | `ahpd user rm`, and the next connection is refused | `ahpd user rm`, and the next command is refused |
-| How many | one, shared | one per person | one per person |
-| Expiry | none | none | `expiresIn`, honoured |
+| How it is revoked | rotate the token, restart, everybody reconnects | `ahpd user rm`, and the next connection is refused; a minted token by `ahpd token rm` | `ahpd user rm`, and the next command is refused |
+| How many | one, shared | one full token per person, and up to `tokensPerPerson` minted ones | one per person |
+| Expiry | none | none, unless a minted token was given one | `expiresIn`, honoured |
 
 The deployment's token is root only when a directory is configured: with no `users` key there is nobody to be, so the token admits the socket and neither credential names anybody.
 
@@ -66,6 +66,8 @@ Two things opt out of it:
 ```
 
 `trustToken` at the top of the configuration trusts everybody's connection token; on a record it decides for that one person and wins over the host. Use it for a client that cannot complete a sign-in, such as a phone with only a URL to paste. A host that wants the token to be enough everywhere sets it once - decision [the door admits a socket and names nobody, and the deployment's token is still the host](../../.project/decisions/the-door-is-a-door.md).
+
+A person also mints tokens of their own, each limited to a subset of their grants. Such a token signs in as the person and holds only the grants the person and the token both have now. A role taken from the person is taken from every token at the next check. A revoked or expired token fails on its next call. A minted token cannot mint, list or revoke tokens. See [server/USERS.md](../server/USERS.md#tokens-of-their-own).
 
 Removing a user **does not close their socket**, but the next command on it is refused `-32007`: the directory is read again for every command, so removal and a role change both take effect at once, with no reconnection.
 
@@ -280,6 +282,7 @@ The root state is one per host, so it cannot be filtered wholesale without givin
 - `issuer` - an authorization server whose tokens this host also accepts: `github`, or an OpenID Connect issuer URL this host may reach. Default: none, so only secrets this host minted are checked.
 - `issuerVerify` - how a token from that issuer is checked: `userinfo`, `jwt` or `auto`. Default `userinfo`. A record's own `issuerVerify` overrides it.
 - `trustToken` - `true` trusts every person's connection token as their authorization. Off by default. A record's own `trustToken` overrides it.
+- `tokensPerPerson` - how many live tokens one person may mint for themselves. Default `10`. An expired token does not count.
 
 A relative `users`, `connectionTokenFile`, `worktreesRoot` or `paths` entry is resolved against the directory of the configuration file that set it, not the working directory.
 
@@ -294,6 +297,7 @@ The `ahpd user` commands are [server/USERS.md](../server/USERS.md#add-a-person).
 | `user list` | `user:read`, `role:read` |
 | `user add`, `user rm`, `user token`, `user member` | `user:write` |
 | `user primary` | their own; `user:write` for somebody else's |
+| `token mint`, `token list`, `token rm` | their own; `user:write` for somebody else's, bounded by that person's grants |
 | `team list` | `team:read` |
 | `team add`, `team rm` | `team:write` |
 

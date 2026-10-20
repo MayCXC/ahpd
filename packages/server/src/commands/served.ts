@@ -25,6 +25,7 @@ import { declareTeams } from './teams.js';
 import { declareUsage } from './usage.js';
 import { declareVault } from './vault.js';
 import { declareUser } from './user.js';
+import { declareToken } from './token.js';
 import { checkScopes } from './scopes.js';
 
 /** The running daemon, as a served command describes it. */
@@ -98,6 +99,7 @@ export const servedRegistry = (facts: ServedFacts): Registry<object> => {
   declareStatus(registry, facts);
   declareConfig(registry, facts);
   declareUser(registry, facts);
+  declareToken(registry, facts);
   declareTeams(registry, facts);
   declarePaths(registry, facts);
   declarePlugin(registry, facts);

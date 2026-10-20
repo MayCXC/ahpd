@@ -708,6 +708,36 @@ describe('a request signs in', () => {
     expect((await post(`${base}/user/rm/ada`, 'root-secret', {})).status).toBe(200);
   }, 30000);
 
+  it('lets a proxy-only token reach the proxy, refuses it user list, and ends it on revoke', async () => {
+    writeFileSync(usersFile, JSON.stringify({ roles: { laptop: ['proxy:read'] }, users: [] }));
+    const directory = fileUsers({ path: usersFile });
+    await directory.add('ana', ['laptop']);
+    const minted = await directory.mintToken!('ana', { grants: ['proxy:read'], label: 'laptop' });
+    const one = await daemon(
+      { httpApi: true,plugins: [BACKEND] },
+      ['--connection-token', 'root-secret', '--users', usersFile],
+    );
+    const base = `http://127.0.0.1:${String(one.port)}`;
+
+    // The API knows who it is, so this is a 403 and not a 401: the token
+    // signed in, and holds nothing the people list asks for.
+    const refused = await get(`${base}/api/user/list`, minted.secret);
+    expect(refused.status).toBe(403);
+    expect((await refused.json() as { message: string }).message).toBe('ana may not user:read here');
+
+    // The proxy asks for proxy:models, which proxy:read covers. The daemon's
+    // model table is empty here, so the empty list is the proxy's own answer
+    // rather than the API's 404: the token got in.
+    const models = await get(`${base}/v1/models`, minted.secret);
+    expect(models.status).toBe(200);
+    expect(await models.json()).toMatchObject({ object: 'list', data: [] });
+
+    // Revoked in the file the daemon reads on every call: the next request is
+    // refused as a credential this host does not know.
+    expect(await directory.revokeToken!(minted.id)).toBe(true);
+    expect((await get(`${base}/v1/models`, minted.secret)).status).toBe(401);
+  }, 30000);
+
   it('answers while a served install is holding npm', async () => {
     const one = await daemon({ httpApi: true,plugins: [BACKEND] }, ['--connection-token', 'root-secret'], fakeNpm({ FAKE_NPM_SLEEP: '2' }));
     const installing = post(`http://127.0.0.1:${String(one.port)}/api/plugin/install`, 'root-secret', { name: ['left-pad'] });

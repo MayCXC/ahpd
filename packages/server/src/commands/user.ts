@@ -75,6 +75,7 @@ export function people(
   const directory = fileUsers({
     path,
     ...(typeof from.issuer === 'string' ? { issuer: from.issuer } : {}),
+    ...(typeof from.tokensPerPerson === 'number' ? { tokensPerPerson: from.tokensPerPerson } : {}),
     onProblem: (line) => { context.error(line); },
   });
   return { path, where, directory };

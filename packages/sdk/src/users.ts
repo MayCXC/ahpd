@@ -5,7 +5,7 @@ import { readJson, writeJsonAtomic } from './jsonfile.js';
 import { same } from './listen.js';
 import { issuerFrom, jwtIssuer, sameIssuer } from './issuers.js';
 import { covers, membership } from './scopes.js';
-import type { Grant, Issuer, IssuerVerify, Named, Principal, UserFile, UserRecord, Users } from './types/users.js';
+import type { Grant, Issuer, IssuerVerify, MintedToken, Named, Principal, TokenRecord, UserFile, UserRecord, Users } from './types/users.js';
 import { strings } from './values.js';
 
 /**
@@ -434,6 +434,22 @@ export interface FileUserOptions {
    * with its own `trustToken`.
    */
   trustToken?: boolean;
+  /**
+   * How many tokens one person may mint for themselves.
+   *
+   * Ten unless a host says otherwise. A token that has expired does not count,
+   * so an old one does not hold a place. Zero lets nobody mint one.
+   */
+  tokensPerPerson?: number;
+  /**
+   * The file the tokens are kept in.
+   *
+   * The users file with `.json` taken off and `.tokens.json` put on it, in the
+   * same folder: `users.json` beside `users.tokens.json`. The people and their
+   * tokens are separate files so a mint does not rewrite the users file and a
+   * change to who somebody is lands without touching their tokens.
+   */
+  tokensPath?: string;
   /** One line for a role a record names and nothing defines. */
   onProblem?(message: string): void;
 }
@@ -453,6 +469,10 @@ export function fileUsers(options: FileUserOptions): Users {
   const told = (message: string): void => { options.onProblem?.(message); };
   /** The host's own answer to whether a connection token authorizes somebody. */
   const trustAll = options.trustToken === true;
+
+  /** Where the tokens live: the users file with its extension changed. */
+  const tokensFile = options.tokensPath
+    ?? `${options.path.endsWith('.json') ? options.path.slice(0, -'.json'.length) : options.path}.tokens.json`;
 
   /**
    * Said once, however often the file is read.
@@ -813,6 +833,79 @@ export function fileUsers(options: FileUserOptions): Users {
     for (const poke of pokes) poke();
   };
 
+  /**
+   * What the tokens file says, and whether it said nothing because it is broken.
+   *
+   * A file that is not there is a host where nobody has minted a token yet.
+   * Anything else that will not parse is no tokens at all - fail closed - said
+   * once, and refused a write so the hand that broke it may fix it. Empty is
+   * not a broken file: like an empty users file, it is one nothing has been
+   * written to, and a write may fill it.
+   */
+  const readTokens = (): { tokens: TokenRecord[]; broken: boolean } => {
+    const outcome = readJson(tokensFile);
+    if (!outcome.ok && outcome.kind !== 'not-json') return { tokens: [], broken: false };
+    if (!outcome.ok) {
+      let text = '';
+      try { text = readFileSync(tokensFile, 'utf8'); }
+      catch { /* it went between the two reads, which leaves no tokens */ }
+      if (text.trim() === '') return { tokens: [], broken: false };
+      once(`${tokensFile} is not a tokens file (${outcome.error instanceof Error ? outcome.error.message : String(outcome.error)}); no token can sign in`);
+      return { tokens: [], broken: true };
+    }
+    try {
+      const parsed = outcome.value;
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) throw new Error('not an object');
+      const held = (parsed as { tokens?: unknown }).tokens;
+      // A file holding no `tokens` key is one with nothing in it yet, which is
+      // where a host starts rather than a file to refuse.
+      if (held === undefined) return { tokens: [], broken: false };
+      if (!Array.isArray(held)) throw new Error('tokens is not a list');
+      const tokens = held.map((one): TokenRecord => {
+        if (typeof one !== 'object' || one === null || Array.isArray(one)) throw new Error('a token is not an object');
+        const entry = one as Partial<TokenRecord>;
+        if (typeof entry.id !== 'string' || entry.id === '') throw new Error('a token has no id');
+        if (typeof entry.user !== 'string' || entry.user === '') throw new Error(`token ${entry.id} names no user`);
+        if (typeof entry.token !== 'string' || entry.token === '') throw new Error(`token ${entry.id} holds no hash`);
+        if (typeof entry.created !== 'number' || !Number.isFinite(entry.created)) throw new Error(`token ${entry.id} has no created time`);
+        if (entry.label !== undefined && typeof entry.label !== 'string') throw new Error(`token ${entry.id} has a label that is not a string`);
+        if (entry.expires !== undefined && (typeof entry.expires !== 'number' || !Number.isFinite(entry.expires))) {
+          throw new Error(`token ${entry.id} has an expires that is not a time`);
+        }
+        if (entry.grants !== undefined) {
+          if (!Array.isArray(entry.grants)
+            || entry.grants.some((grant) => typeof grant !== 'string' || grantProblem(grant as Grant) !== undefined)) {
+            throw new Error(`token ${entry.id} holds a grant that is not one`);
+          }
+        }
+        return {
+          id: entry.id,
+          user: entry.user,
+          ...(entry.label === undefined ? {} : { label: entry.label }),
+          ...(entry.grants === undefined ? {} : { grants: [...entry.grants] as Grant[] }),
+          created: entry.created,
+          ...(entry.expires === undefined ? {} : { expires: entry.expires }),
+          token: entry.token,
+        };
+      });
+      return { tokens, broken: false };
+    }
+    catch (error) {
+      once(`${tokensFile} is not a tokens file (${error instanceof Error ? error.message : String(error)}); no token can sign in`);
+      return { tokens: [], broken: true };
+    }
+  };
+
+  /** Replace the tokens file, atomically, refusing to clobber one that will not parse. */
+  const writeTokens = (tokens: TokenRecord[]): void => {
+    if (readTokens().broken) throw new Error(`${tokensFile} is not a tokens file; fix it before changing anybody's tokens`);
+    // Owner-only, by the default of `writeJsonAtomic`: the file holds the
+    // hashes of secrets that sign in as somebody.
+    writeJsonAtomic(tokensFile, { tokens });
+    // A watcher that hears a users-file write should hear this one too.
+    for (const poke of pokes) poke();
+  };
+
   /** What a set of role names holds, saying so once per name that answered nothing. */
   const grantsOf = (roles: readonly string[], file: UserFile, complainFor?: string): Set<string> => {
     const held = new Set<string>();
@@ -843,7 +936,7 @@ export function fileUsers(options: FileUserOptions): Users {
    * is refused on the next command rather than the next connection, and a role
    * change is in force at the same point.
    */
-  const principalOf = (record: UserRecord, fromIssuer: string[] = [], expiresAt?: number): Principal => {
+  const principalOf = (record: UserRecord, fromIssuer: string[] = [], expiresAt?: number, minted?: TokenRecord): Principal => {
     // Said once, as the record is verified, so a role that nothing defines is
     // in the log even though every command resolves the roles again below -
     // and said only here, because a complaint per command is a log nobody
@@ -882,6 +975,13 @@ export function fileUsers(options: FileUserOptions): Users {
      */
     return Object.freeze({
       id: record.id,
+      /*
+       * The token they signed in with, when it was one of their own.
+       *
+       * Stamped rather than re-read: it is what this connection presented, and
+       * the id is what `can` and `standing` look the token up by.
+       */
+      ...(minted === undefined ? {} : { token: minted.id }),
       // Frozen with the literal, because the roles are the grants the gate
       // reads: a provider handed this principal could otherwise add a role to
       // the person it was signed in as. See the comment above.
@@ -907,12 +1007,42 @@ export function fileUsers(options: FileUserOptions): Users {
       // teams they are written out of.
       get projects(): readonly Named[] { return read().file.projects ?? []; },
       get teams(): readonly Named[] { return read().file.teams ?? []; },
-      standing: () => (read().file.users ?? []).some((one) => one.id === record.id),
+      /*
+       * The person, and a minted token's own life beside theirs.
+       *
+       * A token is looked up again on every question, as the person is: a
+       * revoke or an expiry is in force at the next command rather than at the
+       * next sign-in, and a tokens file that will not parse reads as no tokens
+       * and answers false.
+       */
+      standing: () => {
+        const { file } = read();
+        if (!(file.users ?? []).some((one) => one.id === record.id)) return false;
+        if (minted === undefined) return true;
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        return live !== undefined
+          && live.user === record.id
+          && (live.expires === undefined || live.expires > Date.now());
+      },
       can: (grant: Grant) => {
         const { file } = read();
         const now = (file.users ?? []).find((one) => one.id === record.id);
         if (now === undefined) return false;
-        return holds(grantsOf(now.roles, file), grant) || holds(stamped, grant);
+        const person = grantsOf(now.roles, file);
+        if (minted === undefined) return holds(person, grant) || holds(stamped, grant);
+        /*
+         * Both halves have to hold it now.
+         *
+         * The person's side is what makes a role taken away take the token's
+         * reach with it; the token's side is what keeps the token to the list
+         * it was minted for. No `grants` on the record is every grant of the
+         * person, read here rather than copied at the mint.
+         */
+        const live = readTokens().tokens.find((one) => one.id === minted.id);
+        if (live === undefined) return false;
+        if (live.expires !== undefined && live.expires <= Date.now()) return false;
+        const allowed = live.grants === undefined ? person : new Set(live.grants);
+        return holds(person, grant) && holds(allowed, grant);
       },
     });
   };
@@ -948,12 +1078,34 @@ export function fileUsers(options: FileUserOptions): Users {
     verify: async (token) => {
       if (token === '') return undefined;
       const { file } = read();
+      // The tokens file is read beside the users file, and once: this is the
+      // one question that has to see both as they are at the same moment.
+      const { tokens } = readTokens();
       const hash = hashOf(token);
-      // Every record is compared, and the answer is kept rather than returned:
-      // which record matched is then not something the clock tells.
+      // Every hash is compared, the records' and the minted tokens', and the
+      // answer is kept rather than returned: which entry matched is then not
+      // something the clock tells. A record with no token is compared too, and
+      // can never match, so the count does not say which records have one.
       let found: UserRecord | undefined;
+      let minted: TokenRecord | undefined;
       for (const record of file.users ?? []) {
-        if (record.token !== '' && same(record.token, hash)) found = record;
+        if (same(record.token, hash)) found = record;
+      }
+      for (const one of tokens) {
+        if (same(one.token, hash)) minted = one;
+      }
+      /*
+       * The checks that follow the pass, never inside it.
+       *
+       * A matched token whose person is gone, or whose time is up, is nobody.
+       * An issuer is asked for nothing: a secret this host minted is a local
+       * credential, and a record that matched here is the one that says who.
+       */
+      if (minted !== undefined) {
+        const person = (file.users ?? []).find((one) => one.id === minted.user);
+        if (person === undefined) return undefined;
+        if (minted.expires !== undefined && minted.expires <= Date.now()) return undefined;
+        return principalOf(person, [], minted.expires, minted);
       }
       if (found !== undefined) return principalOf(found);
       /*
@@ -1269,6 +1421,14 @@ export function fileUsers(options: FileUserOptions): Users {
       const left = users.filter((one) => one.id !== id);
       if (left.length === users.length) return false;
       write({ ...file, users: left });
+      // Their tokens go with them, so adding the id back does not bring the
+      // old credentials with it. A broken tokens file reads as no tokens and
+      // is left for its owner to fix rather than written over.
+      const tokens = readTokens();
+      if (!tokens.broken) {
+        const kept = tokens.tokens.filter((one) => one.user !== id);
+        if (kept.length !== tokens.tokens.length) writeTokens(kept);
+      }
       return true;
     },
 
@@ -1281,6 +1441,81 @@ export function fileUsers(options: FileUserOptions): Users {
       held.token = hashOf(secret);
       write({ ...file, users });
       return secret;
+    },
+
+    mintToken: async (user, given = {}) => {
+      const { tokens, broken } = readTokens();
+      if (broken) throw new Error(`${tokensFile} is not a tokens file; fix it before minting a token`);
+      const { file } = read();
+      const held = (file.users ?? []).find((one) => one.id === user);
+      if (held === undefined) throw new Error(`no user called ${user}`);
+      const now = Date.now();
+      if (given.expires !== undefined) {
+        if (typeof given.expires !== 'number' || !Number.isFinite(given.expires)) {
+          throw new Error('expires is not a date');
+        }
+        if (given.expires <= now) {
+          throw new Error(`expires ${new Date(given.expires).toISOString()} is not in the future`);
+        }
+      }
+      /*
+       * Every grant named is one the person holds now.
+       *
+       * The check is at the mint and again at every use: this one keeps a token
+       * from being made holding more than its person does, and `can` keeps a
+       * token from keeping a grant the person later loses.
+       */
+      if (given.grants !== undefined) {
+        const person = grantsOf(held.roles, file);
+        for (const grant of given.grants) {
+          if (!holds(person, grant)) {
+            throw new Error(`user ${user} does not hold ${grant}; a token may not hold what its person does not`);
+          }
+        }
+      }
+      // Only the tokens still live hold a place: an expired one is a credential
+      // that no longer works, and it should not keep its person from minting.
+      const limit = options.tokensPerPerson ?? 10;
+      const live = tokens.filter((one) => one.user === user && (one.expires === undefined || one.expires > now));
+      if (live.length >= limit) {
+        throw new Error(`user ${user} may hold ${limit} tokens at most; revoke one before minting another`);
+      }
+      let id = randomBytes(6).toString('base64url');
+      while (tokens.some((one) => one.id === id)) id = randomBytes(6).toString('base64url');
+      const secret = randomBytes(32).toString('base64url');
+      const record: TokenRecord = {
+        id,
+        user,
+        ...(given.label === undefined ? {} : { label: given.label }),
+        ...(given.grants === undefined ? {} : { grants: [...given.grants] }),
+        created: now,
+        ...(given.expires === undefined ? {} : { expires: given.expires }),
+        // The secret is written here and nowhere, and only as its hash.
+        token: hashOf(secret),
+      };
+      writeTokens([...tokens, record]);
+      const { token: _hash, ...shown } = record;
+      return { ...shown, secret };
+    },
+
+    tokens: async (user) => {
+      const all = readTokens().tokens;
+      return all
+        .filter((one) => user === undefined || one.user === user)
+        .sort((one, other) => one.created - other.created)
+        .map((one) => {
+          // The hash stays here. A listing is what a person can revoke, and a
+          // hash is not one of those.
+          const { token: _hash, ...shown } = one;
+          return shown;
+        });
+    },
+
+    revokeToken: async (id) => {
+      const { tokens } = readTokens();
+      if (!tokens.some((one) => one.id === id)) return false;
+      writeTokens(tokens.filter((one) => one.id !== id));
+      return true;
     },
 
     /*

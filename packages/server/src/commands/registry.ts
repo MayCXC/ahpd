@@ -42,6 +42,7 @@ import { declareVault } from './vault.js';
 import { declareRestart } from './restart.js';
 import { declareUpdate } from './update.js';
 import { declareUser } from './user.js';
+import { declareToken } from './token.js';
 import { checkScopes } from './scopes.js';
 
 /** The commands a process runs about itself, and the only ones `--remote` keeps locally. */
@@ -66,6 +67,7 @@ export const cliRegistry = (): Registry<object> => {
   declareConfig(registry);
   declareConfigure(registry);
   declareUser(registry);
+  declareToken(registry);
   declareTeams(registry);
   declarePaths(registry);
   declarePlugin(registry);

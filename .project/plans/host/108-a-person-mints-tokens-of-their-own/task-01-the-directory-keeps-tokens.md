@@ -1,6 +1,6 @@
 ---
 title: The directory keeps a person's tokens
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -63,3 +63,8 @@ A person's tokens are minted, listed and revoked through three new calls on the 
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step. `TokenRecord` and `MintedToken` are in `types/users.ts`, and `Users` carries optional `mintToken`, `tokens` and `revokeToken`. `fileUsers` has `tokensPerPerson` (default 10) and `tokensPath` (default the users file with `.tokens.json` beside it). It reads the tokens file on every call, keeps only `hashOf(secret)` in it, and writes `{ tokens: [...] }` with `writeJsonAtomic`. A malformed file reads as no tokens, is reported once, and refuses a mint. `remove` drops the person's tokens. `users-tokens.test.ts` has 12 cases, including the byte-for-byte users file, both limits, an expired token not counting, and the malformed file.
+- **Next action:** task 02, which makes `verify` read the tokens file and narrow the principal.
+- **Open questions:** none.
+- **Watch out for:** the tokens file is `{ tokens: [...] }` and `created`/`expires` are epoch milliseconds; task 02 hands `expires` straight to `Principal.expiresAt`. A broken tokens file is left alone by `remove`, because no token reads from it and the hand that broke it should fix it.
