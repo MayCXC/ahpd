@@ -66,3 +66,10 @@ it('finds gemini.cmd on Windows through PATHEXT', () => {
   const wanted = fileIn(second, 'gemini.cmd');
   expect(onPath('gemini', second, 'win32', { PATHEXT: '.cmd' })).toBe(wanted);
 });
+
+// Windows-only: finding `gemini.CMD` for `gemini.cmd` takes a file system
+// that does not tell names apart by case.
+it.runIf(process.platform === 'win32')('names the file as its folder holds it, whatever case PATHEXT gives', () => {
+  const wanted = fileIn(second, 'gemini.cmd');
+  expect(onPath('gemini', second, 'win32', { PATHEXT: '.COM;.EXE;.BAT;.CMD' })).toBe(wanted);
+});

@@ -1,4 +1,5 @@
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -122,7 +123,8 @@ describe('a folder that has gone', () => {
       };
       expect(opened.snapshot.state.workingDirectories).toEqual([uriOf(folder)]);
     }
-    finally { rmSync(root, { recursive: true, force: true }); }
+    // Awaited, with retries: on Windows the host can hold the folder a moment longer.
+    finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
   });
 
   it('is named again after it is made again', async () => {
@@ -148,7 +150,8 @@ describe('a folder that has gone', () => {
       await settle(8);
       expect((await list(client)).items[0]?.workingDirectories).toEqual([uriOf(folder)]);
     }
-    finally { rmSync(root, { recursive: true, force: true }); }
+    // Awaited, with retries: on Windows the host can hold the folder a moment longer.
+    finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
   });
 
   it('keeps a URI that names another machine', async () => {
@@ -187,6 +190,7 @@ describe('a folder that has gone', () => {
       // And the row a listing builds for it, which is not the summary above.
       expect((await list(client)).items.find((one) => one.resource === 'echo:/live')?.workingDirectories).toEqual([]);
     }
-    finally { rmSync(root, { recursive: true, force: true }); }
+    // Awaited, with retries: on Windows the host can hold the folder a moment longer.
+    finally { await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 }); }
   });
 });
