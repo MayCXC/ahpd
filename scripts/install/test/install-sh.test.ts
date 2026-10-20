@@ -74,6 +74,10 @@ function writeBun(box: Box): void {
   );
 }
 
+function writeDeno(box: Box, version: string): void {
+  stub(box, 'deno', `printf '${version}\\n'`);
+}
+
 /*
  * `status --json` exits 0 only while the stub daemon runs, which is what the
  * uninstall reads to decide whether to stop it; a running daemon's record also
@@ -198,6 +202,47 @@ function configDir(box: Box): string {
 }
 
 describe.skipIf(!posix)('install.sh', () => {
+  it('prints one runtime line each for Node, Bun and Deno, in that order', async () => {
+    const box = makeBox();
+    writeDeno(box, '2.0.0');
+    const result = await run(box, ['--no-onboard']);
+
+    expect(result.code).toBe(0);
+    const lines = result.stdout.split('\n');
+    const node = lines.indexOf('Node v22.1.0 (runs ahpd)');
+    const bun = lines.indexOf('Bun 1.3.0 (runs ahpd)');
+    const deno = lines.indexOf('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
+    expect(node).toBeGreaterThanOrEqual(0);
+    expect(bun).toBeGreaterThan(node);
+    expect(deno).toBeGreaterThan(bun);
+  });
+
+  it('says a runtime it did not find is not found', async () => {
+    const box = makeBox();
+    const result = await run(box, ['--no-onboard']);
+
+    expect(result.stdout).toContain('Deno not found');
+  });
+
+  it('says Node below 22.1 is too old, and names the floor', async () => {
+    const box = makeBox({ node: '20.19.0' });
+    const result = await run(box, ['--no-onboard']);
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toContain('Node v20.19.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
+  });
+
+  it('prints the runtime lines under --dry-run', async () => {
+    const box = makeBox();
+    writeDeno(box, '2.0.0');
+    const result = await run(box, ['--dry-run', '--no-onboard']);
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('Node v22.1.0 (runs ahpd)');
+    expect(result.stdout).toContain('Bun 1.3.0 (runs ahpd)');
+    expect(result.stdout).toContain('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
+  });
+
   it('installs the package into the writable npm prefix and adds the PATH line once', async () => {
     const box = makeBox();
     const result = await run(box, ['--no-onboard']);

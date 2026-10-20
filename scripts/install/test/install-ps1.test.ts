@@ -113,6 +113,13 @@ function writeAhpd(box: Box): void {
   ]);
 }
 
+function writeDeno(box: Box): void {
+  stub(box, 'deno', [
+    'if "%1"=="--version" echo 2.0.0',
+    'exit /b 0',
+  ]);
+}
+
 interface Result {
   code: number | null;
   stdout: string;
@@ -196,6 +203,51 @@ describe.skipIf(!canRun)('install.ps1', () => {
       ],
       { env: { ...process.env, AHPD_ORIGINAL_USER_PATH: originalUserPath }, encoding: 'utf8' },
     );
+  });
+
+  it('prints one runtime line each for Node, Bun and Deno, in that order', () => {
+    const box = makeBox();
+    writeDeno(box);
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1' });
+
+    expect(result.code).toBe(0);
+    const lines = result.stdout.split(/\r?\n/);
+    const node = lines.indexOf('Node v22.1.0 (runs ahpd)');
+    const bun = lines.indexOf('Bun 1.3.0 (runs ahpd)');
+    const deno = lines.indexOf('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
+    expect(node).toBeGreaterThanOrEqual(0);
+    expect(bun).toBeGreaterThan(node);
+    expect(deno).toBeGreaterThan(bun);
+  });
+
+  it('says a runtime it did not find is not found', () => {
+    const box = makeBox();
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1' });
+
+    expect(result.stdout).toContain('Deno not found');
+  });
+
+  it('says Node below 22.1 is too old, and names the floor', () => {
+    const box = makeBox({ node: '20.19.0' });
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1' });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toContain('Node v20.19.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
+  });
+
+  it('prints the runtime lines under -DryRun', () => {
+    const box = makeBox();
+    writeDeno(box);
+
+    const result = run(box, { AHPD_DRY_RUN: '1', AHPD_NO_ONBOARD: '1' });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain('Node v22.1.0 (runs ahpd)');
+    expect(result.stdout).toContain('Bun 1.3.0 (runs ahpd)');
+    expect(result.stdout).toContain('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
   });
 
   it('installs the package and adds the npm folder to the user PATH once', () => {

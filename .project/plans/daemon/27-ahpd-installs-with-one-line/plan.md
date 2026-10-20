@@ -10,7 +10,7 @@ refs:
   - "[code://packages/server/src/pty.ts](../../../../packages/server/src/pty.ts) - node-pty is optional, so a failed native build is a warning"
   - "[code://packages/server/src/commands/configure.ts](../../../../packages/server/src/commands/configure.ts) - `ahpd configure`, the onboarding step"
   - "[code://docs/server/INSTALL.md](../../../../docs/server/INSTALL.md) - the install page that gets the one line"
-  - https://ahpio.com - the site that serves `install.sh` and `install.ps1` from its `public/` folder
+  - https://ahpio.com - the site that serves `ahpd/install.sh` and `ahpd/install.ps1` from its `public/` folder
   - "[research: how one-line installers work](../../../research/one-line-installers.md) - Claude Code, OpenClaw, Bun and Deno, read on 2026-10-15"
 ---
 
@@ -19,11 +19,11 @@ refs:
 A person installs ahpd with one line, as Claude Code and OpenClaw do:
 
 ```bash
-curl -fsSL https://ahpio.com/install.sh | bash
+curl -fsSL https://ahpio.com/ahpd/install.sh | bash
 ```
 
 ```powershell
-irm https://ahpio.com/install.ps1 | iex
+irm https://ahpio.com/ahpd/install.ps1 | iex
 ```
 
 The script checks the runtime, installs `@ahpd/server` from npm without sudo, puts `ahpd` on PATH, and runs `ahpd configure`.
@@ -63,10 +63,11 @@ curl | bash -> install.sh -> node >= 22 -> npm prefix -> npm install -g @ahpd/se
 | The script tests live in `scripts/install/test/` | Softov, 2026-10-19, chose the recommended answer for "Where do the install script tests live?" | 01, 02 |
 | `install.ps1` asks, then runs `winget install OpenJS.NodeJS.LTS`, when Node is missing | Softov, 2026-10-19, chose the recommended answer for "On Windows, how does install.ps1 get Node when it is missing?" | 02 |
 | The ahpio-site build reads the scripts from the newest `v*` tag of `softov/ahpd`, so the site serves only released scripts | Softov, 2026-10-19, to "Where does the ahpio-site build read the install scripts from?" - "The newest v* tag" | 03 |
+| The scripts are served under `/ahpd/` | Softov, 2026-10-19: 'its better to be inside https://ahpio.com/ahpd/install.sh instead https://ahpio.com/install.sh' | 03 |
 
 ## Proposed architecture
 
-- **Data flow** - The scripts live in this repository, under `scripts/install/`. The ahpio-site build copies them into `public/`, so the site never holds a copy that is out of date.
+- **Data flow** - The scripts live in this repository, under `scripts/install/`. The ahpio-site build copies them into `public/ahpd/`, so the site never holds a copy that is out of date.
 - **Shape** - OpenClaw's shape, scaled down: an npm install, not a native binary. A binary waits on node-pty, a native module per platform.
 - **Steps in `install.sh`**
   1. Read flags and their `AHPD_*` environment twins. Refuse an unknown flag with exit 2.

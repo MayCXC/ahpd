@@ -1,12 +1,12 @@
 # Install ahpd on Windows with one line:
 #
-#   irm https://ahpio.com/install.ps1 | iex
+#   irm https://ahpio.com/ahpd/install.ps1 | iex
 #
 # The flags, and the AHPD_* variable each one reads. A PowerShell pipe cannot
 # pass a parameter, so the variables are the way `irm | iex` chooses anything;
 # a person with a terminal can also run the script as a block:
 #
-#   & ([scriptblock]::Create((irm https://ahpio.com/install.ps1))) -NoOnboard
+#   & ([scriptblock]::Create((irm https://ahpio.com/ahpd/install.ps1))) -NoOnboard
 #
 #   -Version <v>   AHPD_VERSION     the package version, latest when omitted
 #   -Package <p>   AHPD_PACKAGE     the package, @ahpd/server by default
@@ -48,7 +48,7 @@ function Show-Usage {
   Write-Host @'
 Install ahpd on Windows with one line:
 
-  irm https://ahpio.com/install.ps1 | iex
+  irm https://ahpio.com/ahpd/install.ps1 | iex
 
 Every flag also reads an AHPD_* variable, because a PowerShell pipe cannot pass
 a parameter:
@@ -65,7 +65,7 @@ a parameter:
 
 To pass a flag from the one line, run the script as a block:
 
-  & ([scriptblock]::Create((irm https://ahpio.com/install.ps1))) -NoOnboard
+  & ([scriptblock]::Create((irm https://ahpio.com/ahpd/install.ps1))) -NoOnboard
 '@
 }
 
@@ -92,6 +92,48 @@ function Test-NodeFits([string]$Value) {
   if (-not [int]::TryParse($parts[0], [ref]$major)) { return $false }
   if ($parts.Length -gt 1) { [void][int]::TryParse($parts[1], [ref]$minor) }
   return ($major -gt 22) -or (($major -eq 22) -and ($minor -ge 1))
+}
+
+# One runtime line, in the words `ahpd configure` uses: what is there, the
+# version `--version` printed, and whether ahpd runs on it.
+function Write-RuntimeLine([string]$Name, [string]$Program) {
+  # As in Resolve-Ahpd: an npm shim folder holds an extensionless file beside
+  # the .cmd, and only the .cmd or .exe runs.
+  $found = @(Get-Command $Program -CommandType Application -ErrorAction SilentlyContinue)
+  $command = $found | Where-Object { $_.Extension -in @('.cmd', '.exe') } | Select-Object -First 1
+  if (-not $command) { $command = $found | Select-Object -First 1 }
+  if (-not $command) {
+    Write-Host "$Name not found"
+    return
+  }
+  $line = $null
+  $output = & $command.Source --version 2>$null
+  if ($LASTEXITCODE -eq 0 -and $output) {
+    $line = @($output)[0].ToString().Trim()
+  }
+  if (-not $line) {
+    Write-Host "$Name at $($command.Source) (could not read its version)"
+    return
+  }
+  if ($Program -eq 'node') {
+    if (Test-NodeFits ($line -replace '^v', '')) {
+      Write-Host "Node $line (runs ahpd)"
+    } else {
+      Write-Host "Node $line (ahpd does not run on it; it needs Node 22.1 or newer)"
+    }
+  } elseif ($Program -eq 'deno') {
+    Write-Host "Deno $line (runs ahpd; each plugin it loads needs an npm: spec)"
+  } else {
+    Write-Host "$Name $line (runs ahpd)"
+  }
+}
+
+# What this machine has, before anything is installed: a person whose install
+# stops sees which runtime was missing or too old.
+function Write-Runtimes {
+  Write-RuntimeLine 'Node' 'node'
+  Write-RuntimeLine 'Bun' 'bun'
+  Write-RuntimeLine 'Deno' 'deno'
 }
 
 function Get-NpmVersion {
@@ -367,6 +409,10 @@ function Invoke-AhpdInstall {
     Invoke-AhpdUninstall
     return
   }
+
+  # Before the runtime check, so a stop names what this machine has. Under
+  # -DryRun too, where the lines are the same ones.
+  Write-Runtimes
 
   if ($Runtime -eq 'bun') {
     $folder = Resolve-Bun

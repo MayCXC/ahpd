@@ -2,11 +2,11 @@
 #
 # Install ahpd with one line:
 #
-#   curl -fsSL https://ahpio.com/install.sh | bash
+#   curl -fsSL https://ahpio.com/ahpd/install.sh | bash
 #
 # Then uninstall it with:
 #
-#   curl -fsSL https://ahpio.com/install.sh | bash -s -- --uninstall
+#   curl -fsSL https://ahpio.com/ahpd/install.sh | bash -s -- --uninstall
 #
 # The flags, and the AHPD_* variable each one reads when a pipe cannot pass it:
 #
@@ -88,7 +88,7 @@ usage() {
   cat <<'EOF'
 Install ahpd with one line:
 
-  curl -fsSL https://ahpio.com/install.sh | bash
+  curl -fsSL https://ahpio.com/ahpd/install.sh | bash
 
 A flag passes through the pipe after `bash -s --`, and every flag also reads an
 AHPD_* variable, because a PowerShell pipe cannot pass parameters at all.
@@ -246,6 +246,48 @@ node_fits() {
   if [ "$major" -gt 22 ]; then return 0; fi
   if [ "$major" -eq 22 ] && [ "$minor" -ge 1 ]; then return 0; fi
   return 1
+}
+
+# The first line a program prints for --version, or nothing when it cannot be
+# read. `head` closes the pipe, so pipefail needs the failure handled here.
+first_line() {
+  local value
+  value="$("$1" --version 2>/dev/null | head -n 1)" || value=''
+  printf '%s\n' "$value"
+}
+
+# One runtime line, in the words `ahpd configure` uses: what is there, the
+# version `--version` printed, and whether ahpd runs on it.
+runtime_line() {
+  local name="$1" program="$2" path version
+  path="$(command -v "$program" 2>/dev/null)" || {
+    printf '%s not found\n' "$name"
+    return 0
+  }
+  version="$(first_line "$path")"
+  if [ -z "$version" ]; then
+    printf '%s at %s (could not read its version)\n' "$name" "$path"
+    return 0
+  fi
+  case "$program" in
+    node)
+      if node_fits "$path"; then
+        printf 'Node %s (runs ahpd)\n' "$version"
+      else
+        printf 'Node %s (ahpd does not run on it; it needs Node 22.1 or newer)\n' "$version"
+      fi
+      ;;
+    deno) printf 'Deno %s (runs ahpd; each plugin it loads needs an npm: spec)\n' "$version" ;;
+    *) printf '%s %s (runs ahpd)\n' "$name" "$version" ;;
+  esac
+}
+
+# What this machine has, before anything is installed: a person whose install
+# stops sees which runtime was missing or too old.
+runtimes() {
+  runtime_line Node node
+  runtime_line Bun bun
+  runtime_line Deno deno
 }
 
 # The node on PATH first, then the newest one nvm holds. A node on PATH that is
@@ -553,6 +595,10 @@ daemon_running() {
 
 do_install() {
   local had_ahpd=0 ahpd=''
+
+  # Before the runtime check, so a stop names what this machine has. Under
+  # --dry-run too, where the lines are the same ones.
+  runtimes
 
   if [ "$RUNTIME" = bun ]; then
     ensure_bun
