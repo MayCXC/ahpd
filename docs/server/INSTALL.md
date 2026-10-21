@@ -16,6 +16,8 @@ irm https://ahpio.com/ahpd/install.ps1 | iex
 
 The script checks for Node 22.1 or newer, installs `@ahpd/server` without sudo, adds `ahpd` to your PATH, and runs `ahpd configure` when a terminal is open. Read [install.sh](https://ahpio.com/ahpd/install.sh) or [install.ps1](https://ahpio.com/ahpd/install.ps1) before you pipe it.
 
+The script looks for an installed `ahpd` first. When it finds one, it prints the version and the folder it is in, and asks before it updates it there. The update goes into the npm prefix that holds that `ahpd`, and a folder that is not writable stops it. An `ahpd` that is already the newest version is left alone. After the update, the script fails unless `ahpd --version` prints the new version. An old `ahpd` earlier on the PATH is what made an install look done. Without a terminal, pass `--yes` (`-Yes` on PowerShell, `AHPD_YES=1`) to update, since there is nobody to ask.
+
 ## Flags
 
 A pipe cannot pass a flag to `install.sh` except after `bash -s --`, and it cannot pass a parameter to `install.ps1` at all. Every flag also reads an `AHPD_*` environment variable, and on PowerShell the block form passes a parameter.
@@ -25,6 +27,7 @@ A pipe cannot pass a flag to `install.sh` except after `bash -s --`, and it cann
 | `--version <v>` | `-Version <v>` | `AHPD_VERSION` | install this package version, the newest when omitted |
 | `--package <p>` | `-Package <p>` | `AHPD_PACKAGE` | install this package, `@ahpd/server` by default |
 | `--runtime <r>` | `-Runtime <r>` | `AHPD_RUNTIME` | `node` or `bun` |
+| `--yes` | `-Yes` | `AHPD_YES` | update an installed `ahpd` without asking |
 | `--no-onboard` | `-NoOnboard` | `AHPD_NO_ONBOARD` | do not run `ahpd configure` |
 | `--dry-run` | `-DryRun` | `AHPD_DRY_RUN` | print each step and change nothing |
 | `--verbose` | `-Verbose` | `AHPD_VERBOSE` | print each command before it runs |

@@ -71,13 +71,21 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
       AHPD_VERSION: '',
       AHPD_PACKAGE: '',
       AHPD_RUNTIME: '',
+      AHPD_YES: '',
       AHPD_NO_ONBOARD: '',
       AHPD_DRY_RUN: '',
       AHPD_VERBOSE: '',
       AHPD_HELP: '',
+      AHPD_UNINSTALL: '',
+      AHPD_PURGE: '',
       STUB_NODE_VERSION: options.node ?? '22.1.0',
       STUB_NPM_VERSION: '11.16.0',
       STUB_NPM_PREFIX: folder,
+      STUB_NPM_VIEW_VERSION: '0.13.0',
+      STUB_NPM_INSTALLED_FILE: join(root, 'installed-version'),
+      STUB_NPM_INSTALL_EXIT: '0',
+      STUB_AHPD_VERSION: '0.12.0',
+      STUB_AHPD_VERSION_FILE: join(root, 'installed-version'),
       STUB_AHPD_RUNNING: '0',
       STUB_BUN_INSTALL: join(root, 'bun'),
     },
@@ -90,7 +98,14 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
   stub(box, 'npm', [
     `echo npm %*>>"%AHPD_TEST_LOG%"`,
     'if "%1"=="--version" echo %STUB_NPM_VERSION%',
-    'if "%1"=="prefix" if "%2"=="-g" echo %STUB_NPM_PREFIX%',
+    'if "%1"=="prefix" echo %STUB_NPM_PREFIX%',
+    'if "%1"=="config" echo %STUB_NPM_PREFIX%',
+    'if "%1"=="view" echo %STUB_NPM_VIEW_VERSION%',
+    'if "%1"=="install" goto install',
+    'exit /b 0',
+    ':install',
+    'if not "%STUB_NPM_INSTALL_EXIT%"=="0" echo npm ERR! simulated failure & exit /b %STUB_NPM_INSTALL_EXIT%',
+    '> "%STUB_NPM_INSTALLED_FILE%" echo %STUB_NPM_VIEW_VERSION%',
     'exit /b 0',
   ]);
   stub(box, 'bun', [
@@ -104,13 +119,45 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
   return box;
 }
 
-function writeAhpd(box: Box): void {
-  stub(box, 'ahpd', [
+/*
+ * `status` exits 0 only while the stub daemon runs, which is what the uninstall
+ * reads to decide whether to stop it. `--version` prints the file the npm stub
+ * writes when it "installs", so after an update the same command prints the new
+ * version, as a real one would.
+ */
+function ahpdStub(): string[] {
+  return [
     `echo ahpd %*>>"%AHPD_TEST_LOG%"`,
+    'if "%1"=="--version" goto version',
     'if "%1"=="status" if "%STUB_AHPD_RUNNING%"=="1" exit /b 0',
     'if "%1"=="status" exit /b 1',
     'exit /b 0',
-  ]);
+    ':version',
+    'if exist "%STUB_AHPD_VERSION_FILE%" type "%STUB_AHPD_VERSION_FILE%"',
+    'if not exist "%STUB_AHPD_VERSION_FILE%" echo %STUB_AHPD_VERSION%',
+    'exit /b 0',
+  ];
+}
+
+function writeAhpd(box: Box): void {
+  stub(box, 'ahpd', ahpdStub());
+}
+
+/*
+ * An ahpd the way npm leaves one on Windows: the shim sits in the prefix folder
+ * itself, and node_modules is beside it, which is what the script reads as an
+ * npm prefix. The shim prints `version` until the npm stub overwrites the file.
+ */
+function installAhpd(box: Box, version: string): string {
+  mkdirSync(join(box.folder, 'node_modules', '@ahpd', 'server'), { recursive: true });
+  const shim = join(box.folder, 'ahpd.cmd');
+  writeFileSync(shim, `@echo off\r\n${ahpdStub().join('\r\n')}\r\n`);
+  writeFileSync(box.env.STUB_AHPD_VERSION_FILE, `${version}\r\n`);
+  return shim;
+}
+
+function withFolder(box: Box): string {
+  return `${box.folder};${box.env.PATH}`;
 }
 
 function writeDeno(box: Box): void {
@@ -256,21 +303,114 @@ describe.skipIf(!canRun)('install.ps1', () => {
     const result = run(box, { AHPD_NO_ONBOARD: '1' });
 
     expect(result.code).toBe(0);
-    expect(calls(box)).toContain('npm install -g --no-fund --no-audit --allow-scripts=node-pty @ahpd/server');
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.folder} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
     expect(countEntry(userPath(), box.folder)).toBe(1);
   });
 
-  it('upgrades an existing install without a second PATH entry', () => {
+  it('updates the ahpd it finds, in the folder that holds it', () => {
     const box = makeBox();
     run(box, { AHPD_NO_ONBOARD: '1' });
-    writeAhpd(box);
+    installAhpd(box, '0.12.0');
 
-    const result = run(box, { AHPD_NO_ONBOARD: '1' });
+    const result = run(box, { AHPD_NO_ONBOARD: '1', AHPD_YES: '1', PATH: withFolder(box) });
 
     expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.folder}.`);
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.folder} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
     expect(calls(box)).toContain('ahpd plugin update all');
     expect(result.stdout).toContain('ahpd restart');
     expect(countEntry(userPath(), box.folder)).toBe(1);
+  });
+
+  it('stops when the ahpd it finds is already the target version', () => {
+    const box = makeBox();
+    installAhpd(box, '0.13.0');
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1', AHPD_YES: '1', PATH: withFolder(box) });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(
+      `ahpd 0.13.0 is installed at ${box.folder}, already at 0.13.0. Nothing to update.`,
+    );
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('stops and names the folder when the ahpd is not in an npm prefix', () => {
+    const box = makeBox({ ahpd: true });
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1', AHPD_YES: '1' });
+
+    expect(result.code).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain(`${box.bin}\\ahpd.cmd`);
+    expect(`${result.stdout}${result.stderr}`).toContain('not a folder npm installed it in');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('stops without a terminal when the answer is not -Yes', () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = run(box, { AHPD_NO_ONBOARD: '1', PATH: withFolder(box) });
+
+    expect(result.code).not.toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.folder}.`);
+    expect(`${result.stdout}${result.stderr}`).toContain('Update it to 0.13.0?');
+    expect(`${result.stdout}${result.stderr}`).toContain('-Yes');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('fails when npm fails, even though an ahpd is installed', () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = run(box, {
+      AHPD_NO_ONBOARD: '1',
+      AHPD_YES: '1',
+      PATH: withFolder(box),
+      STUB_NPM_INSTALL_EXIT: '7',
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain('npm install failed with exit code 7');
+    expect(`${result.stdout}${result.stderr}`).not.toContain('carrying on');
+  });
+
+  it('fails when the ahpd on the PATH still prints the old version', () => {
+    const box = makeBox();
+    const shim = installAhpd(box, '0.12.0');
+
+    const result = run(box, {
+      AHPD_NO_ONBOARD: '1',
+      AHPD_YES: '1',
+      PATH: withFolder(box),
+      // The install writes its version somewhere else: the command on the PATH
+      // is the second ahpd that stayed at the old version.
+      STUB_NPM_INSTALLED_FILE: join(box.root, 'another-version'),
+    });
+
+    expect(result.code).not.toBe(0);
+    expect(`${result.stdout}${result.stderr}`).toContain(shim);
+    expect(`${result.stdout}${result.stderr}`).toContain('0.13.0');
+  });
+
+  it('prints the question and the folder under -DryRun', () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = run(box, {
+      AHPD_NO_ONBOARD: '1',
+      AHPD_DRY_RUN: '1',
+      PATH: withFolder(box),
+    });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.folder}.`);
+    expect(result.stdout).toContain('Update it to 0.13.0?');
+    expect(result.stdout).toContain(`would run: npm install -g --prefix ${box.folder}`);
   });
 
   it('throws on an unknown runtime instead of exiting the session', () => {
@@ -292,12 +432,26 @@ describe.skipIf(!canRun)('install.ps1', () => {
   });
 
   it('skips ahpd configure when AHPD_NO_ONBOARD is set', () => {
-    const box = makeBox({ ahpd: true });
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
 
-    const result = run(box, { AHPD_NO_ONBOARD: '1' });
+    const result = run(box, { AHPD_NO_ONBOARD: '1', AHPD_YES: '1', PATH: withFolder(box) });
 
     expect(result.code).toBe(0);
     expect(calls(box)).not.toContain('ahpd configure');
+  });
+
+  it('takes -Yes as the answer to the question', () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = runFile(box, ['-Yes'], { AHPD_NO_ONBOARD: '1', PATH: withFolder(box) });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.folder}.`);
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.folder} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
   });
 
   it('changes nothing under -DryRun', () => {
@@ -325,9 +479,10 @@ describe.skipIf(!canRun)('install.ps1', () => {
   });
 
   it('removes the package and the PATH entry under -Uninstall', () => {
-    const box = makeBox({ ahpd: true });
+    const box = makeBox();
     run(box, { AHPD_NO_ONBOARD: '1' });
     expect(countEntry(userPath(), box.folder)).toBe(1);
+    writeAhpd(box);
 
     const result = run(box, { AHPD_UNINSTALL: '1' });
 

@@ -50,10 +50,23 @@ function writeNpm(box: Box): void {
     'npm',
     [
       `printf 'npm %s\\n' "$*" >> "$AHPD_TEST_LOG"`,
-      'case "$*" in',
+      'case "$1" in',
       '  --version) printf \'%s\\n\' "$STUB_NPM_VERSION" ;;',
-      '  "prefix -g") printf \'%s\\n\' "$STUB_NPM_PREFIX" ;;',
-      '  "config get prefix") printf \'%s\\n\' "$STUB_NPM_PREFIX" ;;',
+      '  prefix) printf \'%s\\n\' "$STUB_NPM_PREFIX" ;;',
+      '  config) printf \'%s\\n\' "$STUB_NPM_PREFIX" ;;',
+      '  view) printf \'%s\\n\' "$STUB_NPM_VIEW_VERSION" ;;',
+      '  install)',
+      '    if [ "${STUB_NPM_INSTALL_EXIT:-0}" -ne 0 ]; then',
+      '      printf \'npm ERR! simulated failure\\n\'',
+      '      exit "$STUB_NPM_INSTALL_EXIT"',
+      '    fi',
+      '    last=\'\'',
+      '    for a in "$@"; do last="$a"; done',
+      '    case "${last##*@}" in',
+      '      [0-9]*) printf \'%s\\n\' "${last##*@}" > "$STUB_NPM_INSTALLED_FILE" ;;',
+      '      *) printf \'%s\\n\' "$STUB_NPM_VIEW_VERSION" > "$STUB_NPM_INSTALLED_FILE" ;;',
+      '    esac',
+      '    ;;',
       '  *) exit 0 ;;',
       'esac',
     ].join('\n'),
@@ -82,26 +95,58 @@ function writeDeno(box: Box, version: string): void {
  * `status --json` exits 0 only while the stub daemon runs, which is what the
  * uninstall reads to decide whether to stop it; a running daemon's record also
  * carries `service`, which is what it reads to decide whether to remove one.
+ *
+ * `--version` prints the file the npm stub writes when it "installs", so after
+ * an update the same command prints the new version, as a real one would.
  */
+function ahpdStub(): string {
+  return [
+    `printf 'ahpd %s\\n' "$*" >> "$AHPD_TEST_LOG"`,
+    'case "$*" in',
+    '  --version)',
+    '    if [ -n "${STUB_AHPD_VERSION_FILE:-}" ] && [ -f "$STUB_AHPD_VERSION_FILE" ]; then',
+    '      cat "$STUB_AHPD_VERSION_FILE"',
+    '    else',
+    '      printf \'%s\\n\' "${STUB_AHPD_VERSION:-0.12.0}"',
+    '    fi',
+    '    ;;',
+    '  "status --json")',
+    '    if [ "${STUB_AHPD_RUNNING:-0}" = 1 ]; then',
+    '      printf \'{"pid":1,"url":"ws://127.0.0.1:1","paths":[],"service":"systemd"}\\n\'',
+    '      exit 0',
+    '    fi',
+    '    printf \'{"running":false}\\n\'',
+    '    exit 1',
+    '    ;;',
+    '  *) exit 0 ;;',
+    'esac',
+  ].join('\n');
+}
+
 function writeAhpd(box: Box): void {
-  stub(
-    box,
-    'ahpd',
-    [
-      `printf 'ahpd %s\\n' "$*" >> "$AHPD_TEST_LOG"`,
-      'case "$*" in',
-      '  "status --json")',
-      '    if [ "${STUB_AHPD_RUNNING:-0}" = 1 ]; then',
-      '      printf \'{"pid":1,"url":"ws://127.0.0.1:1","paths":[],"service":"systemd"}\\n\'',
-      '      exit 0',
-      '    fi',
-      '    printf \'{"running":false}\\n\'',
-      '    exit 1',
-      '    ;;',
-      '  *) exit 0 ;;',
-      'esac',
-    ].join('\n'),
-  );
+  stub(box, 'ahpd', ahpdStub());
+}
+
+/*
+ * An ahpd the way npm leaves one: <prefix>/bin/ahpd is a link into
+ * <prefix>/lib/node_modules/<package>, which is the folder the script reads the
+ * prefix from. The file the stub prints starts at `version`, and the npm stub
+ * overwrites it with the version it installed.
+ */
+function installAhpd(box: Box, version: string): string {
+  const folder = join(box.prefix, 'lib', 'node_modules', '@ahpd', 'server', 'dist');
+  mkdirSync(folder, { recursive: true });
+  const real = join(folder, 'main.js');
+  writeFileSync(real, `#!/bin/sh\n${ahpdStub()}\n`, { mode: 0o755 });
+  chmodSync(real, 0o755);
+  const link = join(box.prefix, 'bin', 'ahpd');
+  symlinkSync(real, link);
+  writeFileSync(box.env.STUB_AHPD_VERSION_FILE, `${version}\n`);
+  return link;
+}
+
+function withPrefix(box: Box): string {
+  return `${box.prefix}/bin:${box.env.PATH}`;
 }
 
 function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
@@ -133,6 +178,7 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
       AHPD_VERSION: '',
       AHPD_PACKAGE: '',
       AHPD_RUNTIME: '',
+      AHPD_YES: '',
       AHPD_NO_ONBOARD: '',
       AHPD_DRY_RUN: '',
       AHPD_VERBOSE: '',
@@ -142,6 +188,11 @@ function makeBox(options: { node?: string; ahpd?: boolean } = {}): Box {
       STUB_NODE_VERSION: options.node ?? '22.1.0',
       STUB_NPM_VERSION: '11.16.0',
       STUB_NPM_PREFIX: prefix,
+      STUB_NPM_VIEW_VERSION: '0.13.0',
+      STUB_NPM_INSTALLED_FILE: join(root, 'installed-version'),
+      STUB_NPM_INSTALL_EXIT: '0',
+      STUB_AHPD_VERSION: '0.12.0',
+      STUB_AHPD_VERSION_FILE: join(root, 'installed-version'),
       STUB_AHPD_RUNNING: '0',
     },
   };
@@ -173,6 +224,47 @@ function run(box: Box, args: string[], extra: Record<string, string> = {}): Prom
     });
     child.on('error', reject);
     child.on('close', (code) => resolve({ code, stdout, stderr }));
+  });
+}
+
+/*
+ * The question is read from /dev/tty, so a case that answers it needs a
+ * terminal. util-linux's `script` gives the run a pty, and what is written to
+ * its stdin arrives as the typed answer.
+ */
+const ptyScript = '/usr/bin/script';
+const canUsePty = process.platform === 'linux' && existsSync(ptyScript);
+
+function runTty(
+  box: Box,
+  args: string[],
+  answer: string,
+  extra: Record<string, string> = {},
+): Promise<Result> {
+  return new Promise((resolve, reject) => {
+    const command = `bash -c "source '${script}'; main ${args.join(' ')}"`;
+    const child = spawn(ptyScript, ['-qec', command, '/dev/null'], {
+      env: { ...process.env, ...box.env, ...extra },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk: string) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk: string) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (code) => resolve({ code, stdout, stderr }));
+    // The prompt is up once the script has read it; a moment later the answer
+    // is in the pty and the read returns it.
+    setTimeout(() => {
+      child.stdin.write(`${answer}\n`);
+      child.stdin.end();
+    }, 200);
   });
 }
 
@@ -248,7 +340,9 @@ describe.skipIf(!posix)('install.sh', () => {
     const result = await run(box, ['--no-onboard']);
 
     expect(result.code).toBe(0);
-    expect(calls(box)).toContain('npm install -g --no-fund --no-audit --allow-scripts=node-pty @ahpd/server');
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.prefix} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
     expect(exportsIn(box)).toEqual([`export PATH="${box.prefix}/bin:$PATH"`]);
     expect(rcLines(box).filter((line) => line === MARKER)).toHaveLength(1);
     expect(result.stdout).toContain('Next: ahpd service install');
@@ -262,21 +356,126 @@ describe.skipIf(!posix)('install.sh', () => {
     });
 
     expect(result.code).toBe(0);
-    expect(calls(box)).toContain('npm install -g --no-fund --no-audit --allow-scripts=node-pty @ahpd/server@0.12.0');
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.prefix} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server@0.12.0`,
+    );
   });
 
-  it('upgrades an existing install without a second PATH line', async () => {
+  it('updates the ahpd it finds, in the prefix that holds it', async () => {
     const box = makeBox();
     await run(box, ['--no-onboard']);
-    writeAhpd(box);
+    installAhpd(box, '0.12.0');
 
-    const result = await run(box, ['--no-onboard']);
+    const result = await run(box, ['--no-onboard', '--yes'], { PATH: withPrefix(box) });
 
     expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.prefix}.`);
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.prefix} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
     expect(calls(box)).toContain('ahpd plugin update all');
     expect(result.stdout).toContain('ahpd restart');
     expect(exportsIn(box)).toHaveLength(1);
     expect(rcLines(box).filter((line) => line === MARKER)).toHaveLength(1);
+  });
+
+  it('stops when the ahpd it finds is already the target version', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.13.0');
+
+    const result = await run(box, ['--no-onboard', '--yes'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(
+      `ahpd 0.13.0 is installed at ${box.prefix}, already at 0.13.0. Nothing to update.`,
+    );
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('stops and names the folder when the ahpd is not in an npm prefix', async () => {
+    const box = makeBox();
+    writeAhpd(box);
+
+    const result = await run(box, ['--no-onboard', '--yes']);
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(`${box.bin}/ahpd`);
+    expect(result.stderr).toContain('not a folder npm installed it in');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('stops when the prefix that holds the ahpd is not writable', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+    chmodSync(box.prefix, 0o555);
+
+    let result: Result;
+    try {
+      result = await run(box, ['--no-onboard', '--yes'], { PATH: withPrefix(box) });
+    } finally {
+      // The folder has to be removable again once the case is done.
+      chmodSync(box.prefix, 0o755);
+    }
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(box.prefix);
+    expect(result.stderr).toContain('not writable');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('stops without a terminal when the answer is not --yes', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = await run(box, ['--no-onboard'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.prefix}.`);
+    expect(result.stderr).toContain('Update it to 0.13.0?');
+    expect(result.stderr).toContain('--yes');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
+  });
+
+  it('fails when npm fails, even though an ahpd is installed', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = await run(box, ['--no-onboard', '--yes'], {
+      PATH: withPrefix(box),
+      STUB_NPM_INSTALL_EXIT: '7',
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain('npm install failed with exit code 7');
+    expect(result.stderr).not.toContain('carrying on');
+  });
+
+  it('fails when the ahpd on the PATH still prints the old version', async () => {
+    const box = makeBox();
+    const link = installAhpd(box, '0.12.0');
+
+    const result = await run(box, ['--no-onboard', '--yes'], {
+      PATH: withPrefix(box),
+      // The install writes its version somewhere else: the command on the PATH
+      // is the second ahpd that stayed at the old version.
+      STUB_NPM_INSTALLED_FILE: join(box.root, 'another-version'),
+    });
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toContain(link);
+    expect(result.stderr).toContain('0.13.0');
+  });
+
+  it('prints the question and the folder under --dry-run', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = await run(box, ['--dry-run', '--no-onboard'], { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(0);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.prefix}.`);
+    expect(result.stderr).toContain('Update it to 0.13.0?');
+    expect(result.stdout).toContain(`install -g --prefix ${box.prefix}`);
   });
 
   it('exits 2 for an unknown flag and an unknown runtime', async () => {
@@ -293,10 +492,12 @@ describe.skipIf(!posix)('install.sh', () => {
 
     expect(result.code).not.toBe(0);
     expect(result.stderr).toContain('nvm install 22');
-    expect(calls(box)).not.toContain('npm install -g --no-fund --no-audit --allow-scripts=node-pty @ahpd/server');
+    expect(calls(box)).not.toContain(
+      `npm install -g --prefix ${box.prefix} --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
   });
 
-  it('moves to ~/.npm-global when the global prefix is not writable', async () => {
+  it('uses ~/.npm-global when the global prefix is not writable, and changes no npm setting', async () => {
     const box = makeBox();
     const readonly = join(box.root, 'readonly');
     mkdirSync(readonly);
@@ -305,7 +506,10 @@ describe.skipIf(!posix)('install.sh', () => {
     const result = await run(box, ['--no-onboard'], { STUB_NPM_PREFIX: readonly });
 
     expect(result.code).toBe(0);
-    expect(calls(box)).toContain(`npm config set prefix ${box.home}/.npm-global`);
+    expect(calls(box).some((line) => line.startsWith('npm config set'))).toBe(false);
+    expect(calls(box)).toContain(
+      `npm install -g --prefix ${box.home}/.npm-global --no-fund --no-audit --allow-scripts=node-pty @ahpd/server`,
+    );
     expect(exportsIn(box)).toEqual([`export PATH="${box.home}/.npm-global/bin:$PATH"`]);
   });
 
@@ -341,6 +545,21 @@ describe.skipIf(!posix)('install.sh', () => {
     expect(result.code).toBe(0);
     expect(calls(box)).toContain('bun add -g @ahpd/server');
     expect(exportsIn(box)).toEqual([`export PATH="${bunHome}/bin:$PATH"`]);
+  });
+});
+
+describe.skipIf(!canUsePty)('install.sh at a terminal', () => {
+  it('asks before it updates an installed ahpd, and a no stops the update', async () => {
+    const box = makeBox();
+    installAhpd(box, '0.12.0');
+
+    const result = await runTty(box, ['--no-onboard'], 'n', { PATH: withPrefix(box) });
+
+    expect(result.code).toBe(1);
+    expect(result.stdout).toContain(`ahpd 0.12.0 is installed at ${box.prefix}.`);
+    expect(result.stdout).toContain('Update it to 0.13.0?');
+    expect(result.stdout).toContain('Left ahpd 0.12.0');
+    expect(calls(box).some((line) => line.startsWith('npm install '))).toBe(false);
   });
 });
 
