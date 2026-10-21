@@ -13,9 +13,10 @@
 
 import type { Agent } from '../types/agent.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
+import type { ServedConnectorKind } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginHost, PluginStarts, SessionMetaKey, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
@@ -29,7 +30,7 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAgent, checkChannel, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, miss, reservedName } from './validate.js';
+import { checkAgent, checkChannel, checkConnectorKind, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -335,6 +336,14 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    */
   const channels: Record<string, ServedChannel> = { ...base.channels };
   /*
+   * The connector kinds, by name, and the plugin each belongs to. Seeded from
+   * the base for the same reason the channels are: a plugin that offers a name
+   * the daemon already does is told, rather than winning by load order.
+   */
+  const connectorKinds: Record<string, ServedConnectorKind> = { ...base.connectorKinds };
+  const connectorHolders = new Map<string, string>();
+  for (const [name, kind] of Object.entries(base.connectorKinds ?? {})) connectorHolders.set(name, kind.by);
+  /*
    * The one Plan call a turn shows, and who draws it.
    *
    * A turn holds one call, so a second registration is a collision and is
@@ -426,6 +435,16 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
         continue;
       }
       channels[scheme] = served;
+    }
+
+    for (const [name, kind] of Object.entries(contribution.connectors)) {
+      const held = connectorHolders.get(name);
+      if (held !== undefined) {
+        problems.push(`plugin ${contribution.by} registers connector kind ${name}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered`);
+        continue;
+      }
+      connectorHolders.set(name, contribution.by);
+      connectorKinds[name] = kind;
     }
 
     for (const [name, served] of Object.entries(contribution.methods)) {
@@ -563,6 +582,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
 
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
   if (Object.keys(channels).length > 0) options.channels = channels;
+  if (Object.keys(connectorKinds).length > 0) options.connectorKinds = connectorKinds;
   if (Object.keys(methods).length > 0) options.methods = methods;
   if (plan !== undefined) options.plan = plan;
   if (sessionMeta.length > 0) options.sessionMeta = sessionMeta;
@@ -782,6 +802,16 @@ export interface HostRecordingOptions {
    * connection holds nothing and every gated command it sends is refused.
    */
   grants?: readonly Grant[];
+  /**
+   * What the plugin's manifest declares it registers, by kind.
+   *
+   * Absent for a plugin that declares none, which is every plugin written
+   * before manifests had contracts: nothing is checked and it registers what
+   * it always could. A list here is closed - a register method refuses a name
+   * that is not in its kind's list - so a plugin says what a client will see
+   * it add.
+   */
+  contracts?: PluginContracts;
 }
 
 /**
@@ -869,6 +899,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     ports: {},
     providers: {},
     channels: {},
+    connectors: {},
     methods: {},
     events: events as unknown as HostHandlers,
     closers: [],
@@ -899,6 +930,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
 
   const setPort = <K extends PortKey>(key: K, method: string, value: PortOf<K>, when?: 'replace'): void => {
     open();
+    declared(by, options.contracts, 'ports', key);
     checkPort(key, value, by);
     if (contribution.ports[key] !== undefined) {
       throw new Error(miss(by, method, key, 'registered only once'));
@@ -1116,6 +1148,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     registerAgent(agent) {
       open();
       checkAgent(agent, by);
+      declared(by, options.contracts, 'agents', agent.provider);
       const reserved = reservedName(agent.provider);
       if (reserved !== undefined) throw new Error(miss(by, 'registerAgent', agent.provider, `a name the host has not reserved; ${reserved}`));
       if (providers.has(agent.provider)) {
@@ -1128,6 +1161,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       open();
       checkTool(tool, by);
       const name = tool.definition.name;
+      declared(by, options.contracts, 'tools', name);
       if (tools.has(name)) {
         throw new Error(miss(by, 'registerTool', name, 'a name no other tool in this plugin uses'));
       }
@@ -1144,6 +1178,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (completions !== undefined && typeof completions !== 'function') {
         throw new Error(miss(by, 'registerSessionConfig', named, 'a function to answer its picker, or nothing'));
       }
+      declared(by, options.contracts, 'sessionConfigs', named);
       if (sessionKeys.has(named)) {
         throw new Error(miss(by, 'registerSessionConfig', named, 'a key no other setting in this plugin uses'));
       }
@@ -1158,6 +1193,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       const reserved = reservedName(named);
       if (reserved !== undefined) throw new Error(miss(by, 'registerResourceProvider', named, `a name the host has not reserved; ${reserved}`));
       checkResourceProvider(named, provider, by);
+      declared(by, options.contracts, 'resourceProviders', named);
       if (contribution.providers[named] !== undefined) {
         throw new Error(miss(by, 'registerResourceProvider', named, 'a scheme no other provider in this plugin uses'));
       }
@@ -1175,6 +1211,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'registerChannel', named, 'a scheme that starts with x-, the protocol\'s extension prefix'));
       }
       checkChannel(named, channel, by);
+      declared(by, options.contracts, 'channels', named);
       if (contribution.channels[named] !== undefined) {
         throw new Error(miss(by, 'registerChannel', named, 'a scheme no other channel in this plugin uses'));
       }
@@ -1198,6 +1235,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     registerMethod(name, method) {
       open();
       const named = checkMethod(name, method, by);
+      declared(by, options.contracts, 'methods', named);
       if (contribution.methods[named] !== undefined) {
         throw new Error(miss(by, 'registerMethod', named, 'a name no other method in this plugin uses'));
       }
@@ -1208,6 +1246,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (typeof preamble !== 'function') {
         throw new Error(miss(by, 'registerChatPreamble', 'the preamble', 'a function'));
       }
+      declared(by, options.contracts, 'chatPreambles');
       // The host logs a preamble that throws, so the error names the plugin.
       contribution.preambles.push(async (opened) => {
         try {
@@ -1228,6 +1267,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (typeof read !== 'function') {
         throw new Error(miss(by, 'registerPlan', 'the reader', 'a function answering the lines of one session\'s plan'));
       }
+      declared(by, options.contracts, 'plans');
       if (contribution.plan !== undefined) {
         throw new Error(miss(by, 'registerPlan', 'a plan', 'registered only once'));
       }
@@ -1257,6 +1297,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (typeof read !== 'function') {
         throw new Error(miss(by, 'registerSessionMeta', 'the reader', 'a function answering the value of that key for one session'));
       }
+      declared(by, options.contracts, 'sessionMeta', key);
       if (contribution.sessionMeta === undefined) contribution.sessionMeta = { by, keys: [] };
       const held = contribution.sessionMeta;
       if (held.keys.some((one) => one.key === key)) {
@@ -1293,6 +1334,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     registerRoute(handler) {
       open();
       checkRoute(handler, by);
+      declared(by, options.contracts, 'routes');
       // A second one is refused here rather than in the fold, because only one
       // plugin is in this call and the prefix is its own: there is no collision
       // for the fold to see, there is one plugin registering two answers to the
@@ -1315,12 +1357,14 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       if (typeof close !== 'function') {
         throw new Error(miss(by, 'registerClose', 'close', 'a function'));
       }
+      declared(by, options.contracts, 'closers');
       contribution.closers.push(close);
     },
     registerTriggerType(definition) {
       open();
       checkTriggerType(definition, by);
       const named = definition.type;
+      declared(by, options.contracts, 'triggerTypes', named);
       /*
        * The host's own two names are refused here rather than in the fold,
        * because a name this host already answers for is not a collision with
@@ -1361,6 +1405,15 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
        * keeps it for later, because an event is about what is happening now.
        */
       held.deliver?.(named, String(event), data as Record<string, unknown>);
+    },
+    registerConnector(kind) {
+      open();
+      const named = checkConnectorKind(kind, by);
+      declared(by, options.contracts, 'connectors', named);
+      if (contribution.connectors[named] !== undefined) {
+        throw new Error(miss(by, 'registerConnector', named, 'a name no other connector kind in this plugin uses'));
+      }
+      contribution.connectors[named] = { ...kind, by };
     },
     on(event, handle) {
       // The context is captured, not rebuilt when the event fires: it is the

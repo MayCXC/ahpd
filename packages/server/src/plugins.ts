@@ -30,7 +30,7 @@ import { pathToFileURL } from 'node:url';
 import { check, type JsonSchema } from '@cofold/commands';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { foldHostOptions, frozenCopy, grantProblem, isRecord, isRecordSlug, pluginHost, readSecret, reason, RECORD_SLUG, runtime, sdkVersion, secretRef } from '@ahpd/sdk';
-import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
+import type { Agent, Contribution, Grant, HostOptions, Loaded, Plugin, PluginContext, PluginContracts, PluginLink, PluginManifest, PluginSpec, RecordStore, Route, SessionStore, Usage, Vault } from '@ahpd/sdk';
 import { satisfies } from './compat.js';
 
 /** One spec, turned into a URL to import. */
@@ -283,6 +283,14 @@ export interface Manifest {
   title?: string;
   /** `ahpd.entry`, the entry a manifest names over what the package resolves to. */
   entry?: string;
+  /** `ahpd.description`, one sentence on what the plugin does. */
+  description?: string;
+  /** `ahpd.categories`, the groups a client files the plugin under. */
+  categories?: string[];
+  /** `ahpd.links`, where a person reads more. */
+  links?: PluginLink[];
+  /** `ahpd.contracts`, the names each kind of registration may use. */
+  contracts?: PluginContracts;
   /** `peerDependencies["@ahpd/sdk"]`, the range compatibility is checked against. */
   sdkRange?: string;
   /** Set when the file could not be read or parsed, so nothing else is trustworthy. */
@@ -326,8 +334,75 @@ export const readManifest = (packageDir: string): Manifest => {
   if (typeof value.name === 'string') manifest.name = value.name;
   if (typeof inside?.title === 'string') manifest.title = inside.title;
   if (typeof inside?.entry === 'string') manifest.entry = inside.entry;
+  if (typeof inside?.description === 'string') manifest.description = inside.description;
+  if (Array.isArray(inside?.categories) && inside.categories.every((one) => typeof one === 'string')) {
+    manifest.categories = [...inside.categories];
+  }
+  if (isLinks(inside?.links)) manifest.links = inside.links.map((one) => ({ title: one.title, url: one.url }));
+  if (areContracts(inside?.contracts)) manifest.contracts = inside.contracts;
   if (typeof peer === 'string') manifest.sdkRange = peer;
   return manifest;
+};
+
+/** Whether a value is a list of `{ title, url }`, the shape a link is. */
+const isLinks = (value: unknown): value is PluginLink[] =>
+  Array.isArray(value) && value.every((one) => isRecord(one) && typeof one['title'] === 'string' && typeof one['url'] === 'string');
+
+/** Whether a value is a record of kind names to lists of strings, the shape contracts are. */
+const areContracts = (value: unknown): value is PluginContracts =>
+  isRecord(value) && Object.values(value).every((one) => Array.isArray(one) && one.every((name) => typeof name === 'string'));
+
+/**
+ * Why one manifest field is not the shape a client draws, or `undefined`.
+ *
+ * Shared by the package.json reader and the loader's read of a module's
+ * `manifest` export, so the two sources a manifest is read from are held to
+ * one rule. `named` says how the field was written where it was found - the
+ * file and the key - so the refusal names the thing the author typed.
+ */
+const checkField = (field: string, value: unknown, named: string): string | undefined => {
+  if (value === undefined) return undefined;
+  if (field === 'description' && typeof value !== 'string') return `${named} is not a string.`;
+  if (field === 'categories' && (!Array.isArray(value) || value.some((one) => typeof one !== 'string'))) {
+    return `${named} is not a list of strings.`;
+  }
+  if (field === 'links' && !isLinks(value)) return `${named} is not a list of links, each with a title and a url.`;
+  if (field === 'contracts' && !areContracts(value)) return `${named} is not an object of lists of names.`;
+  return undefined;
+};
+
+/**
+ * Why a manifest's fields are not the shape a client draws, or `undefined`.
+ *
+ * `named` builds the label for one field, so a package.json's refusal can name
+ * `ahpd.links` and a module's can name `manifest.links`. The fields are
+ * optional; one that is present is held to its kind, because a client draws the
+ * form from them and a value of the wrong kind would be drawn as nothing.
+ */
+const checkFields = (inside: Record<string, unknown>, named: (field: string) => string): string | undefined => {
+  for (const field of ['description', 'categories', 'links', 'contracts']) {
+    const wrong = checkField(field, inside[field], named(field));
+    if (wrong !== undefined) return wrong;
+  }
+  return undefined;
+};
+
+/**
+ * The manifest a package.json declares, when it declares any of the four
+ * fields, or `undefined`.
+ *
+ * A package whose `ahpd` holds only an `entry` and a `title` has no manifest a
+ * client can draw, which is what makes a module's own export the fallback for
+ * a plugin that has both.
+ */
+const manifestFields = (manifest: Manifest): PluginManifest | undefined => {
+  const fields: PluginManifest = {
+    ...(manifest.description === undefined ? {} : { description: manifest.description }),
+    ...(manifest.categories === undefined ? {} : { categories: manifest.categories }),
+    ...(manifest.links === undefined ? {} : { links: manifest.links }),
+    ...(manifest.contracts === undefined ? {} : { contracts: manifest.contracts }),
+  };
+  return Object.keys(fields).length === 0 ? undefined : fields;
 };
 
 /**
@@ -335,7 +410,8 @@ export const readManifest = (packageDir: string): Manifest => {
  *
  * The one place names: an `ahpd`
  * that is not an object, an `ahpd.entry` that is not a string or that points
- * outside its own package, and a `@ahpd/sdk` peer that is not a string. A
+ * outside its own package, one of the four manifest fields that is not the
+ * kind a client draws, and a `@ahpd/sdk` peer that is not a string. A
  * `package.json` that does not parse is the reader's own `problem` and is
  * returned as it stands.
  */
@@ -347,6 +423,10 @@ export const checkManifest = (manifest: Manifest, packageDir: string): string | 
   const inside = manifest.ahpd as Record<string, unknown> | undefined;
   if (inside !== undefined && inside.entry !== undefined && typeof inside.entry !== 'string') {
     return `${manifest.path} has an ahpd.entry that is not a string.`;
+  }
+  if (inside !== undefined) {
+    const wrong = checkFields(inside, (field) => `${manifest.path} has an ahpd.${field} that`);
+    if (wrong !== undefined) return wrong;
   }
   if (manifest.entry !== undefined) {
     const at = resolve(packageDir, manifest.entry);
@@ -799,6 +879,21 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
   // The module wins for shape and its `name` wins for the listing; the
   // manifest is the fallback, and the spec is the last resort.
   const name = ready.id;
+  /*
+   * The manifest a client draws: the package.json's when it declares any of
+   * the four fields, and the module's `manifest` export otherwise. One source
+   * for each plugin, so a package that has both cannot have a client list the
+   * package and the module disagreeing.
+   */
+  let declared = manifest === undefined ? undefined : manifestFields(manifest);
+  if (declared === undefined && held.manifest !== undefined) {
+    if (!isRecord(held.manifest)) {
+      return { problems: [...problems, `plugin ${name} skipped: its manifest is not an object`] };
+    }
+    const wrongField = checkFields(held.manifest, (field) => `${target ?? url} exports a manifest whose ${field}`);
+    if (wrongField !== undefined) return { problems: [...problems, `plugin ${name} skipped: ${wrongField}`] };
+    declared = held.manifest as PluginManifest;
+  }
   const title = typeof held.title === 'string' ? held.title : manifest?.title;
   const defaults = typeof held.defaults === 'object' && held.defaults !== null && !Array.isArray(held.defaults)
     ? held.defaults as Record<string, unknown>
@@ -863,6 +958,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     name,
     apply,
     ...(title === undefined ? {} : { title }),
+    ...(declared === undefined ? {} : { manifest: declared }),
     ...(defaults === undefined ? {} : { defaults }),
     ...(optionsSchema === undefined ? {} : { optionsSchema }),
   };
@@ -924,6 +1020,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     ...(options.vault === undefined ? {} : { vault: options.vault }),
     problem: (line) => { if (answered) options.log(line); else told.push(line); },
     ...(grants.length === 0 ? {} : { grants }),
+    ...(declared?.contracts === undefined ? {} : { contracts: declared.contracts }),
     ...(options.sessions === undefined ? {} : { sessions: options.sessions }),
     ...(options.records === undefined ? {} : { records: options.records }),
     ...(options.collections === undefined ? {} : { collections: options.collections }),
@@ -967,6 +1064,7 @@ export async function loadOne(resolved: Resolved, options: LoadOneOptions, impor
     options: values,
     plugin,
     ...(title === undefined ? {} : { title }),
+    ...(declared === undefined ? {} : { manifest: declared }),
   };
   answered = true;
   return { loaded, contribution, problems: [...problems, ...told] };

@@ -1,0 +1,13 @@
+{
+  "name": "plugin-bad-links",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.ts" },
+  "peerDependencies": { "@ahpd/sdk": ">=0.10 <1" },
+  "ahpd": {
+    "entry": "./index.ts",
+    "title": "Bad links",
+    "links": "https://ahpd.dev/plugins"
+  }
+}

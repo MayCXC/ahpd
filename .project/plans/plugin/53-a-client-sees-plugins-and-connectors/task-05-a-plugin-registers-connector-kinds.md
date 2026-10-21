@@ -1,6 +1,6 @@
 ---
 title: A plugin registers connector kinds
-status: todo
+status: implemented
 depends: [task-02-a-registration-is-checked.md]
 layer: "sdk"
 refs:
@@ -49,7 +49,9 @@ The fold collects every kind in `HostOptions.connectorKinds`, by name.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `packages/sdk/src/types/connectors.ts` holds `CapabilityType`, `Capability`, `ConnectorOwner`, `Connector`, `ConnectorKind` and `ServedConnectorKind`, all exported from `types/index.ts` and so from the package. `CapabilityType` is the four names plus `(string & {})`, so a type this version does not know is kept and shown. `ServedConnectorKind` is a kind with the `by` the fold records. `PluginHost.registerConnector(kind)` checks the shape with `checkConnectorKind`, checks the name against `contracts.connectors`, refuses a name the same plugin reused, and records `{ ...kind, by }` in `Contribution.connectors`. `HostOptions.connectorKinds` is a record by name. The fold seeds it from the base, reports a name two plugins take by naming both, keeps the first, and sets the option only when a kind exists. `validate.ts` refuses a missing or non-slug name, a schema that is not an object, capabilities that are not a list of shaped entries, and an `open` that is not a function. 24 `plugin-fold` and 28 `plugin-host` tests pass; `build`, `typecheck` and `boundary` pass.
+- **Departures:** `Connector.title` is optional and a client falls back to the id, because a connector is named by its id and the step's list does not say every one has a title. `checkConnectorKind` requires a non-empty `title` and `description` on the kind and on each capability, matching the interface, and only `input` is optional. `plugin-fold.test.ts` gained a fourth case beyond the three named: a kind its contracts do not list is refused, which is step 6's check. `plugin-host.test.ts`'s `Contribution` literals each gained `connectors: {}` for the new required member.
+- **Next action:** task 04.
 - **Open questions:** none.
-- **Watch out for:** a capability is declared and shown; nothing in this plan runs one.
+- **Watch out for:** a capability is declared and shown; nothing in this plan runs one. The base wins over a plugin's in `connectorKinds`, as it does for channels and ports: a daemon's own kind is not overwritten by a plugin's.
+- **Commit:** not made in the session (`git add` is denied here). Files: `packages/sdk/src/types/connectors.ts` (new), `packages/sdk/src/types/index.ts`, `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/host.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/sdk/src/plugins/validate.ts`, `packages/sdk/test/plugin-fold.test.ts`, `packages/sdk/test/plugin-host.test.ts`, this task file and the plan row.

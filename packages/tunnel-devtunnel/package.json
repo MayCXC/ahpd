@@ -61,6 +61,10 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Dev Tunnel",
+    "description": "A Dev Tunnel that forwards the bound port, so a client reaches the daemon from anywhere.",
+    "categories": [],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {},
     "options": {
       "command": { "required": false },
       "name": { "required": false },

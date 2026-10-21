@@ -71,6 +71,12 @@
   },
   "ahpd": {
     "entry": "./dist/index.js",
-    "title": "Cofold"
+    "title": "Cofold",
+    "description": "Runs the Cofold agent runtime, providing access to OpenAI-compat api endpoints.",
+    "categories": ["agent"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "agents": ["*"]
+    }
   }
 }

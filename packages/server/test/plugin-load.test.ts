@@ -100,6 +100,49 @@ describe('loadPlugins', () => {
   });
 });
 
+describe('the manifest a client lists', () => {
+  it('reads a package.json manifest, and keeps it on the loaded plugin', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-declared']);
+
+    expect(problems).toEqual([]);
+    expect(loaded[0]?.manifest).toEqual({
+      description: 'Declares its manifest in its package.json.',
+      categories: ['tool'],
+      links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+      contracts: { agents: ['declared'] },
+    });
+    expect(loaded[0]?.plugin.manifest).toEqual(loaded[0]?.manifest);
+  });
+
+  it('reads a module that exports its own manifest', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-declared-module.ts']);
+
+    expect(problems).toEqual([]);
+    expect(loaded[0]?.manifest).toEqual({
+      description: 'Declares its manifest from the module.',
+      categories: ['channel'],
+      links: [{ title: 'Docs', url: 'https://ahpd.dev/plugins' }],
+      contracts: { channels: ['x-declared'] },
+    });
+  });
+
+  it('keeps the package.json manifest when a plugin has both', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-declared-both']);
+
+    expect(problems).toEqual([]);
+    expect(loaded[0]?.manifest?.description).toBe('Declares its manifest in its package.json.');
+  });
+
+  it('refuses a package whose ahpd.links is not a list, naming the field', async () => {
+    const { loaded, problems } = await load(['./fixtures/plugin-bad-links']);
+
+    expect(loaded).toEqual([]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('ahpd.links');
+    expect(problems[0]).toContain('package.json');
+  });
+});
+
 describe('one plugin named twice', () => {
   it('refuses the second entry, whatever options it carries, and loads the first', async () => {
     const { loaded, options, problems } = await load([

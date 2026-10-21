@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { foldHostOptions, routeOf, routePrefix, ROUTE_ROOT } from '../src/plugins/plugins.js';
+import { foldHostOptions, pluginHost, routeOf, routePrefix, ROUTE_ROOT } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';
@@ -11,7 +11,8 @@ import type { AutomationStore } from '../src/types/automations.js';
 import type { Usage } from '../src/types/usage.js';
 import type { Policies } from '../src/types/policies.js';
 import type { Vault } from '../src/types/vault.js';
-import type { Contribution, PortContribution, PortKey, Route } from '../src/types/plugin.js';
+import type { ConnectorKind } from '../src/types/connectors.js';
+import type { Contribution, LoaderContext, PortContribution, PortKey, Route } from '../src/types/plugin.js';
 
 /*
  * The fold, on its own.
@@ -45,6 +46,7 @@ const contribution = (
     ports?: Partial<Record<PortKey, PortContribution>>;
     providers?: Record<string, unknown>;
     channels?: Contribution['channels'];
+    connectors?: Contribution['connectors'];
     methods?: Contribution['methods'];
     sessionConfig?: Record<string, Record<string, unknown>>;
     sessionCompletions?: Contribution['sessionCompletions'];
@@ -61,6 +63,7 @@ const contribution = (
   ports: parts.ports ?? {},
   providers: parts.providers ?? {},
   channels: parts.channels ?? {},
+  connectors: parts.connectors ?? {},
   methods: parts.methods ?? {},
   events: {},
   triggers: { by, types: {} },
@@ -376,5 +379,79 @@ describe('the routes a fold carries', () => {
     expect(ROUTE_ROOT).toBe('/plugins');
     expect(routeOf({}, '/plugins/alpha/hook')).toBeUndefined();
     expect(routeOf({}, '/api/status')).toBeUndefined();
+  });
+});
+
+/*
+ * The connector kinds a plugin offers.
+ *
+ * A kind is registered through `pluginHost`, which checks its shape and its
+ * contract, and the fold keeps it by name. A capability is declared and listed;
+ * nothing here, and nothing in this plan, runs one.
+ */
+
+const KIND_CONTEXT: LoaderContext = {
+  path: '/tmp/fold',
+  paths: ['/tmp/fold'],
+  version: '0.0.0',
+  hostName: 'host',
+  configDir: '/tmp/fold',
+  log: () => {},
+  say: () => {},
+};
+
+/** A connector kind that opens nothing, which is all a registration check reads. */
+const kind = (name: string, parts: Partial<ConnectorKind> = {}): ConnectorKind => ({
+  name,
+  title: `${name} connector`,
+  description: `A connector of the ${name} kind.`,
+  schema: { type: 'object', properties: {} },
+  capabilities: [
+    { type: 'receive', name: 'call', title: 'Receives calls', description: 'Answers a call on the connector.' },
+  ],
+  open: () => {},
+  ...parts,
+});
+
+describe('the connector kinds a fold carries', () => {
+  it('collects two kinds one plugin registers, by name', () => {
+    const alpha = pluginHost('alpha', KIND_CONTEXT);
+    alpha.host.registerConnector(kind('webhook'));
+    alpha.host.registerConnector(kind('mail'));
+
+    const { options, problems } = foldHostOptions(base(), [alpha.contribution]);
+    expect(problems).toEqual([]);
+    expect(Object.keys(options.connectorKinds ?? {})).toEqual(['webhook', 'mail']);
+    expect(options.connectorKinds?.webhook?.by).toBe('alpha');
+    expect(options.connectorKinds?.webhook?.capabilities.map((one) => one.name)).toEqual(['call']);
+  });
+
+  it('refuses a kind name two plugins register, and names both', () => {
+    const alpha = pluginHost('alpha', KIND_CONTEXT);
+    alpha.host.registerConnector(kind('webhook'));
+    const beta = pluginHost('beta', KIND_CONTEXT);
+    beta.host.registerConnector(kind('webhook'));
+
+    const { options, problems } = foldHostOptions(base(), [alpha.contribution, beta.contribution]);
+    expect(problems).toHaveLength(1);
+    expect(problems[0]).toContain('alpha');
+    expect(problems[0]).toContain('beta');
+    expect(problems[0]).toContain('webhook');
+    // The first keeps the name, and the second keeps everything else it
+    // contributed rather than failing its whole load.
+    expect(options.connectorKinds?.webhook?.by).toBe('alpha');
+  });
+
+  it('refuses a kind with no schema', () => {
+    const { host } = pluginHost('alpha', KIND_CONTEXT);
+    expect(() => host.registerConnector({ ...kind('webhook'), schema: undefined } as unknown as ConnectorKind)).toThrow('schema');
+  });
+
+  it('refuses a kind its contracts do not list, naming the kind', () => {
+    const listed = pluginHost('alpha', KIND_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
+    expect(() => listed.registerConnector(kind('webhook'))).not.toThrow();
+
+    const other = pluginHost('beta', KIND_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
+    expect(() => other.registerConnector(kind('mail'))).toThrow('mail');
   });
 });
