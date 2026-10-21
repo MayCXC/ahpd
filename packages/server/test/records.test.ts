@@ -9,8 +9,8 @@ import { fileRecords, readRecordFile, recordFile } from '../src/records.js';
 import { posix } from '../../../tools/posix.ts';
 
 /*
- * The daemon's record store: a folder per collection, a Markdown file per
- * record, and a watch that reads a hand edit again.
+ * The daemon's record store: a folder per collection, a Markdown or JSON file
+ * per record, and a watch that reads a hand edit again.
  */
 
 let dir: string;
@@ -255,6 +255,72 @@ describe('fileRecords', () => {
     expect(problems[0]).toContain('helper.md');
     expect(changes).toEqual([{ id: 'helper', type: 'added' }]);
     expect(await bots.get('helper')).toEqual(bot);
+  });
+});
+
+describe('a collection that keeps JSON records', () => {
+  const connector = {
+    id: 'first',
+    kind: 'webhook',
+    options: { url: 'https://example.test/hook', sign: true },
+  };
+
+  it('writes <id>.json, and a new store reads it back', async () => {
+    const connectors = await store().collection('connectors', { format: 'json' });
+    await connectors.put(connector);
+
+    const file = join(dir, 'connectors', 'first.json');
+    expect(readFileSync(file, 'utf8')).toBe(`${JSON.stringify(connector, null, 2)}\n`);
+    // A POSIX mode, which Windows has none of.
+    if (posix) expect(statSync(file).mode & 0o777).toBe(0o600);
+
+    const again = await store().collection('connectors', { format: 'json' });
+    expect(await again.get('first')).toEqual(connector);
+    expect(await again.list()).toEqual([connector]);
+    expect(await again.find({ kind: 'webhook' })).toEqual([connector]);
+    // A JSON collection has neither a body field nor a migration to report.
+    expect(problems).toEqual([]);
+  });
+
+  it('tells a watcher of a hand edit of a .json file', async () => {
+    const connectors = await store().collection('connectors', { format: 'json' });
+    const changes = heard(connectors);
+    await connectors.put(connector);
+
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(changes).toEqual([{ id: 'first', type: 'added' }]);
+
+    writeFileSync(join(dir, 'connectors', 'first.json'), `${JSON.stringify({ ...connector, title: 'Edited' }, null, 2)}\n`);
+    await vi.waitFor(() => { expect(changes).toHaveLength(2); });
+    expect(changes[1]).toEqual({ id: 'first', type: 'updated' });
+    expect(await connectors.get('first')).toEqual({ ...connector, title: 'Edited' });
+  });
+
+  it('does not turn a .json file into .md', async () => {
+    const folder = join(dir, 'connectors');
+    mkdirSync(folder);
+    writeFileSync(join(folder, 'first.json'), JSON.stringify(connector));
+
+    const connectors = await store().collection('connectors', { format: 'json' });
+    expect(await connectors.get('first')).toEqual(connector);
+    expect(existsSync(join(folder, 'first.md'))).toBe(false);
+    expect(existsSync(join(folder, 'first.json.migrated'))).toBe(false);
+    expect(problems).toEqual([]);
+  });
+
+  it('reports a .json file that does not parse, and keeps the record from before', async () => {
+    const connectors = await store().collection('connectors', { format: 'json' });
+    await connectors.put(connector);
+
+    writeFileSync(join(dir, 'connectors', 'first.json'), '{"id": "first",');
+    await vi.waitFor(() => { expect(problems).toHaveLength(1); });
+    expect(problems[0]).toContain('first.json');
+    expect(await connectors.get('first')).toEqual(connector);
+  });
+
+  it('refuses a body field and a file of its own', async () => {
+    await expect(store().collection('connectors', { format: 'json', body: 'text' })).rejects.toThrow('no body field');
+    await expect(store().collection('connectors', { format: 'json', file: 'connector' })).rejects.toThrow('no file of its own');
   });
 });
 

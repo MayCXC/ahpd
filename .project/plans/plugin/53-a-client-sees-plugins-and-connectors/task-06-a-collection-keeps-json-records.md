@@ -1,6 +1,6 @@
 ---
 title: A collection keeps JSON records
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -38,7 +38,17 @@ A Markdown collection is unchanged.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
-- **Open questions:** none.
-- **Watch out for:** a Markdown collection still turns a stray `<id>.json` into `.md` once.
+Implemented. `CollectionOptions` gained `format?: 'md' | 'json'`, documented as `md` unless `json` is named. In `fileRecords`, a `format: 'json'` collection keeps record `<id>` at `<name>/<id>.json`; `fileOf` and `idsHere` take their suffix from the format, and the folder watch matches `.json` where a Markdown collection matches `.md`. A JSON record is written as `JSON.stringify(record, null, 2)` plus a final newline at mode `0600` through the store's existing temporary-and-rename write, and read back with `JSON.parse` behind a try/catch. A file that does not parse, or that is not a JSON object, is reported through `onProblem` naming the file, and the collection keeps the record it had. The `<id>.json`-to-`<id>.md` migration runs only for a Markdown collection with no `file`, so a JSON collection never renames a file it reads. `collection()` refuses `body` and `file` on a JSON collection, with a message naming which one and why.
+
+Departures and choices the task left open, all written into the code:
+
+- The refusal happens when the collection is opened, not on each `put`, because a JSON collection's shape is fixed by the format and the first call to use it is the open.
+- The JSON read and write live in two small local helpers, `jsonRecord` and `recordJson`, beside the existing exported `recordFile` and `readRecordFile`, which stay Markdown-only and unchanged; the test file keeps writing its JSON fixtures with `JSON.stringify`.
+- The module and `fileRecords` docstrings now say the store keeps Markdown or JSON files, and the migration comment says why a JSON collection has none.
+
+Validation: `packages/server/test/records.test.ts` gained five cases under `a collection that keeps JSON records` - a put writes pretty JSON with a final newline at `0600` and a new store reads it back by `get`, `list` and `find`; a hand edit of a `.json` file reaches a watcher as `updated`; a `.json` file is not turned into `.md` or `.json.migrated`; a file that does not parse is reported by name and the record from before stays; and `body` and `file` are both refused. All 24 cases pass. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass. The wire fixture was not modified by the run.
+
+Files, for the commit `plugin/53 task 06: a collection keeps JSON records`: `packages/sdk/src/types/records.ts`, `packages/server/src/records.ts`, `packages/server/test/records.test.ts`, this task file, and the task-06 row in `plan.md`. The work is uncommitted.
+
+**Next action:** task 07, which opens this collection as `connectors` with `format: 'json'`.
+**Open questions:** none.

@@ -1,12 +1,14 @@
 /**
- * The daemon's record store: each record one Markdown file a person can edit.
+ * The daemon's record store: each record one file a person can edit.
  *
  * A collection is the folder `<configDir>/<name>/`, where a name may be a path
  * of slugs, and a record is `<id>.md` in it - the fields as YAML frontmatter
  * and the collection's body field as the Markdown body. A collection opened
  * with a `file` keeps each record in a folder of its own instead:
  * `<name>/<id>/<file>.md`, so everything that belongs to one record can sit
- * beside its file and one delete can take the folder.
+ * beside its file and one delete can take the folder. A collection opened with
+ * `format: 'json'` keeps each record as `<id>.json`, which is the whole record
+ * as pretty JSON and nothing else.
  */
 
 import { existsSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, watch as watchPath, writeFileSync } from 'node:fs';
@@ -108,7 +110,7 @@ const idsIn = (folder: string, suffix: string): string[] => readdirSync(folder, 
 const copied = (record: StoredRecord): StoredRecord => structuredClone(record);
 
 /**
- * The record store a daemon gives its plugins: Markdown files under `dir`.
+ * The record store a daemon gives its plugins: files under `dir`, Markdown or JSON.
  *
  * A collection reads its folder when it is first opened and keeps what it read;
  * a watch on the folder keeps that current when a person edits, adds or
@@ -124,9 +126,13 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
     const body = wanted.body;
     /** The file each record is kept in, for a collection that gives it a folder. */
     const file = wanted.file;
+    /** Whether a record is kept as the whole file rather than as Markdown around it. */
+    const asJson = wanted.format === 'json';
+    /** What a record's file is called, after its id: `.md`, or `.json` for a JSON collection. */
+    const suffix = asJson ? '.json' : '.md';
     /** The folder one record is kept in: its own for a `file` collection, the collection's otherwise. */
     const folderOf = (id: string): string => (file === undefined ? folder : join(folder, id));
-    const fileOf = (id: string): string => join(folderOf(id), file === undefined ? `${id}.md` : `${file}.md`);
+    const fileOf = (id: string): string => join(folderOf(id), file === undefined ? `${id}${suffix}` : `${file}${suffix}`);
     mkdirSync(folder, { recursive: true, mode: 0o700 });
 
     /**
@@ -137,11 +143,33 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
      * `logs` live beside its `bot.md` and are not records of this collection.
      */
     const idsHere = (): string[] => (file === undefined
-      ? idsIn(folder, '.md')
+      ? idsIn(folder, suffix)
       : readdirSync(folder, { withFileTypes: true })
         .filter((one) => one.isDirectory() && isRecordSlug(one.name))
         .map((one) => one.name)
-        .filter((id) => existsSync(join(folder, id, `${file}.md`))));
+        .filter((id) => existsSync(join(folder, id, `${file}${suffix}`))));
+
+    /** One record as the text of its `.json` file: pretty JSON and a final newline. */
+    const recordJson = (record: StoredRecord): string => `${JSON.stringify(record, null, 2)}\n`;
+
+    /** One record from the text of its `.json` file. Throws with what is wrong, for the caller to report. */
+    const jsonRecord = (text: string): StoredRecord => {
+      let value: unknown;
+      try {
+        value = JSON.parse(text);
+      }
+      catch (error) {
+        throw new Error(`it is not JSON: ${reason(error)}`);
+      }
+      if (!isRecord(value)) throw new Error('it is not a JSON object');
+      return value as StoredRecord;
+    };
+
+    /** One record as the text of its file, in the format this collection keeps. */
+    const textOfRecord = (record: StoredRecord): string => (asJson ? recordJson(record) : recordFile(record, body));
+
+    /** One record from the text of its file, in the format this collection keeps. Throws with what is wrong. */
+    const recordFromText = (text: string): StoredRecord => (asJson ? jsonRecord(text) : readRecordFile(text, body));
 
     /** Every record this collection holds, by id. */
     const held = new Map<string, StoredRecord>();
@@ -157,7 +185,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
       const file = fileOf(id);
       let record: StoredRecord;
       try {
-        record = readRecordFile(text, body);
+        record = recordFromText(text);
       }
       catch (error) {
         said(`records ${name}: ${file} cannot be read: ${reason(error)}`);
@@ -175,11 +203,12 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
      *
      * Renamed to `<id>.json.migrated` once its Markdown file is written, which
      * is what says it has been read. A file that cannot be read is left as it
-     * is and reported. Only a collection whose records are files of the
-     * collection's own folder can have any: a `file` collection is new to this
-     * store, so it has none to convert.
+     * is and reported. Only a Markdown collection whose records are files of
+     * the collection's own folder can have any: a `file` collection is new to
+     * this store, so it has none to convert, and a JSON collection reads its
+     * `.json` files already.
      */
-    for (const id of file === undefined ? idsIn(folder, '.json') : []) {
+    for (const id of !asJson && file === undefined ? idsIn(folder, '.json') : []) {
       const target = fileOf(id);
       if (existsSync(target)) continue;
       const source = join(folder, `${id}.json`);
@@ -254,8 +283,8 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
           // A temporary file, another name, or no name at all is not a record.
           if (changed === null || changed === undefined) return;
           const named = String(changed);
-          if (!named.endsWith('.md')) return;
-          const id = named.slice(0, -'.md'.length);
+          if (!named.endsWith(suffix)) return;
+          const id = named.slice(0, -suffix.length);
           if (!isRecordSlug(id)) return;
           queue(id);
         });
@@ -278,7 +307,7 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
         try {
           const watcher = watchPath(folderOf(id), (_event, changed) => {
             if (changed === null || changed === undefined) return;
-            if (String(changed) !== `${file}.md`) return;
+            if (String(changed) !== `${file}${suffix}`) return;
             queue(id);
           });
           // A record folder removed by hand ends its watch; the collection's watch reads the removal.
@@ -331,8 +360,8 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
         if (typeof record.id !== 'string' || !isRecordSlug(record.id)) {
           throw new Error(`records ${name}: ${String(record.id)} is not a record id: ${RECORD_SLUG}`);
         }
-        const text = recordFile(record, body);
-        const kept = readRecordFile(text, body);
+        const text = textOfRecord(record);
+        const kept = recordFromText(text);
         mkdirSync(folderOf(record.id), { recursive: true, mode: 0o700 });
         written(fileOf(record.id), text);
         known.set(record.id, text);
@@ -367,6 +396,12 @@ export function fileRecords(dir: string, options: FileRecordsOptions = {}): Reco
       if (RESERVED_COLLECTIONS.has(first)) throw new Error(`${name} is not a collection name: the daemon keeps its own files in that folder`);
       if (wanted.file !== undefined && (typeof wanted.file !== 'string' || !isRecordSlug(wanted.file))) {
         throw new Error(`records ${name}: ${String(wanted.file)} is not a file name: ${RECORD_SLUG}`);
+      }
+      if (wanted.format === 'json' && wanted.body !== undefined) {
+        throw new Error(`records ${name}: a JSON collection has no body field, because the file is the whole record`);
+      }
+      if (wanted.format === 'json' && wanted.file !== undefined) {
+        throw new Error(`records ${name}: a JSON collection has no file of its own, because the record is the file`);
       }
       let one = opened.get(name);
       if (one === undefined) {

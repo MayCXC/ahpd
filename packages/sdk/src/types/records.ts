@@ -30,11 +30,20 @@ export interface RecordChange {
 /** How a plugin opens one collection. */
 export interface CollectionOptions {
   /**
+   * How a record is written as a file: as Markdown, or as JSON.
+   *
+   * `md` unless this names `json`. A store that writes files keeps a Markdown
+   * record at `<name>/<id>.md`, with the body field below the frontmatter, and
+   * a JSON record at `<name>/<id>.json`, which is the whole record. A JSON
+   * collection has no body field and no file of its own.
+   */
+  format?: 'md' | 'json';
+  /**
    * The field that holds a record's long text, if it has one.
    *
    * A store that writes a record as a file a person edits keeps this field as
    * the file's body rather than as one of its fields. A store that keeps rows
-   * reads it as any other field.
+   * reads it as any other field. A JSON collection has no body field.
    */
   body?: string;
   /**
@@ -43,7 +52,7 @@ export interface CollectionOptions {
    * A store that writes files keeps record `<id>` at `<name>/<id>/<file>.md`
    * when this is named, and at `<name>/<id>.md` when it is not. A plugin uses
    * it to give a folder of a record's own to the data that belongs beside it,
-   * so one delete takes all of it.
+   * so one delete takes all of it. A JSON collection has no file of its own.
    */
   file?: string;
 }
