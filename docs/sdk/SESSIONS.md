@@ -70,6 +70,8 @@ A row also carries `changes`, the diff stat a client draws beside it: how many f
 
 Paging is by `limit` and `cursor`. A `limit` is capped at 500 however many were asked for. No `limit` means the host chooses, and the size this host chooses is the whole catalogue, up to a thousand rows: neither client that connects here reads `nextCursor`, so a smaller default would be a catalogue silently cut down to it. A catalogue past a thousand is written to the log, because that is the one case a client cannot see for itself. A cursor is the last row served, encoded, and is opaque by contract; one this host did not issue is refused with `-32602` rather than guessed at, since a cursor whose row has been disposed would otherwise resume from the top and the client would page for ever.
 
+A caller that wants only its own sessions sends `_meta: {'ahpd.owner': 'me'}`. The rows are kept to those whose owner is that connection's principal, as `user:<id>` or `plugin:<name>`. That happens before the cursor and the limit apply, so a page is a page of the caller's own. A connection with no principal owns nothing, and the filter answers no rows. Any other value is refused with `-32602`, the way a wrong param is.
+
 ## Configuration keys
 
 A session's config is the backend's schema, plus what this host answers, plus what a plugin contributed. The values are read back on the session, so a client draws its controls from the session and not from its own memory of what it sent.

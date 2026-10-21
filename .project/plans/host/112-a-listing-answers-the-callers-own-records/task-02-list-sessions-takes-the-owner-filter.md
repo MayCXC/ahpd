@@ -1,6 +1,6 @@
 ---
 title: listSessions takes the owner filter
-status: todo
+status: implemented
 depends: [task-01-one-helper-reads-the-owner-filter.md]
 layer: sdk
 refs:
@@ -39,7 +39,7 @@ Paging works on the filtered rows.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `listSessions` reads `_meta['ahpd.owner']` and hands it to `ownerFilter` with `connection.principal`. It keeps the rows whose `SessionStore.owner` equals the answer before the cursor and the limit. A value that is not `me` reaches the caller as INVALID_PARAMS. `packages/sdk/test/sessions.test.ts` has the two-people case, the no-`_meta` case, the cursor case and the `team:x` refusal, and `docs/sdk/SESSIONS.md` says what the filter does.
+- **Next action:** task-03, step 1.
 - **Open questions:** none.
-- **Watch out for:** a kept row of a session that is not live may have no owner in the store. That row does not match the filter.
+- **Watch out for:** a kept row of a session that is not live may have no owner in the store. That row does not match the filter. The filter reads `connection.principal`, not `ownerFor(connection)`, so a root connection owns nothing and a host with no users answers no rows.

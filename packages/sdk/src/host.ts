@@ -44,12 +44,12 @@ import type { Peer } from './types/rpc.js';
 import type { Owner } from './types/usage.js';
 import type { StoredWorktree } from './types/sessions.js';
 import type { ChannelSubscriber, PublishOptions } from './types/plugin.js';
-import { bag, ownerOfPrincipal } from './utils/values.js';
+import { bag, ownerFilter, ownerOfPrincipal } from './utils/values.js';
 import { reason } from './host/common.js';
 import { clientQueueBytes, replayBytes } from './host/limits.js';
 import {
-  ROOT, isRootChannel, AUTOMATIONS, MARKS, spaceOf, servedIn, methodIn, baseOf, URI_KEYS, named,
-  chatUriFor, subagentChatUri, WORKER_ACTIONS, toolCallOfSubagentChat, isAutomations,
+  ROOT, isRootChannel, AUTOMATIONS, AUTOMATIONS_ME, MARKS, spaceOf, servedIn, methodIn, baseOf, URI_KEYS, named,
+  chatUriFor, subagentChatUri, WORKER_ACTIONS, toolCallOfSubagentChat, isAutomations, automationOwner,
 } from './host/channels.js';
 import type { Space } from './host/channels.js';
 import { DELTA_WINDOW_MS, merger } from './host/deltas.js';
@@ -747,6 +747,30 @@ export function createHost(options: HostOptions): Host {
     ctx.stirred(channel, action);
     if (deltas.push(channel, action, origin)) return;
     emit(channel, action, origin);
+    /*
+     * The catalogue narrowed to the caller's own is a channel of its own.
+     *
+     * A client that asked for its own automations holds state under that URI,
+     * and the plain catalogue's action is on a channel it is not watching. So
+     * an action about one automation goes out again under the filtered name,
+     * with a `visible` test that answers each subscriber for itself - at this
+     * send and at every replay, the way an audience on a plugin channel does.
+     *
+     * A removal carries an id and no entry, and the store has already deleted
+     * it by the time this runs, so its owner is not knowable here. It goes to
+     * every filtered subscription: dropping it would leave an owner holding a
+     * row nothing will now take away, while an id alone is not the record.
+     */
+    if (channel === AUTOMATIONS && (action.type === 'automation/set' || action.type === 'automation/removed')) {
+      const entry = action.type === 'automation/set' ? bag(action.automation) : undefined;
+      emit(AUTOMATIONS_ME, action, origin, {
+        visible: (reader) => {
+          const owner = ownerFilter('owner=me', reader);
+          if (owner === undefined || owner === null) return false;
+          return entry === undefined || automationOwner(entry) === owner;
+        },
+      });
+    }
   };
   /**
    * A session's customizations as a client reads them: a backend's, then its

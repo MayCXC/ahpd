@@ -1,6 +1,8 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { idOf } from '../sessions/catalog.js';
+import { bag, ownerOf } from '../utils/values.js';
 import type { ServedChannel, ServedMethod } from '../types/plugin.js';
+import type { Owner } from '../types/usage.js';
 
 export const ROOT = 'ahp-root://';
 /**
@@ -13,6 +15,8 @@ export const ROOT = 'ahp-root://';
 export const isRootChannel = (channel: string): boolean => channel === ROOT || channel.startsWith('ahp-root:');
 /** The automation catalogue, which belongs to the host rather than to a session. */
 export const AUTOMATIONS = 'ahp-automations://';
+/** The catalogue narrowed to the caller's own automations, which is the one filter there is. */
+export const AUTOMATIONS_ME = `${AUTOMATIONS}?owner=me`;
 
 /** What a session's annotations channel is called, under the session's own URI. */
 export const MARKS = '/annotations';
@@ -177,3 +181,32 @@ export const toolCallOfSubagentChat = (uri: string): string | undefined => {
  * a client is answered under the spelling it used, the way a chat is.
  */
 export const isAutomations = (channel: string): boolean => channel.startsWith('ahp-automations:');
+
+/** The text after a channel URI's `?`, or the empty string when it carries none. */
+export const queryOf = (channel: string): string => {
+  const at = channel.indexOf('?');
+  return at < 0 ? '' : channel.slice(at + 1);
+};
+
+/**
+ * The catalogue a subscription names, with the one filter it may carry.
+ *
+ * `owner` is the only key that decides anything. A URI with no `owner` is the
+ * plain catalogue, whatever else its query says. Any value is kept in the name
+ * so the snapshot refuses it as a wrong param rather than answering the whole
+ * catalogue to a filter nobody meant.
+ */
+export const automationsChannel = (channel: string): string => {
+  if (!isAutomations(channel)) return channel;
+  const asked = new URLSearchParams(queryOf(channel)).get('owner');
+  return asked === null ? AUTOMATIONS : `${AUTOMATIONS}?owner=${encodeURIComponent(asked)}`;
+};
+
+/**
+ * Whose an automation entry is, as the entry carries it.
+ *
+ * Read from `_meta`, where the store writes `ahpd.owner` because the
+ * protocol's `AutomationEntry` declares no owner of its own. An automation
+ * nobody owns answers nothing, which matches no filter.
+ */
+export const automationOwner = (entry: unknown): Owner | undefined => ownerOf(bag(bag(entry)._meta)['ahpd.owner']);

@@ -1,6 +1,6 @@
 ---
 title: One helper reads the owner filter
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -37,7 +37,7 @@ Every listing in this plan and in plugin 52 uses it, so the filter reads the sam
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `ownerFilter(query, reader)` sits beside `ownerOfPrincipal` in `packages/sdk/src/utils/values.ts`. It reads `owner` with `URLSearchParams`. No key answers `undefined`, `me` answers `ownerOfPrincipal(reader)`, `me` with no reader answers `null`, and any other value throws `RpcError(INVALID_PARAMS)`. It is exported from `packages/sdk/src/index.ts`, and `packages/sdk/test/owner-filter.test.ts` has one case per step 2 to 5.
+- **Next action:** task-02, step 1.
 - **Open questions:** none.
-- **Watch out for:** a principal from a plugin gives `plugin:<name>`. The filter matches it like any other owner.
+- **Watch out for:** a principal from a plugin gives `plugin:<name>`. The filter matches it like any other owner. `null` is the value that matches no record. A caller must branch on `filter !== undefined` before comparing owners, or two `undefined` owners would match a request that filtered nothing.

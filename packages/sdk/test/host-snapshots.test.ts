@@ -8,10 +8,53 @@ import {
   resetSdk, actions, claude, createHost, emit, hello, machine, open, peer,
  sdk, serving, sessionQueries, settle, running,
 } from './support/host.js';
+import type { Principal } from '../src/types/users.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
 
 beforeEach(resetSdk);
+
+/** The catalogue as one person reads it, which is the only filter it takes. */
+const MINE = 'ahp-automations://?owner=me';
+
+/** One person, with nothing to check against: a filter reads the id alone. */
+const person = (id: string): Principal => ({ id, roles: [], can: () => true, memberships: [], teams: [] });
+
+const AUTOMATION_DEFINITION = {
+  title: 'Nightly',
+  enabled: true,
+  message: { text: 'review what changed today' },
+  session: { provider: 'echo', workingDirectories: ['file:///tmp'] },
+  triggers: [],
+};
+
+/**
+ * A host whose catalogue has one automation each for ana and ben, with both
+ * of them subscribed to the filtered catalogue.
+ */
+async function twoAutomationOwners() {
+  const { memoryAutomations } = await import('../src/automations/automations.js');
+  const store = memoryAutomations();
+  store.create('ahp-automation:/ana-nightly', AUTOMATION_DEFINITION, 'user:ana');
+  store.create('ahp-automation:/ben-nightly', AUTOMATION_DEFINITION, 'user:ben');
+  const host = createHost({
+    path: '/home/softov',
+    agents: [claude({ paths: ['/home/softov'] })],
+    automations: store,
+  });
+  const anaPeer = peer();
+  const benPeer = peer();
+  const ana = host.accept(anaPeer, person('ana'));
+  const ben = host.accept(benPeer, person('ben'));
+  await ana.handle(hello(['0.9.0'], { clientId: 'ana' }));
+  await ben.handle(hello(['0.9.0'], { clientId: 'ben' }));
+  await ana.handle({ method: 'subscribe', params: { channel: MINE } });
+  await ben.handle({ method: 'subscribe', params: { channel: MINE } });
+  return { store, ana, ben, anaPeer, benPeer };
+}
+
+/** The catalogue as a snapshot answers it. */
+type Catalogue = { snapshot: { state: { entries: { resource: string }[] } } };
 
 describe('what it says it is doing', () => {
   it('names the tool, and stops naming it when the turn ends', async () => {
@@ -416,6 +459,44 @@ describe('the fields a client reads by name', () => {
     expect(with_.automations?.runCancellation).toEqual({});
     // The number is VS Code's, and the store keeps exactly it.
     expect(with_.automations?.runHistoryLimit).toBe(50);
+  });
+
+  it('answers the filtered automations catalogue with only the caller\'s own', async () => {
+    const { ana, ben } = await twoAutomationOwners();
+    const mine = await ana.handle({ method: 'subscribe', params: { channel: MINE } }) as Catalogue;
+    expect(mine.snapshot.state.entries.map((one) => one.resource)).toEqual(['ahp-automation:/ana-nightly']);
+    const theirs = await ben.handle({ method: 'subscribe', params: { channel: MINE } }) as Catalogue;
+    expect(theirs.snapshot.state.entries.map((one) => one.resource)).toEqual(['ahp-automation:/ben-nightly']);
+    // The plain catalogue is everybody's, as it was before there was a filter.
+    const all = await ana.handle({ method: 'subscribe', params: { channel: 'ahp-automations://' } }) as Catalogue;
+    expect(all.snapshot.state.entries.map((one) => one.resource).sort())
+      .toEqual(['ahp-automation:/ana-nightly', 'ahp-automation:/ben-nightly']);
+  });
+
+  it('refuses an automations owner filter that is not me', async () => {
+    const { ana } = await twoAutomationOwners();
+    await expect(ana.handle({ method: 'subscribe', params: { channel: 'ahp-automations://?owner=team:x' } }))
+      .rejects.toMatchObject({ code: -32602 });
+  });
+
+  it('sends a moved automation to the filtered subscription it belongs to, and to no other', async () => {
+    const { store, anaPeer, benPeer } = await twoAutomationOwners();
+    anaPeer.notes.length = 0;
+    benPeer.notes.length = 0;
+    store.update('ahp-automation:/ana-nightly', { title: 'Changed' });
+    await settle();
+    expect(actions(anaPeer, MINE).some((one) => one.action.type === 'automation/set')).toBe(true);
+    expect(actions(benPeer, MINE).some((one) => one.action.type === 'automation/set')).toBe(false);
+  });
+
+  it('sends a removal to every filtered subscription, because an id alone is not the record', async () => {
+    const { store, anaPeer, benPeer } = await twoAutomationOwners();
+    anaPeer.notes.length = 0;
+    benPeer.notes.length = 0;
+    store.remove('ahp-automation:/ana-nightly');
+    await settle();
+    expect(actions(anaPeer, MINE).some((one) => one.action.type === 'automation/removed')).toBe(true);
+    expect(actions(benPeer, MINE).some((one) => one.action.type === 'automation/removed')).toBe(true);
   });
 
   it('echoes the clientSeq the dispatch carried, and nothing on its own actions', async () => {

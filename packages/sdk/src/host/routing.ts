@@ -3,7 +3,7 @@ import { idOf, uriFor } from '../sessions/catalog.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 import {
-  ROOT, AUTOMATIONS, MARKS, isRootChannel, isAutomations, schemeOf, spaceOf, baseOf,
+  ROOT, MARKS, isRootChannel, isAutomations, automationsChannel, schemeOf, spaceOf, baseOf,
   chatUriFor, subagentChatUri, toolCallOfSubagentChat, URI_KEYS,
 } from './channels.js';
 import type { ChannelKind, Space } from './channels.js';
@@ -199,7 +199,7 @@ export function createRouting(ctx: HostContext): Routing {
     // off is: a client that opened the row under its own spelling dispatches
     // annotations under that spelling too.
     if (channel.endsWith(MARKS)) return `${heldAs(channel.slice(0, -MARKS.length))}${MARKS}`;
-    if (isAutomations(channel)) return AUTOMATIONS;
+    if (isAutomations(channel)) return automationsChannel(channel);
     if (isRootChannel(channel)) return ROOT;
     return sessionOfChat(channel) !== undefined ? chatOf(channel) : heldAs(channel);
   };

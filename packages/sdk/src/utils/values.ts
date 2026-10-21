@@ -3,10 +3,11 @@
  *
  * Each reads a value that arrived untyped - a JSON body, a plugin's frame, a
  * field off a store - and answers what it holds or what to fall back on. A
- * plugin reaches them through `@ahpd/sdk`, and nothing in this file imports a
- * runtime, which is what keeps the sdk taking no dependency.
+ * plugin reaches them through `@ahpd/sdk`, and nothing here imports a
+ * third-party runtime, which is what keeps the sdk taking no dependency.
  */
 
+import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import type { Bag } from '../types/common.js';
 import type { Owner } from '../types/usage.js';
 import type { Principal } from '../types/users.js';
@@ -63,3 +64,21 @@ export const ownerOf = (value: unknown): Owner | undefined =>
  */
 export const ownerOfPrincipal = (principal: Pick<Principal, 'id' | 'plugin'>): Owner =>
   (principal.plugin !== undefined ? `plugin:${principal.plugin}` : `user:${principal.id}`);
+
+/**
+ * The owner a listing narrows itself to, read off the query it was asked with.
+ *
+ * No `owner` key is no filter, and nothing here narrows anything. `owner=me` is
+ * the caller's own records, which needs a caller: a connection with no reader
+ * filters to `null`, a value no record can carry, so it answers nothing rather
+ * than everything. Any other value is refused the way a wrong param is.
+ */
+export const ownerFilter = (
+  query: string,
+  reader?: Pick<Principal, 'id' | 'plugin'>,
+): Owner | null | undefined => {
+  const asked = new URLSearchParams(query).get('owner');
+  if (asked === null) return undefined;
+  if (asked !== 'me') throw new RpcError(INVALID_PARAMS, 'owner must be me');
+  return reader === undefined ? null : ownerOfPrincipal(reader);
+};
