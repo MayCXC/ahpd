@@ -235,8 +235,9 @@ Reference: [00-host.md](host/00-host.md)
 | [108 - A person mints tokens of their own](host/108-a-person-mints-tokens-of-their-own/plan.md) | medium | active 2026-10-20; tasks 01 to 07 implemented; [checks by hand](../pending/host-108-token-checks.md) pending | - | - |
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented; [Ember check](../pending/host-109-ember-checks.md) pending | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
+| [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | planned 2026-10-20 | - | - |
 
-Next free number in `host`: `97`.
+Next free number in `host`: `112`.
 
 ## claude
 
