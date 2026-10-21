@@ -6,13 +6,15 @@
  * not cover fails that plugin's load, so a load with no contract problem is
  * the list being complete.
  *
- * Each package is loaded by its directory, with the entry its own manifest
- * names - the built `dist`, which `pnpm -s build` produces before the tests.
+ * Each package is loaded as a copy of its package.json whose entry re-exports
+ * its `src`, because the tests run before `pnpm build` and the loader refuses
+ * an entry outside the package.
  */
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { loadPlugins } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -50,13 +52,25 @@ const OPTIONS: Record<string, Record<string, unknown>> = {
 
 const base = (configDir: string): HostOptions => ({ path: configDir, agents: [echo({ path: configDir })] });
 
+/** A package in `dir` with the shipped package.json, whose entry is the shipped `src`. */
+const sourcePackage = (packageName: string, dir: string): string => {
+  const shipped = join(repo, 'packages', packageName);
+  const json = JSON.parse(readFileSync(join(shipped, 'package.json'), 'utf8')) as Record<string, any>;
+  json['ahpd'] = { ...json['ahpd'], entry: './index.ts' };
+  delete json['exports'];
+  delete json['main'];
+  writeFileSync(join(dir, 'package.json'), JSON.stringify(json));
+  writeFileSync(join(dir, 'index.ts'), `export * from ${JSON.stringify(pathToFileURL(join(shipped, 'src/index.ts')).href)};\n`);
+  return dir;
+};
+
 describe('every shipped plugin declares its contracts', () => {
   it.each(SHIPPED)('%s loads with no contract problem', async (packageName) => {
     const configDir = mkdtempSync(join(tmpdir(), 'ahpd-contracts-'));
     try {
       const options = OPTIONS[packageName];
       const spec: PluginSpec = {
-        name: join(repo, 'packages', packageName),
+        name: sourcePackage(packageName, mkdtempSync(join(configDir, 'package-'))),
         ...(options === undefined ? {} : { options }),
       };
       const { loaded, problems } = await loadPlugins([spec], {
