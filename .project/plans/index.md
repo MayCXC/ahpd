@@ -60,8 +60,10 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | built 2026-10-19; merged in PR #22; [implemented.md](daemon/34-the-api-and-proxy-keys-get-their-own-names/implemented.md) | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, 0 done; checks in [pending/update-checks.md](../pending/update-checks.md) | daemon 09, daemon 13 | - |
 | [36 - The install script updates the ahpd it finds](daemon/36-the-install-script-updates-the-ahpd-it-finds/plan.md) | high | active 2026-10-20; tasks 01 and 02 implemented | daemon 27 | - |
+| [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | planned 2026-10-21 | - | - |
+| [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | planned 2026-10-21 | - | - |
 
-Next free number in `daemon`: `37`.
+Next free number in `daemon`: `39`.
 
 ## host
 
@@ -237,8 +239,9 @@ Reference: [00-host.md](host/00-host.md)
 | [109 - A session outside the paths stays listed](host/109-a-session-outside-the-paths-stays-listed/plan.md) | high | active 2026-10-18; task 01 implemented; [Ember check](../pending/host-109-ember-checks.md) pending | - | - |
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
 | [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | implemented 2026-10-20 | - | - |
+| [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | planned 2026-10-21 | - | plugin 52 |
 
-Next free number in `host`: `112`.
+Next free number in `host`: `113`.
 
 ## claude
 
@@ -376,8 +379,9 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p11 - A bot has a private session](plugin/52-p11-a-bot-has-a-private-session/plan.md) | medium | draft 2026-10-18; tasks not written | 52 p9 | 52 p4 |
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
 | [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
+| [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | planned 2026-10-21 | host 112 | - |
 
-Next free number in `plugin`: `52`.
+Next free number in `plugin`: `53`.
 
 ## container
 
