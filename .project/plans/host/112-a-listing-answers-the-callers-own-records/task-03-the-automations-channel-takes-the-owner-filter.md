@@ -1,6 +1,6 @@
 ---
 title: The automations channel takes the owner filter
-status: todo
+status: implemented
 depends: [task-01-one-helper-reads-the-owner-filter.md]
 layer: sdk
 refs:
@@ -39,7 +39,7 @@ The actions after the snapshot reach that subscription only for those automation
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `automationsChannel` in `channels.ts` keeps the one filter a catalogue URI may carry. `meantBy` sends every spelling of the filtered channel to `ahp-automations://?owner=me`. The snapshot filters its entries with `ownerFilter(queryOf(channel), connection?.principal)`. Any value other than `me` reaches the caller as INVALID_PARAMS. `dispatch` sends `automation/set` and `automation/removed` again under the filtered name, with a `visible` test that answers each subscriber for itself. `host-snapshots.test.ts` has the two-people case, the live `automation/set` case, the removal case and the refusal, and `docs/sdk/AUTOMATIONS.md` says what the filter does.
+- **Next action:** task-04, step 1.
 - **Open questions:** none.
-- **Watch out for:** a client keys its state by the channel URI. The filtered channel is a second URI, so it holds its own state.
+- **Watch out for:** the task names `snapshots.ts` and `channels.ts`. The design needed two more files. `routing.ts` makes the filtered URI one normalized channel for the snapshot and the replay. `host.ts` is where `dispatch` is, and where the fan-out runs. A removal carries only an id once the store deleted the entry, so its owner is unknown and it goes to every filtered subscription. Delivering it nowhere would leave a ghost row.

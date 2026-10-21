@@ -1377,3 +1377,87 @@ it('says a write failed rather than throwing out of a flag being set', async () 
   // And it is still usable: the bit is in memory even though the file is not.
   expect(store.flags('a')).toBe(ARCHIVED);
 });
+
+/**
+ * A host on an empty store, with one session each for ana and ben.
+ *
+ * Two connections on one host, because that is where a catalogue and the
+ * owners behind its rows meet: each person starts a session, and the owner is
+ * the principal the connection was accepted as. Ana starts two, so a filtered
+ * page can be asked for a second page.
+ */
+async function twoOwners() {
+  const ben: Principal = { id: 'ben', roles: [], can: () => true, memberships: ['backend'], teams: [{ id: 'backend' }] };
+  const host = createHost({
+    path: root,
+    agents: [echo({ path: root, pace: 0 })],
+    sessions: memorySessions(),
+    users: people(),
+    hostName: HOST,
+  });
+  const anaClient = host.accept(peer(), ana);
+  const benClient = host.accept(peer(), ben);
+  await anaClient.handle({
+    method: 'initialize',
+    params: { clientId: 'ana', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  });
+  await benClient.handle({
+    method: 'initialize',
+    params: { clientId: 'ben', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] },
+  });
+  await anaClient.handle({ method: 'createSession', params: { channel: 'ahp-session:/ana-one', provider: 'echo' } });
+  await anaClient.handle({ method: 'createSession', params: { channel: 'ahp-session:/ana-two', provider: 'echo' } });
+  await benClient.handle({ method: 'createSession', params: { channel: 'ahp-session:/ben-one', provider: 'echo' } });
+  return { anaClient, benClient };
+}
+
+/** What a listing answered, as a client reads it. */
+type Listing = { items: { resource: string }[]; nextCursor?: string };
+
+it('answers only the sessions the caller owns, when it asks for its own', async () => {
+  const { anaClient, benClient } = await twoOwners();
+  const mine = await anaClient.handle({
+    method: 'listSessions',
+    params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
+  }) as Listing;
+  expect(mine.items.map((row) => row.resource).sort()).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+  const theirs = await benClient.handle({
+    method: 'listSessions',
+    params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' } },
+  }) as Listing;
+  expect(theirs.items.map((row) => row.resource)).toEqual(['echo:/ben-one']);
+});
+
+it('answers every session when no owner is asked for', async () => {
+  const { anaClient } = await twoOwners();
+  const listed = await anaClient.handle({ method: 'listSessions', params: { channel: ROOT } }) as Listing;
+  expect(listed.items.map((row) => row.resource).sort())
+    .toEqual(['echo:/ana-one', 'echo:/ana-two', 'echo:/ben-one']);
+});
+
+it('pages a filtered listing on the filtered rows', async () => {
+  const { anaClient } = await twoOwners();
+  const first = await anaClient.handle({
+    method: 'listSessions',
+    params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' }, limit: 1 },
+  }) as Listing;
+  expect(first.items).toHaveLength(1);
+  expect(first.nextCursor).toBeDefined();
+  const second = await anaClient.handle({
+    method: 'listSessions',
+    params: { channel: ROOT, _meta: { 'ahpd.owner': 'me' }, limit: 1, cursor: first.nextCursor },
+  }) as Listing;
+  expect(second.items).toHaveLength(1);
+  // The second page is the other row she owns, and it is the last one.
+  expect(second.nextCursor).toBeUndefined();
+  const seen = [...first.items, ...second.items].map((row) => row.resource).sort();
+  expect(seen).toEqual(['echo:/ana-one', 'echo:/ana-two']);
+});
+
+it('refuses an owner filter that is not me', async () => {
+  const { anaClient } = await twoOwners();
+  await expect(anaClient.handle({
+    method: 'listSessions',
+    params: { channel: ROOT, _meta: { 'ahpd.owner': 'team:x' } },
+  })).rejects.toMatchObject({ code: -32602 });
+});

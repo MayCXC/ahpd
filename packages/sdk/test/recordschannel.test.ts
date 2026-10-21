@@ -6,6 +6,7 @@ import { holds } from '../src/access/users.js';
 import type { Records } from '../src/resources/records.js';
 import type { ChannelHandle, ChannelSubscriber, PublishOptions } from '../src/types/plugin.js';
 import type { Grant, Principal } from '../src/types/users.js';
+import type { Owner } from '../src/types/usage.js';
 
 /*
  * A records channel over an in-memory store: each case subscribes readers
@@ -16,6 +17,8 @@ import type { Grant, Principal } from '../src/types/users.js';
 
 const SCHEME = 'x-ahpd-teams';
 const URI = `${SCHEME}://`;
+/** The list as one person reads it, which is the only filter a records channel takes. */
+const FILTERED = `${URI}?owner=me`;
 
 /** A store of teams, each `{ title }`, that a case edits in place. */
 const store = (rows: Record<string, Record<string, unknown>> = {}): Records & { rows: Record<string, Record<string, unknown>> } => ({
@@ -60,6 +63,25 @@ const fakeHandle = (subscribers: ChannelSubscriber[]) => {
   /** What one client was sent, as `type id` lines. */
   const of = (client: string): string[] => heard
     .filter((one) => one.client === client)
+    .map((one) => `${String(one.action.type).slice(SCHEME.length + 1)} ${String(one.action.id)}`);
+  return { handle, heard, of };
+};
+
+/**
+ * A handle that keeps subscribers per channel URI, which a filtered channel
+ * needs: the plain list and the narrowed one are two channels on one store.
+ */
+const filteredHandle = (byUri: Record<string, ChannelSubscriber[]>) => {
+  const heard: { uri: string; client: string | undefined; action: Record<string, unknown> }[] = [];
+  const handle: ChannelHandle = {
+    publish: (uri, action, options: PublishOptions = {}) => {
+      heard.push({ uri, client: options.to, action });
+    },
+    subscribers: (uri) => byUri[uri] ?? [],
+  };
+  /** What one client was sent on one channel, as `type id` lines. */
+  const of = (uri: string, client: string): string[] => heard
+    .filter((one) => one.uri === uri && one.client === client)
     .map((one) => `${String(one.action.type).slice(SCHEME.length + 1)} ${String(one.action.id)}`);
   return { handle, heard, of };
 };
@@ -307,6 +329,98 @@ it('keeps two people on one client id apart, and tests the person at each send',
   teams.rows.dev = { id: 'dev' };
   await list.refresh();
   expect(sent).toHaveLength(3);
+});
+
+it('answers a filtered channel with the caller\'s own records, in the snapshot and in each diff', async () => {
+  const teams = store({ ana: { id: 'ana', owner: 'user:ana' }, ben: { id: 'ben', owner: 'user:ben' } });
+  const list = recordsChannel(SCHEME, teams, {
+    grant: 'team:read',
+    ownerOf: (_id, record) => record.owner as Owner,
+  });
+  const ana = person('ana', ['team:read']);
+  const ben = person('ben', ['team:read']);
+  const { handle, of } = filteredHandle({
+    [FILTERED]: [{ client: 'ana', reader: ana }, { client: 'ben', reader: ben }],
+  });
+  list.bind(handle);
+  expect(await list.channel.snapshot(FILTERED, ana, 'ana')).toEqual({
+    records: [{ id: 'ana', record: { id: 'ana', owner: 'user:ana' } }],
+  });
+  expect(await list.channel.snapshot(FILTERED, ben, 'ben')).toEqual({
+    records: [{ id: 'ben', record: { id: 'ben', owner: 'user:ben' } }],
+  });
+
+  teams.rows.carol = { id: 'carol', owner: 'user:ana' };
+  teams.rows.dave = { id: 'dave', owner: 'user:ben' };
+  await list.refresh();
+  expect(of(FILTERED, 'ana')).toEqual(['added carol']);
+  expect(of(FILTERED, 'ben')).toEqual(['added dave']);
+
+  // A record that changes hands leaves one filtered channel and joins the other.
+  teams.rows.ana = { id: 'ana', owner: 'user:ben' };
+  await list.refresh();
+  expect(of(FILTERED, 'ana')).toContain('removed ana');
+  expect(of(FILTERED, 'ben')).toContain('added ana');
+});
+
+it('keeps the plain list and the filtered one apart on one client', async () => {
+  const teams = store({ ana: { id: 'ana', owner: 'user:ana' }, ben: { id: 'ben', owner: 'user:ben' } });
+  const list = recordsChannel(SCHEME, teams, {
+    grant: 'team:read',
+    ownerOf: (_id, record) => record.owner as Owner,
+  });
+  const ana = person('ana', ['team:read']);
+  const { handle, of } = filteredHandle({
+    [URI]: [{ client: 'ana', reader: ana }],
+    [FILTERED]: [{ client: 'ana', reader: ana }],
+  });
+  list.bind(handle);
+  expect(await list.channel.snapshot(URI, ana, 'ana')).toMatchObject({ records: [{ id: 'ana' }, { id: 'ben' }] });
+  expect(await list.channel.snapshot(FILTERED, ana, 'ana')).toMatchObject({ records: [{ id: 'ana' }] });
+
+  teams.rows.carol = { id: 'carol', owner: 'user:ben' };
+  await list.refresh();
+  // The same person, on the same client id, holds two states: one whole, one hers.
+  expect(of(URI, 'ana')).toEqual(['added carol']);
+  expect(of(FILTERED, 'ana')).toEqual([]);
+});
+
+it('narrows only what the reader may already read', async () => {
+  const teams = store({ mine: { id: 'mine', owner: 'user:ana' }, secret: { id: 'secret', owner: 'user:ana' } });
+  const list = recordsChannel(SCHEME, teams, {
+    grant: 'team:read',
+    mayRead: (id) => id === 'mine',
+    ownerOf: (_id, record) => record.owner as Owner,
+  });
+  // No grant, so `mayRead` decides first and the filter only narrows after it.
+  expect(await list.channel.snapshot(FILTERED, person('ana', []), 'ana')).toMatchObject({ records: [{ id: 'mine' }] });
+});
+
+it('answers no records to a filtered channel with no reader', async () => {
+  const teams = store({ ana: { id: 'ana', owner: 'user:ana' } });
+  const list = recordsChannel(SCHEME, teams, { grant: 'team:read', ownerOf: (_id, record) => record.owner as Owner });
+  expect(await list.channel.snapshot(FILTERED, undefined, 'root')).toEqual({ records: [] });
+});
+
+it('refuses a channel URI with a query when it has no ownerOf', async () => {
+  const list = recordsChannel(SCHEME, store({ ana: { id: 'ana', owner: 'user:ana' } }), { grant: 'team:read' });
+  await expect(list.channel.snapshot(FILTERED, person('ana', ['team:read']), 'ana'))
+    .rejects.toMatchObject({ code: -32001 });
+  expect(await list.channel.authorize?.(FILTERED, person('ana', ['team:read']))).toBe(false);
+});
+
+it('refuses an owner filter that is not me', async () => {
+  const list = recordsChannel(SCHEME, store({}), { grant: 'team:read', ownerOf: (_id, record) => record.owner as Owner });
+  await expect(list.channel.snapshot(`${URI}?owner=team:x`, person('ana', ['team:read']), 'ana'))
+    .rejects.toMatchObject({ code: -32602 });
+});
+
+it('refuses a query with a key beside owner, so a client cannot open a channel URI of its own', async () => {
+  const list = recordsChannel(SCHEME, store({}), { grant: 'team:read', ownerOf: (_id, record) => record.owner as Owner });
+  for (const asked of [`${URI}?owner=me&x=1`, `${URI}?owner=me&owner=me`]) {
+    await expect(list.channel.snapshot(asked, person('ana', ['team:read']), 'ana'))
+      .rejects.toMatchObject({ code: -32001 });
+  }
 });
 
 /** One method's answer, or the RpcError it threw. */

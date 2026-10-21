@@ -1,6 +1,6 @@
 ---
 title: A records channel takes the owner filter
-status: todo
+status: implemented
 depends: [task-01-one-helper-reads-the-owner-filter.md]
 layer: sdk
 refs:
@@ -37,7 +37,7 @@ The `computer` plugin and other plugins get the filter from the sdk, not each on
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `RecordsChannelOptions.ownerOf(id, record)` gives a channel the owner of one record. With it, `<channel>?owner=me` is answered; without it a channel URI with a query is refused as before. `ownerFilter` refuses any other value with INVALID_PARAMS. Reading and `mayRead` come first, and the filter narrows after them, in the snapshot and in each diff. The plain list and a filtered one hold separate state per client and person. `recordsDomain` passes `ownerOf` through. `recordschannel.test.ts` has the two-people snapshot and diff cases, the changed-hands case and the plain-and-filtered separation. It also has the readable-first case, the no-reader case, the no-`ownerOf` refusal and the invalid value.
+- **Next action:** the plan's gates and its index row.
 - **Open questions:** none.
-- **Watch out for:** the name of the test file may differ. Find the records channel cases with `rg -l recordsChannel packages/sdk/test`.
+- **Watch out for:** the task names `records-channel.test.ts`. The file is `packages/sdk/test/recordschannel.test.ts`. A channel with `ownerOf` accepts only a query that names `owner`; any other query stays a channel that does not exist. A filtered subscription publishes on the URI as asked, so the alias machinery is not involved.

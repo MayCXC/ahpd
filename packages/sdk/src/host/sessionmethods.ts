@@ -4,6 +4,7 @@ import { computerId } from '../machines/computers.js';
 import { tail, older } from '../sessions/paging.js';
 import { namesOf } from '../usage/scopes.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
+import { bag, ownerFilter } from '../utils/values.js';
 import { configOf } from '../sessions/remotesession.js';
 import { CLOSING } from './common.js';
 import { chatIdFor, named, ROOT } from './channels.js';
@@ -842,7 +843,26 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
        * found. So a client is answered in the time it takes to sort, however
        * long a pass over the machine's transcripts takes.
        */
-      const rows = await allRows();
+      const every = await allRows();
+      /*
+       * The caller's own rows, where they asked for them.
+       *
+       * One filter and one reading of it wherever a listing takes it: no
+       * `_meta` is every row, `me` is the rows this connection's principal
+       * owns, and a value nobody meant is refused as a wrong param. It is
+       * applied before the cursor and the limit, so a page is a page of the
+       * rows the caller asked for rather than the caller's rows out of a page.
+       */
+      const askedOwner = bag(params._meta)['ahpd.owner'];
+      const owner = ownerFilter(
+        askedOwner === undefined ? '' : `owner=${encodeURIComponent(String(askedOwner))}`,
+        connection.principal,
+      );
+      const rows = owner === undefined
+        ? every
+        : owner === null
+          ? []
+          : every.filter((row) => kept.owner(idOf(row.resource)) === owner);
       /*
        * And a refresh behind that answer.
        *

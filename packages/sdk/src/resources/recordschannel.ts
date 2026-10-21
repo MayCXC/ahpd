@@ -18,9 +18,10 @@
 
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
 import { putRecord, recordsProvider, removeRecord, type Records, type RecordsProvider } from './records.js';
-import type { ChannelHandle, ChannelSubscriber, PluginChannel, PluginMethod, PublishOptions, ServedChannel, ServedMethod } from '../types/plugin.js';
+import type { ChannelHandle, PluginChannel, PluginMethod, PublishOptions, ServedChannel, ServedMethod } from '../types/plugin.js';
 import type { Grant, Principal } from '../types/users.js';
-import { ownerOfPrincipal } from '../utils/values.js';
+import type { Owner } from '../types/usage.js';
+import { ownerFilter, ownerOfPrincipal } from '../utils/values.js';
 
 /** What a records channel reads: every id, and one record by id. */
 export interface RecordsSource {
@@ -36,6 +37,14 @@ export interface RecordsChannelOptions {
   grant: Grant;
   /** Whether a reader without `grant` may read this one record all the same. */
   mayRead?(id: string, reader: Principal): boolean;
+  /**
+   * Whose one record is, when this channel answers `<channel>?owner=me`.
+   *
+   * Given, a filtered subscription is answered with the caller's own records
+   * in its snapshot and in every diff. Without it a channel URI with a query
+   * is refused, as it was before there was a filter.
+   */
+  ownerOf?(id: string, record: Record<string, unknown>): Owner | undefined;
   /** What a client shows for the channel. */
   describe?(): { title: string; description?: string };
   /** Where a refresh that could not read the store is said. */
@@ -62,15 +71,39 @@ export interface RecordsChannel {
 
 export function recordsChannel(scheme: string, source: RecordsSource, options: RecordsChannelOptions): RecordsChannel {
   const uri = `${scheme}://`;
-  /** The ids sent to each reader, by `readerKey`. */
+  /** The ids sent to each reader of each channel URI, by `stateKey`. */
   const sent = new Map<string, Set<string>>();
   /** The JSON of the last record sent for each id. */
   const last = new Map<string, string>();
+  /** Every channel URI a subscription has been answered on. */
+  const known = new Set<string>([uri]);
   let handle: ChannelHandle | undefined;
   /** The last read of the store queued, which the next one waits for. */
   let tail: Promise<void> = Promise.resolve();
   /** The refresh queued and not yet started, which a further call shares. */
   let pending: Promise<void> | undefined;
+
+  /**
+   * The query a channel URI carries, or nothing when it carries none this
+   * channel answers.
+   *
+   * A query is taken only when `ownerOf` is given and `owner` is its one key:
+   * that is the one filter a records channel has. Any other query is a
+   * channel that does not exist, exactly as it was before there was a filter,
+   * so a client cannot open a new URI by adding keys to it.
+   */
+  const queryOf = (asked: string): string | undefined => {
+    if (asked === uri || options.ownerOf === undefined || !asked.startsWith(`${uri}?`)) return undefined;
+    const query = asked.slice(uri.length + 1);
+    const keys = [...new URLSearchParams(query).keys()];
+    return keys.length === 1 && keys[0] === 'owner' ? query : undefined;
+  };
+
+  /** The owner a channel URI narrows itself to, or none for the plain list. */
+  const narrowedTo = (asked: string, reader: Principal | undefined): Owner | null | undefined => {
+    const query = queryOf(asked);
+    return query === undefined ? undefined : ownerFilter(query, reader);
+  };
 
   /**
    * Whether this reader sees this record.
@@ -80,6 +113,36 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
    */
   const readable = (id: string, reader: Principal | undefined): boolean =>
     reader === undefined || reader.can(options.grant) || options.mayRead?.(id, reader) === true;
+
+  /**
+   * Whether one reader sees one record on one channel URI.
+   *
+   * Reading comes first: a filter narrows what this reader may already read,
+   * and it never opens a record the grant and `mayRead` keep out.
+   */
+  const shownTo = (asked: string, reader: Principal | undefined, entry: RecordEntry): boolean => {
+    if (!readable(entry.id, reader)) return false;
+    const owner = narrowedTo(asked, reader);
+    if (owner === undefined) return true;
+    if (owner === null) return false;
+    return options.ownerOf?.(entry.id, entry.record) === owner;
+  };
+
+  /** One subscription: the URI it was asked on, and who is on it. */
+  interface Held {
+    asked: string;
+    client: string;
+    reader: Principal | undefined;
+  }
+
+  /** Every subscription this channel holds, on every URI it answers. */
+  const watching = (): Held[] => {
+    const held: Held[] = [];
+    for (const asked of known) for (const one of handle?.subscribers(asked) ?? []) {
+      held.push({ asked, client: one.client, reader: one.reader });
+    }
+    return held;
+  };
 
   /** Every record the store holds now, in the order it lists them. */
   const every = async (): Promise<RecordEntry[]> => {
@@ -99,55 +162,70 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
   };
 
   /**
-   * Send one action to one reader on one client.
+   * Send one action to one reader on one client, on one channel URI.
    *
-   * `to` names the client, and `visible` names the reader: two people on one
-   * client id each hold their own state, and an action is seen only by a
-   * connection that is that person now and may still read the record.
+   * `to` names the client, and `visible` names the reader and the filter: two
+   * people on one client id each hold their own state, and an action is seen
+   * only by a connection that is that person now, may still read the record,
+   * and asked for a channel that record belongs on.
    */
-  const send = (client: string, reader: Principal | undefined, action: { type: string; id: string } & Record<string, unknown>): void => {
+  const send = (
+    asked: string,
+    client: string,
+    reader: Principal | undefined,
+    action: { type: string; id: string } & Record<string, unknown>,
+  ): void => {
     const key = readerKey(client, reader);
     const removal = action.type === `${scheme}/removed`;
+    const record = action.record as Record<string, unknown> | undefined;
     const audience: PublishOptions = {
       to: client,
-      visible: (principal, seen) => readerKey(seen, principal) === key && (removal || readable(action.id, principal)),
+      visible: (principal, seen) => {
+        if (readerKey(seen, principal) !== key) return false;
+        if (removal) return true;
+        if (!readable(action.id, principal)) return false;
+        const owner = narrowedTo(asked, principal);
+        if (owner === undefined) return true;
+        if (owner === null) return false;
+        return record !== undefined && options.ownerOf?.(action.id, record) === owner;
+      },
     };
-    handle?.publish(uri, action, audience);
+    handle?.publish(asked, action, audience);
   };
 
-  /** Update `last` from `now`, and send each subscriber but `skip` what it gained, changed and lost. */
-  const apply = (subscribers: ChannelSubscriber[], now: RecordEntry[], skip?: string): void => {
+  /** Update `last` from `now`, and send each waiting subscription but `skip` what it gained, changed and lost. */
+  const apply = (held: Held[], now: RecordEntry[], skip?: string): void => {
     const changed = new Set<string>();
-    const held = new Set<string>();
+    const kept = new Set<string>();
     for (const { id, record } of now) {
-      held.add(id);
+      kept.add(id);
       const text = JSON.stringify(record);
       const was = last.get(id);
       if (was !== undefined && was !== text) changed.add(id);
       last.set(id, text);
     }
-    for (const id of [...last.keys()]) if (!held.has(id)) last.delete(id);
-    for (const { client, reader } of subscribers) {
-      const key = readerKey(client, reader);
+    for (const id of [...last.keys()]) if (!kept.has(id)) last.delete(id);
+    for (const { asked, client, reader } of held) {
+      const key = stateKey(asked, client, reader);
       if (key === skip) continue;
-      const mine = new Set(now.filter((one) => readable(one.id, reader)).map((one) => one.id));
+      const mine = new Set(now.filter((one) => shownTo(asked, reader, one)).map((one) => one.id));
       const set = sent.get(key);
       sent.set(key, mine);
       // A reader with no set has nothing to diff against, and starts from here.
       if (set === undefined) continue;
       for (const { id, record } of now) {
         if (!mine.has(id)) continue;
-        if (!set.has(id)) send(client, reader, { type: `${scheme}/added`, id, record });
-        else if (changed.has(id)) send(client, reader, { type: `${scheme}/changed`, id, record });
+        if (!set.has(id)) send(asked, client, reader, { type: `${scheme}/added`, id, record });
+        else if (changed.has(id)) send(asked, client, reader, { type: `${scheme}/changed`, id, record });
       }
       for (const id of set) {
-        if (!mine.has(id)) send(client, reader, { type: `${scheme}/removed`, id });
+        if (!mine.has(id)) send(asked, client, reader, { type: `${scheme}/removed`, id });
       }
     }
   };
 
   const step = async (): Promise<void> => {
-    const subscribers: ChannelSubscriber[] = handle?.subscribers(uri) ?? [];
+    const subscribers = watching();
     /*
      * Nobody holds a record, so nothing is read: the next snapshot seeds what
      * the refresh after it compares with.
@@ -169,20 +247,34 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
       grant: options.grant,
       ...(options.describe === undefined ? {} : { describe: options.describe }),
       authorize: async (asked, reader) => {
-        if (asked !== uri || options.mayRead === undefined) return false;
-        return (await source.ids()).some((id) => options.mayRead?.(id, reader) === true);
+        const query = queryOf(asked);
+        if (asked !== uri && query === undefined) return false;
+        if (options.mayRead === undefined) return false;
+        const owner = query === undefined ? undefined : ownerFilter(query, reader);
+        if (owner === null) return false;
+        for (const id of await source.ids()) {
+          if (options.mayRead?.(id, reader) !== true) continue;
+          if (owner === undefined) return true;
+          const record = await source.find(id);
+          if (record !== undefined && options.ownerOf?.(id, record) === owner) return true;
+        }
+        return false;
       },
       snapshot: async (asked, reader, client) => {
-        if (asked !== uri) throw new RpcError(-32001, `No channel at ${asked}; the list is ${uri}`);
-        const key = readerKey(client, reader);
+        const query = queryOf(asked);
+        if (asked !== uri && query === undefined) throw new RpcError(-32001, `No channel at ${asked}; the list is ${uri}`);
+        // Refused above for any other value, and kept only once it is a channel this host answers.
+        const owner = query === undefined ? undefined : ownerFilter(query, reader);
+        known.add(asked);
+        const key = stateKey(asked, client, reader);
         /*
          * The snapshot is a refresh's read: every other reader is sent what
          * this read changed, so `last` and each reader's ids agree with it.
          */
         return exclusive(async () => {
           const now = await every();
-          apply(handle?.subscribers(uri) ?? [], now, key);
-          const records = now.filter((one) => readable(one.id, reader));
+          apply(watching(), now, key);
+          const records = owner === null ? [] : now.filter((one) => shownTo(asked, reader, one));
           sent.set(key, new Set(records.map((one) => one.id)));
           return { records };
         });
@@ -209,16 +301,24 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
 }
 
 /**
- * Whose state one reader's ids are: the client id, and the person the
- * connection is now.
+ * Whose one reader is: the client id, and the person the connection is now.
  *
  * Several people may share a client id, and each holds their own state.
  */
 const readerKey = (client: string, reader: Principal | undefined): string =>
   JSON.stringify([client, reader === undefined ? '' : ownerOfPrincipal(reader)]);
 
-/** The client id a `readerKey` was made from. */
-const clientOfKey = (key: string): string => (JSON.parse(key) as [string, string])[0];
+/**
+ * Which subscription one reader's ids are: the channel URI it asked for, the
+ * client, and the person the connection is now.
+ *
+ * The plain list and a filtered one are two URIs, and a client may watch both.
+ */
+const stateKey = (asked: string, client: string, reader: Principal | undefined): string =>
+  JSON.stringify([asked, client, reader === undefined ? '' : ownerOfPrincipal(reader)]);
+
+/** The client id a `stateKey` was made from. */
+const clientOfKey = (key: string): string => (JSON.parse(key) as [string, string, string])[1];
 
 /** A string param that names one record, or a refusal saying what the command needs. */
 const idParam = (command: string, scheme: string, params: Record<string, unknown>): string => {
@@ -322,12 +422,17 @@ export const recordsDomain = (
   domain: string,
   scheme: string,
   records: Records,
-  options: { mayRead?: RecordsChannelOptions['mayRead']; onProblem?: RecordsChannelOptions['onProblem'] } = {},
+  options: {
+    mayRead?: RecordsChannelOptions['mayRead'];
+    ownerOf?: RecordsChannelOptions['ownerOf'];
+    onProblem?: RecordsChannelOptions['onProblem'];
+  } = {},
 ): RecordsDomain => {
   const channel = recordsChannel(`x-ahpd-${domain}`, records, {
     grant: `${scheme}:read` as Grant,
     describe: () => ({ title: records.title, description: records.description }),
     ...(options.mayRead === undefined ? {} : { mayRead: options.mayRead }),
+    ...(options.ownerOf === undefined ? {} : { ownerOf: options.ownerOf }),
     ...(options.onProblem === undefined ? {} : { onProblem: options.onProblem }),
   });
   return {

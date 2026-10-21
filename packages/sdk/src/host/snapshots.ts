@@ -3,7 +3,8 @@ import { tail } from '../sessions/paging.js';
 import { RpcError } from '../rpc.js';
 import { uriOf } from '../resources/fileuri.js';
 import { runState } from './automations.js';
-import { ROOT, isRootChannel, AUTOMATIONS, MARKS, chatUriFor, servedIn, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
+import { ROOT, isRootChannel, isAutomations, automationOwner, queryOf, MARKS, chatUriFor, servedIn, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
+import { ownerFilter } from '../utils/values.js';
 import { need } from './common.js';
 import type { Bag } from '../types/common.js';
 import type { Connection } from '../types/host.js';
@@ -106,10 +107,21 @@ export function createSnapshots(ctx: HostContext): Snapshots {
       // than refused.
       return value({ resource: channel, state: {}, fromSeq: ctx.serverSeq });
     }
-    if (channel === AUTOMATIONS) {
+    if (isAutomations(channel)) {
+      /*
+       * The catalogue, whole or narrowed to the caller's own.
+       *
+       * The query is read here rather than at the door, because this is where
+       * the entries are: `owner=me` keeps the ones whose `_meta` names the
+       * caller, a connection with no principal answers nothing, and any other
+       * value is refused as a wrong param. The plain channel carries no query
+       * and is answered exactly as before.
+       */
+      const owner = ownerFilter(queryOf(channel), connection?.principal);
+      const entries = need(options.automations, 'the automations channel').list();
       return value({
         resource: channel,
-        state: { entries: need(options.automations, 'the automations channel').list() },
+        state: { entries: owner === undefined ? entries : entries.filter((entry) => automationOwner(entry) === owner) },
         fromSeq: ctx.serverSeq,
       });
     }
