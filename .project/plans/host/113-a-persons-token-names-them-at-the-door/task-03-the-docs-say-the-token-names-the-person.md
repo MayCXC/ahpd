@@ -1,6 +1,6 @@
 ---
 title: The docs and the spec say the token names the person
-status: todo
+status: implemented
 depends:
   - task-02-the-daemon-has-require-issuer.md
 layer: "docs"
@@ -42,3 +42,8 @@ They say that `requireIssuer` makes the issuer's token the only way to sign in.
 - The `requireIssuer` example in `AUTHENTICATION.md` is a configuration the daemon of task 02 accepts.
 
 ## Resume
+
+- **Done so far:** every place the Files lines name. `AUTHENTICATION.md` says a person's token names them, replaces the `trustToken` example with a `requireIssuer` configuration the daemon accepts (`requireIssuer`, `issuer`, and a users path) beside the record key, and lists `requireIssuer` among the keys. `USERS.md` says the token is the sign-in and `requireIssuer` asks for the issuer instead, and the VS Code paragraph no longer advises a key for minted secrets. `server/USERS.md` has `## Require the issuer` in place of the old section. `HOST.md` lists `requireIssuer` in both places. `sign-in.md` has `A person's token names them` and `The host requires the issuer` in place of the two door scenarios, the authenticate scenario says a local token where the issuer is required answers `-32007`, "Sign in through your issuer", and the `identify` ref names the new rule.
+- **Next action:** none; the plan is built.
+- **Open questions:** none.
+- **Watch out for:** `packages/sdk/test/people.test.ts:82` asserted `trusted: false` from the old default and now expects `trusted: true`; the sdk suite passes whole with it. The remaining `trustToken` strings are historical plan and research records, and the two intentional ones in `packages`.

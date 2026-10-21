@@ -130,7 +130,7 @@ Every verb and every flag is one declaration under [`src/commands`](https://gith
 | `--resource <url>` | The https identifier this host advertises for its own sign-in. Default: derived from `--host` and `--port` |
 | `--origin <url>` | An origin this host also answers to, such as `http://203.0.113.5:9187`. Repeatable |
 | `--issuer <github\|url>` | An authorization server whose tokens are also accepted: `github`, or an OpenID Connect issuer |
-| `--trust-token` | A person's connection token authorizes them as well as admits them |
+| `--require-issuer` | Only a token from a person's issuer signs them in |
 | `--advanced-tools` | Offer the tools that declare they need advanced permission, such as the computer's three |
 | `--client-tool-timeout-ms <ms>` | How long a call a client runs may wait. Default ten minutes; `0` waits for ever |
 | `--delta-window-ms <ms>` | How long a streamed delta waits for the next one before it is sent. Default `75`; `0` sends every delta as it arrives |

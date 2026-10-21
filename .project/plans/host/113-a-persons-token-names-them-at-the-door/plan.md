@@ -1,7 +1,7 @@
 ---
 title: A person's own token names them at the door
 domain: host
-status: planned
+status: active
 priority: high
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -91,9 +91,9 @@ authenticate(token) -> users.verify -> after: refused when requireIssuer and the
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A local token names its person unless the issuer is required](task-01-a-local-token-names-its-person.md) | todo | - |
-| [02 - The daemon has requireIssuer and no trustToken](task-02-the-daemon-has-require-issuer.md) | todo | 01 |
-| [03 - The docs and the spec say the token names the person](task-03-the-docs-say-the-token-names-the-person.md) | todo | 02 |
+| [01 - A local token names its person unless the issuer is required](task-01-a-local-token-names-its-person.md) | implemented | - |
+| [02 - The daemon has requireIssuer and no trustToken](task-02-the-daemon-has-require-issuer.md) | implemented | 01 |
+| [03 - The docs and the spec say the token names the person](task-03-the-docs-say-the-token-names-the-person.md) | implemented | 02 |
 
 ## Risks and tradeoffs
 
@@ -103,8 +103,8 @@ authenticate(token) -> users.verify -> after: refused when requireIssuer and the
 
 ## Resume state
 
-- **Done so far:** planned 2026-10-21, with the decision that replaces `the-door-is-a-door`.
-- **Next action:** [task-01-a-local-token-names-its-person.md](task-01-a-local-token-names-its-person.md).
+- **Done so far:** planned 2026-10-21, with the decision that replaces `the-door-is-a-door`; tasks 01, 02 and 03 implemented 2026-10-21. Typecheck, the sdk suite (171 files, 3312 cases) and the server suite (64 files, 1290 cases) pass.
+- **Next action:** none; every task is implemented and waiting for the commit by hand.
 - **Open questions:** none.
 - **Watch out for:** `trusted` on a principal is not folder trust; every other `trusted` in `packages/*/src` is the session's folder and stays as it is.
 

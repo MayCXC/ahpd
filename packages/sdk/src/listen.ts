@@ -100,10 +100,12 @@ const boundingOf = (options: Bounds): Bounding | undefined => options.clientQueu
  * what it has always done and the one thing that does not change. Anything
  * else is put to `identify`, which a daemon wires to its user directory: the
  * answer says whether the token opens the door at all, and whether it also
- * says who they are. A person's own token opens it and says nobody unless
- * their record trusts it - decision `the-door-is-a-door` - so the socket is
- * admitted and `authenticate` is what authorizes them. A host with no
- * directory passes no `identify`, so nothing changes for it.
+ * says who they are. A person's own token opens it and names them, unless
+ * their record requires the issuer - decision
+ * `a-persons-token-names-them-unless-the-issuer-is-required` - in which case
+ * the socket is admitted and `authenticate` with the issuer's token is what
+ * signs them in. A host with no directory passes no `identify`, so nothing
+ * changes for it.
  *
  * The WebSocket handshake and a plain request are both decided here, so the
  * two can never disagree about a token.

@@ -588,6 +588,17 @@ export function createHandshake(ctx: HostContext, conn: ConnectionContext): Hand
             resources: [options.users.resource],
           });
         }
+        /*
+         * A local token where the record requires the issuer.
+         *
+         * It opens the socket and names nobody, so it is not a credential for
+         * signing in: the issuer's token is the one that says who they are.
+         */
+        if (held.trusted === false) {
+          throw new RpcError(-32007, 'Sign in through your issuer', {
+            resources: [options.users.resource],
+          });
+        }
         // The clock this replaces, stopped before a second one is armed:
         // signing in again is the same thing to this resource that a
         // replaced token is to any other, and the path below forgets that

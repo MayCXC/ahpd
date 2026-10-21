@@ -1,6 +1,6 @@
 ---
 title: The daemon has requireIssuer and no trustToken
-status: todo
+status: implemented
 depends:
   - task-01-a-local-token-names-its-person.md
 layer: "server"
@@ -53,3 +53,8 @@ The daemon takes `requireIssuer` as a configuration key and as `--require-issuer
 - Run `rg -n "trustToken|trust-token" packages` and expect only the case that checks the unknown key.
 
 ## Resume
+
+- **Done so far:** `Options` carries `requireIssuer` with `--require-issuer` and a false default, `Config` names it, `run.ts` passes it to `fileUsers`, and `main.ts` and the README list it where `trustToken` was. The tests follow: a `requireIssuer` that is not a boolean is refused, the missing key is false, the file's value applies, the flag beats the file, the key is kept out of the root config, and a `trustToken` left in a file starts and is named as unknown. `server-http.test.ts` opens two real sockets on a person's `?tkn=` and reads `initialize`: the token names `user:ada` on `_meta`, and names nobody with `requireIssuer` on. The run of the five files passes, 265 cases.
+- **Next action:** task-03, step 1.
+- **Open questions:** none.
+- **Watch out for:** `frame()` answers the first message, and an `initialize` without `protocolVersions` is answered with `-32005`, so `shook` offers `1.0.0`. The runs rewrite `packages/sdk/test/fixtures/wire.jsonl`, and `git checkout --` on it is still denied, so it is left dirty.

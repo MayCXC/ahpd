@@ -72,7 +72,8 @@ it('admits a door-only token and names nobody, which is the default', async () =
   running = await listen({ port: 0, token: ROOT, identify: doorOnly }, watching);
   const url = `ws://127.0.0.1:${running.port}`;
   // The socket opens and the connection is nobody, so the first gated command
-  // answers -32007 and the client signs in - decision `the-door-is-a-door`.
+  // answers -32007 and the client signs in - decision
+  // `a-persons-token-names-them-unless-the-issuer-is-required`.
   expect(await knock(`${url}/?tkn=ana-secret`)).toBe('open');
   expect(arrived).toEqual([undefined]);
   // A token the directory does not know is still refused, which is the

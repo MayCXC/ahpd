@@ -206,14 +206,14 @@ export interface Config {
    */
   issuerVerify?: IssuerVerify;
   /**
-   * Whether a person's connection token authorizes them as well as admits them.
+   * Whether only a token from a person's issuer signs them in.
    *
-   * False, which is the default and the whole point: the door admits and says
-   * nobody, and `authenticate` is what authorizes. A host that trusts its
-   * connection tokens says so once here, and a record's own `trustToken`
-   * overrides it.
+   * False, so a person's connection token names them at the door and through
+   * `authenticate`. True, a local token only opens the socket, and the token
+   * their record's issuer signed is the one that signs them in. A record's own
+   * `requireIssuer` overrides it.
    */
-  trustToken?: boolean;
+  requireIssuer?: boolean;
   /**
    * How many tokens one person may mint for themselves.
    *

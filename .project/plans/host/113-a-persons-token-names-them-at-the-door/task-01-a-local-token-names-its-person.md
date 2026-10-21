@@ -1,6 +1,6 @@
 ---
 title: A local token names its person unless the issuer is required
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -59,3 +59,8 @@ The door names that person, and `authenticate` refuses a principal whose `truste
 - Run `git checkout -- packages/sdk/test/fixtures/wire.jsonl` after the run.
 
 ## Resume
+
+- **Done so far:** `UserRecord.requireIssuer` replaces `trustToken`, and `FileUserOptions.requireIssuer` replaces the host default; both are off when absent and a record's answer wins. `read` keeps a boolean `requireIssuer`, says once for a value that is not one, says once for a record that still sets `trustToken`, and says once for a record that requires the issuer while neither it nor the host names one. `verify` passes `local: true` from the record branch and the minted branch, and `principalOf` stamps `trusted` false only for those when the record resolves to `requireIssuer`. `list` answers `trusted` as the opposite of the resolved `requireIssuer`, and `authenticate` refuses `held.trusted === false` with `-32007`, "Sign in through your issuer", and the sign-in resource in `data.resources`. Every comment in `packages/sdk` and `packages/server/src/commands/run.ts` that cited `the-door-is-a-door` now cites `a-persons-token-names-them-unless-the-issuer-is-required`.
+- **Next action:** task-02, step 1.
+- **Open questions:** none.
+- **Watch out for:** `pnpm -s typecheck` reports `packages/server/src/commands/run.ts:345` until task 02 replaces its `trustToken` with `requireIssuer`; the sdk and its tests are clean. The runs rewrite `packages/sdk/test/fixtures/wire.jsonl`, and `git checkout --` on it was denied in this session, so it is left dirty for the commit by hand.

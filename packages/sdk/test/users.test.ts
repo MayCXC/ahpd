@@ -250,37 +250,75 @@ it('answers the grants a role resolves to, without repeating the resolution', as
   const users = open();
   await users.add('g', ['guest']);
   const rows = await users.list();
-  expect(rows).toEqual([{ id: 'g', roles: ['guest'], grants: ['session:read', 'automation:read'], trusted: false }]);
+  expect(rows).toEqual([{ id: 'g', roles: ['guest'], grants: ['session:read', 'automation:read'], trusted: true }]);
 });
 
-it('does not trust a connection token unless the record or the host says so', async () => {
+it('trusts a local token unless the issuer is required', async () => {
   /*
-   * The door admits and says nobody; `authenticate` is what authorizes. A
-   * record that sets `trustToken`, or a host whose default is that, makes the
-   * token enough on its own - decision `the-door-is-a-door`.
+   * A record's own token and one they minted name the person at the door.
+   * `requireIssuer`, on the host or on one record over it, makes the issuer's
+   * token the only one that signs them in - decision
+   * `a-persons-token-names-them-unless-the-issuer-is-required`.
    */
   writeFileSync(path, JSON.stringify({
     users: [
-      { id: 'plain', roles: ['guest'], token: '' },
-      { id: 'trusted', roles: ['guest'], token: '', trustToken: true },
+      { id: 'own', roles: ['guest'], token: '' },
+      { id: 'token', roles: ['guest'], token: '' },
     ],
   }));
 
-  const strict = open();
-  expect((await strict.verify(await strict.mint('plain')))?.trusted).toBe(false);
-  expect((await strict.verify(await strict.mint('trusted')))?.trusted).toBe(true);
+  const plain = open();
+  const own = await plain.mint('own');
+  const minted = await plain.mintToken!('token');
+  // Both local branches: the record's own secret and a token of their own.
+  expect((await plain.verify(own))?.trusted).toBe(true);
+  expect((await plain.verify(minted.secret))?.trusted).toBe(true);
 
-  // The host's default, with the record's own answer still winning over it.
-  const loose = fileUsers({ path, trustToken: true });
-  expect((await loose.verify(await loose.mint('plain')))?.trusted).toBe(true);
+  // The host's answer, with no record saying otherwise.
+  const company = fileUsers({ path, requireIssuer: true });
+  expect((await company.verify(own))?.trusted).toBe(false);
+  expect((await company.verify(minted.secret))?.trusted).toBe(false);
+
+  // A record's own answer wins over the host's, in both directions.
   writeFileSync(path, JSON.stringify({
     users: [
-      { id: 'plain', roles: ['guest'], token: '', trustToken: false },
-      { id: 'trusted', roles: ['guest'], token: '', trustToken: true },
+      { id: 'exempt', roles: ['guest'], token: '', requireIssuer: false },
+      { id: 'asked', roles: ['guest'], token: '', requireIssuer: true },
     ],
   }));
-  expect((await loose.verify(await loose.mint('plain')))?.trusted).toBe(false);
-  expect((await loose.verify(await loose.mint('trusted')))?.trusted).toBe(true);
+  const exempt = await company.mint('exempt');
+  expect((await company.verify(exempt))?.trusted).toBe(true);
+  // And on a host that asks for nothing, this record still does.
+  const asked = await plain.mint('asked');
+  expect((await plain.verify(asked))?.trusted).toBe(false);
+});
+
+it('reads a record that still sets trustToken, names it once, and trusts the token', async () => {
+  // The key is gone, so a file that still writes it is read without it and
+  // said so once - a `false` here no longer keeps the person off the door.
+  const said: string[] = [];
+  writeFileSync(path, JSON.stringify({
+    users: [{ id: 'legacy', roles: ['guest'], token: '', trustToken: false }],
+  }));
+  const users = open((line) => said.push(line));
+  const token = await users.mint('legacy');
+  expect((await users.verify(token))?.trusted).toBe(true);
+  expect((await users.verify(token))?.trusted).toBe(true);
+  expect(said.filter((line) => line.includes('trustToken'))).toEqual([
+    `${path}: user legacy sets trustToken, which this host no longer reads; a local token names them at the door`,
+  ]);
+});
+
+it('says once that a record which requires the issuer names none', async () => {
+  const said: string[] = [];
+  writeFileSync(path, JSON.stringify({
+    users: [{ id: 'stuck', roles: ['guest'], token: '', requireIssuer: true }],
+  }));
+  const users = open((line) => said.push(line));
+  const token = await users.mint('stuck');
+  expect((await users.verify(token))?.trusted).toBe(false);
+  expect((await users.verify(token))?.trusted).toBe(false);
+  expect(said).toContain(`${path}: user stuck requires the issuer and no issuer is named, so nothing can sign them in`);
 });
 
 it('refuses a role nothing defines, rather than adding somebody who may do nothing', async () => {
@@ -333,7 +371,7 @@ it('lists people without their credentials', async () => {
   await users.add('a', ['admin']);
   await users.mint('a');
 
-  expect(await users.list()).toEqual([{ id: 'a', roles: ['admin'], grants: ['*:*'], trusted: false }]);
+  expect(await users.list()).toEqual([{ id: 'a', roles: ['admin'], grants: ['*:*'], trusted: true }]);
   const text = JSON.stringify(await users.list());
   expect(text).not.toContain('sha256');
 });
@@ -471,7 +509,7 @@ it('reads a file written before teams and projects were in it', async () => {
   // not read.
   expect(held?.memberships).toEqual([]);
   expect(held?.primary).toBeUndefined();
-  expect(await users.list()).toEqual([{ id: 'ana', roles: ['guest'], grants: ['session:read'], trusted: false }]);
+  expect(await users.list()).toEqual([{ id: 'ana', roles: ['guest'], grants: ['session:read'], trusted: true }]);
 });
 
 it('writes the teams and the projects back, and reads them again', async () => {

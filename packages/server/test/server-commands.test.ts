@@ -46,7 +46,7 @@ afterEach(() => { rmSync(root, { recursive: true, force: true }); });
 const DAEMON_FLAGS = [
   '--port', '--host', '--stdio', '--path', '--connection-token',
   '--connection-token-file', '--without-connection-token', '--config-file',
-  '--users', '--resource', '--issuer', '--trust-token', '--advanced-tools', '--session-tools',
+  '--users', '--resource', '--issuer', '--require-issuer', '--advanced-tools', '--session-tools',
   '--session-tools-providers', '--automations', '--sessions', '--wire', '--plugin', '--no-plugins',
   '--update-check', '--plugin-option',
 ];
