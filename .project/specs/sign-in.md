@@ -11,7 +11,7 @@ covers:
   - packages/server/src/commands/run.ts
   - packages/server/src/config.ts
 decisions:
-  - decisions/the-door-is-a-door.md
+  - decisions/a-persons-token-names-them-unless-the-issuer-is-required.md
 refs:
   - "[code://packages/sdk/src/listen.ts#L102-L127](../../packages/sdk/src/listen.ts#L102-L127) - `identityOf`, what the door makes of a connection token"
   - "[code://packages/server/src/commands/run.ts#L1015-L1026](../../packages/server/src/commands/run.ts#L1015-L1026) - the daemon's `identify`, which names a person only when the token is trusted"

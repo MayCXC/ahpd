@@ -241,6 +241,7 @@ Reference: [00-host.md](host/00-host.md)
 | [110 - A gone folder leaves the session summary](host/110-a-gone-folder-leaves-the-session-summary/plan.md) | medium | built 2026-10-19; [implemented.md](host/110-a-gone-folder-leaves-the-session-summary/implemented.md) | - | - |
 | [111 - The sdk files sit in domain folders](host/111-the-sdk-files-sit-in-domain-folders/plan.md) | medium | implemented 2026-10-20 | - | - |
 | [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | active 2026-10-21; tasks 01 to 04 implemented | - | plugin 52 |
+| [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | planned 2026-10-21; tasks 01 to 03 todo | - | - |
 
 Next free number in `host`: `113`.
 

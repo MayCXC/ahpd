@@ -11,7 +11,7 @@ covers:
   - packages/server/src/proxy/**
   - packages/sdk/src/listen.ts
 decisions:
-  - decisions/the-door-is-a-door.md
+  - decisions/a-persons-token-names-them-unless-the-issuer-is-required.md
 refs:
   - "[code://packages/server/src/http.ts#L24](../../packages/server/src/http.ts#L24) - `API_PREFIX`, the path the API is served under"
   - "[code://packages/server/src/http.ts#L77-L127](../../packages/server/src/http.ts#L77-L127) - `hostRefusal`, `foreign`, `originRefusal` and `apiHandler`"
