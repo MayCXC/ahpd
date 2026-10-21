@@ -1,6 +1,6 @@
 ---
 title: The bot listing takes the owner filter
-status: todo
+status: implemented
 depends: []
 layer: plugin
 refs:
@@ -33,7 +33,7 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `split` keeps the query apart from the path, so `bot:/?owner=me` is the root listing rather than a bot named `?owner=me`. `list` on `bot:/` reads it with `ownerFilter` after the `bot:list` and `mayRead` answer, and keeps the bots whose `owner` equals the caller's. `bot-provider.test.ts` has the reader with `bot:list` who sees their own bot only when asked. It also has the team bot they may read that the filtered listing leaves out. `bot-store.test.ts` has the filtered listing with no reader, which is empty.
+- **Next action:** the plan's gates and its index row.
 - **Open questions:** none.
-- **Watch out for:** none.
+- **Watch out for:** the filter is applied last, so it never widens an answer. A bot a reader could not list before is not in a filtered listing either.

@@ -1,7 +1,7 @@
-import { absentResource, asFile, RpcError, splitResource } from '@ahpd/sdk';
+import { absentResource, asFile, isRecord, ownerFilter, RpcError, splitResource } from '@ahpd/sdk';
 import type {
-  Entry, MachineNeed, Metadata, Owner, PluginHost, PluginMethod, Read, ResourceProvider, SchemeDescription, SecretRef,
-  SecretWork, Write,
+  Entry, MachineNeed, Metadata, Owner, PluginHost, PluginMethod, Principal, Read, ResourceProvider, SchemeDescription,
+  SecretRef, SecretWork, Write,
 } from '@ahpd/sdk';
 import { bodyText, MANIFEST_SCHEMA, manifestOf, pickedOf } from './manifest.js';
 import type { FolderAnswer, Profile } from './manifest.js';
@@ -90,7 +90,7 @@ export interface ProviderOptions {
  * what is always there.
  */
 export interface ComputerProvider extends ResourceProvider {
-  list(uri: string): Promise<Entry[]>;
+  list(uri: string, reader?: Principal): Promise<Entry[]>;
   resolve(uri: string, followSymlinks?: boolean): Promise<Metadata>;
   read(uri: string, wanted?: string): Promise<Read>;
   write(uri: string, content: Write, owner?: Owner): Promise<void>;
@@ -110,6 +110,8 @@ interface At {
   id: string;
   /** `status`, `capabilities`, or empty for the machine itself. */
   leaf: string;
+  /** The text after `?`, which only the root listing reads. */
+  query: string;
 }
 
 /**
@@ -350,11 +352,27 @@ export function computerProvider(runtime: ComputerRuntime, options: ProviderOpti
       }),
     }),
 
-    list: async (uri) => {
+    /**
+     * Every machine, or the caller's own when it is asked with `?owner=me`.
+     *
+     * The filter narrows this listing and says nothing about who may list: a
+     * caller who sees every machine without the query sees the same set of
+     * their own with it. A machine with no recorded owner matches nobody, so it
+     * is in the plain listing and in no filtered one.
+     */
+    list: async (uri, reader) => {
       const held = at(uri);
       if (!isDirectory(held)) throw absentResource('computer', uri);
       if (held.id === '') {
-        return (await runtime.list()).map((one) => ({ name: one.id, type: 'directory' as const }));
+        const every = await runtime.list();
+        const only = ownerFilter(held.query, reader);
+        if (only === undefined) return every.map((one) => ({ name: one.id, type: 'directory' as const }));
+        if (only === null) return [];
+        const kept: Entry[] = [];
+        for (const one of every) {
+          if ((await runtime.owner(one.id))?.owner === only) kept.push({ name: one.id, type: 'directory' });
+        }
+        return kept;
       }
       // A machine that is not there is not a directory either.
       if (await runtime.inspect(held.id) === undefined) throw absentResource('computer', uri);

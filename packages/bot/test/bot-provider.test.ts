@@ -570,6 +570,34 @@ it('shows a bot to its owner, to their team, and to whoever holds the grant', as
   expect(await listing(rob, 'bot://')).toEqual(['hers', 'motion']);
 });
 
+it('answers a reader with bot:list only the bots they own when asked', async () => {
+  const { host } = made({ soft: ['bot:*', 'session:create'], rob: ['bot:list', 'bot:write', 'session:create'] });
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://motion', { name: 'Motion' }, { createOnly: true });
+  const rob = await as(host, 'rob');
+  await write(rob, 'bot://mine', { name: 'Mine' }, { createOnly: true });
+
+  // The grant is still the listing of every bot.
+  expect(await listing(rob, 'bot://')).toEqual(['mine', 'motion']);
+  // Asked for the reader's own, it is the one rob made.
+  expect(await listing(rob, 'bot://?owner=me')).toEqual(['mine']);
+});
+
+it('leaves a team bot out of the listing asked for me', async () => {
+  const { host } = made(
+    { soft: ['bot:*', 'session:create'], rob: ['bot:list'] },
+    { soft: ['backend'], rob: ['backend'] },
+  );
+  const soft = await as(host, 'soft');
+  await write(soft, 'bot://team', { name: 'Team', owner: 'team:backend' }, { createOnly: true });
+  const rob = await as(host, 'rob');
+
+  // Readable, because rob is in the team the bot belongs to...
+  expect(await listing(rob, 'bot://')).toEqual(['team']);
+  // ...and not rob's own, so the filtered listing has it not.
+  expect(await listing(rob, 'bot://?owner=me')).toEqual([]);
+});
+
 /*
  * Who a bot may be made for.
  *

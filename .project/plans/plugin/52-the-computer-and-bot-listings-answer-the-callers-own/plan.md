@@ -1,7 +1,7 @@
 ---
 title: The computer and bot listings answer the caller's own
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -57,8 +57,8 @@ resourceList bot:/?owner=me -> list(uri, reader) -> mayRead, then ownerFilter ->
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The computer listing and channel take the owner filter](task-01-the-computer-listing-takes-the-owner-filter.md) | todo | - |
-| [02 - The bot listing takes the owner filter](task-02-the-bot-listing-takes-the-owner-filter.md) | todo | - |
+| [01 - The computer listing and channel take the owner filter](task-01-the-computer-listing-takes-the-owner-filter.md) | implemented | - |
+| [02 - The bot listing takes the owner filter](task-02-the-bot-listing-takes-the-owner-filter.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -66,7 +66,7 @@ resourceList bot:/?owner=me -> list(uri, reader) -> mayRead, then ownerFilter ->
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** wait for host 112, then [task-01-the-computer-listing-takes-the-owner-filter.md](task-01-the-computer-listing-takes-the-owner-filter.md).
+- **Done so far:** both tasks. `computer://?owner=me` keeps the machines whose owner is the caller. The `x-ahpd-computers` channel narrows with `ownerOf`, read off the status it already holds. `bot:/?owner=me` keeps the bots the reader may list whose owner is the caller. Both read the query with the sdk's `ownerFilter`, and both narrow after who may read.
+- **Next action:** review the two tasks, then write `implemented.md`.
 - **Open questions:** none.
-- **Watch out for:** the `packages/computer` tests time out on this machine, on main too. Run them on CI, or with a longer timeout.
+- **Watch out for:** the `packages/computer` tests time out on this machine, on main too. Run them on CI, or with a longer timeout. The index row stays `implemented`, not `done`.

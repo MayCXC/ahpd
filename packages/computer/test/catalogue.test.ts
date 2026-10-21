@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { computerCatalogue } from '../src/catalogue.js';
 import { computerProvider } from '../src/provider.js';
-import { stateOf } from '../src/runtime.js';
+import { claimedOf, stateOf } from '../src/runtime.js';
 import { createHost } from '../../sdk/src/host.js';
 import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
@@ -42,8 +42,14 @@ afterEach(async () => {
 /** A runtime that keeps its machines in a map, each running or not. */
 const fake = () => {
   const held = new Map<string, Record<string, unknown>>();
-  const put = (id: string, running: boolean): void => {
-    held.set(id, { Name: `/${id}`, Image: 'debian:bookworm-slim', State: { Running: running, Status: running ? 'running' : 'exited' } });
+  const put = (id: string, running: boolean, owner?: string): void => {
+    held.set(id, {
+      Name: `/${id}`,
+      Image: 'debian:bookworm-slim',
+      State: { Running: running, Status: running ? 'running' : 'exited' },
+      // The owner is a label on the machine, as a made one carries it.
+      ...(owner === undefined ? {} : { Config: { Labels: { 'ahpd.owner': owner } } }),
+    });
   };
   const runtime = {
     kind: 'docker',
@@ -53,7 +59,7 @@ const fake = () => {
     // way the runtime reads it rather than kept a second time here.
     state: async (id: string) => { const one = held.get(id); return one === undefined ? undefined : stateOf(one); },
     agents: async () => [],
-    owner: async () => ({}),
+    owner: async (id: string) => { const one = held.get(id); return one === undefined ? undefined : claimedOf(one); },
     run: async (spec: { name: string }) => { put(spec.name, true); return { id: spec.name, image: '', status: 'running', created: '' }; },
     start: async (id: string) => { put(id, true); },
     stop: async (id: string) => { put(id, false); },
@@ -75,6 +81,9 @@ const handle = (subscribers: { client: string; reader: Principal | undefined }[]
 
 const unread: PluginHost['secret'] = async () => '';
 
+/** A reader who holds the channel's own grant, so a listing answers every machine. */
+const readerOf = (id: string): Principal => ({ id, roles: [], can: (one) => one === 'computer:read' });
+
 it('answers every machine with its state and its status', async () => {
   const { runtime, put, held } = fake();
   put('box', true);
@@ -86,6 +95,43 @@ it('answers every machine with its state and its status', async () => {
     { id: 'cold', record: { state: 'stopped', status: held.get('cold') } },
   ]);
   expect(catalogue.channel.grant).toBe('computer:read');
+});
+
+it('answers each person only the machines they own when asked', async () => {
+  const { runtime, put } = fake();
+  put('ana-box', true, 'user:ana');
+  put('bo-box', true, 'user:bo');
+  put('spare', false);
+  const provider = computerProvider(runtime, {
+    image: 'debian:bookworm-slim', max: 4, label: 'ahpd.computer=1', secret: unread,
+  });
+  const ana = readerOf('ana');
+  const bo = readerOf('bo');
+
+  expect(await provider.list('computer://?owner=me', ana)).toEqual([{ name: 'ana-box', type: 'directory' }]);
+  expect(await provider.list('computer://?owner=me', bo)).toEqual([{ name: 'bo-box', type: 'directory' }]);
+  // Without the query each still sees every machine, the ownerless one included.
+  expect(await provider.list('computer://', ana)).toEqual([
+    { name: 'ana-box', type: 'directory' },
+    { name: 'bo-box', type: 'directory' },
+    { name: 'spare', type: 'directory' },
+  ]);
+  // With no reader there is no one for `me` to name, so the filter keeps nothing.
+  expect(await provider.list('computer://?owner=me')).toEqual([]);
+});
+
+it('answers a channel asked with owner=me only the machines the reader owns', async () => {
+  const { runtime, put, held } = fake();
+  put('box', true, 'user:ana');
+  put('cold', false, 'user:bo');
+  const catalogue = computerCatalogue(runtime);
+  const ana = readerOf('ana');
+
+  const mine = await catalogue.channel.snapshot(`${URI}?owner=me`, ana, 'ana') as { records: { id: string; record: Record<string, unknown> }[] };
+  expect(mine.records).toEqual([{ id: 'box', record: { state: 'running', status: held.get('box') } }]);
+  // The plain channel is still every machine she may read.
+  const every = await catalogue.channel.snapshot(URI, ana, 'bo') as { records: { id: string }[] };
+  expect(every.records.map((one) => one.id)).toEqual(['box', 'cold']);
 });
 
 it('sends changed with the new state after a write to computer://box/state', async () => {
