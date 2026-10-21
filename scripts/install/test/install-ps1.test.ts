@@ -479,9 +479,10 @@ describe.skipIf(!canRun)('install.ps1', () => {
   });
 
   it('removes the package and the PATH entry under -Uninstall', () => {
-    const box = makeBox({ ahpd: true });
-    run(box, { AHPD_NO_ONBOARD: '1', AHPD_YES: '1' });
+    const box = makeBox();
+    run(box, { AHPD_NO_ONBOARD: '1' });
     expect(countEntry(userPath(), box.folder)).toBe(1);
+    writeAhpd(box);
 
     const result = run(box, { AHPD_UNINSTALL: '1' });
 
