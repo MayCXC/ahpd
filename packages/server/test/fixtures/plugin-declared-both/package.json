@@ -1,0 +1,13 @@
+{
+  "name": "plugin-declared-both",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.ts" },
+  "peerDependencies": { "@ahpd/sdk": ">=0.10 <1" },
+  "ahpd": {
+    "entry": "./index.ts",
+    "title": "Both",
+    "description": "Declares its manifest in its package.json."
+  }
+}

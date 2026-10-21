@@ -7,9 +7,10 @@ import { echo } from '../../../examples/echo/agent.js';
 import { usageProvider } from '../src/usage/usage.js';
 import type { Agent } from '../src/types/agent.js';
 import type { HostOptions } from '../src/types/host.js';
-import type { Contribution, LoaderContext } from '../src/types/plugin.js';
+import type { Contribution, LoaderContext, PluginChannel } from '../src/types/plugin.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Usage } from '../src/types/usage.js';
+import type { Vault } from '../src/types/vault.js';
 
 /*
  * What the fold is for: a host that serves a plugin's backend.
@@ -37,7 +38,7 @@ const contributed: Agent = {
   displayName: 'Contributed backend',
 };
 
-const contribution: Contribution = { by: 'fixture', agents: [contributed], tools: [], sessionConfig: {}, sessionCompletions: {}, ports: {}, providers: {}, channels: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [] };
+const contribution: Contribution = { by: 'fixture', agents: [contributed], tools: [], sessionConfig: {}, sessionCompletions: {}, ports: {}, providers: {}, channels: {}, connectors: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [] };
 
 it('answers whether it keeps a session, from the store and by the id in the URI', async () => {
   const store = memorySessions();
@@ -212,7 +213,7 @@ it('marks a contributed key dynamic only where something answers for it', () => 
     },
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -234,7 +235,7 @@ it('publishes a session setting a plugin contributed, with its value on the sess
     sessionCompletions: {},
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -290,7 +291,7 @@ it('routes a completions request to whoever registered the key', async () => {
     },
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -343,7 +344,7 @@ it('seeds a contributed key from its own answerer when a config is resolved', as
     },
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -390,7 +391,7 @@ it('answers the rest of the form when a seed fails', async () => {
     },
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -428,7 +429,7 @@ it('answers with nothing when the answerer fails', async () => {
     sessionCompletions: { computer: () => { throw new Error('docker is not running'); } },
     ports: {},
     providers: {},
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -457,7 +458,7 @@ it('advertises every scheme it serves on the handshake and on the root state', a
     sessionCompletions: {},
     ports: {},
     providers: { notes },
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -542,7 +543,7 @@ it('names a scheme that says nothing of itself, and keeps one built-in subject o
       bare: { read: async () => ({ data: 'x', encoding: 'utf-8' as const }), remove: async () => {} },
       file: { read: async () => ({ data: 'x', encoding: 'utf-8' as const }) },
     },
-    channels: {}, methods: {},
+    channels: {}, connectors: {}, methods: {},
     events: {},
     triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [],
     closers: [],
@@ -579,7 +580,7 @@ it('advertises only what a read-only provider implements', async () => {
   };
   const { options } = foldHostOptions(base(), [{
     by: 'fixture', agents: [], tools: [], sessionConfig: {}, sessionCompletions: {},
-    ports: {}, providers: { quiet }, channels: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [],
+    ports: {}, providers: { quiet }, channels: {}, connectors: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [],
   }]);
   const client = createHost(options).accept(peer());
   const ready = await client.handle({
@@ -638,7 +639,7 @@ it('drops a clashing agent alone, and says which plugin lost the id', () => {
   const asAgents = (by: string, ...providers: string[]): Contribution => ({
     by,
     agents: providers.map((provider) => ({ ...echo({ path: '/x' }), provider })),
-    tools: [], sessionConfig: {}, sessionCompletions: {}, ports: {}, providers: {}, channels: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [],
+    tools: [], sessionConfig: {}, sessionCompletions: {}, ports: {}, providers: {}, channels: {}, connectors: {}, methods: {}, events: {}, triggers: { by: 'fixture', types: {} }, starts: { by: 'fixture' }, connects: { by: 'fixture', close: () => {} }, preambles: [], closers: [],
   });
   const folded = foldHostOptions({ ...base(), agents: [] }, [asAgents('a', 'x', 'y'), asAgents('b', 'y', 'z')]);
   expect(folded.options.agents?.map((one) => one.provider)).toEqual(['x', 'y', 'z']);
@@ -706,4 +707,75 @@ it('also logs each line when the caller asks it to', async () => {
   // refusal is carried beside.
   expect(lines).toEqual(['plugin: a is wrong', 'plugin: b is wrong']);
   expect(problems).toEqual(lines);
+});
+
+/*
+ * The contracts a manifest declares.
+ *
+ * A plugin that declares them registers only what its lists name; one that
+ * declares none is not checked, which is what keeps a plugin written before
+ * contracts existed loading. A kind with no name of its own is held to its key
+ * and one entry.
+ */
+
+const CONTRACT_CONTEXT: LoaderContext = {
+  path: '/tmp/plugin-host',
+  paths: ['/tmp/plugin-host'],
+  version: '0.0.0',
+  hostName: 'host',
+  configDir: '/tmp/plugin-host',
+  log: () => {},
+  say: () => {},
+};
+
+/** A channel that holds nothing, which is all a registration check reads. */
+const channel = (): PluginChannel => ({ grant: 'config:read', snapshot: () => undefined });
+
+/** A vault that keeps nothing, which is all a port check reads. */
+const vault = (): Vault => ({
+  get: async () => undefined,
+  set: async () => {},
+  delete: async () => false,
+  list: async () => [],
+});
+
+it('refuses a channel its contracts do not list, naming the channel', () => {
+  const listed = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { channels: ['x-a'] } }).host;
+  expect(() => listed.registerChannel('x-a', channel())).not.toThrow();
+
+  const other = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { channels: ['x-a'] } }).host;
+  expect(() => other.registerChannel('x-b', channel())).toThrow('x-b');
+});
+
+it('refuses the first route when the contracts declare no routes', () => {
+  const { host } = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { channels: ['x-a'] } });
+  expect(() => host.registerRoute(async () => new Response('ok'))).toThrow('routes');
+});
+
+it('checks nothing when the plugin declares no contracts', () => {
+  const { host } = pluginHost('fixture', CONTRACT_CONTEXT);
+  expect(() => host.registerChannel('x-anything', channel())).not.toThrow();
+  expect(() => host.registerRoute(async () => new Response('ok'))).not.toThrow();
+  expect(() => host.registerVault(vault())).not.toThrow();
+});
+
+it('allows the ports its contracts name, and refuses the others', () => {
+  const { host } = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { ports: ['vault'] } });
+  expect(() => host.registerVault(vault())).not.toThrow();
+
+  const other = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { ports: ['vault'] } }).host;
+  expect(() => other.registerDiagnostics({})).toThrow('ports');
+});
+
+it('allows a name a prefix entry matches, and refuses one it does not', () => {
+  const { host } = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { agents: ['claude-*'] } });
+  expect(() => host.registerAgent({ ...contributed, provider: 'claude-build' })).not.toThrow();
+
+  const other = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { agents: ['claude-*'] } }).host;
+  expect(() => other.registerAgent({ ...contributed, provider: 'codex' })).toThrow('codex');
+});
+
+it('allows any name when its contracts say *', () => {
+  const { host } = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { agents: ['*'] } });
+  expect(() => host.registerAgent({ ...contributed, provider: 'anything' })).not.toThrow();
 });

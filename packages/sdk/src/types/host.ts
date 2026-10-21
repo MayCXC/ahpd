@@ -13,6 +13,7 @@ import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
 import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
+import type { ServedConnectorKind } from './connectors.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -140,6 +141,15 @@ export interface HostOptions {
    * `publish` and `subscribers` when it is created.
    */
   channels?: Record<string, ServedChannel>;
+  /**
+   * The connector kinds the plugins offer, by name.
+   *
+   * The fold fills this from `registerConnector`, and one name is one kind: a
+   * second plugin registering it is reported and loses that kind alone. A
+   * client draws a form from each kind's `schema`, and a connector whose kind
+   * is not here cannot be opened.
+   */
+  connectorKinds?: Record<string, ServedConnectorKind>;
   /**
    * The plugin that draws a session's Plan call, if one does.
    *

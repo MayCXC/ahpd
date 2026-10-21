@@ -1,6 +1,6 @@
 ---
 title: The manifest is read
-status: todo
+status: implemented
 depends: []
 layer: "sdk, server"
 refs:
@@ -46,7 +46,8 @@ The loader keeps one manifest for each loaded plugin, from package.json when bot
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `PluginLink`, `PluginContracts` and `PluginManifest` are in `packages/sdk/src/types/plugin.ts` and exported from `types/index.ts`; `Plugin` and `Loaded` both carry `manifest?`. The server's `Manifest` reads `description`, `categories`, `links` and `contracts` from `ahpd`, and `checkManifest` refuses each of the four when it is the wrong shape through one shared `checkFields`, which `loadOne` also uses on a module's `manifest` export. `loadOne` keeps the package.json fields when any of the four is present and otherwise the module's export, on `Loaded`, on `Plugin`, and through `Loaded.plugin` for the fold. Four fixtures were added (`plugin-declared`, `plugin-declared-module.ts`, `plugin-declared-both`, `plugin-bad-links`) with the four cases in `plugin-load.test.ts`; 34 tests pass, as do `build`, `typecheck` and `boundary`.
+- **Next action:** task 02.
 - **Open questions:** none.
-- **Watch out for:** the server's `Manifest` is the raw package.json read, and keeps its name.
+- **Watch out for:** the server's `Manifest` is the raw package.json read, and keeps its name. `Loaded` gained `manifest?` although the Files list names only `Plugin`; step 9 requires it.
+- **Commit:** not made in the session (`git add` is denied here). Files: `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/types/index.ts`, `packages/server/src/plugins.ts`, `packages/server/test/plugin-load.test.ts`, `packages/server/test/fixtures/plugin-declared/`, `packages/server/test/fixtures/plugin-declared-module.ts`, `packages/server/test/fixtures/plugin-declared-both/`, `packages/server/test/fixtures/plugin-bad-links/`, this task file and the plan row.

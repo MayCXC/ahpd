@@ -1,0 +1,16 @@
+{
+  "name": "plugin-declared",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.ts" },
+  "peerDependencies": { "@ahpd/sdk": ">=0.10 <1" },
+  "ahpd": {
+    "entry": "./index.ts",
+    "title": "Declared",
+    "description": "Declares its manifest in its package.json.",
+    "categories": ["tool"],
+    "links": [{ "title": "Docs", "url": "https://ahpd.dev/plugins" }],
+    "contracts": { "agents": ["declared"] }
+  }
+}

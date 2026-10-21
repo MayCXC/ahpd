@@ -64,6 +64,12 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "pi",
+    "description": "Runs the Pi coding agent, embedded in process and served as an agent provider.",
+    "categories": ["agent"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "agents": ["*"]
+    },
     "options": {
       "provider": { "required": false },
       "displayName": { "required": false },

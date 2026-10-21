@@ -68,6 +68,12 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "ACP",
+    "description": "Connects any ACP-compatible agent, including Copilot, Codex, Gemini, and custom ACP servers.",
+    "categories": ["agent"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "agents": ["*"]
+    },
     "options": {
       "presets": {
         "required": true

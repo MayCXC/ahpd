@@ -61,6 +61,13 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Webhook",
+    "description": "A URL that talks to a bot or fires an automation, with a secret per endpoint.",
+    "categories": ["connector"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "routes": ["post /plugins/webhook/:endpoint"],
+      "triggerTypes": ["webhook"]
+    },
     "options": {}
   }
 }

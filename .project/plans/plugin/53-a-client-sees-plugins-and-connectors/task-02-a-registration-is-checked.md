@@ -1,6 +1,6 @@
 ---
 title: A registration is checked against the contract
-status: todo
+status: implemented
 depends: [task-01-the-manifest-is-read.md]
 layer: "sdk, server"
 refs:
@@ -46,7 +46,9 @@ A plugin with no `contracts` is not checked.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `declared(by, contracts, kind, name?)` is in `validate.ts` and throws through `miss`; `HostRecordingOptions` gained `contracts?`; every register method calls it after `open()` and, where a name exists, after the shape check that reads that name; `setPort` calls it for `ports`; `on` is unchanged. `loadOne` passes the chosen manifest's contracts to `pluginHost`. Four cases are in `plugin-host.test.ts`; 26 tests pass there, 34 in `plugin-load.test.ts`, and `build`, `typecheck` and `boundary` pass.
+- **Amended by task 03:** Softov answered the task-03 fork on 2026-10-21 by allowing patterns, so an entry that ends in `*` matches any name with that prefix and `*` alone matches any name. `declared` reads its list through `names(entry, name)`, and two cases in `plugin-host.test.ts` hold it: `claude-*` allows `claude-build` and refuses `codex`, and `*` allows anything.
+- **Next action:** task 03.
 - **Open questions:** none.
-- **Watch out for:** a registration made after `seal()` is already refused by `open()`, so its message stays the same.
+- **Watch out for:** the task names the explicit contract keys (`agents`, `tools`, `channels`, `methods`, `routes`, `triggerTypes`, `connectors`, `ports`) and says "and so on" for the rest; the ones chosen are `sessionConfigs`, `resourceProviders`, `chatPreambles`, `plans`, `sessionMeta`, `closers`. Task 03 must use those spellings. `registerRoute`, `registerPlan`, `registerChatPreamble` and `registerClose` have no name in the call, so their check is the key and at least one entry, not a name match; a route's declared entries are still written `<method> <path>` such as `post /:id`, for the client and the docs.
+- **Commit:** not made in the session (`git add` is denied here). Files: `packages/sdk/src/plugins/validate.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/server/src/plugins.ts`, `packages/sdk/test/plugin-host.test.ts`, this task file and the plan row.

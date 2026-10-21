@@ -18,9 +18,10 @@
  */
 
 import type { StartSession } from '../types/automations.js';
-import type { PortKey } from '../types/plugin.js';
+import type { PluginContracts, PortKey } from '../types/plugin.js';
 import type { Owner } from '../types/usage.js';
 import { SUBJECTS, isGrant } from '../access/users.js';
+import { RECORD_SLUG, isRecordSlug } from '../resources/records.js';
 
 /**
  * The one message shape every check reports through.
@@ -234,6 +235,45 @@ export const checkScheme = (scheme: unknown, by: string, method = 'registerResou
     throw new Error(miss(by, method, 'scheme', 'a URI scheme like computer'));
   }
   return scheme;
+};
+
+/**
+ * Refuse a registration the plugin's contracts do not list.
+ *
+ * `contracts` is what the manifest declares under the plural of each kind, and
+ * a plugin that declares none is not checked at all, so a plugin written
+ * before contracts existed keeps loading. One that declares a list may
+ * register only what is in it, and the refusal names the plugin, the kind and
+ * the name so the author sees which registration was not written down.
+ *
+ * The kinds with no name of their own - a plan, a chat preamble, a route, a
+ * closer - are held to their key and one entry, because what they register is
+ * the entry rather than a name another registration could collide with.
+ *
+ * An entry may end in `*`, such as `claude-*`, or be `*` alone, for a plugin
+ * that takes a name from its options: the first matches any name with that
+ * prefix, and the second any name at all.
+ */
+export const declared = (by: string, contracts: PluginContracts | undefined, kind: string, name?: string): void => {
+  if (contracts === undefined) return;
+  const listed = contracts[kind];
+  if (listed === undefined) {
+    throw new Error(miss(by, kind, 'the registration', `a key its contracts declare, contracts.${kind}`));
+  }
+  if (name === undefined) {
+    if (listed.length === 0) throw new Error(miss(by, kind, 'the registration', `one entry in contracts.${kind}`));
+    return;
+  }
+  if (!listed.some((entry) => names(entry, name))) {
+    throw new Error(miss(by, kind, name, `a name in contracts.${kind}`));
+  }
+};
+
+/** Whether one contract entry names `name`, exactly, by a prefix or by `*`. */
+const names = (entry: string, name: string): boolean => {
+  if (entry === '*') return true;
+  if (!entry.endsWith('*')) return entry === name;
+  return name.startsWith(entry.slice(0, -1));
 };
 
 /** Prefixes no plugin scheme or harness may start with, and why. */
@@ -481,4 +521,40 @@ export const checkTriggerType = (value: unknown, by: string): void => {
   if (object.configSchema !== undefined && !right(object.configSchema, 'object')) {
     throw new Error(miss(by, 'registerTriggerType', 'configSchema', 'an object'));
   }
+};
+
+/**
+ * Check one `registerConnector` value against `ConnectorKind`, and answer its
+ * name.
+ *
+ * The name is a slug and the schema an object, because those are the two the
+ * host acts on: the name is what every stored connector carries, and the
+ * schema is what a client draws and what a connector's own config is checked
+ * against. The capabilities are read for their shape and nothing more - a
+ * client lists them, and this version runs none.
+ */
+export const checkConnectorKind = (value: unknown, by: string): string => {
+  const object = asObject(value, by, 'registerConnector', 'kind');
+  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerConnector');
+  const name = object.name as string;
+  if (!isRecordSlug(name)) {
+    throw new Error(miss(by, 'registerConnector', name, `a slug, ${RECORD_SLUG}`));
+  }
+  if (!right(object.schema, 'object')) {
+    throw new Error(miss(by, 'registerConnector', 'schema', 'an object, the JSON Schema a client draws the form from'));
+  }
+  if (!Array.isArray(object.capabilities)) {
+    throw new Error(miss(by, 'registerConnector', 'capabilities', 'a list of the capabilities a connector of this kind has'));
+  }
+  for (const held of object.capabilities) {
+    const capability = asObject(held, by, 'registerConnector', 'a capability');
+    for (const member of ['type', 'name', 'title', 'description']) stringy(capability, member, by, 'registerConnector');
+    if (capability.input !== undefined && !right(capability.input, 'object')) {
+      throw new Error(miss(by, 'registerConnector', 'input', 'an object, the JSON Schema a client draws the form from, or nothing'));
+    }
+  }
+  if (typeof object.open !== 'function') {
+    throw new Error(miss(by, 'registerConnector', 'open', 'a function answering how to close the connector, or nothing'));
+  }
+  return name;
 };

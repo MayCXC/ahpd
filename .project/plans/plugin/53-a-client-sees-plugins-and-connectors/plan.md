@@ -79,6 +79,7 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | The contracts cover every register method, and an undeclared registration is refused | Softov, 2026-10-21, chose "Every register*" | 02 |
 | A contract key is the plural of its kind: `agents`, `tools`, `channels`, `methods`, `routes`, `triggerTypes`, `connectors` and so on; ports are `ports: ["vault"]` | (defaulted: one key for each register method) | 02 |
 | A route contract entry is `<method> <path>`, such as `post /:id` | (defaulted: a route is named by its method and its path) | 02 |
+| A contract entry may end in `*`, such as `claude-*`, or be `*`, for names a plugin takes from its options | Softov, 2026-10-21, chose "Allow * patterns" | 02 |
 | A plugin with no `contracts` loads as today, and the plugin channel marks it `undeclared` | (defaulted: third-party plugins keep working) | 02 |
 | Every plugin package in this repository gets its contracts | (defaulted: the check proves itself on the plugins that ship) | 03 |
 | The plugin channel lists, enables, disables and edits options; install, update and remove stay on the command line | Softov, 2026-10-21, chose "List + enable/options" | 04 |
@@ -113,11 +114,11 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The manifest is read](task-01-the-manifest-is-read.md) | todo | - |
-| [02 - A registration is checked against the contract](task-02-a-registration-is-checked.md) | todo | 01 |
-| [03 - Every shipped plugin declares its contracts](task-03-shipped-plugins-declare-contracts.md) | todo | 02 |
-| [04 - A client lists the plugins](task-04-a-client-lists-the-plugins.md) | todo | 01 |
-| [05 - A plugin registers connector kinds](task-05-a-plugin-registers-connector-kinds.md) | todo | 02 |
+| [01 - The manifest is read](task-01-the-manifest-is-read.md) | implemented | - |
+| [02 - A registration is checked against the contract](task-02-a-registration-is-checked.md) | implemented | 01 |
+| [03 - Every shipped plugin declares its contracts](task-03-shipped-plugins-declare-contracts.md) | implemented | 02 |
+| [04 - A client lists the plugins](task-04-a-client-lists-the-plugins.md) | implemented | 01 |
+| [05 - A plugin registers connector kinds](task-05-a-plugin-registers-connector-kinds.md) | implemented | 02 |
 | [06 - A collection keeps JSON records](task-06-a-collection-keeps-json-records.md) | todo | - |
 | [07 - A client makes connectors](task-07-a-client-makes-connectors.md) | todo | 05, 06 |
 | [08 - A webhook endpoint is a connector](task-08-a-webhook-endpoint-is-a-connector.md) | todo | 07 |
