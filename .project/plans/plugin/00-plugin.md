@@ -13,6 +13,11 @@ Every kind after those waits, and the whole list is in [deferred.md](01-plugins-
 
 - **Front** - the chat where a person and a bot talk. The bot-chat provider serves it, with no model.
 - **Back** - a chat where a harness does a bot's work and replies to the Front with `post_message`.
+- **Manifest** - what a plugin declares before it runs: a description, categories, links and contracts.
+- **Contract** - the list of names a plugin registers for one kind, such as its channels.
+- **Connector kind** - an integration a plugin registers, with a configuration schema and capabilities.
+- **Connector** - one configured account of a connector kind, owned by the host, a team or a person.
+- **Capability** - a typed entry that says what a connector kind does, such as `receive` or `command`.
 
 ## Packages
 
