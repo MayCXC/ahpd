@@ -203,9 +203,9 @@ describe('the call goes out with the provider\'s key and streams back unchanged'
 
   it('answers a provider that cannot be reached with 502 in the dialect\'s body, naming the provider', async () => {
     const gone = await fake(answerJson(200, {}));
+    const served = await proxy({ proxy: table('anthropic-messages', gone.endpoint), env: keys(1) });
     await gone.close();
     fakes.splice(fakes.indexOf(gone), 1);
-    const served = await proxy({ proxy: table('anthropic-messages', gone.endpoint), env: keys(1) });
     const got = await send(served.port, MESSAGES, { headers: { 'x-api-key': ROOT_TOKEN }, body: { model: 'm/x' } });
     expect(got.status).toBe(502);
     expect(isAnthropicError(got.json)).toBe(true);
@@ -347,13 +347,13 @@ describe('a call ends when either side does, and on a timeout', () => {
   it('falls back on a 429 and a refused connection', async () => {
     const limited = await fake(answerJson(429, {}));
     const gone = await fake(answerJson(200, {}));
-    await gone.close();
-    fakes.splice(fakes.indexOf(gone), 1);
     const up = await fake(answerJson(200, { from: 'up' }));
     const served = await proxy({
       proxy: table('anthropic-messages', limited.endpoint, gone.endpoint, up.endpoint),
       env: keys(3),
     });
+    await gone.close();
+    fakes.splice(fakes.indexOf(gone), 1);
     const got = await send(served.port, MESSAGES, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.json).toEqual({ from: 'up' });
     expect(served.log.join('\n')).toMatch(/p0 429, p1 unreachable[^;]*; p2 answered 200/u);
@@ -382,10 +382,10 @@ describe('a call ends when either side does, and on a timeout', () => {
     // A port nothing listens on: the request never arrived, so the next
     // candidate gets it and the caller gets that one's answer.
     const gone = await fake(answerJson(200, {}));
-    await gone.close();
-    fakes.splice(fakes.indexOf(gone), 1);
     const up = await fake(answerJson(200, { from: 'up' }));
     const served = await proxy({ proxy: table('openai-chat', gone.endpoint, up.endpoint), env: keys(2) });
+    await gone.close();
+    fakes.splice(fakes.indexOf(gone), 1);
     const got = await send(served.port, CHAT, { headers: asRoot, body: { model: 'm/x' } });
     expect(got.status).toBe(200);
     expect(got.json).toEqual({ from: 'up' });
