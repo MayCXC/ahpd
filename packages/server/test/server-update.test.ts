@@ -59,7 +59,10 @@ beforeEach(async () => {
   hadRegistry = process.env.npm_config_registry;
   latest = LATEST;
   registryServer = createServer((request, response) => {
-    if (request.url === '/-/package/@ahpd/server/dist-tags' && latest !== undefined) {
+    // npm's encoded form, and only it: a registry that needs the scope's slash
+    // encoded, such as verdaccio, answers 404 to the unencoded path, which is
+    // what the else branch below does.
+    if (request.url === '/-/package/@ahpd%2fserver/dist-tags' && latest !== undefined) {
       response.setHeader('content-type', 'application/json');
       response.end(JSON.stringify({ latest }));
       return;

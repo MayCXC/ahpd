@@ -67,6 +67,18 @@ export const registry = (env: NodeJS.ProcessEnv = process.env): string => {
   return named ? named.replace(/\/+$/, '') : 'https://registry.npmjs.org';
 };
 
+/**
+ * A package name as the registry's path has it: a scope's slash is `%2f`.
+ *
+ * npm sends `@ahpd%2fserver`, and a registry such as verdaccio answers only
+ * that form, though npmjs.org takes either. A name without a scope has no slash
+ * to replace, and is returned as it is.
+ */
+export const registryPath = (name: string): string => {
+  const slash = name.startsWith('@') ? name.indexOf('/') : -1;
+  return slash === -1 ? name : `${name.slice(0, slash)}%2f${name.slice(slash + 1)}`;
+};
+
 /** How the registry is asked: the global `fetch`, or a stand-in for it. */
 export type Fetch = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -112,7 +124,8 @@ export const stale = (found: Update | undefined, now = Date.now(), maxAgeMs = MA
  * Ask the registry, and write down what it said.
  *
  * `/-/package/<name>/dist-tags` is 18 bytes and is the whole question; the
- * packument answers the same thing in twenty kilobytes. Every failure is the
+ * packument answers the same thing in twenty kilobytes. The name is the
+ * registry's encoded form, as npm sends it. Every failure is the
  * same silence: offline, a proxy that blackholes, a registry that is down, a
  * package not on npm yet, and a captive portal answering `200` with HTML all
  * leave the file as it was and throw nothing. There is nothing a person can
@@ -120,7 +133,7 @@ export const stale = (found: Update | undefined, now = Date.now(), maxAgeMs = MA
  * process that has better things to say.
  */
 export async function refreshUpdate(options: { name: string; registry?: string; timeoutMs?: number }): Promise<void> {
-  const said = await askRegistry(`-/package/${options.name}/dist-tags`, options) as { latest?: unknown } | null | undefined;
+  const said = await askRegistry(`-/package/${registryPath(options.name)}/dist-tags`, options) as { latest?: unknown } | null | undefined;
   if (typeof said?.latest !== 'string') return;
   const record: Update = { name: options.name, latest: said.latest, checkedAt: new Date().toISOString() };
   try {

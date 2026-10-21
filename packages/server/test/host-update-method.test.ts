@@ -216,6 +216,21 @@ describe('x-ahpd/update', () => {
     await host.close();
   });
 
+  it('asks the registry for the encoded scoped path when no version is named', async () => {
+    const asked: string[] = [];
+    const recording: Fetch = async (url) => {
+      asked.push(String(url));
+      return Response.json({ latest: LATEST });
+    };
+    const { host } = served({ fetch: recording });
+    const client = await root(host);
+    const result = await client.handle({ method: 'x-ahpd/update', params: { check: true } });
+    expect(result).toEqual({ current: CURRENT, latest: LATEST, may: true });
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatch(/\/-\/package\/@ahpd%2fserver\/dist-tags$/);
+    await host.close();
+  });
+
   it('answers a failed step with an RpcError, and asks for no restart', async () => {
     const npm = fakeNpm();
     const failing: Runner = async (program, argv) => {
