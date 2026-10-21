@@ -4,7 +4,7 @@ date: 2026-10-09
 refs:
   - "[code://packages/sdk/src/host/chatactions.ts](../../../../packages/sdk/src/host/chatactions.ts)"
   - "[code://packages/sdk/src/types/session.ts](../../../../packages/sdk/src/types/session.ts)"
-  - "[code://packages/sdk/src/nested.ts](../../../../packages/sdk/src/nested.ts)"
+  - "[code://packages/sdk/src/sessions/nested.ts](../../../../packages/sdk/src/sessions/nested.ts)"
 ---
 
 A client can ask the host to stop holding a turn on an MCP server that is still starting.
@@ -14,7 +14,7 @@ The host hands `session/mcpServerBackgroundRequested` to a backend that can do i
 
 - [`code://packages/sdk/src/types/session.ts`](../../../../packages/sdk/src/types/session.ts) - the optional `backgroundMcpServerStartup` on `Session`, VS Code's name for the seam.
 - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts) - the action calls it where it exists, with no refusal either way.
-- [`code://packages/sdk/src/nested.ts`](../../../../packages/sdk/src/nested.ts) - a nested session hands the action to the host inside.
+- [`code://packages/sdk/src/sessions/nested.ts`](../../../../packages/sdk/src/sessions/nested.ts) - a nested session hands the action to the host inside.
 - [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the action row.
 
 ## Verified

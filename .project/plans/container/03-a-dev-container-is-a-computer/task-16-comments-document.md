@@ -4,9 +4,9 @@ status: done
 depends: [task-18-every-command-reaches-it-by-docker-exec.md]
 layer: "sdk | computer"
 refs:
-  - "[code://packages/sdk/src/computers.ts#L4-L26](../../../../packages/sdk/src/computers.ts#L4-L26) - `refuseComputer`'s comment, \"exactly one of those today\" at :9"
-  - "[code://packages/sdk/src/computers.ts#L34-L47](../../../../packages/sdk/src/computers.ts#L34-L47) - `computerSource`, \"`disposable:<profile>` today, `devcontainer://<folder>` after it\" at :38-39"
-  - "[code://packages/sdk/src/computers.ts#L56-L62](../../../../packages/sdk/src/computers.ts#L56-L62) - `openComputer`, \"a disposable profile today and a folder's dev container after it\" at :60"
+  - "[code://packages/sdk/src/machines/computers.ts#L4-L26](../../../../packages/sdk/src/machines/computers.ts#L4-L26) - `refuseComputer`'s comment, \"exactly one of those today\" at :9"
+  - "[code://packages/sdk/src/machines/computers.ts#L34-L47](../../../../packages/sdk/src/machines/computers.ts#L34-L47) - `computerSource`, \"`disposable:<profile>` today, `devcontainer://<folder>` after it\" at :38-39"
+  - "[code://packages/sdk/src/machines/computers.ts#L56-L62](../../../../packages/sdk/src/machines/computers.ts#L56-L62) - `openComputer`, \"a disposable profile today and a folder's dev container after it\" at :60"
 ---
 
 ## Objective
@@ -15,12 +15,12 @@ The comments this plan touched say what each declaration is; history belongs in 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/computers.ts:9`, `:38-39`, `:60` - each names the sources and backends as they are, with no "today" and no "after it".
+- `UPDATE: packages/sdk/src/machines/computers.ts:9`, `:38-39`, `:60` - each names the sources and backends as they are, with no "today" and no "after it".
 - `UPDATE: packages/computer/src/devcontainer.ts`, `packages/computer/src/runtime.ts`, `packages/computer/src/plugin.ts` - any comment from this plan that says what used to be, read after task 18 has rewritten the reach comments.
 
 ## Validation
 
-- `rg -n "today|after it|used to|no longer" packages/sdk/src/computers.ts packages/computer/src` finds no comment that narrates.
+- `rg -n "today|after it|used to|no longer" packages/sdk/src/machines/computers.ts packages/computer/src` finds no comment that narrates.
 - `pnpm typecheck` green.
 
 ## Resume
@@ -29,13 +29,13 @@ Implemented on 2026-10-03.
 
 Files changed:
 
-- `packages/sdk/src/computers.ts` - the three comments the task names. `refuseComputer` names `@ahpd/agent-acp` as the backend that honours the port, `computerSource` names `disposable:<profile>` and `devcontainer://<folder>` as the sources that are not an existing machine, and `openComputer` names a disposable profile and a folder's dev container as the two kinds of source it serves. None of the three says a thing is true only for now.
+- `packages/sdk/src/machines/computers.ts` - the three comments the task names. `refuseComputer` names `@ahpd/agent-acp` as the backend that honours the port, `computerSource` names `disposable:<profile>` and `devcontainer://<folder>` as the sources that are not an existing machine, and `openComputer` names a disposable profile and a folder's dev container as the two kinds of source it serves. None of the three says a thing is true only for now.
 - `packages/computer/src/devcontainer.ts` - the module header says "every command in there" rather than "every command after it", which is the same sentence without the word that reads as history.
 - `packages/computer/src/plugin.ts` - the `runtime` schema field says docker is the only runtime rather than the only one today; the uptime comment says a stretch is written whole once a machine has stopped rather than once it is no longer up.
 - `packages/computer/src/runtime.ts` - the `profile` field no longer marks `host` as the only recipe read back today; the override config's comment says it is gone once the `up` answers; the name comment says a container carrying no such label keeps the name a listing reads for it, rather than a container made before the label existed.
 - `packages/computer/src/provider.ts` - `stateOf`'s comment says `docker`'s status is a longer vocabulary than the three states rather than that it used to answer it.
 
-Validation: `rg -n "today|after it|used to|no longer" packages/sdk/src/computers.ts packages/computer/src` finds one line, and it is not a comment - `plugin.ts:556`'s log line, `removed the disposable machine <id>, <n>ms after its last session`, which says when a machine was disposed of and is worded the way the message reads. `pnpm exec tsc --noEmit` green.
+Validation: `rg -n "today|after it|used to|no longer" packages/sdk/src/machines/computers.ts packages/computer/src` finds one line, and it is not a comment - `plugin.ts:556`'s log line, `removed the disposable machine <id>, <n>ms after its last session`, which says when a machine was disposed of and is worded the way the message reads. `pnpm exec tsc --noEmit` green.
 
 Notes and open questions:
 

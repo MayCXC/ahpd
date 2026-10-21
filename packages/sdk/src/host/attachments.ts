@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { basename, extname, join, sep } from 'node:path';
-import { SNAPSHOT_TAG as TAG } from '../attachments.js';
-import { localPath, uriOf } from '../fileuri.js';
+import { SNAPSHOT_TAG as TAG } from '../resources/attachments.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
 import { ROOT } from './channels.js';
 import type { Bag } from '../types/common.js';
 import type { Connection } from '../types/host.js';

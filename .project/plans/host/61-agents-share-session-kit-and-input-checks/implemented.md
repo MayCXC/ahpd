@@ -3,10 +3,10 @@ title: The agents share their status, activity, title and preset reading, and th
 date: 2026-10-10
 refs:
   - git://79a59d9
-  - "[code://packages/sdk/src/catalog.ts](../../../../packages/sdk/src/catalog.ts)"
-  - "[code://packages/sdk/src/vault.ts](../../../../packages/sdk/src/vault.ts)"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts)"
-  - "[code://packages/sdk/src/toolinput.ts](../../../../packages/sdk/src/toolinput.ts)"
+  - "[code://packages/sdk/src/sessions/catalog.ts](../../../../packages/sdk/src/sessions/catalog.ts)"
+  - "[code://packages/sdk/src/access/vault.ts](../../../../packages/sdk/src/access/vault.ts)"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts)"
+  - "[code://packages/sdk/src/utils/toolinput.ts](../../../../packages/sdk/src/utils/toolinput.ts)"
   - "[code://packages/sdk/src/rpc.ts](../../../../packages/sdk/src/rpc.ts)"
 ---
 
@@ -14,10 +14,10 @@ The four agent backends read a session's status, say its activity and title it f
 
 ## What was built
 
-- [`code://packages/sdk/src/catalog.ts`](../../../../packages/sdk/src/catalog.ts) - `statusOf`, `activityOf` and `titleFrom`, which every backend calls.
-- [`code://packages/sdk/src/vault.ts`](../../../../packages/sdk/src/vault.ts) - `fromEnvRef` and `readSecrets`, which the acp and claude presets read their `env` with.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `eachPreset`, the loop that registers what builds and says one line for each preset it drops.
-- [`code://packages/sdk/src/toolinput.ts`](../../../../packages/sdk/src/toolinput.ts) - the tool-input readers of task 05.
+- [`code://packages/sdk/src/sessions/catalog.ts`](../../../../packages/sdk/src/sessions/catalog.ts) - `statusOf`, `activityOf` and `titleFrom`, which every backend calls.
+- [`code://packages/sdk/src/access/vault.ts`](../../../../packages/sdk/src/access/vault.ts) - `fromEnvRef` and `readSecrets`, which the acp and claude presets read their `env` with.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `eachPreset`, the loop that registers what builds and says one line for each preset it drops.
+- [`code://packages/sdk/src/utils/toolinput.ts`](../../../../packages/sdk/src/utils/toolinput.ts) - the tool-input readers of task 05.
 - [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts) - `INVALID_PARAMS` and the request-param readers of task 06.
 
 ## Verified

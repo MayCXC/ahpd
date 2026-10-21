@@ -4,7 +4,7 @@ status: implemented
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/changes.ts#L61](../../../../packages/sdk/src/changes.ts#L61) - `git`, the one runner of git in the source"
+  - "[code://packages/sdk/src/sessions/changes.ts#L61](../../../../packages/sdk/src/sessions/changes.ts#L61) - `git`, the one runner of git in the source"
   - "[code://packages/sdk/src/host/spawn.ts#L999-L1004](../../../../packages/sdk/src/host/spawn.ts#L999-L1004) - where a turn end reads the folder again"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/common/agentHostCheckpointService.ts#L17-L68 - the refs, the baseline at `turn/0`, and the capture at a turn start"
 ---
@@ -16,9 +16,9 @@ Neither commit moves the person's branch, index or working tree.
 
 ## Files
 
-- `CREATE: packages/sdk/src/checkpoints.ts` - `captureBaseline`, `captureTurn`, `baselineOf`, `latestOf` and `removeAll`.
+- `CREATE: packages/sdk/src/sessions/checkpoints.ts` - `captureBaseline`, `captureTurn`, `baselineOf`, `latestOf` and `removeAll`.
 - `UPDATE: packages/sdk/src/types/changes.ts:321-345` - `ChangesetSource` gets `checkpoint?(dir, session, turn)`.
-- `UPDATE: packages/sdk/src/changes.ts` - `checkpoint` calls `checkpoints.ts`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `checkpoint` calls `checkpoints.ts`.
 - `UPDATE: packages/sdk/src/host/spawn.ts:999-1004` - the turn end calls `checkpoint` before `refreshFacts`.
 - `CREATE: packages/sdk/test/checkpoints.test.ts` - the cases in Validation, in a temporary repository.
 
@@ -44,7 +44,7 @@ Neither commit moves the person's branch, index or working tree.
 ## Resume
 
 - **Done so far:** Built 2026-10-16.
-  `packages/sdk/src/checkpoints.ts` writes the baseline under `turn/0` and one commit per finished turn.
+  `packages/sdk/src/sessions/checkpoints.ts` writes the baseline under `turn/0` and one commit per finished turn.
   It uses `GIT_INDEX_FILE`, so the branch, index and working tree do not move.
   Captures run one at a time per session.
   `ChangesetSource` has `checkpoint` and `removeCheckpoints`, and `changes.ts` answers both.

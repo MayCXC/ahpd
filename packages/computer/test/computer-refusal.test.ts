@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { machineAsked, refuseComputer } from '../../sdk/src/computers.js';
+import { machineAsked, refuseComputer } from '../../sdk/src/machines/computers.js';
 import type { Agent, Start } from '../../sdk/src/types/agent.js';
 import type { ComputerPort } from '../../sdk/src/types/computers.js';
 

@@ -3,7 +3,7 @@ title: Host tools
 status: current
 covers:
   - packages/sdk/src/tools/**
-  - packages/sdk/src/timing.ts
+  - packages/sdk/src/utils/timing.ts
   - packages/sdk/src/host/tooling.ts
 decisions:
   - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
@@ -19,7 +19,7 @@ refs:
   - "[code://packages/sdk/src/tools/artifacts.ts#L205-L222](../../packages/sdk/src/tools/artifacts.ts#L205-L222) - the answer of `add_artifact_or_reference`"
   - "[code://packages/sdk/src/host/facts.ts#L459-L490](../../packages/sdk/src/host/facts.ts#L459-L490) - `recordPullRequest`, the artifact a pull request operation leaves"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L360-L368](../../packages/sdk/src/host/resourcemethods.ts#L360-L368) - where an operation result records its pull request"
-  - "[code://packages/sdk/src/timing.ts#L1-L58](../../packages/sdk/src/timing.ts#L1-L58) - `callTimes`, `withCallTimes` and `startOf`"
+  - "[code://packages/sdk/src/utils/timing.ts#L1-L58](../../packages/sdk/src/utils/timing.ts#L1-L58) - `callTimes`, `withCallTimes` and `startOf`"
   - "[code://packages/sdk/src/tools/server.ts#L33-L50](../../packages/sdk/src/tools/server.ts#L33-L50) - `TOOLS_PREFIX`, the protocol version and `ToolsChanged`"
   - "[code://packages/agent-acp/src/session/opening.ts#L136](../../packages/agent-acp/src/session/opening.ts#L136) - the ACP session asks for `toolsServer`"
   - "[code://packages/agent-acp/src/plugin.ts#L269-L290](../../packages/agent-acp/src/plugin.ts#L269-L290) - `hostTools`, per preset over the plugin setting"

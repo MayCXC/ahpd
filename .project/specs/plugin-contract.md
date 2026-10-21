@@ -2,11 +2,11 @@
 title: Plugin contract
 status: current
 covers:
-  - packages/sdk/src/plugins.ts
+  - packages/sdk/src/plugins/plugins.ts
   - packages/sdk/src/types/plugin.ts
   - packages/sdk/src/types/events.ts
-  - packages/sdk/src/frozen.ts
-  - packages/sdk/src/records.ts
+  - packages/sdk/src/utils/frozen.ts
+  - packages/sdk/src/resources/records.ts
   - packages/sdk/src/types/records.ts
   - packages/server/src/records.ts
 refs:
@@ -15,14 +15,14 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L527-L847](../../packages/sdk/src/types/plugin.ts#L527-L847) - `PluginHost`, every registration and call"
   - "[code://packages/sdk/src/types/plugin.ts#L862-L886](../../packages/sdk/src/types/plugin.ts#L862-L886) - `Plugin`, what a module exports"
   - "[code://packages/sdk/src/types/events.ts#L29-L48](../../packages/sdk/src/types/events.ts#L29-L48) - `EventName`, the events a plugin can hear"
-  - "[code://packages/sdk/src/plugins.ts#L330-L416](../../packages/sdk/src/plugins.ts#L330-L416) - the fold of all contributions into one set of host options"
-  - "[code://packages/sdk/src/plugins.ts#L748-L755](../../packages/sdk/src/plugins.ts#L748-L755) - `pluginHost`, and YAML functions that throw on a host with none"
-  - "[code://packages/sdk/src/plugins.ts#L964-L975](../../packages/sdk/src/plugins.ts#L964-L975) - `records`, one collection per name"
-  - "[code://packages/sdk/src/plugins.ts#L990-L1022](../../packages/sdk/src/plugins.ts#L990-L1022) - `startSession` and `connect`"
-  - "[code://packages/sdk/src/plugins.ts#L1157-L1170](../../packages/sdk/src/plugins.ts#L1157-L1170) - `registerClose`"
-  - "[code://packages/sdk/src/plugins.ts#L1225-L1233](../../packages/sdk/src/plugins.ts#L1225-L1233) - the frozen `host` and the `seal` call"
-  - "[code://packages/sdk/src/plugins.ts#L1248-L1280](../../packages/sdk/src/plugins.ts#L1248-L1280) - `raise`, one frozen event for every listener"
-  - "[code://packages/sdk/src/frozen.ts#L18-L54](../../packages/sdk/src/frozen.ts#L18-L54) - `frozenCopy` and `deepFreeze`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L330-L416](../../packages/sdk/src/plugins/plugins.ts#L330-L416) - the fold of all contributions into one set of host options"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L748-L755](../../packages/sdk/src/plugins/plugins.ts#L748-L755) - `pluginHost`, and YAML functions that throw on a host with none"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L964-L975](../../packages/sdk/src/plugins/plugins.ts#L964-L975) - `records`, one collection per name"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L990-L1022](../../packages/sdk/src/plugins/plugins.ts#L990-L1022) - `startSession` and `connect`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1157-L1170](../../packages/sdk/src/plugins/plugins.ts#L1157-L1170) - `registerClose`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1225-L1233](../../packages/sdk/src/plugins/plugins.ts#L1225-L1233) - the frozen `host` and the `seal` call"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1248-L1280](../../packages/sdk/src/plugins/plugins.ts#L1248-L1280) - `raise`, one frozen event for every listener"
+  - "[code://packages/sdk/src/utils/frozen.ts#L18-L54](../../packages/sdk/src/utils/frozen.ts#L18-L54) - `frozenCopy` and `deepFreeze`"
   - "[code://packages/sdk/src/host.ts#L1139-L1192](../../packages/sdk/src/host.ts#L1139-L1192) - `close`, the order of what stops"
   - "[code://packages/server/src/plugins.ts#L895-L943](../../packages/server/src/plugins.ts#L895-L943) - the frozen context, `apply` and `seal`"
   - "[code://packages/server/src/commands/run.ts#L1036-L1064](../../packages/server/src/commands/run.ts#L1036-L1064) - `listening`, raised before the announcement"
@@ -36,7 +36,7 @@ The loader gives each plugin its own `PluginHost` and a frozen `PluginContext`.
 During `apply` the plugin makes contributions: agents, tools, ports, resource providers, channels, commands, routes, closers and event listeners.
 After every plugin has applied, the fold joins all contributions into one set of host options.
 A plugin then runs as a guest: it hears events, opens record collections, starts sessions and connects as a client.
-The types are in [`code://packages/sdk/src/types/plugin.ts`](../../packages/sdk/src/types/plugin.ts), and the plugin host is in [`code://packages/sdk/src/plugins.ts`](../../packages/sdk/src/plugins.ts).
+The types are in [`code://packages/sdk/src/types/plugin.ts`](../../packages/sdk/src/types/plugin.ts), and the plugin host is in [`code://packages/sdk/src/plugins/plugins.ts`](../../packages/sdk/src/plugins/plugins.ts).
 
 ## Scenarios
 

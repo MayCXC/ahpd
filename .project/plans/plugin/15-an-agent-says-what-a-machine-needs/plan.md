@@ -14,10 +14,10 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L335-L353](../../../../packages/sdk/src/types/agent.ts#L335-L353) - `schema()`, `defaults()` and `machine?()` beside them"
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts) - `MachineNeed` and `ResolvedNeed`"
-  - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`: profile, then plugin option, then the agent's default"
-  - "[code://packages/sdk/src/plugins.ts#L325-L328](../../../../packages/sdk/src/plugins.ts#L325-L328) - `PluginHost.machineNeeds`, read from the live agent list"
+  - "[code://packages/sdk/src/machines/machine.ts#L62-L106](../../../../packages/sdk/src/machines/machine.ts#L62-L106) - `resolveNeeds`: profile, then plugin option, then the agent's default"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L325-L328](../../../../packages/sdk/src/plugins/plugins.ts#L325-L328) - `PluginHost.machineNeeds`, read from the live agent list"
   - "[code://packages/sdk/src/types/computers.ts#L118-L178](../../../../packages/sdk/src/types/computers.ts#L118-L178) - `ComputerPort`, with `agents?` read back from the label"
-  - "[code://packages/sdk/src/computers.ts#L103-L130](../../../../packages/sdk/src/computers.ts#L103-L130) - `computersFor`, the port check on `how` and `nested`"
+  - "[code://packages/sdk/src/machines/computers.ts#L103-L130](../../../../packages/sdk/src/machines/computers.ts#L103-L130) - `computersFor`, the port check on `how` and `nested`"
   - "[code://packages/computer/src/manifest.ts#L520-L621](../../../../packages/computer/src/manifest.ts#L520-L621) - mounts, folder, needs, the needs-only target check and the mount order"
   - "[code://packages/computer/src/runtime.ts#L527-L549](../../../../packages/computer/src/runtime.ts#L527-L549) - the listing's label readers, which split the `Labels` column on commas"
   - "[code://packages/computer/src/runtime.ts#L645-L746](../../../../packages/computer/src/runtime.ts#L645-L746) - `run`: the dev container route and the Docker flags"
@@ -86,7 +86,7 @@ createSession / pre-turn restart / automation onto a machine without X -> [new] 
 - **Data flow** - `Agent.machine()` -> `PluginHost.machineNeeds` -> `resolveNeeds` -> `manifestOf` (one list of every mount with its origin, checked once) -> `MachineSpec` -> runtime flags and labels.
 - **State flow** - the machine's labels are the only record: `ahpd.agents` (read by name), owner, team, project, dev container folder, disposable profile.
 - **Layer responsibilities** - sdk: the need types, resolution, the one "may this session run on this machine" reader the host and `computersFor` share · computer: the manifest checks, the runtime's labels and flags, the fake Docker · agent-claude, agent-cofold: `machine()` and `computerConfigDir`.
-- **Source-of-truth files** - [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts), [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts), [`code://packages/sdk/src/computers.ts`](../../../../packages/sdk/src/computers.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts), [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts), [`code://packages/sdk/src/machines/computers.ts`](../../../../packages/sdk/src/machines/computers.ts)
 
 ## Tasks
 

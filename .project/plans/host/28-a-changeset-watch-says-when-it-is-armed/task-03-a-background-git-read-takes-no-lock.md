@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L49](../../../../packages/sdk/src/changes.ts#L49) - `git`, the helper every read in `gitChanges` goes through"
+  - "[code://packages/sdk/src/sessions/changes.ts#L49](../../../../packages/sdk/src/sessions/changes.ts#L49) - `git`, the helper every read in `gitChanges` goes through"
   - https://git-scm.com/docs/git#Documentation/git.txt---no-optional-locks - `GIT_OPTIONAL_LOCKS=0`, for background processes
 ---
 
@@ -14,7 +14,7 @@ Every git process `gitChanges` runs gets `GIT_OPTIONAL_LOCKS=0` in its environme
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - the `git` helper sets the variable over the inherited environment.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - the `git` helper sets the variable over the inherited environment.
 - `UPDATE: packages/sdk/test/changes-refresh.test.ts` or a sibling - the case below.
 
 ## Steps
@@ -30,7 +30,7 @@ Every git process `gitChanges` runs gets `GIT_OPTIONAL_LOCKS=0` in its environme
 ## Resume
 
 - **Status:** implemented, awaiting review.
-- **Done:** `quiet()` in `packages/sdk/src/changes.ts` (L54) is the inherited environment with `GIT_OPTIONAL_LOCKS=0`; both `git` runners there, `git` and `run`, pass it, so every git run in `gitChanges` has it.
+- **Done:** `quiet()` in `packages/sdk/src/sessions/changes.ts` (L54) is the inherited environment with `GIT_OPTIONAL_LOCKS=0`; both `git` runners there, `git` and `run`, pass it, so every git run in `gitChanges` has it.
 - **Tests:** `packages/sdk/test/changes-locks.test.ts`, "runs every background git read with GIT_OPTIONAL_LOCKS=0": a `git` wrapper first on `PATH` logs the variable per run; a `refresh` and a `watch` up to `ready`, over a repository whose tracked file's stat no longer matches the index, must include a `status` and run nothing without `0`.
 - **Failed first:** with `env: quiet()` taken out of both runners locally, the case fails listing six runs as `unset` (`status`, `rev-parse --show-prefix`, `diff --numstat`, `rev-parse --absolute-git-dir`, `rev-parse --git-common-dir`, `symbolic-ref`); restored, it passes.
 - **Load:** "re-reads a changeset when git is changed outside the host", with task 01's re-read on `ready` in place: 4 failures in 48 runs before (`git add` refused with `index.lock: File exists`), 0 in 48 after, twice (6 copies at once, 2 CPUs, 2 busy loops).

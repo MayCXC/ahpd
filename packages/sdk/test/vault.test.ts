@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { fromEnvRef, readSecret, readSecrets, scopeOf, secretRef } from '../src/vault.js';
-import { pluginHost } from '../src/plugins.js';
+import { fromEnvRef, readSecret, readSecrets, scopeOf, secretRef } from '../src/access/vault.js';
+import { pluginHost } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { Vault } from '../src/types/vault.js';

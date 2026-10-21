@@ -4,7 +4,7 @@ status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, computer
 refs:
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - `seedsOf` and `resolveNeeds`, a seed's source and a mount's source"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts) - `seedsOf` and `resolveNeeds`, a seed's source and a mount's source"
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - `absoluteOnHost`, used for a mount's source, a folder and a dev container's folder"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - `devcontainer.folders` and a `devcontainer://` source"
 ---
@@ -15,7 +15,7 @@ On a Windows host, a machine need, a folder and a dev container's folder named b
 
 ## Files
 
-- `UPDATE: packages/sdk/src/machine.ts` - a seed's source and a mount's source are checked with `isAbsolute`.
+- `UPDATE: packages/sdk/src/machines/machine.ts` - a seed's source and a mount's source are checked with `isAbsolute`.
 - `UPDATE: packages/computer/src/manifest.ts` - `absoluteOnHost`, the rule `sourceOf` already had, is exported and used for the folder and the dev container's folder.
 - `UPDATE: packages/computer/src/plugin.ts` - `devcontainer.folders` and a `devcontainer://` folder use `absoluteOnHost`.
 - `UPDATE: packages/sdk/test/machine-needs.test.ts`, `packages/sdk/test/agent-machine-needs.test.ts`, `packages/agent-pi/test/agent-pi.test.ts` - expected host paths are joined the system's way, and the pi case sets `USERPROFILE` beside `HOME`.

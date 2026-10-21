@@ -3,7 +3,7 @@ title: A customization is switched for all sessions or a folder - implemented
 date: 2026-10-11
 refs:
   - git://f4bd337
-  - "[code://packages/sdk/src/enablement.ts](../../../../packages/sdk/src/enablement.ts)"
+  - "[code://packages/sdk/src/plugins/enablement.ts](../../../../packages/sdk/src/plugins/enablement.ts)"
   - "[code://packages/server/src/enablement.ts](../../../../packages/server/src/enablement.ts)"
   - "[code://packages/sdk/src/host/chatactions.ts](../../../../packages/sdk/src/host/chatactions.ts)"
 ---
@@ -12,7 +12,7 @@ A customization switched off for every session, or for one folder, stays off in 
 
 ## What was built
 
-- [`code://packages/sdk/src/enablement.ts`](../../../../packages/sdk/src/enablement.ts) - `enablementKeyOf`, the `EnablementStore` interface and `memoryEnablement()`, with a cap of 512 keys.
+- [`code://packages/sdk/src/plugins/enablement.ts`](../../../../packages/sdk/src/plugins/enablement.ts) - `enablementKeyOf`, the `EnablementStore` interface and `memoryEnablement()`, with a cap of 512 keys.
 - [`code://packages/server/src/enablement.ts`](../../../../packages/server/src/enablement.ts) - `fileEnablement`, the store on the state file.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - `customizationStatePath()`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the state file in `wholeFiles`, and the store passed to the host.

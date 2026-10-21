@@ -4,7 +4,7 @@ status: done
 depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "computer | sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L376-L381](../../../../packages/sdk/src/nested.ts#L376-L381) - `createSession` sends this host's path as the inner working directory"
+  - "[code://packages/sdk/src/sessions/nested.ts#L376-L381](../../../../packages/sdk/src/sessions/nested.ts#L376-L381) - `createSession` sends this host's path as the inner working directory"
   - "[code://packages/computer/src/plugin.ts#L210-L224](../../../../packages/computer/src/plugin.ts#L210-L224) - `within`, which maps a host path through the machine's mounts"
   - "[code://packages/computer/src/plugin.ts#L634-L646](../../../../packages/computer/src/plugin.ts#L634-L646) - `nestedHost`, which goes through `reach` and maps only the process `-w`"
   - "[code://packages/sdk/src/types/computers.ts#L38](../../../../packages/sdk/src/types/computers.ts#L38) - `NestedStart`"
@@ -18,7 +18,7 @@ The inner session's working directory is the path inside the machine the session
 
 - `UPDATE: packages/sdk/src/types/computers.ts:38-143` - what `nested` answers.
 - `UPDATE: packages/computer/src/plugin.ts:634-646` - `nestedHost`.
-- `UPDATE: packages/sdk/src/nested.ts:376-381` and `:419` - `createSession` and `workingDirectories`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:376-381` and `:419` - `createSession` and `workingDirectories`.
 
 ## Steps
 

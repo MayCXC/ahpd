@@ -5,7 +5,7 @@ import type { Agent, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Principal, Users } from '../src/types/users.js';
-import { memorySessions } from '../src/sessions.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import type { SessionStore } from '../src/types/sessions.js';
 
 /*

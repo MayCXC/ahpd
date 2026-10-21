@@ -6,9 +6,9 @@ priority: medium
 created: 2026-10-09
 revalidated: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/changes.ts#L687-L702](../../../../packages/sdk/src/changes.ts#L687-L702) - `words()`, the pull request title from the session title and the body from the branch's commits"
-  - "[code://packages/sdk/src/changes.ts#L750-L766](../../../../packages/sdk/src/changes.ts#L750-L766) - `create-pr` commits a dirty tree with the session title as the message"
-  - "[code://packages/sdk/src/changes.ts#L1069-L1111](../../../../packages/sdk/src/changes.ts#L1069-L1111) - `commit`, the message from `ahpd.commit`, else the session title, else a fixed line"
+  - "[code://packages/sdk/src/sessions/changes.ts#L687-L702](../../../../packages/sdk/src/sessions/changes.ts#L687-L702) - `words()`, the pull request title from the session title and the body from the branch's commits"
+  - "[code://packages/sdk/src/sessions/changes.ts#L750-L766](../../../../packages/sdk/src/sessions/changes.ts#L750-L766) - `create-pr` commits a dirty tree with the session title as the message"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1069-L1111](../../../../packages/sdk/src/sessions/changes.ts#L1069-L1111) - `commit`, the message from `ahpd.commit`, else the session title, else a fixed line"
   - "[code://packages/sdk/src/host/changesets.ts#L332-L356](../../../../packages/sdk/src/host/changesets.ts#L332-L356) - `operationContext`, which hands the source the session title as `subject`"
   - "[code://packages/sdk/src/host/root.ts#L178-L263](../../../../packages/sdk/src/host/root.ts#L178-L263) - `ROOT_CONFIG_SCHEMA`, where a host setting is declared"
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/agentHostPullRequestOperationHandler.ts#L395-L410 - the title and body: what the person submitted, else generated, else a fixed line
@@ -28,7 +28,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "subject" packages/sdk/src/changes.ts` - the session title is the only text source for `commit`, the `create-pr` commit and `words()`.
+- `rg -n "subject" packages/sdk/src/sessions/changes.ts` - the session title is the only text source for `commit`, the `create-pr` commit and `words()`.
 - `rg -n "complete|generate" packages/sdk/src/types/agent.ts` - an `Agent` has no call that writes text outside a turn.
 
 ### Gaps

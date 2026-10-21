@@ -4,7 +4,7 @@ date: 2026-10-20
 refs:
   - git://89eccdfe
   - https://github.com/softov/ahpd/pull/49 - every job green, merged on 2026-10-20
-  - "[code://packages/sdk/src/terminals.ts#L134-L153](../../../../packages/sdk/src/terminals.ts#L134-L153) - `crtEscaped` and `isWindowsPowerShell`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L134-L153](../../../../packages/sdk/src/machines/terminals.ts#L134-L153) - `crtEscaped` and `isWindowsPowerShell`"
   - "[code://packages/sdk/test/wire.test.ts#L607-L641](../../../../packages/sdk/test/wire.test.ts#L607-L641) - `steady` and the capture written from a POSIX run only"
 ---
 
@@ -14,7 +14,7 @@ The wire capture is the same on every run and names no real person or machine.
 
 ## What was built
 
-- [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts) - under `powershell.exe`, the words of an argv after the program are escaped for the C runtime, by [Windows PowerShell 5.1 is given an argv escaped for the C runtime](../../../decisions/windows-powershell-5-is-given-an-argv-escaped-for-the-c-runtime.md) - task 04.
+- [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts) - under `powershell.exe`, the words of an argv after the program are escaped for the C runtime, by [Windows PowerShell 5.1 is given an argv escaped for the C runtime](../../../decisions/windows-powershell-5-is-given-an-argv-escaped-for-the-c-runtime.md) - task 04.
 - `agent-pi-lazy`, `conformance` and `host-terminals` wait up to `WAIT_MS` - task 01.
 - `computer-spawn` and `nested-process` stand in with this Node running a script, where they ran `cat`, `sleep`, `true`, `false` and `sh -c` - task 02.
 - 25 cases in six files skip on Windows with their reason beside them, and the stop sent while a restart is stopping expects the `control pipe` receipt there - task 03.

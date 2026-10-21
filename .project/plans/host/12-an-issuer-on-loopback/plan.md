@@ -11,7 +11,7 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/issuers.ts#L89-L115](../../../../packages/sdk/src/issuers.ts#L89-L115) - `isIssuerUrl` and the discovered endpoint's check"
+  - "[code://packages/sdk/src/access/issuers.ts#L89-L115](../../../../packages/sdk/src/access/issuers.ts#L89-L115) - `isIssuerUrl` and the discovered endpoint's check"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - `namedIssuer`"
   - "[code://scripts/dev-issuer.mjs](../../../../scripts/dev-issuer.mjs) - the throwaway issuer this exists to make usable"
   - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - where an operator reads how to try one"

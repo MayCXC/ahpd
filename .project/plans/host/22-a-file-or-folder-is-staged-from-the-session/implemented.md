@@ -3,14 +3,14 @@ title: A file or a folder is staged and unstaged from the session's changeset - 
 date: 2026-09-28
 refs:
   - git://59b96f2
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `pathIn`, `STAGE` and `UNSTAGE`"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `pathIn`, `STAGE` and `UNSTAGE`"
 ---
 
 A person stages and unstages from the session itself, a file or a whole folder, and Commit then takes exactly that; nothing above the session's folder can be named.
 
 ## What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `pathIn` decodes a target, and requires both the written and the resolved path inside the session's folder, answering the written one; a folder is refused for `discard` and `revert`; `stage` runs `git add -A` and `unstage` runs `git restore --staged`, or `git rm --cached` before the first commit.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `pathIn` decodes a target, and requires both the written and the resolved path inside the session's folder, answering the written one; a folder is refused for `discard` and `revert`; `stage` runs `git add -A` and `unstage` runs `git restore --staged`, or `git rm --cached` before the first commit.
 - [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - how a person stages, in VS Code, ahpapp, a terminal or Source Control.
 
 ## Verified

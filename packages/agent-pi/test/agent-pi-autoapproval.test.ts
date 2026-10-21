@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { Status } from '../../sdk/src/catalog.js';
+import { Status } from '../../sdk/src/sessions/catalog.js';
 import type { Bag, Start } from '../../sdk/src/types/index.js';
 import { driveCall, opened, root, settled } from './fake-pi.js';
 

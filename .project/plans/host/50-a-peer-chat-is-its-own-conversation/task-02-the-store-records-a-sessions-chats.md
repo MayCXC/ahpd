@@ -5,8 +5,8 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/sessions.ts#L143-L153](../../../../packages/sdk/src/types/sessions.ts#L143-L153) - `chatTitle`, `setChatTitle`, `forget`"
-  - "[code://packages/sdk/src/sessions.ts#L39-L42](../../../../packages/sdk/src/sessions.ts#L39-L42) - the memory store's per-chat map and its `forget`"
-  - "[code://packages/sdk/src/sessions.ts#L194-L212](../../../../packages/sdk/src/sessions.ts#L194-L212) - `rowOf`, what the file store writes for a session"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L39-L42](../../../../packages/sdk/src/sessions/sessions.ts#L39-L42) - the memory store's per-chat map and its `forget`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L194-L212](../../../../packages/sdk/src/sessions/sessions.ts#L194-L212) - `rowOf`, what the file store writes for a session"
   - "[code://packages/sdk/test/sessions.test.ts#L260-L280](../../../../packages/sdk/test/sessions.test.ts#L260-L280) - forgetting and remembering across a restart"
 ---
 
@@ -17,7 +17,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts` - `StoredChat` and the two methods beside `chatTitle`.
-- `UPDATE: packages/sdk/src/sessions.ts` - the memory store's map; the file store's row field, written with the rest of the row.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the memory store's map; the file store's row field, written with the rest of the row.
 - `UPDATE: packages/sdk/test/sessions.test.ts` - the cases below.
 
 ## Steps
@@ -38,4 +38,4 @@ Built on `build/agents/830a472f` on 2026-10-09 and left uncommitted.
 
 `origin` is `Record<string, unknown>`, the shape `madeFrom` already holds and `session/chatAdded` already carries, rather than a second spelling of it. `keepChat` mirrors it into the row from where the host keeps it, because a chat is spawned before its origin is written down. `stored` seeds `madeFrom` back from the row, so a chat listed into the catalogue after a restart still says it was forked.
 
-Two files the Files line does not name. `packages/sdk/src/index.ts` re-exports the type. `packages/sdk/src/validate.ts` lists the required members of a contributed `sessions` port, and `packages/sdk/test/plugin-validate.test.ts` holds the stub those names are checked against.
+Two files the Files line does not name. `packages/sdk/src/index.ts` re-exports the type. `packages/sdk/src/plugins/validate.ts` lists the required members of a contributed `sessions` port, and `packages/sdk/test/plugin-validate.test.ts` holds the stub those names are checked against.

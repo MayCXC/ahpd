@@ -1,5 +1,5 @@
-import { accepts } from '../configvalues.js';
-import { frozenCopy } from '../frozen.js';
+import { accepts } from '../utils/configvalues.js';
+import { frozenCopy } from '../utils/frozen.js';
 import { HOSTS_OWN } from './common.js';
 import type { SessionConfigAnswerer, SessionConfigAsk } from '../types/completions.js';
 import type { Agent } from '../types/agent.js';

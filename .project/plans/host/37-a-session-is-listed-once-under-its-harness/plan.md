@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L3897-L3940](../../../../packages/sdk/src/host.ts#L3897-L3940) - `listing()`, which publishes every agent's rows as `<provider>:/<id>`"
   - "[code://packages/sdk/src/host.ts#L6339-L6366](../../../../packages/sdk/src/host.ts#L6339-L6366) - `openSession`, where a new session's owner and config are kept"
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`, what the host keeps per session"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - the memory and file stores, `version: 1`"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts) - the memory and file stores, `version: 1`"
   - "[code://packages/agent-claude/src/claude.ts#L438](../../../../packages/agent-claude/src/claude.ts#L438) - Claude's `list()`, every transcript under `~/.claude/projects`"
   - "[code://packages/agent-claude/src/session.ts#L2310](../../../../packages/agent-claude/src/session.ts#L2310) - Claude keeps the host's id when it is a UUID, else picks its own"
 ---

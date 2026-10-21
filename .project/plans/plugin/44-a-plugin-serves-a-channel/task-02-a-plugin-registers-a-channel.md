@@ -20,8 +20,8 @@ A client subscribes to it, gets the plugin's snapshot, and may not dispatch to i
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts:532` - `PluginChannel` and `registerChannel`, beside `registerResourceProvider`.
-- `UPDATE: packages/sdk/src/validate.ts` - `checkChannel`, which needs `grant` and `snapshot`.
-- `UPDATE: packages/sdk/src/plugins.ts` - `registerChannel` checks the `x-` prefix and a scheme taken twice, and the fold collects `HostOptions.channels`.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - `checkChannel`, which needs `grant` and `snapshot`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `registerChannel` checks the `x-` prefix and a scheme taken twice, and the fold collects `HostOptions.channels`.
 - `UPDATE: packages/sdk/src/host/channels.ts` - `spaceOf` answers `'plugin'` for a registered scheme.
 - `UPDATE: packages/sdk/src/host/routing.ts` - `channelKind`, `meantBy` and `homeOf` route a plugin channel.
 - `UPDATE: packages/sdk/src/host/snapshots.ts:72` - `snapshotOf` asks the channel for its snapshot.

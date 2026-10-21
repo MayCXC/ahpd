@@ -4,7 +4,7 @@ date: 2026-09-23
 refs:
   - code://packages/sdk/src/listen.ts
   - code://packages/sdk/src/types/listen.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/types/users.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
@@ -18,7 +18,7 @@ A person's connection token now opens a socket and names nobody, so `authenticat
 
 - `code://packages/sdk/src/listen.ts` - `identityOf` admits a token that says nobody, distinguishes the deployment's token, and takes `root` from `ListenOptions`; a principal-less arrival is admitted and a missing arrival is refused. All three runtimes carry `principal` and `root`.
 - `code://packages/sdk/src/types/listen.ts` - `Arrival { principal? }`, `identify` answering it or `undefined`, and `ListenOptions.root`.
-- `code://packages/sdk/src/users.ts` - `trustToken` as the host default, `Principal.trusted` as the record's field or that default, and `list` reporting `trusted` beside `grants`.
+- `code://packages/sdk/src/access/users.ts` - `trustToken` as the host default, `Principal.trusted` as the record's field or that default, and `list` reporting `trusted` beside `grants`.
 - `code://packages/sdk/src/types/users.ts` - the three fields above, with the reason `trusted` is stamped once per connection.
 - `code://packages/server/src/config.ts` - the `trustToken` key.
 - `code://packages/server/src/main.ts` - `--trust-token`, merged with the file, and an `identify` that answers `{ principal }` only for a trusted record so an untrusted token arrives as nobody.

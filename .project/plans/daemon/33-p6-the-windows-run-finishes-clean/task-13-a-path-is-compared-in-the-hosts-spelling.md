@@ -4,8 +4,8 @@ status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, computer, tests
 refs:
-  - "[code://packages/sdk/src/commandautoapprover.ts](../../../../packages/sdk/src/commandautoapprover.ts) - `patternsAllow`, a write's path against the auto-approve patterns"
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `folded`, the key a changeset's side is kept under"
+  - "[code://packages/sdk/src/access/commandautoapprover.ts](../../../../packages/sdk/src/access/commandautoapprover.ts) - `patternsAllow`, a write's path against the auto-approve patterns"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `folded`, the key a changeset's side is kept under"
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - `within`, where a host path is inside a machine"
   - "[code://packages/computer/test/fixtures/docker.mjs](../../../../packages/computer/test/fixtures/docker.mjs) - `mountParts`, the fake docker's mounts"
   - "[code://packages/sdk/test/users-gate-helpers.ts](../../../../packages/sdk/test/users-gate-helpers.ts) - `host`, which closes what it made"
@@ -17,8 +17,8 @@ On a Windows host, a path is compared with a pattern, a key or a mount in the sp
 
 ## Files
 
-- `UPDATE: packages/sdk/src/commandautoapprover.ts` - `patternsAllow` tests a path with `/` separators on Windows. A pattern is written with `/`, so the denial for `.git` never matched `C:\repo\.git\config` while the allow-all pattern did: a redirect into `.git` was auto-approved on Windows.
-- `UPDATE: packages/sdk/src/changes.ts` - `folded` makes the separators one on Windows, so a side a checkpoint named with `/` is the file a URI names with `\`.
+- `UPDATE: packages/sdk/src/access/commandautoapprover.ts` - `patternsAllow` tests a path with `/` separators on Windows. A pattern is written with `/`, so the denial for `.git` never matched `C:\repo\.git\config` while the allow-all pattern did: a redirect into `.git` was auto-approved on Windows.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `folded` makes the separators one on Windows, so a side a checkpoint named with `/` is the file a URI names with `\`.
 - `UPDATE: packages/computer/src/runtime.ts` - `within` compares a path and a mount's source with one separator and no case on Windows, and gives the rest inside the machine with `/`.
 - `UPDATE: packages/computer/test/fixtures/docker.mjs` - `mountParts` keeps a drive letter in a mount's source, as `manifest.ts` does.
 - `UPDATE: packages/sdk/test/users-gate-helpers.ts` - `host` keeps every host it made, and the cleanup closes each before the folder goes: a shell left running holds its folder on Windows.

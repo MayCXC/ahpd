@@ -7,9 +7,9 @@ refs:
   - "[code://packages/sdk/src/types/usage.ts#L21-L29](../../../../packages/sdk/src/types/usage.ts#L21-L29) - `Cost`"
   - "[code://packages/sdk/src/types/usage.ts#L50-L51](../../../../packages/sdk/src/types/usage.ts#L50-L51) - `UsageBase.cost`"
   - "[code://packages/sdk/src/types/usage.ts#L90-L111](../../../../packages/sdk/src/types/usage.ts#L90-L111) - `UsageTotal`"
-  - "[code://packages/sdk/src/usage.ts#L22-L33](../../../../packages/sdk/src/usage.ts#L22-L33) - `Measured` and `none`"
-  - "[code://packages/sdk/src/usage.ts#L118-L144](../../../../packages/sdk/src/usage.ts#L118-L144) - `measured`"
-  - "[code://packages/sdk/src/usage.ts#L261-L293](../../../../packages/sdk/src/usage.ts#L261-L293) - the range total"
+  - "[code://packages/sdk/src/usage/usage.ts#L22-L33](../../../../packages/sdk/src/usage/usage.ts#L22-L33) - `Measured` and `none`"
+  - "[code://packages/sdk/src/usage/usage.ts#L118-L144](../../../../packages/sdk/src/usage/usage.ts#L118-L144) - `measured`"
+  - "[code://packages/sdk/src/usage/usage.ts#L261-L293](../../../../packages/sdk/src/usage/usage.ts#L261-L293) - the range total"
 ---
 
 ## Objective
@@ -23,7 +23,7 @@ A total has `providerUsd`, `inputUsd` and `outputUsd` beside `usd`.
 - `UPDATE: packages/sdk/src/types/usage.ts:21-29` - `input?` and `output?` on `Cost`, the amounts for sent and received, each with a one-line comment. `from` stays.
 - `UPDATE: packages/sdk/src/types/usage.ts:50-51` - `providerCost?: Cost` beside `cost`. The comment on `cost` says it is what the pools are charged.
 - `UPDATE: packages/sdk/src/types/usage.ts:90-111` - `providerUsd?`, `inputUsd?` and `outputUsd?` on `UsageTotal`.
-- `UPDATE: packages/sdk/src/usage.ts` - `Measured`, `none`, `measured`, the per-day charge and the range total carry the three amounts.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - `Measured`, `none`, `measured`, the per-day charge and the range total carry the three amounts.
 - `UPDATE: packages/sdk/test/usage.test.ts` - the cases below.
 - `UPDATE: generated schema` - rerun `node tools/schema.mjs`.
 

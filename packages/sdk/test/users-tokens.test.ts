@@ -4,8 +4,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { same } from '../src/listen.js';
-import { fileUsers } from '../src/users.js';
-import type { FileUserOptions } from '../src/users.js';
+import { fileUsers } from '../src/access/users.js';
+import type { FileUserOptions } from '../src/access/users.js';
 import type { Users } from '../src/types/users.js';
 
 // Counted, not replaced: every comparison still happens, and a case can say

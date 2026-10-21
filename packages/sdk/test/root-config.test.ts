@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { trusted } from '../src/host/trust.js';
 import { CLIENT_QUEUE_BYTES, REPLAY_BYTES, clientQueueBytes, replayBytes } from '../src/host/limits.js';
 import { vscodeRootProperties } from '../src/vscoderootconfig.js';

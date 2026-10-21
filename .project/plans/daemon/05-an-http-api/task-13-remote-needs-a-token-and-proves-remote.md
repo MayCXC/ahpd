@@ -32,7 +32,7 @@ The `--remote` tests pass only when the daemon answered.
 ## Steps
 
 1. The token's sources and the refusal in `main.ts`, before `remoteRegistry`.
-2. The warning: an `http:` URL whose host is not `127.0.0.1`, `[::1]` or `localhost` (the line `loopbackUrl` in `packages/sdk/src/issuers.ts` draws) writes one line on stderr that the token travels in cleartext, then proceeds (["`--remote` to plain http on a host that is not loopback sends the token, with a warning"](../../../../docs/server/REFERENCE.md)).
+2. The warning: an `http:` URL whose host is not `127.0.0.1`, `[::1]` or `localhost` (the line `loopbackUrl` in `packages/sdk/src/access/issuers.ts` draws) writes one line on stderr that the token travels in cleartext, then proceeds (["`--remote` to plain http on a host that is not loopback sends the token, with a warning"](../../../../docs/server/REFERENCE.md)).
 3. The cache directory, with its mode.
 4. The test client gets its own `XDG_CONFIG_HOME` and `XDG_CACHE_HOME`, with no configuration and no `daemon.json`, and `recordFor` goes (task 08 made it unnecessary).
 

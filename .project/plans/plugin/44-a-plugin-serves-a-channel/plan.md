@@ -20,7 +20,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L589-L610](../../../../packages/sdk/src/host.ts#L589-L610) - `emit`, one `serverSeq` and one replay buffer"
   - "[code://packages/sdk/src/types/plugin.ts#L532](../../../../packages/sdk/src/types/plugin.ts#L532) - `registerResourceProvider`, the registration this one sits beside"
   - "[code://packages/sdk/src/types/events.ts#L29-L47](../../../../packages/sdk/src/types/events.ts#L29-L47) - `EventName`, which has no users event"
-  - "[code://packages/sdk/src/users.ts#L393](../../../../packages/sdk/src/users.ts#L393) - `fileUsers`, which reads its file at each check and says nothing when it changes"
+  - "[code://packages/sdk/src/access/users.ts#L393](../../../../packages/sdk/src/access/users.ts#L393) - `fileUsers`, which reads its file at each check and says nothing when it changes"
   - "[code://packages/bot/src/provider.ts#L184-L191](../../../../packages/bot/src/provider.ts#L184-L191) - `mayRead`, which decides what a reader sees"
 ---
 
@@ -37,7 +37,7 @@ When a membership change makes a bot readable or unreadable, the subscriber gets
 
 - `rg -n "AUTOMATIONS" packages/sdk/src` - the host's catalogue channel has a case in `snapshotOf`, routing, the gate and the handshake.
 - `rg -n "registerMethod|registerChannel" packages .project` - no plugin can serve a channel today.
-- `rg -n "users_changed|onChange" packages/sdk/src/users.ts packages/sdk/src/types/events.ts` - nothing tells a plugin that memberships changed.
+- `rg -n "users_changed|onChange" packages/sdk/src/access/users.ts packages/sdk/src/types/events.ts` - nothing tells a plugin that memberships changed.
 
 ### Runtime path
 
@@ -80,7 +80,7 @@ client unsubscribe or disconnect -> channel.left(client)
 - **Event flow** - `publish` calls `emit` with a test. `seenBy` calls the test with the connection's principal, at the send and at a replay.
 - **State flow** - the bot plugin keeps the set of slugs it sent to each client. `users_changed` makes it read each set again and send the difference.
 - **Layer responsibilities** - `packages/sdk`: the channel kind, routing, gate, filter and advertisement, and `users_changed` · `packages/bot`: the catalogue · `docs`: both.
-- **Source-of-truth files** - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts), [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts), [`code://packages/bot/src/provider.ts`](../../../../packages/bot/src/provider.ts)
 
 ## Tasks
 

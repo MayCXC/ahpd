@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/pluginparts.ts#L181-L185](../../../../packages/sdk/src/pluginparts.ts#L181-L185) - `rulesIn`"
-  - "[code://packages/sdk/src/pluginparts.ts#L328-L333](../../../../packages/sdk/src/pluginparts.ts#L328-L333) - `part`"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L181-L185](../../../../packages/sdk/src/plugins/pluginparts.ts#L181-L185) - `rulesIn`"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L328-L333](../../../../packages/sdk/src/plugins/pluginparts.ts#L328-L333) - `part`"
   - "file:///github/agent-host-protocol/types/channels-session/state.ts#L1105-L1131 - `RuleCustomization`"
 ---
 
@@ -16,8 +16,8 @@ The host also keeps the rule's body for task 02.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/pluginparts.ts:181-185` - `rulesIn` reads each rule file once.
-- `UPDATE: packages/sdk/src/pluginparts.ts:328-333` - a rule part gets the three fields of `RuleCustomization`.
+- `UPDATE: packages/sdk/src/plugins/pluginparts.ts:181-185` - `rulesIn` reads each rule file once.
+- `UPDATE: packages/sdk/src/plugins/pluginparts.ts:328-333` - a rule part gets the three fields of `RuleCustomization`.
 - `UPDATE: packages/sdk/test/pluginparts.test.ts` - a rule with frontmatter, a rule without it, and a bad frontmatter.
 
 ## Steps
@@ -40,7 +40,7 @@ The host also keeps the rule's body for task 02.
 ## Resume
 
 - **Done so far:** built 2026-10-16. `rulesIn` reads each rule file once, so a rule part carries `description`, `alwaysApply` and `globs` off its frontmatter. The part is built in one place, and `rulesOf(dir, uri)` hands each rule's body over beside its part, out of the wire shape, for task 02.
-- **Files:** `packages/sdk/src/pluginparts.ts`, `packages/sdk/test/pluginparts.test.ts`, and this task's two rows in `plan.md`. Nothing is committed, and `packages/sdk/test/fixtures/wire.jsonl` is left dirty by the vitest run.
+- **Files:** `packages/sdk/src/plugins/pluginparts.ts`, `packages/sdk/test/pluginparts.test.ts`, and this task's two rows in `plan.md`. Nothing is committed, and `packages/sdk/test/fixtures/wire.jsonl` is left dirty by the vitest run.
 - **Next action:** build task 02.
 - **Open questions:** none.
 - **Watch out for:** one choice the plan did not make:

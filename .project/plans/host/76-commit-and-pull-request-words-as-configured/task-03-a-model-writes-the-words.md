@@ -14,8 +14,8 @@ In model mode, the named model writes the words from VS Code's prompts, and a fa
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - `wordsFor` asks the model in model mode.
-- `CREATE: packages/sdk/src/changewords.ts` - the two prompts and the split of an answer into a title and a body.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `wordsFor` asks the model in model mode.
+- `CREATE: packages/sdk/src/sessions/changewords.ts` - the two prompts and the split of an answer into a title and a body.
 - `UPDATE: packages/sdk/src/host/changesets.ts:176-356` - `watchTurn` waits for the turn under its limit, `askModel` opens the session it asks on, and `changeWordsOf` builds the ask or says what went without.
 - `UPDATE: packages/sdk/src/types/host.ts` - `changeWordsTimeoutMs`, the limit on waiting for a turn asked for the words.
 - `UPDATE: packages/sdk/src/host/context.ts` - `bareSessions`, the sessions that run with nothing to call.
@@ -39,7 +39,7 @@ In model mode, the named model writes the words from VS Code's prompts, and a fa
 ## Resume
 
 - **Implemented** 2026-10-09 on `build/agents/016ab0b2`, uncommitted.
-- `packages/sdk/src/changewords.ts` (101 lines) holds `TITLE_MOST` (72), `DIFF_MOST` (20,000), `commitPrompt`, `pullRequestPrompt`, `splitWords` and `cutDiff`. The two prompts carry a block per input - changed files, the diff, what was said, and for a pull request the branch and the base - and leave a block out whole when there is nothing to put in it. A diff over `DIFF_MOST` ends by saying it was cut.
+- `packages/sdk/src/sessions/changewords.ts` (101 lines) holds `TITLE_MOST` (72), `DIFF_MOST` (20,000), `commitPrompt`, `pullRequestPrompt`, `splitWords` and `cutDiff`. The two prompts carry a block per input - changed files, the diff, what was said, and for a pull request the branch and the base - and leave a block out whole when there is nothing to put in it. A diff over `DIFF_MOST` ends by saying it was cut.
 - `packages/sdk/src/host/changesets.ts:219-258` is `askModel`. It opens a session named `${provider}:/${crypto.randomUUID()}` in the changeset's own directory with `ctx.openSession`, runs one turn on the named model, reads the answer off the turn and disposes of the session in a `finally`. `changes.ts` builds the prompt in `askOf` and splits the answer with `splitWords`; an empty or missing answer falls back to the session title and says `the model did not answer, so the session title was used`.
 - No tools: `ctx.bareSessions` is added to before the session opens and dropped in the `finally`. `boundTools` (`tooling.ts`) answers none for a URI in the set, so a later `retool` cannot put one back, and `spawn.ts` leaves out the MCP servers, the plugins, the denied servers and the tool server. The set is made in `host.ts` with the rest of the context and is empty for a host that never opens one.
 - `changeWordsOf` (`changesets.ts:287-317`) answers `why` instead of an ask when the mode cannot ask: no provider and model named, a provider this host does not serve, a session with no chat, an agent without `chats.sideChat`, a session with no turn. The source falls back with that sentence, so a mode with nothing behind it is a whole answer and not a refusal.

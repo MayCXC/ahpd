@@ -23,7 +23,7 @@ refs:
   - "[code://packages/computer/src/manifest.ts#L54-L55](../../../../packages/computer/src/manifest.ts#L54-L55) - `Profile.needs`"
   - "[code://packages/computer/src/manifest.ts#L158-L159](../../../../packages/computer/src/manifest.ts#L158-L159) - `ManifestDefaults.needValues`"
   - "[code://packages/computer/src/manifest.ts#L578-L590](../../../../packages/computer/src/manifest.ts#L578-L590) - `manifestOf` hands both to `resolveNeeds`"
-  - "[code://packages/sdk/src/machine.ts#L22-L28](../../../../packages/sdk/src/machine.ts#L22-L28) - `NeedSources`, which stays strings"
+  - "[code://packages/sdk/src/machines/machine.ts#L22-L28](../../../../packages/sdk/src/machines/machine.ts#L22-L28) - `NeedSources`, which stays strings"
   - "[code://packages/sdk/src/types/computers.ts#L74-L108](../../../../packages/sdk/src/types/computers.ts#L74-L108) - `MachineSource`: owner, team, project"
   - "[code://packages/computer/test/computer-needs.test.ts](../../../../packages/computer/test/computer-needs.test.ts) - need values from a profile and the option"
 ---

@@ -11,8 +11,8 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { beforeEach, expect, it } from 'vitest';
-import { tokenMethods } from '../src/tokens.js';
-import { fileUsers } from '../src/users.js';
+import { tokenMethods } from '../src/access/tokens.js';
+import { fileUsers } from '../src/access/users.js';
 import { call, hello, host, peer, root, signIn } from './users-gate-helpers.js';
 import type { ServedMethod } from '../src/types/plugin.js';
 import type { MintedToken, Principal, Users } from '../src/types/users.js';

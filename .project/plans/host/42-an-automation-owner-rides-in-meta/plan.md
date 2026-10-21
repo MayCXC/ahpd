@@ -6,9 +6,9 @@ priority: high
 created: 2026-10-03
 refs:
   - "[code://packages/sdk/src/types/automations.ts#L15-L55](../../../../packages/sdk/src/types/automations.ts#L15-L55) - `Automation.owner` and `AutomationRun.owner`, ahpd fields on the protocol shapes"
-  - "[code://packages/sdk/src/automations.ts#L52-L65](../../../../packages/sdk/src/automations.ts#L52-L65) - `entry()` spreads the whole record, `owner` included, onto the `automation/set` entry"
-  - "[code://packages/sdk/src/automations.ts#L136-L150](../../../../packages/sdk/src/automations.ts#L136-L150) - the run record, which carries `owner` onto the run state"
-  - "[code://packages/sdk/src/automations.ts#L171](../../../../packages/sdk/src/automations.ts#L171) - `StartSession.owner`, ahpd's own options, which never reach the wire and stay"
+  - "[code://packages/sdk/src/automations/automations.ts#L52-L65](../../../../packages/sdk/src/automations/automations.ts#L52-L65) - `entry()` spreads the whole record, `owner` included, onto the `automation/set` entry"
+  - "[code://packages/sdk/src/automations/automations.ts#L136-L150](../../../../packages/sdk/src/automations/automations.ts#L136-L150) - the run record, which carries `owner` onto the run state"
+  - "[code://packages/sdk/src/automations/automations.ts#L171](../../../../packages/sdk/src/automations/automations.ts#L171) - `StartSession.owner`, ahpd's own options, which never reach the wire and stay"
   - "[code://packages/sdk/test/wire.test.ts](../../../../packages/sdk/test/wire.test.ts) - records the host's frames and checks each against the protocol schema"
   - "npm://@microsoft/agent-host-protocol@0.9.0 - `AutomationEntry._meta` (channels-automation/state.ts:331) and `AutomationRunState._meta` (channels-automation-run/state.ts:253); neither declares `owner`"
 ---
@@ -24,7 +24,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "owner" packages/sdk/src/automations.ts` - the create (:90), the run (:147) and `StartSession` (:171).
+- `rg -n "owner" packages/sdk/src/automations/automations.ts` - the create (:90), the run (:147) and `StartSession` (:171).
 - `rg -n "interface AutomationSetAction|interface AutomationEntry|interface AutomationRunState" node_modules/.pnpm/@microsoft+agent-host-protocol@0.9.0` - `automation/set` carries an `AutomationEntry`, which has `_meta`; the run state has `_meta`.
 - `rg -o "'ahpd\.[a-zA-Z.]+'" packages/sdk/src` - ahpd's `_meta` keys are `ahpd.<name>`.
 - `/github/ahpapp`, `/github/ahpc` - no reader of an automation's or a run's `owner` found.
@@ -46,7 +46,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - the stored `Automation` and `AutomationRun` keep `owner`; the function that answers the wire entry and the run state moves it into `_meta['ahpd.owner']`, beside any `_meta` already there.
 - **Layer responsibilities** - sdk only.
-- **Source-of-truth files** - [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts)
 
 ## Tasks
 

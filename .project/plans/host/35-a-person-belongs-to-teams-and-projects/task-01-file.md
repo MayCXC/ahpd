@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L162](../../../../packages/sdk/src/types/users.ts#L84-L162) - `UserRecord` and `UserFile`"
-  - "[code://packages/sdk/src/users.ts#L215-L266](../../../../packages/sdk/src/users.ts#L215-L266) - reading the file"
+  - "[code://packages/sdk/src/access/users.ts#L215-L266](../../../../packages/sdk/src/access/users.ts#L215-L266) - reading the file"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The users file holds `teams` and `projects` (each an id and an optional title) a
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts:84-162` - `UserFile.teams?`, `UserFile.projects?`, `UserRecord.memberships?: string[]`, `UserRecord.primary?: string`; the same two on `Principal`.
-- `UPDATE: packages/sdk/src/users.ts` - parse and check them; write them back unchanged.
+- `UPDATE: packages/sdk/src/access/users.ts` - parse and check them; write them back unchanged.
 
 ## Steps
 

@@ -110,7 +110,7 @@ ahpd --plugin @ahpd/agent-cofold [--no-plugins]
 - **Event flow** - none in this plan, because the loader runs once before the host exists; a plugin that wants events adopts one of the two forms [`ideas/plugins.md`](https://github.com/softov/ahpd/blob/ea7a01b8ea4276cbfda113e7a95ac240fb624146/.project/ideas/plugins.md) records and neither needs a change here.
 - **State flow** - none beyond `config.json`; the loader writes nothing, and the only record it consults is the plugin's own `package.json`.
 - **Layer responsibilities** - packages/sdk: the contract types in `types/plugin.ts`, the pure `pluginHost` and `foldHostOptions` in `plugins.ts`, and one exported `runtime()` so the resolver reuses the detection `listen.ts` already owns · packages/server/src/plugins.ts: resolution, import, manifest reading, failure policy and `loadPlugins` · packages/server/src/main.ts: what is named, the base options, one call, and the startup line.
-- **Source-of-truth files** - `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/server/src/plugins.ts`, `code://packages/server/src/main.ts`, `code://packages/server/src/config.ts`.
+- **Source-of-truth files** - `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins/plugins.ts`, `code://packages/server/src/plugins.ts`, `code://packages/server/src/main.ts`, `code://packages/server/src/config.ts`.
 
 ## Tasks
 

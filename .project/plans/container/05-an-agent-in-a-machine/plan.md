@@ -22,7 +22,7 @@ refs:
   - "[code://packages/agent-claude/src/claude.ts#L373-L398](../../../../packages/agent-claude/src/claude.ts#L373-L398) - Claude's needs: the host's `~/.claude` and its own binary, mounted"
   - "[code://packages/agent-acp/src/plugin.ts#L35-L61](../../../../packages/agent-acp/src/plugin.ts#L35-L61) - an ACP load is one command, args and env, registers one agent, and declares no needs"
   - "[code://packages/sdk/src/host/machines.ts#L182-L212](../../../../packages/sdk/src/host/machines.ts#L182-L212) - `placedIn`, which hands the session's folder, already its worktree, and its provider's `machine()` to the machine maker"
-  - "[code://packages/sdk/src/nested.ts#L95-L129](../../../../packages/sdk/src/nested.ts#L95-L129) - the proxy that relays a host started inside a machine"
+  - "[code://packages/sdk/src/sessions/nested.ts#L95-L129](../../../../packages/sdk/src/sessions/nested.ts#L95-L129) - the proxy that relays a host started inside a machine"
   - "git://7552054:.project/ideas/an-image-that-carries-ahpd.md - the image Softov asked for, which the parts answer"
   - "[code://.project/ideas/more-computer-runtimes.md](../../../ideas/more-computer-runtimes.md) - the runtimes not planned, and copying a folder that is not a repository"
 ---

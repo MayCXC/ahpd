@@ -4,9 +4,9 @@ title: A user put clears its issuer and roles-from when it says null - implement
 
 ## What exists
 
-- A `user://<id>` put with `issuer: null` or `rolesFrom: null` removes that field from the record; a key left out, or a blank string, keeps what the record had; clearing one does not clear the other (`packages/sdk/src/people.ts`).
+- A `user://<id>` put with `issuer: null` or `rolesFrom: null` removes that field from the record; a key left out, or a blank string, keeps what the record had; clearing one does not clear the other (`packages/sdk/src/access/people.ts`).
 - The manifest marks `issuer` and `rolesFrom` `nullable`, and says `null` takes each away.
-- `Users.add` takes `issuer` and `rolesFrom` as `string | null`; the file's `add` checks an issuer only when one is given and deletes the field on `null` (`packages/sdk/src/users.ts`).
+- `Users.add` takes `issuer` and `rolesFrom` as `string | null`; the file's `add` checks an issuer only when one is given and deletes the field on `null` (`packages/sdk/src/access/users.ts`).
 - `docs/sdk/USERS.md` says `null` takes `issuer`, `rolesFrom` and `primary` away.
 
 ## Verified

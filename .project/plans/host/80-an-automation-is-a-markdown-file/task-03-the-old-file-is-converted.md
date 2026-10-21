@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-store-keeps-markdown-files.md]
 layer: "packages/server"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions.ts#L712-L740) - `migrateSessions`, the pattern"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions/sessions.ts#L712-L740) - `migrateSessions`, the pattern"
 ---
 
 ## Objective

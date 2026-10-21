@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Status, activityOf, statusOf, titleFrom } from '../src/catalog.js';
+import { Status, activityOf, statusOf, titleFrom } from '../src/sessions/catalog.js';
 import type { Bag, Emit } from '../src/types/index.js';
 
 /*

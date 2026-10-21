@@ -12,8 +12,8 @@ creates: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/users.ts#L96-L134](../../../../packages/sdk/src/types/users.ts#L96-L134) - `rolesFrom` and `IssuerAnswer`"
-  - "[code://packages/sdk/src/users.ts#L343-L397](../../../../packages/sdk/src/users.ts#L343-L397) - `principalOf` and `rolesFromClaim`"
-  - "[code://packages/sdk/src/issuers.ts#L60-L72](../../../../packages/sdk/src/issuers.ts#L60-L72) - `answer`, which keeps the claims"
+  - "[code://packages/sdk/src/access/users.ts#L343-L397](../../../../packages/sdk/src/access/users.ts#L343-L397) - `principalOf` and `rolesFromClaim`"
+  - "[code://packages/sdk/src/access/issuers.ts#L60-L72](../../../../packages/sdk/src/access/issuers.ts#L60-L72) - `answer`, which keeps the claims"
   - "[code://packages/server/src/main.ts](../../../../packages/server/src/main.ts) - `user add --issuer`, and the flag parsing it joins"
   - "[code://scripts/dev-issuer.mjs](../../../../scripts/dev-issuer.mjs) - the claim a test can read"
   - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the operator's side"

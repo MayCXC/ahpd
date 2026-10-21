@@ -18,7 +18,7 @@ Other credentials a profile names on purpose, such as p8 task 07's `gitCredentia
 ## Files
 
 - `UPDATE: packages/computer/src/plugin.ts:717-830` - each resolved need carries where its value came from; checked per agent for a remote runtime.
-- `UPDATE: packages/sdk/src/nested.ts` - checked at the nested start of each session, before `nested` is asked.
+- `UPDATE: packages/sdk/src/sessions/nested.ts` - checked at the nested start of each session, before `nested` is asked.
 - `UPDATE: packages/computer/test/computer-needs.test.ts`.
 
 ## Steps

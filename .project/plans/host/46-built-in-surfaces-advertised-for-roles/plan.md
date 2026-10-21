@@ -20,9 +20,9 @@ refs:
   - "[code://packages/sdk/src/host/root.ts#L171-L186](../../../../packages/sdk/src/host/root.ts#L171-L186) - `advertisedSchemes`, the pattern the new advertisement copies, and its `operations` list named after the provider's methods (`read`, `write`)"
   - "[code://packages/sdk/src/host/root.ts#L204](../../../../packages/sdk/src/host/root.ts#L204) - `ahpd.resourceProviders` in root state `_meta`"
   - "[code://packages/sdk/src/host/handshake.ts#L262](../../../../packages/sdk/src/host/handshake.ts#L262) - `ahpd.resourceProviders` in `initialize`'s `_meta`"
-  - "[code://packages/sdk/src/users.ts#L24-L88](../../../../packages/sdk/src/users.ts#L24-L88) - the built-in roles, `SUBJECTS`, `GRANT`, `LEGACY` and `holds`"
+  - "[code://packages/sdk/src/access/users.ts#L24-L88](../../../../packages/sdk/src/access/users.ts#L24-L88) - the built-in roles, `SUBJECTS`, `GRANT`, `LEGACY` and `holds`"
   - "[code://packages/sdk/src/types/users.ts#L21-L37](../../../../packages/sdk/src/types/users.ts#L21-L37) - `Verb` and `Grant`"
-  - "[code://packages/sdk/src/people.ts#L236-L268](../../../../packages/sdk/src/people.ts#L236-L268) - the `role:` scheme, which writes a role's grants"
+  - "[code://packages/sdk/src/access/people.ts#L236-L268](../../../../packages/sdk/src/access/people.ts#L236-L268) - the `role:` scheme, which writes a role's grants"
   - "[code://packages/server/src/commands/user.ts#L34-L41](../../../../packages/server/src/commands/user.ts#L34-L41) - `bounded`, which lets a person hand out only grants they hold"
   - "[code://packages/sdk/test/users-gate.test.ts#L140-L168](../../../../packages/sdk/test/users-gate.test.ts#L140-L168) - the staleness test: every served method is in `NEEDS` or `UNGATED`"
   - "[code://docs/sdk/USERS.md#L356-L401](../../../../docs/sdk/USERS.md#L356-L401) - the grants table a person reads"
@@ -91,7 +91,7 @@ initialize / root state -> _meta['ahpd.resourceProviders'] (schemes only)
 - **Event flow** - unchanged: a refusal names the operation it needed, `-32009` for a request and `rejectionReason` for a dispatch.
 - **State flow** - roles in the `users` file are unchanged; a new role may hold operations.
 - **Layer responsibilities** - sdk: the table, the gate, the advertisement · server: the `role:` write validation through `isGrant`, `bounded` unchanged · docs: USERS.md.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts), [`code://packages/sdk/src/host/admission.ts`](../../../../packages/sdk/src/host/admission.ts), [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts), [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts), [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts), [`code://packages/sdk/src/host/admission.ts`](../../../../packages/sdk/src/host/admission.ts), [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts), [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts), [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts)
 
 ## Tasks
 

@@ -4,7 +4,7 @@ status: done
 depends: [task-06-the-git-watch-closes-with-its-directory.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L1016-L1133](../../../../packages/sdk/src/changes.ts#L1016-L1133) - the source's `watch`, which covers the index, `HEAD`, the branch's ref and `packed-refs`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1016-L1133](../../../../packages/sdk/src/sessions/changes.ts#L1016-L1133) - the source's `watch`, which covers the index, `HEAD`, the branch's ref and `packed-refs`"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ A ref that moves without the index or `HEAD` being written, as `git reset --soft
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:1016-1133` - the watch also covers the checked-out branch's ref and `packed-refs`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:1016-1133` - the watch also covers the checked-out branch's ref and `packed-refs`.
 - `UPDATE: packages/sdk/test/changes-refresh.test.ts` - the case below.
 
 ## Steps

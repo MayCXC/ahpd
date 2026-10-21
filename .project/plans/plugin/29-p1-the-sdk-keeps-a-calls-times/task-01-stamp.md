@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L2214-L2250](../../../../packages/sdk/src/host.ts#L2214-L2250) - `unstamped`, `withWorkerUri` and `stampedCalls`, the pattern for a `_meta` key kept across actions"
-  - "[code://packages/sdk/src/paging.ts](../../../../packages/sdk/src/paging.ts) - a small sdk module a plugin imports"
+  - "[code://packages/sdk/src/sessions/paging.ts](../../../../packages/sdk/src/sessions/paging.ts) - a small sdk module a plugin imports"
   - "[code://packages/sdk/src/index.ts#L76-L77](../../../../packages/sdk/src/index.ts#L76-L77) - where such a module is exported"
 ---
 
@@ -15,7 +15,7 @@ A helper in the sdk builds `{ 'ahpd.startedAt', 'ahpd.endedAt', 'ahpd.durationMs
 
 ## Files
 
-- `CREATE: packages/sdk/src/timing.ts` - `callTimes`, `withCallTimes` and `startOf`.
+- `CREATE: packages/sdk/src/utils/timing.ts` - `callTimes`, `withCallTimes` and `startOf`.
 - `UPDATE: packages/sdk/src/index.ts:76-77` - export the three beside `tail`, `older` and `PAGE`.
 - `CREATE: packages/sdk/test/timing.test.ts` - the cases below.
 

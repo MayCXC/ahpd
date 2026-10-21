@@ -3,8 +3,8 @@ title: Windows PowerShell 5.1 is given an argv escaped for the C runtime
 status: accepted
 date: 2026-10-20
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L126-L133](../../packages/sdk/src/terminals.ts#L126-L133) - `psQuoted`, one word in PowerShell's single quotes"
-  - "[code://packages/sdk/src/terminals.ts#L212-L227](../../packages/sdk/src/terminals.ts#L212-L227) - `argvLine`, an argv as one line behind the call operator"
+  - "[code://packages/sdk/src/machines/terminals.ts#L126-L133](../../packages/sdk/src/machines/terminals.ts#L126-L133) - `psQuoted`, one word in PowerShell's single quotes"
+  - "[code://packages/sdk/src/machines/terminals.ts#L212-L227](../../packages/sdk/src/machines/terminals.ts#L212-L227) - `argvLine`, an argv as one line behind the call operator"
   - "[code://packages/sdk/test/pty.test.ts#L367-L375](../../packages/sdk/test/pty.test.ts#L367-L375) - the case that fails under Windows PowerShell 5.1"
 ---
 

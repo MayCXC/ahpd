@@ -4,11 +4,11 @@ status: done
 depends: [task-01-ahpds-plugins-export-slugs.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/values.ts#L40-L41](../../../../packages/sdk/src/values.ts#L40-L41) - `ownerOf`, the reading of a saved owner"
-  - "[code://packages/sdk/src/sessions.ts#L610-L618](../../../../packages/sdk/src/sessions.ts#L610-L618) - a saved session's owner and senders"
+  - "[code://packages/sdk/src/utils/values.ts#L40-L41](../../../../packages/sdk/src/utils/values.ts#L40-L41) - `ownerOf`, the reading of a saved owner"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L610-L618](../../../../packages/sdk/src/sessions/sessions.ts#L610-L618) - a saved session's owner and senders"
   - "[code://packages/server/src/scheduled.ts#L404](../../../../packages/server/src/scheduled.ts#L404) - a saved automation's owner"
-  - "[code://packages/sdk/src/usage.ts#L242-L266](../../../../packages/sdk/src/usage.ts#L242-L266) - `entriesIn`, the reading of a usage line"
-  - "[code://packages/sdk/src/triggers.ts#L192-L193](../../../../packages/sdk/src/triggers.ts#L192-L193) - a trigger's `owners` filter"
+  - "[code://packages/sdk/src/usage/usage.ts#L242-L266](../../../../packages/sdk/src/usage/usage.ts#L242-L266) - `entriesIn`, the reading of a usage line"
+  - "[code://packages/sdk/src/automations/triggers.ts#L192-L193](../../../../packages/sdk/src/automations/triggers.ts#L192-L193) - a trigger's `owners` filter"
 ---
 
 ## Objective
@@ -23,9 +23,9 @@ Nothing on disk is rewritten.
 - `UPDATE: packages/sdk/test/usage.test.ts` - a usage line with an old owner.
 - `UPDATE: packages/sdk/test/sessions.test.ts` - a saved row with an old owner and sender.
 - `UPDATE: packages/sdk/test/triggers.test.ts` - a rule whose `owners` names an old owner.
-- `UPDATE: packages/sdk/src/values.ts:31-41` - `currentOwner`, and `ownerOf` reads through it.
-- `UPDATE: packages/sdk/src/usage.ts:242-266` - `entriesIn` reads `owner` and `pools` through `currentOwner`.
-- `UPDATE: packages/sdk/src/triggers.ts:192-193` - the `owners` filter reads through `currentOwner`.
+- `UPDATE: packages/sdk/src/utils/values.ts:31-41` - `currentOwner`, and `ownerOf` reads through it.
+- `UPDATE: packages/sdk/src/usage/usage.ts:242-266` - `entriesIn` reads `owner` and `pools` through `currentOwner`.
+- `UPDATE: packages/sdk/src/automations/triggers.ts:192-193` - the `owners` filter reads through `currentOwner`.
 - `UPDATE: packages/sdk/src/index.ts` - export `currentOwner`.
 
 ## Steps

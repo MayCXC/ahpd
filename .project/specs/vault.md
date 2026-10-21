@@ -2,7 +2,7 @@
 title: Vault
 status: current
 covers:
-  - packages/sdk/src/vault.ts
+  - packages/sdk/src/access/vault.ts
   - packages/sdk/src/types/vault.ts
   - packages/server/src/vault.ts
   - packages/server/src/commands/vault.ts
@@ -10,8 +10,8 @@ covers:
   - packages/computer/src/secrets.ts
 refs:
   - "[code://packages/sdk/src/types/vault.ts#L18-L53](../../packages/sdk/src/types/vault.ts#L18-L53) - `Vault`, `SecretRef` and `SecretWork`"
-  - "[code://packages/sdk/src/vault.ts#L38-L54](../../packages/sdk/src/vault.ts#L38-L54) - `scopeOf`, the three forms of a secret name"
-  - "[code://packages/sdk/src/vault.ts#L129-L138](../../packages/sdk/src/vault.ts#L129-L138) - `readSecret`, the scope check before the store is asked"
+  - "[code://packages/sdk/src/access/vault.ts#L38-L54](../../packages/sdk/src/access/vault.ts#L38-L54) - `scopeOf`, the three forms of a secret name"
+  - "[code://packages/sdk/src/access/vault.ts#L129-L138](../../packages/sdk/src/access/vault.ts#L129-L138) - `readSecret`, the scope check before the store is asked"
   - "[code://packages/server/src/vault.ts#L65-L98](../../packages/server/src/vault.ts#L65-L98) - `fileVault`, the daemon's own vault over one file"
   - "[code://packages/sdk/src/types/plugin.ts#L762-L770](../../packages/sdk/src/types/plugin.ts#L762-L770) - `registerVault`"
   - "[code://packages/server/src/plugins.ts#L640-L670](../../packages/server/src/plugins.ts#L640-L670) - `resolveSecrets`, a plugin option that names a secret"
@@ -26,7 +26,7 @@ A value in the configuration written `{ "$secret": "<name>" }` is a reference, a
 The vault is the `vault` port, and the daemon fills it with a local vault, a plain JSON file beside the configuration.
 A plugin can take the port over with `registerVault(vault, 'replace')`, for example for a secret manager or a shared database.
 The name of a secret carries its scope, and the scope decides which work may read it.
-The code is in [`code://packages/sdk/src/vault.ts`](../../packages/sdk/src/vault.ts) and [`code://packages/server/src/vault.ts`](../../packages/server/src/vault.ts).
+The code is in [`code://packages/sdk/src/access/vault.ts`](../../packages/sdk/src/access/vault.ts) and [`code://packages/server/src/vault.ts`](../../packages/server/src/vault.ts).
 
 ## Scenarios
 

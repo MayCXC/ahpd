@@ -12,10 +12,10 @@ creates: []
 decisions:
   - decisions/a-pasted-image-goes-as-an-image-when-it-fits.md
 refs:
-  - "[code://packages/sdk/src/attachments.ts#L65-L83](../../../../packages/sdk/src/attachments.ts#L65-L83) - `PartSource` and `Part`: a part names the attachment it came from, and a file's own text where it read one"
-  - "[code://packages/sdk/src/attachments.ts#L99-L176](../../../../packages/sdk/src/attachments.ts#L99-L176) - `partsOf` and `partOf`: which of the three an attachment is, within which limits"
+  - "[code://packages/sdk/src/resources/attachments.ts#L65-L83](../../../../packages/sdk/src/resources/attachments.ts#L65-L83) - `PartSource` and `Part`: a part names the attachment it came from, and a file's own text where it read one"
+  - "[code://packages/sdk/src/resources/attachments.ts#L99-L176](../../../../packages/sdk/src/resources/attachments.ts#L99-L176) - `partsOf` and `partOf`: which of the three an attachment is, within which limits"
   - "[code://packages/agent-acp/src/session/turn.ts#L241-L270](../../../../packages/agent-acp/src/session/turn.ts#L241-L270) - `blocksFor`, which maps the parts to ACP blocks"
-  - "[code://packages/sdk/src/resources.ts#L208-L217](../../../../packages/sdk/src/resources.ts#L208-L217) - `read`: `readFile` of the whole file, binary as base64"
+  - "[code://packages/sdk/src/resources/resources.ts#L208-L217](../../../../packages/sdk/src/resources/resources.ts#L208-L217) - `read`: `readFile` of the whole file, binary as base64"
   - "[code://packages/agent-acp/src/session/queue.ts#L176-L199](../../../../packages/agent-acp/src/session/queue.ts#L176-L199) - `startNext`, which passes a queued entry's attachments to `begin`"
   - "[code://packages/agent-acp/src/session/opening.ts#L372](../../../../packages/agent-acp/src/session/opening.ts#L372) - `promptCapabilities`, what the server takes"
 ---

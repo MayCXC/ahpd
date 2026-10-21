@@ -8,7 +8,7 @@
  */
 
 import { expect, it } from 'vitest';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';

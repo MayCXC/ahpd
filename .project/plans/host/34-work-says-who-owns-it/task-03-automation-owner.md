@@ -15,7 +15,7 @@ An automation created by a signed-in person has `owner: 'user:<id>'`, persisted;
 ## Files
 
 - `UPDATE: packages/sdk/src/types/automations.ts:14-29` - `owner?: string`.
-- `UPDATE: packages/sdk/src/automations.ts` - persist `owner` in the store file; copy it onto each run.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - persist `owner` in the store file; copy it onto each run.
 - `UPDATE: packages/sdk/src/host.ts` - set `owner` from the creating connection's principal.
 
 ## Steps

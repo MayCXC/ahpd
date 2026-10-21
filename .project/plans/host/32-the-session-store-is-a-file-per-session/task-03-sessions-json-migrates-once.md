@@ -5,7 +5,7 @@ depends: [task-01-a-file-per-session.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/config.ts#L185](../../../../packages/server/src/config.ts#L185) - `sessions.json`"
-  - "[code://packages/sdk/src/sessions.ts#L76-L86](../../../../packages/sdk/src/sessions.ts#L76-L86) - the old shape"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L76-L86](../../../../packages/sdk/src/sessions/sessions.ts#L76-L86) - the old shape"
 ---
 
 ## Objective

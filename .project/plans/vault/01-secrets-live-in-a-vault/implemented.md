@@ -2,7 +2,7 @@
 title: Secrets live in a vault, and a plugin option or a machine need names one - implemented
 date: 2026-10-03
 refs:
-  - "[code://packages/sdk/src/vault.ts](../../../../packages/sdk/src/vault.ts)"
+  - "[code://packages/sdk/src/access/vault.ts](../../../../packages/sdk/src/access/vault.ts)"
   - "[code://packages/server/src/vault.ts](../../../../packages/server/src/vault.ts)"
   - "[code://packages/computer/src/secrets.ts](../../../../packages/computer/src/secrets.ts)"
 ---

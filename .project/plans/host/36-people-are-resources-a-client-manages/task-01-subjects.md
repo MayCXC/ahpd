@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L39](../../../../packages/sdk/src/users.ts#L39) - `SUBJECTS`"
+  - "[code://packages/sdk/src/access/users.ts#L39](../../../../packages/sdk/src/access/users.ts#L39) - `SUBJECTS`"
   - "[code://packages/server/src/commands/user.ts](../../../../packages/server/src/commands/user.ts) - `users:write` on every verb"
 ---
 
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts` - `SUBJECTS` loses `users` and gains the four.
+- `UPDATE: packages/sdk/src/access/users.ts` - `SUBJECTS` loses `users` and gains the four.
 - `UPDATE: packages/server/src/commands/user.ts` - `user:read` / `user:write`, and `role:read` where a verb lists roles.
 - `UPDATE: packages/server/src/commands/teams.ts` - `team:*` and `project:*`.
 

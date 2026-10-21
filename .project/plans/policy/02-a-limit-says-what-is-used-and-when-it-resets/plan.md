@@ -13,21 +13,21 @@ creates: []
 decisions:
   - decisions/a-limit-counts-the-records-tagged-with-its-key.md
 refs:
-  - "[code://packages/sdk/src/decide.ts#L157-L200](../../../../packages/sdk/src/decide.ts#L157-L200) - `decide`, which answers the candidates the charge walk starts from and reads no limit"
+  - "[code://packages/sdk/src/access/decide.ts#L157-L200](../../../../packages/sdk/src/access/decide.ts#L157-L200) - `decide`, which answers the candidates the charge walk starts from and reads no limit"
   - "[code://packages/sdk/src/types/policies.ts#L66-L98](../../../../packages/sdk/src/types/policies.ts#L66-L98) - `PolicyLimit` and `Policy`: `limits`, `pool` and `cap`, stored and read by nobody"
   - "[code://packages/sdk/src/types/usage.ts#L63](../../../../packages/sdk/src/types/usage.ts#L63) - `pools`, the opaque keys a record is charged to"
   - "[code://packages/sdk/src/types/usage.ts#L104-L131](../../../../packages/sdk/src/types/usage.ts#L104-L131) - `UsageTotal`, which has no turn count"
-  - "[code://packages/sdk/src/usage.ts#L137-L330](../../../../packages/sdk/src/usage.ts#L137-L330) - `fileUsage`: running totals per key and per UTC day"
-  - "[code://packages/sdk/src/usage.ts#L566-L640](../../../../packages/sdk/src/usage.ts#L566-L640) - `shown`, `startOfDay`, `mondayOf` and `firstOf`, the zoned periods of the usage scheme"
-  - "[code://packages/sdk/src/usage.ts#L766-L770](../../../../packages/sdk/src/usage.ts#L766-L770) - `spansOf`, the day, week and month a pool is read over"
-  - "[code://packages/sdk/src/meter.ts#L193-L197](../../../../packages/sdk/src/meter.ts#L193-L197) - `poolsOf`, the owner, team and project keys a turn's record has today"
-  - "[code://packages/sdk/src/meter.ts#L218-L265](../../../../packages/sdk/src/meter.ts#L218-L265) - `write`, the one place a turn's record is made"
+  - "[code://packages/sdk/src/usage/usage.ts#L137-L330](../../../../packages/sdk/src/usage/usage.ts#L137-L330) - `fileUsage`: running totals per key and per UTC day"
+  - "[code://packages/sdk/src/usage/usage.ts#L566-L640](../../../../packages/sdk/src/usage/usage.ts#L566-L640) - `shown`, `startOfDay`, `mondayOf` and `firstOf`, the zoned periods of the usage scheme"
+  - "[code://packages/sdk/src/usage/usage.ts#L766-L770](../../../../packages/sdk/src/usage/usage.ts#L766-L770) - `spansOf`, the day, week and month a pool is read over"
+  - "[code://packages/sdk/src/usage/meter.ts#L193-L197](../../../../packages/sdk/src/usage/meter.ts#L193-L197) - `poolsOf`, the owner, team and project keys a turn's record has today"
+  - "[code://packages/sdk/src/usage/meter.ts#L218-L265](../../../../packages/sdk/src/usage/meter.ts#L218-L265) - `write`, the one place a turn's record is made"
   - "[code://packages/sdk/src/host/spawn.ts#L577-L588](../../../../packages/sdk/src/host/spawn.ts#L577-L588) - where a session's meter is made"
   - "[code://packages/sdk/src/host/owners.ts#L166-L183](../../../../packages/sdk/src/host/owners.ts#L166-L183) - `checked`, which runs `decide` and answers a refusal sentence"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1305-L1335](../../../../packages/sdk/src/host/lifecycle.ts#L1305-L1335) - the turn's own check"
   - "[code://packages/server/src/proxy/listener.ts#L371-L385](../../../../packages/server/src/proxy/listener.ts#L371-L385) - `policyFor`, the proxy's check"
   - "[code://packages/server/src/proxy/listener.ts#L668-L700](../../../../packages/server/src/proxy/listener.ts#L668-L700) - `record`, the proxy's usage record"
-  - "[code://packages/sdk/src/policy.ts#L118-L182](../../../../packages/sdk/src/policy.ts#L118-L182) - the `policy:` records, provider and channel"
+  - "[code://packages/sdk/src/access/policy.ts#L118-L182](../../../../packages/sdk/src/access/policy.ts#L118-L182) - the `policy:` records, provider and channel"
   - "[code://packages/server/src/config.ts#L70-L80](../../../../packages/server/src/config.ts#L70-L80) - `PoliciesSetting`, the `policies` block with `check`"
   - "[code://packages/server/src/commands/run.ts#L348](../../../../packages/server/src/commands/run.ts#L348) - where the daemon makes its usage store"
   - "[code://packages/server/src/commands/run.ts#L872](../../../../packages/server/src/commands/run.ts#L872) - where `usage.timezone` reaches the usage scheme"
@@ -49,9 +49,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "limits|cap|pool" packages/sdk/src/decide.ts` - `decide` reads none of them.
-- `rg -n "pools" packages/sdk/src/meter.ts packages/server/src/proxy/listener.ts` - a record names its owner, team and project, and no policy.
-- `rg -n "today|slice\(0, 10\)" packages/sdk/src/usage.ts` - the store keeps its totals per UTC day.
+- `rg -n "limits|cap|pool" packages/sdk/src/access/decide.ts` - `decide` reads none of them.
+- `rg -n "pools" packages/sdk/src/usage/meter.ts packages/server/src/proxy/listener.ts` - a record names its owner, team and project, and no policy.
+- `rg -n "today|slice\(0, 10\)" packages/sdk/src/usage/usage.ts` - the store keeps its totals per UTC day.
 - `rg -n "kind: 'computer'" packages` - only the computer plugin writes machine time, when a machine stops.
 
 ### Runtime path
@@ -90,7 +90,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 | A measure whose limiting rows are all closed is recorded with no key, and the walk refuses only when no measure finds a payer | Softov, 2026-10-18, asked whether A2 pays when A3 closes: "Yes, A2 pays" | 03 |
 | The keys are `policy:<id>/<measure>` for `shared`, `policy:<id>/<measure>/user:<id>` for `each`, and `pool:<name>/...` for a row that names a `pool` | [the decision](../../../decisions/a-limit-counts-the-records-tagged-with-its-key.md) | 03 |
 | The check is before the work and the record after it, so two turns that start together can both go past the amount | the rules draft, "Answered 2026-10-01" | 03, 04 |
-| A period begins at 00:00 in `usage.timezone`: the day, the week on Monday, the month on the 1st, and resets at the next one; `total` counts from the row's `from` and never resets | the rules draft, "Answered 2026-10-01"; [code://packages/sdk/src/usage.ts#L766-L770](../../../../packages/sdk/src/usage.ts#L766-L770) | 01, 03 |
+| A period begins at 00:00 in `usage.timezone`: the day, the week on Monday, the month on the 1st, and resets at the next one; `total` counts from the row's `from` and never resets | the rules draft, "Answered 2026-10-01"; [code://packages/sdk/src/usage/usage.ts#L766-L770](../../../../packages/sdk/src/usage/usage.ts#L766-L770) | 01, 03 |
 | The store keeps its days in `usage.timezone`, so a period's total holds no hours of the period before | (defaulted: a limit that counts the wrong hours is wrong at every reset) | 01 |
 | A record counts one turn when it is the first record the meter writes for that turn | (defaulted: `calls` counts each report with `per: 'report'`) | 02 |
 | The limits are checked at each turn and each proxy call, and not at a session's creation | (defaulted: a session spends nothing until its first turn) | 04 |
@@ -105,7 +105,7 @@ policy://<id>/limits, usage://limits -> [new] limitsOf(): amount, used, from, re
 - **Event flow** - nothing new: a record is written when it is written today, and a total includes it once it settles.
 - **State flow** - the store keeps one running total per key and per day in `usage.timezone`; nothing else is kept.
 - **Layer responsibilities** - sdk: the periods, the charge walk, the keys, the turn's check, the meter, the reads · server: the settings, the proxy's check and record.
-- **Source-of-truth files** - `packages/sdk/src/charge.ts` (new, beside `decide.ts`) and `packages/sdk/src/periods.ts` (new, out of `usage.ts`).
+- **Source-of-truth files** - `packages/sdk/src/usage/charge.ts` (new, beside `decide.ts`) and `packages/sdk/src/usage/periods.ts` (new, out of `usage.ts`).
 
 ## Tasks
 

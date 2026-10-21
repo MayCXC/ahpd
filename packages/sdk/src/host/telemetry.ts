@@ -1,4 +1,4 @@
-import { raise } from '../plugins.js';
+import { raise } from '../plugins/plugins.js';
 import type { Bag } from '../types/common.js';
 import type { HostEvent } from '../types/events.js';
 import type { HostContext } from './context.js';

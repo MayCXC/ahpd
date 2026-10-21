@@ -5,7 +5,7 @@ depends: []
 layer: "server"
 refs:
   - "[code://packages/server/src/daemon.ts#L124-L144](../../../../packages/server/src/daemon.ts#L124-L144) - `TEMP` matches `daemon.json.<pid>.tmp` in the daemon's directory only"
-  - "[code://packages/sdk/src/users.ts#L679-L683](../../../../packages/sdk/src/users.ts#L679-L683) - the comment that says the sweeper knows the users file's temp"
+  - "[code://packages/sdk/src/access/users.ts#L679-L683](../../../../packages/sdk/src/access/users.ts#L679-L683) - the comment that says the sweeper knows the users file's temp"
   - "[code://packages/server/src/commands/run.ts#L225](../../../../packages/server/src/commands/run.ts#L225) - the users file, at a path of the operator's"
   - "[code://packages/server/test/daemon.test.ts](../../../../packages/server/test/daemon.test.ts) - the sweeper's cases"
 ---

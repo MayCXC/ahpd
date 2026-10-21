@@ -6,16 +6,16 @@ severity: major
 refs:
   - "[code://packages/sdk/src/host/spawn.ts#L578-L582](../../packages/sdk/src/host/spawn.ts#L578-L582) - `checkpointOf` writes the checkpoints under `idOf(uri)`"
   - "[code://packages/sdk/src/host/spawn.ts#L1437-L1441](../../packages/sdk/src/host/spawn.ts#L1437-L1441) - `onFileEdit` hands `observe` the channel URI"
-  - "[code://packages/sdk/src/changes.ts#L1477-L1482](../../packages/sdk/src/changes.ts#L1477-L1482) - `observe` keys the edit tracker `seen` by the session it is given"
-  - "[code://packages/sdk/src/changes.ts#L622-L624](../../packages/sdk/src/changes.ts#L622-L624) - `across`, the tracker's files of one key"
-  - "[code://packages/sdk/src/changes.ts#L747-L767](../../packages/sdk/src/changes.ts#L747-L767) - `inCheckpoints` and `sessionFiles`, which read both under one key"
-  - "[code://packages/sdk/src/changes.ts#L1445-L1448](../../packages/sdk/src/changes.ts#L1445-L1448) - `state` for the `session` scope calls `sessionFiles` with the key it gets"
-  - "[code://packages/sdk/src/changes.ts#L1580](../../packages/sdk/src/changes.ts#L1580) - `sessionSummary` calls `sessionFiles` with the key it gets"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1477-L1482](../../packages/sdk/src/sessions/changes.ts#L1477-L1482) - `observe` keys the edit tracker `seen` by the session it is given"
+  - "[code://packages/sdk/src/sessions/changes.ts#L622-L624](../../packages/sdk/src/sessions/changes.ts#L622-L624) - `across`, the tracker's files of one key"
+  - "[code://packages/sdk/src/sessions/changes.ts#L747-L767](../../packages/sdk/src/sessions/changes.ts#L747-L767) - `inCheckpoints` and `sessionFiles`, which read both under one key"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1445-L1448](../../packages/sdk/src/sessions/changes.ts#L1445-L1448) - `state` for the `session` scope calls `sessionFiles` with the key it gets"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1580](../../packages/sdk/src/sessions/changes.ts#L1580) - `sessionSummary` calls `sessionFiles` with the key it gets"
   - "[code://packages/sdk/src/host/changesets.ts#L114-L121](../../packages/sdk/src/host/changesets.ts#L114-L121) - `changesetAt` names the channel URI as `owner`"
   - "[code://packages/sdk/src/host/changesets.ts#L591](../../packages/sdk/src/host/changesets.ts#L591) - `state` gets `at.owner`, the URI"
   - "[code://packages/sdk/src/host/snapshots.ts#L195](../../packages/sdk/src/host/snapshots.ts#L195) - the snapshot of a changeset gets `at.owner` too"
   - "[code://packages/sdk/src/host/catalogue.ts#L653-L657](../../packages/sdk/src/host/catalogue.ts#L653-L657) - `summaryKept` calls `sessionSummary` with `idOf(uri)`"
-  - "[code://packages/sdk/src/checkpoints.ts#L48-L56](../../packages/sdk/src/checkpoints.ts#L48-L56) - a checkpoint ref is `refs/agents/<key>/checkpoints/`"
+  - "[code://packages/sdk/src/sessions/checkpoints.ts#L48-L56](../../packages/sdk/src/sessions/checkpoints.ts#L48-L56) - a checkpoint ref is `refs/agents/<key>/checkpoints/`"
   - git://06596413 - host/103, which added the checkpoints and `sessionSummary`
 ---
 

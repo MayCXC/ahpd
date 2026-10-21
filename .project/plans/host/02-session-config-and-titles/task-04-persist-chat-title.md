@@ -5,10 +5,10 @@ depends: []
 layer: packages/sdk
 refs:
   - code://packages/sdk/src/types/sessions.ts#L27-L57 - `SessionStore`, which gains the chat-title pair
-  - code://packages/sdk/src/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
-  - code://packages/sdk/src/sessions.ts#L45-L49 - `Saved`, the persisted shape
-  - code://packages/sdk/src/sessions.ts#L80-L108 - `save`, which turns the slots into JSON
-  - code://packages/sdk/src/sessions.ts#L118-L153 - `load` and the store a restart reads
+  - code://packages/sdk/src/sessions/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
+  - code://packages/sdk/src/sessions/sessions.ts#L45-L49 - `Saved`, the persisted shape
+  - code://packages/sdk/src/sessions/sessions.ts#L80-L108 - `save`, which turns the slots into JSON
+  - code://packages/sdk/src/sessions/sessions.ts#L118-L153 - `load` and the store a restart reads
   - code://packages/sdk/src/host.ts#L2231-L2244 - the in-memory chats map and `held.chats.set`, where a chat is created
   - code://packages/sdk/src/host.ts#L3198-L3214 - `renameChat`, which sets the title and dispatches it
   - code://packages/sdk/src/host.ts#L3284 - the title given when a session is opened
@@ -26,11 +26,11 @@ A title given to a chat by a client or by `rename_chat` is written to the sessio
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts:27-57` - `chatTitle(id, chatUri)` and `setChatTitle(id, chatUri, title)` on `SessionStore`.
-- `UPDATE: packages/sdk/src/sessions.ts:16-29` - `memorySessions` keeps a map of chat titles per session id.
-- `UPDATE: packages/sdk/src/sessions.ts:45-49` - `Saved.sessions[]` gains `chatTitles?: Record<string, string>`.
-- `UPDATE: packages/sdk/src/sessions.ts:80-108` - `save` writes the slot when it is not empty.
-- `UPDATE: packages/sdk/src/sessions.ts:118-141` - `load` reads it back with a string check per entry.
-- `UPDATE: packages/sdk/src/sessions.ts:145-153` - the returned store forwards both methods, and `forget` deletes the slot.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:16-29` - `memorySessions` keeps a map of chat titles per session id.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:45-49` - `Saved.sessions[]` gains `chatTitles?: Record<string, string>`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:80-108` - `save` writes the slot when it is not empty.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:118-141` - `load` reads it back with a string check per entry.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:145-153` - the returned store forwards both methods, and `forget` deletes the slot.
 - `UPDATE: packages/sdk/src/host.ts:2231-2244` - `spawn` applies `kept.chatTitle(idOf(uri), chatUri)` to the new chat.
 - `UPDATE: packages/sdk/src/host.ts:3198-3214` - `renameChat` writes the title before it dispatches.
 - `UPDATE: packages/sdk/src/host.ts:3284` and `:3297` - a title given when a session or a chat is created is written too.

@@ -1,4 +1,4 @@
-import { idOf } from '../catalog.js';
+import { idOf } from '../sessions/catalog.js';
 import { chatIdFor } from './channels.js';
 import type { StoredChat } from '../types/sessions.js';
 import type { HostContext } from './context.js';

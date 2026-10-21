@@ -9,10 +9,10 @@ refs:
   - "[idea: a row's diff stat is the session's work](https://github.com/softov/ahpd/blob/5e5f35ce034f24747bd952d4dfdadf2763740cbb/.project/ideas/a-rows-diff-stat-is-the-sessions-work.md) - the request, with three readings of the count"
   - "[code://packages/sdk/src/host/catalogue.ts#L415-L422](../../../../packages/sdk/src/host/catalogue.ts#L415-L422) - `changesOf`: a row's `changes` is the folder's summary"
   - "[code://packages/sdk/src/host/catalogue.ts#L519-L530](../../../../packages/sdk/src/host/catalogue.ts#L519-L530) - `summaryMoved`, which sends a row's new counts"
-  - "[code://packages/sdk/src/changes.ts#L588-L692](../../../../packages/sdk/src/changes.ts#L588-L692) - `look`: `git status` and `git diff --numstat HEAD` of the folder"
-  - "[code://packages/sdk/src/changes.ts#L1224](../../../../packages/sdk/src/changes.ts#L1224) - `summary(dir)`, the folder's counts held in memory"
-  - "[code://packages/sdk/src/changes.ts#L485-L503](../../../../packages/sdk/src/changes.ts#L485-L503) - `fold` and `across`: every file a session's tools wrote, in memory only"
-  - "[code://packages/sdk/src/changes.ts#L1057-L1102](../../../../packages/sdk/src/changes.ts#L1057-L1102) - `scopes`: `uncommitted`, `session` (\"This Session\"), turn and compare"
+  - "[code://packages/sdk/src/sessions/changes.ts#L588-L692](../../../../packages/sdk/src/sessions/changes.ts#L588-L692) - `look`: `git status` and `git diff --numstat HEAD` of the folder"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1224](../../../../packages/sdk/src/sessions/changes.ts#L1224) - `summary(dir)`, the folder's counts held in memory"
+  - "[code://packages/sdk/src/sessions/changes.ts#L485-L503](../../../../packages/sdk/src/sessions/changes.ts#L485-L503) - `fold` and `across`: every file a session's tools wrote, in memory only"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1057-L1102](../../../../packages/sdk/src/sessions/changes.ts#L1057-L1102) - `scopes`: `uncommitted`, `session` (\"This Session\"), turn and compare"
   - "[code://packages/sdk/src/types/changes.ts#L321-L345](../../../../packages/sdk/src/types/changes.ts#L321-L345) - `ChangesetSource`, with `summary(dir)` and `refresh`"
   - "[code://packages/sdk/src/host/spawn.ts#L999-L1004](../../../../packages/sdk/src/host/spawn.ts#L999-L1004) - the folder is read again on `chat/turnComplete` and `chat/turnCancelled` only"
   - "[code://packages/sdk/src/host/spawn.ts#L861-L870](../../../../packages/sdk/src/host/spawn.ts#L861-L870) - `chat/error`, a failed turn"
@@ -90,7 +90,7 @@ turn ends -> checkpoint -> Session Changes (or Branch Changes) -> summary.change
 - **Pick** - the summary is Branch Changes for `isolation: worktree`, else Session Changes, as `getSummaryChangesetKind` does.
 - **Persist** - the session store keeps the summary, as VS Code keeps `agentHost.changes`.
 - **Layer responsibilities** - sdk `changes.ts`: the checkpoints and the two scopes. sdk `host/catalogue.ts`: the pick and the row. sdk `sessions.ts`: the persisted summary. server: nothing.
-- **Source-of-truth files** - [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts), [`code://packages/sdk/src/host/catalogue.ts`](../../../../packages/sdk/src/host/catalogue.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts), [`code://packages/sdk/src/host/catalogue.ts`](../../../../packages/sdk/src/host/catalogue.ts)
 
 ## Tasks
 

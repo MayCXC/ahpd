@@ -22,7 +22,7 @@ A backend that takes no system prompt gets the instructions in the first message
 ## Files
 
 - `UPDATE: packages/sdk/src/types/session.ts` - `instructions` on the session request.
-- `UPDATE: packages/sdk/src/validate.ts` - check `instructions` as an array of strings.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - check `instructions` as an array of strings.
 - `UPDATE: packages/sdk/src/host/spawn.ts` - add the request's instructions to `Start.instructions`.
 - `UPDATE: packages/sdk/src/types/host.ts` - `optIn` on `HostTool`.
 - `UPDATE: packages/sdk/src/host/tooling.ts` - offer an opt-in tool only to a session whose request names it.

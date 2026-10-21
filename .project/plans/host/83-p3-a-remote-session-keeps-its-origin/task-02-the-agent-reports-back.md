@@ -32,7 +32,7 @@ A turn in a session that has an origin gets the `<remote_session_origin>` instru
 
 ## Resume
 
-The instruction is given in `instructions` in `packages/sdk/src/host/tooling.ts`, from the text at the top of that file. The text is the window's own, word for word. The tool's name is the one spelling this host supplies. `SEND_REMOTE_MESSAGE` comes from `packages/sdk/src/remotesession.ts`, so the words and the rule cannot come apart.
+The instruction is given in `instructions` in `packages/sdk/src/host/tooling.ts`, from the text at the top of that file. The text is the window's own, word for word. The tool's name is the one spelling this host supplies. `SEND_REMOTE_MESSAGE` comes from `packages/sdk/src/sessions/remotesession.ts`, so the words and the rule cannot come apart.
 
 The rule is the window's own: the session has an origin, and a client in it announced a tool called `send_remote_message`. The announcement is read rather than the list offered to the model. This host names a client's tool `<clientId>__<name>`, and the text names the bare one. A presence entry always carries a client id here, named or filled in as `anonymous`, so the two agree on which clients count.
 

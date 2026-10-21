@@ -4,7 +4,7 @@ date: 2026-10-09
 refs:
   - "[code://packages/sdk/src/host/chatrecord.ts](../../../../packages/sdk/src/host/chatrecord.ts)"
   - "[code://packages/sdk/src/host/lifecycle.ts](../../../../packages/sdk/src/host/lifecycle.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
   - "[code://packages/server/src/rootconfig.ts](../../../../packages/server/src/rootconfig.ts)"
 ---
 
@@ -18,7 +18,7 @@ Closing a chat hides its conversation by default, and the daemon key `closedChat
 
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - `Start.chatId`, the id a peer chat runs under; Claude, pi and cofold read it.
 - [`code://packages/sdk/src/types/sessions.ts`](../../../../packages/sdk/src/types/sessions.ts) - `StoredChat`, and `SessionStore.chats`, `setChats` and `sessions`.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - both stores keep the list, and the file store reads it back.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - both stores keep the list, and the file store reads it back.
 - [`code://packages/sdk/src/host/chatrecord.ts`](../../../../packages/sdk/src/host/chatrecord.ts) - `createChatRecord`: the chat-to-session map built at start from `sessions()`, the claimed backend ids, and the record kept as chats open and close.
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - the restart starts every chat again under the id its backend answered with; disposing a session deletes each recorded chat's conversation.
 - [`code://packages/sdk/src/host/sessionmethods.ts`](../../../../packages/sdk/src/host/sessionmethods.ts) - closing a chat marks it closed or deletes its conversation, by `closedChats`.

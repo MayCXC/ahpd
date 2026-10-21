@@ -4,7 +4,7 @@ date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
   - code://packages/sdk/src/types/index.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/host.ts
   - code://packages/server/src/main.ts
   - code://test/users.test.ts
@@ -17,7 +17,7 @@ Permission is a subject and a verb, so a role can grant looking without granting
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `Verb`, `Grant` as `${string}:${Verb | '*'}`, and `Users.list` answering the grants a role resolved to.
-- `code://packages/sdk/src/users.ts` - `isGrant`, `holds` (exact, `*:*`, `*:<verb>`, `<subject>:*`), the built-ins `admin`/`member`/`guest`, the once-only report for a malformed grant and for a role nothing defines, the role-name refusal in `add`, and the grants in `list`.
+- `code://packages/sdk/src/access/users.ts` - `isGrant`, `holds` (exact, `*:*`, `*:<verb>`, `<subject>:*`), the built-ins `admin`/`member`/`guest`, the once-only report for a malformed grant and for a role nothing defines, the role-name refusal in `add`, and the grants in `list`.
 - `code://packages/sdk/src/host.ts` - `NEEDS` by pair, `dispatchNeeds` as writes, and `capabilityFor` scoping only the `file` subject by the request's URI scheme.
 - `code://packages/server/src/main.ts` - `guest` as the default, the refusal said as the verb's own, and `user list` printing `id (roles) grants`.
 - `code://docs/sdk/USERS.md` - the grammar, the subject and verb table, the built-ins, the wildcard rule and the `user list` output.

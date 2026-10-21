@@ -20,7 +20,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/catalog.ts` - `titleFrom`, pi's body with the fallback as a parameter.
+- `UPDATE: packages/sdk/src/sessions/catalog.ts` - `titleFrom`, pi's body with the fallback as a parameter.
 - `UPDATE: packages/sdk/src/index.ts:76` - exported.
 - `UPDATE: packages/sdk/test/session-kit.test.ts` - the helper's cases.
 - `UPDATE: packages/agent-pi/src/session.ts:66-70,819-823`, `catalog.ts:192-196` - both use `titleFrom(text, UNTITLED)`; `firstLine` goes.
@@ -48,7 +48,7 @@ refs:
 ## Resume
 
 - **Implemented** 2026-10-10 on `build/agents/167a4a60`.
-- `titleFrom(text, fallback, max = 80)` is in `packages/sdk/src/catalog.ts`.
+- `titleFrom(text, fallback, max = 80)` is in `packages/sdk/src/sessions/catalog.ts`.
 - It answers the first non-blank line, trimmed, cut at `max`.
 - A text with no line in it answers the fallback.
 - pi's `session.ts` and `catalog.ts` both call it, and its local `firstLine` is gone.

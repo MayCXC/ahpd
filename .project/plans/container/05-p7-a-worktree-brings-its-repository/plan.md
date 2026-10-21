@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L457-L459](../../../../packages/sdk/src/host/lifecycle.ts#L457-L459) - `isolated`, which makes the worktree"
   - "[code://packages/sdk/src/repo/worktrees.ts#L58-L64](../../../../packages/sdk/src/repo/worktrees.ts#L58-L64) - `gitWorktrees`, whose `repository` already asks git with `rev-parse` under a five-second limit"
   - "[code://packages/sdk/src/types/worktrees.ts#L73-L112](../../../../packages/sdk/src/types/worktrees.ts#L73-L112) - the `Worktrees` port"
-  - "[code://packages/sdk/src/changes.ts#L1196-L1200](../../../../packages/sdk/src/changes.ts#L1196-L1200) - the same `rev-parse --path-format=absolute --git-common-dir` call, already made to watch a worktree's refs"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1196-L1200](../../../../packages/sdk/src/sessions/changes.ts#L1196-L1200) - the same `rev-parse --path-format=absolute --git-common-dir` call, already made to watch a worktree's refs"
   - "[code://packages/sdk/src/types/computers.ts#L84-L85](../../../../packages/sdk/src/types/computers.ts#L84-L85) - `folder` on what a machine maker is asked"
   - "[code://packages/computer/src/runtime.ts#L730](../../../../packages/computer/src/runtime.ts#L730) - the folder mounted at the same path"
   - https://git-scm.com/docs/git-worktree - a linked worktree's `.git` is a file naming the main repository's `.git/worktrees/<name>` by absolute path

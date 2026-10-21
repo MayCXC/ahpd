@@ -10,8 +10,8 @@ requires:
 decisions:
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176-L262](../../../../packages/sdk/src/types/plugin.ts#L176-L262) - `PluginChannel` and `ServedChannel`, the shapes a method mirrors"
-  - "[code://packages/sdk/src/plugins.ts#L957-L982](../../../../packages/sdk/src/plugins.ts#L957-L982) - `registerChannel`, the registration a method mirrors"
-  - "[code://packages/sdk/src/validate.ts#L271](../../../../packages/sdk/src/validate.ts#L271) - `checkChannel`, the check a method mirrors"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L957-L982](../../../../packages/sdk/src/plugins/plugins.ts#L957-L982) - `registerChannel`, the registration a method mirrors"
+  - "[code://packages/sdk/src/plugins/validate.ts#L271](../../../../packages/sdk/src/plugins/validate.ts#L271) - `checkChannel`, the check a method mirrors"
   - "[code://packages/sdk/src/host.ts#L1341-L1347](../../../../packages/sdk/src/host.ts#L1341-L1347) - a method with no handler is `-32601`"
   - "[code://packages/sdk/src/host/admission.ts](../../../../packages/sdk/src/host/admission.ts) - where a subscribe asks a channel's `authorize`"
   - "[code://packages/sdk/src/host/handshake.ts#L282](../../../../packages/sdk/src/host/handshake.ts#L282) - `_meta['ahpd.channels']`, the advertisement a method mirrors"
@@ -29,7 +29,7 @@ A client finds each served command in `_meta['ahpd.methods']`.
 ### Searches performed
 
 - `rg -n "registerMethod" packages` - only a comment that says it is not here yet.
-- `rg -n "channels" packages/sdk/src/plugins.ts` - the fold seeds the plugin channels from `base.channels`.
+- `rg -n "channels" packages/sdk/src/plugins/plugins.ts` - the fold seeds the plugin channels from `base.channels`.
 - `rg -n "ahpd.channels" packages/sdk/src/host` - two advertisements, in the handshake and in the root state.
 
 ### Runtime path

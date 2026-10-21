@@ -6,7 +6,7 @@ layer: "server"
 refs:
   - "[code://packages/server/src/plugins.ts#L712-L726](../../../../packages/server/src/plugins.ts#L712-L726) - `namePlugin`, which reads the module's `name`"
   - "[code://packages/server/src/plugins.ts#L760-L790](../../../../packages/server/src/plugins.ts#L760-L790) - `loadOne`, where a plugin is skipped with a problem line"
-  - "[code://packages/sdk/src/records.ts#L276-L284](../../../../packages/sdk/src/records.ts#L276-L284) - `RECORD_SLUG` and `isRecordSlug`"
+  - "[code://packages/sdk/src/resources/records.ts#L276-L284](../../../../packages/sdk/src/resources/records.ts#L276-L284) - `RECORD_SLUG` and `isRecordSlug`"
   - "[code://packages/server/test/fixtures/plugin-route/index.ts](../../../../packages/server/test/fixtures/plugin-route/index.ts) - a fixture that exports `@ahpd/plugin-route`"
 ---
 

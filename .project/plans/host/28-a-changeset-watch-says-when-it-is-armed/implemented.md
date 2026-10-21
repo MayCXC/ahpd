@@ -4,7 +4,7 @@ date: 2026-09-28
 refs:
   - git://bde31b5
   - "[code://packages/sdk/src/types/changes.ts](../../../../packages/sdk/src/types/changes.ts) - `ChangesetWatch`"
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `gitChanges().watch` returns `ready`; `quiet()`"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `gitChanges().watch` returns `ready`; `quiet()`"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - `startWatchingDir` re-reads on `ready`; `refreshWatched` ends quietly"
   - "[code://packages/sdk/src/git.ts](../../../../packages/sdk/src/git.ts) - `gitBranches` runs git with `quiet()`"
 ---
@@ -15,7 +15,7 @@ The daemon's background git reads take no optional lock, so a person's `git add`
 ## What was built
 
 - [`code://packages/sdk/src/types/changes.ts`](../../../../packages/sdk/src/types/changes.ts) - `ChangesetWatch`, the stop function with an optional `ready`.
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `gitChanges().watch` resolves `ready` once its watchers are open or it gave up; `quiet()` sets `GIT_OPTIONAL_LOCKS=0` on every git run.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `gitChanges().watch` resolves `ready` once its watchers are open or it gave up; `quiet()` sets `GIT_OPTIONAL_LOCKS=0` on every git run.
 - [`code://packages/sdk/src/git.ts`](../../../../packages/sdk/src/git.ts) - `gitBranches` runs its git with the same `quiet()`.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `startWatchingDir` re-reads on `ready` while the same watch is held; `refreshWatched` catches a failure while telling sessions what moved.
 - [`code://docs/sdk/LIBRARY.md`](../../../../docs/sdk/LIBRARY.md) - `watch` and `ready`.

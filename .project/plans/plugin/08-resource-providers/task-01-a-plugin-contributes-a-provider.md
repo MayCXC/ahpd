@@ -8,9 +8,9 @@ refs:
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, where `resourceProviders` joins
   - code://packages/sdk/src/types/plugin.ts#L98-L130 - `PluginHost`, where the method goes
   - code://packages/sdk/src/types/plugin.ts#L163-L187 - `Contribution`, which gains the keyed bucket
-  - code://packages/sdk/src/plugins.ts#L176-L239 - `pluginHost`, where one `apply` records it
-  - code://packages/sdk/src/plugins.ts#L78-L156 - `foldHostOptions`, where conflicts are reported
-  - code://packages/sdk/src/validate.ts#L148-L183 - `checkPort`, the checker this one is modelled on
+  - code://packages/sdk/src/plugins/plugins.ts#L176-L239 - `pluginHost`, where one `apply` records it
+  - code://packages/sdk/src/plugins/plugins.ts#L78-L156 - `foldHostOptions`, where conflicts are reported
+  - code://packages/sdk/src/plugins/validate.ts#L148-L183 - `checkPort`, the checker this one is modelled on
   - code://test/plugin-fold.test.ts - the fold's cases, one per operation
   - code://test/plugin-validate.test.ts - the checker cases, complete and empty
   - code://test/plugin-host.test.ts - one `apply` recording what it registered
@@ -25,8 +25,8 @@ A plugin can call `host.registerResourceProvider('computer', store)` and the fol
 - `UPDATE: packages/sdk/src/types/resources.ts` - add `ResourceProvider`: everything `ResourceStore` has except `complete`, with `read` required and `list`, `resolve`, `watch` and the five write methods optional, so the signatures are the store's own and a `ResourceStore` satisfies it.
 - `UPDATE: packages/sdk/src/types/host.ts` - `resourceProviders?: Record<string, ResourceProvider>`, documented as host-owned schemes beside the `file:` store, with the relay precedence named.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerResourceProvider(scheme, provider)` on `PluginHost`, and the keyed bucket on `Contribution`.
-- `UPDATE: packages/sdk/src/validate.ts` - `checkResourceProvider(scheme, value, by)`: the scheme's shape, that `read` is a function, and that every other member present is a function.
-- `UPDATE: packages/sdk/src/plugins.ts` - `pluginHost` records the registration and refuses one scheme twice inside a plugin; `foldHostOptions` merges the buckets, refuses a scheme another plugin set, refuses `file` and anything on `ahp-`, and puts the result in `options.resourceProviders`.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - `checkResourceProvider(scheme, value, by)`: the scheme's shape, that `read` is a function, and that every other member present is a function.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `pluginHost` records the registration and refuses one scheme twice inside a plugin; `foldHostOptions` merges the buckets, refuses a scheme another plugin set, refuses `file` and anything on `ahp-`, and puts the result in `options.resourceProviders`.
 - `UPDATE: test/plugin-validate.test.ts`, `test/plugin-fold.test.ts`, `test/plugin-host.test.ts` - one case each for the new kind, plus the refusals.
 
 ## Steps

@@ -4,7 +4,7 @@ status: done
 depends: [task-03-commit-asks-first.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L951-L961](../../../../packages/sdk/src/changes.ts#L951-L961) - `refresh`, which compares only the summary's counts"
+  - "[code://packages/sdk/src/sessions/changes.ts#L951-L961](../../../../packages/sdk/src/sessions/changes.ts#L951-L961) - `refresh`, which compares only the summary's counts"
   - "[code://packages/sdk/src/host.ts#L2420-L2434](../../../../packages/sdk/src/host.ts#L2420-L2434) - `contentMoved`, which re-sends files and operations"
   - "[code://packages/sdk/src/host.ts#L2776-L2798](../../../../packages/sdk/src/host.ts#L2776-L2798) - `refreshFacts`, the refresh a finished turn runs today"
   - "[code://packages/sdk/src/host.ts#L3040-L3048](../../../../packages/sdk/src/host.ts#L3040-L3048) - where a session's actions pass through the host, and a finished turn calls `refreshFacts`"
@@ -19,8 +19,8 @@ No trigger costs anything when no client watches that directory's changesets.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:951-961` - `refresh` reports a move when any row's staging changes, not only the counts.
-- `UPDATE: packages/sdk/src/changes.ts` - a watch on the repository's `index` and `HEAD`, opened per directory a session works in and closed with the last one.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:951-961` - `refresh` reports a move when any row's staging changes, not only the counts.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - a watch on the repository's `index` and `HEAD`, opened per directory a session works in and closed with the last one.
 - `UPDATE: packages/sdk/src/host.ts` - one coalescing refresh per directory, called from each trigger below.
 - `UPDATE: packages/sdk/test/commit.test.ts` and a host case - the cases below.
 

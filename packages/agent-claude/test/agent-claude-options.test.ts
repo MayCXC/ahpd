@@ -6,7 +6,7 @@ import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { optionsSchema } from '../src/plugin.js';
 import { claudeExecutablePath } from '../src/claude.js';
-import { resolveNeeds } from '../../sdk/src/machine.js';
+import { resolveNeeds } from '../../sdk/src/machines/machine.js';
 
 /*
  * The plugin's options, held to the schema it exports.

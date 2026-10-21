@@ -95,9 +95,9 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 const { createHost } = await import('../src/host.js');
 const { claude } = await import('../../agent-claude/src/claude.js');
 const { echo } = await import('../../../examples/echo/agent.js');
-const { shellTerminals } = await import('../src/terminals.js');
-const { fileResources } = await import('../src/resources.js');
-const { memoryAutomations } = await import('../src/automations.js');
+const { shellTerminals } = await import('../src/machines/terminals.js');
+const { fileResources } = await import('../src/resources/resources.js');
+const { memoryAutomations } = await import('../src/automations/automations.js');
 const { hostTools } = await import('../src/tools/index.js');
 
 /** The team and project this capture's work is charged to. */

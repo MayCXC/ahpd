@@ -4,9 +4,9 @@ status: done
 depends: [task-01-a-terminal-picks-a-windows-shell.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L27](../../../../packages/sdk/src/terminals.ts#L27) - `quoted`"
-  - "[code://packages/sdk/src/terminals.ts#L92-L96](../../../../packages/sdk/src/terminals.ts#L92-L96) - the arguments"
-  - "[code://packages/sdk/src/terminals.ts#L184-L200](../../../../packages/sdk/src/terminals.ts#L184-L200) - the spawn"
+  - "[code://packages/sdk/src/machines/terminals.ts#L27](../../../../packages/sdk/src/machines/terminals.ts#L27) - `quoted`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L92-L96](../../../../packages/sdk/src/machines/terminals.ts#L92-L96) - the arguments"
+  - "[code://packages/sdk/src/machines/terminals.ts#L184-L200](../../../../packages/sdk/src/machines/terminals.ts#L184-L200) - the spawn"
 ---
 
 ## Objective
@@ -17,9 +17,9 @@ The spawn opens no console window.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/terminals.ts:27` - quoting for PowerShell and for `cmd.exe`, beside the POSIX one.
-- `UPDATE: packages/sdk/src/terminals.ts:92-96` - the arguments for the shell's kind.
-- `UPDATE: packages/sdk/src/terminals.ts:184-200` - `windowsHide: true`, and no `detached` on Windows.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:27` - quoting for PowerShell and for `cmd.exe`, beside the POSIX one.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:92-96` - the arguments for the shell's kind.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:184-200` - `windowsHide: true`, and no `detached` on Windows.
 
 ## Steps
 
@@ -43,7 +43,7 @@ The spawn opens no console window.
 Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs`, `git diff --quiet tools/` and `pnpm -s exec vitest run packages/sdk` pass, 3001 tests.
 
 Files changed:
-- `packages/sdk/src/terminals.ts` - `kindOf` names the kind from the shell's file name (`pwsh`/`pwsh.exe`/`powershell`/`powershell.exe`, `cmd`/`cmd.exe`, everything else POSIX). `flagOf` gives PowerShell `-NoProfile -Command`, `cmd.exe` `/d /s /c` and a POSIX shell `-c`. `argvLine` quotes each word. PowerShell gets doubled single quotes behind `&`. `cmd.exe` gets double quotes. POSIX gets the form as before. `psQuoted` and `cmdQuoted` sit beside `quoted`. `WINDOWS` is read once. The pipe spawn sets `windowsHide: true` and leaves `detached` off on Windows.
+- `packages/sdk/src/machines/terminals.ts` - `kindOf` names the kind from the shell's file name (`pwsh`/`pwsh.exe`/`powershell`/`powershell.exe`, `cmd`/`cmd.exe`, everything else POSIX). `flagOf` gives PowerShell `-NoProfile -Command`, `cmd.exe` `/d /s /c` and a POSIX shell `-c`. `argvLine` quotes each word. PowerShell gets doubled single quotes behind `&`. `cmd.exe` gets double quotes. POSIX gets the form as before. `psQuoted` and `cmdQuoted` sit beside `quoted`. `WINDOWS` is read once. The pipe spawn sets `windowsHide: true` and leaves `detached` off on Windows.
 - `packages/sdk/test/pty.test.ts` - four cases. PowerShell with a line and with an argv holding `it's`. `cmd.exe` with a line and with an argv. A POSIX shell with both. No flag at all with no command. The fake pty now records the shell and the argv it was started with, which is where a case reads them.
 
 Two things this task does not decide:

@@ -5,7 +5,7 @@ refs:
   - code://packages/sdk/src/host.ts
   - code://packages/sdk/src/types/host.ts
   - code://packages/sdk/src/types/changes.ts
-  - code://packages/sdk/src/changes.ts
+  - code://packages/sdk/src/sessions/changes.ts
   - code://test/writes.test.ts
   - code://test/host.test.ts
   - code://test/operations.test.ts
@@ -21,7 +21,7 @@ The store's own refusals and a client-owned resource's relayed refusal are untou
 
 - `code://packages/sdk/src/host.ts` - `mayWrite` and `needsWrite` are deleted, the six calls to them are gone from the five resource handlers and from `invokeChangesetOperation`, and the comments at the `resource*` family, the write half and `resourceRequest` now name one gate, the store's.
 - `code://packages/sdk/src/types/host.ts` - `Connection` no longer carries `grants`, so nothing holds a claim of enforcement.
-- `code://packages/sdk/src/types/changes.ts` and `code://packages/sdk/src/changes.ts` - `ChangesetOperation.writes` stays as descriptive metadata, and the two comments that said the host gated on it now say what it is for.
+- `code://packages/sdk/src/types/changes.ts` and `code://packages/sdk/src/sessions/changes.ts` - `ChangesetOperation.writes` stays as descriptive metadata, and the two comments that said the host gated on it now say what it is for.
 - `code://test/writes.test.ts` - the helper loses its grant argument, the far-end move asserts it lands, and the two grant cases become one that a first write needs no grant and that `resourceRequest` still answers.
 - `code://test/host.test.ts` - the refusal case becomes one that the same write succeeds, the read-only-store case no longer asks for a grant, and the `create-pr` helper opens with no request.
 - `code://test/operations.test.ts` - `commit` runs with no grant, and the `resourceRequest` case says it answers rather than grants.
@@ -40,7 +40,7 @@ The store's own refusals and a client-owned resource's relayed refusal are untou
 ## Departures from the plan
 
 - `Connection.grants` had to go from `packages/sdk/src/types/host.ts` as well as from `packages/sdk/src/host.ts`, which the task's file list did not name: `mayWrite` was its only reader, so leaving the field would have been a claim of enforcement nothing performs.
-- Two more comments outside the plan's list said the host gated on a write grant, in `packages/sdk/src/types/changes.ts` and `packages/sdk/src/changes.ts`; they were corrected with the rest. The `writes` flag itself stays, as the descriptive thing a client draws a destructive verb from.
+- Two more comments outside the plan's list said the host gated on a write grant, in `packages/sdk/src/types/changes.ts` and `packages/sdk/src/sessions/changes.ts`; they were corrected with the rest. The `writes` flag itself stays, as the descriptive thing a client draws a destructive verb from.
 - `test/operations.test.ts` changed in three places rather than two: the `resourceRequest` case's title and comment also said "grants", which was true then and is not now.
 
 ## Left for later

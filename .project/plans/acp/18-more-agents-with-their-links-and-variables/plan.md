@@ -8,8 +8,8 @@ revalidated: 2026-10-19
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/agents.ts#L25-L50](../../../../packages/sdk/src/agents.ts#L25-L50) - `KnownAgent`, which has a command, install lines and a page, and no site, company or variables"
-  - "[code://packages/sdk/src/agents.ts#L69-L163](../../../../packages/sdk/src/agents.ts#L69-L163) - `knownAgents`, the twelve rows today"
+  - "[code://packages/sdk/src/machines/agents.ts#L25-L50](../../../../packages/sdk/src/machines/agents.ts#L25-L50) - `KnownAgent`, which has a command, install lines and a page, and no site, company or variables"
+  - "[code://packages/sdk/src/machines/agents.ts#L69-L163](../../../../packages/sdk/src/machines/agents.ts#L69-L163) - `knownAgents`, the twelve rows today"
   - "[code://packages/agent-acp/src/presets.ts#L105-L220](../../../../packages/agent-acp/src/presets.ts#L105-L220) - the presets, which add arguments, fixed variables and the sign-in variables to each row"
   - "[code://packages/agent-acp/src/plugin.ts#L36-L113](../../../../packages/agent-acp/src/plugin.ts#L36-L113) - `optionsSchema`, where `env` is any variable name, so a form cannot show which variables an agent reads"
   - "[code://packages/server/src/found.ts#L157-L169](../../../../packages/server/src/found.ts#L157-L169) - how `ahpd configure` lays a person's preset over a row"
@@ -79,7 +79,7 @@ knownAgents row -> found.ts -> ahpd configure prints what is installed and how t
 - **Data flow** - A row in `knownAgents` gets `site`, `company` and `variables`. Each variable has a name, one line on what it does, and `secret`. The preset spreads the row as it does now.
 - **State flow** - Nothing is stored. The rows are code.
 - **Layer responsibilities** - sdk: the rows and their fields · agent-acp: the presets, and an options schema entry for each shipped preset · server: `ahpd configure` prints the site.
-- **Source-of-truth files** - [`code://packages/sdk/src/agents.ts`](../../../../packages/sdk/src/agents.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/machines/agents.ts`](../../../../packages/sdk/src/machines/agents.ts)
 
 ## Tasks
 

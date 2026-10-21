@@ -6,8 +6,8 @@ priority: medium
 created: 2026-10-09
 revalidated: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/changes.ts#L845-L890](../../../../packages/sdk/src/changes.ts#L845-L890) - `scopes()`, which lists `session` before `uncommitted` once a session has turns"
-  - "[code://packages/sdk/src/changes.ts#L1027-L1052](../../../../packages/sdk/src/changes.ts#L1027-L1052) - `operations()`, which offers `commit` on `uncommitted` only"
+  - "[code://packages/sdk/src/sessions/changes.ts#L845-L890](../../../../packages/sdk/src/sessions/changes.ts#L845-L890) - `scopes()`, which lists `session` before `uncommitted` once a session has turns"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1027-L1052](../../../../packages/sdk/src/sessions/changes.ts#L1027-L1052) - `operations()`, which offers `commit` on `uncommitted` only"
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/common/changesetUri.ts#L176-L181 - `selectDefaultChangeset`, a `branch` entry or else the first in the catalogue
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/sessions/contrib/changes/browser/changesActions.ts#L478-L505 - the Commit button reads the selected changeset's `commit` operation
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/agentHostCommitOperationProvider.ts#L37-L56 - VS Code's own host offers `commit` on the uncommitted changeset only
@@ -25,7 +25,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "selectDefaultChangeset" src/vs` in VS Code - the Changes view and the input pills both pick a `branch` entry, else the first.
-- `rg -n "id: 'session'" packages/sdk/src/changes.ts` - `session` is put first, with a comment that says a conversation's changes belong beside it.
+- `rg -n "id: 'session'" packages/sdk/src/sessions/changes.ts` - `session` is put first, with a comment that says a conversation's changes belong beside it.
 
 ### Gaps
 

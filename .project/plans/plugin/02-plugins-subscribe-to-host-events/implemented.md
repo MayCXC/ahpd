@@ -6,7 +6,7 @@ refs:
   - code://packages/sdk/src/types/events.ts
   - code://packages/sdk/src/types/plugin.ts
   - code://packages/sdk/src/types/host.ts
-  - code://packages/sdk/src/plugins.ts
+  - code://packages/sdk/src/plugins/plugins.ts
   - code://packages/sdk/src/host.ts
   - code://test/plugin-events-wiring.test.ts
   - code://test/plugin-events-fire.test.ts
@@ -22,7 +22,7 @@ The event set is closed and written down in one file, and a per-token delta is d
 - `code://packages/sdk/src/types/events.ts` - `EventName`, one payload interface per event, `HostEvent`, `HostEventOf`, `EventHandler`, `EventListener` and `HostHandlers`.
 - `code://packages/sdk/src/types/plugin.ts` - `PluginHost.on` and `Contribution.events`; the listener carries the plugin's `by`, its captured `PluginContext`, and the handler.
 - `code://packages/sdk/src/types/host.ts` - `HostOptions.events`, beside the `onEvent` the embedder still passes.
-- `code://packages/sdk/src/plugins.ts` - `pluginHost`'s `on` records into the contribution, and `foldHostOptions` merges every plugin's listeners after the base's own, in configuration order, leaving `events` absent when nothing subscribed.
+- `code://packages/sdk/src/plugins/plugins.ts` - `pluginHost`'s `on` records into the contribution, and `foldHostOptions` merges every plugin's listeners after the base's own, in configuration order, leaving `events` absent when nothing subscribed.
 - `code://packages/sdk/src/host.ts` - `fire`, the sequential awaiting loop with its report and its `log` re-entrancy guard, and the call sites: `log`, `openSession`, `removeSession`, the agent's `emit` for the turn boundaries, the client's `turnStarted` for `message`, the bound host tool's `run`, `initialize`/`reconnect`/`accept.close`, `authenticate`, `startForAutomation`, `resourceWrite` and `createTerminal`.
 
 ## Verified

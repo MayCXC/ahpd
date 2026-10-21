@@ -2,9 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SpawnOptions } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { uriOf } from '../src/fileuri.js';
-import { shellOf, shellTerminals } from '../src/terminals.js';
-import type { SpawnShell } from '../src/terminals.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { shellOf, shellTerminals } from '../src/machines/terminals.js';
+import type { SpawnShell } from '../src/machines/terminals.js';
 import type { Pty, SpawnPty, Terminal } from '../src/types/terminals.js';
 
 /*

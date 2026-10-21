@@ -2,7 +2,7 @@
 title: An automation disables itself as its definition says, and a kind given twice is refused - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/automations.ts](../../../../packages/sdk/src/automations.ts)"
+  - "[code://packages/sdk/src/automations/automations.ts](../../../../packages/sdk/src/automations/automations.ts)"
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts)"
   - "[code://packages/sdk/src/host/actions.ts](../../../../packages/sdk/src/host/actions.ts)"
 ---
@@ -14,7 +14,7 @@ A switched-off automation still offers `run`, and a manual run is neither refuse
 
 ## What was built
 
-- [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) - `disableConditionsProblem` and `disableConditionsOf`. The memory store counts scheduled runs, resets the count on a fresh allowance, and disables the automation when a condition is met.
+- [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts) - `disableConditionsProblem` and `disableConditionsOf`. The memory store counts scheduled runs, resets the count on a fresh allowance, and disables the automation when a condition is met.
 - [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - `runCount` is saved beside the definition; `rearm` switches off an automation whose date has passed, and `catchUp` skips it.
 - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts) - `automation/createRequested` and `automation/updateRequested` refuse a definition with a bad condition.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `runAutomation` answers `-32001` only when there is no automation.

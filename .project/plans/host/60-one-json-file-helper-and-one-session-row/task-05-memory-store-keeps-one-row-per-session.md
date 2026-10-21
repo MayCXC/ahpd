@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L30-L99](../../../../packages/sdk/src/sessions.ts#L30-L99) - `memorySessions`, nine maps"
-  - "[code://packages/sdk/src/sessions.ts#L124-L137](../../../../packages/sdk/src/sessions.ts#L124-L137) - `Saved`, the row's fields"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L30-L99](../../../../packages/sdk/src/sessions/sessions.ts#L30-L99) - `memorySessions`, nine maps"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L124-L137](../../../../packages/sdk/src/sessions/sessions.ts#L124-L137) - `Saved`, the row's fields"
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`, unchanged"
   - "[code://packages/sdk/test/sessions.test.ts](../../../../packages/sdk/test/sessions.test.ts) - the store's cases"
 ---
@@ -16,8 +16,8 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/sessions.ts:30-99` - one map; each getter reads a field; each setter patches the row through one `patch(id, change)` that deletes the row once every field is empty; `forget` is `rows.delete(id)`; `prune` walks `rows.keys()`.
-- `UPDATE: packages/sdk/src/sessions.ts:124-137` - `Row` declared beside `Saved`, and `Saved` as `Row`'s on-disk form with `version` and `id`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:30-99` - one map; each getter reads a field; each setter patches the row through one `patch(id, change)` that deletes the row once every field is empty; `forget` is `rows.delete(id)`; `prune` walks `rows.keys()`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:124-137` - `Row` declared beside `Saved`, and `Saved` as `Row`'s on-disk form with `version` and `id`.
 - `UPDATE: packages/sdk/test/sessions.test.ts` - the helper's cases below.
 
 ## Steps

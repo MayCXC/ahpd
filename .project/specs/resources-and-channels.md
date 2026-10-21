@@ -7,15 +7,15 @@ covers:
   - packages/sdk/src/host/admission.ts
   - packages/sdk/src/host/channels.ts
   - packages/sdk/src/types/resources.ts
-  - packages/sdk/src/recordschannel.ts
-  - packages/sdk/src/validate.ts
+  - packages/sdk/src/resources/recordschannel.ts
+  - packages/sdk/src/plugins/validate.ts
   - packages/push/src/**
 decisions:
   - decisions/a-plugin-channel-filters-each-action-per-subscriber.md
 refs:
   - "[code://packages/sdk/src/host/resourcemethods.ts#L62-L71](../../packages/sdk/src/host/resourcemethods.ts#L62-L71) - `storeFor`, which routes a URI by its scheme"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L268-L276](../../packages/sdk/src/host/resourcemethods.ts#L268-L276) - `resourceRequest`, which answers `{}` for a `file:` URI"
-  - "[code://packages/sdk/src/resources.ts#L68-L84](../../packages/sdk/src/resources.ts#L68-L84) - `notServed`, the `-32601` for a scheme nobody serves"
+  - "[code://packages/sdk/src/resources/resources.ts#L68-L84](../../packages/sdk/src/resources/resources.ts#L68-L84) - `notServed`, the `-32601` for a scheme nobody serves"
   - "[code://packages/sdk/src/types/resources.ts#L259-L288](../../packages/sdk/src/types/resources.ts#L259-L288) - `ResourceProvider`"
   - "[code://packages/sdk/src/host/root.ts#L23-L48](../../packages/sdk/src/host/root.ts#L23-L48) - `schemeOperations`, the operations read off a provider's methods"
   - "[code://packages/sdk/src/host/root.ts#L352-L408](../../packages/sdk/src/host/root.ts#L352-L408) - the advertised schemes, channels and commands"
@@ -24,13 +24,13 @@ refs:
   - "[code://packages/sdk/src/host/gate.ts#L35-L42](../../packages/sdk/src/host/gate.ts#L35-L42) - the `file` operations each resource method needs"
   - "[code://packages/sdk/src/host/admission.ts#L195-L215](../../packages/sdk/src/host/admission.ts#L195-L215) - a resource method needs the grant of the URI's scheme"
   - "[code://packages/sdk/src/host/admission.ts#L239-L320](../../packages/sdk/src/host/admission.ts#L239-L320) - `excusedBy`, where `authorize` widens a read"
-  - "[code://packages/sdk/src/plugins.ts#L1064-L1114](../../packages/sdk/src/plugins.ts#L1064-L1114) - `registerResourceProvider`, `registerChannel` and `registerMethod`"
-  - "[code://packages/sdk/src/plugins.ts#L384-L416](../../packages/sdk/src/plugins.ts#L384-L416) - a scheme, channel or command that another plugin already has"
-  - "[code://packages/sdk/src/validate.ts#L213-L248](../../packages/sdk/src/validate.ts#L213-L248) - `checkScheme` and `reservedName`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1064-L1114](../../packages/sdk/src/plugins/plugins.ts#L1064-L1114) - `registerResourceProvider`, `registerChannel` and `registerMethod`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L384-L416](../../packages/sdk/src/plugins/plugins.ts#L384-L416) - a scheme, channel or command that another plugin already has"
+  - "[code://packages/sdk/src/plugins/validate.ts#L213-L248](../../packages/sdk/src/plugins/validate.ts#L213-L248) - `checkScheme` and `reservedName`"
   - "[code://packages/sdk/src/types/plugin.ts#L175-L232](../../packages/sdk/src/types/plugin.ts#L175-L232) - `PluginChannel`, `PublishOptions` and `ChannelHandle`"
   - "[code://packages/sdk/src/host.ts#L540-L558](../../packages/sdk/src/host.ts#L540-L558) - `seenBy`, the test of each action per subscriber"
   - "[code://packages/sdk/src/host/actions.ts#L82-L90](../../packages/sdk/src/host/actions.ts#L82-L90) - a client's action on a plugin channel is refused"
-  - "[code://packages/sdk/src/recordschannel.ts#L245-L246](../../packages/sdk/src/recordschannel.ts#L245-L246) - the `put` and `remove` command names of a records domain"
+  - "[code://packages/sdk/src/resources/recordschannel.ts#L245-L246](../../packages/sdk/src/resources/recordschannel.ts#L245-L246) - the `put` and `remove` command names of a records domain"
   - "[code://packages/push/src/provider.ts#L117-L125](../../packages/push/src/provider.ts#L117-L125) - `shownOf`, a device without its token"
   - "[code://packages/push/src/provider.ts#L313-L340](../../packages/push/src/provider.ts#L313-L340) - a device write and a device removal"
   - "[code://packages/sdk/test/uri-resources.test.ts#L74-L94](../../packages/sdk/test/uri-resources.test.ts#L74-L94) - `-32601` for a missing method and for an unserved scheme"

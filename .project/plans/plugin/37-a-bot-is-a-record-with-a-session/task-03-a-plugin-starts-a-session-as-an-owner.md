@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host/automations.ts#L580-L648](../../../../packages/sdk/src/host/automations.ts#L580-L648) - `beginSession`, the steps an automation's run takes to start a session"
   - "[code://packages/sdk/src/host/automations.ts#L755-L764](../../../../packages/sdk/src/host/automations.ts#L755-L764) - `beginPluginSession`, which asks `session:create` first"
   - "[code://packages/sdk/src/types/plugin.ts#L265](../../../../packages/sdk/src/types/plugin.ts#L265) - `PluginHost`"
-  - "[code://packages/sdk/src/plugins.ts#L599-L606](../../../../packages/sdk/src/plugins.ts#L599-L606) - how a `PluginHost` method is made, and where a plugin's request is checked"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L599-L606](../../../../packages/sdk/src/plugins/plugins.ts#L599-L606) - how a `PluginHost` method is made, and where a plugin's request is checked"
 ---
 
 ## Objective
@@ -19,7 +19,7 @@ It takes the steps of an automation's run: isolation, the owner's grants and pol
 
 - `UPDATE: packages/sdk/src/host/automations.ts:638-700` - the steps move into one function that the run calls.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `startSession` on `PluginHost`, with a one-line comment per field.
-- `UPDATE: packages/sdk/src/plugins.ts` - the method, bound to the host.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the method, bound to the host.
 - `CREATE: packages/sdk/test/plugin-start-session.test.ts` - the cases below.
 
 ## Steps

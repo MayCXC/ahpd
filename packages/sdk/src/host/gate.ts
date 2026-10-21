@@ -1,5 +1,5 @@
-import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES, isRegexRuleKey } from '../commandautoapprover.js';
-import { computerSource } from '../computers.js';
+import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES, isRegexRuleKey } from '../access/commandautoapprover.js';
+import { computerSource } from '../machines/computers.js';
 import type { Connection } from '../types/host.js';
 import type { Grant } from '../types/users.js';
 import { ROOT, AUTOMATIONS, isRootChannel, spaceOf } from './channels.js';

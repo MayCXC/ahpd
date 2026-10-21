@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk, agent-acp, agent-claude, agent-cofold, agent-pi"
 refs:
-  - "[code://packages/sdk/src/catalog.ts#L18-L25](../../../../packages/sdk/src/catalog.ts#L18-L25) - `Status`"
+  - "[code://packages/sdk/src/sessions/catalog.ts#L18-L25](../../../../packages/sdk/src/sessions/catalog.ts#L18-L25) - `Status`"
   - "[code://packages/agent-acp/src/session.ts#L79](../../../../packages/agent-acp/src/session.ts#L79) - `let activity`, read at 169, 196 and 211"
   - "[code://packages/agent-acp/src/session.ts#L88-L106](../../../../packages/agent-acp/src/session.ts#L88-L106) - `doing` and `status`"
   - "[code://packages/agent-claude/src/session/parts.ts#L62-L68](../../../../packages/agent-claude/src/session/parts.ts#L62-L68) - `doing`"
@@ -23,7 +23,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/catalog.ts` - `statusOf` and `activityOf` after `Status`.
+- `UPDATE: packages/sdk/src/sessions/catalog.ts` - `statusOf` and `activityOf` after `Status`.
 - `UPDATE: packages/sdk/src/index.ts:76` - added to the `catalog.js` export line.
 - `CREATE: packages/sdk/test/session-kit.test.ts` - the helper's cases.
 - `UPDATE: packages/agent-acp/src/session.ts:79,88-106,169,196,211` - `const activity = activityOf(emit)`; `doing` is `activity.say`; reads are `activity.current()`; `status` is `statusOf({ waiting: ctx.permissions.size > 0, active: ctx.active !== undefined, failed: ctx.failed !== undefined })`.
@@ -46,7 +46,7 @@ refs:
 ## Resume
 
 - **Implemented** 2026-10-10 on `build/agents/167a4a60`.
-- `packages/sdk/src/catalog.ts` holds `statusOf`, `activityOf` and `titleFrom` beside `Status`.
+- `packages/sdk/src/sessions/catalog.ts` holds `statusOf`, `activityOf` and `titleFrom` beside `Status`.
 - The `StatusBits` and `Activity` interfaces are beside them.
 - `statusOf` reads waiting first, then active, then failed.
 - That is the order the four backends already answered in: `InputNeeded`, `InProgress`, `Error`, `Idle`.

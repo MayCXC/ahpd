@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
 import { createHost } from '../src/host.js';
-import { fileResources, pathOf, uriOf } from '../src/resources.js';
+import { fileResources, pathOf, uriOf } from '../src/resources/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 

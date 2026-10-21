@@ -12,7 +12,7 @@ An agent declares what a machine needs, a profile names the agents it prepares f
 
 ## What was built
 
-- `packages/sdk/src/types/machine.ts`, `packages/sdk/src/machine.ts` - the need type and `resolveNeeds`, which refuses a relative or missing host path (tasks 01, 02, 10).
+- `packages/sdk/src/types/machine.ts`, `packages/sdk/src/machines/machine.ts` - the need type and `resolveNeeds`, which refuses a relative or missing host path (tasks 01, 02, 10).
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - needs resolved at create; `oneMountEach` treats identical entries as one and refuses a target two different mounts land at, across plugin, profile, body, needs, copy-ins and the folder (task 09).
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - needs applied to `docker run`, flags emitted once each, labels read as `{{json .Labels}}` so a value with a tab or newline is read whole, and a failed command printed without any `-e` value (tasks 03, 08, 09).
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `admitted`: the policy check then the agents-label check, on create, the pre-turn change and an automation's start; a refusal announces and stores nothing and undoes a scope charge; an automation acts as its owner, refused until that owner has signed in (tasks 04, 11).

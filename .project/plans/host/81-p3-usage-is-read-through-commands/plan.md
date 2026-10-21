@@ -9,9 +9,9 @@ requires:
   - plans/host/81-p1-the-host-serves-x-commands/plan.md
 decisions:
 refs:
-  - "[code://packages/sdk/src/usage.ts#L690-L740](../../../../packages/sdk/src/usage.ts#L690-L740) - `groupsBody` and `body`, the answers each leaf gives as text"
-  - "[code://packages/sdk/src/usage.ts#L664-L688](../../../../packages/sdk/src/usage.ts#L664-L688) - `rangeOf` and `keysAsked`, which read `from`, `until` and `by` from the query"
-  - "[code://packages/sdk/src/usage.ts#L763-L782](../../../../packages/sdk/src/usage.ts#L763-L782) - `authorize` and `list`, which say which pools a reader may read"
+  - "[code://packages/sdk/src/usage/usage.ts#L690-L740](../../../../packages/sdk/src/usage/usage.ts#L690-L740) - `groupsBody` and `body`, the answers each leaf gives as text"
+  - "[code://packages/sdk/src/usage/usage.ts#L664-L688](../../../../packages/sdk/src/usage/usage.ts#L664-L688) - `rangeOf` and `keysAsked`, which read `from`, `until` and `by` from the query"
+  - "[code://packages/sdk/src/usage/usage.ts#L763-L782](../../../../packages/sdk/src/usage/usage.ts#L763-L782) - `authorize` and `list`, which say which pools a reader may read"
   - "[code://packages/server/src/commands/run.ts#L726-L734](../../../../packages/server/src/commands/run.ts#L726-L734) - where the daemon builds the usage provider"
 ---
 
@@ -24,8 +24,8 @@ Each command answers what the matching `usage:` read answers, for the same reade
 
 ### Searches performed
 
-- `rg -n "leaf ===|asked.get" packages/sdk/src/usage.ts` - a pool has the leaves `day`, `week`, `month`, `range` and `records`; the query has `from`, `until` and `by`.
-- `rg -n "authorize|refused|visible" packages/sdk/src/usage.ts` - one rule says which pools a reader may read.
+- `rg -n "leaf ===|asked.get" packages/sdk/src/usage/usage.ts` - a pool has the leaves `day`, `week`, `month`, `range` and `records`; the query has `from`, `until` and `by`.
+- `rg -n "authorize|refused|visible" packages/sdk/src/usage/usage.ts` - one rule says which pools a reader may read.
 
 ### Runtime path
 
@@ -50,7 +50,7 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 | --- | --- | --- |
 | Usage gets commands and no channel | decision 1 | 02 |
 | The commands are `pools`, `totals`, `range`, `records` and `groups`, one for each read | (defaulted: one command for each leaf, so each answer has one shape) | 02 |
-| `from`, `until` and `by` keep their names and defaults; `by` is a list | [code://packages/sdk/src/usage.ts#L664-L688](../../../../packages/sdk/src/usage.ts#L664-L688) | 01 |
+| `from`, `until` and `by` keep their names and defaults; `by` is a list | [code://packages/sdk/src/usage/usage.ts#L664-L688](../../../../packages/sdk/src/usage/usage.ts#L664-L688) | 01 |
 
 ## Proposed architecture
 
@@ -58,7 +58,7 @@ x-ahpd/usage/totals { pool } -> served method -> usage:read, or the reader's own
 - **Event flow** - none.
 - **State flow** - none; the store answers each call.
 - **Layer responsibilities** - `packages/sdk`: the answers and `usageMethods` · `packages/server`: passes the methods in `run.ts`.
-- **Source-of-truth files** - [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts)
 
 ## Tasks
 

@@ -9,7 +9,7 @@ refs:
   - "[code://packages/agent-acp/src/session/opening.ts](../../../../packages/agent-acp/src/session/opening.ts)"
   - "[code://packages/computer/src/secrets.ts](../../../../packages/computer/src/secrets.ts)"
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts)"
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts)"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts)"
 ---
 
 An ACP preset can write `machine: { env, copy }`, and the variant it registers answers `machine()` with one env need per variable, named `<preset>.<VARIABLE>`, and one copy need per entry, named `<preset>.copy.<n>`. A `{ "fromEnv": "NAME" }` value is read from the daemon's environment at load; a `{ "$secret": "<scope>:<name>" }` value travels as the need's default and the computer plugin reads it for the machine's owner when it makes the machine, through p1's path, so it is never given at create and is passed by name on each command. A preset whose `machine` is wrongly written or reads a variable the daemon lacks is skipped with one line naming the field, and the others register. A session in a machine is handed the host's tools only where the machine can reach the daemon's address, and the log says when they were left out.
@@ -21,7 +21,7 @@ An ACP preset can write `machine: { env, copy }`, and the variant it registers a
 - [`code://packages/agent-acp/src/types.ts`](../../../../packages/agent-acp/src/types.ts) - `AcpMachine`, `AcpOptions.machine`, and `authenticateInMachine`, the row's sign-in when only `machine.env` sets its variable, which `signIn` in `session/opening.ts` sends for a session placed in a machine and never on this host. It carries a method id; the key reaches the server only as the machine's environment.
 - [`code://packages/agent-acp/src/session/opening.ts`](../../../../packages/agent-acp/src/session/opening.ts) - `toolsReachable(url, where)` and `serversFor` taking where the session runs.
 - [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) - an `EnvNeed` default may be a `SecretRef`.
-- [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts) - `resolveNeeds` refuses a secret default nothing read.
+- [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts) - `resolveNeeds` refuses a secret default nothing read.
 - [`code://packages/computer/src/secrets.ts`](../../../../packages/computer/src/secrets.ts) - `withDefaults`, used at the form, disposable and dev container creates in `provider.ts` and `plugin.ts`; `namedAgain` falls back to the agent's default after a restart.
 - `docs/plugins/PLUGINS.md`, `docs/plugins/COMPUTERS.md`, `packages/agent-acp/README.md`.
 

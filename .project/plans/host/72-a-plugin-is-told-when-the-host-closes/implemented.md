@@ -4,7 +4,7 @@ date: 2026-10-07
 refs:
   - git://9159665 - the commit this work sits on; none of it is committed yet, on `build/agents/70ebe302`
   - "[code://packages/sdk/src/types/plugin.ts#L372](../../../../packages/sdk/src/types/plugin.ts#L372) - `registerClose` on `PluginHost`"
-  - "[code://packages/sdk/src/plugins.ts#L354-L360](../../../../packages/sdk/src/plugins.ts#L354-L360) - the fold that turns every contribution's closers into `HostOptions.closers`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L354-L360](../../../../packages/sdk/src/plugins/plugins.ts#L354-L360) - the fold that turns every contribution's closers into `HostOptions.closers`"
   - "[code://packages/sdk/src/host.ts#L897](../../../../packages/sdk/src/host.ts#L897) - `close` waits for the machine leaves before it stops the plugins"
   - "[code://packages/sdk/src/host/machines.ts#L141-L184](../../../../packages/sdk/src/host/machines.ts#L141-L184) - the promises `inMachine` keeps, and `settled`"
   - "[code://packages/computer/src/plugin.ts#L1872-L1884](../../../../packages/computer/src/plugin.ts#L1872-L1884) - the computer plugin's closer"
@@ -25,8 +25,8 @@ The computer tests close every host, load and launcher they make before they rem
 
 ## What was built
 
-- [`code://packages/sdk/src/types/plugin.ts#L372`](../../../../packages/sdk/src/types/plugin.ts#L372) and [`code://packages/sdk/src/plugins.ts#L602-L613`](../../../../packages/sdk/src/plugins.ts#L602-L613) - `registerClose(close)` on `PluginHost`, beside the other `register*` functions. It pushes onto its own contribution's `closers`, refuses a non-function the way the others do, and may be called more than once.
-- [`code://packages/sdk/src/plugins.ts#L354-L360`](../../../../packages/sdk/src/plugins.ts#L354-L360) - `foldHostOptions` collects the closers of every loaded plugin into `HostOptions.closers`, each with the name of the plugin that registered it. A host with none carries no `closers` key.
+- [`code://packages/sdk/src/types/plugin.ts#L372`](../../../../packages/sdk/src/types/plugin.ts#L372) and [`code://packages/sdk/src/plugins/plugins.ts#L602-L613`](../../../../packages/sdk/src/plugins/plugins.ts#L602-L613) - `registerClose(close)` on `PluginHost`, beside the other `register*` functions. It pushes onto its own contribution's `closers`, refuses a non-function the way the others do, and may be called more than once.
+- [`code://packages/sdk/src/plugins/plugins.ts#L354-L360`](../../../../packages/sdk/src/plugins/plugins.ts#L354-L360) - `foldHostOptions` collects the closers of every loaded plugin into `HostOptions.closers`, each with the name of the plugin that registered it. A host with none carries no `closers` key.
 - [`code://packages/sdk/src/host.ts#L897`](../../../../packages/sdk/src/host.ts#L897) - `close` runs `await step('the machine leaves', () => ctx.settled())` after the chats, their starting runs and the terminals, and before the plugin closers and the stores. Each closer then runs as its own `step`, so one that fails is logged against its plugin and the next one still runs.
 - [`code://packages/sdk/src/host/machines.ts#L141-L184`](../../../../packages/sdk/src/host/machines.ts#L141-L184) - `inMachine` keeps each enter and leave in a set of promises and takes it out when it settles. `settled()` awaits the set and looks at it again after each round. A port that throws before it answers is caught by the same chain as one that rejects after. The failure becomes a line in the log rather than a rejection nobody holds.
 - [`code://packages/computer/src/plugin.ts#L1872-L1884`](../../../../packages/computer/src/plugin.ts#L1872-L1884) - the plugin's closer sets `closed` and waits for the startup scan it began. It clears every disposal timer without firing it, waits for the removals in flight, and closes the launcher. The startup scan is what gives a machine left behind the delay again on the next start.

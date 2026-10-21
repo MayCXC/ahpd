@@ -49,7 +49,7 @@ Judgement calls the plan does not decide:
 
 What the plan did not know:
 
-- `writeEntry` needs no such fix. It goes through `@ahpd/sdk`'s `writeJsonAtomic`, which makes `dirname(file)` itself (`packages/sdk/src/jsonfile.ts:103`), so the configuration file was never the ENOENT. The token's own `writeFileSync` is the only one of the two writes with no folder made for it, which is what the plan's reference to "the two writes of the token file" already implies.
+- `writeEntry` needs no such fix. It goes through `@ahpd/sdk`'s `writeJsonAtomic`, which makes `dirname(file)` itself (`packages/sdk/src/utils/jsonfile.ts:103`), so the configuration file was never the ENOENT. The token's own `writeFileSync` is the only one of the two writes with no folder made for it, which is what the plan's reference to "the two writes of the token file" already implies.
 - Nothing else in this file writes before the configuration file does, so one `mkdirSync` covers a first run.
 
 Validation:

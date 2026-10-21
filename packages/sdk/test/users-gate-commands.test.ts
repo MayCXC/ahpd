@@ -2,10 +2,10 @@ import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost, GATE, ROOT } from '../src/host.js';
-import { uriOf } from '../src/resources.js';
-import { fileUsers } from '../src/users.js';
-import { memoryAutomations } from '../src/automations.js';
-import { fileUsage, usageProvider } from '../src/usage.js';
+import { uriOf } from '../src/resources/resources.js';
+import { fileUsers } from '../src/access/users.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { fileUsage, usageProvider } from '../src/usage/usage.js';
 import { echo } from '../../../examples/echo/agent.js';
 import {
   RECORD, call, can, directory, file, hello, host, peer, root, signIn, watching,

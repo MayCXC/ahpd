@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { splitCommand } from '../src/commandautoapprover.js';
-import type { CommandShell, CommandSplit } from '../src/commandautoapprover.js';
+import { splitCommand } from '../src/access/commandautoapprover.js';
+import type { CommandShell, CommandSplit } from '../src/access/commandautoapprover.js';
 
 /*
  * The reading of a command line, which is what a rule is matched against.

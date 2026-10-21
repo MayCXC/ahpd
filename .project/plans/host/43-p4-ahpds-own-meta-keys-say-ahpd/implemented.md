@@ -2,7 +2,7 @@
 title: Every _meta key ahpd invents is named ahpd.<name> - tasks 01-04 implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/changes.ts#L1078-L1086](../../../../packages/sdk/src/changes.ts#L1078-L1086) - the `commit` branch reads `ahpd.commit`, then `ahp.commit`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1078-L1086](../../../../packages/sdk/src/sessions/changes.ts#L1078-L1086) - the `commit` branch reads `ahpd.commit`, then `ahp.commit`"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the three cases over the two key names"
   - "[code://docs/sdk/AHP.md#L679](../../../../docs/sdk/AHP.md#L679) - the key is `ahpd.commit`, and `ahp.commit` is read while a client sends it"
   - "[code://packages/sdk/test/wire.test.ts#L243-L273](../../../../packages/sdk/test/wire.test.ts#L243-L273) - `PREFIXED` already allows `ahpd.`, so the census is unchanged"
@@ -10,14 +10,14 @@ refs:
   - "[code://packages/sdk/src/host/facts.ts](../../../../packages/sdk/src/host/facts.ts) - `ahpd.owner`"
   - "[code://packages/sdk/src/host/spawn.ts](../../../../packages/sdk/src/host/spawn.ts) - `ahpd.sender`, stored and live"
   - "[code://packages/sdk/src/host/sessionmethods.ts](../../../../packages/sdk/src/host/sessionmethods.ts) - `hintOf` reads a skill's `ahpd.argumentHint`"
-  - "[code://packages/sdk/src/meter.ts](../../../../packages/sdk/src/meter.ts) - reads and writes `ahpd.cost` and `ahpd.cacheWriteTokens`"
+  - "[code://packages/sdk/src/usage/meter.ts](../../../../packages/sdk/src/usage/meter.ts) - reads and writes `ahpd.cost` and `ahpd.cacheWriteTokens`"
 ---
 
 Task 01 of plan 43 p4. A `commit` invocation now takes its message from `_meta['ahpd.commit']`, and still from `_meta['ahp.commit']` while a client sends that name. The task needs no client, so it lands ahead of the three that do.
 
 ## What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `invoke`'s `commit` branch takes `meta['ahpd.commit']`, falling back to `meta['ahp.commit']` only when the new key is absent, through one `sent` binding the two reads share. The comment beside it says what `ahp.commit` was and names task 05 as the task that drops the fallback. Nothing else in the branch changed, and no other `_meta` key was touched.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `invoke`'s `commit` branch takes `meta['ahpd.commit']`, falling back to `meta['ahp.commit']` only when the new key is absent, through one `sent` binding the two reads share. The comment beside it says what `ahp.commit` was and names task 05 as the task that drops the fallback. Nothing else in the branch changed, and no other `_meta` key was touched.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - `the key a commit message arrives under`, three cases on a real repository: the message under `ahpd.commit` is the commit's subject; the same message under `ahp.commit` still is; and with both sent, `ahpd.commit` wins.
 - [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the `commit` paragraph names `_meta['ahpd.commit']` and says `ahp.commit` is read in its place while a client still sends it, and goes when none does.
 
@@ -44,9 +44,9 @@ Implemented 2026-10-09 in the `build/agents/6dac4670` worktree, not committed. E
 
 ### What was built
 
-- Task 02: `packages/sdk/src/host/facts.ts` sends `ahpd.owner` on the summary and the state. `packages/sdk/src/host/spawn.ts` sends `ahpd.sender` on a stored turn (`withSender`) and on a live `chat/turnStarted`. The plugin event's own `sender` field is not `_meta` and stays. `packages/sdk/src/changes.ts` writes `ahpd.staged` and `ahpd.unstaged`, and `treeSignature` and `commitConfirmation` read the new names.
+- Task 02: `packages/sdk/src/host/facts.ts` sends `ahpd.owner` on the summary and the state. `packages/sdk/src/host/spawn.ts` sends `ahpd.sender` on a stored turn (`withSender`) and on a live `chat/turnStarted`. The plugin event's own `sender` field is not `_meta` and stays. `packages/sdk/src/sessions/changes.ts` writes `ahpd.staged` and `ahpd.unstaged`, and `treeSignature` and `commitConfirmation` read the new names.
 - Task 03: `packages/agent-claude/src/session.ts` sends `ahpd.model` on the state. `packages/agent-claude/src/session/customizations.ts` sends a skill's hint as `ahpd.argumentHint`. `packages/sdk/src/host/sessionmethods.ts` gains `hintOf`, which reads a prompt's `argumentHint` and then a skill's `_meta['ahpd.argumentHint']`. The completion item still sends the bare `argumentHint`.
-- Task 04: `cacheWriteTokens`, `reasoningTokens`, `cost` and `context` are `ahpd.*` in agent-claude (`session/parts.ts`, `session/query.ts`), agent-acp (`mapping.ts`, `session/turn.ts`), agent-pi (`mapping.ts`) and agent-cofold (`mapping.ts`, `transcript.ts`), live and restored. The readers moved in the same change. These are `packages/sdk/src/meter.ts` (`costOf`, `usedBy`, and `addition`, whose output it reads back), pi's `addUsage` running sum, and acp's `context` read-back in `session/turn.ts`. No numeric `_meta.cost` is sent.
+- Task 04: `cacheWriteTokens`, `reasoningTokens`, `cost` and `context` are `ahpd.*` in agent-claude (`session/parts.ts`, `session/query.ts`), agent-acp (`mapping.ts`, `session/turn.ts`), agent-pi (`mapping.ts`) and agent-cofold (`mapping.ts`, `transcript.ts`), live and restored. The readers moved in the same change. These are `packages/sdk/src/usage/meter.ts` (`costOf`, `usedBy`, and `addition`, whose output it reads back), pi's `addUsage` running sum, and acp's `context` read-back in `session/turn.ts`. No numeric `_meta.cost` is sent.
 - `packages/sdk/test/wire.test.ts`: `PENDING` is empty. `REFERENCE` is unchanged.
 - `docs/sdk/AHP.md` names every new key: sender, owner, staging, the `chat/usage` row with the four usage keys, the skill hint and the Claude model. `docs/sdk/LIBRARY.md` names owner and sender.
 
@@ -75,14 +75,14 @@ Merged 2026-10-09. It needed no client release: ahpapp has no releases, and the 
 
 ### What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `invoke`'s `commit` branch reads `_meta['ahpd.commit']` alone. The `ahp.commit` fallback and the comment that carried its history are gone.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `invoke`'s `commit` branch reads `_meta['ahpd.commit']` alone. The `ahp.commit` fallback and the comment that carried its history are gone.
 - [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts) - the four cases that sent `ahp.commit` send `ahpd.commit`, and `the key a commit message arrives under` changes: a message under the old name is ignored, so the commit keeps `Changes from an agent session`, and the both-names case reads `ahpd.commit`.
 - [`code://packages/sdk/test/wire.test.ts`](../../../../packages/sdk/test/wire.test.ts) - `PENDING` is removed, so `announced` is `PREFIXED` or `REFERENCE` and the both-ways check is `REFERENCE` alone. A bare invented key is a stray at every place, not only where no task claimed it.
 - [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the `commit` paragraph no longer says `ahp.commit` is read, and the introduction states the convention once: this host's own `_meta` keys are `ahpd.<name>`, and a key the protocol or the reference client defines keeps its spelling.
 
 ### Verified
 
-- Step 2 needed no work: `rg -n "ahpd\.startedAt|ahpd\.endedAt|ahpd\.durationMs" packages/*/src` finds the three constants in `packages/sdk/src/timing.ts`, which `callTimes` and `withCallTimes` write and every plugin goes through, live and restored (plugin/29). The bare names survive only as cofold's own transcript fields and as the test that refuses them on the wire.
+- Step 2 needed no work: `rg -n "ahpd\.startedAt|ahpd\.endedAt|ahpd\.durationMs" packages/*/src` finds the three constants in `packages/sdk/src/utils/timing.ts`, which `callTimes` and `withCallTimes` write and every plugin goes through, live and restored (plugin/29). The bare names survive only as cofold's own transcript fields and as the test that refuses them on the wire.
 - `node tools/schema.mjs` prints 508 definitions and 633 closed objects. `pnpm build`, `pnpm typecheck` and `pnpm boundary` are clean.
 - `npx vitest run --maxWorkers=2 --testTimeout=10000` from the root: 260 files, 4550 tests pass in the build worktree, and 261 files, 4580 tests in the review worktree.
 

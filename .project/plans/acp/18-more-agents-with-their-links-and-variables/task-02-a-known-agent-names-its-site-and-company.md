@@ -5,7 +5,7 @@ depends: [task-01-cline-and-omp-are-known-agents.md]
 layer: "sdk, server"
 refs:
   - "[research/acp-agents-links-and-variables.md](../../../research/acp-agents-links-and-variables.md) - the site and the company of every row"
-  - "[code://packages/sdk/src/agents.ts#L25-L50](../../../../packages/sdk/src/agents.ts#L25-L50) - `KnownAgent`, which gets `site` and `company`"
+  - "[code://packages/sdk/src/machines/agents.ts#L25-L50](../../../../packages/sdk/src/machines/agents.ts#L25-L50) - `KnownAgent`, which gets `site` and `company`"
   - "[code://packages/server/src/found.ts#L157-L169](../../../../packages/server/src/found.ts#L157-L169) - `withPreset`, which keeps the row's fields"
 ---
 
@@ -16,8 +16,8 @@ Every row in `knownAgents` has `site`, the agent's own page, and `company`, the 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/agents.ts:25-50` - add `site` and `company` to `KnownAgent`.
-- `UPDATE: packages/sdk/src/agents.ts:69-163` - fill both on every row.
+- `UPDATE: packages/sdk/src/machines/agents.ts:25-50` - add `site` and `company` to `KnownAgent`.
+- `UPDATE: packages/sdk/src/machines/agents.ts:69-163` - fill both on every row.
 - `UPDATE: packages/server/src/found.ts` - print the site where neither a line nor a page is there.
 
 ## Steps

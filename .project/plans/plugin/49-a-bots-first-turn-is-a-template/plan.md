@@ -10,7 +10,7 @@ requires:
 refs:
   - "[code://packages/bot/src/start.ts#L27-L38](../../../../packages/bot/src/start.ts#L27-L38) - `sessionFor`, which sends `instructions` as the first turn"
   - "[code://packages/bot/src/record.ts#L52-L86](../../../../packages/bot/src/record.ts#L52-L86) - `BotRecord`, the facts a template fills in"
-  - "[code://packages/sdk/src/wakemessage.ts#L34-L62](../../../../packages/sdk/src/wakemessage.ts#L34-L62) - the `{{word}}` filler, which leaves a name it does not know as written"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L34-L62](../../../../packages/sdk/src/automations/wakemessage.ts#L34-L62) - the `{{word}}` filler, which leaves a name it does not know as written"
   - "[code://packages/sdk/src/types/plugin.ts#L718](../../../../packages/sdk/src/types/plugin.ts#L718) - `registerMethod`, beside which the chat preamble hook goes"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L1042-L1160](../../../../packages/sdk/src/host/sessionmethods.ts#L1042-L1160) - `createChat`, which runs `initialMessage` right after `session/chatAdded`"
 ---

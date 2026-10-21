@@ -35,7 +35,7 @@ refs:
 
 `docs/sdk/TOOLS.md` is written, 155 lines: what a tool is and its terms; the four sources (the host's own, a plugin's, a client's, an MCP server's); the host's nine session tools, its three artifact tools and its two read-only ones; a client's tools and how they are named and timed; `mcpServers` with each field, an example, the invalid-entry rule and the read-at-each-session-start rule; advanced permission beside `effects`; the four things that shape a tool (`instruction`, `compact`, `forSession`, `deferLoading`); how a model reaches them in process or over the endpoint; the config keys; the commands; the grants; and what to read next.
 
-Read against `packages/sdk/src/terminals.ts`, `packages/sdk/src/host/terminals.ts`, `packages/sdk/src/types/terminals.ts`, `packages/server/src/pty.ts`, `packages/sdk/src/host/tooling.ts`, `packages/sdk/src/artifacttools.ts`, `packages/sdk/src/host/gate.ts`, `packages/sdk/src/host/actions.ts`, `packages/sdk/src/host/lifecycle.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/users.ts`, `packages/server/src/commands/plugin.ts` and `packages/server/src/commands/run.ts`.
+Read against `packages/sdk/src/machines/terminals.ts`, `packages/sdk/src/host/terminals.ts`, `packages/sdk/src/types/terminals.ts`, `packages/server/src/pty.ts`, `packages/sdk/src/host/tooling.ts`, `packages/sdk/src/artifacttools.ts`, `packages/sdk/src/host/gate.ts`, `packages/sdk/src/host/actions.ts`, `packages/sdk/src/host/lifecycle.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/access/users.ts`, `packages/server/src/commands/plugin.ts` and `packages/server/src/commands/run.ts`.
 
 Found, and written as the code does it, not as the old text did:
 

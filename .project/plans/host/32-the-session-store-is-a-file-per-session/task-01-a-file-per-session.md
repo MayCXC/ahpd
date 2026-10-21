@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk, server"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L109-L207](../../../../packages/sdk/src/sessions.ts#L109-L207) - `fileSessions`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L109-L207](../../../../packages/sdk/src/sessions/sessions.ts#L109-L207) - `fileSessions`"
   - "[code://packages/server/src/config.ts#L185](../../../../packages/server/src/config.ts#L185) - the path"
 ---
 
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/sessions.ts` - the directory store.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the directory store.
 - `UPDATE: packages/server/src/config.ts` - `sessionsDir()` beside the old path, which task 03 still reads.
 - `UPDATE:` the sessions store tests.
 

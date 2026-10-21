@@ -3,7 +3,7 @@ title: Results and actions are the protocol's shapes - implemented
 date: 2026-10-07
 refs:
   - "[code://packages/sdk/src/rpc.ts#L183](../../../../packages/sdk/src/rpc.ts#L183) - `resultFrame`, which sends a handler's `null` as `null` and its nothing as `{}`"
-  - "[code://packages/sdk/src/automations.ts#L62-L90](../../../../packages/sdk/src/automations.ts#L62-L90) - `shown()`, which is how many runs of an automation a client has been shown"
+  - "[code://packages/sdk/src/automations/automations.ts#L62-L90](../../../../packages/sdk/src/automations/automations.ts#L62-L90) - `shown()`, which is how many runs of an automation a client has been shown"
   - "[code://packages/sdk/src/host/sessionconfig.ts#L300-L314](../../../../packages/sdk/src/host/sessionconfig.ts#L300-L314) - `published()`, which sets `type: 'object'` on every schema a backend publishes"
   - "[code://docs/sdk/AHP.md#L773-L806](../../../../docs/sdk/AHP.md#L773-L806) - the departures, and the table naming them"
 ---
@@ -14,7 +14,7 @@ Every request this host answers now carries the result the protocol declares for
 
 - [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts) - `resultFrame` passes a handler's `null` through, and still answers `{}` for a handler that returned nothing.
 - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts), [`code://packages/sdk/src/host/terminals.ts`](../../../../packages/sdk/src/host/terminals.ts) and [`code://packages/sdk/src/host/sessionmethods.ts`](../../../../packages/sdk/src/host/sessionmethods.ts) - `ping`, `createTerminal`, `disposeTerminal`, `createSession`, `createChat`, `disposeChat` and `disposeSession` answer `null`, which is `{"type":"null"}` in the installed package's `CommandMap`.
-- [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) - the store keeps how many runs each automation shows, starting at one page. `entry()` carries that many runs and `runsNextCursor` when more exist, and `runs()` advances the count and announces the automation. A cursor the store did not issue is refused.
+- [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts) - the store keeps how many runs each automation shows, starting at one page. `entry()` carries that many runs and `runsNextCursor` when more exist, and `runs()` advances the count and announces the automation. A cursor the store did not issue is refused.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `fetchAutomationRuns` answers `{}`, which is `FetchAutomationRunsResult`, and refuses an unrecognised cursor `-32602`.
 - [`code://packages/agent-claude/src/session/asking.ts`](../../../../packages/agent-claude/src/session/asking.ts) and [`code://examples/notes/agent.ts`](../../../../examples/notes/agent.ts) - `chat/inputRequested` is `type` and `request`, with no `turnId`.
 - [`code://packages/sdk/src/host/sessionconfig.ts`](../../../../packages/sdk/src/host/sessionconfig.ts) - `published()` sets `type: 'object'`, which covers the resolved schema and the schema a session state carries.

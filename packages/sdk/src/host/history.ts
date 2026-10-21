@@ -1,4 +1,4 @@
-import { idFor } from '../catalog.js';
+import { idFor } from '../sessions/catalog.js';
 import { subagentChatUri } from './channels.js';
 import type { Agent, Listed, SessionAt } from '../types/agent.js';
 import type { Bag } from '../types/common.js';

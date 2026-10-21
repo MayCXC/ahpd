@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { DEFAULT_TEMPLATE, firstTurn } from '../src/template.js';
 import type { BotRecord } from '../src/record.js';
 import type { TemplateChat } from '../src/template.js';

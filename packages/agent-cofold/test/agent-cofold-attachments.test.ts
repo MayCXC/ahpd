@@ -8,7 +8,7 @@ import type { ModelAdapter } from '@cofold/agents';
 import { localPath } from '@ahpd/sdk';
 import type { Bag, MessageAttachment } from '@ahpd/sdk';
 import { createHost } from '../../sdk/src/host.js';
-import { fileSessions } from '../../sdk/src/sessions.js';
+import { fileSessions } from '../../sdk/src/sessions/sessions.js';
 import { cofoldAgent } from '../src/index.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { HostTool } from '../../sdk/src/types/host.js';

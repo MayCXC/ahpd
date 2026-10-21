@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { clientPluginsIn } from '../src/clientplugins.js';
-import { uriOf } from '../src/fileuri.js';
+import { clientPluginsIn } from '../src/plugins/clientplugins.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import type { Clients } from '../src/types/host.js';
 
 /*

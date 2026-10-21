@@ -5,7 +5,7 @@ depends: [task-04-the-hub-lists-a-node.md]
 layer: "sdk | server"
 refs:
   - "[code://.project/plans/daemon/13-ahpd-restart/plan.md](../../daemon/13-ahpd-restart/plan.md) - `ahpd restart`: quiesce, end agents, resume sessions from the store"
-  - "[code://packages/sdk/src/nested.ts#L232](../../../../packages/sdk/src/nested.ts#L232) - `innerSession`, which container/04 task 11 names by the outer id"
+  - "[code://packages/sdk/src/sessions/nested.ts#L232](../../../../packages/sdk/src/sessions/nested.ts#L232) - `innerSession`, which container/04 task 11 names by the outer id"
 ---
 
 ## Objective
@@ -16,7 +16,7 @@ When the node's `ahpd join` restarts, the hub option `nodeRestart` picks what th
 ## Files
 
 - `UPDATE: packages/sdk/src/nodes.ts` - `connect` for a node that is reconnecting waits a bounded time for it.
-- `UPDATE: packages/sdk/src/nested.ts` - a resumed session reopens through `start` with `resume`, by container/04 task 11.
+- `UPDATE: packages/sdk/src/sessions/nested.ts` - a resumed session reopens through `start` with `resume`, by container/04 task 11.
 - `UPDATE: packages/server/src/commands/options.ts` - `nodeRestart: 'end' | 'reconnect'` in `serverFields`, default `end`.
 - `UPDATE: packages/sdk/test/nodes.test.ts` - the hub restart and both `nodeRestart` values.
 - `UPDATE: packages/server/test/join.test.ts` - the node restart through `ahpd join`.

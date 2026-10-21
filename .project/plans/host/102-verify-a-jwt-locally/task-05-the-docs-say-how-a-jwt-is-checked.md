@@ -5,7 +5,7 @@ depends: [task-03-the-tokens-exp-ends-the-sign-in.md, task-04-the-daemon-takes-t
 layer: docs
 refs:
   - "[code://docs/sdk/AUTHENTICATION.md#L80-L124](../../../../docs/sdk/AUTHENTICATION.md#L80-L124) - \"An issuer\" and \"An issuer per person\""
-  - "[code://packages/sdk/src/issuers.ts#L1-L16](../../../../packages/sdk/src/issuers.ts#L1-L16) - the header that says JWTs are not checked"
+  - "[code://packages/sdk/src/access/issuers.ts#L1-L16](../../../../packages/sdk/src/access/issuers.ts#L1-L16) - the header that says JWTs are not checked"
 ---
 
 ## Objective
@@ -16,7 +16,7 @@ The docs say when the host checks a JWT itself, what it checks, and what it does
 
 - `UPDATE: docs/sdk/AUTHENTICATION.md:80-124` - the setting, the checks, and what `exp` does.
 - `UPDATE: docs/server/USERS.md` - the setting beside `--issuer`.
-- `UPDATE: packages/sdk/src/issuers.ts:1-16` - the header names both checks.
+- `UPDATE: packages/sdk/src/access/issuers.ts:1-16` - the header names both checks.
 
 ## Steps
 

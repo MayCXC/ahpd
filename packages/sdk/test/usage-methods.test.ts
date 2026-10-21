@@ -11,7 +11,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { fileUsage, usageMethods, usageProvider } from '../src/usage.js';
+import { fileUsage, usageMethods, usageProvider } from '../src/usage/usage.js';
 import { call, directory, hello, host, signIn } from './users-gate-helpers.js';
 import type { ServedMethod } from '../src/types/plugin.js';
 import type { ModelUse, Owner } from '../src/types/usage.js';

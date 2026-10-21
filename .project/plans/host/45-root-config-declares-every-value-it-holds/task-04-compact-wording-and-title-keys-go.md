@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/tools/artifacts.ts#L217-L221](../../../../packages/sdk/src/tools/artifacts.ts#L217-L221) - the ADD tool's `compact` member"
   - "[code://packages/sdk/src/types/host.ts#L412-L417](../../../../packages/sdk/src/types/host.ts#L412-L417) - `TitleStrategy`, which keeps its three values"
   - "[code://packages/sdk/src/types/host.ts#L462-L469](../../../../packages/sdk/src/types/host.ts#L462-L469) - `HostTool.compact`"
-  - "[code://packages/sdk/src/validate.ts#L99-L104](../../../../packages/sdk/src/validate.ts#L99-L104) - `TOOL_OPTIONAL`, which accepts `compact` from a plugin"
+  - "[code://packages/sdk/src/plugins/validate.ts#L99-L104](../../../../packages/sdk/src/plugins/validate.ts#L99-L104) - `TOOL_OPTIONAL`, which accepts `compact` from a plugin"
   - "[code://packages/sdk/src/tools/session.ts#L515-L546](../../../../packages/sdk/src/tools/session.ts#L515-L546) - `rename_chat` and its `forSession`"
   - "[code://packages/sdk/test/host-tools.test.ts#L239-L262](../../../../packages/sdk/test/host-tools.test.ts#L239-L262) - the deferred case, which pushes `deferredTitleGeneration`, in `tools the host contributes`"
   - "[code://packages/sdk/test/host-github.test.ts#L266-L276](../../../../packages/sdk/test/host-github.test.ts#L266-L276) - the artifact cases, whose `withTools(compact)` pushes `artifactToolsCompactPrompts`, in `what a session recorded`"
@@ -39,7 +39,7 @@ A client older than 1.140 that still pushes any of the three has that key refuse
 - `UPDATE: packages/sdk/src/host/actions.ts:285-290` - the compact re-dispatch and its comment go.
 - `UPDATE: packages/sdk/src/tools/artifacts.ts:189-200, 217-221` - `COMPACT_ARTIFACT_TOOLS_INSTRUCTION`, `COMPACT_ADD_DESCRIPTION` and the ADD tool's `compact` go; the long instruction and description stay as they are.
 - `UPDATE: packages/sdk/src/types/host.ts:462-469` - `HostTool.compact` goes; `TitleStrategy` keeps `activeAgent`, `utility` and `deferred`, and `forSession` stays.
-- `UPDATE: packages/sdk/src/validate.ts:101` - `compact` leaves `TOOL_OPTIONAL`; `checkTool` does not look at a member the table does not list, so a plugin tool still carrying `compact` registers and the member is ignored.
+- `UPDATE: packages/sdk/src/plugins/validate.ts:101` - `compact` leaves `TOOL_OPTIONAL`; `checkTool` does not look at a member the table does not list, so a plugin tool still carrying `compact` registers and the member is ignored.
 - `UPDATE: packages/sdk/src/tools/session.ts:515-546` - `rename_chat` gains `deferLoading: true`.
 - `UPDATE: packages/sdk/test/host-tools.test.ts`, `packages/sdk/test/host-github.test.ts`, `packages/sdk/test/artifacttools.test.ts`, `packages/sdk/test/users-gate.test.ts`, `packages/sdk/test/root-config.test.ts`, `packages/sdk/test/conformance.test.ts`, `packages/sdk/test/sessiontools.test.ts`, `packages/sdk/test/plugin-validate.test.ts` - the cases below.
 - `UPDATE: docs/sdk/AHP.md` - task 01's root config paragraph says ahpd acts on `defaultShell` and the daemon's keys; a sentence says the compact wording and the two title keys were removed with VS Code 1.140 and a push of them is refused; the artifact and session tool rows, where they mention either key, say the long wording and deferred titles are the only ones.

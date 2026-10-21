@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/types/host.ts](../../../../packages/sdk/src/types/host.ts) - `HostOptions.resourceProviders`, the map the advertisement is built from"
   - "[code://packages/sdk/src/host.ts#L4604-L4608](../../../../packages/sdk/src/host.ts#L4604-L4608) - `storeFor`, the routing step the refusal moves into"
   - "[code://packages/sdk/src/host.ts#L4779](../../../../packages/sdk/src/host.ts#L4779) - `initialize`, where `automations` is advertised by presence and `_meta` is built"
-  - "[code://packages/sdk/src/validate.ts](../../../../packages/sdk/src/validate.ts) - `checkResourceProvider`, which must allow a method it does not demand"
+  - "[code://packages/sdk/src/plugins/validate.ts](../../../../packages/sdk/src/plugins/validate.ts) - `checkResourceProvider`, which must allow a method it does not demand"
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - the manifest the provider would describe"
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - the worked example's answer"
   - "[code://test/uri-resources.test.ts#L84-L93](../../../../test/uri-resources.test.ts#L84-L93) - the case that changes"

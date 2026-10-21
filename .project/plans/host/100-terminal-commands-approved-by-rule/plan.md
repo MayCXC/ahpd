@@ -29,7 +29,7 @@ refs:
   - "[code://packages/sdk/test/root-config.test.ts#L185-L212](../../../../packages/sdk/test/root-config.test.ts#L185-L212) - the pushed keys, both terminal keys included"
   - "[code://packages/sdk/src/vscoderootconfig.ts#L298](../../../../packages/sdk/src/vscoderootconfig.ts#L298) - `editAutoApprovePatterns`, declared and not read"
   - "[code://packages/sdk/src/types/plugin.ts#L351-L366](../../../../packages/sdk/src/types/plugin.ts#L351-L366) - `PortKey`, the ports a plugin can register"
-  - "[code://packages/sdk/src/plugins.ts#L835-L842](../../../../packages/sdk/src/plugins.ts#L835-L842) - `setPort`, one registration per port, with `replace`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L835-L842](../../../../packages/sdk/src/plugins/plugins.ts#L835-L842) - `setPort`, one registration per port, with `replace`"
   - "[code://packages/server/src/config.ts#L318-L323](../../../../packages/server/src/config.ts#L318-L323) - `plugins`, the one key whose value is code today"
   - "[code://.project/decisions/each-backend-offers-its-options-unless-a-rule-asks.md](../../../../.project/decisions/each-backend-offers-its-options-unless-a-rule-asks.md) - the host remembers no approval"
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/platform/agentHost/node/commandAutoApprover.ts#L130-L171 - `CommandApprovalResult` and `IShouldAutoApproveOptions`
@@ -106,7 +106,7 @@ owner's connection pushes the rules -> Start.<check> -> backend asks? -> split(l
 - **State flow** - the host keeps no state; the check reads the rules each time it runs.
 - **Parser seam** - the check calls `split` through the `commandParser` port. The sdk's splitter fills the port unless a plugin or the hook module replaces it.
 - **Layer responsibilities** - The sdk holds `split`, `CommandAutoApprover`, the port and the `Start` field. The server holds the setting for the default rules and the hook module key. Each backend calls the check where it asks today.
-- **Source-of-truth files** - [`code://packages/sdk/src/vscoderootconfig.ts`](../../../../packages/sdk/src/vscoderootconfig.ts), `packages/sdk/src/commandautoapprover.ts` (new).
+- **Source-of-truth files** - [`code://packages/sdk/src/vscoderootconfig.ts`](../../../../packages/sdk/src/vscoderootconfig.ts), `packages/sdk/src/access/commandautoapprover.ts` (new).
 - **Blocks** - host/101 adds "always ask" to the same `Start` seam, in p2, and checks it first.
 - **Matchers** - host/100 and host/101 share the seam, not the matcher. This plan matches command lines; host/101 matches tool names.
 

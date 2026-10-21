@@ -4,7 +4,7 @@ date: 2026-10-11
 refs:
   - git://796ac45 - the last review fix; the build is da923f3, and the review fixes are 02a6f20, 5f85e17 and 796ac45
   - "[code://packages/sdk/src/types/plugin.ts](../../../../packages/sdk/src/types/plugin.ts) - `PluginMethod`, `ServedMethod` and `registerMethod`"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - `registerMethod`, and the fold of `methods`"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - `registerMethod`, and the fold of `methods`"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - the dispatch to a served method"
   - "[code://packages/sdk/src/host/admission.ts](../../../../packages/sdk/src/host/admission.ts) - the grant and `authorize` of a served method"
   - "[code://packages/sdk/src/host/root.ts](../../../../packages/sdk/src/host/root.ts) - `advertisedMethods`"
@@ -18,8 +18,8 @@ A client finds each served command in `_meta['ahpd.methods']`.
 
 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `PluginMethod`, `ServedMethod`, and `registerMethod` on `PluginHost`.
 - [`code://packages/sdk/src/types/host.ts`](../../../../packages/sdk/src/types/host.ts) - `HostOptions.methods`, beside `channels`.
-- [`code://packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `checkMethod`, which refuses a name without `x-`, a bad grant and a missing `handle`.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `registerMethod`, and a fold that seeds `methods` from `base.methods` and refuses a name that is already served.
+- [`code://packages/sdk/src/plugins/validate.ts`](../../../../packages/sdk/src/plugins/validate.ts) - `checkMethod`, which refuses a name without `x-`, a bad grant and a missing `handle`.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `registerMethod`, and a fold that seeds `methods` from `base.methods` and refuses a name that is already served.
 - [`code://packages/sdk/src/host/channels.ts`](../../../../packages/sdk/src/host/channels.ts) - `methodIn`, which finds a served method by name.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - a served method is the handler when no protocol handler holds the name, so it passes the same handshake check and gate.
 - [`code://packages/sdk/src/host/admission.ts`](../../../../packages/sdk/src/host/admission.ts) - a served method needs its grant, or a yes from its `authorize`.

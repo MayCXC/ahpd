@@ -50,7 +50,7 @@ Files this task changed:
 
 Notes for review:
 
-- `quoted` is a local copy of the rule `packages/sdk/src/terminals.ts` quotes a word by, rather than an export from the sdk, so this task's diff stays inside `packages/agent-claude` and each task commits on its own.
+- `quoted` is a local copy of the rule `packages/sdk/src/machines/terminals.ts` quotes a word by, rather than an export from the sdk, so this task's diff stays inside `packages/agent-claude` and each task commits on its own.
 - `isShellName` is imported from `@ahpd/sdk`, which is what task 01 added it for.
 - `sourceFirst` no longer returns early on `!sourced`: it now fires on every Bash call and returns `{}` when there is neither a line nor a script to put in front, so a session with no `shellEnv` sends its command unchanged.
 - The comment on `hooks.PreToolUse` in `packages/agent-claude/src/session/query.ts` still says the hook runs "while a client has a script in force", which is now half of it. `query.ts` belongs to the parallel claude/22 build, so it is left for that build or a later one rather than touched here.

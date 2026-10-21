@@ -4,11 +4,11 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/automations.ts#L51-L59](../../../../packages/sdk/src/automations.ts#L51-L59) - `entry`, which issues `runsNextCursor` as `String(PAGE)`"
-  - "[code://packages/sdk/src/automations.ts#L260-L269](../../../../packages/sdk/src/automations.ts#L260-L269) - `runs`, which reads any cursor it cannot parse as 0"
+  - "[code://packages/sdk/src/automations/automations.ts#L51-L59](../../../../packages/sdk/src/automations/automations.ts#L51-L59) - `entry`, which issues `runsNextCursor` as `String(PAGE)`"
+  - "[code://packages/sdk/src/automations/automations.ts#L260-L269](../../../../packages/sdk/src/automations/automations.ts#L260-L269) - `runs`, which reads any cursor it cannot parse as 0"
   - "[code://packages/sdk/src/types/automations.ts#L208-L209](../../../../packages/sdk/src/types/automations.ts#L208-L209) - the port's `runs`"
   - "[code://packages/sdk/src/host/automations.ts#L306-L310](../../../../packages/sdk/src/host/automations.ts#L306-L310) - `fetchAutomationRuns`"
-  - "[code://packages/sdk/src/paging.ts#L39-L56](../../../../packages/sdk/src/paging.ts#L39-L56) - `older`, the shape to mirror"
+  - "[code://packages/sdk/src/sessions/paging.ts#L39-L56](../../../../packages/sdk/src/sessions/paging.ts#L39-L56) - `older`, the shape to mirror"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L182-L190](../../../../packages/sdk/src/host/sessionmethods.ts#L182-L190) - `fetchTurns`'s refusal, the sentence to reuse"
   - "[code://packages/sdk/test/automations.test.ts#L438-L454](../../../../packages/sdk/test/automations.test.ts#L438-L454) - `records what it has run, and pages it`"
 ---
@@ -20,7 +20,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/automations.ts:208-209` - `runs` answers `{ items; nextCursor? } | undefined`, `undefined` for a cursor the store did not issue; the doc line says so.
-- `UPDATE: packages/sdk/src/automations.ts:260-269` - a cursor that is not `/^\d+$/`, is 0, or is past the end of the history answers `undefined`.
+- `UPDATE: packages/sdk/src/automations/automations.ts:260-269` - a cursor that is not `/^\d+$/`, is 0, or is past the end of the history answers `undefined`.
 - `UPDATE: packages/sdk/src/host/automations.ts:306-310` - `undefined` from the store throws `new RpcError(-32602, \`Unrecognised cursor ${cursor}\`)`.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the cases below.
 

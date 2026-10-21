@@ -1,5 +1,5 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
-import { computerSource } from '../computers.js';
+import { computerSource } from '../machines/computers.js';
 import { isRootChannel, methodIn, schemeOf, servedIn } from './channels.js';
 import { NEEDS, UNGATED, channelRead, ownIn, refusalReason } from './gate.js';
 import type { Grant, Principal } from '../types/users.js';

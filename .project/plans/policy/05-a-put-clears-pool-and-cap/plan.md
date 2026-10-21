@@ -7,10 +7,10 @@ created: 2026-10-19
 revalidated: 2026-10-19
 requires: []
 refs:
-  - "[code://packages/sdk/src/policy.ts#L173](../../../../packages/sdk/src/policy.ts#L173) - a put merges the body over the row the store holds"
-  - "[code://packages/sdk/src/policies.ts#L77-L81](../../../../packages/sdk/src/policies.ts#L77-L81) - `edgeOf`, which reads `null` as absent: the pattern to reuse"
-  - "[code://packages/sdk/src/policies.ts#L212-L224](../../../../packages/sdk/src/policies.ts#L212-L224) - `checkPolicy` refuses `null` for `pool` and `cap`"
-  - "[code://packages/sdk/src/policy.ts#L49-L59](../../../../packages/sdk/src/policy.ts#L49-L59) - `PolicyLimits`, the answer of `policy://<id>/limits`"
+  - "[code://packages/sdk/src/access/policy.ts#L173](../../../../packages/sdk/src/access/policy.ts#L173) - a put merges the body over the row the store holds"
+  - "[code://packages/sdk/src/access/policies.ts#L77-L81](../../../../packages/sdk/src/access/policies.ts#L77-L81) - `edgeOf`, which reads `null` as absent: the pattern to reuse"
+  - "[code://packages/sdk/src/access/policies.ts#L212-L224](../../../../packages/sdk/src/access/policies.ts#L212-L224) - `checkPolicy` refuses `null` for `pool` and `cap`"
+  - "[code://packages/sdk/src/access/policy.ts#L49-L59](../../../../packages/sdk/src/access/policy.ts#L49-L59) - `PolicyLimits`, the answer of `policy://<id>/limits`"
   - "[code://packages/sdk/src/index.ts#L91](../../../../packages/sdk/src/index.ts#L91) - the index exports `PolicyChannels` and `PolicyProvider` only"
   - "[code://packages/sdk/test/policy-scheme.test.ts](../../../../packages/sdk/test/policy-scheme.test.ts) - the scheme tests, where a put is tested"
   - "[code://docs/sdk/POLICY.md#L56-L68](../../../../docs/sdk/POLICY.md#L56-L68) - The scheme, which says a row is written whole"
@@ -27,7 +27,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "null" packages/sdk/src/policies.ts` - `edgeOf`, the match lists and `limits` read `null` as absent; `pool` and `cap` refuse it.
+- `rg -n "null" packages/sdk/src/access/policies.ts` - `edgeOf`, the match lists and `limits` read `null` as absent; `pool` and `cap` refuse it.
 - `rg -n "null" docs/sdk/POLICY.md` - the doc does not say that `null` removes a field.
 - `rg -n "PolicyLimits" packages/sdk/src/index.ts` - nothing.
 
@@ -55,7 +55,7 @@ put policy://<id> { pool: null } -> { ...was, ...body, id } -> checkPolicy -> re
 
 - **Data flow** - `checkPolicy` reads `null` for `pool` and `cap` as it reads `undefined`. The merged row then has no such field.
 - **Layer responsibilities** - sdk: the check and the export · docs: one sentence in The scheme.
-- **Source-of-truth files** - [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts).
 
 ## Tasks
 

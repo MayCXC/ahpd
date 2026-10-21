@@ -10,7 +10,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4607-L4612](../../../../packages/sdk/src/host.ts#L4607-L4612) - `mineOf`, which keeps only a value that is a string, and says so on the session"
   - "[code://packages/sdk/src/host.ts#L4214-L4267](../../../../packages/sdk/src/host.ts#L4214-L4267) - `mergedConfig` and `hostSchema`, the two places this host's own values are typed `Record<string, string>`"
   - "[code://packages/sdk/src/host.ts#L9846-L9893](../../../../packages/sdk/src/host.ts#L9846-L9893) - the `session/configChanged` handler, where a non-string value is refused as `takes a string`"
-  - "[code://packages/sdk/src/configvalues.ts#L30-L49](../../../../packages/sdk/src/configvalues.ts#L30-L49) - `accepts`, which is what a stored value is checked against and which already knows the JSON type `array`"
+  - "[code://packages/sdk/src/utils/configvalues.ts#L30-L49](../../../../packages/sdk/src/utils/configvalues.ts#L30-L49) - `accepts`, which is what a stored value is checked against and which already knows the JSON type `array`"
   - "[code://packages/sdk/src/worktrees.ts#L87-L114](../../../../packages/sdk/src/worktrees.ts#L87-L114) - `create`, whose include loop is the thing the value reaches"
   - "[code://packages/sdk/test/worktrees.test.ts#L210-L232](../../../../packages/sdk/test/worktrees.test.ts#L210-L232) - `brings along the files a checkout leaves behind`, the one case that sends the key as a string"
   - "[code://packages/sdk/test/worktrees.test.ts#L278-L306](../../../../packages/sdk/test/worktrees.test.ts#L278-L306) - the case that asserts the key is offered on a session created with no config"

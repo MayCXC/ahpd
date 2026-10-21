@@ -5,7 +5,7 @@ refs:
   - git://3328b293
   - git://cae59797
   - https://github.com/softov/ahpd/actions/runs/39344018005/job/118372148963 - the `check-windows` job of PR #30, green on 2026-10-19
-  - "[code://packages/sdk/src/terminals.ts](../../../../packages/sdk/src/terminals.ts) - `shellOf`, the arguments and quoting for each shell, and `endTree`"
+  - "[code://packages/sdk/src/machines/terminals.ts](../../../../packages/sdk/src/machines/terminals.ts) - `shellOf`, the arguments and quoting for each shell, and `endTree`"
   - "[code://packages/sdk/test/pty.test.ts](../../../../packages/sdk/test/pty.test.ts) - the cases for each shell and each system"
 ---
 
@@ -14,7 +14,7 @@ The terminal tests run on Windows, with no skip.
 
 ## What was built
 
-- [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts) - on Windows, `shellOf` answers the asked shell, then PowerShell 7, then Windows PowerShell, then `ComSpec`, then `cmd.exe`. It does not read `SHELL` there.
+- [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts) - on Windows, `shellOf` answers the asked shell, then PowerShell 7, then Windows PowerShell, then `ComSpec`, then `cmd.exe`. It does not read `SHELL` there.
 - The same file gives PowerShell `-NoProfile -Command`, `cmd.exe` `/d /s /c` and a POSIX shell `-c`, each with its own quoting. A `cmd.exe` line goes over verbatim, in the outer quotes that `/s` strips.
 - PowerShell exits with `$LASTEXITCODE` after a command, so a `!` command keeps its exit code.
 - The pipe spawn sets `windowsHide`, and is not detached on Windows. `^C` and `close` run `taskkill /pid <pid> /T /F`. A shell with no pid is not signalled.

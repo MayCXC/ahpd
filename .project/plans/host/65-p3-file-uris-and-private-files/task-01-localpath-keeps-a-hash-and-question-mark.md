@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/fileuri.ts#L49-L76](../../../../packages/sdk/src/fileuri.ts#L49-L76) - `localPath`, through `fileURLToPath`"
+  - "[code://packages/sdk/src/resources/fileuri.ts#L49-L76](../../../../packages/sdk/src/resources/fileuri.ts#L49-L76) - `localPath`, through `fileURLToPath`"
   - "[code://packages/sdk/test/fileuri.test.ts](../../../../packages/sdk/test/fileuri.test.ts) - its cases"
 ---
 
@@ -14,8 +14,8 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/fileuri.ts:49-76` - escape `#` and `?` in the path part before `fileURLToPath`; today `fileURLToPath('file:///home/u/src/C#/app')` is `/home/u/src/C`, so a session in `~/src/C#/app` whose working directory was built unencoded is read as `~/src/C`, and `lifecycle.ts:731`, `changesets.ts:40` and `chatactions.ts:183` run there.
-- `UPDATE: packages/sdk/src/fileuri.ts:34-48` - the comment says a `#` and a `?` are path.
+- `UPDATE: packages/sdk/src/resources/fileuri.ts:49-76` - escape `#` and `?` in the path part before `fileURLToPath`; today `fileURLToPath('file:///home/u/src/C#/app')` is `/home/u/src/C`, so a session in `~/src/C#/app` whose working directory was built unencoded is read as `~/src/C`, and `lifecycle.ts:731`, `changesets.ts:40` and `chatactions.ts:183` run there.
+- `UPDATE: packages/sdk/src/resources/fileuri.ts:34-48` - the comment says a `#` and a `?` are path.
 - `UPDATE: packages/sdk/test/fileuri.test.ts` - the cases below.
 
 ## Steps

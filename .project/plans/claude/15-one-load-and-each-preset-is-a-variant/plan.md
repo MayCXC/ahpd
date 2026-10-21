@@ -19,7 +19,7 @@ refs:
   - "[code://packages/server/src/plugins.ts#L660-L678](../../../../packages/server/src/plugins.ts#L660-L678) - the repeated-name check keyed by `provider`"
   - "[code://packages/server/src/rootconfig.ts#L109-L114](../../../../packages/server/src/rootconfig.ts#L109-L114) - root config entries, keyed through `keyed`"
   - "[code://packages/server/src/commands/config.ts#L105-L118](../../../../packages/server/src/commands/config.ts#L105-L118) - `keyed`, which builds `plugins.<name>#<provider>`"
-  - "[code://packages/sdk/src/plugins.ts#L340-L344](../../../../packages/sdk/src/plugins.ts#L340-L344) - `registerAgent` already takes several agents per plugin with distinct providers"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L340-L344](../../../../packages/sdk/src/plugins/plugins.ts#L340-L344) - `registerAgent` already takes several agents per plugin with distinct providers"
 ---
 
 ## Goal

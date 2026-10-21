@@ -4,9 +4,9 @@ status: done
 depends: []
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L105-L115](../../../../packages/sdk/src/plugins.ts#L105-L115) - `reservedScheme`, which this task replaces"
-  - "[code://packages/sdk/src/validate.ts#L86-L97](../../../../packages/sdk/src/validate.ts#L86-L97) - `checkAgent`"
-  - "[code://packages/sdk/src/users.ts#L42-L60](../../../../packages/sdk/src/users.ts#L42-L60) - `SUBJECTS`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L105-L115](../../../../packages/sdk/src/plugins/plugins.ts#L105-L115) - `reservedScheme`, which this task replaces"
+  - "[code://packages/sdk/src/plugins/validate.ts#L86-L97](../../../../packages/sdk/src/plugins/validate.ts#L86-L97) - `checkAgent`"
+  - "[code://packages/sdk/src/access/users.ts#L42-L60](../../../../packages/sdk/src/access/users.ts#L42-L60) - `SUBJECTS`"
 ---
 
 ## Objective
@@ -16,9 +16,9 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts:105-115` - `reservedScheme` becomes `reservedName`, which answers a reason or `undefined`.
-- `UPDATE: packages/sdk/src/plugins.ts:918-929` - `registerResourceProvider` uses `reservedName` and puts the reason in its error.
-- `UPDATE: packages/sdk/src/plugins.ts:883` - `registerAgent` refuses a `provider` that `reservedName` answers for.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:105-115` - `reservedScheme` becomes `reservedName`, which answers a reason or `undefined`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:918-929` - `registerResourceProvider` uses `reservedName` and puts the reason in its error.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:883` - `registerAgent` refuses a `provider` that `reservedName` answers for.
 - `UPDATE: packages/sdk/test/plugin-validate.test.ts` - cases for a reserved scheme and a reserved harness.
 
 ## Steps

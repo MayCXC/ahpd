@@ -1,6 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { memoryAutomations } from '../src/automations.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import {
   claude, createHost, hello, machine, peer, resetSdk, sdk,
 } from './support/host.js';

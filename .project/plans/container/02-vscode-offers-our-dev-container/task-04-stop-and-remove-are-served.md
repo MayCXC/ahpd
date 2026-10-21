@@ -26,7 +26,7 @@ Each method needs `container:stop` or `container:remove` and `computer:write` be
 ## Files
 
 - `UPDATE: packages/sdk/src/types/containers.ts:122-147` - `ContainerPort` gains optional `stop(folder)` and `remove(folder)`, each answering whether it acted.
-- `UPDATE: packages/sdk/src/users.ts:168-173` - the `container` subject gains `stop` and `remove`, both in the write group.
+- `UPDATE: packages/sdk/src/access/users.ts:168-173` - the `container` subject gains `stop` and `remove`, both in the write group.
 - `UPDATE: packages/sdk/src/host/gate.ts:91-92` - `vscode/devContainers/stop` needs `container:stop` and `vscode/devContainers/remove` needs `container:remove`.
 - `UPDATE: packages/sdk/src/host/admission.ts:121-122` - `capabilityFor` asks `computer:write` beside each, as it does for `createSession`.
 - `UPDATE: packages/sdk/src/host/context.ts:55-67` - `relays`, one connection's relay map held where a handler for another connection can see it.

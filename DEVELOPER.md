@@ -100,7 +100,7 @@ That boundary is enforced twice. npm hoists every dependency in a workspace into
 
 It is static, so it needs no install to be in any particular shape and cannot be fooled by one - it asks what the code says rather than what resolved today. `devDependencies` are deliberately treated as undeclared, because they are absent for anybody who installs the package, so a `src/` importing one works here and breaks there.
 
-This is not hypothetical. `catalogue`, the listing of a backend's sessions on disk, was once written inside the host and reached for the Claude Agent SDK's `listSessions`, which compiled only because hoisting resolved it. It now lives in [`packages/agent-claude/src/catalog.ts`](packages/agent-claude/src/catalog.ts), and the host learns a listing through the backend seam; [`packages/sdk/src/catalog.ts`](packages/sdk/src/catalog.ts) is what is left on the host's side, how a session is named and what its status bits are worth.
+This is not hypothetical. `catalogue`, the listing of a backend's sessions on disk, was once written inside the host and reached for the Claude Agent SDK's `listSessions`, which compiled only because hoisting resolved it. It now lives in [`packages/agent-claude/src/catalog.ts`](packages/agent-claude/src/catalog.ts), and the host learns a listing through the backend seam; [`packages/sdk/src/sessions/catalog.ts`](packages/sdk/src/sessions/catalog.ts) is what is left on the host's side, how a session is named and what its status bits are worth.
 
 ### The conformance and wire checks
 

@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/usage.ts#L558-L590](../../../../packages/sdk/src/usage.ts#L558-L590) - `body`"
+  - "[code://packages/sdk/src/usage/usage.ts#L558-L590](../../../../packages/sdk/src/usage/usage.ts#L558-L590) - `body`"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/usage.ts` - the pool body gains `kind` and `name`, read from the people records the provider is given.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - the pool body gains `kind` and `name`, read from the people records the provider is given.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the name cases.
 - `UPDATE: docs/sdk/USAGE.md` - the two fields.
 
@@ -32,7 +32,7 @@ refs:
 
 ## Resume
 
-- `packages/sdk/src/usage.ts`: `UsageProviderOptions.titles` is a reader with `teams()` and `projects()`, which a `Users` port answers.
+- `packages/sdk/src/usage/usage.ts`: `UsageProviderOptions.titles` is a reader with `teams()` and `projects()`, which a `Users` port answers.
 - The pool body is `{ pool, kind, name, day, week, month }`.
 - `kind` is the pool key's prefix, and `name` is the user's id, the team's title, `<team title> / <project title>`, or the host of a `root:` pool, each title falling back to its id.
 - A titles reader that throws is reported through `onProblem`, and the names fall back to ids.

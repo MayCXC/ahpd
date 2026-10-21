@@ -10,7 +10,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L115](../../../../packages/sdk/src/types/users.ts#L84-L115) - `UserRecord`"
   - "[code://packages/sdk/src/types/users.ts#L157-L162](../../../../packages/sdk/src/types/users.ts#L157-L162) - `UserFile`"
-  - "[code://packages/sdk/src/users.ts#L215-L266](../../../../packages/sdk/src/users.ts#L215-L266) - `fileUsers` reads the file on every question"
+  - "[code://packages/sdk/src/access/users.ts#L215-L266](../../../../packages/sdk/src/access/users.ts#L215-L266) - `fileUsers` reads the file on every question"
   - "[code://packages/server/src/commands/user.ts#L93-L170](../../../../packages/server/src/commands/user.ts#L93-L170) - the `user` commands, CLI and `/api`"
   - "[code://packages/sdk/src/types/host.ts#L218](../../../../packages/sdk/src/types/host.ts#L218) - `sessionConfig`, where a session key is declared"
 ---
@@ -54,7 +54,7 @@ AHP: session picker `scope` (fixed after the first turn) -> scopeFor ; proxy: he
 
 - **Data flow** - `UserFile` gains `teams` and `projects`; `UserRecord` gains `memberships` and `primary`; the principal carries both.
 - **Layer responsibilities** - `packages/sdk`: types, validation, `scopeFor`, the session key · `packages/server`: the commands.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), `CREATE: packages/sdk/src/scopes.ts`
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), `CREATE: packages/sdk/src/usage/scopes.ts`
 
 ## Tasks
 

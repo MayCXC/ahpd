@@ -3,7 +3,7 @@ title: The operator sets the environment of agent shells - implemented
 date: 2026-10-11
 refs:
   - git://927c070
-  - "[code://packages/sdk/src/shellenv.ts](../../../../packages/sdk/src/shellenv.ts)"
+  - "[code://packages/sdk/src/machines/shellenv.ts](../../../../packages/sdk/src/machines/shellenv.ts)"
   - "[code://packages/agent-claude/src/session/config.ts](../../../../packages/agent-claude/src/session/config.ts)"
 ---
 
@@ -11,8 +11,8 @@ An operator sets `shellEnv` in the daemon's `config.json`: a map of variable to 
 
 ## What was built
 
-- [`code://packages/sdk/src/shellenv.ts`](../../../../packages/sdk/src/shellenv.ts) - `ShellEnv`, `shellEnvOf` and `isShellName`.
-- [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts) - `shellTerminals` takes the map, and a terminal drops each variable left with no value.
+- [`code://packages/sdk/src/machines/shellenv.ts`](../../../../packages/sdk/src/machines/shellenv.ts) - `ShellEnv`, `shellEnvOf` and `isShellName`.
+- [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts) - `shellTerminals` takes the map, and a terminal drops each variable left with no value.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - `Config.shellEnv` and `shellEnvProblems`.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - the key, with no flag, and the refusal in `checkConfig`.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `Start.shellEnv` for each backend.

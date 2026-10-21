@@ -4,10 +4,10 @@ status: done
 depends: [task-01-the-store-keeps-its-days-in-the-usage-timezone.md, task-02-a-total-counts-the-turns.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/decide.ts#L157-L200](../../../../packages/sdk/src/decide.ts#L157-L200) - `decide`, whose `candidates` the walk starts from"
-  - "[code://packages/sdk/src/decide.ts#L96-L120](../../../../packages/sdk/src/decide.ts#L96-L120) - `scoped`, how a row's scope holds a person"
+  - "[code://packages/sdk/src/access/decide.ts#L157-L200](../../../../packages/sdk/src/access/decide.ts#L157-L200) - `decide`, whose `candidates` the walk starts from"
+  - "[code://packages/sdk/src/access/decide.ts#L96-L120](../../../../packages/sdk/src/access/decide.ts#L96-L120) - `scoped`, how a row's scope holds a person"
   - "[code://packages/sdk/src/types/policies.ts#L66-L98](../../../../packages/sdk/src/types/policies.ts#L66-L98) - `PolicyLimit`, `pool` and `cap`"
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts) - `MEASURES`, the measures of each kind"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts) - `MEASURES`, the measures of each kind"
   - "[code://packages/sdk/src/types/usage.ts#L104-L131](../../../../packages/sdk/src/types/usage.ts#L104-L131) - `UsageTotal`, the figures a limit reads"
   - "[code://packages/sdk/test/decide.test.ts](../../../../packages/sdk/test/decide.test.ts) - the draft's setup, which the walk's tests extend"
   - file:///github/ahp-review/prospect/ahp-user-rules.md - the rules draft: \"A charge rule\", \"Limits\", the setup and examples 1 to 30
@@ -21,8 +21,8 @@ Nothing here is wired into the host.
 
 ## Files
 
-- `CREATE: packages/sdk/src/charge.ts` - `COUNTED`, `keysOf`, `limitsOf`, `chargeFor`, `PayOrder` and the refusal sentence.
-- `UPDATE: packages/sdk/src/decide.ts:96-120` - `scoped` is exported, so the walk sorts candidates by scope level with the same reading.
+- `CREATE: packages/sdk/src/usage/charge.ts` - `COUNTED`, `keysOf`, `limitsOf`, `chargeFor`, `PayOrder` and the refusal sentence.
+- `UPDATE: packages/sdk/src/access/decide.ts:96-120` - `scoped` is exported, so the walk sorts candidates by scope level with the same reading.
 - `UPDATE: packages/sdk/src/types/policies.ts:1-17` - the header no longer says that nothing reads `limits`, `pool` and `cap`.
 - `UPDATE: packages/sdk/src/index.ts` - `chargeFor`, `limitsOf` and their types.
 - `CREATE: packages/sdk/test/charge.test.ts` - the draft's examples over a `memoryUsage`.
@@ -81,7 +81,7 @@ Nothing here is wired into the host.
 
 Implemented 2026-10-18, not reviewed.
 
-- `packages/sdk/src/charge.ts` holds `COUNTED`, `keysOf`, `limitsOf`, `chargeFor`, `PayOrder` and the refusal sentence.
+- `packages/sdk/src/usage/charge.ts` holds `COUNTED`, `keysOf`, `limitsOf`, `chargeFor`, `PayOrder` and the refusal sentence.
 - `COUNTED` is `usd`, `tokens` and `calls` for `model`, `usd`, `tokens` and `turns` for `agent`, and nothing for `computer`.
 - `keysOf` answers `policy:<id>/<measure>` for `shared`, `policy:<id>/<measure>/user:<id>` for `each`, and `pool:<name>/...` for a row naming a pool.
 - `limitsOf` answers each limit with `counted`, `used`, `from`, `resets` and `ends`, and an `each` limit read without a person with `members`.

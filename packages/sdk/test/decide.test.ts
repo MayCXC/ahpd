@@ -12,9 +12,9 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { decide } from '../src/decide.js';
-import { memoryPolicies } from '../src/policies.js';
-import type { Scope } from '../src/scopes.js';
+import { decide } from '../src/access/decide.js';
+import { memoryPolicies } from '../src/access/policies.js';
+import type { Scope } from '../src/usage/scopes.js';
 import type { Policies, Policy, PolicyLimit } from '../src/types/policies.js';
 import type { Grant, Principal } from '../src/types/users.js';
 

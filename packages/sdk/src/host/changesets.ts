@@ -1,6 +1,6 @@
 import type { ChangesetFile } from '@microsoft/agent-host-protocol';
-import { idOf, Status } from '../catalog.js';
-import { localPath, uriOf } from '../fileuri.js';
+import { idOf, Status } from '../sessions/catalog.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
 import { chatUriFor } from './channels.js';
 import { startsRead } from './chatactions.js';
 import type {

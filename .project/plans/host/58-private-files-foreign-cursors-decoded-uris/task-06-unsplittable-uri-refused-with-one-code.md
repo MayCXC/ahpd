@@ -4,9 +4,9 @@ status: done
 depends: []
 layer: "sdk, computer"
 refs:
-  - "[code://packages/sdk/src/policy.ts#L43-L49](../../../../packages/sdk/src/policy.ts#L43-L49) - `splitFor`, `-32609`"
-  - "[code://packages/sdk/src/people.ts#L312-L318](../../../../packages/sdk/src/people.ts#L312-L318) - people's `split`, `-32609`"
-  - "[code://packages/sdk/src/usage.ts#L394-L397](../../../../packages/sdk/src/usage.ts#L394-L397) - usage's `at`, `-32009`"
+  - "[code://packages/sdk/src/access/policy.ts#L43-L49](../../../../packages/sdk/src/access/policy.ts#L43-L49) - `splitFor`, `-32609`"
+  - "[code://packages/sdk/src/access/people.ts#L312-L318](../../../../packages/sdk/src/access/people.ts#L312-L318) - people's `split`, `-32609`"
+  - "[code://packages/sdk/src/usage/usage.ts#L394-L397](../../../../packages/sdk/src/usage/usage.ts#L394-L397) - usage's `at`, `-32009`"
   - "[code://packages/computer/src/provider.ts#L118-L122](../../../../packages/computer/src/provider.ts#L118-L122) - computer's `at`, `-32009`"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L52-L58](../../../../packages/sdk/src/host/resourcemethods.ts#L52-L58) - routing by lowercased scheme, so only a malformed URI of a provider's own scheme reaches `split`"
   - "[code://packages/sdk/test/people.test.ts#L72](../../../../packages/sdk/test/people.test.ts#L72) - pins `-32609`"
@@ -21,9 +21,9 @@ People, policy, usage and computer each refuse a URI they cannot split with `-32
 
 ## Files
 
-- `UPDATE: packages/sdk/src/policy.ts:45` - `-32609` becomes `-32602`.
-- `UPDATE: packages/sdk/src/people.ts:314` - the same.
-- `UPDATE: packages/sdk/src/usage.ts:395` - `-32009` becomes `-32602`.
+- `UPDATE: packages/sdk/src/access/policy.ts:45` - `-32609` becomes `-32602`.
+- `UPDATE: packages/sdk/src/access/people.ts:314` - the same.
+- `UPDATE: packages/sdk/src/usage/usage.ts:395` - `-32009` becomes `-32602`.
 - `UPDATE: packages/computer/src/provider.ts:120` - the same.
 - `UPDATE: packages/sdk/test/people.test.ts:72`, `packages/sdk/test/policy-scheme.test.ts:171-172`, `packages/sdk/test/usage-scheme.test.ts:288` - the pinned code.
 - `UPDATE: packages/computer/test/computer.test.ts` - a new case.

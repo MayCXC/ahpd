@@ -5,7 +5,7 @@ depends: []
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L101-L140](../../../../packages/sdk/src/types/plugin.ts#L101-L140) - the `register*` methods, where this one goes"
-  - "[code://packages/sdk/src/plugins.ts#L200-L260](../../../../packages/sdk/src/plugins.ts#L200-L260) - the per-plugin registration checks a new one follows"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L200-L260](../../../../packages/sdk/src/plugins/plugins.ts#L200-L260) - the per-plugin registration checks a new one follows"
   - "[code://packages/sdk/src/types/agent.ts#L151-L152](../../../../packages/sdk/src/types/agent.ts#L151-L152) - `Agent.schema()`, the schema this merges with"
   - "[code://packages/sdk/src/host.ts#L3051-L3072](../../../../packages/sdk/src/host.ts#L3051-L3072) - `published`, which every published schema passes through"
   - "[code://packages/sdk/src/host.ts#L2486](../../../../packages/sdk/src/host.ts#L2486) - `Start.settings`, the resolved config a backend receives"
@@ -20,7 +20,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerSessionConfig(key, schema)` with the contract in prose.
-- `UPDATE: packages/sdk/src/plugins.ts` - the contribution list, the per-plugin duplicate check, and the cross-plugin duplicate check the way a scheme is checked.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the contribution list, the per-plugin duplicate check, and the cross-plugin duplicate check the way a scheme is checked.
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.sessionConfig?: Record<string, Record<string, unknown>>` or the shape the fold needs, so `createHost` can merge it.
 - `UPDATE: packages/sdk/src/host.ts` - merge the contributed properties into the schema `published` returns, and into the defaults a session resolves, without the plugin learning how a session is stored.
 - `UPDATE: test/plugin-host.test.ts` - registration, duplicate, and the collision with a backend's own key.

@@ -3,8 +3,8 @@ title: A plugin is a client of its own host, as a principal of its own - impleme
 date: 2026-10-10
 refs:
   - git://0a5046e
-  - "[code://packages/sdk/src/pair.ts](../../../../packages/sdk/src/pair.ts)"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts)"
+  - "[code://packages/sdk/src/utils/pair.ts](../../../../packages/sdk/src/utils/pair.ts)"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts)"
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts)"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts)"
 ---
@@ -13,11 +13,11 @@ A plugin that has to act rather than contribute calls `host.connect()` and gets 
 
 ## What was built
 
-- [`code://packages/sdk/src/pair.ts`](../../../../packages/sdk/src/pair.ts) - new. `createPair()` answers the host's `Peer` and the plugin's end of one in-memory pair, `served(connection)` and `close()`; one frame per turn of the loop, and both ends closing together.
+- [`code://packages/sdk/src/utils/pair.ts`](../../../../packages/sdk/src/utils/pair.ts) - new. `createPair()` answers the host's `Peer` and the plugin's end of one in-memory pair, `served(connection)` and `close()`; one frame per turn of the loop, and both ends closing together.
 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `PluginPeer`, `PluginConnects`, `PluginHost.connect()`, `Contribution.connects`, and `PluginSpec.grants`.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `connect()` on the plugin host, the frozen `plugin:<name>` principal, the open pairs it closes, `HostRecordingOptions.grants`, and the fold's `pluginConnects`.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `connect()` on the plugin host, the frozen `plugin:<name>` principal, the open pairs it closes, `HostRecordingOptions.grants`, and the fold's `pluginConnects`.
 - [`code://packages/sdk/src/types/host.ts`](../../../../packages/sdk/src/types/host.ts) - `HostOptions.pluginConnects`.
-- [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts) and [`code://packages/sdk/src/values.ts`](../../../../packages/sdk/src/values.ts) - the `plugin:<name>` form of `Owner` and `ownerOfPrincipal`, which answers it for a principal with the `plugin` field and `user:<id>` for anyone else.
+- [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts) and [`code://packages/sdk/src/utils/values.ts`](../../../../packages/sdk/src/utils/values.ts) - the `plugin:<name>` form of `Owner` and `ownerOfPrincipal`, which answers it for a principal with the `plugin` field and `user:<id>` for anyone else.
 - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts) - `Principal.plugin`, set only on the principal a plugin's connection is served as.
 - [`code://packages/sdk/src/host/owners.ts`](../../../../packages/sdk/src/host/owners.ts) and [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `ownerFor` and the `principals` key both go through `ownerOfPrincipal`.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) and [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - `asSpec` keeps a list of strings and refuses the entry otherwise; `pluginEntry` carries the shape.

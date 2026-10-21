@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/sessions.ts#L260-L268](../../../../packages/sdk/src/types/sessions.ts#L260-L268) - `remoteOrigin`, the optional store field to mirror"
-  - "[code://packages/sdk/src/sessions.ts#L330-L390](../../../../packages/sdk/src/sessions.ts#L330-L390) - `Row`, `empty` and `Saved`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L330-L390](../../../../packages/sdk/src/sessions/sessions.ts#L330-L390) - `Row`, `empty` and `Saved`"
   - "[code://packages/sdk/src/host/lifecycle.ts#L887-L955](../../../../packages/sdk/src/host/lifecycle.ts#L887-L955) - `isolated`"
   - "[code://packages/sdk/src/host/lifecycle.ts#L218-L247](../../../../packages/sdk/src/host/lifecycle.ts#L218-L247) - `teardown`"
 ---
@@ -18,11 +18,11 @@ Every reader of the `worktrees` map falls back to the stored record.
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts:260-268` - add `StoredWorktree` and the optional `worktree?(id)` and `setWorktree?(id, value)`, beside `remoteOrigin`.
-- `UPDATE: packages/sdk/src/sessions.ts:116-117` - the memory store keeps the field, as it keeps `remoteOrigin`.
-- `UPDATE: packages/sdk/src/sessions.ts:330-390` - `Row`, `empty` and `Saved` carry `worktree`.
-- `UPDATE: packages/sdk/src/sessions.ts:516-525` - the file store writes it.
-- `UPDATE: packages/sdk/src/sessions.ts:660-670` - the file store reads it back, and ignores a value that is not a record of strings.
-- `UPDATE: packages/sdk/src/sessions.ts:690-700` - the file wrapper passes it through `touched`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:116-117` - the memory store keeps the field, as it keeps `remoteOrigin`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:330-390` - `Row`, `empty` and `Saved` carry `worktree`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:516-525` - the file store writes it.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:660-670` - the file store reads it back, and ignores a value that is not a record of strings.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:690-700` - the file wrapper passes it through `touched`.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:952` - `isolated` also calls `kept.setWorktree`.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:233-236` - `teardown` reads the map, then the store, and clears both.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:578-582` - the move clears the stored record with the map entry.

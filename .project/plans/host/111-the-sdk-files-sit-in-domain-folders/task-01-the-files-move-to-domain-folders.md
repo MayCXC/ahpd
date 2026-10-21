@@ -1,6 +1,6 @@
 ---
 title: The files move to domain folders
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -58,10 +58,10 @@ The files `index`, `host`, `listen`, `rpc`, `version` and `vscoderootconfig` sta
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** every step. The 52 files in the table moved with `git mv` and kept their names. The imports in `packages/sdk/src`, `packages/sdk/test` and the other packages' tests follow them. A script replaced the old paths in `.project` and `docs`, and a check confirmed that only the inserted folder segment changed there. `00-host.md` names the eight domain folders. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass. A default-worker run exited 1. The two-worker run this machine needs under load passed 387 files and 6463 tests, with 1 file and 22 tests skipped. `packages/sdk/test/fixtures/wire.jsonl` was unchanged after the tests.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:**
   - `src/terminals.ts` moves to `machines/`, and `src/host/terminals.ts` stays where it is.
   - A link in `.project` has `../` before `packages`, so match the path, not the start of the line.
-  - Restore `packages/sdk/test/fixtures/wire.jsonl` with `git checkout --` after the tests.
+  - `packages/sdk/test/fixtures/resource-write.json` still names the old `resources.ts` path in its `about` prose. It was left alone because the file is copied byte for byte into ahpc.

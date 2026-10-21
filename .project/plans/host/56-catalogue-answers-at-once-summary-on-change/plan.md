@@ -40,7 +40,7 @@ A client connecting to ahpd sees its session list in about the time `initialize`
 
 - `rg -n "listNow|catalogue\(\)" packages/sdk/src` - `listSessions` calls `listNow`, and `past` calls `catalogue`, which calls `listNow` once the last listing is two seconds old.
 - `rg -ln "summaryMoved\(" packages/sdk/src` - called from `facts.ts`, `spawn.ts`, `tooling.ts`, `actions.ts` and `chatactions.ts`, besides `catalogue.ts` itself.
-- `rg -n "registerAgent|providers" packages/sdk/src/plugins.ts` - the host's `agents` map holds agents by provider and does not keep which plugin registered one, so the host cannot tell that two agents read the same store.
+- `rg -n "registerAgent|providers" packages/sdk/src/plugins/plugins.ts` - the host's `agents` map holds agents by provider and does not keep which plugin registered one, so the host cannot tell that two agents read the same store.
 - `rg -n "catalogue\(served\)" packages/agent-claude/src` - `transcript` and `subagents` each run a full `listSessions` per path to find which path holds one id.
 - `rg -n "getSessionInfo" packages/agent-claude/node_modules/@anthropic-ai/claude-agent-sdk/sdk.d.ts` - the SDK answers one session's row without listing the rest.
 

@@ -4,7 +4,7 @@ status: done
 depends: [task-01-offered-in-the-picker.md]
 layer: "sdk | computer"
 refs:
-  - "[code://packages/sdk/src/computers.ts#L69-L84](../../../../packages/sdk/src/computers.ts#L69-L84) - `openComputer`"
+  - "[code://packages/sdk/src/machines/computers.ts#L69-L84](../../../../packages/sdk/src/machines/computers.ts#L69-L84) - `openComputer`"
   - "[code://packages/sdk/src/host.ts#L5304-L5334](../../../../packages/sdk/src/host.ts#L5304-L5334) - `placedIn`"
   - "[code://packages/computer/src/plugin.ts#L672-L783](../../../../packages/computer/src/plugin.ts#L672-L783) - the port's `create`"
 ---
@@ -15,7 +15,7 @@ A session whose `computer` is `disposable:<profile>` makes a machine at start th
 
 ## Files
 
-- `UPDATE: packages/sdk/src/computers.ts`
+- `UPDATE: packages/sdk/src/machines/computers.ts`
 - `UPDATE: packages/sdk/src/types/computers.ts` - a create that takes needs.
 - `UPDATE: packages/computer/src/plugin.ts`
 

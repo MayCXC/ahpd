@@ -3,7 +3,7 @@ title: A session two harnesses both list is listed once, under the harness it ru
 date: 2026-10-02
 refs:
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
 ---
 
 The host records which harness each session runs on, and the catalogue lists a session two harnesses both read once, under that harness, so Claude loaded twice no longer shows every session twice or resumes one on the other endpoint.

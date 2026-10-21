@@ -5,8 +5,8 @@ depends: [task-09-the-grants-each-command-needs.md]
 layer: "server, sdk"
 refs:
   - "[code://packages/server/src/commands/user.ts#L119-L191](../../../../packages/server/src/commands/user.ts#L119-L191) - `user add`, `user rm` and `user token`, each held to what its caller holds"
-  - "[code://packages/sdk/src/users.ts#L316-L335](../../../../packages/sdk/src/users.ts#L316-L335) - `grantsOf`, role names resolved to grants, built-in and file-defined"
-  - "[code://packages/sdk/src/users.ts#L53-L59](../../../../packages/sdk/src/users.ts#L53-L59) - `holds`"
+  - "[code://packages/sdk/src/access/users.ts#L316-L335](../../../../packages/sdk/src/access/users.ts#L316-L335) - `grantsOf`, role names resolved to grants, built-in and file-defined"
+  - "[code://packages/sdk/src/access/users.ts#L53-L59](../../../../packages/sdk/src/access/users.ts#L53-L59) - `holds`"
   - "[code://packages/server/src/commands/scopes.ts#L34-L45](../../../../packages/server/src/commands/scopes.ts#L34-L45) - `checkScopes`, the 403 with `refusalReason`"
   - "[code://packages/server/src/commands/authorize.ts#L28-L36](../../../../packages/server/src/commands/authorize.ts#L28-L36) - `ROOT` and `isRoot`"
 ---
@@ -17,7 +17,7 @@ Over HTTP, a caller holding `users:write` but not `*:*` cannot give a role, mint
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts` - the directory answers the grants a set of role names resolves to, and the grants a person's roles resolve to (a method on `Users` beside `add`, `remove`, `mint`, reusing `grantsOf`).
+- `UPDATE: packages/sdk/src/access/users.ts` - the directory answers the grants a set of role names resolves to, and the grants a person's roles resolve to (a method on `Users` beside `add`, `remove`, `mint`, reusing `grantsOf`).
 - `UPDATE: packages/server/src/commands/user.ts:119-191` - `add`, `rm` and `token` check the caller against those grants before they write.
 - `UPDATE: packages/server/test/server-http.test.ts` - the cases below.
 - `UPDATE: packages/sdk/test/users.test.ts` - the resolution.

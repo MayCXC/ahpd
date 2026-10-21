@@ -6,7 +6,7 @@ refs:
   - "[code://packages/computer/src/manifest.ts#L84](../../packages/computer/src/manifest.ts#L84) - \"A host folder to mount at the same path in the machine\""
   - "[code://packages/computer/src/manifest.ts#L1171](../../packages/computer/src/manifest.ts#L1171) - `workdir` defaults to the host folder"
   - "[code://packages/computer/src/runtime.ts#L3404](../../packages/computer/src/runtime.ts#L3404) - `docker run -v` mounts the folder at its own path"
-  - "[code://packages/sdk/src/nested.ts#L655](../../packages/sdk/src/nested.ts#L655) - `outerDir`, a machine URI back to the host's"
+  - "[code://packages/sdk/src/sessions/nested.ts#L655](../../packages/sdk/src/sessions/nested.ts#L655) - `outerDir`, a machine URI back to the host's"
 ---
 
 ## Context

@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/host/vscodemethods.ts#L288-L317](../../../../packages/sdk/src/host/vscodemethods.ts#L288-L317) - `vscode/setAgentHostDetachedWorktreeArchived`, the sibling: remove a clean tree, keep the branch, put it back"
   - "[code://packages/sdk/src/repo/worktrees.ts#L129-L202](../../../../packages/sdk/src/repo/worktrees.ts#L129-L202) - `create` checks out an existing branch when no new branch is named; `remove` deletes the branch it is given"
   - "[code://packages/sdk/src/types/sessions.ts#L260-L268](../../../../packages/sdk/src/types/sessions.ts#L260-L268) - `remoteOrigin`, the optional store field to mirror"
-  - "[code://packages/sdk/src/sessions.ts#L330-L390](../../../../packages/sdk/src/sessions.ts#L330-L390) - `Row`, `empty` and `Saved`, where a new field is kept"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L330-L390](../../../../packages/sdk/src/sessions/sessions.ts#L330-L390) - `Row`, `empty` and `Saved`, where a new field is kept"
   - "[code://packages/sdk/test/worktrees.test.ts#L824-L975](../../../../packages/sdk/test/worktrees.test.ts#L824-L975) - the teardown tests and the detached archive test to mirror"
   - "[code://packages/sdk/src/types/worktrees.ts#L128-L143](../../../../packages/sdk/src/types/worktrees.ts#L128-L143) - `dirty` and `remove` on the `Worktrees` port, which has no commit"
   - "[code://packages/server/src/rootconfig.ts#L32-L40](../../../../packages/server/src/rootconfig.ts#L32-L40) - `DAEMON_KEYS` and `LIVE`, where `closedChats` is a key a client edits and the daemon applies at once"
@@ -79,7 +79,7 @@ daemon restart -> worktrees map empty -> teardown finds no tree
 - **Event flow** - archive sleeps the session as today. When `sleep` stops an archived session, it removes the tree. Unarchive restores the tree before it says anything else.
 - **State flow** - the store holds `{ repository, path, base, branch? }` per session. The record stays after an archive, because unarchive needs it.
 - **Layer responsibilities** - The sdk holds the store field and the record reads and writes. It holds `shelve` and `restore` in `lifecycle.ts`, and the calls from `sleep.ts` and `chatactions.ts`. It also holds the `archiveDirtyWorktree` option and `commit` on the `Worktrees` port. The server holds the key in the configuration, the flags and the root config.
-- **Source-of-truth files** - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts), [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts), [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 

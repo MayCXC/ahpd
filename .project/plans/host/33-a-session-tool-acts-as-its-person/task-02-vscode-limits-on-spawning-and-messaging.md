@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/host/tooling.ts#L1086-L1157](../../../../packages/sdk/src/host/tooling.ts#L1086-L1157) - `send`, `create` and `createChat`, where the limits are asked"
   - "[code://packages/sdk/src/host/tooling.ts#L1131](../../../../packages/sdk/src/host/tooling.ts#L1131) - `kept.setParent`, the only parent link a created session records"
   - "[code://packages/sdk/src/types/sessions.ts#L144-L218](../../../../packages/sdk/src/types/sessions.ts#L144-L218) - `SessionStore` and `setParent`"
-  - "[code://packages/sdk/src/sessions.ts#L309-L348](../../../../packages/sdk/src/sessions.ts#L309-L348) - `Row.parent` and the saved record"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L309-L348](../../../../packages/sdk/src/sessions/sessions.ts#L309-L348) - `Row.parent` and the saved record"
 ---
 
 ## Objective
@@ -21,7 +21,7 @@ Each refusal uses VS Code's words.
 
 - `UPDATE: packages/sdk/src/host/tooling.ts:1086-1157` - `send`, `create` and `createChat` ask the depth and the counts, and count after success.
 - `UPDATE: packages/sdk/src/types/sessions.ts:144-218` - the store answers a session's root through its parent links.
-- `UPDATE: packages/sdk/src/sessions.ts:309-348` - `memorySessions` and `fileSessions` answer the root and the depth from `Row.parent`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:309-348` - `memorySessions` and `fileSessions` answer the root and the depth from `Row.parent`.
 - `UPDATE: packages/sdk/test/sessiontools.test.ts` - the limit cases below.
 - `UPDATE: docs/sdk/TOOLS.md` - the limits and their words.
 
@@ -61,7 +61,7 @@ File by file:
 
 - `packages/sdk/src/host/tooling.ts` - four constants at the top of the file, each documented with VS Code's own name. `TREE_LIMITS` holds each count's limit and its refusal sentence. Inside `createTooling`, `counted` is a map from a tree's root id to its three numbers, with `treeOf`, `countsIn`, `room` and `countUp` over it. `create` asks the count and the depth before it makes anything. It counts after the session has started and its first turn has begun. `createChat` asks and counts around the chat it opens. `send` asks before anything, and counts on both the queued and the sent path. All three ask `treeOf(idOf(uri))`, the tree of the session the tool runs in. Steps 2 and 5 to 12, and the review's one fix.
 - `packages/sdk/src/types/sessions.ts` - `SessionStore` gains `rootOf?(id): string` and `depthOf?(id): number`, beside `parent?`/`setParent?` and documented the same way. Steps 3 and 4.
-- `packages/sdk/src/sessions.ts` - `Held` gains both, `memorySessions` answers them from one `treeOf` walk up the `parent` links, and `fileSessions` passes the inner store's answers through. Steps 3 and 4.
+- `packages/sdk/src/sessions/sessions.ts` - `Held` gains both, `memorySessions` answers them from one `treeOf` walk up the `parent` links, and `fileSessions` passes the inner store's answers through. Steps 3 and 4.
 - `packages/sdk/test/sessiontools.test.ts` - a new describe, `VS Code's limits on spawning and messaging`, with six cases. A chain stops at depth 3 in the reference host's words. The 51st session in one tree is refused, while a second tree still makes one. The 51st chat is refused by either tool that makes one, and so is the 101st message. A send that failed is not counted. An agent that sends to two independent sessions is refused the 101st message in total, which is the review's case. 23 cases before, 29 after. These are the cases the Validation asks for. They run in the file's own style: no users directory, so no grant is asked and only the limits are under test.
 - `docs/sdk/TOOLS.md` - a `Limits` section after `Grants`, holding a table of the four bounds and the refusal each answers with. The paragraphs after it cover depth, what a tree is, and which tree a count is spent in. Then that a count is taken once the thing it counts has happened, and that clients are unbounded. The last says the counters are in memory, as the reference host's are. Step 13.
 

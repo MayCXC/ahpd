@@ -4,9 +4,9 @@ status: done
 depends: [task-01-the-host-declares-the-setting.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/changes.ts#L687-L702](../../../../packages/sdk/src/changes.ts#L687-L702) - `words()`"
-  - "[code://packages/sdk/src/changes.ts#L1069-L1111](../../../../packages/sdk/src/changes.ts#L1069-L1111) - `commit`"
-  - "[code://packages/sdk/src/changes.ts#L750-L766](../../../../packages/sdk/src/changes.ts#L750-L766) - the `create-pr` commit"
+  - "[code://packages/sdk/src/sessions/changes.ts#L687-L702](../../../../packages/sdk/src/sessions/changes.ts#L687-L702) - `words()`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1069-L1111](../../../../packages/sdk/src/sessions/changes.ts#L1069-L1111) - `commit`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L750-L766](../../../../packages/sdk/src/sessions/changes.ts#L750-L766) - the `create-pr` commit"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The three places that write words go through one function, and forced mode refus
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - one `wordsFor(kind, setting, given)` serves `commit`, the `create-pr` commit and `words()`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - one `wordsFor(kind, setting, given)` serves `commit`, the `create-pr` commit and `words()`.
 - `UPDATE: packages/sdk/test/commit.test.ts` - forced refuses an empty message, and the session-title mode gives today's words.
 
 ## Steps
@@ -32,7 +32,7 @@ The three places that write words go through one function, and forced mode refus
 ## Resume
 
 - **Implemented** 2026-10-09 on `build/agents/016ab0b2`, uncommitted.
-- `packages/sdk/src/changes.ts:789-820` is `wordsFor(kind, setting, given)`, the one function the three places that write words go through: the commit operation (1253), the commit `create-pr` makes of a dirty tree (912) and the pull request's own words (942). `words()` became `wordsFromSession(kind, given)`, and `asMessage` carries a body when there is one.
+- `packages/sdk/src/sessions/changes.ts:789-820` is `wordsFor(kind, setting, given)`, the one function the three places that write words go through: the commit operation (1253), the commit `create-pr` makes of a dirty tree (912) and the pull request's own words (942). `words()` became `wordsFromSession(kind, given)`, and `asMessage` carries a body when there is one.
 - The person's own text wins in every mode. With no setting, the words are what this host wrote before the key existed: the session title for a commit, and the session title with the branch's commits for a pull request.
 - `forced` throws `A commit message is required.` for a commit with nothing typed, before anything is staged. A pull request is the other way round: its form is how the person gives the text, so an empty form is left for `create-pr` to refuse at the point the request is actually opened.
 - `packages/sdk/test/commit.test.ts` is 30 tests; the four new ones are forced refusing an empty message with the tree left exactly as it was, forced still taking a typed one, the session title with no setting at all, and `session-title` saying nothing about a fallback.

@@ -2,7 +2,7 @@
 title: A client sees who owns a session and who sent each turn - implemented
 date: 2026-10-02
 refs:
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts)"
   - "[code://packages/agent-claude/src/session.ts](../../../../packages/agent-claude/src/session.ts)"
 ---
@@ -12,7 +12,7 @@ A client can say whose a session is and which person sent each of its turns, liv
 ## What was built
 
 - [`code://packages/sdk/src/types/sessions.ts`](../../../../packages/sdk/src/types/sessions.ts) - `sender(id, turnId)` and `setSender` on `SessionStore`.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - the memory and file stores keep senders per session and turn, written as `senders` and read back only as typed references.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - the memory and file stores keep senders per session and turn, written as `senders` and read back only as typed references.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `chat/turnStarted` carries `_meta.sender`; `withSender` puts `message._meta.sender` on snapshot turns, the active turn, transcript-read sessions, worker chats and `chat/turnsLoaded` pages; `describes` puts `_meta.owner` on rows and session state; `onTurnRecorded` keeps a sender under a backend's own transcript id.
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - the optional `Start.onTurnRecorded(turnId, transcriptId)`.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - calls it once per lead turn with the prompt's CLI uuid, never for a worker's echo.

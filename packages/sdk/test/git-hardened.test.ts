@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { gitChanges } from '../src/changes.js';
+import { gitChanges } from '../src/sessions/changes.js';
 import { gitBranches } from '../src/repo/git.js';
 import { gitArgv } from '../src/repo/hardened.js';
 import { gitWorktrees } from '../src/repo/worktrees.js';

@@ -11,21 +11,21 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions.ts#L236-L241) - the atomic write every store repeats: mkdir, `<file>.<pid>.tmp`, `0o600`, rename"
-  - "[code://packages/sdk/src/policies.ts#L273-L291](../../../../packages/sdk/src/policies.ts#L273-L291) - a read: ENOENT is empty, another failure is said, not JSON is said, then a shape check"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions/sessions.ts#L236-L241) - the atomic write every store repeats: mkdir, `<file>.<pid>.tmp`, `0o600`, rename"
+  - "[code://packages/sdk/src/access/policies.ts#L273-L291](../../../../packages/sdk/src/access/policies.ts#L273-L291) - a read: ENOENT is empty, another failure is said, not JSON is said, then a shape check"
   - "[code://packages/sdk/src/scheduled.ts#L278-L292](../../../../packages/sdk/src/scheduled.ts#L278-L292) - the same read, any read failure silent"
-  - "[code://packages/sdk/src/users.ts#L540-L552](../../../../packages/sdk/src/users.ts#L540-L552) - the same read, where an empty file is `{}`"
+  - "[code://packages/sdk/src/access/users.ts#L540-L552](../../../../packages/sdk/src/access/users.ts#L540-L552) - the same read, where an empty file is `{}`"
   - "[code://packages/server/src/vault.ts#L31-L60](../../../../packages/server/src/vault.ts#L31-L60) - `readSaved`, which says only the errno code and a fixed sentence, never the parser's message, which would quote a secret"
   - "[code://packages/server/src/vault.ts#L102-L107](../../../../packages/server/src/vault.ts#L102-L107) - `writeSaved`"
   - "[code://packages/server/src/daemon.ts#L90-L122](../../../../packages/server/src/daemon.ts#L90-L122) - `running`, `recordIn`, `recorded`: a record that is not one is deleted"
   - "[code://packages/server/src/daemon.ts#L125-L144](../../../../packages/server/src/daemon.ts#L125-L144) - the sweeper, which depends on the `<file>.<pid>.tmp` name"
   - "[code://packages/server/src/install.ts#L137-L161](../../../../packages/server/src/install.ts#L137-L161) - `readEntry` and `writeEntry`, the one write that is not atomic"
   - "[code://packages/computer/src/owners.ts#L117-L171](../../../../packages/computer/src/owners.ts#L117-L171) - computer's read and atomic write"
-  - "[code://packages/sdk/src/sessions.ts#L30-L99](../../../../packages/sdk/src/sessions.ts#L30-L99) - `memorySessions`: nine maps, `forget` and `prune` naming all nine"
-  - "[code://packages/sdk/src/sessions.ts#L124-L137](../../../../packages/sdk/src/sessions.ts#L124-L137) - `Saved`, the row on disk"
-  - "[code://packages/sdk/src/sessions.ts#L194-L220](../../../../packages/sdk/src/sessions.ts#L194-L220) - `rowOf`, a row rebuilt from nine getters"
-  - "[code://packages/sdk/src/sessions.ts#L257-L329](../../../../packages/sdk/src/sessions.ts#L257-L329) - `load`, nine setters and the field-by-field checks"
-  - "[code://packages/sdk/src/sessions.ts#L333-L352](../../../../packages/sdk/src/sessions.ts#L333-L352) - eleven setters wrapped in the same `heard`, `dirty`, `later` line"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L30-L99](../../../../packages/sdk/src/sessions/sessions.ts#L30-L99) - `memorySessions`: nine maps, `forget` and `prune` naming all nine"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L124-L137](../../../../packages/sdk/src/sessions/sessions.ts#L124-L137) - `Saved`, the row on disk"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L194-L220](../../../../packages/sdk/src/sessions/sessions.ts#L194-L220) - `rowOf`, a row rebuilt from nine getters"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L257-L329](../../../../packages/sdk/src/sessions/sessions.ts#L257-L329) - `load`, nine setters and the field-by-field checks"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L333-L352](../../../../packages/sdk/src/sessions/sessions.ts#L333-L352) - eleven setters wrapped in the same `heard`, `dirty`, `later` line"
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`, the port, which does not change"
   - "[code://packages/server/src/update.ts#L93-L130](../../../../packages/server/src/update.ts#L93-L130) - `readUpdate` and `refreshUpdate`, a copy of ahpc's `src/update.ts` kept in step, which this plan leaves alone"
 ---
@@ -44,8 +44,8 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "renameSync" packages/*/src` - atomic writes in `sessions.ts` (twice), `policies.ts`, `scheduled.ts`, `users.ts`, `computer/src/owners.ts`, `server/src/vault.ts`, `server/src/daemon.ts`; `server/src/install.ts:160` writes in place.
 - `rg -n "JSON.parse\(readFileSync" packages/*/src` and the two-step reads - the readers listed in `refs`, plus `computer/src/parts.ts:137`, `agent-claude/src/mcp.ts:33`, `agent-cofold/src/config.ts:79` and `server/src/update.ts:95`.
-- `rg -n "inner\.set" packages/sdk/src/sessions.ts` - eleven setters wrapped one per line, nine restored in `load`.
-- `rg -n "code://packages/sdk/src/sessions.ts" .project/plans` - host 50 task 02 adds a tenth field (`chats`) to the same store.
+- `rg -n "inner\.set" packages/sdk/src/sessions/sessions.ts` - eleven setters wrapped one per line, nine restored in `load`.
+- `rg -n "code://packages/sdk/src/sessions/sessions.ts" .project/plans` - host 50 task 02 adds a tenth field (`chats`) to the same store.
 
 ### Runtime path
 
@@ -82,7 +82,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 - **Event flow** - unchanged.
 - **State flow** - `memorySessions` holds `rows: Map<string, Row>`; a getter reads a field, a setter patches the row and drops it when every field is empty; `fileSessions` writes `rows.get(id)` with `version` and `id` added.
 - **Layer responsibilities** - sdk `jsonfile.ts` (new, exported): the reader and the writer · sdk `policies.ts`, `scheduled.ts`, `users.ts`, `sessions.ts`, server `vault.ts`, `daemon.ts`, `install.ts`, computer `owners.ts`: callers · sdk `sessions.ts`: the row.
-- **Source-of-truth files** - [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts), [`code://packages/server/src/vault.ts`](../../../../packages/server/src/vault.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts), [`code://packages/server/src/vault.ts`](../../../../packages/server/src/vault.ts)
 
 ## Tasks
 

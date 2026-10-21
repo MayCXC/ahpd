@@ -5,10 +5,10 @@ depends: []
 layer: packages/sdk
 refs:
   - code://packages/sdk/src/types/sessions.ts#L27-L57 - `SessionStore`, which gains the baseline pair
-  - code://packages/sdk/src/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
-  - code://packages/sdk/src/sessions.ts#L45-L49 - `Saved`, the persisted shape
-  - code://packages/sdk/src/sessions.ts#L80-L108 - `save`, which turns the slots into JSON
-  - code://packages/sdk/src/sessions.ts#L118-L153 - `load` and the store a restart reads
+  - code://packages/sdk/src/sessions/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
+  - code://packages/sdk/src/sessions/sessions.ts#L45-L49 - `Saved`, the persisted shape
+  - code://packages/sdk/src/sessions/sessions.ts#L80-L108 - `save`, which turns the slots into JSON
+  - code://packages/sdk/src/sessions/sessions.ts#L118-L153 - `load` and the store a restart reads
   - code://packages/sdk/src/host.ts#L1964-L1994 - `githubFacts` and `metaOf`, where the baseline joins the directory's map
   - code://packages/sdk/src/host.ts#L2065-L2098 - `refreshPullRequests`, where the first answer for a directory arrives
   - code://packages/sdk/src/host.ts#L3779-L3816 - `openSession`, where the session starts
@@ -26,11 +26,11 @@ A session's `_meta.github` carries `initialPullRequestUrls`, the pull requests i
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts:27-57` - add `PullRequestBaseline`, `pullRequests(id)` and `setPullRequests(id, value)`.
-- `UPDATE: packages/sdk/src/sessions.ts:16-29` - `memorySessions` keeps the slot and takes it away when it is empty.
-- `UPDATE: packages/sdk/src/sessions.ts:45-49` - `Saved.sessions[]` gains `pullRequests?: PullRequestBaseline`.
-- `UPDATE: packages/sdk/src/sessions.ts:80-108` - `save` writes the slot when it is there.
-- `UPDATE: packages/sdk/src/sessions.ts:118-141` - `load` accepts only an object with two string arrays and ignores anything else.
-- `UPDATE: packages/sdk/src/sessions.ts:145-153` - the returned store forwards both methods, and `forget` deletes the slot.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:16-29` - `memorySessions` keeps the slot and takes it away when it is empty.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:45-49` - `Saved.sessions[]` gains `pullRequests?: PullRequestBaseline`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:80-108` - `save` writes the slot when it is there.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:118-141` - `load` accepts only an object with two string arrays and ignores anything else.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:145-153` - the returned store forwards both methods, and `forget` deletes the slot.
 - `UPDATE: packages/sdk/src/host.ts:1964-1994` - `metaOf` spreads the session's baseline onto the directory's `github` object and counts it in the presence check.
 - `UPDATE: packages/sdk/src/host.ts:2065-2098` - `refreshPullRequests` captures the baseline for sessions in that directory that have none.
 - `UPDATE: packages/sdk/src/host.ts:3779-3816` - `openSession` captures from facts already held.

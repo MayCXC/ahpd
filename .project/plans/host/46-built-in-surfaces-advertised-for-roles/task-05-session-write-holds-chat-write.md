@@ -4,7 +4,7 @@ status: implemented
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/users.ts#L274-L287](../../../../packages/sdk/src/users.ts#L274-L287) - `holds`, where a chat operation is held through the session group but the chat group is not"
+  - "[code://packages/sdk/src/access/users.ts#L274-L287](../../../../packages/sdk/src/access/users.ts#L274-L287) - `holds`, where a chat operation is held through the session group but the chat group is not"
   - "[code://packages/sdk/test/users.test.ts#L665-L688](../../../../packages/sdk/test/users.test.ts#L665-L688) - the cases for groups and operations"
 ---
 
@@ -15,7 +15,7 @@ Today `holds(set('session:write'), 'chat:write')` is `false`, so an admin with `
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:274-287` - `holds` answers a `chat` group from the session group of the same name.
+- `UPDATE: packages/sdk/src/access/users.ts:274-287` - `holds` answers a `chat` group from the session group of the same name.
 - `UPDATE: packages/sdk/test/users.test.ts:665-688` - the cases below.
 
 ## Steps
@@ -35,11 +35,11 @@ Today `holds(set('session:write'), 'chat:write')` is `false`, so an admin with `
 
 ## Resume
 
-Built 2026-10-13, uncommitted. The worktree holds `packages/sdk/src/users.ts` and `packages/sdk/test/users.test.ts`. `packages/sdk/test/fixtures/wire.jsonl` is dirty with the suite's own regeneration, which is not this task's (see *Left* below).
+Built 2026-10-13, uncommitted. The worktree holds `packages/sdk/src/access/users.ts` and `packages/sdk/test/users.test.ts`. `packages/sdk/test/fixtures/wire.jsonl` is dirty with the suite's own regeneration, which is not this task's (see *Left* below).
 
 ### What changed, file by file
 
-- `packages/sdk/src/users.ts` - `holds` now reads the group a grant names, whether the grant spelled an operation in it or the group itself. `groupOf` answers nothing for `read` and `write`, which are groups and no subject's operations. A grant naming one used to fall straight to the exact-and-wildcard line, which is why `holds(set('session:write'), 'chat:write')` was false. The chat rule already there then answers it (step 2). A chat lives in a session, so `session:<group>` is everything `chat:<group>` is. On any other subject the new branch asks what the fall-through already asked, so nothing else moves. An operation still never holds its group, so `chat:send` holds no `chat:write` (step 3). The comment above `holds` now names the session group as a chat group's third answer.
+- `packages/sdk/src/access/users.ts` - `holds` now reads the group a grant names, whether the grant spelled an operation in it or the group itself. `groupOf` answers nothing for `read` and `write`, which are groups and no subject's operations. A grant naming one used to fall straight to the exact-and-wildcard line, which is why `holds(set('session:write'), 'chat:write')` was false. The chat rule already there then answers it (step 2). A chat lives in a session, so `session:<group>` is everything `chat:<group>` is. On any other subject the new branch asks what the fall-through already asked, so nothing else moves. An operation still never holds its group, so `chat:send` holds no `chat:write` (step 3). The comment above `holds` now names the session group as a chat group's third answer.
 - `packages/sdk/test/users.test.ts` - four lines more in `answers a grant from the group its operation is in, and not from the other ones`. It now asserts that `session:write` holds `chat:write`, and that `session:read` holds `chat:read`. It also asserts that `session:read` does not hold `chat:write`, and `chat:turns` does not hold `chat:read` (step 4). A new case, `lets somebody holding session:write hand a chat:write role on`, writes a `chats` role of `['chat:write']` and a `handler` of `['session:write']`. It takes the path `bounded` takes when a role is handed out: `grantsOfRoles(['chats'])` and `principal.can` of each grant it confers. That is what `ahpd user add --role chats` runs. The case also asserts the one-way rule: a chat's group confers nothing of a session's (the third Validation line).
 
 ### Verified

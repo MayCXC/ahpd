@@ -4,10 +4,10 @@ status: done
 depends: [task-01-a-kind-given-twice-is-refused.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/automations.ts#L52-L75](../../../../packages/sdk/src/automations.ts#L52-L75) - `entry()`, where `runCount` and `operations` are built"
-  - "[code://packages/sdk/src/automations.ts#L95-L125](../../../../packages/sdk/src/automations.ts#L95-L125) - `create` and `update`, where the count starts and resets"
-  - "[code://packages/sdk/src/automations.ts#L60-L64](../../../../packages/sdk/src/automations.ts#L60-L64) - `entry()`'s `operations`, which drop `run` when disabled"
-  - "[code://packages/sdk/src/automations.ts#L135-L138](../../../../packages/sdk/src/automations.ts#L135-L138) - `run()`'s gate, `found.definition.enabled === false` at :138"
+  - "[code://packages/sdk/src/automations/automations.ts#L52-L75](../../../../packages/sdk/src/automations/automations.ts#L52-L75) - `entry()`, where `runCount` and `operations` are built"
+  - "[code://packages/sdk/src/automations/automations.ts#L95-L125](../../../../packages/sdk/src/automations/automations.ts#L95-L125) - `create` and `update`, where the count starts and resets"
+  - "[code://packages/sdk/src/automations/automations.ts#L60-L64](../../../../packages/sdk/src/automations/automations.ts#L60-L64) - `entry()`'s `operations`, which drop `run` when disabled"
+  - "[code://packages/sdk/src/automations/automations.ts#L135-L138](../../../../packages/sdk/src/automations/automations.ts#L135-L138) - `run()`'s gate, `found.definition.enabled === false` at :138"
   - "[code://packages/sdk/src/host/automations.ts#L233-L246](../../../../packages/sdk/src/host/automations.ts#L233-L246) - `due`, a scheduled run's call into `run()` with a trigger origin"
   - "[code://packages/sdk/src/host/automations.ts#L299-L305](../../../../packages/sdk/src/host/automations.ts#L299-L305) - `runAutomation`, a manual run's call into `run()` and its \"or it is switched off\" refusal"
   - "[code://packages/sdk/test/automations.test.ts#L258-L268](../../../../packages/sdk/test/automations.test.ts#L258-L268) - `does not offer to run one that is switched off`, which this task inverts"
@@ -29,7 +29,7 @@ A disabled automation, whatever disabled it, still offers `run` and still runs b
 ## Files
 
 - `UPDATE: packages/sdk/src/types/automations.ts` - `runCount?: number` on `Automation` and on the entry; `create` takes an optional `runCount` after `owner`, so a store reading its file can restore it.
-- `UPDATE: packages/sdk/src/automations.ts` - `entry()` offers `['update', 'remove', 'run']` whatever `enabled` says, and its comment says `enabled` governs the schedule only; `run()`'s `enabled === false` refusal at :138 applies to `origin.kind === 'trigger'` only; the count on the record; `entry()` carries it only while an `afterRuns` condition exists; `update()` resets it to `0` on `enabled` going from `false` to `true` or on `afterRuns` appearing; `run()` with `origin.kind === 'trigger'` refuses when an `afterDate` has passed, otherwise counts, and sets `enabled: false` once the count reaches `max`, announcing through `said()`.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - `entry()` offers `['update', 'remove', 'run']` whatever `enabled` says, and its comment says `enabled` governs the schedule only; `run()`'s `enabled === false` refusal at :138 applies to `origin.kind === 'trigger'` only; the count on the record; `entry()` carries it only while an `afterRuns` condition exists; `update()` resets it to `0` on `enabled` going from `false` to `true` or on `afterRuns` appearing; `run()` with `origin.kind === 'trigger'` refuses when an `afterDate` has passed, otherwise counts, and sets `enabled: false` once the count reaches `max`, announcing through `said()`.
 - `UPDATE: packages/sdk/src/scheduled.ts` - `Saved` gains `runCount?`; `save()` writes the entry's, `load()` passes it to `inner.create`; `rearm()` and `catchUp()` treat an automation whose `afterDate` has passed as due for nothing, and switch it off through `inner.update` with `enabled: false`.
 - `UPDATE: packages/sdk/src/host/automations.ts:303` - the `runAutomation` refusal says only that there is no automation at that resource, since a disabled one now runs.
 - `UPDATE: packages/sdk/test/automations.test.ts`, `packages/sdk/test/scheduled.test.ts` - the cases below.

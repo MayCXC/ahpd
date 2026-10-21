@@ -6,9 +6,9 @@ layer: "packages/sdk, docs"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L718](../../../../packages/sdk/src/types/plugin.ts#L718) - `registerMethod`, beside which `registerChatPreamble` goes"
   - "[code://packages/sdk/src/types/plugin.ts#L902-L995](../../../../packages/sdk/src/types/plugin.ts#L902-L995) - `Contribution`, which gains `preambles`"
-  - "[code://packages/sdk/src/plugins.ts#L611-L623](../../../../packages/sdk/src/plugins.ts#L611-L623) - the fold of `pluginConnects`, the pattern the preambles follow"
-  - "[code://packages/sdk/src/plugins.ts#L795-L810](../../../../packages/sdk/src/plugins.ts#L795-L810) - the empty contribution each `apply` fills"
-  - "[code://packages/sdk/src/plugins.ts#L1103-L1110](../../../../packages/sdk/src/plugins.ts#L1103-L1110) - `registerMethod`, the shape `registerChatPreamble` copies"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L611-L623](../../../../packages/sdk/src/plugins/plugins.ts#L611-L623) - the fold of `pluginConnects`, the pattern the preambles follow"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L795-L810](../../../../packages/sdk/src/plugins/plugins.ts#L795-L810) - the empty contribution each `apply` fills"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L1103-L1110](../../../../packages/sdk/src/plugins/plugins.ts#L1103-L1110) - `registerMethod`, the shape `registerChatPreamble` copies"
   - "[code://packages/sdk/src/types/host.ts#L578-L588](../../../../packages/sdk/src/types/host.ts#L578-L588) - `pluginConnects` in `HostOptions`, beside which `chatPreambles` goes"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L1042-L1160](../../../../packages/sdk/src/host/sessionmethods.ts#L1042-L1160) - `createChat`: a fork or side chat, `session/chatAdded`, then `initialMessage`"
   - "[code://packages/sdk/src/host/tooling.ts#L1438-L1463](../../../../packages/sdk/src/host/tooling.ts#L1438-L1463) - the `createChat` tool, which begins the chat's first turn with its prompt"
@@ -49,9 +49,9 @@ export type ChatPreamble = (opened: OpenedChat) => Promise<string | undefined>;
 - `UPDATE: packages/sdk/src/types/plugin.ts:718` - declare `OpenedChat`, `ChatPreamble` and `registerChatPreamble(preamble)` on `PluginHost`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:902-995` - add `preambles: ChatPreamble[]` to `Contribution`.
 - `UPDATE: packages/sdk/src/types/host.ts:578-588` - add `chatPreambles?: ChatPreamble[]` to `HostOptions`.
-- `UPDATE: packages/sdk/src/plugins.ts:795-810` - start each contribution with `preambles: []`.
-- `UPDATE: packages/sdk/src/plugins.ts:1103-1110` - add `registerChatPreamble`, which calls `open()` and appends the preamble.
-- `UPDATE: packages/sdk/src/plugins.ts:611-623` - fold every contribution's `preambles` into `options.chatPreambles`, in plugin order.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:795-810` - start each contribution with `preambles: []`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:1103-1110` - add `registerChatPreamble`, which calls `open()` and appends the preamble.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:611-623` - fold every contribution's `preambles` into `options.chatPreambles`, in plugin order.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:1042-1160` - ask the preambles in `createChat`, and put the text in the first turn's `context`.
 - `UPDATE: packages/sdk/src/host/tooling.ts:1438-1463` - ask the preambles in the `createChat` tool, and put the text in the first turn's `context`.
 - `UPDATE: packages/sdk/src/index.ts` - export the `OpenedChat` and `ChatPreamble` types.

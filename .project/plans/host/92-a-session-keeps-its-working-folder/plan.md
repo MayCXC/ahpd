@@ -20,8 +20,8 @@ refs:
   - "[code://packages/sdk/src/host/history.ts#L364](../../../../packages/sdk/src/host/history.ts#L364) - `past` reads the transcript with the id alone"
   - "[code://packages/sdk/src/host/snapshots.ts#L391](../../../../packages/sdk/src/host/snapshots.ts#L391) - a subscribe reads the transcript with the id alone"
   - "[code://packages/sdk/src/host/snapshots.ts#L541](../../../../packages/sdk/src/host/snapshots.ts#L541) - the -32001 refusal a client gets for a session that `past` cannot find"
-  - "[code://packages/sdk/src/sessions.ts#L331-L347](../../../../packages/sdk/src/sessions.ts#L331-L347) - `Row`, the session record, which keeps no working folder"
-  - "[code://packages/sdk/src/sessions.ts#L254-L273](../../../../packages/sdk/src/sessions.ts#L254-L273) - `nestedOf`, the one record that keeps `workingDirectories`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L331-L347](../../../../packages/sdk/src/sessions/sessions.ts#L331-L347) - `Row`, the session record, which keeps no working folder"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L254-L273](../../../../packages/sdk/src/sessions/sessions.ts#L254-L273) - `nestedOf`, the one record that keeps `workingDirectories`"
   - "[code://packages/agent-pi/src/replay.ts#L212](../../../../packages/agent-pi/src/replay.ts#L212) - pi's `SessionManager.findById(directory, id)`, which looks in one project folder too"
   - npm://@anthropic-ai/claude-agent-sdk - `getSessionInfo(id, { dir })` and `listSessions({ dir })` read one exact project folder and its git worktrees, not its subfolders
 ---
@@ -40,7 +40,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "findSession" packages/agent-claude/src` - `find`, `transcript` and `subagents` all find the folder through the configured paths.
-- `rg -n "workingDirector" packages/sdk/src/sessions.ts` - only the nested record keeps working folders.
+- `rg -n "workingDirector" packages/sdk/src/sessions/sessions.ts` - only the nested record keeps working folders.
 - `rg -n "agent.find|transcript\?\.\(" packages/sdk/src/host` - every caller passes the id alone.
 - `rg -ln -i "working folder|workingDirector" .project/plans` - no plan covers the record. host/23 covers git facts only.
 
@@ -70,7 +70,7 @@ restart -> subscribe to a session -> past(id) -> findOf -> agent.find(id) -> get
 - **Event flow** - No new event.
 - **State flow** - The folder lives in `<configDir>/sessions/<id>.json`, beside the owner and the provider.
 - **Layer responsibilities** - sdk: the record field, the `Agent` argument, the callers · agent-claude: look in the folder first · agent-pi: the same · docs: `AGENT.md` names the argument.
-- **Source-of-truth files** - [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts), [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts), [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts)
 
 ## Tasks
 

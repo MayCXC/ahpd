@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk, agent-acp, agent-claude"
 refs:
-  - "[code://packages/sdk/src/vault.ts#L55-L68](../../../../packages/sdk/src/vault.ts#L55-L68) - `secretRef`, the sibling and the one-key rule"
+  - "[code://packages/sdk/src/access/vault.ts#L55-L68](../../../../packages/sdk/src/access/vault.ts#L55-L68) - `secretRef`, the sibling and the one-key rule"
   - "[code://packages/agent-acp/src/plugin.ts#L96-L130](../../../../packages/agent-acp/src/plugin.ts#L96-L130) - `secretsOf` and `fromEnvOf`"
   - "[code://packages/agent-claude/src/plugin.ts#L115-L138](../../../../packages/agent-claude/src/plugin.ts#L115-L138) - `secretsOf`"
   - "[code://packages/agent-claude/src/options.ts#L243-L247](../../../../packages/agent-claude/src/options.ts#L243-L247) - `fromEnvOf`, which allows other keys"
@@ -19,7 +19,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/vault.ts` - `fromEnvRef` after `secretRef`, and `readSecrets`, acp's `secretsOf` answering `Record<string, unknown>` (claude's type; acp narrows at its call).
+- `UPDATE: packages/sdk/src/access/vault.ts` - `fromEnvRef` after `secretRef`, and `readSecrets`, acp's `secretsOf` answering `Record<string, unknown>` (claude's type; acp narrows at its call).
 - `UPDATE: packages/sdk/src/index.ts:59` - exported.
 - `UPDATE: packages/sdk/test/vault.test.ts` - the helper's cases.
 - `UPDATE: packages/agent-acp/src/plugin.ts:96-130` - `secretsOf` and `fromEnvOf` go.
@@ -41,7 +41,7 @@ refs:
 ## Resume
 
 - **Implemented** 2026-10-10 on `build/agents/167a4a60`.
-- `packages/sdk/src/vault.ts` holds `fromEnvRef` after `secretRef` and `readSecrets` beside `readSecret`.
+- `packages/sdk/src/access/vault.ts` holds `fromEnvRef` after `secretRef` and `readSecrets` beside `readSecret`.
 - Both are exported from `@ahpd/sdk`.
 - `fromEnvRef` takes `secretRef`'s rule: an object whose only key is `fromEnv`, holding a non-empty string.
 - `{ fromEnv: '' }`, `{ fromEnv: 'X', other: 1 }` and a bare `'X'` all answer nothing.

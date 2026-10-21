@@ -14,7 +14,7 @@ decisions:
 refs:
   - "[code://tools/wait.ts#L10](../../../../tools/wait.ts#L10) - `WAIT_MS`, the wait by the clock that a slow runner is given"
   - "[code://tools/posix.ts#L9](../../../../tools/posix.ts#L9) - `posix`, the skip p3 uses for a POSIX-only case"
-  - "[code://packages/sdk/src/terminals.ts#L212-L227](../../../../packages/sdk/src/terminals.ts#L212-L227) - `argvLine`, the argv a terminal runs, quoted for its shell"
+  - "[code://packages/sdk/src/machines/terminals.ts#L212-L227](../../../../packages/sdk/src/machines/terminals.ts#L212-L227) - `argvLine`, the argv a terminal runs, quoted for its shell"
   - "[code://packages/server/src/install.ts#L99-L115](../../../../packages/server/src/install.ts#L99-L115) - `launch`, which on Windows runs the `npm-cli.js` beside Node and never reads `PATH`"
   - "[code://packages/server/src/daemon.ts#L13-L22](../../../../packages/server/src/daemon.ts#L13-L22) - Windows has no `SIGHUP`, so a stop and a restart go by a control pipe"
 ---
@@ -71,7 +71,7 @@ One case of `server-cli-restart`, a stop sent while a restart is stopping, expec
 
 - **Data flow** - a terminal's argv -> `argvLine` -> Windows PowerShell 5.1 escaped for the C runtime -> the program reads each word whole.
 - **Layer responsibilities** - sdk: the argv's escape · tests: waits, stand-ins and skips.
-- **Source-of-truth files** - [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts)
 
 ## Tasks
 

@@ -7,7 +7,7 @@ created: 2026-10-07
 revalidated: 2026-10-07
 decisions:
 refs:
-  - "[code://packages/sdk/src/automations.ts#L382](../../../../packages/sdk/src/automations.ts#L382) - `triggers`, which answered no event trigger types before task 03"
+  - "[code://packages/sdk/src/automations/automations.ts#L382](../../../../packages/sdk/src/automations/automations.ts#L382) - `triggers`, which answered no event trigger types before task 03"
   - "[code://packages/sdk/src/host/automations.ts#L561-L708](../../../../packages/sdk/src/host/automations.ts#L561-L708) - `beginAutomation`, which makes a session and begins a turn"
   - "[code://packages/sdk/src/host/automations.ts#L1004-L1022](../../../../packages/sdk/src/host/automations.ts#L1004-L1022) - `due`, the one way a run starts without a person"
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts) - the schedule clock, the pattern a trigger clock mirrors"
@@ -85,7 +85,7 @@ chat action in dispatch -> session event -> rule engine (per automation, per ses
 - **Event flow** - dispatch -> `events.emit` -> engine -> `fire(automation, event)` -> overlap -> `startForAutomation` or a turn in the pinned chat.
 - **State flow** - counts and timers in the engine, in memory; the pinned session URI in `_meta.ahpd.pinnedSession` on the automation.
 - **Layer responsibilities** - `sessionevents.ts`: the event stream · `triggers.ts`: the rule engine, with a clock it is given · `host/automations.ts`: fire, overlap, pinned, placeholders · `automations.ts`: trigger types.
-- **Source-of-truth files** - `packages/sdk/src/triggers.ts` (made by task 02), `packages/sdk/src/host/automations.ts`.
+- **Source-of-truth files** - `packages/sdk/src/automations/triggers.ts` (made by task 02), `packages/sdk/src/host/automations.ts`.
 
 ```ts
 // packages/sdk/src/types/triggers.ts

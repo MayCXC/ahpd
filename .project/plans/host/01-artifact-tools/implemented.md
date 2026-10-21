@@ -3,7 +3,7 @@ title: Artifact tools promote in place and record a pull request - implemented
 date: 2026-09-20
 refs:
   - code://packages/sdk/src/artifacttools.ts
-  - code://packages/sdk/src/changes.ts
+  - code://packages/sdk/src/sessions/changes.ts
   - code://packages/sdk/src/host.ts
   - code://packages/sdk/src/github.ts
   - code://packages/sdk/src/types/changes.ts
@@ -21,7 +21,7 @@ A `create-pr` invocation now reports the pull request it opened or found again, 
 
 - `code://packages/sdk/src/artifacttools.ts` - holds `recordArtifact(held, one, mintId)`, the reference's `addOrPromoteArtifact`; the ADD run answers `Added artifact`, `Added reference`, `Promoted artifact` or `Already recorded` with the entry's id; the REMOVE run answers `Removed artifact: <id>` or `Removed reference: <id>`; the LIST run still describes its entries.
 - `code://packages/sdk/src/types/changes.ts` - `ChangesetOperationResult` carries an optional `pullRequest: { url, title, branch }`, which is what an operation that produced something the session should hold says for itself.
-- `code://packages/sdk/src/changes.ts` - `create-pr` computes the words before the reused check and returns the pull request on both the opened and the reused path.
+- `code://packages/sdk/src/sessions/changes.ts` - `create-pr` computes the words before the reused check and returns the pull request on both the opened and the reused path.
 - `code://packages/sdk/src/host.ts` - `recordPullRequest` records the artifact through the same `recordArtifact`, then writes the URL first into the directory's `pullRequestUrls` with `pullRequestBranchName`, keeping any state that names that URL, and calls `metaMoved`; `invokeChangesetOperation` calls it after the idle dispatch and before `refreshFacts`.
 - `code://packages/sdk/src/types/github.ts` - `PullRequest` gains an optional `title`.
 - `code://packages/sdk/src/github.ts` - `byApi` maps a string `title` and `byGh` asks for `title` in its `--json` list and maps it.

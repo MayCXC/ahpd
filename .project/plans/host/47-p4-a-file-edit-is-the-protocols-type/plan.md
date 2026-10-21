@@ -16,7 +16,7 @@ refs:
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/sessionPermissions.ts#L455 - VS Code passes a confirmation's `edits` through"
   - "https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/copilot/copilotAgentSession.ts#L5555-L5612 - only its Copilot backend builds them, `_buildEditsForPermission`; `node/claude/` sends none"
   - "[code://packages/agent-claude/src/session.ts#L2090-L2152](../../../../packages/agent-claude/src/session.ts#L2090-L2152) - the Claude backend's confirmation, which carries no `edits`"
-  - "[code://packages/sdk/src/changes.ts#L190-L196](../../../../packages/sdk/src/changes.ts#L190-L196) - `ahp-edit:`, the host's scheme for a side it holds, which serves the proposed text"
+  - "[code://packages/sdk/src/sessions/changes.ts#L190-L196](../../../../packages/sdk/src/sessions/changes.ts#L190-L196) - `ahp-edit:`, the host's scheme for a side it holds, which serves the proposed text"
 ---
 
 ## Goal
@@ -35,7 +35,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `grep -n "agent-host-protocol" packages/agent-acp/package.json` - only a keyword; typing the ACP mapping with the protocol's type would add a dependency, which is Softov's call, so it stays a `Bag`.
 - `rg -n "edits: |FileEditCollection" src/vs/platform/agentHost` in the VS Code clone, generated protocol excluded - the pass-through in `sessionPermissions.ts` and the Copilot builder.
 - `rg -n "pending-edit-content" src/vs/platform/agentHost` - Copilot's in-memory scheme for the proposed text, and `node/claude/CONTEXT.md:745`: Claude has no edit preview.
-- `rg -n "ahp-edit:|observe" packages/sdk/src/changes.ts` - the host already holds captured sides under `ahp-edit:` and serves them through `read`, which is where a proposed side fits.
+- `rg -n "ahp-edit:|observe" packages/sdk/src/sessions/changes.ts` - the host already holds captured sides under `ahp-edit:` and serves them through `read`, which is where a proposed side fits.
 
 ## Decisions locked in
 

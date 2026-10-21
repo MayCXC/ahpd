@@ -15,7 +15,7 @@ decisions:
   - decisions/a-dev-container-is-reached-by-docker-exec.md
 refs:
   - "[code://packages/sdk/src/types/machine.ts#L74-L94](../../../../packages/sdk/src/types/machine.ts#L74-L94) - `MachineNeed`, `NeedKind` (four kinds) and `ResolvedNeed`, where a fifth kind goes"
-  - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`"
+  - "[code://packages/sdk/src/machines/machine.ts#L62-L106](../../../../packages/sdk/src/machines/machine.ts#L62-L106) - `resolveNeeds`"
   - "[code://packages/computer/src/manifest.ts#L34-L100](../../../../packages/computer/src/manifest.ts#L34-L100) - `Profile`, which gains `parts`"
   - "[code://packages/computer/src/manifest.ts#L561-L605](../../../../packages/computer/src/manifest.ts#L561-L605) - where agents' needs are gathered (`resolveNeeds` at L585) and every target is checked once"
   - "[code://packages/computer/src/runtime.ts#L67-L178](../../../../packages/computer/src/runtime.ts#L67-L178) - `MachineSpec`, which gains `parts`"

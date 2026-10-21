@@ -17,7 +17,7 @@ refs:
   - "[code://packages/server/src/commands/proxy.ts](../../../../packages/server/src/commands/proxy.ts) - `ahpd proxy list`, which reads the table and never a key"
   - "[code://packages/sdk/src/types/computers.ts#L38-L48](../../../../packages/sdk/src/types/computers.ts#L38-L48) - `NestedStart`, which carries no environment today"
   - "[code://packages/sdk/src/types/machine.ts#L60-L64](../../../../packages/sdk/src/types/machine.ts#L60-L64) - `EnvNeed`, the variable an agent says its machine needs"
-  - "[code://packages/sdk/src/nested.ts#L115-L129](../../../../packages/sdk/src/nested.ts#L115-L129) - `startInside`, where the inner host's environment is set"
+  - "[code://packages/sdk/src/sessions/nested.ts#L115-L129](../../../../packages/sdk/src/sessions/nested.ts#L115-L129) - `startInside`, where the inner host's environment is set"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L508-L518](../../../../packages/sdk/src/host/sessionmethods.ts#L508-L518) - the session's checks, then `placedIn`, where a machine is made or picked"
   - "[code://.project/plans/container/05-an-agent-in-a-machine/deferred.md](../05-an-agent-in-a-machine/deferred.md) - the host proxy this plan takes from the parent's deferred list"
 ---

@@ -14,7 +14,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/listen.ts#L82-L124](../../../../packages/sdk/src/listen.ts#L82-L124) - `identityOf`, where a personal token stops naming the person"
   - "[code://packages/sdk/src/types/listen.ts#L74-L102](../../../../packages/sdk/src/types/listen.ts#L74-L102) - `Arrival`, `identify` and `root`"
-  - "[code://packages/sdk/src/users.ts#L130-L155](../../../../packages/sdk/src/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
+  - "[code://packages/sdk/src/access/users.ts#L130-L155](../../../../packages/sdk/src/access/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
   - "[code://packages/server/src/main.ts#L810-L830](../../../../packages/server/src/main.ts#L810-L830) - the daemon's `identify`, which passes the record only when it is trusted"
   - "[code://docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - the two layers this makes true"
 ---

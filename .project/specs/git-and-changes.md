@@ -2,7 +2,7 @@
 title: Git and changes
 status: current
 covers:
-  - packages/sdk/src/changes.ts
+  - packages/sdk/src/sessions/changes.ts
   - packages/sdk/src/types/changes.ts
   - packages/sdk/src/host/facts.ts
   - packages/sdk/src/repo/worktrees.ts
@@ -14,13 +14,13 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/changes.ts#L302-L310](../../packages/sdk/src/types/changes.ts#L302-L310) - `ChangesetWatch` and its `ready` promise"
   - "[code://packages/sdk/src/host/facts.ts#L385-L394](../../packages/sdk/src/host/facts.ts#L385-L394) - the read again when a watch is armed"
-  - "[code://packages/sdk/src/changes.ts#L162-L172](../../packages/sdk/src/changes.ts#L162-L172) - `ahp-git://head/<path>`, the side before a change"
-  - "[code://packages/sdk/src/changes.ts#L421-L443](../../packages/sdk/src/changes.ts#L421-L443) - `capturedUri` and `pendingUri`, with the session in base64url"
-  - "[code://packages/sdk/src/changes.ts#L1240-L1262](../../packages/sdk/src/changes.ts#L1240-L1262) - `read`, which parses the URI that a client sends back"
-  - "[code://packages/sdk/src/changes.ts#L226-L256](../../packages/sdk/src/changes.ts#L226-L256) - `COMMIT` and `commitConfirmation`"
-  - "[code://packages/sdk/src/changes.ts#L1300-L1323](../../packages/sdk/src/changes.ts#L1300-L1323) - the operations for each changeset scope"
-  - "[code://packages/sdk/src/changes.ts#L1385-L1410](../../packages/sdk/src/changes.ts#L1385-L1410) - the commit: one file, the index, or everything"
-  - "[code://packages/sdk/src/changes.ts#L900-L1023](../../packages/sdk/src/changes.ts#L900-L1023) - `pullRequest`, prepare and create"
+  - "[code://packages/sdk/src/sessions/changes.ts#L162-L172](../../packages/sdk/src/sessions/changes.ts#L162-L172) - `ahp-git://head/<path>`, the side before a change"
+  - "[code://packages/sdk/src/sessions/changes.ts#L421-L443](../../packages/sdk/src/sessions/changes.ts#L421-L443) - `capturedUri` and `pendingUri`, with the session in base64url"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1240-L1262](../../packages/sdk/src/sessions/changes.ts#L1240-L1262) - `read`, which parses the URI that a client sends back"
+  - "[code://packages/sdk/src/sessions/changes.ts#L226-L256](../../packages/sdk/src/sessions/changes.ts#L226-L256) - `COMMIT` and `commitConfirmation`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1300-L1323](../../packages/sdk/src/sessions/changes.ts#L1300-L1323) - the operations for each changeset scope"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1385-L1410](../../packages/sdk/src/sessions/changes.ts#L1385-L1410) - the commit: one file, the index, or everything"
+  - "[code://packages/sdk/src/sessions/changes.ts#L900-L1023](../../packages/sdk/src/sessions/changes.ts#L900-L1023) - `pullRequest`, prepare and create"
   - "[code://packages/sdk/src/host/facts.ts#L93-L131](../../packages/sdk/src/host/facts.ts#L93-L131) - `captureBaseline` and `promotePullRequest`"
   - "[code://packages/sdk/src/host/facts.ts#L53-L66](../../packages/sdk/src/host/facts.ts#L53-L66) - the baseline in the session's `_meta.github`"
   - "[code://packages/sdk/src/repo/worktrees.ts#L55-L72](../../packages/sdk/src/repo/worktrees.ts#L55-L72) - `worktreesOf` and `worktreeFor`"
@@ -30,7 +30,7 @@ refs:
   - git://d9d4f950^ - the deleted decisions this spec was written from: a-changeset-watch-says-when-it-is-armed, a-commit-takes-the-index-when-anything-is-staged, a-machines-git-directory-is-read-only-but-what-a-commit-writes, changes-uris-are-parsed-on-read-and-minted-to-survive-a-client, session-pull-request-baseline-is-sent, worktrees-can-live-under-one-root
 ---
 
-The changeset source in [`code://packages/sdk/src/changes.ts`](../../packages/sdk/src/changes.ts) shows a session's git changes as AHP changesets and runs the operations on them.
+The changeset source in [`code://packages/sdk/src/sessions/changes.ts`](../../packages/sdk/src/sessions/changes.ts) shows a session's git changes as AHP changesets and runs the operations on them.
 The scopes are the uncommitted tree, the whole session and each turn.
 Each side of a diff has a URI that this host makes and reads back.
 The committed side is an `ahp-git:` URI, and a side that the host holds is an `ahp-edit:` URI.

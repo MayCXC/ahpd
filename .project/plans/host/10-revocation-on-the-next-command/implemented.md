@@ -3,7 +3,7 @@ title: A role is read on every command - implemented
 date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/host.ts
   - code://test/users-gate.test.ts
   - code://docs/sdk/USERS.md
@@ -14,7 +14,7 @@ Editing the user file now takes effect on the next command. A person who has bee
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `Principal.standing?()`, absent meaning still standing so a hand-built principal is unaffected.
-- `code://packages/sdk/src/users.ts` - `principalOf` reads the file for `standing` and for `can`; `grantsOf` takes `complain` so the role-nothing-defines line is said once at verification rather than on every command.
+- `code://packages/sdk/src/access/users.ts` - `principalOf` reads the file for `standing` and for `can`; `grantsOf` takes `complain` so the role-nothing-defines line is said once at verification rather than on every command.
 - `code://packages/sdk/src/host.ts` - both gates ask `standing` first and refuse `-32007`, then `can` and refuse `-32009`.
 
 ## Verified

@@ -11,27 +11,27 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/people.ts#L54-L69](../../../../packages/sdk/src/people.ts#L54-L69) - `Records`, the seven questions a scheme's records answer, which becomes the shared port"
-  - "[code://packages/sdk/src/people.ts#L307-L398](../../../../packages/sdk/src/people.ts#L307-L398) - `providerFor`, the provider over `Records`, which moves out"
-  - "[code://packages/sdk/src/people.ts#L88-L101](../../../../packages/sdk/src/people.ts#L88-L101) - `bodyOf`, the write body decoded and parsed"
-  - "[code://packages/sdk/src/people.ts#L120-L130](../../../../packages/sdk/src/people.ts#L120-L130) - `asFile` and the epoch `moment`"
-  - "[code://packages/sdk/src/policy.ts#L43-L72](../../../../packages/sdk/src/policy.ts#L43-L72) - `splitFor`, `moment` and `asFile`, people's written again"
-  - "[code://packages/sdk/src/policy.ts#L119-L193](../../../../packages/sdk/src/policy.ts#L119-L193) - policy's `providerFor`, people's line for line over the `Policies` port"
-  - "[code://packages/sdk/src/policy.ts#L202-L215](../../../../packages/sdk/src/policy.ts#L202-L215) - policy's `bodyOf`, people's with `scheme` fixed"
-  - "[code://packages/sdk/src/usage.ts#L377-L397](../../../../packages/sdk/src/usage.ts#L377-L397) - usage's `split` with a query and a decoded pool, `absent` and `at`"
+  - "[code://packages/sdk/src/access/people.ts#L54-L69](../../../../packages/sdk/src/access/people.ts#L54-L69) - `Records`, the seven questions a scheme's records answer, which becomes the shared port"
+  - "[code://packages/sdk/src/access/people.ts#L307-L398](../../../../packages/sdk/src/access/people.ts#L307-L398) - `providerFor`, the provider over `Records`, which moves out"
+  - "[code://packages/sdk/src/access/people.ts#L88-L101](../../../../packages/sdk/src/access/people.ts#L88-L101) - `bodyOf`, the write body decoded and parsed"
+  - "[code://packages/sdk/src/access/people.ts#L120-L130](../../../../packages/sdk/src/access/people.ts#L120-L130) - `asFile` and the epoch `moment`"
+  - "[code://packages/sdk/src/access/policy.ts#L43-L72](../../../../packages/sdk/src/access/policy.ts#L43-L72) - `splitFor`, `moment` and `asFile`, people's written again"
+  - "[code://packages/sdk/src/access/policy.ts#L119-L193](../../../../packages/sdk/src/access/policy.ts#L119-L193) - policy's `providerFor`, people's line for line over the `Policies` port"
+  - "[code://packages/sdk/src/access/policy.ts#L202-L215](../../../../packages/sdk/src/access/policy.ts#L202-L215) - policy's `bodyOf`, people's with `scheme` fixed"
+  - "[code://packages/sdk/src/usage/usage.ts#L377-L397](../../../../packages/sdk/src/usage/usage.ts#L377-L397) - usage's `split` with a query and a decoded pool, `absent` and `at`"
   - "[code://packages/computer/src/provider.ts#L102-L130](../../../../packages/computer/src/provider.ts#L102-L130) - computer's `split`, `absent`, `at` and `moment`"
   - "[code://packages/computer/src/provider.ts#L217-L218](../../../../packages/computer/src/provider.ts#L217-L218) - computer's `asFile`"
   - "[code://packages/computer/src/manifest.ts#L535-L552](../../../../packages/computer/src/manifest.ts#L535-L552) - `bodyText` and computer's `bodyOf`, whose first refusal names the manifest's fields"
   - "[code://packages/sdk/src/host/tooling.ts#L346](../../../../packages/sdk/src/host/tooling.ts#L346) - a read's body decoded by hand"
   - "[code://packages/sdk/src/host/common.ts#L17](../../../../packages/sdk/src/host/common.ts#L17) - `reason`, the error's message, not exported from the package"
   - "[code://packages/sdk/src/scheduled.ts#L57-L58](../../../../packages/sdk/src/scheduled.ts#L57-L58) - `owned`, the owner check"
-  - "[code://packages/sdk/src/sessions.ts#L121-L122](../../../../packages/sdk/src/sessions.ts#L121-L122) - `ownerOf`, the same check"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L121-L122](../../../../packages/sdk/src/sessions/sessions.ts#L121-L122) - `ownerOf`, the same check"
   - "[code://packages/computer/src/runtime.ts#L640-L641](../../../../packages/computer/src/runtime.ts#L640-L641) - the same check, a third time"
   - "[code://packages/sdk/src/scheduled.ts#L72](../../../../packages/sdk/src/scheduled.ts#L72) - `bag`, as 16 of the 19 copies write it: any non-null object, arrays included, which the shared one does not keep"
   - "[code://packages/agent-claude/src/options.ts#L241](../../../../packages/agent-claude/src/options.ts#L241) - `bagOf`, one of the three that refuse arrays (with `agent-claude/src/plugin.ts:107` and `agent-acp/src/plugin.ts:94`)"
   - "[code://packages/agent-cofold/src/capabilities.ts#L121-L122](../../../../packages/agent-cofold/src/capabilities.ts#L121-L122) - a `bag` that answers `undefined`, which is `isRecord`"
   - "[code://packages/server/src/plugins.ts#L232-L236](../../../../packages/server/src/plugins.ts#L232-L236) - `messageOf` and `isRecord`, the server's copies"
-  - "[code://packages/sdk/src/users.ts#L367-L369](../../../../packages/sdk/src/users.ts#L367-L369) - `strings`, the string list"
+  - "[code://packages/sdk/src/access/users.ts#L367-L369](../../../../packages/sdk/src/access/users.ts#L367-L369) - `strings`, the string list"
   - "[code://packages/sdk/src/index.ts#L59](../../../../packages/sdk/src/index.ts#L59) - where `secretRef` is exported, the line the new exports sit beside"
   - "[code://packages/agent-acp/package.json#L60](../../../../packages/agent-acp/package.json#L60) - `@ahpd/sdk` peer `>=0.9`, as in agent-claude, agent-cofold, agent-pi and computer"
   - "[code://scripts/boundary.mjs](../../../../scripts/boundary.mjs) - every non-relative import must be declared, so a plugin reaches the helpers only through `@ahpd/sdk`"
@@ -49,7 +49,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `diff <(sed -n 307,398p packages/sdk/src/people.ts) <(sed -n 119,193p packages/sdk/src/policy.ts)` by eye - the same six members, the same refusals, the same sentences with `what` for `scheme`; policy merges the stored row into the body and runs `checkPolicy`, people's `put` merges inside each `Records`.
+- `diff <(sed -n 307,398p packages/sdk/src/access/people.ts) <(sed -n 119,193p packages/sdk/src/access/policy.ts)` by eye - the same six members, the same refusals, the same sentences with `what` for `scheme`; policy merges the stored row into the body and runs `checkPolicy`, people's `put` merges inside each `Records`.
 - `rg -n "^const (bag|bagOf) =" packages/*/src` - 19 copies: agent-acp 3, agent-claude 6, agent-cofold 7, agent-pi 2, sdk 1; `bagOf` in `agent-claude/src/options.ts:241`, `agent-claude/src/plugin.ts:107` and `agent-acp/src/plugin.ts:94` refuse arrays and the other 16 do not; `agent-cofold/src/capabilities.ts:121` answers `undefined`.
 - `rg -n "^const str =" packages/*/src` - 9 copies in agent-claude and agent-cofold.
 - `rg -n "is string => typeof [a-z]+ === 'string'" packages/*/src` - 30 inline string-list filters in 22 files, plus `strings` in `users.ts:368` and `words` in `computer/src/plugin.ts:130` (which answers `undefined` for a non-array).
@@ -79,7 +79,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 | --- | --- | --- |
 | Code repeated in more than one place is replaced by one shared helper, with no new dependency | Softov, 2026-10-05, asked which of the survey's findings become plans: all four | 01-07 |
 | `recordsProvider(scheme, records)` is people's `providerFor` lifted as it is, over people's `Records`; `put` gains the row already there as a third argument so policy can merge | the survey's item 1 and Softov's brief for this plan, 2026-10-05 | 02, 03 |
-| `packages/sdk/src/values.ts` holds `isRecord`, `bag`, `str`, `strings`, `reason` and `ownerOf`, exported from the package | the survey's item 2 and Softov's brief for this plan, 2026-10-05 | 01 |
+| `packages/sdk/src/utils/values.ts` holds `isRecord`, `bag`, `str`, `strings`, `reason` and `ownerOf`, exported from the package | the survey's item 2 and Softov's brief for this plan, 2026-10-05 | 01 |
 | The shared `bag` reads an object only and answers `{}` for an array; every call site is checked, and one that expects a list reads it with a list reader instead | Softov, 2026-10-06, asked whether one `bag` should refuse arrays: "the problem is not changing the bag call, but checking where we need an array and where we need an object; a validator for something that is an object cannot return an array as valid" | 01 |
 | The non-empty string readers stay where they are | (defaulted: three answer the value untrimmed and three trim it, and merging them changes one side) | - |
 | The wrong-scheme refusal inside the shared splitter is `-32602` | host 58 task 06 | 02 |
@@ -92,7 +92,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 - **Event flow** - unchanged.
 - **State flow** - unchanged; no store and no file moves.
 - **Layer responsibilities** - sdk `records.ts` (new): `Records`, `recordsProvider`, `splitResource`, `absentResource`, `asFile`, `jsonBody`, `bodyText`, `EPOCH` · sdk `values.ts` (new): the value readers · sdk `people.ts`, `policy.ts`: their `Records` only · sdk `usage.ts` and computer `provider.ts`: their own leaves, query and `watch` over the shared parts · every package: imports instead of copies.
-- **Source-of-truth files** - [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts), [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/access/people.ts`](../../../../packages/sdk/src/access/people.ts), [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts)
 
 ## Tasks
 

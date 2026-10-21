@@ -1,7 +1,7 @@
 import { compareProtocolVersions, negotiateProtocolVersion, SUPPORTED_PROTOCOL_VERSIONS } from '@microsoft/agent-host-protocol';
-import { RUN_HISTORY_LIMIT } from '../automations.js';
+import { RUN_HISTORY_LIMIT } from '../automations/automations.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
-import { uriOf } from '../fileuri.js';
+import { uriOf } from '../resources/fileuri.js';
 import { BANG } from './common.js';
 import type { ConnectionContext, HostContext } from './context.js';
 

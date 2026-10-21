@@ -3,8 +3,8 @@ title: A record may name its own issuer - implemented
 date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
-  - code://packages/sdk/src/issuers.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/issuers.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/index.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
@@ -18,8 +18,8 @@ Two people on one host can now sign in through two providers. A record names its
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `UserRecord.issuer`, the same vocabulary as the configuration's key.
-- `code://packages/sdk/src/issuers.ts` - `IssuerKind`, `issuerKind` and `issuerFrom`: one place that turns `github` or a URL into a provider, so a configuration and a record cannot disagree.
-- `code://packages/sdk/src/users.ts` - `FileUserOptions.issuer` is a name and `issuerFor` resolves a record's own, with an adapter built and kept once per name. `issuerNameOf` is the effective provider, `knownIssuers` collects them, and `advertised()` composes the record on every read so editing the file is enough. `verify` offers a token that matched no minted secret to the host's default and then to each record's issuer, matching a subject only against the records that name that provider. `list` reports the effective issuer. `signInRecord` takes any number of providers and unions their scopes.
+- `code://packages/sdk/src/access/issuers.ts` - `IssuerKind`, `issuerKind` and `issuerFrom`: one place that turns `github` or a URL into a provider, so a configuration and a record cannot disagree.
+- `code://packages/sdk/src/access/users.ts` - `FileUserOptions.issuer` is a name and `issuerFor` resolves a record's own, with an adapter built and kept once per name. `issuerNameOf` is the effective provider, `knownIssuers` collects them, and `advertised()` composes the record on every read so editing the file is enough. `verify` offers a token that matched no minted secret to the host's default and then to each record's issuer, matching a subject only against the records that name that provider. `list` reports the effective issuer. `signInRecord` takes any number of providers and unions their scopes.
 - `code://packages/sdk/src/index.ts` - `issuerFrom`, `issuerKind` and `IssuerKind` exported.
 - `code://packages/server/src/config.ts` - `namedIssuer` delegates to `issuerKind`, so the daemon's key and a record's field are one rule.
 - `code://packages/server/src/main.ts` - the daemon passes the issuer name, builds the advertised record without an issuer so the directory fills it, and prints the issuer in `user list`.

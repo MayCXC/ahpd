@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "docs"
 refs:
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts) - tokens, the issuer and principals"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts) - tokens, the issuer and principals"
   - "[code://packages/server/src/commands/authorize.ts](../../../../packages/server/src/commands/authorize.ts) - the deployment token"
 ---
 
@@ -41,7 +41,7 @@ Moved out of `docs/server/REFERENCE.md`: "Who may connect", which leaves one lin
 
 Links fixed: `docs/sdk/AHP.md` twice (the `root/configChanged` row's `workspaceTrust` link, and the `authenticate` section's connection-token link), `packages/agent-claude/README.md` and `packages/agent-pi/README.md` (both pointed at `docs/sdk/USERS.md#trusted-folders`), and the `trust` row of `docs/sdk/USERS.md`'s grants table, which linked its own moved anchor.
 
-Found: `docs/sdk/USERS.md`'s "The record the host advertises" said there is no `authorization_servers` and that "an issuer option that would fill it honestly is a later plan". The option is in the tree - `packages/sdk/src/users.ts:326` `signInRecord` adds the field whenever an issuer is passed, `packages/server/src/commands/run.ts:249` passes `options.issuer`, and `packages/sdk/src/issuers.ts` builds one from `github` or an OIDC URL - so the paragraph now says the field is absent until an issuer is configured and otherwise carries the issuers this host answers for.
+Found: `docs/sdk/USERS.md`'s "The record the host advertises" said there is no `authorization_servers` and that "an issuer option that would fill it honestly is a later plan". The option is in the tree - `packages/sdk/src/access/users.ts:326` `signInRecord` adds the field whenever an issuer is passed, `packages/server/src/commands/run.ts:249` passes `options.issuer`, and `packages/sdk/src/access/issuers.ts` builds one from `github` or an OIDC URL - so the paragraph now says the field is absent until an issuer is configured and otherwise carries the issuers this host answers for.
 
 Found: the moved "Trying it" list named five third-party identity products. The new doc says "a real identity provider, named by its issuer URL" instead, since no third-party project may be cited. The moved issuer text also cited "the field plan 07 left empty on purpose" and that phrase is gone; `docs/sdk/USERS.md`'s "Clients" still says "Plan 07's research file records ...", which is untouched and not a claim about code.
 

@@ -24,7 +24,7 @@ refs:
 ## Files
 
 - `CREATE: packages/sdk/src/types/plugin.ts` - `PortKey`, `PortOf`, `PluginSpec`, `Plugin`, `PluginHost`, `Contribution`, `Loaded`.
-- `CREATE: packages/sdk/src/plugins.ts` - `foldHostOptions(base, contributions)`.
+- `CREATE: packages/sdk/src/plugins/plugins.ts` - `foldHostOptions(base, contributions)`.
 - `UPDATE: packages/sdk/src/types/index.ts` - re-export `./plugin.js` beside the other type barrels.
 - `UPDATE: packages/sdk/src/index.ts` - export `foldHostOptions`, and add one line to the module comment saying a plugin contributes the option object and this composes several.
 - `CREATE: packages/sdk/src/version.ts` - `sdkVersion()`, read from the nearest `package.json` the way `packages/server/src/version.ts` does.

@@ -16,9 +16,9 @@ Root `_meta['vscode.remoteSessions']` is `true`, and a session made with `vscode
 
 ## Files
 
-- `CREATE: packages/sdk/src/remotesession.ts` - the window's five keys and its reader, in one place.
+- `CREATE: packages/sdk/src/sessions/remotesession.ts` - the window's five keys and its reader, in one place.
 - `UPDATE: packages/sdk/src/types/sessions.ts:36-65` - `RemoteOrigin`, `CreatedBy` and the four store methods.
-- `UPDATE: packages/sdk/src/sessions.ts` - both stores keep the two, and a file row is read back through the reader.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - both stores keep the two, and a file row is read back through the reader.
 - `UPDATE: packages/sdk/src/host/root.ts:498-508` - add the flag.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:1212-1229` - `openSession` reads the origin and the creator from the config.
 - `UPDATE: packages/sdk/src/host/facts.ts:176-231` - `describes` publishes the three keys.
@@ -45,7 +45,7 @@ Root `_meta['vscode.remoteSessions']` is `true`, and a session made with `vscode
 
 ## Resume
 
-The flag is on the root `_meta` in `packages/sdk/src/host/root.ts`, beside the machine's resources. The origin, the session that made this one and the depth are kept by the session store and published by `describes` in `packages/sdk/src/host/facts.ts`. The five keys and the reader are in `packages/sdk/src/remotesession.ts`. It is a core module and not a host one. The store can then validate a row it reads back with the same reader that accepted it.
+The flag is on the root `_meta` in `packages/sdk/src/host/root.ts`, beside the machine's resources. The origin, the session that made this one and the depth are kept by the session store and published by `describes` in `packages/sdk/src/host/facts.ts`. The five keys and the reader are in `packages/sdk/src/sessions/remotesession.ts`. It is a core module and not a host one. The store can then validate a row it reads back with the same reader that accepted it.
 
 The origin is read in `openSession` in `packages/sdk/src/host/lifecycle.ts`, and not in `createSession` in `packages/sdk/src/host/sessionmethods.ts` as the Files list said. Every road into a session goes through `openSession`: `createSession`, the `create` tool, an automation and a changed session. `backendsOwn` keeps `_meta`, so the config arrives there whole.
 
@@ -57,9 +57,9 @@ Depth is the deeper of the origin's own and the depth the backend publishes, whi
 
 Files changed:
 
-- `packages/sdk/src/remotesession.ts`
+- `packages/sdk/src/sessions/remotesession.ts`
 - `packages/sdk/src/types/sessions.ts`
-- `packages/sdk/src/sessions.ts`
+- `packages/sdk/src/sessions/sessions.ts`
 - `packages/sdk/src/host/root.ts`
 - `packages/sdk/src/host/lifecycle.ts`
 - `packages/sdk/src/host/facts.ts`

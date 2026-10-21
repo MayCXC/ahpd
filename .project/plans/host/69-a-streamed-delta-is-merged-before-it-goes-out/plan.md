@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/host/handshake.ts#L187](../../../../packages/sdk/src/host/handshake.ts#L187) - `initialize` subscribing, a snapshot"
   - "[code://packages/sdk/src/host/handshake.ts#L361](../../../../packages/sdk/src/host/handshake.ts#L361) - `reconnect` subscribing, a snapshot"
   - "[code://packages/sdk/src/types/host.ts#L68](../../../../packages/sdk/src/types/host.ts#L68) - `HostOptions`"
-  - "[code://packages/sdk/src/resources.ts#L469](../../../../packages/sdk/src/resources.ts#L469) - `COALESCE`, the one timer-merge in the sdk today"
+  - "[code://packages/sdk/src/resources/resources.ts#L469](../../../../packages/sdk/src/resources/resources.ts#L469) - `COALESCE`, the one timer-merge in the sdk today"
   - npm://@microsoft/agent-host-protocol@1.0.0 - `ChatDeltaAction` and `ChatReasoningAction` (`turnId`, `partId`, `content`), `ChatToolCallDeltaAction` (`content` appends, `invocationMessage` replaces)
 ---
 

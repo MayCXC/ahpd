@@ -4,7 +4,7 @@ status: implemented
 depends: [task-04-the-token-commands.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/users.ts#L1483-L1484](../../../../packages/sdk/src/users.ts#L1483-L1484) - the id of a minted token, 6 random bytes in base64url"
+  - "[code://packages/sdk/src/access/users.ts#L1483-L1484](../../../../packages/sdk/src/access/users.ts#L1483-L1484) - the id of a minted token, 6 random bytes in base64url"
   - "[code://packages/server/src/commands/user.ts#L84-L89](../../../../packages/server/src/commands/user.ts#L84-L89) - `idOf`, which refuses an id that starts with `-` as an unknown flag"
   - "[code://packages/server/src/commands/token.ts#L241-L278](../../../../packages/server/src/commands/token.ts#L241-L278) - `token rm`, which reads its id with `idOf`"
   - "[code://packages/server/test/token-command.test.ts#L219-L230](../../../../packages/server/test/token-command.test.ts#L219-L230) - the test that fails when the minted id starts with `-`"
@@ -21,7 +21,7 @@ No release has token minting yet, so no kept token has such an id.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:1483-1484` - a mint makes a new id while the id starts with `-` or another token has it.
+- `UPDATE: packages/sdk/src/access/users.ts:1483-1484` - a mint makes a new id while the id starts with `-` or another token has it.
 - `UPDATE: packages/sdk/test/users-tokens.test.ts` - a mint whose first random id starts with `-` keeps the next id.
 
 ## Steps

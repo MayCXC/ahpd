@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Agent, McpServer, Start } from '../src/types/agent.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';

@@ -16,9 +16,9 @@ refs:
   - code://packages/sdk/src/host.ts#L1964-L1994 - `githubFacts` per directory and `metaOf`, where a session's baseline joins the map
   - code://packages/sdk/src/host.ts#L1751-L1769 - `operationContext`, which reads `pullRequestUrls` to say a branch has one
   - code://packages/sdk/src/host.ts#L3779-L3816 - `openSession`, where a session starts and its baseline is captured
-  - code://packages/sdk/src/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
-  - code://packages/sdk/src/sessions.ts#L45-L49 - `Saved`, the persisted shape that gains the baseline
-  - code://packages/sdk/src/sessions.ts#L118-L153 - the load and the store a restart reads
+  - code://packages/sdk/src/sessions/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
+  - code://packages/sdk/src/sessions/sessions.ts#L45-L49 - `Saved`, the persisted shape that gains the baseline
+  - code://packages/sdk/src/sessions/sessions.ts#L118-L153 - the load and the store a restart reads
   - code://packages/sdk/src/types/sessions.ts#L27-L57 - `SessionStore`, the port that gains the pair
   - code://test/sessions.test.ts#L78-L124 - the restart tests the baseline joins
   - code://test/host.test.ts#L6143-L6259 - the GitHub `_meta` suite
@@ -41,7 +41,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "pullRequestUrls|initialPullRequestUrls|associatedPullRequestUrls" packages/sdk/src` - only `pullRequestUrls` is written, and only by `refreshPullRequests`.
 - `rg -n "githubFacts" packages/sdk/src/host.ts` - one map keyed by directory, so a baseline beside it has to be per session.
-- `rg -n "pullRequests|setArtifacts" packages/sdk/src/sessions.ts` - the store's existing slots; no pull-request slot exists.
+- `rg -n "pullRequests|setArtifacts" packages/sdk/src/sessions/sessions.ts` - the store's existing slots; no pull-request slot exists.
 - `rg -n "openSession" packages/sdk/src/host.ts` - the one place a session begins.
 - `rg -n "withInitialSessionPullRequest|withMostRecentRelatedSessionPullRequest" /github/externals/vscode/src` - the two helpers the reference keeps the baseline with.
 
@@ -60,7 +60,7 @@ create-pr -> recordPullRequest (plan 01) -> the URL becomes the session's
 ### Gaps
 
 - `Not found: any baseline key - searched "initialPullRequestUrls" and "associatedPullRequestUrls" in packages/; only the reference has them.`
-- `Not found: a place to keep a session's baseline - searched "pullRequests" in packages/sdk/src/sessions.ts and types/sessions.ts; the store holds flags, config, artifacts and chat titles alone.`
+- `Not found: a place to keep a session's baseline - searched "pullRequests" in packages/sdk/src/sessions/sessions.ts and types/sessions.ts; the store holds flags, config, artifacts and chat titles alone.`
 - A directory's facts are shared by every session there while the baseline is each session's, so the baseline cannot live in `githubFacts` and `metaOf` is where the two meet.
 - The capture has to happen before the session's first turn, or a pull request the turn creates would read as inherited.
 
@@ -84,7 +84,7 @@ create-pr -> recordPullRequest (plan 01) -> the URL becomes the session's
 - **Event flow** - the capture writes to the store and lets the next `session/metaChanged` carry it; the promotion runs inside plan 01's `recordPullRequest` before `metaMoved`, so one map move says both.
 - **State flow** - the baseline is session state and is written down by the file store, so a restart returns the same split. The directory facts stay in memory and are asked again.
 - **Layer responsibilities** - packages/sdk: the slot in `sessions.ts` and `types/sessions.ts`, the capture, the merge and the promotion in `host.ts` · test/: the restart, the capture-once rule and the promotion.
-- **Source-of-truth files** - `code://packages/sdk/src/host.ts`, `code://packages/sdk/src/sessions.ts`.
+- **Source-of-truth files** - `code://packages/sdk/src/host.ts`, `code://packages/sdk/src/sessions/sessions.ts`.
 
 ## Tasks
 

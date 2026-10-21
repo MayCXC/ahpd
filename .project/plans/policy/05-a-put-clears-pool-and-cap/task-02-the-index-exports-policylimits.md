@@ -5,7 +5,7 @@ depends: []
 layer: sdk
 refs:
   - "[code://packages/sdk/src/index.ts#L91](../../../../packages/sdk/src/index.ts#L91) - the type export of policy.js"
-  - "[code://packages/sdk/src/policy.ts#L49-L59](../../../../packages/sdk/src/policy.ts#L49-L59) - `PolicyLimits`"
+  - "[code://packages/sdk/src/access/policy.ts#L49-L59](../../../../packages/sdk/src/access/policy.ts#L49-L59) - `PolicyLimits`"
 ---
 
 ## Objective

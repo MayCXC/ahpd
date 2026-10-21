@@ -6,8 +6,8 @@ priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L96-L106](../../../../packages/sdk/src/terminals.ts#L96-L106) - a terminal's environment: the daemon's, then the caller's"
-  - "[code://packages/sdk/src/terminals.ts#L399](../../../../packages/sdk/src/terminals.ts#L399) - `shellTerminals`, the one store for client and session terminals"
+  - "[code://packages/sdk/src/machines/terminals.ts#L96-L106](../../../../packages/sdk/src/machines/terminals.ts#L96-L106) - a terminal's environment: the daemon's, then the caller's"
+  - "[code://packages/sdk/src/machines/terminals.ts#L399](../../../../packages/sdk/src/machines/terminals.ts#L399) - `shellTerminals`, the one store for client and session terminals"
   - "[code://packages/server/src/commands/run.ts#L556](../../../../packages/server/src/commands/run.ts#L556) - where the daemon makes the store"
   - "[code://packages/agent-claude/src/session/config.ts#L142-L165](../../../../packages/agent-claude/src/session/config.ts#L142-L165) - `sourceFirst`, which puts the session's init script before each Bash command"
   - "[code://packages/server/src/config.ts#L196-L202](../../../../packages/server/src/config.ts#L196-L202) - `clientToolTimeoutMs`, the pattern for a daemon key that reaches each backend"
@@ -27,7 +27,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg "shellTerminals\(" packages` - the daemon makes one store, and client and session terminals both use it.
-- `rg "env" packages/sdk/src/terminals.ts` - a terminal takes `process.env` whole, then the caller's `env`.
+- `rg "env" packages/sdk/src/machines/terminals.ts` - a terminal takes `process.env` whole, then the caller's `env`.
 
 ### Runtime path
 
@@ -53,7 +53,7 @@ config.json shellEnv -> HostOptions -> Start -> Claude's sourceFirst -> every Ba
 
 - **Data flow** - the daemon reads `shellEnv` once, gives it to the terminal store, and gives it to each backend on `Start`.
 - **Layer responsibilities** - `packages/sdk`: the helper, the terminal store and the `Start` field · `packages/server`: the key · `packages/agent-claude`: the Bash hook.
-- **Source-of-truth files** - [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts)
 
 ## Tasks
 

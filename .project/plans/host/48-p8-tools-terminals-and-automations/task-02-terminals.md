@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L5724-L5878](../../../../packages/sdk/src/host.ts#L5724-L5878) - `commanded`, `terminalInfo`, `heldTerminals`"
   - "[code://packages/sdk/src/host.ts#L586-L613](../../../../packages/sdk/src/host.ts#L586-L613) - `claimOf`"
-  - "[code://packages/sdk/src/terminals.ts#L395](../../../../packages/sdk/src/terminals.ts#L395) - `shellTerminals`, the port, which this file does not touch"
+  - "[code://packages/sdk/src/machines/terminals.ts#L395](../../../../packages/sdk/src/machines/terminals.ts#L395) - `shellTerminals`, the port, which this file does not touch"
 ---
 
 ## Objective

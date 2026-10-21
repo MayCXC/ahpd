@@ -5,10 +5,10 @@ depends: [task-03-an-old-owner-name-reads-as-the-new-one.md, task-05-a-fallback-
 layer: "sdk, server"
 refs:
   - "[code://packages/server/src/plugins.ts#L1231-L1292](../../../../packages/server/src/plugins.ts#L1231-L1292) - `describePlugin`, the row `ahpd plugin list` shows"
-  - "[code://packages/sdk/src/usage.ts#L544-L556](../../../../packages/sdk/src/usage.ts#L544-L556) - `split`, the pool a `usage:` URI names"
-  - "[code://packages/sdk/src/usage.ts#L906-L910](../../../../packages/sdk/src/usage.ts#L906-L910) - `poolParam`, the pool a usage command names"
-  - "[code://packages/sdk/src/usage.ts#L933-L944](../../../../packages/sdk/src/usage.ts#L933-L944) - `onePool`, the gate of a usage command over one pool"
-  - "[code://packages/sdk/src/plugins.ts#L138-L139](../../../../packages/sdk/src/plugins.ts#L138-L139) - `routePrefix`"
+  - "[code://packages/sdk/src/usage/usage.ts#L544-L556](../../../../packages/sdk/src/usage/usage.ts#L544-L556) - `split`, the pool a `usage:` URI names"
+  - "[code://packages/sdk/src/usage/usage.ts#L906-L910](../../../../packages/sdk/src/usage/usage.ts#L906-L910) - `poolParam`, the pool a usage command names"
+  - "[code://packages/sdk/src/usage/usage.ts#L933-L944](../../../../packages/sdk/src/usage/usage.ts#L933-L944) - `onePool`, the gate of a usage command over one pool"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L138-L139](../../../../packages/sdk/src/plugins/plugins.ts#L138-L139) - `routePrefix`"
 ---
 
 ## Objective
@@ -24,7 +24,7 @@ A usage read by pool name reads the name through `currentOwner`, so a read of `p
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - a read of `usage://plugin%3A%40ahpd%2Fbot` and its leaves.
 - `UPDATE: packages/sdk/test/usage-methods.test.ts` - `totals`, `range` and `records` with the pool `plugin:@ahpd/bot`.
 - `UPDATE: packages/server/src/plugins.ts:1252-1279` - `describePlugin` checks the id after the range check, and on the path with no manifest.
-- `UPDATE: packages/sdk/src/usage.ts` - `split`, `poolParam` and the `authorize` of `onePool` read the pool through `currentOwner`.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - `split`, `poolParam` and the `authorize` of `onePool` read the pool through `currentOwner`.
 - `UPDATE: docs/plugins/PLUGINS.md` - the `error` state names an id that is not a slug.
 - `UPDATE: plan.md` - the `routePrefix` row, and the answer rows of this task.
 

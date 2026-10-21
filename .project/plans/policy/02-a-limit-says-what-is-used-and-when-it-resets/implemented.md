@@ -4,8 +4,8 @@ date: 2026-10-19
 refs:
   - git://25c95a4d
   - git://48d40cd9
-  - "[code://packages/sdk/src/charge.ts](../../../../packages/sdk/src/charge.ts) - the charge walk"
-  - "[code://packages/sdk/src/periods.ts](../../../../packages/sdk/src/periods.ts) - the periods of a limit in `usage.timezone`"
+  - "[code://packages/sdk/src/usage/charge.ts](../../../../packages/sdk/src/usage/charge.ts) - the charge walk"
+  - "[code://packages/sdk/src/usage/periods.ts](../../../../packages/sdk/src/usage/periods.ts) - the periods of a limit in `usage.timezone`"
 ---
 
 A policy's limits are enforced for agent turns and proxy calls when `policies.check` is on.
@@ -15,13 +15,13 @@ A client reads each limit with its amount, what is used, `from` and `resets`.
 
 ## What was built
 
-- [`code://packages/sdk/src/periods.ts`](../../../../packages/sdk/src/periods.ts) - `periodOf`, the start and reset of a day, a week and a month in one zone.
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `fileUsage` keeps its days in `usage.timezone`, and a total counts `turns`.
-- [`code://packages/sdk/src/meter.ts`](../../../../packages/sdk/src/meter.ts) - the first record of a turn carries `opens`, and every record of a turn carries the turn's policy keys.
-- [`code://packages/sdk/src/charge.ts`](../../../../packages/sdk/src/charge.ts) - the walk over `shared` and `each`, `pool`, `cap`, `payOrder` and the windows of a row.
+- [`code://packages/sdk/src/usage/periods.ts`](../../../../packages/sdk/src/usage/periods.ts) - `periodOf`, the start and reset of a day, a week and a month in one zone.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `fileUsage` keeps its days in `usage.timezone`, and a total counts `turns`.
+- [`code://packages/sdk/src/usage/meter.ts`](../../../../packages/sdk/src/usage/meter.ts) - the first record of a turn carries `opens`, and every record of a turn carries the turn's policy keys.
+- [`code://packages/sdk/src/usage/charge.ts`](../../../../packages/sdk/src/usage/charge.ts) - the walk over `shared` and `each`, `pool`, `cap`, `payOrder` and the windows of a row.
 - [`code://packages/sdk/src/host/owners.ts`](../../../../packages/sdk/src/host/owners.ts) - `checked` answers a refusal or the keys, and the turn's check charges the turn.
 - [`code://packages/server/src/proxy/listener.ts`](../../../../packages/server/src/proxy/listener.ts) - the proxy walks each candidate entry, answers 403 at a limit, and adds the keys to its record.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - `policy://<id>/limits`, and `usage://limits` for the limits that hold the reader, behind `policies.ownLimits`.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts) - `policy://<id>/limits`, and `usage://limits` for the limits that hold the reader, behind `policies.ownLimits`.
 - `docs/sdk/POLICY.md`, `docs/sdk/USAGE.md` and `docs/sdk/HOST.md` say what a limit counts, the policy keys, `payOrder`, `ownLimits` and the store's days.
 
 ## Verified

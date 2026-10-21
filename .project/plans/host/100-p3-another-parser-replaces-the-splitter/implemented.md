@@ -5,8 +5,8 @@ refs:
   - git://a65f3b72
   - "[code://packages/sdk/src/types/host.ts](../../../../packages/sdk/src/types/host.ts)"
   - "[code://packages/sdk/src/types/plugin.ts](../../../../packages/sdk/src/types/plugin.ts)"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts)"
-  - "[code://packages/sdk/src/validate.ts](../../../../packages/sdk/src/validate.ts)"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts)"
+  - "[code://packages/sdk/src/plugins/validate.ts](../../../../packages/sdk/src/plugins/validate.ts)"
   - "[code://packages/sdk/src/host/spawn.ts](../../../../packages/sdk/src/host/spawn.ts)"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts)"
 ---
@@ -20,8 +20,8 @@ A parser that throws or gives a wrong shape counts as `undefined`, so the call a
 
 - [`code://packages/sdk/src/types/host.ts`](../../../../packages/sdk/src/types/host.ts) - `HostOptions.commandParser`.
 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `commandParser` in `PortKey`, and `registerCommandParser` on `PluginHost`.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `registerCommandParser` calls `setPort`, and `PORT_KEYS` has the port.
-- [`code://packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `PORT_METHOD`, `PORT_MEMBERS` and the new `PORT_ITSELF`, which checks a port that is a function.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `registerCommandParser` calls `setPort`, and `PORT_KEYS` has the port.
+- [`code://packages/sdk/src/plugins/validate.ts`](../../../../packages/sdk/src/plugins/validate.ts) - `PORT_METHOD`, `PORT_MEMBERS` and the new `PORT_ITSELF`, which checks a port that is a function.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `getAutoApproval` reads every line through the port, with a shape check.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - `Config.commandParser`, resolved against the file that set it.
 - [`code://packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts) - the `serverFields` entry, and `commandParser` in `FILE_ONLY`.

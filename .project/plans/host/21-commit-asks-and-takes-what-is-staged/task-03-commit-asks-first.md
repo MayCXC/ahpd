@@ -4,7 +4,7 @@ status: done
 depends: [task-02-commit-takes-the-index-when-staged.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L809-L834](../../../../packages/sdk/src/changes.ts#L809-L834) - `operations`, where `COMMIT` is offered"
+  - "[code://packages/sdk/src/sessions/changes.ts#L809-L834](../../../../packages/sdk/src/sessions/changes.ts#L809-L834) - `operations`, where `COMMIT` is offered"
   - "[code://packages/sdk/src/types/changes.ts#L171-L211](../../../../packages/sdk/src/types/changes.ts#L171-L211) - `ChangesetOperationContext`, which has no `subject`, and the request that has one"
   - "[code://packages/sdk/src/host.ts#L2292-L2342](../../../../packages/sdk/src/host.ts#L2292-L2342) - `operationsOf`, which passes `confirmation` through, and `operationsMoved`"
   - "[code://packages/sdk/src/host.ts#L4458-L4470](../../../../packages/sdk/src/host.ts#L4458-L4470) - `renameChat`, where a client or the `rename_chat` tool renames a session"
@@ -19,7 +19,7 @@ The `commit` operation carries a `confirmation` naming the subject line it will 
 
 - `UPDATE: packages/sdk/src/types/changes.ts:171-211` - `subject` moves onto `ChangesetOperationContext`, so `operations` has it too.
 - `UPDATE: packages/sdk/src/host.ts` - the context handed to `operations` carries the title; a title change re-declares the session's operations with `operationsMoved`.
-- `UPDATE: packages/sdk/src/changes.ts:809-834` - `COMMIT` is built per call with its `confirmation`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:809-834` - `COMMIT` is built per call with its `confirmation`.
 - `UPDATE: packages/sdk/test/commit.test.ts` and a host case - the cases below.
 
 ## Steps

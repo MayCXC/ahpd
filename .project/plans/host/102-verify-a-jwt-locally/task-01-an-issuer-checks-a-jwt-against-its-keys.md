@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/issuers.ts#L27-L69](../../../../packages/sdk/src/issuers.ts#L27-L69) - `Fetcher`, `get` and `answer`"
-  - "[code://packages/sdk/src/issuers.ts#L136-L157](../../../../packages/sdk/src/issuers.ts#L136-L157) - `oidcIssuer`"
+  - "[code://packages/sdk/src/access/issuers.ts#L27-L69](../../../../packages/sdk/src/access/issuers.ts#L27-L69) - `Fetcher`, `get` and `answer`"
+  - "[code://packages/sdk/src/access/issuers.ts#L136-L157](../../../../packages/sdk/src/access/issuers.ts#L136-L157) - `oidcIssuer`"
   - "[code://packages/sdk/src/types/users.ts#L185-L215](../../../../packages/sdk/src/types/users.ts#L185-L215) - `IssuerAnswer` and `Issuer`"
   - https://www.rfc-editor.org/rfc/rfc9068 - the claims to check
 ---
@@ -17,7 +17,7 @@ It returns the subject, the claims and the expiry, or nothing.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/issuers.ts:136-157` - read `jwks_uri`, keep the key set, and check a JWT.
+- `UPDATE: packages/sdk/src/access/issuers.ts:136-157` - read `jwks_uri`, keep the key set, and check a JWT.
 - `UPDATE: packages/sdk/src/types/users.ts:185-190` - `IssuerAnswer` gains an optional expiry.
 - `UPDATE: packages/sdk/src/types/users.ts:201-215` - `Issuer` gains a way to say which tokens it can check locally.
 - `UPDATE: packages/sdk/test/users-issuer.test.ts` - good, forged, expired and wrong-audience tokens, and each refused algorithm.

@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/nested.ts`
+- `CREATE: packages/sdk/src/sessions/nested.ts`
 - `UPDATE: packages/sdk/src/index.ts`
 
 ## Steps
@@ -29,7 +29,7 @@ refs:
 ## Resume
 
 Implemented 2026-09-26.
-`packages/sdk/src/nested.ts` creates the proxy: `nestedAgent(provider | agent, options)` returns an `Agent` that keeps everything the real backend answers before a session exists and replaces only `create`.
+`packages/sdk/src/sessions/nested.ts` creates the proxy: `nestedAgent(provider | agent, options)` returns an `Agent` that keeps everything the real backend answers before a session exists and replaces only `create`.
 The default start asks `start.computers.nested(id, { plugins, cwd })` and spawns the descriptor here; `NestedOptions.start` is the seam a test uses to hand it an in-memory pipe instead.
 A line framer over the spawn's stdout is an `AhpTransport`, and `AhpClient` does the handshake: `initialize` with this build's `SUPPORTED_PROTOCOL_VERSIONS`, `createSession` with the session's config minus `computer`, then `subscribe` to the inner session and to the default chat it named.
 Turns sent before the inner session exists wait behind a gate in order; a chat action is forwarded to the outer chat channel and a session action to the outer session channel, with the turn ids untouched.

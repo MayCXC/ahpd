@@ -10,8 +10,8 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/users.ts#L111-L189](../../../../packages/sdk/src/users.ts#L111-L189) - `OPERATIONS`, the table the advertisement and `grantProblem` read"
-  - "[code://packages/sdk/src/users.ts#L30](../../../../packages/sdk/src/users.ts#L30) - the built-in member role, which holds `proxy:read`, `proxy:write` and `trust:write`"
+  - "[code://packages/sdk/src/access/users.ts#L111-L189](../../../../packages/sdk/src/access/users.ts#L111-L189) - `OPERATIONS`, the table the advertisement and `grantProblem` read"
+  - "[code://packages/sdk/src/access/users.ts#L30](../../../../packages/sdk/src/access/users.ts#L30) - the built-in member role, which holds `proxy:read`, `proxy:write` and `trust:write`"
   - "[code://packages/sdk/src/host/root.ts#L305-L331](../../../../packages/sdk/src/host/root.ts#L305-L331) - `advertisedGrants`, read off `OPERATIONS` and the registered schemes"
   - "[code://packages/sdk/src/host/gate.ts#L271-L280](../../../../packages/sdk/src/host/gate.ts#L271-L280) - `dispatchNeeds`, where a dispatch's grant is decided"
   - "[code://packages/server/src/proxy/listener.ts#L462](../../../../packages/server/src/proxy/listener.ts#L462) - where a proxy call is held to its grant"
@@ -40,7 +40,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 
 ### Gaps
 
-- `Not found: trust or proxy in OPERATIONS - searched packages/sdk/src/users.ts`.
+- `Not found: trust or proxy in OPERATIONS - searched packages/sdk/src/access/users.ts`.
 
 ## Decisions locked in
 
@@ -58,7 +58,7 @@ OPERATIONS -> advertisedGrants -> handshake and root state `ahpd.grants` -> clie
 ## Proposed architecture
 
 - **State flow** - two entries in `OPERATIONS`. `advertisedGrants` and `grantProblem` read them with no change.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts).
 
 ## Tasks
 

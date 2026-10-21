@@ -6,7 +6,7 @@ layer: "sdk, computer"
 refs:
   - "[code://packages/sdk/src/host/spawn.ts#L626-L634](../../../../packages/sdk/src/host/spawn.ts#L626-L634) - a finished or cancelled turn"
   - "[code://packages/sdk/src/host/machines.ts#L70-L80](../../../../packages/sdk/src/host/machines.ts#L70-L80) - `inMachine`, where a session leaves"
-  - "[code://packages/sdk/src/changes.ts#L223-L345](../../../../packages/sdk/src/changes.ts#L223-L345) - the changeset operations"
+  - "[code://packages/sdk/src/sessions/changes.ts#L223-L345](../../../../packages/sdk/src/sessions/changes.ts#L223-L345) - the changeset operations"
   - "[code://packages/computer/src/runtime.ts#L2164-L2172](../../../../packages/computer/src/runtime.ts#L2164-L2172) - `remove`"
 ---
 

@@ -1,5 +1,5 @@
 import { ROOT } from './channels.js';
-import { localPath } from '../fileuri.js';
+import { localPath } from '../resources/fileuri.js';
 import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
 import { CLOSING, need } from './common.js';
 import { named } from './channels.js';

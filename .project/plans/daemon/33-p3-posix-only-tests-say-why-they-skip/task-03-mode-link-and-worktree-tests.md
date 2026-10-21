@@ -38,7 +38,7 @@ A worktree test that fails on a path gets p2's fix and runs.
 
 Done 2026-10-18. Not reviewed.
 
-p1's list had one worktree file: `packages/sdk/test/worktrees.test.ts`, 57 tests and 41 failed. Every case that creates a session sent a folder built by hand as `` `file://${project(root)}` ``. On Windows that reads `file://C:\...`. `packages/sdk/src/resources.ts` refuses it with "<uri> is not a local file URI", and the rest of the case then failed with it.
+p1's list had one worktree file: `packages/sdk/test/worktrees.test.ts`, 57 tests and 41 failed. Every case that creates a session sent a folder built by hand as `` `file://${project(root)}` ``. On Windows that reads `file://C:\...`. `packages/sdk/src/resources/resources.ts` refuses it with "<uri> is not a local file URI", and the rest of the case then failed with it.
 
 The file now builds a URI with `uriOf` and reads one back with `localPath`, both from `../src/fileuri.js`. That is 34 sites that write a URI and 14 that read one back, including the `replace('file://', '')` and `replace(/^file:\/\//, '')` forms. The file passes on Linux. Whether a worktree case still fails on Windows for another reason is for the next run of the job to say.
 

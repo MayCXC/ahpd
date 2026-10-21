@@ -16,7 +16,7 @@ refs:
   - code://.project/plans/plugin/01-plugins-load-from-configuration/plan.md - the loader this plan's handlers fold through
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, which gains `events`
   - code://packages/sdk/src/types/plugin.ts - `PluginHost`, which gains `on`
-  - code://packages/sdk/src/plugins.ts - `foldHostOptions`, which merges the handlers
+  - code://packages/sdk/src/plugins/plugins.ts - `foldHostOptions`, which merges the handlers
   - code://packages/sdk/src/host.ts#L777-L783 - `log()`, the one place every notable host line already passes through
   - code://packages/sdk/src/host.ts#L3946-L4011 - `openSession`, where a session starts
   - code://packages/sdk/src/host.ts#L2929-L2935 - where a session is disposed
@@ -79,7 +79,7 @@ plugin apply -> host.on('session_start', handler)
 - **Data flow** - a plugin's `on` calls are collected into its `Contribution`, folded into `HostOptions.events` in plugin order, and `createHost` calls them at named moments.
 - **Event flow** - the host raises an event at a moment it already knows about; every handler is called with the event and the read-only context; the return value is ignored.
 - **State flow** - none; handlers are held for the life of the host and nothing is written.
-- **Layer responsibilities** - packages/sdk/src/types/events.ts: the event union and its payloads · packages/sdk/src/types/plugin.ts: `on` and `PluginContext` · packages/sdk/src/plugins.ts: collecting and folding handlers · packages/sdk/src/host.ts: the `fire` helper and the call sites.
+- **Layer responsibilities** - packages/sdk/src/types/events.ts: the event union and its payloads · packages/sdk/src/types/plugin.ts: `on` and `PluginContext` · packages/sdk/src/plugins/plugins.ts: collecting and folding handlers · packages/sdk/src/host.ts: the `fire` helper and the call sites.
 - **Source-of-truth files** - `code://packages/sdk/src/types/events.ts`, `code://packages/sdk/src/host.ts`.
 
 ## Tasks

@@ -9,10 +9,10 @@ requires: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L30-L41](../../../../packages/sdk/src/types/plugin.ts#L30-L41) - `PortKey`"
-  - "[code://packages/sdk/src/plugins.ts#L29-L32](../../../../packages/sdk/src/plugins.ts#L29-L32) - `PORT_KEYS`"
-  - "[code://packages/sdk/src/validate.ts#L126-L164](../../../../packages/sdk/src/validate.ts#L126-L164) - `PORT_MEMBERS` and `PORT_METHOD`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L29-L32](../../../../packages/sdk/src/plugins/plugins.ts#L29-L32) - `PORT_KEYS`"
+  - "[code://packages/sdk/src/plugins/validate.ts#L126-L164](../../../../packages/sdk/src/plugins/validate.ts#L126-L164) - `PORT_MEMBERS` and `PORT_METHOD`"
   - "[code://packages/sdk/src/types/host.ts#L64-L263](../../../../packages/sdk/src/types/host.ts#L64-L263) - `HostOptions`"
-  - "[code://packages/sdk/src/sessions.ts#L109-L153](../../../../packages/sdk/src/sessions.ts#L109-L153) - versioned file store, temp and rename, the pattern to copy"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L109-L153](../../../../packages/sdk/src/sessions/sessions.ts#L109-L153) - versioned file store, temp and rename, the pattern to copy"
   - "[code://packages/server/src/commands/run.ts#L261-L365](../../../../packages/server/src/commands/run.ts#L261-L365) - where the daemon assembles `HostOptions`"
 ---
 
@@ -54,7 +54,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Data flow** - `record(entry)` appends and adds to the totals of each pool the entry names; `total(pool, from, until)` answers per measure.
 - **State flow** - one JSONL file per month under the daemon's data folder; totals of open periods in memory, rebuilt from the current files at start.
 - **Layer responsibilities** - `packages/sdk`: types, port, `fileUsage` · `packages/server`: wires `fileUsage` by default.
-- **Source-of-truth files** - `CREATE: packages/sdk/src/types/usage.ts`, `CREATE: packages/sdk/src/usage.ts`
+- **Source-of-truth files** - `CREATE: packages/sdk/src/types/usage.ts`, `CREATE: packages/sdk/src/usage/usage.ts`
 
 ## Tasks
 

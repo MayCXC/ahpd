@@ -3,7 +3,7 @@ title: A command is split and matched - implemented
 date: 2026-10-19
 refs:
   - git://15138d6a
-  - "[code://packages/sdk/src/commandautoapprover.ts](../../../../packages/sdk/src/commandautoapprover.ts)"
+  - "[code://packages/sdk/src/access/commandautoapprover.ts](../../../../packages/sdk/src/access/commandautoapprover.ts)"
   - "[code://packages/sdk/src/index.ts](../../../../packages/sdk/src/index.ts)"
 ---
 
@@ -14,7 +14,7 @@ A line that the splitter cannot read with certainty gives `noMatch`, so the call
 
 ## What was built
 
-- [`code://packages/sdk/src/commandautoapprover.ts`](../../../../packages/sdk/src/commandautoapprover.ts) - `splitCommand`, `CommandAutoApprover`, `DEFAULT_TERMINAL_AUTO_APPROVE_RULES` with the git, PowerShell and sort tables, the sed check, the parse-safety check and the write check.
+- [`code://packages/sdk/src/access/commandautoapprover.ts`](../../../../packages/sdk/src/access/commandautoapprover.ts) - `splitCommand`, `CommandAutoApprover`, `DEFAULT_TERMINAL_AUTO_APPROVE_RULES` with the git, PowerShell and sort tables, the sed check, the parse-safety check and the write check.
 - [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts) - exports all of it.
 
 ## Verified

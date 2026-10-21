@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { callTimes, withCallTimes, startOf } from '../src/timing.js';
+import { callTimes, withCallTimes, startOf } from '../src/utils/timing.js';
 
 /*
  * A tool call's times, in the bag every action of that call carries.

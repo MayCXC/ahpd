@@ -3,8 +3,8 @@ title: An issuer vouches for a person, and the directory still decides what they
 date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
-  - code://packages/sdk/src/issuers.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/issuers.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/index.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
@@ -22,8 +22,8 @@ A deployment that mints secrets keeps working exactly as it did, because the loc
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `Issuer`: an RFC 8414 identifier, the scopes to ask for, and `subject(token)`, with the subject matched against a record's `id`.
-- `code://packages/sdk/src/issuers.ts` - `githubIssuer`, `oidcIssuer`, the narrow `Fetcher` they take so a test needs no network, and one `get` that answers nothing rather than throwing.
-- `code://packages/sdk/src/users.ts` - `FileUserOptions.issuer`, the branch in `verify` that asks it only when no local hash matched, and `signInRecord(resource, issuer?)` carrying `authorization_servers` and `scopes_supported`.
+- `code://packages/sdk/src/access/issuers.ts` - `githubIssuer`, `oidcIssuer`, the narrow `Fetcher` they take so a test needs no network, and one `get` that answers nothing rather than throwing.
+- `code://packages/sdk/src/access/users.ts` - `FileUserOptions.issuer`, the branch in `verify` that asks it only when no local hash matched, and `signInRecord(resource, issuer?)` carrying `authorization_servers` and `scopes_supported`.
 - `code://packages/server/src/config.ts` - the `issuer` key and `namedIssuer`, which accepts `github` or an https URL and nothing else.
 - `code://packages/server/src/main.ts` - `--issuer`, the configuration merge, the issuer built once beside the directory, the record composed with it, and a startup line that names it.
 - `code://docs/sdk/USERS.md`, `code://docs/server/REFERENCE.md` - the issuer, the record it produces, the key and the flag.

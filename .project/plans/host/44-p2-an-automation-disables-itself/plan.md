@@ -10,10 +10,10 @@ requires:
   - plans/host/44-p1-ahpd-speaks-1-0-0-and-0-9-0/plan.md
 refs:
   - "[code://packages/sdk/src/host/actions.ts#L403-L423](../../../../packages/sdk/src/host/actions.ts#L403-L423) - `automation/createRequested` and `automation/updateRequested`, which check the resource and nothing in the definition"
-  - "[code://packages/sdk/src/automations.ts#L52-L75](../../../../packages/sdk/src/automations.ts#L52-L75) - `entry()`, which builds what a client reads"
-  - "[code://packages/sdk/src/automations.ts#L95-L125](../../../../packages/sdk/src/automations.ts#L95-L125) - `create` keeps the definition as sent, `update` merges a patch"
-  - "[code://packages/sdk/src/automations.ts#L135-L138](../../../../packages/sdk/src/automations.ts#L135-L138) - `run()` refuses a disabled automation, whatever started it"
-  - "[code://packages/sdk/src/automations.ts#L60-L64](../../../../packages/sdk/src/automations.ts#L60-L64) - `entry()` drops `run` from `operations` when `enabled` is `false`"
+  - "[code://packages/sdk/src/automations/automations.ts#L52-L75](../../../../packages/sdk/src/automations/automations.ts#L52-L75) - `entry()`, which builds what a client reads"
+  - "[code://packages/sdk/src/automations/automations.ts#L95-L125](../../../../packages/sdk/src/automations/automations.ts#L95-L125) - `create` keeps the definition as sent, `update` merges a patch"
+  - "[code://packages/sdk/src/automations/automations.ts#L135-L138](../../../../packages/sdk/src/automations/automations.ts#L135-L138) - `run()` refuses a disabled automation, whatever started it"
+  - "[code://packages/sdk/src/automations/automations.ts#L60-L64](../../../../packages/sdk/src/automations/automations.ts#L60-L64) - `entry()` drops `run` from `operations` when `enabled` is `false`"
   - "[code://packages/sdk/src/host/automations.ts#L299-L305](../../../../packages/sdk/src/host/automations.ts#L299-L305) - `runAutomation`, a manual run, answered `-32001` \"or it is switched off\" when `run()` refuses"
   - "[code://packages/sdk/src/scheduled.ts#L36-L48](../../../../packages/sdk/src/scheduled.ts#L36-L48) - the saved file's shape"
   - "[code://packages/sdk/src/scheduled.ts#L179-L196](../../../../packages/sdk/src/scheduled.ts#L179-L196) - `save()` writes what `inner.list()` answers"
@@ -60,7 +60,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - `createRequested` / `updateRequested` -> `disableConditionsProblem(definition)` -> `no(...)` or the store; scheduler `fire()` -> `run(origin: trigger)` -> count +1 -> `enabled: false` when met -> `automation/set`.
 - **Layer responsibilities** - sdk host: refusing a definition · memory store: the count, the reset rules, the `afterRuns` check on admitting · scheduled store: the `afterDate` check on the clock, persistence.
-- **Source-of-truth files** - [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts)
 
 ## Tasks
 

@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import { recordsProvider } from '../src/records.js';
-import { recordsChannel, recordsDomain, recordsMethods } from '../src/recordschannel.js';
+import { recordsProvider } from '../src/resources/records.js';
+import { recordsChannel, recordsDomain, recordsMethods } from '../src/resources/recordschannel.js';
 import { RpcError } from '../src/rpc.js';
-import { holds } from '../src/users.js';
-import type { Records } from '../src/records.js';
+import { holds } from '../src/access/users.js';
+import type { Records } from '../src/resources/records.js';
 import type { ChannelHandle, ChannelSubscriber, PublishOptions } from '../src/types/plugin.js';
 import type { Grant, Principal } from '../src/types/users.js';
 

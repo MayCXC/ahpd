@@ -13,7 +13,7 @@ creates: []
 decisions:
 refs:
   - "[code://packages/agent-cofold/src/agent.ts#L673](../../../../packages/agent-cofold/src/agent.ts#L673) - cofold's `runsNested: true`"
-  - "[code://packages/sdk/src/nested.ts](../../../../packages/sdk/src/nested.ts) - the proxy: the nested host's stdio, the inner session, the mirror"
+  - "[code://packages/sdk/src/sessions/nested.ts](../../../../packages/sdk/src/sessions/nested.ts) - the proxy: the nested host's stdio, the inner session, the mirror"
   - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - the host gives a `runsNested` backend the proxy when its session names a computer"
   - "[code://packages/computer/src/plugin.ts#L634-L646](../../../../packages/computer/src/plugin.ts#L634-L646) - `nestedHost`, which starts the inner host through `reach`"
   - "[code://packages/sdk/src/types/computers.ts#L19-L143](../../../../packages/sdk/src/types/computers.ts#L19-L143) - `ComputerPort.how` and `Spawn`, a process in a machine"
@@ -45,14 +45,14 @@ process exits                    -> [new] the session ends with the stderr tail 
 
 ### Gaps
 
-- The inner host's end is taken from `exit` and its stdin has no `error` listener ([`code://packages/sdk/src/nested.ts#L173`](../../../../packages/sdk/src/nested.ts#L173)), so a dead pipe can throw in the daemon.
-- The stderr tail is twelve lines of any length ([`code://packages/sdk/src/nested.ts#L38`](../../../../packages/sdk/src/nested.ts#L38)), and stdout is rescanned from the start on every chunk.
+- The inner host's end is taken from `exit` and its stdin has no `error` listener ([`code://packages/sdk/src/sessions/nested.ts#L173`](../../../../packages/sdk/src/sessions/nested.ts#L173)), so a dead pipe can throw in the daemon.
+- The stderr tail is twelve lines of any length ([`code://packages/sdk/src/sessions/nested.ts#L38`](../../../../packages/sdk/src/sessions/nested.ts#L38)), and stdout is rescanned from the start on every chunk.
 - An ended nested session drops later actions silently, and inner chat URIs reach the client unchanged.
-- The inner session has a random id ([`code://packages/sdk/src/nested.ts#L232`](../../../../packages/sdk/src/nested.ts#L232)), so a resume starts a blank session.
-- Several members answer `true` whatever happened (`setConfig` at [`code://packages/sdk/src/nested.ts#L486`](../../../../packages/sdk/src/nested.ts#L486)); `models` and `awaiting` are always empty (`:411`, `:506`).
+- The inner session has a random id ([`code://packages/sdk/src/sessions/nested.ts#L232`](../../../../packages/sdk/src/sessions/nested.ts#L232)), so a resume starts a blank session.
+- Several members answer `true` whatever happened (`setConfig` at [`code://packages/sdk/src/sessions/nested.ts#L486`](../../../../packages/sdk/src/sessions/nested.ts#L486)); `models` and `awaiting` are always empty (`:411`, `:506`).
 - The inner session is created at this host's path rather than the machine's.
-- `close` sends `disposeSession` and kills the process in the same tick ([`code://packages/sdk/src/nested.ts#L511-L524`](../../../../packages/sdk/src/nested.ts#L511-L524)).
-- The inner plugin is derived as `@ahpd/agent-${name}` ([`code://packages/sdk/src/nested.ts#L98`](../../../../packages/sdk/src/nested.ts#L98)), and `runsNested` is a boolean ([`code://packages/sdk/src/validate.ts#L69`](../../../../packages/sdk/src/validate.ts#L69), [`code://packages/sdk/src/types/agent.ts#L439`](../../../../packages/sdk/src/types/agent.ts#L439)).
+- `close` sends `disposeSession` and kills the process in the same tick ([`code://packages/sdk/src/sessions/nested.ts#L511-L524`](../../../../packages/sdk/src/sessions/nested.ts#L511-L524)).
+- The inner plugin is derived as `@ahpd/agent-${name}` ([`code://packages/sdk/src/sessions/nested.ts#L98`](../../../../packages/sdk/src/sessions/nested.ts#L98)), and `runsNested` is a boolean ([`code://packages/sdk/src/plugins/validate.ts#L69`](../../../../packages/sdk/src/plugins/validate.ts#L69), [`code://packages/sdk/src/types/agent.ts#L439`](../../../../packages/sdk/src/types/agent.ts#L439)).
 - `packages/sdk/test/nested-process.test.ts` does not exist yet; every pipe behaviour is tested only against in-memory fakes.
 
 ## Decisions locked in

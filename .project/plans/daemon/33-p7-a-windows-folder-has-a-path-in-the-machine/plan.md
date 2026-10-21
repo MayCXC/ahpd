@@ -15,7 +15,7 @@ decisions:
   - decisions/an-open-machine-is-given-the-hosts-reading-in-its-environment.md
   - decisions/an-open-worktree-on-windows-is-given-its-machine-path.md
 refs:
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - the module the sdk and the computer package share for machine paths: `expandHome`, `partTarget`, `PART_ROOT`"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts) - the module the sdk and the computer package share for machine paths: `expandHome`, `partTarget`, `PART_ROOT`"
   - "[code://packages/computer/src/manifest.ts#L1133-L1173](../../../../packages/computer/src/manifest.ts#L1133-L1173) - `mountedAt`, the folder's mount at its own path, and the `workdir` default"
   - "[code://packages/computer/src/runtime.ts#L3404-L3451](../../../../packages/computer/src/runtime.ts#L3404-L3451) - `docker run -v` for the folder and the git binds, and `-w`"
   - "[code://packages/computer/src/runtime.ts#L1353-L1393](../../../../packages/computer/src/runtime.ts#L1353-L1393) - the dev container override: `workspaceFolder` and `workspaceMount`"
@@ -26,8 +26,8 @@ refs:
   - "[code://packages/computer/src/gitdir.ts#L540-L545](../../../../packages/computer/src/gitdir.ts#L540-L545) - a bind with no target mounts at its own path"
   - "[code://packages/computer/src/devcontainer.ts#L321-L330](../../../../packages/computer/src/devcontainer.ts#L321-L330) - `workdirOf`, a record's mount matched by its source"
   - "[code://packages/computer/src/plugin.ts#L1518](../../../../packages/computer/src/plugin.ts#L1518) - the nested host's working directory, through `within`"
-  - "[code://packages/sdk/src/nested.ts#L424-L425](../../../../packages/sdk/src/nested.ts#L424-L425) - the host URI sent inside when the port names none"
-  - "[code://packages/sdk/src/nested.ts#L655-L660](../../../../packages/sdk/src/nested.ts#L655-L660) - `outerDir`, a machine URI back to the host's"
+  - "[code://packages/sdk/src/sessions/nested.ts#L424-L425](../../../../packages/sdk/src/sessions/nested.ts#L424-L425) - the host URI sent inside when the port names none"
+  - "[code://packages/sdk/src/sessions/nested.ts#L655-L660](../../../../packages/sdk/src/sessions/nested.ts#L655-L660) - `outerDir`, a machine URI back to the host's"
   - "[code://packages/sdk/src/host/machines.ts#L207-L230](../../../../packages/sdk/src/host/machines.ts#L207-L230) - attachments put in and taken out by host path"
   - "[code://packages/agent-claude/src/claude.ts#L579](../../../../packages/agent-claude/src/claude.ts#L579) - the SDK given the host path as its cwd"
   - "[code://packages/agent-acp/src/session/opening.ts#L357](../../../../packages/agent-acp/src/session/opening.ts#L357) - `session/new` sent the host path as its cwd"
@@ -45,7 +45,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- A read-only survey of `packages/computer/src`, `packages/sdk/src/nested.ts`, `packages/sdk/src/host` and the agents, on `a0382dc9`, for every place a host path is used as a machine path, compared with one, or read back.
+- A read-only survey of `packages/computer/src`, `packages/sdk/src/sessions/nested.ts`, `packages/sdk/src/host` and the agents, on `a0382dc9`, for every place a host path is used as a machine path, compared with one, or read back.
 - `rg "same path" packages/computer/src` - the rule, at `manifest.ts:84`, `:517` and `:992`.
 
 ### Runtime path
@@ -81,7 +81,7 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 | What | Source | Task |
 | --- | --- | --- |
-| The pair lives in `packages/sdk/src/machine.ts`, beside `partTarget`, and is exported | (defaulted: the module both packages already share for machine paths) | 01 |
+| The pair lives in `packages/sdk/src/machines/machine.ts`, beside `partTarget`, and is exported | (defaulted: the module both packages already share for machine paths) | 01 |
 | A path inside the machine stays POSIX, and is never passed through the pair | [code://packages/computer/src/manifest.ts#L1171](../../../../packages/computer/src/manifest.ts#L1171) | 02 |
 | Tasks 07 and 08 belong to this plan; an ACP agent's terminal in a machine is acp/19 | Softov, 2026-10-20, "p7 tasks 07 and 08 (Recommended)" and "New plan (Recommended)" | 07, 08 |
 
@@ -89,7 +89,7 @@ createSession (folder, Windows path) -> computer manifestOf (folder, mountedAt, 
 
 - **Data flow** - a host path crosses into the machine through `machinePathOf`, and a machine path comes back through `hostPathOf`; nothing else turns one into the other.
 - **Layer responsibilities** - sdk: the pair, the nested host's working directory and its URIs back, attachments · computer: mounts, `-w`, the dev container override, git mounts, `within` and the trees read back · agents: the cwd an agent inside a machine is given.
-- **Source-of-truth files** - [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts)
 
 ## Tasks
 

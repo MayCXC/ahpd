@@ -11,7 +11,7 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/users.ts#L177-L205](../../../../packages/sdk/src/users.ts#L177-L205) - `principalOf`, frozen at verification and now resolved per question"
+  - "[code://packages/sdk/src/access/users.ts#L177-L205](../../../../packages/sdk/src/access/users.ts#L177-L205) - `principalOf`, frozen at verification and now resolved per question"
   - "[code://packages/sdk/src/types/users.ts#L34-L60](../../../../packages/sdk/src/types/users.ts#L34-L60) - `Principal`, which gains `standing`"
   - "[code://packages/sdk/src/host.ts#L7553-L7580](../../../../packages/sdk/src/host.ts#L7553-L7580) - the command gate"
   - "[code://packages/sdk/src/host.ts#L6346-L6365](../../../../packages/sdk/src/host.ts#L6346-L6365) - the dispatch gate"
@@ -28,7 +28,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "principalOf|grantsOf" packages/sdk/src/users.ts` - one place makes a principal and one place resolves roles, so the change is bounded to them.
+- `rg -n "principalOf|grantsOf" packages/sdk/src/access/users.ts` - one place makes a principal and one place resolves roles, so the change is bounded to them.
 - `rg -n "connection.principal" packages/sdk/src/host.ts` - two gates, `authenticate` and the expiry path; only the gates decide anything from it per command.
 - `rg -n "next command" docs .project` - the page claimed it; the deferred row in `host/07` said it was not done.
 
@@ -64,7 +64,7 @@ any command -> the gate -> connection.principal.standing()  false -> -32007
 - **Event flow** - unchanged. Nothing is raised when a role moves; a client learns from the refusal, the way it learns about any other denial.
 - **State flow** - nothing is cached. The file is the state, which is what the directory's own comment already promised.
 - **Layer responsibilities** - packages/sdk: `Principal.standing`, the live resolution and the two gates · docs: the removal paragraph · test/: the gate cases.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
 
 ## Tasks
 

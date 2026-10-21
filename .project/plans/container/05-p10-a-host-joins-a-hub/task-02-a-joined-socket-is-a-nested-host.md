@@ -4,8 +4,8 @@ status: todo
 depends: [task-01-ahpd-join-dials-the-hub.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L47](../../../../packages/sdk/src/nested.ts#L47) - `NestedHost`"
-  - "[code://packages/sdk/src/nested.ts#L78](../../../../packages/sdk/src/nested.ts#L78) - `NestedOptions.start`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L47](../../../../packages/sdk/src/sessions/nested.ts#L47) - `NestedHost`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L78](../../../../packages/sdk/src/sessions/nested.ts#L78) - `NestedOptions.start`"
   - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - `nestedAgent(agent)`, built with no options today"
   - "[code://packages/sdk/src/listen.ts#L84-L127](../../../../packages/sdk/src/listen.ts#L84-L127) - the door"
 ---

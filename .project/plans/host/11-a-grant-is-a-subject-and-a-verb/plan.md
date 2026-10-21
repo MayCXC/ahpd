@@ -12,8 +12,8 @@ creates: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/users.ts#L21-L32](../../../../packages/sdk/src/types/users.ts#L21-L32) - `Capability` and `Grant`, replaced by the grammar"
-  - "[code://packages/sdk/src/users.ts#L21-L24](../../../../packages/sdk/src/users.ts#L21-L24) - the built-ins, and `principalOf`"
-  - "[code://packages/sdk/src/users.ts#L120-L175](../../../../packages/sdk/src/users.ts#L120-L175) - the file reader, where a role's grants are checked"
+  - "[code://packages/sdk/src/access/users.ts#L21-L24](../../../../packages/sdk/src/access/users.ts#L21-L24) - the built-ins, and `principalOf`"
+  - "[code://packages/sdk/src/access/users.ts#L120-L175](../../../../packages/sdk/src/access/users.ts#L120-L175) - the file reader, where a role's grants are checked"
   - "[code://packages/sdk/src/host.ts#L137-L226](../../../../packages/sdk/src/host.ts#L137-L226) - `NEEDS`, `UNGATED` and `dispatchNeeds`"
   - "[code://packages/sdk/src/host.ts#L4621-L4637](../../../../packages/sdk/src/host.ts#L4621-L4637) - `capabilityFor`"
   - "[code://packages/server/src/main.ts#L470-L500](../../../../packages/server/src/main.ts#L470-L500) - the `user` verbs"
@@ -72,7 +72,7 @@ a command -> the gate -> capabilityFor(method, params) -> file:read or computer:
 - **Event flow** - unchanged. A refusal is still `-32007` for nobody and `-32009` for a role, and the message names the grant that was missing.
 - **State flow** - unchanged. Roles are read from the file per question, as `host/10` made them.
 - **Layer responsibilities** - packages/sdk: the grammar, the matcher, the built-ins, the file reader's grant check, and the three maps in the host · packages/server: the `guest` default and the resolved grants in `user list` · docs: `docs/sdk/USERS.md` · test: the matrix and the wildcards.
-- **Source-of-truth files** - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts).
 
 ## Tasks
 

@@ -1,7 +1,7 @@
 import { availableParallelism, totalmem } from 'node:os';
 import { seesAccount, seesConfig, PER_CONNECTION } from './gate.js';
-import { OPERATIONS, operationsOf } from '../users.js';
-import { REMOTE_SESSIONS_META } from '../remotesession.js';
+import { OPERATIONS, operationsOf } from '../access/users.js';
+import { REMOTE_SESSIONS_META } from '../sessions/remotesession.js';
 import { sdkVersion } from '../version.js';
 import { vscodeRootProperties } from '../vscoderootconfig.js';
 import { CLIENT_QUEUE_BYTES, MINIMUM_LIMIT_BYTES, REPLAY_BYTES } from './limits.js';

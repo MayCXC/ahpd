@@ -19,7 +19,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L644-L646](../../../../packages/sdk/src/host.ts#L644-L646) - each action is cloned into the buffer, then sent to every watcher"
   - "[code://packages/sdk/src/host.ts#L500-L512](../../../../packages/sdk/src/host.ts#L500-L512) - `broadcast` notifies every watching connection"
   - "[code://packages/sdk/src/host/handshake.ts#L463-L490](../../../../packages/sdk/src/host/handshake.ts#L463-L490) - a reconnect replays from the buffer, or sends snapshots past its oldest entry"
-  - "[code://packages/sdk/src/paging.ts#L14-L22](../../../../packages/sdk/src/paging.ts#L14-L22) - `PAGE = 50` turns, a count and no byte budget"
+  - "[code://packages/sdk/src/sessions/paging.ts#L14-L22](../../../../packages/sdk/src/sessions/paging.ts#L14-L22) - `PAGE = 50` turns, a count and no byte budget"
   - "[code://packages/sdk/src/host/snapshots.ts#L399](../../../../packages/sdk/src/host/snapshots.ts#L399) - a snapshot carries the newest page of turns, each with its tool calls whole"
   - "[code://docs/sdk/AHP.md#L83](../../../../docs/sdk/AHP.md#L83) - the docs row for `reconnect`"
   - npm://@types/ws@8.18.1 - `WebSocket.bufferedAmount`

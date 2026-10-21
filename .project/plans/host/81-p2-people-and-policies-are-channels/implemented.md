@@ -3,10 +3,10 @@ title: People and policies are channels and commands - implemented
 date: 2026-10-11
 refs:
   - git://02a6f20 - the review fixes; the build is 4931409
-  - "[code://packages/sdk/src/recordschannel.ts](../../../../packages/sdk/src/recordschannel.ts) - `recordsChannel`, `recordsMethods` and `recordsDomain`"
-  - "[code://packages/sdk/src/records.ts](../../../../packages/sdk/src/records.ts) - `putRecord` and `removeRecord`"
-  - "[code://packages/sdk/src/people.ts](../../../../packages/sdk/src/people.ts) - `peopleChannels`"
-  - "[code://packages/sdk/src/policy.ts](../../../../packages/sdk/src/policy.ts) - `policyChannels`"
+  - "[code://packages/sdk/src/resources/recordschannel.ts](../../../../packages/sdk/src/resources/recordschannel.ts) - `recordsChannel`, `recordsMethods` and `recordsDomain`"
+  - "[code://packages/sdk/src/resources/records.ts](../../../../packages/sdk/src/resources/records.ts) - `putRecord` and `removeRecord`"
+  - "[code://packages/sdk/src/access/people.ts](../../../../packages/sdk/src/access/people.ts) - `peopleChannels`"
+  - "[code://packages/sdk/src/access/policy.ts](../../../../packages/sdk/src/access/policy.ts) - `policyChannels`"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts) - where the daemon serves the five channels and their commands"
 ---
 
@@ -15,10 +15,10 @@ Each has a `put` and a `remove` command, with the same rules as a resource write
 
 ## What was built
 
-- [`code://packages/sdk/src/recordschannel.ts`](../../../../packages/sdk/src/recordschannel.ts) - `recordsChannel`, which sends `added`, `changed` and `removed` to each reader on `refresh`, and `recordsMethods` and `recordsDomain` for the two commands.
-- [`code://packages/sdk/src/records.ts`](../../../../packages/sdk/src/records.ts) - `putRecord` and `removeRecord`, which the resource write and remove and the commands share.
-- [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts) - `peopleChannels`, the four people channels, their commands and their providers on one refresh.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - `policyChannels`, the policy channel, its commands and its provider.
+- [`code://packages/sdk/src/resources/recordschannel.ts`](../../../../packages/sdk/src/resources/recordschannel.ts) - `recordsChannel`, which sends `added`, `changed` and `removed` to each reader on `refresh`, and `recordsMethods` and `recordsDomain` for the two commands.
+- [`code://packages/sdk/src/resources/records.ts`](../../../../packages/sdk/src/resources/records.ts) - `putRecord` and `removeRecord`, which the resource write and remove and the commands share.
+- [`code://packages/sdk/src/access/people.ts`](../../../../packages/sdk/src/access/people.ts) - `peopleChannels`, the four people channels, their commands and their providers on one refresh.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts) - `policyChannels`, the policy channel, its commands and its provider.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `peopleChannels` and `policyChannels` replace `peopleProviders` and `policyProviders`, and `servedRecords` serves them by `ahpd`.
 - `docs/sdk/USERS.md` has a section "People as channels and commands", and `docs/sdk/POLICY.md` has "The channel and its commands".
 

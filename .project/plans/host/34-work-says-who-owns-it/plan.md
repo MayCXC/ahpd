@@ -9,7 +9,7 @@ requires: []
 decisions:
 refs:
   - "[code://packages/sdk/src/host.ts#L7853](../../../../packages/sdk/src/host.ts#L7853) - `createSession` opens the session with no principal"
-  - "[code://packages/sdk/src/sessions.ts#L80-L91](../../../../packages/sdk/src/sessions.ts#L80-L91) - `Saved`, the persisted session fields; unknown keys are ignored on load"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L80-L91](../../../../packages/sdk/src/sessions/sessions.ts#L80-L91) - `Saved`, the persisted session fields; unknown keys are ignored on load"
   - "[code://packages/sdk/src/types/automations.ts#L14-L29](../../../../packages/sdk/src/types/automations.ts#L14-L29) - `Automation`, no creator"
   - "[code://packages/sdk/src/host.ts#L7409-L7413](../../../../packages/sdk/src/host.ts#L7409-L7413) - a manual run's origin \"carries no room for who asked\""
   - "[code://packages/sdk/src/types/users.ts#L40-L102](../../../../packages/sdk/src/types/users.ts#L40-L102) - `Principal`, per connection"
@@ -54,7 +54,7 @@ connection.principal -> createSession -> session owner (persisted) ; sendMessage
 - **Data flow** - the principal of the asking connection becomes the session's `owner` (`user:<id>`) and the active turn's `sender`.
 - **State flow** - `owner` is persisted with the session; `sender` lives with the turn in memory and reaches usage records later.
 - **Layer responsibilities** - `packages/sdk`: all of it.
-- **Source-of-truth files** - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 

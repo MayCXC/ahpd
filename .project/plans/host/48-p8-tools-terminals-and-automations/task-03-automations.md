@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L988-L1018](../../../../packages/sdk/src/host.ts#L988-L1018) - `origins`, `linked`, `settleRun`"
   - "[code://packages/sdk/src/host.ts#L2607-L2652](../../../../packages/sdk/src/host.ts#L2607-L2652) - the `onChanged` callback"
   - "[code://packages/sdk/src/host.ts#L7168-L7295](../../../../packages/sdk/src/host.ts#L7168-L7295) - `beginAutomation`, `startForAutomation`, the `onDue` callback"
-  - "[code://packages/sdk/src/automations.ts#L30](../../../../packages/sdk/src/automations.ts#L30) - `memoryAutomations`, the store, which this file does not touch"
+  - "[code://packages/sdk/src/automations/automations.ts#L30](../../../../packages/sdk/src/automations/automations.ts#L30) - `memoryAutomations`, the store, which this file does not touch"
 ---
 
 ## Objective

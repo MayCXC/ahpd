@@ -15,7 +15,7 @@ A function reads a plugin folder and returns its parts, as VS Code's `parsePlugi
 
 ## Files
 
-- `CREATE: packages/sdk/src/pluginparts.ts` - `partsOf(dir, uri)`: the manifest, the folders it names or the defaults, and one part per file or server.
+- `CREATE: packages/sdk/src/plugins/pluginparts.ts` - `partsOf(dir, uri)`: the manifest, the folders it names or the defaults, and one part per file or server.
 - `CREATE: packages/sdk/test/pluginparts.test.ts` - a plugin folder with each kind of part, and one with a manifest that moves the folders.
 
 ## Steps
@@ -34,7 +34,7 @@ A function reads a plugin folder and returns its parts, as VS Code's `parsePlugi
 ## Resume
 
 - **Status:** done.
-- **Done:** [`code://packages/sdk/src/pluginparts.ts`](../../../../packages/sdk/src/pluginparts.ts) exports `partsOf(dir, uri)`. It reads `.claude-plugin/plugin.json` or `.plugin/plugin.json`, and takes each component's places from the manifest or from the usual ones. One part is answered per file or server. A plugin with neither manifest answers nothing, and one that holds nothing answers an empty list. The order is VS Code's: agents, skills, rules, hooks, then servers.
+- **Done:** [`code://packages/sdk/src/plugins/pluginparts.ts`](../../../../packages/sdk/src/plugins/pluginparts.ts) exports `partsOf(dir, uri)`. It reads `.claude-plugin/plugin.json` or `.plugin/plugin.json`, and takes each component's places from the manifest or from the usual ones. One part is answered per file or server. A plugin with neither manifest answers nothing, and one that holds nothing answers an empty list. The order is VS Code's: agents, skills, rules, hooks, then servers.
 - **Ids:** a part's id and uri are the same string, the URI of the file it was read from in this host's copy. That is the copy's own URI with the file's path under it, escaped one segment at a time. A folder called `two words` is named `two%20words`. A server's id is the declaring file's with `#mcp=<encoded name>` on it. Its `state` is `{ kind: 'stopped' }`, which is the state a declared server is in before a backend starts it. The entries carry no `enabled`, which the protocol reads as on. A part other than a server loads with its plugin, and a server's decision is task 02's.
 - **Not read:** a part's frontmatter. The task's refs name `parsePlugin`, `readSkills` and `buildChildId`, and those answer what the parts are, what they are called and what they are named by. A description or a model would come off the file's own frontmatter, which no step asks for.
 - **Files:** only the two the task names. `partsOf` is reached from `packages/sdk/src/host/tooling.ts` in task 02 by its own path, so `packages/sdk/src/index.ts` is left alone.

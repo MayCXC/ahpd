@@ -9,8 +9,8 @@ requires:
   - plans/plugin/44-a-plugin-serves-a-channel/plan.md
 decisions:
 refs:
-  - "[code://packages/sdk/src/records.ts](../../../../packages/sdk/src/records.ts) - the provider the people and policy schemes share"
-  - "[code://packages/sdk/src/usage.ts#L570](../../../../packages/sdk/src/usage.ts#L570) - `usageProvider`, the `usage:` scheme"
+  - "[code://packages/sdk/src/resources/records.ts](../../../../packages/sdk/src/resources/records.ts) - the provider the people and policy schemes share"
+  - "[code://packages/sdk/src/usage/usage.ts#L570](../../../../packages/sdk/src/usage/usage.ts#L570) - `usageProvider`, the `usage:` scheme"
   - "[code://packages/computer/src/provider.ts#L137](../../../../packages/computer/src/provider.ts#L137) - `computerProvider`, the `computer:` scheme"
   - "[code://packages/bot/src/catalogue.ts](../../../../packages/bot/src/catalogue.ts) - the bot catalogue, the channel shape every list here mirrors"
 ---
@@ -27,7 +27,7 @@ The resource schemes stay as they are, so a client that knows only the protocol 
 
 - `rg -n "registerMethod" packages .project` - no plugin can serve a command; the domain reference lists it as not planned.
 - `rg -n "peopleProviders|policyProviders|usageProvider" packages/server/src` - the daemon registers the people, policy and usage schemes in `run.ts`.
-- `rg -n "channels" packages/sdk/src/types/host.ts packages/sdk/src/plugins.ts` - `HostOptions.channels` takes a channel from the daemon as well as from a plugin.
+- `rg -n "channels" packages/sdk/src/types/host.ts packages/sdk/src/plugins/plugins.ts` - `HostOptions.channels` takes a channel from the daemon as well as from a plugin.
 - `rg -n "ownRecord" packages/sdk/src/host/admission.ts` - a person reads their own `user://<id>` with no grant.
 - `rg -ln "user://|usage://|computer://" /github/ahpapp/src` - ahpapp reads all three; ahpc reads none.
 
@@ -66,7 +66,7 @@ client x-ahpd/usage/totals -> host -> served method -> usage authorize -> Usage.
 - **Event flow** - a change through a command, a resource write or the users file refreshes the channel, which sends `added`, `changed` or `removed`.
 - **State flow** - the store stays the record of truth; a channel keeps only which ids it sent to each client.
 - **Layer responsibilities** - `packages/sdk`: the method table, `registerMethod`, the records channel and commands, the usage commands · `packages/server`: wires them in `run.ts` · `packages/computer`: its channel and commands.
-- **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`code://packages/sdk/src/records.ts`](../../../../packages/sdk/src/records.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`code://packages/sdk/src/resources/records.ts`](../../../../packages/sdk/src/resources/records.ts)
 
 ## Tasks
 

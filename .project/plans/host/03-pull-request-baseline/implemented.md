@@ -3,7 +3,7 @@ title: The session pull request baseline is sent - implemented
 date: 2026-09-20
 refs:
   - code://packages/sdk/src/types/sessions.ts
-  - code://packages/sdk/src/sessions.ts
+  - code://packages/sdk/src/sessions/sessions.ts
   - code://packages/sdk/src/host.ts
   - code://test/sessions.test.ts
   - code://test/host.test.ts
@@ -15,7 +15,7 @@ The baseline is captured once, an empty array stands for a branch that had none,
 ## What was built
 
 - `code://packages/sdk/src/types/sessions.ts` - `PullRequestBaseline` is the pair, and `SessionStore` gains `pullRequests(id)` and `setPullRequests(id, value)`.
-- `code://packages/sdk/src/sessions.ts` - `memorySessions` holds the slot and `forget` drops it; `Saved.sessions[]` gains `pullRequests`; `save` writes it whenever it is there, an all-empty pair included; `load` takes only an object whose two fields are arrays of strings and ignores the rest.
+- `code://packages/sdk/src/sessions/sessions.ts` - `memorySessions` holds the slot and `forget` drops it; `Saved.sessions[]` gains `pullRequests`; `save` writes it whenever it is there, an all-empty pair included; `load` takes only an object whose two fields are arrays of strings and ignores the rest.
 - `code://packages/sdk/src/host.ts` - `captureBaseline` writes the baseline once and never overwrites it; `metaOf` spreads it onto the directory's `github` object and counts it in the presence check; `refreshPullRequests` captures for every session in the directory on the first answer; `openSession` captures from facts already held, so the branch's state at session start is what is kept; `urlKey` and `promotePullRequest` move a URL out of `initialPullRequestUrls` and to the front of `associatedPullRequestUrls`, deduplicated by normalized key; `recordPullRequest` calls the promotion beside the artifact write and before `metaMoved`.
 
 ## Verified

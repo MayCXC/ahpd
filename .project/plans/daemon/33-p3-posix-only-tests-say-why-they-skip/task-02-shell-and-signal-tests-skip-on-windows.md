@@ -4,7 +4,7 @@ status: done
 depends: [task-01-one-helper-names-a-posix-only-case.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L19](../../../../packages/sdk/src/terminals.ts#L19) - `shellOf`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L19](../../../../packages/sdk/src/machines/terminals.ts#L19) - `shellOf`"
   - "[code://packages/sdk/test/nested-process.test.ts#L90](../../../../packages/sdk/test/nested-process.test.ts#L90) - `sh -c`"
   - "[code://packages/sdk/test/pty.test.ts#L192](../../../../packages/sdk/test/pty.test.ts#L192) - a process group"
 ---

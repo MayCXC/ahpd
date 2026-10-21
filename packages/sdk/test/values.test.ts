@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { bag, currentOwner, isRecord, ownerOf, ownerOfPrincipal, reason, str, strings } from '../src/values.js';
+import { bag, currentOwner, isRecord, ownerOf, ownerOfPrincipal, reason, str, strings } from '../src/utils/values.js';
 
 /*
  * The readers every package had its own copy of.

@@ -2,7 +2,7 @@
 title: The vault port and the daemon's plain file - implemented
 date: 2026-10-03
 refs:
-  - "[code://packages/sdk/src/vault.ts](../../../../packages/sdk/src/vault.ts)"
+  - "[code://packages/sdk/src/access/vault.ts](../../../../packages/sdk/src/access/vault.ts)"
   - "[code://packages/sdk/src/types/vault.ts](../../../../packages/sdk/src/types/vault.ts)"
   - "[code://packages/server/src/vault.ts](../../../../packages/server/src/vault.ts)"
   - "[code://packages/server/src/commands/vault.ts](../../../../packages/server/src/commands/vault.ts)"
@@ -13,8 +13,8 @@ The host has a `vault` port, filled by the daemon with one plain `vault.json` (m
 
 ## What was built
 
-- [`code://packages/sdk/src/vault.ts`](../../../../packages/sdk/src/vault.ts) - `scopeOf` (the `host:`, `team:<team>/`, `user:<id>/` forms; whitespace and control characters refused), `secretRef`, `readSecret` applying the scope rule.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) and `types/plugin.ts`, `types/host.ts`, `validate.ts` - `vault` in `PortKey`, `registerVault`, `PluginHost.secret(name, work?)`, `HostOptions.vault`, wired as `usage` is.
+- [`code://packages/sdk/src/access/vault.ts`](../../../../packages/sdk/src/access/vault.ts) - `scopeOf` (the `host:`, `team:<team>/`, `user:<id>/` forms; whitespace and control characters refused), `secretRef`, `readSecret` applying the scope rule.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) and `types/plugin.ts`, `types/host.ts`, `validate.ts` - `vault` in `PortKey`, `registerVault`, `PluginHost.secret(name, work?)`, `HostOptions.vault`, wired as `usage` is.
 - [`code://packages/server/src/vault.ts`](../../../../packages/server/src/vault.ts) - `fileVault({ file })`: re-read on every call, temp file and rename at 0600, only `version: 1` accepted and anything else left untouched, fixed sentences that never quote the file.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - `resolveSecrets` resolves `$secret` before the schema check and checks the value; a `secretAtUse` node is left as written; `vaultInForce` follows the fold's owner rule; a vault plugin's own options cannot name a secret.
 - [`code://packages/server/src/commands/vault.ts`](../../../../packages/server/src/commands/vault.ts) - `ahpd vault` at the terminal (value from piped stdin only) and served (`POST /api/vault/set|delete/<name>`, `GET /api/vault/list`), with the grants of the plan.

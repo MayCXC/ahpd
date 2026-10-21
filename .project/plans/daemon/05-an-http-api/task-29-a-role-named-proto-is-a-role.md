@@ -4,8 +4,8 @@ status: done
 depends: [task-23-user-add-on-existing-person-is-bounded.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L228-L238](../../../../packages/sdk/src/users.ts#L228-L238) - the role table built into `{}` with `roles[name] = kept`"
-  - "[code://packages/sdk/src/users.ts#L34-L36](../../../../packages/sdk/src/users.ts#L34-L36) - `roleIn`, which reads only the table's own keys"
+  - "[code://packages/sdk/src/access/users.ts#L228-L238](../../../../packages/sdk/src/access/users.ts#L228-L238) - the role table built into `{}` with `roles[name] = kept`"
+  - "[code://packages/sdk/src/access/users.ts#L34-L36](../../../../packages/sdk/src/access/users.ts#L34-L36) - `roleIn`, which reads only the table's own keys"
   - "[code://packages/sdk/test/users.test.ts#L244-L246](../../../../packages/sdk/test/users.test.ts#L244-L246) - the `constructor` and `__proto__` cases task 23 added"
 ---
 
@@ -15,7 +15,7 @@ A users file whose `roles` names a role `__proto__` gives that role its grants l
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:228-238` - the table the roles are read into.
+- `UPDATE: packages/sdk/src/access/users.ts:228-238` - the table the roles are read into.
 - `UPDATE: packages/sdk/test/users.test.ts` - the case below.
 
 ## Steps

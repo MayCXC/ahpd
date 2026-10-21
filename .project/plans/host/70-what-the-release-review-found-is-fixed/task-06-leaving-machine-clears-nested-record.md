@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L545-L550](../../../../packages/sdk/src/host/lifecycle.ts#L545-L550) - a session leaves its machine"
-  - "[code://packages/sdk/src/sessions.ts#L71](../../../../packages/sdk/src/sessions.ts#L71) - `setNested` removes on `undefined`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L71](../../../../packages/sdk/src/sessions/sessions.ts#L71) - `setNested` removes on `undefined`"
 ---
 
 ## Objective

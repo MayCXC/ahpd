@@ -15,7 +15,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4322-L4331](../../../../packages/sdk/src/host.ts#L4322-L4331) - `senders` and `senderOf`, held only while a turn runs"
   - "[code://packages/sdk/src/host.ts#L3932-L4026](../../../../packages/sdk/src/host.ts#L3932-L4026) - `listing()`, which builds every session summary"
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`, where the owner is kept and the senders would be"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - the memory and file stores, `ownerOf` and the `Saved` shape a restart reads back"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts) - the memory and file stores, `ownerOf` and the `Saved` shape a restart reads back"
   - "[code://packages/sdk/src/host.ts#L3029-L3054](../../../../packages/sdk/src/host.ts#L3029-L3054) - `describes`, spread into both a `SessionState` and a `SessionSummary`, where a row's `_meta` is composed"
   - "[code://packages/sdk/src/host.ts#L2105-L2128](../../../../packages/sdk/src/host.ts#L2105-L2128) - `withWorkerUri` and `stampedCalls`, the pattern a turn copied rather than mutated follows"
   - "[code://packages/sdk/src/host.ts#L6103-L6125](../../../../packages/sdk/src/host.ts#L6103-L6125) - the live chat snapshot, `turns` and `activeTurn`"

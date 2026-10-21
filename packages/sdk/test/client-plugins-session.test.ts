@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { clientPluginsIn } from '../src/clientplugins.js';
+import { clientPluginsIn } from '../src/plugins/clientplugins.js';
 import { chatUriFor } from '../src/host/channels.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';

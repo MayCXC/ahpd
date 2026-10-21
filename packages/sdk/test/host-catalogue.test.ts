@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { Status } from '../src/catalog.js';
-import { uriOf } from '../src/resources.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { Status } from '../src/sessions/catalog.js';
+import { uriOf } from '../src/resources/resources.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import type { Request } from '../src/types/rpc.js';
 import type { HostOptions } from '../src/types/host.js';
 import {

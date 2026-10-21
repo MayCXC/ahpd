@@ -8,10 +8,10 @@ revalidated: 2026-10-16
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/clientplugins.ts#L61](../../../../packages/sdk/src/clientplugins.ts#L61) - `keyOf`: a URI or a nonce as a file name"
-  - "[code://packages/sdk/src/clientplugins.ts#L88](../../../../packages/sdk/src/clientplugins.ts#L88) - `placeOf`: a copy's directory is named by its nonce"
-  - "[code://packages/sdk/src/clientplugins.ts#L153-L199](../../../../packages/sdk/src/clientplugins.ts#L153-L199) - `sync` copies a plugin and moves it into place"
-  - "[code://packages/sdk/src/pluginparts.ts#L44-L52](../../../../packages/sdk/src/pluginparts.ts#L44-L52) - the host reads a Claude manifest and an Open Plugins manifest"
+  - "[code://packages/sdk/src/plugins/clientplugins.ts#L61](../../../../packages/sdk/src/plugins/clientplugins.ts#L61) - `keyOf`: a URI or a nonce as a file name"
+  - "[code://packages/sdk/src/plugins/clientplugins.ts#L88](../../../../packages/sdk/src/plugins/clientplugins.ts#L88) - `placeOf`: a copy's directory is named by its nonce"
+  - "[code://packages/sdk/src/plugins/clientplugins.ts#L153-L199](../../../../packages/sdk/src/plugins/clientplugins.ts#L153-L199) - `sync` copies a plugin and moves it into place"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L44-L52](../../../../packages/sdk/src/plugins/pluginparts.ts#L44-L52) - the host reads a Claude manifest and an Open Plugins manifest"
   - "[code://packages/agent-claude/src/session/servers.ts#L229-L231](../../../../packages/agent-claude/src/session/servers.ts#L229-L231) - `handed`, the plugin paths the host gave the CLI"
   - "[code://packages/agent-claude/src/session/customizations.ts#L79-L89](../../../../packages/agent-claude/src/session/customizations.ts#L79-L89) - a handed plugin is left out, and `pluginOf` matches a skill by its prefix"
   - "[code://packages/agent-claude/src/session/customizations.ts#L147-L170](../../../../packages/agent-claude/src/session/customizations.ts#L147-L170) - a skill with no plugin lands in the `skills` container under its full name"
@@ -31,7 +31,7 @@ The skill is listed once.
 
 ### Searches performed
 
-- `git grep -n "placeOf\|keyOf" packages/sdk/src/clientplugins.ts` - a copy lives at `<uri key>/<nonce key>`.
+- `git grep -n "placeOf\|keyOf" packages/sdk/src/plugins/clientplugins.ts` - a copy lives at `<uri key>/<nonce key>`.
 - `grep -o '".claude-plugin"' claude` in the CLI binary of `@anthropic-ai/claude-agent-sdk-linux-x64@0.3.278` - the CLI reads `.claude-plugin/plugin.json` and no other manifest.
 - `rg -n "plugin.json|_dirFor" /github/externals/vscode/src/vs` - VS Code writes `.plugin/plugin.json` and copies to a nonce directory.
 
@@ -87,7 +87,7 @@ The skill is listed once.
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. Task 01 built 2026-10-16: `claudeManifestIn` in `packages/sdk/src/clientplugins.ts` writes `.claude-plugin/plugin.json` into a copy that brought only `.plugin/plugin.json`. The file has every field of that manifest, with its `name` in kebab case. A copy with its own Claude manifest, or with no manifest, stays as it is. Task 02 built 2026-10-16: `customizationsOf` in `packages/agent-claude/src/session/customizations.ts` keeps the handed plugins as a second list. It skips a skill and a command whose prefix names one, so only the host's own entry for the copy lists them. Task 03 built 2026-10-16: `.project/proposals/vscode-synced-plugin-has-no-claude-name.md`, with a row in the proposals index and `Filed` set to `no`. Reviewed and merged in `bd49a20d`.
+- **Done so far:** drafted 2026-10-16 from the Windows run in `pending/vscode-checks.md`. Planned 2026-10-16 with Softov's answers. Task 01 built 2026-10-16: `claudeManifestIn` in `packages/sdk/src/plugins/clientplugins.ts` writes `.claude-plugin/plugin.json` into a copy that brought only `.plugin/plugin.json`. The file has every field of that manifest, with its `name` in kebab case. A copy with its own Claude manifest, or with no manifest, stays as it is. Task 02 built 2026-10-16: `customizationsOf` in `packages/agent-claude/src/session/customizations.ts` keeps the handed plugins as a second list. It skips a skill and a command whose prefix names one, so only the host's own entry for the copy lists them. Task 03 built 2026-10-16: `.project/proposals/vscode-synced-plugin-has-no-claude-name.md`, with a row in the proposals index and `Filed` set to `no`. Reviewed and merged in `bd49a20d`.
 - **Next action:** Softov runs the host/105 check in `pending/vscode-checks.md`. Softov files the proposal if he wants it filed.
 - **Open questions:** none.
 - **Watch out for:** One thing the tasks do not decide: an agent of a handed plugin is still listed twice. The written manifest carries every field, so a component that the manifest moves stays where it said.

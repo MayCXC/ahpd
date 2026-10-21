@@ -16,7 +16,7 @@ refs:
   - "[code://packages/sdk/src/types/worktrees.ts#L39](../../../../packages/sdk/src/types/worktrees.ts#L39) - `include`, where `symlink` would sit beside it"
   - "[code://packages/sdk/src/worktrees.ts#L95-L160](../../../../packages/sdk/src/worktrees.ts#L95-L160) - `create`, the best-effort include copy, and `copy`, the pattern a symlink pass mirrors"
   - "[code://packages/sdk/src/worktrees.ts#L9-L18](../../../../packages/sdk/src/worktrees.ts#L9-L18) - the `git` helper, which writes nothing to a child's stdin and so cannot ask `check-ignore --stdin` anything"
-  - "[code://packages/sdk/src/configvalues.ts#L30-L49](../../../../packages/sdk/src/configvalues.ts#L30-L49) - `accepts`, what a stored config value is checked against, and what an array-typed property does to a value stored as a string"
+  - "[code://packages/sdk/src/utils/configvalues.ts#L30-L49](../../../../packages/sdk/src/utils/configvalues.ts#L30-L49) - `accepts`, what a stored config value is checked against, and what an array-typed property does to a value stored as a string"
   - "[code://packages/sdk/src/host.ts#L4057-L4068](../../../../packages/sdk/src/host.ts#L4057-L4068) - the comment counting the host's own config properties, which a seventh worktree key changes"
   - "[code://packages/sdk/src/host.ts#L4952-L4957](../../../../packages/sdk/src/host.ts#L4952-L4957) - `HOSTS_OWN`, the keys a backend is never handed"
   - "[code://packages/sdk/test/github.test.ts](../../../../packages/sdk/test/github.test.ts) - `githubPullRequests`, the port itself, which this plan does not change"

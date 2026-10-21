@@ -4,7 +4,7 @@ status: open
 date: 2026-10-18
 severity: minor
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L352-L364](../../packages/sdk/src/plugins.ts#L352-L364) - the first registration keeps an agent id and the second is dropped with `agent provider clash:`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L352-L364](../../packages/sdk/src/plugins/plugins.ts#L352-L364) - the first registration keeps an agent id and the second is dropped with `agent provider clash:`"
   - "[code://packages/agent-pi/src/plugin.ts#L33](../../packages/agent-pi/src/plugin.ts#L33) - agent-pi registers the id `pi`"
   - "[code://packages/agent-acp/src/presets.ts#L154-L163](../../packages/agent-acp/src/presets.ts#L154-L163) - the shipped ACP preset `pi`, which registers the same id"
 ---

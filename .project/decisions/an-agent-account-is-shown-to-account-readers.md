@@ -5,7 +5,7 @@ date: 2026-10-16
 refs:
   - "[code://packages/sdk/src/host.ts#L570-L593](../../packages/sdk/src/host.ts#L570-L593) - the overlay per connection on `root/configChanged`, which the filter joins"
   - "[code://packages/sdk/src/host/gate.ts#L355-L356](../../packages/sdk/src/host/gate.ts#L355-L356) - `seesConfig`, the check this one sits beside"
-  - "[code://packages/sdk/src/users.ts#L43-L61](../../packages/sdk/src/users.ts#L43-L61) - the subjects, where `account` goes"
+  - "[code://packages/sdk/src/access/users.ts#L43-L61](../../packages/sdk/src/access/users.ts#L43-L61) - the subjects, where `account` goes"
   - "[code://packages/agent-claude/src/probe.ts#L49-L107](../../packages/agent-claude/src/probe.ts#L49-L107) - the probe that reads the account"
   - file:///github/externals/vscode/src/vs/platform/agentHost/common/meta/vscode/codexAccount.ts#L37-L50 - `ICodexAccountInfo`, with `email`
 ---

@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "packages/sdk, packages/server"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L109](../../../../packages/sdk/src/sessions.ts#L109) - `fileSessions`, the shape a file-backed port takes here: a factory returning the port, with the path in its options"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L109](../../../../packages/sdk/src/sessions/sessions.ts#L109) - `fileSessions`, the shape a file-backed port takes here: a factory returning the port, with the path in its options"
   - "[code://packages/sdk/src/listen.ts#L58-L70](../../../../packages/sdk/src/listen.ts#L58-L70) - `same`, the constant-time compare to reuse for a token hash"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the config keys, where `users` joins"
   - "[code://packages/server/src/main.ts#L317-L340](../../../../packages/server/src/main.ts#L317-L340) - the verb dispatch, and `plugin` as the precedent for a verb with sub-verbs"
@@ -19,7 +19,7 @@ Nothing in the host uses any of it yet.
 ## Files
 
 - `CREATE: packages/sdk/src/types/users.ts` - `Capability`, `Principal`, `Users` and `UserRecord`.
-- `CREATE: packages/sdk/src/users.ts` - `fileUsers({ path })`, the file-backed implementation.
+- `CREATE: packages/sdk/src/access/users.ts` - `fileUsers({ path })`, the file-backed implementation.
 - `UPDATE: packages/sdk/src/types/index.ts` - export the four types, the way `ResourceProvider` had to be exported for `plugin/08`'s fixture to name it.
 - `UPDATE: packages/sdk/src/index.ts` - export `fileUsers`.
 - `UPDATE: packages/server/src/config.ts` - a `users?: string` key, the path to the file, absent by default.

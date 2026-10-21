@@ -14,7 +14,7 @@ Under a users directory, a session offers a `scope` key whose choices are the as
 ## Files
 
 - `UPDATE: packages/sdk/src/host.ts` - the `scope` key, its completions from the principal, resolved by `scopeFor` at the first turn; a refusal fails the turn with the list.
-- `UPDATE: packages/sdk/src/sessions.ts` - the resolved scope persisted beside the owner (host 34).
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the resolved scope persisted beside the owner (host 34).
 
 ## Steps
 

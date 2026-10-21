@@ -4,8 +4,8 @@ status: done
 depends: [task-09-ended-nested-session-refuses-with-reason.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L232](../../../../packages/sdk/src/nested.ts#L232) - `innerSession`, a random URI"
-  - "[code://packages/sdk/src/nested.ts#L376-L381](../../../../packages/sdk/src/nested.ts#L376-L381) - the inner `createSession`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L232](../../../../packages/sdk/src/sessions/nested.ts#L232) - `innerSession`, a random URI"
+  - "[code://packages/sdk/src/sessions/nested.ts#L376-L381](../../../../packages/sdk/src/sessions/nested.ts#L376-L381) - the inner `createSession`"
   - "[code://packages/sdk/src/host/chatactions.ts#L139-L219](../../../../packages/sdk/src/host/chatactions.ts#L139-L219) - how a host resumes a session it is not running: a turn on its channel"
 ---
 
@@ -15,9 +15,9 @@ A nested session resumed by the outer host continues the conversation the inner 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:232` - the inner session URI.
-- `UPDATE: packages/sdk/src/nested.ts:376-387` - `createSession` and the subscriptions.
-- `UPDATE: packages/sdk/src/nested.ts:412` - `agentId`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:232` - the inner session URI.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:376-387` - `createSession` and the subscriptions.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:412` - `agentId`.
 
 ## Steps
 

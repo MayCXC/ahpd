@@ -21,7 +21,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L3166](../../../../packages/sdk/src/host.ts#L3166) - a finished turn, the only call of `refreshFacts` for a folder outside `browsable()`"
   - "[code://packages/sdk/src/host.ts#L3332-L3380](../../../../packages/sdk/src/host.ts#L3332-L3380) - `listing`: stored sessions from every agent's `list()`, with their folders"
   - "[code://packages/sdk/src/host.ts#L5095-L5115](../../../../packages/sdk/src/host.ts#L5095-L5115) - subscribing to a changeset: refreshes the files, never the git facts, and ignores whether they moved"
-  - "[code://packages/sdk/src/changes.ts#L918-L932](../../../../packages/sdk/src/changes.ts#L918-L932) - the pull request pair is offered only when the context carries `github`, which comes from the git facts"
+  - "[code://packages/sdk/src/sessions/changes.ts#L918-L932](../../../../packages/sdk/src/sessions/changes.ts#L918-L932) - the pull request pair is offered only when the context carries `github`, which comes from the git facts"
   - "[code://packages/sdk/src/git.ts#L60-L110](../../../../packages/sdk/src/git.ts#L60-L110) - the git facts, including `githubOwner` and `githubRepo` from `origin`"
   - "[code://packages/sdk/test/changes-refresh.test.ts](../../../../packages/sdk/test/changes-refresh.test.ts) - the tests that already drive a changeset refresh against a scratch repository"
 ---

@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { gitChanges } from '../src/changes.js';
-import { uriOf } from '../src/fileuri.js';
+import { gitChanges } from '../src/sessions/changes.js';
+import { uriOf } from '../src/resources/fileuri.js';
 
 /*
  * Branch Changes: what the branch of a worktree session has, since it was cut.

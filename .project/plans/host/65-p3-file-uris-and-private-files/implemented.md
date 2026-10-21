@@ -2,27 +2,27 @@
 title: A file URI keeps every character of its path, and every temp file is private and swept - implemented
 date: 2026-10-06
 refs:
-  - "[code://packages/sdk/src/fileuri.ts](../../../../packages/sdk/src/fileuri.ts)"
+  - "[code://packages/sdk/src/resources/fileuri.ts](../../../../packages/sdk/src/resources/fileuri.ts)"
   - "[code://packages/sdk/src/index.ts](../../../../packages/sdk/src/index.ts)"
   - "[code://packages/server/src/daemon.ts](../../../../packages/server/src/daemon.ts)"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts)"
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts)"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts)"
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts)"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts)"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts)"
 ---
 
 A folder whose name holds `#` or `?` is the same folder on both sides of the wire, so no command runs in a shorter path: `localPath` reads both characters back and `uriOf` writes them encoded, the sdk exports both, and every builder of a `file:` URI in the sdk and in the four agents is `uriOf` now. The temp files beside the users, policies and automations files are no longer readable by anybody but the account the daemon runs as, and the scratch of a writer that died is cleared at the daemon's start rather than staying forever.
 
 ## What was built
 
-- [`code://packages/sdk/src/fileuri.ts`](../../../../packages/sdk/src/fileuri.ts) - `localPath` escapes a literal `#` and `?` to `%23` and `%3F` before the one reader both shapes share, so `C#` and `x?y` decode back to themselves instead of to the folder above them.
+- [`code://packages/sdk/src/resources/fileuri.ts`](../../../../packages/sdk/src/resources/fileuri.ts) - `localPath` escapes a literal `#` and `?` to `%23` and `%3F` before the one reader both shapes share, so `C#` and `x?y` decode back to themselves instead of to the folder above them.
 - [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts) - `localPath` and `uriOf` are exported, which is what the four agents import.
 - Every builder of a `file:` URI in the sdk is `uriOf(...)`: `terminals.ts`, `changes.ts` (four, one of them the key an observe deletes from a reviewed set), `nested.ts`, `debuglogs.ts` (two), `host/vscodemethods.ts` (two), `host/facts.ts` (two), `host/handshake.ts`, `host/spawn.ts`, `host/snapshots.ts`, `host/lifecycle.ts`. `host/sessionmethods.ts` keeps the directory itself as the fallback rather than a URI built to be read straight back.
 - The same in the four agents, twenty sites: `agent-claude` (`session.ts` three, `catalog.ts`, `session/customizations.ts` two), `agent-pi` (`session.ts` two, `catalog.ts` two), `agent-acp` (`session.ts` two, `catalog.ts` two, `mapping.ts`) and `agent-cofold` (`session.ts` two, `agent.ts`). `agent-claude/src/input.ts` encodes on its own and was left.
 - The four agents' `peerDependencies["@ahpd/sdk"]` and the eight workspace `version`s: `>=0.9` became `>=0.10` and 0.9.0 became 0.10.0, the release that exports `uriOf` being the number Softov answered (0.10.0) - see the answer's row in [plan.md](plan.md). The bump moved what reads a range rather than names one: `plugin-hello` and `plugin-alike` went to `^0.10.0`, `plugin-incompatible` to `^0.11.0`, and the two cases asserting those ranges by name with them. `plugin-compat.test.ts`'s floor table is `>=0.10` for the four agents, and its last line asks whether this workspace's own sdk satisfies each floor rather than whether 0.9.0 does.
 - [`code://packages/server/src/daemon.ts`](../../../../packages/server/src/daemon.ts) - `sweepTemps(beside)` takes the files to clear scratch beside and matches `<that file>.<pid>.tmp` in each one's own directory, for a pid that is gone; `claim` sweeps the daemon's own record as it did.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `wholeFiles(users)` is the users file the operator gave plus `policiesPath()`, `automationsPath()`, `computers.json` and `vaultPath()` under the configuration directory, and the daemon's start sweeps all five. The vault joined the list in review.
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) and [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - each removes its temp before writing it, so `mode: 0o600` is applied to a file it creates rather than to one an older writer left readable.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) and [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - each removes its temp before writing it, so `mode: 0o600` is applied to a file it creates rather than to one an older writer left readable.
 - `.project/plans/host/58-private-files-foreign-cursors-decoded-uris/implemented.md` - says its readers decode and that the writers were this plan's, and no longer claims a test shows two writers at once leaving the file whole.
 
 ## Verified

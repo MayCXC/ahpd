@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import { ROOT } from '../src/host.js';
-import { uriOf } from '../src/resources.js';
-import { memorySessions } from '../src/sessions.js';
-import { memoryAutomations } from '../src/automations.js';
+import { uriOf } from '../src/resources/resources.js';
+import { memorySessions } from '../src/sessions/sessions.js';
+import { memoryAutomations } from '../src/automations/automations.js';
 import { echo } from '../../../examples/echo/agent.js';
 import {
   call, directory, file, hello, host, listingOne, onDisk, peer, root, signIn, withRole,

@@ -39,8 +39,8 @@ The source is a Windows 10 run of ahpd 0.12.0 on Node 24.12.0, and three CI runs
   - `packages/agent-claude/src/spawn.ts:154`
   - `packages/computer/src/devcontainer.ts:465, 789, 804, 863, 1114`
   - `packages/computer/src/runtime.ts:884, 2380, 2417`
-  - `packages/sdk/src/changes.ts:64, 79`
-  - `packages/sdk/src/checkpoints.ts:31`
+  - `packages/sdk/src/sessions/changes.ts:64, 79`
+  - `packages/sdk/src/sessions/checkpoints.ts:31`
   - `packages/sdk/src/repo/git.ts:39`
   - `packages/sdk/src/repo/github.ts:65, 117, 157`
   - `packages/sdk/src/repo/worktrees.ts:43`

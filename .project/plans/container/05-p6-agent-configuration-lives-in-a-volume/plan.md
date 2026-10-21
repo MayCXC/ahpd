@@ -12,7 +12,7 @@ creates: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/machine.ts#L18-L94](../../../../packages/sdk/src/types/machine.ts#L18-L94) - the need kinds and the fields every need carries; a state need and `when` join them"
-  - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`, which gains the mode"
+  - "[code://packages/sdk/src/machines/machine.ts#L62-L106](../../../../packages/sdk/src/machines/machine.ts#L62-L106) - `resolveNeeds`, which gains the mode"
   - "[code://packages/computer/src/manifest.ts#L34-L100](../../../../packages/computer/src/manifest.ts#L34-L100) - `Profile`, which gains `state`"
   - "[code://packages/computer/src/manifest.ts#L574-L592](../../../../packages/computer/src/manifest.ts#L574-L592) - each agent the profile names is resolved by its provider id"
   - "[code://packages/computer/src/runtime.ts#L736-L744](../../../../packages/computer/src/runtime.ts#L736-L744) - copy-ins between create and start, paid on every create"

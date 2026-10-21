@@ -6,8 +6,8 @@ layer: "packages/server"
 refs:
   - "[code://packages/server/src/commands/run.ts#L654-L661](../../../../packages/server/src/commands/run.ts#L654-L661) - where the daemon gives its default ports"
   - "[code://packages/bot/src/store.ts#L41-L48](../../../../packages/bot/src/store.ts#L41-L48) - `written`, a file written whole at mode `0600`"
-  - "[code://packages/sdk/src/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions.ts#L712-L740) - `migrateSessions`"
-  - "[code://packages/sdk/src/resources.ts#L503](../../../../packages/sdk/src/resources.ts#L503) - the file store's `watch`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions/sessions.ts#L712-L740) - `migrateSessions`"
+  - "[code://packages/sdk/src/resources/resources.ts#L503](../../../../packages/sdk/src/resources/resources.ts#L503) - the file store's `watch`"
 ---
 
 ## Objective

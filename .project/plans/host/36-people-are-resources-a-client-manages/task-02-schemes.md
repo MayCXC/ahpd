@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/people.ts` - `peopleProviders(users)`, one provider per scheme, each with `describe()`.
+- `CREATE: packages/sdk/src/access/people.ts` - `peopleProviders(users)`, one provider per scheme, each with `describe()`.
 - `UPDATE: packages/sdk/src/types/users.ts` - any `Users` call a provider needs that the port lacks.
 - `UPDATE: packages/server/src/commands/run.ts` - the daemon registers them when it has a users directory.
 

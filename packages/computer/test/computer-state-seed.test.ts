@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
-import { fileResources } from '../../sdk/src/resources.js';
+import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { closeAll, keeping } from './support/closing.js';
 import type { Agent } from '../../sdk/src/types/agent.js';

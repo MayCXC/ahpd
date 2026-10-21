@@ -16,7 +16,7 @@ It takes `split` as an argument.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/commandautoapprover.ts` - `CommandAutoApprover`, `CommandApprovalResult` and the rule compiler.
+- `UPDATE: packages/sdk/src/access/commandautoapprover.ts` - `CommandAutoApprover`, `CommandApprovalResult` and the rule compiler.
 - `UPDATE: packages/sdk/src/index.ts` - export the approver and `split` for the backends and plugins.
 - `CREATE: packages/sdk/test/commandautoapprover.test.ts` - the cases ported from VS Code.
 
@@ -37,7 +37,7 @@ It takes `split` as an argument.
 
 ## Resume
 
-- **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `CommandAutoApprover`, `CommandApprovalOptions`, the rule compiler and the two matchers are in `packages/sdk/src/commandautoapprover.ts`, exported from `packages/sdk/src/index.ts`. `packages/sdk/test/commandautoapprover.test.ts` is new, 45 cases, all passing. `matchCommands` denies an in-place sed, as upstream's `_matchSubCommands` does.
+- **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `CommandAutoApprover`, `CommandApprovalOptions`, the rule compiler and the two matchers are in `packages/sdk/src/access/commandautoapprover.ts`, exported from `packages/sdk/src/index.ts`. `packages/sdk/test/commandautoapprover.test.ts` is new, 45 cases, all passing. `matchCommands` denies an in-place sed, as upstream's `_matchSubCommands` does.
 - **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** a deny rule means "ask" for the caller, not "refuse"; the result names stay VS Code's. The sed check denies before an allow rule is read, so no allow rule can lift it.

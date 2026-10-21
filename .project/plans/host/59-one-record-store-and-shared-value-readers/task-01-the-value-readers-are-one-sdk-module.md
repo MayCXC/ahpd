@@ -7,8 +7,8 @@ refs:
   - "[code://packages/sdk/src/host/common.ts#L17](../../../../packages/sdk/src/host/common.ts#L17) - `reason`, which moves"
   - "[code://packages/sdk/src/scheduled.ts#L57-L58](../../../../packages/sdk/src/scheduled.ts#L57-L58) - `owned`"
   - "[code://packages/sdk/src/scheduled.ts#L72](../../../../packages/sdk/src/scheduled.ts#L72) - `bag`"
-  - "[code://packages/sdk/src/sessions.ts#L121-L122](../../../../packages/sdk/src/sessions.ts#L121-L122) - `ownerOf`"
-  - "[code://packages/sdk/src/users.ts#L367-L369](../../../../packages/sdk/src/users.ts#L367-L369) - `strings`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L121-L122](../../../../packages/sdk/src/sessions/sessions.ts#L121-L122) - `ownerOf`"
+  - "[code://packages/sdk/src/access/users.ts#L367-L369](../../../../packages/sdk/src/access/users.ts#L367-L369) - `strings`"
   - "[code://packages/server/src/plugins.ts#L232-L236](../../../../packages/server/src/plugins.ts#L232-L236) - `messageOf` and `isRecord`"
   - "[code://packages/server/src/proxy/providers.ts#L160](../../../../packages/server/src/proxy/providers.ts#L160) - `isObject`"
   - "[code://packages/server/src/commands/options.ts#L205](../../../../packages/server/src/commands/options.ts#L205) - `isObject`"
@@ -18,15 +18,15 @@ refs:
 
 ## Objective
 
-`packages/sdk/src/values.ts` exports `isRecord`, `bag`, `str`, `strings`, `reason` and `ownerOf` from `@ahpd/sdk`, and the sdk and server copies are gone.
+`packages/sdk/src/utils/values.ts` exports `isRecord`, `bag`, `str`, `strings`, `reason` and `ownerOf` from `@ahpd/sdk`, and the sdk and server copies are gone.
 
 ## Files
 
-- `CREATE: packages/sdk/src/values.ts` - the six readers, one doc line each.
+- `CREATE: packages/sdk/src/utils/values.ts` - the six readers, one doc line each.
 - `CREATE: packages/sdk/test/values.test.ts` - the helper's cases.
 - `UPDATE: packages/sdk/src/index.ts` - `export { bag, isRecord, ownerOf, reason, str, strings } from './values.js';`.
 - `UPDATE: packages/sdk/src/host/common.ts:17` - `reason` re-exported from `../values.js`, so the `host/*.ts` imports stay.
-- `UPDATE: packages/sdk/src/scheduled.ts:57-58,72`, `packages/sdk/src/sessions.ts:121-122`, `packages/sdk/src/users.ts:367-369` - import instead of define.
+- `UPDATE: packages/sdk/src/scheduled.ts:57-58,72`, `packages/sdk/src/sessions/sessions.ts:121-122`, `packages/sdk/src/access/users.ts:367-369` - import instead of define.
 - `UPDATE: packages/server/src/plugins.ts:232-236`, `proxy/providers.ts:160`, `commands/options.ts:205`, `config.ts:319` - import from `@ahpd/sdk`, which the server already depends on.
 
 ## Steps
@@ -47,11 +47,11 @@ refs:
 
 ## Resume
 
-`packages/sdk/src/values.ts` holds the six: `isRecord`, `bag` (an object only, `{}` for an array), `str`, `strings`, `reason` and `ownerOf`, each over the definition the copies already agreed on. `packages/sdk/src/index.ts` exports them beside `secretRef`, `packages/sdk/src/host/common.ts` re-exports `reason` from `../values.js` so `host.ts` and `host/vscodemethods.ts` keep their import path, and `packages/sdk/test/values.test.ts` is the new file's cases (13).
+`packages/sdk/src/utils/values.ts` holds the six: `isRecord`, `bag` (an object only, `{}` for an array), `str`, `strings`, `reason` and `ownerOf`, each over the definition the copies already agreed on. `packages/sdk/src/index.ts` exports them beside `secretRef`, `packages/sdk/src/host/common.ts` re-exports `reason` from `../values.js` so `host.ts` and `host/vscodemethods.ts` keep their import path, and `packages/sdk/test/values.test.ts` is the new file's cases (13).
 
 Replaced, in this order: `host/common.ts` (`reason`), `scheduled.ts` (`owned` and `bag`, `owned` renamed `ownerOf` at its two call sites and the now-unused `Owner` type import dropped), `sessions.ts` (`ownerOf`), `users.ts` (`strings`); `server/src/plugins.ts` (`messageOf` and `isRecord`, `messageOf` renamed `reason` at its ten call sites), `server/src/proxy/providers.ts` and `server/src/commands/options.ts` (`isObject` renamed `isRecord`), `server/src/config.ts` (`why` renamed `reason`).
 
-Four more definitions are inside `packages/*/src` and the plan's own final checklist names them (`rg -n "^const (bag|bagOf|str|isRecord|isObject) =" packages/*/src` finds only `values.ts`), but no task's Files list does, so this is the one judgment call in the task: step 7 says "replace the sdk and server definitions" and the checklist says only `values.ts` may hold one, so they went too. `packages/sdk/src/automations.ts`, `packages/sdk/src/host/automations.ts` and `packages/sdk/src/attachments.ts` take `bag` from `./values.js` and `../values.js`, and `packages/server/src/proxy/dialects.ts` takes `isRecord` from `@ahpd/sdk`. The first two already refused arrays, so their behaviour is unchanged; `attachments.ts`'s copy admitted one, and every call site there was read first: `partOf`, `referenceFor`, `typeFor`, `isSnapshot` and `selectionOf` all read named fields off the answer (`one.type`, `one._meta`, `one.selection`), where an array answered `undefined` before and answers `undefined` now, so no site expects a list and none needed `strings`. `packages/sdk/src/host/automations.ts:82` keeps a local `ownerOf`, which is not this reader: it takes an `AutomationEntry` and reads `_meta`, so a task that wants it folded in has to say which call site takes the shared one.
+Four more definitions are inside `packages/*/src` and the plan's own final checklist names them (`rg -n "^const (bag|bagOf|str|isRecord|isObject) =" packages/*/src` finds only `values.ts`), but no task's Files list does, so this is the one judgment call in the task: step 7 says "replace the sdk and server definitions" and the checklist says only `values.ts` may hold one, so they went too. `packages/sdk/src/automations/automations.ts`, `packages/sdk/src/host/automations.ts` and `packages/sdk/src/resources/attachments.ts` take `bag` from `./values.js` and `../values.js`, and `packages/server/src/proxy/dialects.ts` takes `isRecord` from `@ahpd/sdk`. The first two already refused arrays, so their behaviour is unchanged; `attachments.ts`'s copy admitted one, and every call site there was read first: `partOf`, `referenceFor`, `typeFor`, `isSnapshot` and `selectionOf` all read named fields off the answer (`one.type`, `one._meta`, `one.selection`), where an array answered `undefined` before and answers `undefined` now, so no site expects a list and none needed `strings`. `packages/sdk/src/host/automations.ts:82` keeps a local `ownerOf`, which is not this reader: it takes an `AutomationEntry` and reads `_meta`, so a task that wants it folded in has to say which call site takes the shared one.
 
 No call site of the copies this task replaced expects a list either: `scheduled.ts` reads `trigger.kind`, `trigger.schedule`, `trigger.id` and `one.definition`, and the server's four read named fields and schema keys, so nothing changed to a `strings` read.
 

@@ -20,7 +20,7 @@ refs:
 - `UPDATE: packages/server/src/commands/registry.ts` and `served.ts` - registered at the terminal and served.
 - `UPDATE: packages/server/src/commands/run.ts` and `packages/server/src/daemon.ts` - the lifecycle, the signal handlers, a start in a restarting daemon's place.
 - `UPDATE: packages/sdk/src/host.ts`, `packages/sdk/src/types/host.ts` and `packages/sdk/src/listen.ts` - the running sessions, `Host.close`, and listeners that let go of their port on close.
-- `UPDATE: packages/sdk/src/sessions.ts`, `packages/sdk/src/scheduled.ts` and their types - stores that write nothing once closed.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts`, `packages/sdk/src/scheduled.ts` and their types - stores that write nothing once closed.
 - `UPDATE: packages/sdk/src/types/session.ts`, `packages/agent-acp/src/connection.ts`, `packages/agent-acp/src/types.ts`, `packages/agent-acp/src/session.ts` and `packages/agent-claude/src/session.ts` - a session's close that settles once its agent's process has gone.
 - `CREATE: packages/server/test/server-restart.test.ts` - the cases below.
 

@@ -16,7 +16,7 @@ An event during a run does what the automation's `overlap` says.
 ## Files
 
 - `UPDATE: packages/sdk/src/host/automations.ts:439-533` - begin a turn in the pinned chat, or make the session and keep its URI.
-- `UPDATE: packages/sdk/src/automations.ts` - read `_meta.ahpd`, and refuse `pinned` with `parallel`.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - read `_meta.ahpd`, and refuse `pinned` with `parallel`.
 - `UPDATE: packages/sdk/src/host/actions.ts` - drop a `pinnedSession` a client wrote, and keep the one the host holds.
 - `UPDATE: packages/sdk/test/automation-wake.test.ts` - the cases below.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the case about a client's write.

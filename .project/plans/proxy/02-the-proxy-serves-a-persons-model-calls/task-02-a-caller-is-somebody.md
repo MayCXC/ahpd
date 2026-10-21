@@ -5,9 +5,9 @@ depends: [task-01-v1-answers-in-each-dialect.md]
 layer: "server | sdk"
 refs:
   - "[code://packages/server/src/commands/authorize.ts#L41-L84](../../../../packages/server/src/commands/authorize.ts#L41-L84) - `bearer`, `same` and `authorizeOverHttp`, the order copied here"
-  - "[code://packages/sdk/src/users.ts#L807-L854](../../../../packages/sdk/src/users.ts#L807-L854) - `verify`"
-  - "[code://packages/sdk/src/users.ts#L24-L54](../../../../packages/sdk/src/users.ts#L24-L54) - the built-in roles and `SUBJECTS`, where a `proxy` subject goes"
-  - "[code://packages/sdk/src/scopes.ts#L155-L180](../../../../packages/sdk/src/scopes.ts#L155-L180) - `scopeFor`"
+  - "[code://packages/sdk/src/access/users.ts#L807-L854](../../../../packages/sdk/src/access/users.ts#L807-L854) - `verify`"
+  - "[code://packages/sdk/src/access/users.ts#L24-L54](../../../../packages/sdk/src/access/users.ts#L24-L54) - the built-in roles and `SUBJECTS`, where a `proxy` subject goes"
+  - "[code://packages/sdk/src/usage/scopes.ts#L155-L180](../../../../packages/sdk/src/usage/scopes.ts#L155-L180) - `scopeFor`"
   - "[code://.project/plans/container/05-p12-off-host-machine-reaches-models-via-proxy/task-01-a-session-has-a-token.md](../../container/05-p12-off-host-machine-reaches-models-via-proxy/task-01-a-session-has-a-token.md) - the task that fills `whose`"
 ---
 
@@ -19,7 +19,7 @@ A call carries its credential as `Authorization: Bearer <token>` or `x-api-key: 
 
 - `CREATE: packages/server/src/proxy/caller.ts` - `SessionCaller` (`{ session, chat?, turn?, owner?, principal?, scope? }`), `ProxyCaller` (`{ kind: 'root' } | { kind: 'person', principal, scope? } | { kind: 'session', ...SessionCaller }`) and `callerOf(request, options)`.
 - `UPDATE: packages/server/src/proxy/listener.ts` - `ProxyOptions.whose?(token): SessionCaller | undefined`, the hook container/05 p12 task 01 fills; `callerOf` before anything is routed.
-- `UPDATE: packages/sdk/src/users.ts:24-54` - `proxy` added to `SUBJECTS` (line 40), and `proxy:read` and `proxy:write` to the built-in `member` (line 29); `guest` gains neither.
+- `UPDATE: packages/sdk/src/access/users.ts:24-54` - `proxy` added to `SUBJECTS` (line 40), and `proxy:read` and `proxy:write` to the built-in `member` (line 29); `guest` gains neither.
 - `UPDATE: packages/server/test/proxy-listener.test.ts`.
 
 ## Steps

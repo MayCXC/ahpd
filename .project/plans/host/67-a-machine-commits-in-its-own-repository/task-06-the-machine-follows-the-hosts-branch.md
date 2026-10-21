@@ -4,7 +4,7 @@ status: done
 depends: [task-04-ahpd-brings-the-work-back-by-fetch.md]
 layer: "computer, sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L223-L345](../../../../packages/sdk/src/changes.ts#L223-L345) - commit, discard, revert, create a pull request and checkout move the host's branch or tree"
+  - "[code://packages/sdk/src/sessions/changes.ts#L223-L345](../../../../packages/sdk/src/sessions/changes.ts#L223-L345) - commit, discard, revert, create a pull request and checkout move the host's branch or tree"
   - "[code://packages/sdk/src/host/spawn.ts#L626-L634](../../../../packages/sdk/src/host/spawn.ts#L626-L634) - the turn events"
 ---
 

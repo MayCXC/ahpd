@@ -21,12 +21,12 @@ refs:
 
 ## Objective
 
-`packages/sdk/src/plugins.ts` exports `pluginHost(by, context)`, the `PluginHost` a plugin's `apply` is handed, and every `register*` on it refuses a value whose required members are missing or the wrong kind, throwing one message naming the plugin, the method and the member, so a bad registration fails its plugin and never reaches `createHost`.
+`packages/sdk/src/plugins/plugins.ts` exports `pluginHost(by, context)`, the `PluginHost` a plugin's `apply` is handed, and every `register*` on it refuses a value whose required members are missing or the wrong kind, throwing one message naming the plugin, the method and the member, so a bad registration fails its plugin and never reaches `createHost`.
 
 ## Files
 
-- `CREATE: packages/sdk/src/validate.ts` - `checkAgent`, `checkTool`, `checkPort`, and the `miss` helper they report through.
-- `UPDATE: packages/sdk/src/plugins.ts` - `pluginHost(by, context)`, which validates then records into a `Contribution`.
+- `CREATE: packages/sdk/src/plugins/validate.ts` - `checkAgent`, `checkTool`, `checkPort`, and the `miss` helper they report through.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `pluginHost(by, context)`, which validates then records into a `Contribution`.
 - `UPDATE: packages/sdk/src/index.ts` - export `pluginHost` beside `foldHostOptions`.
 - `CREATE: test/plugin-validate.test.ts` - the cases below.
 
@@ -61,8 +61,8 @@ refs:
 ## Resume
 
 Done 2026-09-20.
-`packages/sdk/src/validate.ts` holds `miss`, `checkAgent`, `checkTool`, `checkPort` and the `PORT_MEMBERS` and `PORT_METHOD` tables keyed by `PortKey`.
-`packages/sdk/src/plugins.ts` gains `pluginHost(by, context)` returning `{ host, contribution }`, and `packages/sdk/src/index.ts` exports both it and the `HostRecording` type.
+`packages/sdk/src/plugins/validate.ts` holds `miss`, `checkAgent`, `checkTool`, `checkPort` and the `PORT_MEMBERS` and `PORT_METHOD` tables keyed by `PortKey`.
+`packages/sdk/src/plugins/plugins.ts` gains `pluginHost(by, context)` returning `{ host, contribution }`, and `packages/sdk/src/index.ts` exports both it and the `HostRecording` type.
 `test/plugin-validate.test.ts` covers a complete `Agent`, `HostTool` and all nine ports, then the empty and incomplete values for `provider`, `create`, `name`, `run`, `list`, `create` and `chatTitle`, empty `diagnostics` and a probe-less `Agent`, a port registered twice by one plugin, and a repeated provider inside one plugin against the fold's handling of it across two.
 Verified: `pnpm test` 667 passed, `pnpm typecheck` green, `pnpm boundary` green.
 Departure from the plan: `checkAgent` checks each optional member by the kind the interface declares rather than "each present member is a function", because `description` is a string and `chats` an object; `checkPort` also checks `github.resource`, which the interface requires and the plan's shorthand omitted.

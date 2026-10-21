@@ -9,7 +9,7 @@ refs:
   - "[code://packages/agent-claude/src/claude.ts#L15-L24](../../../../packages/agent-claude/src/claude.ts#L15-L24) - `claudeExecutablePath`'s comment, which narrates what the docs once pinned"
   - "[code://packages/agent-claude/src/claude.ts#L87-L96](../../../../packages/agent-claude/src/claude.ts#L87-L96) - `computerConfigDir`'s comment, which says nothing here mounts the directory, while `machine()` declares it"
   - "[code://packages/agent-claude/src/claude.ts#L362-L372](../../../../packages/agent-claude/src/claude.ts#L362-L372) - `machine()`'s comment, \"the same host paths the computer docs used to list\""
-  - "[code://packages/sdk/src/machine.ts#L1-L15](../../../../packages/sdk/src/machine.ts#L1-L15) - the header, \"Both were silent before this existed\""
+  - "[code://packages/sdk/src/machines/machine.ts#L1-L15](../../../../packages/sdk/src/machines/machine.ts#L1-L15) - the header, \"Both were silent before this existed\""
   - "[code://packages/computer/src/manifest.ts#L44-L52](../../../../packages/computer/src/manifest.ts#L44-L52) - `Profile.agents`, \"which is what this replaces\""
   - "[code://packages/computer/src/plugin.ts#L132](../../../../packages/computer/src/plugin.ts#L132) - the typo \"a profile disposal\""
   - "[code://packages/computer/src/plugin.ts#L474](../../../../packages/computer/src/plugin.ts#L474) - the typo \"The machine's machine\""
@@ -26,7 +26,7 @@ refs:
 - `UPDATE: packages/agent-claude/src/claude.ts:15-24` - the comment says what `claudeExecutablePath` answers and why it follows the link, with no history.
 - `UPDATE: packages/agent-claude/src/claude.ts:87-96` - `computerConfigDir` says it is where the configuration needs land inside a machine and what `CLAUDE_CONFIG_DIR` is set to, and that `false` leaves the image's own.
 - `UPDATE: packages/agent-claude/src/claude.ts:362-372` - `machine()`'s comment without "used to".
-- `UPDATE: packages/sdk/src/machine.ts:1-15` - the header without "Both were silent before this existed" and the 127 story.
+- `UPDATE: packages/sdk/src/machines/machine.ts:1-15` - the header without "Both were silent before this existed" and the 127 story.
 - `UPDATE: packages/computer/src/manifest.ts:44-52` - `Profile.agents` without "which is what this replaces" and the 127.
 - `UPDATE: packages/computer/src/plugin.ts:132`, `:474` - "a profile disposal" and "The machine's machine" corrected.
 

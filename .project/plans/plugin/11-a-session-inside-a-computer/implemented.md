@@ -6,11 +6,11 @@ refs:
   - code://packages/sdk/src/types/host.ts
   - code://packages/sdk/src/types/agent.ts
   - code://packages/sdk/src/types/plugin.ts
-  - code://packages/sdk/src/plugins.ts
+  - code://packages/sdk/src/plugins/plugins.ts
   - code://packages/sdk/src/host.ts
   - code://packages/computer/src/plugin.ts
   - code://packages/agent-acp/src/session.ts
-  - code://packages/sdk/src/computers.ts
+  - code://packages/sdk/src/machines/computers.ts
   - code://packages/agent-claude/src/claude.ts
   - code://packages/agent-cofold/src/agent.ts
   - code://test/computer-session.test.ts
@@ -24,13 +24,13 @@ A session created with `computer: 'computer://<id>'` runs its ACP server inside 
 
 - `code://packages/sdk/src/types/computers.ts` - `ComputerPort`, `Spawn` and `SpawnOptions`: how to reach a machine, answered as a descriptor rather than a running process.
 - `code://packages/sdk/src/types/host.ts`, `code://packages/sdk/src/types/agent.ts` - `HostOptions.computers` and `Start.computers`.
-- `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/sdk/src/validate.ts` - `registerComputers`, the singleton port, and its validation table.
+- `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins/plugins.ts`, `code://packages/sdk/src/plugins/validate.ts` - `registerComputers`, the singleton port, and its validation table.
 - `code://packages/sdk/src/host.ts` - the port is handed to every backend through `Start`, only when the host holds one.
 - `code://packages/computer/src/plugin.ts` - the port over the runtime: `docker exec -i`, the machine's own `-w` when the caller names none, and the caller's `env` as `-e`.
 - `code://packages/computer/src/runtime.ts` - `mounts` and `workdir` on `MachineSpec`, and `-v`/`-w` in the `docker run` argument list.
 - `code://packages/agent-acp/src/session.ts` - `placed()`, which reads `settings.computer`, asks the port, and refuses on a bad name, a missing port or a machine that is not there.
 - `code://test/computer-session.test.ts` - the four cases, with no Docker and no network.
-- `code://packages/sdk/src/computers.ts` - `refuseComputer` and `machineAsked`: the one gate a backend that cannot reach a machine applies, and the one place an empty setting is read as the host. Added after the fact, when Claude and cofold were still running on the host in silence.
+- `code://packages/sdk/src/machines/computers.ts` - `refuseComputer` and `machineAsked`: the one gate a backend that cannot reach a machine applies, and the one place an empty setting is read as the host. Added after the fact, when Claude and cofold were still running on the host in silence.
 - `code://packages/agent-claude/src/claude.ts`, `code://packages/agent-cofold/src/agent.ts` - both refuse a session that names a machine, in their own `create`, before anything is spawned.
 - `code://test/computer-refusal.test.ts` - every backend that ships here is asked, so a new one cannot skip the rule.
 - `code://docs/plugins/COMPUTERS.md` - the session key, the by-hand case that ran, and what a bind mount is and is not.

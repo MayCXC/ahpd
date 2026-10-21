@@ -13,8 +13,8 @@ decisions:
 refs:
   - "[code://packages/sdk/src/host/root.ts#L173-L202](../../../../packages/sdk/src/host/root.ts#L173-L202) - `advertisedSchemes`, each registered scheme's `describe()`, root and the operations its provider implements"
   - "[code://packages/sdk/src/host/root.ts#L215-L234](../../../../packages/sdk/src/host/root.ts#L215-L234) - `advertisedGrants`, read off `OPERATIONS` only, so the eight built-in subjects and no scheme"
-  - "[code://packages/sdk/src/users.ts#L76](../../../../packages/sdk/src/users.ts#L76) - `RESOURCE`, the operations and groups every subject outside the table takes"
-  - "[code://packages/sdk/src/users.ts#L170-L183](../../../../packages/sdk/src/users.ts#L170-L183) - `operationsOf` and `groupOf`, which already answer a scheme from `RESOURCE`, so `user:read` covers `user:get` at the gate"
+  - "[code://packages/sdk/src/access/users.ts#L76](../../../../packages/sdk/src/access/users.ts#L76) - `RESOURCE`, the operations and groups every subject outside the table takes"
+  - "[code://packages/sdk/src/access/users.ts#L170-L183](../../../../packages/sdk/src/access/users.ts#L170-L183) - `operationsOf` and `groupOf`, which already answer a scheme from `RESOURCE`, so `user:read` covers `user:get` at the gate"
   - "[code://packages/sdk/src/host/handshake.ts#L268](../../../../packages/sdk/src/host/handshake.ts#L268) - `ahpd.grants` on `initialize`"
   - "[code://packages/sdk/src/host/root.ts#L253](../../../../packages/sdk/src/host/root.ts#L253) - `ahpd.grants` on root state"
   - "[code://packages/sdk/test/users-host.test.ts#L338-L360](../../../../packages/sdk/test/users-host.test.ts#L338-L360) - the test that reads `ahpd.grants` off the handshake"
@@ -35,7 +35,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "ahpd.grants" packages docs` - built in `advertisedGrants`, sent from `handshake.ts` and `root.ts`, read by four test files and named in `USERS.md`, `PLUGINS.md` and `COMPUTER.md`.
-- `rg -n "operationsOf|groupOf|RESOURCE" packages/sdk/src/users.ts` - a scheme outside `OPERATIONS` already takes `RESOURCE`'s groups at the gate.
+- `rg -n "operationsOf|groupOf|RESOURCE" packages/sdk/src/access/users.ts` - a scheme outside `OPERATIONS` already takes `RESOURCE`'s groups at the gate.
 
 ### Runtime path
 

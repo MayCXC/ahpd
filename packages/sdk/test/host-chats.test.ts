@@ -6,8 +6,8 @@ import {
   resetSdk, actions, claude, createHost, echo, emit, hello, machine, open, peer, sdk, serving,
   sessionQueries, settle, running,
 } from './support/host.js';
-import { fileSessions } from '../src/sessions.js';
-import { idOf } from '../src/catalog.js';
+import { fileSessions } from '../src/sessions/sessions.js';
+import { idOf } from '../src/sessions/catalog.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
 import { undeclaredIn } from './support/wire.js';
 import type { Agent, HostOptions, Session, Start } from '@ahpd/sdk';

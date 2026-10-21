@@ -4,8 +4,8 @@ status: done
 depends: [task-02-records-commands.md]
 layer: "packages/sdk, packages/server"
 refs:
-  - "[code://packages/sdk/src/people.ts#L239-L240](../../../../packages/sdk/src/people.ts#L239-L240) - `peopleProviders`"
-  - "[code://packages/sdk/src/policy.ts#L151](../../../../packages/sdk/src/policy.ts#L151) - `policyProviders`"
+  - "[code://packages/sdk/src/access/people.ts#L239-L240](../../../../packages/sdk/src/access/people.ts#L239-L240) - `peopleProviders`"
+  - "[code://packages/sdk/src/access/policy.ts#L151](../../../../packages/sdk/src/access/policy.ts#L151) - `policyProviders`"
   - "[code://packages/server/src/commands/run.ts#L550-L558](../../../../packages/server/src/commands/run.ts#L550-L558) - the schemes in `HostOptions`"
   - "[code://packages/sdk/src/host/admission.ts#L213-L231](../../../../packages/sdk/src/host/admission.ts#L213-L231) - `ownRecord`"
 ---
@@ -16,8 +16,8 @@ A daemon with a users directory serves the four people channels and their comman
 
 ## Files
 
-- `UPDATE: packages/sdk/src/people.ts` - `peopleChannels(directory)`, the four channels, methods and providers on one refresh.
-- `UPDATE: packages/sdk/src/policy.ts` - `policyChannels(store)`, the policy channel, methods and provider.
+- `UPDATE: packages/sdk/src/access/people.ts` - `peopleChannels(directory)`, the four channels, methods and providers on one refresh.
+- `UPDATE: packages/sdk/src/access/policy.ts` - `policyChannels(store)`, the policy channel, methods and provider.
 - `UPDATE: packages/sdk/src/index.ts` - export the two functions.
 - `UPDATE: packages/server/src/commands/run.ts:550-558` - pass `channels` and `methods` beside `resourceProviders`.
 - `CREATE: packages/server/test/records-channels.test.ts` - a daemon with users and policies, read through each path.

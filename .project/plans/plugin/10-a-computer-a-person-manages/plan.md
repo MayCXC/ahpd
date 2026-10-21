@@ -39,7 +39,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -n "storeFor|capabilityFor|resourceWrite" packages/sdk/src/host.ts` - a `computer://` write already routes to the provider and already needs `computer:write`, so no routing or gating work is needed.
 - `rg -n "createOnly|-32010" packages/sdk/src` - `resourceWrite` carries `createOnly` and the resources store answers `-32010` for one onto something already there.
 - `rg -n "register(Agent|Resources|Terminals|Sessions|Diagnostics)" packages/sdk/src/types/plugin.ts` - the `register*` list, which has no session-config method; the last is `registerDiagnostics`.
-- `rg -n "foldHostOptions|tools" packages/sdk/src/plugins.ts` - the base's tools and every contribution's become one array at `:159`, and nothing records which is which, so the daemon is the one that can tell them apart.
+- `rg -n "foldHostOptions|tools" packages/sdk/src/plugins/plugins.ts` - the base's tools and every contribution's become one array at `:159`, and nothing records which is which, so the daemon is the one that can tell them apart.
 - `rg -n "hostTools\\(\\)" packages test` - the daemon passes it once (`main.ts`), and a few tests do; the reference set is twelve tools.
 
 ### Runtime path

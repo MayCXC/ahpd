@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, expect, it, vi } from 'vitest';
 import { createSessionEvents } from '../src/host/sessionevents.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import type { HostContext } from '../src/host/context.js';
 import type { SessionStore } from '../src/types/sessions.js';
 import type { SessionEvent, SessionTurn } from '../src/types/triggers.js';

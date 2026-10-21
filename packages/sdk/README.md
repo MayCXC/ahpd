@@ -154,16 +154,16 @@ All types are exported. Nothing under `types/` imports a runtime value, so you c
 | [src/rpc.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/rpc.ts) | JSON-RPC framing, with no socket |
 | [src/listen.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/listen.ts) | Accepts connections on Node, Bun or Deno |
 | [src/host.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/host.ts) | Channels, subscriptions, requests and state actions |
-| [src/resources.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/resources.ts) | The `resources` port: files, reads and writes |
-| [src/terminals.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/terminals.ts) | The `terminals` port: a shell over pipes |
-| [src/changes.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/changes.ts) | The `changes` port: a changeset from git |
+| [src/resources.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/resources/resources.ts) | The `resources` port: files, reads and writes |
+| [src/terminals.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/machines/terminals.ts) | The `terminals` port: a shell over pipes |
+| [src/changes.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/sessions/changes.ts) | The `changes` port: a changeset from git |
 | [src/repo/git.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/repo/git.ts) | The `directories` port: which branch a directory is on |
-| [src/automations.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/automations.ts) | The `automations` port, without a clock |
-| [src/cron.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/cron.ts) | Five-field cron expressions and their next occurrence |
+| [src/automations.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/automations/automations.ts) | The `automations` port, without a clock |
+| [src/cron.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/automations/cron.ts) | Five-field cron expressions and their next occurrence |
 | [src/tools/session.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/tools/session.ts) | The tools a session's agent is given |
-| [src/users.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/users.ts) | The user directory, roles and grants |
-| [src/catalog.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/catalog.ts) | Session names and status bits |
-| [src/paging.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/paging.ts) | A long list of turns, served a page at a time |
+| [src/users.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/access/users.ts) | The user directory, roles and grants |
+| [src/catalog.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/sessions/catalog.ts) | Session names and status bits |
+| [src/paging.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/sessions/paging.ts) | A long list of turns, served a page at a time |
 | [src/index.ts](https://github.com/softov/ahpd/blob/main/packages/sdk/src/index.ts) | The entry point |
 
 ## Documentation

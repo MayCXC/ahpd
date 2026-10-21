@@ -2,40 +2,40 @@
 title: People, roles and grants
 status: current
 covers:
-  - packages/sdk/src/users.ts
-  - packages/sdk/src/people.ts
-  - packages/sdk/src/scopes.ts
+  - packages/sdk/src/access/users.ts
+  - packages/sdk/src/access/people.ts
+  - packages/sdk/src/usage/scopes.ts
   - packages/sdk/src/host/gate.ts
   - packages/sdk/src/host/admission.ts
   - packages/sdk/src/host/actions.ts
   - packages/sdk/src/host/owners.ts
-  - packages/sdk/src/policies.ts
-  - packages/sdk/src/policy.ts
-  - packages/sdk/src/decide.ts
+  - packages/sdk/src/access/policies.ts
+  - packages/sdk/src/access/policy.ts
+  - packages/sdk/src/access/decide.ts
   - packages/server/src/commands/user.ts
   - packages/server/src/commands/teams.ts
 decisions:
   - decisions/a-role-refuses-at-the-dispatch-boundary.md
 refs:
-  - "[code://packages/sdk/src/users.ts#L26-L36](../../packages/sdk/src/users.ts#L26-L36) - `BUILT_IN`, the `admin`, `member` and `guest` roles"
-  - "[code://packages/sdk/src/users.ts#L43-L60](../../packages/sdk/src/users.ts#L43-L60) - `SUBJECTS`, the subjects the host answers to"
-  - "[code://packages/sdk/src/users.ts#L107-L185](../../packages/sdk/src/users.ts#L107-L185) - `OPERATIONS`, each subject's operations and their groups"
-  - "[code://packages/sdk/src/users.ts#L222-L239](../../packages/sdk/src/users.ts#L222-L239) - `grantProblem`, the shape a grant may have"
-  - "[code://packages/sdk/src/users.ts#L252](../../packages/sdk/src/users.ts#L252) - `LEGACY`, what `users:read` and `users:write` are read as"
-  - "[code://packages/sdk/src/users.ts#L266-L288](../../packages/sdk/src/users.ts#L266-L288) - `holds`, the matching rule"
-  - "[code://packages/sdk/src/users.ts#L774-L844](../../packages/sdk/src/users.ts#L774-L844) - `principalOf`, a frozen principal that re-reads the file"
-  - "[code://packages/sdk/src/users.ts#L853-L866](../../packages/sdk/src/users.ts#L853-L866) - `rolesFromClaim`, the roles an issuer claim may add"
+  - "[code://packages/sdk/src/access/users.ts#L26-L36](../../packages/sdk/src/access/users.ts#L26-L36) - `BUILT_IN`, the `admin`, `member` and `guest` roles"
+  - "[code://packages/sdk/src/access/users.ts#L43-L60](../../packages/sdk/src/access/users.ts#L43-L60) - `SUBJECTS`, the subjects the host answers to"
+  - "[code://packages/sdk/src/access/users.ts#L107-L185](../../packages/sdk/src/access/users.ts#L107-L185) - `OPERATIONS`, each subject's operations and their groups"
+  - "[code://packages/sdk/src/access/users.ts#L222-L239](../../packages/sdk/src/access/users.ts#L222-L239) - `grantProblem`, the shape a grant may have"
+  - "[code://packages/sdk/src/access/users.ts#L252](../../packages/sdk/src/access/users.ts#L252) - `LEGACY`, what `users:read` and `users:write` are read as"
+  - "[code://packages/sdk/src/access/users.ts#L266-L288](../../packages/sdk/src/access/users.ts#L266-L288) - `holds`, the matching rule"
+  - "[code://packages/sdk/src/access/users.ts#L774-L844](../../packages/sdk/src/access/users.ts#L774-L844) - `principalOf`, a frozen principal that re-reads the file"
+  - "[code://packages/sdk/src/access/users.ts#L853-L866](../../packages/sdk/src/access/users.ts#L853-L866) - `rolesFromClaim`, the roles an issuer claim may add"
   - "[code://packages/sdk/src/host/gate.ts#L291-L300](../../packages/sdk/src/host/gate.ts#L291-L300) - `dispatchNeeds`, the grant a root config change asks for"
   - "[code://packages/sdk/src/host/gate.ts#L342-L356](../../packages/sdk/src/host/gate.ts#L342-L356) - `PER_CONNECTION` and `seesConfig`"
   - "[code://packages/sdk/src/host/admission.ts#L333-L380](../../packages/sdk/src/host/admission.ts#L333-L380) - `denied` and `admit`, the gate at the dispatch boundary"
   - "[code://packages/sdk/src/host/actions.ts#L122-L153](../../packages/sdk/src/host/actions.ts#L122-L153) - the same gate on a dispatched action"
-  - "[code://packages/sdk/src/people.ts#L239-L290](../../packages/sdk/src/people.ts#L239-L290) - `peopleProviders` and `peopleChannels`"
-  - "[code://packages/sdk/src/scopes.ts#L176-L199](../../packages/sdk/src/scopes.ts#L176-L199) - `scopeFor`, the team and project a request is charged to"
-  - "[code://packages/sdk/src/values.ts#L64-L65](../../packages/sdk/src/values.ts#L64-L65) - `ownerOfPrincipal`, which reads the `plugin` field"
+  - "[code://packages/sdk/src/access/people.ts#L239-L290](../../packages/sdk/src/access/people.ts#L239-L290) - `peopleProviders` and `peopleChannels`"
+  - "[code://packages/sdk/src/usage/scopes.ts#L176-L199](../../packages/sdk/src/usage/scopes.ts#L176-L199) - `scopeFor`, the team and project a request is charged to"
+  - "[code://packages/sdk/src/utils/values.ts#L64-L65](../../packages/sdk/src/utils/values.ts#L64-L65) - `ownerOfPrincipal`, which reads the `plugin` field"
   - "[code://packages/sdk/src/host/owners.ts#L51-L55](../../packages/sdk/src/host/owners.ts#L51-L55) - `ownerFor`, the owner of a connection's work"
   - "[code://packages/sdk/src/host/owners.ts#L166-L183](../../packages/sdk/src/host/owners.ts#L166-L183) - `checked`, the policy check on a session"
-  - "[code://packages/sdk/src/decide.ts#L128-L200](../../packages/sdk/src/decide.ts#L128-L200) - `matched` and `decide`"
-  - "[code://packages/sdk/src/policy.ts#L152-L182](../../packages/sdk/src/policy.ts#L152-L182) - the `policy:` scheme and its channel"
+  - "[code://packages/sdk/src/access/decide.ts#L128-L200](../../packages/sdk/src/access/decide.ts#L128-L200) - `matched` and `decide`"
+  - "[code://packages/sdk/src/access/policy.ts#L152-L182](../../packages/sdk/src/access/policy.ts#L152-L182) - the `policy:` scheme and its channel"
   - "[code://packages/server/src/config.ts#L62-L79](../../packages/server/src/config.ts#L62-L79) - `PoliciesSetting`, the `policies.check` key"
   - "[code://packages/server/src/commands/user.ts#L34-L41](../../packages/server/src/commands/user.ts#L34-L41) - `bounded`, the grants a served command holds its caller to"
   - git://d9d4f950^ - the deleted decisions this spec was written from: a-caller-gives-only-the-grants-it-holds, a-claim-names-the-roles-this-host-defines, a-grant-is-a-subject-and-a-verb, a-grant-names-an-operation-and-read-and-write-are-its-groups, a-legacy-users-grant-is-the-user-subject-only, a-plugin-principal-is-marked-not-read-from-its-id, a-request-naming-no-scope-uses-the-persons-primary, a-role-is-read-on-every-command, any-root-owner-is-this-host, each-people-scheme-has-its-own-channel, people-are-resource-schemes-with-a-grant-each, shutdown-needs-config-change, status-and-plugin-list-need-config-read, teams-and-projects-are-memberships-in-the-users-file, the-user-commands-need-users-write, work-is-owned-by-a-typed-reference, a-deny-binds-only-what-was-asked, policies-are-a-scheme-clients-edit, policy-checks-are-switched-on-by-a-daemon-option, host-wide-root-settings-need-config-write, pushing-workspace-trust-needs-trust-write
@@ -46,7 +46,7 @@ The file is read again on every question, so a change to a role or a person appl
 Every command and every dispatched action passes one gate, which asks the connection's principal for the grant the command needs.
 A grant is `<subject>:<operation>`, and `read` and `write` are the names of groups of operations.
 Policies are a second layer: when the checks are on, they decide which agents, models and computers a person may use.
-The code is in [`code://packages/sdk/src/users.ts`](../../packages/sdk/src/users.ts), [`code://packages/sdk/src/host/admission.ts`](../../packages/sdk/src/host/admission.ts) and [`code://packages/sdk/src/decide.ts`](../../packages/sdk/src/decide.ts).
+The code is in [`code://packages/sdk/src/access/users.ts`](../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/host/admission.ts`](../../packages/sdk/src/host/admission.ts) and [`code://packages/sdk/src/access/decide.ts`](../../packages/sdk/src/access/decide.ts).
 
 ## Scenarios
 

@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L139-L279](../../../../packages/sdk/src/types/plugin.ts#L139-L279) - `PluginHost`"
   - "[code://packages/sdk/src/types/rpc.ts#L34-L59](../../../../packages/sdk/src/types/rpc.ts#L34-L59) - `Peer`"
   - "[code://packages/sdk/src/types/host.ts#L753](../../../../packages/sdk/src/types/host.ts#L753) - `Host.accept`"
-  - "[code://packages/sdk/src/plugins.ts#L299](../../../../packages/sdk/src/plugins.ts#L299) - `pluginHost`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L299](../../../../packages/sdk/src/plugins/plugins.ts#L299) - `pluginHost`"
   - "[code://packages/server/src/commands/run.ts#L639](../../../../packages/server/src/commands/run.ts#L639) - where the host is built"
 ---
 
@@ -18,8 +18,8 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts:139-279` - `connect()` and the type of the end it answers, documented.
-- `CREATE: packages/sdk/src/pair.ts` - an in-memory pair: the host's `Peer` and the plugin's end.
-- `UPDATE: packages/sdk/src/plugins.ts:299` - `pluginHost` takes a late binding to the built host.
+- `CREATE: packages/sdk/src/utils/pair.ts` - an in-memory pair: the host's `Peer` and the plugin's end.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:299` - `pluginHost` takes a late binding to the built host.
 - `UPDATE: packages/server/src/commands/run.ts:639` - binds the host once `createHost` returns, and closes open connections at `stopping`.
 - `CREATE: packages/server/test/plugin-connect.test.ts` - the cases below.
 
@@ -37,7 +37,7 @@ refs:
 
 ## Resume
 
-- `packages/sdk/src/pair.ts` is new: `createPair()` answers a `Pair` - `host` (the `Peer` handed to `Host.accept`), `plugin` (the end the plugin keeps), `served(connection)` and `close()`. Each `send` is the other end's input through `receive`, delivered on one `setTimeout(..., 0)`, so a socket's asynchrony is kept and a plugin cannot settle its own question inside its own turn.
+- `packages/sdk/src/utils/pair.ts` is new: `createPair()` answers a `Pair` - `host` (the `Peer` handed to `Host.accept`), `plugin` (the end the plugin keeps), `served(connection)` and `close()`. Each `send` is the other end's input through `receive`, delivered on one `setTimeout(..., 0)`, so a socket's asynchrony is kept and a plugin cannot settle its own question inside its own turn.
 - A frame with no `method` goes to `pluginPeer.answered` and one with a `method` to `onMessage`, which is the rule `receive` itself uses - both counters start at the same place, so reading a host question as an answer would settle a promise about something else and leave the real question waiting out its timeout.
 - Both ends close together and once: `shut()` is guarded, closes the two peers and hands the host's connection back through its own `close`, which is what takes the connection out of the host's set, stops its turns being attributed to it and tells every client it went. `handle` before `served` throws `-32601` rather than answering nothing.
 - `packages/sdk/src/types/plugin.ts` gains `PluginPeer` (`send`, `notify`, `request`, `onMessage`, `close`), `PluginConnects` (`by`, `host?`, `close()`) and `PluginHost.connect(): PluginPeer`; `Contribution.connects` is required, because the fold reads it without a case, as it reads `starts`.

@@ -1,9 +1,9 @@
 import { WAIT_MS } from '../../../tools/wait.ts';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { memoryAutomations } from '../src/automations.js';
-import { uriOf } from '../src/fileuri.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { chatUriFor } from '../src/host/channels.js';
-import { wakeMessage } from '../src/wakemessage.js';
+import { wakeMessage } from '../src/automations/wakemessage.js';
 import { RECORD, directory } from './users-gate-helpers.js';
 import {
   claude, createHost, hello, machine, peer, resetSdk, running, sdk, sessionQueries, settle,

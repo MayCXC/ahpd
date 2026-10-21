@@ -7,7 +7,7 @@ layer: sdk
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L1179-L1183](../../../../packages/sdk/src/host/lifecycle.ts#L1179-L1183) - `messageAttachments`, used by begin, queue and steer"
   - "[code://packages/sdk/src/host/chatactions.ts#L331](../../../../packages/sdk/src/host/chatactions.ts#L331) - a turn begun, one of the four callers; the others are at :453, :1043 and :1066"
-  - "[code://packages/sdk/src/attachments.ts#L100-L135](../../../../packages/sdk/src/attachments.ts#L100-L135) - `partsOf`, which gives a `simple` attachment's `modelRepresentation` to the model"
+  - "[code://packages/sdk/src/resources/attachments.ts#L100-L135](../../../../packages/sdk/src/resources/attachments.ts#L100-L135) - `partsOf`, which gives a `simple` attachment's `modelRepresentation` to the model"
   - "[code://packages/sdk/src/tools/session.ts#L29](../../../../packages/sdk/src/tools/session.ts#L29) - `openLink`"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1073](../../../../packages/sdk/src/host/lifecycle.ts#L1073) - `principalFor`, the grants of the sender"
   - "git://32bbe1b8cba - VS Code `src/vs/platform/agentHost/common/state/chatAttachmentContext.ts`: `boundChatTranscriptTurns`, `formatChatTranscript`, `buildChatAttachmentPointer`, `resolveChatAttachment`"

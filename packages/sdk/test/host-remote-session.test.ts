@@ -20,8 +20,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { asCreatedBy, asOrigin, depthOf, readOrigin } from '../src/remotesession.js';
-import { fileSessions } from '../src/sessions.js';
+import { asCreatedBy, asOrigin, depthOf, readOrigin } from '../src/sessions/remotesession.js';
+import { fileSessions } from '../src/sessions/sessions.js';
 import type { HostOptions } from '../src/types/host.js';
 import {
   claude, createHost, emit, hello, machine, peer, resetSdk, sdk, sessionQueries, settle,

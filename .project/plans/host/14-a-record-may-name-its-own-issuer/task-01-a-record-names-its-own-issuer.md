@@ -5,10 +5,10 @@ depends: []
 layer: packages/sdk, packages/server
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L101](../../../../packages/sdk/src/types/users.ts#L84-L101) - `UserRecord.issuer`"
-  - "[code://packages/sdk/src/users.ts#L130-L146](../../../../packages/sdk/src/users.ts#L130-L146) - `FileUserOptions.issuer` and `issuerFor`"
-  - "[code://packages/sdk/src/users.ts#L185-L205](../../../../packages/sdk/src/users.ts#L185-L205) - the adapter cache and `issuerNameOf`"
-  - "[code://packages/sdk/src/users.ts#L256-L296](../../../../packages/sdk/src/users.ts#L256-L296) - `knownIssuers` and `advertised`"
-  - "[code://packages/sdk/src/issuers.ts#L146-L176](../../../../packages/sdk/src/issuers.ts#L146-L176) - `issuerKind` and `issuerFrom`"
+  - "[code://packages/sdk/src/access/users.ts#L130-L146](../../../../packages/sdk/src/access/users.ts#L130-L146) - `FileUserOptions.issuer` and `issuerFor`"
+  - "[code://packages/sdk/src/access/users.ts#L185-L205](../../../../packages/sdk/src/access/users.ts#L185-L205) - the adapter cache and `issuerNameOf`"
+  - "[code://packages/sdk/src/access/users.ts#L256-L296](../../../../packages/sdk/src/access/users.ts#L256-L296) - `knownIssuers` and `advertised`"
+  - "[code://packages/sdk/src/access/issuers.ts#L146-L176](../../../../packages/sdk/src/access/issuers.ts#L146-L176) - `issuerKind` and `issuerFrom`"
   - "[code://packages/server/src/main.ts#L620-L660](../../../../packages/server/src/main.ts#L620-L660) - the daemon"
   - "[code://test/users-issuer.test.ts](../../../../test/users-issuer.test.ts) - the per-record cases"
 ---
@@ -20,8 +20,8 @@ A record with an `issuer` signs in through that provider, a record without one s
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts` - `UserRecord.issuer`.
-- `UPDATE: packages/sdk/src/issuers.ts` - `IssuerKind`, `issuerKind` and `issuerFrom`, the one place a name becomes a provider.
-- `UPDATE: packages/sdk/src/users.ts` - `FileUserOptions.issuer` as a name and `issuerFor` as the resolver; an adapter cache; `issuerNameOf`; `knownIssuers`; an `advertised()` that composes the record on every read; a `verify` that offers a token to each issuer a record names; a `list` that reports the issuer; `signInRecord` taking any number of issuers and unioning their scopes.
+- `UPDATE: packages/sdk/src/access/issuers.ts` - `IssuerKind`, `issuerKind` and `issuerFrom`, the one place a name becomes a provider.
+- `UPDATE: packages/sdk/src/access/users.ts` - `FileUserOptions.issuer` as a name and `issuerFor` as the resolver; an adapter cache; `issuerNameOf`; `knownIssuers`; an `advertised()` that composes the record on every read; a `verify` that offers a token to each issuer a record names; a `list` that reports the issuer; `signInRecord` taking any number of issuers and unioning their scopes.
 - `UPDATE: packages/sdk/src/index.ts` - export `issuerFrom`, `issuerKind` and `IssuerKind`.
 - `UPDATE: packages/server/src/config.ts` - `namedIssuer` is the SDK's rule rather than a second copy.
 - `UPDATE: packages/server/src/main.ts` - pass the issuer name, build the advertised record without the host issuer so the directory can fill it, and print the issuer in `user list`.

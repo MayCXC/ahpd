@@ -15,7 +15,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/attachments.ts` - `partsOf`, `Part`, the limits as named constants.
+- `CREATE: packages/sdk/src/resources/attachments.ts` - `partsOf`, `Part`, the limits as named constants.
 - `UPDATE: packages/sdk/src/index.ts` - export them.
 - `CREATE: packages/sdk/test/attachments.test.ts`.
 

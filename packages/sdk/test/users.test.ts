@@ -3,8 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { fileUsers, grantProblem, GROUPS, holds, isGrant, OPERATIONS, signInRecord, SUBJECTS } from '../src/users.js';
-import { scopeFor } from '../src/scopes.js';
+import { fileUsers, grantProblem, GROUPS, holds, isGrant, OPERATIONS, signInRecord, SUBJECTS } from '../src/access/users.js';
+import { scopeFor } from '../src/usage/scopes.js';
 import type { Grant } from '../src/types/users.js';
 
 /*

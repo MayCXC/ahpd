@@ -5,7 +5,7 @@ depends: []
 layer: "server"
 refs:
   - "[code://packages/server/src/commands/options.ts#L231-L247](../../../../packages/server/src/commands/options.ts#L231-L247) - `setAt`"
-  - "[code://packages/sdk/src/vault.ts#L62-L68](../../../../packages/sdk/src/vault.ts#L62-L68) - `secretRef`"
+  - "[code://packages/sdk/src/access/vault.ts#L62-L68](../../../../packages/sdk/src/access/vault.ts#L62-L68) - `secretRef`"
   - "[code://packages/server/test/server-commands.test.ts#L274-L280](../../../../packages/server/test/server-commands.test.ts#L274-L280) - the case that pins the value in the refusal"
 ---
 

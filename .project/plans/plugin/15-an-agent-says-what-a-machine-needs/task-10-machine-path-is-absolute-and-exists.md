@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk | computer"
 refs:
-  - "[code://packages/sdk/src/machine.ts#L80-L95](../../../../packages/sdk/src/machine.ts#L80-L95) - `resolveNeeds`, whose `existsSync` checks a relative value against the daemon's cwd"
+  - "[code://packages/sdk/src/machines/machine.ts#L80-L95](../../../../packages/sdk/src/machines/machine.ts#L80-L95) - `resolveNeeds`, whose `existsSync` checks a relative value against the daemon's cwd"
   - "[code://packages/computer/src/manifest.ts#L520-L535](../../../../packages/computer/src/manifest.ts#L520-L535) - the body's and the profile's mounts, checked only against the `source:target` pattern"
   - "[code://packages/computer/src/manifest.ts#L342](../../../../packages/computer/src/manifest.ts#L342) - `MOUNT`, which takes a relative source"
   - "[code://packages/computer/src/manifest.ts#L553-L559](../../../../packages/computer/src/manifest.ts#L553-L559) - the `folder` check, the sentence shape to reuse"
@@ -19,7 +19,7 @@ A body mount is covered too: it is a mount the machine is made with, and the goa
 
 ## Files
 
-- `UPDATE: packages/sdk/src/machine.ts:80-95` - after `expandHome`, a mount or copy-in value that is not absolute is refused with the need's name, the value and where it came from; an env need is not a path and is not checked.
+- `UPDATE: packages/sdk/src/machines/machine.ts:80-95` - after `expandHome`, a mount or copy-in value that is not absolute is refused with the need's name, the value and where it came from; an env need is not a path and is not checked.
 - `UPDATE: packages/computer/src/manifest.ts:520-535` - each plugin, profile and body mount source is refused when it is not absolute, or not there, with the folder check's sentence shape and the mount's origin.
 - `UPDATE: packages/sdk/test/machine-needs.test.ts`, `packages/computer/test/computer-needs.test.ts` - the cases below, and every existing case that mounts a path this host does not have (`/srv/...`) moved to a temporary directory.
 

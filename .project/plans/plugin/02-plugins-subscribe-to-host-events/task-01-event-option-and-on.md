@@ -6,7 +6,7 @@ layer: packages/sdk
 refs:
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, which gains `events`
   - code://packages/sdk/src/types/plugin.ts - `PluginHost`, which gains `on`; `PluginContext` and the `register*` methods arrive with plan 01
-  - code://packages/sdk/src/plugins.ts - `foldHostOptions`, which merges the handlers
+  - code://packages/sdk/src/plugins/plugins.ts - `foldHostOptions`, which merges the handlers
   - code://docs/plugins/PLUGINS.md - the handler returns nothing and is awaited
   - code://docs/plugins/PLUGINS.md - `on` is the one method not named `register*`
   - file:///github/pi/packages/coding-agent/src/core/extensions/types.ts#L1262-L1318 - `pi.on` and its per-event overloads
@@ -21,7 +21,7 @@ refs:
 - `CREATE: packages/sdk/src/types/events.ts` - `EventName`, the payload per event, `HostEvent`, `EventListener`, `HostHandlers`.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `on` on `PluginHost` and `events` on `Contribution`; `PluginContext` is plan 01's.
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.events?: HostHandlers`.
-- `UPDATE: packages/sdk/src/plugins.ts` - `pluginHost`'s `on` and the merge in `foldHostOptions`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `pluginHost`'s `on` and the merge in `foldHostOptions`.
 - `UPDATE: packages/sdk/src/types/index.ts` and `packages/sdk/src/index.ts` - export the types and nothing else new, since the function is `on`.
 - `CREATE: test/plugin-events-wiring.test.ts` - the cases below.
 

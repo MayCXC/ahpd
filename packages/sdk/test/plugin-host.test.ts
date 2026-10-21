@@ -1,10 +1,10 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { AGENT_CLASH, eachPreset, foldHostOptions, pluginHost } from '../src/plugins.js';
-import { memorySessions } from '../src/sessions.js';
+import { AGENT_CLASH, eachPreset, foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { usageProvider } from '../src/usage.js';
+import { usageProvider } from '../src/usage/usage.js';
 import type { Agent } from '../src/types/agent.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { Contribution, LoaderContext } from '../src/types/plugin.js';

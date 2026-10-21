@@ -5,10 +5,10 @@ depends: [task-01-a-session-has-a-token.md]
 layer: "sdk | computer"
 refs:
   - "[code://packages/sdk/src/types/computers.ts#L38-L48](../../../../packages/sdk/src/types/computers.ts#L38-L48) - `NestedStart`"
-  - "[code://packages/sdk/src/nested.ts#L115-L129](../../../../packages/sdk/src/nested.ts#L115-L129) - `startInside`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L115-L129](../../../../packages/sdk/src/sessions/nested.ts#L115-L129) - `startInside`"
   - "[code://packages/sdk/src/types/machine.ts#L60-L64](../../../../packages/sdk/src/types/machine.ts#L60-L64) - `EnvNeed`"
   - "[code://packages/server/src/proxy/providers.ts#L25-L39](../../../../packages/server/src/proxy/providers.ts#L25-L39) - a provider's key variable"
-  - "[code://packages/sdk/src/nested.ts#L50](../../../../packages/sdk/src/nested.ts#L50) - `NestedAsked`, which carries no env"
+  - "[code://packages/sdk/src/sessions/nested.ts#L50](../../../../packages/sdk/src/sessions/nested.ts#L50) - `NestedAsked`, which carries no env"
   - "[code://packages/computer/src/plugin.ts#L679-L695](../../../../packages/computer/src/plugin.ts#L679-L695) - `nestedHost`, the port's `nested`"
   - "[code://.project/plans/container/05-p12-off-host-machine-reaches-models-via-proxy/plan.md](./plan.md) - the per-session env holds only the token and the proxy URL"
 ---
@@ -24,9 +24,9 @@ The ssh runtime's option `proxyForward` picks a random remote port (the default)
 ## Files
 
 - `UPDATE: packages/sdk/src/types/computers.ts:38-48` - `NestedStart.env`, and `ComputerPort.proxyUrl?(id): Promise<string | undefined>`, the URL a machine reaches this host's proxy at, answered by the port since only the runtime knows how its machine is reached.
-- `UPDATE: packages/sdk/src/nested.ts:50` - `NestedAsked.env`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:50` - `NestedAsked.env`.
 - `UPDATE: packages/sdk/src/types/machine.ts:60-64` - `EnvNeed.proxy?: string` (a provider id) and `EnvNeed.role?: 'key' | 'url'`, documented.
-- `UPDATE: packages/sdk/src/nested.ts:115-129` - `env` passed to `nested`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:115-129` - `env` passed to `nested`.
 - `UPDATE: packages/computer/src/plugin.ts:679-695` - `nestedHost` takes `env` and passes it by name, per p1 (`-e NAME` with the value in the spawned env, never in argv).
 - `UPDATE: packages/computer/src/ssh.ts` - `nested` writes `env` into the remote command as `how` does; `proxyUrl(id)` opens the `-R` forward on the session's own ssh with `-o ExitOnForwardFailure=yes` and answers `http://127.0.0.1:<port>`; p8 and p11 do the same for theirs.
 - `UPDATE: packages/computer/src/plugin.ts:99` - `proxyForward: 'port' | 'socket'` beside `pollSeconds`, default `port`.

@@ -9,7 +9,17 @@ It has no runtime dependencies and one peer dependency, which `scripts/boundary.
 
 ## Packages
 
-- `code://packages/sdk` - entry point `src/index.ts`; the host itself `src/host.ts`; the socket `src/listen.ts`; the peer `src/rpc.ts`; the stores and ports `src/sessions.ts`, `src/resources.ts`, `src/terminals.ts`, `src/git.ts`, `src/github.ts`, `src/changes.ts`, `src/worktrees.ts`, `src/automations.ts`, `src/catalog.ts`, `src/scheduled.ts`, `src/cron.ts`, `src/debuglogs.ts`, `src/paging.ts`, `src/zip.ts`; the tools a session's agent is given `src/tools/index.ts`, `src/tools/session.ts`, `src/tools/artifacts.ts`.
+- `code://packages/sdk` - entry point `src/index.ts`; the host itself `src/host.ts`; the socket `src/listen.ts`; the peer `src/rpc.ts`.
+  - `src/repo/` - the git and github ports: `git.ts`, `github.ts` and `worktrees.ts`.
+  - `src/tools/` - the tools a session's agent is given: `index.ts`, `session.ts` and `artifacts.ts`.
+  - `src/access/` - users, people, issuers, tokens, policy, policies, decide, vault and commandautoapprover.
+  - `src/usage/` - usage, meter, charge, periods and scopes.
+  - `src/resources/` - resources, records, recordschannel, fileuri and attachments.
+  - `src/plugins/` - plugins, pluginparts, clientplugins, validate and enablement.
+  - `src/automations/` - automations, triggers, triggerpresets, cron, calllinks and wakemessage.
+  - `src/sessions/` - sessions, nested, remotesession, checkpoints, catalog, paging, changes, changewords and debuglogs.
+  - `src/machines/` - computers, machine, terminals, agents and shellenv.
+  - `src/utils/` - values, toolinput, jsonfile, frozen, timing, zip, pair and configvalues.
 
 ## Contracts
 

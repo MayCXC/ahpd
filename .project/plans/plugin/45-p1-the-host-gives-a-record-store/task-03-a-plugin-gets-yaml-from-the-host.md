@@ -16,7 +16,7 @@ refs:
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `parseYaml` and `stringifyYaml` on `PluginContext`.
 - `UPDATE: packages/server/src/plugins.ts:864-874` - the two functions in the frozen context.
-- `UPDATE: packages/sdk/src/plugins.ts` - a loader with no YAML functions gives two that throw.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - a loader with no YAML functions gives two that throw.
 - `UPDATE: packages/server/test/plugin-load.test.ts` - a plugin parses and writes YAML through its context.
 
 ## Steps

@@ -12,10 +12,10 @@ refs:
   - "[code://packages/sdk/src/host/vscodemethods.ts#L242](../../../../packages/sdk/src/host/vscodemethods.ts#L242) - a scope"
   - "[code://packages/sdk/src/host/changesets.ts#L39](../../../../packages/sdk/src/host/changesets.ts#L39) - a changeset's directory"
   - "[code://packages/sdk/src/host/facts.ts#L241](../../../../packages/sdk/src/host/facts.ts#L241) - a strip by slicing"
-  - "[code://packages/sdk/src/automations.ts#L170](../../../../packages/sdk/src/automations.ts#L170) - an automation's working directory"
+  - "[code://packages/sdk/src/automations/automations.ts#L170](../../../../packages/sdk/src/automations/automations.ts#L170) - an automation's working directory"
   - "[code://packages/sdk/src/sessiontools.ts#L158](../../../../packages/sdk/src/sessiontools.ts#L158) - `bare`, which strips and lowercases"
   - "[code://packages/sdk/src/sessiontools.ts#L297-L298](../../../../packages/sdk/src/sessiontools.ts#L297-L298) - a third `pathOf`, by slicing"
-  - "[code://packages/sdk/src/terminals.ts#L122-L130](../../../../packages/sdk/src/terminals.ts#L122-L130) - a shell's OSC 7, read and sent on as `file://${path}`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L122-L130](../../../../packages/sdk/src/machines/terminals.ts#L122-L130) - a shell's OSC 7, read and sent on as `file://${path}`"
 ---
 
 ## Objective
@@ -27,9 +27,9 @@ Every place the host turns a `file:` URI into a path reads it through `localPath
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:234,490,680,793,893` - `localPath(...)` for each strip.
 - `UPDATE: packages/sdk/src/host/chatactions.ts:180,339,747` - the same.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:711`, `host/tooling.ts:325`, `host/vscodemethods.ts:242`, `host/terminals.ts:266`, `host/changesets.ts:39`, `host/facts.ts:241` - the same; `vscodemethods.ts` keeps its trailing-slash trim.
-- `UPDATE: packages/sdk/src/automations.ts:170` - the same.
+- `UPDATE: packages/sdk/src/automations/automations.ts:170` - the same.
 - `UPDATE: packages/sdk/src/sessiontools.ts:158,297-298` - `bare` decodes before it trims and lowercases; `pathOf` decodes before it trims.
-- `UPDATE: packages/sdk/src/terminals.ts:126-129` - the OSC 7 path is `localPath(body)` and the emitted `cwd` is `uriOf(path)`.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:126-129` - the OSC 7 path is `localPath(body)` and the emitted `cwd` is `uriOf(path)`.
 - `UPDATE: packages/sdk/test/host-terminals.test.ts`, `packages/sdk/test/sessiontools.test.ts` - the cases below.
 
 ## Steps

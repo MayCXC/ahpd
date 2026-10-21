@@ -4,11 +4,11 @@ status: done
 depends: [task-01-one-json-reader-and-one-atomic-writer.md, task-05-memory-store-keeps-one-row-per-session.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L194-L220](../../../../packages/sdk/src/sessions.ts#L194-L220) - `rowOf`"
-  - "[code://packages/sdk/src/sessions.ts#L222-L256](../../../../packages/sdk/src/sessions.ts#L222-L256) - `save` and `later`"
-  - "[code://packages/sdk/src/sessions.ts#L257-L329](../../../../packages/sdk/src/sessions.ts#L257-L329) - `load`"
-  - "[code://packages/sdk/src/sessions.ts#L333-L352](../../../../packages/sdk/src/sessions.ts#L333-L352) - the wrapped setters"
-  - "[code://packages/sdk/src/sessions.ts#L407-L442](../../../../packages/sdk/src/sessions.ts#L407-L442) - `migrateSessions`, which reads and writes the same rows"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L194-L220](../../../../packages/sdk/src/sessions/sessions.ts#L194-L220) - `rowOf`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L222-L256](../../../../packages/sdk/src/sessions/sessions.ts#L222-L256) - `save` and `later`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L257-L329](../../../../packages/sdk/src/sessions/sessions.ts#L257-L329) - `load`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L333-L352](../../../../packages/sdk/src/sessions/sessions.ts#L333-L352) - the wrapped setters"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L407-L442](../../../../packages/sdk/src/sessions/sessions.ts#L407-L442) - `migrateSessions`, which reads and writes the same rows"
   - "[code://packages/server/test/sessions-migrate.test.ts](../../../../packages/server/test/sessions-migrate.test.ts) - the migration's cases"
 ---
 
@@ -18,11 +18,11 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/sessions.ts:194-220` - `rowOf` reads the inner row through a `rowOf(id)` that `memorySessions` adds to `Held`, with `version` and `id` put first so key order on disk does not move.
-- `UPDATE: packages/sdk/src/sessions.ts:222-256` - `save` writes with `writeJsonAtomic(file, row, { dirMode: 0o700 })`; `later` and its next-tick timer stay as they are.
-- `UPDATE: packages/sdk/src/sessions.ts:257-329` - each file read with `readJson`; the field-by-field checks stay, each now setting the inner row.
-- `UPDATE: packages/sdk/src/sessions.ts:333-352` - the eleven setters built by one `touched(id, run)` wrapper.
-- `UPDATE: packages/sdk/src/sessions.ts:407-442` - `migrateSessions` reads with `readJson` and writes each row with `writeJsonAtomic`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:194-220` - `rowOf` reads the inner row through a `rowOf(id)` that `memorySessions` adds to `Held`, with `version` and `id` put first so key order on disk does not move.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:222-256` - `save` writes with `writeJsonAtomic(file, row, { dirMode: 0o700 })`; `later` and its next-tick timer stay as they are.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:257-329` - each file read with `readJson`; the field-by-field checks stay, each now setting the inner row.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:333-352` - the eleven setters built by one `touched(id, run)` wrapper.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:407-442` - `migrateSessions` reads with `readJson` and writes each row with `writeJsonAtomic`.
 
 ## Steps
 

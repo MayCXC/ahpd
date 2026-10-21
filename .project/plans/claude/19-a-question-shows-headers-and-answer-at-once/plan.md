@@ -12,7 +12,7 @@ refs:
   - "[code://packages/agent-claude/src/session/asking.ts#L392-L443](../../../../packages/agent-claude/src/session/asking.ts#L392-L443) - `answer` reads each answer's `value` and drops its `freeformValues`"
   - "[code://packages/sdk/src/host/chatactions.ts#L936-L951](../../../../packages/sdk/src/host/chatactions.ts#L936-L951) - `chat/inputCompleted` on a lead chat calls `session.answer` and dispatches nothing back"
   - "[code://packages/sdk/src/host/chatactions.ts#L248-L255](../../../../packages/sdk/src/host/chatactions.ts#L248-L255) - `chat/draftChanged` is echoed so the other clients see it; the pattern task 01 mirrors"
-  - "[code://packages/sdk/src/nested.ts#L907](../../../../packages/sdk/src/nested.ts#L907) - a worker chat does deliver `chat/inputCompleted`, so only the lead chat is missing it"
+  - "[code://packages/sdk/src/sessions/nested.ts#L907](../../../../packages/sdk/src/sessions/nested.ts#L907) - a worker chat does deliver `chat/inputCompleted`, so only the lead chat is missing it"
   - "[code://packages/agent-claude/test/agent-claude-tool-input.test.ts](../../../../packages/agent-claude/test/agent-claude-tool-input.test.ts) - where the question builder and the answer are tested"
   - "[code://packages/sdk/test/host-input.test.ts](../../../../packages/sdk/test/host-input.test.ts) - where a client's answer through the host is tested"
   - git://7516b04bc94 - VS Code `src/vs/platform/agentHost/node/claude/claudeInteractiveTools.ts` L105-L118 sets each question's `title` to its `header`, and L135-L153 joins a selection and its `freeformValues` into the answer the tool reads

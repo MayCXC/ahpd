@@ -1,4 +1,4 @@
-import { bag } from '../values.js';
+import { bag } from '../utils/values.js';
 import type { Bag } from '../types/common.js';
 import type { MessageAttachment, MessageChatAttachment, SimpleMessageAttachment } from '@microsoft/agent-host-protocol';
 

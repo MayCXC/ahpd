@@ -2,19 +2,19 @@
 title: JSON files are read and written through one helper, and the session store keeps one row per session - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/jsonfile.ts](../../../../packages/sdk/src/jsonfile.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/utils/jsonfile.ts](../../../../packages/sdk/src/utils/jsonfile.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
 ---
 
 The sdk has one JSON reader and one atomic writer, and every JSON file the sdk, the daemon and computer keep goes through them. A read says why a file gave no value: missing, unreadable, not JSON or not an object. A write goes to a scratch file and replaces the old one by rename. The session store keeps one row per session instead of one map per field.
 
 ## What was built
 
-- [`code://packages/sdk/src/jsonfile.ts`](../../../../packages/sdk/src/jsonfile.ts) - `readJson`, `readJsonObject`, `writeJsonAtomic` and their result types, exported from the sdk.
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) and [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - read and write through the helper.
+- [`code://packages/sdk/src/utils/jsonfile.ts`](../../../../packages/sdk/src/utils/jsonfile.ts) - `readJson`, `readJsonObject`, `writeJsonAtomic` and their result types, exported from the sdk.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts), [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) and [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - read and write through the helper.
 - [`code://packages/server/src/vault.ts`](../../../../packages/server/src/vault.ts), [`code://packages/server/src/install.ts`](../../../../packages/server/src/install.ts) and [`code://packages/server/src/daemon.ts`](../../../../packages/server/src/daemon.ts) - the daemon's files read and write through the helper; the vault's refusals still quote no parser text.
 - [`code://packages/computer/src/owners.ts`](../../../../packages/computer/src/owners.ts) - the owner file reads and writes through the helper.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `memorySessions` keeps one `Map<string, Row>`, and `fileSessions` reads and writes that row.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - `memorySessions` keeps one `Map<string, Row>`, and `fileSessions` reads and writes that row.
 
 ## Verified
 

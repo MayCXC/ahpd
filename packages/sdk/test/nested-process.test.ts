@@ -5,12 +5,12 @@ import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { createHost } from '../src/host.js';
 import { chatUriFor } from '../src/host/channels.js';
-import { nestedAgent } from '../src/nested.js';
-import { fileSessions } from '../src/sessions.js';
-import type { NestedHost } from '../src/nested.js';
+import { nestedAgent } from '../src/sessions/nested.js';
+import { fileSessions } from '../src/sessions/sessions.js';
+import type { NestedHost } from '../src/sessions/nested.js';
 import type { Agent, Start } from '../src/types/agent.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { Peer } from '../src/types/rpc.js';

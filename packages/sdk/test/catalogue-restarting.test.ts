@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { createHost, hello, machine, peer, resetSdk, settle } from './support/host.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { uriOf } from '../src/fileuri.js';
-import { memorySessions } from '../src/sessions.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import type { Agent } from '@ahpd/sdk';
 
 /*

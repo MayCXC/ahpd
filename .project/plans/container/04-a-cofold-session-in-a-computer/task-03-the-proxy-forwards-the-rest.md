@@ -13,7 +13,7 @@ Tool confirmations, input answers, config changes, cancel, and dispose reach the
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts`
+- `UPDATE: packages/sdk/src/sessions/nested.ts`
 
 ## Steps
 

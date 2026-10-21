@@ -7,7 +7,7 @@ refs:
   - code://packages/sdk/src/artifacttools.ts
   - code://packages/sdk/src/sessiontools.ts
   - code://packages/sdk/src/types/sessions.ts
-  - code://packages/sdk/src/sessions.ts
+  - code://packages/sdk/src/sessions/sessions.ts
   - code://test/conformance.test.ts
   - code://test/host.test.ts
   - code://test/artifacttools.test.ts
@@ -25,7 +25,7 @@ A session's title strategy is snapshotted when it opens, a utility strategy with
 - `code://packages/sdk/src/artifacttools.ts` - `COMPACT_ARTIFACT_TOOLS_INSTRUCTION` is the reference's short instruction with the discovery sentence, a short ADD description names the tool, and the ADD tool carries both under `compact`.
 - `code://packages/sdk/src/sessiontools.ts` - `rename_chat` reads its arguments from `RENAME_CHAT_PROPERTIES`, and `forSession` withholds the tool under `utility`, offers it with `DEFERRED_RENAME_CHAT_DESCRIPTION` and the `automatic` property dropped under `deferred`, and leaves it alone under `activeAgent`.
 - `code://packages/sdk/src/types/sessions.ts` - `SessionStore` gains `chatTitle(id, chatUri)` and `setChatTitle(id, chatUri, title)`.
-- `code://packages/sdk/src/sessions.ts` - `memorySessions` holds a title map per session id and an internal `chatTitlesOf(id)` so the file store can write the whole slot at once; `Saved.sessions[]` gains `chatTitles`; `save` writes a non-empty one; `load` takes only string values; `forget` drops the slot.
+- `code://packages/sdk/src/sessions/sessions.ts` - `memorySessions` holds a title map per session id and an internal `chatTitlesOf(id)` so the file store can write the whole slot at once; `Saved.sessions[]` gains `chatTitles`; `save` writes a non-empty one; `load` takes only string values; `forget` drops the slot.
 - `code://packages/sdk/src/host.ts` - `spawn` applies `kept.chatTitle` before a chat is announced, `renameChat` writes the title beside `setTitle`, and `openSession` and the `create_chat` tool write a title given at creation.
 
 ## Verified

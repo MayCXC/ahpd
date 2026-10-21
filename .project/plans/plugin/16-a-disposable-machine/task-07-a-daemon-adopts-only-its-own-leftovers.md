@@ -12,7 +12,7 @@ refs:
   - "[code://packages/computer/src/runtime.ts#L21-L64](../../../../packages/computer/src/runtime.ts#L21-L64) - `Machine`, which has no session field"
   - "[code://packages/computer/src/runtime.ts#L67-L178](../../../../packages/computer/src/runtime.ts#L67-L178) - `MachineSpec`, which has no session field"
   - "[code://packages/sdk/src/types/plugin.ts#L137-L169](../../../../packages/sdk/src/types/plugin.ts#L137-L169) - `PluginHost`: `machineNeeds` and `recordUsage` read the host when called; nothing reads its sessions"
-  - "[code://packages/sdk/src/plugins.ts#L254-L273](../../../../packages/sdk/src/plugins.ts#L254-L273) - `HostRecordingOptions`, where `agents` and `usage` are handed in as functions"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L254-L273](../../../../packages/sdk/src/plugins/plugins.ts#L254-L273) - `HostRecordingOptions`, where `agents` and `usage` are handed in as functions"
   - "[code://packages/server/src/plugins.ts#L686-L696](../../../../packages/server/src/plugins.ts#L686-L696) - where the daemon hands each plugin host `agents` and `usage` as functions"
   - "[code://packages/sdk/src/types/sessions.ts#L50-L56](../../../../packages/sdk/src/types/sessions.ts#L50-L56) - `SessionStore`, read per id, with no list"
   - "[code://packages/sdk/src/host.ts#L4211-L4221](../../../../packages/sdk/src/host.ts#L4211-L4221) - the `gone` predicate handed to `kept.prune` after a full listing"
@@ -32,7 +32,7 @@ This applies [A daemon adopts only the disposable machines whose session it keep
 - `UPDATE: packages/computer/src/runtime.ts:701-723` - `run` writes the session label when the spec names one; the listing reads it by name through `plugin/15` task 08's reader (its key joins that list), and `inspect` readers answer it.
 - `UPDATE: packages/computer/src/plugin.ts:762-777` - the disposable create passes `session: asked.session`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:137-169` - `PluginHost.sessionKept(uri): boolean`, read when called: whether this host's session store keeps that session.
-- `UPDATE: packages/sdk/src/plugins.ts:254-273`, `:319-328` - `HostRecordingOptions.sessions?: () => SessionStore | undefined`, and `sessionKept` answered from it as `machineNeeds` is from `agents`; `false` when there is no store.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:254-273`, `:319-328` - `HostRecordingOptions.sessions?: () => SessionStore | undefined`, and `sessionKept` answered from it as `machineNeeds` is from `agents`; `false` when there is no store.
 - `UPDATE: packages/server/src/plugins.ts:542-553`, `:686-696` - the live session store handed to every plugin host, the way `usage: () => reached?.usage` is.
 - `UPDATE: packages/computer/src/plugin.ts:515-536` - for a disposable leftover, adopt it only when its session label names a session `sessionKept` answers for: `watch` it with that session already in its set, and `open` its stretch if it is running; skip it otherwise. A machine that is not disposable keeps today's behaviour.
 - `UPDATE: packages/sdk/src/host.ts:4211-4221` - the predicate handed to `kept.prune` notes each id it answers `true` for, with the machine that session's stored config names, and after the prune the host calls `leaveForgotten` for each.

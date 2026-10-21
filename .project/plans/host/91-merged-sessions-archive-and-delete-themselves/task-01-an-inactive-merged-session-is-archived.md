@@ -24,7 +24,7 @@ The automatic archive removes the tree only when it is clean and pushed, and it 
 - `UPDATE: packages/sdk/src/host.ts:1110` - call `stopMerged`.
 - `UPDATE: packages/sdk/src/host/actions.ts:364` - after `into(rootConfig, ours)`, call `mergedSoon` when either key is in the push.
 - `UPDATE: packages/sdk/src/types/sessions.ts:260-268` - the optional `autoArchivedAt?(id)` and `setAutoArchivedAt?(id, value)`, beside `remoteOrigin`.
-- `UPDATE: packages/sdk/src/sessions.ts:330-390` - `Row`, `empty` and `Saved` carry `autoArchivedAt`; save, load and wrap it as host/90 task 01 does for the worktree.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:330-390` - `Row`, `empty` and `Saved` carry `autoArchivedAt`; save, load and wrap it as host/90 task 01 does for the worktree.
 - `UPDATE: packages/sdk/src/host/chatactions.ts:27-45` - an unarchive clears `autoArchivedAt`.
 - `UPDATE: packages/sdk/src/types/worktrees.ts:128-143` - add the optional `pushed?(path)`: the branch has an upstream and nothing is left to push.
 - `UPDATE: packages/sdk/src/repo/worktrees.ts:182-202` - `pushed` asks `git rev-parse @{u}` and `git rev-list @{u}..HEAD`.

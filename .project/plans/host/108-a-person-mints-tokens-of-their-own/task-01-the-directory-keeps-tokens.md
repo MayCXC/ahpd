@@ -6,10 +6,10 @@ layer: sdk
 refs:
   - "[code://packages/sdk/src/types/users.ts#L296-L398](../../../../packages/sdk/src/types/users.ts#L296-L398) - the `Users` port, where `mint` is the one credential call today"
   - "[code://packages/sdk/src/types/users.ts#L152-L156](../../../../packages/sdk/src/types/users.ts#L152-L156) - `UserRecord.token`, the full token, which stays as it is"
-  - "[code://packages/sdk/src/users.ts#L376-L446](../../../../packages/sdk/src/users.ts#L376-L446) - `FileUserOptions`, where the limit and the tokens file go"
-  - "[code://packages/sdk/src/users.ts#L449-L450](../../../../packages/sdk/src/users.ts#L449-L450) - `hashOf`, the stored form of a secret"
-  - "[code://packages/sdk/src/users.ts#L799-L815](../../../../packages/sdk/src/users.ts#L799-L815) - `write`, the atomic owner-only write that refuses a broken file"
-  - "[code://packages/sdk/src/users.ts#L1266-L1284](../../../../packages/sdk/src/users.ts#L1266-L1284) - `remove` and `mint`, the pattern for the new calls"
+  - "[code://packages/sdk/src/access/users.ts#L376-L446](../../../../packages/sdk/src/access/users.ts#L376-L446) - `FileUserOptions`, where the limit and the tokens file go"
+  - "[code://packages/sdk/src/access/users.ts#L449-L450](../../../../packages/sdk/src/access/users.ts#L449-L450) - `hashOf`, the stored form of a secret"
+  - "[code://packages/sdk/src/access/users.ts#L799-L815](../../../../packages/sdk/src/access/users.ts#L799-L815) - `write`, the atomic owner-only write that refuses a broken file"
+  - "[code://packages/sdk/src/access/users.ts#L1266-L1284](../../../../packages/sdk/src/access/users.ts#L1266-L1284) - `remove` and `mint`, the pattern for the new calls"
 ---
 
 ## Objective
@@ -20,8 +20,8 @@ A person's tokens are minted, listed and revoked through three new calls on the 
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts:296-398` - add `TokenRecord`, `MintedToken`, and the optional `mintToken`, `tokens` and `revokeToken` calls on `Users`.
-- `UPDATE: packages/sdk/src/users.ts:376-446` - add `tokensPerPerson` and `tokensPath` to `FileUserOptions`.
-- `UPDATE: packages/sdk/src/users.ts:1266-1284` - add the three calls beside `mint`, and make `remove` drop the person's tokens.
+- `UPDATE: packages/sdk/src/access/users.ts:376-446` - add `tokensPerPerson` and `tokensPath` to `FileUserOptions`.
+- `UPDATE: packages/sdk/src/access/users.ts:1266-1284` - add the three calls beside `mint`, and make `remove` drop the person's tokens.
 - `UPDATE: packages/sdk/src/index.ts:86-98` - export the new types.
 - `CREATE: packages/sdk/test/users-tokens.test.ts` - the tests of the store, the limit and the refusals.
 

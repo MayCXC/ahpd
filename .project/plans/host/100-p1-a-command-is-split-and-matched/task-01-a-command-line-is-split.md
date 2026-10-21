@@ -14,7 +14,7 @@ It returns `undefined` for any line it cannot read.
 
 ## Files
 
-- `CREATE: packages/sdk/src/commandautoapprover.ts` - `split` and its result type.
+- `CREATE: packages/sdk/src/access/commandautoapprover.ts` - `split` and its result type.
 - `CREATE: packages/sdk/test/commandsplit.test.ts` - the splitter cases.
 
 ## Steps
@@ -34,7 +34,7 @@ It returns `undefined` for any line it cannot read.
 
 ## Resume
 
-- **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `splitCommand` is in `packages/sdk/src/commandautoapprover.ts`, with the result type, the separator scan, the redirect reader, the sinks and the unanalyzable marks. `packages/sdk/test/commandsplit.test.ts` is new, 18 cases, all passing. `shouldRequireConfirmationForAutoApproveParse` is ported from VS Code, and it decides whether a line with an open PowerShell group asks.
+- **Done so far:** steps 1 to 6, 2026-10-16, extended 2026-10-18. `splitCommand` is in `packages/sdk/src/access/commandautoapprover.ts`, with the result type, the separator scan, the redirect reader, the sinks and the unanalyzable marks. `packages/sdk/test/commandsplit.test.ts` is new, 18 cases, all passing. `shouldRequireConfirmationForAutoApproveParse` is ported from VS Code, and it decides whether a line with an open PowerShell group asks.
 - **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** the splitter only needs to be right when it says yes; anything unsure is `undefined` or `unanalyzable`.

@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "packages/bot, packages/sdk, docs"
 refs:
-  - "[code://packages/sdk/src/wakemessage.ts#L33-L74](../../../../packages/sdk/src/wakemessage.ts#L33-L74) - `WAKE_PLACEHOLDERS`, `PLACEHOLDER` and `wakeMessage`, the filler this task opens to a map of words"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L33-L74](../../../../packages/sdk/src/automations/wakemessage.ts#L33-L74) - `WAKE_PLACEHOLDERS`, `PLACEHOLDER` and `wakeMessage`, the filler this task opens to a map of words"
   - "[code://packages/sdk/src/index.ts#L59](../../../../packages/sdk/src/index.ts#L59) - the export line beside `wakeupTool`, where the filler is exported"
   - "[code://packages/bot/src/start.ts#L4-L38](../../../../packages/bot/src/start.ts#L4-L38) - `sessionFor`, which sends `instructions` as the prompt now"
   - "[code://packages/bot/src/record.ts#L52-L120](../../../../packages/bot/src/record.ts#L52-L120) - `BotRecord`, `BotDraft` and `FIELDS`, which gain `template`"
@@ -44,7 +44,7 @@ You are {{name}}. {{description}}
 
 ## Files
 
-- `UPDATE: packages/sdk/src/wakemessage.ts:33-74` - add `fillWords(text, words)`, which fills each `{{word}}` the map holds and leaves every other name as written; `wakeMessage` calls it.
+- `UPDATE: packages/sdk/src/automations/wakemessage.ts:33-74` - add `fillWords(text, words)`, which fills each `{{word}}` the map holds and leaves every other name as written; `wakeMessage` calls it.
 - `UPDATE: packages/sdk/src/index.ts:59` - export `fillWords` from `./wakemessage.js`.
 - `CREATE: packages/sdk/test/fill-words.test.ts` - cases for the filler with a map of words.
 - `CREATE: packages/bot/src/template.ts` - `DEFAULT_TEMPLATE`, `TEMPLATE_WORDS`, the `chats` lines and `firstTurn(bot, template, chats)`.
@@ -132,7 +132,7 @@ You are {{name}}. {{description}}
 ## Resume
 
 
-Built in `packages/sdk/src/wakemessage.ts` and the bot package. `fill-words.test.ts` has 6 cases, and `bot-template.test.ts` has 8. `bot-record.test.ts` gained 1 case, and `bot-provider.test.ts` gained 4 and changed 3.
+Built in `packages/sdk/src/automations/wakemessage.ts` and the bot package. `fill-words.test.ts` has 6 cases, and `bot-template.test.ts` has 8. `bot-record.test.ts` gained 1 case, and `bot-provider.test.ts` gained 4 and changed 3.
 
 How the parts work:
 

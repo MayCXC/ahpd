@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/index.ts#L25](../../../../packages/sdk/src/index.ts#L25) - the package entry re-exports `createHost`, `HOST_CLOSE_WAIT_MS`, `ROOT` and `refusalReason` from `./host.js`"
   - "[code://packages/sdk/src/host.ts#L11658](../../../../packages/sdk/src/host.ts#L11658) - `ROOT`, `isRootChannel` and `Summary` exported at the end"
   - "[code://packages/sdk/test/users-gate.test.ts#L135-L163](../../../../packages/sdk/test/users-gate.test.ts#L135-L163) - reads `host.ts` as text and finds the handlers by an 8-space indent, so it has to follow the handlers when they move"
-  - "[code://packages/sdk/src/calllinks.ts#L12-L47](../../../../packages/sdk/src/calllinks.ts#L12-L47) - a piece of host state already moved out: `createCallLinks(): CallLinks`, an interface and a factory"
+  - "[code://packages/sdk/src/automations/calllinks.ts#L12-L47](../../../../packages/sdk/src/automations/calllinks.ts#L12-L47) - a piece of host state already moved out: `createCallLinks(): CallLinks`, an interface and a factory"
   - "[code://packages/sdk/src/types/host.ts#L427-L431](../../../../packages/sdk/src/types/host.ts#L427-L431) - the pattern the seam copies: every host tool is handed one context object (`HostTool.run(input, at: ToolCall)`)"
   - "[code://packages/server/src/commands/registry.ts](../../../../packages/server/src/commands/registry.ts) - the one folder of per-area files under one owner in this repository, beside `packages/sdk/src/types/`"
 ---

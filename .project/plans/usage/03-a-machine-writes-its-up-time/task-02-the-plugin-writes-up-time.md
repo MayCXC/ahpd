@@ -16,7 +16,7 @@ Closing writes `{ kind: 'computer', source: 'computer', at: <stretch start>, sec
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/plugin.ts`, `packages/sdk/src/plugins.ts` - the recorder.
+- `UPDATE: packages/sdk/src/types/plugin.ts`, `packages/sdk/src/plugins/plugins.ts` - the recorder.
 - `UPDATE: packages/computer/src/plugin.ts` (and the runtimes) - the stretches.
 - `UPDATE: docs/plugins/PLUGINS.md` - the recorder, and `registerUsage` which is not listed yet.
 - `UPDATE: .project/plans/usage/00-usage.md` - the runtime path.

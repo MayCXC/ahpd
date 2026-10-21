@@ -17,7 +17,7 @@ refs:
   - "[code://packages/computer/src/manifest.ts#L1071-L1081](../../../../packages/computer/src/manifest.ts#L1071-L1081) - the clash check folds in the session folder"
   - "[code://packages/computer/src/runtime.ts#L3069-L3071](../../../../packages/computer/src/runtime.ts#L3069-L3071) - the runtime mounts the repository, and nothing under `copy`"
   - "[code://packages/sdk/src/host/gate.ts#L269-L276](../../../../packages/sdk/src/host/gate.ts#L269-L276) - `dispatchNeeds`"
-  - "[code://packages/sdk/src/users.ts#L23-L45](../../../../packages/sdk/src/users.ts#L23-L45) - the built-in roles and `SUBJECTS`"
+  - "[code://packages/sdk/src/access/users.ts#L23-L45](../../../../packages/sdk/src/access/users.ts#L23-L45) - the built-in roles and `SUBJECTS`"
   - "[code://packages/sdk/src/host/trust.ts#L163](../../../../packages/sdk/src/host/trust.ts#L163) - `autoApproved` reads `globalAutoApproveEnabled`"
   - "[code://packages/sdk/src/host/root.ts#L162-L208](../../../../packages/sdk/src/host/root.ts#L162-L208) - `ROOT_CONFIG_SCHEMA`, which does not declare it"
   - "[code://packages/sdk/src/host/lifecycle.ts#L545-L550](../../../../packages/sdk/src/host/lifecycle.ts#L545-L550) - a session leaves its machine; the nested record stays"

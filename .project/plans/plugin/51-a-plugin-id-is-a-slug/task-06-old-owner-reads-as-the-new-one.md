@@ -4,13 +4,13 @@ status: done
 depends: [task-03-an-old-owner-name-reads-as-the-new-one.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/triggers.ts#L193-L194](../../../../packages/sdk/src/triggers.ts#L193-L194) - a trigger's `owners` filter, read through `currentOwner`"
-  - "[code://packages/sdk/src/plugins.ts#L791-L796](../../../../packages/sdk/src/plugins.ts#L791-L796) - a plugin's principal: no roles, no memberships, and the `grants` of its entry"
-  - "[code://packages/sdk/src/policies.ts#L145-L165](../../../../packages/sdk/src/policies.ts#L145-L165) - a policy's `scope`"
-  - "[code://packages/sdk/src/policies.ts#L52](../../../../packages/sdk/src/policies.ts#L52) - `LIMIT_POOLS`, the pools a usage limit names"
+  - "[code://packages/sdk/src/automations/triggers.ts#L193-L194](../../../../packages/sdk/src/automations/triggers.ts#L193-L194) - a trigger's `owners` filter, read through `currentOwner`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L791-L796](../../../../packages/sdk/src/plugins/plugins.ts#L791-L796) - a plugin's principal: no roles, no memberships, and the `grants` of its entry"
+  - "[code://packages/sdk/src/access/policies.ts#L145-L165](../../../../packages/sdk/src/access/policies.ts#L145-L165) - a policy's `scope`"
+  - "[code://packages/sdk/src/access/policies.ts#L52](../../../../packages/sdk/src/access/policies.ts#L52) - `LIMIT_POOLS`, the pools a usage limit names"
   - "[code://packages/sdk/src/types/policies.ts#L34](../../../../packages/sdk/src/types/policies.ts#L34) - the value types a policy matches"
   - "[code://packages/sdk/src/host/automations.ts#L91-L94](../../../../packages/sdk/src/host/automations.ts#L91-L94) - an automation's owner"
-  - "[code://packages/sdk/src/validate.ts#L322](../../../../packages/sdk/src/validate.ts#L322) - the owner a plugin registers an automation with"
+  - "[code://packages/sdk/src/plugins/validate.ts#L322](../../../../packages/sdk/src/plugins/validate.ts#L322) - the owner a plugin registers an automation with"
   - "[code://packages/bot/src/record.ts#L126](../../../../packages/bot/src/record.ts#L126) - a bot's owner"
   - "[code://packages/computer/src/runtime.ts#L1022](../../../../packages/computer/src/runtime.ts#L1022) - a machine's owner label, read through `ownerOf`"
 ---
@@ -32,7 +32,7 @@ Nothing on disk is rewritten.
 | A trigger's `owners` filter, `triggers.ts:193-194` | yes | yes, since task 03 |
 | A machine's owner label, `computer/src/runtime.ts:1022` | yes | yes, through `ownerOf` |
 | A plugin's `grants`, on its configuration entry | no: a grant names a scheme and a verb, and the entry is keyed by spec | does not apply |
-| A plugin's roles and memberships, `sdk/src/plugins.ts:791-796` | no: a plugin principal has none | does not apply |
+| A plugin's roles and memberships, `sdk/src/plugins/plugins.ts:791-796` | no: a plugin principal has none | does not apply |
 | A policy's `scope`, `policies.ts:145-165` | no: `all`, `user:`, `team:` or `project:` only | does not apply |
 | A policy's `match`, `types/policies.ts:34` | no: `model`, `proxy`, `agent` and `computer` only | does not apply |
 | A usage limit's `pool`, `policies.ts:52` | no: `shared` or `each` only | does not apply |

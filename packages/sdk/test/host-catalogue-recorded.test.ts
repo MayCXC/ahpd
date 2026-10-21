@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createHost, hello, machine, peer, resetSdk, settle } from './support/host.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { chatUriFor } from '../src/host/channels.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import type { Agent, Listed, SessionAt } from '@ahpd/sdk';
 import type { SessionStore } from '../src/types/sessions.js';
 

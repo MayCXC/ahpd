@@ -12,11 +12,11 @@ decisions:
   - decisions/a-commit-asks-first-and-names-what-it-takes.md
   - ../../../decisions/a-commit-asks-first-and-names-what-it-takes.md
 refs:
-  - "[code://packages/sdk/src/changes.ts#L121-L129](../../../../packages/sdk/src/changes.ts#L121-L129) - `COMMIT`, declared with no `confirmation`"
-  - "[code://packages/sdk/src/changes.ts#L362-L440](../../../../packages/sdk/src/changes.ts#L362-L440) - `look`: one pass over `git status --porcelain=v1 -z`, where each row is built"
-  - "[code://packages/sdk/src/changes.ts#L809-L834](../../../../packages/sdk/src/changes.ts#L809-L834) - `operations`, what the uncommitted scope offers"
-  - "[code://packages/sdk/src/changes.ts#L849-L904](../../../../packages/sdk/src/changes.ts#L849-L904) - the `commit` branch of `invoke`"
-  - "[code://packages/sdk/src/changes.ts#L951-L961](../../../../packages/sdk/src/changes.ts#L951-L961) - `refresh`, which reports a move only when the summary's counts change"
+  - "[code://packages/sdk/src/sessions/changes.ts#L121-L129](../../../../packages/sdk/src/sessions/changes.ts#L121-L129) - `COMMIT`, declared with no `confirmation`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L362-L440](../../../../packages/sdk/src/sessions/changes.ts#L362-L440) - `look`: one pass over `git status --porcelain=v1 -z`, where each row is built"
+  - "[code://packages/sdk/src/sessions/changes.ts#L809-L834](../../../../packages/sdk/src/sessions/changes.ts#L809-L834) - `operations`, what the uncommitted scope offers"
+  - "[code://packages/sdk/src/sessions/changes.ts#L849-L904](../../../../packages/sdk/src/sessions/changes.ts#L849-L904) - the `commit` branch of `invoke`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L951-L961](../../../../packages/sdk/src/sessions/changes.ts#L951-L961) - `refresh`, which reports a move only when the summary's counts change"
   - "[code://packages/sdk/src/types/changes.ts#L171-L211](../../../../packages/sdk/src/types/changes.ts#L171-L211) - `ChangesetOperationContext` and `ChangesetOperationRequest`; `subject` is on the request only"
   - "[code://packages/sdk/src/host.ts#L2292-L2342](../../../../packages/sdk/src/host.ts#L2292-L2342) - `operationsOf` and `operationsMoved`, which re-declare a changeset's operations"
   - "[code://packages/sdk/src/host.ts#L2420-L2434](../../../../packages/sdk/src/host.ts#L2420-L2434) - `contentMoved`, which re-sends files and operations after a refresh"
@@ -91,7 +91,7 @@ Commit clicked -> confirmation shown -> invokeChangesetOperation commit -> git c
 
 ## Risks and tradeoffs
 
-- The working tree holds another session's uncommitted draft of this work in `docs/sdk/AHP.md`, `packages/sdk/src/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
+- The working tree holds another session's uncommitted draft of this work in `docs/sdk/AHP.md`, `packages/sdk/src/sessions/changes.ts`, `packages/sdk/src/types/changes.ts` and `packages/sdk/test/commit.test.ts`.
   Task 01 starts from it; the refs' line numbers are that working tree's.
 - A `confirmation` marks an operation as destructive in the protocol, so VS Code styles Commit as a warning.
 - Watching `.git` is one watcher per repository directory a session works in, closed when no session is left there.

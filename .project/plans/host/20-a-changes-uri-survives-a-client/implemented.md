@@ -3,7 +3,7 @@ title: A changes URI opens in a client that normalises it - implemented
 date: 2026-09-28
 refs:
   - git://1d00d3f
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `beforeUri`, `capturedUri`, `partsOf` and `sideOf`"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `beforeUri`, `capturedUri`, `partsOf` and `sideOf`"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - `isRootChannel`"
 ---
 
@@ -11,7 +11,7 @@ Every side of a diff ahpd serves opens in VS Code as it does in a client that se
 
 ## What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `ahp-git://head/<path>` and `ahp-edit://turn/<base64url session>/<turn>/<phase>/<path>` with percent-encoded segments, read by their parsed and decoded parts; the older `ahp-edit://<encoded session>/...` form is still read.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `ahp-git://head/<path>` and `ahp-edit://turn/<base64url session>/<turn>/<phase>/<path>` with percent-encoded segments, read by their parsed and decoded parts; the older `ahp-edit://<encoded session>/...` form is still read.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `isRootChannel` takes `ahp-root://` and `ahp-root:` everywhere the host compared a channel to the root, and `initialize` answers an initial subscription under the spelling the client sent.
 
 ## Verified

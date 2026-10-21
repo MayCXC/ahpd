@@ -7,8 +7,8 @@ refs:
   - "[code://packages/sdk/src/host/owners.ts#L166-L183](../../../../packages/sdk/src/host/owners.ts#L166-L183) - `checked`, which answers a refusal sentence only"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1305-L1335](../../../../packages/sdk/src/host/lifecycle.ts#L1305-L1335) - the turn's own check"
   - "[code://packages/sdk/src/host/machines.ts#L401-L415](../../../../packages/sdk/src/host/machines.ts#L401-L415) - the session's check, which stays without limits"
-  - "[code://packages/sdk/src/meter.ts#L193-L197](../../../../packages/sdk/src/meter.ts#L193-L197) - `poolsOf`, the keys a turn's record has today"
-  - "[code://packages/sdk/src/meter.ts#L218-L265](../../../../packages/sdk/src/meter.ts#L218-L265) - `write`, where the turn's keys join `pools`"
+  - "[code://packages/sdk/src/usage/meter.ts#L193-L197](../../../../packages/sdk/src/usage/meter.ts#L193-L197) - `poolsOf`, the keys a turn's record has today"
+  - "[code://packages/sdk/src/usage/meter.ts#L218-L265](../../../../packages/sdk/src/usage/meter.ts#L218-L265) - `write`, where the turn's keys join `pools`"
   - "[code://packages/sdk/src/host/spawn.ts#L577-L588](../../../../packages/sdk/src/host/spawn.ts#L577-L588) - where a session's meter is made"
   - "[code://packages/sdk/src/types/host.ts#L288-L320](../../../../packages/sdk/src/types/host.ts#L288-L320) - `usagePer`, `policies` and `policiesCheck` in `HostOptions`"
   - "[code://packages/server/src/proxy/listener.ts#L371-L385](../../../../packages/server/src/proxy/listener.ts#L371-L385) - `policyFor`, the proxy's check"
@@ -33,7 +33,7 @@ Every record of the turn or the call carries the keys the check chose, beside it
 - `UPDATE: packages/sdk/src/host/owners.ts:166-183` - `checked` answers the refusal or the keys.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:1305-1335` - the turn's check runs `chargeFor` and keeps the keys by turn id.
 - `UPDATE: packages/sdk/src/host/spawn.ts:577-588` - the meter gets `keysOf(turn)`.
-- `UPDATE: packages/sdk/src/meter.ts:193-265` - `write` adds the turn's keys to `pools`.
+- `UPDATE: packages/sdk/src/usage/meter.ts:193-265` - `write` adds the turn's keys to `pools`.
 - `UPDATE: packages/server/src/proxy/listener.ts:371-385` - `policyFor` runs `chargeFor` and answers the refusal or the keys.
 - `UPDATE: packages/server/src/proxy/listener.ts:668-700` - `record` adds the call's keys to `pools`.
 - `UPDATE: packages/sdk/test/policy-checks.test.ts` - a turn refused at a limit, and the keys on its record.

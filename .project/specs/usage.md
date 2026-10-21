@@ -3,21 +3,21 @@ title: Usage
 status: current
 covers:
   - packages/sdk/src/types/usage.ts
-  - packages/sdk/src/meter.ts
-  - packages/sdk/src/usage.ts
+  - packages/sdk/src/usage/meter.ts
+  - packages/sdk/src/usage/usage.ts
   - packages/server/src/commands/usage.ts
   - packages/server/src/proxy/listener.ts
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L23-L95](../../packages/sdk/src/types/usage.ts#L23-L95) - `Cost`, `UsageBase`, `ModelUse` and `ComputerTime`"
   - "[code://packages/sdk/src/types/usage.ts#L130-L199](../../packages/sdk/src/types/usage.ts#L130-L199) - the `Usage` port and the grouped total"
-  - "[code://packages/sdk/src/meter.ts#L100-L115](../../packages/sdk/src/meter.ts#L100-L115) - `costOf`, the cost a harness reported"
-  - "[code://packages/sdk/src/meter.ts#L193-L197](../../packages/sdk/src/meter.ts#L193-L197) - `poolsOf`, the owner, team and project pools"
-  - "[code://packages/sdk/src/meter.ts#L228-L325](../../packages/sdk/src/meter.ts#L228-L325) - the agent meter, per turn or per report"
-  - "[code://packages/sdk/src/usage.ts#L137-L387](../../packages/sdk/src/usage.ts#L137-L387) - `fileUsage`, the monthly JSONL files and the totals in memory"
-  - "[code://packages/sdk/src/usage.ts#L642-L669](../../packages/sdk/src/usage.ts#L642-L669) - `refused`, `visible` and `keeper`, which pools a reader may read"
-  - "[code://packages/sdk/src/usage.ts#L619-L895](../../packages/sdk/src/usage.ts#L619-L895) - `usageProvider`, the `usage:` scheme"
-  - "[code://packages/sdk/src/usage.ts#L928-L976](../../packages/sdk/src/usage.ts#L928-L976) - `usageMethods`, the `x-ahpd/usage/*` commands"
-  - "[code://packages/sdk/src/scopes.ts#L139-L152](../../packages/sdk/src/scopes.ts#L139-L152) - `mayRead`, the pools a person reads with no grant"
+  - "[code://packages/sdk/src/usage/meter.ts#L100-L115](../../packages/sdk/src/usage/meter.ts#L100-L115) - `costOf`, the cost a harness reported"
+  - "[code://packages/sdk/src/usage/meter.ts#L193-L197](../../packages/sdk/src/usage/meter.ts#L193-L197) - `poolsOf`, the owner, team and project pools"
+  - "[code://packages/sdk/src/usage/meter.ts#L228-L325](../../packages/sdk/src/usage/meter.ts#L228-L325) - the agent meter, per turn or per report"
+  - "[code://packages/sdk/src/usage/usage.ts#L137-L387](../../packages/sdk/src/usage/usage.ts#L137-L387) - `fileUsage`, the monthly JSONL files and the totals in memory"
+  - "[code://packages/sdk/src/usage/usage.ts#L642-L669](../../packages/sdk/src/usage/usage.ts#L642-L669) - `refused`, `visible` and `keeper`, which pools a reader may read"
+  - "[code://packages/sdk/src/usage/usage.ts#L619-L895](../../packages/sdk/src/usage/usage.ts#L619-L895) - `usageProvider`, the `usage:` scheme"
+  - "[code://packages/sdk/src/usage/usage.ts#L928-L976](../../packages/sdk/src/usage/usage.ts#L928-L976) - `usageMethods`, the `x-ahpd/usage/*` commands"
+  - "[code://packages/sdk/src/usage/scopes.ts#L139-L152](../../packages/sdk/src/usage/scopes.ts#L139-L152) - `mayRead`, the pools a person reads with no grant"
   - "[code://packages/server/src/proxy/listener.ts#L233-L244](../../packages/server/src/proxy/listener.ts#L233-L244) - `costOf`, the cost a configured price gives"
   - "[code://packages/server/src/proxy/listener.ts#L668-L698](../../packages/server/src/proxy/listener.ts#L668-L698) - the record of a proxy call"
   - "[code://packages/computer/src/plugin.ts#L846-L874](../../packages/computer/src/plugin.ts#L846-L874) - `close`, the record of a machine's up time"
@@ -28,7 +28,7 @@ refs:
 Usage is the record of model use and computer time, so that a person, a team or a project sees what its work cost.
 Three writers send records to one `usage` port: the proxy, the agent meter and the computer plugin.
 Each record names the pools it is charged to, and the store keeps a live total per pool.
-The default store `fileUsage` is in [`code://packages/sdk/src/usage.ts`](../../packages/sdk/src/usage.ts), and a plugin can replace it with `registerUsage`.
+The default store `fileUsage` is in [`code://packages/sdk/src/usage/usage.ts`](../../packages/sdk/src/usage/usage.ts), and a plugin can replace it with `registerUsage`.
 Clients read usage through the `usage:` scheme, the `x-ahpd/usage/*` commands, `ahpd usage` and `/api/usage/<pool>`.
 Nothing here limits work: a pool is a key, and what a pool allows belongs to policy.
 

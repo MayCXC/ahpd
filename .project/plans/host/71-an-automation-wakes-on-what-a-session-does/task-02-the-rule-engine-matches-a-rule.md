@@ -9,11 +9,11 @@ refs:
 
 ## Objective
 
-`packages/sdk/src/triggers.ts` takes `SessionEvent`s and a clock, and says when a `SessionRule` matches, for each automation and session.
+`packages/sdk/src/automations/triggers.ts` takes `SessionEvent`s and a clock, and says when a `SessionRule` matches, for each automation and session.
 
 ## Files
 
-- `CREATE: packages/sdk/src/triggers.ts` - `createRuleEngine({ now, setTimer })`, `add(id, rule)`, `remove(id)`, `feed(event)`, and an `onMatch` callback.
+- `CREATE: packages/sdk/src/automations/triggers.ts` - `createRuleEngine({ now, setTimer })`, `add(id, rule)`, `remove(id)`, `feed(event)`, and an `onMatch` callback.
 - `CREATE: packages/sdk/test/triggers.test.ts` - the cases below, with fake time.
 
 ## Steps

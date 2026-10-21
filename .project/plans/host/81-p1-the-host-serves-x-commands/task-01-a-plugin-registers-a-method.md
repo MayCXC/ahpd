@@ -5,8 +5,8 @@ depends: []
 layer: "packages/sdk"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176-L262](../../../../packages/sdk/src/types/plugin.ts#L176-L262) - the channel types this task mirrors"
-  - "[code://packages/sdk/src/plugins.ts#L957-L982](../../../../packages/sdk/src/plugins.ts#L957-L982) - `registerChannel`"
-  - "[code://packages/sdk/src/validate.ts#L271](../../../../packages/sdk/src/validate.ts#L271) - `checkChannel`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L957-L982](../../../../packages/sdk/src/plugins/plugins.ts#L957-L982) - `registerChannel`"
+  - "[code://packages/sdk/src/plugins/validate.ts#L271](../../../../packages/sdk/src/plugins/validate.ts#L271) - `checkChannel`"
 ---
 
 ## Objective
@@ -17,8 +17,8 @@ refs:
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `PluginMethod`, `ServedMethod`, `registerMethod`, and `methods` in the fold's result.
 - `UPDATE: packages/sdk/src/types/host.ts:132-138` - `HostOptions.methods`, beside `channels`.
-- `UPDATE: packages/sdk/src/validate.ts` - `checkMethod`, beside `checkChannel`.
-- `UPDATE: packages/sdk/src/plugins.ts` - `registerMethod`, and the fold seeds `methods` from `base.methods`.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - `checkMethod`, beside `checkChannel`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `registerMethod`, and the fold seeds `methods` from `base.methods`.
 - `UPDATE: packages/sdk/src/index.ts` - export the new types.
 - `UPDATE: packages/sdk/test/plugins.test.ts` - cases for the registration.
 

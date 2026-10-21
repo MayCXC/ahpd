@@ -3,9 +3,9 @@ title: An ACP prompt reads a referenced file only within the limits, and a queue
 date: 2026-10-07
 refs:
   - git://222e393 - the commit this work sits on; none of it is committed yet, on `build/agents/b8555747`
-  - "[code://packages/sdk/src/attachments.ts#L65-L83](../../../../packages/sdk/src/attachments.ts#L65-L83) - `PartSource` and `Part`, the attachment a part came from, and the file text it read"
-  - "[code://packages/sdk/src/attachments.ts#L178-L187](../../../../packages/sdk/src/attachments.ts#L178-L187) - `sourceOf`, set on every part an attachment became"
-  - "[code://packages/sdk/src/attachments.ts#L154-L159](../../../../packages/sdk/src/attachments.ts#L154-L159) - the snapshot branch, which reads a file and keeps its own text"
+  - "[code://packages/sdk/src/resources/attachments.ts#L65-L83](../../../../packages/sdk/src/resources/attachments.ts#L65-L83) - `PartSource` and `Part`, the attachment a part came from, and the file text it read"
+  - "[code://packages/sdk/src/resources/attachments.ts#L178-L187](../../../../packages/sdk/src/resources/attachments.ts#L178-L187) - `sourceOf`, set on every part an attachment became"
+  - "[code://packages/sdk/src/resources/attachments.ts#L154-L159](../../../../packages/sdk/src/resources/attachments.ts#L154-L159) - the snapshot branch, which reads a file and keeps its own text"
   - "[code://packages/agent-acp/src/session/turn.ts#L241-L270](../../../../packages/agent-acp/src/session/turn.ts#L241-L270) - `blocksFor`, which maps the parts to ACP blocks"
   - "[code://packages/agent-acp/src/session/queue.ts#L176-L199](../../../../packages/agent-acp/src/session/queue.ts#L176-L199) - `startNext`, which hands a queued entry's attachments to `begin`"
   - "[code://packages/agent-acp/src/session/queue.ts#L226-L239](../../../../packages/agent-acp/src/session/queue.ts#L226-L239) - `queue`, which keeps them on the entry's message"
@@ -17,9 +17,9 @@ An ACP turn sends what a message's attachments became, within host 68's limits, 
 
 ## What was built
 
-- [`code://packages/sdk/src/attachments.ts#L65-L83`](../../../../packages/sdk/src/attachments.ts#L65-L83) - `PartSource`, and the optional `source` on each `Part`. It holds the label of the attachment the part came from, and its URI where it has one. Where the helper read a file it also holds that file's own text. A backend that ignores the field is unchanged.
-- [`code://packages/sdk/src/attachments.ts#L178-L187`](../../../../packages/sdk/src/attachments.ts#L178-L187) - `sourceOf`, which sets the label and URI on every part an attachment became. The file's text is not set here, because it is not the attachment's: the branch that read the file adds it.
-- [`code://packages/sdk/src/attachments.ts#L154-L159`](../../../../packages/sdk/src/attachments.ts#L154-L159) - the branch that inlines a snapshot. It reads the file within the text limit. The bytes' own text goes on the source, beside the fenced copy the part itself carries.
+- [`code://packages/sdk/src/resources/attachments.ts#L65-L83`](../../../../packages/sdk/src/resources/attachments.ts#L65-L83) - `PartSource`, and the optional `source` on each `Part`. It holds the label of the attachment the part came from, and its URI where it has one. Where the helper read a file it also holds that file's own text. A backend that ignores the field is unchanged.
+- [`code://packages/sdk/src/resources/attachments.ts#L178-L187`](../../../../packages/sdk/src/resources/attachments.ts#L178-L187) - `sourceOf`, which sets the label and URI on every part an attachment became. The file's text is not set here, because it is not the attachment's: the branch that read the file adds it.
+- [`code://packages/sdk/src/resources/attachments.ts#L154-L159`](../../../../packages/sdk/src/resources/attachments.ts#L154-L159) - the branch that inlines a snapshot. It reads the file within the text limit. The bytes' own text goes on the source, beside the fenced copy the part itself carries.
 - [`code://packages/agent-acp/src/session/turn.ts#L241-L270`](../../../../packages/agent-acp/src/session/turn.ts#L241-L270) - `blocksFor`. It asks `partsOf` for the parts and sends one block for each. An image part is an image block named by the attachment. A text part is a text block. A part carrying a file's own text is an embedded `resource` of that text where the server advertised `embeddedContext`. `contentOf` and the three helpers around it are gone, so nothing here reads a file.
 - [`code://packages/agent-acp/src/session/queue.ts#L226-L239`](../../../../packages/agent-acp/src/session/queue.ts#L226-L239) - the queue entry's `message` carries `attachments`, so the `chat/pendingMessageSet` echo and the chat state report the message as it was queued.
 - [`code://packages/agent-acp/src/session/queue.ts#L176-L199`](../../../../packages/agent-acp/src/session/queue.ts#L176-L199) - `startNext` passes the entry's attachments to `begin`, so the turn a queued message becomes carries them.

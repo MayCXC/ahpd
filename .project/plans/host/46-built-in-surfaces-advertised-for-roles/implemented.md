@@ -3,7 +3,7 @@ title: The host's own surfaces are advertised with their operations, and a role 
 date: 2026-10-04
 refs:
   - git://6795e9b
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts)"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts)"
   - "[code://packages/sdk/src/host/gate.ts](../../../../packages/sdk/src/host/gate.ts)"
   - "[code://packages/sdk/src/host/root.ts](../../../../packages/sdk/src/host/root.ts)"
 ---
@@ -13,10 +13,10 @@ Every gated method and client-dispatchable action asks for one operation, and th
 
 ## What was built
 
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `OPERATIONS`, the one table of subjects, operations and groups; `holds` answers an operation held exactly, through its group, through `*:*`, `*:<group>` or `<subject>:*`, and for `chat` through the same `session` group.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `OPERATIONS`, the one table of subjects, operations and groups; `holds` answers an operation held exactly, through its group, through `*:*`, `*:<group>` or `<subject>:*`, and for `chat` through the same `session` group.
 - [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts) - `NEEDS` in operations and `ACTION_NEEDS` with all 47 client-dispatchable actions; an action with no row is refused as not served.
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - `advertisedGrants()`, on every root state and on `initialize` through [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts).
-- [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts) - the `role:` scheme writes `<subject>:<operation>` and names the subject's operations in a refusal.
+- [`code://packages/sdk/src/access/people.ts`](../../../../packages/sdk/src/access/people.ts) - the `role:` scheme writes `<subject>:<operation>` and names the subject's operations in a refusal.
 - `docs/sdk/USERS.md` lists every subject with its operations and its read and write groups.
 
 ## Verified

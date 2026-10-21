@@ -12,8 +12,8 @@ requires:
 refs:
   - "[code://packages/sdk/src/host/handshake.ts#L231](../../../../packages/sdk/src/host/handshake.ts#L231) - the automation capabilities ahpd advertises"
   - "[code://packages/sdk/src/host/actions.ts#L403-L423](../../../../packages/sdk/src/host/actions.ts#L403-L423) - `automation/createRequested` and `updateRequested`, handed to the store as sent"
-  - "[code://packages/sdk/src/automations.ts#L95-L125](../../../../packages/sdk/src/automations.ts#L95-L125) - the store keeps a definition as sent, `session.customizations` included"
-  - "[code://packages/sdk/src/automations.ts#L139-L178](../../../../packages/sdk/src/automations.ts#L139-L178) - a run reads the template's provider, folders, config and model, and nothing else"
+  - "[code://packages/sdk/src/automations/automations.ts#L95-L125](../../../../packages/sdk/src/automations/automations.ts#L95-L125) - the store keeps a definition as sent, `session.customizations` included"
+  - "[code://packages/sdk/src/automations/automations.ts#L139-L178](../../../../packages/sdk/src/automations/automations.ts#L139-L178) - a run reads the template's provider, folders, config and model, and nothing else"
   - "[code://packages/sdk/src/host/actions.ts#L454-L509](../../../../packages/sdk/src/host/actions.ts#L454-L509) - `session/activeClientSet` keeps a client's `tools` and passes its `customizations` on unread"
   - "[code://packages/sdk/src/host/relay.ts#L72-L93](../../../../packages/sdk/src/host/relay.ts#L72-L93) - `clients`, the server-to-client `resource*` requests a capture would read with"
   - "[code://.project/plans/acp/11-the-agent-gets-mcp-servers/deferred.md](../../../../.project/plans/acp/11-the-agent-gets-mcp-servers/deferred.md) - \"this host has no client plugin customizations\""
@@ -37,7 +37,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "customizations" packages/sdk/src/automations.ts packages/sdk/src/host.ts` - an automation's `session.customizations` is stored and never read; an active client's `customizations` are dispatched and never read.
+- `rg -n "customizations" packages/sdk/src/automations/automations.ts packages/sdk/src/host.ts` - an automation's `session.customizations` is stored and never read; an active client's `customizations` are dispatched and never read.
 - `rg -n -i "client plugin" .project` - acp/11's deferred list: "this host has no client plugin customizations".
 - `rg -n "customizations" src/vs/platform/agentHost/node/agentHostAutomation*.ts` in the VS Code clone - capture on create and update, garbage collection of unused copies, and the copies handed to a run as an active client.
 
@@ -60,7 +60,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - a template naming plugins and no client plugins directory -> `no(...)`. With a directory -> capture through `clients.read`/`list` into `<dir>/automations/` -> `AutomationEntry.customizations` -> a run session carrying them.
 - **Layer responsibilities** - sdk host: the refusal and the capture · sdk automations: the copies on the entry and the run · sdk clientplugins: where the copies live.
-- **Source-of-truth files** - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts), [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts), [`code://packages/sdk/src/host/relay.ts`](../../../../packages/sdk/src/host/relay.ts), [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts), [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts), [`code://packages/sdk/src/host/relay.ts`](../../../../packages/sdk/src/host/relay.ts), [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts)
 
 ## Tasks
 
@@ -79,7 +79,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Done so far:** task 01 and task 02, both implemented 2026-10-09. A template naming plugins is refused on a host with no client plugins directory. On one that has it each plugin is copied into `<dir>/automations/<sha256 of uri and nonce>` before the store. A run puts an `Automation` active client on the session it starts, so the copies load with nobody connected. The advertised capabilities carry `customizations` only beside that directory.
 - **Next action:** none; see [implemented.md](implemented.md).
 - **Open questions:** none. Softov answered the two that were here on 2026-10-09. The copies live under the client plugins directory in `automations/`, and a run gets them as an `Automation` active client of its own session.
-- **Watch out for:** host/44 p2 task 01 landed first, so `disableConditionsProblem` and task 01's refusal sit together before the store, in that order. [`code://packages/sdk/src/clientplugins.ts`](../../../../packages/sdk/src/clientplugins.ts) now holds two kinds of copy. The session's are in the LRU order and evicted. An automation's are outside it, and one goes when the automation does and no run holds it. A run holds its copies for as long as the process, so a removed automation's copy waits for the host to exit.
+- **Watch out for:** host/44 p2 task 01 landed first, so `disableConditionsProblem` and task 01's refusal sit together before the store, in that order. [`code://packages/sdk/src/plugins/clientplugins.ts`](../../../../packages/sdk/src/plugins/clientplugins.ts) now holds two kinds of copy. The session's are in the LRU order and evicted. An automation's are outside it, and one goes when the automation does and no run holds it. A run holds its copies for as long as the process, so a removed automation's copy waits for the host to exit.
 
 ## Final verification checklist
 

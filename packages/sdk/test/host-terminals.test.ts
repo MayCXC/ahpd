@@ -6,8 +6,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Agent, McpServer, Start } from '../src/types/agent.js';
 import type { OpenedTerminal } from '../src/types/terminals.js';
-import { uriOf } from '../src/resources.js';
-import { localPath } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/resources.js';
+import { localPath } from '../src/resources/fileuri.js';
 import {
   resetSdk, actions, claude, createHost, emit, hello, machine,
   peer, sdk, settle,

@@ -13,7 +13,7 @@ The host archives an inactive session whose pull requests are merged, and later 
 ## What was built
 
 - [`code://packages/sdk/src/host/merged.ts`](../../../../packages/sdk/src/host/merged.ts) - the pass runs at start, every hour, and when a push carries `autoArchiveMergedSessionsAfterDays` or `autoDeleteArchivedMergedSessionsAfterDays`.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - both stores keep `autoArchivedAt`, and an unarchive clears it.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - both stores keep `autoArchivedAt`, and an unarchive clears it.
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - `shelve` keeps the tree of a session that the host archived unless the tree is clean and its branch is pushed.
 - [`code://packages/sdk/src/repo/worktrees.ts`](../../../../packages/sdk/src/repo/worktrees.ts) - `pushed` compares the branch with its upstream.
 - [`code://packages/sdk/src/repo/github.ts`](../../../../packages/sdk/src/repo/github.ts) - `byUrl` reads one pull request by its URL, through the API or `gh`.

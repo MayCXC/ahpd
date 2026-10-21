@@ -3,7 +3,7 @@ title: Usage is read through commands - implemented
 date: 2026-10-11
 refs:
   - git://2e1803f - the build; the review fixes in 02a6f20 changed no usage code
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts) - the answers, and `usageMethods`"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts) - the answers, and `usageMethods`"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts) - where the daemon serves the usage commands"
 ---
 
@@ -12,9 +12,9 @@ Each command answers what the matching `usage:` read answers, for the same reade
 
 ## What was built
 
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `usageProvider` returns `answers`: `periods`, `range`, `records`, `groups`, `pools` and `readable`. `body` and `groupsBody` give the same answers as JSON text.
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `bounds` and `keysFrom` hold the refusal sentences that `rangeOf` and `keysAsked` had.
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `usageMethods(provider)`, the commands `pools`, `totals`, `range`, `records` and `groups`.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `usageProvider` returns `answers`: `periods`, `range`, `records`, `groups`, `pools` and `readable`. `body` and `groupsBody` give the same answers as JSON text.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `bounds` and `keysFrom` hold the refusal sentences that `rangeOf` and `keysAsked` had.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `usageMethods(provider)`, the commands `pools`, `totals`, `range`, `records` and `groups`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the daemon adds the five commands to `base.methods` by `ahpd`.
 - `docs/sdk/USAGE.md` has a section "Reading usage by command".
 

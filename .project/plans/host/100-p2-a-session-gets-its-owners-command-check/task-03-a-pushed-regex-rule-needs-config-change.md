@@ -5,8 +5,8 @@ depends: [task-01-the-check-reads-the-owners-connection.md]
 layer: sdk
 refs:
   - "[code://packages/sdk/src/host/gate.ts#L291-L299](../../../../packages/sdk/src/host/gate.ts#L291-L299) - `dispatchNeeds`, the grant a root push needs"
-  - "[code://packages/sdk/src/commandautoapprover.ts#L450-L474](../../../../packages/sdk/src/commandautoapprover.ts#L450-L474) - `ruleRegexOf`, how a `/.../` key is read"
-  - "[code://packages/sdk/src/commandautoapprover.ts#L817-L942](../../../../packages/sdk/src/commandautoapprover.ts#L817-L942) - `DEFAULT_TERMINAL_AUTO_APPROVE_RULES`, VS Code's default keys"
+  - "[code://packages/sdk/src/access/commandautoapprover.ts#L450-L474](../../../../packages/sdk/src/access/commandautoapprover.ts#L450-L474) - `ruleRegexOf`, how a `/.../` key is read"
+  - "[code://packages/sdk/src/access/commandautoapprover.ts#L817-L942](../../../../packages/sdk/src/access/commandautoapprover.ts#L817-L942) - `DEFAULT_TERMINAL_AUTO_APPROVE_RULES`, VS Code's default keys"
   - "[code://packages/sdk/test/users-gate-dispatch.test.ts](../../../../packages/sdk/test/users-gate-dispatch.test.ts) - the tests of `dispatchNeeds`"
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/platform/agentHost/common/agentHostSchema.ts#L707-L727 - VS Code pushes the effective rules, with its default keys
 ---
@@ -21,7 +21,7 @@ VS Code pushes its default keys on every connect, so a push of only those keys a
 ## Files
 
 - `UPDATE: packages/sdk/src/host/gate.ts:291-299` - `dispatchNeeds` returns `config:change` for a pushed `/.../` key that is not a default key.
-- `UPDATE: packages/sdk/src/commandautoapprover.ts:450-474` - export the test that says a key is written `/.../`, so the gate and `ruleRegexOf` read a key the same way.
+- `UPDATE: packages/sdk/src/access/commandautoapprover.ts:450-474` - export the test that says a key is written `/.../`, so the gate and `ruleRegexOf` read a key the same way.
 - `UPDATE: packages/sdk/test/users-gate-dispatch.test.ts` - the cases of this task.
 - `UPDATE: docs/server/CONFIGURE.md` - the Terminal rules section says which pushed keys need `config:change`.
 - `UPDATE: docs/sdk/AHP.md` - the `root/configChanged` row says the same.

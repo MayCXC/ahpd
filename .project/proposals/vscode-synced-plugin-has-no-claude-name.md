@@ -48,7 +48,7 @@ It is also the safer of the two: a bundle that carries its own Claude manifest k
 
 The daemon in `softov/ahpd` met the same two causes from the other side, with the same symptom: a copy filed under its nonce, announced as `VS Code Synced Data`, and every skill of it offered as `1683262406:advisor`.
 It fixed it on 2026-10-16 by the first route.
-Its copy step, which is the sibling of `agentPluginManager`'s, gives a copy that brought `.plugin/plugin.json` and no `.claude-plugin/plugin.json` the second manifest, named by the Open Plugins name in kebab case with the description carried over, and leaves a copy that brought a Claude manifest of its own exactly as it is (`packages/sdk/src/clientplugins.ts`, `claudeManifestIn`).
+Its copy step, which is the sibling of `agentPluginManager`'s, gives a copy that brought `.plugin/plugin.json` and no `.claude-plugin/plugin.json` the second manifest, named by the Open Plugins name in kebab case with the description carried over, and leaves a copy that brought a Claude manifest of its own exactly as it is (`packages/sdk/src/plugins/clientplugins.ts`, `claudeManifestIn`).
 The other half is on the listing side: a backend drops a skill of a plugin the host handed over, because the host's own entry for the copy already lists that file, which is what made the second row (`packages/agent-claude/src/session/customizations.ts`, `handedOf`).
 
 The first half is the one this proposal asks for, and it is the one that has to be in the bundle: only whatever writes the bundle can put a name inside it.

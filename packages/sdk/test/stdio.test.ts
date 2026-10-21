@@ -6,7 +6,7 @@ import { afterEach, beforeEach, expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { overStdio } from '../src/listen.js';
-import { fileResources } from '../src/resources.js';
+import { fileResources } from '../src/resources/resources.js';
 import type { Grant, Users } from '../src/types/users.js';
 
 /*

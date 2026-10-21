@@ -5,9 +5,9 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/automations.ts#L319-L324](../../../../packages/sdk/src/host/automations.ts#L319-L324) - `fetchAutomationRuns`"
-  - "[code://packages/sdk/src/automations.ts#L25](../../../../packages/sdk/src/automations.ts#L25) - `PAGE = 20`"
-  - "[code://packages/sdk/src/automations.ts#L62-L90](../../../../packages/sdk/src/automations.ts#L62-L90) - `shown()` and `entry()`, which carry the runs in view"
-  - "[code://packages/sdk/src/automations.ts#L294-L303](../../../../packages/sdk/src/automations.ts#L294-L303) - `runs()`, which advances how many are shown"
+  - "[code://packages/sdk/src/automations/automations.ts#L25](../../../../packages/sdk/src/automations/automations.ts#L25) - `PAGE = 20`"
+  - "[code://packages/sdk/src/automations/automations.ts#L62-L90](../../../../packages/sdk/src/automations/automations.ts#L62-L90) - `shown()` and `entry()`, which carry the runs in view"
+  - "[code://packages/sdk/src/automations/automations.ts#L294-L303](../../../../packages/sdk/src/automations/automations.ts#L294-L303) - `runs()`, which advances how many are shown"
   - "[code://packages/sdk/src/types/automations.ts#L221](../../../../packages/sdk/src/types/automations.ts#L221) - the port's `runs` signature"
   - "[code://packages/sdk/test/automations.test.ts](../../../../packages/sdk/test/automations.test.ts) - the paging tests, which read the entry"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - `FetchAutomationRunsParams.cursor` is the entry's `runsNextCursor`, `FetchAutomationRunsResult {}` (`channels-automation/commands.ts:95-125`), `AutomationEntry.runs` and `runsNextCursor` (`channels-automation/state.ts:434-438`)"
@@ -20,7 +20,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/automations.ts` - the store keeps how many runs each automation shows (`PAGE` to start); `entry()` slices that many and offers `runsNextCursor` when more exist; `runs(resource, cursor)` checks the cursor against the entry's own, advances the count, and announces the automation through `said()`.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - the store keeps how many runs each automation shows (`PAGE` to start); `entry()` slices that many and offers `runsNextCursor` when more exist; `runs(resource, cursor)` checks the cursor against the entry's own, advances the count, and announces the automation through `said()`.
 - `UPDATE: packages/sdk/src/types/automations.ts:221` - `runs` answers nothing the wire carries; its doc says the page arrives on `automation/set`.
 - `UPDATE: packages/sdk/src/host/automations.ts:319-324` - answers `{}`; a cursor the store does not recognise is `-32602`.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the paging tests read the entry.

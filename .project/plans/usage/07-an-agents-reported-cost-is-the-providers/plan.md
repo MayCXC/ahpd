@@ -11,7 +11,7 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/meter.ts#L97-L105](../../../../packages/sdk/src/meter.ts#L97-L105) - `costOf`, which reads a harness's `_meta.cost`"
+  - "[code://packages/sdk/src/usage/meter.ts#L97-L105](../../../../packages/sdk/src/usage/meter.ts#L97-L105) - `costOf`, which reads a harness's `_meta.cost`"
   - "[code://packages/agent-claude/src/session/parts.ts#L163-L190](../../../../packages/agent-claude/src/session/parts.ts#L163-L190) - Claude's cost, the change in `modelUsage` since the last `result`"
   - "[code://packages/agent-pi/src/mapping.ts#L205-L240](../../../../packages/agent-pi/src/mapping.ts#L205-L240) - pi's `addUsage`, which sums only `cost.total`"
   - "[code://packages/agent-claude/src/models.ts#L30-L39](../../../../packages/agent-claude/src/models.ts#L30-L39) - `ranOn`, which drops `<synthetic>` as a model name since 2026-10-04"
@@ -44,7 +44,7 @@ harness usage -> agent mapping (_meta.cost) -> meter costOf -> ModelUse { cost, 
 
 ### Gaps
 
-- `Not found: a split of a harness cost - searched "cost" in packages/sdk/src/meter.ts`.
+- `Not found: a split of a harness cost - searched "cost" in packages/sdk/src/usage/meter.ts`.
 
 ## Decisions locked in
 
@@ -65,7 +65,7 @@ harness usage -> agent mapping (_meta.cost) -> meter costOf -> ModelUse { cost, 
 
 - **Data flow** - The meter reads `_meta.cost` with its optional `input` and `output`, and writes it as `cost` and `providerCost`. pi sends the split.
 - **Layer responsibilities** - sdk: the meter · agent-claude: the cost of a `result` · agent-pi: the split.
-- **Source-of-truth files** - [`code://packages/sdk/src/meter.ts`](../../../../packages/sdk/src/meter.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/usage/meter.ts`](../../../../packages/sdk/src/usage/meter.ts).
 
 ## Tasks
 

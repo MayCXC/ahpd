@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { AutomationTriggerDefinition, ConfigPropertySchema } from '@microsoft/agent-host-protocol';
-import { memoryAutomations } from '../src/automations.js';
-import { presetById } from '../src/triggerpresets.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { presetById } from '../src/automations/triggerpresets.js';
 import type { Bag } from '../src/types/common.js';
 
 /*

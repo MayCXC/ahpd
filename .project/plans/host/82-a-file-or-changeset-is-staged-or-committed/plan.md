@@ -6,9 +6,9 @@ priority: medium
 created: 2026-10-11
 revalidated: 2026-10-11
 refs:
-  - "[code://packages/sdk/src/changes.ts#L227-L285](../../../../packages/sdk/src/changes.ts#L227-L285) - `COMMIT`, `commitConfirmation`, `DISCARD`, `STAGE` and `UNSTAGE`, each with its scopes"
-  - "[code://packages/sdk/src/changes.ts#L1328-L1432](../../../../packages/sdk/src/changes.ts#L1328-L1432) - `invoke` for commit, discard, stage and unstage"
-  - "[code://packages/sdk/src/changes.ts#L588-L680](../../../../packages/sdk/src/changes.ts#L588-L680) - `look()`, which reads `git status` and drops the path a rename came from"
+  - "[code://packages/sdk/src/sessions/changes.ts#L227-L285](../../../../packages/sdk/src/sessions/changes.ts#L227-L285) - `COMMIT`, `commitConfirmation`, `DISCARD`, `STAGE` and `UNSTAGE`, each with its scopes"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1328-L1432](../../../../packages/sdk/src/sessions/changes.ts#L1328-L1432) - `invoke` for commit, discard, stage and unstage"
+  - "[code://packages/sdk/src/sessions/changes.ts#L588-L680](../../../../packages/sdk/src/sessions/changes.ts#L588-L680) - `look()`, which reads `git status` and drops the path a rename came from"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L300-L315](../../../../packages/sdk/src/host/resourcemethods.ts#L300-L315) - no target is the changeset, and the host refuses a target kind the operation does not list"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the commit tests over a real repository"
   - "[code://docs/sdk/AHP.md#L697-L710](../../../../docs/sdk/AHP.md#L697-L710) - what the docs say each operation takes"
@@ -30,9 +30,9 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "scopes:" packages/sdk/src/changes.ts` - commit has `['changeset']`; discard, stage, unstage and revert have `['resource']`.
+- `rg -n "scopes:" packages/sdk/src/sessions/changes.ts` - commit has `['changeset']`; discard, stage, unstage and revert have `['resource']`.
 - `rg -n "target\?.kind \?\? 'changeset'" packages/sdk/src/host` - the host already passes a call with no target as the changeset.
-- `rg -n "/\[RC\]/" packages/sdk/src/changes.ts` - `look()` skips the record that names the old path of a rename.
+- `rg -n "/\[RC\]/" packages/sdk/src/sessions/changes.ts` - `look()` skips the record that names the old path of a rename.
 
 ### Gaps
 
@@ -56,7 +56,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - a rename's row gets `before.uri` from the old path; nothing else in a row changes.
 - **Event flow** - `invoke` reads `target`: none is the whole directory, a resource is one path.
-- **Layer responsibilities** - `packages/sdk/src/changes.ts` only; the host already routes both target kinds.
+- **Layer responsibilities** - `packages/sdk/src/sessions/changes.ts` only; the host already routes both target kinds.
 
 ## Tasks
 

@@ -17,11 +17,11 @@ import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { partsOf, SNAPSHOT_TAG } from '../src/attachments.js';
-import { uriOf } from '../src/fileuri.js';
+import { partsOf, SNAPSHOT_TAG } from '../src/resources/attachments.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import type { Bag } from '../src/types/common.js';
 import type { MessageAttachment } from '../src/types/session.js';
-import type { Part } from '../src/attachments.js';
+import type { Part } from '../src/resources/attachments.js';
 
 let made: string[] = [];
 afterEach(() => {

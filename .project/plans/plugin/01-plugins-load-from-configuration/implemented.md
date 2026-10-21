@@ -4,8 +4,8 @@ date: 2026-09-20
 refs:
   - git://3313390
   - code://packages/sdk/src/types/plugin.ts
-  - code://packages/sdk/src/plugins.ts
-  - code://packages/sdk/src/validate.ts
+  - code://packages/sdk/src/plugins/plugins.ts
+  - code://packages/sdk/src/plugins/validate.ts
   - code://packages/sdk/src/version.ts
   - code://packages/server/src/plugins.ts
   - code://packages/server/src/compat.ts
@@ -22,8 +22,8 @@ The contract is the option object the daemon already builds, named back, so a pl
 ## What was built
 
 - `code://packages/sdk/src/types/plugin.ts` - `PortKey`, `PortOf`, `PluginSpec`, `PluginContext`, `PluginHost`, `Plugin`, `PortContribution`, `Contribution` and `Loaded`, with no runtime import, so the whole plugin surface is one read.
-- `code://packages/sdk/src/plugins.ts` - `foldHostOptions(base, contributions)` returning `{ options, problems }`, `pluginHost(by, context)` returning `{ host, contribution }`, and the exported `AGENT_CLASH` marker a caller refuses over.
-- `code://packages/sdk/src/validate.ts` - `miss`, `checkAgent`, `checkTool` and `checkPort`, with `PORT_MEMBERS` and `PORT_METHOD` keyed by `PortKey` so a port added to the union without a checker fails the compiler.
+- `code://packages/sdk/src/plugins/plugins.ts` - `foldHostOptions(base, contributions)` returning `{ options, problems }`, `pluginHost(by, context)` returning `{ host, contribution }`, and the exported `AGENT_CLASH` marker a caller refuses over.
+- `code://packages/sdk/src/plugins/validate.ts` - `miss`, `checkAgent`, `checkTool` and `checkPort`, with `PORT_MEMBERS` and `PORT_METHOD` keyed by `PortKey` so a port added to the union without a checker fails the compiler.
 - `code://packages/sdk/src/version.ts` - `sdkVersion()`, read from the nearest `package.json` the way the daemon reads its own.
 - `code://packages/server/src/plugins.ts` - `resolvePlugin` and `entryOf`; `readManifest`, `checkManifest` and `checkShape`; `loadOne` and `loadPlugins`; and `describePlugin` and `pluginLine` for the listing.
 - `code://packages/server/src/compat.ts` - `satisfies(version, range)` over the update check's own version reader, supporting `*`, an exact version, `^`, `~`, `>=`, `<=`, `>`, `<`, `=` and a two-sided range, and refusing anything else by name.

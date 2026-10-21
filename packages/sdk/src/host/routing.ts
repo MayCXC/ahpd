@@ -1,5 +1,5 @@
 import { RpcError } from '../rpc.js';
-import { idOf, uriFor } from '../catalog.js';
+import { idOf, uriFor } from '../sessions/catalog.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 import {

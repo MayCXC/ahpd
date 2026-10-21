@@ -13,9 +13,9 @@ creates: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/users.ts#L84-L101](../../../../packages/sdk/src/types/users.ts#L84-L101) - `UserRecord.issuer`"
-  - "[code://packages/sdk/src/users.ts#L130-L146](../../../../packages/sdk/src/users.ts#L130-L146) - `FileUserOptions.issuer` as a name, and `issuerFor`"
-  - "[code://packages/sdk/src/users.ts#L256-L296](../../../../packages/sdk/src/users.ts#L256-L296) - `knownIssuers` and `advertised`"
-  - "[code://packages/sdk/src/issuers.ts#L146-L176](../../../../packages/sdk/src/issuers.ts#L146-L176) - `issuerKind` and `issuerFrom`"
+  - "[code://packages/sdk/src/access/users.ts#L130-L146](../../../../packages/sdk/src/access/users.ts#L130-L146) - `FileUserOptions.issuer` as a name, and `issuerFor`"
+  - "[code://packages/sdk/src/access/users.ts#L256-L296](../../../../packages/sdk/src/access/users.ts#L256-L296) - `knownIssuers` and `advertised`"
+  - "[code://packages/sdk/src/access/issuers.ts#L146-L176](../../../../packages/sdk/src/access/issuers.ts#L146-L176) - `issuerKind` and `issuerFrom`"
   - "[code://packages/server/src/main.ts#L620-L660](../../../../packages/server/src/main.ts#L620-L660) - the daemon, which passes the name and not the adapter"
   - "[code://test/users-issuer.test.ts](../../../../test/users-issuer.test.ts) - the per-record cases"
 ---

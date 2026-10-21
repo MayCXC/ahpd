@@ -5,8 +5,8 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { metaKeys } from '../../../tools/wire.mjs';
 import { posix } from '../../../tools/posix.ts';
-import { uriOf } from '../src/fileuri.js';
-import { gitChanges } from '../src/changes.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { gitChanges } from '../src/sessions/changes.js';
 import type { ChangeWords, ChangeWordsMode, ChangesetOperationContext } from '../src/types/changes.js';
 
 /*

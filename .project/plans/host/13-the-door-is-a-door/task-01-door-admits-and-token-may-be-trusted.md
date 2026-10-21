@@ -6,7 +6,7 @@ layer: packages/sdk, packages/server
 refs:
   - "[code://packages/sdk/src/listen.ts#L82-L124](../../../../packages/sdk/src/listen.ts#L82-L124) - `identityOf`"
   - "[code://packages/sdk/src/types/listen.ts#L74-L102](../../../../packages/sdk/src/types/listen.ts#L74-L102) - `Arrival` and `ListenOptions`"
-  - "[code://packages/sdk/src/users.ts#L130-L155](../../../../packages/sdk/src/users.ts#L130-L155) - `trustToken`, and `trusted` on the principal"
+  - "[code://packages/sdk/src/access/users.ts#L130-L155](../../../../packages/sdk/src/access/users.ts#L130-L155) - `trustToken`, and `trusted` on the principal"
   - "[code://packages/server/src/main.ts#L810-L830](../../../../packages/server/src/main.ts#L810-L830) - the daemon's `identify`"
   - "[code://test/listen-identity.test.ts](../../../../test/listen-identity.test.ts) - the door's cases"
 ---
@@ -20,7 +20,7 @@ A personal connection token no longer arrives as a person: `identify` says wheth
 - `UPDATE: packages/sdk/src/listen.ts` - `identityOf` returns an arrival with or without a principal, the deployment's token answers root when the caller opts in, and all three runtimes carry `principal` and `root`.
 - `UPDATE: packages/sdk/src/types/listen.ts` - `Arrival { principal? }`, `identify` answering it or `undefined`, and `ListenOptions.root`.
 - `UPDATE: packages/sdk/src/types/users.ts` - `Principal.trusted`, `UserRecord.trustToken`, and `Users.list` including `trusted`.
-- `UPDATE: packages/sdk/src/users.ts` - `trustToken` as the host default, `trusted` resolved as the record's field or the default, and grant validation beside it.
+- `UPDATE: packages/sdk/src/access/users.ts` - `trustToken` as the host default, `trusted` resolved as the record's field or the default, and grant validation beside it.
 - `UPDATE: packages/server/src/config.ts` - the `trustToken` key.
 - `UPDATE: packages/server/src/main.ts` - `--trust-token`, the file merging under `--trust-token`, `user list` printing `trusted` or `sign-in`, and an `identify` that hands the record over only when it is trusted.
 - `UPDATE: test/listen-identity.test.ts`, `test/users-gate.test.ts`, `test/users-host.test.ts`, `test/users-issuer.test.ts`, `test/users.test.ts`, `test/daemon.test.ts` - the arrival shape, the default refusal, the opt-out in both places, and root.

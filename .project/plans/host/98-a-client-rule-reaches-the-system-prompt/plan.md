@@ -12,9 +12,9 @@ refs:
   - "[code://packages/sdk/src/host/tooling.ts#L1720-L1724](../../../../packages/sdk/src/host/tooling.ts#L1720-L1724) - `instructions`, made from the host tools only"
   - "[code://packages/sdk/src/host/tooling.ts#L1736-L1740](../../../../packages/sdk/src/host/tooling.ts#L1736-L1740) - `turnInstructions`, the per-turn route"
   - "[code://packages/sdk/src/host/spawn.ts#L673](../../../../packages/sdk/src/host/spawn.ts#L673) - the session start hands `instructions` to the backend"
-  - "[code://packages/sdk/src/pluginparts.ts#L53-L55](../../../../packages/sdk/src/pluginparts.ts#L53-L55) - the rule suffixes `.mdc` and `.instructions.md`"
-  - "[code://packages/sdk/src/pluginparts.ts#L181-L185](../../../../packages/sdk/src/pluginparts.ts#L181-L185) - `rulesIn`, which finds the rule files"
-  - "[code://packages/sdk/src/pluginparts.ts#L328-L333](../../../../packages/sdk/src/pluginparts.ts#L328-L333) - `part`: a rule has no `description`, `alwaysApply` or `globs`"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L53-L55](../../../../packages/sdk/src/plugins/pluginparts.ts#L53-L55) - the rule suffixes `.mdc` and `.instructions.md`"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L181-L185](../../../../packages/sdk/src/plugins/pluginparts.ts#L181-L185) - `rulesIn`, which finds the rule files"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L328-L333](../../../../packages/sdk/src/plugins/pluginparts.ts#L328-L333) - `part`: a rule has no `description`, `alwaysApply` or `globs`"
   - "[code://packages/sdk/src/host/tooling.ts#L682-L734](../../../../packages/sdk/src/host/tooling.ts#L682-L734) - `partsWith`, `entryOf` and `clientPluginsOf`"
   - "[code://packages/sdk/src/host/tooling.ts#L1047-L1056](../../../../packages/sdk/src/host/tooling.ts#L1047-L1056) - `pluginsFor` and `pluginsMoved`"
   - "[code://packages/sdk/src/host/chatactions.ts#L526-L541](../../../../packages/sdk/src/host/chatactions.ts#L526-L541) - a moved plugin set restarts the chat between turns"
@@ -40,7 +40,7 @@ A client can then give standing instructions, such as how to format an answer fo
 ### Searches performed
 
 - `rg -n "instructions" packages/sdk/src/host packages/sdk/src/types` - `Start.instructions` comes from the host tools only.
-- `rg -n "RULE_SUFFIX|rulesIn|part\('rule'" packages/sdk/src/pluginparts.ts` - rules are listed by file name, with no frontmatter.
+- `rg -n "RULE_SUFFIX|rulesIn|part\('rule'" packages/sdk/src/plugins/pluginparts.ts` - rules are listed by file name, with no frontmatter.
 - `rg -n "instructions" packages/agent-*/src` - Claude, pi and cofold take it, and ACP puts it at the start of the first prompt.
 - `rg -n "CustomizationType.Rule|instructionDirectories" /github/externals/vscode/src/vs/platform/agentHost` - the VS Code route for a rule.
 

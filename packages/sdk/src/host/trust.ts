@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, parse, sep } from 'node:path';
-import { localPath, uriOf } from '../fileuri.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
 import type { Connection } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 

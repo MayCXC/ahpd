@@ -17,7 +17,7 @@ It finds the row with `agent.find(id, { workingDirectory })`, asking the recorde
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts` - an optional store method that lists every recorded session id with its folder.
-- `UPDATE: packages/sdk/src/sessions.ts` - the file store and its wrapper implement the new method.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the file store and its wrapper implement the new method.
 - `UPDATE: packages/sdk/src/host/catalogue.ts` - the lookup block in `listing`, after the nested block.
 - `UPDATE: packages/sdk/test` - the restart, refresh and worktree cases.
 

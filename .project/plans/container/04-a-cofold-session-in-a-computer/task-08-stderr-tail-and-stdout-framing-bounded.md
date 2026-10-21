@@ -4,8 +4,8 @@ status: done
 depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L155-L172](../../../../packages/sdk/src/nested.ts#L155-L172) - stdout reassembly and the stderr line split"
-  - "[code://packages/sdk/src/nested.ts#L37-L38](../../../../packages/sdk/src/nested.ts#L37-L38) - `TAIL`, twelve lines of any length"
+  - "[code://packages/sdk/src/sessions/nested.ts#L155-L172](../../../../packages/sdk/src/sessions/nested.ts#L155-L172) - stdout reassembly and the stderr line split"
+  - "[code://packages/sdk/src/sessions/nested.ts#L37-L38](../../../../packages/sdk/src/sessions/nested.ts#L37-L38) - `TAIL`, twelve lines of any length"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ A failure's sentence carries at most a bounded number of characters of the inner
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:155-172` - `out += chunk` and `indexOf` from the start on every chunk; stderr split per chunk with no carried remainder.
-- `UPDATE: packages/sdk/src/nested.ts:37-38` - `TAIL`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:155-172` - `out += chunk` and `indexOf` from the start on every chunk; stderr split per chunk with no carried remainder.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:37-38` - `TAIL`.
 
 ## Steps
 

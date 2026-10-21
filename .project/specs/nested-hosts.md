@@ -2,24 +2,24 @@
 title: Nested hosts
 status: current
 covers:
-  - packages/sdk/src/nested.ts
+  - packages/sdk/src/sessions/nested.ts
   - packages/sdk/src/host/spawn.ts
   - packages/sdk/src/types/agent.ts
   - packages/sdk/src/types/computers.ts
-  - packages/sdk/src/plugins.ts
+  - packages/sdk/src/plugins/plugins.ts
   - packages/computer/src/plugin.ts
   - packages/computer/src/parts.ts
 decisions:
   - decisions/a-nested-host-speaks-stdio.md
   - decisions/cofold-config-reaches-a-machine-by-a-path-variable.md
 refs:
-  - "[code://packages/sdk/src/nested.ts#L1-L35](../../packages/sdk/src/nested.ts#L1-L35) - the proxy session, and what a `Start` passes on"
-  - "[code://packages/sdk/src/nested.ts#L170-L204](../../packages/sdk/src/nested.ts#L170-L204) - `nestedAgent` and `startInside`"
-  - "[code://packages/sdk/src/nested.ts#L716-L730](../../packages/sdk/src/nested.ts#L716-L730) - `servedAs`, which ends a variant's session"
-  - "[code://packages/sdk/src/nested.ts#L803-L806](../../packages/sdk/src/nested.ts#L803-L806) - the protocol version check"
-  - "[code://packages/sdk/src/nested.ts#L1189-L1239](../../packages/sdk/src/nested.ts#L1189-L1239) - `deleteNested`, the copy inside removed"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1-L35](../../packages/sdk/src/sessions/nested.ts#L1-L35) - the proxy session, and what a `Start` passes on"
+  - "[code://packages/sdk/src/sessions/nested.ts#L170-L204](../../packages/sdk/src/sessions/nested.ts#L170-L204) - `nestedAgent` and `startInside`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L716-L730](../../packages/sdk/src/sessions/nested.ts#L716-L730) - `servedAs`, which ends a variant's session"
+  - "[code://packages/sdk/src/sessions/nested.ts#L803-L806](../../packages/sdk/src/sessions/nested.ts#L803-L806) - the protocol version check"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1189-L1239](../../packages/sdk/src/sessions/nested.ts#L1189-L1239) - `deleteNested`, the copy inside removed"
   - "[code://packages/sdk/src/host/spawn.ts#L516-L542](../../packages/sdk/src/host/spawn.ts#L516-L542) - when a session runs nested"
-  - "[code://packages/sdk/src/plugins.ts#L365-L368](../../packages/sdk/src/plugins.ts#L365-L368) - the plugin spec kept for each agent"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L365-L368](../../packages/sdk/src/plugins/plugins.ts#L365-L368) - the plugin spec kept for each agent"
   - "[code://packages/sdk/src/types/agent.ts#L547-L561](../../packages/sdk/src/types/agent.ts#L547-L561) - `runsNested`"
   - "[code://packages/sdk/src/types/computers.ts#L36-L51](../../packages/sdk/src/types/computers.ts#L36-L51) - `NestedStart`"
   - "[code://packages/computer/src/plugin.ts#L1492-L1520](../../packages/computer/src/plugin.ts#L1492-L1520) - `nestedHost`, the command that starts a host in a machine"
@@ -33,7 +33,7 @@ The proxy speaks AHP to the host inside with `AhpClient`.
 It sends back what that host says as the session's own actions.
 The host uses this route for a backend that cannot move its own process into a machine, such as cofold.
 It also uses it for every machine that is not on this host.
-The code is in [`code://packages/sdk/src/nested.ts`](../../packages/sdk/src/nested.ts), and the command that starts the host inside is in [`code://packages/computer/src/plugin.ts`](../../packages/computer/src/plugin.ts).
+The code is in [`code://packages/sdk/src/sessions/nested.ts`](../../packages/sdk/src/sessions/nested.ts), and the command that starts the host inside is in [`code://packages/computer/src/plugin.ts`](../../packages/computer/src/plugin.ts).
 
 ## Scenarios
 

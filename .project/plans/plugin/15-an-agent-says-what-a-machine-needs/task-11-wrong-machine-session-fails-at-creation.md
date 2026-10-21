@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/computers.ts#L103-L130](../../../../packages/sdk/src/computers.ts#L103-L130) - `computersFor`, whose `prepared` closure is the check, fired only when the backend enters the machine"
+  - "[code://packages/sdk/src/machines/computers.ts#L103-L130](../../../../packages/sdk/src/machines/computers.ts#L103-L130) - `computersFor`, whose `prepared` closure is the check, fired only when the backend enters the machine"
   - "[code://packages/sdk/src/host.ts#L8676-L8692](../../../../packages/sdk/src/host.ts#L8676-L8692) - `createSession`: the policy check, then `placedIn`"
   - "[code://packages/sdk/src/host.ts#L10436-L10460](../../../../packages/sdk/src/host.ts#L10436-L10460) - the config change before the first turn, where a refused value is undone and the action refused"
   - "[code://packages/sdk/src/host.ts#L10515-L10517](../../../../packages/sdk/src/host.ts#L10515-L10517) - where that change starts `restart`"
@@ -20,7 +20,7 @@ This applies [A session on a machine not prepared for its agent fails at creatio
 
 ## Files
 
-- `UPDATE: packages/sdk/src/computers.ts:103-130` - `prepared` is lifted out of `computersFor` into one exported reader, `machineRefusal(computers, id, provider)`, which answers the sentence or nothing; `computersFor` calls it.
+- `UPDATE: packages/sdk/src/machines/computers.ts:103-130` - `prepared` is lifted out of `computersFor` into one exported reader, `machineRefusal(computers, id, provider)`, which answers the sentence or nothing; `computersFor` calls it.
 - `UPDATE: packages/sdk/src/index.ts:40` - the export, beside `computersFor`.
 - `UPDATE: packages/sdk/src/host.ts:8676-8692` - `createSession` calls the reader for a `computer://<id>` setting before `placedIn`, and throws the sentence as an `RpcError`.
 - `UPDATE: packages/sdk/src/host.ts:10436-10460` - a change of `computer` to a `computer://<id>` calls the reader before `restart` is started; a refusal undoes the keys and refuses the action as the "fixed once the session has started" branch does, so the session keeps running where it was.

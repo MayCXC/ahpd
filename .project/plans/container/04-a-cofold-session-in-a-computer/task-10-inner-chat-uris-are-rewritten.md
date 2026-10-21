@@ -4,8 +4,8 @@ status: done
 depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L295-L332](../../../../packages/sdk/src/nested.ts#L295-L332) - `pump`, which emits inner actions unchanged"
-  - "[code://packages/sdk/src/nested.ts#L382-L389](../../../../packages/sdk/src/nested.ts#L382-L389) - the two subscriptions, default chat only"
+  - "[code://packages/sdk/src/sessions/nested.ts#L295-L332](../../../../packages/sdk/src/sessions/nested.ts#L295-L332) - `pump`, which emits inner actions unchanged"
+  - "[code://packages/sdk/src/sessions/nested.ts#L382-L389](../../../../packages/sdk/src/sessions/nested.ts#L382-L389) - the two subscriptions, default chat only"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ No action or snapshot the proxy emits names an inner chat URI.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:295-332` - `pump`.
-- `UPDATE: packages/sdk/src/nested.ts:426-427` - `sessionState`, whose `chats` and `defaultChat` still name inner URIs.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:295-332` - `pump`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:426-427` - `sessionState`, whose `chats` and `defaultChat` still name inner URIs.
 
 ## Steps
 

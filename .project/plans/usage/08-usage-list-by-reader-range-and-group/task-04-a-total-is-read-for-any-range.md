@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/usage.ts#L405-L445](../../../../packages/sdk/src/usage.ts#L405-L445) - `LEAVES` and the URI reader"
-  - "[code://packages/sdk/src/usage.ts#L285-L323](../../../../packages/sdk/src/usage.ts#L285-L323) - `total`, which takes any range"
+  - "[code://packages/sdk/src/usage/usage.ts#L405-L445](../../../../packages/sdk/src/usage/usage.ts#L405-L445) - `LEAVES` and the URI reader"
+  - "[code://packages/sdk/src/usage/usage.ts#L285-L323](../../../../packages/sdk/src/usage/usage.ts#L285-L323) - `total`, which takes any range"
 ---
 
 ## Objective
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/usage.ts` - add `range` to `LEAVES`, and answer it from `store.total`.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - add `range` to `LEAVES`, and answer it from `store.total`.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the range cases.
 - `UPDATE: docs/sdk/USAGE.md` - the `range` leaf.
 
@@ -33,7 +33,7 @@ refs:
 
 ## Resume
 
-- `packages/sdk/src/usage.ts`: `range` is in `LEAVES`, and answers `store.total` over the asked range.
+- `packages/sdk/src/usage/usage.ts`: `range` is in `LEAVES`, and answers `store.total` over the asked range.
 - `rangeOf` holds the `records` defaults, the first day of the month in the zone and now, and `records`, `range` and `groups` read their bounds through it.
 - A bound that is not a date is refused with `-32602`. The `records` leaf had no such error before, so this adds it to `records` as well.
 - `packages/sdk/test/usage-scheme.test.ts`: a test of a two-day range, of `records` and `range` agreeing, of the default range, and of the refusal on both leaves.

@@ -6,9 +6,9 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L81-L84](../../../../packages/sdk/src/types/usage.ts#L81-L84) - `ModelUse`, the record a turn writes"
   - "[code://packages/sdk/src/types/usage.ts#L104-L131](../../../../packages/sdk/src/types/usage.ts#L104-L131) - `UsageTotal`, which has `calls` and no `turns`"
-  - "[code://packages/sdk/src/usage.ts#L158-L199](../../../../packages/sdk/src/usage.ts#L158-L199) - `measured`, what one record adds to a total"
-  - "[code://packages/sdk/src/meter.ts#L218-L265](../../../../packages/sdk/src/meter.ts#L218-L265) - `write`, the one place a turn's record is made"
-  - "[code://packages/sdk/src/meter.ts#L267-L325](../../../../packages/sdk/src/meter.ts#L267-L325) - `per: 'turn'` writes once at the end, `per: 'report'` writes each report"
+  - "[code://packages/sdk/src/usage/usage.ts#L158-L199](../../../../packages/sdk/src/usage/usage.ts#L158-L199) - `measured`, what one record adds to a total"
+  - "[code://packages/sdk/src/usage/meter.ts#L218-L265](../../../../packages/sdk/src/usage/meter.ts#L218-L265) - `write`, the one place a turn's record is made"
+  - "[code://packages/sdk/src/usage/meter.ts#L267-L325](../../../../packages/sdk/src/usage/meter.ts#L267-L325) - `per: 'turn'` writes once at the end, `per: 'report'` writes each report"
 ---
 
 ## Objective
@@ -20,8 +20,8 @@ With `per: 'turn'` or `per: 'report'`, one turn is one in `turns`.
 
 - `UPDATE: packages/sdk/src/types/usage.ts:81-84` - `opens?: true` on `ModelUse`: the first record the meter writes for its turn.
 - `UPDATE: packages/sdk/src/types/usage.ts:104-131` - `turns?: number` in `UsageTotal`.
-- `UPDATE: packages/sdk/src/usage.ts:158-199` - `measured` adds 1 to `turns` for a record with `opens`, and `addTo`, `none` and `reported` carry the field.
-- `UPDATE: packages/sdk/src/meter.ts:218-325` - `write` sets `opens` on the first record of a turn.
+- `UPDATE: packages/sdk/src/usage/usage.ts:158-199` - `measured` adds 1 to `turns` for a record with `opens`, and `addTo`, `none` and `reported` carry the field.
+- `UPDATE: packages/sdk/src/usage/meter.ts:218-325` - `write` sets `opens` on the first record of a turn.
 - `UPDATE: packages/sdk/test/usage-meter.test.ts` - the turn count in both modes.
 - `UPDATE: packages/sdk/test/usage.test.ts` - `turns` in a total.
 

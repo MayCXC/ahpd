@@ -1,7 +1,7 @@
 import { IS_CLIENT_DISPATCHABLE } from '@microsoft/agent-host-protocol';
 import { expect, it } from 'vitest';
 import { GATE } from '../src/host.js';
-import { GROUPS, OPERATIONS, groupOf, holds } from '../src/users.js';
+import { GROUPS, OPERATIONS, groupOf, holds } from '../src/access/users.js';
 import { host, peer } from './users-gate-helpers.js';
 import type { Grant } from '../src/types/users.js';
 

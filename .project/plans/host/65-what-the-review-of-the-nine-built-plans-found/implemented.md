@@ -5,9 +5,9 @@ refs:
   - git://0cdbb95
   - "[code://packages/sdk/src/host/admission.ts](../../../../packages/sdk/src/host/admission.ts) - the fail-closed branch, p1"
   - "[code://packages/computer/src/gitdir.ts](../../../../packages/computer/src/gitdir.ts) - what a machine may write in a repository, p2"
-  - "[code://packages/sdk/src/fileuri.ts](../../../../packages/sdk/src/fileuri.ts) - every character of a path kept, p3"
+  - "[code://packages/sdk/src/resources/fileuri.ts](../../../../packages/sdk/src/resources/fileuri.ts) - every character of a path kept, p3"
   - "[code://packages/computer/src/parts.ts](../../../../packages/computer/src/parts.ts) - a part's tag says what is in it, p4"
-  - "[code://packages/sdk/src/nested.ts](../../../../packages/sdk/src/nested.ts) - one inner host at a time, p5"
+  - "[code://packages/sdk/src/sessions/nested.ts](../../../../packages/sdk/src/sessions/nested.ts) - one inner host at a time, p5"
   - "[code://packages/server/src/commands/options.ts](../../../../packages/server/src/commands/options.ts) - a verb's own flags, and a path that refuses without printing a value, p6"
 ---
 

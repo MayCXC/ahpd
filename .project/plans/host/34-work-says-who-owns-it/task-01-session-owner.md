@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L7853](../../../../packages/sdk/src/host.ts#L7853) - where `createSession` opens a session"
-  - "[code://packages/sdk/src/sessions.ts#L80-L91](../../../../packages/sdk/src/sessions.ts#L80-L91) - the persisted shape"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L80-L91](../../../../packages/sdk/src/sessions/sessions.ts#L80-L91) - the persisted shape"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ A session created by a signed-in person has `owner: 'user:<id>'`, kept by the se
 ## Files
 
 - `UPDATE: packages/sdk/src/host.ts:7853` - pass the connection's principal into `openSession`; store `owner` on the held session.
-- `UPDATE: packages/sdk/src/sessions.ts:80-91` - `owner?: string` in `Saved`, written and read like `flags`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:80-91` - `owner?: string` in `Saved`, written and read like `flags`.
 - `UPDATE: packages/sdk/src/types/sessions.ts` - the `SessionStore` record gains `owner`, typed `Owner` from `types/usage.ts`.
 - `UPDATE: packages/sdk/src/types/host.ts` - `hostName?: string` on `HostOptions`, the daemon's name in a root owner.
 - `UPDATE: packages/server/src/commands/run.ts` - passes `hostName: hostname()`.

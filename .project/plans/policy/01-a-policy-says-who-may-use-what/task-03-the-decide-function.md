@@ -4,10 +4,10 @@ status: done
 depends: [task-01-the-policy-row-and-the-policies-port.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/scopes.ts#L42-L64](../../../../packages/sdk/src/scopes.ts#L42-L64) - `membership` and `covers`, the grammar a policy scope is written in the same shape as"
+  - "[code://packages/sdk/src/usage/scopes.ts#L42-L64](../../../../packages/sdk/src/usage/scopes.ts#L42-L64) - `membership` and `covers`, the grammar a policy scope is written in the same shape as"
   - "[code://packages/sdk/src/types/users.ts#L40-L102](../../../../packages/sdk/src/types/users.ts#L40-L102) - `Principal`, whose `can` answers `*:*` and whose `memberships` say what work may be charged where"
-  - "[code://packages/sdk/src/scopes.ts#L13-L24](../../../../packages/sdk/src/scopes.ts#L13-L24) - `Scope` and `ScopeAnswer`, what a request's team and project are spelled as"
-  - "code://packages/sdk/src/policies.ts - the row, its windows and the `Policies` port `decide` reads, written by task 01"
+  - "[code://packages/sdk/src/usage/scopes.ts#L13-L24](../../../../packages/sdk/src/usage/scopes.ts#L13-L24) - `Scope` and `ScopeAnswer`, what a request's team and project are spelled as"
+  - "code://packages/sdk/src/access/policies.ts - the row, its windows and the `Policies` port `decide` reads, written by task 01"
   - "[code://packages/sdk/src/index.ts#L53-L67](../../../../packages/sdk/src/index.ts#L53-L67) - where `decide` is exported"
   - "[code://packages/sdk/test/scopes.test.ts](../../../../packages/sdk/test/scopes.test.ts) - the shape a test over this vocabulary is written in"
   - "file:///github/ahp-review/prospect/ahp-user-rules.md - steps 1 to 4 of \"Each check runs the same steps\", the row shape, the match grammar, and the examples the checklist names"
@@ -20,7 +20,7 @@ It is one function, so the `model` kind a proxy call is checked against is decid
 
 ## Files
 
-- `CREATE: packages/sdk/src/decide.ts` - `Asked` (the request: `model`, `proxy`, `agent`, `computer`), `Decision` (`allowed` with the `candidates` of that kind, or `allowed: false` with the `refusal` sentence and the same candidates), and `decide(store, principal, scope, kind, asked, at?)`.
+- `CREATE: packages/sdk/src/access/decide.ts` - `Asked` (the request: `model`, `proxy`, `agent`, `computer`), `Decision` (`allowed` with the `candidates` of that kind, or `allowed: false` with the `refusal` sentence and the same candidates), and `decide(store, principal, scope, kind, asked, at?)`.
 - `CREATE: packages/sdk/test/decide.test.ts` - the draft's setup as data, and the examples the plan's checklist names.
 - `UPDATE: packages/sdk/src/index.ts:53-67` - `decide` and the two types beside it.
 

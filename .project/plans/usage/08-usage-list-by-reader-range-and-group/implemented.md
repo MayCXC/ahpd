@@ -2,8 +2,8 @@
 title: A usage list shows the charged pools a reader may read, names them, and sums any range by user, team and project - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/scopes.ts](../../../../packages/sdk/src/scopes.ts)"
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts)"
+  - "[code://packages/sdk/src/usage/scopes.ts](../../../../packages/sdk/src/usage/scopes.ts)"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts)"
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts)"
   - "[code://packages/server/src/commands/run.ts](../../../../packages/server/src/commands/run.ts)"
 ---
@@ -12,8 +12,8 @@ A reader without `usage:read` now sees the pools that were charged and that they
 
 ## What was built
 
-- [`code://packages/sdk/src/scopes.ts`](../../../../packages/sdk/src/scopes.ts) - `mayRead` answers for one pool key: the reader's own `user:` pool, `team:<team>` for any membership in that team, and `project:<team>:<project>` for `team:*` or that project.
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - the list is the charged pools filtered by `mayRead`. A pool body carries `kind` and `name`. The `range` leaf takes `from` and `until`. `usage://groups?by=&from=&until=` returns `[{keys, names, total}]`, and the store's `groups` keeps a record when any of its pools is readable.
+- [`code://packages/sdk/src/usage/scopes.ts`](../../../../packages/sdk/src/usage/scopes.ts) - `mayRead` answers for one pool key: the reader's own `user:` pool, `team:<team>` for any membership in that team, and `project:<team>:<project>` for `team:*` or that project.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - the list is the charged pools filtered by `mayRead`. A pool body carries `kind` and `name`. The `range` leaf takes `from` and `until`. `usage://groups?by=&from=&until=` returns `[{keys, names, total}]`, and the store's `groups` keeps a record when any of its pools is readable.
 - [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts) - `UsageKey`, `UsageGroup`, and `groups` on the port.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - wires the team and project titles into the provider.
 - `docs/sdk/USAGE.md` and `docs/sdk/HOST.md` describe the list rule, the `range` leaf and `usage://groups`.

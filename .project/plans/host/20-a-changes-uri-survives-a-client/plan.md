@@ -12,13 +12,13 @@ creates: []
 decisions:
   - decisions/an-ahp-edit-uri-carries-its-session-as-base64url.md
 refs:
-  - "[code://packages/sdk/src/changes.ts#L85-L95](../../../../packages/sdk/src/changes.ts#L85-L95) - `BEFORE`, `beforeUri` and `CAPTURED`"
-  - "[code://packages/sdk/src/changes.ts#L242-L255](../../../../packages/sdk/src/changes.ts#L242-L255) - `kept` and `capturedUri`"
-  - "[code://packages/sdk/src/changes.ts#L310-L320](../../../../packages/sdk/src/changes.ts#L310-L320) - `rowsOf`, where captured sides are minted and kept"
-  - "[code://packages/sdk/src/changes.ts#L425](../../../../packages/sdk/src/changes.ts#L425) - a modified file's `before`, minted with `beforeUri`"
-  - "[code://packages/sdk/src/changes.ts#L733](../../../../packages/sdk/src/changes.ts#L733) - a captured side kept under its minted text"
-  - "[code://packages/sdk/src/changes.ts#L759-L779](../../../../packages/sdk/src/changes.ts#L759-L779) - `read`, which slices `ahp-git://` off and looks `ahp-edit:` up by exact text"
-  - "[code://packages/sdk/src/changes.ts#L70-L76](../../../../packages/sdk/src/changes.ts#L70-L76) - `pathIn`, which reads an operation's `file://` target without decoding it"
+  - "[code://packages/sdk/src/sessions/changes.ts#L85-L95](../../../../packages/sdk/src/sessions/changes.ts#L85-L95) - `BEFORE`, `beforeUri` and `CAPTURED`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L242-L255](../../../../packages/sdk/src/sessions/changes.ts#L242-L255) - `kept` and `capturedUri`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L310-L320](../../../../packages/sdk/src/sessions/changes.ts#L310-L320) - `rowsOf`, where captured sides are minted and kept"
+  - "[code://packages/sdk/src/sessions/changes.ts#L425](../../../../packages/sdk/src/sessions/changes.ts#L425) - a modified file's `before`, minted with `beforeUri`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L733](../../../../packages/sdk/src/sessions/changes.ts#L733) - a captured side kept under its minted text"
+  - "[code://packages/sdk/src/sessions/changes.ts#L759-L779](../../../../packages/sdk/src/sessions/changes.ts#L759-L779) - `read`, which slices `ahp-git://` off and looks `ahp-edit:` up by exact text"
+  - "[code://packages/sdk/src/sessions/changes.ts#L70-L76](../../../../packages/sdk/src/sessions/changes.ts#L70-L76) - `pathIn`, which reads an operation's `file://` target without decoding it"
   - "[code://packages/sdk/src/host.ts#L71-L73](../../../../packages/sdk/src/host.ts#L71-L73) - `ahp-root://` and `ahp-automations://`, other schemes ahpd mints"
   - git://6e4b2c4 - `gitChanges` and the `ahp-git:` URI
   - file:///github/externals/vscode - `src/vs/base/common/uri.ts` at the clone's HEAD, the `URI` class every VS Code request passes a URI through; the clone is sparse and has no working copy of it, so read it with `git -C /github/externals/vscode show HEAD:src/vs/base/common/uri.ts`, and its imports `charCode.ts`, `marshallingIds.ts`, `path.ts`, `platform.ts` and `process.ts` the same way
@@ -35,7 +35,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg "ahp-git|ahp-edit" packages` - both are minted and read only in `packages/sdk/src/changes.ts`, and no test sends either back.
+- `rg "ahp-git|ahp-edit" packages` - both are minted and read only in `packages/sdk/src/sessions/changes.ts`, and no test sends either back.
 - `rg "[a-z]+-[a-z]+://" packages/*/src` - `ahp-root://` and `ahp-automations://` in `host.ts` are the other minted schemes.
 - VS Code's `URI` class, compiled from the clone and run on the minted forms: `ahp-git:///github/ahpd/docs/AHP.md` comes back `ahp-git:/github/ahpd/docs/AHP.md`; `ahp-git:///github/ahpd/docs/a file #1.md` comes back `ahp-git:/github/ahpd/docs/a%20file%20#1.md`; `ahp-edit://cofold%3A%2FAbc-123/turn-1/before/...` comes back `ahp-edit://cofold:/abc-123/turn-1/before/...`; `ahp-git://head/github/ahpd/docs/AHP.md` comes back unchanged; `ahp-edit://turn/cofold%3A%2FAbc-123/t1/...` comes back `ahp-edit://turn/cofold%3A/Abc-123/t1/...`, because the path is decoded and re-encoded with `/` kept literal.
 

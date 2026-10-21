@@ -13,7 +13,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/host.ts#L271-L281](../../../../packages/sdk/src/host.ts#L271-L281) - `dispatchNeeds`, which gated the root as `file:write` by channel alone"
   - "[code://packages/sdk/src/host.ts#L6846](../../../../packages/sdk/src/host.ts#L6846) - the dispatch gate in `applyDispatch`"
-  - "[code://packages/sdk/src/users.ts#L22-L35](../../../../packages/sdk/src/users.ts#L22-L35) - the built-in roles and `SUBJECTS`"
+  - "[code://packages/sdk/src/access/users.ts#L22-L35](../../../../packages/sdk/src/access/users.ts#L22-L35) - the built-in roles and `SUBJECTS`"
   - "[code://test/users-gate.test.ts](../../../../test/users-gate.test.ts) - the gate's tests"
   - https://github.com/microsoft/vscode/blob/832cf23c588/src/vs/workbench/contrib/chat/browser/agentSessions/agentHost/agentHostRootConfigForwarder.ts - what VS Code pushes on connect
 ---

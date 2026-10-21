@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: packages/sdk, packages/server
 refs:
-  - "[code://packages/sdk/src/users.ts#L470-L505](../../../../packages/sdk/src/users.ts#L470-L505) - `add`, which sets or leaves the issuer"
+  - "[code://packages/sdk/src/access/users.ts#L470-L505](../../../../packages/sdk/src/access/users.ts#L470-L505) - `add`, which sets or leaves the issuer"
   - "[code://packages/sdk/src/types/users.ts#L190-L192](../../../../packages/sdk/src/types/users.ts#L190-L192) - the `Users.add` signature"
   - "[code://packages/server/src/main.ts#L475-L545](../../../../packages/server/src/main.ts#L475-L545) - the `user` verb's flags and its `add`"
   - "[code://test/users-issuer.test.ts](../../../../test/users-issuer.test.ts) - the case"
@@ -17,7 +17,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts` - `add(id, roles, options?)`.
-- `UPDATE: packages/sdk/src/users.ts` - `knows(name)`, and `add` setting the issuer on a new record and on one that already exists.
+- `UPDATE: packages/sdk/src/access/users.ts` - `knows(name)`, and `add` setting the issuer on a new record and on one that already exists.
 - `UPDATE: packages/server/src/main.ts` - `--issuer` in the `user` verb, passed to `add`, named in the confirmation and in the usage line.
 - `UPDATE: test/users-issuer.test.ts` - set, refuse, and leave alone.
 

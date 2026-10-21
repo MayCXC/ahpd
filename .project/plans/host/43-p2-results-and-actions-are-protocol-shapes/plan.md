@@ -13,8 +13,8 @@ refs:
   - "[code://packages/sdk/src/rpc.ts#L183](../../../../packages/sdk/src/rpc.ts#L183) - `resultFrame`, where a handler's `null` stays `null` and its nothing stays `{}`"
   - "[code://packages/sdk/src/host/handshake.ts#L286](../../../../packages/sdk/src/host/handshake.ts#L286) - `ping` answers `null`"
   - "[code://packages/sdk/src/host/automations.ts#L319-L324](../../../../packages/sdk/src/host/automations.ts#L319-L324) - `fetchAutomationRuns` answers `{}` and leaves the page to the store"
-  - "[code://packages/sdk/src/automations.ts#L67-L90](../../../../packages/sdk/src/automations.ts#L67-L90) - `entry()` carries the runs in view and the next cursor"
-  - "[code://packages/sdk/src/automations.ts#L294-L303](../../../../packages/sdk/src/automations.ts#L294-L303) - `runs()` advances how many are shown, and announces the automation"
+  - "[code://packages/sdk/src/automations/automations.ts#L67-L90](../../../../packages/sdk/src/automations/automations.ts#L67-L90) - `entry()` carries the runs in view and the next cursor"
+  - "[code://packages/sdk/src/automations/automations.ts#L294-L303](../../../../packages/sdk/src/automations/automations.ts#L294-L303) - `runs()` advances how many are shown, and announces the automation"
   - "[code://packages/sdk/src/types/automations.ts#L221](../../../../packages/sdk/src/types/automations.ts#L221) - the store's `runs` signature"
   - "[code://packages/agent-claude/src/session/asking.ts#L206](../../../../packages/agent-claude/src/session/asking.ts#L206) - `chat/inputRequested` with `type` and `request`"
   - "[code://examples/notes/agent.ts#L271](../../../../examples/notes/agent.ts#L271) - the same in the notes example"
@@ -66,7 +66,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - `fetchAutomationRuns` -> store advances the automation's loaded count -> `automation/set` with the longer `runs` -> every catalogue subscriber; the request answers `{}`.
 - **Layer responsibilities** - sdk: rpc, host, automations store · agent-claude, examples: the action · agent-acp, agent-cofold, examples: the session state · docs.
-- **Source-of-truth files** - [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts), [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts), [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts)
 
 ## Tasks
 

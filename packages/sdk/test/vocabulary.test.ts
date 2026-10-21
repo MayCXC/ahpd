@@ -1,7 +1,7 @@
 import * as protocol from '@microsoft/agent-host-protocol';
 import { describe, expect, it } from 'vitest';
-import { gitChanges } from '../src/changes.js';
-import { fileResources } from '../src/resources.js';
+import { gitChanges } from '../src/sessions/changes.js';
+import { fileResources } from '../src/resources/resources.js';
 import { fileURLToPath } from 'node:url';
 
 /**

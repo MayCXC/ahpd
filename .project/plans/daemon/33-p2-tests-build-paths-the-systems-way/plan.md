@@ -18,7 +18,7 @@ refs:
   - "[code://packages/agent-claude/test/agent-claude-tool-input.test.ts#L158](../../../../packages/agent-claude/test/agent-claude-tool-input.test.ts#L158) - `/tmp/project`"
   - "[code://packages/sdk/test/fileuri.test.ts#L42](../../../../packages/sdk/test/fileuri.test.ts#L42) - a path split on `/`"
   - "[code://packages/sdk/test/attachments.test.ts#L44](../../../../packages/sdk/test/attachments.test.ts#L44) - a label from a path split on `/`"
-  - "[code://packages/sdk/src/fileuri.ts](../../../../packages/sdk/src/fileuri.ts) - `localPath` and `uriOf`, the host's own conversion"
+  - "[code://packages/sdk/src/resources/fileuri.ts](../../../../packages/sdk/src/resources/fileuri.ts) - `localPath` and `uriOf`, the host's own conversion"
 ---
 
 ## Goal

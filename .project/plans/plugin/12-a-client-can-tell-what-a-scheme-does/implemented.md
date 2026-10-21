@@ -4,9 +4,9 @@ date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/resources.ts
   - code://packages/sdk/src/types/index.ts
-  - code://packages/sdk/src/validate.ts
+  - code://packages/sdk/src/plugins/validate.ts
   - code://packages/sdk/src/host.ts
-  - code://packages/sdk/src/resources.ts
+  - code://packages/sdk/src/resources/resources.ts
   - code://packages/computer/src/manifest.ts
   - code://packages/computer/src/provider.ts
   - code://test/plugin-host.test.ts
@@ -22,9 +22,9 @@ A host says which schemes it serves, what each can be asked to do and what a cre
 ## What was built
 
 - `code://packages/sdk/src/types/resources.ts` - `SchemeDescription { title, description?, manifest? }` and an optional `describe()` on `ResourceProvider`.
-- `code://packages/sdk/src/validate.ts` - `describe` allowed as an optional function on a provider registration.
+- `code://packages/sdk/src/plugins/validate.ts` - `describe` allowed as an optional function on a provider registration.
 - `code://packages/sdk/src/host.ts` - `advertisedSchemes()`, merged into `initialize._meta` and set as the root state's `_meta` under `ahpd.resourceProviders`; `root` and `operations` are derived from the provider's own methods, and the key is absent when no provider is registered.
-- `code://packages/sdk/src/resources.ts` - `notServedWords` and `notServed`, one sentence and one refusal shared with the file store.
+- `code://packages/sdk/src/resources/resources.ts` - `notServedWords` and `notServed`, one sentence and one refusal shared with the file store.
 - `code://packages/sdk/src/host.ts` - `storeFor` refuses a non-`file:` scheme no provider owns with `-32601`, before the file store is asked.
 - `code://packages/computer/src/manifest.ts` - `MANIFEST_SCHEMA`, the create body as a schema, one source with `manifestOf`.
 - `code://packages/computer/src/provider.ts` - `describe()` and a `capabilities.manifest` that is the same schema.

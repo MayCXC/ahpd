@@ -4,10 +4,10 @@ status: done
 depends: [task-01-a-target-stays-inside-the-folder.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L212-L238](../../../../packages/sdk/src/changes.ts#L212-L238) - `DISCARD`, `STAGE` and `UNSTAGE`"
-  - "[code://packages/sdk/src/changes.ts#L928-L936](../../../../packages/sdk/src/changes.ts#L928-L936) - what the uncommitted scope offers"
-  - "[code://packages/sdk/src/changes.ts#L79-L86](../../../../packages/sdk/src/changes.ts#L79-L86) - `indexHolds`, which handles a repository with no commit yet"
-  - "[code://packages/sdk/src/changes.ts#L1044-L1063](../../../../packages/sdk/src/changes.ts#L1044-L1063) - the `stage` and `unstage` branches of `invoke`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L212-L238](../../../../packages/sdk/src/sessions/changes.ts#L212-L238) - `DISCARD`, `STAGE` and `UNSTAGE`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L928-L936](../../../../packages/sdk/src/sessions/changes.ts#L928-L936) - what the uncommitted scope offers"
+  - "[code://packages/sdk/src/sessions/changes.ts#L79-L86](../../../../packages/sdk/src/sessions/changes.ts#L79-L86) - `indexHolds`, which handles a repository with no commit yet"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1044-L1063](../../../../packages/sdk/src/sessions/changes.ts#L1044-L1063) - the `stage` and `unstage` branches of `invoke`"
 ---
 
 ## Objective
@@ -16,7 +16,7 @@ The uncommitted changeset offers `stage` and `unstage` as resource-scoped operat
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - `STAGE` and `UNSTAGE`, offered beside `DISCARD` when the changeset is dirty, and their branch in `invoke`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `STAGE` and `UNSTAGE`, offered beside `DISCARD` when the changeset is dirty, and their branch in `invoke`.
 - `UPDATE: packages/sdk/test/commit.test.ts` - the cases below.
 - `UPDATE: packages/sdk/test/pullrequest.test.ts` - the operation list the pull request cases assert, which now holds the two new ids.
 

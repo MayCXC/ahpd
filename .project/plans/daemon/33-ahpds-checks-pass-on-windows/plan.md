@@ -14,7 +14,7 @@ refs:
   - "[code://.github/workflows/ci.yml#L45-L46](../../../../.github/workflows/ci.yml#L45-L46) - `timeout 300`, a POSIX command"
   - "[code://tools/test-tmpdir.ts#L15-L16](../../../../tools/test-tmpdir.ts#L15-L16) - the run's folder goes in `TMPDIR`, which Windows does not read"
   - "[code://packages/agent-claude/src/session/customizations.ts#L55-L56](../../../../packages/agent-claude/src/session/customizations.ts#L55-L56) - `HOME`, which Windows does not set"
-  - "[code://packages/sdk/src/terminals.ts#L19](../../../../packages/sdk/src/terminals.ts#L19) - a terminal runs `SHELL` or `/bin/sh`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L19](../../../../packages/sdk/src/machines/terminals.ts#L19) - a terminal runs `SHELL` or `/bin/sh`"
   - "[code://DEVELOPER.md#L78-L90](../../../../DEVELOPER.md#L78-L90) - the checks, and where they run"
 ---
 

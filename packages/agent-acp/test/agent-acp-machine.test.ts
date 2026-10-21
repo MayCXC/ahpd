@@ -7,7 +7,7 @@ import { afterEach, expect, it, vi } from 'vitest';
 import { machinePathOf } from '@ahpd/sdk';
 import type { Agent, Bag, MachineNeed, OpenedTerminal, OpenTerminal, PluginHost, Session, SpawnOptions, Vault } from '@ahpd/sdk';
 import { loadPlugins } from '../../server/src/plugins.js';
-import { fileResources } from '../../sdk/src/resources.js';
+import { fileResources } from '../../sdk/src/resources/resources.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { acpAgent } from '../src/agent.js';
 import { name, optionsOf } from '../src/plugin.js';

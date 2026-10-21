@@ -16,7 +16,7 @@ refs:
   - "[code://packages/server/src/commands/user.ts#L227](../../../../packages/server/src/commands/user.ts#L227) - the one read of `host` and `port`, `user token --url`"
   - "[code://packages/server/src/commands/vault.ts#L139-L141](../../../../packages/server/src/commands/vault.ts#L139-L141) - every vault verb takes `vaultAt`"
   - "[code://packages/server/src/commands/options.ts#L231-L247](../../../../packages/server/src/commands/options.ts#L231-L247) - `setAt`"
-  - "[code://packages/sdk/src/vault.ts#L62-L68](../../../../packages/sdk/src/vault.ts#L62-L68) - `secretRef`"
+  - "[code://packages/sdk/src/access/vault.ts#L62-L68](../../../../packages/sdk/src/access/vault.ts#L62-L68) - `secretRef`"
   - "[code://packages/sdk/src/host/actions.ts#L31-L40](../../../../packages/sdk/src/host/actions.ts#L31-L40) - `createActions` destructures `ctx`"
   - "[code://packages/server/test/server-commands.test.ts#L607-L633](../../../../packages/server/test/server-commands.test.ts#L607-L633) - the flag test, which pins `--host` and `--port` on four verbs"
 ---

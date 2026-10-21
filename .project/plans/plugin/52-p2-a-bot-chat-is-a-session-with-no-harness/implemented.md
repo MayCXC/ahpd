@@ -6,7 +6,7 @@ refs:
   - "[code://packages/bot/src/chat.ts](../../../../packages/bot/src/chat.ts) - the `bot-chat` agent and its logs"
   - "[code://packages/bot/src/provider.ts](../../../../packages/bot/src/provider.ts) - `chatOf`, the read that answers `chat`"
   - "[code://packages/webhook/src/plugin.ts](../../../../packages/webhook/src/plugin.ts) - the webhook's seam, which reads `chat`"
-  - "[code://packages/sdk/src/validate.ts](../../../../packages/sdk/src/validate.ts) - `OWNER`, which takes `plugin:`"
+  - "[code://packages/sdk/src/plugins/validate.ts](../../../../packages/sdk/src/plugins/validate.ts) - `OWNER`, which takes `plugin:`"
 ---
 
 A person talks to a bot in a chat of their own. A read of `bot:/<slug>` answers `chat`, the session URI of the reader's chat, and the first read starts it. The chat is a session of the `bot-chat` agent, which runs no model, so a turn ends with no response until p3.
@@ -27,7 +27,7 @@ A person talks to a bot in a chat of their own. A read of `bot:/<slug>` answers 
 
 ## Departures from the plan
 
-- Task 04 changes `packages/sdk/src/validate.ts`, which its Files list does not name. `OWNER` takes `plugin:`, because the webhook's chat is owned by `plugin:webhook`. A plugin can already start a session as `root:`, so this gives a plugin no new power.
+- Task 04 changes `packages/sdk/src/plugins/validate.ts`, which its Files list does not name. `OWNER` takes `plugin:`, because the webhook's chat is owned by `plugin:webhook`. A plugin can already start a session as `root:`, so this gives a plugin no new power.
 - The rebase kept the bot body fix of `f2fccac7`: the store keeps any body and drops `session`.
 
 ## Left for later

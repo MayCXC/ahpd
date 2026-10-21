@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/machine.ts#L18-L94](../../../../packages/sdk/src/types/machine.ts#L18-L94) - the kinds, the common fields and `ResolvedNeed`"
-  - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`"
+  - "[code://packages/sdk/src/machines/machine.ts#L62-L106](../../../../packages/sdk/src/machines/machine.ts#L62-L106) - `resolveNeeds`"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/machine.ts` - `StateNeed`, `when`, `ResolvedNeed.seed`.
-- `UPDATE: packages/sdk/src/machine.ts` - the mode argument, `~` expansion in seed sources.
+- `UPDATE: packages/sdk/src/machines/machine.ts` - the mode argument, `~` expansion in seed sources.
 - `UPDATE: packages/sdk/test/machine-needs.test.ts` - the cases below.
 
 ## Steps
@@ -32,7 +32,7 @@ refs:
 ## Resume
 
 - Built 2026-10-05 on cecc459.
-- `StateNeed`, `Seed`, `ResolvedSeed`, `StateMode`, `when` on every need, and `seed` and `provider` on `ResolvedNeed` are in `packages/sdk/src/types/machine.ts`; `resolveNeeds(needs, sources, home, mode = 'volume')` in `packages/sdk/src/machine.ts`.
+- `StateNeed`, `Seed`, `ResolvedSeed`, `StateMode`, `when` on every need, and `seed` and `provider` on `ResolvedNeed` are in `packages/sdk/src/types/machine.ts`; `resolveNeeds(needs, sources, home, mode = 'volume')` in `packages/sdk/src/machines/machine.ts`.
 - A state need belongs to `volume` alone, so mode `host` drops it, as the validation asks.
 - A profile's or an option's value names another state directory; the directory is an absolute path inside the machine and is never looked for on the host.
 - A seed source must be absolute once `~` is read, and a seed target stays inside the state directory.

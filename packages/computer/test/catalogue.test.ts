@@ -7,7 +7,7 @@ import { computerCatalogue } from '../src/catalogue.js';
 import { computerProvider } from '../src/provider.js';
 import { stateOf } from '../src/runtime.js';
 import { createHost } from '../../sdk/src/host.js';
-import { fileResources } from '../../sdk/src/resources.js';
+import { fileResources } from '../../sdk/src/resources/resources.js';
 import { loadPlugins } from '../../server/src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { closeAll, keeping } from './support/closing.js';
