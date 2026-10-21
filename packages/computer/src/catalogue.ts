@@ -1,5 +1,6 @@
-import { recordsChannel } from '@ahpd/sdk';
+import { isRecord, recordsChannel } from '@ahpd/sdk';
 import type { RecordsChannel } from '@ahpd/sdk';
+import { claimedOf } from './runtime.js';
 import type { ComputerRuntime } from './runtime.js';
 
 /**
@@ -8,7 +9,8 @@ import type { ComputerRuntime } from './runtime.js';
  * A subscribe answers `{ records }`, each entry `{ id, record }` where the
  * record is `{ state, status }`: `state` is what `computer://<id>/state` reads,
  * and `status` is what `computer://<id>/status` reads. `added`, `changed` and
- * `removed` follow it, as every records channel sends them.
+ * `removed` follow it, as every records channel sends them. A subscription to
+ * `x-ahpd-computers://?owner=me` is the caller's own machines.
  *
  * The runtime is the record of truth and has no event stream, so the channel
  * hears only what `refresh` is called for: the changes this plugin makes.
@@ -40,6 +42,14 @@ export const computerCatalogue = (
     },
   }, {
     grant: 'computer:read',
+    /*
+     * Whose a machine is, read off the record the channel already holds.
+     *
+     * The status is the machine's own `inspect`, which is where its owner label
+     * lives, so a subscription asking for `?owner=me` narrows to the caller's
+     * machines without asking the runtime a second time.
+     */
+    ownerOf: (_id, record) => (isRecord(record.status) ? claimedOf(record.status).owner : undefined),
     describe: () => ({ title: 'Computers', description: 'Every machine this host serves, with its state.' }),
     ...(onProblem === undefined ? {} : { onProblem }),
   });

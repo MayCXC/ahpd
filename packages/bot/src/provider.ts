@@ -1,7 +1,7 @@
 import { rmSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 import { RpcError } from '@ahpd/sdk';
-import { covers, ownerOfPrincipal } from '@ahpd/sdk';
+import { covers, ownerFilter, ownerOfPrincipal } from '@ahpd/sdk';
 import { CHAT_PROVIDER } from './chat.js';
 import { fromAgents, makeFolder, partsOf, writeAgentsFile } from './folder.js';
 import { named, rowId, userOf, whose } from './names.js';
@@ -167,6 +167,8 @@ interface At {
   slug: string;
   /** Whatever came after a further slash: the chat, or the chat's own name. */
   leaf: string;
+  /** The text after `?`, which only the root listing reads. */
+  query: string;
 }
 
 /**
@@ -174,14 +176,21 @@ interface At {
  *
  * A client pastes a URI it was handed and a person types one, and the two
  * spellings are one character apart for the same resource. Both are read the
- * same way rather than one of them being a mistake.
+ * same way rather than one of them being a mistake. The query is kept apart
+ * from the path, so `bot://?owner=me` is the root listing asked for the
+ * caller's own rather than a bot named `?owner=me`.
  */
 const split = (uri: string): At | undefined => {
   const match = /^([a-zA-Z][\w+.-]*):\/\/?(.*)$/.exec(uri);
   if (match === null || match[1] !== 'bot') return undefined;
   const rest = match[2] ?? '';
-  const slash = rest.indexOf('/');
-  return slash === -1 ? { slug: rest, leaf: '' } : { slug: rest.slice(0, slash), leaf: rest.slice(slash + 1) };
+  const mark = rest.indexOf('?');
+  const path = mark === -1 ? rest : rest.slice(0, mark);
+  const query = mark === -1 ? '' : rest.slice(mark + 1);
+  const slash = path.indexOf('/');
+  return slash === -1
+    ? { slug: path, leaf: '', query }
+    : { slug: path.slice(0, slash), leaf: path.slice(slash + 1), query };
 };
 
 const absent = (uri: string): RpcError => new RpcError(-32008, `No bot at ${uri}`);
@@ -566,6 +575,11 @@ export function botProvider(options: BotOptions): BotProvider {
      * list a person's back sessions is who may look into their chats: what a
      * person has running behind a bot is theirs, so a listing of the names is
      * not shown to whoever may read the bot.
+     *
+     * `?owner=me` narrows the root listing to the bots whose owner is the
+     * caller. It comes after who may list, so it only ever takes bots out of an
+     * answer the reader was already shown, and a team bot they may read is not
+     * theirs.
      */
     list: async (uri, reader) => {
       await store.ready();
@@ -576,7 +590,11 @@ export function botProvider(options: BotOptions): BotProvider {
         const shown = reader === undefined || reader.can('bot:list')
           ? every
           : every.filter((one) => mayRead(one, reader));
-        return shown.map((one) => ({ name: one.id, type: 'file' as const }));
+        const only = ownerFilter(held.query, reader);
+        const kept = only === undefined ? shown
+          : only === null ? []
+            : shown.filter((one) => one.owner === only);
+        return kept.map((one) => ({ name: one.id, type: 'file' as const }));
       }
       const bot = store.get(held.slug);
       if (bot === undefined) throw absent(uri);

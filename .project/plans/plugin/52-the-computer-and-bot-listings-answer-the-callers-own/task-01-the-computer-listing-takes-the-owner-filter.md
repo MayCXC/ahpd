@@ -1,6 +1,6 @@
 ---
 title: The computer listing and channel take the owner filter
-status: todo
+status: implemented
 depends: []
 layer: plugin
 refs:
@@ -36,7 +36,7 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `list` on `computer://` takes the reader and reads the URI's query with `ownerFilter`. With `?owner=me` it keeps the machines whose `runtime.owner(id)` is the caller. `splitResource` already keeps the query, so the provider's own `At` now carries it. The catalogue gives `ownerOf` to `recordsChannel`, read off the status the channel already holds with `claimedOf`. A subscription to `x-ahpd-computers://?owner=me` is the caller's machines in its snapshot and in every diff. `catalogue.test.ts` has the two-people provider case, with an ownerless machine in the plain listing and in no filtered one, and the filtered channel case.
+- **Next action:** the plan's gates and its index row.
 - **Open questions:** none.
-- **Watch out for:** `runtime.list()` may not carry the owner. Then read it from the kept record of each machine.
+- **Watch out for:** a write to `computer://<name>/state` carries no query. A machine made before owners were kept has no owner, so it is in no filtered listing. The channel's `ownerOf` reads the status record, so a runtime whose `inspect` holds no `Config.Labels` has no owner there either.

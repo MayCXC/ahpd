@@ -324,3 +324,12 @@ it('lists a saved bot whatever its body says, and gives one with no body the fir
   await provider.write('bot://flame', said({ name: 'flame', body: 'spark' }));
   expect((await record(provider, 'bot://flame'))['body']).toBe('spark');
 });
+
+it('answers a listing asked for me with no reader as empty', async () => {
+  const { provider } = await made();
+  await provider.write('bot://motion', said({ name: 'Motion' }));
+
+  // With no reader there is no one for `me` to name, so the filter keeps nothing.
+  expect((await provider.list('bot://')).map((one) => one.name)).toEqual(['motion']);
+  expect(await provider.list('bot://?owner=me')).toEqual([]);
+});
