@@ -87,7 +87,7 @@ ACP server in the machine -> terminal/create (machine cwd)
 
 - **Done so far:** tasks 01 and 02 implemented 2026-10-20, and their gates pass on Linux. A terminal in a placed session asks `computers.how` and opens the descriptor it answers on the host's shells. The spec and the computer docs say so.
 - **Next action:** review both tasks, then the Windows hand check with Docker Desktop.
-- **Open questions:** none.
+- **Open questions:** a records follow-up that Softov must review to define. See [acp-19-records-follow-up.md](../../../pending/acp-19-records-follow-up.md).
 - **Watch out for:** on Linux and macOS a host spawn at the machine's path succeeds, so only the `how` assertion shows the command was placed.
 
 ## Final verification checklist
