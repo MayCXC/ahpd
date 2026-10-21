@@ -133,6 +133,22 @@ const put = (held: unknown): void => { writeFileSync(configFile, `${JSON.stringi
 const read = (): Record<string, unknown> => JSON.parse(readFileSync(configFile, 'utf8')) as Record<string, unknown>;
 const tokenFile = (): string => join(configDir, 'connection-token');
 
+/** The `@ahpd/agent-acp` entry in the file, as an object, which every pi case writes. */
+const acpEntry = (): Record<string, unknown> => {
+  const entry = (read().plugins as unknown[]).find((one) => typeof one === 'object' && one !== null
+    && (one as Record<string, unknown>)['name'] === '@ahpd/agent-acp');
+  if (entry === undefined) throw new Error('the file has no @ahpd/agent-acp entry');
+  return entry as Record<string, unknown>;
+};
+
+/** The presets the `@ahpd/agent-acp` entry names, by id. */
+const presetsOf = (): Record<string, unknown> => {
+  const options = acpEntry()['options'];
+  if (typeof options !== 'object' || options === null) return {};
+  const presets = (options as Record<string, unknown>)['presets'];
+  return typeof presets === 'object' && presets !== null ? presets as Record<string, unknown> : {};
+};
+
 it('is a local command, and no served one', () => {
   const command = cliRegistry().find('daemon.configure');
   expect(command?.surfaces?.cli).toBe(true);
@@ -140,8 +156,8 @@ it('is a local command, and no served one', () => {
   expect(command?.meta?.http).toBeUndefined();
 });
 
-it('writes the defaults on Enter at every question, and installs Claude', async () => {
-  const { answered } = await asked('', '', '', '', '', '', '');
+it('writes the defaults on Enter at every question, and installs Claude and the web UI', async () => {
+  const { answered } = await asked('', '', '', '', '', '', '', '');
   expect(answered.backends).toEqual(['@ahpd/agent-claude']);
   expect(answered.paths).toEqual([process.cwd()]);
 
@@ -150,7 +166,7 @@ it('writes the defaults on Enter at every question, and installs Claude', async 
     port: 9187,
     connectionTokenFile: tokenFile(),
     paths: [process.cwd()],
-    plugins: ['@ahpd/agent-claude'],
+    plugins: ['@ahpd/agent-claude', '@ahpd/web'],
   });
   // A secret, so Enter wrote one into the file beside the configuration and it
   // is not the empty string.
@@ -158,11 +174,27 @@ it('writes the defaults on Enter at every question, and installs Claude', async 
   expect(calls).toHaveLength(1);
   expect(calls[0]?.program).toBe('npm');
   expect(calls[0]?.argv).toContain('@ahpd/agent-claude@0.8.0');
+  // The web UI is offered on a first run, and Enter takes it.
+  expect(calls[0]?.argv).toContain('@ahpd/web');
+});
+
+it('installs only Claude when the web UI is answered No on a first run', async () => {
+  const { said } = await asked('', '', '', 'n', '', '', '', '');
+  expect(said).toContain('Web UI? [Y/n]: ');
+  expect(read().plugins).toEqual(['@ahpd/agent-claude']);
+  expect(calls.some((one) => one.argv.includes('@ahpd/web'))).toBe(false);
+});
+
+it('switches a web UI the file names off when it is answered No', async () => {
+  put({ plugins: ['@ahpd/agent-claude', '@ahpd/web'] });
+  await asked('', '', '', 'n', '', '', '', '');
+  // A No is not a removal: the entry stays, saying it is off.
+  expect(read().plugins).toEqual(['@ahpd/agent-claude', { name: '@ahpd/web', enabled: false }]);
 });
 
 it('shows what it wrote as the default on a second run, and installs nothing again', async () => {
-  await asked('', '', '', '', '', '', '');
-  const again = await asked('', '', '', '', '', '', '');
+  await asked('', '', '', '', '', '', '', '');
+  const again = await asked('', '', '', '', '', '', '', '');
   expect(again.said).toContain('Claude? [Y/n]: ');
   // A backend the file already names is the answer Enter keeps.
   expect(again.said).toContain('cofold? [y/N]: ');
@@ -172,7 +204,7 @@ it('shows what it wrote as the default on a second run, and installs nothing aga
   // The token that is there is what Enter keeps, rather than a second one.
   expect(again.said).toContain(`Connection token [keep ${tokenFile()}]: `);
   expect(calls).toHaveLength(1);
-  expect(read().plugins).toEqual(['@ahpd/agent-claude']);
+  expect(read().plugins).toEqual(['@ahpd/agent-claude', '@ahpd/web']);
 });
 
 it('makes the configuration folder on a first run, rather than failing on the token file', async () => {
@@ -182,7 +214,7 @@ it('makes the configuration folder on a first run, rather than failing on the to
   // question.
   const fresh = join(root, 'never-made');
   const file = join(fresh, 'config.json');
-  const term = terminal('', '', '', '', '', '', '');
+  const term = terminal('', '', '', '', '', '', '', '');
   const answered = await configure({
     configDir: fresh, configFile: file, version: '0.8.0', term: term.term, run, fetch, path: bin, say: () => {},
   });
@@ -194,23 +226,23 @@ it('makes the configuration folder on a first run, rather than failing on the to
 });
 
 it('writes a typed token to the token file', async () => {
-  await asked('', '', '', '', '', 'shh', '');
+  await asked('', '', '', '', '', '', 'shh', '');
   expect(read().connectionTokenFile).toBe(tokenFile());
   expect(readFileSync(tokenFile(), 'utf8').trim()).toBe('shh');
 });
 
 it('generates a token on Enter, and keeps the one already there', async () => {
-  await asked('', '', '', '', '', '', '');
+  await asked('', '', '', '', '', '', '', '');
   const generated = readFileSync(tokenFile(), 'utf8').trim();
   expect(generated).not.toBe('');
-  await asked('', '', '', '', '', '', '');
+  await asked('', '', '', '', '', '', '', '');
   // And a third run changes neither the token nor the file.
   expect(readFileSync(tokenFile(), 'utf8').trim()).toBe(generated);
 });
 
 it('keeps a token written as a literal, moving it into the token file', async () => {
   put({ connectionToken: 'old-shh' });
-  const { said } = await asked('', '', '', '', '', '', '');
+  const { said } = await asked('', '', '', '', '', '', '', '');
   // A token clients are already presenting is one Enter keeps, not one it
   // replaces: a fresh one here locks every one of them out.
   expect(said).toContain(`Connection token [keep the token in ${configFile}]: `);
@@ -222,48 +254,49 @@ it('keeps a token written as a literal, moving it into the token file', async ()
 
 it('switches a backend the file names off when it is answered No, and on again when it is answered Yes', async () => {
   put({ plugins: ['@ahpd/agent-claude'] });
-  await asked('n', '', '', '', '', '', '');
+  await asked('n', '', '', '', '', '', '', '');
   // A No is not a removal: the entry stays, saying it is off, as
   // `ahpd plugin disable` writes it.
   expect(read().plugins).toEqual([{ name: '@ahpd/agent-claude', enabled: false }]);
 
   put({ plugins: [{ name: '@ahpd/agent-claude', options: { model: 'opus' } }] });
-  await asked('', '', '', '', '', '', '');
+  await asked('', '', '', '', '', '', '', '');
   expect(read().plugins).toEqual([{ name: '@ahpd/agent-claude', options: { model: 'opus' }, enabled: true }]);
 });
 
 it('leaves a folder answered No out of paths', async () => {
   put({ paths: ['/tmp/one', '/tmp/two'] });
-  const { answered } = await asked('', '', '', '', '', '', 'n', '');
+  const { answered } = await asked('', '', '', '', '', '', '', 'n', '');
   expect(answered.paths).toEqual(['/tmp/two']);
   expect(read().paths).toEqual(['/tmp/two']);
 });
 
 it('keeps a key it was not asked about', async () => {
   put({ users: '/tmp/people.json', advancedTools: true });
-  await asked('', '', '', '', '', '', '');
+  await asked('', '', '', '', '', '', '', '');
   expect(read().users).toBe('/tmp/people.json');
   expect(read().advancedTools).toBe(true);
 });
 
 it('refuses a port that is not one, before anything is written', async () => {
-  await expect(asked('', '', '', '', 'nine thousand', '', '')).rejects.toThrow(/^Port must be a number from 0 to 65535, not nine thousand\.$/u);
+  await expect(asked('', '', '', '', '', 'nine thousand', '', '')).rejects.toThrow(/^Port must be a number from 0 to 65535, not nine thousand\.$/u);
   expect(existsSync(configFile)).toBe(false);
 });
 
 it('refuses rather than serving nothing when every folder is answered No', async () => {
   put({ paths: ['/tmp/one'] });
-  await expect(asked('', '', '', '', '', '', 'n')).rejects.toThrow(/every folder/i);
+  await expect(asked('', '', '', '', '', '', '', 'n')).rejects.toThrow(/every folder/i);
 });
 
 describe('what is on PATH', () => {
   it('asks about a found agent, and a Yes writes it under the presets of @ahpd/agent-acp', async () => {
     stub('gemini', '0.9.0');
-    const { said } = await asked('', '', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini? [Y/n]: ');
     expect(read().plugins).toEqual([
       { name: '@ahpd/agent-acp', options: { presets: { gemini: {} } } },
       '@ahpd/agent-claude',
+      '@ahpd/web',
     ]);
     // The package that runs it is installed with the backend, after the write.
     expect(calls.some((one) => one.program === 'npm' && one.argv.includes('@ahpd/agent-acp'))).toBe(true);
@@ -271,8 +304,8 @@ describe('what is on PATH', () => {
 
   it('writes no agent-acp entry and installs nothing for it when the agent is answered No', async () => {
     stub('gemini', '0.9.0');
-    await asked('', '', '', 'n', '', '', '', '');
-    expect(read().plugins).toEqual(['@ahpd/agent-claude']);
+    await asked('', '', '', '', 'n', '', '', '', '');
+    expect(read().plugins).toEqual(['@ahpd/agent-claude', '@ahpd/web']);
     expect(calls.some((one) => one.argv.includes('@ahpd/agent-acp'))).toBe(false);
   });
 
@@ -284,7 +317,7 @@ describe('what is on PATH', () => {
       }],
     });
     stub('gemini', '0.9.0');
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Gemini 0.9.0 (configured, @ahpd/agent-acp)');
     expect(said).not.toContain('Gemini? [Y/n]: ');
     expect(read().plugins).toEqual([
@@ -293,8 +326,43 @@ describe('what is on PATH', () => {
     ]);
   });
 
+  it('asks nothing about the ACP pi preset when the native pi backend is on', async () => {
+    stub('pi-acp', '1.0.0');
+    const { said } = await asked('', '', 'y', '', '', '', '', '');
+    expect(said).toContain('pi-acp: not asked, the pi backend runs pi');
+    expect(said).not.toContain('Pi? [Y/n]: ');
+    // The one pi is the backend, and no preset was written beside it.
+    expect(read().plugins).toEqual(['@ahpd/agent-claude', '@ahpd/agent-pi', '@ahpd/web']);
+  });
+
+  it('offers to remove an ACP pi preset the file has when the native pi backend is on', async () => {
+    const both = {
+      plugins: ['@ahpd/agent-pi', { name: '@ahpd/agent-acp', options: { presets: { pi: {} }, hostTools: false } }],
+    };
+    put(both);
+    stub('pi-acp', '1.0.0');
+    const yes = await asked('', '', '', '', '', '', '', '', '');
+    expect(yes.said).toContain('Remove the ACP pi preset? It clashes with the pi backend. [Y/n]: ');
+    expect(presetsOf()).toEqual({});
+    // Dropping the preset keeps every other option the entry holds.
+    expect((acpEntry()['options'] as Record<string, unknown>)['hostTools']).toBe(false);
+
+    put(both);
+    const no = await asked('', '', '', '', 'n', '', '', '', '');
+    expect(no.said).toContain('Remove the ACP pi preset? It clashes with the pi backend. [Y/n]: ');
+    expect(presetsOf()).toEqual({ pi: {} });
+  });
+
+  it('asks about the ACP pi preset when the native pi backend is answered No', async () => {
+    stub('pi-acp', '1.0.0');
+    const { said } = await asked('', '', 'n', '', '', '', '', '', '');
+    expect(said).toContain('Pi? [Y/n]: ');
+    expect(said).not.toContain('pi-acp: not asked, the pi backend runs pi');
+    expect(presetsOf()).toEqual({ pi: {} });
+  });
+
   it('lists every agent it did not find with the line that installs it', async () => {
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Agents not found:');
     expect(said).toContain(`  Codex: ${installLine(row('codex'), process.platform)}`);
     expect(said).toContain(`  OpenCode: ${installLine(row('opencode'), process.platform)}`);
@@ -303,7 +371,7 @@ describe('what is on PATH', () => {
   });
 
   it('asks no agent question with an empty PATH, so the questions are the ones of today', async () => {
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     for (const agent of Object.values(knownAgents)) {
       expect(said, `${agent.name} was asked about`).not.toContain(`${agent.name}? [Y/n]: `);
     }
@@ -313,7 +381,7 @@ describe('what is on PATH', () => {
     stub('node', 'v24.21.0');
     stub('bun', '1.2.3');
     stub('deno', '2.0.0');
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Node v24.21.0 (runs ahpd)');
     expect(said).toContain('Bun 1.2.3 (runs ahpd)');
     expect(said).toContain('Deno 2.0.0 (runs ahpd; each plugin it loads needs an npm: spec)');
@@ -321,13 +389,13 @@ describe('what is on PATH', () => {
 
   it('says ahpd does not run on Node 20', async () => {
     stub('node', 'v20.11.0');
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Node v20.11.0 (ahpd does not run on it; it needs Node 22.1 or newer)');
   });
 
   it('shows the version the runner gave for the agent it found', async () => {
     stub('gemini', '0.9.0');
-    const { said } = await asked('', '', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '', '');
     expect(said).toContain('Agents found:');
     expect(said).toContain('Gemini 0.9.0 (not configured, @ahpd/agent-acp)');
   });
@@ -335,7 +403,7 @@ describe('what is on PATH', () => {
   it('shows the path and no version when --version fails', async () => {
     stub('gemini');
     failing.add('gemini');
-    const { said } = await asked('', '', '', 'n', '', '', '', '');
+    const { said } = await asked('', '', '', '', 'n', '', '', '', '');
     expect(said).toContain(`Gemini at ${stubFile('gemini')} (not configured, @ahpd/agent-acp)`);
     // The limit is what keeps an agent that checks for updates as it starts
     // from holding up the setup, so the probe is given it.
@@ -346,13 +414,13 @@ describe('what is on PATH', () => {
   it('shows the path and no version when --version passes the 3 seconds', async () => {
     stub('gemini');
     hanging.add('gemini');
-    const { said } = await asked('', '', '', 'n', '', '', '', '');
+    const { said } = await asked('', '', '', '', 'n', '', '', '', '');
     expect(said).toContain(`Gemini at ${stubFile('gemini')} (not configured, @ahpd/agent-acp)`);
   });
 
   it('shows claude under Also found, and asks the three backend questions it always did', async () => {
     stub('claude', '2.1.291');
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('Also found:');
     expect(said).toContain('  claude 2.1.291');
     expect(said).toContain('Claude? [Y/n]: ');
@@ -367,7 +435,7 @@ describe('what is on PATH', () => {
         options: { presets: { gemini: { install: { all: 'npm i -g my-gemini' } } } },
       }],
     });
-    const { said } = await asked('', '', '', '', '', '', '');
+    const { said } = await asked('', '', '', '', '', '', '', '');
     expect(said).toContain('  Gemini: npm i -g my-gemini');
     expect(said).not.toContain('@google/gemini-cli');
   });

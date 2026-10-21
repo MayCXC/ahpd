@@ -60,8 +60,8 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [34 - The API and proxy keys get their own names](daemon/34-the-api-and-proxy-keys-get-their-own-names/plan.md) | medium | built 2026-10-19; merged in PR #22; [implemented.md](daemon/34-the-api-and-proxy-keys-get-their-own-names/implemented.md) | - | - |
 | [35 - The daemon updates itself](daemon/35-the-daemon-updates-itself/plan.md) | medium | active 2026-10-19; tasks 01 to 06 implemented, 0 done; checks in [pending/update-checks.md](../pending/update-checks.md) | daemon 09, daemon 13 | - |
 | [36 - The install script updates the ahpd it finds](daemon/36-the-install-script-updates-the-ahpd-it-finds/plan.md) | high | active 2026-10-20; tasks 01 and 02 implemented | daemon 27 | - |
-| [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | planned 2026-10-21 | - | - |
-| [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | planned 2026-10-21 | - | - |
+| [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
+| [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | planned 2026-10-21 | - | - |
 
 Next free number in `daemon`: `40`.

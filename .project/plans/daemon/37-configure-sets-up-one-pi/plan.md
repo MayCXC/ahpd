@@ -1,7 +1,7 @@
 ---
 title: configure sets up one pi
 domain: daemon
-status: planned
+status: active
 priority: medium
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -62,7 +62,7 @@ ahpd start -> loadPlugins -> pluginHost: the first registration of an agent keep
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - configure keeps one pi](task-01-configure-keeps-one-pi.md) | todo | - |
+| [01 - configure keeps one pi](task-01-configure-keeps-one-pi.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -71,7 +71,7 @@ ahpd start -> loadPlugins -> pluginHost: the first registration of an agent keep
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-configure-keeps-one-pi.md](task-01-configure-keeps-one-pi.md).
+- **Done so far:** [task-01](task-01-configure-keeps-one-pi.md) is implemented. `configure` skips the ACP `pi` question after a yes to the native pi backend. It asks to remove a `pi` preset the file already has. The clash line tells the person to run `ahpd configure`. `server-configure.test.ts` passed 36 of 36, and `plugin-host.test.ts` passed 22 of 22. From the repository root, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6474 tests with 29 skipped (387 files passed, 1 skipped).
+- **Next action:** none. The plan is implemented and waits for a review.
 - **Open questions:** none.
-- **Watch out for:** `configure` runs on Softov's machine with a file that already has both. Test that case with a file that names `@ahpd/agent-pi` and the `pi` preset.
+- **Watch out for:** a person who wants the ACP `pi` answers No to the native pi question, and the preset is then offered as before. A later overlap of a preset name with a native backend gets the same treatment with its own entry.

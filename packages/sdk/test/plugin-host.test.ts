@@ -644,7 +644,7 @@ it('drops a clashing agent alone, and says which plugin lost the id', () => {
   expect(folded.options.agents?.map((one) => one.provider)).toEqual(['x', 'y', 'z']);
   expect(folded.problems).toHaveLength(1);
   expect(folded.problems[0]).toMatch(
-    new RegExp(`^${AGENT_CLASH} plugin b registers agent y, which plugin a already registered$`, 'u'),
+    new RegExp(`^${AGENT_CLASH} plugin b registers agent y, which plugin a already registered; run ahpd configure to keep one$`, 'u'),
   );
 });
 

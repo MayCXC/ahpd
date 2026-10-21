@@ -51,6 +51,25 @@ const BACKENDS = [
 /** The one a first install gets without being asked, because a daemon needs a backend. */
 const FIRST = '@ahpd/agent-claude';
 
+/**
+ * The native pi backend.
+ *
+ * The ACP preset `pi` registers the same agent name, so a file that names both
+ * is a file where one of the two is dropped at the next start.
+ */
+const PI = '@ahpd/agent-pi';
+
+/**
+ * The plugins that are neither a backend nor an ACP agent.
+ *
+ * A backend runs an agent in this process, which is what a daemon needs. These
+ * are asked with the same question and installed the same way, and a daemon
+ * with none of them still starts.
+ */
+const OTHERS = [
+  { name: 'Web UI', package: '@ahpd/web' },
+] as const;
+
 /** The file the token is written to, beside the configuration that names it. */
 const TOKEN = 'connection-token';
 
@@ -122,6 +141,16 @@ const switched = (list: unknown[], name: string, enabled: boolean): unknown[] =>
   return { ...at, enabled };
 });
 
+/** Whether the file names this plugin and does not switch it off. */
+const enabledIn = (list: unknown[], name: string): boolean => {
+  for (const entry of list) {
+    const spec = asSpec(entry);
+    if (spec === undefined || !isNamed(spec, name)) continue;
+    return typeof spec === 'string' || spec.enabled !== false;
+  }
+  return false;
+};
+
 /**
  * The `@ahpd/agent-acp` entry with one preset switched on, and nothing else changed.
  *
@@ -150,6 +179,43 @@ const takePreset = (list: unknown[], id: string): unknown[] => {
 };
 
 /**
+ * The `@ahpd/agent-acp` entry with one preset taken out, and nothing else changed.
+ *
+ * The entry stays, because its other presets and its options are not what is
+ * being dropped. A file with no such entry, a string one, or one that does not
+ * name the preset is left as it is.
+ */
+const dropPreset = (list: unknown[], id: string): unknown[] => {
+  const at = list.findIndex((entry) => {
+    const spec = asSpec(entry);
+    return spec !== undefined && isNamed(spec, AGENT_PLUGIN);
+  });
+  if (at === -1) return list;
+  const spec = asSpec(list[at]);
+  if (spec === undefined || typeof spec === 'string') return list;
+  const entry: Record<string, unknown> = { ...list[at] as Record<string, unknown>, name: spec.name };
+  const options = isRecord(entry.options) ? entry.options : {};
+  const presets = isRecord(options['presets']) ? options['presets'] : {};
+  if (!Object.hasOwn(presets, id)) return list;
+  const rest = Object.fromEntries(Object.entries(presets).filter(([key]) => key !== id));
+  const next = [...list];
+  next[at] = { ...entry, options: { ...options, presets: rest } };
+  return next;
+};
+
+/** Whether the `@ahpd/agent-acp` entry in this list names a preset for that id. */
+const hasPreset = (list: unknown[], id: string): boolean => {
+  for (const entry of list) {
+    const spec = asSpec(entry);
+    if (spec === undefined || !isNamed(spec, AGENT_PLUGIN)) continue;
+    if (typeof spec === 'string') return false;
+    const presets = spec.options?.['presets'];
+    return isRecord(presets) && Object.hasOwn(presets, id);
+  }
+  return false;
+};
+
+/**
  * Ask every question, write the file, and install what was asked for.
  *
  * The file is written before npm runs, because a plugin that will not install is
@@ -159,6 +225,9 @@ const takePreset = (list: unknown[], id: string): unknown[] => {
 export async function configure(options: ConfigureOptions): Promise<Configured> {
   const held = readEntry(options.configFile);
   const installed = named(held);
+  // A file that is not there yet is the run that offers what a first install
+  // wants; a later run asks with the file's own answer in front of the person.
+  const firstRun = !existsSync(options.configFile);
 
   /*
    * The backends, one question each.
@@ -177,6 +246,23 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
     const keep = await confirm(`${backend.name}?`, was || backend.package === FIRST, options.term);
     if (keep) backends.push(backend.package);
     if (was) plugins = switched(plugins, backend.package, keep);
+  }
+  const nativePi = backends.includes(PI);
+
+  /*
+   * The other plugins, asked with the same question as a backend.
+   *
+   * Enter takes one on a first run, because a first install is the one that
+   * gets what the daemon offers without being asked. A later run shows the
+   * file's own answer, so a plugin somebody switched off is not reinstalled
+   * by pressing Enter through the questions.
+   */
+  const others: string[] = [];
+  for (const other of OTHERS) {
+    const was = installed.has(other.package);
+    const keep = await confirm(`${other.name}?`, firstRun || enabledIn(plugins, other.package), options.term);
+    if (keep) others.push(other.package);
+    if (was) plugins = switched(plugins, other.package, keep);
   }
 
   /*
@@ -202,10 +288,27 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
   for (const line of alsoLines(await findAlso({ run: options.run, path, platform }))) options.say(line);
   if (answering(options.term)) {
     for (const one of found.agents) {
+      /*
+       * The native backend and the ACP preset both register the agent `pi`, and
+       * the daemon keeps only the first. Taking the native one is taken to
+       * mean the ACP one, so it is not offered, and a person who wants the
+       * preset answers No to the native question instead.
+       */
+      if (nativePi && one.agent.id === 'pi') {
+        options.say(`${one.agent.command}: not asked, the pi backend runs pi`);
+        continue;
+      }
       if (one.configured) continue;
       if (!await confirm(`${one.agent.name}?`, true, options.term)) continue;
       taken.push(one.agent.id);
       plugins = takePreset(plugins, one.agent.id);
+    }
+    // A file that already names both was written before this question existed,
+    // and one of the two is dropped at the next start, so this is the run that
+    // can keep only the backend.
+    if (nativePi && hasPreset(plugins, 'pi')
+      && await confirm('Remove the ACP pi preset? It clashes with the pi backend.', true, options.term)) {
+      plugins = dropPreset(plugins, 'pi');
     }
   }
   for (const line of missingLines(found.missing, platform)) options.say(line);
@@ -295,6 +398,7 @@ export async function configure(options: ConfigureOptions): Promise<Configured> 
 
   const missing = [
     ...backends.filter((one) => !installed.has(one)),
+    ...others.filter((one) => !installed.has(one)),
     // The package every taken agent runs through, installed with them rather
     // than before the questions, because a first run has no entry for it yet.
     ...(taken.length > 0 && !installed.has(AGENT_PLUGIN) ? [AGENT_PLUGIN] : []),
