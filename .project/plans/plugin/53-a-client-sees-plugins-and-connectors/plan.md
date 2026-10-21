@@ -118,7 +118,7 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | [03 - Every shipped plugin declares its contracts](task-03-shipped-plugins-declare-contracts.md) | todo | 02 |
 | [04 - A client lists the plugins](task-04-a-client-lists-the-plugins.md) | todo | 01 |
 | [05 - A plugin registers connector kinds](task-05-a-plugin-registers-connector-kinds.md) | todo | 02 |
-| [06 - A collection keeps JSON records](task-06-a-collection-keeps-json-records.md) | todo | - |
+| [06 - A collection keeps JSON records](task-06-a-collection-keeps-json-records.md) | implemented | - |
 | [07 - A client makes connectors](task-07-a-client-makes-connectors.md) | todo | 05, 06 |
 | [08 - A webhook endpoint is a connector](task-08-a-webhook-endpoint-is-a-connector.md) | todo | 07 |
 | [09 - The docs say how plugins and connectors are seen](task-09-the-docs-say-how-it-is-seen.md) | todo | 03, 04, 08 |
