@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/usage.ts#L664-L740](../../../../packages/sdk/src/usage.ts#L664-L740) - `rangeOf`, `keysAsked`, `groupsBody` and `body`"
+  - "[code://packages/sdk/src/usage/usage.ts#L664-L740](../../../../packages/sdk/src/usage/usage.ts#L664-L740) - `rangeOf`, `keysAsked`, `groupsBody` and `body`"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ The usage provider builds each answer as a value from typed arguments, and `read
 
 ## Files
 
-- `UPDATE: packages/sdk/src/usage.ts:664-740` - typed answer functions, and the query read once into their arguments.
+- `UPDATE: packages/sdk/src/usage/usage.ts:664-740` - typed answer functions, and the query read once into their arguments.
 - `UPDATE: packages/sdk/test/usage.test.ts` - the existing reads still answer the same text.
 
 ## Steps

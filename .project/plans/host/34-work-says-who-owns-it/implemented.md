@@ -3,7 +3,7 @@ title: A session and an automation say who owns them, and a turn says who sent i
 date: 2026-10-02
 refs:
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts)"
 ---
 

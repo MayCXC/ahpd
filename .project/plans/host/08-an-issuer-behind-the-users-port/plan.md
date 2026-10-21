@@ -11,8 +11,8 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/users.ts#L29-L70](../../../../packages/sdk/src/users.ts#L29-L70) - `DEFAULT_RESOURCE`, `signInRecord` and `FileUserOptions`, where an issuer joins the record and the options"
-  - "[code://packages/sdk/src/users.ts#L148-L175](../../../../packages/sdk/src/users.ts#L148-L175) - `verify`, which compares local hashes and is where the issuer is asked"
+  - "[code://packages/sdk/src/access/users.ts#L29-L70](../../../../packages/sdk/src/access/users.ts#L29-L70) - `DEFAULT_RESOURCE`, `signInRecord` and `FileUserOptions`, where an issuer joins the record and the options"
+  - "[code://packages/sdk/src/access/users.ts#L148-L175](../../../../packages/sdk/src/access/users.ts#L148-L175) - `verify`, which compares local hashes and is where the issuer is asked"
   - "[code://packages/sdk/src/types/users.ts#L43-L62](../../../../packages/sdk/src/types/users.ts#L43-L62) - `UserRecord`, whose `id` becomes the subject, and where `Issuer` belongs"
   - "[code://packages/sdk/src/types/users.ts#L64-L84](../../../../packages/sdk/src/types/users.ts#L64-L84) - `Principal`, unchanged by this plan"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the `issuer` key and `signInIdentifier`, which the record composes with"
@@ -78,7 +78,7 @@ client -> authenticate(resource, token)   -> Users.verify
 - **Event flow** - unchanged. The principal is attached by `authenticate`, expires by its timer, and is raised as `auth/required` exactly as before.
 - **State flow** - the advertised record gains `authorization_servers` and `scopes_supported` when an issuer is configured. OpenID Connect metadata is discovered once and cached on success.
 - **Layer responsibilities** - packages/sdk: the `Issuer` type, `githubIssuer` and `oidcIssuer`, and the branch in `fileUsers.verify` · packages/server: the `issuer` key, the `--issuer` flag and the record · test/: the verifier against a fake fetch · docs: `docs/sdk/USERS.md` and `docs/server/REFERENCE.md`.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts), [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts).
 
 ## Tasks
 

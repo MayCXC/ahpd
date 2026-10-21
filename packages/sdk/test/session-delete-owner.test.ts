@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
-import { memorySessions } from '../src/sessions.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { hostTools } from '../src/tools/index.js';
 import type { Agent, BoundTool, Start } from '../src/types/agent.js';

@@ -3,7 +3,7 @@ title: A role editor offers trust and proxy, the two subjects the gate asks for 
 date: 2026-10-07
 refs:
   - git://032a0c1 - the commit this work sits on; none of it is committed yet, on `build/agents/a261d92b`
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts) - `OPERATIONS`, which now holds `trust` and `proxy`"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts) - `OPERATIONS`, which now holds `trust` and `proxy`"
   - "[code://packages/sdk/src/host/root.ts](../../../../packages/sdk/src/host/root.ts) - `advertisedGrants`, which reads the two new entries with no change"
   - "[code://packages/sdk/src/host/gate.ts](../../../../packages/sdk/src/host/gate.ts) - `dispatchNeeds`, where the trust push is held to `trust:push`"
   - "[code://packages/server/src/proxy/listener.ts](../../../../packages/server/src/proxy/listener.ts) - the proxy's call and model-list routes, held to `proxy:call` and `proxy:models`"
@@ -19,7 +19,7 @@ A role naming a word either subject does not have is refused with the list that 
 
 ## What was built
 
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `OPERATIONS` gains `trust` (`push`, write group) and `proxy` (`models` read, `call` write), each with a title and a one-sentence description. `SUBJECTS` already named the two; the table that `advertisedGrants` and `grantProblem` read did not.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `OPERATIONS` gains `trust` (`push`, write group) and `proxy` (`models` read, `call` write), each with a title and a one-sentence description. `SUBJECTS` already named the two; the table that `advertisedGrants` and `grantProblem` read did not.
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - the comment over `advertisedGrants` says ten subjects, not eight. It says the ones this host decides, not the ones the gate asks for.
 - [`code://packages/sdk/src/host/gate.ts`](../../../../packages/sdk/src/host/gate.ts) and [`code://packages/server/src/proxy/listener.ts`](../../../../packages/server/src/proxy/listener.ts) - the gate asks for the operation: `trust:push` on a `workspaceTrust` push, `proxy:call` on a call and `proxy:models` on the model list. `holds` covers each one through its group and the wildcards, so nothing else moved.
 - [`code://packages/sdk/test/users-host.test.ts`](../../../../packages/sdk/test/users-host.test.ts) - both key lists name the two subjects. A case of its own asserts the entry of each. It reads `trust` with `push` and `proxy` with `models` and `call`, in the groups the plan fixed. It also asserts the words `grantProblem` takes for the two, and the refusal `trust:get` and `proxy:list` get.

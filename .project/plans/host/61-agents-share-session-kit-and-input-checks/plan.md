@@ -17,7 +17,7 @@ refs:
   - "[code://packages/agent-cofold/src/runs.ts#L53-L68](../../../../packages/agent-cofold/src/runs.ts#L53-L68) - `doing` and `status`, over `ctx`"
   - "[code://packages/agent-pi/src/session.ts#L179-L184](../../../../packages/agent-pi/src/session.ts#L179-L184) - `doing`"
   - "[code://packages/agent-pi/src/session.ts#L370-L373](../../../../packages/agent-pi/src/session.ts#L370-L373) - `status`"
-  - "[code://packages/sdk/src/catalog.ts#L18-L25](../../../../packages/sdk/src/catalog.ts#L18-L25) - `Status`, beside which the shared pieces go"
+  - "[code://packages/sdk/src/sessions/catalog.ts#L18-L25](../../../../packages/sdk/src/sessions/catalog.ts#L18-L25) - `Status`, beside which the shared pieces go"
   - "[code://packages/agent-acp/src/session/queue.ts#L42-L46](../../../../packages/agent-acp/src/session/queue.ts#L42-L46) - a command's title: its first 60 characters, newlines included"
   - "[code://packages/agent-acp/src/session/queue.ts#L159-L164](../../../../packages/agent-acp/src/session/queue.ts#L159-L164) - a message's title: the same rule"
   - "[code://packages/agent-cofold/src/turns.ts#L49-L53](../../../../packages/agent-cofold/src/turns.ts#L49-L53) - cofold's title: the same rule"
@@ -30,7 +30,7 @@ refs:
   - "[code://packages/agent-claude/src/claude.ts#L46-L51](../../../../packages/agent-claude/src/claude.ts#L46-L51) - `baseUrlOf`, a third `fromEnv` read, inline"
   - "[code://packages/agent-acp/src/plugin.ts#L267-L292](../../../../packages/agent-acp/src/plugin.ts#L267-L292) - the per-preset loop, which logs and says each failure"
   - "[code://packages/agent-claude/src/plugin.ts#L158-L189](../../../../packages/agent-claude/src/plugin.ts#L158-L189) - the same loop, which says each failure and calls a preset a variant"
-  - "[code://packages/sdk/src/vault.ts#L55-L68](../../../../packages/sdk/src/vault.ts#L55-L68) - `secretRef`, the one-key rule"
+  - "[code://packages/sdk/src/access/vault.ts#L55-L68](../../../../packages/sdk/src/access/vault.ts#L55-L68) - `secretRef`, the one-key rule"
   - "[code://packages/sdk/src/tools/artifacts.ts#L42-L46](../../../../packages/sdk/src/tools/artifacts.ts#L42-L46) - `requireString`, which trims what it answers"
   - "[code://packages/sdk/src/tools/session.ts#L49-L69](../../../../packages/sdk/src/tools/session.ts#L49-L69) - `required`, `optional`, `flag`, `when`; `required` answers the value untrimmed"
   - "[code://packages/sdk/src/rpc.ts#L13-L16](../../../../packages/sdk/src/rpc.ts#L13-L16) - four named codes, and no `-32602`"
@@ -82,8 +82,8 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 | --- | --- | --- |
 | Code repeated in more than one place is replaced by one shared helper, with no new dependency | Softov, 2026-10-05, asked which of the survey's findings become plans: all four | 01-06 |
 | A session's title from its first message is the first non-blank line, cut at 80 characters (pi's rule), for every backend | Softov, 2026-10-05, asked "acp, cofold and pi each make a session title from the first message, with different rules. Which rule should the shared one use?": "First line, up to 80" | 02 |
-| `statusOf`, `activityOf` and `titleFrom` live in `packages/sdk/src/catalog.ts` beside `Status`, exported | the survey's item 5 and Softov's brief for this plan, 2026-10-05 | 01, 02 |
-| `readSecrets` and `fromEnvRef` live in `packages/sdk/src/vault.ts` beside `secretRef`, and `eachPreset` in `packages/sdk/src/plugins.ts`, exported | the survey's item 6 and Softov's brief for this plan, 2026-10-05 | 03, 04 |
+| `statusOf`, `activityOf` and `titleFrom` live in `packages/sdk/src/sessions/catalog.ts` beside `Status`, exported | the survey's item 5 and Softov's brief for this plan, 2026-10-05 | 01, 02 |
+| `readSecrets` and `fromEnvRef` live in `packages/sdk/src/access/vault.ts` beside `secretRef`, and `eachPreset` in `packages/sdk/src/plugins/plugins.ts`, exported | the survey's item 6 and Softov's brief for this plan, 2026-10-05 | 03, 04 |
 | `fromEnvRef` takes `secretRef`'s rule: an object whose only key is `fromEnv`, holding a non-empty string | (defaulted: acp already says so and `secretRef` is the sibling; claude's looser read is an open question) | 03 |
 | Every refusal keeps its sentence word for word; the loop's noun (`preset`, `variant`) and whether it also logs are the caller's | (defaulted: tests and people read these sentences) | 04, 05, 06 |
 | `INVALID_PARAMS = -32602` is named in `rpc.ts` beside the four codes already there | (defaulted: the sibling pattern; the protocol package's `JsonRpcErrorCodes.InvalidParams` is the same number) | 06 |
@@ -97,7 +97,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 - **Event flow** - unchanged: the same two `activityChanged` actions, once per change, and one `session/titleChanged`.
 - **State flow** - the last activity is held inside `activityOf`'s closure and read through its `current()`; claude and cofold read that where they read `ctx.activity`.
 - **Layer responsibilities** - sdk `catalog.ts`, `vault.ts`, `plugins.ts`: the shared pieces · sdk `toolinput.ts` (new, internal), `rpc.ts`: the readers · agent-acp, agent-claude, agent-cofold, agent-pi: callers.
-- **Source-of-truth files** - [`code://packages/sdk/src/catalog.ts`](../../../../packages/sdk/src/catalog.ts), [`code://packages/sdk/src/vault.ts`](../../../../packages/sdk/src/vault.ts), [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/catalog.ts`](../../../../packages/sdk/src/sessions/catalog.ts), [`code://packages/sdk/src/access/vault.ts`](../../../../packages/sdk/src/access/vault.ts), [`code://packages/sdk/src/rpc.ts`](../../../../packages/sdk/src/rpc.ts)
 
 ## Tasks
 

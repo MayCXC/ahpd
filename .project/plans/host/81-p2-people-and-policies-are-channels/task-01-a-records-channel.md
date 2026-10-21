@@ -5,7 +5,7 @@ depends: []
 layer: "packages/sdk"
 refs:
   - "[code://packages/bot/src/catalogue.ts](../../../../packages/bot/src/catalogue.ts) - the per-client sets and `recompute` this copies"
-  - "[code://packages/sdk/src/records.ts#L37-L64](../../../../packages/sdk/src/records.ts#L37-L64) - `Records`, the store the channel reads"
+  - "[code://packages/sdk/src/resources/records.ts#L37-L64](../../../../packages/sdk/src/resources/records.ts#L37-L64) - `Records`, the store the channel reads"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The source has only `ids` and `find`, so the computer plugin can use it in p4.
 
 ## Files
 
-- `CREATE: packages/sdk/src/recordschannel.ts` - `recordsChannel`, its options and its actions.
+- `CREATE: packages/sdk/src/resources/recordschannel.ts` - `recordsChannel`, its options and its actions.
 - `UPDATE: packages/sdk/src/index.ts` - export `recordsChannel`.
 - `CREATE: packages/sdk/test/recordschannel.test.ts` - cases for the snapshot, the actions and the reader filter.
 
@@ -43,4 +43,4 @@ The source has only `ids` and `find`, so the computer plugin can use it in p4.
 
 ## Resume
 
-Implemented 2026-10-11. `recordsChannel` is in `packages/sdk/src/recordschannel.ts`, with its cases in `packages/sdk/test/recordschannel.test.ts`. A refresh runs after the one before it, and a refresh that cannot read the store is said through `onProblem` rather than thrown.
+Implemented 2026-10-11. `recordsChannel` is in `packages/sdk/src/resources/recordschannel.ts`, with its cases in `packages/sdk/test/recordschannel.test.ts`. A refresh runs after the one before it, and a refresh that cannot read the store is said through `onProblem` rather than thrown.

@@ -21,8 +21,8 @@ export { sdk, resetSdk };
 export const sessionQueries = () => sdk.queries.filter((q) => q.options.canUseTool !== undefined);
 
 export const { createHost } = await import('../../src/host.js');
-export const { fileResources, list, read, resolve, complete } = await import('../../src/resources.js');
-export const { shellTerminals } = await import('../../src/terminals.js');
+export const { fileResources, list, read, resolve, complete } = await import('../../src/resources/resources.js');
+export const { shellTerminals } = await import('../../src/machines/terminals.js');
 export const { gitBranches } = await import('../../src/repo/git.js');
 /*
  * What the daemon hands its host, handed here too.
@@ -35,7 +35,7 @@ export const machine = () => ({ resources: fileResources(), terminals: shellTerm
 export const { claude } = await import('../../../agent-claude/src/claude.js');
 export const { echo } = await import('../../../../examples/echo/agent.js');
 export const { hostTools } = await import('../../src/tools/index.js');
-export const { gitChanges } = await import('../../src/changes.js');
+export const { gitChanges } = await import('../../src/sessions/changes.js');
 
 /**
  * The host, serving the backend that ships with it.

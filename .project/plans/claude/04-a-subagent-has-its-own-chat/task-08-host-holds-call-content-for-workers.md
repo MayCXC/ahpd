@@ -15,7 +15,7 @@ The host's `callContent` index holds the content of spawning calls only, and for
 
 ## Files
 
-- `CREATE: packages/sdk/src/calllinks.ts` - `createCallLinks()`, the index that today is inline in `host.ts`, with a `size` getter a test reads.
+- `CREATE: packages/sdk/src/automations/calllinks.ts` - `createCallLinks()`, the index that today is inline in `host.ts`, with a `size` getter a test reads.
 - `UPDATE: packages/sdk/src/host.ts:838-846` - `turnsOf` and `callContent` move into the index.
 - `UPDATE: packages/sdk/src/host.ts:1841-1848` - today every `chat/toolCallContentChanged` and every `chat/toolCallComplete` with content is kept, for any call.
 - `UPDATE: packages/sdk/src/host.ts:2880-2887` - `openSubagent` reads and writes the index.
@@ -37,7 +37,7 @@ The host's `callContent` index holds the content of spawning calls only, and for
 
 ## Resume
 
-Built `packages/sdk/src/calllinks.ts`, `createCallLinks()`, which holds each chat's open turn and the content of spawning calls only, recognised by `_meta.toolKind: 'subagent'` on their start or ready action or by a link written onto them.
+Built `packages/sdk/src/automations/calllinks.ts`, `createCallLinks()`, which holds each chat's open turn and the content of spawning calls only, recognised by `_meta.toolKind: 'subagent'` on their start or ready action or by a link written onto them.
 `host.ts` feeds it from `dispatch` and forgets a chat's entries when the session is disposed, lead chat included, and when a secondary chat is closed with `removeChat`.
 `packages/sdk/test/calllinks.test.ts` failed first against the moved rule (100 held instead of 1) and passes now; the fake in `packages/sdk/test/subagent-chat.test.ts` carries `_meta: { toolKind: 'subagent' }` on `toolu_task`.
 Gates: `pnpm typecheck` and `pnpm boundary` clean, `pnpm test` 107 files and 1506 tests passed.

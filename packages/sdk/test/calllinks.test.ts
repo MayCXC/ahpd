@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createCallLinks } from '../src/calllinks.js';
+import { createCallLinks } from '../src/automations/calllinks.js';
 
 /*
  * The index a worker's link is written from, held only for spawning calls.

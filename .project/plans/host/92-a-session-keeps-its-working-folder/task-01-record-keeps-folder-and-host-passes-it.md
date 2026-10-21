@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "packages/sdk, docs"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L331-L347](../../../../packages/sdk/src/sessions.ts#L331-L347) - `Row`, where the field goes"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L331-L347](../../../../packages/sdk/src/sessions/sessions.ts#L331-L347) - `Row`, where the field goes"
   - "[code://packages/sdk/src/types/agent.ts#L611](../../../../packages/sdk/src/types/agent.ts#L611) - `find`, which takes the new argument"
   - "[code://packages/sdk/src/types/agent.ts#L685](../../../../packages/sdk/src/types/agent.ts#L685) - `transcript`, the same"
   - "[code://packages/sdk/src/types/agent.ts#L699](../../../../packages/sdk/src/types/agent.ts#L699) - `subagents`, the same"
@@ -21,7 +21,7 @@ The session record keeps the session's working folder, and the host gives it to 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/sessions.ts:331-347` - `Row` and `Saved` keep `workingDirectory`, with a getter and a setter.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:331-347` - `Row` and `Saved` keep `workingDirectory`, with a getter and a setter.
 - `UPDATE: packages/sdk/src/types/agent.ts:611` - `find(id, at?)`, where `at` is `{ workingDirectory?: string }`.
 - `UPDATE: packages/sdk/src/types/agent.ts:685` - `transcript(id, at?)`.
 - `UPDATE: packages/sdk/src/types/agent.ts:699` - `subagents(id, turns, at?)`.

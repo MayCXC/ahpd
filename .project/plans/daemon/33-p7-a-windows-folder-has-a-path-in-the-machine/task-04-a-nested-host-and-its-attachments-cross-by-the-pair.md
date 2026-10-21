@@ -4,9 +4,9 @@ status: done
 depends: [task-01-a-host-path-has-a-machine-path.md]
 layer: sdk, computer
 refs:
-  - "[code://packages/sdk/src/nested.ts#L371](../../../../packages/sdk/src/nested.ts#L371) - `fileUri`"
-  - "[code://packages/sdk/src/nested.ts#L424-L425](../../../../packages/sdk/src/nested.ts#L424-L425) - the host URI sent inside when the port names none"
-  - "[code://packages/sdk/src/nested.ts#L655-L660](../../../../packages/sdk/src/nested.ts#L655-L660) - `outerDir`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L371](../../../../packages/sdk/src/sessions/nested.ts#L371) - `fileUri`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L424-L425](../../../../packages/sdk/src/sessions/nested.ts#L424-L425) - the host URI sent inside when the port names none"
+  - "[code://packages/sdk/src/sessions/nested.ts#L655-L660](../../../../packages/sdk/src/sessions/nested.ts#L655-L660) - `outerDir`"
   - "[code://packages/sdk/src/host/machines.ts#L207-L230](../../../../packages/sdk/src/host/machines.ts#L207-L230) - `putIn` and `takeOut` callers"
   - "[code://packages/computer/src/runtime.ts#L3559-L3573](../../../../packages/computer/src/runtime.ts#L3559-L3573) - `putIn` and `takeOut`"
   - "[code://packages/computer/src/plugin.ts#L1518](../../../../packages/computer/src/plugin.ts#L1518) - the nested host's working directory"
@@ -18,7 +18,7 @@ A nested host in a machine is told its working directory by its machine path, th
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts` - the fallback inside URI is the machine path's; `outerDir` maps every file URI the nested host sends back, not only `workingDirectories`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts` - the fallback inside URI is the machine path's; `outerDir` maps every file URI the nested host sends back, not only `workingDirectories`.
 - `UPDATE: packages/computer/src/runtime.ts` - `putIn` and `takeOut` write and remove at `machinePathOf(path)`.
 - `UPDATE: packages/computer/src/plugin.ts:1518` - the nested host's `workingDirectory` comes through `within`, which task 03 makes a machine path.
 

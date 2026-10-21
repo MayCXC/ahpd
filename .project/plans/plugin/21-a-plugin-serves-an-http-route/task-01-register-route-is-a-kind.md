@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L139-L279](../../../../packages/sdk/src/types/plugin.ts#L139-L279) - `PluginHost`"
   - "[code://packages/sdk/src/types/plugin.ts#L329-L364](../../../../packages/sdk/src/types/plugin.ts#L329-L364) - `Contribution`"
-  - "[code://packages/sdk/src/plugins.ts#L299](../../../../packages/sdk/src/plugins.ts#L299) - `pluginHost`, beside which the fold is"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L299](../../../../packages/sdk/src/plugins/plugins.ts#L299) - `pluginHost`, beside which the fold is"
   - "[code://packages/sdk/test/plugin-validate.test.ts](../../../../packages/sdk/test/plugin-validate.test.ts) - where each registration's check is paired with a good and an empty value"
 ---
 
@@ -18,7 +18,7 @@ A plugin may call `registerRoute(handler)` once, the handler is checked to be a 
 
 - `UPDATE: packages/sdk/src/types/plugin.ts:139-279` - `registerRoute`, documented.
 - `UPDATE: packages/sdk/src/types/plugin.ts:329-364` - `Contribution.routes`.
-- `UPDATE: packages/sdk/src/plugins.ts` - the recording, the check and the fold into a new `routes` result keyed by plugin name.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the recording, the check and the fold into a new `routes` result keyed by plugin name.
 - `UPDATE: packages/sdk/test/plugin-validate.test.ts`, `packages/sdk/test/plugin-fold.test.ts` - the cases below.
 
 ## Steps

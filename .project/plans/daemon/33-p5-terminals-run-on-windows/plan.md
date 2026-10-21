@@ -10,13 +10,13 @@ requires:
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L19](../../../../packages/sdk/src/terminals.ts#L19) - `shellOf`: `SHELL` or `/bin/sh`"
-  - "[code://packages/sdk/src/terminals.ts#L27](../../../../packages/sdk/src/terminals.ts#L27) - `quoted`, for a POSIX shell"
-  - "[code://packages/sdk/src/terminals.ts#L47](../../../../packages/sdk/src/terminals.ts#L47) - the title, cut at the last `/`"
-  - "[code://packages/sdk/src/terminals.ts#L92-L96](../../../../packages/sdk/src/terminals.ts#L92-L96) - `-c` with a line or a quoted argv"
-  - "[code://packages/sdk/src/terminals.ts#L184-L200](../../../../packages/sdk/src/terminals.ts#L184-L200) - the shell under pipes, `detached` for its own process group"
-  - "[code://packages/sdk/src/terminals.ts#L318-L337](../../../../packages/sdk/src/terminals.ts#L318-L337) - `^C` as `SIGINT` to the process group"
-  - "[code://packages/sdk/src/terminals.ts#L369-L385](../../../../packages/sdk/src/terminals.ts#L369-L385) - `close` sends `SIGKILL` to the process group"
+  - "[code://packages/sdk/src/machines/terminals.ts#L19](../../../../packages/sdk/src/machines/terminals.ts#L19) - `shellOf`: `SHELL` or `/bin/sh`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L27](../../../../packages/sdk/src/machines/terminals.ts#L27) - `quoted`, for a POSIX shell"
+  - "[code://packages/sdk/src/machines/terminals.ts#L47](../../../../packages/sdk/src/machines/terminals.ts#L47) - the title, cut at the last `/`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L92-L96](../../../../packages/sdk/src/machines/terminals.ts#L92-L96) - `-c` with a line or a quoted argv"
+  - "[code://packages/sdk/src/machines/terminals.ts#L184-L200](../../../../packages/sdk/src/machines/terminals.ts#L184-L200) - the shell under pipes, `detached` for its own process group"
+  - "[code://packages/sdk/src/machines/terminals.ts#L318-L337](../../../../packages/sdk/src/machines/terminals.ts#L318-L337) - `^C` as `SIGINT` to the process group"
+  - "[code://packages/sdk/src/machines/terminals.ts#L369-L385](../../../../packages/sdk/src/machines/terminals.ts#L369-L385) - `close` sends `SIGKILL` to the process group"
   - "[code://packages/sdk/src/host/terminals.ts#L291](../../../../packages/sdk/src/host/terminals.ts#L291) - a connection's `defaultShell` names the shell"
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/base/node/shell.ts#L16-L26 - `getSystemShell`: on Windows, PowerShell, and `SHELL` is not read
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/base/node/shell.ts#L64-L70 - `getSystemShellWindows`: the first PowerShell found
@@ -33,7 +33,7 @@ The terminal tests run on Windows instead of skipping.
 
 ### Searches performed
 
-- `git grep -n "SHELL\|/bin/sh\|process.kill(-" packages/sdk/src/terminals.ts` - the POSIX parts of a terminal.
+- `git grep -n "SHELL\|/bin/sh\|process.kill(-" packages/sdk/src/machines/terminals.ts` - the POSIX parts of a terminal.
 - `rg -n "getSystemShell" /github/externals/vscode/src/vs/platform/agentHost` - VS Code's agent host asks `getSystemShell`.
 - `git show a959ba62444:src/vs/base/node/shell.ts` in VS Code - the Windows branch.
 

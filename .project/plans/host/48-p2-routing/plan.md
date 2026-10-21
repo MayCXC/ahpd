@@ -17,7 +17,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L727-L909](../../../../packages/sdk/src/host.ts#L727-L909) - `ownId`, `claimsId`, `ownerOf`, `ask`, `clients`, `relayed`, `elsewhere`"
   - "[code://packages/sdk/src/host.ts#L7494-L7697](../../../../packages/sdk/src/host.ts#L7494-L7697) - `read`, `capabilityFor`, `ownRecord`, `excusedBy`, `denied`, `admit`, inside `accept`"
   - "[code://packages/sdk/src/types/host.ts#L503-L509](../../../../packages/sdk/src/types/host.ts#L503-L509) - `ToolCall`, the one context every host tool is handed, the shape `HostContext` copies"
-  - "[code://packages/sdk/src/calllinks.ts#L12-L47](../../../../packages/sdk/src/calllinks.ts#L12-L47) - an interface of what the factory offers, and `create<Name>()`, the factory naming the areas copy"
+  - "[code://packages/sdk/src/automations/calllinks.ts#L12-L47](../../../../packages/sdk/src/automations/calllinks.ts#L12-L47) - an interface of what the factory offers, and `create<Name>()`, the factory naming the areas copy"
 ---
 
 ## Goal

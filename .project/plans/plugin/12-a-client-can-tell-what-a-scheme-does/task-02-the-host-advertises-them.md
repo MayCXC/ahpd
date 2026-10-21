@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4779](../../../../packages/sdk/src/host.ts#L4779) - the `initialize` result, where `_meta` is built"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - the root state the snapshot carries"
   - "[code://packages/sdk/src/types/host.ts](../../../../packages/sdk/src/types/host.ts) - `HostOptions.resourceProviders`, the map it reads"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - the fold, which is where the providers are complete"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - the fold, which is where the providers are complete"
   - "[code://test/plugin-host.test.ts](../../../../test/plugin-host.test.ts) - where a host built from folded options is asserted"
 ---
 

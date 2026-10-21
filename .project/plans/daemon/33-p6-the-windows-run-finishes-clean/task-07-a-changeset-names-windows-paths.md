@@ -4,7 +4,7 @@ status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, agent-acp
 refs:
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `slashed`, `unslashed` and `folded`, used by `beforeUri`, `capturedUri`, `pendingUri`, `sideKey`, `sideOf` and `read`"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `slashed`, `unslashed` and `folded`, used by `beforeUri`, `capturedUri`, `pendingUri`, `sideKey`, `sideOf` and `read`"
   - "[code://packages/sdk/src/host/facts.ts](../../../../packages/sdk/src/host/facts.ts) - `dirOfFile`, which a write through the host refreshes the changeset by"
   - "[code://packages/agent-acp/src/session.ts](../../../../packages/agent-acp/src/session.ts) - `inside`, whether a path is in the session's folders"
   - "[code://packages/agent-acp/src/session/handlers.ts](../../../../packages/agent-acp/src/session/handlers.ts) - `writeTextFile`"
@@ -17,7 +17,7 @@ On a Windows host, a changeset's before side, a turn's captured sides and a writ
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - a path goes into an `ahp-git:` or `ahp-edit:` URI as `/C:/a/b`, comes back as `C:\a\b`, and is compared without case on Windows.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - a path goes into an `ahp-git:` or `ahp-edit:` URI as `/C:/a/b`, comes back as `C:\a\b`, and is compared without case on Windows.
 - `UPDATE: packages/sdk/src/host/facts.ts` - `dirOfFile` compares with the system's separator.
 - `UPDATE: packages/agent-acp/src/session.ts` - `inside` compares with the system's separator.
 - `UPDATE: packages/agent-acp/src/session/handlers.ts` and `packages/agent-acp/src/mapping.ts` - an agent's path is normalized before it is captured.

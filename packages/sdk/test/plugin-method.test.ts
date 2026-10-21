@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { root } from './users-gate-helpers.js';
 import type { LoaderContext, PluginMethod, ServedMethod } from '../src/types/plugin.js';

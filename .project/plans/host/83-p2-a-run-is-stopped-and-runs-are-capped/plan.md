@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/host/handshake.ts#L225-L249](../../../../packages/sdk/src/host/handshake.ts#L225-L249) - the automation capabilities, and the comment on why `runCancellation` is absent"
   - "[code://packages/sdk/src/host/automations.ts#L195-L240](../../../../packages/sdk/src/host/automations.ts#L195-L240) - `waiting` and `settleRun`"
   - "[code://packages/sdk/src/host/gate.ts#L201](../../../../packages/sdk/src/host/gate.ts#L201) - the action already maps to `automation:cancel`"
-  - "[code://packages/sdk/src/automations.ts#L374](../../../../packages/sdk/src/automations.ts#L374) - `memoryAutomations`, which keeps every run"
+  - "[code://packages/sdk/src/automations/automations.ts#L374](../../../../packages/sdk/src/automations/automations.ts#L374) - `memoryAutomations`, which keeps every run"
   - file:///github/externals/vscode/src/vs/platform/agentHost/node/agentHostAutomationService.ts - `handleCancel`, `_cancelRun` and `RUN_HISTORY_PAGE_SIZE`
 ---
 
@@ -69,7 +69,7 @@ automationRun/cancelRequested -> gate automation:cancel -> cancel each run sessi
 - **Done so far:** every task is done, and the plan is built. See [implemented.md](implemented.md).
 - **Next action:** Softov's check by hand: stop in VS Code's window ends a running automation as cancelled.
 - **Open questions:** none.
-- **Watch out for:** the store is still `packages/sdk/src/automations.ts`; host 80 has not moved it. Three capability cases in the tests now carry `runHistoryLimit` beside `runCancellation`, and a later task that adds a capability moves them again.
+- **Watch out for:** the store is still `packages/sdk/src/automations/automations.ts`; host 80 has not moved it. Three capability cases in the tests now carry `runHistoryLimit` beside `runCancellation`, and a later task that adds a capability moves them again.
 
 ## Final verification checklist
 

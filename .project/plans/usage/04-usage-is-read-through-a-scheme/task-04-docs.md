@@ -36,5 +36,5 @@ refs:
 
 ## Validation
 
-- Read by hand: every URI, key and command named here is one the code answers, and no grant named in `docs/sdk/USERS.md` is one `packages/sdk/src/users.ts:40` does not list.
+- Read by hand: every URI, key and command named here is one the code answers, and no grant named in `docs/sdk/USERS.md` is one `packages/sdk/src/access/users.ts:40` does not list.
 - `pnpm test`, which runs `tools/schema.mjs` over the configuration schema `usage.timezone` joined.

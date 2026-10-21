@@ -1,7 +1,7 @@
 import { tmpdir } from 'node:os';
 import { describe, expect, it } from 'vitest';
-import { isShellName, shellEnvOf, type ShellEnv } from '../src/shellenv.js';
-import { shellTerminals } from '../src/terminals.js';
+import { isShellName, shellEnvOf, type ShellEnv } from '../src/machines/shellenv.js';
+import { shellTerminals } from '../src/machines/terminals.js';
 
 /*
  * The environment an operator gives the shells a host starts.

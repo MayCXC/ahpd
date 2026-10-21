@@ -4,10 +4,10 @@ status: done
 depends: [task-02-a-caller-is-somebody.md, task-04-the-call-streams-through.md]
 layer: "server"
 refs:
-  - "[code://packages/sdk/src/decide.ts#L157-L200](../../../../packages/sdk/src/decide.ts#L157-L200) - `decide` with kind `model` and `{ model, proxy }`"
+  - "[code://packages/sdk/src/access/decide.ts#L157-L200](../../../../packages/sdk/src/access/decide.ts#L157-L200) - `decide` with kind `model` and `{ model, proxy }`"
   - "[code://packages/sdk/src/host/owners.ts#L138](../../../../packages/sdk/src/host/owners.ts#L138) - the host's call, and how a store that throws refuses"
   - "[code://packages/sdk/src/types/usage.ts#L59-L77](../../../../packages/sdk/src/types/usage.ts#L59-L77) - `ModelCall`, `ModelUse`"
-  - "[code://packages/sdk/src/meter.ts#L167-L224](../../../../packages/sdk/src/meter.ts#L167-L224) - `poolsOf` and the agent meter's record"
+  - "[code://packages/sdk/src/usage/meter.ts#L167-L224](../../../../packages/sdk/src/usage/meter.ts#L167-L224) - `poolsOf` and the agent meter's record"
   - "[code://packages/server/src/commands/run.ts#L294-L312](../../../../packages/server/src/commands/run.ts#L294-L312) - the policies store and `policiesCheck`"
 ---
 

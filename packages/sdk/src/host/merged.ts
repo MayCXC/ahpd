@@ -1,5 +1,5 @@
-import { idOf, Status } from '../catalog.js';
-import { localPath } from '../fileuri.js';
+import { idOf, Status } from '../sessions/catalog.js';
+import { localPath } from '../resources/fileuri.js';
 import { stat } from 'node:fs/promises';
 import { sessionFlag } from './chatactions.js';
 import type { Bag } from '../types/common.js';

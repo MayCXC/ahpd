@@ -1,6 +1,6 @@
 import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
-import { notServed } from '../resources.js';
-import { Status } from '../catalog.js';
+import { notServed } from '../resources/resources.js';
+import { Status } from '../sessions/catalog.js';
 import { need } from './common.js';
 import { schemeOf } from './channels.js';
 import type { WriteMode } from '../types/resources.js';

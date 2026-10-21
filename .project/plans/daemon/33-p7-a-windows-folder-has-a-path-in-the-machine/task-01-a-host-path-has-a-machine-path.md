@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - beside `partTarget` and `PART_ROOT`"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts) - beside `partTarget` and `PART_ROOT`"
   - "[code://packages/sdk/src/index.ts#L57](../../../../packages/sdk/src/index.ts#L57) - where `machine.ts` is re-exported"
 ---
 
@@ -14,7 +14,7 @@ One pair of functions turns a host path into the path it has inside a machine, a
 
 ## Files
 
-- `UPDATE: packages/sdk/src/machine.ts` - `machinePathOf` and `hostPathOf`.
+- `UPDATE: packages/sdk/src/machines/machine.ts` - `machinePathOf` and `hostPathOf`.
 - `UPDATE: packages/sdk/src/index.ts:57` - both exported.
 - `CREATE: packages/sdk/test/machine-paths.test.ts` - both directions, on both platforms' rules.
 

@@ -16,7 +16,7 @@ refs:
   - "[code://pnpm-lock.yaml](../../../../pnpm-lock.yaml) - four importers resolve `0.9.0`"
   - "[code://pnpm-workspace.yaml#L17-L25](../../../../pnpm-workspace.yaml#L17-L25) - `minimumReleaseAgeExclude`, how a package younger than pnpm's minimum release age is let in"
   - "[code://packages/sdk/src/host.ts#L7576-L7605](../../../../packages/sdk/src/host.ts#L7576-L7605) - `initialize`: the first supported version in the client's order, and a comment saying that is the rule"
-  - "[code://packages/sdk/src/nested.ts#L372-L375](../../../../packages/sdk/src/nested.ts#L372-L375) - the inner host must answer exactly `PROTOCOL_VERSION`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L372-L375](../../../../packages/sdk/src/sessions/nested.ts#L372-L375) - the inner host must answer exactly `PROTOCOL_VERSION`"
   - "[code://packages/sdk/test/host.test.ts#L184-L234](../../../../packages/sdk/test/host.test.ts#L184-L234) - `hello()` and the three handshake tests"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L302-L335](../../../../packages/sdk/test/nested-proxy.test.ts#L302-L335) - an inner host on another version, and one on 0.9.0"
   - "[code://tools/schema.mjs#L276-L285](../../../../tools/schema.mjs#L276-L285) - the strict schema it writes, which says nothing of the package it came from"

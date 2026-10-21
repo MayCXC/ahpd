@@ -4,7 +4,7 @@ status: done
 depends: [task-06-docs.md]
 layer: "sdk | test"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L138-L203](../../../../packages/sdk/src/nested.ts#L138-L203) - `stdioTransport`, with no `error` listener on stdin and the end taken from `exit`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L138-L203](../../../../packages/sdk/src/sessions/nested.ts#L138-L203) - `stdioTransport`, with no `error` listener on stdin and the end taken from `exit`"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L56-L130](../../../../packages/sdk/test/nested-proxy.test.ts#L56-L130) - the in-memory fakes, which cannot raise EPIPE or reorder `exit` and stdout"
   - "[code://packages/server/test/fixtures/plugin-echo/index.ts](../../../../packages/server/test/fixtures/plugin-echo/index.ts) - the echo plugin a real inner host can load"
 ---
@@ -15,7 +15,7 @@ A nested host that dies at any moment, or closes its stdin, ends the outer sessi
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:173-190` - the `exit` listener and `send`; stdin has no `error` listener today.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:173-190` - the `exit` listener and `send`; stdin has no `error` listener today.
 - `CREATE: packages/sdk/test/fixtures/plugin-nested-echo/index.ts` and `package.json`, after [`code://packages/server/test/fixtures/plugin-echo`](../../../../packages/server/test/fixtures/plugin-echo) - the echo backend under provider `cofold`, its `pace` read from the `PACE` environment variable.
 - `CREATE: packages/sdk/test/nested-process.test.ts` - the proxy against real child processes.
 

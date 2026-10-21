@@ -7,11 +7,11 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L31-L44](../../../../packages/sdk/src/types/plugin.ts#L31-L44) - `PortKey`"
   - "[code://packages/sdk/src/types/plugin.ts#L152-L168](../../../../packages/sdk/src/types/plugin.ts#L152-L168) - `recordUsage`, the host call `secret` mirrors"
   - "[code://packages/sdk/src/types/plugin.ts#L233-L240](../../../../packages/sdk/src/types/plugin.ts#L233-L240) - `registerUsage`"
-  - "[code://packages/sdk/src/plugins.ts#L30-L42](../../../../packages/sdk/src/plugins.ts#L30-L42) - `PORT_KEYS`"
-  - "[code://packages/sdk/src/plugins.ts#L264-L272](../../../../packages/sdk/src/plugins.ts#L264-L272) - the live `usage` port a plugin host is handed"
-  - "[code://packages/sdk/src/plugins.ts#L335-L339](../../../../packages/sdk/src/plugins.ts#L335-L339) - `recordUsage` over it"
-  - "[code://packages/sdk/src/plugins.ts#L395](../../../../packages/sdk/src/plugins.ts#L395) - `registerUsage` through `setPort`"
-  - "[code://packages/sdk/src/validate.ts#L126-L168](../../../../packages/sdk/src/validate.ts#L126-L168) - `PORT_MEMBERS` and `PORT_METHOD`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L30-L42](../../../../packages/sdk/src/plugins/plugins.ts#L30-L42) - `PORT_KEYS`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L264-L272](../../../../packages/sdk/src/plugins/plugins.ts#L264-L272) - the live `usage` port a plugin host is handed"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L335-L339](../../../../packages/sdk/src/plugins/plugins.ts#L335-L339) - `recordUsage` over it"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L395](../../../../packages/sdk/src/plugins/plugins.ts#L395) - `registerUsage` through `setPort`"
+  - "[code://packages/sdk/src/plugins/validate.ts#L126-L168](../../../../packages/sdk/src/plugins/validate.ts#L126-L168) - `PORT_MEMBERS` and `PORT_METHOD`"
   - "[code://packages/sdk/src/types/host.ts#L210-L216](../../../../packages/sdk/src/types/host.ts#L210-L216) - `HostOptions.usage`"
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts) - `Owner`, which a `user:` secret is matched against"
 ---
@@ -24,16 +24,16 @@ A plugin reads a secret at use time through `host.secret(name, work)`, the way i
 ## Files
 
 - `CREATE: packages/sdk/src/types/vault.ts` - `Vault { get(name): Promise<string | undefined>; set(name, value): Promise<void>; delete(name): Promise<boolean>; list(): Promise<string[]> }`, `SecretRef { $secret: string }`, `SecretWork { owner?: Owner; team?: string }`.
-- `CREATE: packages/sdk/src/vault.ts` - `secretRef(value)`, `scopeOf(name)`, `readSecret(vault, name, work)`.
+- `CREATE: packages/sdk/src/access/vault.ts` - `secretRef(value)`, `scopeOf(name)`, `readSecret(vault, name, work)`.
 - `UPDATE: packages/sdk/src/types/host.ts:210-216` - `vault?: Vault` beside `usage`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:31-44` - `'vault'` in `PortKey`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:152-168` - `secret(name: string, work?: SecretWork): Promise<string>` on `PluginHost`, after `recordUsage`.
 - `UPDATE: packages/sdk/src/types/plugin.ts:233-240` - `registerVault(vault: PortOf<'vault'>, when?: 'replace'): void` after `registerUsage`.
-- `UPDATE: packages/sdk/src/plugins.ts:30-33` - `'vault'` in `PORT_KEYS`.
-- `UPDATE: packages/sdk/src/plugins.ts:264-272` - `vault?: () => Vault | undefined` beside `usage`.
-- `UPDATE: packages/sdk/src/plugins.ts:335-339` - `secret` over it, after `recordUsage`.
-- `UPDATE: packages/sdk/src/plugins.ts:395` - `registerVault: (vault, when) => { setPort('vault', 'registerVault', vault, when); }`.
-- `UPDATE: packages/sdk/src/validate.ts:126-168` - `vault: { get: 'function', set: 'function', delete: 'function', list: 'function' }` and `vault: 'registerVault'`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:30-33` - `'vault'` in `PORT_KEYS`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:264-272` - `vault?: () => Vault | undefined` beside `usage`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:335-339` - `secret` over it, after `recordUsage`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:395` - `registerVault: (vault, when) => { setPort('vault', 'registerVault', vault, when); }`.
+- `UPDATE: packages/sdk/src/plugins/validate.ts:126-168` - `vault: { get: 'function', set: 'function', delete: 'function', list: 'function' }` and `vault: 'registerVault'`.
 - `UPDATE: packages/sdk/src/types/index.ts`, `packages/sdk/src/index.ts` - export the types and the three functions.
 - `CREATE: packages/sdk/test/vault.test.ts` - the reference form and the scope rule.
 - `UPDATE: packages/sdk/test/plugin-fold.test.ts` - a plugin's vault, with and without `'replace'`.

@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { installLine, knownAgents, type KnownAgent } from '../src/agents.js';
+import { installLine, knownAgents, type KnownAgent } from '../src/machines/agents.js';
 
 /** One part of `versions.json`, as far as this file reads it. */
 interface Part {

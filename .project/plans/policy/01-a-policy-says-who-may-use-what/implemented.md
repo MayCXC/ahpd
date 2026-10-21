@@ -2,9 +2,9 @@
 title: A policy says who may use which agent, model and computer - implemented
 date: 2026-10-02
 refs:
-  - "[code://packages/sdk/src/decide.ts](../../../../packages/sdk/src/decide.ts)"
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts)"
-  - "[code://packages/sdk/src/policy.ts](../../../../packages/sdk/src/policy.ts)"
+  - "[code://packages/sdk/src/access/decide.ts](../../../../packages/sdk/src/access/decide.ts)"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts)"
+  - "[code://packages/sdk/src/access/policy.ts](../../../../packages/sdk/src/access/policy.ts)"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts)"
 ---
 
@@ -13,9 +13,9 @@ A host can keep policies that say who may use which harness, model and machine, 
 ## What was built
 
 - [`code://packages/sdk/src/types/policies.ts`](../../../../packages/sdk/src/types/policies.ts) - the policy row and the `policies` port.
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts) - row validation, and the file and memory stores; `limits`, `pool` and `cap` are stored and enforce nothing.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - the `policy:` scheme, behind `policy:read` and `policy:write`.
-- [`code://packages/sdk/src/decide.ts`](../../../../packages/sdk/src/decide.ts) - `decide`: `*:*` allowed, candidates by kind, window, scope and match, any deny wins, no candidate refuses; a deny binds only when everything it names was asked.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts) - row validation, and the file and memory stores; `limits`, `pool` and `cap` are stored and enforce nothing.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts) - the `policy:` scheme, behind `policy:read` and `policy:write`.
+- [`code://packages/sdk/src/access/decide.ts`](../../../../packages/sdk/src/access/decide.ts) - `decide`: `*:*` allowed, candidates by kind, window, scope and match, any deny wins, no candidate refuses; a deny binds only when everything it names was asked.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `checked` at session creation (harness and machine, before the machine is made, `-32009`) and at each turn (harness, machine and the turn's model); a store that cannot be read refuses.
 - `packages/server` - the `policies` setting, file only, the store at `policies.json`, and the start line when checks are on.
 - `docs/sdk/POLICY.md`, `docs/server/REFERENCE.md`, `docs/sdk/USERS.md`, `README.md`.

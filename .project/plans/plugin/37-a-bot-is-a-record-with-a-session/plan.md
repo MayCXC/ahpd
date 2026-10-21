@@ -15,10 +15,10 @@ refs:
   - "[code://packages/sdk/src/types/resources.ts#L226-L245](../../../../packages/sdk/src/types/resources.ts#L226-L245) - `SchemeDescription` and `ResourceProvider`"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L148-L184](../../../../packages/sdk/src/host/resourcemethods.ts#L148-L184) - `resourceWrite` and `resourceDelete`, which hand the provider the owner and the reader"
   - "[code://packages/sdk/src/host/admission.ts#L145-L155](../../../../packages/sdk/src/host/admission.ts#L145-L155) - a write to `bot:/x` asks for `bot:put`, read from the scheme"
-  - "[code://packages/sdk/src/users.ts#L85-L93](../../../../packages/sdk/src/users.ts#L85-L93) - a scheme the table does not name takes the resource operations"
+  - "[code://packages/sdk/src/access/users.ts#L85-L93](../../../../packages/sdk/src/access/users.ts#L85-L93) - a scheme the table does not name takes the resource operations"
   - "[code://packages/sdk/src/host/automations.ts#L657-L732](../../../../packages/sdk/src/host/automations.ts#L657-L732) - an automation's run starts a session as its owner"
   - "[code://packages/sdk/src/types/sessions.ts#L100-L102](../../../../packages/sdk/src/types/sessions.ts#L100-L102) - a session's owner"
-  - "[code://packages/sdk/src/policies.ts#L277](../../../../packages/sdk/src/policies.ts#L277) - `filePolicies`, a JSON file store to mirror"
+  - "[code://packages/sdk/src/access/policies.ts#L277](../../../../packages/sdk/src/access/policies.ts#L277) - `filePolicies`, a JSON file store to mirror"
 ---
 
 ## Goal

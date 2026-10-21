@@ -1,12 +1,12 @@
 import { expect, it, vi } from 'vitest';
 import { join } from 'node:path';
 import { createHost, ROOT } from '../src/host.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { peopleProviders } from '../src/people.js';
-import { policyProviders } from '../src/policy.js';
-import { filePolicies } from '../src/policies.js';
-import { grantProblem, isGrant, OPERATIONS } from '../src/users.js';
+import { peopleProviders } from '../src/access/people.js';
+import { policyProviders } from '../src/access/policy.js';
+import { filePolicies } from '../src/access/policies.js';
+import { grantProblem, isGrant, OPERATIONS } from '../src/access/users.js';
 import type { HostEvent } from '../src/types/events.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { Offered } from '../src/types/probe.js';

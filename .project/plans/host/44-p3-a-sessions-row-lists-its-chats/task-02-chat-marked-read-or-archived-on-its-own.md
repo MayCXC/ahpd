@@ -10,8 +10,8 @@ refs:
   - "[code://packages/sdk/src/host/snapshots.ts#L277](../../../../packages/sdk/src/host/snapshots.ts#L277) - a chat's state, built from the backend's `chatState()`"
   - "[code://packages/sdk/src/host/chatactions.ts#L1126-L1127](../../../../packages/sdk/src/host/chatactions.ts#L1126-L1127) - the refusal these actions reach today"
   - "[code://packages/sdk/src/types/sessions.ts#L136-L145](../../../../packages/sdk/src/types/sessions.ts#L136-L145) - `chatTitle` and `setChatTitle`, the shape to mirror"
-  - "[code://packages/sdk/src/sessions.ts#L39](../../../../packages/sdk/src/sessions.ts#L39) - `chatTitles`, the memory store's per-chat map"
-  - "[code://packages/sdk/src/sessions.ts#L194-L212](../../../../packages/sdk/src/sessions.ts#L194-L212) - `rowOf`, what the file store writes for a session"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L39](../../../../packages/sdk/src/sessions/sessions.ts#L39) - `chatTitles`, the memory store's per-chat map"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L194-L212](../../../../packages/sdk/src/sessions/sessions.ts#L194-L212) - `rowOf`, what the file store writes for a session"
   - "[code://packages/sdk/test/host-snapshots.test.ts#L302-L307](../../../../packages/sdk/test/host-snapshots.test.ts#L302-L307) - a row nobody is running keeps its read bit, in `the fields a client reads by name`"
 ---
 
@@ -23,7 +23,7 @@ A client's `chat/isReadChanged` or `chat/isArchivedChanged` sets or clears that 
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts` - `chatFlags(id, chatUri): number` and `setChatFlags(id, chatUri, value)`, beside `chatTitle`.
-- `UPDATE: packages/sdk/src/sessions.ts` - the memory store's map, the file store's row field, both forgotten with the session.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the memory store's map, the file store's row field, both forgotten with the session.
 - `UPDATE: packages/sdk/src/host/chatactions.ts` - a handler beside `actions.ts:511` for the two chat actions on a chat channel: compare, store, dispatch the action on the chat channel, `session/chatUpdated` with the new `status`, `summaryMoved`; `chat/isArchivedChanged` whose chat is the session's `defaultChat` goes through the session's path instead (`kept.flags` / `kept.setFlags` on the session's `IsArchived`, `session/isArchivedChanged` dispatched on the session channel, `summaryMoved`, and nothing on the chat channel, whose reducer would set the chat's bit), shared with the `session/isArchivedChanged` branch rather than copied; `chatSummary`, `subagentSummary`, the restored workers' rows and a chat's state OR the chat's flags into `status`.
 - `UPDATE: packages/sdk/test/host-snapshots.test.ts`, `packages/sdk/test/sessions.test.ts` - the cases below.
 - `UPDATE: docs/sdk/AHP.md` - two rows in the chat actions table.
@@ -60,7 +60,7 @@ A client's `chat/isReadChanged` or `chat/isArchivedChanged` sets or clears that 
 - In `snapshots.ts` they are the session state's chat list, the live worker, the peer chat, the restored worker and the recorded chat.
 - The session's own flags are never folded into a chat's status, and a chat's never into the session's.
 - `restoredSubagentSummary` takes the session as a leading argument, not decoded from the chat URI. The flags are keyed by the pair.
-- **Departure 1.** `packages/sdk/src/validate.ts` and `packages/sdk/test/plugin-validate.test.ts` are not in the Files list.
+- **Departure 1.** `packages/sdk/src/plugins/validate.ts` and `packages/sdk/test/plugin-validate.test.ts` are not in the Files list.
 - The plugin boundary checks a store's members against a table keyed by port.
 - A required member missing from that table is a compile error, and one missing from the fixture is a test failure.
 - Both needed `chatFlags` and `setChatFlags`.

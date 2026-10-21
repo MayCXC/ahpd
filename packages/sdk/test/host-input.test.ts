@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chatReducer } from '@microsoft/agent-host-protocol';
 import { checker } from '../../../tools/wire.mjs';
-import { fileSessions } from '../src/sessions.js';
+import { fileSessions } from '../src/sessions/sessions.js';
 import {
   resetSdk, actions, emit, sdk, settle, running, peer, hello,
 } from './support/host.js';

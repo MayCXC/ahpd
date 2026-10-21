@@ -4,7 +4,7 @@ status: done
 depends: [task-01-promote-and-answers.md]
 layer: packages/sdk
 refs:
-  - code://packages/sdk/src/changes.ts#L560-L584 - the two returns of `create-pr`, which gain the pull request
+  - code://packages/sdk/src/sessions/changes.ts#L560-L584 - the two returns of `create-pr`, which gain the pull request
   - code://packages/sdk/src/types/changes.ts#L205-L220 - `ChangesetOperationResult`, which gains `pullRequest`
   - code://packages/sdk/src/types/github.ts#L6-L11 - `PullRequest`, the port's answer, which gains an optional title
   - code://packages/sdk/src/github.ts#L38-L71 - `byApi` and `byGh`, which read the title from GitHub's answer
@@ -26,7 +26,7 @@ A pull request that `create-pr` opened or reused is recorded once as a `pullRequ
 - `UPDATE: packages/sdk/src/types/changes.ts:205-220` - add `pullRequest?: { url: string; title: string; branch: string }` to `ChangesetOperationResult`, commented as what the host records.
 - `UPDATE: packages/sdk/src/types/github.ts:6-11` - `PullRequest` gains `title?: string`.
 - `UPDATE: packages/sdk/src/github.ts:38-71` - `byApi` maps `item.title` and `byGh` asks for `title` in its `--json` list.
-- `UPDATE: packages/sdk/src/changes.ts:560-584` - compute `said` before the reused check and add `pullRequest` to both returns.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:560-584` - compute `said` before the reused check and add `pullRequest` to both returns.
 - `UPDATE: packages/sdk/src/host.ts:5004-5018` - record `result.pullRequest` before `refreshFacts(at.dir)`.
 - `UPDATE: packages/sdk/src/host.ts:1964-1994` - add `recordPullRequest(uri, dir, pullRequest)` beside `refreshPullRequests` and `metaOf`.
 - `UPDATE: test/pullrequest.test.ts:125-167` - both cases assert the returned `pullRequest`.

@@ -4,7 +4,7 @@ date: 2026-10-02
 refs:
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts)"
   - "[code://packages/computer/src/owners.ts](../../../../packages/computer/src/owners.ts)"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts)"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts)"
 ---
 
 Every machine the computer plugin makes, a reopen-in-container relay's included, knows who created it, and every stretch it is up is written as a `ComputerTime` record charged to that owner's, team's and project's pools, or to `root:<host>` for a machine with no owner.

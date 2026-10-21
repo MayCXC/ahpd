@@ -3,12 +3,12 @@ import { realpathSync } from 'node:fs';
 import { stat } from 'node:fs/promises';
 import { isAbsolute, resolve } from 'node:path';
 import { INTERNAL_ERROR, INVALID_PARAMS, METHOD_NOT_FOUND, RpcError, numberParam, optionalStringParam, stringParam } from '../rpc.js';
-import { idOf } from '../catalog.js';
-import { hostLogPath } from '../debuglogs.js';
-import { localPath, uriOf } from '../fileuri.js';
+import { idOf } from '../sessions/catalog.js';
+import { hostLogPath } from '../sessions/debuglogs.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
 import { need, reason } from './common.js';
 import { symlinkFolders } from './lifecycle.js';
-import type { LogFile } from '../debuglogs.js';
+import type { LogFile } from '../sessions/debuglogs.js';
 import type { ContainerConnect, ContainerConnectResult, ContainerSink } from '../types/containers.js';
 import type { ConnectionContext, HostContext } from './context.js';
 

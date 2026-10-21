@@ -9,7 +9,7 @@ requires:
   - plans/host/65-what-the-review-of-the-nine-built-plans-found/plan.md
   - plans/host/58-private-files-foreign-cursors-decoded-uris/plan.md
 refs:
-  - "[code://packages/sdk/src/fileuri.ts#L49-L79](../../../../packages/sdk/src/fileuri.ts#L49-L79) - `localPath` and `uriOf`"
+  - "[code://packages/sdk/src/resources/fileuri.ts#L49-L79](../../../../packages/sdk/src/resources/fileuri.ts#L49-L79) - `localPath` and `uriOf`"
   - "[code://packages/sdk/src/index.ts#L37](../../../../packages/sdk/src/index.ts#L37) - what the sdk exports; neither `localPath` nor `uriOf`"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L907](../../../../packages/sdk/src/host/sessionmethods.ts#L907) - `localPath` of an unencoded `file://${dir}`"
   - "[code://packages/sdk/src/host/lifecycle.ts#L731](../../../../packages/sdk/src/host/lifecycle.ts#L731) - a session's directory read back from its working directories"
@@ -17,8 +17,8 @@ refs:
   - "[code://packages/sdk/src/host/chatactions.ts#L183](../../../../packages/sdk/src/host/chatactions.ts#L183) - and a chat's"
   - "[code://packages/agent-claude/src/session.ts#L152](../../../../packages/agent-claude/src/session.ts#L152) - an agent building `file://${cwd}`"
   - "[code://packages/server/src/daemon.ts#L124-L144](../../../../packages/server/src/daemon.ts#L124-L144) - `TEMP` and `sweepTemps`, `daemon.json` only"
-  - "[code://packages/sdk/src/users.ts#L676-L695](../../../../packages/sdk/src/users.ts#L676-L695) - the users file's temp, whose comment says the sweeper knows it"
-  - "[code://packages/sdk/src/policies.ts#L320-L331](../../../../packages/sdk/src/policies.ts#L320-L331) - the policies file's temp"
+  - "[code://packages/sdk/src/access/users.ts#L676-L695](../../../../packages/sdk/src/access/users.ts#L676-L695) - the users file's temp, whose comment says the sweeper knows it"
+  - "[code://packages/sdk/src/access/policies.ts#L320-L331](../../../../packages/sdk/src/access/policies.ts#L320-L331) - the policies file's temp"
   - "[code://packages/sdk/src/scheduled.ts#L196-L206](../../../../packages/sdk/src/scheduled.ts#L196-L206) - the automations file's temp"
   - "[code://packages/sdk/test/users.test.ts#L536-L547](../../../../packages/sdk/test/users.test.ts#L536-L547) - the case `implemented.md` reads as two writers at once"
 ---
@@ -58,7 +58,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Proposed architecture
 
 - **Layer responsibilities** - sdk: 01, 02, 05 · agent-claude, agent-pi, agent-acp, agent-cofold: 03 · server: 04 · `.project`: 06.
-- **Source-of-truth files** - [`code://packages/sdk/src/fileuri.ts`](../../../../packages/sdk/src/fileuri.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/resources/fileuri.ts`](../../../../packages/sdk/src/resources/fileuri.ts)
 
 ## Tasks
 

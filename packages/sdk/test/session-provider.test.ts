@@ -1,8 +1,8 @@
 import { expect, describe, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { idOf } from '../src/catalog.js';
-import { memorySessions } from '../src/sessions.js';
+import { idOf } from '../src/sessions/catalog.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import type { Agent, Start } from '../src/types/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { SessionStore } from '../src/types/sessions.js';

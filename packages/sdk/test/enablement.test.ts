@@ -9,7 +9,7 @@
  */
 
 import { expect, it } from 'vitest';
-import { enablementKeyOf, memoryEnablement } from '../src/enablement.js';
+import { enablementKeyOf, memoryEnablement } from '../src/plugins/enablement.js';
 
 /** One plugin's URI, which is what a decision about it is keyed by. */
 const PLUGIN = 'file:///copies/holder/a-plugin';

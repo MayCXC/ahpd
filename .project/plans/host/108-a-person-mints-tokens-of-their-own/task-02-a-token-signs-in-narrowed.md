@@ -4,8 +4,8 @@ status: implemented
 depends: [task-01-the-directory-keeps-tokens.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/users.ts#L948-L957](../../../../packages/sdk/src/users.ts#L948-L957) - `verify`, which compares every record's hash and keeps the match"
-  - "[code://packages/sdk/src/users.ts#L846-L917](../../../../packages/sdk/src/users.ts#L846-L917) - `principalOf`, with `standing` and `can` re-read on each call"
+  - "[code://packages/sdk/src/access/users.ts#L948-L957](../../../../packages/sdk/src/access/users.ts#L948-L957) - `verify`, which compares every record's hash and keeps the match"
+  - "[code://packages/sdk/src/access/users.ts#L846-L917](../../../../packages/sdk/src/access/users.ts#L846-L917) - `principalOf`, with `standing` and `can` re-read on each call"
   - "[code://packages/sdk/src/types/users.ts#L40-L91](../../../../packages/sdk/src/types/users.ts#L40-L91) - `Principal`, with `standing` and `expiresAt`"
   - "[code://packages/server/src/commands/authorize.ts#L84-L88](../../../../packages/server/src/commands/authorize.ts#L84-L88) - the HTTP gate, which asks `standing` on each request"
   - "[code://packages/server/src/proxy/caller.ts#L99-L106](../../../../packages/server/src/proxy/caller.ts#L99-L106) - the proxy gate, which asks `standing` and `can` on each call"
@@ -21,8 +21,8 @@ A revoked token, an expired token and a token whose person is gone fail on the n
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts:40-91` - add the optional `token` field, the id of the minted token the principal signed in with.
-- `UPDATE: packages/sdk/src/users.ts:846-917` - give `principalOf` the token record, and narrow `can` and `standing` by it.
-- `UPDATE: packages/sdk/src/users.ts:948-957` - compare the minted tokens' hashes in the same loop as the records' hashes.
+- `UPDATE: packages/sdk/src/access/users.ts:846-917` - give `principalOf` the token record, and narrow `can` and `standing` by it.
+- `UPDATE: packages/sdk/src/access/users.ts:948-957` - compare the minted tokens' hashes in the same loop as the records' hashes.
 - `UPDATE: packages/sdk/test/users-tokens.test.ts` - the tests of the sign-in, the grants, the revoke and the expiry.
 - `UPDATE: packages/server/test/server-http.test.ts` - a proxy-only token at the HTTP API and at the proxy.
 

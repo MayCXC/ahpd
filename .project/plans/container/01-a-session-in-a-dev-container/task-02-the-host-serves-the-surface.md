@@ -22,7 +22,7 @@ A host with a `containers` port serves the reference client's four dev container
 - `CREATE: packages/sdk/src/types/containers.ts` - `ContainerPort` and its shapes: `available()`, `connect({ connectionId, workspaceFolder, name })` answering `{ address, remoteWorkspaceFolder, hostWorkspaceFolder? }` plus a `ContainerChannel` of `write`, `onMessage`, `onClose` and `dispose`, and `disconnect(connectionId)`.
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.containers?: ContainerPort`.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerContainers(port, when?)`, beside `registerComputers`.
-- `UPDATE: packages/sdk/src/plugins.ts` - the registration, the duplicate check and the singleton rule.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the registration, the duplicate check and the singleton rule.
 - `UPDATE: packages/sdk/src/types/index.ts`, `packages/sdk/src/index.ts` - what is published.
 - `UPDATE: packages/sdk/src/host.ts` - the four handlers, the four notifications, the `_meta` key, the `NEEDS`/`UNGATED` entries, and the per-connection map.
 - `CREATE: test/containers.test.ts` - the surface's cases against a fake port.

@@ -1,5 +1,5 @@
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
-import { idOf } from '../catalog.js';
+import { idOf } from '../sessions/catalog.js';
 import type { ServedChannel, ServedMethod } from '../types/plugin.js';
 
 export const ROOT = 'ahp-root://';

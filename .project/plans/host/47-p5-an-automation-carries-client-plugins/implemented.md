@@ -2,7 +2,7 @@
 title: An automation carries the client plugins its template names - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/clientplugins.ts](../../../../packages/sdk/src/clientplugins.ts)"
+  - "[code://packages/sdk/src/plugins/clientplugins.ts](../../../../packages/sdk/src/plugins/clientplugins.ts)"
   - "[code://packages/sdk/src/host/actions.ts](../../../../packages/sdk/src/host/actions.ts)"
   - "[code://packages/sdk/src/host/automations.ts](../../../../packages/sdk/src/host/automations.ts)"
 ---
@@ -13,12 +13,12 @@ A host with no client plugins directory does not advertise `customizations` and 
 
 ## What was built
 
-- [`code://packages/sdk/src/clientplugins.ts`](../../../../packages/sdk/src/clientplugins.ts) - `capture`, `spare` and `prune`; copies live at `<dir>/automations/<sha256 of uri and nonce>`, outside the LRU order.
+- [`code://packages/sdk/src/plugins/clientplugins.ts`](../../../../packages/sdk/src/plugins/clientplugins.ts) - `capture`, `spare` and `prune`; copies live at `<dir>/automations/<sha256 of uri and nonce>`, outside the LRU order.
 - A capture holds each copy it makes back from `prune` until its write is stored or refused, and answers `HeldCopies` with a `release`.
 - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts) - the refusal, the capture before the store, and a prune after a write and after a removal.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - a run sets an `Automation` active client on its session and waits for the plugins to settle.
 - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts) - `customizations: {}` in the automation capabilities, only beside the port.
-- [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) and [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - the copies on the entry and the run, kept across a restart.
+- [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts) and [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - the copies on the entry and the run, kept across a restart.
 - [`code://packages/sdk/src/types/index.ts`](../../../../packages/sdk/src/types/index.ts) - exports `CapturedPlugin`, `HeldCopies` and `TemplatePlugin`, which the public port and store signatures use.
 - [`code://docs/sdk/AHP.md`](../../../../docs/sdk/AHP.md) - the capability, the two automation rows and the `Automation` client.
 

@@ -2,20 +2,20 @@
 title: Automations
 status: current
 covers:
-  - packages/sdk/src/automations.ts
+  - packages/sdk/src/automations/automations.ts
   - packages/sdk/src/host/automations.ts
   - packages/sdk/src/types/automations.ts
   - packages/sdk/src/types/triggers.ts
-  - packages/sdk/src/triggers.ts
-  - packages/sdk/src/wakemessage.ts
+  - packages/sdk/src/automations/triggers.ts
+  - packages/sdk/src/automations/wakemessage.ts
   - packages/server/src/scheduled.ts
 refs:
   - "[code://packages/sdk/src/types/automations.ts#L216-L365](../../packages/sdk/src/types/automations.ts#L216-L365) - `AutomationStore`, the port"
-  - "[code://packages/sdk/src/automations.ts#L264-L293](../../packages/sdk/src/automations.ts#L264-L293) - `checkTriggers` and `checkWake`, the checks at write"
-  - "[code://packages/sdk/src/automations.ts#L396](../../packages/sdk/src/automations.ts#L396) - `memoryAutomations`, the store in memory"
+  - "[code://packages/sdk/src/automations/automations.ts#L264-L293](../../packages/sdk/src/automations/automations.ts#L264-L293) - `checkTriggers` and `checkWake`, the checks at write"
+  - "[code://packages/sdk/src/automations/automations.ts#L396](../../packages/sdk/src/automations/automations.ts#L396) - `memoryAutomations`, the store in memory"
   - "[code://packages/sdk/src/types/triggers.ts#L106-L156](../../packages/sdk/src/types/triggers.ts#L106-L156) - `SessionRule` and `AutomationWake`"
-  - "[code://packages/sdk/src/wakemessage.ts#L39](../../packages/sdk/src/wakemessage.ts#L39) - `WAKE_PLACEHOLDERS`"
-  - "[code://packages/sdk/src/wakemessage.ts#L73-L104](../../packages/sdk/src/wakemessage.ts#L73-L104) - the summary block and `wakeMessage`"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L39](../../packages/sdk/src/automations/wakemessage.ts#L39) - `WAKE_PLACEHOLDERS`"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L73-L104](../../packages/sdk/src/automations/wakemessage.ts#L73-L104) - the summary block and `wakeMessage`"
   - "[code://packages/sdk/src/host/automations.ts#L106-L114](../../packages/sdk/src/host/automations.ts#L106-L114) - `wakeOf`, the waking settings in `_meta.ahpd`"
   - "[code://packages/sdk/src/host/automations.ts#L240-L268](../../packages/sdk/src/host/automations.ts#L240-L268) - `stillGoing` and `settleRun`"
   - "[code://packages/sdk/src/host/automations.ts#L493-L584](../../packages/sdk/src/host/automations.ts#L493-L584) - `hold`, `skip` and `request`, what an overlapping event does"

@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - memory and file stores"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts) - memory and file stores"
   - "[code://packages/sdk/src/host.ts#L6339-L6366](../../../../packages/sdk/src/host.ts#L6339-L6366) - where `setOwner` and `setConfig` are called for a new session"
 ---
 
@@ -16,7 +16,7 @@ The host records it whenever a session starts running on an agent: created (`ope
 
 ## Files
 
-- `UPDATE: packages/sdk/src/types/sessions.ts`, `packages/sdk/src/sessions.ts` - the field, stored and forgotten like `owner`; a file without it reads as nothing recorded.
+- `UPDATE: packages/sdk/src/types/sessions.ts`, `packages/sdk/src/sessions/sessions.ts` - the field, stored and forgotten like `owner`; a file without it reads as nothing recorded.
 - `UPDATE: packages/sdk/src/host.ts` - the calls.
 
 ## Validation

@@ -2,7 +2,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { ROOT } from '../src/host.js';
 import { accountKey } from '../src/host/root.js';
-import { fileUsers } from '../src/users.js';
+import { fileUsers } from '../src/access/users.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { directory, hello, host, root, signIn, watching } from './users-gate-helpers.js';
 import type { Bag } from './users-gate-helpers.js';

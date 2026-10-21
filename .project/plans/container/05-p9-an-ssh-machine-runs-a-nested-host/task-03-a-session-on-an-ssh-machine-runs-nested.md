@@ -5,10 +5,10 @@ depends: [task-02-ssh-machine-is-listed-from-the-options.md]
 layer: "computer | sdk"
 refs:
   - "[code://packages/sdk/src/types/computers.ts#L110-L143](../../../../packages/sdk/src/types/computers.ts#L110-L143) - `how` and `nested` on the port"
-  - "[code://packages/sdk/src/computers.ts#L103-L129](../../../../packages/sdk/src/computers.ts#L103-L129) - `computersFor`, which spreads the port"
+  - "[code://packages/sdk/src/machines/computers.ts#L103-L129](../../../../packages/sdk/src/machines/computers.ts#L103-L129) - `computersFor`, which spreads the port"
   - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - the nested route, chosen by `runsNested` alone"
   - "[code://.project/plans/container/04-a-cofold-session-in-a-computer/task-17-a-backend-names-its-nested-plugin.md](../04-a-cofold-session-in-a-computer/task-17-a-backend-names-its-nested-plugin.md) - removes the `@ahpd/agent-<provider>` default this task would otherwise lean on"
-  - "[code://packages/sdk/src/nested.ts#L115-L129](../../../../packages/sdk/src/nested.ts#L115-L129) - `startInside`, which spawns what `nested` answers"
+  - "[code://packages/sdk/src/sessions/nested.ts#L115-L129](../../../../packages/sdk/src/sessions/nested.ts#L115-L129) - `startInside`, which spawns what `nested` answers"
   - "[code://packages/computer/src/plugin.ts#L210-L224](../../../../packages/computer/src/plugin.ts#L210-L224) - `within`, which has nothing to read for an ssh machine"
 ---
 

@@ -3,8 +3,8 @@ import type { Agent, Listed, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { Session } from '../src/types/session.js';
 import type { Peer } from '../src/types/rpc.js';
-import { createCallLinks } from '../src/calllinks.js';
-import { Status } from '../src/catalog.js';
+import { createCallLinks } from '../src/automations/calllinks.js';
+import { Status } from '../src/sessions/catalog.js';
 import { undeclaredIn } from './support/wire.js';
 
 /*

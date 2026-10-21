@@ -4,8 +4,8 @@ date: 2026-10-05
 refs:
   - git://2caabb1
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts) - `PartNeed` and the `part` kind"
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - a part need resolved to `/opt/ahpd/<id>`"
-  - "[code://packages/sdk/src/computers.ts](../../../../packages/sdk/src/computers.ts) - `machineRefusal` naming a missing part"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts) - a part need resolved to `/opt/ahpd/<id>`"
+  - "[code://packages/sdk/src/machines/computers.ts](../../../../packages/sdk/src/machines/computers.ts) - `machineRefusal` naming a missing part"
   - "[code://packages/computer/src/parts.ts](../../../../packages/computer/src/parts.ts) - `ensureParts`, `withRequires`, the label, the volume name and the `PATH`"
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - `Profile.parts` and the parts a machine asks for"
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - the probe, the two routes, the volume fill and the dev container override"
@@ -17,8 +17,8 @@ An agent can say it needs a part, a profile can name the parts its machines carr
 
 ## What was built
 
-- [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) and [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts) - `PartNeed { part }`, the `part` kind, and its resolution to `/opt/ahpd/<id>` with a profile's or option's value naming another part; a part id that is not a plain name is refused.
-- [`code://packages/sdk/src/types/computers.ts`](../../../../packages/sdk/src/types/computers.ts) and [`code://packages/sdk/src/computers.ts`](../../../../packages/sdk/src/computers.ts) - `ComputerPort.partsMissing`, and `machineRefusal` refusing a session whose agent needs a part the machine lacks.
+- [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) and [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts) - `PartNeed { part }`, the `part` kind, and its resolution to `/opt/ahpd/<id>` with a profile's or option's value naming another part; a part id that is not a plain name is refused.
+- [`code://packages/sdk/src/types/computers.ts`](../../../../packages/sdk/src/types/computers.ts) and [`code://packages/sdk/src/machines/computers.ts`](../../../../packages/sdk/src/machines/computers.ts) - `ComputerPort.partsMissing`, and `machineRefusal` refusing a session whose agent needs a part the machine lacks.
 - [`code://packages/computer/src/parts.ts`](../../../../packages/computer/src/parts.ts) - `ensureParts`, which builds each part asked for with its requirements and answers the ones that failed with the build's reason; `refusedWithout`, the one place that decides which failed parts a machine is not made without (a session-time machine's own agent's parts); `MACHINE_PARTS`, `volumeOf`, `pathWith`, `archiveOf`, and `once` shared with the volume fill.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - `Profile.parts`, and `partsAsked` from the profile and every part need, each part's target in the shared-target check.
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - `canMountImages`, `devcontainerPartRoute`, `ensurePartVolume` with its marker, the flags and label on `docker run`, the image's `PATH`, and the override config's `runArgs` or `mounts` for a dev container.

@@ -4,8 +4,8 @@ date: 2026-10-11
 refs:
   - git://0fcd7ad - `@cofold/yaml` from npm; the build is da2b27f, a483f2c, 343b6d9, 1cf152f and f55c30d, merged in dd02f22, with the review fix 50264e2
   - "[code://packages/sdk/src/types/records.ts](../../../../packages/sdk/src/types/records.ts) - `RecordStore`, `RecordCollection`, `RecordChange` and `CollectionOptions`"
-  - "[code://packages/sdk/src/records.ts](../../../../packages/sdk/src/records.ts) - `memoryRecords` and the slug rule"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - `registerRecords`, `host.records`, and the YAML functions that throw"
+  - "[code://packages/sdk/src/resources/records.ts](../../../../packages/sdk/src/resources/records.ts) - `memoryRecords` and the slug rule"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - `registerRecords`, `host.records`, and the YAML functions that throw"
   - "[code://packages/server/src/records.ts](../../../../packages/server/src/records.ts) - `fileRecords`, the daemon's default record store"
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts) - the record store, the shared `collections` map and the YAML functions for each plugin"
   - npm://@cofold/yaml@^0.3.0 - `parseYaml` and `stringifyYaml`
@@ -19,8 +19,8 @@ A plugin reads and writes YAML with `parseYaml` and `stringifyYaml` on its conte
 ## What was built
 
 - [`code://packages/sdk/src/types/records.ts`](../../../../packages/sdk/src/types/records.ts) - the record store types, with `StoredRecord` as the record type.
-- [`code://packages/sdk/src/records.ts`](../../../../packages/sdk/src/records.ts) - `memoryRecords`, and the slug rule `RECORD_SLUG` with `isRecordSlug`, which the sdk index exports.
-- [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `records` in `PORT_KEYS`, `registerRecords`, and `host.records`, whose calls wait for the fold.
+- [`code://packages/sdk/src/resources/records.ts`](../../../../packages/sdk/src/resources/records.ts) - `memoryRecords`, and the slug rule `RECORD_SLUG` with `isRecordSlug`, which the sdk index exports.
+- [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `records` in `PORT_KEYS`, `registerRecords`, and `host.records`, whose calls wait for the fold.
 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `registerRecords` and `records` on `PluginHost`, `parseYaml` and `stringifyYaml` on `PluginContext`, and `LoaderContext`.
 - [`code://packages/server/src/records.ts`](../../../../packages/server/src/records.ts) - `fileRecords`, `recordFile` and `readRecordFile`, with a folder watch and the one-time conversion of `<id>.json`.
 - [`code://packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - `fileRecords` is the daemon's `records` port.

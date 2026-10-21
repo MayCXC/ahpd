@@ -5,7 +5,7 @@ import { rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, parse } from 'node:path';
 import { echo } from '../../../examples/echo/agent.js';
-import { uriOf } from '../src/resources.js';
+import { uriOf } from '../src/resources/resources.js';
 import type { Start } from '../src/types/agent.js';
 import type { ComputerPort, MachineSource } from '../src/types/computers.js';
 import type { GitDir, Worktrees } from '../src/types/worktrees.js';

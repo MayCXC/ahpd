@@ -12,10 +12,10 @@ creates: []
 decisions:
   - ../../../decisions/a-commit-asks-first-and-names-what-it-takes.md
 refs:
-  - "[code://packages/sdk/src/changes.ts#L107-L136](../../../../packages/sdk/src/changes.ts#L107-L136) - `settled` and `pathIn`, which judge a target where it resolves"
-  - "[code://packages/sdk/src/changes.ts#L212-L238](../../../../packages/sdk/src/changes.ts#L212-L238) - `DISCARD`, `STAGE` and `UNSTAGE`"
-  - "[code://packages/sdk/src/changes.ts#L928-L936](../../../../packages/sdk/src/changes.ts#L928-L936) - what the uncommitted scope offers"
-  - "[code://packages/sdk/src/changes.ts#L995-L1006](../../../../packages/sdk/src/changes.ts#L995-L1006) - where `invoke` turns a target into a path"
+  - "[code://packages/sdk/src/sessions/changes.ts#L107-L136](../../../../packages/sdk/src/sessions/changes.ts#L107-L136) - `settled` and `pathIn`, which judge a target where it resolves"
+  - "[code://packages/sdk/src/sessions/changes.ts#L212-L238](../../../../packages/sdk/src/sessions/changes.ts#L212-L238) - `DISCARD`, `STAGE` and `UNSTAGE`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L928-L936](../../../../packages/sdk/src/sessions/changes.ts#L928-L936) - what the uncommitted scope offers"
+  - "[code://packages/sdk/src/sessions/changes.ts#L995-L1006](../../../../packages/sdk/src/sessions/changes.ts#L995-L1006) - where `invoke` turns a target into a path"
   - file:///github/externals/agent-host-protocol/types/channels-changeset/state.ts - `ChangesetOperation`, whose own example ids include `"stage"`, and `ChangesetOperationScope.Resource`, "a single file within the changeset"
   - file:///github/externals/vscode - `src/vs/sessions/contrib/providers/agentHost/browser/changesActions.ts`: a resource-scoped operation is drawn as a button on every row
   - file:///github/ahpapp/src/changeset-ops.ts - ahpapp already draws resource-scoped operations
@@ -33,7 +33,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ### Searches performed
 
 - `rg -n "stage" /github/externals/vscode` under `src/vs/platform/agentHost` and `src/vs/sessions/contrib/providers/agentHost` - the reference host declares no stage operation; the protocol names `"stage"` as an example id.
-- `rg -n "pathIn" packages/sdk/src/changes.ts` - every resource-scoped operation goes through it, and it neither decodes nor normalises the path.
+- `rg -n "pathIn" packages/sdk/src/sessions/changes.ts` - every resource-scoped operation goes through it, and it neither decodes nor normalises the path.
 
 ### Runtime path
 
@@ -59,7 +59,7 @@ client invokeChangesetOperation stage|unstage { target.resource: file:///<dir>/<
 | Staging is ahpd operations on the uncommitted changeset, which ahpapp and VS Code draw, in a plan of its own. | Softov, 2026-09-27, asked where the stage and unstage work goes: "New plan host/22"; and asked again after a report said it was ahpapp work: "ahpd operations, host/22". | 02 |
 | Two operations, `stage` and `unstage`, on every row, each harmless where it changes nothing. | Softov, 2026-09-27, asked how staging appears: "Two ops: stage and unstage". | 02 |
 | The target is a file or a folder; the session's own folder stages everything; nothing above it can be named. | Softov, 2026-09-27, asked whether to add whole-changeset operations: "file and folder... so a folder in root is stage all... cannot go back more than root ../.. etc". | 01, 02 |
-| The containment check is shared by every resource-scoped operation, `discard` and `revert` included. | the same answer, and [`code://packages/sdk/src/changes.ts#L101-L107`](../../../../packages/sdk/src/changes.ts#L101-L107) | 01 |
+| The containment check is shared by every resource-scoped operation, `discard` and `revert` included. | the same answer, and [`code://packages/sdk/src/sessions/changes.ts#L101-L107`](../../../../packages/sdk/src/sessions/changes.ts#L101-L107) | 01 |
 | Staging is refused mid-turn like every other operation. | (defaulted: the host refuses any operation while a turn runs; Softov may exempt staging) | 02 |
 
 ## Tasks

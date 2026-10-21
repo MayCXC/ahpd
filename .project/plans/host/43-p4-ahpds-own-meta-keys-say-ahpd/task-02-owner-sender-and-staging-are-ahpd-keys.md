@@ -8,9 +8,9 @@ refs:
   - "[code://packages/sdk/src/host/facts.ts#L174-L179](../../../../packages/sdk/src/host/facts.ts#L174-L179) - `owner` beside the git facts"
   - "[code://packages/sdk/src/host/spawn.ts#L136-L141](../../../../packages/sdk/src/host/spawn.ts#L136-L141) - `sender` on a stored turn's message"
   - "[code://packages/sdk/src/host/spawn.ts#L472-L476](../../../../packages/sdk/src/host/spawn.ts#L472-L476) - `sender` on `chat/turnStarted`"
-  - "[code://packages/sdk/src/changes.ts#L634](../../../../packages/sdk/src/changes.ts#L634) - `staged` and `unstaged` on a file"
-  - "[code://packages/sdk/src/changes.ts#L108](../../../../packages/sdk/src/changes.ts#L108) - read back for the watch's comparison"
-  - "[code://packages/sdk/src/changes.ts#L244](../../../../packages/sdk/src/changes.ts#L244) - counted for the commit"
+  - "[code://packages/sdk/src/sessions/changes.ts#L634](../../../../packages/sdk/src/sessions/changes.ts#L634) - `staged` and `unstaged` on a file"
+  - "[code://packages/sdk/src/sessions/changes.ts#L108](../../../../packages/sdk/src/sessions/changes.ts#L108) - read back for the watch's comparison"
+  - "[code://packages/sdk/src/sessions/changes.ts#L244](../../../../packages/sdk/src/sessions/changes.ts#L244) - counted for the commit"
   - "file:///github/ahpapp/src/changes.ts - lines 122-123, the staging reader"
 ---
 
@@ -21,7 +21,7 @@ A session summary and state carry `_meta['ahpd.owner']`, a live `chat/turnStarte
 ## Files
 
 - `UPDATE: packages/sdk/src/host/facts.ts:161, 179` and `packages/sdk/src/host/spawn.ts:140, 474` - the new keys; the plugin event fields at `spawn.ts:515` and `spawn.ts:525` are not `_meta` and stay.
-- `UPDATE: packages/sdk/src/changes.ts:634, 108, 244` - write and read the new keys.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:634, 108, 244` - write and read the new keys.
 - `UPDATE: packages/sdk/test/*.test.ts` - the `host-*.test.ts` area files, `sessions.test.ts`, `plugin-events-fire.test.ts`, `commit.test.ts` and any other that reads the old keys (`rg -n "_meta\??\.(owner|sender|staged|unstaged)" packages/sdk/test`).
 - `UPDATE: packages/sdk/test/wire.test.ts` - `owner` and `sender` leave `PENDING`.
 - `UPDATE: docs/sdk/AHP.md:217, 246, 349, 633, 661` - the new names.
@@ -41,5 +41,5 @@ A session summary and state carry `_meta['ahpd.owner']`, a live `chat/turnStarte
 
 Implemented 2026-10-09, in the `build/agents/6dac4670` worktree.
 Step 1 was already met: ahpapp reads both names for staging since host/05 (a66f582). No client reads `owner` or `sender` yet (ahpapp `chat/02` is todo), so nothing goes blank.
-`packages/sdk/src/host/facts.ts` sends `ahpd.owner` on the summary and the state. `packages/sdk/src/host/spawn.ts` sends `ahpd.sender` on a stored turn's message and on a live `chat/turnStarted`; the plugin event's own `sender` field is not `_meta` and stays. `packages/sdk/src/changes.ts` writes `ahpd.staged` and `ahpd.unstaged`, and its two readers read the new names.
+`packages/sdk/src/host/facts.ts` sends `ahpd.owner` on the summary and the state. `packages/sdk/src/host/spawn.ts` sends `ahpd.sender` on a stored turn's message and on a live `chat/turnStarted`; the plugin event's own `sender` field is not `_meta` and stays. `packages/sdk/src/sessions/changes.ts` writes `ahpd.staged` and `ahpd.unstaged`, and its two readers read the new names.
 Tests: `commit.test.ts`, `sessions.test.ts`, `plugin-events-fire.test.ts`. Docs: `docs/sdk/AHP.md`, `docs/sdk/LIBRARY.md`.

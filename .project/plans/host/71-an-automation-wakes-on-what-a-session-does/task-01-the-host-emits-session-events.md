@@ -17,7 +17,7 @@ The host turns chat actions into `SessionEvent`s on one stream that the automati
 - `CREATE: packages/sdk/src/host/sessionevents.ts` - the stream, and what each session is doing as the events arrive.
 - `UPDATE: packages/sdk/src/host.ts` - read every action at the one dispatch funnel a client's action and a backend's both pass through.
 - `UPDATE: packages/sdk/src/types/sessions.ts` - the parent link on the session's stored record.
-- `UPDATE: packages/sdk/src/sessions.ts` - the parent link in both stores.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the parent link in both stores.
 - `UPDATE: packages/sdk/src/host/tooling.ts` - record the parent when the `create` tool starts a session.
 - `CREATE: packages/sdk/test/session-events.test.ts` - the cases below.
 

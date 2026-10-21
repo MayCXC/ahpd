@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { memoryAutomations } from '../src/automations.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';

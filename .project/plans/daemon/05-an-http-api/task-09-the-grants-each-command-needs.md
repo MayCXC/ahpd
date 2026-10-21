@@ -8,7 +8,7 @@ refs:
   - "[../../../../docs/sdk/USERS.md](../../../../docs/sdk/USERS.md) - `users:write`"
   - "[../../../../docs/sdk/AUTHENTICATION.md](../../../../docs/sdk/AUTHENTICATION.md) - the deployment token only"
   - "[../../../../docs/sdk/HOST.md](../../../../docs/sdk/HOST.md) - no `connectionToken` value"
-  - "[code://packages/sdk/src/users.ts#L39](../../../../packages/sdk/src/users.ts#L39) - `SUBJECTS`, which now has `users`"
+  - "[code://packages/sdk/src/access/users.ts#L39](../../../../packages/sdk/src/access/users.ts#L39) - `SUBJECTS`, which now has `users`"
   - "[code://packages/server/src/commands/scopes.ts#L17-L45](../../../../packages/server/src/commands/scopes.ts#L17-L45) - the mark and the hook that reads it"
   - "[code://packages/server/src/commands/plugin.ts#L27](../../../../packages/server/src/commands/plugin.ts#L27) and [#L72-L74](../../../../packages/server/src/commands/plugin.ts#L72-L74) - `config:read` on the list, and the deployment-token mark on install and remove"
   - "[code://packages/server/src/commands/config.ts#L29-L44](../../../../packages/server/src/commands/config.ts#L29-L44) and [#L61-L64](../../../../packages/server/src/commands/config.ts#L61-L64) - `withoutSecrets`, and the served answer"
@@ -24,7 +24,7 @@ This task starts after daemon/04's task that moves the scope check into the regi
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:39` - `SUBJECTS` gains `users`.
+- `UPDATE: packages/sdk/src/access/users.ts:39` - `SUBJECTS` gains `users`.
 - `UPDATE: packages/server/src/commands/status.ts:23` and `plugin.ts:27` - `scopes: ['config:read']`; today none.
 - `UPDATE: packages/server/src/commands/plugin.ts:72-74` - install and remove carry `meta.deploymentTokenOnly`; today `config:write` alone.
 - `UPDATE: packages/server/src/commands/user.ts` - `scopes: ['users:write']` in place of `['admin']` on all four.

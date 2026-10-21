@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/session.ts#L381-L382](../../../../packages/sdk/src/types/session.ts#L381-L382) - `confirm(toolCallId, approved)`"
   - "[code://packages/sdk/src/host.ts#L8955-L8957](../../../../packages/sdk/src/host.ts#L8955-L8957) - where `selectedOptionId` is dropped"
-  - "[code://packages/sdk/src/nested.ts#L476-L477](../../../../packages/sdk/src/nested.ts#L476-L477) - the nested proxy's re-dispatch"
+  - "[code://packages/sdk/src/sessions/nested.ts#L476-L477](../../../../packages/sdk/src/sessions/nested.ts#L476-L477) - the nested proxy's re-dispatch"
 ---
 
 ## Objective
@@ -17,7 +17,7 @@ A `chat/toolCallConfirmed` that carries `selectedOptionId` reaches the backend's
 
 - `UPDATE: packages/sdk/src/types/session.ts:381-382` - `confirm(toolCallId: string, approved: boolean, optionId?: string): void`, the comment saying what `optionId` is.
 - `UPDATE: packages/sdk/src/host.ts:8955-8957` - pass `action.selectedOptionId` when it is a string.
-- `UPDATE: packages/sdk/src/nested.ts:476-477` - re-dispatch `selectedOptionId` into the nested host.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:476-477` - re-dispatch `selectedOptionId` into the nested host.
 - `UPDATE: packages/sdk/test/host.test.ts`, `packages/sdk/test/nested-proxy.test.ts` - the cases below.
 
 ## Steps

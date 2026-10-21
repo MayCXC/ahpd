@@ -11,7 +11,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/host/resourcemethods.ts#L102-L134](../../../../packages/sdk/src/host/resourcemethods.ts#L102-L134) - `createResourceWatch`, which calls a provider's `watch` with no reader"
   - "[code://packages/sdk/src/types/resources.ts#L211-L215](../../../../packages/sdk/src/types/resources.ts#L211-L215) - `watch`, the signature a provider takes from `ResourceStore`"
-  - "[code://packages/sdk/src/resources.ts#L503-L575](../../../../packages/sdk/src/resources.ts#L503-L575) - the file store's `watch`, the pattern to mirror"
+  - "[code://packages/sdk/src/resources/resources.ts#L503-L575](../../../../packages/sdk/src/resources/resources.ts#L503-L575) - the file store's `watch`, the pattern to mirror"
   - "[code://packages/sdk/src/host/admission.ts#L231-L253](../../../../packages/sdk/src/host/admission.ts#L231-L253) - `excusedBy`, which asks `authorize` for a read and a list only"
   - "[code://packages/sdk/src/host/gate.ts#L252-L259](../../../../packages/sdk/src/host/gate.ts#L252-L259) - `channelRead`, which gates every resource watch channel as `file:watch`"
   - "[code://packages/sdk/src/host/root.ts#L21-L45](../../../../packages/sdk/src/host/root.ts#L21-L45) - `schemeOperations`, which does not advertise `watch`"

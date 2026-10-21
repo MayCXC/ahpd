@@ -11,7 +11,7 @@
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
 import { echo } from '../../../examples/echo/agent.js';
-import { memorySessions } from '../src/sessions.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import type { Agent, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { Peer } from '../src/types/rpc.js';

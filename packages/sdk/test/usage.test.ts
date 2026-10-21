@@ -16,7 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { fileUsage } from '../src/usage.js';
+import { fileUsage } from '../src/usage/usage.js';
 import type { ComputerTime, ModelCall, ModelUse, UsageEntry } from '../src/types/usage.js';
 
 let root: string;

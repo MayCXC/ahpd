@@ -3,7 +3,7 @@ title: A put clears pool and cap, and a client imports the limits type - impleme
 date: 2026-10-19
 refs:
   - git://d6cab489
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts) - `checkPolicy`, which reads `null` for `pool` and `cap` as absent"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts) - `checkPolicy`, which reads `null` for `pool` and `cap` as absent"
   - "[code://packages/sdk/src/index.ts](../../../../packages/sdk/src/index.ts) - the type export of `PolicyLimits`"
 ---
 
@@ -12,8 +12,8 @@ A client imports `PolicyLimits` from `@ahpd/sdk` to type what `policy://<id>/lim
 
 ## What was built
 
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts) - `checkPolicy` takes `null` for `pool` and `cap`, and the row it answers leaves the field out.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - the manifest takes `null` for every field the check reads it for, so a form does not refuse a body the host accepts.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts) - `checkPolicy` takes `null` for `pool` and `cap`, and the row it answers leaves the field out.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts) - the manifest takes `null` for every field the check reads it for, so a form does not refuse a body the host accepts.
 - [`code://packages/sdk/src/index.ts`](../../../../packages/sdk/src/index.ts) - `PolicyLimits` is exported beside `PolicyChannels` and `PolicyProvider`.
 - [`code://docs/sdk/POLICY.md`](../../../../docs/sdk/POLICY.md) - The scheme says a field sent as `null` is removed, and names the fields.
 

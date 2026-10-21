@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L393](../../../../packages/sdk/src/users.ts#L393) - `fileUsers`"
-  - "[code://packages/sdk/src/users.ts#L707](../../../../packages/sdk/src/users.ts#L707) - `write`, where the host changes the users file"
+  - "[code://packages/sdk/src/access/users.ts#L393](../../../../packages/sdk/src/access/users.ts#L393) - `fileUsers`"
+  - "[code://packages/sdk/src/access/users.ts#L707](../../../../packages/sdk/src/access/users.ts#L707) - `write`, where the host changes the users file"
   - "[code://packages/sdk/src/types/users.ts#L252](../../../../packages/sdk/src/types/users.ts#L252) - `Users`, the port"
   - "[code://packages/sdk/src/types/events.ts#L29-L47](../../../../packages/sdk/src/types/events.ts#L29-L47) - `EventName`"
 ---
@@ -18,7 +18,7 @@ The event fires for a hand edit of the users file and for a write the host makes
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts:252` - `Users` gets an optional `watch(onChange)` that answers a handle with `close()`.
-- `UPDATE: packages/sdk/src/users.ts:393` - `fileUsers` implements `watch` with a watch on its file, and calls each listener after `write`.
+- `UPDATE: packages/sdk/src/access/users.ts:393` - `fileUsers` implements `watch` with a watch on its file, and calls each listener after `write`.
 - `UPDATE: packages/sdk/src/types/events.ts:29-47` - `EventName` gains `users_changed`, an event with no fields.
 - `UPDATE: packages/sdk/src/host.ts` - the host watches its users directory when a plugin listens to `users_changed`, and closes the watch on close.
 - `CREATE: packages/sdk/test/users-changed.test.ts` - a hand edit and a host write each fire the event once.

@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L335-L353](../../../../packages/sdk/src/types/agent.ts#L335-L353) - `Agent`, where `machine?()` sits after `defaults()`"
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts) - the need types"
-  - "[code://packages/sdk/src/validate.ts#L72](../../../../packages/sdk/src/validate.ts#L72) - `machine` checked as an optional function"
+  - "[code://packages/sdk/src/plugins/validate.ts#L72](../../../../packages/sdk/src/plugins/validate.ts#L72) - `machine` checked as an optional function"
 ---
 
 ## Objective

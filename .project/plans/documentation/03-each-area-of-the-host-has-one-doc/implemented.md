@@ -39,7 +39,7 @@ Nine areas of the host have a document of their own where DAEMON.md and USERS.md
 ## Departures from the plan
 
 - None of the tasks named a code change, and none was made. Where the code and a document disagreed, the document moved to the code.
-- The plan's task 05 expected the area's decisions to be found by their `code://` refs. `rg -ln "code://packages/sdk/src/usage.ts|code://packages/sdk/src/host/resourcemethods.ts" .project/decisions/` finds nothing, so RESOURCES.md's two decisions came from the wider sweep over `resources.ts` and the rest of the set from the decisions' own titles.
+- The plan's task 05 expected the area's decisions to be found by their `code://` refs. `rg -ln "code://packages/sdk/src/usage/usage.ts|code://packages/sdk/src/host/resourcemethods.ts" .project/decisions/` finds nothing, so RESOURCES.md's two decisions came from the wider sweep over `resources.ts` and the rest of the set from the decisions' own titles.
 - Task 06's Files named `README.md` for a link only. Its Documentation shortlist claimed `docs/plugins/COMPUTERS.md` covers "Docker and KVM", and the code has one runtime, so that row was corrected to "(Docker)" in the same change.
 - `docs/sdk/AHP.md`'s two rows that contradict the code are left as they are, because no task's Files cover that file's rows, and editing a wire row was not this plan's work.
 

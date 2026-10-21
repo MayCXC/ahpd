@@ -5,11 +5,11 @@ depends: [task-06-docs.md]
 layer: "sdk | agent-cofold"
 refs:
   - "[code://packages/sdk/src/types/agent.ts#L439](../../../../packages/sdk/src/types/agent.ts#L439) - `runsNested?: boolean`"
-  - "[code://packages/sdk/src/plugins.ts#L500-L507](../../../../packages/sdk/src/plugins.ts#L500-L507) - `registerAgent`, where the plugin that registers an agent is known"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L500-L507](../../../../packages/sdk/src/plugins/plugins.ts#L500-L507) - `registerAgent`, where the plugin that registers an agent is known"
   - "[code://packages/sdk/src/types/plugin.ts#L454-L470](../../../../packages/sdk/src/types/plugin.ts#L454-L470) - `Loaded.spec`, what configuration named for that plugin"
   - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - the host chooses the proxy when `runsNested === true`"
-  - "[code://packages/sdk/src/nested.ts#L95-L103](../../../../packages/sdk/src/nested.ts#L95-L103) - `nestedAgent`, which derives `@ahpd/agent-<provider>`"
-  - "[code://packages/sdk/src/nested.ts#L376-L381](../../../../packages/sdk/src/nested.ts#L376-L381) - the inner `createSession`, under the outer provider name"
+  - "[code://packages/sdk/src/sessions/nested.ts#L95-L103](../../../../packages/sdk/src/sessions/nested.ts#L95-L103) - `nestedAgent`, which derives `@ahpd/agent-<provider>`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L376-L381](../../../../packages/sdk/src/sessions/nested.ts#L376-L381) - the inner `createSession`, under the outer provider name"
   - "[code://packages/agent-cofold/src/agent.ts#L673](../../../../packages/agent-cofold/src/agent.ts#L673) - cofold's `runsNested: true`"
   - "[code://packages/computer/test/computer-refusal.test.ts#L52-L98](../../../../packages/computer/test/computer-refusal.test.ts#L52-L98) - the cases that read `runsNested` as a boolean"
 ---
@@ -20,10 +20,10 @@ The host knows which plugin spec registered each agent, the inner host loads tha
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts:500-507` - each agent a plugin registers is kept with the name of that plugin's spec.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:500-507` - each agent a plugin registers is kept with the name of that plugin's spec.
 - `UPDATE: packages/sdk/src/host/spawn.ts:332-334` - the proxy handed the recorded plugin of the agent.
-- `UPDATE: packages/sdk/src/nested.ts:62-103` - `NestedOptions.plugins` default and its doc comment; the provider-string form of `nestedAgent`.
-- `UPDATE: packages/sdk/src/nested.ts:376-381` - the provider named in the inner `createSession`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:62-103` - `NestedOptions.plugins` default and its doc comment; the provider-string form of `nestedAgent`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:376-381` - the provider named in the inner `createSession`.
 - `UPDATE: packages/sdk/test/nested-proxy.test.ts` - the cases below.
 
 ## Steps

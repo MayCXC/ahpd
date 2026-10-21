@@ -5,8 +5,8 @@ depends: []
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/types/users.ts#L13-L35](../../../../packages/sdk/src/types/users.ts#L13-L35) - the grammar"
-  - "[code://packages/sdk/src/users.ts#L20-L52](../../../../packages/sdk/src/users.ts#L20-L52) - the built-ins, `isGrant` and `holds`"
-  - "[code://packages/sdk/src/users.ts#L140-L200](../../../../packages/sdk/src/users.ts#L140-L200) - the file reader, the once-only reporter and `principalOf`"
+  - "[code://packages/sdk/src/access/users.ts#L20-L52](../../../../packages/sdk/src/access/users.ts#L20-L52) - the built-ins, `isGrant` and `holds`"
+  - "[code://packages/sdk/src/access/users.ts#L140-L200](../../../../packages/sdk/src/access/users.ts#L140-L200) - the file reader, the once-only reporter and `principalOf`"
   - "[code://packages/sdk/src/host.ts#L137-L190](../../../../packages/sdk/src/host.ts#L137-L190) - `NEEDS`"
   - "[code://packages/sdk/src/host.ts#L220-L245](../../../../packages/sdk/src/host.ts#L220-L245) - `dispatchNeeds`"
   - "[code://packages/sdk/src/host.ts#L4626-L4665](../../../../packages/sdk/src/host.ts#L4626-L4665) - `capabilityFor`"
@@ -20,7 +20,7 @@ A grant is `<subject>:<verb>`, `*` matches in either position, every method decl
 
 - `UPDATE: packages/sdk/src/types/users.ts` - `Grant` becomes the grammar; `Verb` replaces `Capability`; `Users.list` answers resolved grants.
 - `UPDATE: packages/sdk/src/types/index.ts` - export `Verb` instead of `Capability`.
-- `UPDATE: packages/sdk/src/users.ts` - the built-ins, `isGrant`, `holds`, the malformed-grant report, the role-name refusal in `add`, and the grants in `list`.
+- `UPDATE: packages/sdk/src/access/users.ts` - the built-ins, `isGrant`, `holds`, the malformed-grant report, the role-name refusal in `add`, and the grants in `list`.
 - `UPDATE: packages/sdk/src/host.ts` - `NEEDS` by pair, `dispatchNeeds` by pair, and `capabilityFor` scoping only the file subject by the URI.
 - `UPDATE: test/users.test.ts`, `test/users-gate.test.ts`, `test/users-issuer.test.ts`, `test/users-host.test.ts` - the matrix, the wildcards and the new expectations.
 

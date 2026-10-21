@@ -23,7 +23,7 @@ refs:
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.computers?: ComputerPort`.
 - `UPDATE: packages/sdk/src/types/agent.ts` - `Start.computers?: ComputerPort`.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerComputers(port: ComputerPort): void`.
-- `UPDATE: packages/sdk/src/plugins.ts` - the registration and the duplicate check every singleton port gets.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the registration and the duplicate check every singleton port gets.
 - `UPDATE: packages/sdk/src/host.ts` - pass the port through to the `Start` it builds.
 - `UPDATE: packages/computer/src/plugin.ts` - build the port over the runtime and register it.
 - `UPDATE: test/plugin-host.test.ts` - the registration and the duplicate.

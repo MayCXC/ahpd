@@ -12,8 +12,8 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176](../../../../packages/sdk/src/types/plugin.ts#L176) - `PluginHost`, where `registerClose` goes"
   - "[code://packages/sdk/src/types/plugin.ts#L417](../../../../packages/sdk/src/types/plugin.ts#L417) - `Contribution`, which carries what one plugin registered"
-  - "[code://packages/sdk/src/plugins.ts#L548-L571](../../../../packages/sdk/src/plugins.ts#L548-L571) - the `register*` functions, the pattern to copy"
-  - "[code://packages/sdk/src/plugins.ts#L166](../../../../packages/sdk/src/plugins.ts#L166) - `foldHostOptions`, which folds the contributions into `HostOptions`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L548-L571](../../../../packages/sdk/src/plugins/plugins.ts#L548-L571) - the `register*` functions, the pattern to copy"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L166](../../../../packages/sdk/src/plugins/plugins.ts#L166) - `foldHostOptions`, which folds the contributions into `HostOptions`"
   - "[code://packages/sdk/src/host.ts#L857-L890](../../../../packages/sdk/src/host.ts#L857-L890) - `close`: chats first, then `options.automations?.close?.()` and `kept.close?.()`, each as a `step`"
   - "[code://packages/computer/src/plugin.ts#L857-L896](../../../../packages/computer/src/plugin.ts#L857-L896) - `arm` and `watch`: the disposal timers, and a refused removal that arms again"
   - "[code://packages/computer/src/plugin.ts#L957-L1006](../../../../packages/computer/src/plugin.ts#L957-L1006) - the startup scan that gives a leftover machine the delay again"

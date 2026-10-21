@@ -24,7 +24,7 @@ refs:
   - "[code://packages/agent-claude/src/session/workers.ts#L146-L167](../../../../packages/agent-claude/src/session/workers.ts#L146-L167) - `background`, `taskInfo` and `live`, claude's background work"
   - "[code://packages/agent-claude/src/session/query.ts#L249](../../../../packages/agent-claude/src/session/query.ts#L249) - the `hooks` option, where a `Stop` hook is added"
   - "[code://packages/agent-acp/src/connection.ts#L106-L120](../../../../packages/agent-acp/src/connection.ts#L106-L120) - the ACP server process, held between turns"
-  - "[code://packages/sdk/src/nested.ts#L1107-L1160](../../../../packages/sdk/src/nested.ts#L1107-L1160) - a nested session's `close`, an inner ahpd process"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1107-L1160](../../../../packages/sdk/src/sessions/nested.ts#L1107-L1160) - a nested session's `close`, an inner ahpd process"
   - https://github.com/microsoft/vscode/blob/main/src/vs/platform/agentHost/node/agentSessionResidency.ts - VS Code's `AgentSessionResidency`: at most 10 loaded sessions, the least recently used released first, an archived one at once
   - https://github.com/microsoft/vscode/blob/main/src/vs/platform/agentHost/node/claude/claudeAgent.ts - `_releaseChat`, which stops an idle claude process and keeps its conversation
   - npm://@anthropic-ai/claude-agent-sdk@0.3.278 - `StopHookInput.session_crons` and `background_tasks`, what a claude session will still do later

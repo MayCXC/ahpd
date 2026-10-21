@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
-import { machineRefusal } from '../src/computers.js';
+import { machineRefusal } from '../src/machines/computers.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { ComputerPort, KeptFor } from '../src/types/computers.js';
 import type { Peer } from '../src/types/rpc.js';

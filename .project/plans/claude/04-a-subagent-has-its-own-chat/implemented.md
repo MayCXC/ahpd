@@ -6,7 +6,7 @@ refs:
   - "[code://packages/agent-claude/src/session.ts](../../../../packages/agent-claude/src/session.ts) - a `Scope` per conversation, the routing by `parent_tool_use_id`, the endings and the asks"
   - "[code://packages/agent-claude/src/transcript.ts](../../../../packages/agent-claude/src/transcript.ts) - `subagentsOf`, the restore from the CLI's meta files"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - `Start.subagent`, the worker chats, `WORKER_ACTIONS`"
-  - "[code://packages/sdk/src/calllinks.ts](../../../../packages/sdk/src/calllinks.ts) - the content of spawning calls, held while a worker needs it"
+  - "[code://packages/sdk/src/automations/calllinks.ts](../../../../packages/sdk/src/automations/calllinks.ts) - the content of spawning calls, held while a worker needs it"
 ---
 
 A subagent Claude starts is its own read-only chat, opened from the `Task` or `Agent` call that started it, with its text, thinking and tool calls, and it is there again after a restart.
@@ -16,7 +16,7 @@ A permission or a question asked inside a subagent is asked on its chat, and an 
 
 - [`code://packages/sdk/src/types/session.ts`](../../../../packages/sdk/src/types/session.ts) - `SubagentRequest` and `SubagentChat`, the seam a backend opens a worker chat through.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `Start.subagent` mints `ahp-chat://subagent/<base64url session>/<call id>`, announces the chat `read-only` with a `tool` origin, opens its turn, links the spawning call with `subagent` content and `_meta.subagentChatUri`, and reduces the worker's actions through the protocol's `chatReducer`; a worker chat takes `chat/toolCallConfirmed`, `chat/inputCompleted` and `chat/turnCancelled`, resolved to its session's lead chat, and refuses every other action.
-- [`code://packages/sdk/src/calllinks.ts`](../../../../packages/sdk/src/calllinks.ts) - each chat's open turn and the content of spawning calls only, forgotten with the worker chat or the session.
+- [`code://packages/sdk/src/automations/calllinks.ts`](../../../../packages/sdk/src/automations/calllinks.ts) - each chat's open turn and the content of spawning calls only, forgotten with the worker chat or the session.
 - [`code://packages/agent-claude/src/session.ts`](../../../../packages/agent-claude/src/session.ts) - `forwardSubagentText: true`; a `Scope` per spawning call; frames routed by `parent_tool_use_id`; `subagentDescription` and `subagentAgentName` on the call's `_meta`; a foreground worker ends on its result or notification, a background one on its notification, once; a cancel ends the workers of that turn; an ask is drawn on the worker's chat through `toolUseID` and `agentID`.
 - [`code://packages/agent-claude/src/transcript.ts`](../../../../packages/agent-claude/src/transcript.ts) - `subagentsOf` reads `subagents/agent-<id>.meta.json`, falls back to the `agentId:` line in the spawning result, and links a nested worker from its parent worker.
 - [`code://packages/agent-claude/README.md`](../../../../packages/agent-claude/README.md), [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) and [`code://UPSTREAM.md`](../../../../UPSTREAM.md) - the worker chat, the seam, and the upstream line.

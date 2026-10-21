@@ -2,7 +2,7 @@
 title: A client plugin lists its parts, and a part can be switched off - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/pluginparts.ts](../../../../packages/sdk/src/pluginparts.ts)"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts](../../../../packages/sdk/src/plugins/pluginparts.ts)"
   - "[code://packages/sdk/src/host/tooling.ts](../../../../packages/sdk/src/host/tooling.ts)"
   - "[code://packages/sdk/src/host/chatactions.ts](../../../../packages/sdk/src/host/chatactions.ts)"
   - "[code://packages/agent-claude/src/session/query.ts](../../../../packages/agent-claude/src/session/query.ts)"
@@ -15,7 +15,7 @@ The chat starts again at the next send with the new set of servers.
 
 ## What was built
 
-- [`code://packages/sdk/src/pluginparts.ts`](../../../../packages/sdk/src/pluginparts.ts) - `partsOf` reads `.claude-plugin/plugin.json` or `.plugin/plugin.json` and the default places, one part per file or server.
+- [`code://packages/sdk/src/plugins/pluginparts.ts`](../../../../packages/sdk/src/plugins/pluginparts.ts) - `partsOf` reads `.claude-plugin/plugin.json` or `.plugin/plugin.json` and the default places, one part per file or server.
 - [`code://packages/sdk/src/host/tooling.ts`](../../../../packages/sdk/src/host/tooling.ts) - the parts are published as `children`, `childEnablement` applies to servers, `mcpFor` skips a server switched off, and `deniedMcpServers` names the rest.
 - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts) - a server toggle is offered to the backend's live switch, and a backend with no switch does not refuse it.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `Start.deniedMcpServers` carries the names to a backend.

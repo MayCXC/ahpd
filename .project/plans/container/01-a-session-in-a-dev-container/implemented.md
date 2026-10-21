@@ -6,7 +6,7 @@ refs:
   - code://packages/sdk/src/types/listen.ts
   - code://packages/sdk/src/types/containers.ts
   - code://packages/sdk/src/host.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/computer/src/devcontainer.ts
   - code://packages/computer/src/plugin.ts
   - code://packages/server/src/main.ts
@@ -25,7 +25,7 @@ A workspace with a `devcontainer.json` runs its session inside that container, a
 
 - `code://packages/sdk/src/listen.ts` - `overStdio`, the second transport: one frame per line of JSON on this process's stdin and stdout, through the same `createPeer` and `receive` the socket uses, and the same gate, tap and framing. It takes its streams, so the suite drives it without taking over the test runner's pipes.
 - `code://packages/sdk/src/types/containers.ts` - `ContainerPort` (`available`, `connect`, `send`, `disconnect`), `ContainerConnect`, `ContainerConnectResult` and `ContainerSink`.
-- `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/sdk/src/validate.ts` - `registerContainers` and the port's validation row.
+- `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins/plugins.ts`, `code://packages/sdk/src/plugins/validate.ts` - `registerContainers` and the port's validation row.
 - `code://packages/sdk/src/host.ts` - the four methods (`isDockerAvailable`, `connect`, `disconnect`, `relaySend`) and the four notifications (`relayMessage`, `output`, `relayClose`, `closeConnection`), the per-connection map that namespaces a client's `connectionId`, the disposal that stops a socket's relays, and the capability key, which is a probe rather than a presence.
 - `code://packages/computer/src/devcontainer.ts` - the launcher: `devcontainer up`, the CLI's JSON read off whichever line carries it, the host inside probed and installed, the configuration written owner-only, and the stdio process whose lines are frames or output.
 - `code://packages/computer/src/plugin.ts` - the launcher registered from the plugin's `devcontainer` option, on unless it says `false`.

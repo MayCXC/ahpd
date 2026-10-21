@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { webhookRoute } from '../src/route.js';
 import type { Endpoint } from '../src/record.js';
 import type { WebhookSeams } from '../src/route.js';

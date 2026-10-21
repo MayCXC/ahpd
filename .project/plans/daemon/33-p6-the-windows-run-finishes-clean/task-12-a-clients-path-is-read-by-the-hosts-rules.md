@@ -4,8 +4,8 @@ status: done
 depends: [task-03-the-windows-job-runs-to-the-end.md]
 layer: sdk, server, bot, tests
 refs:
-  - "[code://packages/sdk/src/fileuri.ts](../../../../packages/sdk/src/fileuri.ts) - `localPath`, a URI with no drive on Windows"
-  - "[code://packages/sdk/src/resources.ts](../../../../packages/sdk/src/resources.ts) - `pathOf`, which refuses a URI naming another machine"
+  - "[code://packages/sdk/src/resources/fileuri.ts](../../../../packages/sdk/src/resources/fileuri.ts) - `localPath`, a URI with no drive on Windows"
+  - "[code://packages/sdk/src/resources/resources.ts](../../../../packages/sdk/src/resources/resources.ts) - `pathOf`, which refuses a URI naming another machine"
   - "[code://packages/sdk/src/tools/session.ts](../../../../packages/sdk/src/tools/session.ts) - `pathOf`, the folder `set_workspace` and `create_session` are given"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - `browsable`, the folders a host serves"
   - "[code://packages/bot/src/provider.ts](../../../../packages/bot/src/provider.ts) - `workspaceFor`, a bot's folder"
@@ -18,8 +18,8 @@ On a Windows host, every path and `file:` URI a client or an agent sends is read
 
 ## Files
 
-- `UPDATE: packages/sdk/src/fileuri.ts` - a URI with no drive is decoded by POSIX rules on Windows, where Node's reader refused it and left its escapes in.
-- `UPDATE: packages/sdk/src/resources.ts` - a URI naming another machine is refused on every system; on Windows it was read as a network path. A URI with no drive is read as `localPath` reads it.
+- `UPDATE: packages/sdk/src/resources/fileuri.ts` - a URI with no drive is decoded by POSIX rules on Windows, where Node's reader refused it and left its escapes in.
+- `UPDATE: packages/sdk/src/resources/resources.ts` - a URI naming another machine is refused on every system; on Windows it was read as a network path. A URI with no drive is read as `localPath` reads it.
 - `UPDATE: packages/sdk/src/tools/session.ts` - `pathOf` reads a path with `isAbsolute` and `resolve`, so `set_workspace` and `create_session` take a Windows folder.
 - `UPDATE: packages/sdk/src/host.ts` - `browsable` resolves the folders it serves, so a folder's facts are kept and read under one spelling.
 - `UPDATE: packages/bot/src/provider.ts` - a bot's folder is `join(root, slug)`.

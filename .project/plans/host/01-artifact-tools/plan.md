@@ -14,7 +14,7 @@ refs:
   - code://packages/sdk/src/artifacttools.ts#L173-L193 - the ADD run, where a duplicate is answered "Already recorded" and a reference is never promoted
   - code://packages/sdk/src/artifacttools.ts#L207-L215 - the REMOVE run, whose answer still describes the entry
   - code://packages/sdk/src/artifacttools.ts#L113-L121 - `valueOf` and `describe`, the value rule the match uses and the one answer that keeps describing entries
-  - code://packages/sdk/src/changes.ts#L560-L584 - the reused and opened returns of `create-pr`, neither of which records anything
+  - code://packages/sdk/src/sessions/changes.ts#L560-L584 - the reused and opened returns of `create-pr`, neither of which records anything
   - code://packages/sdk/src/types/changes.ts#L205-L220 - `ChangesetOperationResult`, which gains the pull request the operation produced
   - code://packages/sdk/src/host.ts#L4942-L5037 - `invokeChangesetOperation`, whose success path is where the host sees the result and can write session state
   - code://packages/sdk/src/host.ts#L5004-L5018 - the success path itself: the status, the refresh, and the message and follow-up it returns
@@ -44,7 +44,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - `rg -n "Already recorded|Promoted artifact|addOrPromoteArtifact" packages/` - nothing promotes; the reference has `addOrPromoteArtifact` and its own status words.
 - `rg -n "describe\(" packages/sdk/src/artifacttools.ts` - three call sites, the duplicate, the removal and the list; only the list should keep it.
-- `rg -n "artifact|setArtifacts" packages/sdk/src/changes.ts` - nothing; the changes source reaches no session store.
+- `rg -n "artifact|setArtifacts" packages/sdk/src/sessions/changes.ts` - nothing; the changes source reaches no session store.
 - `rg -n "ChangesetOperationResult" packages/sdk/src` - the two `create-pr` returns and the host's one reader, so the result is where a produced pull request can travel.
 - `rg -n "title" packages/sdk/src/types/github.ts packages/sdk/src/github.ts` - absent, so the reused path has no title to label an artifact with.
 - `rg -n "pullRequestUrls" packages/sdk/src/host.ts` - written in `refreshPullRequests` and read in `operationContext` alone.
@@ -92,7 +92,7 @@ add_artifact_or_reference -> match on value -> a reference re-added as an artifa
 - **Event flow** - `create-pr` puts the pull request on `ChangesetOperationResult.pullRequest`; `invokeChangesetOperation` records it after `invoke` resolves and before it returns, so the artifact and `_meta.github` move in the same beat as the operation's own refresh.
 - **State flow** - the artifact list is replaced whole by `setArtifacts`, which composes `metaOf` and dispatches `session/metaChanged`. The branch association is written into `githubFacts` for the directory and `metaMoved` dispatches the map to every session there.
 - **Layer responsibilities** - packages/sdk: the promote rule and the answers in `artifacttools.ts`, the produced pull request in `changes.ts` and `types/changes.ts`, the recording and the association in `host.ts`, the title on `github.ts` and `types/github.ts` · test/: the answers, the promotion, both `create-pr` paths and the `_meta.github` association.
-- **Source-of-truth files** - `code://packages/sdk/src/artifacttools.ts`, `code://packages/sdk/src/changes.ts`, `code://packages/sdk/src/host.ts`.
+- **Source-of-truth files** - `code://packages/sdk/src/artifacttools.ts`, `code://packages/sdk/src/sessions/changes.ts`, `code://packages/sdk/src/host.ts`.
 
 ## Tasks
 

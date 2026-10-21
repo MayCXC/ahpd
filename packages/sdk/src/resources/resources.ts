@@ -1,0 +1,604 @@
+import { constants, watch as watchPath } from 'node:fs';
+import { cp, lstat, open, mkdir as makeDir, readdir, readFile, realpath, rename, rm, stat } from 'node:fs/promises';
+import { dirname, isAbsolute, join, relative, sep } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { uriOf } from './fileuri.js';
+import { INVALID_PARAMS, RpcError } from '../rpc.js';
+import type { Entry, Metadata, Read, ResourceChange, ResourceStore, WatchOptions, Watcher, Write } from '../types/resources.js';
+
+/**
+ * The host's filesystem, as the reference host serves it: all of it.
+ *
+ * The connection token is the boundary, not the served directories. A client
+ * that may connect may list any directory, which is what the window's folder
+ * dialog does to let somebody pick where a session goes - it walks the disk
+ * through `resourceList` and checks the pick with `resourceResolve`, and a
+ * host that refused everything outside `--path` left that dialog able to
+ * pick nothing. `--path` says where the catalogue looks and where a session
+ * goes by default; it never said who may read what.
+ *
+ * `node:fs/promises` and `node:path` are used here because all three
+ * supported runtimes provide them.
+ */
+
+/** `-32008`, which the protocol has for a resource that is not there. */
+const NOT_FOUND = -32008;
+/** `-32009`, for one this client may not see. */
+const REFUSED = -32009;
+/** `-32010`, for a `createOnly` write onto something already there. */
+const ALREADY = -32010;
+/** `-32011`, for a write whose `ifMatch` no longer matches. */
+const CONFLICT = -32011;
+
+/** `file:///a/b` and `/a/b` both mean the same path here. */
+export const pathOf = (uri: string): string => {
+  if (!uri.startsWith('file:')) return uri;
+  if (!uri.startsWith('file:/')) throw new RpcError(REFUSED, `${uri} is not an absolute path`);
+  /*
+   * A URI naming another machine is refused on every system. Node refuses one
+   * on Linux, and on Windows reads `file://server/share` as a network path - a
+   * read that makes this host connect to whatever server a client named, and
+   * sign in to it as the person running the daemon.
+   */
+  let url: URL;
+  try { url = new URL(uri); }
+  catch { throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`); }
+  if (url.host !== '' && url.host !== 'localhost') throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`);
+  // A path with no drive, on Windows, by POSIX rules: Node's Windows reader
+  // refuses `file:///etc/x` as not absolute, which is a path on this drive.
+  const driveless = process.platform === 'win32' && !/^\/[A-Za-z]:/.test(url.pathname);
+  try { return fileURLToPath(uri, driveless ? { windows: false } : undefined); }
+  catch { throw new RpcError(INVALID_PARAMS, `${uri} is not a local file URI`); }
+};
+
+/**
+ * A path, back as the URI a client sends and receives.
+ *
+ * The host's one writer, named here as well because this store and its callers
+ * already read it from here.
+ */
+export { uriOf };
+
+/**
+ * Why this store cannot answer for a URI, in the terms of what it is.
+ *
+ * This one serves a filesystem, so anything that is not a `file:` URI is not
+ * a path it got wrong - it is a URI somebody else was meant to answer. A
+ * client publishes its own under `<scheme>://<clientId>/`, and a request for
+ * one whose client has hung up arrives here having been routed nowhere. Told
+ * as what it is, because `virtual://ahpc-6ec6cf49/hello.txt is not an
+ * absolute path` sends whoever reads it looking at their path.
+ */
+const why = (uri: string): string => notServedWords(uri) ?? `${uri} is not an absolute path`;
+
+/**
+ * The sentence a URI another scheme was meant to serve gets, or nothing for a
+ * file URI.
+ *
+ * Exported because the routing step above this store answers the same case and
+ * the two must say the same thing.
+ */
+export const notServedWords = (uri: string): string | undefined => {
+  const scheme = /^([a-zA-Z][\w+.-]*):/.exec(uri)?.[1];
+  return scheme !== undefined && scheme !== 'file'
+    ? `${uri} is not this host's to read: nothing here serves ${scheme}:,`
+      + ' and no connected client publishes it'
+    : undefined;
+};
+
+/**
+ * The refusal for a URI no provider and no connected client serves.
+ *
+ * `-32601` rather than a permission code, because the host having nothing that
+ * serves a scheme is not a client being refused - the same answer a provider
+ * gets when it does not implement a method.
+ */
+export const notServed = (uri: string): RpcError =>
+  new RpcError(-32601, notServedWords(uri) ?? `${uri} is not served here`);
+
+/**
+ * The path a URI names, as the filesystem knows it.
+ *
+ * Resolved through symlinks where it exists, so what is opened is what a
+ * directory listing showed rather than the text that was sent; a path that
+ * does not exist yet is taken as written, since there is nothing to resolve
+ * and it is what will be created.
+ */
+export async function allowed(uri: string): Promise<string> {
+  const asked = pathOf(uri);
+  if (!isAbsolute(asked)) {
+    throw new RpcError(REFUSED, why(uri));
+  }
+  try {
+    return await realpath(asked);
+  }
+  catch { return asked; }
+}
+
+/**
+ * The path to write.
+ *
+ * The *parent* is resolved rather than the path itself, because the thing
+ * being written may not be there yet. A directory that is not there yet is
+ * walked up until one is, because `mkdir -p` may be creating several at
+ * once, and the path is rebuilt from the resolved ancestor down.
+ */
+export async function writable(uri: string): Promise<string> {
+  const asked = pathOf(uri);
+  if (!isAbsolute(asked)) throw new RpcError(REFUSED, why(uri));
+  /** The nearest ancestor that exists, and how far up it was. */
+  let up = dirname(asked);
+  const climbed: string[] = [];
+  for (;;) {
+    const real = await realpath(up).catch(() => undefined);
+    if (real !== undefined) {
+      return join(real, ...climbed.reverse(), asked.slice(asked.lastIndexOf(sep) + 1));
+    }
+    const next = dirname(up);
+    // `/` resolving to nothing means the filesystem is gone.
+    if (next === up) throw new RpcError(NOT_FOUND, `Nothing to write ${asked} under.`);
+    climbed.push(up.slice(up.lastIndexOf(sep) + 1));
+    up = next;
+  }
+}
+
+/** The validator `resourceWrite`'s `ifMatch` compares against. */
+const tagOf = (size: number, mtimeMs: number): string => `W/"${size.toString(16)}-${Math.trunc(mtimeMs).toString(16)}"`;
+
+// A compare-and-write has no filesystem primitive on the platforms this host
+// supports.  Keep requests from this host in order for each opened path, so a
+// second `ifMatch` sees the first request's completed write.
+const writes = new Map<string, Promise<void>>();
+
+/** One directory's entries, names only. */
+export async function list(uri: string): Promise<Entry[]> {
+  const path = await allowed(uri);
+  const found = await readdir(path, { withFileTypes: true }).catch(() => {
+    throw new RpcError(NOT_FOUND, `No directory at ${uri}`);
+  });
+  return found
+    .map((entry) => ({ name: entry.name, type: entry.isDirectory() ? 'directory' as const : 'file' as const }))
+    // Directories first, then by name: a listing sorted by the order the
+    // filesystem happens to return is a listing nobody can scan.
+    .sort((a, b) => (a.type === b.type ? a.name.localeCompare(b.name) : a.type === 'directory' ? -1 : 1));
+}
+
+/**
+ * What a path is, without opening it.
+ *
+ * `followSymlinks` decides which of the two questions is being asked - what
+ * the link points at, or what the link is - and they have different answers
+ * for size and type.
+ */
+export async function resolve(uri: string, followSymlinks = true): Promise<Metadata> {
+  const path = await allowed(uri);
+  const asked = followSymlinks ? path : pathOf(uri);
+  // `stat` describes the destination.  A caller that explicitly declined to
+  // follow links asked about the directory entry itself, for which `lstat` is
+  // the corresponding operation.
+  const found = await (followSymlinks ? stat : lstat)(asked, { bigint: false }).catch(() => {
+    throw new RpcError(NOT_FOUND, `Nothing at ${uri}`);
+  });
+  return {
+    uri: uriOf(followSymlinks ? path : asked),
+    type: found.isDirectory() ? 'directory' : found.isSymbolicLink() ? 'symlink' : 'file',
+    ...(found.isDirectory() ? {} : { size: found.size }),
+    mtime: found.mtime.toISOString(),
+    ctime: found.birthtime.toISOString(),
+    // Only for a file. A directory has no bytes to have been changed under
+    // somebody, which is the only thing this is compared for.
+    ...(found.isDirectory() ? {} : { etag: tagOf(found.size, found.mtimeMs) }),
+  };
+}
+
+/**
+ * Whether bytes are text: valid UTF-8 with no zero byte.
+ *
+ * Judged by the content, not the name, because the name is not reliable in
+ * either direction: `LICENSE`, `Makefile` and `deno.lock` are text with no
+ * extension a list would know, and a zero byte is what almost every binary
+ * format carries and no text file does.
+ */
+function textual(bytes: Buffer): boolean {
+  if (bytes.includes(0)) return false;
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * One file's bytes, as text where that is meaningful.
+ *
+ * The encoding is *reported* rather than assumed by the caller: a client that
+ * asked for utf-8 and got a PNG would render the replacement character four
+ * hundred thousand times, so anything not recognisably textual comes back
+ * base64 whatever was asked for - which the protocol allows for exactly this.
+ */
+export async function read(uri: string, wanted?: string): Promise<Read> {
+  const path = await allowed(uri);
+  const bytes = await readFile(path).catch(() => {
+    throw new RpcError(NOT_FOUND, `No file at ${uri}`);
+  });
+  if (wanted === 'base64' || !textual(bytes)) {
+    return { data: bytes.toString('base64'), encoding: 'base64' };
+  }
+  return { data: bytes.toString('utf8'), encoding: 'utf-8', contentType: 'text/plain' };
+}
+
+/**
+ * Paths under `base` that start with what was typed.
+ *
+ * The typed text is a path fragment, so its last segment is the prefix and
+ * everything before it is the directory to look in - which is what makes
+ * `@src/ho` complete to `@src/host.ts` rather than looking for a file called
+ * `src/ho`.
+ */
+export async function complete(typed: string, base: string, limit = 50): Promise<string[]> {
+  const cut = typed.lastIndexOf('/');
+  const inside = cut === -1 ? '' : typed.slice(0, cut + 1);
+  const prefix = cut === -1 ? typed : typed.slice(cut + 1);
+  const where = join(base, inside);
+  const found = await list(uriOf(where)).catch(() => [] as Entry[]);
+  return found
+    .filter((entry) => entry.name.toLowerCase().startsWith(prefix.toLowerCase()))
+    // A directory keeps its slash, so the next keystroke goes into it rather
+    // than starting again.
+    .map((entry) => `${inside}${entry.name}${entry.type === 'directory' ? '/' : ''}`)
+    .slice(0, limit);
+}
+
+/**
+ * Write, create or splice one file.
+ *
+ * The three modes differ in where `position` is rooted, which the protocol is
+ * explicit about and which is easy to get subtly wrong: `truncate` and
+ * `insert` count from the start of the file and `append` counts *backwards
+ * from EOF*, so `append` with `position: 0` is a POSIX append and with
+ * `position: 5` splices five bytes before the end.
+ *
+ * Everything is done on a buffer and written once. A file is not a stream
+ * here - the protocol has no chunked write - so reading it, splicing, and
+ * putting it back is both the simplest form and the only one that can honour
+ * `insert` at all.
+ */
+export async function write(uri: string, content: Write): Promise<void> {
+  /*
+   * `ahpc` carries a second copy of everything below, in its `publish.ts`.
+   *
+   * `resourceWrite` is symmetrical - a host asks a client for one exactly as a
+   * client asks a host - so both ends need the same flags, the same order of
+   * preconditions and the same append and insert arithmetic. The client does
+   * not depend on this package and is not going to, so the copy is deliberate.
+   * What is not deliberate is fixing one and not the other: everything here
+   * was wrong in both at once, and was corrected in both at once.
+   */
+  const path = await writable(uri);
+  const before = writes.get(path) ?? Promise.resolve();
+  const operation = before.catch(() => {}).then(() => writeAt(path, uri, content));
+  writes.set(path, operation);
+  try { await operation; }
+  finally {
+    if (writes.get(path) === operation) writes.delete(path);
+  }
+}
+
+async function writeAt(path: string, uri: string, content: Write): Promise<void> {
+  const incoming = Buffer.from(content.data, content.encoding === 'base64' ? 'base64' : 'utf8');
+  const mode = content.mode ?? 'truncate';
+  const at = content.position ?? 0;
+
+  // Keep the opened file through the read and write. A final link swapped in
+  // after the checks must never redirect either operation outside the root.
+  // `O_EXCL` makes createOnly an operation the filesystem decides, rather than
+  // a check that can become stale before open.
+  let flags = (mode === 'truncate' && at === 0 ? constants.O_WRONLY : constants.O_RDWR) | constants.O_NOFOLLOW;
+  if (content.ifMatch === undefined) flags |= constants.O_CREAT;
+  if (content.createOnly === true && content.ifMatch === undefined) flags |= constants.O_EXCL;
+  const file = await open(path, flags).catch((error: NodeJS.ErrnoException) => {
+    if (content.createOnly === true && error.code === 'EEXIST') {
+      throw new RpcError(ALREADY, `${uri} already exists`);
+    }
+    if (content.ifMatch !== undefined && error.code === 'ENOENT') {
+      throw new RpcError(CONFLICT, `${uri} has changed since ${content.ifMatch}`);
+    }
+    if (error.code === 'ENOENT')
+      throw new RpcError(NOT_FOUND, `No directory at ${uriOf(dirname(path))} to write ${uri} into`);
+    /*
+     * The two refusals the flags above produce, said in the host's own words.
+     *
+     * `O_NOFOLLOW` answers a final symbolic link with `ELOOP`, and opening a
+     * directory for writing answers `EISDIR`. Both are this host declining,
+     * not the filesystem failing, so neither should reach a client as an
+     * errno: the client asked to write something that cannot be written, and
+     * the reason is the useful part.
+     */
+    if (error.code === 'ELOOP') throw new RpcError(REFUSED, `${uri} is a symbolic link`);
+    if (error.code === 'EISDIR') throw new RpcError(REFUSED, `${uri} is a directory`);
+    throw new RpcError(REFUSED, `Could not write ${uri}: ${error.message}`);
+  });
+  try {
+    // `O_EXCL` above is the successful createOnly case. The only createOnly
+    // request that reaches here without it also supplied ifMatch, so it opened
+    // an existing file and cannot be a create.
+    if (content.createOnly === true && content.ifMatch !== undefined) {
+      throw new RpcError(ALREADY, `${uri} already exists`);
+    }
+    if (content.ifMatch !== undefined) {
+      // Off the open descriptor, so what is compared is the file about to be
+      // written rather than whatever the name pointed at a moment ago.
+      const found = await file.stat();
+      if (tagOf(found.size, found.mtimeMs) !== content.ifMatch) {
+        throw new RpcError(CONFLICT, `${uri} has changed since ${content.ifMatch}`);
+      }
+    }
+    // Only read the existing bytes where a mode actually keeps some. A truncate
+    // from zero - the ordinary save - reads nothing.
+    const held = mode === 'truncate' && at === 0
+      ? Buffer.alloc(0)
+      : await file.readFile();
+
+    let out: Buffer;
+    if (mode === 'append') {
+      // Backwards from EOF, and clamped: a position past the start of the file
+      // is a client asking to insert before the beginning.
+      const cut = Math.max(0, held.length - Math.max(0, at));
+      out = Buffer.concat([held.subarray(0, cut), incoming, held.subarray(cut)]);
+    }
+    else if (mode === 'insert') {
+      const cut = Math.min(Math.max(0, at), held.length);
+      out = Buffer.concat([held.subarray(0, cut), incoming, held.subarray(cut)]);
+    }
+    else {
+      // Truncate: everything from `position` on is replaced, so what survives is
+      // the head. A short file padded out to `position` would be inventing
+      // bytes, so the head is however much of it there is.
+      const cut = Math.min(Math.max(0, at), held.length);
+      out = Buffer.concat([held.subarray(0, cut), incoming]);
+    }
+    let offset = 0;
+    while (offset < out.length) {
+      const { bytesWritten } = await file.write(out, offset, out.length - offset, offset);
+      if (bytesWritten === 0) throw new RpcError(REFUSED, `Could not finish writing ${uri}`);
+      offset += bytesWritten;
+    }
+    await file.truncate(out.length);
+  } catch (error) {
+    if (error instanceof RpcError) throw error;
+    throw new RpcError(REFUSED, `Could not write ${uri}: ${String(error)}`);
+  } finally { await file.close(); }
+}
+
+/**
+ * Remove one.
+ *
+ * A directory needs `recursive`, and a directory without it is refused rather
+ * than emptied: the protocol has the flag so that deleting a tree is
+ * something a client asked for in as many words.
+ */
+export async function remove(uri: string, recursive = false): Promise<void> {
+  const path = await writable(uri);
+  const found = await stat(path).catch(() => {
+    throw new RpcError(NOT_FOUND, `Nothing at ${uri}`);
+  });
+  if (found.isDirectory() && !recursive) {
+    throw new RpcError(REFUSED, `${uri} is a directory. Pass recursive to remove it.`);
+  }
+  await rm(path, { recursive, force: false }).catch((error: NodeJS.ErrnoException) => {
+    throw new RpcError(REFUSED, `Could not remove ${uri}: ${error.message}`);
+  });
+}
+
+/** Make a directory, and the parents it needs. */
+export async function mkdir(uri: string): Promise<void> {
+  const path = await writable(uri);
+  await makeDir(path, { recursive: true }).catch((error: NodeJS.ErrnoException) => {
+    // `recursive` already tolerates an existing directory, so this is a *file*
+    // in the way - which is a different thing to say.
+    if (error.code === 'EEXIST' || error.code === 'ENOTDIR') {
+      throw new RpcError(ALREADY, `${uri} is already a file`);
+    }
+    throw new RpcError(REFUSED, `Could not create ${uri}: ${error.message}`);
+  });
+}
+
+/**
+ * Both ends of a two-path operation, checked.
+ *
+ * The source has to exist and the destination has to have somewhere to go -
+ * different questions, and neither implies the other. Neither end is
+ * followed through a symbolic link at the destination, for the same reason a
+ * write is not.
+ */
+async function pair(source: string, destination: string, failIfExists: boolean) {
+  const from = await allowed(source);
+  const to = await writable(destination);
+  await stat(from).catch(() => {
+    throw new RpcError(NOT_FOUND, `Nothing at ${source}`);
+  });
+  if (await lstat(to).then((found) => found.isSymbolicLink(), () => false)) {
+    throw new RpcError(REFUSED, `${destination} is a symbolic link`);
+  }
+  if (failIfExists && await stat(to).then(() => true, () => false)) {
+    throw new RpcError(ALREADY, `${destination} already exists`);
+  }
+  return { from, to };
+}
+
+/** Rename. */
+export async function move(source: string, destination: string, failIfExists = false): Promise<void> {
+  const { from, to } = await pair(source, destination, failIfExists);
+  await rename(from, to).catch((error: NodeJS.ErrnoException) => {
+    throw new RpcError(REFUSED, `Could not move ${source}: ${error.message}`);
+  });
+}
+
+/** Copy. */
+export async function copy(source: string, destination: string, failIfExists = false): Promise<void> {
+  const { from, to } = await pair(source, destination, failIfExists);
+  const found = await stat(from);
+  // Files use the same guarded open as resourceWrite; directories need a tree walk.
+  const run = found.isDirectory()
+    ? cp(from, to, { recursive: true, force: !failIfExists, errorOnExist: failIfExists })
+    : readFile(from).then((bytes) => write(uriOf(to), { data: bytes.toString('base64'), encoding: 'base64' }));
+  await run.catch((error: NodeJS.ErrnoException) => {
+    throw new RpcError(REFUSED, `Could not copy ${source}: ${error.message}`);
+  });
+}
+
+/**
+ * One glob, as a regular expression.
+ *
+ * Enough of the syntax to read what the protocol's own example sends -
+ * `**\/.git/**`, `**\/node_modules/**` - and no more. `**` crosses
+ * separators and `*` does not, which is the distinction the whole notation
+ * exists for; everything else is escaped, so a pattern with a dot in it means
+ * a dot.
+ */
+const globbed = (pattern: string): RegExp => {
+  let out = '';
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i] as string;
+    if (c === '*') {
+      if (pattern[i + 1] === '*') {
+        i += 1;
+        // `**/` also matches nothing at all, so `**\/.git/**` finds `.git/config`
+        // at the root and not only in a subdirectory.
+        if (pattern[i + 1] === '/') { i += 1; out += '(?:.*/)?'; }
+        else out += '.*';
+      }
+      else out += '[^/]*';
+    }
+    else if (c === '?') out += '[^/]';
+    else out += c.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  }
+  return new RegExp(`^${out}$`);
+};
+
+/** How long to gather events before saying anything. */
+const COALESCE = 50;
+
+/**
+ * How far before a watch started a file may have been created and still count
+ * as new.
+ *
+ * `Date.now()` and the filesystem's own clock are not the same clock: a file
+ * written immediately after a watch begins stats with a `birthtime` a
+ * millisecond or two *before* the moment the watch recorded. Without an
+ * allowance the first file created under a fresh watch is reported as an edit.
+ */
+const SKEW = 50;
+
+/**
+ * Tell me when that changes.
+ *
+ * `node:fs.watch`, and the two things about it worth stating. It reports one
+ * event per file, so a save that rewrites four files is four events and a
+ * `git checkout` is hundreds - hence the window: events are gathered and sent
+ * as one batch, which is what the protocol asks a server to do and what keeps
+ * a client from redrawing per file.
+ *
+ * And its event names are not the protocol's, nor even the same across
+ * runtimes: creating a file is `rename` on Node and `change` on Deno, which is
+ * the sort of thing only running it on both ever tells you. So the name is
+ * ignored and the file is *looked at*. Gone is `deleted`. There and created
+ * since this watch started is `added`. Anything else is `updated`.
+ *
+ * `birthtime` rather than an inventory of the tree, because the tree may be a
+ * hundred thousand files and the question is only ever asked about the handful
+ * that moved. A path already reported as `added` is `updated` from then on, so
+ * a file created and then written twice is one appearance and two edits rather
+ * than three appearances.
+ */
+export async function watch(
+  uri: string,
+  options: WatchOptions,
+  onChange: (changes: ResourceChange[]) => void,
+): Promise<Watcher> {
+  const path = await allowed(uri);
+  await stat(path).catch(() => {
+    throw new RpcError(NOT_FOUND, `Nothing at ${uri}`);
+  });
+  const excludes = (options.excludes ?? []).map(globbed);
+  const includes = (options.includes ?? []).map(globbed);
+  /** Whether a path relative to the root is one the caller asked about. */
+  const wanted = (relative_: string): boolean => {
+    if (excludes.some((one) => one.test(relative_))) return false;
+    return includes.length === 0 || includes.some((one) => one.test(relative_));
+  };
+
+  /** Paths that have moved since the last batch went out. */
+  const pending = new Set<string>();
+  /** Paths already reported as having appeared, so they are edits from then on. */
+  const announced = new Set<string>();
+  const since = Date.now() - SKEW;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let closed = false;
+
+  const flush = (): void => {
+    timer = undefined;
+    const held = [...pending];
+    pending.clear();
+    void (async () => {
+      const items: ResourceChange[] = [];
+      for (const full of held) {
+        const found = await stat(full).catch(() => undefined);
+        if (found === undefined) {
+          announced.delete(full);
+          items.push({ uri: uriOf(full), type: 'deleted' });
+          continue;
+        }
+        const fresh = found.birthtimeMs >= since && !announced.has(full);
+        if (fresh) announced.add(full);
+        items.push({ uri: uriOf(full), type: fresh ? 'added' : 'updated' });
+      }
+      // "An empty `changes.items` list MUST NOT be dispatched" - and the whole
+      // batch can be empty once every event in it was filtered out.
+      if (items.length > 0 && !closed) onChange(items);
+    })().catch(() => {});
+  };
+
+  const held = watchPath(path, { recursive: options.recursive === true }, (kind, name) => {
+    // A watcher can fire with no filename - the platform knows something moved
+    // and not what. Nothing useful can be said about that, and saying the
+    // directory changed would send a client to re-read the wrong thing.
+    if (name === null || name === undefined) return;
+    const relative_ = String(name).split(sep).join('/');
+    if (!wanted(relative_)) return;
+    // `kind` is deliberately unread: see above.
+    void kind;
+    pending.add(join(path, String(name)));
+    if (timer === undefined) timer = setTimeout(flush, COALESCE);
+  });
+  // Never the reason a daemon stays up: a watch is something a client asked
+  // for, and the process should still exit when everything else is done.
+  held.unref?.();
+  held.on('error', () => { /* the directory went; the watch is simply over */ });
+
+  return {
+    close() {
+      closed = true;
+      if (timer !== undefined) clearTimeout(timer);
+      held.close();
+    },
+  };
+}
+
+/**
+ * The filesystem this process is on, as a host's `ResourceStore`.
+ *
+ * Kept out of `createHost` so the protocol imports no runtime: this file is
+ * the one that touches `node:fs`, and a host that never opens a file never
+ * loads it.
+ *
+ * ```ts
+ * createHost({ path, agents, resources: fileResources() });
+ * ```
+ */
+export const fileResources = (): ResourceStore => ({
+  list, read, resolve, complete,
+  write, remove, mkdir, move, copy,
+  watch,
+});

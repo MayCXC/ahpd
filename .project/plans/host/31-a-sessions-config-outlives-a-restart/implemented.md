@@ -8,7 +8,7 @@ refs:
   - git://693e06f
   - "[code://packages/sdk/src/host/sessionconfig.ts](../../../../packages/sdk/src/host/sessionconfig.ts)"
   - "[code://packages/sdk/src/host/chatactions.ts](../../../../packages/sdk/src/host/chatactions.ts)"
-  - "[code://packages/sdk/src/configvalues.ts](../../../../packages/sdk/src/configvalues.ts)"
+  - "[code://packages/sdk/src/utils/configvalues.ts](../../../../packages/sdk/src/utils/configvalues.ts)"
 ---
 
 A session keeps the config it was created with and every accepted change after the daemon restarts.
@@ -22,8 +22,8 @@ A key the schema does not declare is kept.
 - `remember` skips a peer chat's chat-scoped key, and writes nothing once the session it was made for is gone.
 - The no-agent `session/configChanged` path stores values as they arrive, and refuses a channel that names no session with `<channel> is not a session here`.
 - [`code://packages/sdk/src/host/sessionconfig.ts`](../../../../packages/sdk/src/host/sessionconfig.ts) - `storedConfig(owner, id)`, which a resume and a browsed row both read through.
-- [`code://packages/sdk/src/configvalues.ts`](../../../../packages/sdk/src/configvalues.ts) - `accepts(property, value)`, the check on the JSON `type` and `enum`.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `fileSessions` no longer loads an array as a session's config.
+- [`code://packages/sdk/src/utils/configvalues.ts`](../../../../packages/sdk/src/utils/configvalues.ts) - `accepts(property, value)`, the check on the JSON `type` and `enum`.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - `fileSessions` no longer loads an array as a session's config.
 - Both tasks landed in `e33ebee`, in `host.ts`. host/48 p5 moved `storedConfig` to `host/sessionconfig.ts` in `f1b3bd1`, and p10 moved `remember` to `host/chatactions.ts` in `ca6adcb`.
 
 ## Verified

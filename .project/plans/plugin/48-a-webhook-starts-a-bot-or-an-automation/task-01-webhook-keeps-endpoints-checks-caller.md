@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L801](../../../../packages/sdk/src/types/plugin.ts#L801) - `registerRoute`, the one route this plugin serves"
   - "[code://packages/sdk/src/types/plugin.ts#L586](../../../../packages/sdk/src/types/plugin.ts#L586) - `secret()`, which reads the vault secret that an endpoint names"
   - "[code://packages/sdk/src/types/plugin.ts#L629](../../../../packages/sdk/src/types/plugin.ts#L629) - `records()`, where the endpoints are kept"
-  - "[code://packages/sdk/src/plugins.ts#L139](../../../../packages/sdk/src/plugins.ts#L139) - `routePrefix`, which serves `@ahpd/webhook` under `/plugins/%40ahpd/webhook/`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L139](../../../../packages/sdk/src/plugins/plugins.ts#L139) - `routePrefix`, which serves `@ahpd/webhook` under `/plugins/%40ahpd/webhook/`"
   - "[code://packages/server/src/http.ts#L192-L227](../../../../packages/server/src/http.ts#L192-L227) - `pluginRoutes`, which checks Host only and leaves the caller to the route"
   - "[code://packages/push/package.json](../../../../packages/push/package.json) - the package shape to copy"
   - "[code://packages/bot/src/plugin.ts](../../../../packages/bot/src/plugin.ts) - the plugin entry and the seam pattern to copy"

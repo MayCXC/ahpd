@@ -8,7 +8,7 @@ import { connect } from 'node:net';
 import { EventEmitter } from 'node:events';
 import type { ChildProcess } from 'node:child_process';
 import { afterEach, expect, it } from 'vitest';
-import { pluginHost, raise } from '../../sdk/src/plugins.js';
+import { pluginHost, raise } from '../../sdk/src/plugins/plugins.js';
 import type { LoaderContext } from '../../sdk/src/types/plugin.js';
 import {
   deriveConnectionToken, displayLabel, nameLabel, LAUNCHER_LABEL, PROTOCOL_LABEL, TUNNEL_PORT,

@@ -9,7 +9,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L3910](../../../../packages/sdk/src/host.ts#L3910) - a session removed, one of two places"
   - "[code://packages/sdk/src/host.ts#L4012](../../../../packages/sdk/src/host.ts#L4012) - a session removed, the other"
   - "[code://packages/sdk/src/host.ts#L9140-L9163](../../../../packages/sdk/src/host.ts#L9140-L9163) - a connection's `close`, which drops its `watching` without a last unsubscribe"
-  - "[code://packages/sdk/src/changes.ts#L1016-L1133](../../../../packages/sdk/src/changes.ts#L1016-L1133) - the source's `watch`, whose every handle has an `error` listener"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1016-L1133](../../../../packages/sdk/src/sessions/changes.ts#L1016-L1133) - the source's `watch`, whose every handle has an `error` listener"
 ---
 
 ## Objective
@@ -19,7 +19,7 @@ The git watch on a directory is closed as soon as no connection watches a change
 ## Files
 
 - `UPDATE: packages/sdk/src/host.ts` - one check that stops a directory's watch when `watchedIn` is false, called on the last unsubscribe (as today), on a connection's `close`, and where a session is removed.
-- `UPDATE: packages/sdk/src/changes.ts:1016-1133` - an `error` listener on every watcher that closes it and calls nothing.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:1016-1133` - an `error` listener on every watcher that closes it and calls nothing.
 - `UPDATE: packages/sdk/test/changes-refresh.test.ts` - the cases below.
 
 ## Steps

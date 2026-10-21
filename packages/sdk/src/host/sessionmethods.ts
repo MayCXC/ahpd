@@ -1,10 +1,10 @@
 import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
-import { idOf } from '../catalog.js';
-import { computerId } from '../computers.js';
-import { tail, older } from '../paging.js';
-import { namesOf } from '../scopes.js';
-import { localPath, uriOf } from '../fileuri.js';
-import { configOf } from '../remotesession.js';
+import { idOf } from '../sessions/catalog.js';
+import { computerId } from '../machines/computers.js';
+import { tail, older } from '../sessions/paging.js';
+import { namesOf } from '../usage/scopes.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
+import { configOf } from '../sessions/remotesession.js';
 import { CLOSING } from './common.js';
 import { chatIdFor, named, ROOT } from './channels.js';
 import { preambleOf, withPreamble } from './preamble.js';

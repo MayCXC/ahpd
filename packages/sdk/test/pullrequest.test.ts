@@ -3,8 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
-import { gitChanges } from '../src/changes.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { gitChanges } from '../src/sessions/changes.js';
 import type { ChangesetOperationContext } from '../src/types/changes.js';
 import type { NewPullRequest, PullRequest } from '../src/types/github.js';
 

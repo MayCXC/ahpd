@@ -1,10 +1,10 @@
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/commandautoapprover.js';
+import { DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/access/commandautoapprover.js';
 import { createHost, GATE, ROOT } from '../src/host.js';
-import { shellTerminals } from '../src/terminals.js';
-import { fileUsers } from '../src/users.js';
+import { shellTerminals } from '../src/machines/terminals.js';
+import { fileUsers } from '../src/access/users.js';
 import {
   call, directory, hello, host, peer, root, signIn, until, watching, withRole,
 } from './users-gate-helpers.js';

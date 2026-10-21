@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L96-L106](../../../../packages/sdk/src/terminals.ts#L96-L106) - a terminal's environment"
-  - "[code://packages/sdk/src/terminals.ts#L399](../../../../packages/sdk/src/terminals.ts#L399) - `shellTerminals`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L96-L106](../../../../packages/sdk/src/machines/terminals.ts#L96-L106) - a terminal's environment"
+  - "[code://packages/sdk/src/machines/terminals.ts#L399](../../../../packages/sdk/src/machines/terminals.ts#L399) - `shellTerminals`"
 ---
 
 ## Objective
@@ -15,10 +15,10 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/shellenv.ts` - `ShellEnv`, `shellEnvOf` and `isShellName`.
+- `CREATE: packages/sdk/src/machines/shellenv.ts` - `ShellEnv`, `shellEnvOf` and `isShellName`.
 - `UPDATE: packages/sdk/src/index.ts` - export both.
-- `UPDATE: packages/sdk/src/terminals.ts:96-106` - start from `shellEnvOf`, and remove a key whose value is `undefined`.
-- `UPDATE: packages/sdk/src/terminals.ts:399` - take `shellEnv` in the options of `shellTerminals`.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:96-106` - start from `shellEnvOf`, and remove a key whose value is `undefined`.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:399` - take `shellEnv` in the options of `shellTerminals`.
 - `CREATE: packages/sdk/test/shellenv.test.ts` - the cases below.
 
 ## Steps
@@ -42,9 +42,9 @@ refs:
 Implemented. `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk packages/server` pass.
 
 Files changed:
-- `packages/sdk/src/shellenv.ts` (new) - `ShellEnv`, `shellEnvOf` and `isShellName`.
+- `packages/sdk/src/machines/shellenv.ts` (new) - `ShellEnv`, `shellEnvOf` and `isShellName`.
 - `packages/sdk/src/index.ts` - exports the three.
-- `packages/sdk/src/terminals.ts` - `createTerminal` and `shellTerminals` take `shellEnv`; a terminal's environment starts from `shellEnvOf(process.env, shellEnv)`, then the caller's `env`, then `TERM`, `COLUMNS` and `LINES`, and every name left with `undefined` is deleted before the child is started.
+- `packages/sdk/src/machines/terminals.ts` - `createTerminal` and `shellTerminals` take `shellEnv`; a terminal's environment starts from `shellEnvOf(process.env, shellEnv)`, then the caller's `env`, then `TERM`, `COLUMNS` and `LINES`, and every name left with `undefined` is deleted before the child is started.
 - `packages/sdk/test/shellenv.test.ts` (new) - the eight cases.
 
 `isShellName` is past the two names the Files section lists: tasks 02 and 03 both need one rule for what a shell reads as a variable, and this is the package both of them reach.

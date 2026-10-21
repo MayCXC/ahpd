@@ -14,7 +14,7 @@ The main conversation does not change.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts` - `wordsFor` asks a side chat in agent mode.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `wordsFor` asks a side chat in agent mode.
 - `UPDATE: packages/sdk/src/host/changesets.ts:260-356` - `askAgent` opens the side chat, and `changeWordsOf` answers the ask or says what went without.
 - `UPDATE: packages/sdk/src/types/host.ts` - `changeWordsTimeoutMs`, the limit the side chat's turn waits under.
 - `UPDATE: packages/sdk/test/changewords.test.ts` - an agent with a side chat, and one without.

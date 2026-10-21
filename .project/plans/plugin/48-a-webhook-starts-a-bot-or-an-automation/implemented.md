@@ -20,7 +20,7 @@ Each endpoint has its own secret, and routes can listen on a public port of thei
 - [`code://packages/webhook/src/bot.ts`](../../../../packages/webhook/src/bot.ts) - a bot call: the thread map, the turn, and the reply as a callback, a sync answer or none.
 - [`code://packages/webhook/src/automation.ts`](../../../../packages/webhook/src/automation.ts) - an automation call, which fires the `webhook` trigger.
 - [`code://packages/webhook/src/plugin.ts`](../../../../packages/webhook/src/plugin.ts) - the seams over the plugin's connection, the dispatcher that hears a refusal, and `callBack`, which follows no redirect.
-- [`code://packages/sdk/src/wakemessage.ts`](../../../../packages/sdk/src/wakemessage.ts) - `{{event.<field>}}` in a run's prompt.
+- [`code://packages/sdk/src/automations/wakemessage.ts`](../../../../packages/sdk/src/automations/wakemessage.ts) - `{{event.<field>}}` in a run's prompt.
 - [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `fired` matches a trigger's `config` against the keys of the fire's data.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - the `routes` setting, a listener for public routes only.
 - [`code://docs/plugins/WEBHOOKS.md`](../../../../docs/plugins/WEBHOOKS.md) - the operator guide.

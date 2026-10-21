@@ -4,7 +4,7 @@ status: done
 depends: [task-07-inner-host-pipes-cannot-crash-daemon.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L511-L524](../../../../packages/sdk/src/nested.ts#L511-L524) - `close`, which sends `disposeSession` and signals the process in the same tick"
+  - "[code://packages/sdk/src/sessions/nested.ts#L511-L524](../../../../packages/sdk/src/sessions/nested.ts#L511-L524) - `close`, which sends `disposeSession` and signals the process in the same tick"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ Closing a nested session disposes the inner session before the inner host is sto
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:511-524` - `close`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:511-524` - `close`.
 
 ## Steps
 

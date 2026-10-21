@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: packages/sdk
 refs:
-  - "[code://packages/sdk/src/users.ts#L29-L52](../../../../packages/sdk/src/users.ts#L29-L52) - `DEFAULT_RESOURCE`, which names a documentation page as an authorization server and a non-https resource identifier"
-  - "[code://packages/sdk/src/users.ts#L53-L70](../../../../packages/sdk/src/users.ts#L53-L70) - `FileUserOptions.resource`, the deployment's own record when it has one"
+  - "[code://packages/sdk/src/access/users.ts#L29-L52](../../../../packages/sdk/src/access/users.ts#L29-L52) - `DEFAULT_RESOURCE`, which names a documentation page as an authorization server and a non-https resource identifier"
+  - "[code://packages/sdk/src/access/users.ts#L53-L70](../../../../packages/sdk/src/access/users.ts#L53-L70) - `FileUserOptions.resource`, the deployment's own record when it has one"
   - "[code://packages/server/src/config.ts#L9-L61](../../../../packages/server/src/config.ts#L9-L61) - the config keys, which gain the identifier the host advertises"
   - "[code://packages/server/src/main.ts#L548-L560](../../../../packages/server/src/main.ts#L548-L560) - where `fileUsers` is built and where the identifier is known"
   - https://www.rfc-editor.org/rfc/rfc9728.txt - `resource` is an https URL, `authorization_servers` is optional, and `resource_documentation` is the field for a page
@@ -17,8 +17,8 @@ The record the host advertises on every agent says only what is true: a document
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:29-52` - `DEFAULT_RESOURCE` loses `authorization_servers`, gains `resource_documentation` holding the documentation URL, and keeps a library fallback identifier for an embedder that names none.
-- `UPDATE: packages/sdk/src/users.ts:53-70` - the `resource` option's comment says what a conformant identifier is and what the fallback is not.
+- `UPDATE: packages/sdk/src/access/users.ts:29-52` - `DEFAULT_RESOURCE` loses `authorization_servers`, gains `resource_documentation` holding the documentation URL, and keeps a library fallback identifier for an embedder that names none.
+- `UPDATE: packages/sdk/src/access/users.ts:53-70` - the `resource` option's comment says what a conformant identifier is and what the fallback is not.
 - `UPDATE: packages/server/src/config.ts` - a `resource` key: the identifier this host advertises for itself, when the operator wants to name one.
 - `UPDATE: packages/server/src/main.ts:548-560` - build the record the daemon passes to `fileUsers`, deriving the identifier from the configured `host` and `port` when neither the flag nor the config names one.
 - `UPDATE: test/users.test.ts` - the record's shape and the derivation.

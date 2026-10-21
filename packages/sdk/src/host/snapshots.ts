@@ -1,7 +1,7 @@
-import { Status, idOf } from '../catalog.js';
-import { tail } from '../paging.js';
+import { Status, idOf } from '../sessions/catalog.js';
+import { tail } from '../sessions/paging.js';
 import { RpcError } from '../rpc.js';
-import { uriOf } from '../fileuri.js';
+import { uriOf } from '../resources/fileuri.js';
 import { runState } from './automations.js';
 import { ROOT, isRootChannel, AUTOMATIONS, MARKS, chatUriFor, servedIn, spaceOf, subagentChatUri, toolCallOfSubagentChat } from './channels.js';
 import { need } from './common.js';

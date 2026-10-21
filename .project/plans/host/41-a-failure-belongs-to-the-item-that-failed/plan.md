@@ -7,7 +7,7 @@ created: 2026-10-03
 requires:
   - plans/claude/15-one-load-and-each-preset-is-a-variant/plan.md
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L124-L135](../../../../packages/sdk/src/plugins.ts#L124-L135) - the fold: a clashing agent is reported with `AGENT_CLASH` and still added"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L124-L135](../../../../packages/sdk/src/plugins/plugins.ts#L124-L135) - the fold: a clashing agent is reported with `AGENT_CLASH` and still added"
   - "[code://packages/server/src/commands/run.ts#L607-L623](../../../../packages/server/src/commands/run.ts#L607-L623) - load problems are stamped to the log, and a clash exits the daemon"
   - "[code://packages/sdk/src/host.ts#L4134-L4148](../../../../packages/sdk/src/host.ts#L4134-L4148) - the listing: a session recorded for an agent not served goes to the first agent that listed it"
   - "[code://packages/sdk/src/host.ts#L3586-L3594](../../../../packages/sdk/src/host.ts#L3586-L3594) - `keepProvider`, which rewrites the record on open"
@@ -57,7 +57,7 @@ loadPlugins -> fold (clash) -> run.ts (stamp, exit) -> host listing (recorded pr
 
 - **Data flow** - the fold skips a clashing agent instead of adding it; `run.ts` no longer exits on `AGENT_CLASH`. The listing answers a recorded-but-missing provider's session under that provider; an open of it refuses. Load problems, and the preset lines claude/16 logs, reach the starting terminal.
 - **Layer responsibilities** - sdk: the fold and the session listing and open · server: the start and restart output.
-- **Source-of-truth files** - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/server/src/commands/restart.ts`](../../../../packages/server/src/commands/restart.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/server/src/commands/restart.ts`](../../../../packages/server/src/commands/restart.ts)
 
 ## Tasks
 

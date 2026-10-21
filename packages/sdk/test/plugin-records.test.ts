@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
-import { memoryRecords } from '../src/records.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
+import { memoryRecords } from '../src/resources/records.js';
 import type { HostOptions } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { RecordChange, RecordStore } from '../src/types/records.js';

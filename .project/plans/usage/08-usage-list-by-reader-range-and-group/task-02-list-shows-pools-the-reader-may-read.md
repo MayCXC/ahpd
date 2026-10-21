@@ -4,7 +4,7 @@ status: done
 depends: [task-01-a-member-reads-their-teams-pool.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/usage.ts#L542-L543](../../../../packages/sdk/src/usage.ts#L542-L543) - `visible`"
+  - "[code://packages/sdk/src/usage/usage.ts#L542-L543](../../../../packages/sdk/src/usage/usage.ts#L542-L543) - `visible`"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ A listing of `usage://` answers `store.pools()` filtered by `mayRead`, for every
 
 ## Files
 
-- `UPDATE: packages/sdk/src/usage.ts:542-543` - `visible` filters `store.pools()` by `mayRead`.
+- `UPDATE: packages/sdk/src/usage/usage.ts:542-543` - `visible` filters `store.pools()` by `mayRead`.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the listing cases.
 - `UPDATE: docs/sdk/USAGE.md` - a listing names the charged pools the reader may read.
 
@@ -31,7 +31,7 @@ A listing of `usage://` answers `store.pools()` filtered by `mayRead`, for every
 
 ## Resume
 
-- `packages/sdk/src/usage.ts`: `visible` is `store.pools()` filtered by `refused`, for every reader, in the store's sorted order.
+- `packages/sdk/src/usage/usage.ts`: `visible` is `store.pools()` filtered by `refused`, for every reader, in the store's sorted order.
 - `packages/sdk/test/usage-scheme.test.ts`: a test with records in `user:soft`, `team:backend`, `project:backend:ahpapp` and `root:x`, where `soft` lists the first three and root lists all four.
 - The same test checks that `project:testing:ahpc`, which `soft` may read and which has no records, is not listed.
 - The existing case that listed an uncharged `user:ana` now expects only the charged pool.

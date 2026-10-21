@@ -2,7 +2,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { botChatAgent } from '../src/chat.js';
 import { contextBlock, timeWithOffset } from '../src/context.js';
 import { backSessions, chatsOf, rowId, sessionsOf } from '../src/names.js';

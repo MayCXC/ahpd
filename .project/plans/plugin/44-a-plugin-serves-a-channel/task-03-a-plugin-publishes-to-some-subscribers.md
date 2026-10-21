@@ -19,7 +19,7 @@ The host sends it only to a subscriber that `to` names and that `visible` lets s
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `ChannelHandle` with `publish` and `subscribers(uri)`.
 - `UPDATE: packages/sdk/src/host.ts:589-610` - `emit` keeps the test with the envelope and in `replayable`.
 - `UPDATE: packages/sdk/src/host.ts:520-556` - `seenBy` calls the test with the connection's principal and client id.
-- `UPDATE: packages/sdk/src/plugins.ts` - the handle is bound to the host when `createHost` runs, and a publish before that is refused.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the handle is bound to the host when `createHost` runs, and a publish before that is refused.
 - `UPDATE: packages/sdk/test/plugin-channel.test.ts` - two readers, one test, and a reconnect that replays.
 
 ## Steps

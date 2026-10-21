@@ -9,13 +9,13 @@ requires: []
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/users.ts#L948-L957](../../../../packages/sdk/src/users.ts#L948-L957) - `verify`, which compares a token with the one hash on each record"
-  - "[code://packages/sdk/src/users.ts#L1275-L1284](../../../../packages/sdk/src/users.ts#L1275-L1284) - `mint`, which replaces a person's one hash"
-  - "[code://packages/sdk/src/users.ts#L910-L916](../../../../packages/sdk/src/users.ts#L910-L916) - `standing` and `can`, where a principal's grants are read on each call"
+  - "[code://packages/sdk/src/access/users.ts#L948-L957](../../../../packages/sdk/src/access/users.ts#L948-L957) - `verify`, which compares a token with the one hash on each record"
+  - "[code://packages/sdk/src/access/users.ts#L1275-L1284](../../../../packages/sdk/src/access/users.ts#L1275-L1284) - `mint`, which replaces a person's one hash"
+  - "[code://packages/sdk/src/access/users.ts#L910-L916](../../../../packages/sdk/src/access/users.ts#L910-L916) - `standing` and `can`, where a principal's grants are read on each call"
   - "[code://packages/sdk/src/types/users.ts#L152-L156](../../../../packages/sdk/src/types/users.ts#L152-L156) - `UserRecord.token`, one hash per person"
   - "[code://packages/server/src/commands/user.ts#L218-L247](../../../../packages/server/src/commands/user.ts#L218-L247) - `user token`, which needs `user:write` and is bounded by the caller's grants"
   - "[code://packages/server/src/commands/user.ts#L303-L334](../../../../packages/server/src/commands/user.ts#L303-L334) - `user primary`, free for one's own record and `user:write` for another's"
-  - "[code://packages/sdk/src/usage.ts#L982-L1020](../../../../packages/sdk/src/usage.ts#L982-L1020) - `usageMethods`, AHP methods that let a reader in for their own records"
+  - "[code://packages/sdk/src/usage/usage.ts#L982-L1020](../../../../packages/sdk/src/usage/usage.ts#L982-L1020) - `usageMethods`, AHP methods that let a reader in for their own records"
   - "[code://packages/server/src/proxy/caller.ts#L99-L106](../../../../packages/server/src/proxy/caller.ts#L99-L106) - the proxy's check of a caller, which asks `standing` and `can`"
   - "[code://packages/server/src/proxy/listener.ts#L418](../../../../packages/server/src/proxy/listener.ts#L418) - `policyFor`, which charges a call to the principal's id"
 ---
@@ -71,7 +71,7 @@ person signs in -> token mint (grants, label) -> secret shown once -> hash in th
 - **Data flow** - a mint writes a `TokenRecord` with the hash to the tokens file. `verify` reads the users file and the tokens file, and compares the hash with each entry in one pass.
 - **State flow** - each call reads the tokens file, as it reads the users file. A revoke or an expiry is in force on the next call.
 - **Layer responsibilities** - sdk: the tokens file, the limit, `verify` and the narrowed principal, and the AHP methods · server: the key, the commands and the wiring.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts)
 
 ## Tasks
 

@@ -6,7 +6,7 @@ title: ahpd speaks 1.0.0 and 0.9.0 - implemented
 
 - `@microsoft/agent-host-protocol` is `^1.0.0` in every package that names it, and `1.0.0` is in `minimumReleaseAgeExclude`.
 - `initialize` (`packages/sdk/src/host.ts`) answers with `negotiateProtocolVersion`: the highest offered version compatible with `1.0.0` or `0.9.0`. No compatible version is `-32005` with `supportedVersions`; a malformed entry is `-32602` with the package's message.
-- A nested host is accepted when it answers any version in `SUPPORTED_PROTOCOL_VERSIONS` (`packages/sdk/src/nested.ts`).
+- A nested host is accepted when it answers any version in `SUPPORTED_PROTOCOL_VERSIONS` (`packages/sdk/src/sessions/nested.ts`).
 - The strict schema carries the package version it was built from; the wire test rebuilds a stale one, and `tools/validate.mjs` refuses one with exit 2.
 - Tests offer `0.9.0`, which both packages speak; `docs/sdk/AHP.md` and `README.md` name `1.0.0` and `0.9.0`.
 

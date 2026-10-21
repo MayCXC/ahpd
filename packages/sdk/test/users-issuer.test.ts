@@ -3,9 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { webcrypto } from 'node:crypto';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { fileUsers, signInRecord } from '../src/users.js';
-import { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, jwtIssuer, oidcIssuer } from '../src/issuers.js';
-import type { Fetcher } from '../src/issuers.js';
+import { fileUsers, signInRecord } from '../src/access/users.js';
+import { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, jwtIssuer, oidcIssuer } from '../src/access/issuers.js';
+import type { Fetcher } from '../src/access/issuers.js';
 import type { Issuer, IssuerVerify, Users } from '../src/types/users.js';
 
 /*

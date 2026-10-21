@@ -9,7 +9,7 @@ refs:
   - "[code://packages/sdk/src/host/automations.ts#L1019-L1030](../../../../packages/sdk/src/host/automations.ts#L1019-L1030) - `watchFor`, which keeps a watched trigger without its `config`"
   - "[code://packages/sdk/src/types/plugin.ts#L96](../../../../packages/sdk/src/types/plugin.ts#L96) - `config`, the form values of a saved trigger"
   - "[code://packages/sdk/src/host/automations.ts#L482-L496](../../../../packages/sdk/src/host/automations.ts#L482-L496) - `hold`, which keeps the newest facts of a folded wake"
-  - "[code://packages/sdk/src/wakemessage.ts#L18-L74](../../../../packages/sdk/src/wakemessage.ts#L18-L74) - `WakeFacts`, `WAKE_PLACEHOLDERS` and `wakeMessage`, whose `\\w+` pattern does not match `{{event.<field>}}`"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L18-L74](../../../../packages/sdk/src/automations/wakemessage.ts#L18-L74) - `WakeFacts`, `WAKE_PLACEHOLDERS` and `wakeMessage`, whose `\\w+` pattern does not match `{{event.<field>}}`"
   - "[code://packages/sdk/test/plugin-triggers.test.ts#L116-L132](../../../../packages/sdk/test/plugin-triggers.test.ts#L116-L132) - the case where a plugin fires its event, to extend"
   - "[code://packages/sdk/test/automation-wake.test.ts#L217](../../../../packages/sdk/test/automation-wake.test.ts#L217) - the case that fills the placeholders, to extend"
   - "[code://docs/sdk/AUTOMATIONS.md#L142-L167](../../../../docs/sdk/AUTOMATIONS.md#L142-L167) - the placeholder table of a run's message"
@@ -23,7 +23,7 @@ A run's message can name each field as `{{event.<field>}}`, which the wake fille
 
 ## Files
 
-- `UPDATE: packages/sdk/src/wakemessage.ts:18-74` - add `data` to `WakeFacts`, and fill `{{event.<field>}}` from it.
+- `UPDATE: packages/sdk/src/automations/wakemessage.ts:18-74` - add `data` to `WakeFacts`, and fill `{{event.<field>}}` from it.
 - `UPDATE: packages/sdk/src/host/automations.ts:1019-1030` - keep the trigger's `config` on the watched entry.
 - `UPDATE: packages/sdk/src/host/automations.ts:1133-1136` - skip an automation whose trigger `config` does not match the fire's data, and put the fire's `data` on the facts of the run.
 - `UPDATE: packages/sdk/test/automation-wake.test.ts:217` - add the `{{event.<field>}}` cases beside the case that fills the placeholders.
@@ -91,7 +91,7 @@ A run's message can name each field as `{{event.<field>}}`, which the wake fille
 
 ## Resume
 
-Built in `packages/sdk/src/wakemessage.ts`, `packages/sdk/src/host/automations.ts` and `packages/webhook/src/automation.ts`, with the trigger type and the automation seam in `plugin.ts`. `automation-wake.test.ts` gained 7 cases, `plugin-triggers.test.ts` gained 3 and changed 1, and `packages/webhook/test/webhook-automation.test.ts` holds 6.
+Built in `packages/sdk/src/automations/wakemessage.ts`, `packages/sdk/src/host/automations.ts` and `packages/webhook/src/automation.ts`, with the trigger type and the automation seam in `plugin.ts`. `automation-wake.test.ts` gained 7 cases, `plugin-triggers.test.ts` gained 3 and changed 1, and `packages/webhook/test/webhook-automation.test.ts` holds 6.
 
 How the parts work:
 

@@ -1,7 +1,7 @@
 /** An agent backend, and everything the host asks one for. */
 
 import type { ToolCallConfirmationReason, Turn } from '@microsoft/agent-host-protocol';
-import type { CommandShell } from '../commandautoapprover.js';
+import type { CommandShell } from '../access/commandautoapprover.js';
 import type { Bag } from './common.js';
 import type { FileEdit } from './changes.js';
 import type { WireTurn } from './wire.js';
@@ -13,7 +13,7 @@ import type { StartTerminals } from './terminals.js';
 import type { MayRunTool, RunClientTool, ToolsChanged, ToolsEndpoint } from '../tools/server.js';
 import type { ComputerPort } from './computers.js';
 import type { MachineNeed } from './machine.js';
-import type { ShellEnv } from '../shellenv.js';
+import type { ShellEnv } from '../machines/shellenv.js';
 
 /**
  * An MCP server the host offers its agents, reached over stdio.

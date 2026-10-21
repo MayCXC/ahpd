@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { Status } from '../../sdk/src/catalog.js';
+import { Status } from '../../sdk/src/sessions/catalog.js';
 import type { Bag, BoundTool, Start } from '../../sdk/src/types/index.js';
 import { piAgent } from '../src/agent.js';
 import { driveCall, opened, root, settled } from './fake-pi.js';

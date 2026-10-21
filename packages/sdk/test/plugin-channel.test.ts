@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createHost, ROOT } from '../src/host.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
-import { fileResources } from '../src/resources.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
+import { fileResources } from '../src/resources/resources.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import { call, directory, hello, RECORD, root, watching } from './users-gate-helpers.js';

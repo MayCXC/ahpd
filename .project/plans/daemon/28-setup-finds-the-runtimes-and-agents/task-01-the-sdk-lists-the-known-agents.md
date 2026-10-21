@@ -20,7 +20,7 @@ A person's preset in `config.json` can write `install` and `page`, and the value
 
 ## Files
 
-- `CREATE: packages/sdk/src/agents.ts` - `KnownAgent` and `knownAgents`, keyed by the preset id.
+- `CREATE: packages/sdk/src/machines/agents.ts` - `KnownAgent` and `knownAgents`, keyed by the preset id.
 - `UPDATE: packages/sdk/src/index.ts:34` - export `knownAgents` and the type `KnownAgent`.
 - `UPDATE: packages/agent-acp/src/presets.ts:85-213` - each row spreads `name` and `command` from `knownAgents[id]`; the header names the new home of the commands.
 - `UPDATE: packages/agent-acp/src/plugin.ts:47-101` - `install` and `page` in the schema of a preset, each with a description.
@@ -58,7 +58,7 @@ A person's preset in `config.json` can write `install` and `page`, and the value
 
 ## Resume
 
-- **Done so far:** steps 1 to 16, 2026-10-19. `packages/sdk/src/agents.ts` holds `KnownAgent`, `installLine` and the 12 rows. Each install line was checked against the vendor's docs or the npm package page on 2026-10-19, and the date is in the file header. `packages/sdk/src/index.ts` exports them. `packages/agent-acp/src/presets.ts` takes each row's `name` and `command` from `knownAgents` through `rowOf`, and keeps args, env, authenticate and machine. `plugin.ts` accepts `install` and `page` in a preset and ignores them when it runs an agent. The sdk test and the agent-acp test pass.
+- **Done so far:** steps 1 to 16, 2026-10-19. `packages/sdk/src/machines/agents.ts` holds `KnownAgent`, `installLine` and the 12 rows. Each install line was checked against the vendor's docs or the npm package page on 2026-10-19, and the date is in the file header. `packages/sdk/src/index.ts` exports them. `packages/agent-acp/src/presets.ts` takes each row's `name` and `command` from `knownAgents` through `rowOf`, and keeps args, env, authenticate and machine. `plugin.ts` accepts `install` and `page` in a preset and ignores them when it runs an agent. The sdk test and the agent-acp test pass.
 - **Next action:** none. Task 03 is the install script.
 - **Open questions:** none.
 - **Watch out for:** `claude` is an npm part of `versions.json`, but it is the native backend and not an ACP agent. The sdk test leaves it out of the rows it requires. A `claude` on PATH is shown under "Also found" instead. Amp's README gives only `npx` and prebuilt binaries. Its row has a `page` and no line for any system.

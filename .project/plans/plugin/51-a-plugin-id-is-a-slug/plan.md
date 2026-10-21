@@ -12,15 +12,15 @@ refs:
   - "[code://packages/server/src/plugins.ts#L712-L726](../../../../packages/server/src/plugins.ts#L712-L726) - `namePlugin`: the module's `name` export, or the provisional id"
   - "[code://packages/server/src/plugins.ts#L760-L790](../../../../packages/server/src/plugins.ts#L760-L790) - `loadOne`, where a plugin is skipped with a problem line"
   - "[code://packages/server/src/plugins.ts#L1083-L1119](../../../../packages/server/src/plugins.ts#L1083-L1119) - `loadPlugins` names every entry and checks for a repeated id"
-  - "[code://packages/sdk/src/records.ts#L276-L284](../../../../packages/sdk/src/records.ts#L276-L284) - `RECORD_SLUG` and `isRecordSlug`, the slug rule records use"
-  - "[code://packages/sdk/src/plugins.ts#L138-L166](../../../../packages/sdk/src/plugins.ts#L138-L166) - `routePrefix` and `routeOf`: a route is served under `/plugins/<id>/`"
-  - "[code://packages/sdk/src/plugins.ts#L791-L793](../../../../packages/sdk/src/plugins.ts#L791-L793) - a plugin's principal is `plugin:<id>`"
-  - "[code://packages/sdk/src/values.ts#L40-L52](../../../../packages/sdk/src/values.ts#L40-L52) - `ownerOf`, the reading of a saved owner, and `ownerOfPrincipal`"
-  - "[code://packages/sdk/src/sessions.ts#L610-L618](../../../../packages/sdk/src/sessions.ts#L610-L618) - a saved session's owner and senders, read through `ownerOf`"
+  - "[code://packages/sdk/src/resources/records.ts#L276-L284](../../../../packages/sdk/src/resources/records.ts#L276-L284) - `RECORD_SLUG` and `isRecordSlug`, the slug rule records use"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L138-L166](../../../../packages/sdk/src/plugins/plugins.ts#L138-L166) - `routePrefix` and `routeOf`: a route is served under `/plugins/<id>/`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L791-L793](../../../../packages/sdk/src/plugins/plugins.ts#L791-L793) - a plugin's principal is `plugin:<id>`"
+  - "[code://packages/sdk/src/utils/values.ts#L40-L52](../../../../packages/sdk/src/utils/values.ts#L40-L52) - `ownerOf`, the reading of a saved owner, and `ownerOfPrincipal`"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L610-L618](../../../../packages/sdk/src/sessions/sessions.ts#L610-L618) - a saved session's owner and senders, read through `ownerOf`"
   - "[code://packages/server/src/scheduled.ts#L404](../../../../packages/server/src/scheduled.ts#L404) - a saved automation's owner, read through `ownerOf`"
-  - "[code://packages/sdk/src/usage.ts#L242-L266](../../../../packages/sdk/src/usage.ts#L242-L266) - `entriesIn`, the one reading of a usage line, with its `owner` and `pools`"
+  - "[code://packages/sdk/src/usage/usage.ts#L242-L266](../../../../packages/sdk/src/usage/usage.ts#L242-L266) - `entriesIn`, the one reading of a usage line, with its `owner` and `pools`"
   - "[code://packages/server/src/plugins.ts#L1231-L1292](../../../../packages/server/src/plugins.ts#L1231-L1292) - `describePlugin`, the row `ahpd plugin list` shows"
-  - "[code://packages/sdk/src/triggers.ts#L192-L193](../../../../packages/sdk/src/triggers.ts#L192-L193) - a trigger's `owners` filter, compared with a session's owner"
+  - "[code://packages/sdk/src/automations/triggers.ts#L192-L193](../../../../packages/sdk/src/automations/triggers.ts#L192-L193) - a trigger's `owners` filter, compared with a session's owner"
   - "[code://packages/webhook/src/route.ts#L8-L11](../../../../packages/webhook/src/route.ts#L8-L11) - `NAME` and `PREFIX`, the webhook's id and route"
   - "[code://docs/plugins/PLUGINS.md#L39-L47](../../../../docs/plugins/PLUGINS.md#L39-L47) - the section on the id"
   - https://github.com/softov/ahpw/blob/main/plugin/index.ts - ahpw exports `ahpd-web` and serves `/plugins/ahpd-web/`
@@ -85,7 +85,7 @@ saved owner plugin:@ahpd/<x> -> ownerOf / entriesIn -> plugin:<x>
 - **Event flow** - unchanged.
 - **State flow** - one function in `values.ts` maps an old first-party owner to the new one. `ownerOf`, `entriesIn` and the trigger filter call it.
 - **Layer responsibilities** - server `plugins.ts`: the slug check · each plugin package: its `name` · sdk `values.ts`, `usage.ts`, `triggers.ts`: old owners · docs · ahpw `plugin/index.ts`.
-- **Source-of-truth files** - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts), [`code://packages/sdk/src/values.ts`](../../../../packages/sdk/src/values.ts)
+- **Source-of-truth files** - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts), [`code://packages/sdk/src/utils/values.ts`](../../../../packages/sdk/src/utils/values.ts)
 
 ## Tasks
 

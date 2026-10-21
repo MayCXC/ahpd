@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L111-L189](../../../../packages/sdk/src/users.ts#L111-L189) - `OPERATIONS`"
+  - "[code://packages/sdk/src/access/users.ts#L111-L189](../../../../packages/sdk/src/access/users.ts#L111-L189) - `OPERATIONS`"
   - "[code://packages/sdk/src/host/root.ts#L305-L331](../../../../packages/sdk/src/host/root.ts#L305-L331) - `advertisedGrants`"
   - "[code://packages/sdk/test/users-host.test.ts#L369](../../../../packages/sdk/test/users-host.test.ts#L369) - the advertisement test"
 ---
@@ -15,7 +15,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:111-189` - add `trust` (`push`, write group) and `proxy` (`models` read, `call` write), each with a short title and a one-sentence description.
+- `UPDATE: packages/sdk/src/access/users.ts:111-189` - add `trust` (`push`, write group) and `proxy` (`models` read, `call` write), each with a short title and a one-sentence description.
 - `UPDATE: packages/sdk/src/host/root.ts:309` - the comment's subject count.
 - `UPDATE: packages/sdk/src/host/gate.ts:271-280` - the trust push asks for `trust:push`.
 - `UPDATE: packages/server/src/proxy/listener.ts:462` - a proxy call asks for `proxy:call`.

@@ -3,7 +3,7 @@ title: The folder inside a machine is trusted when this host's client trusts the
 status: accepted
 date: 2026-10-18
 refs:
-  - "[code://packages/sdk/src/nested.ts#L824-L836](../../packages/sdk/src/nested.ts#L824-L836) - the proxy pushes `workspaceTrust` for the inside folder before the create"
+  - "[code://packages/sdk/src/sessions/nested.ts#L824-L836](../../packages/sdk/src/sessions/nested.ts#L824-L836) - the proxy pushes `workspaceTrust` for the inside folder before the create"
   - "[code://packages/agent-acp/src/session/opening.ts#L340](../../packages/agent-acp/src/session/opening.ts#L340) - the ACP refusal in a folder nobody trusts"
   - "[code://packages/sdk/src/host/spawn.ts#L695-L706](../../packages/sdk/src/host/spawn.ts#L695-L706) - `trustedBy`, this host's answer for the session's folder"
 ---

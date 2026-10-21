@@ -4,14 +4,14 @@ import { join, resolve } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
 import { chatUriFor, subagentChatUri } from '../src/host/channels.js';
-import { posixUriOf, uriOf } from '../src/fileuri.js';
+import { posixUriOf, uriOf } from '../src/resources/fileuri.js';
 import { createPeer, receive } from '../src/rpc.js';
-import { machinePathOf } from '../src/machine.js';
-import { nestedAgent } from '../src/nested.js';
-import { fileSessions } from '../src/sessions.js';
+import { machinePathOf } from '../src/machines/machine.js';
+import { nestedAgent } from '../src/sessions/nested.js';
+import { fileSessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../src/types/agent.js';
-import type { NestedHost } from '../src/nested.js';
+import type { NestedHost } from '../src/sessions/nested.js';
 import type { Handler, Peer, Wire } from '../src/types/rpc.js';
 
 /*

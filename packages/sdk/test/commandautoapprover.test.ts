@@ -3,10 +3,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/commandautoapprover.js';
+import { CommandAutoApprover, DEFAULT_TERMINAL_AUTO_APPROVE_RULES } from '../src/access/commandautoapprover.js';
 import type {
   CommandApprovalOptions, CommandSplitter, TerminalAutoApprovePatterns, TerminalAutoApproveRules,
-} from '../src/commandautoapprover.js';
+} from '../src/access/commandautoapprover.js';
 import { vscodeRootProperties } from '../src/vscoderootconfig.js';
 
 /*

@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { botTarget, turnEnds } from '../src/bot.js';
 import { callBack, dispatcher } from '../src/plugin.js';
 import { checkEndpoint } from '../src/record.js';

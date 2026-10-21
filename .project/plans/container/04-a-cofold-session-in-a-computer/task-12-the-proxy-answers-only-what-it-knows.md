@@ -4,8 +4,8 @@ status: done
 depends: [task-10-inner-chat-uris-are-rewritten.md]
 layer: "sdk | test"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L464-L510](../../../../packages/sdk/src/nested.ts#L464-L510) - the members that answer `true` whatever happened"
-  - "[code://packages/sdk/src/nested.ts#L1-L22](../../../../packages/sdk/src/nested.ts#L1-L22) - the module comment, which says what the proxy forwards"
+  - "[code://packages/sdk/src/sessions/nested.ts#L464-L510](../../../../packages/sdk/src/sessions/nested.ts#L464-L510) - the members that answer `true` whatever happened"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1-L22](../../../../packages/sdk/src/sessions/nested.ts#L1-L22) - the module comment, which says what the proxy forwards"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L174-L235](../../../../packages/sdk/test/nested-proxy.test.ts#L174-L235) - the permission test, an input request answered with `confirm`"
 ---
 
@@ -15,8 +15,8 @@ Every `Session` member the proxy has reports the inner session's real answer, th
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:464-505` - `steer`, `resume`, `setAnswer`, `setConfig`, `setCustomizationEnabled`, `startMcpServer`, `stopMcpServer`.
-- `UPDATE: packages/sdk/src/nested.ts:1-22` - the module comment.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:464-505` - `steer`, `resume`, `setAnswer`, `setConfig`, `setCustomizationEnabled`, `startMcpServer`, `stopMcpServer`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:1-22` - the module comment.
 - `UPDATE: packages/sdk/test/nested-proxy.test.ts:174-235` - the permission case.
 
 ## Steps

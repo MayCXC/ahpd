@@ -13,7 +13,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/session.ts#L381-L382](../../../../packages/sdk/src/types/session.ts#L381-L382) - `confirm(toolCallId, approved)`, which carries no option"
   - "[code://packages/sdk/src/host.ts#L8955-L8957](../../../../packages/sdk/src/host.ts#L8955-L8957) - the host drops the action's `selectedOptionId`"
-  - "[code://packages/sdk/src/nested.ts#L476-L477](../../../../packages/sdk/src/nested.ts#L476-L477) - the nested proxy re-dispatches the answer with `approved` only"
+  - "[code://packages/sdk/src/sessions/nested.ts#L476-L477](../../../../packages/sdk/src/sessions/nested.ts#L476-L477) - the nested proxy re-dispatches the answer with `approved` only"
   - "[code://packages/agent-claude/src/session.ts#L1765](../../../../packages/agent-claude/src/session.ts#L1765) - `canUseTool`, whose third argument carries `suggestions`, never read"
   - "[code://packages/agent-claude/src/session.ts#L3283-L3321](../../../../packages/agent-claude/src/session.ts#L3283-L3321) - claude's `confirm`, which settles allow or deny with no `updatedPermissions`"
   - "[code://packages/agent-acp/src/session.ts#L388-L445](../../../../packages/agent-acp/src/session.ts#L388-L445) - `askPermission`, which keeps only the once options and emits no pending `chat/toolCallReady`"

@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/sessions.ts](../../../../packages/sdk/src/types/sessions.ts) - `SessionStore`, where the owner is kept and the turn senders would sit beside it"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - the memory and file stores, `ownerOf` and the `Saved` shape"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts) - the memory and file stores, `ownerOf` and the `Saved` shape"
   - "[code://packages/sdk/src/host.ts#L3614-L3679](../../../../packages/sdk/src/host.ts#L3614-L3679) - the per-chat emit, where `dispatch` happens, a queued sender moves and `senderOf` is read"
   - "[code://packages/sdk/src/host.ts#L4322-L4331](../../../../packages/sdk/src/host.ts#L4322-L4331) - `senders` and `senderOf`, held only while a turn runs"
   - "[code://packages/sdk/src/host.ts#L5103-L5148](../../../../packages/sdk/src/host.ts#L5103-L5148) - `beginOrRun`, where a sender is recorded under `queuedAs ?? turnId`"
@@ -20,12 +20,12 @@ Nothing is written and nothing is sent where there is nobody to name: a host wit
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts:73-97` - `sender(id, turnId)` and `setSender(id, turnId, value)` beside `owner`/`setOwner`, which is the port's existing shape for one typed reference per session, keyed a second time.
-- `UPDATE: packages/sdk/src/sessions.ts:29-70` - a map of maps beside `chatTitles`, and one more map in `forget`.
-- `UPDATE: packages/sdk/src/sessions.ts:16-19` - `sendersOf(id)` on the interface that holds what the port cannot answer, which is the whole session's senders at once.
-- `UPDATE: packages/sdk/src/sessions.ts:95-109` - `senders?: Record<string, string>` on `Saved`, beside `owner`.
-- `UPDATE: packages/sdk/src/sessions.ts:142-171` - `save()` writing the map, and the row filter at 168-170 counting it as something worth a line.
-- `UPDATE: packages/sdk/src/sessions.ts:193-250` - `load()` reading each value through `ownerOf`, the guard at 92 that a typed reference is and nothing else.
-- `UPDATE: packages/sdk/src/sessions.ts:254-271` - the file store's pass-through, which registers the id as known and coalesces the write.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:29-70` - a map of maps beside `chatTitles`, and one more map in `forget`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:16-19` - `sendersOf(id)` on the interface that holds what the port cannot answer, which is the whole session's senders at once.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:95-109` - `senders?: Record<string, string>` on `Saved`, beside `owner`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:142-171` - `save()` writing the map, and the row filter at 168-170 counting it as something worth a line.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:193-250` - `load()` reading each value through `ownerOf`, the guard at 92 that a typed reference is and nothing else.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts:254-271` - the file store's pass-through, which registers the id as known and coalesces the write.
 - `UPDATE: packages/sdk/src/host.ts:3614-3679` - the emit: the queued move before the dispatch, the stamp on the action, and the write to the store.
 
 ## Steps

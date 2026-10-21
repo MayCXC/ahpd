@@ -4,7 +4,7 @@ date: 2026-10-09
 refs:
   - "[code://packages/sdk/src/host/catalogue.ts](../../../../packages/sdk/src/host/catalogue.ts)"
   - "[code://packages/sdk/src/host/chatactions.ts](../../../../packages/sdk/src/host/chatactions.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
 ---
 
 A running session's catalogue row now lists its chats and names its default chat, so a client draws a session's chats without subscribing to it.
@@ -15,7 +15,7 @@ Archiving a session's default chat archives the session.
 
 - [`code://packages/sdk/src/host/catalogue.ts`](../../../../packages/sdk/src/host/catalogue.ts) - `chatCatalogOf` builds a session's chat list for both the session state and the row. `compactChats` cuts it to `SessionChatSummary`, and `summaryOf` adds `chats` and `defaultChat`.
 - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts) - `sessionFlag` is the session's flag path. `chat/isReadChanged` and `chat/isArchivedChanged` set a chat's own bits, or the session's archive on its default chat.
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `chatFlags` and `setChatFlags` in the memory and file stores, so the bits survive a restart.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - `chatFlags` and `setChatFlags` in the memory and file stores, so the bits survive a restart.
 - [`code://packages/sdk/src/host/snapshots.ts`](../../../../packages/sdk/src/host/snapshots.ts) - every chat status it builds carries that chat's bits.
 - `spawn.ts`, `tooling.ts` and `sessionmethods.ts` call `summaryMoved` where a chat is added or removed.
 - `docs/sdk/AHP.md` and `README.md` - the two row notifications and the two chat actions, and the state-action total `99 of 100`.

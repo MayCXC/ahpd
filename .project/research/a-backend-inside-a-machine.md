@@ -2,7 +2,7 @@
 title: Two ways a backend could run inside a machine, and which backends each covers
 date: 2026-09-23
 refs:
-  - "[code://packages/sdk/src/computers.ts](../../packages/sdk/src/computers.ts) - the gate that refuses today, and the two functions either route would replace"
+  - "[code://packages/sdk/src/machines/computers.ts](../../packages/sdk/src/machines/computers.ts) - the gate that refuses today, and the two functions either route would replace"
   - "[code://packages/sdk/src/types/computers.ts](../../packages/sdk/src/types/computers.ts) - `ComputerPort.how`, which answers how to reach a machine as a process"
   - "[code://packages/computer/src/plugin.ts#L100-L125](../../packages/computer/src/plugin.ts#L100-L125) - the port over Docker, and the `asked.cwd` it already honours"
   - "[code://packages/agent-acp/src/session.ts#L447-L479](../../packages/agent-acp/src/session.ts#L447-L479) - `placed()`, the one backend that moves today"

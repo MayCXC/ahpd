@@ -8,11 +8,11 @@ refs:
   - "[code://packages/server/src/config.ts#L378-L392](../../../../packages/server/src/config.ts#L378-L392) - `asSpec`"
   - "[code://packages/server/src/plugins.ts#L684](../../../../packages/server/src/plugins.ts#L684) - where the spec reaches `pluginHost`"
   - "[code://packages/sdk/src/types/users.ts#L40-L101](../../../../packages/sdk/src/types/users.ts#L40-L101) - `Principal`"
-  - "[code://packages/sdk/src/users.ts#L79](../../../../packages/sdk/src/users.ts#L79) - `holds`"
+  - "[code://packages/sdk/src/access/users.ts#L79](../../../../packages/sdk/src/access/users.ts#L79) - `holds`"
   - "[code://packages/sdk/src/host/owners.ts#L47-L51](../../../../packages/sdk/src/host/owners.ts#L47-L51) - `ownerFor`, which answers `plugin:<name>` for a plugin's principal"
   - "[code://packages/sdk/src/types/usage.ts#L19](../../../../packages/sdk/src/types/usage.ts#L19) - `Owner`, which gains the `plugin:<name>` form"
   - "[code://packages/server/src/commands/options.ts#L408-L416](../../../../packages/server/src/commands/options.ts#L408-L416) - `pluginEntry`"
-  - "[code://packages/sdk/src/users.ts#L545](../../../../packages/sdk/src/users.ts#L545) - `principalOf`, how grants become `can`"
+  - "[code://packages/sdk/src/access/users.ts#L545](../../../../packages/sdk/src/access/users.ts#L545) - `principalOf`, how grants become `can`"
 ---
 
 ## Objective
@@ -27,7 +27,7 @@ A plugin's connection is served as the principal `plugin:<name>`, which can do w
 - `UPDATE: packages/server/src/plugins.ts:684` - the loader checks each grant, drops one whose shape is not `<subject>:<verb>` with a line in its `problems` naming `plugins.<name>.grants`, and hands the rest to `pluginHost`.
 - `UPDATE: packages/sdk/src/types/usage.ts:19` - `Owner` gains the `plugin:<name>` form.
 - `UPDATE: packages/sdk/src/host/owners.ts:47-51` - `ownerFor` answers `plugin:<name>` for a plugin's principal, not `user:plugin:<name>`.
-- `UPDATE: packages/sdk/src/plugins.ts` - `connect()` passes the principal to `Host.accept`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `connect()` passes the principal to `Host.accept`.
 - `UPDATE: packages/server/test/plugin-connect.test.ts` - the cases below.
 
 ## Steps

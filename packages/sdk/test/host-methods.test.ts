@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
-import { fileResources } from '../src/resources.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
+import { fileResources } from '../src/resources/resources.js';
 import { RpcError } from '../src/rpc.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';

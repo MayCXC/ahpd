@@ -4,8 +4,8 @@ status: done
 depends: [task-01-a-row-says-what-is-staged.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L849-L904](../../../../packages/sdk/src/changes.ts#L849-L904) - the `commit` branch of `invoke`, in the draft's form"
-  - "[code://packages/sdk/src/changes.ts#L121-L129](../../../../packages/sdk/src/changes.ts#L121-L129) - `COMMIT` and its description"
+  - "[code://packages/sdk/src/sessions/changes.ts#L849-L904](../../../../packages/sdk/src/sessions/changes.ts#L849-L904) - the `commit` branch of `invoke`, in the draft's form"
+  - "[code://packages/sdk/src/sessions/changes.ts#L121-L129](../../../../packages/sdk/src/sessions/changes.ts#L121-L129) - `COMMIT` and its description"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:849-904` - the two paths; the draft's `files` selection goes, its `message` stays.
-- `UPDATE: packages/sdk/src/changes.ts:121-129` - `COMMIT.description` says it commits what is staged, or everything when nothing is.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:849-904` - the two paths; the draft's `files` selection goes, its `message` stays.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:121-129` - `COMMIT.description` says it commits what is staged, or everything when nothing is.
 - `UPDATE: packages/sdk/test/commit.test.ts` - the draft's selection cases go; the cases below replace them.
 
 ## Steps

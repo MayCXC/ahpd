@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: packages/sdk
 refs:
-  - "[code://packages/sdk/src/issuers.ts#L89-L115](../../../../packages/sdk/src/issuers.ts#L89-L115) - where `isIssuerUrl` and the endpoint check go"
+  - "[code://packages/sdk/src/access/issuers.ts#L89-L115](../../../../packages/sdk/src/access/issuers.ts#L89-L115) - where `isIssuerUrl` and the endpoint check go"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - `namedIssuer`"
   - "[code://test/users-issuer.test.ts](../../../../test/users-issuer.test.ts) - the loopback and remote cases"
   - "[code://test/daemon.test.ts](../../../../test/daemon.test.ts) - `namedIssuer`"
@@ -16,7 +16,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/issuers.ts` - `loopbackUrl`, `isIssuerUrl`, and the discovered endpoint checked by it.
+- `UPDATE: packages/sdk/src/access/issuers.ts` - `loopbackUrl`, `isIssuerUrl`, and the discovered endpoint checked by it.
 - `UPDATE: packages/sdk/src/index.ts` - export `isIssuerUrl`.
 - `UPDATE: packages/server/src/config.ts` - `namedIssuer` uses `isIssuerUrl`.
 - `CREATE: scripts/dev-issuer.mjs` - discovery and userinfo over http on loopback, any bearer token answering as its own subject.

@@ -1,10 +1,10 @@
 import { lstatSync, readFileSync } from 'node:fs';
 import { realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
-import { idOf } from '../catalog.js';
-import { computerId, computerSource, machineRefusal, openComputer } from '../computers.js';
+import { idOf } from '../sessions/catalog.js';
+import { computerId, computerSource, machineRefusal, openComputer } from '../machines/computers.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
-import type { Scope } from '../scopes.js';
+import type { Scope } from '../usage/scopes.js';
 import type { BroughtBack } from '../types/computers.js';
 import type { Principal } from '../types/users.js';
 import type { Owner } from '../types/usage.js';

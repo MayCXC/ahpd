@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/gate.ts#L271-L280](../../../../packages/sdk/src/host/gate.ts#L271-L280) - `dispatchNeeds`"
-  - "[code://packages/sdk/src/users.ts#L23-L62](../../../../packages/sdk/src/users.ts#L23-L62) - roles and subjects"
+  - "[code://packages/sdk/src/access/users.ts#L23-L62](../../../../packages/sdk/src/access/users.ts#L23-L62) - roles and subjects"
 ---
 
 ## Objective
@@ -14,7 +14,7 @@ A `root/configChanged` that carries `workspaceTrust` needs `trust:write`, and th
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:23-62` - `trust` joins `SUBJECTS`, and `member` gains `trust:write`.
+- `UPDATE: packages/sdk/src/access/users.ts:23-62` - `trust` joins `SUBJECTS`, and `member` gains `trust:write`.
 - `UPDATE: packages/sdk/src/host/gate.ts:271-280` - ask for `trust:write` when the config has `workspaceTrust`.
 - `UPDATE: packages/sdk/test/users-gate-dispatch.test.ts` - the cases below, beside the root config pushes.
 - `UPDATE: docs/sdk/USERS.md:390-403` - the `trust` row, which the page's own test asks for.

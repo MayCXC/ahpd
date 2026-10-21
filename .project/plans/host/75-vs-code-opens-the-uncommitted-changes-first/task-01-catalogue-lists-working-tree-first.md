@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L845-L890](../../../../packages/sdk/src/changes.ts#L845-L890) - `scopes()`, the catalogue order"
+  - "[code://packages/sdk/src/sessions/changes.ts#L845-L890](../../../../packages/sdk/src/sessions/changes.ts#L845-L890) - `scopes()`, the catalogue order"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:845-890` - put the `uncommitted` entry before `session`, and rewrite the comment to say why.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:845-890` - put the `uncommitted` entry before `session`, and rewrite the comment to say why.
 - `UPDATE: packages/sdk/test/changes-uris.test.ts` - assert the order, and update any case that read `session` as the first entry.
 
 ## Steps
@@ -31,7 +31,7 @@ refs:
 ## Resume
 
 - **Status:** implemented, awaiting review.
-- **Done:** [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) `scopes()` returns `...scopes` before the `session` entry, so `uncommitted` leads, then `session`, then the two templates. The comment says a client shows the first entry and Commit is on the working tree.
+- **Done:** [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) `scopes()` returns `...scopes` before the `session` entry, so `uncommitted` leads, then `session`, then the two templates. The comment says a client shows the first entry and Commit is on the working tree.
 - **Files:** the task named `packages/sdk/test/changes.test.ts`, which the repository does not have. The changes tests are split into `changes-locks`, `changes-refresh` and `changes-uris`. Softov chose `packages/sdk/test/changes-uris.test.ts` on 2026-10-09, this file's Files line now names it, and the case sits beside the session-catalogue case there.
 - **Tests:** `packages/sdk/test/changes-uris.test.ts`, "lists the working tree, then the session, then the two templates". A real repository, one `refresh` so the working tree has an entry, and one observed turn; `scopes()` must then answer `uncommitted`, `session`, `turn/{turnId}`, `compare/{originalTurnId}/{modifiedTurnId}`.
 - **Failed first:** with the old order it answered `['session', 'uncommitted', 'turn/{turnId}', 'compare/...']`.

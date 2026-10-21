@@ -4,11 +4,11 @@ status: done
 depends: [task-03-the-charge-walk.md]
 layer: "sdk, server"
 refs:
-  - "[code://packages/sdk/src/policy.ts#L118-L182](../../../../packages/sdk/src/policy.ts#L118-L182) - the `policy:` records, provider and channel"
-  - "[code://packages/sdk/src/records.ts#L194-L240](../../../../packages/sdk/src/records.ts#L194-L240) - `recordsProvider`, which refuses a leaf today"
-  - "[code://packages/sdk/src/usage.ts#L640-L660](../../../../packages/sdk/src/usage.ts#L640-L660) - `refused` and `mayRead`, who may read which pool"
-  - "[code://packages/sdk/src/usage.ts#L800-L830](../../../../packages/sdk/src/usage.ts#L800-L830) - `body`, the leaves of `usage://`"
-  - "[code://packages/sdk/src/decide.ts#L96-L120](../../../../packages/sdk/src/decide.ts#L96-L120) - `scoped`, how a row's scope holds a person"
+  - "[code://packages/sdk/src/access/policy.ts#L118-L182](../../../../packages/sdk/src/access/policy.ts#L118-L182) - the `policy:` records, provider and channel"
+  - "[code://packages/sdk/src/resources/records.ts#L194-L240](../../../../packages/sdk/src/resources/records.ts#L194-L240) - `recordsProvider`, which refuses a leaf today"
+  - "[code://packages/sdk/src/usage/usage.ts#L640-L660](../../../../packages/sdk/src/usage/usage.ts#L640-L660) - `refused` and `mayRead`, who may read which pool"
+  - "[code://packages/sdk/src/usage/usage.ts#L800-L830](../../../../packages/sdk/src/usage/usage.ts#L800-L830) - `body`, the leaves of `usage://`"
+  - "[code://packages/sdk/src/access/decide.ts#L96-L120](../../../../packages/sdk/src/access/decide.ts#L96-L120) - `scoped`, how a row's scope holds a person"
   - "[code://packages/server/src/commands/run.ts#L860-L875](../../../../packages/server/src/commands/run.ts#L860-L875) - where the usage scheme is made"
   - "[code://packages/sdk/test/policy-scheme.test.ts](../../../../packages/sdk/test/policy-scheme.test.ts) - the `policy:` scheme's tests"
   - "[code://packages/sdk/test/usage-scheme.test.ts](../../../../packages/sdk/test/usage-scheme.test.ts) - the `usage:` scheme's tests"
@@ -21,8 +21,8 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/policy.ts:118-182` - the provider answers the `limits` leaf of a row.
-- `UPDATE: packages/sdk/src/usage.ts:800-830` - the `limits` leaf of `usage://`, and the policies store, the zone and the switch in `UsageProviderOptions`.
+- `UPDATE: packages/sdk/src/access/policy.ts:118-182` - the provider answers the `limits` leaf of a row.
+- `UPDATE: packages/sdk/src/usage/usage.ts:800-830` - the `limits` leaf of `usage://`, and the policies store, the zone and the switch in `UsageProviderOptions`.
 - `UPDATE: packages/server/src/commands/run.ts:860-875` - the usage scheme gets the policies store and `ownLimits`.
 - `UPDATE: packages/sdk/test/policy-scheme.test.ts` - the `limits` leaf.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - `usage://limits` on and off.

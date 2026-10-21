@@ -8,12 +8,12 @@
  */
 
 import { beforeEach, describe, expect, it } from 'vitest';
-import { chargeFor, limitsOf } from '../src/charge.js';
-import type { Charge, PayOrder } from '../src/charge.js';
-import { decide } from '../src/decide.js';
-import type { Asked } from '../src/decide.js';
-import { memoryPolicies } from '../src/policies.js';
-import type { Scope } from '../src/scopes.js';
+import { chargeFor, limitsOf } from '../src/usage/charge.js';
+import type { Charge, PayOrder } from '../src/usage/charge.js';
+import { decide } from '../src/access/decide.js';
+import type { Asked } from '../src/access/decide.js';
+import { memoryPolicies } from '../src/access/policies.js';
+import type { Scope } from '../src/usage/scopes.js';
 import type { Policies, Policy, PolicyKind, PolicyLimit } from '../src/types/policies.js';
 import type { Usage, UsageTotal } from '../src/types/usage.js';
 import type { Grant, Principal } from '../src/types/users.js';

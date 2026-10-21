@@ -4,8 +4,8 @@ status: accepted
 date: 2026-10-17
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L63](../../packages/sdk/src/types/usage.ts#L63) - `pools`, the opaque keys a record is charged to"
-  - "[code://packages/sdk/src/usage.ts#L202-L212](../../packages/sdk/src/usage.ts#L202-L212) - `charge`, the running total each key gets per day"
-  - "[code://packages/sdk/src/meter.ts#L193-L197](../../packages/sdk/src/meter.ts#L193-L197) - `poolsOf`, the owner, team and project keys a turn's record has today"
+  - "[code://packages/sdk/src/usage/usage.ts#L202-L212](../../packages/sdk/src/usage/usage.ts#L202-L212) - `charge`, the running total each key gets per day"
+  - "[code://packages/sdk/src/usage/meter.ts#L193-L197](../../packages/sdk/src/usage/meter.ts#L193-L197) - `poolsOf`, the owner, team and project keys a turn's record has today"
   - file:///github/ahp-review/prospect/ahp-user-rules.md - the rules draft: the charge walk, `shared` and `each`, `pool`, `cap`
 ---
 

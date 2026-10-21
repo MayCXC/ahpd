@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { idOf } from '../catalog.js';
+import { idOf } from '../sessions/catalog.js';
 import type { Bag } from '../types/common.js';
 import type { SessionAbout, SessionEvent, SessionEventKind, SessionTurn } from '../types/triggers.js';
 import type { HostContext } from './context.js';

@@ -8,7 +8,7 @@
  */
 
 import { expect, it } from 'vitest';
-import { periodOf } from '../src/periods.js';
+import { periodOf } from '../src/usage/periods.js';
 
 /** `periodOf`, with the instant spelled as a string. */
 const start = (zone: string, period: 'day' | 'week' | 'month' | 'total', now: string, from?: string) =>

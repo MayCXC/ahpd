@@ -5,7 +5,7 @@ depends: [task-01-a-restart-waits-for-the-old-inner-host.md]
 layer: "sdk, computer"
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L342-L381](../../../../packages/sdk/src/host/lifecycle.ts#L342-L381) - `removeSession`: a row not held goes straight to the backend's delete"
-  - "[code://packages/sdk/src/nested.ts#L964-L983](../../../../packages/sdk/src/nested.ts#L964-L983) - only a running session disposes inside"
+  - "[code://packages/sdk/src/sessions/nested.ts#L964-L983](../../../../packages/sdk/src/sessions/nested.ts#L964-L983) - only a running session disposes inside"
   - "[code://packages/computer/src/plugin.ts#L104-L110](../../../../packages/computer/src/plugin.ts#L104-L110) - `secretUnreadable` in the profile schema"
   - "[code://packages/computer/src/plugin.ts#L220](../../../../packages/computer/src/plugin.ts#L220) - and where a profile reads it"
 ---

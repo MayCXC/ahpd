@@ -15,7 +15,7 @@ Any other redirect turns `approved` into `noMatch`.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/commandautoapprover.ts` - the write check, with the working folder and the edit rules as arguments.
+- `UPDATE: packages/sdk/src/access/commandautoapprover.ts` - the write check, with the working folder and the edit rules as arguments.
 - `UPDATE: packages/sdk/test/commandautoapprover.test.ts` - a target inside and outside the folder, and one under `.git`.
 
 ## Steps
@@ -35,7 +35,7 @@ Any other redirect turns `approved` into `noMatch`.
 
 ## Resume
 
-- **Done so far:** steps 1 to 6, 2026-10-16. `writeAllowed`, `realPathOf`, `isInside` and `patternsAllow` are in `packages/sdk/src/commandautoapprover.ts`, reached from `evaluate` through `workingDirectory` and `editPatterns`. The `a write redirect` block of `packages/sdk/test/commandautoapprover.test.ts` covers them, and all of it passes. It has a target inside the folder and one outside it, one that leaves by `..` and one under `.git`. Also one under a symbolic link out of the folder, a dynamic name, and the client's own `editAutoApprovePatterns` read from `vscoderootconfig.ts`.
+- **Done so far:** steps 1 to 6, 2026-10-16. `writeAllowed`, `realPathOf`, `isInside` and `patternsAllow` are in `packages/sdk/src/access/commandautoapprover.ts`, reached from `evaluate` through `workingDirectory` and `editPatterns`. The `a write redirect` block of `packages/sdk/test/commandautoapprover.test.ts` covers them, and all of it passes. It has a target inside the folder and one outside it, one that leaves by `..` and one under `.git`. Also one under a symbolic link out of the folder, a dynamic name, and the client's own `editAutoApprovePatterns` read from `vscoderootconfig.ts`.
 - **Next action:** none. Softov reviewed the task and approved it 2026-10-19.
 - **Open questions:** none.
 - **Watch out for:** a target with `..` or a symbolic link can leave the folder; resolve it before the check.

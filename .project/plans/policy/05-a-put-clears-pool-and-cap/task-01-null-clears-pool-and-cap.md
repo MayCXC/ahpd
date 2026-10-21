@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/policies.ts#L212-L224](../../../../packages/sdk/src/policies.ts#L212-L224) - the two checks to change"
-  - "[code://packages/sdk/src/policies.ts#L77-L81](../../../../packages/sdk/src/policies.ts#L77-L81) - `edgeOf`, the pattern"
+  - "[code://packages/sdk/src/access/policies.ts#L212-L224](../../../../packages/sdk/src/access/policies.ts#L212-L224) - the two checks to change"
+  - "[code://packages/sdk/src/access/policies.ts#L77-L81](../../../../packages/sdk/src/access/policies.ts#L77-L81) - `edgeOf`, the pattern"
 ---
 
 ## Objective
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/policies.ts:212-224` - accept `null` for `pool` and `cap`, and leave the field out of the row.
+- `UPDATE: packages/sdk/src/access/policies.ts:212-224` - accept `null` for `pool` and `cap`, and leave the field out of the row.
 - `UPDATE: packages/sdk/test/policy-scheme.test.ts` - a put with `null` removes each field.
 - `UPDATE: docs/sdk/POLICY.md` - one sentence in The scheme: `null` removes `from`, `until`, `limits`, `pool`, `cap` and a match list.
 

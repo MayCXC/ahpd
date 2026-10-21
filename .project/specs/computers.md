@@ -4,7 +4,7 @@ status: current
 covers:
   - packages/computer/src/**
   - packages/computer/images/versions.json
-  - packages/sdk/src/computers.ts
+  - packages/sdk/src/machines/computers.ts
   - packages/sdk/src/types/computers.ts
   - packages/sdk/src/types/machine.ts
   - packages/sdk/src/host/machines.ts
@@ -14,8 +14,8 @@ decisions:
   - decisions/cofold-config-reaches-a-machine-by-a-path-variable.md
 refs:
   - "[code://packages/sdk/src/types/computers.ts#L93-L143](../../packages/sdk/src/types/computers.ts#L93-L143) - `MachineSource`, what the host hands the maker of a machine"
-  - "[code://packages/sdk/src/computers.ts#L113-L152](../../packages/sdk/src/computers.ts#L113-L152) - `machineRefusal`, the checks before a session runs in a machine"
-  - "[code://packages/sdk/src/computers.ts#L162-L187](../../packages/sdk/src/computers.ts#L162-L187) - `computersFor`, the port a backend is given"
+  - "[code://packages/sdk/src/machines/computers.ts#L113-L152](../../packages/sdk/src/machines/computers.ts#L113-L152) - `machineRefusal`, the checks before a session runs in a machine"
+  - "[code://packages/sdk/src/machines/computers.ts#L162-L187](../../packages/sdk/src/machines/computers.ts#L162-L187) - `computersFor`, the port a backend is given"
   - "[code://packages/sdk/src/host/machines.ts#L481-L514](../../packages/sdk/src/host/machines.ts#L481-L514) - `placedIn`, where a source becomes a machine"
   - "[code://packages/sdk/src/host/admission.ts#L123-L135](../../packages/sdk/src/host/admission.ts#L123-L135) - a session that names a source needs `computer:write`"
   - "[code://packages/computer/src/plugin.ts#L48-L59](../../packages/computer/src/plugin.ts#L48-L59) - the plugin defaults"
@@ -41,7 +41,7 @@ A backend reaches the machine through the `computers` port.
 The port answers a command to spawn and never spawns it, so the backend keeps the process and its stdio.
 The host hands each agent's machine needs to the maker.
 The maker builds the machine from a profile, the needs and the parts in [`code://packages/computer/images/versions.json`](../../packages/computer/images/versions.json).
-The code is in [`code://packages/computer/src/plugin.ts`](../../packages/computer/src/plugin.ts) and [`code://packages/sdk/src/computers.ts`](../../packages/sdk/src/computers.ts).
+The code is in [`code://packages/computer/src/plugin.ts`](../../packages/computer/src/plugin.ts) and [`code://packages/sdk/src/machines/computers.ts`](../../packages/sdk/src/machines/computers.ts).
 
 ## Scenarios
 

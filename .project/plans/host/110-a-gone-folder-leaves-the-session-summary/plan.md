@@ -9,8 +9,8 @@ requires: []
 refs:
   - "[code://packages/sdk/src/host/catalogue.ts#L478-L490](../../../../packages/sdk/src/host/catalogue.ts#L478-L490) - `summaryOf`, the live session's summary and snapshot, with `lead.workingDirectories()`"
   - "[code://packages/sdk/src/host/catalogue.ts#L948-L971](../../../../packages/sdk/src/host/catalogue.ts#L948-L971) - `adopt`, the catalogue row with `row.workingDirectories`"
-  - "[code://packages/sdk/src/fileuri.ts#L65](../../../../packages/sdk/src/fileuri.ts#L65) - `localPath`, a `file:` URI to a path on this host"
-  - "[code://packages/sdk/src/resources.ts#L141-L145](../../../../packages/sdk/src/resources.ts#L141-L145) - `No directory at`, the refusal a client gets for a gone folder"
+  - "[code://packages/sdk/src/resources/fileuri.ts#L65](../../../../packages/sdk/src/resources/fileuri.ts#L65) - `localPath`, a `file:` URI to a path on this host"
+  - "[code://packages/sdk/src/resources/resources.ts#L141-L145](../../../../packages/sdk/src/resources/resources.ts#L141-L145) - `No directory at`, the refusal a client gets for a gone folder"
   - "[code://docs/sdk/SESSIONS.md#L63](../../../../docs/sdk/SESSIONS.md#L63) - what `workingDirectories` are"
   - "[code://packages/sdk/src/host/lifecycle.ts#L990-L1025](../../../../packages/sdk/src/host/lifecycle.ts#L990-L1025) - where a session's worktree is made"
 ---

@@ -4,7 +4,7 @@ status: accepted
 date: 2026-10-19
 refs:
   - "[code://packages/agent-acp/src/connection.ts](../../packages/agent-acp/src/connection.ts) - `connectAcp`, `signal`, `close` and `endLeftovers`"
-  - "[code://packages/sdk/src/terminals.ts#L405-L443](../../packages/sdk/src/terminals.ts#L405-L443) - the terminal's own Windows answer: no `detached`, and `taskkill /T /F` for its tree"
+  - "[code://packages/sdk/src/machines/terminals.ts#L405-L443](../../packages/sdk/src/machines/terminals.ts#L405-L443) - the terminal's own Windows answer: no `detached`, and `taskkill /T /F` for its tree"
 ---
 
 ## Context

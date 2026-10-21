@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/host/chatactions.ts#L1126-L1127](../../../../packages/sdk/src/host/chatactions.ts#L1126-L1127) - where `session/mcpServerBackgroundRequested` lands today: `is not served yet`"
   - "[code://packages/sdk/src/host/gate.ts#L232-L242](../../../../packages/sdk/src/host/gate.ts#L232-L242) - `ACTION_HOMES`: a `session/` action needs `session:write`"
   - "[code://packages/sdk/src/types/session.ts#L513-L516](../../../../packages/sdk/src/types/session.ts#L513-L516) - `startMcpServer` and `stopMcpServer` on `Session`"
-  - "[code://packages/sdk/src/nested.ts#L498-L505](../../../../packages/sdk/src/nested.ts#L498-L505) - a nested host forwards start and stop to its inner host"
+  - "[code://packages/sdk/src/sessions/nested.ts#L498-L505](../../../../packages/sdk/src/sessions/nested.ts#L498-L505) - a nested host forwards start and stop to its inner host"
   - "[code://packages/agent-claude/src/session.ts#L405-L428](../../../../packages/agent-claude/src/session.ts#L405-L428) - the CLI's MCP status as a protocol state, `{ kind: 'starting' }` with no `blocking`"
   - "[code://packages/agent-claude/src/session.ts#L3293-L3305](../../../../packages/agent-claude/src/session.ts#L3293-L3305) - `startMcpServer`: the backend emits the action, then the state, the shape a background call copies"
   - "[code://packages/agent-acp/src/session.ts#L2046](../../../../packages/agent-acp/src/session.ts#L2046) - ACP, like pi and cofold, starts no MCP server it could report"
@@ -53,7 +53,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 | A backend without it, or a server that is not blocking, makes the action a no-op with no refusal | VS Code `agentSideEffects.ts:1869-1875`; AHP 1.0.0: the reducer "is a no-op otherwise" | 01 |
 | A backend that backgrounds emits `session/mcpServerBackgroundRequested` then `session/mcpServerStateChanged` with `blocking: false`, and one that cannot emits `session/mcpServerStateChanged` restoring `blocking: true` | AHP 1.0.0 `SessionMcpServerBackgroundRequestedAction`; the backend-emits pattern of `startMcpServer` | 01 |
 | The Claude backend implements nothing and never reports `blocking` | Claude Agent SDK: startup non-blocking by default, no background call; ahpd sets no `alwaysLoad` on a server | 01 |
-| A nested host forwards the action to its inner host and answers `true` | [`code://packages/sdk/src/nested.ts#L498-L505`](../../../../packages/sdk/src/nested.ts#L498-L505), the start and stop it already forwards | 01 |
+| A nested host forwards the action to its inner host and answers `true` | [`code://packages/sdk/src/sessions/nested.ts#L498-L505`](../../../../packages/sdk/src/sessions/nested.ts#L498-L505), the start and stop it already forwards | 01 |
 | The action asks `session:write` today and `session:configure` once host/46 lands, and goes to a 0.9.0 connection too | host/46 task 02's table, row `session/mcpServerBackgroundRequested`; AHP 1.0.0 `ACTION_INTRODUCED_IN`: `0.9.0` | 01 |
 
 ## Proposed architecture

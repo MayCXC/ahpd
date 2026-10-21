@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createHost } from '../src/host.js';
-import { shellTerminals } from '../src/terminals.js';
+import { shellTerminals } from '../src/machines/terminals.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Owners } from '../src/host/owners.js';
 import type { Agent } from '../src/types/agent.js';

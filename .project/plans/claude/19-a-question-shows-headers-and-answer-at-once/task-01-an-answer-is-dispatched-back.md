@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/chatactions.ts#L936-L951](../../../../packages/sdk/src/host/chatactions.ts#L936-L951) - the case that only calls `session.answer`"
   - "[code://packages/sdk/src/host/chatactions.ts#L248-L255](../../../../packages/sdk/src/host/chatactions.ts#L248-L255) - `chat/draftChanged`, echoed with `dispatch(channel, action, origin)`"
-  - "[code://packages/sdk/src/nested.ts#L907](../../../../packages/sdk/src/nested.ts#L907) - the worker chat's own delivery, which must not double"
+  - "[code://packages/sdk/src/sessions/nested.ts#L907](../../../../packages/sdk/src/sessions/nested.ts#L907) - the worker chat's own delivery, which must not double"
 ---
 
 ## Objective

@@ -18,7 +18,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { filePolicies, memoryPolicies } from '../src/policies.js';
+import { filePolicies, memoryPolicies } from '../src/access/policies.js';
 import { RpcError } from '../src/rpc.js';
 import type { Measure, Policies, Policy, PolicyLimit } from '../src/types/policies.js';
 

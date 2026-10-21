@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L19](../../../../packages/sdk/src/terminals.ts#L19) - `shellOf`"
-  - "[code://packages/sdk/src/terminals.ts#L47](../../../../packages/sdk/src/terminals.ts#L47) - the title"
+  - "[code://packages/sdk/src/machines/terminals.ts#L19](../../../../packages/sdk/src/machines/terminals.ts#L19) - `shellOf`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L47](../../../../packages/sdk/src/machines/terminals.ts#L47) - the title"
   - https://github.com/microsoft/vscode/blob/a959ba62444/src/vs/base/node/powershell.ts#L250-L304 - the PowerShell order
 ---
 
@@ -17,8 +17,8 @@ Off Windows it answers as now.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/terminals.ts:19` - the Windows branch.
-- `UPDATE: packages/sdk/src/terminals.ts:47` - the title from `basename`, so a `\` path gives `pwsh.exe`.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:19` - the Windows branch.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:47` - the title from `basename`, so a `\` path gives `pwsh.exe`.
 - `UPDATE: packages/sdk/test` - `shellOf` with a fake environment and file check.
 
 ## Steps
@@ -44,7 +44,7 @@ Off Windows it answers as now.
 Implemented. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `node tools/schema.mjs`, `git diff --quiet tools/` and `pnpm -s exec vitest run packages/sdk` pass.
 
 Files changed:
-- `packages/sdk/src/terminals.ts` - `windowsShell` reads `%ProgramFiles%\PowerShell\7\pwsh.exe`, then `pwsh.exe` on `PATH`, then `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`, then `ComSpec`, then `cmd.exe`. `shellOf` is exported. It takes the asked shell, the platform, the environment and the file check. It reads `SHELL` only off Windows. The title comes from `basename`.
+- `packages/sdk/src/machines/terminals.ts` - `windowsShell` reads `%ProgramFiles%\PowerShell\7\pwsh.exe`, then `pwsh.exe` on `PATH`, then `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe`, then `ComSpec`, then `cmd.exe`. `shellOf` is exported. It takes the asked shell, the platform, the environment and the file check. It reads `SHELL` only off Windows. The title comes from `basename`.
 - `packages/sdk/test/pty.test.ts` - seven cases. PowerShell 7 installed. PowerShell 7 on `PATH`. The Windows PowerShell. `ComSpec` and then `cmd.exe`. `SHELL` not read. `SHELL` then `/bin/sh` off Windows. The asked shell wins on either system.
 
 Past the Files section, and why:

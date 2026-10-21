@@ -4,8 +4,8 @@ status: done
 depends: [task-02-a-command-runs-in-powershell.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L318-L337](../../../../packages/sdk/src/terminals.ts#L318-L337) - `^C`"
-  - "[code://packages/sdk/src/terminals.ts#L369-L385](../../../../packages/sdk/src/terminals.ts#L369-L385) - `close`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L318-L337](../../../../packages/sdk/src/machines/terminals.ts#L318-L337) - `^C`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L369-L385](../../../../packages/sdk/src/machines/terminals.ts#L369-L385) - `close`"
 ---
 
 ## Objective
@@ -15,8 +15,8 @@ Neither one signals a negative pid.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/terminals.ts:318-337` - `^C` on Windows.
-- `UPDATE: packages/sdk/src/terminals.ts:369-385` - `close` on Windows.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:318-337` - `^C` on Windows.
+- `UPDATE: packages/sdk/src/machines/terminals.ts:369-385` - `close` on Windows.
 
 ## Steps
 
@@ -51,7 +51,7 @@ So `^C` and `close` both keep `/T /F`, and `endTree` does not change.
 E1: `^C` and `close` are the same call on Windows. POSIX's difference between an interrupt and a kill has nothing to draw it with there.
 
 Files changed:
-- `packages/sdk/src/terminals.ts` - `RunQuietly` and the real `quietly`. `quietly` is `spawn` with both pipes ignored and an `error` listener. `endTree(pid)` runs `taskkill /pid <pid> /T /F`. `createTerminal` and `shellTerminals` take `platform` and `run`. They read `windows` from the platform, not from `process` once at the top. `^C` and `close` take the Windows branch by pid. The POSIX branches and the no-pid guard are unchanged.
+- `packages/sdk/src/machines/terminals.ts` - `RunQuietly` and the real `quietly`. `quietly` is `spawn` with both pipes ignored and an `error` listener. `endTree(pid)` runs `taskkill /pid <pid> /T /F`. `createTerminal` and `shellTerminals` take `platform` and `run`. They read `windows` from the platform, not from `process` once at the top. `^C` and `close` take the Windows branch by pid. The POSIX branches and the no-pid guard are unchanged.
 - `packages/sdk/test/pty.test.ts` - three cases. `close` on `win32` runs `taskkill` with `/pid`, the shell's pid (checked to be a live process) and `/T /F`. A spawn with no pid runs no `taskkill`. `close` on `linux` sends `SIGKILL` to a negative pid.
 
 Past the Files section: the tests are not named there, and step 6 asks for them. They are in `pty.test.ts`, beside the case that already covers `close` with no pid.

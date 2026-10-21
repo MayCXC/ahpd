@@ -4,8 +4,8 @@ status: dropped
 depends: []
 layer: "sdk, agent-claude"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L484-L506](../../../../packages/sdk/src/changes.ts#L484-L506) - `rowsOf()`, where a row without `after` is a deletion"
-  - "[code://packages/sdk/src/changes.ts#L898-L928](../../../../packages/sdk/src/changes.ts#L898-L928) - `observe`, first `before` wins"
+  - "[code://packages/sdk/src/sessions/changes.ts#L484-L506](../../../../packages/sdk/src/sessions/changes.ts#L484-L506) - `rowsOf()`, where a row without `after` is a deletion"
+  - "[code://packages/sdk/src/sessions/changes.ts#L898-L928](../../../../packages/sdk/src/sessions/changes.ts#L898-L928) - `observe`, first `before` wins"
   - "[code://packages/agent-claude/src/session.ts#L1566-L1577](../../../../packages/agent-claude/src/session.ts#L1566-L1577) - the `before` capture, and its comment on racing the write"
   - "[code://packages/agent-claude/src/session.ts#L1615-L1616](../../../../packages/agent-claude/src/session.ts#L1615-L1616) - a result whose part is unknown is skipped, and its `after` with it"
   - "[code://packages/agent-claude/src/session.ts#L1701-L1707](../../../../packages/agent-claude/src/session.ts#L1701-L1707) - the `after`"
@@ -18,7 +18,7 @@ The `D` Softov saw is reproduced, its cause found and pinned by a test that fail
 
 ## Files
 
-- `UPDATE:` whichever of `packages/sdk/src/changes.ts`, `packages/agent-claude/src/session.ts` or `packages/sdk/src/host.ts` the cause is in.
+- `UPDATE:` whichever of `packages/sdk/src/sessions/changes.ts`, `packages/agent-claude/src/session.ts` or `packages/sdk/src/host.ts` the cause is in.
 - `UPDATE: packages/sdk/test/` or `packages/agent-claude/test/` - the case that pins it.
 
 ## Steps

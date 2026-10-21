@@ -16,7 +16,7 @@ refs:
   - "[code://packages/computer/src/plugin.ts#L663-L801](../../../../packages/computer/src/plugin.ts#L663-L801) - the port's `create`, `enter` and `leave`"
   - "[code://packages/computer/src/plugin.ts#L903-L970](../../../../packages/computer/src/plugin.ts#L903-L970) - the picker a disposable row joins"
   - "[code://packages/sdk/src/types/computers.ts#L118-L178](../../../../packages/sdk/src/types/computers.ts#L118-L178) - the port a session-time create goes through"
-  - "[code://packages/sdk/src/computers.ts#L69-L84](../../../../packages/sdk/src/computers.ts#L69-L84) - `openComputer`, the one session-time create"
+  - "[code://packages/sdk/src/machines/computers.ts#L69-L84](../../../../packages/sdk/src/machines/computers.ts#L69-L84) - `openComputer`, the one session-time create"
   - "[code://packages/sdk/src/host.ts#L5304-L5334](../../../../packages/sdk/src/host.ts#L5304-L5334) - `placedIn` and `sessionMachines`"
   - "[code://packages/sdk/src/host.ts#L3596-L3680](../../../../packages/sdk/src/host.ts#L3596-L3680) - `spawn`, the one function every road to a running backend calls"
   - "[code://packages/sdk/src/host.ts#L4589-L4605](../../../../packages/sdk/src/host.ts#L4589-L4605) - `checked`, the `policy/01` check, inert with no principal"
@@ -90,7 +90,7 @@ another session names an alone machine -> [new] refused
 
 - **State flow** - the host keeps, per session, the machine it entered (`enter` in `spawn`, `leave` at dispose and when a restart moves it), and `sessionMachines` only for a machine made from a source; the plugin keeps the set of sessions per disposable machine; the machine keeps its profile, alone flag and session as labels.
 - **Layer responsibilities** - sdk: `enter`/`leave` placement, `leaveForgotten` for a session a listing stops finding, the grant check, `admitted` for the `policy/01` kinds on all three roads, `PluginHost.sessionKept` with the provider asked of it, the daemon's own id in the config dir, the shared machine refusal reader · computer: labels, adoption, `max`, `sessionFolder`, the port's alone answer.
-- **Source-of-truth files** - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/computers.ts`](../../../../packages/sdk/src/computers.ts)
+- **Source-of-truth files** - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/sdk/src/machines/computers.ts`](../../../../packages/sdk/src/machines/computers.ts)
 
 ## Tasks
 

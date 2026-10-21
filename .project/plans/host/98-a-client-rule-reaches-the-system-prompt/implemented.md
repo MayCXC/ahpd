@@ -4,7 +4,7 @@ date: 2026-10-19
 refs:
   - git://d34adeb1
   - git://a54d02ac
-  - "[code://packages/sdk/src/pluginparts.ts](../../../../packages/sdk/src/pluginparts.ts)"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts](../../../../packages/sdk/src/plugins/pluginparts.ts)"
   - "[code://packages/sdk/src/host/tooling.ts](../../../../packages/sdk/src/host/tooling.ts)"
   - "[code://packages/agent-acp/src/agent.ts](../../../../packages/agent-acp/src/agent.ts)"
   - "[code://docs/sdk/TOOLS.md](../../../../docs/sdk/TOOLS.md)"
@@ -17,7 +17,7 @@ Claude, pi and cofold add the rules to the system prompt, and ACP puts them at t
 
 ## What was built
 
-- [`code://packages/sdk/src/pluginparts.ts`](../../../../packages/sdk/src/pluginparts.ts) - a rule part carries `description`, `alwaysApply` and `globs` from its frontmatter, and `rulesOf` keeps the body beside the part.
+- [`code://packages/sdk/src/plugins/pluginparts.ts`](../../../../packages/sdk/src/plugins/pluginparts.ts) - a rule part carries `description`, `alwaysApply` and `globs` from its frontmatter, and `rulesOf` keeps the body beside the part.
 - [`code://packages/sdk/src/host/tooling.ts`](../../../../packages/sdk/src/host/tooling.ts) - `instructions(uri)` adds the always-apply rules of the session's client plugins, with the limit `RULE_MOST`.
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - the doc of `Start.instructions` names client rules.
 - [`code://packages/agent-acp/src/agent.ts`](../../../../packages/agent-acp/src/agent.ts) - `create` logs once that the instructions go into the first prompt.

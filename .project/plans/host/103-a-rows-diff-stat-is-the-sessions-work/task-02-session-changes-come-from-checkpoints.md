@@ -5,9 +5,9 @@ depends:
   - task-01-a-turn-leaves-a-checkpoint.md
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/changes.ts#L485-L503](../../../../packages/sdk/src/changes.ts#L485-L503) - `fold` and `across`, the fallback"
-  - "[code://packages/sdk/src/changes.ts#L567-L577](../../../../packages/sdk/src/changes.ts#L567-L577) - `capturedFor`, which serves the `session` scope"
-  - "[code://packages/sdk/src/changes.ts#L1076-L1083](../../../../packages/sdk/src/changes.ts#L1076-L1083) - the `session` scope, labelled \"This Session\""
+  - "[code://packages/sdk/src/sessions/changes.ts#L485-L503](../../../../packages/sdk/src/sessions/changes.ts#L485-L503) - `fold` and `across`, the fallback"
+  - "[code://packages/sdk/src/sessions/changes.ts#L567-L577](../../../../packages/sdk/src/sessions/changes.ts#L567-L577) - `capturedFor`, which serves the `session` scope"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1076-L1083](../../../../packages/sdk/src/sessions/changes.ts#L1076-L1083) - the `session` scope, labelled \"This Session\""
   - "file:///github/externals/vscode/src/vs/platform/agentHost/node/agentHostChangesetService.ts#L2191-L2232 - `_tryComputeSessionGitDiffs`"
   - "file:///github/externals/vscode/src/vs/platform/agentHost/common/changesetUri.ts#L66-L70 - the label and description of Session Changes"
 ---
@@ -19,9 +19,9 @@ Without a checkpoint, it is the edit tracker of today, as VS Code's `auto` strat
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:567-577` - `capturedFor` reads the checkpoints for `session`, else `across`.
-- `UPDATE: packages/sdk/src/changes.ts:1076-1083` - the label is \"Session Changes\" and the description is \"Show all changes made in this session\".
-- `UPDATE: packages/sdk/src/changes.ts` - `sessionSummary(dir, session)`, the counts of Session Changes.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:567-577` - `capturedFor` reads the checkpoints for `session`, else `across`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:1076-1083` - the label is \"Session Changes\" and the description is \"Show all changes made in this session\".
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `sessionSummary(dir, session)`, the counts of Session Changes.
 - `UPDATE: packages/sdk/src/types/changes.ts:321-345` - `ChangesetSource` gets `sessionSummary`.
 - `UPDATE: packages/sdk/test/checkpoints.test.ts` - the diff cases.
 

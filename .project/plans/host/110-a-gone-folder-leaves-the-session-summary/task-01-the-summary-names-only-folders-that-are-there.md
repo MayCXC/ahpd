@@ -6,7 +6,7 @@ layer: sdk
 refs:
   - "[code://packages/sdk/src/host/catalogue.ts#L478-L490](../../../../packages/sdk/src/host/catalogue.ts#L478-L490) - `summaryOf`, the first caller"
   - "[code://packages/sdk/src/host/catalogue.ts#L948-L971](../../../../packages/sdk/src/host/catalogue.ts#L948-L971) - `adopt`, the second caller"
-  - "[code://packages/sdk/src/fileuri.ts#L65](../../../../packages/sdk/src/fileuri.ts#L65) - `localPath`"
+  - "[code://packages/sdk/src/resources/fileuri.ts#L65](../../../../packages/sdk/src/resources/fileuri.ts#L65) - `localPath`"
 ---
 
 ## Objective

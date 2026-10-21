@@ -4,10 +4,10 @@ status: done
 depends: [task-12-the-proxy-answers-only-what-it-knows.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L411](../../../../packages/sdk/src/nested.ts#L411) - `models`, always empty"
-  - "[code://packages/sdk/src/nested.ts#L506](../../../../packages/sdk/src/nested.ts#L506) - `awaiting`, always empty"
-  - "[code://packages/sdk/src/nested.ts#L299](../../../../packages/sdk/src/nested.ts#L299) - every event that is not an action is skipped, `auth/required` included"
-  - "[code://packages/sdk/src/nested.ts#L369-L371](../../../../packages/sdk/src/nested.ts#L369-L371) - the `AhpClient`, with no server request handler"
+  - "[code://packages/sdk/src/sessions/nested.ts#L411](../../../../packages/sdk/src/sessions/nested.ts#L411) - `models`, always empty"
+  - "[code://packages/sdk/src/sessions/nested.ts#L506](../../../../packages/sdk/src/sessions/nested.ts#L506) - `awaiting`, always empty"
+  - "[code://packages/sdk/src/sessions/nested.ts#L299](../../../../packages/sdk/src/sessions/nested.ts#L299) - every event that is not an action is skipped, `auth/required` included"
+  - "[code://packages/sdk/src/sessions/nested.ts#L369-L371](../../../../packages/sdk/src/sessions/nested.ts#L369-L371) - the `AhpClient`, with no server request handler"
 ---
 
 ## Objective
@@ -16,9 +16,9 @@ The session's models are the inner host's for this provider, an inner `auth/requ
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:369-393` - `bringUp`: the root subscription, the request handler.
-- `UPDATE: packages/sdk/src/nested.ts:295-332` - `pump`: `authRequired` events.
-- `UPDATE: packages/sdk/src/nested.ts:411` and `:506` - `models`, `awaiting`, and a new `authenticated`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:369-393` - `bringUp`: the root subscription, the request handler.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:295-332` - `pump`: `authRequired` events.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:411` and `:506` - `models`, `awaiting`, and a new `authenticated`.
 
 ## Steps
 

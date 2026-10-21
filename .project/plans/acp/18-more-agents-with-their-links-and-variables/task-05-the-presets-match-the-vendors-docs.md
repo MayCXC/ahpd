@@ -19,7 +19,7 @@ The pi row installs a pi that pi-acp can run.
 ## Files
 
 - `UPDATE: packages/agent-acp/src/presets.ts:185-210` - devin and amp.
-- `UPDATE: packages/sdk/src/agents.ts:116-121` - pi.
+- `UPDATE: packages/sdk/src/machines/agents.ts:116-121` - pi.
 - `UPDATE: packages/computer/images/versions.json:119-120` - the pi packages, which name only `pi-acp` now.
 - `UPDATE: packages/agent-acp/test/agent-acp-presets.test.ts` - test devin and amp.
 

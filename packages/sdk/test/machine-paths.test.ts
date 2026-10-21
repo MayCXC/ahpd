@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { hostPathOf, machinePathOf } from '../src/machine.js';
+import { hostPathOf, machinePathOf } from '../src/machines/machine.js';
 
 /*
  * A host path as it is inside a machine, and back.

@@ -10,7 +10,7 @@ refs:
   - code://packages/sdk/src/types/host.ts
   - code://packages/sdk/src/types/plugin.ts
   - code://packages/sdk/src/types/resources.ts
-  - code://packages/sdk/src/plugins.ts
+  - code://packages/sdk/src/plugins/plugins.ts
   - code://packages/sdk/src/host.ts
   - code://packages/server/src/config.ts
   - code://packages/server/src/main.ts
@@ -28,9 +28,9 @@ A person makes a computer with a resource write and destroys it with a resource 
 - `code://packages/computer/src/tools.ts` - the three tools declare `advancedPermission: true`.
 - `code://packages/sdk/src/types/host.ts` - `HostTool.advancedPermission`, `HostOptions.advancedTools`, `HostOptions.sessionConfig`.
 - `code://packages/sdk/src/types/plugin.ts` - `registerSessionConfig` and `Contribution.sessionConfig`.
-- `code://packages/sdk/src/plugins.ts` - the session-config registration, its per-plugin duplicate check, and the fold's cross-plugin and backend collisions as reported problems.
+- `code://packages/sdk/src/plugins/plugins.ts` - the session-config registration, its per-plugin duplicate check, and the fold's cross-plugin and backend collisions as reported problems.
 - `code://packages/sdk/src/host.ts` - one `permitted()` filter over the offered tools, and `sessionSchema`/`contributedDefaults` merging a contributed setting into the schema and the values a backend sees.
-- `code://packages/sdk/src/validate.ts` - the `computers` port in the member and method tables.
+- `code://packages/sdk/src/plugins/validate.ts` - the `computers` port in the member and method tables.
 - `code://packages/server/src/config.ts`, `code://packages/server/src/main.ts` - the `advancedTools` key, `--advanced-tools`, and a startup line.
 - `code://docs/plugins/COMPUTERS.md`, `code://docs/server/REFERENCE.md`, `code://docs/plugins/PLUGINS.md`, `code://docs/sdk/USERS.md` - the lifecycle, the setting, the key and the two registrations.
 

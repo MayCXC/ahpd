@@ -22,7 +22,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L4520-L4560](../../../../packages/sdk/src/host.ts#L4520-L4560) - `reconnect`, the second place a `clientId` is taken from a client"
   - "[code://packages/sdk/src/types/host.ts#L405-L441](../../../../packages/sdk/src/types/host.ts#L405-L441) - `Connection`, which gains the principal beside `tokens`"
   - "[code://packages/sdk/src/types/host.ts#L146](../../../../packages/sdk/src/types/host.ts#L146) - `HostOptions.github`, the optional host-level port `users` is modelled on"
-  - "[code://packages/sdk/src/sessions.ts#L109](../../../../packages/sdk/src/sessions.ts#L109) - `fileSessions`, the shape a file-backed port takes in this SDK"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L109](../../../../packages/sdk/src/sessions/sessions.ts#L109) - `fileSessions`, the shape a file-backed port takes in this SDK"
   - "[code://packages/sdk/src/listen.ts#L45-L70](../../../../packages/sdk/src/listen.ts#L45-L70) - the connection token and its constant-time compare, unchanged by this plan and reused for the token hash"
   - "[code://packages/server/src/main.ts#L440-L470](../../../../packages/server/src/main.ts#L440-L470) - where the ports are handed to `createHost`, and where `users` joins"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the daemon config the user file sits beside"

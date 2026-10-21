@@ -1,7 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { idOf } from '../src/catalog.js';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
-import { memorySessions } from '../src/sessions.js';
+import { idOf } from '../src/sessions/catalog.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import { sdkVersion } from '../src/version.js';
 import {
   createHost, echo, machine, resetSdk,

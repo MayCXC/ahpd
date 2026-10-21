@@ -2,8 +2,8 @@
 title: Sign-in
 status: current
 covers:
-  - packages/sdk/src/users.ts
-  - packages/sdk/src/issuers.ts
+  - packages/sdk/src/access/users.ts
+  - packages/sdk/src/access/issuers.ts
   - packages/sdk/src/listen.ts
   - packages/sdk/src/host/handshake.ts
   - packages/sdk/src/host/auth.ts
@@ -17,10 +17,10 @@ refs:
   - "[code://packages/server/src/commands/run.ts#L1015-L1026](../../packages/server/src/commands/run.ts#L1015-L1026) - the daemon's `identify`, which names a person only when the token is trusted"
   - "[code://packages/server/src/commands/run.ts#L242-L248](../../packages/server/src/commands/run.ts#L242-L248) - `advertisedResource`, the https identifier of the sign-in resource"
   - "[code://packages/server/src/config.ts#L693-L702](../../packages/server/src/config.ts#L693-L702) - `signInIdentifier`, derived from the bind address and port"
-  - "[code://packages/sdk/src/users.ts#L300-L345](../../packages/sdk/src/users.ts#L300-L345) - `DEFAULT_RESOURCE` and `signInRecord`"
-  - "[code://packages/sdk/src/users.ts#L706-L714](../../packages/sdk/src/users.ts#L706-L714) - `advertised`, built again on every read"
-  - "[code://packages/sdk/src/users.ts#L873-L919](../../packages/sdk/src/users.ts#L873-L919) - `verify`, local secrets first and then the issuers"
-  - "[code://packages/sdk/src/issuers.ts#L90-L174](../../packages/sdk/src/issuers.ts#L90-L174) - the GitHub and OpenID Connect issuers, and the loopback rule"
+  - "[code://packages/sdk/src/access/users.ts#L300-L345](../../packages/sdk/src/access/users.ts#L300-L345) - `DEFAULT_RESOURCE` and `signInRecord`"
+  - "[code://packages/sdk/src/access/users.ts#L706-L714](../../packages/sdk/src/access/users.ts#L706-L714) - `advertised`, built again on every read"
+  - "[code://packages/sdk/src/access/users.ts#L873-L919](../../packages/sdk/src/access/users.ts#L873-L919) - `verify`, local secrets first and then the issuers"
+  - "[code://packages/sdk/src/access/issuers.ts#L90-L174](../../packages/sdk/src/access/issuers.ts#L90-L174) - the GitHub and OpenID Connect issuers, and the loopback rule"
   - "[code://packages/sdk/src/host/handshake.ts#L515-L619](../../packages/sdk/src/host/handshake.ts#L515-L619) - `authenticate`, sign-in and sign-out"
   - "[code://packages/sdk/src/host/handshake.ts#L346](../../packages/sdk/src/host/handshake.ts#L346) - `ahpd.principal` in the initialize result"
   - "[code://packages/sdk/src/host/root.ts#L536](../../packages/sdk/src/host/root.ts#L536) - `ahpd.principal` in the root state"
@@ -33,7 +33,7 @@ The door decides whether a socket opens, from the connection token in the URL or
 The protocol's `authenticate` command decides who is on the socket, and the gate in [People, roles and grants](people-roles-and-grants.md) reads that person's roles.
 The host advertises its own sign-in as a protected resource, and accepts its own minted secrets and the tokens of a configured issuer.
 A connection is told who it is in the `ahpd.principal` key of `_meta`.
-The code is in [`code://packages/sdk/src/listen.ts`](../../packages/sdk/src/listen.ts), [`code://packages/sdk/src/users.ts`](../../packages/sdk/src/users.ts) and [`code://packages/sdk/src/host/handshake.ts`](../../packages/sdk/src/host/handshake.ts).
+The code is in [`code://packages/sdk/src/listen.ts`](../../packages/sdk/src/listen.ts), [`code://packages/sdk/src/access/users.ts`](../../packages/sdk/src/access/users.ts) and [`code://packages/sdk/src/host/handshake.ts`](../../packages/sdk/src/host/handshake.ts).
 
 ## Scenarios
 

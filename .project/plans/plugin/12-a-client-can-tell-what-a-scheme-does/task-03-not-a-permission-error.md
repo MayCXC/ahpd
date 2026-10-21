@@ -5,7 +5,7 @@ depends: []
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/host.ts#L4604-L4608](../../../../packages/sdk/src/host.ts#L4604-L4608) - `storeFor`, where the scheme is resolved"
-  - "[code://packages/sdk/src/resources.ts#L45-L60](../../../../packages/sdk/src/resources.ts#L45-L60) - `why`, the sentence to keep"
+  - "[code://packages/sdk/src/resources/resources.ts#L45-L60](../../../../packages/sdk/src/resources/resources.ts#L45-L60) - `why`, the sentence to keep"
   - "[code://test/uri-resources.test.ts#L84-L93](../../../../test/uri-resources.test.ts#L84-L93) - the case that pins `-32009`"
   - "[code://docs/sdk/RESOURCES.md](../../../../docs/sdk/RESOURCES.md) - the decision"
 ---

@@ -18,7 +18,7 @@ A match starts a run with `origin.kind: 'trigger'`, and its message has the plac
 - `UPDATE: packages/server/src/config.ts` - the same key in the daemon's configuration file, beside `automations`.
 - `UPDATE: packages/server/src/commands/options.ts` - the flag, spelled as the configuration key.
 - `UPDATE: packages/server/src/commands/run.ts` - hand the answer to the host.
-- `CREATE: packages/sdk/src/wakemessage.ts` - the placeholders and the summary block.
+- `CREATE: packages/sdk/src/automations/wakemessage.ts` - the placeholders and the summary block.
 - `CREATE: packages/sdk/test/automation-wake.test.ts` - the cases below.
 
 ## Steps
@@ -53,7 +53,7 @@ Built. `createAutomations` watches every enabled automation that carries an even
 
 A match goes through `woke`, which is where the facts an event does not carry are settled. Three of them are the owner's `session:read` (`maySee`), the loop guard (`origins.get(session)?.automation`) and the hourly cap of 20. Past that the wake is dropped with one log line. `woke` asks whether the host has closed first, the way `due` and a plugin's `fired` do. A rule that matches as the host is going starts nothing. The run then starts through the store's `run` with `{ kind: 'trigger', triggerId, event }`. The `start` callback is wrapped so `beginAutomation` gets the message `wakeMessage` fills, because the store keeps owning the template. Six placeholders are filled and a four-line summary block is appended.
 
-`packages/sdk/src/wakemessage.ts` holds `WAKE_PLACEHOLDERS`, `WakeFacts` and `wakeMessage`. `packages/sdk/src/types/host.ts` gained `unownedAutomations?: 'every' | 'none'`, read beside `automations` in the daemon's config and on its command line. The two answer through `maySee` for an automation that names no owner.
+`packages/sdk/src/automations/wakemessage.ts` holds `WAKE_PLACEHOLDERS`, `WakeFacts` and `wakeMessage`. `packages/sdk/src/types/host.ts` gained `unownedAutomations?: 'every' | 'none'`, read beside `automations` in the daemon's config and on its command line. The two answer through `maySee` for an automation that names no owner.
 
 Ten cases in `test/automation-wake.test.ts` pass. One was wrong when it was written, and the code was right to disagree. A triggered run's origin carries the *trigger's* id (`t1`), not the event's, which is what a schedule trigger's origin already carried.
 

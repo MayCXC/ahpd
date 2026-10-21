@@ -5,7 +5,7 @@ depends: [task-03-docker-applies-needs.md]
 layer: "computer | sdk"
 refs:
   - "[code://packages/computer/src/plugin.ts#L914-L922](../../../../packages/computer/src/plugin.ts#L914-L922) - the answerer's filter by `ask.provider`"
-  - "[code://packages/sdk/src/computers.ts#L103-L130](../../../../packages/sdk/src/computers.ts#L103-L130) - `computersFor`, the check on `how` and `nested`"
+  - "[code://packages/sdk/src/machines/computers.ts#L103-L130](../../../../packages/sdk/src/machines/computers.ts#L103-L130) - `computersFor`, the check on `how` and `nested`"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The `computer` answerer offers only machines whose `ahpd.agents` label includes 
 ## Files
 
 - `UPDATE: packages/computer/src/plugin.ts` - the filter.
-- `UPDATE: packages/sdk/src/computers.ts` - the check.
+- `UPDATE: packages/sdk/src/machines/computers.ts` - the check.
 
 ## Steps
 

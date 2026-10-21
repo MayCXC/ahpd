@@ -8,9 +8,9 @@ revalidated: 2026-10-03
 requires:
   - plans/host/36-people-are-resources-a-client-manages/plan.md
 refs:
-  - "[code://packages/sdk/src/people.ts#L158-L191](../../../../packages/sdk/src/people.ts#L158-L191) - the `user:` manifest and `put`: `primary` is nullable and `null` clears it; `issuer` and `rolesFrom` go through `textOf`, so `null` keeps the old value"
+  - "[code://packages/sdk/src/access/people.ts#L158-L191](../../../../packages/sdk/src/access/people.ts#L158-L191) - the `user:` manifest and `put`: `primary` is nullable and `null` clears it; `issuer` and `rolesFrom` go through `textOf`, so `null` keeps the old value"
   - "[code://packages/sdk/src/types/users.ts#L272-L284](../../../../packages/sdk/src/types/users.ts#L272-L284) - `Users.add`, whose options take `primary: string | null` and `issuer`/`rolesFrom` as strings only"
-  - "[code://packages/sdk/src/users.ts#L714-L800](../../../../packages/sdk/src/users.ts#L714-L800) - the file's `add`, which deletes `primary` on `null` and only ever sets `issuer`/`rolesFrom`"
+  - "[code://packages/sdk/src/access/users.ts#L714-L800](../../../../packages/sdk/src/access/users.ts#L714-L800) - the file's `add`, which deletes `primary` on `null` and only ever sets `issuer`/`rolesFrom`"
 ---
 
 ## Goal

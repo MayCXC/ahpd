@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L107-L136](../../../../packages/sdk/src/changes.ts#L107-L136) - `settled` and `pathIn`"
-  - "[code://packages/sdk/src/changes.ts#L995-L1006](../../../../packages/sdk/src/changes.ts#L995-L1006) - the refusal every resource-scoped operation shares"
+  - "[code://packages/sdk/src/sessions/changes.ts#L107-L136](../../../../packages/sdk/src/sessions/changes.ts#L107-L136) - `settled` and `pathIn`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L995-L1006](../../../../packages/sdk/src/sessions/changes.ts#L995-L1006) - the refusal every resource-scoped operation shares"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ A resource target is decoded and normalised before it is judged, so `..`, a perc
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:107-136` - `settled` and `pathIn`.
-- `UPDATE: packages/sdk/src/changes.ts:995-1006` - the path handed on is the contained, relative one, `.` for the folder itself.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:107-136` - `settled` and `pathIn`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:995-1006` - the path handed on is the contained, relative one, `.` for the folder itself.
 - `UPDATE: packages/sdk/test/commit.test.ts` - the cases below.
 
 ## Steps

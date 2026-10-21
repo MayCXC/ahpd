@@ -18,7 +18,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { resolve, write } from '../src/resources.js';
+import { resolve, write } from '../src/resources/resources.js';
 import type { Write } from '../src/types/resources.js';
 
 const here = dirname(fileURLToPath(import.meta.url));

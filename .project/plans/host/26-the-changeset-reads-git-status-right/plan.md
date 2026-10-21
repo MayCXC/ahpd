@@ -10,12 +10,12 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/changes.ts#L536-L620](../../../../packages/sdk/src/changes.ts#L536-L620) - `look()`, the `uncommitted` rows from `git status --porcelain=v1 -z`"
-  - "[code://packages/sdk/src/changes.ts#L584](../../../../packages/sdk/src/changes.ts#L584) - a rename's source record is consumed only when the index column is `R` or `C`"
-  - "[code://packages/sdk/src/changes.ts#L591](../../../../packages/sdk/src/changes.ts#L591) - the row id joins the session folder to a path git gives from the repository root"
-  - "[code://packages/sdk/src/changes.ts#L484-L506](../../../../packages/sdk/src/changes.ts#L484-L506) - `rowsOf()`, the `session` rows from the captured sides"
-  - "[code://packages/sdk/src/changes.ts#L36-L44](../../../../packages/sdk/src/changes.ts#L36-L44) - `counted()`, which counts a trailing newline as a line"
-  - "[code://packages/sdk/src/changes.ts#L1124-L1141](../../../../packages/sdk/src/changes.ts#L1124-L1141) - `stage` and `unstage`, which take the row's path"
+  - "[code://packages/sdk/src/sessions/changes.ts#L536-L620](../../../../packages/sdk/src/sessions/changes.ts#L536-L620) - `look()`, the `uncommitted` rows from `git status --porcelain=v1 -z`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L584](../../../../packages/sdk/src/sessions/changes.ts#L584) - a rename's source record is consumed only when the index column is `R` or `C`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L591](../../../../packages/sdk/src/sessions/changes.ts#L591) - the row id joins the session folder to a path git gives from the repository root"
+  - "[code://packages/sdk/src/sessions/changes.ts#L484-L506](../../../../packages/sdk/src/sessions/changes.ts#L484-L506) - `rowsOf()`, the `session` rows from the captured sides"
+  - "[code://packages/sdk/src/sessions/changes.ts#L36-L44](../../../../packages/sdk/src/sessions/changes.ts#L36-L44) - `counted()`, which counts a trailing newline as a line"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1124-L1141](../../../../packages/sdk/src/sessions/changes.ts#L1124-L1141) - `stage` and `unstage`, which take the row's path"
   - "[code://packages/agent-claude/src/session.ts#L1573-L1577](../../../../packages/agent-claude/src/session.ts#L1573-L1577) - claude's `before` capture for an edit tool"
   - "[code://packages/agent-claude/src/session.ts#L1701-L1707](../../../../packages/agent-claude/src/session.ts#L1701-L1707) - claude's `after`, only when the call's part is known"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the staging cases, which check porcelain text and never a row's sides"

@@ -4,7 +4,7 @@ status: done
 depends: [task-01-records-and-port.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L109-L153](../../../../packages/sdk/src/sessions.ts#L109-L153) - the file store pattern"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L109-L153](../../../../packages/sdk/src/sessions/sessions.ts#L109-L153) - the file store pattern"
 ---
 
 ## Objective
@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/usage.ts` - `fileUsage`.
+- `CREATE: packages/sdk/src/usage/usage.ts` - `fileUsage`.
 - `CREATE: packages/sdk/test/usage.test.ts`.
 
 ## Steps
@@ -29,7 +29,7 @@ refs:
 
 ## Resume
 
-Implemented. `fileUsage` in `packages/sdk/src/usage.ts` writes `<folder>/YYYY-MM-model.jsonl` and `<folder>/YYYY-MM-computer.jsonl`, one whole record per line, and keeps `pool` then day in memory, rebuilt by reading every file of those names once at construction.
+Implemented. `fileUsage` in `packages/sdk/src/usage/usage.ts` writes `<folder>/YYYY-MM-model.jsonl` and `<folder>/YYYY-MM-computer.jsonl`, one whole record per line, and keeps `pool` then day in memory, rebuilt by reading every file of those names once at construction.
 
 Four choices the task did not settle, each written into the code:
 

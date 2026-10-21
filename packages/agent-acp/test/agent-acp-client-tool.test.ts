@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
-import { fileResources } from '../../sdk/src/resources.js';
+import { fileResources } from '../../sdk/src/resources/resources.js';
 import { toolServers } from '../../sdk/src/tools/server.js';
 import { acpAgent } from '../src/index.js';
 import { Status } from '@ahpd/sdk';

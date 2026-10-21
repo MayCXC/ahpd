@@ -8,7 +8,7 @@ refs:
   - "[code://packages/computer/src/runtime.ts#L30-L45](../../../../packages/computer/src/runtime.ts#L30-L45) - `MachineSpec`"
   - "[code://packages/computer/src/runtime.ts#L173-L182](../../../../packages/computer/src/runtime.ts#L173-L182) - `run`, which builds the argument list"
   - "[code://packages/sdk/src/types/resources.ts#L61-L75](../../../../packages/sdk/src/types/resources.ts#L61-L75) - `Write`: `data`, `encoding`, `mode`, `createOnly`"
-  - "[code://packages/sdk/src/resources.ts#L27](../../../../packages/sdk/src/resources.ts#L27) - `-32010`, the create-onto-something-there code"
+  - "[code://packages/sdk/src/resources/resources.ts#L27](../../../../packages/sdk/src/resources/resources.ts#L27) - `-32010`, the create-onto-something-there code"
   - "[code://packages/sdk/src/host.ts#L4626-L4660](../../../../packages/sdk/src/host.ts#L4626-L4660) - `capabilityFor`, which gates this write as `computer:write`"
   - "[code://test/computer.test.ts](../../../../test/computer.test.ts) - the fixture runtime the cases drive"
 ---

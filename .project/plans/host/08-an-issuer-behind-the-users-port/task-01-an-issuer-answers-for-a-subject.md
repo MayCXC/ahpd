@@ -5,8 +5,8 @@ depends: []
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/types/users.ts#L43-L62](../../../../packages/sdk/src/types/users.ts#L43-L62) - `UserRecord`, whose `id` becomes the subject, and where `Issuer` is declared"
-  - "[code://packages/sdk/src/users.ts#L148-L175](../../../../packages/sdk/src/users.ts#L148-L175) - `verify`, which gains the branch and keeps the hash compare first"
-  - "[code://packages/sdk/src/users.ts#L29-L70](../../../../packages/sdk/src/users.ts#L29-L70) - `signInRecord` and `FileUserOptions`, which take the issuer"
+  - "[code://packages/sdk/src/access/users.ts#L148-L175](../../../../packages/sdk/src/access/users.ts#L148-L175) - `verify`, which gains the branch and keeps the hash compare first"
+  - "[code://packages/sdk/src/access/users.ts#L29-L70](../../../../packages/sdk/src/access/users.ts#L29-L70) - `signInRecord` and `FileUserOptions`, which take the issuer"
   - "[code://packages/sdk/src/github.ts](../../../../packages/sdk/src/github.ts) - a port implementation that already reaches the network from this package, so the shape is established"
   - https://www.rfc-editor.org/rfc/rfc8414 - the metadata document an OpenID Connect issuer publishes at its well-known path
 ---
@@ -17,9 +17,9 @@ A token this host did not mint can be checked: an `Issuer` answers who it belong
 
 ## Files
 
-- `CREATE: packages/sdk/src/issuers.ts` - `githubIssuer` and `oidcIssuer`, and the one `get` they share.
+- `CREATE: packages/sdk/src/access/issuers.ts` - `githubIssuer` and `oidcIssuer`, and the one `get` they share.
 - `UPDATE: packages/sdk/src/types/users.ts` - `Issuer`: an identifier, the scopes to ask for, and `subject(token)`.
-- `UPDATE: packages/sdk/src/users.ts` - `FileUserOptions.issuer`, `signInRecord` carrying `authorization_servers` and `scopes_supported`, and the issuer branch in `verify`.
+- `UPDATE: packages/sdk/src/access/users.ts` - `FileUserOptions.issuer`, `signInRecord` carrying `authorization_servers` and `scopes_supported`, and the issuer branch in `verify`.
 - `UPDATE: packages/sdk/src/index.ts` - export `githubIssuer`, `oidcIssuer` and the `Issuer` type.
 - `CREATE: test/users-issuer.test.ts` - the verifier and the branch, against a fake fetch.
 
@@ -42,7 +42,7 @@ A token this host did not mint can be checked: an `Issuer` answers who it belong
 ## Resume
 
 Done 2026-09-23.
-`Issuer` is declared beside `Users`; `githubIssuer` and `oidcIssuer` live in `packages/sdk/src/issuers.ts` behind one narrow `Fetcher` and one `get` that answers nothing rather than throwing; `fileUsers` takes an `issuer` and asks it only when no local hash matched, matching the subject against a record's `id`; and `signInRecord(resource, issuer?)` carries `authorization_servers` and `scopes_supported`.
+`Issuer` is declared beside `Users`; `githubIssuer` and `oidcIssuer` live in `packages/sdk/src/access/issuers.ts` behind one narrow `Fetcher` and one `get` that answers nothing rather than throwing; `fileUsers` takes an `issuer` and asks it only when no local hash matched, matching the subject against a record's `id`; and `signInRecord(resource, issuer?)` carries `authorization_servers` and `scopes_supported`.
 `test/users-issuer.test.ts` holds nine cases against a fake fetch and no network.
 Found: OpenID Connect discovery is fetched once and kept only on success, so a failed discovery is retried on the next sign-in, and a `userinfo` endpoint that is not https is refused before any token is sent.
 

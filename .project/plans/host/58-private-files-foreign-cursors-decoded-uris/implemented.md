@@ -2,13 +2,13 @@
 title: Policy and automation files are private, a cursor the host did not issue is refused, and a file URI is decoded - implemented
 date: 2026-10-06
 refs:
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts)"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts)"
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts)"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts)"
-  - "[code://packages/sdk/src/fileuri.ts](../../../../packages/sdk/src/fileuri.ts)"
-  - "[code://packages/sdk/src/automations.ts](../../../../packages/sdk/src/automations.ts)"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts)"
+  - "[code://packages/sdk/src/resources/fileuri.ts](../../../../packages/sdk/src/resources/fileuri.ts)"
+  - "[code://packages/sdk/src/automations/automations.ts](../../../../packages/sdk/src/automations/automations.ts)"
   - "[code://packages/sdk/src/host/automations.ts](../../../../packages/sdk/src/host/automations.ts)"
-  - "[code://packages/sdk/src/policy.ts](../../../../packages/sdk/src/policy.ts)"
+  - "[code://packages/sdk/src/access/policy.ts](../../../../packages/sdk/src/access/policy.ts)"
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts)"
 ---
 
@@ -16,16 +16,16 @@ The policy and automation files are written owner-only, the user file's temp nam
 
 ## What was built
 
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts) and [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - both temp writes pass `{ mode: 0o600 }`, so the rename leaves `policies.json` and `automations.json` owner-only from the first save, as every other file the daemon keeps already was.
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - the temp name is `${path}.${pid}.tmp`, the form the daemon's sweeper in `daemon.ts` knows, so a writer's scratch is its own rather than one name every writer shares. The case beside it is what that buys: a directory sits at the old shared name `${path}.tmp` and the write lands anyway.
-- [`code://packages/sdk/src/types/automations.ts`](../../../../packages/sdk/src/types/automations.ts), [`code://packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) and [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `runs` answers `{ items; nextCursor? } | undefined`, `undefined` for a cursor that is not `/^\d+$/`, is 0, or is at or past the end of the history; an omitted cursor is the newest page as before. `fetchAutomationRuns` turns that `undefined` into `-32602 Unrecognised cursor <cursor>`, mirroring `older` and `fetchTurns`.
-- [`code://packages/sdk/src/fileuri.ts`](../../../../packages/sdk/src/fileuri.ts) - new: `localPath(uri)` percent-decodes and never throws, dropping an authority (`file://host/a` is `/a` on this machine), and `uriOf(path)` encodes with `pathToFileURL`.
-- [`code://packages/sdk/src/fileuri.ts`](../../../../packages/sdk/src/fileuri.ts) - the authority comes off first and the path then goes through the one reader both shapes share (Softov's review, 2026-10-06), so an encoded slash or a `%00` is never decoded - `%2F` is a slash in a name and not a step up, and a NUL is not a path - and `file://` with nothing after the scheme still names no path rather than the root.
-- [`code://packages/sdk/src/resources.ts`](../../../../packages/sdk/src/resources.ts) - `uriOf` now comes from `fileuri.ts`; `pathOf` stays the file store's own, because it throws and is what a `file:` read is refused through.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts) and [`code://packages/sdk/src/scheduled.ts`](../../../../packages/sdk/src/scheduled.ts) - both temp writes pass `{ mode: 0o600 }`, so the rename leaves `policies.json` and `automations.json` owner-only from the first save, as every other file the daemon keeps already was.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - the temp name is `${path}.${pid}.tmp`, the form the daemon's sweeper in `daemon.ts` knows, so a writer's scratch is its own rather than one name every writer shares. The case beside it is what that buys: a directory sits at the old shared name `${path}.tmp` and the write lands anyway.
+- [`code://packages/sdk/src/types/automations.ts`](../../../../packages/sdk/src/types/automations.ts), [`code://packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts) and [`code://packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - `runs` answers `{ items; nextCursor? } | undefined`, `undefined` for a cursor that is not `/^\d+$/`, is 0, or is at or past the end of the history; an omitted cursor is the newest page as before. `fetchAutomationRuns` turns that `undefined` into `-32602 Unrecognised cursor <cursor>`, mirroring `older` and `fetchTurns`.
+- [`code://packages/sdk/src/resources/fileuri.ts`](../../../../packages/sdk/src/resources/fileuri.ts) - new: `localPath(uri)` percent-decodes and never throws, dropping an authority (`file://host/a` is `/a` on this machine), and `uriOf(path)` encodes with `pathToFileURL`.
+- [`code://packages/sdk/src/resources/fileuri.ts`](../../../../packages/sdk/src/resources/fileuri.ts) - the authority comes off first and the path then goes through the one reader both shapes share (Softov's review, 2026-10-06), so an encoded slash or a `%00` is never decoded - `%2F` is a slash in a name and not a step up, and a NUL is not a path - and `file://` with nothing after the scheme still names no path rather than the root.
+- [`code://packages/sdk/src/resources/resources.ts`](../../../../packages/sdk/src/resources/resources.ts) - `uriOf` now comes from `fileuri.ts`; `pathOf` stays the file store's own, because it throws and is what a `file:` read is refused through.
 - The 15 `.replace(/^file:\/\//, '')` strips, the two `.replace(/^file:\/\/[^/]*/, '')` strips and the two by-slice strips are gone, replaced by `localPath`: `host/sessionmethods.ts` (five), `host/chatactions.ts` (three), `host/lifecycle.ts`, `host/tooling.ts`, `host/vscodemethods.ts`, `host/terminals.ts`, `host/changesets.ts`, `host/facts.ts`, `debuglogs.ts` (whose hand-written `asPath` is deleted), `sessiontools.ts` (two, one of which keeps lowercasing for a comparison after decoding) and `automations.ts` (the automation's working directory).
 - `host/channels.ts` - the unencoded `uriOf` (`file://${path}`) is deleted; its one caller, the `@` completion's attachment URI, uses the sdk's.
-- [`code://packages/sdk/src/terminals.ts`](../../../../packages/sdk/src/terminals.ts) - the OSC 7 handler reads the directory with `localPath` and emits `cwd` as `uriOf(path)`, so a shell's `cwdChanged` carries the encoded URI the rest of the host speaks.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts), [`code://packages/sdk/src/people.ts`](../../../../packages/sdk/src/people.ts), [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) and [`code://packages/computer/src/provider.ts`](../../../../packages/computer/src/provider.ts) - a URI a provider cannot split is `-32602`, not `-32609` (which no specification defines) and not `-32009` (which says the caller is not permitted). Every refusal's sentence is unchanged.
+- [`code://packages/sdk/src/machines/terminals.ts`](../../../../packages/sdk/src/machines/terminals.ts) - the OSC 7 handler reads the directory with `localPath` and emits `cwd` as `uriOf(path)`, so a shell's `cwdChanged` carries the encoded URI the rest of the host speaks.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts), [`code://packages/sdk/src/access/people.ts`](../../../../packages/sdk/src/access/people.ts), [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) and [`code://packages/computer/src/provider.ts`](../../../../packages/computer/src/provider.ts) - a URI a provider cannot split is `-32602`, not `-32609` (which no specification defines) and not `-32009` (which says the caller is not permitted). Every refusal's sentence is unchanged.
 
 ## Verified
 

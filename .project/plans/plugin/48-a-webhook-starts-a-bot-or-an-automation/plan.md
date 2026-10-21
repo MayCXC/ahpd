@@ -13,7 +13,7 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L801](../../../../packages/sdk/src/types/plugin.ts#L801) - `registerRoute`, which serves `/plugins/<name>/` on the daemon port; no plugin uses it yet"
   - "[code://packages/sdk/src/types/plugin.ts#L828-L842](../../../../packages/sdk/src/types/plugin.ts#L828-L842) - `registerTriggerType` and `fireTrigger`"
   - "[code://packages/sdk/src/host/automations.ts#L1135](../../../../packages/sdk/src/host/automations.ts#L1135) - the fire's `data` is kept on the run's origin, and nothing reads it"
-  - "[code://packages/sdk/src/wakemessage.ts#L34-L62](../../../../packages/sdk/src/wakemessage.ts#L34-L62) - the `{{word}}` filler of a wake message, to reuse for the event's fields"
+  - "[code://packages/sdk/src/automations/wakemessage.ts#L34-L62](../../../../packages/sdk/src/automations/wakemessage.ts#L34-L62) - the `{{word}}` filler of a wake message, to reuse for the event's fields"
   - "[code://packages/sdk/src/types/plugin.ts#L586](../../../../packages/sdk/src/types/plugin.ts#L586) - `secret()`, which reads a vault secret by name"
   - "[code://packages/sdk/src/types/plugin.ts#L629](../../../../packages/sdk/src/types/plugin.ts#L629) - `records()`, where the endpoints and the thread map are kept"
   - "[code://packages/sdk/src/types/plugin.ts#L669](../../../../packages/sdk/src/types/plugin.ts#L669) - `connect()`, how a plugin sends a turn and hears its end, as push does"

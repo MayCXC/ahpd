@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Status } from '../src/catalog.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { Status } from '../src/sessions/catalog.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -395,7 +395,7 @@ describe('the fields a client reads by name', () => {
   });
 
   it('advertises automations only where there are any', async () => {
-    const { memoryAutomations } = await import('../src/automations.js');
+    const { memoryAutomations } = await import('../src/automations/automations.js');
     const without = await open().handle(hello(['0.9.0'])) as Record<string, unknown>;
     // Absence is what tells a client the host has no catalogue and no
     // automation commands, and a correct one will not go looking.

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { Status } from '../src/catalog.js';
+import { Status } from '../src/sessions/catalog.js';
 import {
   resetSdk, actions, emit, hello, peer, sdk, settle,
   running,

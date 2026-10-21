@@ -3,7 +3,7 @@ title: Host configuration has its own grant - implemented
 date: 2026-09-25
 refs:
   - "[code://packages/sdk/src/host.ts#L271-L281](../../../../packages/sdk/src/host.ts#L271-L281)"
-  - "[code://packages/sdk/src/users.ts#L35](../../../../packages/sdk/src/users.ts#L35)"
+  - "[code://packages/sdk/src/access/users.ts#L35](../../../../packages/sdk/src/access/users.ts#L35)"
 ---
 
 Changing a host-wide root setting, or replacing the root config, needs `config:write`, which only `admin` has among the built-in roles.
@@ -12,7 +12,7 @@ Setting your own `defaultShell` needs only a sign-in.
 ## What was built
 
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `dispatchNeeds(channel, action)`, and the gate asking for a grant only when one is needed.
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `config` in `SUBJECTS`.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `config` in `SUBJECTS`.
 - [`code://docs/sdk/USERS.md`](../../../../docs/sdk/USERS.md) - the `config` row and the root rule.
 
 ## Verified

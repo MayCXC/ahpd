@@ -5,7 +5,7 @@ depends: []
 layer: "packages/sdk"
 refs:
   - "[code://packages/sdk/src/types/host.ts#L215-L224](../../../../packages/sdk/src/types/host.ts#L215-L224) - the `automations` option, the pattern for a new store option"
-  - "[code://packages/sdk/src/automations.ts#L374](../../../../packages/sdk/src/automations.ts#L374) - `memoryAutomations`, the pattern for the memory store"
+  - "[code://packages/sdk/src/automations/automations.ts#L374](../../../../packages/sdk/src/automations/automations.ts#L374) - `memoryAutomations`, the pattern for the memory store"
   - file:///github/externals/vscode/src/vs/platform/agentHost/node/agentHostCustomizationEnablementService.ts - the key, the stored shape, the inherited rule and the cap
 ---
 
@@ -16,7 +16,7 @@ The store keeps a global decision and a decision for each folder, keyed as VS Co
 
 ## Files
 
-- `CREATE: packages/sdk/src/enablement.ts` - the key function, the store interface and `memoryEnablement()`.
+- `CREATE: packages/sdk/src/plugins/enablement.ts` - the key function, the store interface and `memoryEnablement()`.
 - `UPDATE: packages/sdk/src/types/host.ts:215-224` - the `enablement?: EnablementStore` host option beside `automations`.
 - `UPDATE: packages/sdk/src/index.ts` - export the new names.
 - `CREATE: packages/sdk/test/enablement.test.ts` - the cases below.
@@ -45,7 +45,7 @@ The store keeps a global decision and a decision for each folder, keyed as VS Co
 ## Resume
 
 - **State:** implemented. All 11 steps are in, and the four validation points pass.
-- **What exists now:** `packages/sdk/src/enablement.ts` holds `enablementKeyOf`, `EnablementStore`, `HeldDecisions`, `memoryEnablement()` and the 512-decision cap.
+- **What exists now:** `packages/sdk/src/plugins/enablement.ts` holds `enablementKeyOf`, `EnablementStore`, `HeldDecisions`, `memoryEnablement()` and the 512-decision cap.
   The `enablement` host option is declared in `types/host.ts`, and `index.ts` exports the function and the three types.
 - **Departure from the Steps:** `enablementKeyOf(customization, ofPlugin?)` takes a second, optional argument.
   A server of a plugin is keyed as `<plugin source>#mcp=<name>`, so the key function has to be told which plugin owns the server.
@@ -56,7 +56,7 @@ The store keeps a global decision and a decision for each folder, keyed as VS Co
 - **Validation:** `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm exec vitest run packages/sdk` pass, with 5 new tests in `enablement.test.ts`.
   They cover the key forms, inheritance, no keep-if-equal, the cap and its order of eviction.
 - **Files changed by this task:**
-  - `packages/sdk/src/enablement.ts` (created)
+  - `packages/sdk/src/plugins/enablement.ts` (created)
   - `packages/sdk/src/types/host.ts`
   - `packages/sdk/src/index.ts`
   - `packages/sdk/test/enablement.test.ts` (created)

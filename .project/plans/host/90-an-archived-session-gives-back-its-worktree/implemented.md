@@ -4,7 +4,7 @@ date: 2026-10-15
 refs:
   - git://849e245b
   - "[code://packages/sdk/src/host/lifecycle.ts](../../../../packages/sdk/src/host/lifecycle.ts)"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
   - "[code://packages/sdk/src/repo/worktrees.ts](../../../../packages/sdk/src/repo/worktrees.ts)"
 ---
 
@@ -13,7 +13,7 @@ The worktree record is in the session store, so it outlives the daemon.
 
 ## What was built
 
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - both stores keep `worktree`, a `StoredWorktree`.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - both stores keep `worktree`, a `StoredWorktree`.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `worktreeOf` reads the map, then the store.
 - [`code://packages/sdk/src/host/lifecycle.ts`](../../../../packages/sdk/src/host/lifecycle.ts) - `shelve` and `restore`, chained per session. `offBranch` keeps a tree whose `HEAD` is detached or on another branch, on archive and on delete.
 - [`code://packages/sdk/src/host/sleep.ts`](../../../../packages/sdk/src/host/sleep.ts) - an archived session is shelved after it stops, and a wake restores the tree first.

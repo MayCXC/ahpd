@@ -11,8 +11,8 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/policies.ts#L21-L53](../../../../packages/sdk/src/policies.ts#L21-L53) - `MEASURES` and `MATCHES` by kind, `PERIODS`, `KINDS`, `EFFECTS`, `LIMIT_POOLS`: the values `checkPolicy` accepts"
-  - "[code://packages/sdk/src/policy.ts#L71-L150](../../../../packages/sdk/src/policy.ts#L71-L150) - the manifest, built from those tables"
+  - "[code://packages/sdk/src/access/policies.ts#L21-L53](../../../../packages/sdk/src/access/policies.ts#L21-L53) - `MEASURES` and `MATCHES` by kind, `PERIODS`, `KINDS`, `EFFECTS`, `LIMIT_POOLS`: the values `checkPolicy` accepts"
+  - "[code://packages/sdk/src/access/policy.ts#L71-L150](../../../../packages/sdk/src/access/policy.ts#L71-L150) - the manifest, built from those tables"
   - "[code://packages/sdk/test/policy-scheme.test.ts#L175-L278](../../../../packages/sdk/test/policy-scheme.test.ts#L175-L278) - the manifest test and the choices it carries"
   - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - the row, its match types and measures by kind, for a person"
   - npm://ajv@^8.20.0 - already a dev dependency; validates a body against the manifest in the test
@@ -30,7 +30,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ### Searches performed
 
-- `rg -n "enum" packages/sdk/src/policy.ts packages/sdk/src/people.ts` - no manifest field in either carries an `enum`.
+- `rg -n "enum" packages/sdk/src/access/policy.ts packages/sdk/src/access/people.ts` - no manifest field in either carries an `enum`.
 - `rg -n "MEASURES|MATCHES|PERIODS|KINDS|EFFECTS|LIMIT_POOLS" packages/sdk/src` - module constants in `policies.ts`, not exported, read only by `checkPolicy`.
 
 ### Runtime path
@@ -61,7 +61,7 @@ policy.ts manifest -> describe() -> initialize _meta['ahpd.resourceProviders'].p
 - **Event flow** - none; the manifest already reaches clients through `ahpd.resourceProviders`.
 - **State flow** - none.
 - **Layer responsibilities** - sdk: the tables, the manifest and its test · docs: `POLICY.md`.
-- **Source-of-truth files** - [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts)
 
 ## Tasks
 

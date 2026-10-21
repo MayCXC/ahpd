@@ -5,8 +5,8 @@ refs:
   - code://packages/sdk/src/types/resources.ts
   - code://packages/sdk/src/types/plugin.ts
   - code://packages/sdk/src/types/host.ts
-  - code://packages/sdk/src/plugins.ts
-  - code://packages/sdk/src/validate.ts
+  - code://packages/sdk/src/plugins/plugins.ts
+  - code://packages/sdk/src/plugins/validate.ts
   - code://packages/sdk/src/host.ts
   - code://test/uri-resources.test.ts
   - code://test/uri-resources-plugin.test.ts
@@ -23,8 +23,8 @@ A provider implements less than a `ResourceStore`: `read` is required, `list`, `
 - `code://packages/sdk/src/types/resources.ts` - `ResourceProvider`, everything `ResourceStore` has except `complete`, with `read` required.
 - `code://packages/sdk/src/types/host.ts` - `HostOptions.resourceProviders`, keyed by scheme, with the order of authority written down.
 - `code://packages/sdk/src/types/plugin.ts` - `registerResourceProvider(scheme, provider)` and the keyed `Contribution.providers` bucket.
-- `code://packages/sdk/src/validate.ts` - `checkScheme` and `checkResourceProvider`.
-- `code://packages/sdk/src/plugins.ts` - `reservedScheme`, the registration and its per-plugin duplicate check, and the fold's cross-plugin conflict.
+- `code://packages/sdk/src/plugins/validate.ts` - `checkScheme` and `checkResourceProvider`.
+- `code://packages/sdk/src/plugins/plugins.ts` - `reservedScheme`, the registration and its per-plugin duplicate check, and the fold's cross-plugin conflict.
 - `code://packages/sdk/src/host.ts` - `storeFor(uri)`, the nine routed call sites, and the cross-scheme `-32602` on move and copy.
 - `code://test/uri-resources.test.ts`, `code://test/uri-resources-plugin.test.ts` - the routing cases and the whole path through the loader.
 - `code://test/fixtures/plugin-uri-resources` - a read-only `computer:` serving `computer://local/status` and `computer://local/capabilities`.

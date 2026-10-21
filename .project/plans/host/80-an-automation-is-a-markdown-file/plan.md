@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/scheduled.ts#L331-L371](../../../../packages/sdk/src/scheduled.ts#L331-L371) - `load`, which reads them once, at start"
   - "[code://packages/server/src/commands/run.ts#L654-L661](../../../../packages/server/src/commands/run.ts#L654-L661) - where the daemon opens the store"
   - "[code://packages/server/src/config.ts#L389](../../../../packages/server/src/config.ts#L389) - `automationsPath`"
-  - "[code://packages/sdk/src/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions.ts#L712-L740) - `migrateSessions`, the pattern for the one-time conversion"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions/sessions.ts#L712-L740) - `migrateSessions`, the pattern for the one-time conversion"
 ---
 
 ## Goal

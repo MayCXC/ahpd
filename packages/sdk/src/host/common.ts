@@ -1,6 +1,6 @@
 import { RpcError, METHOD_NOT_FOUND } from '../rpc.js';
 
-export { reason } from '../values.js';
+export { reason } from '../utils/values.js';
 
 /**
  * A port this host was not given.

@@ -19,9 +19,9 @@ The rule shape is the rules draft at file:///github/ahp-review/prospect/ahp-user
 
 - [`code://packages/sdk/src/types/plugin.ts`](../../../packages/sdk/src/types/plugin.ts) - `PortKey` and the `register*` methods.
 - [`code://packages/sdk/src/types/users.ts`](../../../packages/sdk/src/types/users.ts) - `Principal`: roles through `can`, memberships and the primary.
-- [`code://packages/sdk/src/scopes.ts`](../../../packages/sdk/src/scopes.ts) - the team and project a request is charged to.
+- [`code://packages/sdk/src/usage/scopes.ts`](../../../packages/sdk/src/usage/scopes.ts) - the team and project a request is charged to.
 - [`code://packages/sdk/src/types/policies.ts`](../../../packages/sdk/src/types/policies.ts) - the row and the `Policies` port.
-- [`code://packages/sdk/src/decide.ts`](../../../packages/sdk/src/decide.ts) - the four steps of a check.
+- [`code://packages/sdk/src/access/decide.ts`](../../../packages/sdk/src/access/decide.ts) - the four steps of a check.
 
 ## Runtime path
 

@@ -13,7 +13,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/listen.ts](../../../../packages/sdk/src/listen.ts) - the listener; plain requests to `/api` are answered beside the WebSocket upgrade"
   - "[code://packages/sdk/src/host.ts#L141](../../../../packages/sdk/src/host.ts#L141) - `NEEDS`, the grant pairs a command is checked against"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts) - `verify`, the path `authenticate` takes for a token"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts) - `verify`, the path `authenticate` takes for a token"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts) - the configuration `http` joins"
   - file:///github/cofold/examples/commands/clerver/server.ts - the server `serve()` is promoted from
   - "file:///github/cofold/examples/commands/clerver/cli.ts - the client: manifest, `commandsFrom`, `httpTransport`, Bearer"

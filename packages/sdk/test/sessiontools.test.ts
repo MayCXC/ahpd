@@ -2,10 +2,10 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
-import { Status } from '../src/catalog.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { Status } from '../src/sessions/catalog.js';
 import { ROOT, createHost } from '../src/host.js';
-import { fileSessions } from '../src/sessions.js';
+import { fileSessions } from '../src/sessions/sessions.js';
 import { hostTools } from '../src/tools/index.js';
 import {
   filterSessions, openLink, serializeContext, serializeSession, sessionMeant, sessionTools, statusWords,

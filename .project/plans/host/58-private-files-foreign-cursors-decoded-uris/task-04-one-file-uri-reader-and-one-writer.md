@@ -4,10 +4,10 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/resources.ts#L32-L41](../../../../packages/sdk/src/resources.ts#L32-L41) - `pathOf` and `uriOf`, which already decode and encode"
+  - "[code://packages/sdk/src/resources/resources.ts#L32-L41](../../../../packages/sdk/src/resources/resources.ts#L32-L41) - `pathOf` and `uriOf`, which already decode and encode"
   - "[code://packages/sdk/src/host/channels.ts#L19-L20](../../../../packages/sdk/src/host/channels.ts#L19-L20) - the unencoded `uriOf`, which goes"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L249](../../../../packages/sdk/src/host/sessionmethods.ts#L249) - its one caller, the `@` completion's attachment URI"
-  - "[code://packages/sdk/src/debuglogs.ts#L43](../../../../packages/sdk/src/debuglogs.ts#L43) - `asPath`, a hand-written decoder that becomes `localPath`"
+  - "[code://packages/sdk/src/sessions/debuglogs.ts#L43](../../../../packages/sdk/src/sessions/debuglogs.ts#L43) - `asPath`, a hand-written decoder that becomes `localPath`"
 ---
 
 ## Objective
@@ -16,11 +16,11 @@ The sdk has one `localPath(uri)` that turns a `file:` URI into a decoded path an
 
 ## Files
 
-- `CREATE: packages/sdk/src/fileuri.ts` - `localPath(value: string): string` and `uriOf(path: string): string`.
-- `UPDATE: packages/sdk/src/resources.ts:32-41` - `pathOf` keeps its two refusals and decodes through `fileURLToPath` as now; `uriOf` is imported from `fileuri.ts` and re-exported under the same name.
+- `CREATE: packages/sdk/src/resources/fileuri.ts` - `localPath(value: string): string` and `uriOf(path: string): string`.
+- `UPDATE: packages/sdk/src/resources/resources.ts:32-41` - `pathOf` keeps its two refusals and decodes through `fileURLToPath` as now; `uriOf` is imported from `fileuri.ts` and re-exported under the same name.
 - `UPDATE: packages/sdk/src/host/channels.ts:19-20` - `uriOf` removed.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:6,249` - imports `uriOf` from `../fileuri.js`.
-- `UPDATE: packages/sdk/src/debuglogs.ts:43` - `asPath` is `localPath`.
+- `UPDATE: packages/sdk/src/sessions/debuglogs.ts:43` - `asPath` is `localPath`.
 - `CREATE: packages/sdk/test/fileuri.test.ts` - the cases below.
 
 ## Steps

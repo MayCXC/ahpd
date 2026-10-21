@@ -1,5 +1,5 @@
-import { idOf, Status } from '../catalog.js';
-import { localPath } from '../fileuri.js';
+import { idOf, Status } from '../sessions/catalog.js';
+import { localPath } from '../resources/fileuri.js';
 import { filesOf, needsWriting, snapshot } from './attachments.js';
 import { chatIdFor, chatUriFor, isRootChannel, MARKS, ROOT, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { HOSTS_OWN } from './common.js';

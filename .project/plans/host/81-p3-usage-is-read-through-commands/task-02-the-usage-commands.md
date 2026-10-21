@@ -4,7 +4,7 @@ status: done
 depends: [task-01-each-usage-read-answers-a-value.md]
 layer: "packages/sdk, packages/server"
 refs:
-  - "[code://packages/sdk/src/usage.ts#L763-L782](../../../../packages/sdk/src/usage.ts#L763-L782) - the pools a reader may read"
+  - "[code://packages/sdk/src/usage/usage.ts#L763-L782](../../../../packages/sdk/src/usage/usage.ts#L763-L782) - the pools a reader may read"
   - "[code://packages/server/src/commands/run.ts#L726-L734](../../../../packages/server/src/commands/run.ts#L726-L734) - the usage provider in `run.ts`"
 ---
 
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/usage.ts` - `usageMethods(provider)`, the five served methods.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - `usageMethods(provider)`, the five served methods.
 - `UPDATE: packages/sdk/src/index.ts` - export `usageMethods`.
 - `UPDATE: packages/server/src/commands/run.ts:726-734` - pass the methods as `HostOptions.methods`.
 - `CREATE: packages/sdk/test/usage-methods.test.ts` - each command beside its read.

@@ -15,7 +15,7 @@ A created session's config and every change the backend accepts are in the sessi
 ## Files
 
 - `UPDATE: packages/sdk/src/host.ts` - write `kept.setConfig` where a session is created and after a live `session/configChanged` is accepted; drop the `String()` at 8388.
-- `UPDATE: packages/sdk/src/sessions.ts` - the stored `config` holds JSON values.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - the stored `config` holds JSON values.
 - `UPDATE:` the host's session store tests.
 
 ## Steps

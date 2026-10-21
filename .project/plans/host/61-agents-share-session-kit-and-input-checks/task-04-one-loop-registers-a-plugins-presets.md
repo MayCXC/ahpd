@@ -6,7 +6,7 @@ layer: "sdk, agent-acp, agent-claude"
 refs:
   - "[code://packages/agent-acp/src/plugin.ts#L267-L292](../../../../packages/agent-acp/src/plugin.ts#L267-L292) - acp's loop: log and problem per failure, `preset`"
   - "[code://packages/agent-claude/src/plugin.ts#L158-L189](../../../../packages/agent-claude/src/plugin.ts#L158-L189) - claude's loop: problem per failure, `variant`"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - where `eachPreset` goes"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - where `eachPreset` goes"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts` - `eachPreset`: for each `[id, given]`, `await build(id, given)`; a throw says `${name}: ${reason(error)}` through `host.problem` (and `host.log` when `log` is set) and drops the id; none left throws `presets names no <noun> left to register an agent for[: <dropped>]`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `eachPreset`: for each `[id, given]`, `await build(id, given)`; a throw says `${name}: ${reason(error)}` through `host.problem` (and `host.log` when `log` is set) and drops the id; none left throws `presets names no <noun> left to register an agent for[: <dropped>]`.
 - `UPDATE: packages/sdk/src/index.ts:27` - exported.
 - `UPDATE: packages/sdk/test/plugin-host.test.ts` - the helper's cases.
 - `UPDATE: packages/agent-acp/src/plugin.ts:267-292` - `eachPreset(host, name, Object.entries(bagOf(values.presets)), presetOf..., { noun: 'preset', log: true })`.
@@ -34,7 +34,7 @@ refs:
 ## Resume
 
 - **Implemented** 2026-10-10 on `build/agents/167a4a60`.
-- `eachPreset(host, name, entries, build, { noun, log })` is in `packages/sdk/src/plugins.ts`.
+- `eachPreset(host, name, entries, build, { noun, log })` is in `packages/sdk/src/plugins/plugins.ts`.
 - It is exported from `@ahpd/sdk` with its `EachPresetOptions` type.
 - It awaits `build(id, given)` per entry and drops a throwing one.
 - A throw says `${name}: ${reason(error)}` through `host.problem`.

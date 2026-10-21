@@ -12,7 +12,7 @@ refs:
   - "[code://packages/sdk/src/host/chatactions.ts#L196-L200](../../../../packages/sdk/src/host/chatactions.ts#L196-L200) - a resume spawns with `kept.config(id)`"
   - "[code://packages/sdk/src/host/snapshots.ts#L396-L399](../../../../packages/sdk/src/host/snapshots.ts#L396-L399) - a browsed row shows defaults under `kept.config(id)`"
   - "[code://packages/sdk/src/host/spawn.ts#L422](../../../../packages/sdk/src/host/spawn.ts#L422) - `spawn`, which merges the config over `agent.defaults()`"
-  - "[code://packages/sdk/src/sessions.ts#L76-L207](../../../../packages/sdk/src/sessions.ts#L76-L207) - `fileSessions` and the saved shape"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L76-L207](../../../../packages/sdk/src/sessions/sessions.ts#L76-L207) - `fileSessions` and the saved shape"
 ---
 
 ## Goal
@@ -56,7 +56,7 @@ restart -> resume -> spawn(kept.config(id) ?? {})                     (defaults:
 
 - **State flow** - `createSession` and every accepted `session/configChanged` write `kept.setConfig(id, values)`; resume and a browsed row read it through one `storedConfig(owner, id)` that drops what the schema refuses.
 - **Layer responsibilities** - sdk only.
-- **Source-of-truth files** - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts), [`code://packages/sdk/src/host/sessionconfig.ts`](../../../../packages/sdk/src/host/sessionconfig.ts), [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts), [`code://packages/sdk/src/host/sessionconfig.ts`](../../../../packages/sdk/src/host/sessionconfig.ts), [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 

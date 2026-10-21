@@ -1,9 +1,9 @@
 import { expect, it } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { ROOT } from '../src/host.js';
-import { memorySessions } from '../src/sessions.js';
-import { memoryAutomations } from '../src/automations.js';
-import { shellTerminals } from '../src/terminals.js';
+import { memorySessions } from '../src/sessions/sessions.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { shellTerminals } from '../src/machines/terminals.js';
 import { echo } from '../../../examples/echo/agent.js';
 import {
   RECORD, call, directory, hello, host, listingOne, onDisk, peer, root, signIn, until, watching, withRole,

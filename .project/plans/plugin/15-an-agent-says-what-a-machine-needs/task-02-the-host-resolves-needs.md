@@ -5,9 +5,9 @@ depends: [task-01-the-need-type.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L152](../../../../packages/sdk/src/types/plugin.ts#L152) - `PluginHost.machineNeeds`"
-  - "[code://packages/sdk/src/plugins.ts#L325-L328](../../../../packages/sdk/src/plugins.ts#L325-L328) - its implementation over the live agent list"
-  - "[code://packages/sdk/src/machine.ts#L62-L106](../../../../packages/sdk/src/machine.ts#L62-L106) - `resolveNeeds`"
-  - "[code://packages/sdk/src/computers.ts](../../../../packages/sdk/src/computers.ts) - the computers port wiring"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L325-L328](../../../../packages/sdk/src/plugins/plugins.ts#L325-L328) - its implementation over the live agent list"
+  - "[code://packages/sdk/src/machines/machine.ts#L62-L106](../../../../packages/sdk/src/machines/machine.ts#L62-L106) - `resolveNeeds`"
+  - "[code://packages/sdk/src/machines/computers.ts](../../../../packages/sdk/src/machines/computers.ts) - the computers port wiring"
 ---
 
 ## Objective
@@ -17,8 +17,8 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `machineNeeds`.
-- `UPDATE: packages/sdk/src/plugins.ts` - its implementation over the host's agents.
-- `CREATE: packages/sdk/src/machine.ts` - `resolveNeeds`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - its implementation over the host's agents.
+- `CREATE: packages/sdk/src/machines/machine.ts` - `resolveNeeds`.
 
 ## Steps
 

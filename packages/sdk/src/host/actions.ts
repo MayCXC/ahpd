@@ -1,9 +1,9 @@
 import { annotationsReducer, IS_CLIENT_DISPATCHABLE } from '@microsoft/agent-host-protocol';
 import type { AnnotationsAction } from '@microsoft/agent-host-protocol';
-import { idOf, Status } from '../catalog.js';
-import { disableConditionsProblem } from '../automations.js';
-import { localPath } from '../fileuri.js';
-import { reason } from '../values.js';
+import { idOf, Status } from '../sessions/catalog.js';
+import { disableConditionsProblem } from '../automations/automations.js';
+import { localPath } from '../resources/fileuri.js';
+import { reason } from '../utils/values.js';
 import { computerNeeds, dispatchNeeds, ACTION_HOMES, ACTION_NEEDS, HOME_WORDS, ownIn, PER_CONNECTION } from './gate.js';
 import { chatUriFor, isRootChannel, MARKS, ROOT, spaceOf, toolCallOfSubagentChat, WORKER_ACTIONS } from './channels.js';
 import { chatAction, sessionFlag } from './chatactions.js';

@@ -10,7 +10,7 @@ requires:
 decisions:
 refs:
   - "[code://packages/sdk/src/host.ts#L2214-L2250](../../../../packages/sdk/src/host.ts#L2214-L2250) - `unstamped`, `withWorkerUri` and `stampedCalls`, the pattern for a `_meta` key kept across actions"
-  - "[code://packages/sdk/src/paging.ts](../../../../packages/sdk/src/paging.ts) - a small sdk module a plugin imports, the shape the helper's module takes"
+  - "[code://packages/sdk/src/sessions/paging.ts](../../../../packages/sdk/src/sessions/paging.ts) - a small sdk module a plugin imports, the shape the helper's module takes"
   - "[code://packages/sdk/src/index.ts#L76-L77](../../../../packages/sdk/src/index.ts#L76-L77) - where such a module is exported"
 ---
 
@@ -26,7 +26,7 @@ A helper in the sdk builds `{ 'ahpd.startedAt', 'ahpd.endedAt', 'ahpd.durationMs
 
 | What | Source | Task |
 | --- | --- | --- |
-| The helper is `packages/sdk/src/timing.ts`, exported from the sdk's index: `callTimes(start, end?, durationMs?)`, `withCallTimes(meta, times)` and `startOf(meta)` | (defaulted: one module per concern, as `paging.ts` is) | 01 |
+| The helper is `packages/sdk/src/utils/timing.ts`, exported from the sdk's index: `callTimes(start, end?, durationMs?)`, `withCallTimes(meta, times)` and `startOf(meta)` | (defaulted: one module per concern, as `paging.ts` is) | 01 |
 | A time is given as epoch milliseconds or an ISO string, and written as ISO | the decision: the keys carry ISO times | 01 |
 | A `durationMs` the harness measured is kept; with none, it is the end minus the start | (defaulted: cofold's `tool.completed` measures its own, and the harness's number is the truer one) | 01 |
 

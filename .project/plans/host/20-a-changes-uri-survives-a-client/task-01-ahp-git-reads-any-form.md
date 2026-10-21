@@ -4,9 +4,9 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L85-L86](../../../../packages/sdk/src/changes.ts#L85-L86) - `beforeUri`"
-  - "[code://packages/sdk/src/changes.ts#L759-L779](../../../../packages/sdk/src/changes.ts#L759-L779) - `read`"
-  - "[code://packages/sdk/src/changes.ts#L425](../../../../packages/sdk/src/changes.ts#L425) - where a modified file's `before` is minted"
+  - "[code://packages/sdk/src/sessions/changes.ts#L85-L86](../../../../packages/sdk/src/sessions/changes.ts#L85-L86) - `beforeUri`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L759-L779](../../../../packages/sdk/src/sessions/changes.ts#L759-L779) - `read`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L425](../../../../packages/sdk/src/sessions/changes.ts#L425) - where a modified file's `before` is minted"
 ---
 
 ## Objective
@@ -15,8 +15,8 @@ A modified file's `before` resolves from `ahp-git://head/<path>`, from the one-s
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:85-86` - `beforeUri` mints `ahp-git://head` and percent-encodes each path segment.
-- `UPDATE: packages/sdk/src/changes.ts:759-779` - the `ahp-git:` half of `read` parses the URI.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:85-86` - `beforeUri` mints `ahp-git://head` and percent-encodes each path segment.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:759-779` - the `ahp-git:` half of `read` parses the URI.
 - `CREATE: packages/sdk/test/changes-uris.test.ts` - the cases below.
 
 ## Steps

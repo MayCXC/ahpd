@@ -14,12 +14,12 @@ creates: []
 decisions:
 refs:
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts) - `Usage.record` and `total`; no way to read records yet"
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts) - `fileUsage`, monthly JSONL files and per-day totals"
-  - "[code://packages/sdk/src/users.ts#L23-L39](../../../../packages/sdk/src/users.ts#L23-L39) - `SUBJECTS`, where `usage` joins"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts) - `fileUsage`, monthly JSONL files and per-day totals"
+  - "[code://packages/sdk/src/access/users.ts#L23-L39](../../../../packages/sdk/src/access/users.ts#L23-L39) - `SUBJECTS`, where `usage` joins"
   - "[code://packages/computer/src/provider.ts](../../../../packages/computer/src/provider.ts) - a scheme provider with `describe()`, the shape to mirror"
-  - "[code://packages/sdk/src/scopes.ts](../../../../packages/sdk/src/scopes.ts) - a principal's memberships, which decide the pools they read without a grant"
+  - "[code://packages/sdk/src/usage/scopes.ts](../../../../packages/sdk/src/usage/scopes.ts) - a principal's memberships, which decide the pools they read without a grant"
   - "[code://packages/sdk/src/host.ts#L6766-L6855](../../../../packages/sdk/src/host.ts#L6766-L6855) - `capabilityFor` and `admit`, the gate a scheme's own-pool rule has to pass"
-  - "[code://packages/sdk/src/meter.ts#L159-L171](../../../../packages/sdk/src/meter.ts#L159-L171) - `poolsOf`, the spelling a record was charged under"
+  - "[code://packages/sdk/src/usage/meter.ts#L159-L171](../../../../packages/sdk/src/usage/meter.ts#L159-L171) - `poolsOf`, the spelling a record was charged under"
   - "[code://packages/server/src/commands/run.ts#L355-L363](../../../../packages/server/src/commands/run.ts#L355-L363) - the daemon's own store, which the provider and the command share"
   - "[code://packages/server/src/commands/user.ts#L34-L41](../../../../packages/server/src/commands/user.ts#L34-L41) - `bounded`, the in-body check `ahpd usage` copies"
   - file:///github/ahp-review/prospect/ahp-user-rules.md - the rules draft that settled the week, at "A week is calendar based, Monday 00:00 in a configured timezone"

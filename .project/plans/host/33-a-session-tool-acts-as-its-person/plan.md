@@ -12,7 +12,7 @@ refs:
   - "[code://packages/sdk/src/tools/index.ts#L24-L56](../../../../packages/sdk/src/tools/index.ts#L24-L56) - `hostTools`, the session and artifact tools every session is offered"
   - "[code://packages/sdk/src/host/tooling.ts#L1048](../../../../packages/sdk/src/host/tooling.ts#L1048) - `toolContext`, what a tool may see and do: it carries no person"
   - "[code://packages/sdk/src/types/host.ts#L701-L805](../../../../packages/sdk/src/types/host.ts#L701-L805) - `ToolCall`"
-  - "[code://packages/sdk/src/users.ts#L25-L36](../../../../packages/sdk/src/users.ts#L25-L36) - the built-in roles; sessions are reached by role, and none is any one person's"
+  - "[code://packages/sdk/src/access/users.ts#L25-L36](../../../../packages/sdk/src/access/users.ts#L25-L36) - the built-in roles; sessions are reached by role, and none is any one person's"
   - "[code://packages/server/src/commands/run.ts#L626](../../../../packages/server/src/commands/run.ts#L626) - the daemon passes `hostTools()` to every session"
   - "git://ac05bdfe1e1 - VS Code `src/vs/platform/agentHost/node/shared/sessionServerTools.ts`: `maxSessionSpawnDepth` 3, `maxCreatedSessions` 50, `maxCreatedChats` 50, `maxSentMessages` 100, and their refusal words"
 ---

@@ -2,7 +2,7 @@
 title: A client reads what a pool spent, and the records behind it, through a usage scheme - implemented
 date: 2026-10-02
 refs:
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts)"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts)"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts)"
   - "[code://packages/server/src/commands/usage.ts](../../../../packages/server/src/commands/usage.ts)"
 ---
@@ -12,11 +12,11 @@ A person reads their own pool and their teams' and projects' pools without `usag
 
 ## What was built
 
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `pools` and `records` on the file store, and `usageProvider`, the `usage:` scheme with `authorize`, the reader-filtered root listing and the period totals in the configured zone.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `pools` and `records` on the file store, and `usageProvider`, the `usage:` scheme with `authorize`, the reader-filtered root listing and the period totals in the configured zone.
 - [`code://packages/sdk/src/types/resources.ts`](../../../../packages/sdk/src/types/resources.ts) - `ResourceProvider.authorize`, and the reader passed to `read` and `list`.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - the gate asks the scheme's `authorize` before requiring `<scheme>:read`, for reads and listings only.
-- [`code://packages/sdk/src/scopes.ts`](../../../../packages/sdk/src/scopes.ts) - `poolsFor`, the pools one person may see.
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `usage` as a grant subject.
+- [`code://packages/sdk/src/usage/scopes.ts`](../../../../packages/sdk/src/usage/scopes.ts) - `poolsFor`, the pools one person may see.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `usage` as a grant subject.
 - [`code://packages/server/src/commands/usage.ts`](../../../../packages/server/src/commands/usage.ts) - `ahpd usage`, and `usage.timezone` in the daemon configuration.
 - `docs/sdk/USERS.md`, `docs/server/REFERENCE.md`, `docs/plugins/PLUGINS.md`.
 

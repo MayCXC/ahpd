@@ -5,8 +5,8 @@ import type { Agent, Start } from '../src/types/agent.js';
 import type { Bag } from '../src/types/common.js';
 import type { Session } from '../src/types/session.js';
 import type { Peer } from '../src/types/rpc.js';
-import { memorySessions } from '../src/sessions.js';
-import { shellTerminals } from '../src/terminals.js';
+import { memorySessions } from '../src/sessions/sessions.js';
+import { shellTerminals } from '../src/machines/terminals.js';
 
 /*
  * A key that may not move once the session runs.

@@ -2,7 +2,7 @@
 title: VS Code opens the uncommitted changes first - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/changes.ts#L856-L873](../../../../packages/sdk/src/changes.ts#L856-L873)"
+  - "[code://packages/sdk/src/sessions/changes.ts#L856-L873](../../../../packages/sdk/src/sessions/changes.ts#L856-L873)"
   - "[code://packages/sdk/test/changes-uris.test.ts](../../../../packages/sdk/test/changes-uris.test.ts)"
 ---
 
@@ -11,7 +11,7 @@ A session's changesets list the working tree first, so VS Code opens it and offe
 
 ## What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `scopes()` lists `uncommitted`, then `session`, then the two templates.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `scopes()` lists `uncommitted`, then `session`, then the two templates.
 - [`code://packages/sdk/test/changes-uris.test.ts`](../../../../packages/sdk/test/changes-uris.test.ts) - a case that asserts that order for a session with a turn.
 
 ## Verified

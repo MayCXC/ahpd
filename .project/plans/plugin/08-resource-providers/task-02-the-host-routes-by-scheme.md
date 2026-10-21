@@ -11,7 +11,7 @@ refs:
   - code://packages/sdk/src/host.ts#L5419 - `resourceResolve`
   - code://packages/sdk/src/host.ts#L4726-L4745 - the `@` completion, which stays on the file store
   - code://packages/sdk/src/host.ts#L7160-L7194 - the client relay, which must stay ahead of all of this
-  - code://packages/sdk/src/resources.ts#L48-L58 - `why`, the sentence an unserved scheme gets
+  - code://packages/sdk/src/resources/resources.ts#L48-L58 - `why`, the sentence an unserved scheme gets
   - code://test/host.test.ts#L3297-L3303 - the resource suite's `at(base)` helper, the pattern for the new cases
 ---
 

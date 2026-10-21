@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { membership, namesOf, scopeFor } from '../src/scopes.js';
+import { membership, namesOf, scopeFor } from '../src/usage/scopes.js';
 import type { Named } from '../src/types/users.js';
 import type { Principal } from '../src/types/users.js';
 

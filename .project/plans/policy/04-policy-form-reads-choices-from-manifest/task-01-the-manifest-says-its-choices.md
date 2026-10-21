@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/policies.ts#L21-L53](../../../../packages/sdk/src/policies.ts#L21-L53) - the tables, exported"
-  - "[code://packages/sdk/src/policy.ts#L71-L150](../../../../packages/sdk/src/policy.ts#L71-L150) - the manifest, built from them"
+  - "[code://packages/sdk/src/access/policies.ts#L21-L53](../../../../packages/sdk/src/access/policies.ts#L21-L53) - the tables, exported"
+  - "[code://packages/sdk/src/access/policy.ts#L71-L150](../../../../packages/sdk/src/access/policy.ts#L71-L150) - the manifest, built from them"
   - "[code://packages/sdk/test/policy-scheme.test.ts#L175-L278](../../../../packages/sdk/test/policy-scheme.test.ts#L175-L278) - the manifest test and the cases this task added"
 ---
 
@@ -15,8 +15,8 @@ The `policy:` manifest carries every choice a form offers, built from the tables
 
 ## Files
 
-- `UPDATE: packages/sdk/src/policies.ts:22-44` - export `MEASURES`, `MATCHES`, `PERIODS`, `KINDS`, `EFFECTS` and `LIMIT_POOLS`; nothing else changes.
-- `UPDATE: packages/sdk/src/policy.ts:64-110` - build the manifest from those exports.
+- `UPDATE: packages/sdk/src/access/policies.ts:22-44` - export `MEASURES`, `MATCHES`, `PERIODS`, `KINDS`, `EFFECTS` and `LIMIT_POOLS`; nothing else changes.
+- `UPDATE: packages/sdk/src/access/policy.ts:64-110` - build the manifest from those exports.
 - `UPDATE: packages/sdk/test/policy-scheme.test.ts:175-186` - the cases below.
 
 ## Steps

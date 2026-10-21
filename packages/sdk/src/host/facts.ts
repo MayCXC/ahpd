@@ -1,9 +1,9 @@
 import { sep } from 'node:path';
 import { ARTIFACTS_META, artifactsIn, isGitHubLink, recordArtifact } from '../tools/artifacts.js';
-import { idOf } from '../catalog.js';
-import { localPath, uriOf } from '../fileuri.js';
-import { CREATED_BY_META, REMOTE_ORIGIN_META, SPAWN_DEPTH_META, depthOf } from '../remotesession.js';
-import { reason } from '../values.js';
+import { idOf } from '../sessions/catalog.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
+import { CREATED_BY_META, REMOTE_ORIGIN_META, SPAWN_DEPTH_META, depthOf } from '../sessions/remotesession.js';
+import { reason } from '../utils/values.js';
 import type { Bag } from '../types/common.js';
 import type { HostContext } from './context.js';
 

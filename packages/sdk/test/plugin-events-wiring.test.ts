@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { foldHostOptions, pluginHost } from '../src/plugins.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { HostOptions } from '../src/types/host.js';

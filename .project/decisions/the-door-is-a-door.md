@@ -6,8 +6,8 @@ refs:
   - git://20a050a2 - the superseded decision, as committed
   - "[code://packages/sdk/src/listen.ts#L82-L124](../../packages/sdk/src/listen.ts#L82-L124) - `identityOf`, which still answers root for the deployment's token and now admits a person's token as nobody unless the record trusts it"
   - "[code://packages/sdk/src/types/listen.ts#L74-L90](../../packages/sdk/src/types/listen.ts#L74-L90) - `ListenOptions.identify` and `root`, and why `identify` may answer an arrival with no principal"
-  - "[code://packages/sdk/src/users.ts#L258-L281](../../packages/sdk/src/users.ts#L258-L281) - `principalOf`, where `trusted` is the record's `trustToken` or the host default"
-  - "[code://packages/sdk/src/users.ts#L130-L155](../../packages/sdk/src/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
+  - "[code://packages/sdk/src/access/users.ts#L258-L281](../../packages/sdk/src/access/users.ts#L258-L281) - `principalOf`, where `trusted` is the record's `trustToken` or the host default"
+  - "[code://packages/sdk/src/access/users.ts#L130-L155](../../packages/sdk/src/access/users.ts#L130-L155) - `FileUserOptions.trustToken`, the host-wide default"
   - "[code://packages/server/src/main.ts#L810-L830](../../packages/server/src/main.ts#L810-L830) - the daemon's `identify`, which hands the record over only when it is trusted"
   - "[code://packages/server/src/config.ts#L60-L72](../../packages/server/src/config.ts#L60-L72) - the `trustToken` key, off unless it is written"
   - "[code://docs/sdk/USERS.md](../../docs/sdk/USERS.md) - the two layers, which this makes true rather than nominal"

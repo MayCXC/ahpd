@@ -4,7 +4,7 @@ status: implemented
 depends: [task-02-the-persona-is-read-from-agents-md.md]
 layer: "packages/sdk, packages/server, packages/bot"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L987-L1002](../../../../packages/sdk/src/plugins.ts#L987-L1002) - `records` takes only a slug, so a collection cannot be in a subfolder"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L987-L1002](../../../../packages/sdk/src/plugins/plugins.ts#L987-L1002) - `records` takes only a slug, so a collection cannot be in a subfolder"
   - "[code://packages/bot/src/provider.ts#L77](../../../../packages/bot/src/provider.ts#L77) - the `bot-chats` collection"
   - "[code://packages/bot/src/names.ts#L24](../../../../packages/bot/src/names.ts#L24) - the `bot-sessions` collection"
   - "[code://packages/bot/src/chat.ts#L129](../../../../packages/bot/src/chat.ts#L129) - the chat logs in `bot-chats/`"
@@ -27,8 +27,8 @@ The chat logs are plain files in `bots/<slug>/logs/`.
 ## Files
 
 - `UPDATE: packages/sdk/src/types/records.ts` - add `file?: string` to `CollectionOptions`, where record `<id>` is the file `<id>/<file>.md`, and say that a name can be a path of slugs.
-- `UPDATE: packages/sdk/src/records.ts` - add `isRecordPath`, and make `memoryRecords` take a path and `file`.
-- `UPDATE: packages/sdk/src/plugins.ts` - `records` takes a path of slugs and `file`, and the claim is on the first slug.
+- `UPDATE: packages/sdk/src/resources/records.ts` - add `isRecordPath`, and make `memoryRecords` take a path and `file`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - `records` takes a path of slugs and `file`, and the claim is on the first slug.
 - `UPDATE: packages/server/src/records.ts` - `fileRecords` takes a path, and keeps and watches a `file` collection as one folder for each record.
 - `UPDATE: packages/server/test/records.test.ts` - the tests of a path and of a `file` collection.
 - `UPDATE: packages/bot/src/plugin.ts` - open `bots` with `file: 'bot'`, open each bot's two collections, and move the data at load.

@@ -4,7 +4,7 @@ date: 2026-10-07
 refs:
   - git://4279708 - the commit this work sits on; none of it is committed yet, on `build/agents/f0c62ad5`
   - "[code://packages/sdk/src/host/sessionevents.ts](../../../../packages/sdk/src/host/sessionevents.ts) - the stream of session events"
-  - "[code://packages/sdk/src/triggers.ts](../../../../packages/sdk/src/triggers.ts) - the rule engine"
+  - "[code://packages/sdk/src/automations/triggers.ts](../../../../packages/sdk/src/automations/triggers.ts) - the rule engine"
   - "[code://packages/sdk/src/host/automations.ts](../../../../packages/sdk/src/host/automations.ts) - the rules the host watches, the overlap modes and the pinned chat"
   - "[code://docs/server/REFERENCE.md](../../../../docs/server/REFERENCE.md) - the `## Automations` section a person running the daemon reads"
 ---
@@ -15,12 +15,12 @@ An automation can now wake on what a session does, not only on a clock. It picks
 
 - [`packages/sdk/src/host/sessionevents.ts`](../../../../packages/sdk/src/host/sessionevents.ts) - the stream of session events, what each session is doing as they arrive, where it works and whether a run made it. It also says the turn start the engine is handed, and the parent link a child session leaves.
 - [`packages/sdk/src/types/triggers.ts`](../../../../packages/sdk/src/types/triggers.ts) - the event kinds, the facts every one of them carries, and the rule a trigger is written as.
-- [`packages/sdk/src/triggers.ts`](../../../../packages/sdk/src/triggers.ts) - the rule engine: counts, windows, the timer a long turn is measured by, and the clock it is handed.
-- [`packages/sdk/src/triggerpresets.ts`](../../../../packages/sdk/src/triggerpresets.ts) - the five presets, each a function from its numbers to a rule.
-- [`packages/sdk/src/automations.ts`](../../../../packages/sdk/src/automations.ts) - the `session` and `watch` trigger types, the rule schema, and the refusal of a rule this host cannot fire.
+- [`packages/sdk/src/automations/triggers.ts`](../../../../packages/sdk/src/automations/triggers.ts) - the rule engine: counts, windows, the timer a long turn is measured by, and the clock it is handed.
+- [`packages/sdk/src/automations/triggerpresets.ts`](../../../../packages/sdk/src/automations/triggerpresets.ts) - the five presets, each a function from its numbers to a rule.
+- [`packages/sdk/src/automations/automations.ts`](../../../../packages/sdk/src/automations/automations.ts) - the `session` and `watch` trigger types, the rule schema, and the refusal of a rule this host cannot fire.
 - [`packages/sdk/src/host/automations.ts`](../../../../packages/sdk/src/host/automations.ts) - the rules the host watches, the owner gate, the hourly cap, the overlap modes, the pinned chat, and the fire a plugin's type reaches.
-- [`packages/sdk/src/wakemessage.ts`](../../../../packages/sdk/src/wakemessage.ts) - the six placeholders and the summary block a woken run's message carries.
-- [`packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts), [`packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `registerTriggerType` and `fireTrigger`, the fold that gathers the types, and the check on one.
+- [`packages/sdk/src/automations/wakemessage.ts`](../../../../packages/sdk/src/automations/wakemessage.ts) - the six placeholders and the summary block a woken run's message carries.
+- [`packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts), [`packages/sdk/src/plugins/validate.ts`](../../../../packages/sdk/src/plugins/validate.ts) - `registerTriggerType` and `fireTrigger`, the fold that gathers the types, and the check on one.
 - [`packages/server/src/commands/options.ts`](../../../../packages/server/src/commands/options.ts), [`packages/server/src/config.ts`](../../../../packages/server/src/config.ts), [`packages/server/src/commands/run.ts`](../../../../packages/server/src/commands/run.ts) - the `unownedAutomations` key and flag, handed to the host.
 - [`docs/server/REFERENCE.md`](../../../../docs/server/REFERENCE.md) - an `## Automations` section: the events, the rule, the presets, pinned, the overlap modes, the placeholders and the limits.
 - [`docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) - `registerTriggerType` and `fireTrigger` under what a plugin can register.

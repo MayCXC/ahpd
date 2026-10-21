@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions.ts#L236-L241) - the write to lift"
-  - "[code://packages/sdk/src/policies.ts#L273-L291](../../../../packages/sdk/src/policies.ts#L273-L291) - the read's four outcomes"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions/sessions.ts#L236-L241) - the write to lift"
+  - "[code://packages/sdk/src/access/policies.ts#L273-L291](../../../../packages/sdk/src/access/policies.ts#L273-L291) - the read's four outcomes"
   - "[code://packages/server/src/vault.ts#L31-L48](../../../../packages/server/src/vault.ts#L31-L48) - a caller that may use only the errno code"
   - "[code://packages/server/src/daemon.ts#L125](../../../../packages/server/src/daemon.ts#L125) - the temp name the sweeper reads"
   - "[code://packages/sdk/src/index.ts](../../../../packages/sdk/src/index.ts) - where the helper is exported"
@@ -13,11 +13,11 @@ refs:
 
 ## Objective
 
-`packages/sdk/src/jsonfile.ts` exports `readJson`, `readJsonObject` and `writeJsonAtomic` from `@ahpd/sdk`, and nothing calls them yet.
+`packages/sdk/src/utils/jsonfile.ts` exports `readJson`, `readJsonObject` and `writeJsonAtomic` from `@ahpd/sdk`, and nothing calls them yet.
 
 ## Files
 
-- `CREATE: packages/sdk/src/jsonfile.ts` - the three functions and the `JsonRead` type.
+- `CREATE: packages/sdk/src/utils/jsonfile.ts` - the three functions and the `JsonRead` type.
 - `CREATE: packages/sdk/test/jsonfile.test.ts` - the helper's cases.
 - `UPDATE: packages/sdk/src/index.ts` - the exports.
 
@@ -37,7 +37,7 @@ refs:
 
 Implemented 2026-10-09 in the `build/agents/61968c74` worktree, test-first.
 
-- `packages/sdk/src/jsonfile.ts` exports `JsonRead`, `JsonObjectRead`, `readJson`, `readJsonObject`, `JsonWriteOptions` and `writeJsonAtomic`; `packages/sdk/src/index.ts` exports the three functions and the three types, each on its own line, so host 59's exports land beside them.
+- `packages/sdk/src/utils/jsonfile.ts` exports `JsonRead`, `JsonObjectRead`, `readJson`, `readJsonObject`, `JsonWriteOptions` and `writeJsonAtomic`; `packages/sdk/src/index.ts` exports the three functions and the three types, each on its own line, so host 59's exports land beside them.
 - `packages/sdk/test/jsonfile.test.ts`, 15 cases: the five outcomes (a value that is an object and one that is a list, `missing`, a directory as `unreadable` with `EISDIR`, `nope` and an empty file as `not-json`), the object reader refusing `[]`, `null` and three leaves, the write's two-space body with a trailing newline and no scratch behind, `0o600` by default, `0o644` where a caller names it, the folder made first and at a `dirMode`, and the pid form proved by putting a directory at the temp's own name.
 - Step 3 does not name the `rmSync` the writer makes before it writes. It is there because `mode` is applied when a file is created and not when one is opened: a temp left at 0644 by an earlier process that held this pid would keep it, and the rename would put that on the file. `is owner-only even when a readable temp at its own name was left behind` pins it.
 - Nothing calls the helper yet, as the objective says.

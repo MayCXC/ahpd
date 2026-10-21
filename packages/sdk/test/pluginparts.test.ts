@@ -2,8 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
 import { expect, it } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
-import { partsOf, rulesOf } from '../src/pluginparts.js';
+import { uriOf } from '../src/resources/fileuri.js';
+import { partsOf, rulesOf } from '../src/plugins/pluginparts.js';
 
 /*
  * What a plugin holds, read off a copy of it.

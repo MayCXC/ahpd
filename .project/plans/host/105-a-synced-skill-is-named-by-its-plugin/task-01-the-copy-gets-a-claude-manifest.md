@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/clientplugins.ts#L153-L199](../../../../packages/sdk/src/clientplugins.ts#L153-L199) - `sync`"
-  - "[code://packages/sdk/src/pluginparts.ts#L44-L52](../../../../packages/sdk/src/pluginparts.ts#L44-L52) - the two manifests"
+  - "[code://packages/sdk/src/plugins/clientplugins.ts#L153-L199](../../../../packages/sdk/src/plugins/clientplugins.ts#L153-L199) - `sync`"
+  - "[code://packages/sdk/src/plugins/pluginparts.ts#L44-L52](../../../../packages/sdk/src/plugins/pluginparts.ts#L44-L52) - the two manifests"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ Its `name` is the Open Plugins name in kebab case, and its `description` is the 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/clientplugins.ts:180-186` - after the copy and before the rename, write the Claude manifest.
+- `UPDATE: packages/sdk/src/plugins/clientplugins.ts:180-186` - after the copy and before the rename, write the Claude manifest.
 - `UPDATE: packages/sdk/test` - the test of the client plugin copy holds the two cases.
 
 ## Steps
@@ -37,7 +37,7 @@ Its `name` is the Open Plugins name in kebab case, and its `description` is the 
 
 ## Resume
 
-- **Done so far:** built 2026-10-16. `claudeManifestIn` in `packages/sdk/src/clientplugins.ts` runs on the building directory, between the copy and the rename into place. A copy that brought `.plugin/plugin.json` and no `.claude-plugin/plugin.json` gets the second written from the first: its `name` in kebab case by `kebab`, which is lower case with a dash for each run of anything else, and the `description` it wrote carried over beside it. A copy that brought a Claude manifest is left exactly as it is, and one that brought no manifest gets none. Three tests in `packages/sdk/test/clientplugins.test.ts`: the bundle of `VS Code Synced Data` gets `vs-code-synced-data` with its description, a copy with its own `{"name":"mine"}` keeps it, and a copy with no manifest gets no `.claude-plugin` at all.
+- **Done so far:** built 2026-10-16. `claudeManifestIn` in `packages/sdk/src/plugins/clientplugins.ts` runs on the building directory, between the copy and the rename into place. A copy that brought `.plugin/plugin.json` and no `.claude-plugin/plugin.json` gets the second written from the first: its `name` in kebab case by `kebab`, which is lower case with a dash for each run of anything else, and the `description` it wrote carried over beside it. A copy that brought a Claude manifest is left exactly as it is, and one that brought no manifest gets none. Three tests in `packages/sdk/test/clientplugins.test.ts`: the bundle of `VS Code Synced Data` gets `vs-code-synced-data` with its description, a copy with its own `{"name":"mine"}` keeps it, and a copy with no manifest gets no `.claude-plugin` at all.
 - **Next action:** build task 02.
 - **Open questions:** none.
 - **Watch out for:**

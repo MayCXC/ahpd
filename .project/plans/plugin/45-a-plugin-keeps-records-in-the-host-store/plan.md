@@ -27,7 +27,7 @@ The bot plugin keeps its bots in the record store, and it never reads or writes 
 ### Searches performed
 
 - `rg -n "configDir" packages/*/src` - the bot and computer plugins write their own files under `configDir`.
-- `rg -n "registerVault|recordUsage" packages/sdk/src/plugins.ts` - a port that a plugin reads is resolved when it is called, not at load.
+- `rg -n "registerVault|recordUsage" packages/sdk/src/plugins/plugins.ts` - a port that a plugin reads is resolved when it is called, not at load.
 - `rg -n "store\.(all|get|gone|put|remove)" packages/bot/src/provider.ts` - ten calls, each synchronous today.
 
 ### Runtime path

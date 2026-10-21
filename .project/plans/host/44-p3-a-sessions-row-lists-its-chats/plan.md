@@ -59,7 +59,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 - **Data flow** - a chat moves -> `session/chatUpdated` -> `summaryMoved` -> `root/sessionSummaryChanged` with `chats` from `chatCatalogOf(session)`; `chat/isReadChanged` -> session store chat flags -> the action on the chat channel, `session/chatUpdated` with the new `status`, `summaryMoved`.
 - **Layer responsibilities** - sdk host: the catalogue and the dispatch · sdk session store: per-chat flags.
-- **Source-of-truth files** - [`code://packages/sdk/src/host/catalogue.ts`](../../../../packages/sdk/src/host/catalogue.ts), [`code://packages/sdk/src/host/snapshots.ts`](../../../../packages/sdk/src/host/snapshots.ts), [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts), [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/host/catalogue.ts`](../../../../packages/sdk/src/host/catalogue.ts), [`code://packages/sdk/src/host/snapshots.ts`](../../../../packages/sdk/src/host/snapshots.ts), [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts), [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 
@@ -85,7 +85,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - **Open questions:** none.
 - **Watch out for:** `IsRead` and `IsArchived` are orthogonal to the activity bits; a chat's status is its activity bits from the backend OR its flags, never the session's flags.
 - **Files the plan's lists did not name:** `packages/sdk/src/types/catalog.ts` (task 01's row fields).
-- `packages/sdk/src/validate.ts` and `packages/sdk/test/plugin-validate.test.ts` (task 02's store members).
+- `packages/sdk/src/plugins/validate.ts` and `packages/sdk/test/plugin-validate.test.ts` (task 02's store members).
 - `packages/sdk/test/ahp-test-cases.test.ts` (task 02, whose refusal lists name these two actions).
 - `README.md` (task 02, whose coverage line carries the same state-action total as `docs/sdk/AHP.md`).
 - Each is written up in its task's Resume.

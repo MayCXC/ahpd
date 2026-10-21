@@ -7,7 +7,7 @@ refs:
   - "[code://packages/computer/package.json](../../../../packages/computer/package.json) - the plugin manifest to copy"
   - "[code://packages/computer/src/plugin.ts#L1053](../../../../packages/computer/src/plugin.ts#L1053) - where a plugin registers its scheme"
   - "[code://packages/computer/src/provider.ts#L85-L92](../../../../packages/computer/src/provider.ts#L85-L92) - the provider shape"
-  - "[code://packages/sdk/src/policies.ts#L277](../../../../packages/sdk/src/policies.ts#L277) - a JSON file store"
+  - "[code://packages/sdk/src/access/policies.ts#L277](../../../../packages/sdk/src/access/policies.ts#L277) - a JSON file store"
   - "[code://packages/sdk/src/types/resources.ts#L226-L245](../../../../packages/sdk/src/types/resources.ts#L226-L245) - `SchemeDescription` and its `manifest`"
 ---
 

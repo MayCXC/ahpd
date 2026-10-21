@@ -4,10 +4,10 @@ status: done
 depends: [task-01-ahp-git-reads-any-form.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L242-L255](../../../../packages/sdk/src/changes.ts#L242-L255) - `kept` and `capturedUri`"
-  - "[code://packages/sdk/src/changes.ts#L310-L320](../../../../packages/sdk/src/changes.ts#L310-L320) - `rowsOf`"
-  - "[code://packages/sdk/src/changes.ts#L733](../../../../packages/sdk/src/changes.ts#L733) - a captured side kept"
-  - "[code://packages/sdk/src/changes.ts#L759-L779](../../../../packages/sdk/src/changes.ts#L759-L779) - `read`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L242-L255](../../../../packages/sdk/src/sessions/changes.ts#L242-L255) - `kept` and `capturedUri`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L310-L320](../../../../packages/sdk/src/sessions/changes.ts#L310-L320) - `rowsOf`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L733](../../../../packages/sdk/src/sessions/changes.ts#L733) - a captured side kept"
+  - "[code://packages/sdk/src/sessions/changes.ts#L759-L779](../../../../packages/sdk/src/sessions/changes.ts#L759-L779) - `read`"
 ---
 
 ## Objective
@@ -16,9 +16,9 @@ A turn's captured sides resolve after VS Code has lowercased and decoded the URI
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:242-255` - `kept` is keyed by the parsed parts; `capturedUri` mints `ahp-edit://turn/...`.
-- `UPDATE: packages/sdk/src/changes.ts:310-320,733` - sides are kept by their parts.
-- `UPDATE: packages/sdk/src/changes.ts:759-779` - the `ahp-edit:` half of `read` parses the URI.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:242-255` - `kept` is keyed by the parsed parts; `capturedUri` mints `ahp-edit://turn/...`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:310-320,733` - sides are kept by their parts.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:759-779` - the `ahp-edit:` half of `read` parses the URI.
 - `UPDATE: packages/sdk/test/changes-uris.test.ts` - the cases below.
 
 ## Steps

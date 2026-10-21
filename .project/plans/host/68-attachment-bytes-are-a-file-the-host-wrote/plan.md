@@ -19,8 +19,8 @@ refs:
   - "[code://packages/sdk/src/types/session.ts#L368](../../../../packages/sdk/src/types/session.ts#L368) - `steer(id, text, attachments?)`"
   - "[code://packages/sdk/src/types/session.ts#L377-L384](../../../../packages/sdk/src/types/session.ts#L377-L384) - `begin(..., attachments?)` and its doc comment"
   - "[code://packages/sdk/src/types/session.ts#L413-L420](../../../../packages/sdk/src/types/session.ts#L413-L420) - `queue(id, text, model?, from?, attachments?)`"
-  - "[code://packages/sdk/src/sessions.ts#L213-L215](../../../../packages/sdk/src/sessions.ts#L213-L215) - `fileSessions`, whose `dir` the attachments folder sits under"
-  - "[code://packages/sdk/src/resources.ts#L208-L216](../../../../packages/sdk/src/resources.ts#L208-L216) - `read`, whole file, no cap: the helper must not use it for attachments"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L213-L215](../../../../packages/sdk/src/sessions/sessions.ts#L213-L215) - `fileSessions`, whose `dir` the attachments folder sits under"
+  - "[code://packages/sdk/src/resources/resources.ts#L208-L216](../../../../packages/sdk/src/resources/resources.ts#L208-L216) - `read`, whole file, no cap: the helper must not use it for attachments"
   - "[code://packages/agent-acp/src/session/turn.ts#L284-L321](../../../../packages/agent-acp/src/session/turn.ts#L284-L321) - `blocksFor`, the one backend mapping today"
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/agentService.ts#L7548-L7600 - VS Code's host rewrite
   - https://github.com/microsoft/vscode/blob/7516b04bc94/src/vs/platform/agentHost/node/claude/claudePromptResolver.ts - VS Code's reference block wording, selection suffix and read-only note
@@ -81,7 +81,7 @@ chat/turnStarted | chat/pendingMessageSet with message.attachments
 - **The folder** - `SessionStore.attachmentsDir?(id)` is the one place that knows it. `fileSessions` answers `<its dir>/attachments/<name>` and removes it in `forget`. The name is the id escaped, so that no id names a folder rather than one under the root. The folder is answered only when it lies strictly inside `<dir>/attachments`. One that does not is a line in the log and nothing written or removed. A store that keeps nothing answers nothing. A session running in a machine is handed the files a message names.
 The host asks the port to put them into that machine at the same path, after they are written and before the action is applied.
 It asks for the folder back out when the session is removed.
-- **Data flow** - `sdk/src/host/attachments.ts` (new): `snapshot(session, action, connection)` writes and rewrites; `sdk/src/attachments.ts` (new, exported): `partsOf(text, attachments, { images: boolean })` returns `Part[]`, where `Part` is `{ type: 'text', text }` or `{ type: 'image', mimeType, data }`, text first.
+- **Data flow** - `sdk/src/host/attachments.ts` (new): `snapshot(session, action, connection)` writes and rewrites; `sdk/src/resources/attachments.ts` (new, exported): `partsOf(text, attachments, { images: boolean })` returns `Part[]`, where `Part` is `{ type: 'text', text }` or `{ type: 'image', mimeType, data }`, text first.
 - **State flow** - the rewritten action is what is applied, stored and echoed; nothing else holds the bytes.
 - **Layer responsibilities** - `sdk` host: the folder, the rewrite, the `Session` contract · `sdk` library: `partsOf` and its limits · each backend: its own block.
 - **Source-of-truth files** - [`code://packages/sdk/src/types/session.ts`](../../../../packages/sdk/src/types/session.ts), [`code://packages/sdk/src/host/chatactions.ts`](../../../../packages/sdk/src/host/chatactions.ts)

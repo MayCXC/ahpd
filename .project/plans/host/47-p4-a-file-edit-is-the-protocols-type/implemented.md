@@ -3,7 +3,7 @@ title: A file edit is the protocol's type, and a Claude write confirmation previ
 date: 2026-10-09
 refs:
   - "[code://packages/sdk/src/types/changes.ts](../../../../packages/sdk/src/types/changes.ts)"
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts)"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts)"
   - "[code://packages/agent-claude/src/input.ts](../../../../packages/agent-claude/src/input.ts)"
   - "[code://packages/agent-claude/src/session/asking.ts](../../../../packages/agent-claude/src/session/asking.ts)"
 ---
@@ -15,7 +15,7 @@ A client can draw the diff before the person answers.
 ## What was built
 
 - [`code://packages/sdk/src/types/changes.ts`](../../../../packages/sdk/src/types/changes.ts) - the local `ContentRef` and `FileEdit` are gone; the protocol's `ContentRef`, `FileEdit`, `FileEditSide` and `FileEditCollection` are re-exported. `ChangesetSource` gained `propose` and `settle`.
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `propose` reads the file, applies the tool's change and holds the result under `ahp-edit://pending/<session>/<call>/<path>`. `read` serves it, and `settle` drops it.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `propose` reads the file, applies the tool's change and holds the result under `ahp-edit://pending/<session>/<call>/<path>`. `read` serves it, and `settle` drops it.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `Start.onEditProposed` and `Start.onEditSettled` pass a session's calls to the changes source. A session with no folder gets no preview.
 - [`code://packages/agent-claude/src/input.ts`](../../../../packages/agent-claude/src/input.ts) - `writeOf` makes the text that `Write`, `Edit` and `MultiEdit` would leave. An edit that does not fit the file gives no preview.
 - [`code://packages/agent-claude/src/session/asking.ts`](../../../../packages/agent-claude/src/session/asking.ts) - `canUseTool` asks for the preview before the question goes out and puts `edits` on the call and on the ready action. `settleEdits` drops the preview on the answer. `turns.ts`, `query.ts` and `session.ts` drop every preview when a turn stops, a turn ends or the session closes.

@@ -3,7 +3,7 @@ title: A session keeps its working folder, and the backends find it there after 
 date: 2026-10-15
 refs:
   - git://54db6c7e
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts)"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts)"
   - "[code://packages/agent-claude/src/catalog.ts](../../../../packages/agent-claude/src/catalog.ts)"
   - "[code://packages/agent-pi/src/catalog.ts](../../../../packages/agent-pi/src/catalog.ts)"
 ---
@@ -14,7 +14,7 @@ Examples are a bot's session under `~/.bots`, a session in a subfolder of a path
 
 ## What was built
 
-- [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts) - `Row` and `Saved` keep `workingDirectory`, and the store reads and writes it.
+- [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts) - `Row` and `Saved` keep `workingDirectory`, and the store reads and writes it.
 - [`code://packages/sdk/src/types/agent.ts`](../../../../packages/sdk/src/types/agent.ts) - `SessionAt`, the optional last argument `at` of `find`, `transcript` and `subagents`.
 - [`code://packages/sdk/src/host/history.ts`](../../../../packages/sdk/src/host/history.ts) - `sessionAt(id)` reads the record, and `findOf`, `past` and `restoredSubagents` pass it.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - `keepFolder` records the folder of a started session.

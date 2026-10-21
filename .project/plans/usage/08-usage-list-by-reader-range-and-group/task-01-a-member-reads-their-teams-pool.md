@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/scopes.ts#L95-L131](../../../../packages/sdk/src/scopes.ts#L95-L131) - `namesOf` and `poolsFor`"
-  - "[code://packages/sdk/src/usage.ts#L520-L540](../../../../packages/sdk/src/usage.ts#L520-L540) - `refused` and `notYours`"
+  - "[code://packages/sdk/src/usage/scopes.ts#L95-L131](../../../../packages/sdk/src/usage/scopes.ts#L95-L131) - `namesOf` and `poolsFor`"
+  - "[code://packages/sdk/src/usage/usage.ts#L520-L540](../../../../packages/sdk/src/usage/usage.ts#L520-L540) - `refused` and `notYours`"
 ---
 
 ## Objective
@@ -14,8 +14,8 @@ A person reads `team:<team>` when they hold `team`, `team:*` or `team:<project>`
 
 ## Files
 
-- `UPDATE: packages/sdk/src/scopes.ts` - add `mayRead(principal, pool)`, and say in `poolsFor`'s comment that it is the pools a person names.
-- `UPDATE: packages/sdk/src/usage.ts:520-540` - `refused` asks `mayRead`.
+- `UPDATE: packages/sdk/src/usage/scopes.ts` - add `mayRead(principal, pool)`, and say in `poolsFor`'s comment that it is the pools a person names.
+- `UPDATE: packages/sdk/src/usage/usage.ts:520-540` - `refused` asks `mayRead`.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the cases below, or the test file that holds the usage scheme's read rule.
 
 ## Steps
@@ -32,9 +32,9 @@ A person reads `team:<team>` when they hold `team`, `team:*` or `team:<project>`
 
 ## Resume
 
-- `packages/sdk/src/scopes.ts`: added `mayRead(principal, pool)`, exported from `packages/sdk/src/index.ts`.
+- `packages/sdk/src/usage/scopes.ts`: added `mayRead(principal, pool)`, exported from `packages/sdk/src/index.ts`.
 - `mayRead` reads the own `user:` pool, `team:<team>` for any membership in that team, and `project:<team>:<project>` for `team:*` or `team:<project>`.
 - A bare `team` reads no project pool, and `root:` pools are never read through `mayRead`.
 - `poolsFor`'s comment now says it is the pools a person names.
-- `packages/sdk/src/usage.ts`: `refused` asks `mayRead`, so the `authorize` hook and `notYours` use it.
+- `packages/sdk/src/usage/usage.ts`: `refused` asks `mayRead`, so the `authorize` hook and `notYours` use it.
 - `packages/sdk/test/usage-scheme.test.ts`: a test for `backend:*`, `backend:ahpapp`, a bare `backend` and a `usage:read` reader.

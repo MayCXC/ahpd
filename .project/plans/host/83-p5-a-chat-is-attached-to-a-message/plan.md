@@ -10,7 +10,7 @@ requires:
 refs:
   - "[code://packages/sdk/src/host/sessionmethods.ts#L443-L496](../../../../packages/sdk/src/host/sessionmethods.ts#L443-L496) - the completions command; `#chat:` answers no items today"
   - "[code://packages/sdk/src/host/lifecycle.ts#L1179-L1183](../../../../packages/sdk/src/host/lifecycle.ts#L1179-L1183) - `messageAttachments`, which every way a message reaches a backend goes through"
-  - "[code://packages/sdk/src/attachments.ts#L100-L135](../../../../packages/sdk/src/attachments.ts#L100-L135) - `partsOf`; a `simple` attachment reaches the model as its `modelRepresentation`, and a `chat` only as a reference line"
+  - "[code://packages/sdk/src/resources/attachments.ts#L100-L135](../../../../packages/sdk/src/resources/attachments.ts#L100-L135) - `partsOf`; a `simple` attachment reaches the model as its `modelRepresentation`, and a `chat` only as a reference line"
   - "[code://packages/sdk/src/tools/session.ts#L29](../../../../packages/sdk/src/tools/session.ts#L29) - `openLink`, the link `get_session_context` reads"
   - "[code://packages/sdk/src/host/catalogue.ts#L338-L344](../../../../packages/sdk/src/host/catalogue.ts#L338-L344) - a chat's `title`, `origin` and `interactivity`"
   - "git://32bbe1b8cba - VS Code `src/vs/platform/agentHost/node/agentHostChatCompletionProvider.ts`: `extractChatToken`, `sanitizeChatTitle`, the filter at :133-158"

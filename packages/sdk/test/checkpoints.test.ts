@@ -4,9 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BASELINE_TURN } from '../src/types/changes.js';
-import { baselineOf, captureBaseline, captureTurn, latestOf, removeAll } from '../src/checkpoints.js';
-import { gitChanges } from '../src/changes.js';
-import { uriOf } from '../src/fileuri.js';
+import { baselineOf, captureBaseline, captureTurn, latestOf, removeAll } from '../src/sessions/checkpoints.js';
+import { gitChanges } from '../src/sessions/changes.js';
+import { uriOf } from '../src/resources/fileuri.js';
 
 /*
  * What a turn leaves behind in the folder it ran in.

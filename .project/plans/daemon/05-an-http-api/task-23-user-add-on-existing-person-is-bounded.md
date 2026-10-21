@@ -6,8 +6,8 @@ layer: "server, sdk"
 refs:
   - "[code://packages/server/src/commands/user.ts#L34-L41](../../../../packages/server/src/commands/user.ts#L34-L41) - `bounded`, which passes a caller with no actor"
   - "[code://packages/server/src/commands/user.ts#L119-L145](../../../../packages/server/src/commands/user.ts#L119-L145) - `user add`, which checks only the roles being given"
-  - "[code://packages/sdk/src/users.ts#L317-L335](../../../../packages/sdk/src/users.ts#L317-L335) - `grantsOf`, whose `BUILT_IN[role]` lookup answers for `constructor`"
-  - "[code://packages/sdk/src/users.ts#L494-L516](../../../../packages/sdk/src/users.ts#L494-L516) - `add`, which replaces an existing person's roles"
+  - "[code://packages/sdk/src/access/users.ts#L317-L335](../../../../packages/sdk/src/access/users.ts#L317-L335) - `grantsOf`, whose `BUILT_IN[role]` lookup answers for `constructor`"
+  - "[code://packages/sdk/src/access/users.ts#L494-L516](../../../../packages/sdk/src/access/users.ts#L494-L516) - `add`, which replaces an existing person's roles"
 ---
 
 ## Objective
@@ -18,7 +18,7 @@ A `users:write` caller cannot re-add a person whose current roles hold a grant t
 
 - `UPDATE: packages/server/src/commands/user.ts:34-41` - `bounded` runs its check on every surface but `cli`.
 - `UPDATE: packages/server/src/commands/user.ts:119-145` - `user add` bounds the person's current grants too.
-- `UPDATE: packages/sdk/src/users.ts:317-335,494-516` - own-key lookups.
+- `UPDATE: packages/sdk/src/access/users.ts:317-335,494-516` - own-key lookups.
 - `UPDATE: packages/server/test/server-http.test.ts`, `packages/sdk/test/users.test.ts` - the cases below.
 - `UPDATE: docs/sdk/USERS.md` - the `users` row says a role an issuer grants at sign-in is not in the file, so `user rm` does not see it.
 

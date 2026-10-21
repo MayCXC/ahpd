@@ -7,7 +7,7 @@ refs:
   - "[file:///github/externals/agent-host-protocol/types/common/errors.ts#L41-L90](file:///github/externals/agent-host-protocol/types/common/errors.ts#L41-L90) - `-32008` NotFound and `-32009` PermissionDenied, in the protocol's own words"
   - "[file:///github/externals/agent-host-protocol/types/channels-session/state.ts#L1252-L1257](file:///github/externals/agent-host-protocol/types/channels-session/state.ts#L1252-L1257) - the `Customization` union, which is closed"
   - "[code://packages/sdk/src/host.ts#L4779](../../packages/sdk/src/host.ts#L4779) - where ahpd advertises `automations` only when it holds the store"
-  - "[code://packages/sdk/src/resources.ts#L52-L58](../../packages/sdk/src/resources.ts#L52-L58) - `why`, the file store's answer for a URI another scheme was meant to serve"
+  - "[code://packages/sdk/src/resources/resources.ts#L52-L58](../../packages/sdk/src/resources/resources.ts#L52-L58) - `why`, the file store's answer for a URI another scheme was meant to serve"
   - "[code://packages/sdk/src/host.ts#L4604-L4608](../../packages/sdk/src/host.ts#L4604-L4608) - `storeFor`, which falls back to the file store for an unknown scheme"
   - "[file:///github/externals/vscode/src/vs/sessions/services/sessions/common/session.ts#L294-L302](file:///github/externals/vscode/src/vs/sessions/services/sessions/common/session.ts#L294-L302) - `SessionCustomizationKind`, a seven-value closed enum"
   - "[file:///github/externals/vscode/src/vs/sessions/contrib/chat/browser/sessionCustomizations.ts#L46-L54](file:///github/externals/vscode/src/vs/sessions/contrib/chat/browser/sessionCustomizations.ts#L46-L54) - the fixed section order"

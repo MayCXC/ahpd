@@ -13,11 +13,11 @@ refs:
   - "[code://packages/sdk/src/types/plugin.ts#L31-L44](../../../../packages/sdk/src/types/plugin.ts#L31-L44) - `PortKey`"
   - "[code://packages/sdk/src/types/plugin.ts#L152-L168](../../../../packages/sdk/src/types/plugin.ts#L152-L168) - `recordUsage`, a host call resolved when it is made, which `secret` mirrors"
   - "[code://packages/sdk/src/types/plugin.ts#L233-L240](../../../../packages/sdk/src/types/plugin.ts#L233-L240) - `registerUsage`, which `registerVault` mirrors"
-  - "[code://packages/sdk/src/plugins.ts#L30-L42](../../../../packages/sdk/src/plugins.ts#L30-L42) - `PORT_KEYS` and the check that it is the whole union"
-  - "[code://packages/sdk/src/plugins.ts#L264-L272](../../../../packages/sdk/src/plugins.ts#L264-L272) - `usage?: () => Usage | undefined`, the live port a plugin host reads"
-  - "[code://packages/sdk/src/plugins.ts#L335-L339](../../../../packages/sdk/src/plugins.ts#L335-L339) - `recordUsage` implemented over it"
-  - "[code://packages/sdk/src/plugins.ts#L395](../../../../packages/sdk/src/plugins.ts#L395) - `registerUsage` implemented through `setPort`"
-  - "[code://packages/sdk/src/validate.ts#L126-L168](../../../../packages/sdk/src/validate.ts#L126-L168) - `PORT_MEMBERS` and `PORT_METHOD`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L30-L42](../../../../packages/sdk/src/plugins/plugins.ts#L30-L42) - `PORT_KEYS` and the check that it is the whole union"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L264-L272](../../../../packages/sdk/src/plugins/plugins.ts#L264-L272) - `usage?: () => Usage | undefined`, the live port a plugin host reads"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L335-L339](../../../../packages/sdk/src/plugins/plugins.ts#L335-L339) - `recordUsage` implemented over it"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L395](../../../../packages/sdk/src/plugins/plugins.ts#L395) - `registerUsage` implemented through `setPort`"
+  - "[code://packages/sdk/src/plugins/validate.ts#L126-L168](../../../../packages/sdk/src/plugins/validate.ts#L126-L168) - `PORT_MEMBERS` and `PORT_METHOD`"
   - "[code://packages/sdk/src/types/host.ts#L210-L216](../../../../packages/sdk/src/types/host.ts#L210-L216) - `HostOptions.usage`, the shape `HostOptions.vault` copies"
   - "[code://packages/server/src/plugins.ts#L320-L371](../../../../packages/server/src/plugins.ts#L320-L371) - `LoadOneOptions`, where `usage` is handed down"
   - "[code://packages/server/src/plugins.ts#L515-L533](../../../../packages/server/src/plugins.ts#L515-L533) - a plugin's options merged and checked before `apply`"
@@ -32,7 +32,7 @@ refs:
   - "[code://packages/server/src/rootconfig.ts#L210-L230](../../../../packages/server/src/rootconfig.ts#L210-L230) - a root config write checks each option against its schema"
   - "[code://packages/server/src/commands/plugin.ts#L253-L266](../../../../packages/server/src/commands/plugin.ts#L253-L266) - `plugin option` checks a value against its schema"
   - "[code://packages/agent-claude/src/options.ts#L100-L116](../../../../packages/agent-claude/src/options.ts#L100-L116) - `fromEnv: true`, a schema keyword a plugin sets on its own option"
-  - "[code://packages/sdk/src/users.ts#L40-L54](../../../../packages/sdk/src/users.ts#L40-L54) - `SUBJECTS`, the grant subjects"
+  - "[code://packages/sdk/src/access/users.ts#L40-L54](../../../../packages/sdk/src/access/users.ts#L40-L54) - `SUBJECTS`, the grant subjects"
   - "[code://packages/sdk/src/types/users.ts#L40-L81](../../../../packages/sdk/src/types/users.ts#L40-L81) - `Principal`: `id`, `can` and `memberships`"
   - "[code://packages/server/test/usage-port.test.ts](../../../../packages/server/test/usage-port.test.ts) - the daemon's store and a plugin's replacement, run as a process"
 ---
@@ -100,7 +100,7 @@ GET /api/config -> walk: a { "$secret" } value is answered as written
 - **Data flow** - `fileVault` reads `vault.json` on every call; `readSecret(vault, name, work)` in the sdk applies the scope rule; the loader and `PluginHost.secret` both go through it.
 - **State flow** - `vault.json` (mode 0600, temp file and rename) holds `{ "version": 1, "secrets": { name: value } }` in plain JSON; the daemon holds nothing of it in memory between calls.
 - **Layer responsibilities** - `packages/sdk`: `Vault`, the port, `secretRef`, `scopeOf`, `readSecret`, `PluginHost.secret` · `packages/server`: `fileVault`, `vaultPath`, the daemon's wiring, the loader, `ahpd vault`, the mask.
-- **Source-of-truth files** - `CREATE: packages/sdk/src/types/vault.ts`, `CREATE: packages/sdk/src/vault.ts`, `CREATE: packages/server/src/vault.ts`, `CREATE: packages/server/src/commands/vault.ts`
+- **Source-of-truth files** - `CREATE: packages/sdk/src/types/vault.ts`, `CREATE: packages/sdk/src/access/vault.ts`, `CREATE: packages/server/src/vault.ts`, `CREATE: packages/server/src/commands/vault.ts`
 
 ## Tasks
 

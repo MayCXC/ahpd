@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { gitChanges } from '../src/changes.js';
+import { gitChanges } from '../src/sessions/changes.js';
 
 /*
  * The git that `gitChanges` runs in the background takes no optional lock.

@@ -5,10 +5,10 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { rm } from 'node:fs/promises';
 import { afterEach, describe, expect, it } from 'vitest';
-import { memoryAutomations } from '../src/automations.js';
-import { gitChanges } from '../src/changes.js';
+import { memoryAutomations } from '../src/automations/automations.js';
+import { gitChanges } from '../src/sessions/changes.js';
 import { createHost } from '../src/host.js';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { echo } from '../../../examples/echo/agent.js';
 
 /*

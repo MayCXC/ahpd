@@ -4,9 +4,9 @@ status: done
 depends: [task-01-a-restart-waits-for-the-old-inner-host.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L772-L803](../../../../packages/sdk/src/nested.ts#L772-L803) - the session made inside, and the resume whose refusal is answered with one"
-  - "[code://packages/sdk/src/nested.ts#L84](../../../../packages/sdk/src/nested.ts#L84) - `NO_AGENT`, the code the inner host refuses an unheld session with"
-  - "[code://packages/sdk/src/nested.ts#L847](../../../../packages/sdk/src/nested.ts#L847) - `agentId: () => sessionId`, which is set from the first breath"
+  - "[code://packages/sdk/src/sessions/nested.ts#L772-L803](../../../../packages/sdk/src/sessions/nested.ts#L772-L803) - the session made inside, and the resume whose refusal is answered with one"
+  - "[code://packages/sdk/src/sessions/nested.ts#L84](../../../../packages/sdk/src/sessions/nested.ts#L84) - `NO_AGENT`, the code the inner host refuses an unheld session with"
+  - "[code://packages/sdk/src/sessions/nested.ts#L847](../../../../packages/sdk/src/sessions/nested.ts#L847) - `agentId: () => sessionId`, which is set from the first breath"
   - "[code://packages/sdk/src/host/lifecycle.ts#L435-L437](../../../../packages/sdk/src/host/lifecycle.ts#L435-L437) - a restart resumes whenever `agentId()` is set"
   - "[code://packages/sdk/test/nested-process.test.ts](../../../../packages/sdk/test/nested-process.test.ts) - the new case, and the one from container/04 whose sentence this replaces"
 ---
@@ -17,8 +17,8 @@ A nested session the inner host does not hold is created there, whether or not t
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:772-803` - the create moved into `make`, called when there is no resume and again when a resume is refused with `NO_AGENT`; today `agentId()` is the session id from the start, so adding a directory before the first turn restarts with `resume` set, `createSession` is skipped, and an inner host that never persisted the session refuses with "holds no session to resume".
-- `UPDATE: packages/sdk/src/nested.ts:84` - `NO_AGENT`, the protocol's `No agent for session` code, named once.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:772-803` - the create moved into `make`, called when there is no resume and again when a resume is refused with `NO_AGENT`; today `agentId()` is the session id from the start, so adding a directory before the first turn restarts with `resume` set, `createSession` is skipped, and an inner host that never persisted the session refuses with "holds no session to resume".
+- `UPDATE: packages/sdk/src/sessions/nested.ts:84` - `NO_AGENT`, the protocol's `No agent for session` code, named once.
 - `UPDATE: packages/sdk/test/nested-process.test.ts` - the case below, and the container/04 case that asserted the refusal.
 
 ## Steps

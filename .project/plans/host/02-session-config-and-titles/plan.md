@@ -25,9 +25,9 @@ refs:
   - code://packages/sdk/src/host.ts#L2231-L2244 - the in-memory chats map and `held.chats.set`, where a chat is created
   - code://packages/sdk/src/host.ts#L3198-L3214 - `renameChat`, which sets the title and dispatches it
   - code://packages/sdk/src/host.ts#L3302-L3308 - the tool context's `rename` and `setArtifacts`
-  - code://packages/sdk/src/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
-  - code://packages/sdk/src/sessions.ts#L45-L49 - `Saved`, the persisted shape
-  - code://packages/sdk/src/sessions.ts#L118-L153 - the load and the store a restart reads
+  - code://packages/sdk/src/sessions/sessions.ts#L16-L29 - `memorySessions`, the slots a store holds
+  - code://packages/sdk/src/sessions/sessions.ts#L45-L49 - `Saved`, the persisted shape
+  - code://packages/sdk/src/sessions/sessions.ts#L118-L153 - the load and the store a restart reads
   - code://packages/sdk/src/types/sessions.ts#L27-L57 - `SessionStore`, the port
   - code://test/host.test.ts#L2872-L2902 - the title cases on the wire
   - code://test/host.test.ts#L4440-L4461 - the `rename_chat` tool cases
@@ -61,7 +61,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `rg -n "deferredTitleGeneration|strategy|utility" packages/sdk/src` - nothing; a title comes from the catalogue or a client.
 - `rg -n "rename_chat" packages/sdk/src` - one definition and one `automatic` property, with no per-session variation.
 - `rg -n "chatUpdated|setTitle" packages/sdk/src/host.ts` - `renameChat` calls `found.setTitle` and dispatches; `chats` is a `Map`.
-- `rg -n "artifacts\\(|setArtifacts\\(" packages/sdk/src/sessions.ts` - the slot pattern a kept title follows.
+- `rg -n "artifacts\\(|setArtifacts\\(" packages/sdk/src/sessions/sessions.ts` - the slot pattern a kept title follows.
 
 ### Runtime path
 
@@ -79,7 +79,7 @@ client session/titleChanged | rename_chat -> renameChat -> chat.setTitle + dispa
 
 - `Not found: a per-session tool set - searched "toolDefinitions" and "getDefinitionForSession" in packages/sdk/src; contributing is one flat list reported to every session.` This is what the `rename_chat` gating needs.
 - `Not found: a title strategy - searched "strategy", "utility" and "deferred" in packages/sdk/src.`
-- `Not found: a title kept anywhere - searched "setTitle" and "title" in packages/sdk/src/sessions.ts; renameChat sets it on a chat in a Map and nothing writes it down.`
+- `Not found: a title kept anywhere - searched "setTitle" and "title" in packages/sdk/src/sessions/sessions.ts; renameChat sets it on a chat in a Map and nothing writes it down.`
 - `Not found: a compact artifact wording - searched "compact" in packages/; ARTIFACT_TOOLS_INSTRUCTION is the only one.`
 - No utility model exists in this host, so deferred generation here is the strategy and the tool gating, not a title generated from a utility model.
 
@@ -104,7 +104,7 @@ client session/titleChanged | rename_chat -> renameChat -> chat.setTitle + dispa
 - **Event flow** - a client pushes `root/configChanged`; the artifact wording is read where the instruction list is built and the tool set is shaped, and the title strategy is snapshotted into a map when a session opens, so a running turn is not handed a changed set.
 - **State flow** - a chat title lives in `chat.setTitle` and is mirrored into the session store by `renameChat`, which is the one path a client's `session/titleChanged` and the `rename_chat` tool both take. `spawn` applies a stored title as it creates the chat, before any client sees it.
 - **Layer responsibilities** - packages/sdk: the two keys and the per-session tool shapes in `host.ts`, the strategy map, the store slots in `sessions.ts` and `types/sessions.ts`, the two artifact wordings in `artifacttools.ts`, the gated `rename_chat` in `sessiontools.ts` · test/: the keys, the wording, the gating and the restart.
-- **Source-of-truth files** - `code://packages/sdk/src/host.ts`, `code://packages/sdk/src/sessions.ts`, `code://packages/sdk/src/artifacttools.ts`.
+- **Source-of-truth files** - `code://packages/sdk/src/host.ts`, `code://packages/sdk/src/sessions/sessions.ts`, `code://packages/sdk/src/artifacttools.ts`.
 
 ## Tasks
 

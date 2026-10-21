@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { createRuleEngine, durationMs, type RuleMatch } from '../src/triggers.js';
+import { createRuleEngine, durationMs, type RuleMatch } from '../src/automations/triggers.js';
 import type { SessionEvent, SessionEventKind, SessionRule, SessionTurn } from '../src/types/triggers.js';
 
 /*

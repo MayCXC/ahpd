@@ -4,8 +4,8 @@ status: done
 depends: [task-01-an-issuer-checks-a-jwt-against-its-keys.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/users.ts#L873-L919](../../../../packages/sdk/src/users.ts#L873-L919) - `verify`"
-  - "[code://packages/sdk/src/users.ts#L853](../../../../packages/sdk/src/users.ts#L853) - `rolesFromClaim`"
+  - "[code://packages/sdk/src/access/users.ts#L873-L919](../../../../packages/sdk/src/access/users.ts#L873-L919) - `verify`"
+  - "[code://packages/sdk/src/access/users.ts#L853](../../../../packages/sdk/src/access/users.ts#L853) - `rolesFromClaim`"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ A JWT from an unknown issuer is refused without a request, and every other token
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:873-919` - pick the issuer by `iss` for a JWT, before the ordered search.
+- `UPDATE: packages/sdk/src/access/users.ts:873-919` - pick the issuer by `iss` for a JWT, before the ordered search.
 - `UPDATE: packages/sdk/test/users-issuer.test.ts` - a JWT from each of two issuers, one from an unknown issuer, and an opaque token.
 
 ## Steps

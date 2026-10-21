@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
 import { readRecordFile } from '../../server/src/records.js';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { readAgents } from '../src/agents.js';
 import { botStore } from '../src/store.js';
 

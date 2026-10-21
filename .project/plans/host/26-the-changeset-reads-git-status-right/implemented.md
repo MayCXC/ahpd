@@ -3,14 +3,14 @@ title: "The session's changes read git's status right, from any folder - impleme
 date: 2026-09-29
 refs:
   - git://373253e
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts) - `look()` and `counted()`"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts) - `look()` and `counted()`"
 ---
 
 A working-tree rename is one row under its new name, a session in a subfolder of its repository lists only its own files under their real paths and can stage, unstage and read them, and a file ending in a newline is counted by its lines.
 
 ## What was built
 
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `look()` consumes a rename's source record, reads `git rev-parse --show-prefix` and keeps only rows under the session folder with their path from there; a `before` is read with `git show HEAD:./<path>`; `counted()` drops one final newline before splitting.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `look()` consumes a rename's source record, reads `git rev-parse --show-prefix` and keeps only rows under the session folder with their path from there; a `before` is read with `git show HEAD:./<path>`; `counted()` drops one final newline before splitting.
 
 ## Verified
 

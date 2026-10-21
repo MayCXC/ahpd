@@ -20,7 +20,7 @@ The plugin serves several runtimes at once, and a machine id says which runtime 
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - each runtime answers `remote`, `how`, `hostCommand`, `state`, `agents`, `owner` and `parts`. No caller reads Docker's `inspect` record for these.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - the `ssh` option with `pollSeconds`, the router in `made`, and the listing meter charged to `root:<host>`. It refuses a vault-named value for a machine off this host.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts) - a session nests when its backend runs nested or the port says the machine is `remote`.
-- [`code://packages/sdk/src/nested.ts`](../../../../packages/sdk/src/nested.ts) - a close with `stopping` leaves the inner session to resume. Only a session removal and a chat removal send `disposeSession`.
+- [`code://packages/sdk/src/sessions/nested.ts`](../../../../packages/sdk/src/sessions/nested.ts) - a close with `stopping` leaves the inner session to resume. Only a session removal and a chat removal send `disposeSession`.
 - Task 06's run fixed the box's folder URI and the trust of a folder inside a machine. It also fixed `--plugin` options and Windows console windows.
 - [`code://docs/plugins/COMPUTERS.md`](../../../../docs/plugins/COMPUTERS.md) - the "ssh machines" section: the option, the fields, the id, a policy glob and what the box needs.
 

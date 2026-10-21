@@ -17,8 +17,8 @@ Every process that ahpd starts sets `windowsHide: true`, so a Windows daemon ope
 - `UPDATE: packages/agent-claude/src/spawn.ts:154` - `windowsHide` on Claude's spawn.
 - `UPDATE: packages/computer/src/devcontainer.ts` - `windowsHide` at lines 465, 789, 804, 863 and 1114.
 - `UPDATE: packages/computer/src/runtime.ts` - `windowsHide` at lines 884, 2380 and 2417.
-- `UPDATE: packages/sdk/src/changes.ts:64-79` - `windowsHide` on both git calls.
-- `UPDATE: packages/sdk/src/checkpoints.ts:31` - `windowsHide` on the git call.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:64-79` - `windowsHide` on both git calls.
+- `UPDATE: packages/sdk/src/sessions/checkpoints.ts:31` - `windowsHide` on the git call.
 - `UPDATE: packages/sdk/src/repo/git.ts:39` - `windowsHide` on the git call.
 - `UPDATE: packages/sdk/src/repo/github.ts` - `windowsHide` at lines 65, 117 and 157.
 - `UPDATE: packages/sdk/src/repo/worktrees.ts:43` - `windowsHide` on the git call.
@@ -53,8 +53,8 @@ Files changed:
 - `packages/computer/src/gitdir.ts:444` - `windowsHide` on `seedOf`'s `spawnSync('git', ...)`.
 - `packages/computer/src/parts.ts:331` - `windowsHide` on `packOf`'s `spawnSync('pnpm', ...)`.
 - `packages/computer/src/runtime.ts` - `windowsHide` on both `spawn` calls and the `spawnSync('git', ...)` in `hostGit`.
-- `packages/sdk/src/changes.ts:64,79` - `windowsHide` on both git calls.
-- `packages/sdk/src/checkpoints.ts:31` - `windowsHide` on the git call.
+- `packages/sdk/src/sessions/changes.ts:64,79` - `windowsHide` on both git calls.
+- `packages/sdk/src/sessions/checkpoints.ts:31` - `windowsHide` on the git call.
 - `packages/sdk/src/repo/git.ts:39` - `windowsHide` on the git call.
 - `packages/sdk/src/repo/github.ts` - `windowsHide` on all three `gh` calls.
 - `packages/sdk/src/repo/worktrees.ts:43` - `windowsHide` on the git call.
@@ -65,6 +65,6 @@ Files changed:
 - `packages/server/src/service.ts:323` - `windowsHide` on the service's spawn.
 - `packages/tunnel-devtunnel/src/devtunnel.ts` - `windowsHide` on both `devtunnel` spawns.
 
-Past the Files section: step 3's search found three spawns the list does not name. They are the three above at `gitdir.ts:444`, `parts.ts:331` and `pty.ts:30`. They are in the change. `packages/computer/src/ssh.ts:180`, `packages/sdk/src/terminals.ts:37,420` and `packages/sdk/src/nested.ts:198` already set the option and are unchanged.
+Past the Files section: step 3's search found three spawns the list does not name. They are the three above at `gitdir.ts:444`, `parts.ts:331` and `pty.ts:30`. They are in the change. `packages/computer/src/ssh.ts:180`, `packages/sdk/src/machines/terminals.ts:37,420` and `packages/sdk/src/sessions/nested.ts:198` already set the option and are unchanged.
 
 The search in step 1 now answers every `spawn`, `spawnSync`, `execFile` and `execFileSync` call in `packages/*/src` with `windowsHide: true`. `fork` is not imported anywhere in `src`. Nothing Windows-only was run: this host is Linux, so the console window itself is for task 03's run or Softov's machine.

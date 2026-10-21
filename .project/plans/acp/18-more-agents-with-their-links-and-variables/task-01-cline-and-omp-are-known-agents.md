@@ -4,7 +4,7 @@ status: implemented
 depends: []
 layer: "sdk, agent-acp, docs"
 refs:
-  - "[code://packages/sdk/src/agents.ts#L69-L163](../../../../packages/sdk/src/agents.ts#L69-L163) - the rows, which get two more"
+  - "[code://packages/sdk/src/machines/agents.ts#L69-L163](../../../../packages/sdk/src/machines/agents.ts#L69-L163) - the rows, which get two more"
   - "[code://packages/agent-acp/src/presets.ts#L105-L220](../../../../packages/agent-acp/src/presets.ts#L105-L220) - the presets, which get two more"
   - https://docs.cline.bot/usage/acp.md - `cline --acp`
   - https://docs.cline.bot/cli/cli-reference.md - the Cline install line and its variables
@@ -18,7 +18,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/agents.ts:69-163` - add the `cline` and `omp` rows.
+- `UPDATE: packages/sdk/src/machines/agents.ts:69-163` - add the `cline` and `omp` rows.
 - `UPDATE: packages/agent-acp/src/presets.ts:105-220` - add the `cline` and `omp` presets.
 - `UPDATE: packages/agent-acp/test/agent-acp-presets.test.ts` - test the two presets.
 - `UPDATE: docs/plugins/PLUGINS.md:1232-1239` - add the two keys to the list of shipped presets.

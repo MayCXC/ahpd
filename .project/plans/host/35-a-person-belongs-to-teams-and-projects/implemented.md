@@ -2,8 +2,8 @@
 title: A person belongs to teams and projects, and work names which one it is for - implemented
 date: 2026-10-01
 refs:
-  - "[code://packages/sdk/src/scopes.ts](../../../../packages/sdk/src/scopes.ts)"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts)"
+  - "[code://packages/sdk/src/usage/scopes.ts](../../../../packages/sdk/src/usage/scopes.ts)"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts)"
   - "[code://packages/server/src/commands/teams.ts](../../../../packages/server/src/commands/teams.ts)"
 ---
 
@@ -12,8 +12,8 @@ The users file names teams and projects, and each person holds memberships (`tea
 ## What was built
 
 - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts) - `teams` and `projects` in the file, `memberships` and `primary` on a person and a principal, and the `Users` calls that add, list and remove teams and projects.
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - reads and checks them; an entry naming nothing is reported and ignored by the read and kept as written by every write.
-- [`code://packages/sdk/src/scopes.ts`](../../../../packages/sdk/src/scopes.ts) - `membership`, `covers` and `scopeFor`.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - reads and checks them; an entry naming nothing is reported and ignored by the read and kept as written by every write.
+- [`code://packages/sdk/src/usage/scopes.ts`](../../../../packages/sdk/src/usage/scopes.ts) - `membership`, `covers` and `scopeFor`.
 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - the `scope` session key, charged at the first turn, kept with the session, never handed to a backend.
 - [`code://packages/server/src/commands/teams.ts`](../../../../packages/server/src/commands/teams.ts) and `user.ts` - `team` and `project` add, list, rm; `user member`, `user primary`, and `--membership` / `--primary` on `user add`.
 

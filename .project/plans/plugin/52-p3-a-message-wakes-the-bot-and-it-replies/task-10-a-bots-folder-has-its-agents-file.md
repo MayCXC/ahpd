@@ -8,7 +8,7 @@ refs:
   - "[code://packages/bot/src/wake.ts](../../../../packages/bot/src/wake.ts) - `sessionFor`, the back session's request"
   - "[code://packages/agent-claude/src/session/query.ts#L320](../../../../packages/agent-claude/src/session/query.ts#L320) - Claude loads `CLAUDE.md` only from a trusted folder"
   - "[code://packages/sdk/src/host/spawn.ts#L655-L664](../../../../packages/sdk/src/host/spawn.ts#L655-L664) - `trustedBy`, which answers false for a start with no sender"
-  - "[code://packages/sdk/src/validate.ts](../../../../packages/sdk/src/validate.ts) - `checkSessionRequest`, which reads the request"
+  - "[code://packages/sdk/src/plugins/validate.ts](../../../../packages/sdk/src/plugins/validate.ts) - `checkSessionRequest`, which reads the request"
 ---
 
 ## Objective
@@ -22,10 +22,10 @@ The plugin never writes over a file that is in the folder.
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - add `trusted?: boolean` to `SessionRequest`.
 - `UPDATE: packages/sdk/src/types/automations.ts` - add `trusted?: boolean` to `StartSession`.
-- `UPDATE: packages/sdk/src/users.ts` and `docs/sdk/USERS.md` - add the grant `session:trust` to the operations table and the page that documents it.
-- `UPDATE: packages/sdk/src/validate.ts` - read `trusted` as a boolean, or nothing.
+- `UPDATE: packages/sdk/src/access/users.ts` and `docs/sdk/USERS.md` - add the grant `session:trust` to the operations table and the page that documents it.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - read `trusted` as a boolean, or nothing.
 - `UPDATE: packages/sdk/src/types/sessions.ts` - add the trusted folder of a session to the store.
-- `UPDATE: packages/sdk/src/sessions.ts` - keep the trusted folder in memory and on disk.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - keep the trusted folder in memory and on disk.
 - `UPDATE: packages/sdk/src/host/automations.ts` - refuse `trusted` from a plugin with no `session:trust` grant, and record the folder.
 - `UPDATE: packages/sdk/src/host/spawn.ts` - answer `trusted` true for the folder that the store holds for the session.
 - `CREATE: packages/sdk/test/session-trust.test.ts` - the tests of the trust flag and its grant.

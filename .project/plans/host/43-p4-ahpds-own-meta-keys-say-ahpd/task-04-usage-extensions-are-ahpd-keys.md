@@ -12,7 +12,7 @@ refs:
   - "[code://packages/agent-pi/src/mapping.ts#L185-L208](../../../../packages/agent-pi/src/mapping.ts#L185-L208) - the running sum reads and writes `cacheWriteTokens` and `cost`"
   - "[code://packages/agent-cofold/src/mapping.ts#L104-L123](../../../../packages/agent-cofold/src/mapping.ts#L104-L123) - `cacheWriteTokens`, `reasoningTokens`, `cost`"
   - "[code://packages/agent-cofold/src/transcript.ts#L63-L74](../../../../packages/agent-cofold/src/transcript.ts#L63-L74) - the two token keys, restored"
-  - "[code://packages/sdk/src/meter.ts#L99-L147](../../../../packages/sdk/src/meter.ts#L99-L147) - reads `cost` and `cacheWriteTokens`"
+  - "[code://packages/sdk/src/usage/meter.ts#L99-L147](../../../../packages/sdk/src/usage/meter.ts#L99-L147) - reads `cost` and `cacheWriteTokens`"
   - "file:///github/ahpapp/src/blocks.ts - lines 457-458, the token readers"
   - "file:///github/ahpapp/src/components/RawView.tsx - lines 592 and 594"
 ---
@@ -27,7 +27,7 @@ Every backend's usage carries `_meta['ahpd.cacheWriteTokens']`, `['ahpd.reasonin
 - `UPDATE: packages/agent-acp/src/mapping.ts:406-414`, `packages/agent-acp/src/session.ts:1332-1351`.
 - `UPDATE: packages/agent-pi/src/mapping.ts:159, 185-208`.
 - `UPDATE: packages/agent-cofold/src/mapping.ts:104-123`, `packages/agent-cofold/src/transcript.ts:63-74`.
-- `UPDATE: packages/sdk/src/meter.ts:99-147` - `metaOf(usage)['ahpd.cost']` and `['ahpd.cacheWriteTokens']`; the meter's own output fields keep their names.
+- `UPDATE: packages/sdk/src/usage/meter.ts:99-147` - `metaOf(usage)['ahpd.cost']` and `['ahpd.cacheWriteTokens']`; the meter's own output fields keep their names.
 - `UPDATE: packages/agent-*/test/agent-*-usage.test.ts`, `packages/sdk/test/usage-meter.test.ts`, `packages/agent-pi/test/agent-pi.test.ts` - the new keys, and p1's `metaKeys` census over every usage they produce.
 - `UPDATE: packages/sdk/test/wire.test.ts` - `cacheWriteTokens` and `cost` leave `PENDING`; its claude result has cache writes and a cost.
 - `UPDATE: docs/sdk/AHP.md` - wherever usage's `_meta` is described.
@@ -48,5 +48,5 @@ Every backend's usage carries `_meta['ahpd.cacheWriteTokens']`, `['ahpd.reasonin
 
 Implemented 2026-10-09, in the `build/agents/6dac4670` worktree.
 Step 1 was already met: ahpapp reads both names since host/05 (a66f582).
-`cacheWriteTokens`, `reasoningTokens`, `cost` and `context` are `ahpd.*` in agent-claude (`session/parts.ts`, `session/query.ts`), agent-acp (`mapping.ts`, `session/turn.ts`), agent-pi (`mapping.ts`) and agent-cofold (`mapping.ts`, `transcript.ts`). The readers moved with them: `packages/sdk/src/meter.ts`, pi's `addUsage`, and acp's `context` read-back. No numeric `_meta.cost` is sent. The timing keys were already `ahpd.` (plugin/29).
+`cacheWriteTokens`, `reasoningTokens`, `cost` and `context` are `ahpd.*` in agent-claude (`session/parts.ts`, `session/query.ts`), agent-acp (`mapping.ts`, `session/turn.ts`), agent-pi (`mapping.ts`) and agent-cofold (`mapping.ts`, `transcript.ts`). The readers moved with them: `packages/sdk/src/usage/meter.ts`, pi's `addUsage`, and acp's `context` read-back. No numeric `_meta.cost` is sent. The timing keys were already `ahpd.` (plugin/29).
 Each backend's usage test asserts its census of `ahpd.` keys. `wire.test.ts`'s `PENDING` is empty.

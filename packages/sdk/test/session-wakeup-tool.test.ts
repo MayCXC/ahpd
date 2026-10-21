@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, expect, it } from 'vitest';
 import { createHost } from '../src/host.js';
-import { memorySessions } from '../src/sessions.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import { hostTools } from '../src/tools/index.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, BoundTool, Start } from '../src/types/agent.js';

@@ -2,7 +2,7 @@
 title: A person reaches the host as themselves, and the host advertises only what is true - implemented
 date: 2026-09-23
 refs:
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/index.ts
   - code://packages/sdk/src/types/listen.ts
   - code://packages/sdk/src/listen.ts
@@ -27,7 +27,7 @@ Superseded in part by [host 13](../13-the-door-is-a-door/plan.md): the door no l
 
 ## What was built
 
-- `code://packages/sdk/src/users.ts` - `DEFAULT_RESOURCE` without `authorization_servers` and with `resource_documentation`, and `signInRecord`, which puts the same record under a deployment's identifier.
+- `code://packages/sdk/src/access/users.ts` - `DEFAULT_RESOURCE` without `authorization_servers` and with `resource_documentation`, and `signInRecord`, which puts the same record under a deployment's identifier.
 - `code://packages/sdk/src/types/listen.ts` - `ListenOptions.identify`, and an `OnConnect` that carries the `Principal` the token resolved to.
 - `code://packages/sdk/src/listen.ts` - `identityOf` in place of the boolean check: the deployment's token admits and names nobody, anything else is put to `identify`, and all three runtimes resolve before the socket. Bun carries the answer on `ws.data`, Deno closes over it, and Node carries it from `verifyClient` to `connection`.
 - `code://packages/sdk/src/types/host.ts`, `code://packages/sdk/src/host.ts` - `Host.accept(peer, principal?)`, which writes the principal onto the `Connection` before any handler can run.

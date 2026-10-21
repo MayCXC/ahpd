@@ -5,7 +5,7 @@ depends: []
 layer: "agent-acp"
 refs:
   - "[code://packages/agent-acp/src/session/turn.ts#L241-L270](../../../../packages/agent-acp/src/session/turn.ts#L241-L270) - `blocksFor`"
-  - "[code://packages/sdk/src/attachments.ts#L65-L83](../../../../packages/sdk/src/attachments.ts#L65-L83) - `PartSource` and `Part`, the label, URI and file text a part carries"
+  - "[code://packages/sdk/src/resources/attachments.ts#L65-L83](../../../../packages/sdk/src/resources/attachments.ts#L65-L83) - `PartSource` and `Part`, the label, URI and file text a part carries"
 ---
 
 ## Objective
@@ -14,7 +14,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/attachments.ts` - `Part` carries the attachment it came from.
+- `UPDATE: packages/sdk/src/resources/attachments.ts` - `Part` carries the attachment it came from.
 - `UPDATE: packages/sdk/src/index.ts` - `PartSource` exported beside `Part`.
 - `UPDATE: packages/sdk/test/attachments.test.ts` - the shape of each part, and that it names its attachment.
 - `UPDATE: packages/agent-acp/src/session/turn.ts` - `contentOf` goes, and `blocksFor` maps the parts instead.

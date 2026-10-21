@@ -109,7 +109,7 @@ not where a client is allowed to.
 
 ### `terminals`
 
-`create(options)` returns a `Terminal`. [packages/sdk/src/terminals.ts](../../packages/sdk/src/terminals.ts)
+`create(options)` returns a `Terminal`. [packages/sdk/src/machines/terminals.ts](../../packages/sdk/src/machines/terminals.ts)
 is a subprocess over pipes, which is why it reports `isPty: false` - said rather
 than left to be discovered, because anything drawing itself with cursor movement
 will not look right.

@@ -13,7 +13,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/scopes.ts` - `scopeFor` and the membership parser.
+- `CREATE: packages/sdk/src/usage/scopes.ts` - `scopeFor` and the membership parser.
 - `CREATE: packages/sdk/test/scopes.test.ts`.
 - `UPDATE: packages/sdk/src/index.ts` - export it.
 

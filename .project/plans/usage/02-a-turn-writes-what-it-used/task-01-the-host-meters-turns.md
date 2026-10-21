@@ -28,7 +28,7 @@ A failing `record` is logged with the session uri and swallowed.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/host.ts` - the meter, or `CREATE: packages/sdk/src/meter.ts` for the record building if it reads better apart.
+- `UPDATE: packages/sdk/src/host.ts` - the meter, or `CREATE: packages/sdk/src/usage/meter.ts` for the record building if it reads better apart.
 - `UPDATE: .project/plans/usage/00-usage.md` - the runtime path.
 
 ## Validation

@@ -14,7 +14,7 @@ refs:
   - "[code://packages/sdk/src/types/usage.ts#L21-L29](../../../../packages/sdk/src/types/usage.ts#L21-L29) - `Cost`, one amount and `from`"
   - "[code://packages/sdk/src/types/usage.ts#L50-L51](../../../../packages/sdk/src/types/usage.ts#L50-L51) - `UsageBase.cost`"
   - "[code://packages/sdk/src/types/usage.ts#L90-L111](../../../../packages/sdk/src/types/usage.ts#L90-L111) - `UsageTotal`, with `usd` only"
-  - "[code://packages/sdk/src/usage.ts#L118-L144](../../../../packages/sdk/src/usage.ts#L118-L144) - `measured`, which reads `cost` into `usd`"
+  - "[code://packages/sdk/src/usage/usage.ts#L118-L144](../../../../packages/sdk/src/usage/usage.ts#L118-L144) - `measured`, which reads `cost` into `usd`"
   - "[code://packages/server/src/proxy/listener.ts#L225-L238](../../../../packages/server/src/proxy/listener.ts#L225-L238) - `costOf`, which prices a missing side as 0"
   - "[code://packages/server/src/proxy/listener.ts#L655-L690](../../../../packages/server/src/proxy/listener.ts#L655-L690) - `record`, which writes the price as the only cost"
   - "[code://packages/server/src/proxy/dialects.ts#L153-L230](../../../../packages/server/src/proxy/dialects.ts#L153-L230) - the usage reader, which reads tokens and no cost"

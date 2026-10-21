@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { foldHostOptions, routeOf, routePrefix, ROUTE_ROOT } from '../src/plugins.js';
+import { foldHostOptions, routeOf, routePrefix, ROUTE_ROOT } from '../src/plugins/plugins.js';
 import { sdkVersion } from '../src/version.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent } from '../src/types/agent.js';

@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "packages/sdk, packages/server"
 refs:
-  - "[code://packages/sdk/src/automations.ts#L374](../../../../packages/sdk/src/automations.ts#L374) - `memoryAutomations`; host 80 may move it"
+  - "[code://packages/sdk/src/automations/automations.ts#L374](../../../../packages/sdk/src/automations/automations.ts#L374) - `memoryAutomations`; host 80 may move it"
   - "[code://packages/sdk/src/host/handshake.ts#L225-L249](../../../../packages/sdk/src/host/handshake.ts#L225-L249) - the capabilities"
 ---
 
@@ -14,7 +14,7 @@ The host advertises `runHistoryLimit: 50`, and the automation store keeps at mos
 
 ## Files
 
-- `UPDATE: packages/sdk/src/automations.ts:374-430` - the limit, the window, and where it is applied.
+- `UPDATE: packages/sdk/src/automations/automations.ts:374-430` - the limit, the window, and where it is applied.
 - `UPDATE: packages/sdk/src/index.ts:63` - export `RUN_HISTORY_LIMIT`.
 - `UPDATE: packages/sdk/src/host/handshake.ts:225-260` - advertise the limit.
 - `UPDATE: packages/sdk/test/automations.test.ts` - the cases below.
@@ -36,7 +36,7 @@ The host advertises `runHistoryLimit: 50`, and the automation store keeps at mos
 
 ## Resume
 
-`RUN_HISTORY_LIMIT = 50` is exported from `packages/sdk/src/automations.ts`, and the sdk's index re-exports it. The capability sends that constant as `runHistoryLimit`, so the number a client is told is the number the store keeps.
+`RUN_HISTORY_LIMIT = 50` is exported from `packages/sdk/src/automations/automations.ts`, and the sdk's index re-exports it. The capability sends that constant as `runHistoryLimit`, so the number a client is told is the number the store keeps.
 
 The window is applied where the history moves and not where it is read. A run is `pending` when the store records it, so the window keeps it whatever the count says. A store that trimmed only on the way in kept 51 runs the moment that run ended, which the first case caught. So `trim` runs where a run is added, where one ends, and where a start fails.
 
@@ -48,7 +48,7 @@ The cases are `keeps the newest ended runs, and only that many of them` and `nev
 
 Files changed:
 
-- `packages/sdk/src/automations.ts`
+- `packages/sdk/src/automations/automations.ts`
 - `packages/sdk/src/index.ts`
 - `packages/sdk/src/host/handshake.ts`
 - `packages/sdk/test/automations.test.ts`

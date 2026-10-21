@@ -3,8 +3,8 @@ title: What the issuer left, a provider from the CLI and roles from a claim - im
 date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
-  - code://packages/sdk/src/issuers.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/issuers.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/index.ts
   - code://packages/server/src/main.ts
   - code://scripts/dev-issuer.mjs
@@ -18,8 +18,8 @@ Two gaps the issuer feature left are closed. A record's provider is set from the
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `IssuerAnswer` with the whole claims body beside the subject, `Issuer.who` in place of `Issuer.subject`, and `UserRecord.rolesFrom`.
-- `code://packages/sdk/src/issuers.ts` - `answer()`, and `who` on `githubIssuer` and `oidcIssuer`, so the body already fetched for the subject is not fetched again for a claim.
-- `code://packages/sdk/src/users.ts` - `rolesFromClaim`, which resolves a claim's values against the roles this file defines and the built-ins and reports one that names nothing; `principalOf`, which adds the claim's roles to the record's own and stamps their grants once while the record's roles are still resolved on every command; `add` taking an optional issuer and refusing a name nothing can resolve.
+- `code://packages/sdk/src/access/issuers.ts` - `answer()`, and `who` on `githubIssuer` and `oidcIssuer`, so the body already fetched for the subject is not fetched again for a claim.
+- `code://packages/sdk/src/access/users.ts` - `rolesFromClaim`, which resolves a claim's values against the roles this file defines and the built-ins and reports one that names nothing; `principalOf`, which adds the claim's roles to the record's own and stamps their grants once while the record's roles are still resolved on every command; `add` taking an optional issuer and refusing a name nothing can resolve.
 - `code://packages/server/src/main.ts` - `user add --issuer <name>`, named in the confirmation and the usage line, and `rolesFrom` printed by `user list`.
 - `code://scripts/dev-issuer.mjs` - `Bearer ana|eng,ops` answers `sub: ana` with `groups: [eng, ops]`, so the whole claim path is tryable without an identity provider.
 - `code://docs/sdk/USERS.md` - the field, the claim-values-are-roles rule, the two clocks, and how to try it with the dev issuer.

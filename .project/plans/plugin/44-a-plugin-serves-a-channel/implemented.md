@@ -3,9 +3,9 @@ title: A plugin serves a channel, and bots have a catalogue - implemented
 date: 2026-10-10
 refs:
   - git://build/plugin-44 - the build, not merged yet
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - `registerChannel`, its handle, and the fold of `channels`"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - `registerChannel`, its handle, and the fold of `channels`"
   - "[code://packages/sdk/src/host.ts](../../../../packages/sdk/src/host.ts) - `seenBy`, `emit`, `leftChannel`, and the handle bound to the host"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts) - `fileUsers` `watch`"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts) - `fileUsers` `watch`"
   - "[code://packages/bot/src/catalogue.ts](../../../../packages/bot/src/catalogue.ts) - the `x-ahpd-bots://` channel"
 ---
 
@@ -16,11 +16,11 @@ A subscriber gets `added` and `removed` when a membership change gives or takes 
 
 ## What was built
 
-- Task 01 - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `fileUsers` has `watch(onChange)`. It watches the folder of the file, filters to the file name, and waits 100 ms after the last event. A `write` of the host pokes each watch.
+- Task 01 - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `fileUsers` has `watch(onChange)`. It watches the folder of the file, filters to the file name, and waits 100 ms after the last event. A `write` of the host pokes each watch.
 - Task 01 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - the host opens the watch only when a plugin listens to `users_changed`, fires the event, and closes the watch on close. `UsersChangedEvent` is in `events.ts`.
 - Task 02 - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts) - `PluginChannel`, `ChannelHandle`, `ChannelSubscriber`, `PublishOptions`, `ServedChannel`, and `registerChannel` on `PluginHost`.
-- Task 02 - [`code://packages/sdk/src/validate.ts`](../../../../packages/sdk/src/validate.ts) - `checkChannel` needs a `grant` and a `snapshot` function. `authorize`, `left` and `describe` are functions when they are there.
-- Task 02 - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts) - `registerChannel` refuses a scheme without `x-` and a scheme the plugin already registered. The fold collects `HostOptions.channels` and drops a scheme a second plugin registers, with a problem line.
+- Task 02 - [`code://packages/sdk/src/plugins/validate.ts`](../../../../packages/sdk/src/plugins/validate.ts) - `checkChannel` needs a `grant` and a `snapshot` function. `authorize`, `left` and `describe` are functions when they are there.
+- Task 02 - [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts) - `registerChannel` refuses a scheme without `x-` and a scheme the plugin already registered. The fold collects `HostOptions.channels` and drops a scheme a second plugin registers, with a problem line.
 - Task 02 - `host/channels.ts`, `host/routing.ts`, `host/snapshots.ts`, `host/gate.ts`, `host/admission.ts` and `host/actions.ts` - an `x-` URI is in the plugin space. It never routes as a session. Its subscribe needs the grant of the channel or its `authorize`. The plugin answers its snapshot, and a client dispatch to it is refused.
 - Task 03 - [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts) - `emit` keeps the audience on the envelope and in `replayable`. `seenBy` drops the envelope for a connection that `to` does not name or that `visible` refuses. It does this at the send and at each replay. The audience never goes out. `createHost` binds `publish` and `subscribers` on each handle.
 - Task 04 - `host/root.ts` and `host/handshake.ts` - `_meta['ahpd.channels']` on `initialize` and in root state, one entry `{ scheme, title, description?, grant }` per channel. It is absent when no plugin serves a channel.

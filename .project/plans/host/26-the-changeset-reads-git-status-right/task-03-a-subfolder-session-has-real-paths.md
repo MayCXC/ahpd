@@ -4,9 +4,9 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L536-L620](../../../../packages/sdk/src/changes.ts#L536-L620) - `look()`: row id, counts and line reads join `dir` to a root-relative path"
-  - "[code://packages/sdk/src/changes.ts#L130-L139](../../../../packages/sdk/src/changes.ts#L130-L139) - `pathIn`, the path `stage` and `unstage` pass to git"
-  - "[code://packages/sdk/src/changes.ts#L1124-L1141](../../../../packages/sdk/src/changes.ts#L1124-L1141) - `stage` and `unstage`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L536-L620](../../../../packages/sdk/src/sessions/changes.ts#L536-L620) - `look()`: row id, counts and line reads join `dir` to a root-relative path"
+  - "[code://packages/sdk/src/sessions/changes.ts#L130-L139](../../../../packages/sdk/src/sessions/changes.ts#L130-L139) - `pathIn`, the path `stage` and `unstage` pass to git"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1124-L1141](../../../../packages/sdk/src/sessions/changes.ts#L1124-L1141) - `stage` and `unstage`"
 ---
 
 ## Objective
@@ -15,8 +15,8 @@ In a session whose folder is below the repository root, each uncommitted row's i
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:536-620` - resolve porcelain and numstat paths against the repository root (`git rev-parse --show-toplevel`, once per look), and list only files under the session folder.
-- `UPDATE: packages/sdk/src/changes.ts` - `stage`, `unstage` and `discard` pass git a path it accepts from the session folder.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:536-620` - resolve porcelain and numstat paths against the repository root (`git rev-parse --show-toplevel`, once per look), and list only files under the session folder.
+- `UPDATE: packages/sdk/src/sessions/changes.ts` - `stage`, `unstage` and `discard` pass git a path it accepts from the session folder.
 - `UPDATE: packages/sdk/test/commit.test.ts` - the cases below.
 
 ## Steps
@@ -31,7 +31,7 @@ In a session whose folder is below the repository root, each uncommitted row's i
 ## Resume
 
 - **Before the change (step 1):** with the session in `sub`, a new `sub/new.txt` was listed as `file://<repo>/sub/sub/new.txt` and a new `root.txt` at the repository root was listed too, as `file://<repo>/sub/root.txt`; staging from the first row failed with `pathspec 'root.txt' did not match any files` (the rows came in that order), and a changed file in `sub` had no line count, since numstat's root-relative path never matched.
-- **Done:** `look()` in `packages/sdk/src/changes.ts` reads `git rev-parse --show-prefix` once per look; a porcelain path that does not start with the prefix is skipped, and the rest of it after the prefix is the row's path in the directory. Numstat counts are looked up by the root-relative path.
+- **Done:** `look()` in `packages/sdk/src/sessions/changes.ts` reads `git rev-parse --show-prefix` once per look; a porcelain path that does not start with the prefix is skipped, and the rest of it after the prefix is the row's path in the directory. Numstat counts are looked up by the root-relative path.
 - `read` of a `before` side runs `git show HEAD:./<path>`, so the path is read from the directory, not the root; at the root this is the same file.
 - `stage`, `unstage` and `discard` were not changed: they pass git the row's path relative to the directory, which git takes as a pathspec from there, and the rows now carry the real path.
 - **Departure:** the plan names `git rev-parse --show-toplevel`; `--show-prefix` gives the directory's place in the repository in one call and needs no path arithmetic against a top level that may be spelled differently (a symlinked checkout). The decision, resolving against the root and listing only rows under the session folder, is what it does. Review whether this is acceptable.

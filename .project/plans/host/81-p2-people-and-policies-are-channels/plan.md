@@ -9,9 +9,9 @@ requires:
   - plans/host/81-p1-the-host-serves-x-commands/plan.md
 decisions:
 refs:
-  - "[code://packages/sdk/src/records.ts#L162-L244](../../../../packages/sdk/src/records.ts#L162-L244) - `recordsProvider`, whose write and remove the commands share"
-  - "[code://packages/sdk/src/people.ts#L239-L240](../../../../packages/sdk/src/people.ts#L239-L240) - `peopleProviders`, the four people schemes"
-  - "[code://packages/sdk/src/policy.ts#L151](../../../../packages/sdk/src/policy.ts#L151) - `policyProviders`, the policy scheme"
+  - "[code://packages/sdk/src/resources/records.ts#L162-L244](../../../../packages/sdk/src/resources/records.ts#L162-L244) - `recordsProvider`, whose write and remove the commands share"
+  - "[code://packages/sdk/src/access/people.ts#L239-L240](../../../../packages/sdk/src/access/people.ts#L239-L240) - `peopleProviders`, the four people schemes"
+  - "[code://packages/sdk/src/access/policy.ts#L151](../../../../packages/sdk/src/access/policy.ts#L151) - `policyProviders`, the policy scheme"
   - "[code://packages/bot/src/catalogue.ts](../../../../packages/bot/src/catalogue.ts) - per-client sets, `added`, `changed`, `removed` and `recompute`, which the records channel copies"
   - "[code://packages/sdk/src/host/admission.ts#L213-L231](../../../../packages/sdk/src/host/admission.ts#L213-L231) - `ownRecord`, a person reads their own `user://<id>`"
   - "[code://packages/sdk/src/types/users.ts#L351](../../../../packages/sdk/src/types/users.ts#L351) - `Users.watch`, the signal for a change to the users file"
@@ -59,7 +59,7 @@ users file changes -> Users.watch -> refresh the four people channels
 | The channels are `x-ahpd-users`, `x-ahpd-teams`, `x-ahpd-projects`, `x-ahpd-roles` and `x-ahpd-policies` | decision 3, plural domain | 03 |
 | A channel needs `<scheme>:read`; `put` needs `<scheme>:put`; `remove` needs `<scheme>:delete` | (defaulted: the operations a resource write and delete need now) | 01, 02 |
 | A reader without `user:read` sees only their own record in `x-ahpd-users://` | [code://packages/sdk/src/host/admission.ts#L213-L231](../../../../packages/sdk/src/host/admission.ts#L213-L231) | 03 |
-| `put` takes `createOnly`, as a resource write does | [code://packages/sdk/src/records.ts](../../../../packages/sdk/src/records.ts) | 02 |
+| `put` takes `createOnly`, as a resource write does | [code://packages/sdk/src/resources/records.ts](../../../../packages/sdk/src/resources/records.ts) | 02 |
 
 ## Proposed architecture
 
@@ -68,7 +68,7 @@ users file changes -> Users.watch -> refresh the four people channels
   `refresh` reads the store, and sends what each client gained, changed and lost.
 - **State flow** - the channel keeps the last record it sent for each id, and the ids sent to each client.
 - **Layer responsibilities** - `packages/sdk`: `recordsChannel`, `recordsMethods`, `putRecord` and `removeRecord` · `packages/server`: wires the five in `run.ts`.
-- **Source-of-truth files** - [`code://packages/sdk/src/records.ts`](../../../../packages/sdk/src/records.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/resources/records.ts`](../../../../packages/sdk/src/resources/records.ts)
 
 ## Tasks
 

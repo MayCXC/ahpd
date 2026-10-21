@@ -13,10 +13,10 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, 
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 import { createHost } from '../src/host.js';
-import { PAGE } from '../src/paging.js';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { PAGE } from '../src/sessions/paging.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Peer } from '../src/types/rpc.js';
 import type { Bag } from '../src/types/common.js';

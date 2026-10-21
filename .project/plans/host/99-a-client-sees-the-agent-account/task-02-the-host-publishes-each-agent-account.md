@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L1023-L1043](../../../../packages/sdk/src/host.ts#L1023-L1043) - the boot probe loop"
   - "[code://packages/sdk/src/host.ts#L570-L593](../../../../packages/sdk/src/host.ts#L570-L593) - the filter per connection"
   - "[code://packages/sdk/src/host/gate.ts#L355-L356](../../../../packages/sdk/src/host/gate.ts#L355-L356) - `seesConfig`"
-  - "[code://packages/sdk/src/users.ts#L30-L61](../../../../packages/sdk/src/users.ts#L30-L61) - the roles and the subjects"
+  - "[code://packages/sdk/src/access/users.ts#L30-L61](../../../../packages/sdk/src/access/users.ts#L30-L61) - the roles and the subjects"
 ---
 
 ## Objective
@@ -21,7 +21,7 @@ A connection that is not root and does not hold `account:read` gets no account v
 - `UPDATE: packages/sdk/src/host.ts:570-593` - the filter drops the account values for a connection without the grant.
 - `UPDATE: packages/sdk/src/host/root.ts:233-344` - the account keys are root config values that a client cannot write.
 - `UPDATE: packages/sdk/src/host/gate.ts:355-356` - `seesAccount` beside `seesConfig`.
-- `UPDATE: packages/sdk/src/users.ts:43-61` - the `account` subject, with `account:read`.
+- `UPDATE: packages/sdk/src/access/users.ts:43-61` - the `account` subject, with `account:read`.
 - `UPDATE: packages/sdk/src/types/agent.ts:492-504` - an event that a running agent sends when its account changes.
 - `UPDATE: packages/sdk/test` - the account reaches a connection with the grant and not one without it.
 
@@ -69,7 +69,7 @@ Files this task changed, so the work can be committed on its own:
 - `packages/sdk/src/host/catalogue.ts` - `learnAccount`
 - `packages/sdk/src/host/spawn.ts` - the `onAccount` wiring
 - `packages/sdk/src/host.ts` - the probe loop, `isAccountKey`, the `seenBy` filter
-- `packages/sdk/src/users.ts` - the `account` subject and its `SUBJECTS` entry
+- `packages/sdk/src/access/users.ts` - the `account` subject and its `SUBJECTS` entry
 - `packages/sdk/test/root-account.test.ts` (new), `packages/sdk/test/users-host.test.ts` (the two key lists)
 - `docs/sdk/USERS.md` - the row and the count, which `users.test.ts` reads the table against
 - `.project/plans/host/99-a-client-sees-the-agent-account/plan.md` and this file

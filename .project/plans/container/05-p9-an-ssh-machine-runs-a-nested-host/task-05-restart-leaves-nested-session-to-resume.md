@@ -11,7 +11,7 @@ refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L95-L104](../../../../packages/sdk/src/host/lifecycle.ts#L95-L104) - `removeSession`, the one session removal"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L701-L706](../../../../packages/sdk/src/host/sessionmethods.ts#L701-L706) - a chat removed by a client"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L720-L723](../../../../packages/sdk/src/host/sessionmethods.ts#L720-L723) - `disposeSession`, which removes the session on the inner host"
-  - "[code://packages/sdk/src/nested.ts#L511-L524](../../../../packages/sdk/src/nested.ts#L511-L524) - the nested `close`, which asks the inner host to dispose"
+  - "[code://packages/sdk/src/sessions/nested.ts#L511-L524](../../../../packages/sdk/src/sessions/nested.ts#L511-L524) - the nested `close`, which asks the inner host to dispose"
   - "[code://.project/plans/daemon/13-ahpd-restart/plan.md](../../daemon/13-ahpd-restart/plan.md) - `ahpd restart` quiesces, ends agents and resumes sessions from the store"
 ---
 
@@ -28,7 +28,7 @@ Only `removeSession` and a client removing a chat dispose the inner session.
 - `UPDATE: packages/sdk/src/host/chatactions.ts:1000-1014` - the truncate restart closes with `stopping`, since it resumes the session right after.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:95-104` - `removeSession` closes with `dispose`, named.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts:701-706` - a chat removal closes with `dispose`, named, so the two are the only disposing paths.
-- `UPDATE: packages/sdk/src/nested.ts:511-524` - `stopping` skips `disposeSession`, shuts the client down and ends the process.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:511-524` - `stopping` skips `disposeSession`, shuts the client down and ends the process.
 - `UPDATE: packages/sdk/test/nested-process.test.ts` - made by container/04 task 11.
 
 ## Steps

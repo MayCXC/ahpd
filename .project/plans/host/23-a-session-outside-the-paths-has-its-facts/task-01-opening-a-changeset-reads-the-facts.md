@@ -6,7 +6,7 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host.ts#L5095-L5115](../../../../packages/sdk/src/host.ts#L5095-L5115) - the changeset subscribe, which refreshes the files only"
   - "[code://packages/sdk/src/host.ts#L2882-L2903](../../../../packages/sdk/src/host.ts#L2882-L2903) - `refreshFacts`, whose order and announcements this reuses"
-  - "[code://packages/sdk/src/changes.ts#L918-L932](../../../../packages/sdk/src/changes.ts#L918-L932) - the pull request pair needs `github` in the operation context"
+  - "[code://packages/sdk/src/sessions/changes.ts#L918-L932](../../../../packages/sdk/src/sessions/changes.ts#L918-L932) - the pull request pair needs `github` in the operation context"
   - "[code://packages/sdk/test/changes-refresh.test.ts](../../../../packages/sdk/test/changes-refresh.test.ts) - where the new cases go"
 ---
 

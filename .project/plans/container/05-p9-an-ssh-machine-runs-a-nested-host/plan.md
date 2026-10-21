@@ -35,12 +35,12 @@ refs:
   - "[code://packages/sdk/src/types/computers.ts#L19-L28](../../../../packages/sdk/src/types/computers.ts#L19-L28) - `Spawn`, the descriptor"
   - "[code://packages/sdk/src/types/computers.ts#L51-L60](../../../../packages/sdk/src/types/computers.ts#L51-L60) - `SpawnOptions`: command, args, cwd, env"
   - "[code://packages/sdk/src/types/computers.ts#L143](../../../../packages/sdk/src/types/computers.ts#L143) - `nested`"
-  - "[code://packages/sdk/src/plugins.ts#L393](../../../../packages/sdk/src/plugins.ts#L393) - `registerComputers` is one port per host, so every runtime lives inside this plugin"
-  - "[code://packages/sdk/src/computers.ts#L103-L129](../../../../packages/sdk/src/computers.ts#L103-L129) - `computersFor`, the agents gate around `how` and `nested`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L393](../../../../packages/sdk/src/plugins/plugins.ts#L393) - `registerComputers` is one port per host, so every runtime lives inside this plugin"
+  - "[code://packages/sdk/src/machines/computers.ts#L103-L129](../../../../packages/sdk/src/machines/computers.ts#L103-L129) - `computersFor`, the agents gate around `how` and `nested`"
   - "[code://packages/sdk/src/host/spawn.ts#L332-L334](../../../../packages/sdk/src/host/spawn.ts#L332-L334) - a session runs nested only when its backend says `runsNested`"
   - "[code://packages/sdk/src/host.ts#L844-L846](../../../../packages/sdk/src/host.ts#L844-L846) - `Host.close` closes every chat, which for a nested session sends `disposeSession` inside"
-  - "[code://packages/sdk/src/nested.ts#L511-L524](../../../../packages/sdk/src/nested.ts#L511-L524) - the nested `close`"
-  - "[code://packages/sdk/src/decide.ts#L68-L71](../../../../packages/sdk/src/decide.ts#L68-L71) - a policy value is a whole-value glob, `*` the only special character"
+  - "[code://packages/sdk/src/sessions/nested.ts#L511-L524](../../../../packages/sdk/src/sessions/nested.ts#L511-L524) - the nested `close`"
+  - "[code://packages/sdk/src/access/decide.ts#L68-L71](../../../../packages/sdk/src/access/decide.ts#L68-L71) - a policy value is a whole-value glob, `*` the only special character"
   - git://c81ebe0:.project/ideas/more-computer-runtimes.md - the idea this plan takes `ssh` and several runtimes on one host from
   - https://github.com/microsoft/vscode/blob/832cf23c588/src/vs/platform/agentHost/node/sshRemoteAgentHostService.ts - VS Code's SSH remote agent host, the parity target
   - https://man.openbsd.org/ssh - `ssh` has no flag for a remote directory or environment; the remote command is one string the login shell parses
@@ -98,7 +98,7 @@ session computer://ssh.dev02 -> port.remote(id) -> nested for every backend
 | What | Source | Task |
 | --- | --- | --- |
 | `ssh` is a runtime value, and several runtimes serve one host | ["One computer: provider, the runtime named for what makes the machine"](../05-p11-a-vm-is-made-for-a-machine/plan.md), "A machine id records which runtime made it" | 01 |
-| Every runtime lives inside `@ahpd/computer` | one `computers` port per host, [`code://packages/sdk/src/plugins.ts#L393`](../../../../packages/sdk/src/plugins.ts#L393) | 01 |
+| Every runtime lives inside `@ahpd/computer` | one `computers` port per host, [`code://packages/sdk/src/plugins/plugins.ts#L393`](../../../../packages/sdk/src/plugins/plugins.ts#L393) | 01 |
 | The first test is a box set up by hand and listed as an ssh machine, before any maker code | Softov, 2026-10-02, asked "Does the first Proxmox test use a VM made by hand, listed as an ssh machine (p9 only), before any maker code?": "Yes, by hand first" | 06 |
 | The test box is dev02 | Softov, 2026-10-02, asked "Which box is the test target?": "ssh to softov@dev02.example.com worked." | 06 |
 | An ssh machine's records are the plugin's options, not labels on the box | an ssh machine is listed, never made, so there is nothing of ours on the box to label | 02 |

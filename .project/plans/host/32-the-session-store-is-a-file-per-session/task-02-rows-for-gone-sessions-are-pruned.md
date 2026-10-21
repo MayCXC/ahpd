@@ -5,7 +5,7 @@ depends: [task-01-a-file-per-session.md]
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/sessions.ts#L41-L95](../../../../packages/sdk/src/types/sessions.ts#L41-L95) - the port"
-  - "[code://packages/sdk/src/catalog.ts](../../../../packages/sdk/src/catalog.ts) - the catalogue listing"
+  - "[code://packages/sdk/src/sessions/catalog.ts](../../../../packages/sdk/src/sessions/catalog.ts) - the catalogue listing"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/sessions.ts` - `prune`, documented as optional.
-- `UPDATE: packages/sdk/src/sessions.ts` - both stores implement it.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - both stores implement it.
 - `UPDATE: packages/sdk/src/host.ts` - the call after a full listing.
 - `UPDATE:` the store and host tests.
 

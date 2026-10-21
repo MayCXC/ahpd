@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/changes.ts#L1068-L1069](../../../../packages/sdk/src/changes.ts#L1068-L1069) - reads `_meta['ahp.commit']`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1068-L1069](../../../../packages/sdk/src/sessions/changes.ts#L1068-L1069) - reads `_meta['ahp.commit']`"
   - "[code://packages/sdk/test/commit.test.ts](../../../../packages/sdk/test/commit.test.ts) - the commit operation's tests"
   - "file:///github/ahpapp/src/changeset-ops.ts - line 207, the only sender of `ahp.commit`"
 ---
@@ -15,7 +15,7 @@ A `commit` invocation takes its message from `_meta['ahpd.commit']`, and from `_
 
 ## Files
 
-- `UPDATE: packages/sdk/src/changes.ts:1068-1069` - read `ahpd.commit` first, then `ahp.commit`.
+- `UPDATE: packages/sdk/src/sessions/changes.ts:1068-1069` - read `ahpd.commit` first, then `ahp.commit`.
 - `UPDATE: packages/sdk/test/commit.test.ts` - both keys, and the new one winning when both are sent.
 - `UPDATE: docs/sdk/AHP.md:675` - the key is `ahpd.commit`; `ahp.commit` is read until task 05.
 
@@ -33,6 +33,6 @@ A `commit` invocation takes its message from `_meta['ahpd.commit']`, and from `_
 ## Resume
 
 Implemented 2026-10-08, in the `build/agents/d1ffbc3d` worktree.
-`invoke`'s `commit` branch in `packages/sdk/src/changes.ts` reads `meta['ahpd.commit']` and falls back to `meta['ahp.commit']` when the new key is absent. The comment beside it names task 05 as the task that drops the fallback, once ahpapp sends the new name. Nothing else reads or writes either key: the census in `packages/sdk/test/wire.test.ts` leaves `ahpd.commit` to its `ahpd.` prefix, and its traffic sends no commit.
+`invoke`'s `commit` branch in `packages/sdk/src/sessions/changes.ts` reads `meta['ahpd.commit']` and falls back to `meta['ahp.commit']` when the new key is absent. The comment beside it names task 05 as the task that drops the fallback, once ahpapp sends the new name. Nothing else reads or writes either key: the census in `packages/sdk/test/wire.test.ts` leaves `ahpd.commit` to its `ahpd.` prefix, and its traffic sends no commit.
 Failing first: `takes the message from ahpd.commit, this host's own name for it` and `lets ahpd.commit win when a client sends both` in `packages/sdk/test/commit.test.ts` saw the session title, since only `ahp.commit` was read.
 `docs/sdk/AHP.md` names `_meta['ahpd.commit']` and says `ahp.commit` is read while a client still sends it.

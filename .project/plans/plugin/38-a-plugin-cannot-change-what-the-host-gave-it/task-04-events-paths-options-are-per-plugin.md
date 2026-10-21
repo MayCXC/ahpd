@@ -4,7 +4,7 @@ status: done
 depends: [task-01-a-principal-cannot-be-changed.md]
 layer: "sdk, server"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L725-L740](../../../../packages/sdk/src/plugins.ts#L725-L740) - `raise` hands one event to every listener"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L725-L740](../../../../packages/sdk/src/plugins/plugins.ts#L725-L740) - `raise` hands one event to every listener"
   - "[code://packages/server/src/plugins.ts#L740-L760](../../../../packages/server/src/plugins.ts#L740-L760) - the context with the daemon's `paths` array"
   - "[code://packages/server/src/plugins.ts#L600-L645](../../../../packages/server/src/plugins.ts#L600-L645) - `secretAtUse` nodes passed as they are"
 ---
@@ -15,7 +15,7 @@ One listener cannot change the event the next listener reads, and one plugin can
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts:725-740` - `raise` freezes one copy of the event and hands it to every listener.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:725-740` - `raise` freezes one copy of the event and hands it to every listener.
 - `UPDATE: packages/server/src/plugins.ts:740-760` - `paths` is a frozen copy per plugin; the context object is frozen.
 - `UPDATE: packages/server/src/plugins.ts:600-645` - `secretAtUse` nodes are copied like the rest.
 - `UPDATE: packages/sdk/test/plugin-boundary.test.ts` and `packages/server/test` - the cases below.
@@ -37,7 +37,7 @@ One listener cannot change the event the next listener reads, and one plugin can
 
 Implemented 2026-10-08, at the three sites the task names. `raise` copies the event once and hands that one frozen copy to every listener, so a listener that writes to it is refused where it stands - reported against its plugin, the rest carrying on - and the next listener still reads what the host said. The event the host built is neither frozen nor moved. `loadOne` now builds the context it passes to `pluginHost` as a frozen `PluginContext` with `paths: frozenCopy(options.paths)`, so each plugin gets its own copy of the listing the daemon serves rather than the daemon's own array, which the status line reads. `resolveSecrets` copies a `secretAtUse` node like every other one, so a plugin that writes into the node it reads itself changes nothing that configuration wrote.
 
-One site beyond the task's list, on the same reasoning. `PluginHost` extends `PluginContext`, so the object a plugin registers through is the context it holds: the server's frozen literal only covers the object listeners capture, and `pluginHost` spreads it into the plugin's own `host`. That object is frozen where it is built, in `packages/sdk/src/plugins.ts`, which is what makes a write to `host.path` or `host.log` throw for the plugin itself.
+One site beyond the task's list, on the same reasoning. `PluginHost` extends `PluginContext`, so the object a plugin registers through is the context it holds: the server's frozen literal only covers the object listeners capture, and `pluginHost` spreads it into the plugin's own `host`. That object is frozen where it is built, in `packages/sdk/src/plugins/plugins.ts`, which is what makes a write to `host.path` or `host.log` throw for the plugin itself.
 
 Tests: two in `packages/sdk/test/plugin-boundary.test.ts` (the frozen context a `pluginHost` hands out; two listeners and one event, where the first listener's write is reported in its own name and the second reads the port the host bound, with the host's own event left alone). Two in `packages/server/test/plugin-load.test.ts`, each with a new fixture: `plugin-push` writes to the context and then pushes to `paths` (both refused, the load costs it a line, and the array the daemon was given is unchanged), and `plugin-later` writes into its `secretAtUse` node (refused, and the options object configuration handed in is as it was).
 

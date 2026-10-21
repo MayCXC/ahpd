@@ -4,7 +4,7 @@ status: done
 depends: [task-01-created-session-held-under-provider-name.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L42-L52](../../../../packages/sdk/src/sessions.ts#L42-L52) - `chatTitle` and `setChatTitle`, by the exact chat URI"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L42-L52](../../../../packages/sdk/src/sessions/sessions.ts#L42-L52) - `chatTitle` and `setChatTitle`, by the exact chat URI"
   - "[code://packages/sdk/src/types/sessions.ts#L84](../../../../packages/sdk/src/types/sessions.ts#L84) - the port's `chatTitle(id, chatUri)`"
   - "[code://packages/sdk/src/host/spawn.ts#L693-L694](../../../../packages/sdk/src/host/spawn.ts#L693-L694) - `spawn`, which reads a title back"
   - "[code://packages/sdk/src/host/channels.ts#L109-L122](../../../../packages/sdk/src/host/channels.ts#L109-L122) - `chatUriFor` and `subagentChatUri`, which embed the session URI"

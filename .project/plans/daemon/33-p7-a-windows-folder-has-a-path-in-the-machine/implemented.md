@@ -6,7 +6,7 @@ refs:
   - git://35e48b0a
   - https://github.com/softov/ahpd/pull/38 - tasks 01 to 06
   - https://github.com/softov/ahpd/pull/43 - tasks 07 and 08 and the real-Docker test fixes, green and merged on 2026-10-20
-  - "[code://packages/sdk/src/machine.ts#L115-L130](../../../../packages/sdk/src/machine.ts#L115-L130) - `machinePathOf` and `hostPathOf`, the pair"
+  - "[code://packages/sdk/src/machines/machine.ts#L115-L130](../../../../packages/sdk/src/machines/machine.ts#L115-L130) - `machinePathOf` and `hostPathOf`, the pair"
   - "[code://packages/computer/src/gitdir.ts](../../../../packages/computer/src/gitdir.ts) - the git mounts at machine paths, and the worktree's `.git` file for `open`"
 ---
 
@@ -17,11 +17,11 @@ On Linux and macOS the pair is the path itself, so nothing changes there.
 
 ## What was built
 
-- [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts) - `machinePathOf` turns a host path into its machine path, and `hostPathOf` turns it back; nothing else turns one into the other.
+- [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts) - `machinePathOf` turns a host path into its machine path, and `hostPathOf` turns it back; nothing else turns one into the other.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) and [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - every mount, `-w` and dev container override names the folder by its machine path, and the host side of a mount keeps the host path.
 - The same files - a host path matched against what a machine reports is matched in the host's spelling.
 - [`code://packages/computer/src/hostpath.ts`](../../../../packages/computer/src/hostpath.ts) - `sourceOnHost` reads both forms Docker Desktop gives a bind's `Source`: `C:\...` and `/run/desktop/mnt/host/c/...`.
-- [`code://packages/sdk/src/nested.ts`](../../../../packages/sdk/src/nested.ts) - a nested host is told its working directory by its machine path, and every file URI under the folder it sends back names the host's path.
+- [`code://packages/sdk/src/sessions/nested.ts`](../../../../packages/sdk/src/sessions/nested.ts) - a nested host is told its working directory by its machine path, and every file URI under the folder it sends back names the host's path.
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - `putIn` and `takeOut` write and remove an attachment at its machine path.
 - [`code://packages/agent-acp/src/session/opening.ts`](../../../../packages/agent-acp/src/session/opening.ts) - an ACP agent in a machine is sent the machine path as `cwd` in `session/new`, `session/load`, `session/resume` and `session/fork`; the catalogue keeps the host path.
 - [`code://packages/agent-acp/src/mapping.ts`](../../../../packages/agent-acp/src/mapping.ts) and [`code://packages/agent-acp/src/session/handlers.ts`](../../../../packages/agent-acp/src/session/handlers.ts) - a diff path or an `fs/` path an agent names is read through `hostPathOf`.

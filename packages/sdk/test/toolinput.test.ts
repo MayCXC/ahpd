@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { flag, optional, required, when } from '../src/toolinput.js';
+import { flag, optional, required, when } from '../src/utils/toolinput.js';
 
 /*
  * The readers for a tool's input fields, one per kind of field.

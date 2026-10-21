@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-daemon-mounts-it.md]
 layer: "server | sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts) - `verify`"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts) - `verify`"
   - "[code://packages/sdk/src/host.ts#L141](../../../../packages/sdk/src/host.ts#L141) - `NEEDS` and the refusal reasons"
 ---
 

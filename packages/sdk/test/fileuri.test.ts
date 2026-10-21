@@ -2,7 +2,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { localPath, posixUriOf, uriOf } from '../src/fileuri.js';
+import { localPath, posixUriOf, uriOf } from '../src/resources/fileuri.js';
 
 /*
  * The one reader and the one writer for `file:` URIs.

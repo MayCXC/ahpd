@@ -12,15 +12,15 @@ creates: []
 decisions: []
 refs:
   - "[code://.project/plans/host/08-an-issuer-behind-the-users-port/deferred.md](../../../../.project/plans/host/08-an-issuer-behind-the-users-port/deferred.md) - host/08 set this work aside"
-  - "[code://packages/sdk/src/issuers.ts#L1-L16](../../../../packages/sdk/src/issuers.ts#L1-L16) - the header: `userinfo`, not JWT verification"
-  - "[code://packages/sdk/src/issuers.ts#L27-L69](../../../../packages/sdk/src/issuers.ts#L27-L69) - `Fetcher`, `get` and `answer`, the request helpers to reuse"
-  - "[code://packages/sdk/src/issuers.ts#L136-L157](../../../../packages/sdk/src/issuers.ts#L136-L157) - `oidcIssuer` reads the discovery document and `userinfo_endpoint`"
-  - "[code://packages/sdk/src/issuers.ts#L167-L186](../../../../packages/sdk/src/issuers.ts#L167-L186) - `issuerKind` and `issuerFrom`"
+  - "[code://packages/sdk/src/access/issuers.ts#L1-L16](../../../../packages/sdk/src/access/issuers.ts#L1-L16) - the header: `userinfo`, not JWT verification"
+  - "[code://packages/sdk/src/access/issuers.ts#L27-L69](../../../../packages/sdk/src/access/issuers.ts#L27-L69) - `Fetcher`, `get` and `answer`, the request helpers to reuse"
+  - "[code://packages/sdk/src/access/issuers.ts#L136-L157](../../../../packages/sdk/src/access/issuers.ts#L136-L157) - `oidcIssuer` reads the discovery document and `userinfo_endpoint`"
+  - "[code://packages/sdk/src/access/issuers.ts#L167-L186](../../../../packages/sdk/src/access/issuers.ts#L167-L186) - `issuerKind` and `issuerFrom`"
   - "[code://packages/sdk/src/types/users.ts#L40-L60](../../../../packages/sdk/src/types/users.ts#L40-L60) - `Principal` and `standing`"
   - "[code://packages/sdk/src/types/users.ts#L185-L215](../../../../packages/sdk/src/types/users.ts#L185-L215) - `IssuerAnswer` and `Issuer`"
-  - "[code://packages/sdk/src/users.ts#L300-L345](../../../../packages/sdk/src/users.ts#L300-L345) - `DEFAULT_RESOURCE` and `signInRecord`"
-  - "[code://packages/sdk/src/users.ts#L853](../../../../packages/sdk/src/users.ts#L853) - `rolesFromClaim`"
-  - "[code://packages/sdk/src/users.ts#L873-L919](../../../../packages/sdk/src/users.ts#L873-L919) - `verify` asks the default issuer, then each record's issuer, in order"
+  - "[code://packages/sdk/src/access/users.ts#L300-L345](../../../../packages/sdk/src/access/users.ts#L300-L345) - `DEFAULT_RESOURCE` and `signInRecord`"
+  - "[code://packages/sdk/src/access/users.ts#L853](../../../../packages/sdk/src/access/users.ts#L853) - `rolesFromClaim`"
+  - "[code://packages/sdk/src/access/users.ts#L873-L919](../../../../packages/sdk/src/access/users.ts#L873-L919) - `verify` asks the default issuer, then each record's issuer, in order"
   - "[code://packages/sdk/src/host/handshake.ts#L67-L108](../../../../packages/sdk/src/host/handshake.ts#L67-L108) - `expire` drops the principal and sends `auth/required` with `expired`"
   - "[code://packages/sdk/src/host/handshake.ts#L564-L610](../../../../packages/sdk/src/host/handshake.ts#L564-L610) - `expiresIn`, `verify` and `principalUntil`"
   - "[code://packages/sdk/src/host/admission.ts#L353-L378](../../../../packages/sdk/src/host/admission.ts#L353-L378) - the gate answers `-32007`"
@@ -93,7 +93,7 @@ authenticate(token) -> users.verify -> JWT? -> iss -> issuer's key set (cached b
 - **Data flow** - `verify` reads the token's header and `iss` without trust. It picks the issuer that `iss` names and checks the signature with that issuer's key. Then it checks `aud`, `exp` and `nbf`, and returns the subject, the claims and the expiry.
 - **State flow** - each issuer keeps its key set in memory, by `kid`, with the time of the last fetch.
 - **Layer responsibilities** - The sdk holds the JWT check in `issuers.ts`, the choice of issuer in `users.ts` and the expiry in `handshake.ts`. The server reads the setting in `config.ts` and `run.ts`. The docs are AUTHENTICATION.md.
-- **Source-of-truth files** - [`code://packages/sdk/src/issuers.ts`](../../../../packages/sdk/src/issuers.ts), [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/issuers.ts`](../../../../packages/sdk/src/access/issuers.ts), [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts).
 
 ## Tasks
 

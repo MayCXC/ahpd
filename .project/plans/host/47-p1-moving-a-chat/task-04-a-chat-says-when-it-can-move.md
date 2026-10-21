@@ -8,7 +8,7 @@ refs:
   - "[code://packages/sdk/src/host/spawn.ts#L615-L616](../../../../packages/sdk/src/host/spawn.ts#L615-L616) - a turn starting or ending, already the moment `operationsMoved` is said"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L689-L719](../../../../packages/sdk/src/host/sessionmethods.ts#L689-L719) - `disposeChat`, where another chat becomes the default"
   - "[code://packages/sdk/src/types/session.ts#L236-L243](../../../../packages/sdk/src/types/session.ts#L236-L243) - `agentId()`, beside which `resumable()` goes"
-  - "[code://packages/sdk/src/nested.ts#L412](../../../../packages/sdk/src/nested.ts#L412) - the nested host answers an `agentId()` it cannot resume, so `agentId()` alone does not say a chat can be picked up again"
+  - "[code://packages/sdk/src/sessions/nested.ts#L412](../../../../packages/sdk/src/sessions/nested.ts#L412) - the nested host answers an `agentId()` it cannot resume, so `agentId()` alone does not say a chat can be picked up again"
   - "[code://packages/agent-acp/src/session.ts#L1088-L1093](../../../../packages/agent-acp/src/session.ts#L1088-L1093) - an ACP server without `loadSession` refuses a resume"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - `ChatState.movable` and `ChatSummary.movable`, absent meaning `false`, never `true` on the default chat (`channels-chat/state.ts:72-79`, `:197-203`); `chat/movableChanged`, the host updating the catalogue through `session/chatUpdated` (`channels-chat/actions.ts:579-595`)"
 ---
@@ -20,7 +20,7 @@ A peer chat carries `movable: true` in its `ChatState` and `ChatSummary` exactly
 ## Files
 
 - `UPDATE: packages/sdk/src/types/session.ts` - `resumable?(): boolean` beside `agentId()`, documented: absent means `agentId()` can be resumed.
-- `UPDATE: packages/sdk/src/nested.ts` - `resumable: () => false`.
+- `UPDATE: packages/sdk/src/sessions/nested.ts` - `resumable: () => false`.
 - `UPDATE: packages/agent-acp/src/session.ts` - `resumable` answers whether the handshake advertised `loadSession`.
 - `UPDATE: packages/sdk/src/host/catalogue.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/host/sessionmethods.ts` - a `movable(chatUri)` function; `movable` in `chatSummary` and a peer chat's state; a `movableMoved(chatUri)` that dispatches the two actions when the answer changed, called at a turn's start and end (`packages/sdk/src/host/spawn.ts:615`), when a worker of the chat starts or ends a turn, and when the default chat changes in `disposeChat`.
 - `UPDATE: packages/sdk/test/host-chats.test.ts`, `packages/agent-acp/test/agent-acp.test.ts` - the cases below, the host's in `more than one chat in a session`.

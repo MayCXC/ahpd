@@ -11,8 +11,8 @@ creates: []
 decisions:
   - ../../../decisions/the-door-is-a-door.md
 refs:
-  - "[code://packages/sdk/src/users.ts#L29-L52](../../../../packages/sdk/src/users.ts#L29-L52) - `DEFAULT_RESOURCE`, whose `authorization_servers` is a documentation page and whose `resource` is not an https identifier"
-  - "[code://packages/sdk/src/users.ts#L148-L162](../../../../packages/sdk/src/users.ts#L148-L162) - `Users.verify`, the one question both a door and the protocol will ask"
+  - "[code://packages/sdk/src/access/users.ts#L29-L52](../../../../packages/sdk/src/access/users.ts#L29-L52) - `DEFAULT_RESOURCE`, whose `authorization_servers` is a documentation page and whose `resource` is not an https identifier"
+  - "[code://packages/sdk/src/access/users.ts#L148-L162](../../../../packages/sdk/src/access/users.ts#L148-L162) - `Users.verify`, the one question both a door and the protocol will ask"
   - "[code://packages/sdk/src/host.ts#L2144-L2150](../../../../packages/sdk/src/host.ts#L2144-L2150) - `resourcesOf`, which appends the host's record to every agent"
   - "[code://packages/sdk/src/host.ts#L4474-L4478](../../../../packages/sdk/src/host.ts#L4474-L4478) - `accept`, which builds a `Connection` and is where a principal has to arrive early"
   - "[code://packages/sdk/src/host.ts#L5415-L5432](../../../../packages/sdk/src/host.ts#L5415-L5432) - `authenticate`, the one place a person becomes a principal today, unchanged by this plan"
@@ -86,7 +86,7 @@ client -> ws://host:port?tkn=<token>            -> listen.ts: root token, else t
 - **Event flow** - unchanged. `authenticate` still attaches a principal, still arms the expiry timer, and still raises `auth/required` when a credential runs out.
 - **State flow** - the record a `Users` port advertises is built once at construction, from the operator's identifier or one derived from the listen address. It carries `resource_documentation` and omits `authorization_servers`. Nothing is stored per connection that was not stored before.
 - **Layer responsibilities** - packages/sdk: the record, the token resolution in `listen`, and the principal parameter on `accept` · packages/server: the identifier the daemon advertises and the `identify` wiring · test/: the door matrix and the record · docs: `docs/sdk/USERS.md` and the protocol note.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts), [`code://packages/sdk/src/listen.ts`](../../../../packages/sdk/src/listen.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts), [`code://packages/sdk/src/listen.ts`](../../../../packages/sdk/src/listen.ts), [`code://packages/sdk/src/host.ts`](../../../../packages/sdk/src/host.ts), [`code://packages/server/src/main.ts`](../../../../packages/server/src/main.ts).
 
 ## Tasks
 

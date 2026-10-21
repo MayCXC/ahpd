@@ -8,7 +8,7 @@ revalidated: 2026-09-28
 requires: []
 refs:
   - "[code://packages/sdk/src/types/changes.ts#L276-L284](../../../../packages/sdk/src/types/changes.ts#L276-L284) - `ChangesetSource.watch`"
-  - "[code://packages/sdk/src/changes.ts#L1184-L1300](../../../../packages/sdk/src/changes.ts#L1184-L1300) - the git watch, armed after three `git` runs"
+  - "[code://packages/sdk/src/sessions/changes.ts#L1184-L1300](../../../../packages/sdk/src/sessions/changes.ts#L1184-L1300) - the git watch, armed after three `git` runs"
   - "[code://packages/sdk/src/host.ts#L2794-L2856](../../../../packages/sdk/src/host.ts#L2794-L2856) - `refreshWatched` and `startWatchingDir`"
   - "[code://packages/sdk/test/changes-refresh.test.ts#L264-L277](../../../../packages/sdk/test/changes-refresh.test.ts#L264-L277) - the coalesce case, which counts after a fixed `settle(20)`"
   - "[code://packages/sdk/test/changes-refresh.test.ts#L371-L395](../../../../packages/sdk/test/changes-refresh.test.ts#L371-L395) - the branch-move case, which commits after a fixed `settle(10)`"

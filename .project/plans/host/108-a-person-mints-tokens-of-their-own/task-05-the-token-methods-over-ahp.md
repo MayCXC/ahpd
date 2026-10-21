@@ -4,7 +4,7 @@ status: implemented
 depends: [task-02-a-token-signs-in-narrowed.md]
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/usage.ts#L982-L1020](../../../../packages/sdk/src/usage.ts#L982-L1020) - `usageMethods`, the pattern of a method whose `authorize` lets a reader in for their own records"
+  - "[code://packages/sdk/src/usage/usage.ts#L982-L1020](../../../../packages/sdk/src/usage/usage.ts#L982-L1020) - `usageMethods`, the pattern of a method whose `authorize` lets a reader in for their own records"
   - "[code://packages/sdk/src/types/plugin.ts#L402-L426](../../../../packages/sdk/src/types/plugin.ts#L402-L426) - `PluginMethod`, with `grant`, `authorize` and `handle`"
   - "[code://packages/server/src/commands/run.ts#L998-L1006](../../../../packages/server/src/commands/run.ts#L998-L1006) - where the daemon registers its own methods"
   - "[code://packages/sdk/src/index.ts#L74](../../../../packages/sdk/src/index.ts#L74) - where `usageMethods` is exported"
@@ -17,7 +17,7 @@ The methods do what the commands of task 04 do, with the same checks and the sam
 
 ## Files
 
-- `CREATE: packages/sdk/src/tokens.ts` - `tokenMethods(directory)`, which answers `x-ahpd/tokens/mint`, `x-ahpd/tokens/list` and `x-ahpd/tokens/revoke`.
+- `CREATE: packages/sdk/src/access/tokens.ts` - `tokenMethods(directory)`, which answers `x-ahpd/tokens/mint`, `x-ahpd/tokens/list` and `x-ahpd/tokens/revoke`.
 - `UPDATE: packages/sdk/src/index.ts:74` - export `tokenMethods`.
 - `UPDATE: packages/server/src/commands/run.ts:998-1006` - register the three methods when the daemon has a users directory.
 - `CREATE: packages/sdk/test/token-methods.test.ts` - the tests of the three methods, as `usage-methods.test.ts` does.
@@ -50,7 +50,7 @@ The methods do what the commands of task 04 do, with the same checks and the sam
 
 ## Resume
 
-- **Done so far:** every step. `packages/sdk/src/tokens.ts` answers `x-ahpd/tokens/mint`, `x-ahpd/tokens/list` and `x-ahpd/tokens/revoke`, each with the `user:write` grant and a `describe`. `authorize` lets in a reader whose `token` is not set, when `params.user` is absent or their own id. A reader with `token` set is refused by `handle` with `-32009` and the task-04 sentence. Another person needs `user:write` and is bounded by that person's grants. The body repeats the check because `authorize` is asked only of a caller the grant refused. A root connection with no `user` is refused `INVALID_PARAMS`. Mint answers the `MintedToken` with its `secret`, list the records without hashes, revoke `{}`. Bad params are `INVALID_PARAMS` and directory refusals `-32009` with the directory's sentence. `index.ts` exports `tokenMethods`, and `run.ts` registers the three as `{ by: 'ahpd', name, method }` when a users directory exists.
+- **Done so far:** every step. `packages/sdk/src/access/tokens.ts` answers `x-ahpd/tokens/mint`, `x-ahpd/tokens/list` and `x-ahpd/tokens/revoke`, each with the `user:write` grant and a `describe`. `authorize` lets in a reader whose `token` is not set, when `params.user` is absent or their own id. A reader with `token` set is refused by `handle` with `-32009` and the task-04 sentence. Another person needs `user:write` and is bounded by that person's grants. The body repeats the check because `authorize` is asked only of a caller the grant refused. A root connection with no `user` is refused `INVALID_PARAMS`. Mint answers the `MintedToken` with its `secret`, list the records without hashes, revoke `{}`. Bad params are `INVALID_PARAMS` and directory refusals `-32009` with the directory's sentence. `index.ts` exports `tokenMethods`, and `run.ts` registers the three as `{ by: 'ahpd', name, method }` when a users directory exists.
 - **Next action:** task 06, the docs.
 - **Open questions:** none.
 - **Watch out for:**

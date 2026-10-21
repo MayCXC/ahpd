@@ -1,4 +1,4 @@
-import type { Scope } from '../scopes.js';
+import type { Scope } from '../usage/scopes.js';
 import type { ChangesSummary } from './changes.js';
 import type { Owner } from './usage.js';
 

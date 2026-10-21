@@ -10,11 +10,11 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/usage.ts#L520-L545](../../../../packages/sdk/src/usage.ts#L520-L545) - `refused`, `notYours` and `visible`, the read rule and the list"
-  - "[code://packages/sdk/src/usage.ts#L558-L590](../../../../packages/sdk/src/usage.ts#L558-L590) - `body`, the totals and the records a read answers"
-  - "[code://packages/sdk/src/usage.ts#L405-L445](../../../../packages/sdk/src/usage.ts#L405-L445) - `LEAVES`, `split` and `at`, how a `usage://` URI is read"
-  - "[code://packages/sdk/src/scopes.ts#L95-L131](../../../../packages/sdk/src/scopes.ts#L95-L131) - `namesOf` and `poolsFor`; a `team:*` is crossed with every project, and no `team:` pool comes from a project membership"
-  - "[code://packages/sdk/src/meter.ts#L190-L205](../../../../packages/sdk/src/meter.ts#L190-L205) - the meter charges a scoped record to its `team:` pool too"
+  - "[code://packages/sdk/src/usage/usage.ts#L520-L545](../../../../packages/sdk/src/usage/usage.ts#L520-L545) - `refused`, `notYours` and `visible`, the read rule and the list"
+  - "[code://packages/sdk/src/usage/usage.ts#L558-L590](../../../../packages/sdk/src/usage/usage.ts#L558-L590) - `body`, the totals and the records a read answers"
+  - "[code://packages/sdk/src/usage/usage.ts#L405-L445](../../../../packages/sdk/src/usage/usage.ts#L405-L445) - `LEAVES`, `split` and `at`, how a `usage://` URI is read"
+  - "[code://packages/sdk/src/usage/scopes.ts#L95-L131](../../../../packages/sdk/src/usage/scopes.ts#L95-L131) - `namesOf` and `poolsFor`; a `team:*` is crossed with every project, and no `team:` pool comes from a project membership"
+  - "[code://packages/sdk/src/usage/meter.ts#L190-L205](../../../../packages/sdk/src/usage/meter.ts#L190-L205) - the meter charges a scoped record to its `team:` pool too"
   - "[code://packages/sdk/src/types/usage.ts#L128-L165](../../../../packages/sdk/src/types/usage.ts#L128-L165) - the `Usage` port"
   - "[code://packages/sdk/src/host/admission.ts#L136-L172](../../../../packages/sdk/src/host/admission.ts#L136-L172) - every `usage:` read is gated as `usage:get`"
   - "[code://docs/sdk/USAGE.md](../../../../docs/sdk/USAGE.md) - the scheme as documented"

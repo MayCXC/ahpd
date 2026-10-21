@@ -4,7 +4,7 @@ import { echo } from '../../../examples/echo/agent.js';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { fileSessions, memorySessions } from '../src/sessions.js';
+import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import type { Agent, Listed, SessionAt } from '@ahpd/sdk';
 import type { SessionStore } from '../src/types/sessions.js';
 

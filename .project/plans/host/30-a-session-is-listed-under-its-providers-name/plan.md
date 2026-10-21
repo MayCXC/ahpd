@@ -21,7 +21,7 @@ refs:
   - "[code://packages/sdk/src/host.ts#L447-L465](../../../../packages/sdk/src/host.ts#L447-L465) - `broadcast`, which swaps only the envelope's channel for an aliased subscriber"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L101-L148](../../../../packages/sdk/src/host/sessionmethods.ts#L101-L148) - `subscribe`, which records the alias and applies `spelledFor`"
   - "[code://packages/sdk/src/host/chatactions.ts#L140-L204](../../../../packages/sdk/src/host/chatactions.ts#L140-L204) - resuming a listed session, which already spawns it under `nameOf(id)`: the pattern task 01 mirrors"
-  - "[code://packages/sdk/src/sessions.ts#L42-L52](../../../../packages/sdk/src/sessions.ts#L42-L52) - chat titles, kept by the exact chat URI"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L42-L52](../../../../packages/sdk/src/sessions/sessions.ts#L42-L52) - chat titles, kept by the exact chat URI"
   - "[code://packages/sdk/test/host-names.test.ts#L200-L335](../../../../packages/sdk/test/host-names.test.ts#L200-L335) - `a session asked for by the name a client computed`, the tests for the other spelling of a listed session"
   - https://github.com/microsoft/agent-host-protocol/blob/main/docs/specification/session-channel.md - the provider is not in the session URI's scheme
 ---
@@ -41,7 +41,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 - `/tmp/ahpd-wire.jsonl` on 2026-09-29 - ahpapp's `createSession {channel: "ahp-session:/39c2…", provider: "claude"}`, and every frame for that session carrying `ahp-session:/39c2…` until the restart, then `claude:/39c2…` in `listSessions` while ahpapp kept subscribing as `ahp-session:/39c2…` and was answered.
 - VS Code Agents Window log - `No harness descriptor found for session type remote-…-ahp-session` before the restart, `sessionType="claude"` after.
 - `git -C /github/externals/vscode show origin/main:src/vs/platform/agentHost/common/agent.ts` - `AgentSession.provider()` returns the scheme; `agentHostSessionHandler.ts` `_resolveSessionUri` rebuilds `<provider>:/<id>`.
-- `rg "ahp-session|idOf|nameOf|heldAs" packages/sdk/src` - the maps and helpers in the refs; `packages/sdk/src/nested.ts:232` mints `ahp-session:/` for a nested host's inner session.
+- `rg "ahp-session|idOf|nameOf|heldAs" packages/sdk/src` - the maps and helpers in the refs; `packages/sdk/src/sessions/nested.ts:232` mints `ahp-session:/` for a nested host's inner session.
 - `rg "ahp-session|idOf" .project` - no decision covered the scheme; host 29 recorded that a not-running session is `<provider>:/<id>`.
 
 ### Runtime path

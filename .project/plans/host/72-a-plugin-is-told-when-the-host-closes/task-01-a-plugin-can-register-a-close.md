@@ -6,8 +6,8 @@ layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L176](../../../../packages/sdk/src/types/plugin.ts#L176) - `PluginHost` gets `registerClose`"
   - "[code://packages/sdk/src/types/plugin.ts#L417](../../../../packages/sdk/src/types/plugin.ts#L417) - `Contribution` gets `closers`"
-  - "[code://packages/sdk/src/plugins.ts#L548-L571](../../../../packages/sdk/src/plugins.ts#L548-L571) - the `register*` functions to copy"
-  - "[code://packages/sdk/src/plugins.ts#L166](../../../../packages/sdk/src/plugins.ts#L166) - `foldHostOptions` collects the closers"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L548-L571](../../../../packages/sdk/src/plugins/plugins.ts#L548-L571) - the `register*` functions to copy"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L166](../../../../packages/sdk/src/plugins/plugins.ts#L166) - `foldHostOptions` collects the closers"
   - "[code://packages/sdk/src/host.ts#L857-L890](../../../../packages/sdk/src/host.ts#L857-L890) - `close` calls them"
 ---
 
@@ -20,8 +20,8 @@ A plugin calls `host.registerClose(fn)` in `apply`.
 
 - `UPDATE: packages/sdk/src/types/plugin.ts:176` - `registerClose(close: () => void | Promise<void>): void` on `PluginHost`, with a doc comment.
 - `UPDATE: packages/sdk/src/types/plugin.ts:417` - `closers: (() => void | Promise<void>)[]` on `Contribution`.
-- `UPDATE: packages/sdk/src/plugins.ts:548-571` - `registerClose` checks that it got a function and pushes it onto `contribution.closers`; the empty contribution starts with `closers: []`.
-- `UPDATE: packages/sdk/src/plugins.ts:166` - `foldHostOptions` collects every contribution's closers, in load order, into `HostOptions.closers` as `{ by, close }`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:548-571` - `registerClose` checks that it got a function and pushes it onto `contribution.closers`; the empty contribution starts with `closers: []`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:166` - `foldHostOptions` collects every contribution's closers, in load order, into `HostOptions.closers` as `{ by, close }`.
 - `UPDATE: packages/sdk/src/types/host.ts` - `closers?: { by: string; close: () => void | Promise<void> }[]` on `HostOptions`, with a doc comment.
 - `UPDATE: packages/sdk/src/host.ts:857-890` - after the chats close and before `the automation store`, run each closer as ``await step(`the plugin ${by}`, close)``.
 

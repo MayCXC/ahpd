@@ -4,8 +4,8 @@ date: 2026-10-16
 refs:
   - git://e6417811
   - "[code://packages/server/src/plugins.ts](../../../../packages/server/src/plugins.ts)"
-  - "[code://packages/sdk/src/values.ts](../../../../packages/sdk/src/values.ts)"
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts)"
+  - "[code://packages/sdk/src/utils/values.ts](../../../../packages/sdk/src/utils/values.ts)"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts)"
   - https://github.com/softov/ahpw/blob/main/plugin/index.ts - ahpw exports `web`, in ahpw commit `e500c19`
 ---
 
@@ -20,9 +20,9 @@ Work saved under an old owner such as `plugin:@ahpd/bot` reads as `plugin:bot`, 
 - Each first-party `plugin.ts` and [`code://packages/webhook/src/route.ts`](../../../../packages/webhook/src/route.ts) export the slug, in `a8e998bb`.
 - [`code://packages/server/test/plugin-ids.test.ts`](../../../../packages/server/test/plugin-ids.test.ts) - one case for each of the nine first-party plugins.
 - [`code://packages/server/src/plugins.ts`](../../../../packages/server/src/plugins.ts) - `loadOne` skips an exported name that is not a slug, in `5a6fbdf4`. `unscoped` makes a fallback `@scope/name` into `scope-name`, and `loadOne` checks every id, in `80562f9d`. `describePlugin` lists an id that is not a slug as `error`, in `e6417811`.
-- [`code://packages/sdk/src/values.ts`](../../../../packages/sdk/src/values.ts) - `currentOwner` reads `plugin:@ahpd/<x>` as `plugin:<x>` and `plugin:ahpd-web` as `plugin:web`, and `ownerOf` reads through it, in `11e4df4f`.
-- [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) - `entriesIn` reads a line's owner and pools through `currentOwner`, in `11e4df4f`. A read by pool name reads the name through it too, in `e6417811`.
-- [`code://packages/sdk/src/triggers.ts`](../../../../packages/sdk/src/triggers.ts) - a trigger's `owners` filter compares through `currentOwner`, in `11e4df4f`.
+- [`code://packages/sdk/src/utils/values.ts`](../../../../packages/sdk/src/utils/values.ts) - `currentOwner` reads `plugin:@ahpd/<x>` as `plugin:<x>` and `plugin:ahpd-web` as `plugin:web`, and `ownerOf` reads through it, in `11e4df4f`.
+- [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) - `entriesIn` reads a line's owner and pools through `currentOwner`, in `11e4df4f`. A read by pool name reads the name through it too, in `e6417811`.
+- [`code://packages/sdk/src/automations/triggers.ts`](../../../../packages/sdk/src/automations/triggers.ts) - a trigger's `owners` filter compares through `currentOwner`, in `11e4df4f`.
 - [`code://docs/plugins/PLUGINS.md`](../../../../docs/plugins/PLUGINS.md) and [`code://docs/plugins/WEBHOOKS.md`](../../../../docs/plugins/WEBHOOKS.md) - the slug rule, the first-party ids and the new routes.
 - ahpw commit `e500c19` - the plugin exports `web` and serves its page under `/plugins/web/`.
 

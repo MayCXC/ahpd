@@ -5,9 +5,9 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L90-L111](../../../../packages/sdk/src/types/usage.ts#L90-L111) - `UsageTotal`"
-  - "[code://packages/sdk/src/usage.ts#L22-L33](../../../../packages/sdk/src/usage.ts#L22-L33) - `Measured` and `none`"
-  - "[code://packages/sdk/src/usage.ts#L118-L144](../../../../packages/sdk/src/usage.ts#L118-L144) - `measured`"
-  - "[code://packages/sdk/src/usage.ts#L261-L293](../../../../packages/sdk/src/usage.ts#L261-L293) - the range total"
+  - "[code://packages/sdk/src/usage/usage.ts#L22-L33](../../../../packages/sdk/src/usage/usage.ts#L22-L33) - `Measured` and `none`"
+  - "[code://packages/sdk/src/usage/usage.ts#L118-L144](../../../../packages/sdk/src/usage/usage.ts#L118-L144) - `measured`"
+  - "[code://packages/sdk/src/usage/usage.ts#L261-L293](../../../../packages/sdk/src/usage/usage.ts#L261-L293) - the range total"
 ---
 
 ## Objective
@@ -17,7 +17,7 @@ A `UsageTotal` has `input`, `output` and `cache` beside `tokens`, and `tokens` i
 ## Files
 
 - `UPDATE: packages/sdk/src/types/usage.ts:90-111` - `input?`, `output?` and `cache?` on `UsageTotal`, each with a one-line comment.
-- `UPDATE: packages/sdk/src/usage.ts` - `Measured`, `none`, `measured`, `charge` and the range total carry the three counts.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - `Measured`, `none`, `measured`, `charge` and the range total carry the three counts.
 - `UPDATE: packages/sdk/test/usage.test.ts` - the cases below, and the `toEqual` totals that gain fields.
 
 ## Steps

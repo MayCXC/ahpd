@@ -4,8 +4,8 @@ status: done
 depends: [task-01-one-reserved-list.md]
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L330-L382](../../../../packages/sdk/src/plugins.ts#L330-L382) - the fold, where a scheme or an agent clash is a problem"
-  - "[code://packages/sdk/src/plugins.ts#L352](../../../../packages/sdk/src/plugins.ts#L352) - the agent provider clash this task mirrors"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L330-L382](../../../../packages/sdk/src/plugins/plugins.ts#L330-L382) - the fold, where a scheme or an agent clash is a problem"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L352](../../../../packages/sdk/src/plugins/plugins.ts#L352) - the agent provider clash this task mirrors"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ The daemon's own agents go through `reservedName` too.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts:330-382` - the fold compares the agent providers with the provider schemes, from the base and every plugin.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:330-382` - the fold compares the agent providers with the provider schemes, from the base and every plugin.
 - `UPDATE: packages/sdk/src/host.ts` - `createHost` refuses a base agent whose `provider` `reservedName` answers for.
 - `UPDATE: packages/sdk/test/plugin-validate.test.ts` - cases for both clashes.
 

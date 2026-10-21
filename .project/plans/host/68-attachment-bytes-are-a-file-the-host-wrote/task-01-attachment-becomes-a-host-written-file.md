@@ -7,7 +7,7 @@ refs:
   - "[code://packages/sdk/src/host/chatactions.ts#L345-L356](../../../../packages/sdk/src/host/chatactions.ts#L345-L356) - `chat/turnStarted`"
   - "[code://packages/sdk/src/host/chatactions.ts#L927-L974](../../../../packages/sdk/src/host/chatactions.ts#L927-L974) - `chat/pendingMessageSet`"
   - "[code://packages/sdk/src/host/tooling.ts#L373-L379](../../../../packages/sdk/src/host/tooling.ts#L373-L379) - `resourceRead` to a client"
-  - "[code://packages/sdk/src/sessions.ts#L213-L215](../../../../packages/sdk/src/sessions.ts#L213-L215) - `fileSessions`, whose `dir` the attachments folder sits under"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L213-L215](../../../../packages/sdk/src/sessions/sessions.ts#L213-L215) - `fileSessions`, whose `dir` the attachments folder sits under"
   - "[code://packages/sdk/src/types/sessions.ts#L68](../../../../packages/sdk/src/types/sessions.ts#L68) - `SessionStore`, which answers where the folder is"
 ---
 
@@ -20,7 +20,7 @@ Before the host applies a `chat/turnStarted` or `chat/pendingMessageSet`, each o
 - `CREATE: packages/sdk/src/host/attachments.ts` - `snapshot`.
 - `UPDATE: packages/sdk/src/host/chatactions.ts` - both actions go through `snapshot` before they are applied.
 - `UPDATE: packages/sdk/src/types/sessions.ts` - `SessionStore.attachmentsDir?`, the one place that knows the folder.
-- `UPDATE: packages/sdk/src/sessions.ts` - `fileSessions` answers it and removes the folder in `forget`.
+- `UPDATE: packages/sdk/src/sessions/sessions.ts` - `fileSessions` answers it and removes the folder in `forget`.
 - `CREATE: packages/sdk/test/host-attachments.test.ts`.
 - `UPDATE: packages/sdk/test/sessions.test.ts` - the folder's name whatever the id says, and a removal that reaches only the session's own.
 

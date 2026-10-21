@@ -13,11 +13,11 @@ decisions:
   - decisions/dev-containers-need-allowed-folders-on-a-host-with-users.md
 refs:
   - "[code://packages/sdk/src/host/lifecycle.ts#L409-L470](../../../../packages/sdk/src/host/lifecycle.ts#L409-L470) - a restart: the chats closed, `talking` from `agentId()`, then `spawn`"
-  - "[code://packages/sdk/src/nested.ts#L511-L548](../../../../packages/sdk/src/nested.ts#L511-L548) - `openWorker`"
-  - "[code://packages/sdk/src/nested.ts#L560-L569](../../../../packages/sdk/src/nested.ts#L560-L569) - `opensWorker`, which starts it with `void`"
-  - "[code://packages/sdk/src/nested.ts#L756-L772](../../../../packages/sdk/src/nested.ts#L756-L772) - `createSession` skipped on resume, and the refusal when the inner host has none"
-  - "[code://packages/sdk/src/nested.ts#L817](../../../../packages/sdk/src/nested.ts#L817) - `agentId`, always the session id"
-  - "[code://packages/sdk/src/nested.ts#L964-L983](../../../../packages/sdk/src/nested.ts#L964-L983) - `close`, which returns at once"
+  - "[code://packages/sdk/src/sessions/nested.ts#L511-L548](../../../../packages/sdk/src/sessions/nested.ts#L511-L548) - `openWorker`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L560-L569](../../../../packages/sdk/src/sessions/nested.ts#L560-L569) - `opensWorker`, which starts it with `void`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L756-L772](../../../../packages/sdk/src/sessions/nested.ts#L756-L772) - `createSession` skipped on resume, and the refusal when the inner host has none"
+  - "[code://packages/sdk/src/sessions/nested.ts#L817](../../../../packages/sdk/src/sessions/nested.ts#L817) - `agentId`, always the session id"
+  - "[code://packages/sdk/src/sessions/nested.ts#L964-L983](../../../../packages/sdk/src/sessions/nested.ts#L964-L983) - `close`, which returns at once"
   - "[code://packages/sdk/src/host/lifecycle.ts#L342-L381](../../../../packages/sdk/src/host/lifecycle.ts#L342-L381) - `removeSession`"
   - "[code://packages/computer/src/owners.ts#L124-L153](../../../../packages/computer/src/owners.ts#L124-L153) - `read`, which answers `{}` for a file it cannot read"
   - "[code://packages/computer/src/owners.ts#L164-L178](../../../../packages/computer/src/owners.ts#L164-L178) - `write`"
@@ -71,7 +71,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 ## Proposed architecture
 
 - **Layer responsibilities** - sdk: 01-05 (`nested.ts`, `host/lifecycle.ts`), and the plugin context field 07 needs · computer: 06-08 (`owners.ts`, `plugin.ts`, `runtime.ts`).
-- **Source-of-truth files** - [`code://packages/sdk/src/nested.ts`](../../../../packages/sdk/src/nested.ts), [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/nested.ts`](../../../../packages/sdk/src/sessions/nested.ts), [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts)
 
 ## Tasks
 

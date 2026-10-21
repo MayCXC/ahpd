@@ -14,7 +14,7 @@ decisions:
 refs:
   - "[code://packages/sdk/src/types/plugin.ts#L139-L279](../../../../packages/sdk/src/types/plugin.ts#L139-L279) - `PluginHost`, which gains `registerRoute`"
   - "[code://packages/sdk/src/types/plugin.ts#L329-L364](../../../../packages/sdk/src/types/plugin.ts#L329-L364) - `Contribution`, which gains the routes"
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - the fold and the registration checks"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - the fold and the registration checks"
   - "[code://packages/sdk/src/types/listen.ts#L99-L112](../../../../packages/sdk/src/types/listen.ts#L99-L112) - the listener's plain-request handler"
   - "[code://packages/server/src/commands/run.ts#L341-L342](../../../../packages/server/src/commands/run.ts#L341-L342) - `daemonRequest`, the plain-request chain, built before the plugins load"
   - "[code://packages/server/src/commands/run.ts#L607](../../../../packages/server/src/commands/run.ts#L607) - `loadPlugins`, where the fold that holds the routes is made"

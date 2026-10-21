@@ -9,7 +9,7 @@ requires:
   - plans/host/35-a-person-belongs-to-teams-and-projects/plan.md
 decisions:
 refs:
-  - "[code://packages/sdk/src/users.ts#L23-L39](../../../../packages/sdk/src/users.ts#L23-L39) - the built-in roles and `SUBJECTS`"
+  - "[code://packages/sdk/src/access/users.ts#L23-L39](../../../../packages/sdk/src/access/users.ts#L23-L39) - the built-in roles and `SUBJECTS`"
   - "[code://packages/sdk/src/types/resources.ts#L214-L238](../../../../packages/sdk/src/types/resources.ts#L214-L238) - `SchemeDescription` and `ResourceProvider`, the shape each scheme implements"
   - "[code://packages/sdk/src/host.ts#L5364-L5378](../../../../packages/sdk/src/host.ts#L5364-L5378) - `advertisedSchemes`, which already advertises any registered scheme"
   - "[code://packages/computer/src/plugin.ts#L366](../../../../packages/computer/src/plugin.ts#L366) - `computer:`, the provider to mirror"
@@ -54,7 +54,7 @@ client resourceList/Read/Write/Delete user://, team://, project://, role://
 
 - **Data flow** - each scheme's provider reads and writes through the `Users` port; a record is read as JSON and written as the JSON of the record.
 - **Layer responsibilities** - `packages/sdk`: the subjects, the four providers · `packages/server`: the daemon registers them, the commands move to the new subjects · ahpapp: its own plan, a people screen like the computers one.
-- **Source-of-truth files** - [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts)
 
 ## Tasks
 

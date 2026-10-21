@@ -4,7 +4,7 @@ status: done
 depends: [task-04-a-matched-rule-starts-a-run.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/plugins.ts](../../../../packages/sdk/src/plugins.ts) - the plugin API"
+  - "[code://packages/sdk/src/plugins/plugins.ts](../../../../packages/sdk/src/plugins/plugins.ts) - the plugin API"
 ---
 
 ## Objective
@@ -14,10 +14,10 @@ A plugin declares a trigger type and fires its events, and an automation with th
 ## Files
 
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerTriggerType` and `fireTrigger` on the plugin's host.
-- `UPDATE: packages/sdk/src/plugins.ts` - hand them the fold, so a type is registered and fired through the host.
-- `UPDATE: packages/sdk/src/automations.ts` - list plugin types beside `session` and `watch`.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - hand them the fold, so a type is registered and fired through the host.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - list plugin types beside `session` and `watch`.
 - `UPDATE: packages/sdk/src/types/host.ts` - carry what the fold gathered to the host that fires it.
-- `UPDATE: packages/sdk/src/validate.ts` - check one registration before it is kept.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - check one registration before it is kept.
 - `UPDATE: packages/sdk/src/host/automations.ts` - the fire reaching the automations that watch the type.
 - `CREATE: packages/sdk/test/plugin-triggers.test.ts` - the cases below.
 

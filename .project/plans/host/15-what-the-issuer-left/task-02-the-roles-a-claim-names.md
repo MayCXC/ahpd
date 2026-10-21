@@ -5,8 +5,8 @@ depends: ["01"]
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/types/users.ts#L96-L134](../../../../packages/sdk/src/types/users.ts#L96-L134) - `UserRecord.rolesFrom` and `IssuerAnswer`"
-  - "[code://packages/sdk/src/issuers.ts#L55-L75](../../../../packages/sdk/src/issuers.ts#L55-L75) - `answer`, and `who` on both issuers"
-  - "[code://packages/sdk/src/users.ts#L343-L397](../../../../packages/sdk/src/users.ts#L343-L397) - `principalOf` and `rolesFromClaim`"
+  - "[code://packages/sdk/src/access/issuers.ts#L55-L75](../../../../packages/sdk/src/access/issuers.ts#L55-L75) - `answer`, and `who` on both issuers"
+  - "[code://packages/sdk/src/access/users.ts#L343-L397](../../../../packages/sdk/src/access/users.ts#L343-L397) - `principalOf` and `rolesFromClaim`"
   - "[code://scripts/dev-issuer.mjs](../../../../scripts/dev-issuer.mjs) - a claim to read"
   - "[code://test/users-issuer.test.ts](../../../../test/users-issuer.test.ts) - the cases"
 ---
@@ -18,8 +18,8 @@ A record with `rolesFrom` gets the roles the named claim carries, added to its o
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts` - `IssuerAnswer { subject, claims }`, `Issuer.who` in place of `Issuer.subject`, and `UserRecord.rolesFrom`.
-- `UPDATE: packages/sdk/src/issuers.ts` - `answer`, and `who` on `githubIssuer` and `oidcIssuer`.
-- `UPDATE: packages/sdk/src/users.ts` - `rolesFromClaim`, and `principalOf` taking the claim's roles and stamping their grants.
+- `UPDATE: packages/sdk/src/access/issuers.ts` - `answer`, and `who` on `githubIssuer` and `oidcIssuer`.
+- `UPDATE: packages/sdk/src/access/users.ts` - `rolesFromClaim`, and `principalOf` taking the claim's roles and stamping their grants.
 - `UPDATE: packages/sdk/src/index.ts` - export `IssuerAnswer`.
 - `UPDATE: scripts/dev-issuer.mjs` - `Bearer ana|eng,ops` answers `groups`.
 - `UPDATE: test/users-issuer.test.ts` - the claim cases, and every call site moved to `who`.

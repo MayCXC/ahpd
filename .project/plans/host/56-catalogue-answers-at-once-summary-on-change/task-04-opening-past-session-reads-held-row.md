@@ -20,7 +20,7 @@ Opening a past session reads its row from the held catalogue, a row that is not 
 ## Files
 
 - `UPDATE: packages/sdk/src/types/agent.ts:474` - `find?(id: string): Promise<Listed | undefined>` after `list`, documented: this backend's row for one session, read without listing the rest; undefined when it has none.
-- `UPDATE: packages/sdk/src/validate.ts` - `find` checked as a function when present, as `list` is.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - `find` checked as a function when present, as `list` is.
 - `UPDATE: packages/sdk/src/host/catalogue.ts` - `adopt(agent, row)`: the per-row recording `listing` does at 333-361, taken out so `listing` and `past` share it.
 - `UPDATE: packages/sdk/src/host/history.ts:10-20, 123-197` - `past` reads `rows`; a missing row goes through `find`; `LISTING_FRESH` and `pastAt` are deleted.
 - `UPDATE: packages/agent-claude/src/catalog.ts` - `findSession(dirs, id)`: `getSessionInfo(id, { dir })` per path, mapped as `catalogue` maps a row, with the path it was found under.

@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L528-L582](../../../../packages/sdk/src/nested.ts#L528-L582) - `openWorker`: the subscribe's own catch, then everything after it inside one `try`"
-  - "[code://packages/sdk/src/nested.ts#L599](../../../../packages/sdk/src/nested.ts#L599) - `void openWorker(...)`, which is why no caller holds the promise"
+  - "[code://packages/sdk/src/sessions/nested.ts#L528-L582](../../../../packages/sdk/src/sessions/nested.ts#L528-L582) - `openWorker`: the subscribe's own catch, then everything after it inside one `try`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L599](../../../../packages/sdk/src/sessions/nested.ts#L599) - `void openWorker(...)`, which is why no caller holds the promise"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L962-L997](../../../../packages/sdk/test/nested-proxy.test.ts#L962-L997) - the case, with the process's own `unhandledRejection` watched"
 ---
 
@@ -15,7 +15,7 @@ Whatever opening an inner worker chat throws is logged with the chat's name and 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:528-582` - the body after the subscribe is inside a `try` that logs and returns; today a throw from `start.subagent(...)` or an `emit` rejects a promise started with `void`, and with no `unhandledRejection` handler anywhere that ends the daemon.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:528-582` - the body after the subscribe is inside a `try` that logs and returns; today a throw from `start.subagent(...)` or an `emit` rejects a promise started with `void`, and with no `unhandledRejection` handler anywhere that ends the daemon.
 - `UPDATE: packages/sdk/test/nested-proxy.test.ts` - the case below.
 
 ## Steps

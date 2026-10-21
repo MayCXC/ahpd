@@ -12,9 +12,9 @@ decisions: []
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L59-L71](../../../../packages/sdk/src/types/usage.ts#L59-L71) - `ModelCall`, which already keeps `input`, `output` and `cache`"
   - "[code://packages/sdk/src/types/usage.ts#L90-L111](../../../../packages/sdk/src/types/usage.ts#L90-L111) - `UsageTotal`, which has one `tokens`"
-  - "[code://packages/sdk/src/usage.ts#L22-L33](../../../../packages/sdk/src/usage.ts#L22-L33) - `Measured`, the per-day sum, and `none`"
-  - "[code://packages/sdk/src/usage.ts#L118-L144](../../../../packages/sdk/src/usage.ts#L118-L144) - `measured`, which sets the three token counts and their sum"
-  - "[code://packages/sdk/src/usage.ts#L261-L293](../../../../packages/sdk/src/usage.ts#L261-L293) - the total over a range"
+  - "[code://packages/sdk/src/usage/usage.ts#L22-L33](../../../../packages/sdk/src/usage/usage.ts#L22-L33) - `Measured`, the per-day sum, and `none`"
+  - "[code://packages/sdk/src/usage/usage.ts#L118-L144](../../../../packages/sdk/src/usage/usage.ts#L118-L144) - `measured`, which sets the three token counts and their sum"
+  - "[code://packages/sdk/src/usage/usage.ts#L261-L293](../../../../packages/sdk/src/usage/usage.ts#L261-L293) - the total over a range"
   - "[code://packages/sdk/test/usage.test.ts#L55](../../../../packages/sdk/test/usage.test.ts#L55) - the test that charges one model call"
   - "file:///github/ahpapp/.project/plans/usage/02-a-pool-shows-tokens-sent-and-received/plan.md - the ahpapp plan that draws the split"
 ---
@@ -39,7 +39,7 @@ ModelUse { input, output, cache } -> measured -> per-day Measured -> total over 
 
 ### Gaps
 
-- `Not found: a sent or received count in a total - searched "tokens" in packages/sdk/src/usage.ts`.
+- `Not found: a sent or received count in a total - searched "tokens" in packages/sdk/src/usage/usage.ts`.
 
 ## Decisions locked in
 
@@ -57,7 +57,7 @@ ModelUse { input, output, cache } -> measured -> per-day Measured -> total over 
 ## Proposed architecture
 
 - **State flow** - `Measured` keeps `input`, `output` and `cache` beside `tokens`, and the range total adds them the same way.
-- **Source-of-truth files** - [`code://packages/sdk/src/usage.ts`](../../../../packages/sdk/src/usage.ts) and [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts).
+- **Source-of-truth files** - [`code://packages/sdk/src/usage/usage.ts`](../../../../packages/sdk/src/usage/usage.ts) and [`code://packages/sdk/src/types/usage.ts`](../../../../packages/sdk/src/types/usage.ts).
 
 ## Tasks
 

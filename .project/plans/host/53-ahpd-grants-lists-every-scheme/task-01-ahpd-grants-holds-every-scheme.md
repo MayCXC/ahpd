@@ -5,7 +5,7 @@ depends: []
 layer: "sdk"
 refs:
   - "[code://packages/sdk/src/host/root.ts#L215-L234](../../../../packages/sdk/src/host/root.ts#L215-L234) - `advertisedGrants`, which gains the schemes"
-  - "[code://packages/sdk/src/users.ts#L76](../../../../packages/sdk/src/users.ts#L76) - `RESOURCE`, the groups a scheme takes"
+  - "[code://packages/sdk/src/access/users.ts#L76](../../../../packages/sdk/src/access/users.ts#L76) - `RESOURCE`, the groups a scheme takes"
 ---
 
 ## Objective

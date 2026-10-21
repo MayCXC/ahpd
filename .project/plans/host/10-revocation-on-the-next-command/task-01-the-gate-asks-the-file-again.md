@@ -5,7 +5,7 @@ depends: []
 layer: packages/sdk
 refs:
   - "[code://packages/sdk/src/types/users.ts#L34-L60](../../../../packages/sdk/src/types/users.ts#L34-L60) - `Principal`, which gains `standing`"
-  - "[code://packages/sdk/src/users.ts#L177-L205](../../../../packages/sdk/src/users.ts#L177-L205) - `principalOf`, which resolves from the file"
+  - "[code://packages/sdk/src/access/users.ts#L177-L205](../../../../packages/sdk/src/access/users.ts#L177-L205) - `principalOf`, which resolves from the file"
   - "[code://packages/sdk/src/host.ts#L7553-L7580](../../../../packages/sdk/src/host.ts#L7553-L7580) - the command gate"
   - "[code://packages/sdk/src/host.ts#L6346-L6365](../../../../packages/sdk/src/host.ts#L6346-L6365) - the dispatch gate"
 ---
@@ -17,7 +17,7 @@ A principal resolves through the directory on every question, so a removed perso
 ## Files
 
 - `UPDATE: packages/sdk/src/types/users.ts` - `Principal.standing?()`, with the comment saying absent means still standing.
-- `UPDATE: packages/sdk/src/users.ts` - `principalOf` returns a live `standing` and `can`; `grantsOf` gains the `complain` flag so the undefined-role line is said once at verification.
+- `UPDATE: packages/sdk/src/access/users.ts` - `principalOf` returns a live `standing` and `can`; `grantsOf` gains the `complain` flag so the undefined-role line is said once at verification.
 - `UPDATE: packages/sdk/src/host.ts` - both gates ask `standing` before `can`.
 - `UPDATE: test/users-gate.test.ts` - a real `fileUsers`: a role change answers `-32009`, removal answers `-32007`, both on the next command.
 

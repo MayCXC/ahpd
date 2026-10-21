@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L86-L89](../../../../packages/sdk/src/plugins.ts#L86-L89) - `PORT_KEYS`"
-  - "[code://packages/sdk/src/plugins.ts#L935](../../../../packages/sdk/src/plugins.ts#L935) - `registerAutomations`, the shape of a port setter"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L86-L89](../../../../packages/sdk/src/plugins/plugins.ts#L86-L89) - `PORT_KEYS`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L935](../../../../packages/sdk/src/plugins/plugins.ts#L935) - `registerAutomations`, the shape of a port setter"
 ---
 
 ## Objective
@@ -16,10 +16,10 @@ refs:
 ## Files
 
 - `CREATE: packages/sdk/src/types/records.ts` - `RecordStore`, `RecordCollection`, `RecordChange` and `CollectionOptions`.
-- `UPDATE: packages/sdk/src/records.ts` - `memoryRecords()`, and the slug rule for a name and an id.
+- `UPDATE: packages/sdk/src/resources/records.ts` - `memoryRecords()`, and the slug rule for a name and an id.
 - `UPDATE: packages/sdk/src/types/host.ts` - `HostOptions.records`.
 - `UPDATE: packages/sdk/src/types/plugin.ts` - `registerRecords` and `records` on `PluginHost`.
-- `UPDATE: packages/sdk/src/plugins.ts:86-89` - `records` in `PORT_KEYS`, `registerRecords`, and `records` resolved at call time.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:86-89` - `records` in `PORT_KEYS`, `registerRecords`, and `records` resolved at call time.
 - `UPDATE: packages/sdk/src/types/index.ts` - export the new types.
 - `UPDATE: packages/sdk/src/index.ts` - export `memoryRecords`.
 - `CREATE: packages/sdk/test/plugin-records.test.ts` - cases for the port and the collection.

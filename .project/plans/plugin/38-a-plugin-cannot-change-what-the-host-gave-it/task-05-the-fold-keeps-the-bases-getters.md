@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L176-L181](../../../../packages/sdk/src/plugins.ts#L176-L181) - `{ ...base }` reads each getter once"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L176-L181](../../../../packages/sdk/src/plugins/plugins.ts#L176-L181) - `{ ...base }` reads each getter once"
   - "[code://packages/server/src/commands/run.ts#L566-L571](../../../../packages/server/src/commands/run.ts#L566-L571) - `get mcpServers()`"
 ---
 
@@ -14,7 +14,7 @@ A root-config edit to `mcpServers` reaches the next session without a restart, a
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts:180` - the options start from `Object.defineProperties({}, Object.getOwnPropertyDescriptors(base))`, so getters stay getters.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts:180` - the options start from `Object.defineProperties({}, Object.getOwnPropertyDescriptors(base))`, so getters stay getters.
 - `UPDATE: packages/sdk/test` - the case below.
 
 ## Steps

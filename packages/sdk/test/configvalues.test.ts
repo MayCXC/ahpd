@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { accepts } from '../src/configvalues.js';
+import { accepts } from '../src/utils/configvalues.js';
 
 describe('a config value against its property', () => {
   it('takes a value on the list and refuses one that is not', () => {

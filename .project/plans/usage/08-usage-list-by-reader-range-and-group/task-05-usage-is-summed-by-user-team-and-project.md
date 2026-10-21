@@ -5,7 +5,7 @@ depends: [task-01-a-member-reads-their-teams-pool.md, task-03-a-pool-says-its-ki
 layer: sdk
 refs:
   - "[code://packages/sdk/src/types/usage.ts#L128-L165](../../../../packages/sdk/src/types/usage.ts#L128-L165) - the `Usage` port"
-  - "[code://packages/sdk/src/usage.ts#L285-L356](../../../../packages/sdk/src/usage.ts#L285-L356) - the file store's `total` and `records`"
+  - "[code://packages/sdk/src/usage/usage.ts#L285-L356](../../../../packages/sdk/src/usage/usage.ts#L285-L356) - the file store's `total` and `records`"
 ---
 
 ## Objective
@@ -15,7 +15,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/usage.ts` - the `Usage` port gains `groups(by, from, until, keep)` and a row type.
-- `UPDATE: packages/sdk/src/usage.ts` - the file store's `groups`, and the `groups` read on the scheme root.
+- `UPDATE: packages/sdk/src/usage/usage.ts` - the file store's `groups`, and the `groups` read on the scheme root.
 - `UPDATE: packages/sdk/test/usage-scheme.test.ts` - the group cases.
 - `UPDATE: docs/sdk/USAGE.md` - the `groups` read.
 
@@ -39,7 +39,7 @@ refs:
 ## Resume
 
 - `packages/sdk/src/types/usage.ts`: the `Usage` port gains `groups(by, from, until, keep)`, with `UsageKey` and `UsageGroup`, exported from `packages/sdk/src/types/index.ts`.
-- `packages/sdk/src/usage.ts`: the file store's `groups` reads each record of the range once, keeps it when `keep` accepts its pools, and sums it by its keys.
+- `packages/sdk/src/usage/usage.ts`: the file store's `groups` reads each record of the range once, keeps it when `keep` accepts its pools, and sums it by its keys.
 - A key is the pool key: `user` is the record's owner, `team` is `team:<team>`, and `project` is `project:<team>:<project>`. A key the record has none of is left out.
 - `usage://groups?by=&from=&until=` answers `[{ keys, names, total }]`. A `by` with an unknown key is `-32602`, and no `by` is one row.
 - The grouped read is authorized for every reader, and keeps a record when the reader may read one of its pools.

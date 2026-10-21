@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L672-L687](../../../../packages/sdk/src/users.ts#L672-L687) - `write`, whose temp name is `${options.path}.tmp`"
+  - "[code://packages/sdk/src/access/users.ts#L672-L687](../../../../packages/sdk/src/access/users.ts#L672-L687) - `write`, whose temp name is `${options.path}.tmp`"
   - "[code://packages/server/src/daemon.ts#L125](../../../../packages/server/src/daemon.ts#L125) - the sweeper's `<file>.<pid>.tmp` form"
   - "[code://packages/sdk/test/users.test.ts](../../../../packages/sdk/test/users.test.ts) - the user directory's cases"
 ---
@@ -15,7 +15,7 @@ Each process writing the user file writes through `${path}.${pid}.tmp`, so two w
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:675` - `const loose = \`${options.path}.${String(process.pid)}.tmp\``; today `${options.path}.tmp`.
+- `UPDATE: packages/sdk/src/access/users.ts:675` - `const loose = \`${options.path}.${String(process.pid)}.tmp\``; today `${options.path}.tmp`.
 - `UPDATE: packages/sdk/test/users.test.ts` - one case.
 
 ## Steps

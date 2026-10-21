@@ -6,7 +6,7 @@ layer: "packages/bot"
 refs:
   - "[code://packages/bot/src/provider.ts#L365-L454](../../../../packages/bot/src/provider.ts#L365-L454) - `write` and `remove`"
   - "[code://packages/bot/src/provider.ts#L184-L191](../../../../packages/bot/src/provider.ts#L184-L191) - `mayRead`"
-  - "[code://packages/sdk/src/resources.ts#L503-L575](../../../../packages/sdk/src/resources.ts#L503-L575) - the file store's `watch`"
+  - "[code://packages/sdk/src/resources/resources.ts#L503-L575](../../../../packages/sdk/src/resources/resources.ts#L503-L575) - the file store's `watch`"
 ---
 
 ## Objective

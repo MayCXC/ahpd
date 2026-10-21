@@ -4,7 +4,7 @@ status: done
 depends: [task-02-the-rule-engine-matches-a-rule.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/automations.ts#L382](../../../../packages/sdk/src/automations.ts#L382) - `triggers`"
+  - "[code://packages/sdk/src/automations/automations.ts#L382](../../../../packages/sdk/src/automations/automations.ts#L382) - `triggers`"
 ---
 
 ## Objective
@@ -13,9 +13,9 @@ refs:
 
 ## Files
 
-- `CREATE: packages/sdk/src/triggerpresets.ts` - the five presets, each a function from its numbers to a `SessionRule`.
-- `UPDATE: packages/sdk/src/automations.ts:333` - list the two types with their events and config schemas.
-- `UPDATE: packages/sdk/src/automations.ts` - check each event trigger's config on create and update.
+- `CREATE: packages/sdk/src/automations/triggerpresets.ts` - the five presets, each a function from its numbers to a `SessionRule`.
+- `UPDATE: packages/sdk/src/automations/automations.ts:333` - list the two types with their events and config schemas.
+- `UPDATE: packages/sdk/src/automations/automations.ts` - check each event trigger's config on create and update.
 - `UPDATE: packages/sdk/src/scheduled.ts:359` - answer the types from the store underneath, which is the one the daemon is built over.
 - `CREATE: packages/sdk/test/trigger-types.test.ts` - the cases below.
 

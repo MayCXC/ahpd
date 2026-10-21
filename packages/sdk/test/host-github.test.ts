@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { memorySessions } from '../src/sessions.js';
+import { memorySessions } from '../src/sessions/sessions.js';
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
@@ -9,7 +9,7 @@ import {
   resetSdk, actions, claude, createHost, emit, gitChanges, hello, hostTools, machine,
  peer, sdk, sessionQueries, settle,
 } from './support/host.js';
-import { uriOf } from '../src/fileuri.js';
+import { uriOf } from '../src/resources/fileuri.js';
 
 /** The folder the hosts here serve, as its URI on this system: `file:///C:/home/softov` on Windows. */
 const HOME = uriOf('/home/softov');

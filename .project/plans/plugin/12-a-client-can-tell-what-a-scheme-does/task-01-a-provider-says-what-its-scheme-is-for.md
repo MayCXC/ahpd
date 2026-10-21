@@ -5,7 +5,7 @@ depends: []
 layer: packages/sdk, packages/computer
 refs:
   - "[code://packages/sdk/src/types/resources.ts#L204-L211](../../../../packages/sdk/src/types/resources.ts#L204-L211) - `ResourceProvider`, which gains the optional method"
-  - "[code://packages/sdk/src/validate.ts](../../../../packages/sdk/src/validate.ts) - `checkResourceProvider`, the boundary that must allow it"
+  - "[code://packages/sdk/src/plugins/validate.ts](../../../../packages/sdk/src/plugins/validate.ts) - `checkResourceProvider`, the boundary that must allow it"
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - `manifestOf`, whose rules the schema has to say"
   - "[code://packages/computer/src/provider.ts#L78-L100](../../../../packages/computer/src/provider.ts#L78-L100) - `capabilities`, which already names the fields in prose"
   - "[code://test/computer.test.ts](../../../../test/computer.test.ts) - where the provider's answer is asserted"
@@ -19,7 +19,7 @@ refs:
 ## Files
 
 - `UPDATE: packages/sdk/src/types/resources.ts` - `SchemeDescription { title, description?, manifest? }` and `describe?(): SchemeDescription` on `ResourceProvider`.
-- `UPDATE: packages/sdk/src/validate.ts` - `describe` accepted as an optional function on a provider registration.
+- `UPDATE: packages/sdk/src/plugins/validate.ts` - `describe` accepted as an optional function on a provider registration.
 - `UPDATE: packages/computer/src/manifest.ts` - `MANIFEST_SCHEMA`, the fields `manifestOf` reads, built from the same defaults the parser uses.
 - `UPDATE: packages/computer/src/provider.ts` - `describe()` answering the title, the description and `MANIFEST_SCHEMA`.
 - `UPDATE: test/computer.test.ts` - the provider's description.

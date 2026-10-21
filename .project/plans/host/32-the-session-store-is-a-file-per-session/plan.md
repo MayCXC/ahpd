@@ -9,7 +9,7 @@ requires:
   - plans/host/31-a-sessions-config-outlives-a-restart/plan.md
 decisions:
 refs:
-  - "[code://packages/sdk/src/sessions.ts#L27-L207](../../../../packages/sdk/src/sessions.ts#L27-L207) - `memorySessions` and `fileSessions`: load, coalesced save, temp and rename"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L27-L207](../../../../packages/sdk/src/sessions/sessions.ts#L27-L207) - `memorySessions` and `fileSessions`: load, coalesced save, temp and rename"
   - "[code://packages/sdk/src/types/sessions.ts#L41-L95](../../../../packages/sdk/src/types/sessions.ts#L41-L95) - `SessionStore`, with no list or prune"
   - "[code://packages/sdk/src/host.ts#L2936-L2950](../../../../packages/sdk/src/host.ts#L2936-L2950) - a GitHub answer writes a baseline for every session in the directory"
   - "[code://packages/sdk/src/host.ts#L7403-L7427](../../../../packages/sdk/src/host.ts#L7403-L7427) - `disposeChat`, which leaves the chat's title"
@@ -53,7 +53,7 @@ The files read are the `refs` above.
 
 - **State flow** - `fileSessions(dir)` reads `dir/*.json` at start; each setter marks its id dirty and the coalesced save writes each dirty id's file; `forget` and `prune` unlink.
 - **Layer responsibilities** - sdk: the store, the port, the prune call and the two host fixes · server: the path, `sessions/` instead of `sessions.json`, and the migration.
-- **Source-of-truth files** - [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 

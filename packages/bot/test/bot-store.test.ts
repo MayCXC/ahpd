@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, expect, it } from 'vitest';
 import { parseYaml, stringifyYaml } from '@cofold/yaml';
-import { memoryRecords } from '../../sdk/src/records.js';
+import { memoryRecords } from '../../sdk/src/resources/records.js';
 import { backSessions, chatsOf, sessionsOf } from '../src/names.js';
 import { botProvider } from '../src/provider.js';
 import { botStore } from '../src/store.js';

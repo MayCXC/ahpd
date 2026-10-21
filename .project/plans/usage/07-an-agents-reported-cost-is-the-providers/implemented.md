@@ -2,7 +2,7 @@
 title: An agent's reported cost is kept as the provider's, and a record says nothing it was not told - implemented
 date: 2026-10-08
 refs:
-  - "[code://packages/sdk/src/meter.ts](../../../../packages/sdk/src/meter.ts)"
+  - "[code://packages/sdk/src/usage/meter.ts](../../../../packages/sdk/src/usage/meter.ts)"
   - "[code://packages/agent-claude/src/session/parts.ts](../../../../packages/agent-claude/src/session/parts.ts)"
   - "[code://packages/agent-pi/src/mapping.ts](../../../../packages/agent-pi/src/mapping.ts)"
 ---
@@ -11,7 +11,7 @@ A model record written for an agent's turn now keeps the harness's cost as both 
 
 ## What was built
 
-- [`code://packages/sdk/src/meter.ts`](../../../../packages/sdk/src/meter.ts) - `costOf` reads `input` and `output` from a harness's `_meta.cost` beside the amount, leaving out a part that is absent or is not a count. `write` sets `providerCost` to the same value as `cost`, and drops both when the amount is 0 and the report counted no token (`usedAny`). `addition` differences a cost's `input` and `output` per report as it already differenced the amount, so a per-report meter writes each round's own split.
+- [`code://packages/sdk/src/usage/meter.ts`](../../../../packages/sdk/src/usage/meter.ts) - `costOf` reads `input` and `output` from a harness's `_meta.cost` beside the amount, leaving out a part that is absent or is not a count. `write` sets `providerCost` to the same value as `cost`, and drops both when the amount is 0 and the report counted no token (`usedAny`). `addition` differences a cost's `input` and `output` per report as it already differenced the amount, so a per-report meter writes each round's own split.
 - [`code://packages/agent-claude/src/session/parts.ts`](../../../../packages/agent-claude/src/session/parts.ts) - `costOf` reads a figure that did not go up as no spend, sends no cost when no model spent, and moves the `costUSD` baseline only for a model the result spent on. `newConversation` clears that baseline, and [`code://packages/agent-claude/src/session/query.ts`](../../../../packages/agent-claude/src/session/query.ts) calls it on the CLI's `conversation_reset`, so the turns after a `/clear`, a plan-mode exit or a fresh session are billed from zero rather than read as a step back below the old figure.
 - [`code://packages/agent-pi/src/mapping.ts`](../../../../packages/agent-pi/src/mapping.ts) - `addUsage` sums pi's four priced parts over the calls: `input`, `cacheRead` and `cacheWrite` into the sent side, `output` into the received side, beside the total. A part no call sent stays absent.
 

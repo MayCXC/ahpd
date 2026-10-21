@@ -52,7 +52,7 @@ Every area file is in `docs/server/`, `docs/sdk/` or `docs/plugins/`, and every 
 - `CREATE: docs/plugins/webhook.md` - a heading, an include of `packages/webhook/README.md` and a link to `WEBHOOKS.md`.
 - `UPDATE: docs/README.md` - lists the files in three tables, one per folder, with the plugin pages in `plugins/`.
 - `UPDATE: packages/bot/test/bot-docs.test.ts:16` - reads `docs/plugins/BOTS.md`.
-- `UPDATE: packages/sdk/src/users.ts` - the `resource_documentation` link names `docs/sdk/USERS.md`.
+- `UPDATE: packages/sdk/src/access/users.ts` - the `resource_documentation` link names `docs/sdk/USERS.md`.
 - `UPDATE: README.md` - the links to area files name the new paths.
 - `UPDATE: DEVELOPER.md` - the link to `AHP.md` names the new path.
 - `UPDATE: REFERENCE.md` - the link to `AHP.md` names the new path.

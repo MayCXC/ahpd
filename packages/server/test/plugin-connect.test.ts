@@ -1,9 +1,9 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
 import { createHost } from '../../sdk/src/host.js';
-import { raise } from '../../sdk/src/plugins.js';
-import { idOf } from '../../sdk/src/catalog.js';
-import { memorySessions } from '../../sdk/src/sessions.js';
+import { raise } from '../../sdk/src/plugins/plugins.js';
+import { idOf } from '../../sdk/src/sessions/catalog.js';
+import { memorySessions } from '../../sdk/src/sessions/sessions.js';
 import { loadPlugins } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Agent, Start } from '../../sdk/src/types/agent.js';

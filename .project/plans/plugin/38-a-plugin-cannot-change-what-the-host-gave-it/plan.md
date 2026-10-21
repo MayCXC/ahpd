@@ -10,7 +10,7 @@ changes: []
 creates: []
 decisions:
 refs:
-  - "[code://packages/sdk/src/users.ts#L782-L810](../../../../packages/sdk/src/users.ts#L782-L810) - a principal is a writable literal; `can` and `id` are own properties"
+  - "[code://packages/sdk/src/access/users.ts#L782-L810](../../../../packages/sdk/src/access/users.ts#L782-L810) - a principal is a writable literal; `can` and `id` are own properties"
   - "[code://packages/server/src/commands/authorize.ts#L29-L33](../../../../packages/server/src/commands/authorize.ts#L29-L33) - `ROOT`, one module-level principal for the deployment token"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L74-L92](../../../../packages/sdk/src/host/resourcemethods.ts#L74-L92) - `list` and `read` get `connection.principal` itself"
   - "[code://packages/sdk/src/host/admission.ts#L206-L231](../../../../packages/sdk/src/host/admission.ts#L206-L231) - `authorize` gets the principal before the gate calls `who.can`"
@@ -19,12 +19,12 @@ refs:
   - "[code://packages/sdk/src/host/tooling.ts#L270-L282](../../../../packages/sdk/src/host/tooling.ts#L270-L282) - a tool's `context()` returns another backend's live turns"
   - "[code://packages/sdk/src/host/tooling.ts#L408](../../../../packages/sdk/src/host/tooling.ts#L408) - `mcpFor` copies the map, not the `McpServer` entries with their credentials"
   - "[code://packages/sdk/src/host/spawn.ts#L460-L470](../../../../packages/sdk/src/host/spawn.ts#L460-L470) - `Start.resources` is the host's own file store"
-  - "[code://packages/sdk/src/plugins.ts#L176-L181](../../../../packages/sdk/src/plugins.ts#L176-L181) - `foldHostOptions` spreads the base, which reads the `mcpServers` getter once"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L176-L181](../../../../packages/sdk/src/plugins/plugins.ts#L176-L181) - `foldHostOptions` spreads the base, which reads the `mcpServers` getter once"
   - "[code://packages/server/src/commands/run.ts#L566-L571](../../../../packages/server/src/commands/run.ts#L566-L571) - the `mcpServers` getter, so a root-config edit reaches the next session"
-  - "[code://packages/sdk/src/plugins.ts#L370-L402](../../../../packages/sdk/src/plugins.ts#L370-L402) - the fold keeps each plugin's `PluginTriggers` object live"
-  - "[code://packages/sdk/src/plugins.ts#L660-L680](../../../../packages/sdk/src/plugins.ts#L660-L680) - `registerTriggerType` still writes after the fold"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L370-L402](../../../../packages/sdk/src/plugins/plugins.ts#L370-L402) - the fold keeps each plugin's `PluginTriggers` object live"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L660-L680](../../../../packages/sdk/src/plugins/plugins.ts#L660-L680) - `registerTriggerType` still writes after the fold"
   - "[code://packages/sdk/src/host/automations.ts#L912-L918](../../../../packages/sdk/src/host/automations.ts#L912-L918) - `fired` does not check that the type is the firing plugin's"
-  - "[code://packages/sdk/src/plugins.ts#L725-L740](../../../../packages/sdk/src/plugins.ts#L725-L740) - `raise` hands one event object to every listener in turn"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L725-L740](../../../../packages/sdk/src/plugins/plugins.ts#L725-L740) - `raise` hands one event object to every listener in turn"
   - "[code://packages/server/src/plugins.ts#L600-L645](../../../../packages/server/src/plugins.ts#L600-L645) - `apply` options; `secretAtUse` nodes are passed as they are"
   - "[code://packages/server/src/plugins.ts#L740-L760](../../../../packages/server/src/plugins.ts#L740-L760) - the context each plugin gets; `paths` is the daemon's own array"
   - "[code://packages/server/src/plugins.ts#L957](../../../../packages/server/src/plugins.ts#L957) - the plugin's `optionsSchema` is kept live and masks its secrets"
@@ -84,7 +84,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 - **Data flow** - one sdk helper, `frozenCopy(value)`, copies plain data with `structuredClone` and freezes it deep. An object with methods, such as a store or a principal, is built new and frozen with `Object.freeze`.
 - **State flow** - the host keeps its own record of what it writes later, such as a trigger's `deliver`. It does not write onto the plugin's object.
 - **Layer responsibilities** - sdk: the helper, principals, `Start`, tool context, the fold, `raise` · server: `ROOT`, the plugin context, `apply` options, `optionsSchema`.
-- **Source-of-truth files** - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts), [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts), [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts)
 
 ## Tasks
 
@@ -107,7 +107,7 @@ plugin contribution -> copy + freeze at registration or fold -> host keeps only 
 ## Resume state
 
 - **Done so far:** all six tasks, in dependency order, 2026-10-08, merged to main as 9f3798c on 2026-10-09.
-  - **01 - a principal cannot be changed.** `frozenCopy(value)` and `deepFreeze(value)` in the new `packages/sdk/src/frozen.ts`; every principal the host builds is frozen, the daemon's `ROOT` and the `can`/`id` literals in `packages/sdk/src/users.ts` included, so the reader a provider is handed at `read`, `write` and `remove` is read-only.
+  - **01 - a principal cannot be changed.** `frozenCopy(value)` and `deepFreeze(value)` in the new `packages/sdk/src/utils/frozen.ts`; every principal the host builds is frozen, the daemon's `ROOT` and the `can`/`id` literals in `packages/sdk/src/access/users.ts` included, so the reader a provider is handed at `read`, `write` and `remove` is read-only.
   - **02 - an agent's start holds copies.** `Start`'s schema, tool definitions, MCP servers and per-session file store are the host's own frozen copies; a host tool's `context()` answers a frozen copy of the turns.
   - **03 - the host holds copies of contributions.** The fold takes its own copy of every agent, tool, session-config schema, trigger type and `optionsSchema`; a `register*` after `apply` returns throws the loader's seal sentence; `fired` asks the door which plugin holds a trigger type.
   - **04 - events, paths and options are per plugin copies.** `raise` hands one frozen copy of the event to every listener; the plugin context is a frozen literal with `paths: frozenCopy(...)`; a `secretAtUse` node is copied like any other.

@@ -4,7 +4,7 @@ date: 2026-10-05
 refs:
   - git://cecc459
   - "[code://packages/sdk/src/types/machine.ts](../../../../packages/sdk/src/types/machine.ts) - `StateNeed`, `Seed`, `StateMode`, `when`, and `seed` and `provider` on `ResolvedNeed`"
-  - "[code://packages/sdk/src/machine.ts](../../../../packages/sdk/src/machine.ts) - `resolveNeeds` with the mode, and the seeds resolved"
+  - "[code://packages/sdk/src/machines/machine.ts](../../../../packages/sdk/src/machines/machine.ts) - `resolveNeeds` with the mode, and the seeds resolved"
   - "[code://packages/computer/src/manifest.ts](../../../../packages/computer/src/manifest.ts) - `Profile.state`, `Profile.stateScope`, `sameNeed`, `oneNeedEach` and `statesAsked`"
   - "[code://packages/computer/src/runtime.ts](../../../../packages/computer/src/runtime.ts) - `stateVolumeOf`, `seedState`, the flags, the label and the removal"
   - "[code://packages/computer/src/plugin.ts](../../../../packages/computer/src/plugin.ts) - the profile schema and checks, and each volume named before a machine is made"
@@ -19,7 +19,7 @@ Two agents asking for one env value or one state directory get it once, and two 
 
 ## What was built
 
-- [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) and [`code://packages/sdk/src/machine.ts`](../../../../packages/sdk/src/machine.ts) - the `state` kind, `when` on every need, and `resolveNeeds(needs, sources, home, mode = 'volume')`, which leaves out a need of the other mode; a state need is `volume` alone, and a seed whose `keep` or `drop` names `__proto__`, `constructor` or `prototype` is refused.
+- [`code://packages/sdk/src/types/machine.ts`](../../../../packages/sdk/src/types/machine.ts) and [`code://packages/sdk/src/machines/machine.ts`](../../../../packages/sdk/src/machines/machine.ts) - the `state` kind, `when` on every need, and `resolveNeeds(needs, sources, home, mode = 'volume')`, which leaves out a need of the other mode; a state need is `volume` alone, and a seed whose `keep` or `drop` names `__proto__`, `constructor` or `prototype` is refused.
 - [`code://packages/computer/src/manifest.ts`](../../../../packages/computer/src/manifest.ts) - `Profile.state` and `Profile.stateScope`, the mode passed to resolution, each state need tagged with its provider, `sameNeed` and `oneNeedEach`, state targets in `oneMountEach`, and `statesAsked` and `stateScope` on the spec.
 - [`code://packages/computer/src/plugin.ts`](../../../../packages/computer/src/plugin.ts) - `state` and `stateScope` in the profile schema and in `profilesOf`, refused by name when neither answer, and `states` named with `stateVolumeOf` before a machine is made, the owner as `claimOf` answers it.
 - [`code://packages/computer/src/runtime.ts`](../../../../packages/computer/src/runtime.ts) - `stateVolumeOf`, `-v <volume>:<dir>` and `--mount type=volume` on the two routes, the `ahpd.state=volume` label, `seedState` with its stamp and filters writing an archive owned by the machine's user with `docker cp -a`, a symlink inside a seeded directory skipped with a log line, a dev container that builds its image seeded after `up` inside its running container, and a machine made without a profile losing its volumes on remove.

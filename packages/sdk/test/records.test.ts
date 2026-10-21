@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { RpcError } from '../src/rpc.js';
-import { asFile, jsonBody, splitResource } from '../src/records.js';
+import { asFile, jsonBody, splitResource } from '../src/resources/records.js';
 import type { Write } from '../src/types/resources.js';
 
 /*

@@ -82,7 +82,7 @@ window root/configChanged { autoArchiveMergedSessionsAfterDays: 7 } -> actions.t
 - **Event flow** - an archive goes out as `session/isArchivedChanged`, so every client sees it. A delete goes out as `root/sessionRemoved`.
 - **State flow** - the store keeps `autoArchivedAt` per session. The two keys stay in `rootConfig`.
 - **Layer responsibilities** - The sdk holds a new `host/merged.ts` with the pass and its timer, the store field and the trigger in `actions.ts`. It also holds `byUrl` on the GitHub port, `pushed` on the `Worktrees` port and the stricter rule in `shelve`. The server holds the `pullRequestLookup` key.
-- **Source-of-truth files** - `packages/sdk/src/host/merged.ts` (new), [`code://packages/sdk/src/sessions.ts`](../../../../packages/sdk/src/sessions.ts)
+- **Source-of-truth files** - `packages/sdk/src/host/merged.ts` (new), [`code://packages/sdk/src/sessions/sessions.ts`](../../../../packages/sdk/src/sessions/sessions.ts)
 
 ## Tasks
 

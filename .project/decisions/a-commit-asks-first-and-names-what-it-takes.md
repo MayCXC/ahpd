@@ -3,7 +3,7 @@ title: The commit operation asks first, naming what it takes, and commits the in
 status: accepted
 date: 2026-09-27
 refs:
-  - "[code://packages/sdk/src/changes.ts#L121-L129](../../packages/sdk/src/changes.ts#L121-L129) - `COMMIT`, declared with no `confirmation`"
+  - "[code://packages/sdk/src/sessions/changes.ts#L121-L129](../../packages/sdk/src/sessions/changes.ts#L121-L129) - `COMMIT`, declared with no `confirmation`"
   - file:///github/externals/vscode - `src/vs/sessions/contrib/providers/agentHost/browser/agentHostSessionChangesets.ts` shows an operation's `confirmation` before invoking it; `src/vs/platform/agentHost/node/agentHostCommitOperationProvider.ts` declares the reference host's `commit` with none
   - file:///github/externals/agent-host-protocol/types/channels-changeset/state.ts - `ChangesetOperation.confirmation`: the client MUST show it and invoke only after the user accepts
   - file:///github/externals/vscode - `src/vs/platform/agentHost/node/agentHostGitService.ts` `commitAll`: the reference host always runs `git add -A -- :/` before committing

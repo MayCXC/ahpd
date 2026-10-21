@@ -2,8 +2,8 @@
 title: The policy form reads its choices from the manifest - implemented
 date: 2026-10-06
 refs:
-  - "[code://packages/sdk/src/policies.ts](../../../../packages/sdk/src/policies.ts) - the tables a body is checked against, now exported"
-  - "[code://packages/sdk/src/policy.ts](../../../../packages/sdk/src/policy.ts) - the manifest, built from them"
+  - "[code://packages/sdk/src/access/policies.ts](../../../../packages/sdk/src/access/policies.ts) - the tables a body is checked against, now exported"
+  - "[code://packages/sdk/src/access/policy.ts](../../../../packages/sdk/src/access/policy.ts) - the manifest, built from them"
   - "[code://packages/sdk/test/policy-scheme.test.ts](../../../../packages/sdk/test/policy-scheme.test.ts) - the enums, the per-kind `allOf`, and the ajv cases"
   - "[code://docs/sdk/POLICY.md](../../../../docs/sdk/POLICY.md) - the paragraph naming the manifest"
 ---
@@ -12,8 +12,8 @@ A client drawing the policy form no longer has to know a single value: the `poli
 
 ## What was built
 
-- [`code://packages/sdk/src/policies.ts`](../../../../packages/sdk/src/policies.ts) - `MEASURES`, `MATCHES`, `PERIODS`, `KINDS`, `EFFECTS` and `LIMIT_POOLS` are exported; nothing else in the file changed.
-- [`code://packages/sdk/src/policy.ts`](../../../../packages/sdk/src/policy.ts) - `kind`, `effect` and a limit's `measure`, `period` and `pool` are built with `choice()`, each carrying an `enum`; the manifest's `allOf` holds one `if`/`then` per kind from `narrowed`, narrowing `limits.items.properties.measure.enum` to that kind's measures and giving `match` a `propertyNames.enum` of that kind's value types. `ALL_MEASURES` is the union in the order the kinds name it. The descriptions that repeated a value list dropped it.
+- [`code://packages/sdk/src/access/policies.ts`](../../../../packages/sdk/src/access/policies.ts) - `MEASURES`, `MATCHES`, `PERIODS`, `KINDS`, `EFFECTS` and `LIMIT_POOLS` are exported; nothing else in the file changed.
+- [`code://packages/sdk/src/access/policy.ts`](../../../../packages/sdk/src/access/policy.ts) - `kind`, `effect` and a limit's `measure`, `period` and `pool` are built with `choice()`, each carrying an `enum`; the manifest's `allOf` holds one `if`/`then` per kind from `narrowed`, narrowing `limits.items.properties.measure.enum` to that kind's measures and giving `match` a `propertyNames.enum` of that kind's value types. `ALL_MEASURES` is the union in the order the kinds name it. The descriptions that repeated a value list dropped it.
 - [`code://docs/sdk/POLICY.md`](../../../../docs/sdk/POLICY.md) - a paragraph under "The scheme" says the choices are the manifest's `enum`s and per-kind `allOf`, and that a client draws its pickers from there rather than from the page.
 
 ## Verified

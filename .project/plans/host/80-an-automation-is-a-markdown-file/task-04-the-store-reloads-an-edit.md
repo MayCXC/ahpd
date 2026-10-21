@@ -5,7 +5,7 @@ depends: [task-02-the-store-keeps-markdown-files.md]
 layer: "packages/server"
 refs:
   - "[code://packages/sdk/src/scheduled.ts](../../../../packages/sdk/src/scheduled.ts) - `scheduledAutomations`, which arms the clock and tells the catalogue, in the server after task 01"
-  - "[code://packages/sdk/src/resources.ts#L503](../../../../packages/sdk/src/resources.ts#L503) - the file store's `watch`"
+  - "[code://packages/sdk/src/resources/resources.ts#L503](../../../../packages/sdk/src/resources/resources.ts#L503) - the file store's `watch`"
 ---
 
 ## Objective

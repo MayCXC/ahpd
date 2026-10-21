@@ -4,8 +4,8 @@ date: 2026-10-19
 refs:
   - git://0fe64d7e
   - git://c1d88f10
-  - "[code://packages/sdk/src/issuers.ts](../../../../packages/sdk/src/issuers.ts)"
-  - "[code://packages/sdk/src/users.ts](../../../../packages/sdk/src/users.ts)"
+  - "[code://packages/sdk/src/access/issuers.ts](../../../../packages/sdk/src/access/issuers.ts)"
+  - "[code://packages/sdk/src/access/users.ts](../../../../packages/sdk/src/access/users.ts)"
   - "[code://packages/sdk/src/host/handshake.ts](../../../../packages/sdk/src/host/handshake.ts)"
   - "[code://packages/server/src/config.ts](../../../../packages/server/src/config.ts)"
 ---
@@ -18,8 +18,8 @@ The default stays `userinfo`, so GitHub and every existing setup work as before.
 
 ## What was built
 
-- [`code://packages/sdk/src/issuers.ts`](../../../../packages/sdk/src/issuers.ts) - the JWT check with WebCrypto, the algorithms RS256, PS256, ES256 and EdDSA, the key set kept by `kid`, and `jwtIssuer`.
-- [`code://packages/sdk/src/users.ts`](../../../../packages/sdk/src/users.ts) - `verify` picks the issuer that `iss` names, refuses an unknown one with no request, and reads `issuerVerify` per issuer.
+- [`code://packages/sdk/src/access/issuers.ts`](../../../../packages/sdk/src/access/issuers.ts) - the JWT check with WebCrypto, the algorithms RS256, PS256, ES256 and EdDSA, the key set kept by `kid`, and `jwtIssuer`.
+- [`code://packages/sdk/src/access/users.ts`](../../../../packages/sdk/src/access/users.ts) - `verify` picks the issuer that `iss` names, refuses an unknown one with no request, and reads `issuerVerify` per issuer.
 - [`code://packages/sdk/src/types/users.ts`](../../../../packages/sdk/src/types/users.ts) - `IssuerVerify`, `Principal.expiresAt`, and `issuerVerify` on a user record.
 - [`code://packages/sdk/src/host/handshake.ts`](../../../../packages/sdk/src/host/handshake.ts) - `principalUntil` is the earlier of the credential's `exp` and the client's `expiresIn`.
 - [`code://packages/server/src/config.ts`](../../../../packages/server/src/config.ts) - the `issuerVerify` key beside `issuer`.

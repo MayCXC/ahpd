@@ -4,16 +4,16 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/usage.ts](../../../../packages/sdk/src/usage.ts) - `fileUsage`, the file store in the config folder this one is written beside"
-  - "[code://packages/sdk/src/automations.ts](../../../../packages/sdk/src/automations.ts) - `memoryAutomations`, the in-memory store this one is the shape of"
+  - "[code://packages/sdk/src/usage/usage.ts](../../../../packages/sdk/src/usage/usage.ts) - `fileUsage`, the file store in the config folder this one is written beside"
+  - "[code://packages/sdk/src/automations/automations.ts](../../../../packages/sdk/src/automations/automations.ts) - `memoryAutomations`, the in-memory store this one is the shape of"
   - "[code://packages/sdk/src/scheduled.ts#L179-L205](../../../../packages/sdk/src/scheduled.ts#L179-L205) - `save`, the write-beside-and-rename a file store here uses"
   - "[code://packages/sdk/src/types/usage.ts](../../../../packages/sdk/src/types/usage.ts) - the `Usage` port, whose shape the `Policies` port follows"
   - "[code://packages/sdk/src/types/host.ts#L209-L225](../../../../packages/sdk/src/types/host.ts#L209-L225) - `usage` and `usagePer` in `HostOptions`, beside which `policies` is added"
   - "[code://packages/sdk/src/types/plugin.ts#L31-L44](../../../../packages/sdk/src/types/plugin.ts#L31-L44) - `PortKey`, the closed set of `set` registrations"
   - "[code://packages/sdk/src/types/plugin.ts#L232-L239](../../../../packages/sdk/src/types/plugin.ts#L232-L239) - `registerUsage`, the declaration `registerPolicies` is written beside"
-  - "[code://packages/sdk/src/plugins.ts#L30-L33](../../../../packages/sdk/src/plugins.ts#L30-L33) - `PORT_KEYS`, the runtime half of the same union"
-  - "[code://packages/sdk/src/plugins.ts#L373-L395](../../../../packages/sdk/src/plugins.ts#L373-L395) - the `register*` methods of `pluginHost`"
-  - "[code://packages/sdk/src/validate.ts#L126-L166](../../../../packages/sdk/src/validate.ts#L126-L166) - `PORT_MEMBERS` and `PORT_METHOD`, the tables that must name the new key"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L30-L33](../../../../packages/sdk/src/plugins/plugins.ts#L30-L33) - `PORT_KEYS`, the runtime half of the same union"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L373-L395](../../../../packages/sdk/src/plugins/plugins.ts#L373-L395) - the `register*` methods of `pluginHost`"
+  - "[code://packages/sdk/src/plugins/validate.ts#L126-L166](../../../../packages/sdk/src/plugins/validate.ts#L126-L166) - `PORT_MEMBERS` and `PORT_METHOD`, the tables that must name the new key"
   - "[code://packages/sdk/src/index.ts#L53-L67](../../../../packages/sdk/src/index.ts#L53-L67) - where `fileUsage` and `peopleProviders` are exported"
   - "[code://packages/sdk/src/types/index.ts](../../../../packages/sdk/src/types/index.ts) - the type barrel `index.ts` re-exports with `export type *`"
   - "[code://docs/plugins/PLUGINS.md#L87](../../../../docs/plugins/PLUGINS.md#L87) - the registration table a client reads before writing a plugin"
@@ -28,10 +28,10 @@ A row written through the port comes back exactly as it was written, and nothing
 ## Files
 
 - `CREATE: packages/sdk/src/types/policies.ts` - `PolicyKind` (`model`, `agent`, `computer`), `PolicyEffect` (`allow`, `deny`), `PolicyScope` (`all`, `user:<id>`, `team:<id>`, `project:<team>:<project>`), `PolicyMatch` (one list per value type: `model`, `proxy`, `agent`, `computer`), `PolicyLimit` (`amount`, `measure`, `period`, `pool`), `Policy` (the row: `id`, `scope`, `kind`, `effect`, `match`, `limits`, optional `pool` and `cap`, `from`, `until`), `Measure`, `Period` and the `Policies` port (`list`, `get`, `put`, `remove`).
-- `CREATE: packages/sdk/src/policies.ts` - `filePolicies(options)`, `memoryPolicies()` and the validation both use, exported so the scheme and `decide` can name a row they were handed rather than a body.
+- `CREATE: packages/sdk/src/access/policies.ts` - `filePolicies(options)`, `memoryPolicies()` and the validation both use, exported so the scheme and `decide` can name a row they were handed rather than a body.
 - `UPDATE: packages/sdk/src/types/host.ts:209-225` - `policies?: Policies` in `HostOptions`, beside `usage` and `usagePer`.
-- `UPDATE: packages/sdk/src/types/plugin.ts:31-44`, `packages/sdk/src/plugins.ts:30-33`, `packages/sdk/src/validate.ts:126-166` - `'policies'` in `PortKey`, in `PORT_KEYS`, and in `PORT_MEMBERS` and `PORT_METHOD`; the last two are `Record<PortKey, ...>`, so nothing compiles until the key is in them.
-- `UPDATE: packages/sdk/src/types/plugin.ts:232-239`, `packages/sdk/src/plugins.ts:395` - `registerPolicies(policies, when?)` beside `registerUsage`.
+- `UPDATE: packages/sdk/src/types/plugin.ts:31-44`, `packages/sdk/src/plugins/plugins.ts:30-33`, `packages/sdk/src/plugins/validate.ts:126-166` - `'policies'` in `PortKey`, in `PORT_KEYS`, and in `PORT_MEMBERS` and `PORT_METHOD`; the last two are `Record<PortKey, ...>`, so nothing compiles until the key is in them.
+- `UPDATE: packages/sdk/src/types/plugin.ts:232-239`, `packages/sdk/src/plugins/plugins.ts:395` - `registerPolicies(policies, when?)` beside `registerUsage`.
 - `UPDATE: packages/sdk/src/index.ts:53-67` - `filePolicies`, `memoryPolicies` and the check; `UPDATE: packages/sdk/src/types/index.ts` - the row types and `Policies`, which reach the surface through the barrel's `export type *`.
 - `UPDATE: docs/plugins/PLUGINS.md:87` - the `registerPolicies` row of the registration table, and a short section on what a plugin's store has to answer.
 

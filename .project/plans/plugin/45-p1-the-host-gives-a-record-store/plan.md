@@ -7,13 +7,13 @@ created: 2026-10-11
 revalidated: 2026-10-11
 decisions:
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L86-L89](../../../../packages/sdk/src/plugins.ts#L86-L89) - `PORT_KEYS`, the ports a plugin may set"
-  - "[code://packages/sdk/src/plugins.ts#L787-L791](../../../../packages/sdk/src/plugins.ts#L787-L791) - `recordUsage`, a port read when it is called"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L86-L89](../../../../packages/sdk/src/plugins/plugins.ts#L86-L89) - `PORT_KEYS`, the ports a plugin may set"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L787-L791](../../../../packages/sdk/src/plugins/plugins.ts#L787-L791) - `recordUsage`, a port read when it is called"
   - "[code://packages/sdk/src/types/plugin.ts#L292-L360](../../../../packages/sdk/src/types/plugin.ts#L292-L360) - `PluginContext`"
   - "[code://packages/server/src/plugins.ts#L864-L880](../../../../packages/server/src/plugins.ts#L864-L880) - where the daemon makes each plugin's context and host"
   - "[code://packages/server/src/commands/run.ts#L654-L661](../../../../packages/server/src/commands/run.ts#L654-L661) - where the daemon gives its default ports"
-  - "[code://packages/sdk/src/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions.ts#L712-L740) - `migrateSessions`, the pattern for the one-time conversion"
-  - "[code://packages/sdk/src/resources.ts#L503](../../../../packages/sdk/src/resources.ts#L503) - the file store's `watch`, the pattern for a folder watch"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L712-L740](../../../../packages/sdk/src/sessions/sessions.ts#L712-L740) - `migrateSessions`, the pattern for the one-time conversion"
+  - "[code://packages/sdk/src/resources/resources.ts#L503](../../../../packages/sdk/src/resources/resources.ts#L503) - the file store's `watch`, the pattern for a folder watch"
   - npm://@cofold/yaml@^0.3.0 - `parseYaml`, and `stringifyYaml` from cofold plan commands/05
 ---
 
@@ -28,8 +28,8 @@ A plugin reads and writes YAML with `parseYaml` and `stringifyYaml` on its conte
 
 ### Searches performed
 
-- `rg -n "PORT_KEYS|setPort" packages/sdk/src/plugins.ts` - one list of port keys and one setter for each port.
-- `rg -n "sessionKept" packages/sdk/src/plugins.ts` - a call that waits for the fold before it answers.
+- `rg -n "PORT_KEYS|setPort" packages/sdk/src/plugins/plugins.ts` - one list of port keys and one setter for each port.
+- `rg -n "sessionKept" packages/sdk/src/plugins/plugins.ts` - a call that waits for the fold before it answers.
 - `rg -n "yaml" packages/server/package.json` - the server has no direct YAML dependency.
 
 ### Runtime path
@@ -80,7 +80,7 @@ fileRecords: folder watch -> parseYaml -> the collection's watchers
 - **Event flow** - each open collection has one folder watch; a change to `<id>.md` tells each watcher the id and the change type.
 - **State flow** - `fileRecords` keeps the text it wrote last per file, to ignore its own writes; the files are the truth.
 - **Layer responsibilities** - `packages/sdk`: `RecordStore`, `RecordCollection`, `memoryRecords`, `registerRecords`, `host.records`, the YAML types on the context · `packages/server`: `fileRecords`, the YAML functions, the default port.
-- **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/types/plugin.ts`](../../../../packages/sdk/src/types/plugin.ts), [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts)
 
 ## Tasks
 

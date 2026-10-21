@@ -10,24 +10,24 @@ changes: []
 creates: []
 decisions: []
 refs:
-  - "[code://packages/sdk/src/policies.ts#L311-L323](../../../../packages/sdk/src/policies.ts#L311-L323) - `save`, which writes the policy file with no mode, so it lands with the umask's"
+  - "[code://packages/sdk/src/access/policies.ts#L311-L323](../../../../packages/sdk/src/access/policies.ts#L311-L323) - `save`, which writes the policy file with no mode, so it lands with the umask's"
   - "[code://packages/sdk/src/scheduled.ts#L197-L207](../../../../packages/sdk/src/scheduled.ts#L197-L207) - the automation file's write, also with no mode"
-  - "[code://packages/sdk/src/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions.ts#L236-L241) - the session store's write, the shape the two above should have: pid temp name, `0o600`"
-  - "[code://packages/sdk/src/users.ts#L672-L687](../../../../packages/sdk/src/users.ts#L672-L687) - `write`, whose temp file is `${path}.tmp` with no pid"
+  - "[code://packages/sdk/src/sessions/sessions.ts#L236-L241](../../../../packages/sdk/src/sessions/sessions.ts#L236-L241) - the session store's write, the shape the two above should have: pid temp name, `0o600`"
+  - "[code://packages/sdk/src/access/users.ts#L672-L687](../../../../packages/sdk/src/access/users.ts#L672-L687) - `write`, whose temp file is `${path}.tmp` with no pid"
   - "[code://packages/server/src/daemon.ts#L125](../../../../packages/server/src/daemon.ts#L125) - `TEMP`, the one sweeper of temp files, which only knows the pid form"
-  - "[code://packages/sdk/src/automations.ts#L51-L59](../../../../packages/sdk/src/automations.ts#L51-L59) - `entry`, which issues `runsNextCursor` as a number of runs"
-  - "[code://packages/sdk/src/automations.ts#L260-L269](../../../../packages/sdk/src/automations.ts#L260-L269) - `runs`, where a cursor that is not a number, or is negative, starts again at 0"
+  - "[code://packages/sdk/src/automations/automations.ts#L51-L59](../../../../packages/sdk/src/automations/automations.ts#L51-L59) - `entry`, which issues `runsNextCursor` as a number of runs"
+  - "[code://packages/sdk/src/automations/automations.ts#L260-L269](../../../../packages/sdk/src/automations/automations.ts#L260-L269) - `runs`, where a cursor that is not a number, or is negative, starts again at 0"
   - "[code://packages/sdk/src/types/automations.ts#L208-L209](../../../../packages/sdk/src/types/automations.ts#L208-L209) - the port's `runs` signature"
   - "[code://packages/sdk/src/host/automations.ts#L306-L310](../../../../packages/sdk/src/host/automations.ts#L306-L310) - `fetchAutomationRuns`, which hands the store's page back as it is"
-  - "[code://packages/sdk/src/paging.ts#L39-L56](../../../../packages/sdk/src/paging.ts#L39-L56) - `older`, which answers nothing for a cursor it did not issue, the pattern `runs` mirrors"
+  - "[code://packages/sdk/src/sessions/paging.ts#L39-L56](../../../../packages/sdk/src/sessions/paging.ts#L39-L56) - `older`, which answers nothing for a cursor it did not issue, the pattern `runs` mirrors"
   - "[code://packages/sdk/src/host/sessionmethods.ts#L182-L190](../../../../packages/sdk/src/host/sessionmethods.ts#L182-L190) - `fetchTurns`, which turns that nothing into `-32602 Unrecognised cursor`"
-  - "[code://packages/sdk/src/resources.ts#L32-L41](../../../../packages/sdk/src/resources.ts#L32-L41) - `pathOf` with `fileURLToPath` and `uriOf` with `pathToFileURL`, the one pair that encodes"
+  - "[code://packages/sdk/src/resources/resources.ts#L32-L41](../../../../packages/sdk/src/resources/resources.ts#L32-L41) - `pathOf` with `fileURLToPath` and `uriOf` with `pathToFileURL`, the one pair that encodes"
   - "[code://packages/sdk/src/host/channels.ts#L19-L20](../../../../packages/sdk/src/host/channels.ts#L19-L20) - the second `uriOf`, `file://${path}`, not encoded"
-  - "[code://packages/sdk/src/debuglogs.ts#L43](../../../../packages/sdk/src/debuglogs.ts#L43) - `asPath`, which decodes by hand"
-  - "[code://packages/sdk/src/policy.ts#L43-L49](../../../../packages/sdk/src/policy.ts#L43-L49) - `splitFor`, which refuses with `-32609`"
-  - "[code://packages/sdk/src/people.ts#L312-L318](../../../../packages/sdk/src/people.ts#L312-L318) - people's `split`, also `-32609`"
+  - "[code://packages/sdk/src/sessions/debuglogs.ts#L43](../../../../packages/sdk/src/sessions/debuglogs.ts#L43) - `asPath`, which decodes by hand"
+  - "[code://packages/sdk/src/access/policy.ts#L43-L49](../../../../packages/sdk/src/access/policy.ts#L43-L49) - `splitFor`, which refuses with `-32609`"
+  - "[code://packages/sdk/src/access/people.ts#L312-L318](../../../../packages/sdk/src/access/people.ts#L312-L318) - people's `split`, also `-32609`"
   - "[code://packages/computer/src/provider.ts#L118-L122](../../../../packages/computer/src/provider.ts#L118-L122) - computer's `at`, which refuses with `-32009`"
-  - "[code://packages/sdk/src/usage.ts#L394-L397](../../../../packages/sdk/src/usage.ts#L394-L397) - usage's `at`, also `-32009`"
+  - "[code://packages/sdk/src/usage/usage.ts#L394-L397](../../../../packages/sdk/src/usage/usage.ts#L394-L397) - usage's `at`, also `-32009`"
   - "[code://packages/sdk/src/host/resourcemethods.ts#L52-L58](../../../../packages/sdk/src/host/resourcemethods.ts#L52-L58) - `storeFor`, which hands a provider only URIs whose lowercased scheme is its own"
   - "npm://@microsoft/agent-host-protocol@1.0.0 - `common/errors.ts`: `JsonRpcErrorCodes.InvalidParams` is `-32602`, `AhpErrorCodes.PermissionDenied` is `-32009` (\"not permitted to access\"), and no `-32609` exists; `common/commands.ts` says an unrecognised cursor SHOULD be rejected with `InvalidParams`"
 ---
@@ -91,7 +91,7 @@ No decision file: every row below is either Softov's answer or a choice anyone w
 - **Event flow** - unchanged.
 - **State flow** - unchanged; the files keep their format, only their mode and temp name change.
 - **Layer responsibilities** - sdk `policies.ts`, `scheduled.ts`, `users.ts`: the writes · sdk `automations.ts`, `types/automations.ts`, `host/automations.ts`: the cursor · sdk `fileuri.ts` (new) and the 18 strip sites: the paths · sdk `people.ts`, `policy.ts`, `usage.ts` and computer `provider.ts`: the refusal code.
-- **Source-of-truth files** - [`code://packages/sdk/src/resources.ts`](../../../../packages/sdk/src/resources.ts), [`code://packages/sdk/src/paging.ts`](../../../../packages/sdk/src/paging.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/resources/resources.ts`](../../../../packages/sdk/src/resources/resources.ts), [`code://packages/sdk/src/sessions/paging.ts`](../../../../packages/sdk/src/sessions/paging.ts)
 
 ## Tasks
 

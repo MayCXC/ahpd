@@ -2,8 +2,8 @@
 title: A commit and a pull request get their words as configured - implemented
 date: 2026-10-09
 refs:
-  - "[code://packages/sdk/src/changewords.ts](../../../../packages/sdk/src/changewords.ts)"
-  - "[code://packages/sdk/src/changes.ts](../../../../packages/sdk/src/changes.ts)"
+  - "[code://packages/sdk/src/sessions/changewords.ts](../../../../packages/sdk/src/sessions/changewords.ts)"
+  - "[code://packages/sdk/src/sessions/changes.ts](../../../../packages/sdk/src/sessions/changes.ts)"
   - "[code://packages/sdk/src/host/changesets.ts](../../../../packages/sdk/src/host/changesets.ts)"
   - "[code://packages/sdk/src/host/root.ts](../../../../packages/sdk/src/host/root.ts)"
 ---
@@ -15,8 +15,8 @@ The four modes are the session title, which is the default, forced, a named mode
 
 - [`code://packages/sdk/src/host/root.ts`](../../../../packages/sdk/src/host/root.ts) - `changeWords` in the root config schema, with `mode`, `provider` and `model`.
 - [`code://packages/sdk/src/host/actions.ts`](../../../../packages/sdk/src/host/actions.ts) - a push that names a provider the host does not serve, or a model the provider does not list, is refused.
-- [`code://packages/sdk/src/changewords.ts`](../../../../packages/sdk/src/changewords.ts) - the commit and pull request prompts, the split of an answer into a title and a body, and the cut of a long diff.
-- [`code://packages/sdk/src/changes.ts`](../../../../packages/sdk/src/changes.ts) - `wordsFor` writes the words for the commit, the commit `create-pr` makes of a dirty tree, and the pull request. The person's own text wins in every mode, and a fallback is said in the operation's message.
+- [`code://packages/sdk/src/sessions/changewords.ts`](../../../../packages/sdk/src/sessions/changewords.ts) - the commit and pull request prompts, the split of an answer into a title and a body, and the cut of a long diff.
+- [`code://packages/sdk/src/sessions/changes.ts`](../../../../packages/sdk/src/sessions/changes.ts) - `wordsFor` writes the words for the commit, the commit `create-pr` makes of a dirty tree, and the pull request. The person's own text wins in every mode, and a fallback is said in the operation's message.
 - [`code://packages/sdk/src/host/changesets.ts`](../../../../packages/sdk/src/host/changesets.ts) - `askModel` runs one turn on a throwaway session and removes it. `askAgent` asks a side chat made from the newest turn, and the chat stays. `watchTurn` waits for the turn, and cancels it after `changeWordsTimeoutMs`, which is two minutes when unset.
 - [`code://packages/sdk/src/host/spawn.ts`](../../../../packages/sdk/src/host/spawn.ts), [`code://packages/sdk/src/host/tooling.ts`](../../../../packages/sdk/src/host/tooling.ts) - a throwaway session gets no host tools, MCP servers or client plugins.
 - [`code://packages/sdk/test/changewords.test.ts`](../../../../packages/sdk/test/changewords.test.ts), [`code://packages/sdk/test/commit.test.ts`](../../../../packages/sdk/test/commit.test.ts), [`code://packages/sdk/test/root-config.test.ts`](../../../../packages/sdk/test/root-config.test.ts) - every mode for the commit, the `create-pr` commit and the pull request, the time limit, and the setting.

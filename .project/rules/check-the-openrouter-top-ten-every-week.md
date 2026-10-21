@@ -1,10 +1,10 @@
 ---
 title: "Check the OpenRouter top 10 every week, and add a missing ACP agent"
 applies:
-  - packages/sdk/src/agents.ts
+  - packages/sdk/src/machines/agents.ts
   - packages/agent-acp/src/presets.ts
 refs:
-  - "[code://packages/sdk/src/agents.ts](../../packages/sdk/src/agents.ts) - `knownAgents`, the list a setup offers"
+  - "[code://packages/sdk/src/machines/agents.ts](../../packages/sdk/src/machines/agents.ts) - `knownAgents`, the list a setup offers"
   - "[code://packages/agent-acp/src/presets.ts](../../packages/agent-acp/src/presets.ts) - the arguments and variables of each agent"
   - https://openrouter.ai/apps/category/coding - the ranking of coding agents, which a plain `curl` reads
 ---

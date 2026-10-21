@@ -5,7 +5,7 @@ depends: [task-01-the-vault-port-and-the-scope-rule.md]
 layer: "server"
 refs:
   - "[code://packages/server/src/config.ts#L274](../../../../packages/server/src/config.ts#L274) - `policiesPath`, a file beside the configuration"
-  - "[code://packages/sdk/src/sessions.ts](../../../../packages/sdk/src/sessions.ts) - write to a temporary file and rename, the pattern every store here uses"
+  - "[code://packages/sdk/src/sessions/sessions.ts](../../../../packages/sdk/src/sessions/sessions.ts) - write to a temporary file and rename, the pattern every store here uses"
 ---
 
 ## Objective

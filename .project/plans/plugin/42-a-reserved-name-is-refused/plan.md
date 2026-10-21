@@ -6,12 +6,12 @@ priority: high
 created: 2026-10-10
 revalidated: 2026-10-10
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L105-L115](../../../../packages/sdk/src/plugins.ts#L105-L115) - `reservedScheme`, which refuses only `file` and `ahp-` today"
-  - "[code://packages/sdk/src/plugins.ts#L918-L929](../../../../packages/sdk/src/plugins.ts#L918-L929) - `registerResourceProvider`, where a scheme is checked"
-  - "[code://packages/sdk/src/plugins.ts#L352](../../../../packages/sdk/src/plugins.ts#L352) - the agent provider clash, the only check on a harness name today"
-  - "[code://packages/sdk/src/validate.ts#L86-L97](../../../../packages/sdk/src/validate.ts#L86-L97) - `checkAgent`, which checks only that `provider` is a string"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L105-L115](../../../../packages/sdk/src/plugins/plugins.ts#L105-L115) - `reservedScheme`, which refuses only `file` and `ahp-` today"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L918-L929](../../../../packages/sdk/src/plugins/plugins.ts#L918-L929) - `registerResourceProvider`, where a scheme is checked"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L352](../../../../packages/sdk/src/plugins/plugins.ts#L352) - the agent provider clash, the only check on a harness name today"
+  - "[code://packages/sdk/src/plugins/validate.ts#L86-L97](../../../../packages/sdk/src/plugins/validate.ts#L86-L97) - `checkAgent`, which checks only that `provider` is a string"
   - "[code://packages/sdk/src/host/channels.ts](../../../../packages/sdk/src/host/channels.ts) - `schemeOf` and `spaceOf`, the routing a session URI goes through"
-  - "[code://packages/sdk/src/users.ts#L42-L60](../../../../packages/sdk/src/users.ts#L42-L60) - `SUBJECTS`, the grant subjects a scheme name becomes"
+  - "[code://packages/sdk/src/access/users.ts#L42-L60](../../../../packages/sdk/src/access/users.ts#L42-L60) - `SUBJECTS`, the grant subjects a scheme name becomes"
   - "[code://packages/sdk/src/host/admission.ts#L177-L187](../../../../packages/sdk/src/host/admission.ts#L177-L187) - a URI's scheme becomes the grant `<scheme>:<op>`"
 ---
 
@@ -41,7 +41,7 @@ client subscribe <provider>:/<id> -> schemeOf -> spaceOf / channelKind -> sessio
 - A harness named `ahp-root`, `file` or `bot` registers today, and its session URIs route as another channel or scheme.
 - A scheme named `session` registers today, and its grants read as the built-in `session` subject.
 - A harness name and a resource scheme can be the same name.
-- `Not found: a reserved check on an agent provider - searched "provider" in packages/sdk/src/validate.ts and plugins.ts.`
+- `Not found: a reserved check on an agent provider - searched "provider" in packages/sdk/src/plugins/validate.ts and plugins.ts.`
 
 ## Decisions locked in
 
@@ -64,7 +64,7 @@ client subscribe <provider>:/<id> -> schemeOf -> spaceOf / channelKind -> sessio
 - **Event flow** - no change.
 - **State flow** - no change.
 - **Layer responsibilities** - `packages/sdk`: the reserved list, the checks at registration and at the fold · `docs`: the list.
-- **Source-of-truth files** - [`code://packages/sdk/src/plugins.ts`](../../../../packages/sdk/src/plugins.ts)
+- **Source-of-truth files** - [`code://packages/sdk/src/plugins/plugins.ts`](../../../../packages/sdk/src/plugins/plugins.ts)
 
 ## Tasks
 

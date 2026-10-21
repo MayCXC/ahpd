@@ -20,8 +20,8 @@ Every chat the store records for a session is rebuilt when the session is resume
 ## Files
 
 - `CREATE: packages/sdk/src/host/chatrecord.ts` - the chat-to-session map: the chats the store records for a session, and the backend ids those chats claim.
-- `UPDATE: packages/sdk/src/types/sessions.ts`, `packages/sdk/src/sessions.ts` - the port lists the ids a store holds, and both stores answer it.
-- `UPDATE: packages/sdk/src/validate.ts`, `packages/sdk/test/plugin-validate.test.ts` - the member a contributed store must have, and the case that refuses one without it.
+- `UPDATE: packages/sdk/src/types/sessions.ts`, `packages/sdk/src/sessions/sessions.ts` - the port lists the ids a store holds, and both stores answer it.
+- `UPDATE: packages/sdk/src/plugins/validate.ts`, `packages/sdk/test/plugin-validate.test.ts` - the member a contributed store must have, and the case that refuses one without it.
 - `UPDATE: packages/sdk/src/host/context.ts`, `packages/sdk/src/host.ts` - the area is built with the host, before the routing.
 - `UPDATE: packages/sdk/src/host/spawn.ts` - every chat is recorded where it starts, and a renamed one again.
 - `UPDATE: packages/sdk/src/host/sessionmethods.ts`, `packages/sdk/src/host/lifecycle.ts` - a chat leaves the record when it is disposed, and a session's when it is torn down.

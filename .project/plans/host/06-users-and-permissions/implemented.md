@@ -3,7 +3,7 @@ title: A person signs in to the host, and a role decides what they may do - impl
 date: 2026-09-23
 refs:
   - code://packages/sdk/src/types/users.ts
-  - code://packages/sdk/src/users.ts
+  - code://packages/sdk/src/access/users.ts
   - code://packages/sdk/src/types/host.ts
   - code://packages/sdk/src/host.ts
   - code://packages/sdk/src/listen.ts
@@ -21,7 +21,7 @@ A daemon with no `users` configured advertises nothing new, refuses nothing, and
 ## What was built
 
 - `code://packages/sdk/src/types/users.ts` - `Capability`, `Grant`, `Principal`, `UserRecord`, `UserFile` and `Users`, with the login record on the port.
-- `code://packages/sdk/src/users.ts` - `fileUsers`: one JSON file, SHA-256 hashes compared with the socket's own constant-time `same`, secrets minted once, and a malformed file that fails closed and refuses to be overwritten.
+- `code://packages/sdk/src/access/users.ts` - `fileUsers`: one JSON file, SHA-256 hashes compared with the socket's own constant-time `same`, secrets minted once, and a malformed file that fails closed and refuses to be overwritten.
 - `code://packages/sdk/src/types/host.ts` - `HostOptions.users`, and `Connection.principal`/`principalUntil` beside `tokens`.
 - `code://packages/sdk/src/host.ts` - `resourcesOf` appends the login record, `lent` skips it, `authenticate` verifies it, `expire` detaches it, the gate at the dispatch boundary with `NEEDS`, `UNGATED` and `capabilityFor`, and the second gate at the top of `applyDispatch` with `dispatchNeeds` for the half that arrives as a notification.
 - `code://packages/server/src/config.ts`, `code://packages/server/src/main.ts` - the `users` config key, the `--users` flag, the `user` verb with `add`, `rm`, `list` and `token`, and the port wired into the host literal.

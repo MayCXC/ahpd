@@ -1,7 +1,7 @@
 import { ROOT, subagentChatUri } from './channels.js';
 import { accountKey } from './root.js';
-import { Status, idFor, idOf } from '../catalog.js';
-import { localPath } from '../fileuri.js';
+import { Status, idFor, idOf } from '../sessions/catalog.js';
+import { localPath } from '../resources/fileuri.js';
 import { statSync } from 'node:fs';
 import type { Summary, SummaryChat } from '../types/catalog.js';
 import type { ChangesSummary } from '../types/changes.js';

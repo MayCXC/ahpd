@@ -4,8 +4,8 @@ status: done
 depends: [task-01-a-principal-cannot-be-changed.md]
 layer: "sdk, server"
 refs:
-  - "[code://packages/sdk/src/plugins.ts#L176-L402](../../../../packages/sdk/src/plugins.ts#L176-L402) - `foldHostOptions`"
-  - "[code://packages/sdk/src/plugins.ts#L660-L680](../../../../packages/sdk/src/plugins.ts#L660-L680) - `registerTriggerType` and `fireTrigger`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L176-L402](../../../../packages/sdk/src/plugins/plugins.ts#L176-L402) - `foldHostOptions`"
+  - "[code://packages/sdk/src/plugins/plugins.ts#L660-L680](../../../../packages/sdk/src/plugins/plugins.ts#L660-L680) - `registerTriggerType` and `fireTrigger`"
   - "[code://packages/sdk/src/host/automations.ts#L912-L918](../../../../packages/sdk/src/host/automations.ts#L912-L918) - `fired`"
   - "[code://packages/server/src/plugins.ts#L957](../../../../packages/server/src/plugins.ts#L957) - `optionsSchema` kept live"
 ---
@@ -17,8 +17,8 @@ A plugin cannot register after `apply` returns, and cannot fire a trigger type t
 
 ## Files
 
-- `UPDATE: packages/sdk/src/plugins.ts` - the fold builds the host's own trigger table (type, definition copy, owner, `deliver`) instead of keeping `PluginTriggers`; tool definitions, session-config schemas and trigger definitions are `frozenCopy`; each agent's `provider` is read once and the host uses that string.
-- `UPDATE: packages/sdk/src/plugins.ts` - every `register*` after `apply` returns throws a plugin error, the same words for each.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - the fold builds the host's own trigger table (type, definition copy, owner, `deliver`) instead of keeping `PluginTriggers`; tool definitions, session-config schemas and trigger definitions are `frozenCopy`; each agent's `provider` is read once and the host uses that string.
+- `UPDATE: packages/sdk/src/plugins/plugins.ts` - every `register*` after `apply` returns throws a plugin error, the same words for each.
 - `UPDATE: packages/sdk/src/host/automations.ts:912-918` - `fired(by, type, ...)` drops a type whose owner is not `by`, with a problem line.
 - `UPDATE: packages/server/src/plugins.ts:957` - `schemas.set` stores `frozenCopy(optionsSchema)`.
 - `UPDATE: packages/sdk/test/plugin-boundary.test.ts` - the cases below.

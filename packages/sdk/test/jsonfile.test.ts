@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { posix } from '../../../tools/posix.ts';
-import { readJson, readJsonObject, writeJsonAtomic } from '../src/jsonfile.js';
+import { readJson, readJsonObject, writeJsonAtomic } from '../src/utils/jsonfile.js';
 
 /*
  * The one reader and the one writer for a JSON file.

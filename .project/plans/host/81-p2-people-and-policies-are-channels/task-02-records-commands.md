@@ -4,7 +4,7 @@ status: done
 depends: [task-01-a-records-channel.md]
 layer: "packages/sdk"
 refs:
-  - "[code://packages/sdk/src/records.ts#L162-L244](../../../../packages/sdk/src/records.ts#L162-L244) - `recordsProvider.write` and `remove`, whose rules move to two functions"
+  - "[code://packages/sdk/src/resources/records.ts#L162-L244](../../../../packages/sdk/src/resources/records.ts#L162-L244) - `recordsProvider.write` and `remove`, whose rules move to two functions"
 ---
 
 ## Objective
@@ -13,8 +13,8 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/records.ts:162-244` - `putRecord` and `removeRecord`, which `write` and `remove` call; an optional `changed` callback.
-- `UPDATE: packages/sdk/src/recordschannel.ts` - `recordsMethods`, the two served methods.
+- `UPDATE: packages/sdk/src/resources/records.ts:162-244` - `putRecord` and `removeRecord`, which `write` and `remove` call; an optional `changed` callback.
+- `UPDATE: packages/sdk/src/resources/recordschannel.ts` - `recordsMethods`, the two served methods.
 - `UPDATE: packages/sdk/test/recordschannel.test.ts` - cases for the commands.
 
 ## Steps

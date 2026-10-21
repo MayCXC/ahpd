@@ -1,7 +1,7 @@
 import { isAbsolute, resolve } from 'node:path';
-import { Status, idOf } from '../catalog.js';
-import { localPath, uriOf } from '../fileuri.js';
-import { flag, optional, required, when } from '../toolinput.js';
+import { Status, idOf } from '../sessions/catalog.js';
+import { localPath, uriOf } from '../resources/fileuri.js';
+import { flag, optional, required, when } from '../utils/toolinput.js';
 import type { HostTool, ToolCall } from '../types/host.js';
 import type { Summary } from '../types/catalog.js';
 import type { Bag } from '../types/common.js';

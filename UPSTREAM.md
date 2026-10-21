@@ -54,8 +54,8 @@ Not possible here, as Pass 4 found: discovery and adoption read the Copilot CLI 
 - [ ] **Peer chats are restored after a refresh.** Upstream `2cab7c729da`. `packages/sdk/src/host/catalogue.ts`.
 - [ ] **Background shell output is kept and readable after the turn.** Upstream `57b4202903e`. `packages/agent-claude/src/session.ts`.
 - [ ] **Read-only config values survive a config push.** Upstream `b9573ffde95`. `packages/sdk/src/host/actions.ts`.
-- [ ] **The commit action takes only uncommitted changes.** Upstream `880f8d903e7`. `packages/sdk/src/changes.ts`.
-- [ ] **A nested session's Session Changes defaults to its own chat.** Upstream `88ff9e3b9f5`. `packages/sdk/src/changes.ts`.
+- [ ] **The commit action takes only uncommitted changes.** Upstream `880f8d903e7`. `packages/sdk/src/sessions/changes.ts`.
+- [ ] **A nested session's Session Changes defaults to its own chat.** Upstream `88ff9e3b9f5`. `packages/sdk/src/sessions/changes.ts`.
 
 ### Not host
 
@@ -76,7 +76,7 @@ The working-directory actions date from 0.7/0.8 and are handled here (`host.ts`)
 - [ ] **`create_session` has two schemas, picked by `multipleWorkingDirectories`.** With it, `relationship` is optional (default `currentSession`), `workspace`/`worktree` are valid for `currentSession`, the folder joins the session and the new checkout goes only to the new chat; an omitted `worktree` reuses a checkout of that repository already in the session. Upstream `9b091281057`, `3722d65df29` (`node/shared/sessionServerTools.ts`). Claude advertises the capability (`packages/agent-claude/src/claude.ts`) but `packages/sdk/src/tools/session.ts` offers only the shared-workspace schema.
 - [ ] **`create_session` `independent` without a `workspace` is a session with no folder.** Upstream `d0f50833ebf`. `packages/sdk/src/tools/session.ts` requires `workspace`.
 - [x] **GitHub and git state are published per folder, and `_meta.github` on a live summary is no longer read.** The client reads `githubData` through `workingDirectoryKeys`, and `gitData` through `workingDirectoryScopeIds` (a scope id is the SHA-1 of the sorted folder keys); `_meta.git` is still read for the session folder. Upstream `18d64b8c226`, `a41ff3b2808`, `97182611fa2` (`common/state/sessionState.ts`, `sessions/contrib/providers/agentHost/browser/baseAgentHostSessionsProvider.ts`). This undoes Pass 3's `_meta.github` box: the pull request pill falls back to recorded artifacts. `packages/sdk/src/host.ts` `metaOf`. Built in `host/39`.
-- [ ] **Changesets and change summaries are per chat**: `ChatState.changesets`, `chat/changesetsChanged`, `changes` on `ChatState` and `SessionChatSummary`. Upstream `a8c1541df5a`, `5470377e71f`, `d17cacb01b3`; protocol `ba231a0`, `c02ad7e`. `packages/sdk/src/changes.ts`, `host.ts`; needs the next protocol package or local types.
+- [ ] **Changesets and change summaries are per chat**: `ChatState.changesets`, `chat/changesetsChanged`, `changes` on `ChatState` and `SessionChatSummary`. Upstream `a8c1541df5a`, `5470377e71f`, `d17cacb01b3`; protocol `ba231a0`, `c02ad7e`. `packages/sdk/src/sessions/changes.ts`, `host.ts`; needs the next protocol package or local types.
 - [ ] **`_meta.multiRoot` `{ workspaceFile }` from `createSession` config is echoed on the summary.** `host.ts` createSession.
 
 ### Remote delegation
@@ -132,7 +132,7 @@ VS Code `8e35945b` (2026-09-12) to `832cf23c5` (2026-09-19): 72 agentHost commit
 
 - [x] **`add_artifact_or_reference` promotes a reference to an artifact in place, keeping its id.** `packages/sdk/src/tools/artifacts.ts:180-182`. Built in `host/01`.
 - [x] **Artifact tool answers are `<status>: <id>`.** `packages/sdk/src/tools/artifacts.ts:184,189,215`. Built in `host/01`.
-- [x] **The pull request `create-pr` opens or reuses is recorded as a session artifact.** `packages/sdk/src/changes.ts:565,573`. This re-opens a box Pass 3 ticked: a pull request made by `prepare-pull-request` is one of these artifacts, and nothing here writes one. Built in `host/01`, for the reused pull request as well (`recordPullRequest` in `host.ts`).
+- [x] **The pull request `create-pr` opens or reuses is recorded as a session artifact.** `packages/sdk/src/sessions/changes.ts:565,573`. This re-opens a box Pass 3 ticked: a pull request made by `prepare-pull-request` is one of these artifacts, and nothing here writes one. Built in `host/01`, for the reused pull request as well (`recordPullRequest` in `host.ts`).
 - [x] **A round that ends with no text and no tool calls is announced as `responseRoundEnded`.** `packages/agent-claude/src/session.ts`. The SDK still has no round event (0.3.283), but the stream's own `message_start` to `message_stop` is one; built as `claude/03`.
 
 ### What the agent's own tools cost it
@@ -159,7 +159,7 @@ VS Code `8e35945b` (2026-09-12) to `832cf23c5` (2026-09-19): 72 agentHost commit
 - [x] **Dev Containers as an extension surface.** Built in `container/01`, except its ahpapp half.
 - [ ] **The terminal auto-approval rule engine.** An idea: [`terminal-commands-approved-by-rule`](.project/ideas/terminal-commands-approved-by-rule.md), with the two questions a plan has to settle first.
 - [ ] **The turn tracker and its telemetry, and `vscode.modelCall`.** An idea: [`turn-and-model-call-diagnostics`](.project/ideas/turn-and-model-call-diagnostics.md).
-- **Not possible from this host, as a fact:** `setAgentMergeEnabled` and the `vscode.pullRequest` Agent Merge turn (Agent Merge is a Copilot service; `packages/sdk/src/changes.ts` says so when asked), and the Copilot and Codex SDK surfaces (a different SDK with no AHP surface).
+- **Not possible from this host, as a fact:** `setAgentMergeEnabled` and the `vscode.pullRequest` Agent Merge turn (Agent Merge is a Copilot service; `packages/sdk/src/sessions/changes.ts` says so when asked), and the Copilot and Codex SDK surfaces (a different SDK with no AHP surface).
 - **Not a host feature:** the central session catalog (VS Code's own cache, no wire surface), the transport's client side (VS Code dials out; this daemon is dialed to), and the window's own UI.
 
 ### Left open, answered 2026-09-26

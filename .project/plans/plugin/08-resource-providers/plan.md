@@ -13,12 +13,12 @@ refs:
   - code://.project/research/host-owned-uri-resources.md - the proposal this plan answers, and where the gap was written down
   - code://packages/sdk/src/types/plugin.ts#L83-L130 - `PluginHost`, the contribution surface the new method joins
   - code://packages/sdk/src/types/plugin.ts#L163-L187 - `Contribution`, which gains a bucket beside `ports`, `agents` and `tools`
-  - code://packages/sdk/src/plugins.ts#L78-L156 - `foldHostOptions`, which folds a keyed registration and reports its conflicts
-  - code://packages/sdk/src/plugins.ts#L176-L239 - `pluginHost`, where one `apply` records what it registered
-  - code://packages/sdk/src/validate.ts#L148-L183 - `PORT_METHOD` and `checkPort`, the pattern the new checker follows
+  - code://packages/sdk/src/plugins/plugins.ts#L78-L156 - `foldHostOptions`, which folds a keyed registration and reports its conflicts
+  - code://packages/sdk/src/plugins/plugins.ts#L176-L239 - `pluginHost`, where one `apply` records what it registered
+  - code://packages/sdk/src/plugins/validate.ts#L148-L183 - `PORT_METHOD` and `checkPort`, the pattern the new checker follows
   - code://packages/sdk/src/types/host.ts#L132-L245 - `HostOptions`, where `resourceProviders` joins
   - code://packages/sdk/src/types/resources.ts#L125-L183 - `ResourceStore`, the file-shaped contract a provider does not have to satisfy
-  - code://packages/sdk/src/resources.ts#L48-L58 - `why`, the sentence an unserved scheme already gets
+  - code://packages/sdk/src/resources/resources.ts#L48-L58 - `why`, the sentence an unserved scheme already gets
   - code://packages/sdk/src/host.ts#L5024-L5041 - `resourceList` and `resourceRead`, the two handlers that name the store today
   - code://packages/sdk/src/host.ts#L5183-L5215 - `createResourceWatch`, which needs `watch`
   - code://packages/sdk/src/host.ts#L5225-L5290 - the write half, where an absent method is `-32601`
@@ -92,7 +92,7 @@ ahpd --plugin <pkg> -> loadPlugins -> apply(host) -> host.registerResourceProvid
 - **Event flow** - unchanged; `resource_write` and the rest fire as they do, and a provider's changes reach a client through the same watch channel `createResourceWatch` mints.
 - **State flow** - nothing new is stored. The record lives in `HostOptions` for the host's life, and a plugin's registration is folded before `createHost` sees it.
 - **Layer responsibilities** - packages/sdk: the contract, `HostOptions.resourceProviders`, the keyed fold, the checker and the routing · packages/server: nothing but the loader's existing per-kind checks, if they name kinds explicitly · test/: the fold, the validation, the routing and a fixture provider · docs: `docs/plugins/PLUGINS.md` and the kinds table in `00-plugin.md`.
-- **Source-of-truth files** - `code://packages/sdk/src/types/resources.ts`, `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins.ts`, `code://packages/sdk/src/host.ts`.
+- **Source-of-truth files** - `code://packages/sdk/src/types/resources.ts`, `code://packages/sdk/src/types/plugin.ts`, `code://packages/sdk/src/plugins/plugins.ts`, `code://packages/sdk/src/host.ts`.
 
 ## Tasks
 

@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/users.ts#L24-L88](../../../../packages/sdk/src/users.ts#L24-L88) - `BUILT_IN`, `SUBJECTS`, `GRANT`, `isGrant`, `LEGACY`, `holds`"
+  - "[code://packages/sdk/src/access/users.ts#L24-L88](../../../../packages/sdk/src/access/users.ts#L24-L88) - `BUILT_IN`, `SUBJECTS`, `GRANT`, `isGrant`, `LEGACY`, `holds`"
   - "[code://packages/sdk/src/types/users.ts#L21-L37](../../../../packages/sdk/src/types/users.ts#L21-L37) - `Verb` and `Grant`"
   - "[code://packages/sdk/test/users.test.ts](../../../../packages/sdk/test/users.test.ts) - the directory and `holds` cases"
 ---
@@ -15,7 +15,7 @@ refs:
 
 ## Files
 
-- `UPDATE: packages/sdk/src/users.ts:24-88` - `OPERATIONS`, `holds`, `isGrant`.
+- `UPDATE: packages/sdk/src/access/users.ts:24-88` - `OPERATIONS`, `holds`, `isGrant`.
 - `UPDATE: packages/sdk/src/types/users.ts:21-37` - `Grant` becomes `` `${string}:${string}` ``; `Verb` is kept as the group name type and renamed in its comment to say so.
 - `UPDATE: packages/sdk/test/users.test.ts` - the cases below.
 

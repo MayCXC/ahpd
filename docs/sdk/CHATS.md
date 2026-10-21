@@ -57,7 +57,7 @@ A client may rename a chat, and this host names one after its first message, bec
 
 ## Attachments
 
-A message may carry files, and what this host does with each is decided once for every backend - [attachments.ts](../../packages/sdk/src/attachments.ts).
+A message may carry files, and what this host does with each is decided once for every backend - [attachments.ts](../../packages/sdk/src/resources/attachments.ts).
 
 A pasted image goes to the model as an image when it is jpeg, png, gif or webp and at most 5 MiB - decision [A pasted image goes to the model as an image when it is jpeg, png, gif or webp and at most 5 MB, and by path otherwise](../../.project/decisions/a-pasted-image-goes-as-an-image-when-it-fits.md). Pasted text is inlined up to 64 KiB and named by its path above that. Everything else is named by the path this host wrote it to.
 

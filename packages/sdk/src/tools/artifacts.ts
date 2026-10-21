@@ -1,4 +1,4 @@
-import { required } from '../toolinput.js';
+import { required } from '../utils/toolinput.js';
 import type { HostTool } from '../types/host.js';
 import type { Bag } from '../types/common.js';
 

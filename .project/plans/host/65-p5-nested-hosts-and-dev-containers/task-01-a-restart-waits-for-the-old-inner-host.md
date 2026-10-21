@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L966-L1000](../../../../packages/sdk/src/nested.ts#L966-L1000) - `close`, which disposes inside only for a removal and settles on the process's end for a restart"
-  - "[code://packages/sdk/src/nested.ts#L374-L378](../../../../packages/sdk/src/nested.ts#L374-L378) - `gone`, resolved by the process's own `close` and `error`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L966-L1000](../../../../packages/sdk/src/sessions/nested.ts#L966-L1000) - `close`, which disposes inside only for a removal and settles on the process's end for a restart"
+  - "[code://packages/sdk/src/sessions/nested.ts#L374-L378](../../../../packages/sdk/src/sessions/nested.ts#L374-L378) - `gone`, resolved by the process's own `close` and `error`"
   - "[code://packages/sdk/src/host/lifecycle.ts#L409-L425](../../../../packages/sdk/src/host/lifecycle.ts#L409-L425) - the restart closes each chat without disposing it, and keeps what to wait on"
   - "[code://packages/sdk/src/host/lifecycle.ts#L470-L474](../../../../packages/sdk/src/host/lifecycle.ts#L470-L474) - and waits there, immediately before `spawn`"
   - "[code://packages/sdk/src/types/session.ts#L565-L576](../../../../packages/sdk/src/types/session.ts#L565-L576) - `Session.close`, which now takes whether the session is being removed"
@@ -19,8 +19,8 @@ A removal still disposes the inner session before the host stops.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:374-378` - `gone`, a promise the process's own `close` and `error` resolve.
-- `UPDATE: packages/sdk/src/nested.ts:966-1000` - `close` takes whether the session is being removed, disposes inside only then, and settles on the process's end for a restart.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:374-378` - `gone`, a promise the process's own `close` and `error` resolve.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:966-1000` - `close` takes whether the session is being removed, disposes inside only then, and settles on the process's end for a restart.
 - `UPDATE: packages/sdk/src/host/lifecycle.ts:409-425,470-474` - the restart closes each chat with `false`, keeps the promises, and waits on them immediately before `spawn`.
 - `UPDATE: packages/sdk/src/types/session.ts:565-576` - `Session.close` takes the flag, so a host may pass it.
 - `UPDATE: packages/sdk/test/nested-process.test.ts` - the case below, and `manyDirectories`, the proxy a host offers more than one directory.

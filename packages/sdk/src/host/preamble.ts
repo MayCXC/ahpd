@@ -1,4 +1,4 @@
-import { reason } from '../values.js';
+import { reason } from '../utils/values.js';
 import type { ChatPreamble, OpenedChat } from '../types/plugin.js';
 
 /**

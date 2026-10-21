@@ -4,8 +4,8 @@ status: done
 depends: []
 layer: sdk
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L134-L153](../../../../packages/sdk/src/terminals.ts#L134-L153) - `crtEscaped` and `isWindowsPowerShell`"
-  - "[code://packages/sdk/src/terminals.ts#L212-L227](../../../../packages/sdk/src/terminals.ts#L212-L227) - `argvLine`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L134-L153](../../../../packages/sdk/src/machines/terminals.ts#L134-L153) - `crtEscaped` and `isWindowsPowerShell`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L212-L227](../../../../packages/sdk/src/machines/terminals.ts#L212-L227) - `argvLine`"
   - "[code://packages/sdk/test/pty.test.ts#L159](../../../../packages/sdk/test/pty.test.ts#L159) - the line given to each PowerShell"
 ---
 
@@ -15,7 +15,7 @@ A terminal started with an argv under Windows PowerShell 5.1 hands the program e
 
 ## Files
 
-- `UPDATE: packages/sdk/src/terminals.ts` - `crtEscaped(word)`, `isWindowsPowerShell(shell)`, and `argvLine(kind, argv, windowsPowerShell)`, which escapes the words after the program for `powershell.exe`.
+- `UPDATE: packages/sdk/src/machines/terminals.ts` - `crtEscaped(word)`, `isWindowsPowerShell(shell)`, and `argvLine(kind, argv, windowsPowerShell)`, which escapes the words after the program for `powershell.exe`.
 - `UPDATE: packages/sdk/test/pty.test.ts` - a case for the line `powershell.exe` and `pwsh.exe` are given.
 
 ## Steps

@@ -4,11 +4,11 @@ status: done
 depends: []
 layer: "sdk, server"
 refs:
-  - "[code://packages/sdk/src/usage.ts#L96-L108](../../../../packages/sdk/src/usage.ts#L96-L108) - `FileUsageOptions`, which has no zone"
-  - "[code://packages/sdk/src/usage.ts#L145-L156](../../../../packages/sdk/src/usage.ts#L145-L156) - `dayOf`, the UTC day a record is kept under"
-  - "[code://packages/sdk/src/usage.ts#L288-L330](../../../../packages/sdk/src/usage.ts#L288-L330) - `today`, `record` and `total`, which compare UTC days"
-  - "[code://packages/sdk/src/usage.ts#L566-L640](../../../../packages/sdk/src/usage.ts#L566-L640) - `shown`, `offsetAt`, `startOfDay`, `zoneOf`, `mondayOf` and `firstOf`"
-  - "[code://packages/sdk/src/usage.ts#L766-L770](../../../../packages/sdk/src/usage.ts#L766-L770) - `spansOf`, the periods of the usage scheme"
+  - "[code://packages/sdk/src/usage/usage.ts#L96-L108](../../../../packages/sdk/src/usage/usage.ts#L96-L108) - `FileUsageOptions`, which has no zone"
+  - "[code://packages/sdk/src/usage/usage.ts#L145-L156](../../../../packages/sdk/src/usage/usage.ts#L145-L156) - `dayOf`, the UTC day a record is kept under"
+  - "[code://packages/sdk/src/usage/usage.ts#L288-L330](../../../../packages/sdk/src/usage/usage.ts#L288-L330) - `today`, `record` and `total`, which compare UTC days"
+  - "[code://packages/sdk/src/usage/usage.ts#L566-L640](../../../../packages/sdk/src/usage/usage.ts#L566-L640) - `shown`, `offsetAt`, `startOfDay`, `zoneOf`, `mondayOf` and `firstOf`"
+  - "[code://packages/sdk/src/usage/usage.ts#L766-L770](../../../../packages/sdk/src/usage/usage.ts#L766-L770) - `spansOf`, the periods of the usage scheme"
   - "[code://packages/server/src/commands/run.ts#L348](../../../../packages/server/src/commands/run.ts#L348) - `fileUsage`, made with no zone"
   - "[code://packages/server/src/commands/run.ts#L872](../../../../packages/server/src/commands/run.ts#L872) - `usageTimezone`, given to the usage scheme only"
 ---
@@ -20,11 +20,11 @@ One sdk module answers the start of the current day, week and month in a zone, a
 
 ## Files
 
-- `CREATE: packages/sdk/src/periods.ts` - `zoneOf`, `periodOf(zone, period, now, from?)` answering `{ from, resets? }`, and the zoned helpers out of `usage.ts`.
-- `UPDATE: packages/sdk/src/usage.ts:96-108` - `timezone?: string` in `FileUsageOptions`.
-- `UPDATE: packages/sdk/src/usage.ts:145-330` - the day a record is kept under and the days `total`, `records` and `groups` compare are days in the zone.
-- `UPDATE: packages/sdk/src/usage.ts:566-640` - the helpers move to `periods.ts`, and `usageProvider` imports them.
-- `UPDATE: packages/sdk/src/usage.ts:766-770` - `spansOf` reads its spans from `periodOf`.
+- `CREATE: packages/sdk/src/usage/periods.ts` - `zoneOf`, `periodOf(zone, period, now, from?)` answering `{ from, resets? }`, and the zoned helpers out of `usage.ts`.
+- `UPDATE: packages/sdk/src/usage/usage.ts:96-108` - `timezone?: string` in `FileUsageOptions`.
+- `UPDATE: packages/sdk/src/usage/usage.ts:145-330` - the day a record is kept under and the days `total`, `records` and `groups` compare are days in the zone.
+- `UPDATE: packages/sdk/src/usage/usage.ts:566-640` - the helpers move to `periods.ts`, and `usageProvider` imports them.
+- `UPDATE: packages/sdk/src/usage/usage.ts:766-770` - `spansOf` reads its spans from `periodOf`.
 - `UPDATE: packages/server/src/commands/run.ts:348` - `fileUsage` gets `options.usageTimezone`.
 - `UPDATE: packages/sdk/test/usage.test.ts` - the zoned days.
 
@@ -53,7 +53,7 @@ One sdk module answers the start of the current day, week and month in a zone, a
 
 Implemented 2026-10-17, not reviewed.
 
-- `packages/sdk/src/periods.ts` holds the zoned helpers out of `usage.ts`, without a change.
+- `packages/sdk/src/usage/periods.ts` holds the zoned helpers out of `usage.ts`, without a change.
 - `periodOf` answers `{ from, resets? }` for `day`, `week`, `month` and `total`.
 - `fileUsage` resolves `timezone` once, and keeps each record under its day in that zone.
 - `total`, `records` and `groups` compare `from` and `until` as days in that zone.

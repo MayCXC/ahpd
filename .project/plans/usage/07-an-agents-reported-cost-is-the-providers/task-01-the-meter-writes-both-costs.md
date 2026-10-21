@@ -4,7 +4,7 @@ status: done
 depends: []
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/meter.ts#L97-L105](../../../../packages/sdk/src/meter.ts#L97-L105) - `costOf`"
+  - "[code://packages/sdk/src/usage/meter.ts#L97-L105](../../../../packages/sdk/src/usage/meter.ts#L97-L105) - `costOf`"
   - "[code://packages/sdk/test/usage-meter.test.ts](../../../../packages/sdk/test/usage-meter.test.ts) - what a turn is charged"
 ---
 
@@ -15,8 +15,8 @@ A harness cost of 0 on a record with no token counted is no cost.
 
 ## Files
 
-- `UPDATE: packages/sdk/src/meter.ts:97-105` - `costOf` reads `input` and `output` from `_meta.cost` beside `amount`. A part that is not a count is left out.
-- `UPDATE: packages/sdk/src/meter.ts` - where the record is built, `providerCost` is the same value as `cost`; an amount of 0 with no token counted gives neither.
+- `UPDATE: packages/sdk/src/usage/meter.ts:97-105` - `costOf` reads `input` and `output` from `_meta.cost` beside `amount`. A part that is not a count is left out.
+- `UPDATE: packages/sdk/src/usage/meter.ts` - where the record is built, `providerCost` is the same value as `cost`; an amount of 0 with no token counted gives neither.
 - `UPDATE: packages/sdk/test/usage-meter.test.ts` - the cases below.
 
 ## Steps

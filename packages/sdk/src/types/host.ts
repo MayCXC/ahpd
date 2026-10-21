@@ -11,7 +11,7 @@ import type { ChangesetSource } from './changes.js';
 import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
-import type { EnablementStore } from '../enablement.js';
+import type { EnablementStore } from '../plugins/enablement.js';
 import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
@@ -19,15 +19,15 @@ import type { ContainerPort } from './containers.js';
 import type { ClientPlugins } from './clientplugins.js';
 import type { Usage } from './usage.js';
 import type { Policies } from './policies.js';
-import type { PayOrder } from '../charge.js';
+import type { PayOrder } from '../usage/charge.js';
 import type { RecordStore } from './records.js';
 import type { Vault } from './vault.js';
 import type { Peer, Request } from './rpc.js';
 import type { Summary } from './catalog.js';
 import type { Bag } from './common.js';
 import type { SessionConfigAnswerer } from './completions.js';
-import type { ShellEnv } from '../shellenv.js';
-import type { CommandSplitter } from '../commandautoapprover.js';
+import type { ShellEnv } from '../machines/shellenv.js';
+import type { CommandSplitter } from '../access/commandautoapprover.js';
 
 /**
  * What a host can say about a directory beyond its path.

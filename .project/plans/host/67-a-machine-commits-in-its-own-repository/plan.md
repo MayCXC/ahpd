@@ -29,7 +29,7 @@ refs:
   - "[code://packages/sdk/src/types/computers.ts#L182-L184](../../../../packages/sdk/src/types/computers.ts#L182-L184) - `ComputerPort`, which gains the call that brings the work back"
   - "[code://packages/sdk/src/host/spawn.ts#L626-L634](../../../../packages/sdk/src/host/spawn.ts#L626-L634) - a finished turn re-reads the folder's git facts"
   - "[code://packages/sdk/src/host/snapshots.ts#L158](../../../../packages/sdk/src/host/snapshots.ts#L158) - a changeset read re-reads the facts"
-  - "[code://packages/sdk/src/changes.ts#L223-L345](../../../../packages/sdk/src/changes.ts#L223-L345) - the changeset operations that move the host's branch or index: commit, discard, stage, revert, create a pull request, checkout"
+  - "[code://packages/sdk/src/sessions/changes.ts#L223-L345](../../../../packages/sdk/src/sessions/changes.ts#L223-L345) - the changeset operations that move the host's branch or index: commit, discard, stage, revert, create a pull request, checkout"
   - "[code://docs/plugins/COMPUTERS.md#L344](../../../../docs/plugins/COMPUTERS.md#L344) - the `gitGuard` row"
   - "[code://docs/plugins/COMPUTERS.md#L435](../../../../docs/plugins/COMPUTERS.md#L435) - a worktree brings its repository"
   - "[code://docs/plugins/COMPUTERS.md#L580](../../../../docs/plugins/COMPUTERS.md#L580) - a mounted git directory"

@@ -81,8 +81,8 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 
 const { createHost } = await import('../src/host.js');
 const { claude } = await import('../../agent-claude/src/claude.js');
-const { shellTerminals } = await import('../src/terminals.js');
-const { uriOf } = await import('../src/fileuri.js');
+const { shellTerminals } = await import('../src/machines/terminals.js');
+const { uriOf } = await import('../src/resources/fileuri.js');
 const { echo } = await import('../../../examples/echo/agent.js');
 
 function peer(): Peer & { notes: { method: string; params: unknown }[] } {

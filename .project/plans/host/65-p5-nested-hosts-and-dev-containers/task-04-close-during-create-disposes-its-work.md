@@ -4,8 +4,8 @@ status: done
 depends: [task-01-a-restart-waits-for-the-old-inner-host.md]
 layer: "sdk"
 refs:
-  - "[code://packages/sdk/src/nested.ts#L790-L809](../../../../packages/sdk/src/nested.ts#L790-L809) - `make`, which refuses to ask once the session is closed and keeps the request it made"
-  - "[code://packages/sdk/src/nested.ts#L1043-L1069](../../../../packages/sdk/src/nested.ts#L1043-L1069) - `close`, which waits for a create in flight on a removal and disposes what it made"
+  - "[code://packages/sdk/src/sessions/nested.ts#L790-L809](../../../../packages/sdk/src/sessions/nested.ts#L790-L809) - `make`, which refuses to ask once the session is closed and keeps the request it made"
+  - "[code://packages/sdk/src/sessions/nested.ts#L1043-L1069](../../../../packages/sdk/src/sessions/nested.ts#L1043-L1069) - `close`, which waits for a create in flight on a removal and disposes what it made"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L119-L145](../../../../packages/sdk/test/nested-proxy.test.ts#L119-L145) - `holdingCreate`, an inner host whose answer to the create is held"
   - "[code://packages/sdk/test/nested-proxy.test.ts#L429-L444](../../../../packages/sdk/test/nested-proxy.test.ts#L429-L444) - the case"
 ---
@@ -16,7 +16,7 @@ A nested session removed while its inner `createSession` is in flight leaves no 
 
 ## Files
 
-- `UPDATE: packages/sdk/src/nested.ts:761-768,971-974` - `close` on a removal waits for a create in flight and disposes the session if it was made; today `up` is false until `ready`, so the host is shut down with no dispose and an inner session the create already wrote stays in the machine's store.
+- `UPDATE: packages/sdk/src/sessions/nested.ts:761-768,971-974` - `close` on a removal waits for a create in flight and disposes the session if it was made; today `up` is false until `ready`, so the host is shut down with no dispose and an inner session the create already wrote stays in the machine's store.
 - `UPDATE: packages/sdk/test/nested-proxy.test.ts` - the case below, which the task names in `nested-process.test.ts`; the Resume says why it is here.
 
 ## Steps

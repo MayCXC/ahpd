@@ -22,7 +22,7 @@ refs:
   - "[code://packages/sdk/src/types/computers.ts#L19-L28](../../../../packages/sdk/src/types/computers.ts#L19-L28) - `Spawn.env`, the docker program's own environment, which can carry the values"
   - "[code://packages/agent-claude/src/spawn.ts#L142-L164](../../../../packages/agent-claude/src/spawn.ts#L142-L164) - Claude spawns the descriptor with its `env` over `process.env`"
   - "[code://packages/agent-acp/src/session.ts#L658-L667](../../../../packages/agent-acp/src/session.ts#L658-L667) - the ACP bridge spawns the descriptor with its `env`"
-  - "[code://packages/sdk/src/nested.ts#L115-L129](../../../../packages/sdk/src/nested.ts#L115-L129) - the nested host spawns the descriptor with its `env` over `process.env`"
+  - "[code://packages/sdk/src/sessions/nested.ts#L115-L129](../../../../packages/sdk/src/sessions/nested.ts#L115-L129) - the nested host spawns the descriptor with its `env` over `process.env`"
   - "[code://packages/agent-claude/src/session.ts#L2203-L2209](../../../../packages/agent-claude/src/session.ts#L2203-L2209) - every `CLAUDE_*` and `ANTHROPIC_*` variable crosses into the machine, so `ANTHROPIC_API_KEY` is in argv today"
   - "[code://packages/computer/src/plugin.ts#L76](../../../../packages/computer/src/plugin.ts#L76) - the `env` option, whose values are `writeOnly`"
   - "[code://packages/computer/src/plugin.ts#L61](../../../../packages/computer/src/plugin.ts#L61) - `needValue`, `secretAtUse` and not yet `writeOnly`, used by `needs` and every profile's `needs`"

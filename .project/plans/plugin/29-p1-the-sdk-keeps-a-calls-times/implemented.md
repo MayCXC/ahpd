@@ -4,7 +4,7 @@ title: The sdk has one helper that builds and keeps a tool call's timing _meta -
 
 ## What exists
 
-- `packages/sdk/src/timing.ts`: `callTimes`, `withCallTimes` and `startOf`, exported from the sdk, write `ahpd.startedAt`, `ahpd.endedAt` and `ahpd.durationMs` into a call's `_meta` beside the keys it already has.
+- `packages/sdk/src/utils/timing.ts`: `callTimes`, `withCallTimes` and `startOf`, exported from the sdk, write `ahpd.startedAt`, `ahpd.endedAt` and `ahpd.durationMs` into a call's `_meta` beside the keys it already has.
 
 ## Verified
 

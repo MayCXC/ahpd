@@ -15,7 +15,7 @@ The `@ahpd/computer` plugin makes and reaches machines, the SDK carries the `com
 - [`code://packages/computer/src/router.ts`](../../../packages/computer/src/router.ts) - the router that serves several runtimes on one host, and `spellMachineId` and `parseMachineId`, the one place an id is `<runtime>.<name>`.
 - [`code://packages/computer/src/devcontainer.ts`](../../../packages/computer/src/devcontainer.ts) - the Dev Container CLI runner and the relay launcher: `up` with the two id labels, the host inside, and the relay's pipes.
 - [`code://packages/computer/src/owners.ts`](../../../packages/computer/src/owners.ts) - `computers.json` beside the daemon's config, which holds the owner of a machine the CLI made.
-- [`code://packages/sdk/src/nested.ts`](../../../packages/sdk/src/nested.ts) - the proxy a `runsNested` backend gets: an `ahpd --stdio` inside the machine, reached as a client.
+- [`code://packages/sdk/src/sessions/nested.ts`](../../../packages/sdk/src/sessions/nested.ts) - the proxy a `runsNested` backend gets: an `ahpd --stdio` inside the machine, reached as a client.
 - [`code://packages/sdk/src/host.ts`](../../../packages/sdk/src/host.ts) - the host, its `initialize` `_meta` block and the `vscode/devContainers/*` methods it serves.
 - [`code://packages/sdk/src/listen.ts`](../../../packages/sdk/src/listen.ts) - the WebSocket and stdio transports over the same seam.
 

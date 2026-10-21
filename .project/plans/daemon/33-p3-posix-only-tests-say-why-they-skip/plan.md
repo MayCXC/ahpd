@@ -10,7 +10,7 @@ requires:
 changes: []
 creates: []
 refs:
-  - "[code://packages/sdk/src/terminals.ts#L19](../../../../packages/sdk/src/terminals.ts#L19) - `shellOf`: `SHELL` or `/bin/sh`"
+  - "[code://packages/sdk/src/machines/terminals.ts#L19](../../../../packages/sdk/src/machines/terminals.ts#L19) - `shellOf`: `SHELL` or `/bin/sh`"
   - "[code://packages/sdk/test/pty.test.ts#L192](../../../../packages/sdk/test/pty.test.ts#L192) - a process group killed with a negative pid"
   - "[code://packages/sdk/test/nested-process.test.ts#L90](../../../../packages/sdk/test/nested-process.test.ts#L90) - a script run with `sh -c`"
   - "[code://packages/sdk/test/git-locks.test.ts#L49](../../../../packages/sdk/test/git-locks.test.ts#L49) - `sh -c 'command -v git'`"

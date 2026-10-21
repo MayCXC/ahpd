@@ -238,14 +238,14 @@ Two reads answer a limit, both with the same figure: the amount, what the period
 
 | | |
 | --- | --- |
-| The four steps | `decide` in `packages/sdk/src/decide.ts` |
-| The walk, the keys and the figures | `chargeFor`, `keysOf` and `limitsOf` in `packages/sdk/src/charge.ts` |
-| The periods | `periodOf` in `packages/sdk/src/periods.ts` |
-| The turn's check and its keys | `checked` in `packages/sdk/src/host/owners.ts`, and `write` in `packages/sdk/src/meter.ts` |
-| The row and the two stores | `packages/sdk/src/policies.ts` |
-| The `policy:` scheme and its channel | `packages/sdk/src/policy.ts` and `packages/sdk/src/recordschannel.ts` |
+| The four steps | `decide` in `packages/sdk/src/access/decide.ts` |
+| The walk, the keys and the figures | `chargeFor`, `keysOf` and `limitsOf` in `packages/sdk/src/usage/charge.ts` |
+| The periods | `periodOf` in `packages/sdk/src/usage/periods.ts` |
+| The turn's check and its keys | `checked` in `packages/sdk/src/host/owners.ts`, and `write` in `packages/sdk/src/usage/meter.ts` |
+| The row and the two stores | `packages/sdk/src/access/policies.ts` |
+| The `policy:` scheme and its channel | `packages/sdk/src/access/policy.ts` and `packages/sdk/src/resources/recordschannel.ts` |
 | The switch and the charge settings, in the host | `policies`, `policiesCheck`, `policiesPayOrder` and `usageTimezone` on `HostOptions`, `packages/sdk/src/types/host.ts` |
 | The switch and the charge settings, in the daemon | `PoliciesSetting` and `UsageSetting` in `packages/server/src/config.ts`, and the wiring in `packages/server/src/commands/run.ts` |
-| The `ownLimits` switch, in the usage scheme | `ownLimits` on `UsageProviderOptions`, `packages/sdk/src/usage.ts` |
+| The `ownLimits` switch, in the usage scheme | `ownLimits` on `UsageProviderOptions`, `packages/sdk/src/usage/usage.ts` |
 | The proxy's check and its record | `policyFor` and `record` in `packages/server/src/proxy/listener.ts` |
-| The reads | `policy://<id>/limits` in `packages/sdk/src/policy.ts`, and `usage://limits` in `packages/sdk/src/usage.ts` |
+| The reads | `policy://<id>/limits` in `packages/sdk/src/access/policy.ts`, and `usage://limits` in `packages/sdk/src/usage/usage.ts` |

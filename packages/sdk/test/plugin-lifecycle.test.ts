@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { pluginHost, raise } from '../src/plugins.js';
+import { pluginHost, raise } from '../src/plugins/plugins.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 
 /*
