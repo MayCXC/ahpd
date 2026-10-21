@@ -1,6 +1,6 @@
 ---
 title: configure asks about the web UI
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -44,7 +44,7 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `configure` has an `OTHERS` list with the web UI as its one entry, asked after the backend questions. Enter takes the web UI on a first run. A later run shows the file's answer, so a plugin the file names and switches off stays off. A Yes adds `@ahpd/web` to the missing packages, and a No on a named entry writes `enabled: false`. The `backends` result holds the backends only. `docs/server/CONFIGURE.md` and `docs/server/INSTALL.md` name the question. `server-configure.test.ts` passed 38 of 38. From the repository root, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6476 tests with 29 skipped (387 files passed, 1 skipped).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** the message `Every backend is already named` must not count the web UI as a backend.
+- **Watch out for:** the web UI is not a backend. The message `Every backend is already named` does not count it. A daemon with only the web UI still refuses to start.

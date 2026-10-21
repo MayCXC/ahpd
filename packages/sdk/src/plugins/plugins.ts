@@ -381,7 +381,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
        * two plugins is told which id and which two parties.
        */
       if (held !== undefined) {
-        problems.push(`${AGENT_CLASH} plugin ${contribution.by} registers agent ${agent.provider}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered`);
+        problems.push(`${AGENT_CLASH} plugin ${contribution.by} registers agent ${agent.provider}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered; run ahpd configure to keep one`);
         continue;
       }
       providers.set(agent.provider, contribution.by);

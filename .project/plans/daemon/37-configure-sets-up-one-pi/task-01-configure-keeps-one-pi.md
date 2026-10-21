@@ -1,6 +1,6 @@
 ---
 title: configure keeps one pi
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -44,7 +44,7 @@ The clash line at start tells the person to run `ahpd configure` to keep one.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `configure.ts` has `dropPreset` and `hasPreset` beside `takePreset`. A yes to the native pi backend skips the ACP `pi` agent and says `pi-acp: not asked, the pi backend runs pi`. A file that names both gets the question `Remove the ACP pi preset? It clashes with the pi backend.`, and a yes drops the preset while keeping the entry's other options. The clash line ends with `; run ahpd configure to keep one`. `server-configure.test.ts` passed 36 of 36, and `plugin-host.test.ts` passed 22 of 22. From the repository root, `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6474 tests with 29 skipped (387 files passed, 1 skipped).
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** the native questions come before `findAgents`, so the answer is known when the ACP loop runs.
+- **Watch out for:** the native questions come before `findAgents`, so the answer is known when the ACP loop runs. Only `pi` is special-cased, because no other ACP preset has the name of a native backend.
