@@ -134,7 +134,7 @@ describe('the flags of a run', () => {
       '--connection-token', 'secret1234',
       '--resource', 'https://ahpd.test/',
       '--issuer', 'github',
-      '--trust-token', '--advanced-tools', '--session-tools', '--session-tools-providers', 'claude',
+      '--require-issuer', '--advanced-tools', '--session-tools', '--session-tools-providers', 'claude',
       '--automations', 'memory', '--sessions', 'memory',
       '--wire', wire,
       '--plugin', BACKEND,

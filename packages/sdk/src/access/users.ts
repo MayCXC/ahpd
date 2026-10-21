@@ -425,15 +425,15 @@ export interface FileUserOptions {
    */
   audience?: string;
   /**
-   * Whether a person's connection token authorizes them, for every record that
-   * does not say otherwise.
+   * Whether only a token from a record's issuer signs them in, for every record
+   * that does not say otherwise.
    *
-   * False, which is the whole point: the door admits and says nobody, and
-   * `authenticate` is what authorizes - decision `the-door-is-a-door`. A host
-   * that trusts its connection tokens says so once here; a record overrides it
-   * with its own `trustToken`.
+   * False, so a record's own token or one they minted names them at the door -
+   * decision `a-persons-token-names-them-unless-the-issuer-is-required`. A host
+   * whose people must sign in through its company provider says so once here;
+   * a record overrides it with its own `requireIssuer`.
    */
-  trustToken?: boolean;
+  requireIssuer?: boolean;
   /**
    * How many tokens one person may mint for themselves.
    *
@@ -467,8 +467,8 @@ const hashOf = (token: string): string =>
 
 export function fileUsers(options: FileUserOptions): Users {
   const told = (message: string): void => { options.onProblem?.(message); };
-  /** The host's own answer to whether a connection token authorizes somebody. */
-  const trustAll = options.trustToken === true;
+  /** The host's own answer to whether a local token only opens the socket. */
+  const hostRequiresIssuer = options.requireIssuer === true;
 
   /** Where the tokens live: the users file with its extension changed. */
   const tokensFile = options.tokensPath
@@ -508,6 +508,13 @@ export function fileUsers(options: FileUserOptions): Users {
 
   /** The server a record signs in through: its own, or the host's default. */
   const issuerNameOf = (record: UserRecord): string | undefined => record.issuer ?? options.issuer;
+
+  /**
+   * Whether only a token from the record's issuer signs them in.
+   *
+   * The record's own answer over the host's, and off when neither names one.
+   */
+  const requiresIssuer = (record: UserRecord): boolean => record.requireIssuer ?? hostRequiresIssuer;
 
   /** Whether a name is one this directory can resolve, saying nothing. */
   const knows = (name: string): boolean => (options.issuerFor ?? issuerFrom)(name) !== undefined;
@@ -724,16 +731,28 @@ export function fileUsers(options: FileUserOptions): Users {
               if (one.issuerVerify !== undefined && verify === undefined) {
                 once(`${options.path}: user ${one.id} names issuerVerify ${JSON.stringify(one.issuerVerify)}, which this host does not have; it is checked the default way`);
               }
+              /*
+               * The company sign-in, read as a switch. A value that is not one
+               * is said once and dropped rather than taken for the answer
+               * beside it, the way `issuerVerify` is.
+               */
+              if (one.requireIssuer !== undefined && typeof one.requireIssuer !== 'boolean') {
+                once(`${options.path}: user ${one.id} names requireIssuer ${JSON.stringify(one.requireIssuer)}, which is not true or false; the host's answer applies`);
+              }
+              const legacyTrust = (one as { trustToken?: unknown }).trustToken;
+              if (legacyTrust !== undefined) {
+                once(`${options.path}: user ${one.id} sets trustToken, which this host no longer reads; a local token names them at the door`);
+              }
               const record: UserRecord = {
                 id: one.id,
                 roles: strings(one.roles),
                 token: typeof one.token === 'string' ? one.token : '',
-                // Both flags are kept rather than dropped, or a file would lose
+                // These are kept rather than dropped, or a file would lose
                 // them the next time anything wrote to it.
                 ...(typeof one.issuer === 'string' && one.issuer !== '' ? { issuer: one.issuer } : {}),
                 ...(typeof one.rolesFrom === 'string' && one.rolesFrom !== '' ? { rolesFrom: one.rolesFrom } : {}),
                 ...(verify === undefined ? {} : { issuerVerify: verify }),
-                ...(typeof one.trustToken === 'boolean' ? { trustToken: one.trustToken } : {}),
+                ...(typeof one.requireIssuer === 'boolean' ? { requireIssuer: one.requireIssuer } : {}),
                 // And these two, as the file spelled them. Checked below and
                 // held as written, because the file is written back from what
                 // was read: dropping an entry here would lose a membership
@@ -742,6 +761,16 @@ export function fileUsers(options: FileUserOptions): Users {
                 ...(typeof one.primary === 'string' && one.primary !== '' ? { primary: one.primary } : {}),
               };
               settledOf(record, teamNames, projectNames);
+              /*
+               * Nobody can sign in, and the log says why.
+               *
+               * The record asks for the issuer and neither it nor the host
+               * names one, so the local token opens the socket and names
+               * nobody, and `authenticate` refuses it too.
+               */
+              if (requiresIssuer(record) && issuerNameOf(record) === undefined) {
+                once(`${options.path}: user ${one.id} requires the issuer and no issuer is named, so nothing can sign them in`);
+              }
               return record;
             }),
         },
@@ -936,7 +965,13 @@ export function fileUsers(options: FileUserOptions): Users {
    * is refused on the next command rather than the next connection, and a role
    * change is in force at the same point.
    */
-  const principalOf = (record: UserRecord, fromIssuer: string[] = [], expiresAt?: number, minted?: TokenRecord): Principal => {
+  const principalOf = (
+    record: UserRecord,
+    fromIssuer: string[] = [],
+    expiresAt?: number,
+    minted?: TokenRecord,
+    local = false,
+  ): Principal => {
     // Said once, as the record is verified, so a role that nothing defines is
     // in the log even though every command resolves the roles again below -
     // and said only here, because a complaint per command is a log nobody
@@ -986,10 +1021,15 @@ export function fileUsers(options: FileUserOptions): Users {
       // reads: a provider handed this principal could otherwise add a role to
       // the person it was signed in as. See the comment above.
       roles: Object.freeze([...record.roles, ...fromIssuer]),
-      // The record's own answer, or the host's default. Stamped once, because
-      // the door asks once per connection, and the person's answer does not
-      // change while their socket is open.
-      trusted: record.trustToken ?? trustAll,
+      /*
+       * Whether the token they arrived with signs them in as well.
+       *
+       * A local token does unless the record, or the host, requires the
+       * issuer; a token from an issuer always does. Stamped once, because the
+       * door asks once per connection and the person's answer does not change
+       * while their socket is open.
+       */
+      trusted: !(local && requiresIssuer(record)),
       // Stamped like `trusted`, and for the same reason: it is what the token
       // said at the moment it was checked, and the token is not kept.
       ...(expiresAt === undefined ? {} : { expiresAt }),
@@ -1105,9 +1145,9 @@ export function fileUsers(options: FileUserOptions): Users {
         const person = (file.users ?? []).find((one) => one.id === minted.user);
         if (person === undefined) return undefined;
         if (minted.expires !== undefined && minted.expires <= Date.now()) return undefined;
-        return principalOf(person, [], minted.expires, minted);
+        return principalOf(person, [], minted.expires, minted, true);
       }
-      if (found !== undefined) return principalOf(found);
+      if (found !== undefined) return principalOf(found, [], undefined, undefined, true);
       /*
        * The issuers, only when nothing local matched.
        *
@@ -1228,10 +1268,10 @@ export function fileUsers(options: FileUserOptions): Users {
           id: one.id,
           roles: [...one.roles],
           grants: [...grantsOf(one.roles, file)] as Grant[],
-          // What the record resolved to, so `ahpd user list` can say who the
-          // door identifies, who still has to sign in, and where their
-          // credential comes from.
-          trusted: one.trustToken ?? trustAll,
+          // What the record resolved to, so `ahpd user list` can say whether
+          // their local token signs them in, who still has to sign in, and
+          // where their credential comes from.
+          trusted: !requiresIssuer(one),
           ...(issuer === undefined ? {} : { issuer }),
           ...(one.rolesFrom === undefined ? {} : { rolesFrom: one.rolesFrom }),
           // Who their work may be charged to, which is not a permission and is

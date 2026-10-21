@@ -79,7 +79,7 @@ it('creates and edits a person, and a body naming no field keeps what was there'
   await directory.addTeam('backend');
   await schemes.user!.write('user://ana', body({ roles: ['member'], memberships: ['backend'] }));
 
-  expect(await read('user', 'ana')).toMatchObject({ id: 'ana', roles: ['member'], memberships: ['backend'], trusted: false });
+  expect(await read('user', 'ana')).toMatchObject({ id: 'ana', roles: ['member'], memberships: ['backend'], trusted: true });
 
   // A body naming only a primary leaves the roles and the memberships alone,
   // and a `null` takes the primary away.

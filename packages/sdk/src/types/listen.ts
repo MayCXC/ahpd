@@ -104,7 +104,8 @@ export interface ListenOptions extends Bounds {
    * `undefined` is a token this host does not know, and the socket is refused.
    * An object is a token that opens the door: with a `principal` it is also who
    * they are, and without one it says nobody. A person's own token answers the
-   * second unless their record trusts it - decision `the-door-is-a-door`.
+   * first unless their record requires the issuer - decision
+   * `a-persons-token-names-them-unless-the-issuer-is-required`.
    */
   identify?: (token: string) => Promise<Arrival | undefined> | Arrival | undefined;
   /**
@@ -198,7 +199,7 @@ export interface RequestsListener {
  * An empty object is a door token that says nobody: the socket is admitted and
  * every gated command answers `-32007` until somebody signs in. A `principal`
  * is a door token that authorizes its holder as well, which is what a person's
- * own token does only when their record says `trustToken`.
+ * own token does unless their record requires the issuer.
  */
 export interface Arrival {
   principal?: Principal;

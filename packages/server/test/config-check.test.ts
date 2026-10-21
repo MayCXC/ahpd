@@ -69,7 +69,7 @@ describe('a wrong value on a known key', () => {
   });
 
   it('refuses a boolean given as a string', () => {
-    expect(refusal({ trustToken: 'yes' })).toBe(`${config}: trustToken must be true or false`);
+    expect(refusal({ requireIssuer: 'yes' })).toBe(`${config}: requireIssuer must be true or false`);
   });
 
   it('refuses a tokens per person that is not a whole number of 0 or more', () => {
@@ -187,7 +187,7 @@ describe('a valid file', () => {
       resource: 'https://ahpd.test/',
       issuer: 'github',
       issuerVerify: 'jwt',
-      trustToken: true,
+      requireIssuer: true,
       advancedTools: true,
       sessionTools: true,
       sessionToolsProviders: ['claude'],
@@ -211,7 +211,7 @@ describe('a valid file', () => {
       resource: 'https://ahpd.test/',
       issuer: 'github',
       issuerVerify: 'jwt',
-      trustToken: true,
+      requireIssuer: true,
       advancedTools: true,
       sessionTools: true,
       sessionToolsProviders: ['claude'],
@@ -231,15 +231,15 @@ describe('a valid file', () => {
   });
 
   it('is under every flag that was typed', () => {
-    put({ port: 1, automations: 'memory', paths: ['/from-file'], trustToken: true });
-    const options = optionsFrom({ configFile: config, port: 2, automations: 'file', paths: ['/typed'], trustToken: false });
-    expect(options).toMatchObject({ port: 2, automations: 'file', paths: ['/typed'], trustToken: false });
+    put({ port: 1, automations: 'memory', paths: ['/from-file'], requireIssuer: true });
+    const options = optionsFrom({ configFile: config, port: 2, automations: 'file', paths: ['/typed'], requireIssuer: false });
+    expect(options).toMatchObject({ port: 2, automations: 'file', paths: ['/typed'], requireIssuer: false });
   });
 
   it('leaves the defaults where neither says anything', () => {
     const options = folded({});
     expect(options).toMatchObject({
-      port: 9187, host: '127.0.0.1', open: false, trustToken: false, tokensPerPerson: 10, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url', terminalAutoApproveDefaults: 'vscode',
+      port: 9187, host: '127.0.0.1', open: false, requireIssuer: false, tokensPerPerson: 10, advancedTools: false, sessionTools: true, sessionToolsProviders: [], closedChats: 'hidden', archiveDirtyWorktree: 'keep', pullRequestLookup: 'url', terminalAutoApproveDefaults: 'vscode',
       automations: 'file', sessions: 'file', usagePer: 'turn', plugins: [], updateCheck: true, warnings: [],
     });
     // Absent rather than defaulted here, for the same reason: a host that says
@@ -534,6 +534,15 @@ describe('the daemon', () => {
     const said = await run({ plugin: [] });
     expect(said.code).toBe(0);
     expect(said.stderr).toContain(`${config}: plugin is not a setting ahpd knows; ignored`);
+    expect(said.stderr).toContain('ahpd over stdio');
+  }, 20000);
+
+  it('starts with a trustToken somebody left behind, and says so in its log', async () => {
+    // The key is gone, so a file that still writes it is unknown rather than
+    // wrong: the run goes on and the line names the file to change.
+    const said = await run({ trustToken: true });
+    expect(said.code).toBe(0);
+    expect(said.stderr).toContain(`${config}: trustToken is not a setting ahpd knows; ignored`);
     expect(said.stderr).toContain('ahpd over stdio');
   }, 20000);
 

@@ -342,7 +342,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       audience: advertisedResource(),
       ...(options.issuer === undefined ? {} : { issuer: options.issuer }),
       ...(options.issuerVerify === undefined ? {} : { issuerVerify: options.issuerVerify }),
-      trustToken: options.trustToken,
+      requireIssuer: options.requireIssuer,
       tokensPerPerson: options.tokensPerPerson,
       onProblem: (line) => process.stderr.write(`${line}\n`),
     });
@@ -548,6 +548,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   /*
    * Who may open a connection on the daemon's own port: the deployment's own
    * token, which is the host, and a person's token that the directory knows.
+   * A token the directory trusts names its person at the door; one where the
+   * record requires the issuer opens the socket and names nobody.
    * The same options build the door of the handshake and of a plain request.
    */
   const door: DoorOptions = {
@@ -1158,11 +1160,11 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * The door, and which transport this host answers on.
    *
    * The deployment's own token is the host, and no other is. A person's token
-   * opens the socket and says nobody unless their record trusts it - decision
-   * `the-door-is-a-door` - so a client that presents only a connection token is
-   * admitted and then answers `-32007` until it authenticates. With no directory
-   * there is nothing to ask, so nothing is passed and the door refuses what it
-   * refuses.
+   * names them at the door unless their record requires the issuer - decision
+   * `a-persons-token-names-them-unless-the-issuer-is-required` - in which case
+   * the socket is admitted and then answers `-32007` until the issuer's token
+   * signs them in. With no directory there is nothing to ask, so nothing is
+   * passed and the door refuses what it refuses.
    *
    * Over stdio there is no door to guard: the process that started this one
    * holds the only handle to the pipes, so the connection is this host itself

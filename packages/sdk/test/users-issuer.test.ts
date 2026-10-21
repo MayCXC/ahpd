@@ -97,7 +97,7 @@ it('matches an issuer subject against a record and keeps its roles', async () =>
   await users.add('ana', ['admin']);
   // A record with an issuer and no minted secret: `add` leaves the hash empty,
   // so this person can only arrive through the issuer.
-  expect((await users.list())[0]).toEqual({ id: 'ana', roles: ['admin'], grants: ['*:*'], trusted: false, issuer: 'github' });
+  expect((await users.list())[0]).toEqual({ id: 'ana', roles: ['admin'], grants: ['*:*'], trusted: true, issuer: 'github' });
 
   const held = await users.verify('gho_secret');
   expect(held?.id).toBe('ana');

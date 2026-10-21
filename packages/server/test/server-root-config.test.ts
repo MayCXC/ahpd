@@ -69,7 +69,7 @@ describe('the daemon keys root config carries', () => {
     const { schema } = port();
     const properties = (schema() as { properties: Record<string, unknown> }).properties;
     expect(Object.keys(properties)).toEqual(['paths', 'port', 'host', 'httpApi', 'routes', 'modelProxy', 'updateCheck', 'advancedTools', 'sessionTools', 'sessionToolsProviders', 'closedChats', 'archiveDirtyWorktree', 'pullRequestLookup', 'wire', 'mcpServers']);
-    for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'trustToken', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
+    for (const key of ['stdio', 'configFile', 'connectionToken', 'connectionTokenFile', 'requireIssuer', 'issuer', 'resource', 'users', 'automations', 'sessions']) {
       expect(Object.keys(properties)).not.toContain(key);
     }
   });

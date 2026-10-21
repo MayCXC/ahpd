@@ -66,8 +66,8 @@ export interface Options {
   issuer?: string;
   /** How a token from that issuer is checked, absent when the deployment said nothing. */
   issuerVerify?: IssuerVerify;
-  /** Whether a person's connection token authorizes them as well as admits them. */
-  trustToken: boolean;
+  /** Whether only a token from a person's issuer signs them in. */
+  requireIssuer: boolean;
   /** How many tokens one person may mint for themselves. Default 10; 0 lets nobody mint one. */
   tokensPerPerson: number;
   /** Whether a tool that declares `advancedPermission` is offered to sessions. */
@@ -515,9 +515,9 @@ export const serverFields = {
     description: 'How a token from --issuer is checked: userinfo asks the issuer what the token means, jwt checks it against the keys the issuer publishes, and auto takes the first reading that a token shaped like a JWT allows and userinfo for the rest. Default: userinfo.',
     cli: { value: 'userinfo|jwt|auto' },
   },
-  trustToken: {
+  requireIssuer: {
     type: 'boolean',
-    description: "A person's connection token authorizes them as well as admits them.",
+    description: "Only a token from a person's issuer signs them in; a local token only opens the socket.",
   },
   tokensPerPerson: {
     type: 'integer',
@@ -1165,7 +1165,7 @@ const noCwd = input['noCwd'] === true;
     ...(origins.length === 0 ? {} : { origins }),
     ...(issuer === undefined ? {} : { issuer }),
     ...(issuerVerify === undefined ? {} : { issuerVerify }),
-    trustToken: given('trustToken') ?? false,
+    requireIssuer: given('requireIssuer') ?? false,
     tokensPerPerson: given('tokensPerPerson') ?? 10,
     advancedTools: given('advancedTools') ?? false,
     sessionTools: given('sessionTools') ?? true,

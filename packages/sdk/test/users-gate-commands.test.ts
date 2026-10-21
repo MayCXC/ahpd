@@ -330,6 +330,41 @@ it('says who it became to a client that signed in after connecting', async () =>
   expect(await rootMeta(client)).toEqual({ 'ahpd.principal': 'user:m' });
 });
 
+it('refuses a local token at authenticate when the record requires the issuer', async () => {
+  /*
+   * The record requires the company sign-in, so its own token opens the socket
+   * and names nobody - decision
+   * `a-persons-token-names-them-unless-the-issuer-is-required`. The issuer's
+   * token is the one that signs them in, and the local one is refused there.
+   */
+  const usersPath = join(root, 'users.json');
+  writeFileSync(usersPath, JSON.stringify({
+    users: [{ id: 'm', roles: ['member'], token: '', issuer: 'acme', requireIssuer: true }],
+  }));
+  const users = fileUsers({
+    path: usersPath,
+    issuer: 'acme',
+    issuerFor: () => ({
+      id: 'acme',
+      scopes: ['openid'],
+      who: async (token: string) => (token === 'from-issuer' ? { subject: 'm', claims: {} } : undefined),
+    }),
+  });
+  const local = await users.mint('m');
+  const client = host({ users }).accept(peer());
+  await hello(client);
+
+  await expect(signIn(client, local)).rejects.toMatchObject({
+    code: -32007,
+    message: 'Sign in through your issuer',
+    data: { resources: [expect.objectContaining({ resource: RECORD.resource })] },
+  });
+  expect(await rootMeta(client)).not.toHaveProperty('ahpd.principal');
+
+  expect(await signIn(client, 'from-issuer')).toEqual({});
+  expect(await rootMeta(client)).toEqual({ 'ahpd.principal': 'user:m' });
+});
+
 it('gives two connections each their own principal and never the other', async () => {
   const made = host({ users: directory({ ana: [], bob: [] }) });
   const one = made.accept(peer());

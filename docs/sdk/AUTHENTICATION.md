@@ -7,7 +7,7 @@ How a client proves who it is. Two layers, and they are separate: the door decid
 | the door | the connection token a client presents before a socket exists |
 | connection token | the deployment's secret, presented as `?tkn=` on the WebSocket URL or as `Authorization: Bearer` |
 | deployment token | the connection token that is the host itself |
-| a person's token | a per-person secret `ahpd user token` mints; it opens the door and names nobody |
+| a person's token | a per-person secret `ahpd user token` mints; it opens the door and names its person, unless the issuer is required |
 | `authenticate` | the protocol command that says who is on the other end |
 | resource | the https identifier this host advertises for its own sign-in, which `authenticate` names |
 | issuer | an authorization server whose tokens this host also accepts |
@@ -19,7 +19,7 @@ How a client proves who it is. Two layers, and they are separate: the door decid
 | --- | --- | --- | --- |
 | Where it is presented | `?tkn=` on the WebSocket URL, or a bearer header | the same, with the secret `ahpd user token` printed | the command, against the resource the host advertises |
 | What it answers | whether a socket may exist at all | that, and nothing else | who is on the other end, for a socket that arrived as nobody |
-| Identity | the host itself, when a directory is configured | nobody, unless the record sets `trustToken` | the person the directory or the issuer resolves the token to |
+| Identity | the host itself, when a directory is configured | the person it belongs to, unless the record or the host requires the issuer | the person the directory or the issuer resolves the token to |
 | How it is revoked | rotate the token, restart, everybody reconnects | `ahpd user rm`, and the next connection is refused; a minted token by `ahpd token rm` | `ahpd user rm`, and the next command is refused |
 | How many | one, shared | one full token per person, and up to `tokensPerPerson` minted ones | one per person |
 | Expiry | none | none, unless a minted token was given one | `expiresIn`, honoured |
@@ -48,24 +48,19 @@ This is the *connection* token, which is about who may reach the host at all. Wi
 
 ## The deployment token
 
-The deployment's token needs no credential. A socket on it is the host: every capability, including a scheme no role names, because the key to the door is the operator's own. It is the one thing `authenticate` cannot demote or revoke, and the one thing never asked to justify itself. Rotating the deployment's token is what locks somebody out of the door entirely, and that token is the host itself - decision [the door token is the host, and a person's own token is that person](../../.project/decisions/the-door-is-a-door.md).
+The deployment's token needs no credential. A socket on it is the host: every capability, including a scheme no role names, because the key to the door is the operator's own. It is the one thing `authenticate` cannot demote or revoke, and the one thing never asked to justify itself. Rotating the deployment's token is what locks somebody out of the door entirely, and that token is the host itself - decision [a person's own token names them at the door, unless the host requires the issuer](../../.project/decisions/a-persons-token-names-them-unless-the-issuer-is-required.md).
 
 ## A person's token
 
-A person's own token opens the socket and names nobody, and the first gated command answers `-32007`, so the client signs in. That is the default because a token in a URL can end up in a log and a login does not - decision [a person signs in through `authenticate`, not through the connection token](../../.project/decisions/the-door-is-a-door.md).
+A person's own token opens the socket and names them: `initialize` answers `ahpd.principal` as `user:<id>`, and every gated command is answered under their roles. A minted token does the same, with the grants the person and the token both hold. Decision [a person's token names them at the door, unless the host requires the issuer](../../.project/decisions/a-persons-token-names-them-unless-the-issuer-is-required.md).
 
-Two things opt out of it:
+`requireIssuer` asks for a different credential. The connection token then only opens the socket, and `authenticate` refuses it `-32007` with the sign-in resource in `data.resources`, so the client signs in through the issuer:
 
 ```json
-{
-  "trustToken": true,
-  "users": [
-    { "id": "normal", "roles": ["guest"], "token": "sha256:…", "trustToken": true }
-  ]
-}
+{ "requireIssuer": true, "issuer": "github", "users": "/home/me/.config/ahpd/users.json" }
 ```
 
-`trustToken` at the top of the configuration trusts everybody's connection token; on a record it decides for that one person and wins over the host. Use it for a client that cannot complete a sign-in, such as a phone with only a URL to paste. A host that wants the token to be enough everywhere sets it once - decision [the door admits a socket and names nobody, and the deployment's token is still the host](../../.project/decisions/the-door-is-a-door.md).
+`requireIssuer` at the top of the configuration asks it of everybody; on a record it decides for that one person and wins over the host, as in `{ "id": "normal", "roles": ["member"], "requireIssuer": true }`. A record that requires the issuer where neither it nor the host names one signs nobody in, and the daemon says so once at startup.
 
 A person also mints tokens of their own, each limited to a subset of their grants. Such a token signs in as the person and holds only the grants the person and the token both have now. A role taken from the person is taken from every token at the next check. A revoked or expired token fails on its next call. A minted token cannot mint, list or revoke tokens. See [server/USERS.md](../server/USERS.md#tokens-of-their-own).
 
@@ -281,7 +276,7 @@ The root state is one per host, so it cannot be filtered wholesale without givin
 - `resource` - the https identifier this host advertises for its own sign-in. Default: derived from `host` and `port`.
 - `issuer` - an authorization server whose tokens this host also accepts: `github`, or an OpenID Connect issuer URL this host may reach. Default: none, so only secrets this host minted are checked.
 - `issuerVerify` - how a token from that issuer is checked: `userinfo`, `jwt` or `auto`. Default `userinfo`. A record's own `issuerVerify` overrides it.
-- `trustToken` - `true` trusts every person's connection token as their authorization. Off by default. A record's own `trustToken` overrides it.
+- `requireIssuer` - `true` accepts only a token from the person's issuer as their sign-in; their own token, and any they minted, only opens the socket. Off by default. A record's own `requireIssuer` overrides it.
 - `tokensPerPerson` - how many live tokens one person may mint for themselves. Default `10`. An expired token does not count.
 
 A relative `users`, `connectionTokenFile`, `worktreesRoot` or `paths` entry is resolved against the directory of the configuration file that set it, not the working directory.

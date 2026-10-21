@@ -368,6 +368,39 @@ const frame = (port: number, token: string, text: string): Promise<string> => ne
   socket.on('error', (error: Error) => { clearTimeout(timer); fail(error); });
 });
 
+/** The `_meta` an `initialize` answer carried on a socket opened with this token. */
+const shook = async (one: Daemon, token: string): Promise<Record<string, unknown>> => {
+  const asked = { jsonrpc: '2.0', id: 1, method: 'initialize', params: { clientId: 'door', protocolVersions: ['1.0.0'] } };
+  const answered = JSON.parse(await frame(one.port, token, JSON.stringify(asked))) as {
+    result?: { _meta?: Record<string, unknown> };
+  };
+  return answered.result?._meta ?? {};
+};
+
+describe('a person at the door', () => {
+  /** A directory with one person in it, and the token they connect with. */
+  const ada = async (): Promise<string> => {
+    const directory = fileUsers({ path: usersFile });
+    await directory.add('ada', ['member']);
+    return directory.mint('ada');
+  };
+
+  it('names the person whose token opened the socket, on initialize', async () => {
+    const token = await ada();
+    const one = await daemon({ plugins: [BACKEND] }, ['--connection-token', 'root-secret', '--users', usersFile]);
+    // No `authenticate`: the token itself says who they are.
+    expect((await shook(one, token))['ahpd.principal']).toBe('user:ada');
+  }, 30000);
+
+  it('names nobody with that token when the host requires the issuer', async () => {
+    const token = await ada();
+    const one = await daemon({ requireIssuer: true, plugins: [BACKEND] }, ['--connection-token', 'root-secret', '--users', usersFile]);
+    // The socket opens and the directory knows the token, but only the record's
+    // issuer says who they are.
+    expect(await shook(one, token)).not.toHaveProperty('ahpd.principal');
+  }, 30000);
+});
+
 /** Whether this machine has an IPv6 loopback to bind the API to. */
 const hasIPv6Loopback = (): boolean =>
   Object.values(networkInterfaces()).some((list) => (list ?? []).some((one) => one.family === 'IPv6' && one.internal));

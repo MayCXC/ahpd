@@ -78,13 +78,13 @@ export interface Principal {
    */
   readonly plugin?: string;
   /**
-   * Whether this person's connection token is their authorization as well.
+   * Whether a local token of theirs signs them in at the door.
    *
-   * The door admits and says nobody; `authenticate` is what authorizes a
-   * person - decision `the-door-is-a-door`. A record that sets `trustToken`,
-   * or a host whose default is that, makes the token enough on its own, which
-   * is what a client that cannot complete a sign-in needs. Absent is the
-   * default and means no.
+   * A record's own token or one they minted names the person on the connection
+   * unless the record, or the host, requires the issuer - decision
+   * `a-persons-token-names-them-unless-the-issuer-is-required`. A token from
+   * their issuer always does. False is what such a local token answers: the
+   * socket opens and names nobody, and `authenticate` refuses the token.
    */
   trusted?: boolean;
   /**
@@ -194,8 +194,15 @@ export interface UserRecord {
    * host's setting applies here too.
    */
   issuerVerify?: IssuerVerify;
-  /** Whether a connection token of theirs authorizes them, over the host's default. */
-  trustToken?: boolean;
+  /**
+   * Whether only a token from their issuer signs them in, over the host's
+   * default.
+   *
+   * True, their own token and the ones they minted only open the socket, and
+   * `authenticate` accepts the issuer's alone. Absent, the host's answer
+   * applies.
+   */
+  requireIssuer?: boolean;
   /**
    * The teams and projects their work may be charged to.
    *
@@ -356,7 +363,9 @@ export interface Users {
    *
    * The resolved grants are here because only the directory knows both halves -
    * the file's own roles and the built-ins - so a caller that wants to say what
-   * a person may do would otherwise have to repeat the resolution.
+   * a person may do would otherwise have to repeat the resolution. `trusted` is
+   * whether a local token signs the person in, which is false where the issuer
+   * is required.
    */
   list(): Promise<(Omit<UserRecord, 'token'> & { grants: Grant[]; trusted: boolean })[]>;
   /**

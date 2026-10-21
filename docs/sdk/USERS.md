@@ -15,9 +15,9 @@ What the connection token, a person's own token, `authenticate` and the deployme
 1. **One person, the deployment token only.** No `users` key, no directory.
    This is the default and it is unchanged.
 2. **Several people.** A deployment token for the door, when the port is not
-   loopback, and a token per person. Each person signs in with `authenticate`,
-   against their issuer or with the secret `ahpd user token` minted, and a
-   person whose client cannot do that is given `trustToken` instead.
+   loopback, and a token per person. A person's own token names them at the
+   door, and a person whose record requires the issuer signs in with
+   `authenticate` against that issuer instead.
 3. **No deployment token at all.** `--without-connection-token`, so a person's
    own token is the only secret and who may reach the port is the network's
    business. A token nobody recognises is then simply a socket that is nobody:
@@ -448,11 +448,10 @@ acquires a token only from an authentication provider it can match through
 self-issued credential has no route through its sign-in flow: it reports the
 `-32007` as a plain error with nothing to click, which is what a directory used
 to produce. It does take a WebSocket URL in Add Remote Agent Host, so the URL
-from `ahpd user token <id> --url` reaches the socket. That URL is a door and not
-a credential now, so the window is connected and still nobody: a deployment that
-reaches VS Code with minted secrets sets `trustToken` on the record, which makes
-that one person's token their authorization, and a deployment with an issuer
-needs neither.
+from `ahpd user token <id> --url` reaches the socket. The token in it names
+that person at the door, so the window is connected as them, and a deployment
+that requires the issuer moves it back to a sign-in through the provider it
+can resolve.
 
 An issuer is what lets a client acquire a credential through its own OAuth flow
 rather than being handed one, and it is configured with `issuer`. With `github`

@@ -77,6 +77,6 @@ A token from the issuer is accepted for a person whose record names it. See [sdk
 
 `--issuer-verify` (key `issuerVerify`) says how that token is checked. `userinfo`, the default, asks the issuer who the token belongs to. `jwt` checks it here against the key set the issuer publishes. The issuer is not asked, and the token's own `exp` ends the sign-in. `auto` checks here first, and asks the issuer for a token the keys cannot answer. See [sdk/AUTHENTICATION.md](../sdk/AUTHENTICATION.md#checking-a-token-here).
 
-## Trust the token
+## Require the issuer
 
-By default a person's token lets them connect, and they then sign in with `authenticate`. `--trust-token` (key `trustToken`) makes the token sign them in too.
+By default a person's token signs them in at the door, the same as `authenticate` would. `--require-issuer` (key `requireIssuer`) asks for the issuer's token instead: their own token only opens the socket, and `authenticate` accepts the issuer's alone.

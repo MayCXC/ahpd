@@ -14,7 +14,7 @@ decisions:
   - decisions/a-persons-token-names-them-unless-the-issuer-is-required.md
 refs:
   - "[code://packages/sdk/src/listen.ts#L102-L127](../../packages/sdk/src/listen.ts#L102-L127) - `identityOf`, what the door makes of a connection token"
-  - "[code://packages/server/src/commands/run.ts#L1015-L1026](../../packages/server/src/commands/run.ts#L1015-L1026) - the daemon's `identify`, which names a person only when the token is trusted"
+  - "[code://packages/server/src/commands/run.ts#L555-L566](../../packages/server/src/commands/run.ts#L555-L566) - the daemon's `identify`, which names a person unless the record requires the issuer"
   - "[code://packages/server/src/commands/run.ts#L242-L248](../../packages/server/src/commands/run.ts#L242-L248) - `advertisedResource`, the https identifier of the sign-in resource"
   - "[code://packages/server/src/config.ts#L693-L702](../../packages/server/src/config.ts#L693-L702) - `signInIdentifier`, derived from the bind address and port"
   - "[code://packages/sdk/src/access/users.ts#L300-L345](../../packages/sdk/src/access/users.ts#L300-L345) - `DEFAULT_RESOURCE` and `signInRecord`"
@@ -51,28 +51,29 @@ AND the host has a users file
 THEN the connection is root, holds every grant and is never asked to sign in
 AND a stdio connection is root in the same way, because only the process that started the host holds the pipes.
 
-### A personal token opens the door and names nobody
+### A person's token names them
 
 WHEN a client connects with a token that a record in the users file accepts
-AND neither the record nor the host trusts the token
-THEN the socket opens with no principal
-AND every gated command answers `-32007` until the person signs in through `authenticate`.
-The reason: a token in a URL ends up in logs and screenshots, so it does not also prove who the person is.
+AND neither the record nor the host requires the issuer
+THEN the socket opens as that person
+AND the `initialize` result carries `ahpd.principal` in `_meta`, with no `authenticate`
+AND a token the person minted names them the same way, with the grants it and they both hold.
 
-### A trusted token also signs the person in
+### The host requires the issuer
 
 WHEN a client connects with a token that a record accepts
-AND the record's `trustToken` is `true`, or the record does not say and the host's `trustToken` is `true`
-THEN the connection arrives as that person, with no `authenticate`
-AND the host default is off, and is set with the `trustToken` key or `--trust-token`
-AND the record's own `trustToken` wins over the host's.
+AND the record's `requireIssuer` is `true`, or the record does not say and the host's `requireIssuer` is `true`
+THEN the socket opens with no principal
+AND every gated command answers `-32007` until the person signs in through `authenticate` with the issuer's token
+AND the host default is off, and is set with the `requireIssuer` key or `--require-issuer`
+AND the record's own `requireIssuer` wins over the host's.
 
 ### A token the door does not know
 
 WHEN the host has a deployment token
 AND a client connects with a token that is neither that token nor one the users file accepts
 THEN the door refuses the socket
-AND a host started with no deployment token opens every socket, and still names a person when a presented token is trusted.
+AND a host started with no deployment token opens every socket, and still names a person when a presented token is one a record accepts.
 
 ### A person signs in through authenticate
 
@@ -80,6 +81,7 @@ WHEN a client sends `authenticate` for the host's sign-in resource with a token
 THEN the host verifies the token against the users file and answers `{}` when it names a person
 AND the connection is that person from the next command on
 AND a token that names nobody answers `-32007`, "That credential is not one this host knows", with the sign-in resource in the error data
+AND a local token where the record requires the issuer answers `-32007`, "Sign in through your issuer", with the sign-in resource in the error data
 AND an `expiresIn` ends the sign-in after that many seconds.
 
 ### A person signs out
