@@ -1,6 +1,6 @@
 ---
 title: install.ps1 updates the ahpd it finds
-status: todo
+status: implemented
 depends: [task-01-install-sh-updates-the-ahpd-it-finds.md]
 layer: scripts
 refs:
@@ -35,7 +35,9 @@ refs:
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `install.ps1` does what task 01 does. `Resolve-Ahpd` finds the command and its version is read. The target version comes from `-Version` or `npm view`. The folder that holds the `ahpd.cmd` is the prefix, and it has to hold `node_modules` and be writable. `-Yes` (`AHPD_YES=1`) answers the question, and a run with no console stops unless it is given. A failed npm install throws, and so does an ahpd on the PATH that still prints the old version. `Install-Package` names the folder with `--prefix` and no longer carries on after a failure. `install-ps1.test.ts` has the same cases as the shell file.
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** npm on Windows puts `ahpd.cmd` in the prefix folder itself, not in a `bin` folder.
+- **Watch out for:**
+  - This Linux box has no `pwsh`, so all 24 cases skip here; the syntax case skips too. The CI job `install-windows` is the one that runs them.
+  - npm on Windows puts `ahpd.cmd` in the prefix folder itself, not in a `bin` folder. The prefix is the folder of the command, not its parent's parent.

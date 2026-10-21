@@ -1,6 +1,6 @@
 ---
 title: install.sh updates the ahpd it finds
-status: todo
+status: implemented
 depends: []
 layer: scripts
 refs:
@@ -48,9 +48,9 @@ After the install, the script fails when `ahpd --version` does not print the tar
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `install.sh` finds the ahpd on the PATH and reads its version. It compares that with `npm view` and updates the ahpd in the prefix its real path names. It asks first, and `--yes` (`AHPD_YES=1`) answers. A prefix that is not writable, or a command that is not in an npm prefix, stops it and names the folder. A failed npm install stops it, and so does an ahpd on the PATH that still prints the old version. `install_package` installs with `--prefix` and no longer writes an npm setting. `install-sh.test.ts` passed 27 of 27, including the pty case for a refused answer.
+- **Next action:** none.
 - **Open questions:** none.
 - **Watch out for:**
   - The CI job `install (node:22-bookworm-slim, installs)` has no ahpd before it runs, so it stays on the first install path.
-  - The question reads `/dev/tty`, because the script itself arrives on stdin.
+  - The question reads `/dev/tty`, because the script itself arrives on stdin. The pty case needs util-linux's `/usr/bin/script`, so it skips where that is absent.

@@ -13,6 +13,7 @@
 #   --version <v>   AHPD_VERSION     the package version, latest when omitted
 #   --package <p>   AHPD_PACKAGE     the package, @ahpd/server by default
 #   --runtime <r>   AHPD_RUNTIME     node or bun
+#   --yes           AHPD_YES         update an installed ahpd without asking
 #   --no-onboard    AHPD_NO_ONBOARD  do not run ahpd configure
 #   --dry-run       AHPD_DRY_RUN     print each step and change nothing
 #   --verbose       AHPD_VERBOSE     print each command before it runs
@@ -45,11 +46,13 @@ VERBOSE=0
 HELP=0
 UNINSTALL=0
 PURGE=0
+YES=0
 
 NODE=''
 NPM=''
 BUN=''
 BIN=''
+PREFIX=''
 AHPD=''
 
 on() {
@@ -65,6 +68,7 @@ if on "${AHPD_VERBOSE:-}"; then VERBOSE=1; fi
 if on "${AHPD_HELP:-}"; then HELP=1; fi
 if on "${AHPD_UNINSTALL:-}"; then UNINSTALL=1; fi
 if on "${AHPD_PURGE:-}"; then PURGE=1; fi
+if on "${AHPD_YES:-}"; then YES=1; fi
 
 say() { printf 'ahpd: %s\n' "$*"; }
 warn() { printf 'ahpd: %s\n' "$*" >&2; }
@@ -96,6 +100,7 @@ AHPD_* variable, because a PowerShell pipe cannot pass parameters at all.
   --version <v>   install this version of the package (AHPD_VERSION)
   --package <p>   install this package (AHPD_PACKAGE, @ahpd/server by default)
   --runtime <r>   node or bun (AHPD_RUNTIME)
+  --yes           update an installed ahpd without asking (AHPD_YES)
   --no-onboard    do not run ahpd configure (AHPD_NO_ONBOARD)
   --dry-run       print each step and change nothing (AHPD_DRY_RUN)
   --verbose       print each command before it runs (AHPD_VERBOSE)
@@ -141,6 +146,10 @@ parse_args() {
         ;;
       --runtime=*)
         RUNTIME="${1#*=}"
+        shift
+        ;;
+      --yes)
+        YES=1
         shift
         ;;
       --no-onboard)
@@ -211,9 +220,11 @@ interactive() {
   return 1
 }
 
+ask_prompt() { printf '%s [Y/n] ' "$1" >&2; }
+
 ask_yes() {
   local answer=''
-  printf '%s [Y/n] ' "$1" >&2
+  ask_prompt "$1"
   if ! IFS= read -r answer < /dev/tty; then
     answer=''
   fi
@@ -254,6 +265,99 @@ first_line() {
   local value
   value="$("$1" --version 2>/dev/null | head -n 1)" || value=''
   printf '%s\n' "$value"
+}
+
+# The version an installed ahpd prints, without the `v` a person may have put
+# there. An ahpd that cannot say is one this script will not replace.
+ahpd_version() {
+  local value
+  value="$(first_line "$1")"
+  printf '%s\n' "${value#v}"
+}
+
+# The version the install moves to: the one --version named, or the newest the
+# registry has for the package.
+target_version() {
+  local value
+  if [ -n "$VERSION" ]; then
+    printf '%s\n' "${VERSION#v}"
+    return 0
+  fi
+  value="$("$NPM" view "$PACKAGE" version 2>/dev/null | head -n 1)" || value=''
+  printf '%s\n' "${value#v}"
+}
+
+# The file a path really is: npm links <prefix>/bin/ahpd into the package folder
+# it installed, and the prefix is the part before /lib/node_modules/ there.
+# `readlink -f` is not on every macOS, so the links are followed by hand.
+real_path() {
+  local path="$1" link dir
+  while [ -L "$path" ]; do
+    link="$(readlink "$path" 2>/dev/null)" || break
+    case "$link" in
+      /*) path="$link" ;;
+      *) path="$(dirname "$path")/$link" ;;
+    esac
+  done
+  dir="$(cd -P "$(dirname "$path")" 2>/dev/null && pwd)" || return 1
+  printf '%s/%s\n' "$dir" "$(basename "$path")"
+}
+
+# The npm prefix an ahpd was installed into. A real path outside an npm
+# package folder, as a Bun install or a hand-copied command gives, has no
+# prefix to read.
+ahpd_prefix() {
+  local real
+  real="$(real_path "$1")" || return 1
+  case "$real" in
+    */lib/node_modules/*) printf '%s\n' "${real%%/lib/node_modules/*}" ;;
+    *) return 1 ;;
+  esac
+}
+
+# The update is the person's to allow: it changes an ahpd that is already
+# installed, and where. --yes and AHPD_YES answer for them; a run with no
+# terminal has nobody to ask, so it stops unless one of them was given.
+confirm_update() {
+  local old="$1" new="$2"
+  say "ahpd $old is installed at $PREFIX."
+  if [ "$YES" -eq 1 ]; then
+    return 0
+  fi
+  # Nothing is changed under --dry-run, so the question is printed and the
+  # walk through the steps goes on.
+  if [ "$DRY_RUN" -eq 1 ]; then
+    ask_prompt "Update it to $new?"
+    return 0
+  fi
+  if ! interactive; then
+    ask_prompt "Update it to $new?"
+    fail 1 "There is no terminal to answer on. Run this again with --yes to update ahpd $old at $PREFIX to $new."
+  fi
+  if ! ask_yes "Update it to $new?"; then
+    fail 1 "Left ahpd $old at $PREFIX as it is."
+  fi
+}
+
+# The update is done when the `ahpd` the shell finds prints the new version. An
+# old ahpd earlier on the PATH, or a second one in another folder, is what this
+# stops on: that is the install that looked done and left the old version in
+# place.
+check_installed_version() {
+  local want="$1" found seen
+  if [ "$DRY_RUN" -eq 1 ]; then
+    say "would check: ahpd --version prints $want"
+    return 0
+  fi
+  found="$(command -v ahpd 2>/dev/null || true)"
+  if [ -z "$found" ]; then
+    fail 1 "ahpd $want was installed at $PREFIX, but ahpd is not on the PATH. Add $BIN to the PATH and run this again."
+  fi
+  seen="$(ahpd_version "$found")"
+  if [ "$seen" != "$want" ]; then
+    fail 1 "ahpd at $found prints ${seen:-no version}, not $want. That is a second ahpd: remove it, or put $PREFIX first on the PATH."
+  fi
+  say "ahpd $want is installed at $found."
 }
 
 # One runtime line, in the words `ahpd configure` uses: what is there, the
@@ -372,7 +476,8 @@ ensure_bun() {
 
 # npm's global folder when the person can write to it, and ~/.npm-global when
 # they cannot: a global install under /usr/local is one npm refuses, and sudo is
-# not how the install answers that.
+# not how the install answers that. The folder is handed to npm with --prefix
+# and the npm configuration is left as the person has it.
 resolve_prefix() {
   local prefix
   prefix="$("$NPM" prefix -g 2>/dev/null || true)"
@@ -381,12 +486,12 @@ resolve_prefix() {
   fi
   if [ -z "$prefix" ] || [ ! -d "$prefix" ] || [ ! -w "$prefix" ]; then
     say "The global npm prefix is not writable; using $HOME/.npm-global."
-    run_cmd "$NPM" config set prefix "$HOME/.npm-global"
     prefix="$HOME/.npm-global"
     if [ "$DRY_RUN" -eq 0 ]; then
       mkdir -p "$prefix/bin"
     fi
   fi
+  PREFIX="$prefix"
   BIN="$prefix/bin"
 }
 
@@ -444,7 +549,9 @@ install_package() {
     return 0
   fi
 
-  args=(install -g --no-fund --no-audit)
+  # The prefix is named here rather than as an npm setting: the script changes
+  # the folder it installs into, not the person's npm configuration.
+  args=(install -g --prefix "$PREFIX" --no-fund --no-audit)
   if npm_allows_scripts; then
     args+=(--allow-scripts=node-pty)
   fi
@@ -464,11 +571,9 @@ install_package() {
   if [ "$status" -eq 0 ]; then
     return 0
   fi
-  if [ -x "$BIN/ahpd" ] || command -v ahpd >/dev/null 2>&1; then
-    warn "npm install exited $status, but ahpd is installed; carrying on."
-    return 0
-  fi
-  fail "$status" "npm install failed."
+  # An ahpd from an earlier install is no reason to call a failed install a
+  # success: it is how a script ran to its end and left the old version there.
+  fail 1 "npm install failed with exit code $status."
 }
 
 shell_name() {
@@ -594,7 +699,7 @@ daemon_running() {
 }
 
 do_install() {
-  local had_ahpd=0 ahpd=''
+  local had_ahpd=0 ahpd='' old='' new='' at=''
 
   # Before the runtime check, so a stop names what this machine has. Under
   # --dry-run too, where the lines are the same ones.
@@ -604,7 +709,37 @@ do_install() {
     ensure_bun
   else
     ensure_node
-    resolve_prefix
+
+    # An ahpd on the PATH is updated where it is, before a prefix is chosen:
+    # the prefix that holds this ahpd is the one the update goes into, and a
+    # second copy in another folder is what left the old version in the shell.
+    ahpd="$(command -v ahpd 2>/dev/null || true)"
+    if [ -n "$ahpd" ]; then
+      old="$(ahpd_version "$ahpd")"
+      if [ -z "$old" ]; then
+        fail 1 "$ahpd did not print a version for --version, so this script will not replace it."
+      fi
+      new="$(target_version)"
+      if [ -z "$new" ]; then
+        fail 1 "Could not read the newest version of $PACKAGE from npm. Run npm view $PACKAGE version to see why."
+      fi
+      PREFIX="$(ahpd_prefix "$ahpd" || true)"
+      at="${PREFIX:-$ahpd}"
+      if [ "$old" = "$new" ]; then
+        say "ahpd $old is installed at $at, already at $new. Nothing to update."
+        exit 0
+      fi
+      if [ -z "$PREFIX" ]; then
+        fail 1 "ahpd $old is at $ahpd, which is not a folder npm installed it in. Remove it there, or update it the way it was installed."
+      fi
+      if [ ! -w "$PREFIX" ]; then
+        fail 1 "ahpd $old is at $PREFIX, which is not writable. Update it yourself, or install it into a folder of your own."
+      fi
+      BIN="$PREFIX/bin"
+      confirm_update "$old" "$new"
+    else
+      resolve_prefix
+    fi
   fi
 
   if ahpd="$(resolve_ahpd || true)"; then
@@ -614,6 +749,13 @@ do_install() {
   fi
 
   install_package
+
+  # Only an update has a version to check: the first install has no ahpd to
+  # compare with, and the paths it writes are the ones it just chose.
+  if [ -n "$new" ]; then
+    check_installed_version "$new"
+  fi
+
   write_path
 
   # An upgrade reloads the plugins and says how to pick the new version up. The

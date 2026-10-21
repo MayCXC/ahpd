@@ -11,6 +11,7 @@
 #   -Version <v>   AHPD_VERSION     the package version, latest when omitted
 #   -Package <p>   AHPD_PACKAGE     the package, @ahpd/server by default
 #   -Runtime <r>   AHPD_RUNTIME     node or bun
+#   -Yes           AHPD_YES         update an installed ahpd without asking
 #   -NoOnboard     AHPD_NO_ONBOARD  do not run ahpd configure
 #   -DryRun        AHPD_DRY_RUN     print each step and change nothing
 #   -Verbose       AHPD_VERBOSE     print each command before it runs
@@ -26,6 +27,7 @@ param(
   [string]$Version = $env:AHPD_VERSION,
   [string]$Package = $env:AHPD_PACKAGE,
   [string]$Runtime = $env:AHPD_RUNTIME,
+  [switch]$Yes,
   [switch]$NoOnboard,
   [switch]$DryRun,
   [switch]$Verbose,
@@ -56,6 +58,7 @@ a parameter:
   -Version <v>   install this version of the package (AHPD_VERSION)
   -Package <p>   install this package (AHPD_PACKAGE, @ahpd/server by default)
   -Runtime <r>   node or bun (AHPD_RUNTIME)
+  -Yes           update an installed ahpd without asking (AHPD_YES)
   -NoOnboard     do not run ahpd configure (AHPD_NO_ONBOARD)
   -DryRun        print each step and change nothing (AHPD_DRY_RUN)
   -Verbose       print each command before it runs (AHPD_VERBOSE)
@@ -272,11 +275,93 @@ function Resolve-Ahpd([string]$Folder) {
   $command = $found | Where-Object { $_.Extension -in @('.cmd', '.exe') } | Select-Object -First 1
   if (-not $command) { $command = $found | Select-Object -First 1 }
   if ($command) { return $command.Source }
-  foreach ($name in @('ahpd.cmd', 'ahpd.exe', 'ahpd')) {
-    $candidate = Join-Path $Folder $name
-    if (Test-Path $candidate) { return $candidate }
+  if ($Folder) {
+    foreach ($name in @('ahpd.cmd', 'ahpd.exe', 'ahpd')) {
+      $candidate = Join-Path $Folder $name
+      if (Test-Path $candidate) { return $candidate }
+    }
   }
   return $null
+}
+
+function Get-AhpdVersion([string]$Program) {
+  $output = & $Program --version 2>$null
+  if ($LASTEXITCODE -ne 0) { return $null }
+  $line = @($output)[0]
+  if (-not $line) { return $null }
+  return ("$line".Trim() -replace '^v', '')
+}
+
+# The version the install moves to: the one -Version named, or the newest the
+# registry has for the package.
+function Get-TargetVersion {
+  if ($Version) { return ($Version -replace '^v', '') }
+  $output = & npm view $Package version 2>$null
+  if ($LASTEXITCODE -ne 0) { return $null }
+  $line = @($output)[0]
+  if (-not $line) { return $null }
+  return ("$line".Trim() -replace '^v', '')
+}
+
+# On Windows npm puts the folder's name in the PATH, and the shims and their
+# node_modules beside each other in that folder, so the folder an ahpd.cmd is
+# in is the prefix. A folder without node_modules is not one npm made.
+function Test-NpmPrefix([string]$Folder) {
+  if (-not (Test-Path $Folder -PathType Container)) { return $false }
+  return (Test-Path (Join-Path $Folder 'node_modules') -PathType Container)
+}
+
+function Test-Writable([string]$Folder) {
+  if ($isDryRun) { return $true }
+  $probe = Join-Path $Folder ('.ahpd-write-check-' + [guid]::NewGuid().ToString('N'))
+  try {
+    [void][System.IO.File]::WriteAllText($probe, '')
+    Remove-Item $probe -Force -ErrorAction SilentlyContinue
+    return $true
+  } catch {
+    return $false
+  }
+}
+
+# The update is the person's to allow: it changes an ahpd that is already
+# installed, and where. -Yes and AHPD_YES answer for them; a run with no
+# console has nobody to ask, so it stops unless one of them was given.
+function Confirm-Update([string]$Old, [string]$New, [string]$Folder) {
+  Write-Say "ahpd $Old is installed at $Folder."
+  if ($isYes) { return }
+  # Nothing is changed under -DryRun, so the question is printed and the walk
+  # through the steps goes on.
+  if ($isDryRun) {
+    Write-Host "Update it to ${New}? [Y/n] " -NoNewline
+    return
+  }
+  if (-not (Test-Interactive)) {
+    Write-Host "Update it to ${New}? [Y/n] " -NoNewline
+    throw "There is no terminal to answer on. Run this again with -Yes to update ahpd $Old at $Folder to $New."
+  }
+  if (-not (Confirm-Action "Update it to ${New}?")) {
+    throw "Left ahpd $Old at $Folder as it is."
+  }
+}
+
+# The update is done when the `ahpd` the window finds prints the new version.
+# An old ahpd earlier on the PATH, or a second one in another folder, is what
+# this stops on: that is the install that looked done and left the old one.
+function Assert-InstalledVersion([string]$Want, [string]$Folder) {
+  if ($isDryRun) {
+    Write-Say "would check: ahpd --version prints $Want"
+    return
+  }
+  $found = Resolve-Ahpd
+  if (-not $found) {
+    throw "ahpd $Want was installed at $Folder, but ahpd is not on the PATH. Add $Folder to the PATH and run this again."
+  }
+  $seen = Get-AhpdVersion $found
+  if ($seen -ne $Want) {
+    $printed = if ($seen) { $seen } else { 'no version' }
+    throw "ahpd at $found prints $printed, not $Want. That is a second ahpd: remove it, or put $Folder first on the PATH."
+  }
+  Write-Say "ahpd $Want is installed at $found."
 }
 
 function Get-PackageSpec {
@@ -302,7 +387,9 @@ function Install-Package([string]$Target, [string]$Folder) {
   if (-not $npmVersion) {
     throw 'npm was not found beside Node. Open a new window and run this again.'
   }
-  $arguments = @('install', '-g', '--no-fund', '--no-audit')
+  # The folder is named here rather than as an npm setting: the script changes
+  # the folder it installs into, not the person's npm configuration.
+  $arguments = @('install', '-g', '--prefix', $Folder, '--no-fund', '--no-audit')
   if (Test-AllowsScripts $npmVersion) {
     $arguments += '--allow-scripts=node-pty'
   }
@@ -314,14 +401,8 @@ function Install-Package([string]$Target, [string]$Folder) {
   if ($isVerbose) { Write-Host "ahpd: npm $($arguments -join ' ')" }
   & npm @arguments
   if ($LASTEXITCODE -ne 0) {
-    # node-pty is optional. A shim that landed means the install is what the
-    # person came for, and a terminal on pipes is the daemon's own fallback.
-    if (Test-Path (Join-Path $Folder 'ahpd.cmd')) {
-      Write-Warning 'npm install failed, but ahpd is installed; carrying on.'
-      Write-Warning 'node-pty may not have built; terminals will use pipes.'
-      Write-Warning 'Install the Visual Studio Build Tools with the C++ workload and run this again.'
-      return
-    }
+    # An ahpd from an earlier install is no reason to call a failed install a
+    # success: it is how a script ran to its end and left the old version there.
     throw "npm install failed with exit code $LASTEXITCODE."
   }
 }
@@ -414,17 +495,57 @@ function Invoke-AhpdInstall {
   # -DryRun too, where the lines are the same ones.
   Write-Runtimes
 
+  $new = $null
   if ($Runtime -eq 'bun') {
     $folder = Resolve-Bun
   } else {
     Resolve-Node
-    $folder = Get-NpmBin
+
+    # An ahpd on the PATH is updated where it is, before a folder is chosen:
+    # the folder that holds this ahpd is the one the update goes into, and a
+    # second copy elsewhere is what left the old version in the window.
+    $installed = Resolve-Ahpd
+    if ($installed) {
+      $old = Get-AhpdVersion $installed
+      if (-not $old) {
+        throw "$installed did not print a version for --version, so this script will not replace it."
+      }
+      if (-not (Get-NpmVersion)) {
+        throw 'npm was not found beside Node. Open a new window and run this again.'
+      }
+      $new = Get-TargetVersion
+      if (-not $new) {
+        throw "Could not read the newest version of $Package from npm. Run npm view $Package version to see why."
+      }
+      $prefix = Split-Path -Parent $installed
+      if ($old -eq $new) {
+        Write-Say "ahpd $old is installed at $prefix, already at $new. Nothing to update."
+        return
+      }
+      if (-not (Test-NpmPrefix $prefix)) {
+        throw "ahpd $old is at $installed, which is not a folder npm installed it in. Remove it there, or update it the way it was installed."
+      }
+      if (-not (Test-Writable $prefix)) {
+        throw "ahpd $old is at $prefix, which is not writable. Update it yourself, or install it into a folder of your own."
+      }
+      $folder = $prefix
+      Confirm-Update $old $new $folder
+    } else {
+      $folder = Get-NpmBin
+    }
   }
 
   $hadAhpd = $null -ne (Resolve-Ahpd $folder)
   $target = Get-PackageSpec
 
   Install-Package $target $folder
+
+  # Only an update has a version to check: the first install has no ahpd to
+  # compare with, and the paths it writes are the ones it just chose.
+  if ($new) {
+    Assert-InstalledVersion $new $folder
+  }
+
   $null = Add-UserPath $folder
 
   # An upgrade reloads the plugins and says how to pick the new version up. The
@@ -470,6 +591,7 @@ $isVerbose = $Verbose.IsPresent -or (Test-Enabled 'AHPD_VERBOSE')
 $showHelp = $Help.IsPresent -or (Test-Enabled 'AHPD_HELP')
 $isUninstall = $Uninstall.IsPresent -or (Test-Enabled 'AHPD_UNINSTALL')
 $isPurge = $Purge.IsPresent -or (Test-Enabled 'AHPD_PURGE')
+$isYes = $Yes.IsPresent -or (Test-Enabled 'AHPD_YES')
 
 # A test sources this file with AHPD_INSTALL_NO_RUN=1, then calls
 # Invoke-AhpdInstall, so the variables and every step are the ones a person gets.
