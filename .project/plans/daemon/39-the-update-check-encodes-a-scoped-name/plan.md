@@ -1,7 +1,7 @@
 ---
 title: The update check encodes a scoped name
 domain: daemon
-status: planned
+status: active
 priority: high
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -55,7 +55,7 @@ daemon start -> refreshUpdate -> the same path -> 404 -> no update.json
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The registry requests encode a scoped name](task-01-the-registry-requests-encode-a-scoped-name.md) | todo | - |
+| [01 - The registry requests encode a scoped name](task-01-the-registry-requests-encode-a-scoped-name.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -63,7 +63,7 @@ daemon start -> refreshUpdate -> the same path -> 404 -> no update.json
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-registry-requests-encode-a-scoped-name.md](task-01-the-registry-requests-encode-a-scoped-name.md).
+- **Done so far:** [task-01](task-01-the-registry-requests-encode-a-scoped-name.md) is implemented. `registryPath` in `update.ts` gives a package name as a registry path, with a scope's slash as `%2f`. The four requests use it: `refreshUpdate`, `latestOnNpm` and the two in `install.ts`. The four server files passed 128 of 128. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6474 tests with 29 skipped (387 files passed, 1 skipped).
+- **Next action:** none. The plan is implemented and waits for a review.
 - **Open questions:** none.
-- **Watch out for:** none.
+- **Watch out for:** npmjs.org accepts both forms, so the change has no effect there. Only a registry that needs the encoded scope, such as verdaccio, shows the difference.

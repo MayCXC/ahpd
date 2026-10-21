@@ -1,6 +1,6 @@
 ---
 title: The registry requests encode a scoped name
-status: todo
+status: implemented
 depends: []
 layer: server
 refs:
@@ -43,7 +43,7 @@ Every registry request sends a scoped name as `@scope%2fname`, as npm does.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `registryPath` is exported from `update.ts`. A scoped name has the slash after its scope replaced with `%2f`; a name without a scope comes back as it is. `refreshUpdate`, `latestOnNpm` and the two requests in `install.ts` use it, and their own `replace` is gone. `update.test.ts` asserts `/-/package/@ahpd%2fserver/dist-tags` and has a `registryPath` case for a scoped and a plain name. The local registry in `server-update.test.ts` answers only the encoded path, so the unencoded one is a 404. `host-update-method.test.ts` has a case that records the URL `x-ahpd/update` with no version asks, and it is the encoded path. The four server files passed 128 of 128. `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` passed, and the full suite passed 6474 tests with 29 skipped.
+- **Next action:** none.
 - **Open questions:** none.
-- **Watch out for:** `plugin-install.test.ts` stubs the packument path. Keep its paths as they are, because the helper sends the same form.
+- **Watch out for:** `plugin-install.test.ts` stubs the packument path. Its paths are unchanged, because the helper sends the same form the file already had.

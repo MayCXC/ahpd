@@ -28,7 +28,7 @@ import { FOREGROUND, busy, notRestartable } from './commands/restart.js';
 import type { Running } from './daemon.js';
 import { fittingVersion, launch, npmFailed, pluginRoot, registryPluginsIn, updatePlugins } from './install.js';
 import type { Launch, Moved, Ran, Runner } from './install.js';
-import { askRegistry, newer, parse } from './update.js';
+import { askRegistry, newer, parse, registryPath } from './update.js';
 import type { Fetch } from './update.js';
 import type { HelperManifest } from './updater.js';
 import { packageRoot, version } from './version.js';
@@ -123,7 +123,7 @@ export const SERVER = '@ahpd/server';
 
 /** The version npm calls current, or a refusal when the registry does not answer with one. */
 const latestOnNpm = async (fetch?: Fetch | undefined): Promise<string> => {
-  const said = await askRegistry(`-/package/${SERVER}/dist-tags`, { fetch }) as { latest?: unknown } | null | undefined;
+  const said = await askRegistry(`-/package/${registryPath(SERVER)}/dist-tags`, { fetch }) as { latest?: unknown } | null | undefined;
   if (typeof said?.latest !== 'string') {
     throw new Error(`The registry did not say which version of ${SERVER} is latest; name one with --version.`);
   }

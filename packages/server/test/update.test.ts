@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import type { AddressInfo } from 'node:net';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { checkingUpdates, newer, readUpdate, refreshUpdate, registry, stale, updateLine } from '../src/update.js';
+import { checkingUpdates, newer, readUpdate, refreshUpdate, registry, registryPath, stale, updateLine } from '../src/update.js';
 
 /*
  * The update check, without a network.
@@ -45,6 +45,17 @@ describe('registry', () => {
   it('reads npm_config_registry, without its trailing slash', () => {
     expect(registry({ npm_config_registry: 'https://mirror.example/npm/' })).toBe('https://mirror.example/npm');
     expect(registry({ npm_config_registry: 'http://127.0.0.1:4873' })).toBe('http://127.0.0.1:4873');
+  });
+});
+
+describe('registryPath', () => {
+  it('encodes a scoped name as npm does', () => {
+    expect(registryPath('@ahpd/server')).toBe('@ahpd%2fserver');
+    expect(registryPath('@ahpd/agent-acp')).toBe('@ahpd%2fagent-acp');
+  });
+  it('leaves a name without a scope as it is', () => {
+    expect(registryPath('server')).toBe('server');
+    expect(registryPath('typescript')).toBe('typescript');
   });
 });
 
@@ -143,7 +154,7 @@ describe('the file', () => {
       let asked = '';
       const base = await serve((path, respond) => { asked = path; respond(200, '{"latest":"9.9.9","next":"10.0.0-rc.1"}'); });
       await refreshUpdate({ name: '@ahpd/server', registry: base });
-      expect(asked).toBe('/-/package/@ahpd/server/dist-tags');
+      expect(asked).toBe('/-/package/@ahpd%2fserver/dist-tags');
       const written = JSON.parse(readFileSync(at(), 'utf8')) as { name: string; latest: string; checkedAt: string };
       expect(written.name).toBe('@ahpd/server');
       expect(written.latest).toBe('9.9.9');

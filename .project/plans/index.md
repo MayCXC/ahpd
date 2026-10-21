@@ -62,7 +62,7 @@ Reference: [00-daemon.md](daemon/00-daemon.md)
 | [36 - The install script updates the ahpd it finds](daemon/36-the-install-script-updates-the-ahpd-it-finds/plan.md) | high | active 2026-10-20; tasks 01 and 02 implemented | daemon 27 | - |
 | [37 - configure sets up one pi](daemon/37-configure-sets-up-one-pi/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
 | [38 - configure offers the web UI](daemon/38-configure-offers-the-web-ui/plan.md) | medium | active 2026-10-21; task 01 implemented | - | - |
-| [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | planned 2026-10-21 | - | - |
+| [39 - The update check encodes a scoped name](daemon/39-the-update-check-encodes-a-scoped-name/plan.md) | high | active 2026-10-21; task 01 implemented | - | - |
 
 Next free number in `daemon`: `40`.
 

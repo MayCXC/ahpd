@@ -26,7 +26,7 @@ import type { PluginSpec } from '@ahpd/sdk';
 import { asSpec } from './config.js';
 import { hasScheme, isNamed, nameOf, pluginIdOf } from './plugins.js';
 import { satisfies } from './compat.js';
-import { askRegistry, newer, parse } from './update.js';
+import { askRegistry, newer, parse, registryPath } from './update.js';
 import type { Fetch } from './update.js';
 
 /** What one run of a program left behind. */
@@ -254,7 +254,7 @@ const noFit = (name: string, newest: { version: string; range: string } | undefi
  */
 export const fittingVersion = async (name: string, daemonVersion: string, options: VersionOptions = {}): Promise<string | undefined> => {
   if (daemonVersion === 'unknown') return undefined;
-  const packument = await askRegistry(name.replace('/', '%2f'), { fetch: options.fetch, accept: ABBREVIATED });
+  const packument = await askRegistry(registryPath(name), { fetch: options.fetch, accept: ABBREVIATED });
   const versions = versionsIn(packument);
   if (versions === undefined) return undefined;
   const latest = latestIn(packument);
@@ -590,7 +590,7 @@ const refuseNonPlugins = async (names: readonly string[], options: InstallOption
     const chosen = name === bare ? await fittingVersion(bare, options.version, { fetch: options.fetch }) : undefined;
     const target = chosen === undefined ? name : `${bare}@${chosen}`;
     const tag = target === bare ? 'latest' : target.slice(bare.length + 1);
-    const manifest = await askRegistry(`${bare.replace('/', '%2f')}/${encodeURIComponent(tag)}`, { fetch: options.fetch });
+    const manifest = await askRegistry(`${registryPath(bare)}/${encodeURIComponent(tag)}`, { fetch: options.fetch });
     if (manifest === undefined) return target;
     if (typeof manifest !== 'object' || manifest === null || !('ahpd' in manifest)) {
       throw new Error(`${bare} is not an ahpd plugin: its package.json has no "ahpd" field.`);
