@@ -63,6 +63,24 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Computer",
+    "description": "Provides isolated Docker/Container environments for agent sessions, including lifecycle management and tools.",
+    "categories": ["channel", "tool"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "channels": ["x-ahpd-computers"],
+      "resourceProviders": ["computer"],
+      "methods": [
+        "x-ahpd/computers/create",
+        "x-ahpd/computers/start",
+        "x-ahpd/computers/stop",
+        "x-ahpd/computers/restart",
+        "x-ahpd/computers/remove"
+      ],
+      "tools": ["request_disposable_computer", "release_computer", "computer_exec"],
+      "sessionConfigs": ["computer"],
+      "ports": ["computers", "containers"],
+      "closers": ["the up time of every running machine"]
+    },
     "options": {
       "runtime": { "required": false },
       "command": { "required": false },

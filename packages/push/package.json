@@ -63,6 +63,12 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Push",
+    "description": "Delivers push notifications to connected devices when agent sessions require user attention.",
+    "categories": [],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "resourceProviders": ["push"]
+    },
     "options": {}
   }
 }

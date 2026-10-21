@@ -17,6 +17,7 @@ import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary } from '@micr
 import type { Agent } from './agent.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
+import type { ConnectorKind, ServedConnectorKind } from './connectors.js';
 import type { EventHandler, EventName, HostHandlers } from './events.js';
 import type { Host, HostOptions, HostTool } from './host.js';
 import type { MachineNeed } from './machine.js';
@@ -1022,6 +1023,16 @@ export interface PluginHost extends PluginContext {
    */
   fireTrigger(type: string, event: string, data: Record<string, unknown>): void;
   /**
+   * Offer one kind of connector a person can make.
+   *
+   * The name is a slug and is what a stored connector carries, so a kind is
+   * registered once: a name this plugin already used is refused here, and one
+   * another plugin took is reported by the fold. The schema is the form a
+   * client draws, and `open` runs each time a connector of the kind is made or
+   * the daemon starts with one stored.
+   */
+  registerConnector(kind: ConnectorKind): void;
+  /**
    * Subscribe to one of the host's own moments.
    *
    * The one method not named `register*`, because it contributes nothing to
@@ -1030,6 +1041,45 @@ export interface PluginHost extends PluginContext {
    * it observes, and it is awaited before the next listener runs.
    */
   on<K extends EventName>(event: K, handler: EventHandler<K>): void;
+}
+
+/** One place a person can read more about a plugin. */
+export interface PluginLink {
+  /** What a client prints for the link. */
+  title: string;
+  /** Where the link goes. */
+  url: string;
+}
+
+/**
+ * The registrations a plugin declares, by kind.
+ *
+ * A key is the plural of the register method of that kind - `agents`, `tools`,
+ * `channels`, `methods`, `routes`, `triggerTypes`, `connectors` - and its
+ * entries are the names the method may be called with. `ports` holds the
+ * singleton ports a plugin sets, such as `vault`. A registration its contracts
+ * do not list is refused.
+ */
+export type PluginContracts = Record<string, string[]>;
+
+/**
+ * What a plugin says about itself before a person uses it.
+ *
+ * The fields a client draws: a description, the categories it files the plugin
+ * under, the links a person can follow, and the contracts that say what the
+ * plugin registers. An npm plugin writes them in the `ahpd` field of its
+ * package.json, and a file plugin exports this as `manifest`; a plugin that
+ * does both is read from its package.json.
+ */
+export interface PluginManifest {
+  /** One sentence on what the plugin does. */
+  description?: string;
+  /** The groups a client files the plugin under. */
+  categories?: string[];
+  /** Where a person reads more about it. */
+  links?: PluginLink[];
+  /** The names each kind of registration may use. */
+  contracts?: PluginContracts;
 }
 
 /**
@@ -1055,6 +1105,14 @@ export interface Plugin {
   name: string;
   /** What a listing prints instead of the id. */
   title?: string;
+  /**
+   * What the plugin declares about itself, from its package.json or its own
+   * `manifest` export.
+   *
+   * Kept for the listing a client draws, so what the plugin says it adds is
+   * read without importing it again.
+   */
+  manifest?: PluginManifest;
   /** This plugin's own option defaults, under whatever the configuration said. */
   defaults?: Record<string, unknown>;
   /**
@@ -1141,6 +1199,14 @@ export interface Contribution {
    * them into `HostOptions.channels` as they are.
    */
   channels: Record<string, ServedChannel>;
+  /**
+   * The connector kinds this plugin offers, keyed by name.
+   *
+   * Each entry carries the plugin that registered it, as a channel does, so
+   * the fold can report a name two plugins both took without looking the
+   * plugin up again.
+   */
+  connectors: Record<string, ServedConnectorKind>;
   /** The commands this plugin serves, keyed by name. */
   methods: Record<string, ServedMethod>;
   /**
@@ -1224,6 +1290,8 @@ export interface Loaded {
   name: string;
   /** What a listing prints, from the module or its manifest. */
   title?: string;
+  /** What the plugin declares about itself, from its package.json or its module. */
+  manifest?: PluginManifest;
   /** The options `apply` is given. */
   options: Record<string, unknown>;
   /** The module's plugin object. */

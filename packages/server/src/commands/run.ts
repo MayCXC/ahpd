@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, Registry } from '@cofold/commands';
-import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   clientPluginsIn,
   createHost,
@@ -57,6 +57,7 @@ import { servedRegistry, type ServedFacts } from './served.js';
 import { updateMethod } from './update.js';
 import { proxyHandler } from '../proxy/listener.js';
 import { loadPlugins } from '../plugins.js';
+import { pluginsChannel } from '../pluginschannel.js';
 import { fileRecords } from '../records.js';
 import { fileVault } from '../vault.js';
 import { daemonRootConfig } from '../rootconfig.js';
@@ -640,10 +641,26 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const peopleLists = users === undefined
     ? undefined
     : peopleChannels(users, { onChange: () => { void policyLists.refresh(); }, onProblem: listProblem });
+  /*
+   * The plugins as a channel, built here rather than after the load, because
+   * the host is built over this list and the plugins fold into the host.
+   *
+   * `loaded` is filled in below, when the load has run; the channel reads it
+   * through the closure, so a listing taken before then answers the rows the
+   * file holds and no manifest, which is what a client sees before the first
+   * load finishes anyway.
+   */
+  let loaded: Loaded[] = [];
+  const pluginLists = pluginsChannel({
+    configFile: options.configFile ?? configPath(),
+    where: { configDir: configDir(), cwd: process.cwd() },
+    loaded: () => loaded,
+    onProblem: listProblem,
+  });
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels],
-    { ...peopleLists?.methods, ...policyLists.methods },
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel],
+    { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods },
   );
 
   /*
@@ -1048,7 +1065,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
-  const { options: folded, contributions, problems, loaded, routes: registered } = await loadPlugins(options.plugins, {
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered } = await loadPlugins(options.plugins, {
     base,
     paths: options.paths,
     configDir: configDir(),
@@ -1064,6 +1081,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       said.push(one);
     },
   });
+  // The channel built above starts answering manifests from here.
+  loaded = didLoad;
   for (const problem of problems) stamp(problem);
 
   /*

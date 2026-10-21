@@ -62,6 +62,15 @@
   "ahpd": {
     "entry": "./dist/index.js",
     "title": "Bot",
+    "description": "Creates conversational bots with individual identities, workspaces, and persistent sessions.",
+    "categories": ["agent", "channel", "tool"],
+    "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
+    "contracts": {
+      "agents": ["bot-chat"],
+      "channels": ["x-ahpd-bots"],
+      "resourceProviders": ["bot"],
+      "tools": ["post_message"]
+    },
     "options": {
       "root": { "required": false }
     }
