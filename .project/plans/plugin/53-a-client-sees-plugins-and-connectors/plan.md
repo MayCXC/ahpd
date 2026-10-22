@@ -54,7 +54,7 @@ The files read and the patterns to reuse are the `refs` above, each with its not
 
 ```
 package.json ahpd | module manifest -> loadOne -> pluginHost(contracts) -> register* -> contract check
-registerConnector(kind) -> contribution.connectors -> HostOptions.connectorKinds -> x-ahpd-connectors { kinds, connectors }
+registerAdapter(adapter) -> contribution.adapters -> HostOptions.adapters -> x-ahpd-adapters { adapters } + x-ahpd-connectors { connectors }
 client -> x-ahpd/connectors/put -> schema check -> vault.set(secret) -> connectors/<id>.json -> kind.open(connector)
 client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disable | options -> configuration file
 ```
@@ -93,13 +93,18 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | The UI component tree is a later plan; v1 only reserves the `ui` type | Softov, 2026-10-21, chose "Its own plan" and "Declarative tree" | 05 |
 | A connector is `<configDir>/connectors/<id>.json` | Softov, 2026-10-11, "so no md for a config that is not a description.. use json" | 06 |
 | A connector's owner is `host`, `team:<team>` or `user:<id>`, and its secrets are in the vault scope of that owner | Softov, 2026-10-21, chose "Host, team or person" | 07 |
-| One channel, `x-ahpd-connectors`, holds the kinds and the connectors; the methods are `x-ahpd/connectors/put` and `remove` | (defaulted: the names follow the records methods) | 07 |
-| A team connector needs the grant that writes the team's secrets | (defaulted: a connector holds a secret of that scope) | 07 |
+| A plugin registers adapters, and a person makes connectors from an adapter; `registerConnector`, `ConnectorKind` and the contract key `connectors` become `registerAdapter`, `Adapter` and `adapters` | Softov, 2026-10-22, proposed "plugins:// drivers or adapters connectors://", then chose "Adapters" | 15, 16 |
+| Two channels: `x-ahpd-adapters` lists the adapters and is read-only, and `x-ahpd-connectors` lists the connectors; the methods are `x-ahpd/connectors/put` and `remove` | Softov, 2026-10-22, chose "Two channels" | 07, 15 |
+| A connector record names its adapter in the field `adapter` | (defaulted: one word for one thing) | 15 |
+| A team connector needs `connector:put` to make or `connector:remove` to remove, and a membership of the team | Softov, 2026-10-22, chose "put/remove + membership" | 15 |
 | A connector of a kind no plugin registers stays on disk and shows as `unavailable` | (defaulted: a disabled plugin keeps its connectors) | 07 |
 | No limit on the connectors of one kind in v1 | (defaulted: no case needs one yet) | 07 |
-| `connector:list` reads every row of `x-ahpd-connectors`; without it, a person reads the connectors owned by `user:<them>`, and a member reads the ones owned by `team:<team>` | Softov, 2026-10-21, chose "config:read, plus own"; 2026-10-22, chose "Yes, a connector subject" | 07, 12 |
-| A kind row is keyed `kind:<name>`, and a connector row by the id of the connector | Softov, 2026-10-21, chose "kind:<name> and <id>" | 07 |
-| A connector owned by `host` needs `connector:put` to make and `connector:remove` to remove | Softov, 2026-10-21, chose "config:write"; 2026-10-22, chose "Yes, a connector subject" | 07, 12 |
+| `connector:list` reads the caller's own connectors, their teams' and the host's; `connector:all` reads every connector | Softov, 2026-10-22, chose "Own, team's and host's" | 15 |
+| A caller with neither `connector:list` nor `connector:all` reads no connector, its own included | (defaulted: every connector action takes a grant) | 15 |
+| `connector:list` reads `x-ahpd-adapters` | Softov, 2026-10-22, chose "connector:list" | 15 |
+| A person's own connector needs `connector:put` to make and `connector:remove` to remove | Softov, 2026-10-22, "A user also need permission to make a connector. even if its own", then chose "connector:put / remove" | 15 |
+| An adapter row is keyed by the name of the adapter | (defaulted: the adapters channel holds only adapters) | 15 |
+| A connector owned by `host` needs `connector:host` beside `connector:put` or `connector:remove` | Softov, 2026-10-22, chose "A new connector:host" | 15 |
 | A put that changes a connector's owner passes the rule of the old owner too, and the old owner's secrets leave the vault | Softov, 2026-10-21, chose "Check the old owner too" | 07 |
 | Webhook endpoints move in this plan; agent presets and channels move in later plans | Softov, 2026-10-21, chose "Webhooks" | 08 |
 | The `webhook` kind has one `receive` capability | (defaulted: an endpoint only receives calls) | 08 |
@@ -111,8 +116,8 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | `enable`, `disable` and `options` set `ahpd.restartNeeded` on the root state; a restart clears it | (defaulted: as ahpw asked) | 11 |
 | A `plugin` subject: `list` reads; `enable`, `disable` and `options` write | Softov, 2026-10-22, asked "its not better a expecific grant? plugin:read etc?", then chose "Yes, as proposed" | 12 |
 | The protocol and HTTP take the same `plugin:` grant for enable, disable and options; install, update and remove keep the deployment token | Softov, 2026-10-22, chose "Yes, as proposed" | 12 |
-| A `connector` subject: `list` reads; `put` and `remove` write | Softov, 2026-10-22, chose "Yes, a connector subject" | 12 |
-| Moving a `host` connector to a new owner takes `connector:remove` | (defaulted: the move removes it from the host) | 12 |
+| A `connector` subject: `list` and `all` read; `put`, `remove` and `host` write | Softov, 2026-10-22, chose "Yes, a connector subject", then "Own, team's and host's" and "A new connector:host" | 12, 15 |
+| A put that moves a connector passes the remove rule of the old owner | (defaulted: the move removes it from the old owner) | 12, 15 |
 | The host pushes `x-ahpd/restartNeeded` to every client that watches the root | Softov, 2026-10-22, chose "Add an ahpd push" | 14 |
 | The push goes only when the mark changes from false to true | (defaulted: a second mark changes nothing) | 14 |
 
@@ -142,6 +147,8 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | [12 - Plugins and connectors have their own grants](task-12-plugins-and-connectors-have-grants.md) | implemented | 04, 07 |
 | [13 - The docs say the new row fields and the grants](task-13-the-docs-say-the-row-and-grants.md) | implemented | 10, 11, 12 |
 | [14 - The restart mark is pushed to every client](task-14-a-restart-mark-is-pushed.md) | implemented | 11 |
+| [15 - Adapters and connectors are two channels](task-15-adapters-and-connectors-split.md) | todo | 12 |
+| [16 - The docs say adapters, connectors and their grants](task-16-the-docs-say-adapters.md) | todo | 15 |
 
 ## Risks and tradeoffs
 
@@ -167,10 +174,10 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
   `USERS.md` has thirteen subjects, and the changelog says which grant a role adds.
   Task 14 is implemented on the same day: a connection watching the root is sent `x-ahpd/restartNeeded` once.
   It goes out when a plugin command or a root configuration write sets the mark.
-- **Next action:** the final verification checklist.
+- **Next action:** task 15, which renames connector kinds to adapters and serves them in their own channel.
   The ahpw pages and the UI component tree are separate plans.
 - **Open questions:** none; the defaulted rows above are the ones to check.
-- **Watch out for:** "connector" is one configured account; "connector kind" is what a plugin registers. "Channel" is always an AHP `x-` channel. `on` is not a registration and has no contract.
+- **Watch out for:** "connector" is one configured account; "adapter" is what a plugin registers, called "connector kind" before task 15. "Channel" is always an AHP `x-` channel. `on` is not a registration and has no contract.
 
 ## Final verification checklist
 
