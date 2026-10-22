@@ -147,7 +147,7 @@ The daemon's half is added to the same schema, and `config:read` is what a conne
 Pushing a key acts in one of two ways, and the answer says which.
 
 - `advancedTools`, `sessionTools`, `sessionToolsProviders`, `closedChats`, `archiveDirtyWorktree`, `pullRequestLookup`, `wire` and `mcpServers` apply to this daemon as written. `advancedTools` changes the tools every running session's model is offered at once; the two session tool keys are rebuilt per session, since a provider list is not the same answer for all of them, and each running session is told its own set; the wire capture starts, moves or stops; `mcpServers` is read again for the next session opened, while a running session keeps the servers it started with. `closedChats` is read when the next chat is closed, so no session is rebuilt and none is told. `archiveDirtyWorktree` is read when the next archived session gives its tree back. `pullRequestLookup` is read by the next pass over merged sessions.
-- Every other key is written to `config.json` and the answer puts `ahpd.restartNeeded` in the `_meta` of the root state, which every reader of root is shown whether or not it may see the keys the notice is about. `ahpd restart` applies it.
+- Every other key is written to `config.json` and the answer puts `ahpd.restartNeeded` in the `_meta` of the root state, which every reader of root is shown whether or not it may see the keys the notice is about. The mark is also sent to every connection watching the root as `x-ahpd/restartNeeded` with `{ channel: "ahp-root://" }`, once, when it is set: it is an `x-ahpd` extension, since no protocol action carries `_meta`, and a client that does not know it reads the state as before. `ahpd restart` applies it.
 
 That split, and the reason it is per key rather than all-or-nothing, is decision A configuration change applies live where the key can, and otherwise on `ahpd restart`.
 
@@ -168,13 +168,15 @@ The verbs that read or change this host's own settings, one line each. The rest 
 
 | What | Grant | Where it is asked |
 | --- | --- | --- |
-| Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` and `plugin list` commands|
+| Read the daemon's own settings in root state | `config:read` | `seesConfig`, and the `status` command |
+| List the plugins the configuration names | `plugin:list` | The `plugin list` command, and `x-ahpd-plugins` |
+| List the connector kinds and the connectors | `connector:list` | `x-ahpd-connectors` |
 | Change a host-wide root config key | `config:change` | `root/configChanged`, and a `replace` - `config:write` covers it |
 | Push `workspaceTrust` | `trust:push` | The same action, when every key it carries is a connection's own - `trust:write` covers it |
 | Push only `defaultShell` or a terminal key | none, but a sign-in | It changes nothing anybody else reads |
 | Read the account an agent bills to | `account:read` | `seesAccount`, on the root state a connection subscribes to and on every `root/configChanged` after it |
 | Stop the daemon | `config:change` | The `shutdown` command|
-| Edit the configuration over HTTP | `config:write` | `GET /api/config`, and the `plugin` verbs that write - the deployment token only, for those |
+| Edit the configuration over HTTP | `config:write` | `GET /api/config`; the plugin verbs that write take `plugin:` grants, and install, update and remove are the deployment token's |
 
 ## See also
 

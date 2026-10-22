@@ -68,7 +68,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     // verbs here take a name from.
     effect: 'read',
     resource: { kind: 'plugin' },
-    scopes: ['config:read'],
+    scopes: ['plugin:list'],
     // Served, the list is the daemon's own, so no field could name another.
     ...(served === undefined ? { input: flagFields } : {}),
     run: async (context) => {
@@ -349,10 +349,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
     resource: { kind: 'plugin', key: 'name' },
     input: configFields,
     required: ['name'],
-    scopes: ['config:write'],
-    // A plugin's options change what its code does in this process, so over
-    // HTTP this is the deployment's own token, as an install is.
-    meta: { deploymentTokenOnly: "change a plugin's options" },
+    scopes: ['plugin:options'],
     run: configure('show'),
   });
   const set = registry.action({
@@ -372,8 +369,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       value: { type: 'string', description: 'The value: JSON when it parses, otherwise text.' },
     },
     required: ['name', 'key', 'value'],
-    scopes: ['config:write'],
-    meta: { deploymentTokenOnly: "change a plugin's options" },
+    scopes: ['plugin:options'],
     run: configure('set'),
   });
   const unset = registry.action({
@@ -393,8 +389,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       key: keyField,
     },
     required: ['name', 'key'],
-    scopes: ['config:write'],
-    meta: { deploymentTokenOnly: "change a plugin's options" },
+    scopes: ['plugin:options'],
     run: configure('unset'),
   });
 
@@ -409,9 +404,7 @@ export const declarePlugin = (registry: Registry<object>, served?: ServedFacts):
       ...(served === undefined ? { configFile: serverFields.configFile } : {}),
       name: { type: 'string', description: 'The plugin, by its id or as plugins names it.' },
     },
-    scopes: ['config:write'],
-    // Turning a plugin on runs its code in this process, as an install does.
-    meta: { deploymentTokenOnly: 'enable or disable a plugin' },
+    scopes: [`plugin:${sub}`],
     run: (context) => oneAtATime(async () => {
       const name = context.optional<string>('name');
       if (name === undefined) stop(`Say which plugin: ahpd plugin ${sub} <name>.`);

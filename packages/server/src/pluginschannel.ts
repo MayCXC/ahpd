@@ -17,9 +17,9 @@ import { check } from '@cofold/commands';
 import type { JsonSchema } from '@cofold/commands';
 import { recordsChannel, RpcError, scopeOf, secretRef } from '@ahpd/sdk';
 import type { Grant, Loaded, PluginMethod, PluginSpec, RecordsChannel, RecordsSource } from '@ahpd/sdk';
-import { maskOption, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
+import { maskOption, SET, withoutSpecSecrets, withoutUserinfoIn } from './commands/config.js';
 import { oneAtATime, setPluginEnabled, setPluginOption, specsIn } from './install.js';
-import { describePlugin, nameOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf } from './plugins.js';
+import { describePlugin, nameOf, optionsSchemaLoaded, optionsSchemaOf, pluginIdOf, schemaOf } from './plugins.js';
 
 /** The channel, and the domain its commands are named after. */
 const SCHEME = 'x-ahpd-plugins';
@@ -30,6 +30,46 @@ const INVALID_PARAMS = -32602;
 
 /** The message of a throw, whatever was thrown. */
 const reason = (error: unknown): string => error instanceof Error ? error.message : String(error);
+
+/** A value that is one object, or `undefined` for anything else. */
+const object = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+
+/**
+ * The values among a spec's options that its schema marks `writeOnly`.
+ *
+ * A plugin's own error can quote what it was handed, and a write-only option is
+ * a credential. Each such value is collected here so a served load problem can
+ * take it out: a reference is a name rather than a value, so it is not one.
+ */
+const secretsOf = (schema: Record<string, unknown> | undefined, value: unknown, found: string[]): void => {
+  if (schema === undefined || secretRef(value) !== undefined) return;
+  if (Array.isArray(value)) {
+    const items = object(schema['items']);
+    for (const one of value) secretsOf(items, one, found);
+    return;
+  }
+  const held = object(value);
+  if (held !== undefined) {
+    for (const [key, one] of Object.entries(held)) secretsOf(schemaOf(schema, key), one, found);
+    return;
+  }
+  if (schema['writeOnly'] === true && typeof value === 'string' && value !== '') found.push(value);
+};
+
+/**
+ * A load problem as a client may read it.
+ *
+ * Masked as every other answer is: the userinfo of any URL in the sentence, and
+ * each write-only option value the plugin's own error quoted.
+ */
+const loadProblemOf = (line: string, spec: PluginSpec, schema: Record<string, unknown> | undefined): string => {
+  const found: string[] = [];
+  if (typeof spec !== 'string') secretsOf(schema, spec.options, found);
+  let text = line;
+  for (const secret of found) text = text.split(secret).join(SET);
+  return withoutUserinfoIn(text);
+};
 
 /** What the channel and its commands are built from. */
 export interface PluginsChannelOptions {
@@ -45,6 +85,20 @@ export interface PluginsChannelOptions {
    * read through this on each listing rather than handed in.
    */
   loaded(): Loaded[];
+  /**
+   * The plugins the daemon could not load, by id, once it has.
+   *
+   * The same fact as `loaded()`, the other way: a row says `loaded: false` when
+   * its id is absent here and when it is present with the line that says why.
+   */
+  failures(): Record<string, string>;
+  /**
+   * Mark that the running host is behind the file a command just wrote.
+   *
+   * Called after a command writes, and never when it is refused: a refusal
+   * changed nothing, so there is nothing for a restart to apply.
+   */
+  restartNeeded(): void;
   /** Where a listing or an edit that could not be read or written is said. */
   onProblem?(message: string): void;
 }
@@ -101,6 +155,8 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
     const row = await describePlugin(spec, where);
     const loaded = options.loaded().find((one) => one.name === row.name);
     const manifest = loaded?.manifest;
+    // What the daemon said when this plugin did not run, if it said anything.
+    const failure = options.failures()[row.name];
     return {
       id: withoutUserinfoIn(row.name),
       record: {
@@ -109,11 +165,19 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
         spec: withoutSpecSecrets(row.spec, schema),
         name: withoutUserinfoIn(row.name),
         state: row.state,
+        ...(row.version === undefined ? {} : { version: withoutUserinfoIn(row.version) }),
         ...(row.module === undefined ? {} : { module: withoutUserinfoIn(row.module) }),
         ...(row.url === undefined ? {} : { url: withoutUserinfoIn(row.url) }),
         ...(row.path === undefined ? {} : { path: withoutUserinfoIn(row.path) }),
         ...(row.title === undefined ? {} : { title: withoutUserinfoIn(row.title) }),
         ...(row.problem === undefined ? {} : { problem: withoutUserinfoIn(row.problem) }),
+        // What the running daemon did, which the state does not say: a plugin
+        // may be configured and yet not be running.
+        loaded: loaded !== undefined,
+        ...(failure === undefined ? {} : { loadProblem: loadProblemOf(failure, row.spec, schema) }),
+        // The form a client draws, from the daemon's copy or the module it
+        // would import; absent for one switched off, which is never imported.
+        ...(schema === undefined ? {} : { optionsSchema: schema }),
         ...(manifest === undefined ? {} : { manifest }),
         // A plugin with no contracts is listed all the same, and said to be
         // undeclared: it is the listing's only way to tell the two apart.
@@ -156,7 +220,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
   };
 
   const channel = recordsChannel(SCHEME, source, {
-    grant: 'config:read' as Grant,
+    grant: 'plugin:list' as Grant,
     describe: () => ({ title: 'Plugins', description: 'What the configuration names, and what a run would load.' }),
     ...(options.onProblem === undefined ? {} : { onProblem: options.onProblem }),
   });
@@ -179,7 +243,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
   });
 
   const toggle = (enabled: boolean): PluginMethod => ({
-    grant: 'config:write' as Grant,
+    grant: `plugin:${enabled ? 'enable' : 'disable'}` as Grant,
     describe: () => ({
       title: `${enabled ? 'Enable' : 'Disable'} a plugin`,
       description: `Turns a configured plugin ${enabled ? 'on' : 'off'}, keeping its entry and its options. The daemon loads the change at its next start.`,
@@ -192,6 +256,8 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
+      // The file moved and the daemon that serves this channel did not.
+      options.restartNeeded();
       /*
        * A change is loaded by the next start, and this channel is only served
        * by a daemon that is running now, so the command line's served answer
@@ -202,7 +268,7 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
   });
 
   const optionsMethod: PluginMethod = {
-    grant: 'config:write' as Grant,
+    grant: 'plugin:options' as Grant,
     describe: () => ({
       title: "Write one of a plugin's options",
       description: 'Takes `id`, `key` and a `value` checked against the plugin\'s own schema, and writes it as `ahpd plugin config set` does. A `value` left out takes the option out, as `unset` does.',
@@ -251,6 +317,8 @@ export const pluginsChannel = (options: PluginsChannelOptions): PluginsChannel =
       catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
+      // Nothing written is nothing a restart would apply.
+      if (written) options.restartNeeded();
       /*
        * `<set>` for a value the schema marks, as every answer about an option
        * says: a write is not the place a secret is handed back.

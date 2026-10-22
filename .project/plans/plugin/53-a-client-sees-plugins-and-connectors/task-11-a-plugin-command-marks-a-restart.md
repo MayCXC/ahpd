@@ -1,6 +1,6 @@
 ---
 title: A plugin command marks a restart for every client
-status: todo
+status: implemented
 depends: [task-04-a-client-lists-the-plugins.md]
 layer: "sdk, server"
 refs:
@@ -41,8 +41,13 @@ A restarted daemon starts without it.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `Host.markRestartNeeded()` sets the host's flag, and every root state carries `ahpd.restartNeeded` from then on.
+  The flag lives only in memory, so a new host over the same configuration starts without it.
+  `enable`, `disable` and `options` call it after the configuration file is written; a refused command, and an option write that changed nothing, mark nothing.
+  `run.ts` hands the channel the call through a closure once `createHost` has answered.
+- **Next action:** task 12.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** nothing is pushed to a client that is already subscribed.
+  The protocol has no notification that replaces a channel's state, so the mark reaches that client the next time it takes the root state.
+  The test reads a second client's root state after the command, which is the way every client learns it.
 - **Watch out for:** a daemon restart clears the mark because `restartNeeded` lives only in memory; nothing writes it to disk.

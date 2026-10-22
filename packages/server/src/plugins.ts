@@ -281,6 +281,8 @@ export interface Manifest {
   name?: string;
   /** `ahpd.title`, the fallback a listing prints. */
   title?: string;
+  /** The package's `version`, which a listing shows. */
+  version?: string;
   /** `ahpd.entry`, the entry a manifest names over what the package resolves to. */
   entry?: string;
   /** `ahpd.description`, one sentence on what the plugin does. */
@@ -332,6 +334,7 @@ export const readManifest = (packageDir: string): Manifest => {
 
   const manifest: Manifest = { path, ahpd, peer };
   if (typeof value.name === 'string') manifest.name = value.name;
+  if (typeof value.version === 'string') manifest.version = value.version;
   if (typeof inside?.title === 'string') manifest.title = inside.title;
   if (typeof inside?.entry === 'string') manifest.entry = inside.entry;
   if (typeof inside?.description === 'string') manifest.description = inside.description;
@@ -1124,6 +1127,14 @@ export interface LoadedPlugins {
   /** The plugins that loaded and applied, in load order. */
   loaded: Loaded[];
   /**
+   * The plugins that did not load, by id, with the line that says why.
+   *
+   * The same lines are among `problems`, with everything else that went wrong;
+   * this is the one fact keyed by the plugin a row is listed under, so a client
+   * reads a row's `loadProblem` without searching the daemon's log.
+   */
+  failures: Record<string, string>;
+  /**
    * Every plugin's route, by plugin name, for the listener to serve.
    *
    * Answered beside the options rather than among them: a route is not
@@ -1148,6 +1159,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   const contributions: Contribution[] = [];
   const problems: string[] = [];
   const loaded: Loaded[] = [];
+  const failures: Record<string, string> = {};
   /*
    * Every agent this host will have, filled as plugins load.
    *
@@ -1232,7 +1244,9 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
     taken.add(id);
     if (typeof spec !== 'string' && spec.enabled === false) continue;
     if (resolved === undefined || named === undefined) {
-      problems.push(unresolved ?? `plugin ${id} did not resolve`);
+      const line = unresolved ?? `plugin ${id} did not resolve`;
+      problems.push(line);
+      failures[id] = line;
       continue;
     }
     const one = await loadOne(resolved, {
@@ -1261,6 +1275,11 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
         schemas.set(id, frozenCopy(one.loaded.plugin.optionsSchema));
       }
     }
+    else {
+      // The last line is the one that says why this plugin is not running.
+      const line = one.problems.at(-1);
+      if (line !== undefined) failures[id] = line;
+    }
     if (one.contribution !== undefined) {
       contributions.push(one.contribution);
       known.push(...one.contribution.agents);
@@ -1276,7 +1295,7 @@ export async function loadPlugins(specs: PluginSpec[], options: LoadOptions): Pr
   problems.push(...folded.problems);
   reached = folded.options;
   settled(folded.options);
-  return { options: folded.options, contributions, problems, loaded, routes: folded.routes };
+  return { options: folded.options, contributions, problems, loaded, routes: folded.routes, failures };
 }
 
 /**
@@ -1315,6 +1334,8 @@ export interface PluginRow {
   path?: string;
   /** The title the manifest declares. */
   title?: string;
+  /** The version package.json declares. */
+  version?: string;
   /** The one line explaining a state that is not `ready`. */
   problem?: string;
 }
@@ -1367,6 +1388,7 @@ export async function describePlugin(
   if (bad !== undefined) return { ...row, state: 'error', problem: bad };
   if (manifest.name !== undefined) row.module = manifest.name;
   if (manifest.title !== undefined) row.title = manifest.title;
+  if (manifest.version !== undefined) row.version = manifest.version;
 
   if (manifest.sdkRange !== undefined) {
     let satisfied = false;

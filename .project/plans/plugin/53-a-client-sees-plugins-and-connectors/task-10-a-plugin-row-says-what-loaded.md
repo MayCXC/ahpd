@@ -1,6 +1,6 @@
 ---
 title: A plugin row says its version, its load and its options schema
-status: todo
+status: implemented
 depends: [task-04-a-client-lists-the-plugins.md]
 layer: "server"
 refs:
@@ -49,8 +49,14 @@ The row carries the options schema of a plugin that is loaded or enabled.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** the row carries `version`, `loaded`, `loadProblem` and `optionsSchema`.
+  `readManifest` keeps the package `version`, and `describePlugin` puts it on `PluginRow`.
+  `loadPlugins` answers `failures`: the line saying why each plugin that did not load is not running.
+  The channel serves it as `loadProblem`, with URL userinfo and each `writeOnly` option value taken out.
+  A disabled plugin is never imported for its schema, and its row has `loaded: false` and no `loadProblem` or `optionsSchema`.
+- **Next action:** task 11.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** two fixtures were added.
+  `packages/server/test/fixtures/plugin-throws-secret` is an `apply` that quotes its own `writeOnly` option.
+  `packages/server/test/fixtures/plugin-marker-off` is a package.json that names the plugin, so a listing can key its row without an import, and a module that writes `AHPD_MARKER`.
 - **Watch out for:** `state` stays what the configuration and the package say; `loaded` is what the running daemon did.

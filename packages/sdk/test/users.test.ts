@@ -806,7 +806,7 @@ it('takes an operation of a subject it decides and any operation word of one it 
   expect(grantProblem('session:launch')).toMatch(/^session:launch is not one of session's operations \(list, state,/u);
   expect(grantProblem('session:launch')).toMatch(/read or write or a \*$/u);
   expect(grantProblem('session')).toBe('session is not <subject>:<operation>');
-  expect(grantProblem('plugin:something')).toBeUndefined();
+  expect(grantProblem('notes:something')).toBeUndefined();
 });
 
 /*

@@ -18,12 +18,15 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ```
 
   The host writes the token to the vault as `host:connector/ci/secret`, so the caller's header does not change. A `host:<name>` secret the old record named can be taken out with `ahpd vault delete host:<name>`. See [docs/plugins/WEBHOOKS.md](docs/plugins/WEBHOOKS.md).
+- `x-ahpd-plugins` and `x-ahpd-connectors` take their own grants rather than `config`. A role that read them with `config:read` now needs `plugin:list` for the plugins and `connector:list` for the connectors. One that enabled, disabled or edited a plugin with `config:write` now needs `plugin:enable`, `plugin:disable` or `plugin:options`, and one that made or removed a host connector now needs `connector:put` or `connector:remove`. Over HTTP, `plugin config`, `enable` and `disable` take the same grants and are no longer the deployment token's alone; install, update and remove still are.
 
 ### Plugins and connectors
 
 - A plugin declares a manifest: a description, categories, links and contracts. A registration its contracts do not list fails that plugin, with a line naming the method and the name. A plugin with no contracts loads as before, and is listed as `undeclared`.
 - A plugin registers connector kinds, each with a JSON Schema a client draws the form from and the capabilities a connector of that kind has.
 - `x-ahpd-plugins` lists the configured plugins, and `x-ahpd/plugins/enable`, `disable` and `options` change the file the daemon loads.
+- A plugin row carries `version`, `loaded`, `loadProblem` and `optionsSchema`. `loadProblem` is the line saying why the daemon did not load it, with any URL userinfo and any `writeOnly` option value an error quoted answered `<set>`. A plugin switched off carries no `optionsSchema`, because its module is never imported to read it.
+- `enable`, `disable` and `options` mark `ahpd.restartNeeded` on the root state for every connection, and only a restart clears it. A connection watching the root is sent `x-ahpd/restartNeeded` with `{ channel: "ahp-root://" }` when the mark is set, once, so a client holding the state does not have to read it again.
 - `x-ahpd-connectors` lists the connector kinds and the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field a kind's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
 - `@ahpd/webhook` registers the first connector kind, so a client makes a webhook endpoint from the connector form.
 

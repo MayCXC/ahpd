@@ -95,7 +95,7 @@ The mark is read wherever the schema says it, so a credential under `env`, under
 
 Root config, `GET /api/config`, `GET /api/plugin/list` and `POST /api/plugin/config` all answer such a value as `<set>`, so a client is told the key is there and is never told what it is. A client that sends `<set>` back has said the credential is left as it is, so a form sent in whole does not overwrite it with the word; another value replaces it and `null` takes it back, at either depth. What is not named is left as the file holds it, so sending one value back does not take the rest of the object with it. The terminal's `ahpd config` is the one answer that prints the file as it is.
 
-A plugin that marks nothing is one whose options are all shown to a client holding `config:read`, so a credential it does not mark is a credential that leaks. The other way round is a plugin the daemon could not import to read its schema, which is every option of one switched off with `enabled: false`: nothing is known of which of its options are credentials, so all of them are answered `<set>` until it loads and declares.
+A plugin that marks nothing is one whose options are all shown to a client holding `config:read` or `plugin:list`, so a credential it does not mark is a credential that leaks. The other way round is a plugin the daemon could not import to read its schema, which is every option of one switched off with `enabled: false`: nothing is known of which of its options are credentials, so all of them are answered `<set>` until it loads and declares.
 
 ### Naming a secret instead of holding one
 
@@ -982,20 +982,40 @@ other the connector kinds and the connectors made from them.
 One row per configured plugin, described without running it: `spec`, `name`,
 `state`, and `module`, `url`, `path`, `title` and `problem` where the daemon has
 them. A row carries the manifest the daemon loaded, and `undeclared: true` when
-the plugin declares no contracts. Reading needs `config:read`.
+the plugin declares no contracts. Four fields say what the running daemon did
+with it:
+
+| Field | What it says |
+| --- | --- |
+| `version` | The version the plugin's package.json declares, when it has one |
+| `loaded` | Whether this daemon loaded it at its start |
+| `loadProblem` | The line saying why it did not load, with the userinfo of any URL and each `writeOnly` option value an error quoted answered `<set>` |
+| `optionsSchema` | The form a client draws, from the daemon's own copy or the module it would import. A plugin switched off carries none, because its module is never imported to read it |
+
+Reading the channel needs `plugin:list`.
 
 Three commands change the file the daemon loads:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/plugins/enable` | `config:write` | Turns the plugin on, keeping its entry and its options. Takes `id` |
-| `x-ahpd/plugins/disable` | `config:write` | Turns it off the same way. Takes `id` |
-| `x-ahpd/plugins/options` | `config:write` | Writes one option, checked against the plugin's own schema. Takes `id`, `key` and a `value`; a `value` left out takes the option out |
+| `x-ahpd/plugins/enable` | `plugin:enable` | Turns the plugin on, keeping its entry and its options. Takes `id` |
+| `x-ahpd/plugins/disable` | `plugin:disable` | Turns it off the same way. Takes `id` |
+| `x-ahpd/plugins/options` | `plugin:options` | Writes one option, checked against the plugin's own schema. Takes `id`, `key` and a `value`; a `value` left out takes the option out |
 
 The `id` is the plugin's id, which is also the row's id and the root config key
 it is edited by. A value the schema marks `writeOnly` is answered `<set>`. Every
 answer carries `restart: true`, because a running daemon loads the change at its
 next start.
+
+A command that writes also marks `ahpd.restartNeeded` on the root state, for
+every connection and for one that subscribes afterwards: the daemon holding the
+old file says so until it is restarted, which clears the mark. A client already
+subscribed is sent `x-ahpd/restartNeeded` with `{ channel: "ahp-root://" }` as
+the mark is set, so it does not have to read the root state again. That is an
+`x-ahpd` extension, because no protocol action carries `_meta`, and a client
+that does not know the name ignores it. It is sent once, when the mark changes
+from unset to set; a second mark changes nothing and sends nothing. A refused
+command marks nothing.
 
 ### `x-ahpd-connectors`
 
@@ -1011,7 +1031,7 @@ and a `state`:
 | `invalid` | Its config no longer fits its kind's schema, or the kind refused to open it |
 | `unavailable` | No loaded plugin registers its kind, so it cannot be opened |
 
-A kind row shows before any connector of it exists. `config:read` reads every
+A kind row shows before any connector of it exists. `connector:list` reads every
 row; without it a person reads the connectors owned by `user:<them>` and a
 member reads the ones owned by `team:<team>`, and a kind row takes the grant. A
 subscribe also takes `?owner=me`, which narrows the listing to the caller's own
@@ -1021,16 +1041,17 @@ Two commands change a connector:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/connectors/put` | `config:write`, and the owner's | Makes or changes `{ id, kind, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
-| `x-ahpd/connectors/remove` | `config:write`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
+| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, kind, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
+| `x-ahpd/connectors/remove` | `connector:remove`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
 
-The owner narrows the grant: a `host` connector needs `config:write`, a
-`team:<team>` one needs `team:write` and membership of that team, and a
-`user:<id>` one needs the caller to be that person. A caller without the grant
-is refused, for reading and for each method.
+The owner narrows the grant: a `host` connector needs `connector:put` to be made
+and `connector:remove` to be removed, a `team:<team>` one needs `team:write` and
+membership of that team, and a `user:<id>` one needs the caller to be that
+person. A caller without the grant is refused, for reading and for each method.
 
-A `put` under a new owner keeps nothing of the old one's secrets, and takes the
-old names out of the vault. A secret field sent empty keeps the value the record
+A `put` under a new owner removes the connector from the old one, so it also
+needs what a remove by the old owner needs. It keeps nothing of the old one's
+secrets, and takes the old names out of the vault. A secret field sent empty keeps the value the record
 holds, because a client is never shown one to send back. The vault names are
 `host:connector/<id>/<field>`, `team:<team>/connector/<id>/<field>` and
 `user:<id>/connector/<id>/<field>`.

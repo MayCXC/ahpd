@@ -170,6 +170,18 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
     operations: ['settings', 'change'],
     groups: { read: ['settings'], write: ['change'] },
   },
+  plugin: {
+    title: 'Plugins',
+    description: 'The plugins the configuration names: listing them, turning them on and off, and editing their options.',
+    operations: ['list', 'enable', 'disable', 'options'],
+    groups: { read: ['list'], write: ['enable', 'disable', 'options'] },
+  },
+  connector: {
+    title: 'Connectors',
+    description: 'The connector kinds plugins register, and the connectors made from them.',
+    operations: ['list', 'put', 'remove'],
+    groups: { read: ['list'], write: ['put', 'remove'] },
+  },
   diagnostics: {
     title: 'Diagnostics',
     description: 'Logs and network details for troubleshooting.',

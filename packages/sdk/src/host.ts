@@ -126,6 +126,15 @@ const CLIENT_DISCONNECT_GRACE_MS = 30_000;
 const WAIT_LIMIT = 60_000;
 
 /**
+ * The notification that says the root state now carries `ahpd.restartNeeded`.
+ *
+ * An `x-ahpd` extension rather than a protocol method: no action carries
+ * `_meta`, and a client that does not know the name ignores it and reads the
+ * root state the way it always has.
+ */
+const RESTART_NEEDED = 'x-ahpd/restartNeeded';
+
+/**
  * One principal, held as this host's own: frozen, and its `roles` with it.
  *
  * Where this library builds a principal it freezes there, roles included. An
@@ -1025,6 +1034,11 @@ export function createHost(options: HostOptions): Host {
     closed: false, refusing: undefined, bareSessions: new Set<string>(), commandTurns: new Map<string, boolean>(), described, links,
     watches, marksOf, resumedSessions, activeClientsOf, drafts,
     restartNeeded: false,
+    markRestart: () => {
+      if (ctx.restartNeeded) return;
+      ctx.restartNeeded = true;
+      broadcast(ROOT, RESTART_NEEDED, { channel: ROOT });
+    },
     dispatch,
     flushDeltas: deltas.flush,
   } as HostContext;
@@ -1328,6 +1342,12 @@ export function createHost(options: HostOptions): Host {
      * owed that reason rather than a silence.
      */
     refuseTurns: (why) => { ctx.refusing = why; },
+    /*
+     * The root state reads this flag when a connection takes it, so every
+     * connection sees the mark from here on, and one already watching it is
+     * told by `x-ahpd/restartNeeded` rather than left to ask again.
+     */
+    markRestartNeeded: () => { ctx.markRestart(); },
     accept(peer: Peer, principal?: Principal, root?: boolean) {
       const connection: Connection = {
         peer, clientId: '', watching: new Set<string>(),

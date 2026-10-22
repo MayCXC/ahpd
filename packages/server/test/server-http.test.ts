@@ -611,12 +611,12 @@ describe('a request signs in', () => {
     expect((await refused.json() as { message: string }).message).toBe('ada may not config:write here');
   }, 30000);
 
-  it('refuses a member the commands that need config:read', async () => {
+  it('refuses a member the commands whose grant it does not hold', async () => {
     const { one, member } = await guarded();
-    for (const path of ['status', 'plugin/list']) {
+    for (const [path, grant] of [['status', 'config:read'], ['plugin/list', 'plugin:list']] as const) {
       const refused = await get(`http://127.0.0.1:${String(one.port)}/api/${path}`, member);
       expect(refused.status).toBe(403);
-      expect((await refused.json() as { message: string }).message).toBe('ada may not config:read here');
+      expect((await refused.json() as { message: string }).message).toBe(`ada may not ${grant} here`);
     }
   }, 30000);
 
@@ -909,7 +909,7 @@ describe('what a served command reads', () => {
   }, 30000);
 
   it('answers the same in a served plugin list', async () => {
-    writeFileSync(usersFile, JSON.stringify({ roles: { reader: ['config:read'] }, users: [] }));
+    writeFileSync(usersFile, JSON.stringify({ roles: { reader: ['plugin:list'] }, users: [] }));
     const directory = fileUsers({ path: usersFile });
     await directory.add('rea', ['reader']);
     const reader = await directory.mint('rea');
@@ -927,7 +927,7 @@ describe('what a served command reads', () => {
 
   it('masks the credentials in a plugin spec URL, in the file and in a served row', async () => {
     writeFileSync(usersFile, JSON.stringify({
-      roles: { writer: ['config:write'], reader: ['config:read'] },
+      roles: { writer: ['config:write'], reader: ['plugin:list'] },
       users: [],
     }));
     const directory = fileUsers({ path: usersFile });

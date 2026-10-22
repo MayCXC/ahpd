@@ -652,10 +652,18 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * load finishes anyway.
    */
   let loaded: Loaded[] = [];
+  let failures: Record<string, string> = {};
+  /*
+   * The host's restart mark, once there is a host: the channel is built before
+   * `createHost`, and a command that writes calls this through the closure.
+   */
+  let markRestart: () => void = () => {};
   const pluginLists = pluginsChannel({
     configFile: options.configFile ?? configPath(),
     where: { configDir: configDir(), cwd: process.cwd() },
     loaded: () => loaded,
+    failures: () => failures,
+    restartNeeded: () => markRestart(),
     onProblem: listProblem,
   });
   /*
@@ -1094,7 +1102,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * what their daemon is missing before it says it started.
    */
   stamp('start: plugins');
-  const { options: folded, contributions, problems, loaded: didLoad, routes: registered } = await loadPlugins(options.plugins, {
+  const { options: folded, contributions, problems, loaded: didLoad, routes: registered, failures: didFail } = await loadPlugins(options.plugins, {
     base,
     paths: options.paths,
     configDir: configDir(),
@@ -1112,6 +1120,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
+  failures = didFail;
   // And the connectors channel starts answering kinds, which is what a stored
   // connector is checked against when it opens below.
   connectorKinds = folded.connectorKinds ?? {};
@@ -1187,6 +1196,8 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   }
 
   const host = createHost(folded);
+  // The plugin channel's marks reach the host that now serves it.
+  markRestart = () => { host.markRestartNeeded(); };
   /*
    * The host the plugins were loaded for, handed over now that it exists.
    *
