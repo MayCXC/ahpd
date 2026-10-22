@@ -2,30 +2,41 @@
 
 `@ahpd/webhook` gives a program outside the host a URL to call. A call to an endpoint either talks to a bot or fires an automation, and each endpoint has its own secret.
 
-## The endpoint record
+## The endpoint connector
 
-An endpoint is a record in the `webhooks` collection. The daemon's record store keeps each one as a file a person writes by hand, `<configDir>/webhooks/<id>.md`.
+An endpoint is a `webhook` connector: a JSON record in `<configDir>/connectors/<id>.json`, made from a client with `x-ahpd/connectors/put`. A hand-written `webhooks/<id>.md` file is no longer read.
 
 | Field | What it is |
 | --- | --- |
 | `id` | The slug, and the last segment of the endpoint's URL |
-| `bot` | The bot a call talks to, as `bot://<slug>`. An endpoint names `bot` or `automation`, not both |
-| `automation` | `true` on an endpoint whose calls fire the `webhook` trigger |
-| `secret` | The name of the vault secret that the caller sends as its bearer token, such as `host:ci-hook` |
-| `reply` | How a call to a bot is answered: `callback`, `sync` or `none`. The default is `callback` |
-| `callbackPrefix` | What every callback URL must start with: an `http` or `https` URL whose path ends in `/`. A `callback` endpoint needs one |
-| `syncTimeoutSeconds` | How long a `sync` call waits, over the plugin option of the same name |
+| `title` | What a client prints for it. Optional |
+| `owner` | `host`, `team:<team>` or `user:<id>`. The secret is kept under that owner's scope |
+| `config.bot` | The bot a call talks to, as `bot://<slug>`. An endpoint names `bot` or `automation`, not both |
+| `config.automation` | `true` on an endpoint whose calls fire the `webhook` trigger |
+| `config.secret` | The value the caller sends as its bearer token. The field is `writeOnly`, so it is kept in the vault and never in the record |
+| `config.reply` | How a call to a bot is answered: `callback`, `sync` or `none`. The default is `callback` |
+| `config.callbackPrefix` | What every callback URL must start with: an `http` or `https` URL whose path ends in `/`. A `callback` endpoint needs one |
+| `config.syncTimeoutSeconds` | How long a `sync` call waits, over the plugin option of the same name |
 
-```md
----
-id: ci
-bot: bot://motion
-secret: host:ci-hook
-callbackPrefix: https://ci.example.com/hooks/
----
+```json
+{
+  "id": "ci",
+  "kind": "webhook",
+  "owner": "host",
+  "title": "CI",
+  "config": {
+    "bot": "bot://motion",
+    "secret": "a-long-random-value",
+    "callbackPrefix": "https://ci.example.com/hooks/"
+  }
+}
 ```
 
-A record that fails the check is no endpoint. A call to it answers 404, and the plugin reports the problem.
+That object is the params of `x-ahpd/connectors/put`. A config that fails the kind's schema is refused with `-32602` and no connector is made. A `put` of an id that already exists closes the connector it had, writes the record and opens the new one.
+
+The host writes `secret` to the vault as `host:connector/<id>/secret`, `team:<team>/connector/<id>/secret` or `user:<id>/connector/<id>/secret`, and the record holds `{ "$secret": "<name>" }` in its place. A client sending the config again sends an empty `secret` to keep the stored value. `ahpd vault list` shows the names.
+
+A connector of a kind no loaded plugin registers stays on disk and shows as `unavailable`, and one whose config no longer fits shows as `invalid`. A call to either answers 404, and so does one to a connector that is not open yet.
 
 ## The call
 
@@ -38,12 +49,12 @@ curl -X POST http://127.0.0.1:37537/plugins/webhook/ci \
   -d '{ "thread": "pr-42", "text": "Review this pull request.", "callback": "https://ci.example.com/hooks/pr-42" }'
 ```
 
-Put the token in the vault under the name that `secret` gives, with `ahpd vault set host:ci-hook`.
+The token is the connector's `secret`, which the host keeps in the vault, so nothing else has to be set.
 
 | Answer | When |
 | --- | --- |
-| 401 | The call has no bearer token, the token is wrong, or the vault does not hold the secret. The last case is also a problem in the daemon's log |
-| 404 | No endpoint has that id, or the path has more than one segment after the prefix |
+| 401 | The call has no bearer token, or the token is not the connector's secret |
+| 404 | No open connector answers for that id, or the path has more than one segment after the prefix |
 | 405 | The method is not `POST` |
 
 The plugin compares the token in constant time, and reads no body before the token passes.
@@ -126,12 +137,13 @@ The plugin opens its connection when the daemon listens, and hears each turn's e
 
 A call to an automation endpoint fires the `webhook` trigger type, which the plugin offers. The type has one event, `call`, and its form asks for one `endpoint`. An automation runs on a call when its trigger's `config` names the endpoint the call came to.
 
-```md
----
-id: deploys
-automation: true
-secret: host:deploys-hook
----
+```json
+{
+  "id": "deploys",
+  "kind": "webhook",
+  "owner": "host",
+  "config": { "automation": true, "secret": "another-long-random-value" }
+}
 ```
 
 ```markdown

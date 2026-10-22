@@ -1,7 +1,7 @@
 ---
 title: Plugin - what exists today
 domain: plugin
-revalidated: 2026-09-20
+revalidated: 2026-10-21
 ---
 
 A plugin is an installed package the daemon folds into the options it hands `createHost`, so a backend, a port, a tool or a configuration key is an install and a configuration line rather than a rebuild.
@@ -56,6 +56,7 @@ This is the list [A plugin registers from a closed set of kinds, one register me
 | HTTP route | `registerRoute(handler)` | register, open key | a handler the daemon's own listener serves under `/plugins/<name>/`, beside the HTTP API and beside a session's tools servers; it lands in the fold's `routes`, keyed by plugin name, rather than in `HostOptions` | built 2026-10-04, [plan 21](21-a-plugin-serves-an-http-route/plan.md) |
 | configuration key | `registerConfig(key, schema, default)` | register, open key | a new `HostOptions.rootConfig`, beside the session keys an agent already declares | not planned yet |
 | channel | `registerChannel(scheme, channel)` | register, open key | `HostOptions.channels`, one channel per `x-` scheme, which a client subscribes to and the plugin publishes on, with a test of who sees each action | built 2026-10-10, [plan 44](44-a-plugin-serves-a-channel/plan.md) |
+| connector kind | `registerConnector(kind)` | register, open key | `HostOptions.connectorKinds`, one kind per name, with the schema a client draws a connector's form from and the capabilities it lists; a name another plugin registered is reported and that plugin loses the kind alone | built 2026-10-21, [plan 53](53-a-client-sees-plugins-and-connectors/plan.md) |
 | host method | `registerMethod(name, method)` | register, open key | `HostOptions.methods`, one command per `x-` name, which a client sends after the gate asks for its grant, and which the host lists in `_meta['ahpd.methods']` | built 2026-10-11, [plan host/81 p1](../host/81-p1-the-host-serves-x-commands/plan.md); its protocol half is [a proposal](../../proposals/agent-host-protocol-extension-methods.md) |
 
 Every method that contributes a value is named `register*`, so a registration is told apart at the call site from what a plugin only reads (`path`, `paths`, `version`, `log`). The one exception is `on`, which contributes nothing and attaches a listener to an event the host already fires; `on` is what every event emitter calls that.
@@ -94,6 +95,9 @@ ahpd [flags] -> main.ts parses config.json under the flags -> createHost(literal
 - [03 - An agent backend over cofold](03-agent-cofold/plan.md) is built: `@ahpd/agent-cofold` is the first real consumer of this mechanism, one installed package that runs a harness and serves every model it can reach, and it is also the worked example in [docs/plugins/PLUGINS.md](../../../docs/plugins/PLUGINS.md).
 - [04 - The cofold extras](04-agent-cofold-extras/plan.md) is built: a host tool says what running it does, a cofold conversation forks and rewinds, and a tool a client runs is offered and waited for.
 - [07 - The ACP bridge](07-agent-acp/plan.md) is built: `@ahpd/agent-acp` speaks the Agent Client Protocol to any server, so `copilot --acp`, `codex-acp`, `gemini --experimental-acp` and `@deepseek-ai/dsh-acp` are configuration lines, and the file, shell and permission requests a server makes back are answered through the host's own ports; the decision [agent-package-only-when-it-brings-a-runtime](../../decisions/agent-package-only-when-it-brings-a-runtime.md) is why a model or an endpoint is not a package of its own.
+- [53 - A client sees the plugins and the connectors](53-a-client-sees-plugins-and-connectors/plan.md) is implemented: a plugin declares a manifest, and every registration is checked against its contracts.
+  The `x-ahpd-plugins` and `x-ahpd-connectors` channels show a client the plugins and the connectors.
+  The ahpw pages and the UI component tree wait on later plans.
 - The next plans, in order:
   1. [17 - A plugin hears when a session needs a person](17-a-plugin-hears-a-session-needs-a-person/plan.md) adds `input_needed_set` and `input_needed_removed`.
   2. [20 - A plugin is a client of its own host, as a principal of its own](20-a-plugin-is-a-client-of-its-own-host/plan.md) lets a plugin start sessions, send turns and run automations as `plugin:<name>`.

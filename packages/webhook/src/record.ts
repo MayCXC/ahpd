@@ -1,10 +1,10 @@
 /**
- * One webhook endpoint, as the `webhooks` collection holds it.
+ * One webhook endpoint, as a `webhook` connector describes it.
  *
- * An endpoint is a file a person writes by hand, so every field is checked
- * when the record is read. The `id` is the last segment of the URL a caller
- * posts to, and the `secret` names the vault secret that the caller sends as
- * its bearer token.
+ * A person makes an endpoint from a client, and every field is checked again
+ * when the connector is opened. The `id` is the connector's id and the last
+ * segment of the URL a caller posts to, and the `secret` is the value that the
+ * caller sends as its bearer token, kept in the vault under the owner.
  */
 
 /** What the plugin answers a caller of a bot endpoint. */
@@ -14,13 +14,13 @@ export type Reply = (typeof REPLIES)[number];
 
 /** One endpoint, checked. */
 export interface Endpoint {
-  /** The record's slug, and the last segment of the endpoint's URL. */
+  /** The connector's slug, and the last segment of the endpoint's URL. */
   id: string;
   /** The bot a call talks to, as `bot://<slug>`. Absent on an automation endpoint. */
   bot?: string;
   /** `true` on an endpoint whose calls fire the `webhook` trigger. Absent on a bot endpoint. */
   automation?: true;
-  /** The name of the vault secret that a caller sends as `Authorization: Bearer <value>`. */
+  /** The value a caller sends as `Authorization: Bearer <value>`, held in the vault. */
   secret: string;
   /** How a call to a bot is answered. */
   reply: Reply;
@@ -34,10 +34,11 @@ export interface Endpoint {
 const BOT_URI = /^bot:\/\/[a-z][a-z0-9-]{0,39}$/;
 
 /**
- * The endpoint a record describes, or an error that says what is wrong.
+ * The endpoint a connector's config describes, or an error that says what is
+ * wrong.
  *
- * The error message is one sentence about the record, for the plugin's problem
- * line.
+ * The error message is one sentence about the config, for the line the host
+ * reports when the connector cannot be opened.
  */
 export function checkEndpoint(said: unknown): Endpoint {
   if (typeof said !== 'object' || said === null || Array.isArray(said)) {
@@ -64,7 +65,7 @@ export function checkEndpoint(said: unknown): Endpoint {
 
   const secret = record['secret'];
   if (typeof secret !== 'string' || secret.trim() === '') {
-    throw new Error('An endpoint names the vault secret that its caller sends.');
+    throw new Error('An endpoint names the secret that its caller sends.');
   }
 
   const reply = record['reply'] ?? 'callback';

@@ -94,6 +94,8 @@ export { policyChannels, policyProviders } from './access/policy.js';
 export type { PolicyChannels, PolicyLimits, PolicyProvider } from './access/policy.js';
 export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './resources/recordschannel.js';
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './resources/recordschannel.js';
+export { connectorsChannel } from './connectors/channel.js';
+export type { ConnectorsChannel, ConnectorsChannelOptions, ConnectorState } from './connectors/channel.js';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './usage/scopes.js';
 export type { Membership, Scope, ScopeAnswer } from './usage/scopes.js';
 export { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, oidcIssuer } from './access/issuers.js';

@@ -10,6 +10,7 @@ import { loadPlugins } from '../src/plugins.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Bag } from '../../sdk/src/types/common.js';
 import type { HostOptions } from '../../sdk/src/types/host.js';
+import type { ServedConnectorKind } from '../../sdk/src/types/connectors.js';
 import type { Peer } from '../../sdk/src/types/rpc.js';
 import type { Users } from '../../sdk/src/types/users.js';
 import type { Vault } from '../../sdk/src/types/vault.js';
@@ -93,7 +94,7 @@ async function started(grants: string[] = GRANTS) {
     agents: [echo({ path: dir, pace: 0 })],
     sessions: memorySessions(),
     records,
-    vault: vault({ 'host:ci-hook': 'right-token' }),
+    vault: vault({ 'host:connector/ci/secret': 'right-token' }),
     users: directory(),
   };
   const { options, problems, routes } = await loadPlugins([
@@ -107,11 +108,23 @@ async function started(grants: string[] = GRANTS) {
     { type: 'listening', runtime: 'node', host: '127.0.0.1', port: 0, guarded: false },
     (line) => { lines.push(line); },
   );
-  return { host, lines, problems, routes, records };
+  return { host, lines, problems, routes, records, kinds: options.connectorKinds ?? {} };
 }
 
+/**
+ * Open the `ci` endpoint the way the host opens a connector.
+ *
+ * The connector channel is not served here, so the kind is handed the config a
+ * put would have resolved: the secret is its value, not a vault name.
+ */
+const openCi = (kinds: Record<string, ServedConnectorKind>, config: Record<string, unknown>): void => {
+  const kind = kinds['webhook'];
+  if (kind === undefined) throw new Error('the webhook plugin registered no kind');
+  kind.open({ id: 'ci', kind: 'webhook', owner: 'host', config: { bot: 'bot://motion', secret: 'right-token', ...config } });
+};
+
 it('answers a sync call with the turn status and no text, in the plugin chat', async () => {
-  const { host, problems, routes, records } = await started();
+  const { host, problems, routes, records, kinds } = await started();
   expect(problems).toEqual([]);
 
   // The host's own key makes the bot, which starts nothing: a chat is started
@@ -120,8 +133,7 @@ it('answers a sync call with the turn status and no text, in the plugin chat', a
   await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
 
-  const webhooks = await records.collection('webhooks');
-  await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'sync', syncTimeoutSeconds: 10 });
+  openCi(kinds, { reply: 'sync', syncTimeoutSeconds: 10 });
 
   const route = routes['webhook'];
   expect(route).toBeDefined();
@@ -162,12 +174,11 @@ it('answers a sync call with the turn status and no text, in the plugin chat', a
 });
 
 it('answers 409 when the plugin may not read the bot', async () => {
-  const { host, routes, records } = await started([]);
+  const { host, routes, kinds } = await started([]);
   const root = host.accept(peer(), undefined, true);
   await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
-  const webhooks = await records.collection('webhooks');
-  await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
+  openCi(kinds, { reply: 'none' });
 
   const answer = await routes['webhook']!(new Request('http://127.0.0.1:1/plugins/webhook/ci?thread=pr-12', {
     method: 'POST',
@@ -178,12 +189,11 @@ it('answers 409 when the plugin may not read the bot', async () => {
 });
 
 it('answers 409 and names the grants when the plugin is answered no chat', async () => {
-  const { host, lines, routes, records } = await started(['bot:get', 'session:read']);
+  const { host, lines, routes, records, kinds } = await started(['bot:get', 'session:read']);
   const root = host.accept(peer(), undefined, true);
   await root.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
   await root.handle({ method: 'resourceWrite', params: { uri: 'bot://motion', data: JSON.stringify({ name: 'Motion', harness: 'echo' }) } });
-  const webhooks = await records.collection('webhooks');
-  await webhooks.put({ id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none' });
+  openCi(kinds, { reply: 'none' });
 
   const answer = await routes['webhook']!(new Request('http://127.0.0.1:1/plugins/webhook/ci?thread=pr-12', {
     method: 'POST',

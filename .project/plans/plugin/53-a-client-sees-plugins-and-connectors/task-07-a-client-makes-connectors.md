@@ -1,6 +1,6 @@
 ---
 title: A client makes connectors
-status: todo
+status: implemented
 depends: [task-05-a-plugin-registers-connector-kinds.md, task-06-a-collection-keeps-json-records.md]
 layer: "sdk, server"
 refs:
@@ -36,7 +36,7 @@ A secret is written to the vault, and is in no record and no snapshot.
 9. In `remove`, close the connector, delete its secrets and delete the record.
 10. Require the owner's grant: root for `host`, the team's secret grant for `team:<team>`, and that person for `user:<id>`.
 11. Open every stored connector of a registered kind when the daemon starts.
-12. Run the SDK tests, and set this task and the plan row to `done`.
+12. Run the SDK tests, and set this task and the plan row to `implemented`.
 
 ## Validation
 
@@ -50,7 +50,28 @@ A secret is written to the vault, and is in no record and no snapshot.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `packages/sdk/src/connectors/channel.ts` serves the kinds, the connectors, the two methods and `openAll`.
+  `index.ts` exports `connectorsChannel`.
+  `run.ts` opens the `connectors` JSON collection on the store the host is built over, and serves the channel and its methods.
+  It fills the kinds after the load, and opens the stored connectors once the host is built.
+- **Done so far:** `packages/sdk/test/connectors-channel.test.ts` has 16 cases.
+  They cover the kind before a connector, two puts and two opens, and a secret in the vault and in no record or snapshot.
+  They also cover an empty `writeOnly` field keeping the secret, an unregistered kind, an invalid config and `openAll`.
+  The rest are `?owner=me`, the grants for reading and for host, team and person, and a refused config and kind.
+- **Fixed in review:** `put` checked only the new owner, so a caller took a person's or a team's connector by its id.
+  A put that changes the owner now passes the owner rule of the record it replaces, and a record with no owner takes `config:write`.
+  The old owner's secrets leave the vault after the record is written, and two cases hold both.
+- **Next action:** task 08, which makes the `webhook` kind the first one.
 - **Open questions:** none.
+- **Departures:**
+  - Step 3 reads `ownerOf` from a cache the last listing filled, because `recordsChannel` asks `mayRead` synchronously.
+    The cache is filled by `ids`, `find` and `put`.
+  - The channel takes the schema checker as an option, because the sdk declares no `@cofold/commands` and the boundary check forbids one.
+  - A kind row needs `config:read`: the Answer reads "every row" with the grant, and "the connectors owned by" without it.
+    A reader without the grant sees no kind row, so a person with no connector of their own is refused the channel.
+  - `put` answers the row as written, with its `state`, rather than `{}`.
+  - A put under a different owner keeps none of the old owner's secrets, and the old names are taken out of the vault.
+  - `openAll` runs after `createHost` and before the listener binds, so the vault a plugin replaced is the one it reads.
+  - A stored `writeOnly` field is checked against the schema as `HELD`, the placeholder a client is shown.
+    A value nobody may read is never read to ask a rule of it.
 - **Watch out for:** a client sends an empty `writeOnly` field to keep the secret, because it never sees the stored value.

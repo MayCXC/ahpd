@@ -1,7 +1,7 @@
 ---
 title: A client sees the plugins and the connectors
 domain: plugin
-status: draft
+status: active
 priority: medium
 created: 2026-10-21
 revalidated: 2026-10-21
@@ -97,6 +97,9 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | A team connector needs the grant that writes the team's secrets | (defaulted: a connector holds a secret of that scope) | 07 |
 | A connector of a kind no plugin registers stays on disk and shows as `unavailable` | (defaulted: a disabled plugin keeps its connectors) | 07 |
 | No limit on the connectors of one kind in v1 | (defaulted: no case needs one yet) | 07 |
+| `config:read` reads every row of `x-ahpd-connectors`; without it, a person reads the connectors owned by `user:<them>`, and a member reads the ones owned by `team:<team>` | Softov, 2026-10-21, chose "config:read, plus own" | 07 |
+| A kind row is keyed `kind:<name>`, and a connector row by the id of the connector | Softov, 2026-10-21, chose "kind:<name> and <id>" | 07 |
+| A connector owned by `host` needs `config:write` to make or remove | Softov, 2026-10-21, chose "config:write" | 07 |
 | Webhook endpoints move in this plan; agent presets and channels move in later plans | Softov, 2026-10-21, chose "Webhooks" | 08 |
 | The `webhook` kind has one `receive` capability | (defaulted: an endpoint only receives calls) | 08 |
 | Old `webhooks/<id>.md` files are no longer read; `CHANGELOG.md` and `WEBHOOKS.md` say how to make the endpoint again | Softov, 2026-10-21, chose "Break and document" | 08, 09 |
@@ -120,9 +123,9 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | [04 - A client lists the plugins](task-04-a-client-lists-the-plugins.md) | implemented | 01 |
 | [05 - A plugin registers connector kinds](task-05-a-plugin-registers-connector-kinds.md) | implemented | 02 |
 | [06 - A collection keeps JSON records](task-06-a-collection-keeps-json-records.md) | implemented | - |
-| [07 - A client makes connectors](task-07-a-client-makes-connectors.md) | todo | 05, 06 |
-| [08 - A webhook endpoint is a connector](task-08-a-webhook-endpoint-is-a-connector.md) | todo | 07 |
-| [09 - The docs say how plugins and connectors are seen](task-09-the-docs-say-how-it-is-seen.md) | todo | 03, 04, 08 |
+| [07 - A client makes connectors](task-07-a-client-makes-connectors.md) | implemented | 05, 06 |
+| [08 - A webhook endpoint is a connector](task-08-a-webhook-endpoint-is-a-connector.md) | implemented | 07 |
+| [09 - The docs say how plugins and connectors are seen](task-09-the-docs-say-how-it-is-seen.md) | implemented | 03, 04, 08 |
 
 ## Risks and tradeoffs
 
@@ -136,8 +139,11 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 
 ## Resume state
 
-- **Done so far:** plan and tasks written 2026-10-21 from Softov's answers.
-- **Next action:** Softov reviews the plan; then [task-01-the-manifest-is-read.md](task-01-the-manifest-is-read.md).
+- **Done so far:** tasks 01 to 09 are implemented on 2026-10-21.
+  That is the manifest and the contract check, every shipped plugin's contracts, and the `x-ahpd-plugins` channel.
+  It is also connector kinds, JSON collections, the `x-ahpd-connectors` channel with `put` and `remove`, and the `webhook` kind, which makes endpoints out of connectors.
+  The docs say all of it: `PLUGINS.md` and `WEBHOOKS.md`, the changelog's break, the domain file and the index row.
+- **Next action:** the final verification checklist below, which is Softov's to run; the ahpw pages and the UI component tree are separate plans.
 - **Open questions:** none; the defaulted rows above are the ones to check.
 - **Watch out for:** "connector" is one configured account; "connector kind" is what a plugin registers. "Channel" is always an AHP `x-` channel. `on` is not a registration and has no contract.
 

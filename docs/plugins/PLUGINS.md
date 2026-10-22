@@ -163,6 +163,7 @@ against its contract before it is recorded.
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
 | `registerResourceProvider(scheme, provider)` | register, open key | One host-owned URI scheme, routed beside the `file:` store |
 | `registerChannel(scheme, channel)` | register, open key | One channel a client subscribes to, under an `x-` scheme; answers a handle to publish on |
+| `registerConnector(kind)` | register, open key | One connector kind, whose schema a client draws the form from, and the connectors a person makes of it |
 | `registerMethod(name, method)` | register, open key | One command a client sends by name, under an `x-` name |
 | `registerTerminals(store)` | set | `create` |
 | `registerChanges(source)` | set | `scopes`, `state`, `summary`, and the optional operations |
@@ -491,6 +492,59 @@ and a send meant for one of them carries `to` and a `visible` test both.
 Two plugins cannot serve one scheme: the later one is dropped with a problem
 line. `@ahpd/bot` serves `x-ahpd-bots://` this way, and [BOTS.md](BOTS.md)
 says what it sends.
+
+### A connector kind of your own
+
+A plugin may offer a connector kind: the form a person fills in to make one
+connector of it, and the capabilities a connector of that kind carries. The
+host keeps each connector as a JSON record, and calls the kind's `open` when one
+is made and when the daemon starts with one stored.
+
+```ts
+host.registerConnector({
+  name: 'webhook',
+  title: 'Webhook',
+  description: 'A URL that talks to a bot or fires an automation.',
+  schema: {
+    type: 'object',
+    properties: {
+      secret: { type: 'string', writeOnly: true, title: 'Secret', description: 'The bearer token a caller sends.' },
+      bot: { type: 'string', title: 'Bot', description: 'The bot a call talks to, as bot://<name>.' },
+    },
+    required: ['secret'],
+  },
+  capabilities: [{
+    type: 'receive',
+    name: 'calls',
+    title: 'Receives calls',
+    description: 'Answers a POST to its URL.',
+  }],
+  open(connector) {
+    serve(connector.id, connector.config);
+    return () => { stopServing(connector.id); };
+  },
+});
+```
+
+- `name` is a slug, and is the `kind` every connector of it records.
+- `schema` is the JSON Schema a client draws the form from, and what a `put`
+  checks `config` against. A field it marks `writeOnly` is a secret: the host
+  writes the value to the vault under the owner's scope and keeps
+  `{ "$secret": "<name>" }` in the record, so no record, snapshot, answer or log
+  holds it. A client sends an empty value for a field it is never shown, and the
+  connector keeps the secret it has.
+- `capabilities` are listed for a client and not run. The types are `receive`,
+  `command` and `action`, and `ui` is reserved for a later plan; a type this
+  version does not know is shown by its title.
+- `open(connector)` starts answering for one connector, which carries `id`,
+  `kind`, `owner`, an optional `title`, and `config` with each secret read back
+  from the vault. The answer is the function that stops it, or nothing when
+  there is nothing to stop. An `open` that throws leaves the connector stored
+  and shown as `invalid`.
+
+The schema can change between versions, and nothing migrates a stored
+connector: one whose config no longer fits shows as `invalid`, and one whose
+kind no plugin registers shows as `unavailable`. Neither is opened.
 
 ### A command of your own
 
@@ -822,8 +876,12 @@ in a moment is one event.
 
 ## The manifest
 
-A plugin that is a package declares its metadata in `package.json` and nowhere
-else. There is no `manifest.json`.
+A plugin declares its manifest before it runs: a description, the categories a
+client files it under, the links a person may follow, and the contracts that say
+what it may register. A package writes it in the `ahpd` field of its
+`package.json`, and a plugin loaded from a single file exports it as
+`manifest`. A plugin that has both is read from `package.json`. There is no
+`manifest.json`.
 
 ```json
 {
@@ -832,14 +890,36 @@ else. There is no `manifest.json`.
   "type": "module",
   "exports": { ".": "./dist/index.js" },
   "peerDependencies": { "@ahpd/sdk": ">=0.9" },
-  "ahpd": { "entry": "./dist/index.js", "title": "Mine" }
+  "ahpd": {
+    "entry": "./dist/index.js",
+    "title": "Mine",
+    "description": "A backend that runs my model.",
+    "categories": ["agent"],
+    "links": [{ "title": "Docs", "url": "https://example.com/mine" }],
+    "contracts": { "agents": ["mine"], "tools": ["mine-*"] }
+  }
 }
+```
+
+A single-file plugin exports the same fields, without `entry` or `options`:
+
+```ts
+export const manifest = {
+  description: 'Adds the notes channel and its command.',
+  categories: ['connector'],
+  links: [{ title: 'Repository', url: 'https://example.com/notes' }],
+  contracts: { channels: ['x-notes'], methods: ['x-notes/*'] },
+};
 ```
 
 | Key | |
 | --- | --- |
 | `ahpd.entry` | What to import, when `exports` is not enough to say. It wins over `exports`, `main` and `index.js` for resolution, and a mismatch with what the package resolves to is reported |
 | `ahpd.title` | What `ahpd plugin list` prints, unless the module exports its own `title` |
+| `ahpd.description` | One sentence on what the plugin does |
+| `ahpd.categories` | The groups a client files the plugin under, such as `agent` or `connector` |
+| `ahpd.links` | Where a person reads more, each a `{ "title", "url" }` |
+| `ahpd.contracts` | The names each kind of registration may use. See [the contracts](#the-contracts) |
 | `ahpd.options` | A required option the configuration must set before the plugin is `ready`. `true` or `{ "required": true }` means required. It is only reported by `ahpd plugin list`, which reads it from the manifest and calls no `apply`; a load holds the options to the module's `optionsSchema` instead |
 | `peerDependencies["@ahpd/sdk"]` | The compatibility range, checked **before** the module is imported. It states the oldest `@ahpd/sdk` the plugin needs |
 
@@ -850,7 +930,114 @@ instead of loading unchecked. A package with no `peerDependencies` loads, becaus
 absent is not incompatible.
 
 The module is still the contract: `entry` says what to import, `apply` says what
-it is.
+it is. The manifest is kept on the contribution, so the plugin channel lists it
+without importing the module again.
+
+### The contracts
+
+A contract key is the plural of a register method, and its entries are the names
+that method may be called with:
+
+| Key | The method it names |
+| --- | --- |
+| `agents` | `registerAgent(agent)`, by `provider` |
+| `tools` | `registerTool(tool)`, by the tool's `name` |
+| `sessionConfigs` | `registerSessionConfig(key, ...)`, by key |
+| `resourceProviders` | `registerResourceProvider(scheme, provider)`, by scheme |
+| `channels` | `registerChannel(scheme, channel)`, by scheme |
+| `methods` | `registerMethod(name, method)`, by name |
+| `connectors` | `registerConnector(kind)`, by kind name |
+| `triggerTypes` | `registerTriggerType(definition)`, by type |
+| `sessionMeta` | `registerSessionMeta(key, read)`, by key |
+| `ports` | every `set` registration: `registerRecords`, `registerVault`, `registerPolicies` and the rest |
+| `routes` | `registerRoute(handler)`, which takes no name, so the list says only that the plugin serves one |
+| `chatPreambles` | `registerChatPreamble(preamble)` |
+| `plans` | `registerPlan(plan)` |
+| `closers` | `registerClose(close)` |
+
+An entry may end in `*`, such as `claude-*`, or be `*`, for a name the plugin
+takes from its options. Anything else is the name exactly.
+
+A registration the contracts do not list fails that plugin, and the line names
+the method and the name:
+
+```
+plugin notes failed: plugin notes: channels needs x-note to be a name in contracts.channels
+```
+
+A contract that lists the kind but no name, because the list is empty, is
+refused with `... needs the registration to be one entry in contracts.routes`.
+
+A plugin that declares no `contracts` loads unchecked, as third-party plugins
+have always done, and the plugin channel marks it `undeclared`.
+
+## What a client sees
+
+The daemon serves two `x-ahpd-` channels, so a client shows what a plugin adds
+before a person uses it: one lists the plugins the configuration names, and the
+other the connector kinds and the connectors made from them.
+
+### `x-ahpd-plugins`
+
+One row per configured plugin, described without running it: `spec`, `name`,
+`state`, and `module`, `url`, `path`, `title` and `problem` where the daemon has
+them. A row carries the manifest the daemon loaded, and `undeclared: true` when
+the plugin declares no contracts. Reading needs `config:read`.
+
+Three commands change the file the daemon loads:
+
+| Method | Grant | What it does |
+| --- | --- | --- |
+| `x-ahpd/plugins/enable` | `config:write` | Turns the plugin on, keeping its entry and its options. Takes `id` |
+| `x-ahpd/plugins/disable` | `config:write` | Turns it off the same way. Takes `id` |
+| `x-ahpd/plugins/options` | `config:write` | Writes one option, checked against the plugin's own schema. Takes `id`, `key` and a `value`; a `value` left out takes the option out |
+
+The `id` is the plugin's id, which is also the row's id and the root config key
+it is edited by. A value the schema marks `writeOnly` is answered `<set>`. Every
+answer carries `restart: true`, because a running daemon loads the change at its
+next start.
+
+### `x-ahpd-connectors`
+
+One row for each connector kind, keyed `kind:<name>`, and one for each
+connector, keyed by its id. A kind row carries `name`, `title`, `description`,
+`schema`, `capabilities` and the `plugin` that registered it. A connector row
+carries its record, with `config` holding a reference where a secret was moved,
+and a `state`:
+
+| `state` | What it says |
+| --- | --- |
+| `open` | The kind was called and is answering |
+| `invalid` | Its config no longer fits its kind's schema, or the kind refused to open it |
+| `unavailable` | No loaded plugin registers its kind, so it cannot be opened |
+
+A kind row shows before any connector of it exists. `config:read` reads every
+row; without it a person reads the connectors owned by `user:<them>` and a
+member reads the ones owned by `team:<team>`, and a kind row takes the grant. A
+subscribe also takes `?owner=me`, which narrows the listing to the caller's own
+connectors and their teams'.
+
+Two commands change a connector:
+
+| Method | Grant | What it does |
+| --- | --- | --- |
+| `x-ahpd/connectors/put` | `config:write`, and the owner's | Makes or changes `{ id, kind, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
+| `x-ahpd/connectors/remove` | `config:write`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
+
+The owner narrows the grant: a `host` connector needs `config:write`, a
+`team:<team>` one needs `team:write` and membership of that team, and a
+`user:<id>` one needs the caller to be that person. A caller without the grant
+is refused, for reading and for each method.
+
+A `put` under a new owner keeps nothing of the old one's secrets, and takes the
+old names out of the vault. A secret field sent empty keeps the value the record
+holds, because a client is never shown one to send back. The vault names are
+`host:connector/<id>/<field>`, `team:<team>/connector/<id>/<field>` and
+`user:<id>/connector/<id>/<field>`.
+
+The daemon keeps its own connectors in the JSON collection `connectors`, so one
+is `<configDir>/connectors/<id>.json`. The `@ahpd/webhook` plugin registers the
+first kind; [WEBHOOKS.md](WEBHOOKS.md) says what an endpoint is.
 
 ## Naming a plugin
 
