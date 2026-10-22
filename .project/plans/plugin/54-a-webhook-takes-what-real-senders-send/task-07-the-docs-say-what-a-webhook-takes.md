@@ -1,6 +1,6 @@
 ---
 title: The docs say what a webhook takes
-status: todo
+status: implemented
 depends: [task-04-a-webhook-checks-each-senders-proof.md, task-05-a-webhook-answers-handshakes.md, task-06-a-bot-connector-works-by-default.md]
 layer: "docs"
 refs:
@@ -46,8 +46,8 @@ The README and the docs page agree.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** all steps. WEBHOOKS.md is rewritten around the connector: the field table, the `oneOf` refusals, the call and its answers, the ten schemes, the three handshakes, one connector for each of the eight senders, the bodies, the event data with a GitHub run, `match` with the GitHub `push`, the three targets and the owner rule, the bot target, the trigger with a `connector` config, the public port and the grants. The README's endpoint section is one current connector in the `x-ahpd/connectors/put` format, and its options table gains `maxBodyBytes`. AUTOMATIONS.md says a plugin trigger is checked on save, that an `x-ahpd-connector` field names a connector of its adapter, and that the owner rule is checked on both saves and again at a fire. PLUGINS.md documents `runAutomation`, the `owner` argument of `fireTrigger`, the two schema marks and the `oneOf` form. The changelog's unreleased section has four upgrading bullets for the breaks and a Webhooks section for the new behaviour.
+- **Next action:** none. The plan awaits review, and its final verification checklist is the next reader's.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** WEBHOOKS.md is not hard-wrapped; keep one paragraph on one line.
+- **Departures:** the plan's `plans/index.md` row and Resume state were updated to say the seven tasks are implemented, which no step asked for, because the row still said all seven were todo. The changelog's Webhooks section also names `PluginHost.runAutomation` and the schema marks, which are sdk changes rather than webhook docs. No commit was made, and `packages/sdk/test/fixtures/wire.jsonl` was rewritten by the earlier test runs.
+- **Watch out for:** WEBHOOKS.md is not hard-wrapped; keep one paragraph on one line. PLUGINS.md is wrapped around the adapter section and unwrapped around the trigger section, and each addition follows the paragraph it extends.

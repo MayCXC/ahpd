@@ -1,6 +1,6 @@
 ---
 title: A webhook reads any body and starts its target
-status: todo
+status: implemented
 depends: [task-02-references-owners-and-run-automation.md]
 layer: "webhook"
 refs:
@@ -58,9 +58,8 @@ A connector talks to its `bot`, starts its `automation`, or fires the `webhook` 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** all steps. `call.ts` reads a call once: the body up to `maxBodyBytes` (default 5 MiB, 413 over it, cut off mid-stream), parsed by its content type (JSON, form, text, `null` when empty), with headers lowercased minus `authorization`, `cookie` and the proof's own header, and the query minus `token`; `dataOf` adds `connector` and `method`. `allows` applies the connector's `match` to that data, refusing a missing path and answering `202 { skipped: true }`; `at` walks the dotted path. The route picks `bot`, then `automation`, then the trigger, each seam carrying the connector's owner from `adapter.open`. `automation` is now an id marked `x-ahpd-automation`, `match` is in the adapter schema, and `endpoints`/`Endpoint` carry `match` and `owner`. `checkEndpoint` refuses both targets and validates `match`; a connector with neither is allowed. The trigger field is `connector`, required, marked `x-ahpd-connector`. The plugin option `maxBodyBytes` is registered and passed to the route. `call.test.ts` covers the seven cases, and `webhook-kind.test.ts` reads a stored `automation: true` as `invalid`.
+- **Next action:** task-04-a-webhook-checks-each-senders-proof.md.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** task 04 checks a signature over the raw bytes, so keep them beside the parsed body.
-  The bot target reads `thread`, `text` and `callback` from the same parsed call.
+- **Departures:** `webhook-automation.test.ts` keeps only the trigger-type definition, because `automationTarget` was removed; the trigger, automation and owner cases moved to `call.test.ts` and `webhook-route.test.ts`. The stored-connector `invalid` case uses a small schema check mirroring the subset the daemon's checker reads, because the real checker belongs to the server package. The adapter schema does not yet use `oneOf`/`allOf`: the checker the server uses supports neither `not` nor `allOf`, so "both targets" is refused in `checkEndpoint` and the bot-only fields move into a `oneOf` branch in task 06. No commit was made: `git add`/`git commit` and `git checkout` of `wire.jsonl` are denied in this session, so the files stay uncommitted.
+- **Watch out for:** the proof header is not known to `readCall` yet, so task 04 passes it as `omit`, and a signature is checked over `call.raw`. The bot target now reads `Call`, not `Request`.

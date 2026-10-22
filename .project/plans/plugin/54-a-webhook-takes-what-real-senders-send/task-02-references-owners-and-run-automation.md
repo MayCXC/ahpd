@@ -1,6 +1,6 @@
 ---
 title: References and owners are checked, and a plugin runs one automation
-status: todo
+status: implemented
 depends: [task-01-plugin-trigger-checked-on-save-and-fire.md]
 layer: "sdk, server"
 refs:
@@ -53,9 +53,9 @@ A plugin starts one automation by its id, and every fire carries the owner of th
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `types/connectors.ts` has `ConnectorRef { id, adapter, owner? }`. `types/plugin.ts` gives `PluginTriggers.deliver` and `PluginHost.fireTrigger` an optional `owner`, adds `PluginTriggers.run` and `PluginHost.runAutomation(id, data, owner)`, and `plugins/plugins.ts` forwards both to the host. `automations/automations.ts` has `AutomationsOptions.connectors`, exported `sameOwnerOrHost` (a `host` connector matches anyone, `root:<host>` is treated as the host), and `checkReferences`, which reads `x-ahpd-connector: { adapter }` off each field of a trigger type's `configSchema`, refuses an id this host does not serve as that adapter, and refuses one whose owner fails the rule; `create` and `update` call it, `update` against the automation's stored owner. `host/automations.ts` skips a fire's automations the connector owner fails, and `runOne` resolves the named resource, applies the owner, off and `maySee` rules with one problem line each, then starts a run with origin `{ kind: 'trigger', triggerId, event: data }`; a missing automation is logged rather than started. `connectors/channel.ts` keeps a `known` map filled by every read of the collection and by put and remove, exposed as `refs()`, and `checkAutomationLinks` refuses a put whose `x-ahpd-automation` field names no automation or one the connector's owner may not start. `server/src/scheduled.ts` forwards `store` and checks references in its client-facing create and update only. `server/src/commands/run.ts` builds one automation store (memory or daemon) with the plugin types getter and `connectorLists.refs()`, keeps it in `automationsStore` for the connectors channel lookup, and fills `pluginTypes` after the fold. `references.test.ts` has the five cases: another person's connector refused at save, the host's accepted, a connector naming another person's automation refused through the host's put, a fire owned by alice not waking bob's automation, and `runAutomation` starting one run of the named automation only, with its data on the origin.
+- **Next action:** task 03.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** the reference check is synchronous, so the connectors channel keeps a snapshot (`refs()`) rather than the store awaiting the collection; the snapshot is filled by `stored()` on every listing and by this channel's own put and remove, and `run.ts` calls `openAll()` before serving clients. A definition restored from a file is not checked: `scheduledAutomations` checks references in its client-facing wrapper and its initial restore and reload call the inner store directly, because a connector may be loaded after the file is read. `runAutomation`'s `triggerId` is the first event trigger's id, and empty when the automation has no event trigger. This task could not be committed: `git add`, `git commit` and the wire fixture restore are denied by the running permission mode, and `packages/sdk/test/fixtures/wire.jsonl` is modified again by the suite.
 - **Watch out for:** a connector owner is `host`, `team:<id>` or `user:<id>`, and an automation owner can also be `project:<id>` or `root:<host>`.
   A `project:` owner matches only the host's connectors.

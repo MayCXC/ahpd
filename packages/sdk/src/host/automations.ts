@@ -1,7 +1,7 @@
 import { computerSource } from '../machines/computers.js';
 import { Status, idOf } from '../sessions/catalog.js';
 import { INVALID_PARAMS, RpcError } from '../rpc.js';
-import { EVENT_TRIGGERS, pluginTriggerTypes } from '../automations/automations.js';
+import { EVENT_TRIGGERS, pluginTriggerTypes, sameOwnerOrHost, wrongIn } from '../automations/automations.js';
 import { presetById } from '../automations/triggerpresets.js';
 import { localPath } from '../resources/fileuri.js';
 import { createRuleEngine } from '../automations/triggers.js';
@@ -12,6 +12,7 @@ import { CLOSING, need } from './common.js';
 import { refusalReason } from './gate.js';
 import type { Bag } from '../types/common.js';
 import type { AutomationEntry, AutomationRun, AutomationRunState, RunEnding, StartSession } from '../types/automations.js';
+import type { ConnectorOwner } from '../types/connectors.js';
 import type { PluginStarts, TriggerTypeDefinition } from '../types/plugin.js';
 import type { RuleMatch } from '../automations/triggers.js';
 import type { WakeFacts } from '../automations/wakemessage.js';
@@ -80,6 +81,10 @@ const eventTitle = (type: string, id: string): string =>
 /** What a plugin's own type calls one of its events, in the words a person reads. */
 const eventName = (type: TriggerTypeDefinition, id: string): string =>
   type.events.find((one) => one.id === id)?.title ?? id;
+
+/** The resource an automation id names, or the URI it already is. */
+const automationResource = (id: string): string =>
+  (id.startsWith('ahp-automation:/') ? id : `ahp-automation:/${id}`);
 
 /**
  * Whose an automation is, as the entry a client reads carries it.
@@ -985,6 +990,16 @@ export function createAutomations(ctx: HostContext): Automations {
    */
   const watched = new Map<string, Waking>();
 
+  /**
+   * The refusals already said, by automation and sentence.
+   *
+   * A fire may come every few seconds from a sender nobody stopped, so a
+   * trigger whose config its type refuses is said once rather than on every
+   * call. The sentence is part of the key, so a config edited into a different
+   * mistake is a new one to say.
+   */
+  const refusedSaid = new Set<string>();
+
   /** What an automation that names no owner sees, which the daemon may narrow. */
   const unownedSees = options.unownedAutomations ?? 'every';
 
@@ -1171,7 +1186,7 @@ export function createAutomations(ctx: HostContext): Automations {
    * event are what fill the message. A plugin names no session, because it may
    * have none to name, and a message asking for one is filled with nothing.
    */
-  const fired = (by: string, type: string, event: string, data: Record<string, unknown>): void => {
+  const fired = (by: string, type: string, event: string, data: Record<string, unknown>, owner?: ConnectorOwner): void => {
     if (ctx.closed) return;
     const held = pluginType(type);
     if (held === undefined) return;
@@ -1186,14 +1201,86 @@ export function createAutomations(ctx: HostContext): Automations {
       return;
     }
     const title = eventName(held.definition, event);
+    const schema = held.definition.configSchema;
     for (const [automation, one] of watched) {
       if (one.type !== type || !one.events.includes(event)) continue;
+      /*
+       * A config the type's schema refuses is a trigger this host cannot know
+       * the meaning of, so it does not run: a save after the type was loaded is
+       * refused, and one written before it - or against a type this store never
+       * saw - is caught here instead of firing on a rule nobody meant.
+       */
+      if (schema !== undefined) {
+        const wrong = wrongIn(one.config, schema);
+        if (wrong !== undefined) {
+          const said = `${automation}\n${type}\n${wrong}`;
+          if (!refusedSaid.has(said)) {
+            refusedSaid.add(said);
+            log(`${automation} holds a ${type} trigger its type refuses (${wrong}), so this fire did not wake it`);
+          }
+          continue;
+        }
+      }
       if (!configMatches(one.config, data)) continue;
+      /*
+       * A fire that names the owner of the connector it came from may wake only
+       * an automation that may read that connector. A plugin firing with no
+       * owner - a machine going away, a forecast - names none, and its fire is
+       * the host's own rather than a connector's.
+       */
+      if (owner !== undefined && !sameOwnerOrHost(owner, one.owner)) continue;
       if (!maySee(one.owner)) continue;
       const origin = { kind: 'trigger', triggerId: one.id, event: { ...data, event } };
       const facts: WakeFacts = { trigger: one.title, event: title, count: 1, at: new Date().toISOString(), data };
       request(automation, origin, facts, `${automation} woke on ${title} from ${by}`, true);
     }
+  };
+
+  /**
+   * Start one automation by its id, for a plugin that knows which one it means.
+   *
+   * A fire reaches every automation watching a type; this reaches the one the
+   * caller named, and is what a connector holding an automation id uses. The
+   * owner is the connector's, compared the way a fire's is, and a run that is
+   * switched off or gone is said rather than started - a plugin asking for one
+   * that cannot run is owed a line, unlike a fire that reached nobody.
+   *
+   * The origin is the first event trigger's, because that is the row the
+   * protocol points `triggerId` at, and the plugin's own data goes on `event`.
+   */
+  const runOne = (by: string, id: string, data: Record<string, unknown>, owner?: ConnectorOwner): void => {
+    if (ctx.closed) return;
+    const resource = automationResource(id);
+    const found = options.automations?.get(resource);
+    if (found === undefined) {
+      log(`${by} asked for ${resource}, which this host does not hold`);
+      return;
+    }
+    const automationOwner = ownerOf(found as AutomationEntry);
+    if (owner !== undefined && !sameOwnerOrHost(owner, automationOwner)) {
+      log(`${by} asked for ${resource} from ${owner}, whose owner is ${automationOwner ?? 'the host'}, so it was not run`);
+      return;
+    }
+    if (found.definition.enabled === false) {
+      log(`${by} asked for ${resource}, which is switched off, so it was not run`);
+      return;
+    }
+    if (!maySee(automationOwner)) {
+      log(`${by} asked for ${resource}, which belongs to ${automationOwner ?? 'nobody to this host'}, so it was not run`);
+      return;
+    }
+    const trigger = eventTrigger(found.definition);
+    const event = eventsOf(trigger ?? {})[0] ?? '';
+    const type = pluginType(String(trigger?.type ?? ''));
+    const facts: WakeFacts = {
+      trigger: String(trigger?.title ?? resource),
+      event: type === undefined ? event : eventName(type.definition, event),
+      count: 1,
+      at: new Date().toISOString(),
+      data,
+    };
+    const origin = { kind: 'trigger', triggerId: String(trigger?.id ?? ''), event: data };
+    void fly(resource, origin, facts, `${by} asked for ${resource}`);
   };
 
   /** The rule engine, with the clock a test may hand it and the host's own answer. */
@@ -1267,7 +1354,8 @@ export function createAutomations(ctx: HostContext): Automations {
    * meant.
    */
   for (const one of options.pluginTriggers ?? []) {
-    one.deliver = (type, event, data) => { fired(one.by, type, event, data); };
+    one.deliver = (type, event, data, owner) => { fired(one.by, type, event, data, owner); };
+    one.run = (automation, data, owner) => { runOne(one.by, automation, data, owner); };
   }
 
   /*

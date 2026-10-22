@@ -36,6 +36,27 @@ const WEATHER: TriggerTypeDefinition = {
   events: [{ id: 'storm', title: 'A storm is coming', description: 'Heavy rain on the way.' }],
 };
 
+/**
+ * A type that asks for a field, the way the webhook type asks for its connector.
+ *
+ * Nothing about the host knows what `connector` means: the type says it is
+ * required, and a save that leaves it out is refused with that word, because a
+ * trigger this host cannot place is one it would never fire for the right call.
+ */
+const DEPLOY: TriggerTypeDefinition = {
+  type: 'webhook',
+  title: 'A webhook call',
+  description: 'A call that arrived at an endpoint.',
+  events: [{ id: 'call', title: 'A call', description: 'An endpoint was called.' }],
+  configSchema: {
+    type: 'object',
+    properties: {
+      connector: { type: 'string', title: 'Connector', description: 'The connector the call came to.' },
+    },
+    required: ['connector'],
+  },
+};
+
 /** One automation watching for that event, the way a client would have saved it. */
 const BATTEN: Bag = {
   title: 'Batten down',
@@ -78,10 +99,16 @@ const until = async (done: () => boolean, what: string, tries = 600): Promise<vo
  * is read when the store says it moved, and that path has its own file.
  */
 function offered(definitions: TriggerTypeDefinition[] = [WEATHER], written?: Bag, over: Partial<HostOptions> = {}) {
-  const store = memoryAutomations();
+  // Read at each save, so the store checks a definition written after the
+  // plugins were loaded and leaves one written before them alone - which is
+  // the order a daemon starts in, and what a definition restored from a file
+  // looks like.
+  const types: TriggerTypeDefinition[] = [];
+  const store = memoryAutomations({ pluginTypes: () => types });
   if (written !== undefined) store.create(AUTOMATION, written);
   const { host: plugin, contribution } = pluginHost('weather', context());
   for (const one of definitions) plugin.registerTriggerType(one);
+  types.push(...definitions);
 
   const base: HostOptions = {
     path: DIR,
@@ -139,6 +166,12 @@ const battenWith = (config: Bag): Bag => ({
   triggers: [{ ...(BATTEN['triggers'] as Bag[])[0], config }],
 });
 
+/** BATTEN, with its one trigger re-pointed at `type` and `event`, holding `config`. */
+const triggerOf = (type: string, event: string, config: Bag): Bag => ({
+  ...BATTEN,
+  triggers: [{ id: 't1', kind: 'event', type, title: 'A call', events: [{ id: event }], config }],
+});
+
 it('runs a trigger whose config matches the fire data', async () => {
   const { plugin, store, client } = offered([WEATHER], battenWith({ where: 'the coast' }));
   await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
@@ -177,12 +210,55 @@ it('does not run a trigger whose config differs on a key the data holds, beside 
   expect(bag(bag(runs(store)[0]?.['origin'])['event'])).toMatchObject({ where: 'the hills' });
 });
 
-it('runs a trigger with no config on every fire of its type and event', async () => {
+it('runs a trigger with no config when its type requires nothing', async () => {
+  // The weather type has no schema, so an empty config is the whole of its
+  // rule. A type that requires a field is the other side of this, below: the
+  // save is refused without it, and a stored one that has it missing does not run.
   const { plugin, store, client } = offered([WEATHER], { ...BATTEN, _meta: { ahpd: { overlap: 'parallel' } } });
   await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
   plugin.fireTrigger('weather', 'storm', { where: 'the coast' });
   plugin.fireTrigger('weather', 'storm', { where: 'the hills' });
   await until(() => runs(store).length === 2, 'a run for each fire');
+});
+
+it('refuses a save whose plugin trigger leaves out a field its type requires', () => {
+  const { store } = offered([DEPLOY]);
+  // Named as the client wrote it, so the form can point at the field to fill.
+  expect(() => store.create(AUTOMATION, triggerOf('webhook', 'call', {}))).toThrow('connector is required');
+});
+
+it('refuses a save whose plugin trigger names an event its type does not offer', () => {
+  const { store } = offered([DEPLOY]);
+  // A config that passes, beside an event nobody offers: the event is the one
+  // thing wrong, and the id is named rather than the type.
+  expect(() => store.create(AUTOMATION, triggerOf('webhook', 'calls', { connector: 'deploys' })))
+    .toThrow('calls is not an event this host watches for');
+});
+
+it('saves a trigger of a type no loaded plugin registers', () => {
+  const { store } = offered([DEPLOY]);
+  // A plugin that is not loaded today may be loaded tomorrow, so its type is
+  // not a name this store can call wrong - neither its config nor its events.
+  expect(() => store.create(AUTOMATION, triggerOf('nobody', 'anything', {}))).not.toThrow();
+});
+
+it('does not run a stored trigger whose config its type refuses, and says so once', async () => {
+  const lines: string[] = [];
+  const { plugin, store, client } = offered([DEPLOY], triggerOf('webhook', 'call', {}), {
+    onEvent: (line) => { lines.push(line); },
+  });
+  await client.handle(hello(['0.9.0'], { clientId: 'probe', initialSubscriptions: [ROOT] }));
+
+  // Written before the plugin was loaded, so the save never saw the schema.
+  // The fire is where the host finds out, and it does not wake the automation.
+  plugin.fireTrigger('webhook', 'call', { connector: 'deploys' });
+  plugin.fireTrigger('webhook', 'call', { connector: 'deploys' });
+  await until(() => lines.some((line) => line.includes('connector is required')), 'the problem line');
+  await new Promise((r) => { setTimeout(r, 20); });
+
+  expect(runs(store)).toEqual([]);
+  // Once, though the sender called twice: a fire can come every few seconds.
+  expect(lines.filter((line) => line.includes('connector is required'))).toHaveLength(1);
 });
 
 it('leaves an automation nobody owns out when the host says so', async () => {

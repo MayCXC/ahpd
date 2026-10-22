@@ -7,8 +7,10 @@ import { durationMs } from './triggers.js';
 import { WATCH_PRESETS } from './triggerpresets.js';
 import type { Automation, AutomationEntry, AutomationRun, AutomationStore, StartSession } from '../types/automations.js';
 import type { Bag } from '../types/common.js';
+import type { ConnectorOwner, ConnectorRef } from '../types/connectors.js';
 import type { PluginTriggers } from '../types/plugin.js';
 import type { SessionEventKind } from '../types/triggers.js';
+import type { Owner } from '../types/usage.js';
 import { bag } from '../utils/values.js';
 
 /**
@@ -26,6 +28,52 @@ import { bag } from '../utils/values.js';
  */
 
 const now = (): string => new Date().toISOString();
+
+/**
+ * What a store reads when it checks a definition.
+ *
+ * A store is built before the plugins are loaded, so the types a plugin offers
+ * are read through a function rather than handed over once: a save after the
+ * load is checked against them, and a save during it is checked against what
+ * was known then.
+ */
+export interface AutomationsOptions {
+  /**
+   * The trigger types the plugins offer, read at each save.
+   *
+   * A type that is not here is a trigger this store does not check, which is
+   * what a plugin that is not loaded offers: the automation may still be
+   * written, and it fires nothing.
+   */
+  pluginTypes?: () => readonly AutomationTriggerDefinition[];
+  /**
+   * The connectors this host serves, read at each save.
+   *
+   * A schema field marked `x-ahpd-connector` names one of these, and a save is
+   * refused when the field names none of the adapter it asks for or one whose
+   * owner the automation may not read. Absent on an embedder with no
+   * connectors, which checks no reference - the same answer a type no plugin
+   * registers gets.
+   */
+  connectors?: () => readonly ConnectorRef[];
+}
+
+/**
+ * Whether a connector may be the one an automation of `automation` names.
+ *
+ * The same owner, or the connector is the host's, which everyone it serves may
+ * use. An automation owned by `root:<host>` is the host's own and compares as
+ * the host rather than as a fifth kind of owner, and an automation nobody owns
+ * is host work too - it reaches the host's connectors and none of a person's.
+ * A `project:` owner is not the host: it reaches the host's connectors and
+ * nothing else.
+ */
+export const sameOwnerOrHost = (connector: ConnectorOwner | undefined, automation: Owner | undefined): boolean => {
+  if (connector === undefined) return false;
+  if (connector === 'host') return true;
+  if (automation === undefined || automation.startsWith('root:')) return false;
+  return connector === automation;
+};
 
 /** How many runs a summary list carries before it needs a cursor. */
 const PAGE = 20;
@@ -221,9 +269,14 @@ const holds = (value: unknown, property: ConfigPropertySchema): boolean => {
  *
  * A field the schema does not name is refused rather than ignored, which is
  * the difference between a rule this host will fire and one it will quietly
- * never fire.
+ * never fire. A field the schema requires and the config leaves out is refused
+ * too: a plugin type asks for what it needs, and a save that leaves it out is
+ * a trigger that would never mean what the form says.
  */
-const wrongIn = (value: Bag, schema: ConfigSchema, at = ''): string | undefined => {
+export const wrongIn = (value: Bag, schema: ConfigSchema, at = ''): string | undefined => {
+  for (const key of schema.required ?? []) {
+    if (value[key] === undefined) return `${at === '' ? key : `${at}.${key}`} is required`;
+  }
   for (const [key, given] of Object.entries(value)) {
     const where = at === '' ? key : `${at}.${key}`;
     const property = schema.properties[key];
@@ -253,6 +306,53 @@ const wrongIn = (value: Bag, schema: ConfigSchema, at = ''): string | undefined 
 };
 
 /**
+ * Refuse a definition whose trigger names a connector it may not read.
+ *
+ * A config field marked `x-ahpd-connector` names a stored connector: the
+ * annotation says which adapter it is one of, and the save is where the claim
+ * is checked. A field naming a connector this host does not serve, or one of
+ * another adapter, is refused with the id named; one whose owner the automation
+ * may not read is refused too, so one person's automation cannot be pointed at
+ * another person's calls.
+ *
+ * Read when the store is created, and again by a store that keeps files before
+ * a client's write reaches it - a definition restored from a file is the host's
+ * own record and is not checked here: the connector may be loaded after it.
+ */
+export const checkReferences = (
+  definition: Bag,
+  owner: Owner | undefined,
+  types: readonly AutomationTriggerDefinition[],
+  connectors: (() => readonly ConnectorRef[]) | undefined,
+): void => {
+  if (connectors === undefined) return;
+  const served = connectors();
+  for (const raw of Array.isArray(definition.triggers) ? definition.triggers : []) {
+    const trigger = bag(raw);
+    if (trigger.kind !== 'event') continue;
+    const type = types.find((one) => one.type === trigger.type);
+    if (type?.configSchema === undefined) continue;
+    const config = bag(trigger.config);
+    for (const [field, property] of Object.entries(type.configSchema.properties ?? {})) {
+      const wanted = bag(property)['x-ahpd-connector'];
+      const adapter = typeof wanted === 'string' ? wanted : String(bag(wanted)['adapter'] ?? '');
+      if (adapter === '') continue;
+      const id = config[field];
+      // A field left out is the schema's own refusal, by its `required`, and a
+      // value of another type is `wrongIn`'s. Neither is a reference to check.
+      if (typeof id !== 'string' || id === '') continue;
+      const found = served.find((one) => one.id === id && one.adapter === adapter);
+      if (found === undefined) {
+        throw new Error(`${field} names ${id}, and this host serves no ${adapter} connector with that id`);
+      }
+      if (!sameOwnerOrHost(found.owner, owner)) {
+        throw new Error(`${field} names ${id}, which belongs to ${found.owner ?? 'nobody'}, so this automation cannot read its calls`);
+      }
+    }
+  }
+};
+
+/**
  * Refuse a definition carrying an event trigger this store cannot honour.
  *
  * Thrown rather than answered, because that is how a write is refused on this
@@ -261,14 +361,16 @@ const wrongIn = (value: Bag, schema: ConfigSchema, at = ''): string | undefined 
  * is left alone - a plugin may register one, and until it does the host will
  * not fire it.
  */
-const checkTriggers = (definition: Bag): void => {
+const checkTriggers = (definition: Bag, types: readonly AutomationTriggerDefinition[]): void => {
   for (const raw of Array.isArray(definition.triggers) ? definition.triggers : []) {
     const trigger = bag(raw);
     if (trigger.kind !== 'event') continue;
-    const type = EVENT_TRIGGERS.find((one) => one.type === trigger.type);
-    if (type?.configSchema === undefined) continue;
-    const wrong = wrongIn(bag(trigger.config), type.configSchema);
-    if (wrong !== undefined) throw new Error(wrong);
+    const type = types.find((one) => one.type === trigger.type);
+    if (type === undefined) continue;
+    if (type.configSchema !== undefined) {
+      const wrong = wrongIn(bag(trigger.config), type.configSchema);
+      if (wrong !== undefined) throw new Error(wrong);
+    }
     for (const chosen of Array.isArray(trigger.events) ? trigger.events : []) {
       const id = String(bag(chosen).id ?? '');
       if (!type.events.some((one) => one.id === id)) throw new Error(`${id} is not an event this host watches for`);
@@ -393,8 +495,12 @@ const windowed = (runs: AutomationRun[]): AutomationRun[] => {
 };
 
 
-export function memoryAutomations(): AutomationStore {
+export function memoryAutomations(options: AutomationsOptions = {}): AutomationStore {
   const held = new Map<string, Automation>();
+  /** The types a save is checked against: this host's own, and what the plugins offer. */
+  const types = (): readonly AutomationTriggerDefinition[] => [
+    ...EVENT_TRIGGERS, ...(options.pluginTypes?.() ?? []),
+  ];
   /** Runs by automation, newest first. */
   const history = new Map<string, AutomationRun[]>();
   /**
@@ -528,7 +634,8 @@ export function memoryAutomations(): AutomationStore {
     triggers: () => EVENT_TRIGGERS,
 
     create: (resource, definition, owner, runCount, customizations) => {
-      checkTriggers(definition);
+      checkTriggers(definition, types());
+      checkReferences(definition, owner, types(), options.connectors);
       checkWake(definition);
       const at = now();
       const made: Automation = {
@@ -555,7 +662,10 @@ export function memoryAutomations(): AutomationStore {
       // Only a patch that carries triggers is a patch about them: an
       // automation written before this store checked anything is still
       // editable, and what it holds is refused the moment it is rewritten.
-      if (changes.triggers !== undefined) checkTriggers(changes);
+      if (changes.triggers !== undefined) checkTriggers(changes, types());
+      // A patch never moves the owner, so the reference is judged against the
+      // automation's own rather than against whoever edited it last.
+      if (changes.triggers !== undefined) checkReferences(changes, found.owner, types(), options.connectors);
       // The waking settings are read together - what a run does about another
       // one is a question about both - so a patch touching either of them is
       // judged on what the definition would then say rather than on the patch.

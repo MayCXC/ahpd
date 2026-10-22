@@ -30,15 +30,17 @@
  */
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
+import { sameOwnerOrHost } from '../automations/automations.js';
 import { scopeOf, secretRef } from '../access/vault.js';
 import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import { membership } from '../usage/scopes.js';
 import { bag, isRecord, reason } from '../utils/values.js';
-import type { Connector, ConnectorOwner, ServedAdapter } from '../types/connectors.js';
+import type { Connector, ConnectorOwner, ConnectorRef, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
+import type { Owner } from '../types/usage.js';
 import type { Vault } from '../types/vault.js';
 
 /** The channel's scheme, and the domain its two commands are named under. */
@@ -76,6 +78,14 @@ export interface ConnectorsChannelOptions {
    * runtime, and the schema checker the daemon uses belongs to the server.
    */
   check(value: unknown, schema: Record<string, unknown>, label: string): void;
+  /**
+   * One automation a schema field may name, by id, read at each put.
+   *
+   * A field marked `x-ahpd-automation: true` names one of these, and a put is
+   * refused when it names none or one the connector's owner may not read.
+   * Absent on a host with no automations store, which checks no reference.
+   */
+  automations?(id: string): { owner?: Owner | undefined } | undefined;
   /** Where a connector that could not be opened is said. */
   onProblem?(message: string): void;
 }
@@ -88,6 +98,15 @@ export interface ConnectorsChannel {
   methods: Record<string, PluginMethod>;
   /** Send every reader what the connectors are now. */
   refresh(): Promise<void>;
+  /**
+   * Every stored connector as a save that may name one reads it, as of the
+   * last read of the collection.
+   *
+   * Id, adapter and owner, synchronously - what an automation's save is checked
+   * against, which cannot wait for a collection that answers later. Filled by
+   * every listing and by this channel's own puts and removes.
+   */
+  refs(): readonly ConnectorRef[];
   /** Open every stored connector of a registered adapter, as a start does. */
   openAll(): Promise<void>;
 }
@@ -95,6 +114,8 @@ export interface ConnectorsChannel {
 export function connectorsChannel(options: ConnectorsChannelOptions): ConnectorsChannel {
   /** The owner of each stored connector, as the last read of the collection found it. */
   const owners = new Map<string, ConnectorOwner | undefined>();
+  /** The same connectors as a reference is checked against: id, adapter and owner. */
+  const known = new Map<string, ConnectorRef>();
   /** What stops each open connector, by id; an id in the map was opened. */
   const open = new Map<string, (() => void | Promise<void>) | undefined>();
 
@@ -193,8 +214,45 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /** The connector records the store holds, and the owner each names. */
   const stored = async (): Promise<StoredRecord[]> => {
     const records = await options.collection.list();
-    for (const one of records) owners.set(one.id, asOwner(one.owner));
+    owners.clear();
+    known.clear();
+    for (const one of records) {
+      owners.set(one.id, asOwner(one.owner));
+      known.set(one.id, { id: one.id, adapter: String(one.adapter), owner: asOwner(one.owner) });
+    }
     return records;
+  };
+
+  /** The fields an adapter's schema marks `x-ahpd-automation`: the ones that name an automation. */
+  const automationFields = (schema: Record<string, unknown>): string[] =>
+    Object.entries(bag(schema['properties']))
+      .filter(([, one]) => isRecord(one) && one['x-ahpd-automation'] === true)
+      .map(([field]) => field);
+
+  /**
+   * Refuse a config naming an automation this connector's owner may not read.
+   *
+   * Read off the adapter's schema rather than the config, so a field the
+   * adapter marks and the client left out is no reference at all - the schema's
+   * own rules say whether it was required.
+   */
+  const checkAutomationLinks = (adapter: ServedAdapter, config: Record<string, unknown>, owner: ConnectorOwner): void => {
+    const lookup = options.automations;
+    if (lookup === undefined) return;
+    for (const field of automationFields(adapter.schema)) {
+      const named = config[field];
+      if (named === undefined || named === '') continue;
+      if (typeof named !== 'string') {
+        throw new RpcError(INVALID_PARAMS, `A connector's ${field} names an automation, so it is sent as its id`);
+      }
+      const found = lookup(named);
+      if (found === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${field} names ${named}, and this host holds no such automation`);
+      }
+      if (!sameOwnerOrHost(owner, found.owner)) {
+        throw new RpcError(INVALID_PARAMS, `${field} names ${named}, which belongs to ${found.owner ?? 'the host'}, so ${owner} may not start it`);
+      }
+    }
   };
 
   const source = {
@@ -424,6 +482,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       } catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
+      checkAutomationLinks(adapter, config, owner);
       const moved = await moveSecrets(adapter, config, kept, owner, id, options.vault());
       const record: StoredRecord = {
         id,
@@ -435,6 +494,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       await close(id);
       await options.collection.put(record);
       owners.set(id, owner);
+      known.set(id, { id, adapter: adapterName, owner });
       // The secrets kept under the owner it left are no record's any more.
       if (moving && was !== undefined) await forgetAll(before, was, id);
       try {
@@ -472,6 +532,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       await forgetAll(before, owner, id);
       await options.collection.remove(id);
       owners.delete(id);
+      known.delete(id);
       await channel.refresh();
       return {};
     },
@@ -483,6 +544,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     channel,
     methods,
     refresh: () => channel.refresh(),
+    refs: () => [...known.values()],
     /*
      * Every stored connector of a registered adapter, in id order, so two
      * connectors that answer on one URL open the same way on every start.

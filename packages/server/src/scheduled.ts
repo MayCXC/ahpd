@@ -11,6 +11,7 @@ import type { FSWatcher } from 'node:fs';
 import { join } from 'node:path';
 import {
   bag,
+  checkReferences,
   disableConditionsOf,
   memoryAutomations,
   nextOccurrence,
@@ -24,6 +25,7 @@ import type {
   Automation,
   AutomationEntry,
   AutomationStore,
+  AutomationsOptions,
   Bag,
   CapturedPlugin,
   Cron,
@@ -59,6 +61,16 @@ export interface ScheduledOptions {
   timer?(fire: () => void, ms: number): { cancel(): void };
   /** Somewhere to say that a definition could not be read. */
   onProblem?(message: string): void;
+  /**
+   * What a client's save is checked against beyond the store's own rules.
+   *
+   * The plugin trigger types, and the connectors an `x-ahpd-connector` field
+   * may name. Read here rather than handed to the store underneath, because a
+   * definition restored from a file is not checked: the connectors and the
+   * plugins are loaded after this store is built, and a file is the host's own
+   * record rather than a client's claim.
+   */
+  store?: AutomationsOptions;
 }
 
 /**
@@ -275,7 +287,15 @@ const textOf = (held: Held): string => automationFile(held.definition, held);
  * wrote down, which is the definition and when it next fires.
  */
 export function scheduledAutomations(options: ScheduledOptions): AutomationStore {
-  const inner = memoryAutomations();
+  // The plugin types only: a reference is checked in `create`/`update` below,
+  // where a client's save is told apart from a file this store restored.
+  const inner = memoryAutomations(options.store?.pluginTypes === undefined
+    ? {}
+    : { pluginTypes: options.store.pluginTypes });
+  /** The types a reference may be marked on, read at each client save. */
+  const types = (): ReturnType<AutomationStore['triggers']> => [
+    ...inner.triggers({}), ...(options.store?.pluginTypes?.() ?? []),
+  ];
   const dir = options.dir;
   const state = options.state;
   const now = options.now ?? ((): Date => new Date());
@@ -845,6 +865,7 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
       // here is a file and a resource with no usable id is one nothing could
       // name that file after.
       idFor(resource);
+      checkReferences(definition, owner, types(), options.store?.connectors);
       const made = inner.create(resource, definition, owner, runCount, customizations);
       stamps.set(resource, { createdAt: made.createdAt, modifiedAt: made.modifiedAt });
       // `onChanged` above has already rearmed and written; the stamp is set
@@ -854,6 +875,12 @@ export function scheduledAutomations(options: ScheduledOptions): AutomationStore
     },
 
     update: (resource, changes, customizations) => {
+      // A patch never moves the owner, so a trigger it writes is judged against
+      // the automation's own owner rather than the editor's.
+      if (changes.triggers !== undefined) {
+        const held = inner.get(resource);
+        checkReferences(changes, ownerOf((held?._meta as Bag | undefined)?.['ahpd.owner']), types(), options.store?.connectors);
+      }
       const after = inner.update(resource, changes, customizations);
       if (!after) return undefined;
       const stamp = stamps.get(resource);

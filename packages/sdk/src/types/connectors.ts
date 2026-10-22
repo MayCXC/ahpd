@@ -49,6 +49,24 @@ export interface Capability {
  */
 export type ConnectorOwner = 'host' | `team:${string}` | `user:${string}`;
 
+/**
+ * One stored connector as a save that may name it reads it.
+ *
+ * Id, adapter and owner and nothing else, because that is the whole of what a
+ * reference is checked against: a schema field naming a connector has to find
+ * one of the adapter it asks for, and one whose owner the automation may read.
+ * A record written by hand may name no owner, and such a connector is not one
+ * a save may link to.
+ */
+export interface ConnectorRef {
+  /** The connector's id: the slug its record is kept under. */
+  id: string;
+  /** The adapter it is one of. */
+  adapter: string;
+  /** Whose it is; absent on a record that names no scope. */
+  owner?: ConnectorOwner | undefined;
+}
+
 /** One connector, as an adapter's `open` is handed it. */
 export interface Connector {
   /** The connector's id: a slug, and the name its record is kept under. */
