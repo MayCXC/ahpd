@@ -1,7 +1,7 @@
 import { reason } from '@ahpd/sdk';
 import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
-import { webhookKind } from './kind.js';
+import { webhookAdapter } from './adapter.js';
 import { NAME, webhookRoute } from './route.js';
 import type { Bag, Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
 import type { BotChat, BotSeams } from './bot.js';
@@ -10,8 +10,8 @@ import type { Endpoint } from './record.js';
 /**
  * The package as a plugin.
  *
- * One route, `/plugins/webhook/<endpoint>`, and the `webhook` connector kind
- * whose open connectors the route serves. Each endpoint holds its own secret,
+ * One route, `/plugins/webhook/<endpoint>`, and the `webhook` adapter whose
+ * open connectors the route serves. Each endpoint holds its own secret,
  * and a call passes only with that secret as its bearer token.
  *
  * A bot endpoint talks to its bot through the plugin's own connection to the
@@ -218,7 +218,7 @@ export const apply: Plugin['apply'] = (host, options) => {
 
   host.registerTriggerType(WEBHOOK_TRIGGER);
   const endpoints = new Map<string, Endpoint>();
-  host.registerConnector(webhookKind(endpoints));
+  host.registerAdapter(webhookAdapter(endpoints));
   host.registerRoute(webhookRoute({
     endpoint: (id) => endpoints.get(id),
     bot: botTarget(botSeams(host, open, timeout)),

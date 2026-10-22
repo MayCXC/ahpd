@@ -163,7 +163,7 @@ against its contract before it is recorded.
 | `registerResources(store)` | set | `list`, `read`, `resolve`, `complete`, and the optional write half |
 | `registerResourceProvider(scheme, provider)` | register, open key | One host-owned URI scheme, routed beside the `file:` store |
 | `registerChannel(scheme, channel)` | register, open key | One channel a client subscribes to, under an `x-` scheme; answers a handle to publish on |
-| `registerConnector(kind)` | register, open key | One connector kind, whose schema a client draws the form from, and the connectors a person makes of it |
+| `registerAdapter(adapter)` | register, open key | One adapter, whose schema a client draws the form from, and the connectors a person makes of it |
 | `registerMethod(name, method)` | register, open key | One command a client sends by name, under an `x-` name |
 | `registerTerminals(store)` | set | `create` |
 | `registerChanges(source)` | set | `scopes`, `state`, `summary`, and the optional operations |
@@ -493,15 +493,15 @@ Two plugins cannot serve one scheme: the later one is dropped with a problem
 line. `@ahpd/bot` serves `x-ahpd-bots://` this way, and [BOTS.md](BOTS.md)
 says what it sends.
 
-### A connector kind of your own
+### An adapter of your own
 
-A plugin may offer a connector kind: the form a person fills in to make one
-connector of it, and the capabilities a connector of that kind carries. The
-host keeps each connector as a JSON record, and calls the kind's `open` when one
-is made and when the daemon starts with one stored.
+A plugin may offer an adapter: the form a person fills in to make one connector
+of it, and the capabilities a connector of that adapter carries. The host keeps
+each connector as a JSON record, and calls the adapter's `open` when one is made
+and when the daemon starts with one stored.
 
 ```ts
-host.registerConnector({
+host.registerAdapter({
   name: 'webhook',
   title: 'Webhook',
   description: 'A URL that talks to a bot or fires an automation.',
@@ -526,7 +526,7 @@ host.registerConnector({
 });
 ```
 
-- `name` is a slug, and is the `kind` every connector of it records.
+- `name` is a slug, and is the `adapter` every connector of it records.
 - `schema` is the JSON Schema a client draws the form from, and what a `put`
   checks `config` against. A field it marks `writeOnly` is a secret: the host
   writes the value to the vault under the owner's scope and keeps
@@ -537,14 +537,14 @@ host.registerConnector({
   `command` and `action`, and `ui` is reserved for a later plan; a type this
   version does not know is shown by its title.
 - `open(connector)` starts answering for one connector, which carries `id`,
-  `kind`, `owner`, an optional `title`, and `config` with each secret read back
-  from the vault. The answer is the function that stops it, or nothing when
+  `adapter`, `owner`, an optional `title`, and `config` with each secret read
+  back from the vault. The answer is the function that stops it, or nothing when
   there is nothing to stop. An `open` that throws leaves the connector stored
   and shown as `invalid`.
 
 The schema can change between versions, and nothing migrates a stored
 connector: one whose config no longer fits shows as `invalid`, and one whose
-kind no plugin registers shows as `unavailable`. Neither is opened.
+adapter no plugin registers shows as `unavailable`. Neither is opened.
 
 ### A command of your own
 
@@ -678,7 +678,7 @@ Two reads go with it. `host.sessionKept(uri)` answers whether this host keeps th
 
 ### Writing a usage record
 
-`host.recordUsage(entry)` keeps one `UsageEntry` in the host's `usage` port: a model call (`kind: 'model'`) or a stretch a computer was up (`kind: 'computer'`). It is how a plugin says what its work cost, and the store is the host's own, so every record a daemon keeps lands in one place whichever plugin wrote it.
+`host.recordUsage(entry)` keeps one `UsageEntry` in the host's `usage` port: a model call, whose `kind` is `model`, or a stretch a computer was up, whose `kind` is `computer`. It is how a plugin says what its work cost, and the store is the host's own, so every record a daemon keeps lands in one place whichever plugin wrote it.
 
 The entry names `pools` - the keys it is charged to - and the reader charges nothing else. Build them as [Usage is charged to the owner's, the team's and the project's pool](../sdk/USAGE.md) says: the owner as written (`user:<id>`, `root:<host>`), `team:<team>` and `project:<team>:<project>`, each only when the record has it.
 
@@ -946,7 +946,7 @@ that method may be called with:
 | `resourceProviders` | `registerResourceProvider(scheme, provider)`, by scheme |
 | `channels` | `registerChannel(scheme, channel)`, by scheme |
 | `methods` | `registerMethod(name, method)`, by name |
-| `connectors` | `registerConnector(kind)`, by kind name |
+| `adapters` | `registerAdapter(adapter)`, by adapter name |
 | `triggerTypes` | `registerTriggerType(definition)`, by type |
 | `sessionMeta` | `registerSessionMeta(key, read)`, by key |
 | `ports` | every `set` registration: `registerRecords`, `registerVault`, `registerPolicies` and the rest |
@@ -973,9 +973,9 @@ have always done, and the plugin channel marks it `undeclared`.
 
 ## What a client sees
 
-The daemon serves two `x-ahpd-` channels, so a client shows what a plugin adds
-before a person uses it: one lists the plugins the configuration names, and the
-other the connector kinds and the connectors made from them.
+The daemon serves three `x-ahpd-` channels, so a client shows what a plugin adds
+before a person uses it: one lists the plugins the configuration names, one the
+adapters the plugins register, and one the connectors made from them.
 
 ### `x-ahpd-plugins`
 
@@ -1017,37 +1017,45 @@ that does not know the name ignores it. It is sent once, when the mark changes
 from unset to set; a second mark changes nothing and sends nothing. A refused
 command marks nothing.
 
+### `x-ahpd-adapters`
+
+A read-only channel. One row for each adapter the loaded plugins register, keyed
+by the adapter's name, holding `name`, `title`, `description`, `schema`,
+`capabilities` and the `plugin` that registered it. Nothing on it is an instance
+of anything: the connectors made from an adapter are on `x-ahpd-connectors`.
+A row shows as soon as the plugin registers the adapter, before any connector of
+it exists. Reading the channel needs `connector:list`.
+
 ### `x-ahpd-connectors`
 
-One row for each connector kind, keyed `kind:<name>`, and one for each
-connector, keyed by its id. A kind row carries `name`, `title`, `description`,
-`schema`, `capabilities` and the `plugin` that registered it. A connector row
-carries its record, with `config` holding a reference where a secret was moved,
-and a `state`:
+One row for each connector, keyed by its id; no adapter is on this channel. A
+connector row carries its record, whose `adapter` names the adapter it is one
+of, with `config` holding a reference where a secret was moved, and a `state`:
 
 | `state` | What it says |
 | --- | --- |
-| `open` | The kind was called and is answering |
-| `invalid` | Its config no longer fits its kind's schema, or the kind refused to open it |
-| `unavailable` | No loaded plugin registers its kind, so it cannot be opened |
+| `open` | The adapter was called and is answering |
+| `invalid` | Its config no longer fits its adapter's schema, or the adapter refused to open it |
+| `unavailable` | No loaded plugin registers its adapter, so it cannot be opened |
 
-A kind row shows before any connector of it exists. `connector:list` reads every
-row; without it a person reads the connectors owned by `user:<them>` and a
-member reads the ones owned by `team:<team>`, and a kind row takes the grant. A
-subscribe also takes `?owner=me`, which narrows the listing to the caller's own
-connectors and their teams'.
+`connector:all` reads every connector. `connector:list` reads the caller's own
+connectors, their teams' and the host's, and no other person's. A caller with
+neither grant reads no connector, its own included. A subscribe also takes
+`?owner=me`, which narrows the listing to the caller's own connectors.
 
 Two commands change a connector:
 
 | Method | Grant | What it does |
 | --- | --- | --- |
-| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, kind, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
+| `x-ahpd/connectors/put` | `connector:put`, and the owner's | Makes or changes `{ id, adapter, owner, title?, config }`, moves each `writeOnly` value to the vault, writes the record and opens it. Answers the row |
 | `x-ahpd/connectors/remove` | `connector:remove`, and the owner's | Closes `{ id }`, takes its secrets out of the vault and takes the record out |
 
-The owner narrows the grant: a `host` connector needs `connector:put` to be made
-and `connector:remove` to be removed, a `team:<team>` one needs `team:write` and
-membership of that team, and a `user:<id>` one needs the caller to be that
-person. A caller without the grant is refused, for reading and for each method.
+The owner narrows the grant. A `host` connector needs `connector:put` to be made
+and `connector:remove` to be removed, and `connector:host` beside either. A
+`team:<team>` connector needs `connector:put` or `connector:remove` and a
+membership of that team; it does not take `team:write`. A `user:<id>` connector
+needs the caller to be that person, beside the same grant. A caller without the
+grant is refused, for reading and for each method.
 
 A `put` under a new owner removes the connector from the old one, so it also
 needs what a remove by the old owner needs. It keeps nothing of the old one's

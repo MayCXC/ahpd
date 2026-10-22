@@ -13,8 +13,9 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedConnectorKind, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
+  adaptersChannel,
   clientPluginsIn,
   connectorsChannel,
   createHost,
@@ -677,25 +678,26 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   const recordStore = fileRecords(configDir(), { onProblem: listProblem });
   const connectorRecords = await recordStore.collection('connectors', { format: 'json' });
   /*
-   * The connector kinds the load folds in, read through the closure: the
-   * channel is built before the plugins are loaded, and a kind row answers
-   * from the first listing after it, as the plugin channel's manifest does.
+   * The adapters the load folds in, read through the closure: both channels
+   * are built before the plugins are loaded, and an adapter row answers from
+   * the first listing after it, as the plugin channel's manifest does.
    */
-  let connectorKinds: Record<string, ServedConnectorKind> = {};
+  let adapters: Record<string, ServedAdapter> = {};
+  const adapterLists = adaptersChannel({ adapters: () => adapters, onProblem: listProblem });
   const connectorLists = connectorsChannel({
     collection: connectorRecords,
-    kinds: () => connectorKinds,
+    adapters: () => adapters,
     // The vault a plugin may have replaced, so a secret is written where
     // `ahpd vault` reads it once the host exists.
     vault: () => held,
-    // The checker the command line and the tools are held to, so a kind's
+    // The checker the command line and the tools are held to, so an adapter's
     // schema means one thing everywhere it is asked.
     check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
     onProblem: listProblem,
   });
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, connectorLists.channel],
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, adapterLists.channel, connectorLists.channel],
     { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods },
   );
 
@@ -1121,9 +1123,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
   failures = didFail;
-  // And the connectors channel starts answering kinds, which is what a stored
+  // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
-  connectorKinds = folded.connectorKinds ?? {};
+  adapters = folded.adapters ?? {};
   for (const problem of problems) stamp(problem);
 
   /*
@@ -1218,10 +1220,10 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   if (folded.vault !== undefined) held = folded.vault;
   kept = folded.automations;
   /*
-   * Every stored connector of a kind a plugin registered, opened before the
-   * listener answers: a call that arrives in the first turn after the socket
-   * is bound finds the connector that answers it already open. One of a kind
-   * nobody registered stays on disk, and is listed as `unavailable`.
+   * Every stored connector of an adapter a plugin registered, opened before
+   * the listener answers: a call that arrives in the first turn after the
+   * socket is bound finds the connector that answers it already open. One of
+   * an adapter nobody registered stays on disk, and is listed as `unavailable`.
    */
   await connectorLists.openAll();
 

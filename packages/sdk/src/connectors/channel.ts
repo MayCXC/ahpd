@@ -1,14 +1,13 @@
 /**
- * `x-ahpd-connectors`: the connector kinds a host serves, and the connectors made from them.
+ * `x-ahpd-connectors`: the connectors made from the adapters a host serves.
  *
- * One row for each kind, keyed `kind:<name>`, holding what a client draws the
- * form from: the title, the description, the JSON Schema and the
- * capabilities. One row for each stored connector, keyed by the connector's
- * id, holding the record as it is kept and a `state`: `open`, `invalid` when
- * its config no longer fits the kind's schema or its kind refused to open it,
- * or `unavailable` when no plugin registers its kind any more.
+ * One row for each stored connector, keyed by the connector's id, holding the
+ * record as it is kept and a `state`: `open`, `invalid` when its config no
+ * longer fits the adapter's schema or its adapter refused to open it, or
+ * `unavailable` when no plugin registers its adapter any more. The adapters
+ * themselves are listed on `x-ahpd-adapters`.
  *
- * Where a kind's schema marks a field `writeOnly`, the value is a secret. A
+ * Where an adapter's schema marks a field `writeOnly`, the value is a secret. A
  * put moves it to the vault under `connector/<id>/<field>` in the owner's
  * scope and keeps a `{ "$secret": "<name>" }` in the record instead, so a
  * listing, a snapshot, an answer and the log never carry it. A field sent
@@ -16,14 +15,18 @@
  * given one to send back.
  *
  * Two commands change a connector. `x-ahpd/connectors/put` takes
- * `{ id, kind, owner, title?, config }`, checks `config` against the kind's
- * schema, closes the connector with that id, writes the record, and calls the
- * kind's `open` with each secret read back. `x-ahpd/connectors/remove` takes
- * `{ id }`, closes it, takes its secrets out of the vault and takes the record
- * out. Both answer the row a client now holds.
+ * `{ id, adapter, owner, title?, config }`, checks `config` against the
+ * adapter's schema, closes the connector with that id, writes the record, and
+ * calls the adapter's `open` with each secret read back.
+ * `x-ahpd/connectors/remove` takes `{ id }`, closes it, takes its secrets out
+ * of the vault and takes the record out. Both answer the row a client now
+ * holds.
  *
- * A connector of a kind no plugin registers stays on disk and is served as
- * `unavailable`: a disabled plugin keeps its connectors.
+ * `connector:list` reads the caller's own connectors, their teams' and the
+ * host's; `connector:all` reads every connector. A caller with neither reads
+ * no connector, its own included. A connector of an adapter no plugin
+ * registers stays on disk and is served as `unavailable`: a disabled plugin
+ * keeps its connectors.
  */
 
 import { INVALID_PARAMS, INTERNAL_ERROR, RpcError } from '../rpc.js';
@@ -32,7 +35,7 @@ import { isRecordSlug } from '../resources/records.js';
 import { recordsChannel, type RecordsChannel } from '../resources/recordschannel.js';
 import { membership } from '../usage/scopes.js';
 import { bag, isRecord, reason } from '../utils/values.js';
-import type { Connector, ConnectorOwner, ServedConnectorKind } from '../types/connectors.js';
+import type { Connector, ConnectorOwner, ServedAdapter } from '../types/connectors.js';
 import type { PluginMethod } from '../types/plugin.js';
 import type { RecordCollection, StoredRecord } from '../types/records.js';
 import type { Grant, Principal } from '../types/users.js';
@@ -43,9 +46,6 @@ const SCHEME = 'x-ahpd-connectors';
 const DOMAIN = 'x-ahpd/connectors';
 const PUT = `${DOMAIN}/put`;
 const REMOVE = `${DOMAIN}/remove`;
-
-/** What a kind row's key starts with, which a connector's id cannot: an id is a slug. */
-const KIND = 'kind:';
 
 /** What a client is shown in place of a secret, which is also what the schema is held against. */
 const HELD = '<set>';
@@ -61,16 +61,16 @@ export interface ConnectorsChannelOptions {
   /** The `connectors` collection: one JSON record for each connector. */
   collection: RecordCollection;
   /**
-   * The connector kinds the plugins registered, read at each call.
+   * The adapters the plugins registered, read at each call.
    *
-   * Read through a function because the kinds are known only after the load,
-   * and a channel built before it would hold none.
+   * Read through a function because the adapters are known only after the
+   * load, and a channel built before it would hold none.
    */
-  kinds(): Record<string, ServedConnectorKind>;
-  /** The vault a secret is written to, and read back from when a kind opens. */
+  adapters(): Record<string, ServedAdapter>;
+  /** The vault a secret is written to, and read back from when an adapter opens. */
   vault(): Vault | undefined;
   /**
-   * Check one value against a kind's schema, throwing the first finding.
+   * Check one value against an adapter's schema, throwing the first finding.
    *
    * Taken as an option rather than imported: the sdk takes no third-party
    * runtime, and the schema checker the daemon uses belongs to the server.
@@ -86,9 +86,9 @@ export interface ConnectorsChannel {
   channel: RecordsChannel;
   /** `x-ahpd/connectors/put` and `remove`, by name. */
   methods: Record<string, PluginMethod>;
-  /** Send every reader what the kinds and the connectors are now. */
+  /** Send every reader what the connectors are now. */
   refresh(): Promise<void>;
-  /** Open every stored connector of a registered kind, as a start does. */
+  /** Open every stored connector of a registered adapter, as a start does. */
   openAll(): Promise<void>;
 }
 
@@ -121,21 +121,22 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /**
    * Whether this reader may make or remove a connector of this owner.
    *
-   * `host` takes `connector:put` to be made and `connector:remove` to be
-   * removed, the grants the channel's two commands ask for; a `team:<team>`
-   * connector takes `team:write` and a membership of that team; a `user:<id>`
-   * connector is that person's own, and takes nothing else. No reader is the
-   * root connection or a host with no users directory, and both are the daemon
-   * itself. A caller holding `config:write` is not let into a host's, a team's
-   * or a person's connector by it, which is why this is asked again in
-   * `handle` and not only by the gate.
+   * Every owner takes `connector:put` to be made and `connector:remove` to be
+   * removed. A `host` connector then takes `connector:host` as well. A
+   * `team:<team>` connector takes a membership of that team. A `user:<id>`
+   * connector is that person's own, and takes the caller to be that person. No
+   * reader is the root connection or a host with no users directory, and both
+   * are the daemon itself. A caller holding `config:write` is not let into a
+   * host's, a team's or a person's connector by it, which is why this is asked
+   * again in `handle` and not only by the gate.
    */
   const ownerAllows = (owner: ConnectorOwner | undefined, reader: Principal | undefined, verb: 'put' | 'remove'): boolean => {
     if (reader === undefined) return true;
     if (owner === undefined) return false;
-    if (owner === 'host') return reader.can(`connector:${verb}` as Grant);
+    if (!reader.can(`connector:${verb}` as Grant)) return false;
+    if (owner === 'host') return reader.can('connector:host' as Grant);
     if (owner.startsWith('user:')) return reader.plugin === undefined && reader.id === owner.slice('user:'.length);
-    return reader.can('team:write' as Grant) && onTeam(reader, owner.slice('team:'.length));
+    return onTeam(reader, owner.slice('team:'.length));
   };
 
   /** Refuse one caller the owner's rule keeps out. */
@@ -144,7 +145,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     throw new RpcError(DENIED, `${owner} is not ${reader?.id ?? 'this connection'}'s to ${doing}`);
   };
 
-  /** The fields a kind's schema marks `writeOnly`: the values that are secrets. */
+  /** The fields an adapter's schema marks `writeOnly`: the values that are secrets. */
   const writeOnly = (schema: Record<string, unknown>): string[] => {
     const properties = bag(schema['properties']);
     return Object.entries(properties)
@@ -168,7 +169,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     return out;
   };
 
-  /** Whether a stored config is still one the kind's schema describes. */
+  /** Whether a stored config is still one the adapter's schema describes. */
   const fits = (config: Record<string, unknown>, schema: Record<string, unknown>): boolean => {
     try {
       options.check(heldAgainst(config), schema, 'config');
@@ -180,43 +181,25 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
 
   /** The state a stored connector is in now. */
   const stateOf = (record: StoredRecord): ConnectorState => {
-    const kind = options.kinds()[String(record.kind)];
-    if (kind === undefined) return 'unavailable';
-    if (!fits(configOf(record), kind.schema)) return 'invalid';
+    const adapter = options.adapters()[String(record.adapter)];
+    if (adapter === undefined) return 'unavailable';
+    if (!fits(configOf(record), adapter.schema)) return 'invalid';
     return open.has(record.id) ? 'open' : 'invalid';
   };
-
-  /** One kind as a client is shown it. */
-  const kindRow = (kind: ServedConnectorKind): Record<string, unknown> => ({
-    name: kind.name,
-    title: kind.title,
-    description: kind.description,
-    schema: kind.schema,
-    capabilities: kind.capabilities,
-    plugin: kind.by,
-  });
 
   /** One stored connector as a client is shown it: its record, and the state it is in. */
   const connectorRow = (record: StoredRecord): Record<string, unknown> => ({ ...record, state: stateOf(record) });
 
-  /** The connector rows the store holds, leaving out any id a kind row keeps. */
+  /** The connector records the store holds, and the owner each names. */
   const stored = async (): Promise<StoredRecord[]> => {
-    const records = (await options.collection.list()).filter((one) => !one.id.startsWith(KIND));
+    const records = await options.collection.list();
     for (const one of records) owners.set(one.id, asOwner(one.owner));
     return records;
   };
 
   const source = {
-    ids: async (): Promise<string[]> => {
-      const names = Object.keys(options.kinds()).sort();
-      const records = await stored();
-      return [...names.map((name) => `${KIND}${name}`), ...records.map((one) => one.id).sort()];
-    },
+    ids: async (): Promise<string[]> => (await stored()).map((one) => one.id).sort(),
     find: async (id: string): Promise<Record<string, unknown> | undefined> => {
-      if (id.startsWith(KIND)) {
-        const kind = options.kinds()[id.slice(KIND.length)];
-        return kind === undefined ? undefined : kindRow(kind);
-      }
       const record = await options.collection.get(id);
       owners.set(id, record === undefined ? undefined : asOwner(record.owner));
       return record === undefined ? undefined : connectorRow(record);
@@ -224,43 +207,46 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   };
 
   /**
-   * Whether this reader sees this row without the channel's grant.
+   * Whether this reader sees this row without the channel's `connector:all`.
    *
-   * `connector:list` reads every row, as it reads every row of the plugin
-   * channel. Without it a reader sees the connectors they own, and a member
-   * sees the ones their team owns: a kind row is the daemon's own listing and
-   * takes the grant.
+   * `connector:all` reads every connector. `connector:list` reads the ones the
+   * caller owns, the ones their teams own and the host's. A reader holding
+   * neither sees nothing, its own connector included.
    */
   const mayRead = (id: string, reader: Principal): boolean => {
-    if (id.startsWith(KIND)) return false;
+    if (reader.can('connector:all' as Grant)) return true;
+    if (!reader.can('connector:list' as Grant)) return false;
     const owner = owners.get(id);
     if (owner === undefined) return false;
+    if (owner === 'host') return true;
     if (owner.startsWith('user:')) return reader.plugin === undefined && reader.id === owner.slice('user:'.length);
-    if (owner.startsWith('team:')) return onTeam(reader, owner.slice('team:'.length));
-    return false;
+    return onTeam(reader, owner.slice('team:'.length));
   };
 
   const channel = recordsChannel(SCHEME, source, {
-    grant: 'connector:list' as Grant,
+    /*
+     * `connector:all` is the channel's own gate, because it is the grant that
+     * reads every row. A holder of `connector:list` is let in by `authorize`
+     * and then sees the rows `mayRead` allows.
+     */
+    grant: 'connector:all' as Grant,
     mayRead,
     /*
-     * A kind row names no owner, and a host connector belongs to everyone and
-     * to nobody, so the filter leaves both out and `?owner=me` is the caller's
-     * own connectors and their teams'.
+     * A host connector belongs to everyone and to nobody, so the filter leaves
+     * it out and `?owner=me` is the caller's own connectors.
      */
     ownerOf: (id, record) => {
-      if (id.startsWith(KIND)) return undefined;
       const owner = asOwner(record.owner);
       return owner === undefined || owner === 'host' ? undefined : owner;
     },
     describe: () => ({
       title: 'Connectors',
-      description: 'The connector kinds this host serves, and the connectors made from them.',
+      description: 'The connectors made from the adapters this host serves.',
     }),
     onProblem: problem,
   });
 
-  /** The config a kind is opened with: each reference read back from the vault. */
+  /** The config an adapter is opened with: each reference read back from the vault. */
   const resolved = async (config: Record<string, unknown>): Promise<Record<string, unknown>> => {
     const out: Record<string, unknown> = {};
     for (const [field, value] of Object.entries(config)) {
@@ -285,19 +271,19 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     }
   };
 
-  /** Open one stored connector through its kind, and keep what stops it. */
-  const openOne = async (kind: ServedConnectorKind, record: StoredRecord, owner: ConnectorOwner): Promise<void> => {
+  /** Open one stored connector through its adapter, and keep what stops it. */
+  const openOne = async (adapter: ServedAdapter, record: StoredRecord, owner: ConnectorOwner): Promise<void> => {
     const config = configOf(record);
-    options.check(heldAgainst(config), kind.schema, `connector ${record.id}`);
+    options.check(heldAgainst(config), adapter.schema, `connector ${record.id}`);
     const connector: Connector = {
       id: record.id,
-      kind: kind.name,
+      adapter: adapter.name,
       owner,
       ...(typeof record.title === 'string' ? { title: record.title } : {}),
       config: await resolved(config),
     };
     await close(record.id);
-    const stop = kind.open(connector);
+    const stop = adapter.open(connector);
     open.set(record.id, stop === undefined ? undefined : stop);
   };
 
@@ -311,7 +297,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
    * which is what a record written whole does.
    */
   const moveSecrets = async (
-    kind: ServedConnectorKind,
+    adapter: ServedAdapter,
     config: Record<string, unknown>,
     held: Record<string, unknown>,
     owner: ConnectorOwner,
@@ -319,7 +305,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     vault: Vault | undefined,
   ): Promise<Record<string, unknown>> => {
     const out: Record<string, unknown> = { ...config };
-    for (const field of writeOnly(kind.schema)) {
+    for (const field of writeOnly(adapter.schema)) {
       const value = config[field];
       const was = secretRef(held[field]);
       const mine = was !== undefined && was === secretNameOf(owner, id, field);
@@ -388,13 +374,13 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     authorize: async (params, reader) => ownerAllows(asOwner(params.owner), reader, 'put'),
     handle: async (params, reader) => {
       const id = idParam(PUT, params);
-      const kindName = params.kind;
-      if (typeof kindName !== 'string' || kindName === '') {
-        throw new RpcError(INVALID_PARAMS, `${PUT} needs kind, the name of a connector kind`);
+      const adapterName = params.adapter;
+      if (typeof adapterName !== 'string' || adapterName === '') {
+        throw new RpcError(INVALID_PARAMS, `${PUT} needs adapter, the name of an adapter`);
       }
-      const kind = options.kinds()[kindName];
-      if (kind === undefined) {
-        throw new RpcError(INVALID_PARAMS, `${kindName} is not a connector kind this host serves`);
+      const adapter = options.adapters()[adapterName];
+      if (adapter === undefined) {
+        throw new RpcError(INVALID_PARAMS, `${adapterName} is not an adapter this host serves`);
       }
       const owner = asOwner(params.owner);
       if (owner === undefined) {
@@ -430,18 +416,18 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
        * keeps a secret is not refused for being empty.
        */
       const checked: Record<string, unknown> = { ...config };
-      for (const field of writeOnly(kind.schema)) {
+      for (const field of writeOnly(adapter.schema)) {
         if (checked[field] === '' && secretRef(kept[field]) !== undefined) checked[field] = HELD;
       }
       try {
-        options.check(checked, kind.schema, `connector ${id}`);
+        options.check(checked, adapter.schema, `connector ${id}`);
       } catch (error) {
         throw new RpcError(INVALID_PARAMS, reason(error));
       }
-      const moved = await moveSecrets(kind, config, kept, owner, id, options.vault());
+      const moved = await moveSecrets(adapter, config, kept, owner, id, options.vault());
       const record: StoredRecord = {
         id,
-        kind: kindName,
+        adapter: adapterName,
         owner,
         ...(title === undefined ? {} : { title }),
         config: moved,
@@ -452,10 +438,10 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       // The secrets kept under the owner it left are no record's any more.
       if (moving && was !== undefined) await forgetAll(before, was, id);
       try {
-        await openOne(kind, record, owner);
+        await openOne(adapter, record, owner);
       } catch (error) {
         await channel.refresh();
-        throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${kindName} could not open it: ${reason(error)}`);
+        throw new RpcError(INTERNAL_ERROR, `${id} is stored, but ${adapterName} could not open it: ${reason(error)}`);
       }
       await channel.refresh();
       return connectorRow(record);
@@ -498,22 +484,22 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     methods,
     refresh: () => channel.refresh(),
     /*
-     * Every stored connector of a registered kind, in id order, so two kinds
-     * that answer on one URL open the same way on every start.
+     * Every stored connector of a registered adapter, in id order, so two
+     * connectors that answer on one URL open the same way on every start.
      */
     openAll: async () => {
-      const kinds = options.kinds();
+      const adapters = options.adapters();
       for (const record of [...(await stored())].sort((one, two) => one.id.localeCompare(two.id))) {
         const owner = owners.get(record.id);
-        const kind = kinds[String(record.kind)];
+        const adapter = adapters[String(record.adapter)];
         if (owner === undefined) {
           problem(`${record.id} names no owner, so it is not opened`);
           continue;
         }
-        // A kind nobody registers keeps its connectors on disk, served as `unavailable`.
-        if (kind === undefined) continue;
+        // An adapter nobody registers keeps its connectors on disk, served as `unavailable`.
+        if (adapter === undefined) continue;
         try {
-          await openOne(kind, record, owner);
+          await openOne(adapter, record, owner);
         } catch (error) {
           problem(`${record.id} could not be opened: ${reason(error)}`);
         }

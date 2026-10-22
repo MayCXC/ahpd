@@ -147,8 +147,8 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | [12 - Plugins and connectors have their own grants](task-12-plugins-and-connectors-have-grants.md) | implemented | 04, 07 |
 | [13 - The docs say the new row fields and the grants](task-13-the-docs-say-the-row-and-grants.md) | implemented | 10, 11, 12 |
 | [14 - The restart mark is pushed to every client](task-14-a-restart-mark-is-pushed.md) | implemented | 11 |
-| [15 - Adapters and connectors are two channels](task-15-adapters-and-connectors-split.md) | todo | 12 |
-| [16 - The docs say adapters, connectors and their grants](task-16-the-docs-say-adapters.md) | todo | 15 |
+| [15 - Adapters and connectors are two channels](task-15-adapters-and-connectors-split.md) | implemented | 12 |
+| [16 - The docs say adapters, connectors and their grants](task-16-the-docs-say-adapters.md) | implemented | 15 |
 
 ## Risks and tradeoffs
 
@@ -174,7 +174,11 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
   `USERS.md` has thirteen subjects, and the changelog says which grant a role adds.
   Task 14 is implemented on the same day: a connection watching the root is sent `x-ahpd/restartNeeded` once.
   It goes out when a plugin command or a root configuration write sets the mark.
-- **Next action:** task 15, which renames connector kinds to adapters and serves them in their own channel.
+  Task 15 is implemented on the same day: a plugin registers an adapter, and a person makes connectors from one.
+  `x-ahpd-adapters` lists the adapters by name, and `x-ahpd-connectors` lists only connectors, each naming its `adapter`.
+  No connector row is read without `connector:list` or `connector:all`. `put` and `remove` take their grants of any owner, beside `connector:host` for a host connector and a membership for a team's.
+  Task 16 is implemented on the same day. `PLUGINS.md`, `USERS.md`, `HOST.md`, the changelog and the domain file say adapters, the two channels and the new grants.
+- **Next action:** every task is implemented. The close-out writes `implemented.md` and sets `status: built`.
   The ahpw pages and the UI component tree are separate plans.
 - **Open questions:** none; the defaulted rows above are the ones to check.
 - **Watch out for:** "connector" is one configured account; "adapter" is what a plugin registers, called "connector kind" before task 15. "Channel" is always an AHP `x-` channel. `on` is not a registration and has no contract.

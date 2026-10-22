@@ -178,9 +178,9 @@ export const OPERATIONS: Record<string, SubjectOperations> = {
   },
   connector: {
     title: 'Connectors',
-    description: 'The connector kinds plugins register, and the connectors made from them.',
-    operations: ['list', 'put', 'remove'],
-    groups: { read: ['list'], write: ['put', 'remove'] },
+    description: 'The adapters plugins register, and the connectors made from them.',
+    operations: ['list', 'all', 'put', 'remove', 'host'],
+    groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
   },
   diagnostics: {
     title: 'Diagnostics',

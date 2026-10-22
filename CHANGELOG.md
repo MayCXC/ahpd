@@ -11,24 +11,28 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 ```json
 {
   "id": "ci",
-  "kind": "webhook",
+  "adapter": "webhook",
   "owner": "host",
   "config": { "bot": "bot://motion", "secret": "the token a caller sends", "reply": "sync" }
 }
 ```
 
   The host writes the token to the vault as `host:connector/ci/secret`, so the caller's header does not change. A `host:<name>` secret the old record named can be taken out with `ahpd vault delete host:<name>`. See [docs/plugins/WEBHOOKS.md](docs/plugins/WEBHOOKS.md).
-- `x-ahpd-plugins` and `x-ahpd-connectors` take their own grants rather than `config`. A role that read them with `config:read` now needs `plugin:list` for the plugins and `connector:list` for the connectors. One that enabled, disabled or edited a plugin with `config:write` now needs `plugin:enable`, `plugin:disable` or `plugin:options`, and one that made or removed a host connector now needs `connector:put` or `connector:remove`. Over HTTP, `plugin config`, `enable` and `disable` take the same grants and are no longer the deployment token's alone; install, update and remove still are.
+- A plugin registers **adapters**, not connector kinds: `registerConnector` is `registerAdapter`, `ConnectorKind` is `Adapter`, `connectorKinds` is `adapters`, and the contract key `connectors` is `adapters`. A stored connector that still says `kind` and not `adapter` reads as `unavailable`. A plugin whose manifest declares `connectors` no longer loads.
+- `x-ahpd-adapters` lists the adapters, and `x-ahpd-connectors` lists only connectors. A connector row no longer carries an adapter row beside it, and its `adapter` field names the adapter it is one of.
+- `x-ahpd-plugins`, `x-ahpd-adapters` and `x-ahpd-connectors` take their own grants rather than `config`. A role that read the plugins with `config:read` now needs `plugin:list`, and one that read the connectors now needs `connector:list`. One that enabled, disabled or edited a plugin with `config:write` now needs `plugin:enable`, `plugin:disable` or `plugin:options`. One that made or removed a connector now needs `connector:put` or `connector:remove`. Over HTTP, `plugin config`, `enable` and `disable` take the same grants and are no longer the deployment token's alone; install, update and remove still are.
+- Every connector action takes a `connector:` grant, the caller's own connector included. A person needs `connector:put` to make their own connector and `connector:remove` to remove it. `connector:list` reads the caller's own connectors, their teams' and the host's, and no other person's; a role that reads every connector needs the new `connector:all`. A connector owned by `host` also needs the new `connector:host` to be made or removed. A team connector no longer takes `team:write`; it takes `connector:put` or `connector:remove` and a membership of the team.
+- A role that made or removed a host connector with `connector:put` or `connector:remove` alone now also needs `connector:host`.
 
 ### Plugins and connectors
 
 - A plugin declares a manifest: a description, categories, links and contracts. A registration its contracts do not list fails that plugin, with a line naming the method and the name. A plugin with no contracts loads as before, and is listed as `undeclared`.
-- A plugin registers connector kinds, each with a JSON Schema a client draws the form from and the capabilities a connector of that kind has.
+- A plugin registers adapters, each with a JSON Schema a client draws the form from and the capabilities a connector of that adapter has.
 - `x-ahpd-plugins` lists the configured plugins, and `x-ahpd/plugins/enable`, `disable` and `options` change the file the daemon loads.
 - A plugin row carries `version`, `loaded`, `loadProblem` and `optionsSchema`. `loadProblem` is the line saying why the daemon did not load it, with any URL userinfo and any `writeOnly` option value an error quoted answered `<set>`. A plugin switched off carries no `optionsSchema`, because its module is never imported to read it.
 - `enable`, `disable` and `options` mark `ahpd.restartNeeded` on the root state for every connection, and only a restart clears it. A connection watching the root is sent `x-ahpd/restartNeeded` with `{ channel: "ahp-root://" }` when the mark is set, once, so a client holding the state does not have to read it again.
-- `x-ahpd-connectors` lists the connector kinds and the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field a kind's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
-- `@ahpd/webhook` registers the first connector kind, so a client makes a webhook endpoint from the connector form.
+- `x-ahpd-adapters` lists the adapters a host serves, keyed by adapter name, and read-only. `x-ahpd-connectors` lists the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field an adapter's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
+- `@ahpd/webhook` registers the first adapter, so a client makes a webhook endpoint from the connector form.
 
 ## 0.13.0 - 2026-10-20
 

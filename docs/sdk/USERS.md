@@ -104,7 +104,7 @@ The subjects the host decides are these thirteen:
 | `file` | `get`, `list`, `resolve`, `watch` | `put`, `delete`, `mkdir`, `move`, `copy`, `request` | Files and other resources on this host. Every other scheme has the same operations under its own name |
 | `config` | `settings` | `change` | This host's settings |
 | `plugin` | `list` | `enable`, `disable`, `options` | The plugins the configuration names: listing them, turning them on and off, and editing their options |
-| `connector` | `list` | `put`, `remove` | The connector kinds plugins register, and the connectors made from them |
+| `connector` | `list`, `all` | `put`, `remove`, `host` | The adapters plugins register, and the connectors made from them. `list` reads the caller's own connectors, their teams' and the host's; `all` reads every connector; `host` lets a put or a remove change a connector owned by `host` |
 | `diagnostics` | `logs`, `network`, `fetch` | - | Logs and network details for troubleshooting |
 | `container` | - | `connect`, `disconnect`, `relay`, `stop`, `remove` | Connecting to dev containers, and stopping or removing one |
 | `proxy` | `models` | `call` | The model proxy under `/v1` ([PROXY.md](../server/PROXY.md)). `proxy:call` calls a model, which spends this host's provider keys; `proxy:models` lists the model names |

@@ -15,9 +15,9 @@ Every kind after those waits, and the whole list is in [deferred.md](01-plugins-
 - **Back** - a chat where a harness does a bot's work and replies to the Front with `post_message`.
 - **Manifest** - what a plugin declares before it runs: a description, categories, links and contracts.
 - **Contract** - the list of names a plugin registers for one kind, such as its channels.
-- **Connector kind** - an integration a plugin registers, with a configuration schema and capabilities.
-- **Connector** - one configured account of a connector kind, owned by the host, a team or a person.
-- **Capability** - a typed entry that says what a connector kind does, such as `receive` or `command`.
+- **Adapter** - an integration a plugin registers, with a configuration schema and capabilities.
+- **Connector** - one configured account of an adapter, owned by the host, a team or a person.
+- **Capability** - a typed entry that says what an adapter does, such as `receive` or `command`.
 
 ## Packages
 
@@ -56,7 +56,7 @@ This is the list [A plugin registers from a closed set of kinds, one register me
 | HTTP route | `registerRoute(handler)` | register, open key | a handler the daemon's own listener serves under `/plugins/<name>/`, beside the HTTP API and beside a session's tools servers; it lands in the fold's `routes`, keyed by plugin name, rather than in `HostOptions` | built 2026-10-04, [plan 21](21-a-plugin-serves-an-http-route/plan.md) |
 | configuration key | `registerConfig(key, schema, default)` | register, open key | a new `HostOptions.rootConfig`, beside the session keys an agent already declares | not planned yet |
 | channel | `registerChannel(scheme, channel)` | register, open key | `HostOptions.channels`, one channel per `x-` scheme, which a client subscribes to and the plugin publishes on, with a test of who sees each action | built 2026-10-10, [plan 44](44-a-plugin-serves-a-channel/plan.md) |
-| connector kind | `registerConnector(kind)` | register, open key | `HostOptions.connectorKinds`, one kind per name, with the schema a client draws a connector's form from and the capabilities it lists; a name another plugin registered is reported and that plugin loses the kind alone | built 2026-10-21, [plan 53](53-a-client-sees-plugins-and-connectors/plan.md) |
+| adapter | `registerAdapter(adapter)` | register, open key | `HostOptions.adapters`, one adapter per name, with the schema a client draws a connector's form from and the capabilities it lists; a name another plugin registered is reported and that plugin loses the adapter alone | built 2026-10-21, [plan 53](53-a-client-sees-plugins-and-connectors/plan.md) |
 | host method | `registerMethod(name, method)` | register, open key | `HostOptions.methods`, one command per `x-` name, which a client sends after the gate asks for its grant, and which the host lists in `_meta['ahpd.methods']` | built 2026-10-11, [plan host/81 p1](../host/81-p1-the-host-serves-x-commands/plan.md); its protocol half is [a proposal](../../proposals/agent-host-protocol-extension-methods.md) |
 
 Every method that contributes a value is named `register*`, so a registration is told apart at the call site from what a plugin only reads (`path`, `paths`, `version`, `log`). The one exception is `on`, which contributes nothing and attaches a listener to an event the host already fires; `on` is what every event emitter calls that.
