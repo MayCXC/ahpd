@@ -1,8 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
-import { reason, routePrefix } from '@ahpd/sdk';
-import { checkEndpoint } from './record.js';
+import { routePrefix } from '@ahpd/sdk';
 import type { Endpoint } from './record.js';
-import type { Route, StoredRecord } from '@ahpd/sdk';
+import type { Route } from '@ahpd/sdk';
 
 /** The plugin's id, which is also the prefix its route is served under. */
 export const NAME = 'webhook';
@@ -15,12 +14,8 @@ export type Target = (endpoint: Endpoint, request: Request) => Promise<Response>
 
 /** What the route reads and calls, so a test gives each one. */
 export interface WebhookSeams {
-  /** The record that the `webhooks` collection holds under this id. */
-  endpoint(id: string): Promise<StoredRecord | undefined>;
-  /** The value of one vault secret, or a throw when the vault refuses the name. */
-  secret(name: string): Promise<string>;
-  /** Say what is wrong with one endpoint, for the operator to read. */
-  problem(line: string): void;
+  /** The endpoint an open `webhook` connector of this id answers for, or nothing when none does. */
+  endpoint(id: string): Endpoint | undefined | Promise<Endpoint | undefined>;
   /** What a call to a bot endpoint does. */
   bot?: Target;
   /** What a call to an automation endpoint does. */
@@ -50,9 +45,10 @@ const same = (given: string, kept: string): boolean => {
 /**
  * The one route the plugin serves: `POST /plugins/webhook/<endpoint>`.
  *
- * The route finds the endpoint, checks the bearer against the vault secret
- * that the endpoint names, and passes the call to the endpoint's target. The
- * body is not read before the bearer passes.
+ * The route finds the open endpoint, checks the bearer against the secret it
+ * holds, and passes the call to the endpoint's target. A connector that was
+ * never opened, or was closed, answers 404 like an id nobody made. The body is
+ * not read before the bearer passes.
  */
 export function webhookRoute(seams: WebhookSeams): Route {
   return async (request) => {
@@ -68,28 +64,12 @@ export function webhookRoute(seams: WebhookSeams): Route {
     catch {
       return answer(404, { message: 'No webhook endpoint is at this path.' });
     }
-    const record = await seams.endpoint(id);
-    if (record === undefined) return answer(404, { message: 'No webhook endpoint is at this path.' });
-    let endpoint: Endpoint;
-    try {
-      endpoint = checkEndpoint(record);
-    }
-    catch (error) {
-      seams.problem(`webhooks/${id} is not an endpoint: ${reason(error)}`);
-      return answer(404, { message: 'No webhook endpoint is at this path.' });
-    }
+    const endpoint = await seams.endpoint(id);
+    if (endpoint === undefined) return answer(404, { message: 'No webhook endpoint is at this path.' });
 
     const token = bearerOf(request);
     if (token === undefined) return answer(401, { message: 'The call needs a bearer token.' });
-    let kept: string;
-    try {
-      kept = await seams.secret(endpoint.secret);
-    }
-    catch (error) {
-      seams.problem(`webhooks/${id} names the secret ${endpoint.secret}, which the vault refused: ${reason(error)}`);
-      return answer(401, { message: 'The bearer token is not valid.' });
-    }
-    if (!same(token, kept)) return answer(401, { message: 'The bearer token is not valid.' });
+    if (!same(token, endpoint.secret)) return answer(401, { message: 'The bearer token is not valid.' });
 
     const target = endpoint.bot !== undefined ? seams.bot : seams.automation;
     if (target === undefined) return answer(501, { message: 'This plugin cannot serve this endpoint yet.' });

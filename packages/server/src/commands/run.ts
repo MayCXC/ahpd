@@ -11,11 +11,12 @@
 import { hostname } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { canonicalFromCli, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
-import type { Command, Registry } from '@cofold/commands';
-import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
+import type { Command, JsonSchema, Registry } from '@cofold/commands';
+import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedConnectorKind, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   clientPluginsIn,
+  connectorsChannel,
   createHost,
   doorOf,
   fileResources,
@@ -657,10 +658,37 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     loaded: () => loaded,
     onProblem: listProblem,
   });
+  /*
+   * Where each plugin keeps its own records: a folder per collection beside the
+   * configuration. One store, because the host is built over it below and the
+   * connectors channel reads the same records a plugin would: two would answer
+   * from different folders. A plugin may still take it over with
+   * `registerRecords(store, 'replace')`, and this channel keeps reading the
+   * daemon's `connectors` collection, which is where a connector is kept.
+   */
+  const recordStore = fileRecords(configDir(), { onProblem: listProblem });
+  const connectorRecords = await recordStore.collection('connectors', { format: 'json' });
+  /*
+   * The connector kinds the load folds in, read through the closure: the
+   * channel is built before the plugins are loaded, and a kind row answers
+   * from the first listing after it, as the plugin channel's manifest does.
+   */
+  let connectorKinds: Record<string, ServedConnectorKind> = {};
+  const connectorLists = connectorsChannel({
+    collection: connectorRecords,
+    kinds: () => connectorKinds,
+    // The vault a plugin may have replaced, so a secret is written where
+    // `ahpd vault` reads it once the host exists.
+    vault: () => held,
+    // The checker the command line and the tools are held to, so a kind's
+    // schema means one thing everywhere it is asked.
+    check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
+    onProblem: listProblem,
+  });
   const lists = servedRecords(
     'ahpd',
-    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel],
-    { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods },
+    [...(peopleLists?.channels ?? []), ...policyLists.channels, pluginLists.channel, connectorLists.channel],
+    { ...peopleLists?.methods, ...policyLists.methods, ...pluginLists.methods, ...connectorLists.methods },
   );
 
   /*
@@ -944,8 +972,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * Where each plugin keeps its own records: a folder per collection beside
      * the configuration, a Markdown file per record, read again when a person
      * edits one. A plugin takes it over with `registerRecords(store, 'replace')`.
+     * The same store the connectors channel reads its JSON collection from.
      */
-    records: fileRecords(configDir(), { onProblem: (message) => process.stdout.write(`${message}\n`) }),
+    records: recordStore,
     // Whether that is one record per turn or one per report, which `usage.per`
     // in the configuration file chose.
     usagePer: options.usagePer,
@@ -1083,6 +1112,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   });
   // The channel built above starts answering manifests from here.
   loaded = didLoad;
+  // And the connectors channel starts answering kinds, which is what a stored
+  // connector is checked against when it opens below.
+  connectorKinds = folded.connectorKinds ?? {};
   for (const problem of problems) stamp(problem);
 
   /*
@@ -1174,6 +1206,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   if (folded.usage !== undefined) metered = folded.usage;
   if (folded.vault !== undefined) held = folded.vault;
   kept = folded.automations;
+  /*
+   * Every stored connector of a kind a plugin registered, opened before the
+   * listener answers: a call that arrives in the first turn after the socket
+   * is bound finds the connector that answers it already open. One of a kind
+   * nobody registered stays on disk, and is listed as `unavailable`.
+   */
+  await connectorLists.openAll();
 
   /*
    * The door, and which transport this host answers on.

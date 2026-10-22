@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { checkEndpoint } from '../src/record.js';
 
 /*
- * The endpoint record, as the `webhooks` collection holds one.
+ * The endpoint a `webhook` connector's config describes.
  *
- * A person writes the file by hand, so every field is checked when the record
- * is read: a record that fails the check is no endpoint, and the sentence says
- * what is wrong with it.
+ * A person fills the form in from a client, so every field is checked when the
+ * connector is opened: a config that fails the check opens no endpoint, and
+ * the sentence says what is wrong with it.
  */
 
 describe('an endpoint', () => {

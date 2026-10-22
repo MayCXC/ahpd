@@ -2,6 +2,31 @@
 
 What changed in each release of the `@ahpd/*` packages. Every package carries the same version. Releases before 0.11.0 are in the git history.
 
+## 0.14.0 - unreleased
+
+### Upgrading
+
+- A webhook endpoint is now a `webhook` connector, and a hand-written `webhooks/<id>.md` file is no longer read. A call to an id that no open connector answers for answers 404. Make each endpoint again with `x-ahpd/connectors/put`, giving it the same id, the bot or the automation, and the token a caller already sends:
+
+```json
+{
+  "id": "ci",
+  "kind": "webhook",
+  "owner": "host",
+  "config": { "bot": "bot://motion", "secret": "the token a caller sends", "reply": "sync" }
+}
+```
+
+  The host writes the token to the vault as `host:connector/ci/secret`, so the caller's header does not change. A `host:<name>` secret the old record named can be taken out with `ahpd vault delete host:<name>`. See [docs/plugins/WEBHOOKS.md](docs/plugins/WEBHOOKS.md).
+
+### Plugins and connectors
+
+- A plugin declares a manifest: a description, categories, links and contracts. A registration its contracts do not list fails that plugin, with a line naming the method and the name. A plugin with no contracts loads as before, and is listed as `undeclared`.
+- A plugin registers connector kinds, each with a JSON Schema a client draws the form from and the capabilities a connector of that kind has.
+- `x-ahpd-plugins` lists the configured plugins, and `x-ahpd/plugins/enable`, `disable` and `options` change the file the daemon loads.
+- `x-ahpd-connectors` lists the connector kinds and the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field a kind's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
+- `@ahpd/webhook` registers the first connector kind, so a client makes a webhook endpoint from the connector form.
+
 ## 0.13.0 - 2026-10-20
 
 ### Upgrading

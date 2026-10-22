@@ -1,16 +1,18 @@
 import { reason } from '@ahpd/sdk';
 import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
+import { webhookKind } from './kind.js';
 import { NAME, webhookRoute } from './route.js';
 import type { Bag, Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
 import type { BotChat, BotSeams } from './bot.js';
+import type { Endpoint } from './record.js';
 
 /**
  * The package as a plugin.
  *
- * One route, `/plugins/webhook/<endpoint>`, and the endpoints it
- * serves in the `webhooks` collection. Each endpoint names its own vault
- * secret, and a call passes only with that secret as its bearer token.
+ * One route, `/plugins/webhook/<endpoint>`, and the `webhook` connector kind
+ * whose open connectors the route serves. Each endpoint holds its own secret,
+ * and a call passes only with that secret as its bearer token.
  *
  * A bot endpoint talks to its bot through the plugin's own connection to the
  * host, which is opened once the daemon listens. An automation endpoint fires
@@ -215,11 +217,10 @@ export const apply: Plugin['apply'] = (host, options) => {
   };
 
   host.registerTriggerType(WEBHOOK_TRIGGER);
-  const webhooks = host.records('webhooks');
+  const endpoints = new Map<string, Endpoint>();
+  host.registerConnector(webhookKind(endpoints));
   host.registerRoute(webhookRoute({
-    endpoint: (id) => webhooks.get(id),
-    secret: (secret) => host.secret(secret),
-    problem: (line) => { host.problem(`${name}: ${line}`); },
+    endpoint: (id) => endpoints.get(id),
     bot: botTarget(botSeams(host, open, timeout)),
     automation: automationTarget({ fire: (data) => { host.fireTrigger(WEBHOOK_TRIGGER.type, 'call', data); } }),
   }));
