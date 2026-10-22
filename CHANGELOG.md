@@ -34,6 +34,10 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - `x-ahpd-adapters` lists the adapters a host serves, keyed by adapter name, and read-only. `x-ahpd-connectors` lists the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field an adapter's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
 - `@ahpd/webhook` registers the first adapter, so a client makes a webhook endpoint from the connector form.
 
+### Bots
+
+- A message sent in a bot chat while a turn runs shows as a turn of its own. The running turn ends `complete` with what it held, and the back session's answer after the steer lands under the new turn.
+
 ## 0.13.0 - 2026-10-20
 
 ### Upgrading

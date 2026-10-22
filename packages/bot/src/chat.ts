@@ -30,10 +30,11 @@ import type { BotStore } from './store.js';
  *
  * What this backend is for is the *log*: one JSON line per moment under
  * `<configDir>/bots/<slug>/logs/`, in the folder of the bot the chat is with -
- * a line when a turn begins, a line when it ends with its response, and a line
- * for each message steered into an open turn. Nothing about a chat is kept in
- * memory past the process that made it, so `list`, `find` and `transcript` read
- * the folders and there is no index that could fall out of step with them.
+ * a line when a turn begins, and a line when it ends with its response. A
+ * message steered into a running turn is a turn of its own, written down the
+ * same two ways. Nothing about a chat is kept in memory past the process that
+ * made it, so `list`, `find` and `transcript` read the folders and there is no
+ * index that could fall out of step with them.
  */
 
 /**
@@ -337,15 +338,24 @@ const logAt = (path: string): { turns: ChatTurn[]; mark: Bag | undefined } | und
     if (typeof said !== 'object' || said === null || Array.isArray(said)) continue;
     const held = said as Bag;
     /*
-     * What somebody said into a turn that was already running.
+     * A message somebody said into a turn that was already running, in a log
+     * written before a steer became a turn of its own.
      *
-     * Kept, as everything said in a chat is, and not a turn: a steering message
-     * is consumed by the turn it steers, and the protocol has no place on a
-     * finished turn for a second message. It is still a line of this chat's, so
-     * it says which bot the chat is for like any other.
+     * It is read as what it now would be written as: a turn of its own,
+     * finished, with the steered message and no reply. The line's id is the id
+     * of the turn it went into, so a turn of its own takes one derived from it:
+     * folding the two together would lose the steer the person watched happen.
+     * A log written since has no such line - a steer writes a turn instead.
      */
     if (held['steering'] === true) {
       mark ??= markIn(held);
+      const one = turnOf(held);
+      if (one === undefined) continue;
+      let steered = `${one.id}:steer`;
+      for (let n = 2; at.has(steered); n += 1) steered = `${one.id}:steer${n}`;
+      one.id = steered;
+      at.set(steered, turns.length);
+      turns.push(one);
       continue;
     }
     const one = turnOf(held);
@@ -660,8 +670,12 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
      * one that is over. The line goes down before the turn is announced, as the
      * line it began with did: a turn a client watched end is a turn a restart
      * can read back.
+     *
+     * `next` says whether what was waiting starts now. A steer ends a turn
+     * without it: the steered message is a turn in front of the queue, and the
+     * message behind it starts when that turn ends.
      */
-    const finish = (held: OpenTurn, state: Ending, parts: Bag[]): void => {
+    const finish = (held: OpenTurn, state: Ending, parts: Bag[], next = true): void => {
       open = undefined;
       const duration = Date.now() - Date.parse(held.startedAt);
       for (const call of held.calls) {
@@ -706,7 +720,7 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
       // Whatever was waiting behind it, now that there is nothing in front of
       // it. After the turn is said to be over, so a client reads one ending and
       // then the next beginning rather than the other way round.
-      startNext();
+      if (next) startNext();
     };
 
     /**
@@ -960,28 +974,31 @@ export function botChatAgent(configDir: string, store: BotStore, heard?: (messag
       },
 
       /**
-       * A message put into the turn that is already running.
+       * A message said while a turn is running.
        *
        * Nothing here can take one: a correction halfway is read by a model, and
-       * this chat runs none. What it does instead is hand the message on to
-       * whoever answers the chat - which is the session doing the work, and it
-       * is told mid-turn the same way a harness with steering would be - and
-       * keep it, because what was said into a turn was said in this chat.
+       * this chat runs none. The message is a turn of its own instead - the open
+       * turn ends complete with what it holds so far, and the steered text
+       * begins the next one, which is what a person watching the chat sees.
+       *
+       * It wakes whoever answers the chat again, and the wake steers the back
+       * session rather than starting it, so the answer after the steer lands in
+       * the steered turn rather than under the turn it interrupted.
        *
        * The id the host names is the client's own entry, which is not one of
-       * this chat's queue: a steer is a message the open turn takes rather than
-       * one waiting for it, so the line is written against the turn it went
-       * into, which is the one thing a later reader asks about.
+       * this chat's queue, so the new turn takes an id of its own. A message
+       * that was already waiting stays waiting: a steer is in front of it, and
+       * it starts when the steered turn ends.
        *
-       * False where there is no open turn to put it in, which is a message the
-       * host refuses rather than one it quietly turns into a turn of its own.
+       * False where there is no open turn to steer, which is a message the host
+       * refuses rather than one it quietly turns into a turn of its own.
        */
       steer: (_pendingId, text) => {
         const held = open;
         if (held === undefined) return false;
-        append(dir, id, { id: held.id, steering: true, message: messageOf(text), _meta: mark });
-        touch();
-        handle.onMessage?.({ session: start.uri, turnId: held.id, text });
+        // Ended without the queue: the steered turn is in front of it.
+        finish(held, 'complete', [], false);
+        beginTurn(crypto.randomUUID(), text);
         return true;
       },
 

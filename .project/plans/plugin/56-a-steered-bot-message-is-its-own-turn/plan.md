@@ -67,7 +67,7 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A steer starts its own turn](task-01-a-steer-starts-its-own-turn.md) | todo | - |
+| [01 - A steer starts its own turn](task-01-a-steer-starts-its-own-turn.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -76,10 +76,10 @@ client chat/pendingMessageSet steering -> bot chat steer -> end the open turn as
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-a-steer-starts-its-own-turn.md](task-01-a-steer-starts-its-own-turn.md).
+- **Done so far:** task 01 is implemented. A steer ends the open turn and begins one of its own; a reload reads it, and the wake's answer follows the new turn.
+- **Next action:** the Final verification checklist, by hand, before the plan is reviewed.
 - **Open questions:** none.
-- **Watch out for:** `finish` calls `startNext`, so the split needs an end that does not start a queued message.
+- **Watch out for:** `finish` calls `startNext`, so the split uses the new `next` parameter to leave the queue waiting.
 
 ## Final verification checklist
 
