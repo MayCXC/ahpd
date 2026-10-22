@@ -524,8 +524,7 @@ export const checkTriggerType = (value: unknown, by: string): void => {
 };
 
 /**
- * Check one `registerConnector` value against `ConnectorKind`, and answer its
- * name.
+ * Check one `registerAdapter` value against `Adapter`, and answer its name.
  *
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored connector carries, and the
@@ -533,28 +532,28 @@ export const checkTriggerType = (value: unknown, by: string): void => {
  * against. The capabilities are read for their shape and nothing more - a
  * client lists them, and this version runs none.
  */
-export const checkConnectorKind = (value: unknown, by: string): string => {
-  const object = asObject(value, by, 'registerConnector', 'kind');
-  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerConnector');
+export const checkAdapter = (value: unknown, by: string): string => {
+  const object = asObject(value, by, 'registerAdapter', 'adapter');
+  for (const member of ['name', 'title', 'description']) stringy(object, member, by, 'registerAdapter');
   const name = object.name as string;
   if (!isRecordSlug(name)) {
-    throw new Error(miss(by, 'registerConnector', name, `a slug, ${RECORD_SLUG}`));
+    throw new Error(miss(by, 'registerAdapter', name, `a slug, ${RECORD_SLUG}`));
   }
   if (!right(object.schema, 'object')) {
-    throw new Error(miss(by, 'registerConnector', 'schema', 'an object, the JSON Schema a client draws the form from'));
+    throw new Error(miss(by, 'registerAdapter', 'schema', 'an object, the JSON Schema a client draws the form from'));
   }
   if (!Array.isArray(object.capabilities)) {
-    throw new Error(miss(by, 'registerConnector', 'capabilities', 'a list of the capabilities a connector of this kind has'));
+    throw new Error(miss(by, 'registerAdapter', 'capabilities', 'a list of the capabilities a connector of this adapter has'));
   }
   for (const held of object.capabilities) {
-    const capability = asObject(held, by, 'registerConnector', 'a capability');
-    for (const member of ['type', 'name', 'title', 'description']) stringy(capability, member, by, 'registerConnector');
+    const capability = asObject(held, by, 'registerAdapter', 'a capability');
+    for (const member of ['type', 'name', 'title', 'description']) stringy(capability, member, by, 'registerAdapter');
     if (capability.input !== undefined && !right(capability.input, 'object')) {
-      throw new Error(miss(by, 'registerConnector', 'input', 'an object, the JSON Schema a client draws the form from, or nothing'));
+      throw new Error(miss(by, 'registerAdapter', 'input', 'an object, the JSON Schema a client draws the form from, or nothing'));
     }
   }
   if (typeof object.open !== 'function') {
-    throw new Error(miss(by, 'registerConnector', 'open', 'a function answering how to close the connector, or nothing'));
+    throw new Error(miss(by, 'registerAdapter', 'open', 'a function answering how to close the connector, or nothing'));
   }
   return name;
 };

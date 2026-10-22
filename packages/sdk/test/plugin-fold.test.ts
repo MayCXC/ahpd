@@ -11,7 +11,7 @@ import type { AutomationStore } from '../src/types/automations.js';
 import type { Usage } from '../src/types/usage.js';
 import type { Policies } from '../src/types/policies.js';
 import type { Vault } from '../src/types/vault.js';
-import type { ConnectorKind } from '../src/types/connectors.js';
+import type { Adapter } from '../src/types/connectors.js';
 import type { Contribution, LoaderContext, PortContribution, PortKey, Route } from '../src/types/plugin.js';
 
 /*
@@ -46,7 +46,7 @@ const contribution = (
     ports?: Partial<Record<PortKey, PortContribution>>;
     providers?: Record<string, unknown>;
     channels?: Contribution['channels'];
-    connectors?: Contribution['connectors'];
+    adapters?: Contribution['adapters'];
     methods?: Contribution['methods'];
     sessionConfig?: Record<string, Record<string, unknown>>;
     sessionCompletions?: Contribution['sessionCompletions'];
@@ -63,7 +63,7 @@ const contribution = (
   ports: parts.ports ?? {},
   providers: parts.providers ?? {},
   channels: parts.channels ?? {},
-  connectors: parts.connectors ?? {},
+  adapters: parts.adapters ?? {},
   methods: parts.methods ?? {},
   events: {},
   triggers: { by, types: {} },
@@ -383,14 +383,14 @@ describe('the routes a fold carries', () => {
 });
 
 /*
- * The connector kinds a plugin offers.
+ * The adapters a plugin offers.
  *
- * A kind is registered through `pluginHost`, which checks its shape and its
+ * An adapter is registered through `pluginHost`, which checks its shape and its
  * contract, and the fold keeps it by name. A capability is declared and listed;
  * nothing here, and nothing in this plan, runs one.
  */
 
-const KIND_CONTEXT: LoaderContext = {
+const ADAPTER_CONTEXT: LoaderContext = {
   path: '/tmp/fold',
   paths: ['/tmp/fold'],
   version: '0.0.0',
@@ -400,11 +400,11 @@ const KIND_CONTEXT: LoaderContext = {
   say: () => {},
 };
 
-/** A connector kind that opens nothing, which is all a registration check reads. */
-const kind = (name: string, parts: Partial<ConnectorKind> = {}): ConnectorKind => ({
+/** An adapter that opens nothing, which is all a registration check reads. */
+const adapter = (name: string, parts: Partial<Adapter> = {}): Adapter => ({
   name,
   title: `${name} connector`,
-  description: `A connector of the ${name} kind.`,
+  description: `A connector of the ${name} adapter.`,
   schema: { type: 'object', properties: {} },
   capabilities: [
     { type: 'receive', name: 'call', title: 'Receives calls', description: 'Answers a call on the connector.' },
@@ -413,24 +413,24 @@ const kind = (name: string, parts: Partial<ConnectorKind> = {}): ConnectorKind =
   ...parts,
 });
 
-describe('the connector kinds a fold carries', () => {
-  it('collects two kinds one plugin registers, by name', () => {
-    const alpha = pluginHost('alpha', KIND_CONTEXT);
-    alpha.host.registerConnector(kind('webhook'));
-    alpha.host.registerConnector(kind('mail'));
+describe('the adapters a fold carries', () => {
+  it('collects two adapters one plugin registers, by name', () => {
+    const alpha = pluginHost('alpha', ADAPTER_CONTEXT);
+    alpha.host.registerAdapter(adapter('webhook'));
+    alpha.host.registerAdapter(adapter('mail'));
 
     const { options, problems } = foldHostOptions(base(), [alpha.contribution]);
     expect(problems).toEqual([]);
-    expect(Object.keys(options.connectorKinds ?? {})).toEqual(['webhook', 'mail']);
-    expect(options.connectorKinds?.webhook?.by).toBe('alpha');
-    expect(options.connectorKinds?.webhook?.capabilities.map((one) => one.name)).toEqual(['call']);
+    expect(Object.keys(options.adapters ?? {})).toEqual(['webhook', 'mail']);
+    expect(options.adapters?.webhook?.by).toBe('alpha');
+    expect(options.adapters?.webhook?.capabilities.map((one) => one.name)).toEqual(['call']);
   });
 
-  it('refuses a kind name two plugins register, and names both', () => {
-    const alpha = pluginHost('alpha', KIND_CONTEXT);
-    alpha.host.registerConnector(kind('webhook'));
-    const beta = pluginHost('beta', KIND_CONTEXT);
-    beta.host.registerConnector(kind('webhook'));
+  it('refuses an adapter name two plugins register, and names both', () => {
+    const alpha = pluginHost('alpha', ADAPTER_CONTEXT);
+    alpha.host.registerAdapter(adapter('webhook'));
+    const beta = pluginHost('beta', ADAPTER_CONTEXT);
+    beta.host.registerAdapter(adapter('webhook'));
 
     const { options, problems } = foldHostOptions(base(), [alpha.contribution, beta.contribution]);
     expect(problems).toHaveLength(1);
@@ -439,19 +439,25 @@ describe('the connector kinds a fold carries', () => {
     expect(problems[0]).toContain('webhook');
     // The first keeps the name, and the second keeps everything else it
     // contributed rather than failing its whole load.
-    expect(options.connectorKinds?.webhook?.by).toBe('alpha');
+    expect(options.adapters?.webhook?.by).toBe('alpha');
   });
 
-  it('refuses a kind with no schema', () => {
-    const { host } = pluginHost('alpha', KIND_CONTEXT);
-    expect(() => host.registerConnector({ ...kind('webhook'), schema: undefined } as unknown as ConnectorKind)).toThrow('schema');
+  it('refuses an adapter with no schema', () => {
+    const { host } = pluginHost('alpha', ADAPTER_CONTEXT);
+    expect(() => host.registerAdapter({ ...adapter('webhook'), schema: undefined } as unknown as Adapter)).toThrow('schema');
   });
 
-  it('refuses a kind its contracts do not list, naming the kind', () => {
-    const listed = pluginHost('alpha', KIND_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
-    expect(() => listed.registerConnector(kind('webhook'))).not.toThrow();
+  it('refuses an adapter its contracts do not list, naming the adapter', () => {
+    const listed = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: { adapters: ['webhook'] } }).host;
+    expect(() => listed.registerAdapter(adapter('webhook'))).not.toThrow();
 
-    const other = pluginHost('beta', KIND_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
-    expect(() => other.registerConnector(kind('mail'))).toThrow('mail');
+    const other = pluginHost('beta', ADAPTER_CONTEXT, { contracts: { adapters: ['webhook'] } }).host;
+    expect(() => other.registerAdapter(adapter('mail'))).toThrow('mail');
+  });
+
+  it('refuses an adapter a plugin whose contracts say connectors registers, naming adapters', () => {
+    const old = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
+
+    expect(() => old.registerAdapter(adapter('webhook'))).toThrow('adapters');
   });
 });

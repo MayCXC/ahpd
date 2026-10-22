@@ -96,6 +96,8 @@ export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './resources/recordschannel.js';
 export { connectorsChannel } from './connectors/channel.js';
 export type { ConnectorsChannel, ConnectorsChannelOptions, ConnectorState } from './connectors/channel.js';
+export { adaptersChannel } from './connectors/adapters.js';
+export type { AdaptersChannel, AdaptersChannelOptions } from './connectors/adapters.js';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './usage/scopes.js';
 export type { Membership, Scope, ScopeAnswer } from './usage/scopes.js';
 export { githubIssuer, isIssuerUrl, issuerFrom, issuerKind, oidcIssuer } from './access/issuers.js';

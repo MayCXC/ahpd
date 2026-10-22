@@ -1,6 +1,6 @@
 ---
 title: The docs say adapters, connectors and their grants
-status: todo
+status: implemented
 depends: [task-15-adapters-and-connectors-split.md]
 layer: "docs"
 refs:
@@ -46,8 +46,17 @@ The docs say which grant each connector action takes.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** implemented on 2026-10-22.
+  `PLUGINS.md` names `registerAdapter` and has "An adapter of your own" and the `adapters` contract key. It has a section for `x-ahpd-adapters` beside the one for `x-ahpd-connectors`; no `kind:` key remains, and the old usage `kind:` example is written out.
+  The connector section says the two read grants, `?owner=me`, and the grant each owner takes for a put and a remove.
+  `USERS.md` lists `connector` with `list`, `all`, `put`, `remove` and `host`.
+  `HOST.md` has a row for the adapters channel, for each connector read grant, and for a put and a remove.
+  `CHANGELOG.md` has the adapter renames, the two channels and the new grant rules under `0.14.0 - unreleased`. It says a person needs `connector:put` to make their own connector.
+  `00-plugin.md` says adapter in the glossary and in the registration table.
+  `pnpm -s docs:build` passes. `rg -n "connector kind" docs .project/plans/plugin/00-plugin.md` finds nothing, and `PLUGINS.md` has no `kind:`.
+- **Next action:** none in this task. Every task of the plan is implemented; `implemented.md` and `status: built` wait for a close-out.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** the `HOST.md` grants table gained separate rows for the adapters channel, each connector read grant, and put and remove. They replace the one row.
+  The changelog's JSON example carries `adapter`, because a put takes it.
 - **Watch out for:** older plans keep "connector kind"; a path is an identity, so they stay as written.
+  The prose linter still reports long sentences in `HOST.md`, `CHANGELOG.md` and `00-plugin.md` that were there before this task; the lines this task added are short.

@@ -17,7 +17,7 @@ import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary } from '@micr
 import type { Agent } from './agent.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
-import type { ConnectorKind, ServedConnectorKind } from './connectors.js';
+import type { Adapter, ServedAdapter } from './connectors.js';
 import type { EventHandler, EventName, HostHandlers } from './events.js';
 import type { Host, HostOptions, HostTool } from './host.js';
 import type { MachineNeed } from './machine.js';
@@ -1023,15 +1023,15 @@ export interface PluginHost extends PluginContext {
    */
   fireTrigger(type: string, event: string, data: Record<string, unknown>): void;
   /**
-   * Offer one kind of connector a person can make.
+   * Offer one adapter a person can make connectors from.
    *
-   * The name is a slug and is what a stored connector carries, so a kind is
-   * registered once: a name this plugin already used is refused here, and one
-   * another plugin took is reported by the fold. The schema is the form a
-   * client draws, and `open` runs each time a connector of the kind is made or
-   * the daemon starts with one stored.
+   * The name is a slug and is what a stored connector carries, so an adapter
+   * is registered once: a name this plugin already used is refused here, and
+   * one another plugin took is reported by the fold. The schema is the form a
+   * client draws, and `open` runs each time a connector of the adapter is made
+   * or the daemon starts with one stored.
    */
-  registerConnector(kind: ConnectorKind): void;
+  registerAdapter(adapter: Adapter): void;
   /**
    * Subscribe to one of the host's own moments.
    *
@@ -1055,7 +1055,7 @@ export interface PluginLink {
  * The registrations a plugin declares, by kind.
  *
  * A key is the plural of the register method of that kind - `agents`, `tools`,
- * `channels`, `methods`, `routes`, `triggerTypes`, `connectors` - and its
+ * `channels`, `methods`, `routes`, `triggerTypes`, `adapters` - and its
  * entries are the names the method may be called with. `ports` holds the
  * singleton ports a plugin sets, such as `vault`. A registration its contracts
  * do not list is refused.
@@ -1200,13 +1200,13 @@ export interface Contribution {
    */
   channels: Record<string, ServedChannel>;
   /**
-   * The connector kinds this plugin offers, keyed by name.
+   * The adapters this plugin offers, keyed by name.
    *
    * Each entry carries the plugin that registered it, as a channel does, so
    * the fold can report a name two plugins both took without looking the
    * plugin up again.
    */
-  connectors: Record<string, ServedConnectorKind>;
+  adapters: Record<string, ServedAdapter>;
   /** The commands this plugin serves, keyed by name. */
   methods: Record<string, ServedMethod>;
   /**

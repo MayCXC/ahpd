@@ -67,7 +67,7 @@
     "contracts": {
       "routes": ["post /plugins/webhook/:endpoint"],
       "triggerTypes": ["webhook"],
-      "connectors": ["webhook"]
+      "adapters": ["webhook"]
     },
     "options": {}
   }

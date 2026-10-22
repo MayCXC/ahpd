@@ -1,22 +1,22 @@
 import { checkEndpoint, REPLIES } from './record.js';
 import type { Endpoint } from './record.js';
-import type { Capability, Connector, ConnectorKind } from '@ahpd/sdk';
+import type { Adapter, Capability, Connector } from '@ahpd/sdk';
 
 /**
- * The `webhook` connector kind.
+ * The `webhook` adapter.
  *
- * A connector of this kind is one endpoint: a bot or an automation, the reply
- * a call gets, and the secret its caller sends. The schema is what a client
- * draws the form from, and `open` is where the plugin starts answering for a
- * connector that was made or was stored when the daemon started.
+ * A connector of this adapter is one endpoint: a bot or an automation, the
+ * reply a call gets, and the secret its caller sends. The schema is what a
+ * client draws the form from, and `open` is where the plugin starts answering
+ * for a connector that was made or was stored when the daemon started.
  *
  * `secret` is the one field a schema marks `writeOnly`, so the host keeps its
  * value in the vault and the connector's record holds a reference to it. Every
  * other field is the endpoint's own and stays in the record.
  */
 
-/** The kind's name, which is the `kind` every endpoint's record carries. */
-export const KIND = 'webhook';
+/** The adapter's name, which is the `adapter` every endpoint's record carries. */
+export const ADAPTER = 'webhook';
 
 /**
  * The fields of a webhook endpoint, as a client draws them.
@@ -94,7 +94,7 @@ export const SCHEMA: Record<string, unknown> = {
   ],
 };
 
-/** What a connector of this kind does, as a client lists it. */
+/** What a connector of this adapter does, as a client lists it. */
 export const CAPABILITIES: Capability[] = [{
   type: 'receive',
   name: 'calls',
@@ -103,16 +103,16 @@ export const CAPABILITIES: Capability[] = [{
 }];
 
 /**
- * The kind over the endpoints that are open now.
+ * The adapter over the endpoints that are open now.
  *
  * `open` checks the connector's config once more, because the schema is a
  * form and `id` is not one of its fields, and keeps the endpoint where the
  * route reads it. The answered close takes it out again: a removed connector,
  * and one closed before it is made afresh, answers 404.
  */
-export function webhookKind(endpoints: Map<string, Endpoint>): ConnectorKind {
+export function webhookAdapter(endpoints: Map<string, Endpoint>): Adapter {
   return {
-    name: KIND,
+    name: ADAPTER,
     title: 'Webhook',
     description: 'A URL that talks to a bot or fires an automation, with a secret per endpoint.',
     schema: SCHEMA,

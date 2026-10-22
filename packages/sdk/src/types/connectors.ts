@@ -1,11 +1,11 @@
 /**
- * The kinds of connector a plugin offers, and the connectors made from them.
+ * The adapters a plugin offers, and the connectors made from them.
  *
- * A connector kind is what a plugin registers: one name, the form a person
- * fills in to make a connector of it, and the capabilities a connector of that
- * kind carries. A connector is one person's or team's instance of a kind, kept
- * as a JSON record, and the kind's `open` is where the plugin starts answering
- * for it.
+ * An adapter is what a plugin registers: one name, the form a person fills in
+ * to make a connector of it, and the capabilities a connector of that adapter
+ * carries. A connector is one person's or team's instance of an adapter, kept
+ * as a JSON record, and the adapter's `open` is where the plugin starts
+ * answering for it.
  *
  * A capability is declared and shown; nothing here runs one. Running an action
  * as a tool is a later plan.
@@ -21,7 +21,7 @@
  */
 export type CapabilityType = 'receive' | 'command' | 'action' | 'ui' | (string & {});
 
-/** One thing a connector of a kind does. */
+/** One thing a connector of an adapter does. */
 export interface Capability {
   /** What kind of capability this is. */
   type: CapabilityType;
@@ -49,12 +49,12 @@ export interface Capability {
  */
 export type ConnectorOwner = 'host' | `team:${string}` | `user:${string}`;
 
-/** One connector, as a kind's `open` is handed it. */
+/** One connector, as an adapter's `open` is handed it. */
 export interface Connector {
   /** The connector's id: a slug, and the name its record is kept under. */
   id: string;
-  /** The name of the kind it is one of. */
-  kind: string;
+  /** The name of the adapter it is one of. */
+  adapter: string;
   /** Whose connector it is. */
   owner: ConnectorOwner;
   /** What a client prints for it; absent, its id stands for it. */
@@ -64,24 +64,24 @@ export interface Connector {
 }
 
 /**
- * One kind of connector a plugin offers.
+ * One adapter a plugin offers.
  *
- * The name is the kind's identity and is a slug, because it is also the
- * `kind` a stored connector carries. The schema is what a client draws the
- * form from, so it is the protocol between the plugin and a person: a kind
+ * The name is the adapter's identity and is a slug, because it is also the
+ * `adapter` a stored connector carries. The schema is what a client draws the
+ * form from, so it is the protocol between the plugin and a person: an adapter
  * that changes it leaves a connector that no longer matches, and the plan that
  * adds connectors does not migrate one.
  */
-export interface ConnectorKind {
-  /** The kind's name: a slug, and the name every connector of it carries. */
+export interface Adapter {
+  /** The adapter's name: a slug, and the name every connector of it carries. */
   name: string;
-  /** What a client prints for the kind. */
+  /** What a client prints for the adapter. */
   title: string;
-  /** One sentence on what a connector of this kind is. */
+  /** One sentence on what a connector of this adapter is. */
   description: string;
   /** The JSON Schema a client draws the form from. */
   schema: Record<string, unknown>;
-  /** What a connector of this kind does, as a client lists it. */
+  /** What a connector of this adapter does, as a client lists it. */
   capabilities: Capability[];
   /**
    * Start answering for one connector.
@@ -93,8 +93,8 @@ export interface ConnectorKind {
   open(connector: Connector): void | (() => void | Promise<void>);
 }
 
-/** One connector kind as the fold keeps it, with the plugin that registered it. */
-export interface ServedConnectorKind extends ConnectorKind {
+/** One adapter as the fold keeps it, with the plugin that registered it. */
+export interface ServedAdapter extends Adapter {
   /** The plugin that registered it. */
   by: string;
 }

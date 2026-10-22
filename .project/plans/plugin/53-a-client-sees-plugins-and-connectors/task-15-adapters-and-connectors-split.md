@@ -1,6 +1,6 @@
 ---
 title: Adapters and connectors are two channels
-status: todo
+status: implemented
 depends: [task-12-plugins-and-connectors-have-grants.md]
 layer: "sdk, server, webhook"
 refs:
@@ -78,9 +78,22 @@ Every connector action takes a `connector:` grant, the caller's own connector in
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** implemented on 2026-10-22.
+  `ConnectorKind`, `ServedConnectorKind`, `registerConnector`, `connectorKinds` and `checkConnectorKind` are `Adapter`, `ServedAdapter`, `registerAdapter`, `adapters` and `checkAdapter`; the contract key is `adapters`.
+  The connector record names its adapter in `adapter`, and a put takes `adapter`, not `kind`.
+  `x-ahpd-adapters` is a read-only channel keyed by adapter name, needs `connector:list`, and is served beside `x-ahpd-connectors` from `run.ts`.
+  `x-ahpd-connectors` holds connector rows only; `connector:list` reads own, team and host rows, `connector:all` reads every row, and neither grant reads no row.
+  A put and a remove take `connector:put` or `connector:remove` of any owner. A host connector also takes `connector:host`, and a team connector a membership of its team. A `user:` connector takes the caller to be the person. A move also passes the old owner's remove rule.
+  The webhook plugin registers `webhookAdapter` from `adapter.ts` and declares `adapters` in its manifest.
+  `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
+  The six touched test files pass, 86 tests: `connectors-channel`, `adapters-channel`, `plugin-fold`, `plugin-host`, `webhook-bot`, `webhook-kind`.
+  The validation grep finds no `ConnectorKind`, `registerConnector`, `connectorKinds` or `ServedConnectorKind`. The `kind:` in that grep also matches unrelated fields such as `clientplugins.ts`'s `load: { kind: 'loaded' }`, `validate.ts`'s parameter and `pluginparts.ts`'s `state: { kind: 'stopped' }`, and none of those is a connector.
+- **Next action:** task 16, the docs.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** `webhook-kind.test.ts` keeps its name, because the Files list renames only `src/kind.ts`; its body uses the adapter names.
+  `plugin-fold.test.ts`, `plugin-host.test.ts` and `webhook-bot.test.ts` were updated too, because the renamed contribution field and type live in them.
+  The contract check's new case is in `plugin-fold.test.ts`.
 - **Watch out for:** a stored connector with a `kind` field and no `adapter` field reads as `unavailable`.
   A person who made their own connector with no grant cannot change it any more; the changelog says which grants to add.
+  A `connector:list` caller with no readable connector is refused the subscription, an empty store included. A records channel admits a reader through one readable id.
+  `connector:all` holders are admitted by the channel grant and read an empty store as an empty snapshot.

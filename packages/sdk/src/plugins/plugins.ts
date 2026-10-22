@@ -13,7 +13,7 @@
 
 import type { Agent } from '../types/agent.js';
 import type { SessionConfigAnswerer } from '../types/completions.js';
-import type { ServedConnectorKind } from '../types/connectors.js';
+import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
 import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
@@ -30,7 +30,7 @@ import { isRecordPath, isRecordSlug, RECORD_PATH, RECORD_SLUG } from '../resourc
 import type { Pair } from '../utils/pair.js';
 import { reason } from '../utils/values.js';
 import { readSecret } from '../access/vault.js';
-import { checkAgent, checkChannel, checkConnectorKind, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
+import { checkAdapter, checkAgent, checkChannel, checkMethod, checkPort, checkResourceProvider, checkRoute, checkScheme, checkSessionRequest, checkTool, checkTriggerType, declared, miss, reservedName } from './validate.js';
 
 /**
  * One contributed backend, as the host keeps it: the plugin's own agent with a
@@ -336,13 +336,13 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
    */
   const channels: Record<string, ServedChannel> = { ...base.channels };
   /*
-   * The connector kinds, by name, and the plugin each belongs to. Seeded from
-   * the base for the same reason the channels are: a plugin that offers a name
-   * the daemon already does is told, rather than winning by load order.
+   * The adapters, by name, and the plugin each belongs to. Seeded from the
+   * base for the same reason the channels are: a plugin that offers a name the
+   * daemon already does is told, rather than winning by load order.
    */
-  const connectorKinds: Record<string, ServedConnectorKind> = { ...base.connectorKinds };
-  const connectorHolders = new Map<string, string>();
-  for (const [name, kind] of Object.entries(base.connectorKinds ?? {})) connectorHolders.set(name, kind.by);
+  const adapters: Record<string, ServedAdapter> = { ...base.adapters };
+  const adapterHolders = new Map<string, string>();
+  for (const [name, adapter] of Object.entries(base.adapters ?? {})) adapterHolders.set(name, adapter.by);
   /*
    * The one Plan call a turn shows, and who draws it.
    *
@@ -437,14 +437,14 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
       channels[scheme] = served;
     }
 
-    for (const [name, kind] of Object.entries(contribution.connectors)) {
-      const held = connectorHolders.get(name);
+    for (const [name, adapter] of Object.entries(contribution.adapters)) {
+      const held = adapterHolders.get(name);
       if (held !== undefined) {
-        problems.push(`plugin ${contribution.by} registers connector kind ${name}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered`);
+        problems.push(`plugin ${contribution.by} registers adapter ${name}, which ${held === 'the daemon' ? 'the daemon' : `plugin ${held}`} already registered`);
         continue;
       }
-      connectorHolders.set(name, contribution.by);
-      connectorKinds[name] = kind;
+      adapterHolders.set(name, contribution.by);
+      adapters[name] = adapter;
     }
 
     for (const [name, served] of Object.entries(contribution.methods)) {
@@ -582,7 +582,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
 
   if (Object.keys(resourceProviders).length > 0) options.resourceProviders = resourceProviders;
   if (Object.keys(channels).length > 0) options.channels = channels;
-  if (Object.keys(connectorKinds).length > 0) options.connectorKinds = connectorKinds;
+  if (Object.keys(adapters).length > 0) options.adapters = adapters;
   if (Object.keys(methods).length > 0) options.methods = methods;
   if (plan !== undefined) options.plan = plan;
   if (sessionMeta.length > 0) options.sessionMeta = sessionMeta;
@@ -899,7 +899,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
     ports: {},
     providers: {},
     channels: {},
-    connectors: {},
+    adapters: {},
     methods: {},
     events: events as unknown as HostHandlers,
     closers: [],
@@ -1406,14 +1406,14 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
        */
       held.deliver?.(named, String(event), data as Record<string, unknown>);
     },
-    registerConnector(kind) {
+    registerAdapter(adapter) {
       open();
-      const named = checkConnectorKind(kind, by);
-      declared(by, options.contracts, 'connectors', named);
-      if (contribution.connectors[named] !== undefined) {
-        throw new Error(miss(by, 'registerConnector', named, 'a name no other connector kind in this plugin uses'));
+      const named = checkAdapter(adapter, by);
+      declared(by, options.contracts, 'adapters', named);
+      if (contribution.adapters[named] !== undefined) {
+        throw new Error(miss(by, 'registerAdapter', named, 'a name no other adapter in this plugin uses'));
       }
-      contribution.connectors[named] = { ...kind, by };
+      contribution.adapters[named] = { ...adapter, by };
     },
     on(event, handle) {
       // The context is captured, not rebuilt when the event fires: it is the

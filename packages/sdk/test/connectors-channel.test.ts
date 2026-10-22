@@ -9,7 +9,7 @@ import { fileResources } from '../src/resources/resources.js';
 import { memoryRecords } from '../src/resources/records.js';
 import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
-import type { Connector, ServedConnectorKind } from '../src/types/connectors.js';
+import type { Connector, ServedAdapter } from '../src/types/connectors.js';
 import type { RecordCollection } from '../src/types/records.js';
 import type { Users } from '../src/types/users.js';
 import type { Vault } from '../src/types/vault.js';
@@ -18,10 +18,10 @@ import type { Vault } from '../src/types/vault.js';
  * The connectors channel over a store in memory and a vault that is a map.
  *
  * The host is in this process, over a real users file, so the grant a caller
- * holds is the one the daemon would see: `connector:read` reads every row,
- * `connector:put` and `connector:remove` make and remove a host connector,
- * `team:write` makes a team's, and a person's own connector takes nothing but
- * being them.
+ * holds is the one the daemon would see: `connector:list` reads the caller's
+ * own connectors, their teams' and the host's, `connector:all` reads every one,
+ * and `connector:put` and `connector:remove` make and remove a connector of
+ * any owner beside that owner's own rule.
  */
 
 const URI = 'x-ahpd-connectors://';
@@ -30,7 +30,7 @@ const ROOT = 'ahp-root://';
 
 type Bag = Record<string, any>;
 
-/** The kind's schema: one string a person fills in, one secret and one choice. */
+/** The adapter's schema: one string a person fills in, one secret and one choice. */
 const SCHEMA: Record<string, unknown> = {
   type: 'object',
   properties: {
@@ -42,7 +42,7 @@ const SCHEMA: Record<string, unknown> = {
 };
 
 /**
- * The subset of JSON Schema this kind's form uses, as the daemon's checker
+ * The subset of JSON Schema this adapter's form uses, as the daemon's checker
  * reads it: a value of the named type, the required fields, and no field the
  * schema does not describe.
  */
@@ -83,22 +83,25 @@ beforeEach(() => {
   writeFileSync(usersFile, JSON.stringify({
     teams: [{ id: 'backend' }],
     roles: {
-      reader: ['connector:read'],
-      writer: ['connector:read', 'connector:write'],
-      teamer: ['team:write'],
+      lister: ['connector:list'],
+      all: ['connector:all'],
+      writer: ['connector:list', 'connector:put', 'connector:remove'],
+      teamer: ['connector:list', 'connector:put', 'connector:remove'],
+      'host-maker': ['connector:put', 'connector:host'],
+      'host-writer': ['connector:put', 'connector:remove', 'connector:host'],
       'config-reader': ['config:read'],
       'config-writer': ['config:write'],
-      putter: ['connector:put'],
     },
     users: [
-      { id: 'ana', roles: ['reader'] },
+      { id: 'ana', roles: ['lister'] },
       { id: 'bo', roles: [] },
       { id: 'cy', roles: ['writer'] },
       { id: 'di', roles: ['teamer'], memberships: ['backend'] },
       { id: 'el', roles: [], memberships: ['backend'] },
       { id: 'fa', roles: ['config-reader'] },
       { id: 'gi', roles: ['config-writer'] },
-      { id: 'ha', roles: ['putter'] },
+      { id: 'ha', roles: ['host-maker'] },
+      { id: 'iv', roles: ['all'] },
     ],
   }));
 });
@@ -106,22 +109,22 @@ afterEach(() => { rmSync(home, { recursive: true, force: true }); });
 
 type Host = ReturnType<typeof createHost>;
 
-/** What a kind was opened with, and what it was closed as. */
+/** What an adapter was opened with, and what it was closed as. */
 interface Opened {
   id: string;
-  kind: string;
+  adapter: string;
   owner: string;
   config: Record<string, unknown>;
 }
 
-/** A host serving the connectors channel over one kind, the `webhook` one. */
+/** A host serving the connectors channel over one adapter, the `webhook` one. */
 async function served(register = true) {
   const collection: RecordCollection = await memoryRecords().collection('connectors', { format: 'json' });
   const opened: Opened[] = [];
   const closed: string[] = [];
   const problems: string[] = [];
   const vault = made();
-  const kinds: Record<string, ServedConnectorKind> = register
+  const adapters: Record<string, ServedAdapter> = register
     ? {
         webhook: {
           name: 'webhook',
@@ -131,7 +134,7 @@ async function served(register = true) {
           schema: SCHEMA,
           capabilities: [{ type: 'receive', name: 'call', title: 'Receives calls', description: 'Receives calls at a URL.' }],
           open: (connector: Connector) => {
-            opened.push({ id: connector.id, kind: connector.kind, owner: connector.owner, config: connector.config });
+            opened.push({ id: connector.id, adapter: connector.adapter, owner: connector.owner, config: connector.config });
             return () => { closed.push(connector.id); };
           },
         },
@@ -139,7 +142,7 @@ async function served(register = true) {
     : {};
   const connectors = connectorsChannel({
     collection,
-    kinds: () => kinds,
+    adapters: () => adapters,
     vault: () => vault,
     check,
     onProblem: (line) => { problems.push(line); },
@@ -154,7 +157,7 @@ async function served(register = true) {
     methods: wire.methods,
     users,
   });
-  return { host, users, collection, connectors, kinds, opened, closed, problems, vault, close: async () => { await host.close(); } };
+  return { host, users, collection, connectors, adapters, opened, closed, problems, vault, close: async () => { await host.close(); } };
 }
 
 /** A client signed in as `id`, whose channel actions are kept. */
@@ -183,42 +186,43 @@ const as = async (host: Host, users: Users, id: string) => {
   return { call, rows, ready, close: () => { client.close(); } };
 };
 
-it('lists a kind before any connector of it exists', async () => {
+it('holds no adapter row, and a connector row names its adapter', async () => {
   const { host, users, close } = await served();
-  const ana = await as(host, users, 'ana');
+  const ha = await as(host, users, 'ha');
+  const iv = await as(host, users, 'iv');
 
-  const rows = await ana.rows();
-  expect(Object.keys(rows)).toEqual(['kind:webhook']);
-  expect(rows['kind:webhook']).toEqual({
-    name: 'webhook',
-    title: 'Webhook',
-    description: 'Receives calls at a URL.',
-    schema: SCHEMA,
-    capabilities: [{ type: 'receive', name: 'call', title: 'Receives calls', description: 'Receives calls at a URL.' }],
-    plugin: 'webhook',
-  });
+  expect(await ha.call('x-ahpd/connectors/put', {
+    id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' },
+  })).toMatchObject({ result: { state: 'open' } });
+
+  const rows = await iv.rows();
+  expect(Object.keys(rows)).toEqual(['shared']);
+  expect(rows['shared']).toMatchObject({ id: 'shared', adapter: 'webhook', owner: 'host' });
+  // An adapter's own fields stay on `x-ahpd-adapters`.
+  expect(rows['shared']).not.toHaveProperty('name');
+  expect(rows['shared']).not.toHaveProperty('plugin');
+  expect(rows['shared']).not.toHaveProperty('capabilities');
   await close();
 });
 
-it('makes two connectors of one kind, and opens each with its own config', async () => {
+it('makes two connectors of one adapter, and opens each with its own config', async () => {
   const { host, users, opened, close } = await served();
   const cy = await as(host, users, 'cy');
-  await cy.rows();
 
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'webhook', owner: 'user:cy', title: 'CI', config: { target: 'bot://motion' },
-  })).toMatchObject({ result: { id: 'ci', kind: 'webhook', owner: 'user:cy', title: 'CI', state: 'open' } });
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', title: 'CI', config: { target: 'bot://motion' },
+  })).toMatchObject({ result: { id: 'ci', adapter: 'webhook', owner: 'user:cy', title: 'CI', state: 'open' } });
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'deploys', kind: 'webhook', owner: 'user:cy', config: { target: 'automation' },
+    id: 'deploys', adapter: 'webhook', owner: 'user:cy', config: { target: 'automation' },
   })).toMatchObject({ result: { id: 'deploys', state: 'open' } });
 
   expect(opened).toEqual([
-    { id: 'ci', kind: 'webhook', owner: 'user:cy', config: { target: 'bot://motion' } },
-    { id: 'deploys', kind: 'webhook', owner: 'user:cy', config: { target: 'automation' } },
+    { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'bot://motion' } },
+    { id: 'deploys', adapter: 'webhook', owner: 'user:cy', config: { target: 'automation' } },
   ]);
   const rows = await cy.rows();
-  expect(Object.keys(rows)).toEqual(['kind:webhook', 'ci', 'deploys']);
-  expect(rows['ci']).toMatchObject({ id: 'ci', kind: 'webhook', owner: 'user:cy', state: 'open' });
+  expect(Object.keys(rows)).toEqual(['ci', 'deploys']);
+  expect(rows['ci']).toMatchObject({ id: 'ci', adapter: 'webhook', owner: 'user:cy', state: 'open' });
   expect(rows['deploys']).toMatchObject({ state: 'open' });
   await close();
 });
@@ -226,15 +230,14 @@ it('makes two connectors of one kind, and opens each with its own config', async
 it('keeps a writeOnly value in the vault, and in no record and no snapshot', async () => {
   const { host, users, collection, opened, vault, close } = await served();
   const cy = await as(host, users, 'cy');
-  await cy.rows();
 
   await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'webhook', owner: 'user:cy', config: { target: 'bot://motion', secret: 'sk-live-1' },
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'bot://motion', secret: 'sk-live-1' },
   });
 
   // The vault holds it under the owner's scope, under the connector and the field.
   expect(await vault.get('user:cy/connector/ci/secret')).toBe('sk-live-1');
-  // The kind is given the value back, because that is what it answers calls with.
+  // The adapter is given the value back, because that is what it answers calls with.
   expect(opened[0]?.config['secret']).toBe('sk-live-1');
 
   const stored = await collection.get('ci');
@@ -248,12 +251,12 @@ it('keeps the stored secret when a put sends the writeOnly field empty', async (
   const { host, users, collection, opened, vault, close } = await served();
   const cy = await as(host, users, 'cy');
   await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'webhook', owner: 'user:cy', config: { target: 'bot://motion', secret: 'sk-live-1' },
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'bot://motion', secret: 'sk-live-1' },
   });
 
   // A client never sees the value, so it sends the field empty rather than leaving it out.
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'webhook', owner: 'user:cy', config: { target: 'bot://other', secret: '' },
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'bot://other', secret: '' },
   })).toMatchObject({ result: { state: 'open' } });
 
   expect(await vault.get('user:cy/connector/ci/secret')).toBe('sk-live-1');
@@ -267,21 +270,21 @@ it('keeps the stored secret when a put sends the writeOnly field empty', async (
   await close();
 });
 
-it('serves a connector of a kind nobody registers as unavailable, and does not open it', async () => {
+it('serves a connector of an adapter nobody registers as unavailable, and does not open it', async () => {
   const { host, users, collection, opened, connectors, close } = await served(false);
-  await collection.put({ id: 'lost', kind: 'webhook', owner: 'host', config: { target: 'bot://motion' } });
+  await collection.put({ id: 'lost', adapter: 'webhook', owner: 'host', config: { target: 'bot://motion' } });
   await connectors.openAll();
   const ana = await as(host, users, 'ana');
 
   const rows = await ana.rows();
-  expect(rows['lost']).toMatchObject({ id: 'lost', kind: 'webhook', owner: 'host', state: 'unavailable' });
+  expect(rows['lost']).toMatchObject({ id: 'lost', adapter: 'webhook', owner: 'host', state: 'unavailable' });
   expect(opened).toEqual([]);
   await close();
 });
 
-it('serves a connector whose config no longer fits its kind as invalid, and opens none', async () => {
+it('serves a connector whose config no longer fits its adapter as invalid, and opens none', async () => {
   const { host, users, collection, opened, connectors, close } = await served();
-  await collection.put({ id: 'lost', kind: 'webhook', owner: 'host', config: { reply: 'none' } });
+  await collection.put({ id: 'lost', adapter: 'webhook', owner: 'host', config: { reply: 'none' } });
   await connectors.openAll();
   const ana = await as(host, users, 'ana');
 
@@ -290,73 +293,93 @@ it('serves a connector whose config no longer fits its kind as invalid, and open
   await close();
 });
 
-it('opens a stored connector of a registered kind when the daemon starts', async () => {
+it('opens a stored connector of a registered adapter when the daemon starts', async () => {
   const { host, users, collection, opened, connectors, vault, close } = await served();
   await vault.set('host:connector/ci/secret', 'right-token');
   await collection.put({
-    id: 'ci', kind: 'webhook', owner: 'host', config: { target: 'bot://motion', secret: { $secret: 'host:connector/ci/secret' } },
+    id: 'ci', adapter: 'webhook', owner: 'host', config: { target: 'bot://motion', secret: { $secret: 'host:connector/ci/secret' } },
   });
   await connectors.openAll();
   const ana = await as(host, users, 'ana');
 
   expect(opened).toEqual([
-    { id: 'ci', kind: 'webhook', owner: 'host', config: { target: 'bot://motion', secret: 'right-token' } },
+    { id: 'ci', adapter: 'webhook', owner: 'host', config: { target: 'bot://motion', secret: 'right-token' } },
   ]);
   expect((await ana.rows())['ci']).toMatchObject({ state: 'open' });
   await close();
 });
 
-it('lists only the caller\'s own connectors through ?owner=me', async () => {
+it('reads the caller\'s own, their team\'s and the host\'s connectors with connector:list', async () => {
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
   const di = await as(host, users, 'di');
-  await cy.call('x-ahpd/connectors/put', { id: 'mine', kind: 'webhook', owner: 'user:cy', config: { target: 'a' } });
-  await cy.call('x-ahpd/connectors/put', { id: 'shared', kind: 'webhook', owner: 'host', config: { target: 'b' } });
-  await di.call('x-ahpd/connectors/put', { id: 'theirs', kind: 'webhook', owner: 'user:di', config: { target: 'c' } });
+  const ana = await as(host, users, 'ana');
+  const ha = await as(host, users, 'ha');
+  await cy.call('x-ahpd/connectors/put', { id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'b' } });
+  await di.call('x-ahpd/connectors/put', { id: 'theirs', adapter: 'webhook', owner: 'user:di', config: { target: 'c' } });
+  await di.call('x-ahpd/connectors/put', { id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'd' } });
 
-  // Everything, because `connector:read` is the whole listing.
-  expect(Object.keys(await cy.rows())).toEqual(['kind:webhook', 'mine', 'shared', 'theirs']);
-  // Only the caller's own, and no kind row, because a kind belongs to nobody.
+  // The caller's own, the host's, and no other person's.
+  expect(Object.keys(await cy.rows())).toEqual(['mine', 'shared']);
+  // A person's own, their team's and the host's.
+  expect(Object.keys(await di.rows())).toEqual(['shared', 'team', 'theirs']);
+  // `?owner=me` narrows to the caller's own.
   expect(Object.keys(await cy.rows(FILTERED))).toEqual(['mine']);
   expect(Object.keys(await di.rows(FILTERED))).toEqual(['theirs']);
+  // A lister in no team and with no connector of their own reads the host's only.
+  expect(Object.keys(await ana.rows())).toEqual(['shared']);
+  await close();
+});
+
+it('reads every connector with connector:all', async () => {
+  const { host, users, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const di = await as(host, users, 'di');
+  const iv = await as(host, users, 'iv');
+  const ha = await as(host, users, 'ha');
+  await cy.call('x-ahpd/connectors/put', { id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'b' } });
+  await di.call('x-ahpd/connectors/put', { id: 'theirs', adapter: 'webhook', owner: 'user:di', config: { target: 'c' } });
+
+  expect(Object.keys(await iv.rows())).toEqual(['mine', 'shared', 'theirs']);
+  expect(Object.keys(await iv.rows(FILTERED))).toEqual([]);
   await close();
 });
 
 it('refuses a caller with no grant, to read and to change what is not theirs', async () => {
   const { host, users, close } = await served();
   const bo = await as(host, users, 'bo');
-  const cy = await as(host, users, 'cy');
-  await cy.call('x-ahpd/connectors/put', { id: 'shared', kind: 'webhook', owner: 'host', config: { target: 'a' } });
+  const ha = await as(host, users, 'ha');
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
 
-  // A reader with nothing of their own is answered no row at all.
+  // A reader with no `connector:` grant is answered no row at all.
   expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
-  // A host connector is the daemon's, and takes connector:put.
+  // A host connector takes connector:put and connector:host.
   expect(await bo.call('x-ahpd/connectors/put', {
-    id: 'other', kind: 'webhook', owner: 'host', config: { target: 'a' },
+    id: 'other', adapter: 'webhook', owner: 'host', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
-  // A team's takes team:write and a membership, and a person's takes being them.
+  // A team's takes connector:put and a membership, and a person's takes being them.
   expect(await bo.call('x-ahpd/connectors/put', {
-    id: 'other', kind: 'webhook', owner: 'team:backend', config: { target: 'a' },
+    id: 'other', adapter: 'webhook', owner: 'team:backend', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
   expect(await bo.call('x-ahpd/connectors/put', {
-    id: 'other', kind: 'webhook', owner: 'user:cy', config: { target: 'a' },
+    id: 'other', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
   expect(await bo.call('x-ahpd/connectors/remove', { id: 'shared' })).toMatchObject({ code: -32009 });
   await close();
 });
 
-it('lets a person make and remove their own connector with no connector grant, and read it', async () => {
+it('refuses a person without connector:put their own connector', async () => {
   const { host, users, closed, close } = await served();
   const bo = await as(host, users, 'bo');
 
   expect(await bo.call('x-ahpd/connectors/put', {
-    id: 'mine', kind: 'webhook', owner: 'user:bo', config: { target: 'a' },
-  })).toMatchObject({ result: { state: 'open' } });
-  expect(Object.keys(await bo.rows())).toEqual(['mine']);
-  expect(await bo.call('x-ahpd/connectors/remove', { id: 'mine' })).toEqual({ result: {} });
-  expect(closed).toEqual(['mine']);
-  // Nothing of theirs is left, and the kinds take connector:read, so there is no row to answer.
+    id: 'mine', adapter: 'webhook', owner: 'user:bo', config: { target: 'a' },
+  })).toMatchObject({ code: -32009 });
+  // Nothing of theirs is stored, and the channel is not theirs to read.
   expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
+  expect(closed).toEqual([]);
   await close();
 });
 
@@ -364,15 +387,15 @@ it('does not let a connector grant reach a team\'s connector or a person\'s', as
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
   const di = await as(host, users, 'di');
-  await di.call('x-ahpd/connectors/put', { id: 'theirs', kind: 'webhook', owner: 'user:di', config: { target: 'a' } });
-  await di.call('x-ahpd/connectors/put', { id: 'team', kind: 'webhook', owner: 'team:backend', config: { target: 'b' } });
+  await di.call('x-ahpd/connectors/put', { id: 'theirs', adapter: 'webhook', owner: 'user:di', config: { target: 'a' } });
+  await di.call('x-ahpd/connectors/put', { id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'b' } });
 
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'theirs', kind: 'webhook', owner: 'user:di', config: { target: 'c' },
+    id: 'theirs', adapter: 'webhook', owner: 'user:di', config: { target: 'c' },
   })).toMatchObject({ code: -32009 });
   expect(await cy.call('x-ahpd/connectors/remove', { id: 'team' })).toMatchObject({ code: -32009 });
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'team', kind: 'webhook', owner: 'team:backend', config: { target: 'c' },
+    id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'c' },
   })).toMatchObject({ code: -32009 });
   await close();
 });
@@ -382,14 +405,15 @@ it('does not let a put with another owner take a connector its caller may not ch
   const bo = await as(host, users, 'bo');
   const cy = await as(host, users, 'cy');
   const di = await as(host, users, 'di');
-  await di.call('x-ahpd/connectors/put', { id: 'theirs', kind: 'webhook', owner: 'user:di', config: { target: 'a' } });
-  await di.call('x-ahpd/connectors/put', { id: 'team', kind: 'webhook', owner: 'team:backend', config: { target: 'b' } });
+  await di.call('x-ahpd/connectors/put', { id: 'theirs', adapter: 'webhook', owner: 'user:di', config: { target: 'a' } });
+  await di.call('x-ahpd/connectors/put', { id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'b' } });
 
   expect(await bo.call('x-ahpd/connectors/put', {
-    id: 'theirs', kind: 'webhook', owner: 'user:bo', config: { target: 'c' },
+    id: 'theirs', adapter: 'webhook', owner: 'user:bo', config: { target: 'c' },
   })).toMatchObject({ code: -32009 });
+  // Moving the team's connector to the host leaves the team, and takes its remove rule.
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'team', kind: 'webhook', owner: 'host', config: { target: 'c' },
+    id: 'team', adapter: 'webhook', owner: 'host', config: { target: 'c' },
   })).toMatchObject({ code: -32009 });
   expect(opened.map((one) => [one.id, one.owner])).toEqual([['theirs', 'user:di'], ['team', 'team:backend']]);
   await close();
@@ -399,72 +423,71 @@ it('takes the old owner\'s secrets out of the vault when a connector changes han
   const { host, users, vault, close } = await served();
   const di = await as(host, users, 'di');
   await di.call('x-ahpd/connectors/put', {
-    id: 'moved', kind: 'webhook', owner: 'user:di', config: { target: 'a', secret: 'old-value' },
+    id: 'moved', adapter: 'webhook', owner: 'user:di', config: { target: 'a', secret: 'old-value' },
   });
   expect([...vault.held.keys()]).toEqual(['user:di/connector/moved/secret']);
 
   expect(await di.call('x-ahpd/connectors/put', {
-    id: 'moved', kind: 'webhook', owner: 'team:backend', config: { target: 'a', secret: 'new-value' },
+    id: 'moved', adapter: 'webhook', owner: 'team:backend', config: { target: 'a', secret: 'new-value' },
   })).toMatchObject({ result: { owner: 'team:backend' } });
   expect([...vault.held.keys()]).toEqual(['team:backend/connector/moved/secret']);
   await close();
 });
 
-it('makes a team connector with team:write and a membership, and the member reads it', async () => {
+it('makes a team connector with connector:put and a membership, without team:write', async () => {
   const { host, users, close } = await served();
   const di = await as(host, users, 'di');
 
   expect(await di.call('x-ahpd/connectors/put', {
-    id: 'team', kind: 'webhook', owner: 'team:backend', config: { target: 'a' },
+    id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'a' },
   })).toMatchObject({ result: { state: 'open' } });
   expect(Object.keys(await di.rows())).toEqual(['team']);
   await close();
 });
 
-it('refuses a team connector to a member without team:write', async () => {
+it('refuses a team connector to a member without connector:put', async () => {
   const { host, users, close } = await served();
   const el = await as(host, users, 'el');
 
   expect(await el.call('x-ahpd/connectors/put', {
-    id: 'team', kind: 'webhook', owner: 'team:backend', config: { target: 'a' },
+    id: 'team', adapter: 'webhook', owner: 'team:backend', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
   await close();
 });
 
-it('reads every row with connector:read, and refuses a role holding only config:read', async () => {
+it('refuses a role holding only config:read, which used to read this channel', async () => {
   const { host, users, close } = await served();
-  const cy = await as(host, users, 'cy');
-  await cy.call('x-ahpd/connectors/put', { id: 'shared', kind: 'webhook', owner: 'host', config: { target: 'a' } });
-  await cy.call('x-ahpd/connectors/put', { id: 'mine', kind: 'webhook', owner: 'user:cy', config: { target: 'b' } });
+  const ha = await as(host, users, 'ha');
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
 
-  // The grant reads the listing whole: a kind's row, a host's, and someone else's.
-  const ana = await as(host, users, 'ana');
-  expect(Object.keys(await ana.rows())).toEqual(['kind:webhook', 'mine', 'shared']);
-
-  // `config:read` used to read this channel, and no longer does.
   const fa = await as(host, users, 'fa');
   expect(await fa.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
   await close();
 });
 
-it('makes a host connector with connector:put, and refuses a role holding only config:write', async () => {
+it('makes a host connector with connector:put and connector:host, and refuses connector:put alone', async () => {
   const { host, users, closed, close } = await served();
   const ha = await as(host, users, 'ha');
 
   expect(await ha.call('x-ahpd/connectors/put', {
-    id: 'shared', kind: 'webhook', owner: 'host', config: { target: 'a' },
+    id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' },
   })).toMatchObject({ result: { id: 'shared', owner: 'host', state: 'open' } });
   // Making one is not removing it, which takes its own grant.
   expect(await ha.call('x-ahpd/connectors/remove', { id: 'shared' })).toMatchObject({ code: -32009 });
   // Moving it to themselves takes it from the host, which is a remove too.
   expect(await ha.call('x-ahpd/connectors/put', {
-    id: 'shared', kind: 'webhook', owner: 'user:ha', config: { target: 'b' },
+    id: 'shared', adapter: 'webhook', owner: 'user:ha', config: { target: 'b' },
   })).toMatchObject({ code: -32009 });
   expect(closed).toEqual([]);
 
+  const cy = await as(host, users, 'cy');
+  expect(await cy.call('x-ahpd/connectors/put', {
+    id: 'other', adapter: 'webhook', owner: 'host', config: { target: 'a' },
+  })).toMatchObject({ code: -32009 });
+
   const gi = await as(host, users, 'gi');
   expect(await gi.call('x-ahpd/connectors/put', {
-    id: 'other', kind: 'webhook', owner: 'host', config: { target: 'a' },
+    id: 'other', adapter: 'webhook', owner: 'host', config: { target: 'a' },
   })).toMatchObject({ code: -32009 });
   await close();
 });
@@ -483,23 +506,23 @@ it('advertises plugin and connector in the handshake, beside the built-ins', asy
   expect(grants['connector']).toEqual({
     title: 'Connectors',
     description: expect.any(String),
-    operations: ['list', 'put', 'remove'],
-    groups: { read: ['list'], write: ['put', 'remove'] },
+    operations: ['list', 'all', 'put', 'remove', 'host'],
+    groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
   });
   await close();
 });
 
-it('refuses a config the kind\'s schema refuses, and an unregistered kind', async () => {
+it('refuses a config the adapter\'s schema refuses, and an unregistered adapter', async () => {
   const { host, users, collection, opened, close } = await served();
   const cy = await as(host, users, 'cy');
 
-  expect(await cy.call('x-ahpd/connectors/put', { id: 'ci', kind: 'webhook', owner: 'user:cy', config: {} }))
+  expect(await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: {} }))
     .toMatchObject({ code: -32602, message: 'connector ci.target is required' });
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'webhook', owner: 'user:cy', config: { target: 'a', extra: true },
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a', extra: true },
   })).toMatchObject({ code: -32602 });
   expect(await cy.call('x-ahpd/connectors/put', {
-    id: 'ci', kind: 'ghost', owner: 'user:cy', config: { target: 'a' },
+    id: 'ci', adapter: 'ghost', owner: 'user:cy', config: { target: 'a' },
   })).toMatchObject({ code: -32602 });
   expect(await collection.list()).toEqual([]);
   expect(opened).toEqual([]);
