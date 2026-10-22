@@ -1,6 +1,6 @@
 ---
 title: Plugins and connectors have their own grants
-status: todo
+status: implemented
 depends: [task-04-a-client-lists-the-plugins.md, task-07-a-client-makes-connectors.md]
 layer: "sdk, server"
 refs:
@@ -52,8 +52,18 @@ Install, update and remove stay with the deployment token.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** the `plugin` and `connector` subjects are in `OPERATIONS`, and both channels and their commands require them.
+  `plugin:list` reads the plugin channel; `plugin:enable`, `plugin:disable` and `plugin:options` write it, and `connector:list` reads the connector channel while `connector:put` and `connector:remove` write it.
+  Over HTTP the options commands and `enable` and `disable` take the same `plugin:` grants with no deployment token, and install, update and remove keep it.
+  A host connector takes `connector:put` and `connector:remove`, a team's keeps `team:write` with a membership, and a person's own connector still takes nothing but being them.
+  The handshake lists both subjects with their operations.
+  The plugin channel's tests cover the answers over the protocol and over HTTP, and the connectors channel's cover the same reads and writes.
+- **Next action:** task 13: the plugin and connector docs, and the changelog's break.
 - **Open questions:** none.
-- **Departures:** none.
+- **Departures:** `docs/sdk/USERS.md` gained the `plugin` and `connector` rows, and its two "eleven" counts became "thirteen", in this task rather than in task 13.
+  The SDK's `users.test.ts` refuses a subject with no row on that page, and this task's gate runs it.
+  `users.test.ts` used `plugin:something` as its example of a grant on a subject the table does not decide.
+  It now uses `notes:something`, because `plugin` is a table subject.
+  In `server-http.test.ts` the two `config:read` expectations for `plugin/list` now say `plugin:list`, and the loop that covered `status` and `plugin/list` together names each command's grant.
+  In review, moving a `host` connector to a new owner takes `connector:remove`, because the move removes it from the host.
 - **Watch out for:** a role that held `config:read` for these channels loses them; the changelog says which grant to add.

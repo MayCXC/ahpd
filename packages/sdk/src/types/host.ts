@@ -1207,6 +1207,19 @@ export interface Host {
    */
   setTools(tools: HostTool[]): void;
   /**
+   * Say that a restart is what puts the configuration in force.
+   *
+   * From here on every root state carries `_meta["ahpd.restartNeeded"]`: for
+   * every connection, and for one that subscribes afterwards. It lives only in
+   * memory, so a restarted daemon starts without it.
+   *
+   * A connection watching the root is sent `x-ahpd/restartNeeded` with
+   * `{ channel: "ahp-root://" }` as it is set, so it does not have to read the
+   * state again; a second call sends nothing, because the mark is the same fact
+   * said once.
+   */
+  markRestartNeeded(): void;
+  /**
    * Stop what this host runs, once, while the process stays up.
    *
    * From the first call no automation fires and no session, terminal or

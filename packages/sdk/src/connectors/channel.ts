@@ -121,26 +121,27 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /**
    * Whether this reader may make or remove a connector of this owner.
    *
-   * `host` takes `config:write`, which is what a `host:` secret takes; a
-   * `team:<team>` connector takes `team:write` and a membership of that team;
-   * a `user:<id>` connector is that person's own, and takes nothing else. No
-   * reader is the root connection or a host with no users directory, and both
-   * are the daemon itself. A caller holding `config:write` is not let into a
-   * team's or a person's connector by it, which is why this is asked again in
+   * `host` takes `connector:put` to be made and `connector:remove` to be
+   * removed, the grants the channel's two commands ask for; a `team:<team>`
+   * connector takes `team:write` and a membership of that team; a `user:<id>`
+   * connector is that person's own, and takes nothing else. No reader is the
+   * root connection or a host with no users directory, and both are the daemon
+   * itself. A caller holding `config:write` is not let into a host's, a team's
+   * or a person's connector by it, which is why this is asked again in
    * `handle` and not only by the gate.
    */
-  const ownerAllows = (owner: ConnectorOwner | undefined, reader: Principal | undefined): boolean => {
+  const ownerAllows = (owner: ConnectorOwner | undefined, reader: Principal | undefined, verb: 'put' | 'remove'): boolean => {
     if (reader === undefined) return true;
     if (owner === undefined) return false;
-    if (owner === 'host') return reader.can('config:write' as Grant);
+    if (owner === 'host') return reader.can(`connector:${verb}` as Grant);
     if (owner.startsWith('user:')) return reader.plugin === undefined && reader.id === owner.slice('user:'.length);
     return reader.can('team:write' as Grant) && onTeam(reader, owner.slice('team:'.length));
   };
 
   /** Refuse one caller the owner's rule keeps out. */
-  const refuseOwner = (verb: string, owner: ConnectorOwner, reader: Principal | undefined): void => {
-    if (ownerAllows(owner, reader)) return;
-    throw new RpcError(DENIED, `${owner} is not ${reader?.id ?? 'this connection'}'s to ${verb}`);
+  const refuseOwner = (doing: string, owner: ConnectorOwner, reader: Principal | undefined, verb: 'put' | 'remove'): void => {
+    if (ownerAllows(owner, reader, verb)) return;
+    throw new RpcError(DENIED, `${owner} is not ${reader?.id ?? 'this connection'}'s to ${doing}`);
   };
 
   /** The fields a kind's schema marks `writeOnly`: the values that are secrets. */
@@ -225,7 +226,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /**
    * Whether this reader sees this row without the channel's grant.
    *
-   * `config:read` reads every row, as it reads every row of the plugin
+   * `connector:list` reads every row, as it reads every row of the plugin
    * channel. Without it a reader sees the connectors they own, and a member
    * sees the ones their team owns: a kind row is the daemon's own listing and
    * takes the grant.
@@ -240,7 +241,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   };
 
   const channel = recordsChannel(SCHEME, source, {
-    grant: 'config:read' as Grant,
+    grant: 'connector:list' as Grant,
     mayRead,
     /*
      * A kind row names no owner, and a host connector belongs to everyone and
@@ -382,9 +383,9 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   };
 
   const put: PluginMethod = {
-    grant: 'config:write' as Grant,
+    grant: 'connector:put' as Grant,
     describe: () => ({ title: 'Make a connector', description: 'Makes or changes one connector, and opens it.' }),
-    authorize: async (params, reader) => ownerAllows(asOwner(params.owner), reader),
+    authorize: async (params, reader) => ownerAllows(asOwner(params.owner), reader, 'put'),
     handle: async (params, reader) => {
       const id = idParam(PUT, params);
       const kindName = params.kind;
@@ -399,7 +400,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       if (owner === undefined) {
         throw new RpcError(INVALID_PARAMS, `${PUT} needs owner, one of host, team:<team> or user:<id>`);
       }
-      refuseOwner('make', owner, reader);
+      refuseOwner('make', owner, reader, 'put');
       const config = params.config ?? {};
       if (!isRecord(config)) {
         throw new RpcError(INVALID_PARAMS, "A connector's config is a JSON object, and that is not one");
@@ -412,13 +413,13 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       const was = before === undefined ? undefined : asOwner(before.owner);
       /*
        * An id that is taken is its owner's: a put that names another owner
-       * takes it from them, and is asked of the owner it leaves as well. A
-       * record naming no scope was written by hand, and takes `config:write`,
-       * as its remove does.
+       * takes it from them, which is a remove for the owner it leaves. A
+       * record naming no scope was written by hand, and takes
+       * `connector:remove`, as its remove does.
        */
       const moving = before !== undefined && was !== owner;
-      if (moving && was !== undefined) refuseOwner('take', was, reader);
-      if (moving && was === undefined && reader !== undefined && !reader.can('config:write' as Grant)) {
+      if (moving && was !== undefined) refuseOwner('take', was, reader, 'remove');
+      if (moving && was === undefined && reader !== undefined && !reader.can('connector:remove' as Grant)) {
         throw new RpcError(DENIED, `${id} is not ${reader.id}'s to take`);
       }
       // Nothing of an old owner's is kept, so nothing of it is read either.
@@ -462,13 +463,13 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   };
 
   const remove: PluginMethod = {
-    grant: 'config:write' as Grant,
+    grant: 'connector:remove' as Grant,
     describe: () => ({ title: 'Remove a connector', description: 'Closes one connector and takes it out.' }),
     authorize: async (params, reader) => {
       const id = params.id;
       if (typeof id !== 'string') return false;
       const before = await options.collection.get(id);
-      return before !== undefined && ownerAllows(asOwner(before.owner), reader);
+      return before !== undefined && ownerAllows(asOwner(before.owner), reader, 'remove');
     },
     handle: async (params, reader) => {
       const id = idParam(REMOVE, params);
@@ -477,10 +478,10 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
       const owner = asOwner(before.owner);
       /*
        * A record naming no scope is one written by hand, and only a caller the
-       * gate let through with `config:write` reaches it; a record that names
-       * one is the owner's, and the gate's grant does not widen that.
+       * gate let through with `connector:remove` reaches it; a record that
+       * names one is the owner's, and the gate's grant does not widen that.
        */
-      if (owner !== undefined) refuseOwner('remove', owner, reader);
+      if (owner !== undefined) refuseOwner('remove', owner, reader, 'remove');
       await close(id);
       await forgetAll(before, owner, id);
       await options.collection.remove(id);

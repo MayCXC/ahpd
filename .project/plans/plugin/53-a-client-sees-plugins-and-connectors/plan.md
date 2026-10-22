@@ -112,6 +112,9 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | A `plugin` subject: `list` reads; `enable`, `disable` and `options` write | Softov, 2026-10-22, asked "its not better a expecific grant? plugin:read etc?", then chose "Yes, as proposed" | 12 |
 | The protocol and HTTP take the same `plugin:` grant for enable, disable and options; install, update and remove keep the deployment token | Softov, 2026-10-22, chose "Yes, as proposed" | 12 |
 | A `connector` subject: `list` reads; `put` and `remove` write | Softov, 2026-10-22, chose "Yes, a connector subject" | 12 |
+| Moving a `host` connector to a new owner takes `connector:remove` | (defaulted: the move removes it from the host) | 12 |
+| The host pushes `x-ahpd/restartNeeded` to every client that watches the root | Softov, 2026-10-22, chose "Add an ahpd push" | 14 |
+| The push goes only when the mark changes from false to true | (defaulted: a second mark changes nothing) | 14 |
 
 ## Proposed architecture
 
@@ -134,10 +137,11 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 | [07 - A client makes connectors](task-07-a-client-makes-connectors.md) | implemented | 05, 06 |
 | [08 - A webhook endpoint is a connector](task-08-a-webhook-endpoint-is-a-connector.md) | implemented | 07 |
 | [09 - The docs say how plugins and connectors are seen](task-09-the-docs-say-how-it-is-seen.md) | implemented | 03, 04, 08 |
-| [10 - A plugin row says its version, its load and its options schema](task-10-a-plugin-row-says-what-loaded.md) | todo | 04 |
-| [11 - A plugin command marks a restart for every client](task-11-a-plugin-command-marks-a-restart.md) | todo | 04 |
-| [12 - Plugins and connectors have their own grants](task-12-plugins-and-connectors-have-grants.md) | todo | 04, 07 |
-| [13 - The docs say the new row fields and the grants](task-13-the-docs-say-the-row-and-grants.md) | todo | 10, 11, 12 |
+| [10 - A plugin row says its version, its load and its options schema](task-10-a-plugin-row-says-what-loaded.md) | implemented | 04 |
+| [11 - A plugin command marks a restart for every client](task-11-a-plugin-command-marks-a-restart.md) | implemented | 04 |
+| [12 - Plugins and connectors have their own grants](task-12-plugins-and-connectors-have-grants.md) | implemented | 04, 07 |
+| [13 - The docs say the new row fields and the grants](task-13-the-docs-say-the-row-and-grants.md) | implemented | 10, 11, 12 |
+| [14 - The restart mark is pushed to every client](task-14-a-restart-mark-is-pushed.md) | implemented | 11 |
 
 ## Risks and tradeoffs
 
@@ -155,7 +159,15 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
   That is the manifest and the contract check, every shipped plugin's contracts, and the `x-ahpd-plugins` channel.
   It is also connector kinds, JSON collections, the `x-ahpd-connectors` channel with `put` and `remove`, and the `webhook` kind, which makes endpoints out of connectors.
   The docs say all of it: `PLUGINS.md` and `WEBHOOKS.md`, the changelog's break, the domain file and the index row.
-- **Next action:** tasks 10 to 13, from the ahpw requests of 2026-10-22; then the final verification checklist below, which is Softov's to run.
+  Task 10 is implemented on 2026-10-22: a plugin row carries `version`, `loaded`, `loadProblem` and `optionsSchema`, and a disabled plugin is never imported for its schema.
+  Task 11 is implemented on the same day: `enable`, `disable` and `options` mark `ahpd.restartNeeded` on every root state, and only a restart clears it.
+  Task 12 is implemented on the same day: `plugin` and `connector` are their own subjects.
+  The protocol and HTTP take the same `plugin:` grant, and install, update and remove keep the deployment token.
+  Task 13 is implemented on the same day: `PLUGINS.md` has the four row fields, the restart mark and the new grants.
+  `USERS.md` has thirteen subjects, and the changelog says which grant a role adds.
+  Task 14 is implemented on the same day: a connection watching the root is sent `x-ahpd/restartNeeded` once.
+  It goes out when a plugin command or a root configuration write sets the mark.
+- **Next action:** the final verification checklist.
   The ahpw pages and the UI component tree are separate plans.
 - **Open questions:** none; the defaulted rows above are the ones to check.
 - **Watch out for:** "connector" is one configured account; "connector kind" is what a plugin registers. "Channel" is always an AHP `x-` channel. `on` is not a registration and has no contract.
@@ -168,6 +180,6 @@ client -> x-ahpd-plugins -> PluginRow + manifest -> x-ahpd/plugins/enable | disa
 - [ ] A client lists the connector kinds before any connector exists.
 - [ ] A person makes two webhook connectors, and each answers its own URL.
 - [ ] No snapshot of either channel holds a secret.
-- [ ] A plugin whose `apply` throws shows `loaded: false` and its problem, and a second client sees `ahpd.restartNeeded` after a disable.
+- [ ] A plugin whose `apply` throws shows `loaded: false` and its problem, and a second client gets `x-ahpd/restartNeeded` after a disable.
 - [ ] A role with `plugin:read` and no `config` grant lists the plugins.
 - [ ] `docs/plugins/PLUGINS.md`, `docs/plugins/WEBHOOKS.md`, `CHANGELOG.md` and `plans/index.md` updated.

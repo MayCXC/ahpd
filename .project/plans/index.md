@@ -382,7 +382,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 p12 - Claude and ACP write the task list](plugin/52-p12-claude-and-acp-write-the-task-list/plan.md) | medium | active 2026-10-18; tasks 01 to 07 implemented; title answer recorded | 52 p1 | - |
 | [52 p13 - A client sees the task list](plugin/52-p13-a-client-sees-the-task-list/plan.md) | medium | active 2026-10-18; 5 tasks, 01, 02, 03 and 05 implemented; 04 done 2026-10-19 | 52 p1 | - |
 | [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | active 2026-10-21; tasks 01 and 02 implemented | host 112 | - |
-| [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; thirteen tasks, 01 to 09 implemented, 10 to 13 todo | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
+| [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; fourteen tasks, 01 to 14 implemented | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
 
 Next free number in `plugin`: `54`.
 

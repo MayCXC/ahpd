@@ -70,7 +70,7 @@ describe('the command registry', () => {
   it('says which grant each command needs', () => {
     const scopes = (id: string): readonly string[] => registry.find(id)?.scopes ?? [];
     expect(scopes('daemon.status')).toEqual(['config:read']);
-    expect(scopes('plugin.list')).toEqual(['config:read']);
+    expect(scopes('plugin.list')).toEqual(['plugin:list']);
     expect(scopes('daemon.config')).toEqual(['config:write']);
     expect(scopes('plugin.install')).toEqual(['config:write']);
     expect(scopes('plugin.remove')).toEqual(['config:write']);
@@ -85,13 +85,21 @@ describe('the command registry', () => {
     }
     for (const id of ['plugin.install', 'plugin.remove']) expect(only(id)).toBe('install or remove a plugin');
     expect(only('plugin.update')).toBe('update a plugin');
-    for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset']) expect(only(id)).toBe("change a plugin's options");
-    for (const id of ['plugin.enable', 'plugin.disable']) expect(only(id)).toBe('enable or disable a plugin');
+    /*
+     * The options and the switch take the plugin subject over HTTP as they do
+     * over the protocol, so a person's own token holds them: `only` answers
+     * the deployment's token, and none of these waits for it.
+     */
+    for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset']) {
+      expect(scopes(id)).toEqual(['plugin:options']);
+      expect(only(id)).toBeUndefined();
+    }
+    for (const id of ['plugin.enable', 'plugin.disable']) {
+      expect(scopes(id)).toEqual([`plugin:${id.split('.').pop()}`]);
+      expect(only(id)).toBeUndefined();
+    }
     expect(only('daemon.restart')).toBe('restart the daemon');
     expect(only('daemon.update')).toBe('update the daemon');
-    for (const id of ['plugin.config', 'plugin.config.set', 'plugin.config.unset', 'plugin.enable', 'plugin.disable']) {
-      expect(scopes(id)).toEqual(['config:write']);
-    }
     // Each scheme is its own subject, and a verb is gated by the one its own
     // verb touches.
     expect(scopes('user.list')).toEqual(['user:read', 'role:read']);

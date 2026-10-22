@@ -415,7 +415,7 @@ export function createActions(ctx: HostContext, conn: ConnectionContext): Action
       }
       const port = options.rootConfig;
       return Promise.resolve(port.write(theirs)).then(async (answer) => {
-        if (answer.restartNeeded === true) ctx.restartNeeded = true;
+        if (answer.restartNeeded === true) ctx.markRestart();
         /*
          * Read back so the echo is what the daemon holds. The client sent
          * the credential in clear, and the echo is one envelope for every

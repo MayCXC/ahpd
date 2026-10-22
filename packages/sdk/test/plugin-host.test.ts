@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { expect, it } from 'vitest';
-import { createHost } from '../src/host.js';
+import { createHost, ROOT } from '../src/host.js';
 import { AGENT_CLASH, eachPreset, foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { memorySessions } from '../src/sessions/sessions.js';
 import { echo } from '../../../examples/echo/agent.js';
@@ -503,7 +503,7 @@ it('advertises every scheme it serves on the handshake and on the root state', a
   });
   // The eight the host decides are still there ahead of it, untouched.
   expect(Object.keys(grants).slice(0, 8)).toEqual([
-    'session', 'chat', 'terminal', 'automation', 'file', 'config', 'diagnostics', 'container',
+    'session', 'chat', 'terminal', 'automation', 'file', 'config', 'plugin', 'connector',
   ]);
   // And the root snapshot says so, as it does for the key beside it.
   expect(ready.snapshots[0]?.state._meta?.['ahpd.grants']).toEqual(grants);
@@ -778,4 +778,90 @@ it('allows a name a prefix entry matches, and refuses one it does not', () => {
 it('allows any name when its contracts say *', () => {
   const { host } = pluginHost('fixture', CONTRACT_CONTEXT, { contracts: { agents: ['*'] } });
   expect(() => host.registerAgent({ ...contributed, provider: 'anything' })).not.toThrow();
+});
+
+/*
+ * The restart mark, told to a client rather than left for it to read again.
+ *
+ * `markRestartNeeded` is what a plugin command calls, and the root state is
+ * where the mark is read; a client that already holds that state has no way to
+ * learn of the change but the notification, so these cases are about who is
+ * sent it and how often.
+ */
+
+/** A peer whose notifications are kept, in the order the host sent them. */
+const listening = (): Peer & { notes: { method: string; params: unknown }[] } => {
+  const notes: { method: string; params: unknown }[] = [];
+  return {
+    notes,
+    send: () => {},
+    notify: (method, params) => notes.push({ method, params }),
+    request: async () => ({}),
+    answered: () => {},
+    close: () => {},
+  };
+};
+
+/** The restart notifications one connection was sent, and nothing else. */
+const toldOfRestart = (heard: Peer & { notes: { method: string; params: unknown }[] }): { method: string; params: unknown }[] =>
+  heard.notes.filter((one) => one.method === 'x-ahpd/restartNeeded');
+
+/** Let the notification a dispatch sends, and the write behind it, come to. */
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 6; i++) await new Promise((done) => { setTimeout(done, 0); });
+};
+
+it('tells a client watching the root that a restart is needed', async () => {
+  const host = createHost(base());
+  const heard = listening();
+  const client = host.accept(heard);
+  await client.handle({ method: 'initialize', params: { clientId: 'probe', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+
+  host.markRestartNeeded();
+  expect(toldOfRestart(heard)).toEqual([{ method: 'x-ahpd/restartNeeded', params: { channel: ROOT } }]);
+
+  // And the root state says the same thing to a client that reads it after.
+  const { snapshot } = await client.handle({ method: 'subscribe', params: { channel: ROOT } }) as {
+    snapshot: { state: { _meta: Record<string, unknown> } };
+  };
+  expect(snapshot.state._meta['ahpd.restartNeeded']).toBe(true);
+});
+
+it('sends the same notification for a root configuration write that needs a restart', async () => {
+  const HOST_REPORTED = { type: 'object', properties: { daemonPort: { type: 'integer', title: 'Daemon Port', description: 'Where this daemon listens.' } } };
+  const host = createHost({
+    ...base(),
+    rootConfig: {
+      schema: () => HOST_REPORTED,
+      values: async () => ({ daemonPort: 9187 }),
+      // The daemon's answer to the write, which is what the host is told.
+      write: async () => ({ restartNeeded: true }),
+    },
+  });
+  const heard = listening();
+  // The host's own root, which is who may write the daemon's keys.
+  const client = host.accept(heard, undefined, true);
+  await client.handle({ method: 'initialize', params: { clientId: 'root', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+
+  await client.handle({
+    method: 'dispatchAction',
+    params: { channel: ROOT, action: { type: 'root/configChanged', config: { daemonPort: 9000 } } },
+  });
+  await settle();
+  expect(toldOfRestart(heard)).toEqual([{ method: 'x-ahpd/restartNeeded', params: { channel: ROOT } }]);
+});
+
+it('says the restart once, and only to a client watching the root', async () => {
+  const host = createHost(base());
+  const watching = listening();
+  const elsewhere = listening();
+  const watcher = host.accept(watching);
+  const other = host.accept(elsewhere);
+  await watcher.handle({ method: 'initialize', params: { clientId: 'watching', protocolVersions: ['0.9.0'], initialSubscriptions: [ROOT] } });
+  await other.handle({ method: 'initialize', params: { clientId: 'elsewhere', protocolVersions: ['0.9.0'] } });
+
+  host.markRestartNeeded();
+  host.markRestartNeeded();
+  expect(toldOfRestart(watching)).toEqual([{ method: 'x-ahpd/restartNeeded', params: { channel: ROOT } }]);
+  expect(toldOfRestart(elsewhere)).toEqual([]);
 });

@@ -1,6 +1,6 @@
 ---
 title: The docs say the new row fields and the grants
-status: todo
+status: implemented
 depends: [task-10-a-plugin-row-says-what-loaded.md, task-11-a-plugin-command-marks-a-restart.md, task-12-plugins-and-connectors-have-grants.md]
 layer: "docs"
 refs:
@@ -38,8 +38,17 @@ The changelog says which grant a role adds to keep its access.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `PLUGINS.md` has a table of `version`, `loaded`, `loadProblem` and `optionsSchema`.
+  It says a plugin switched off carries no schema, because its module is never imported.
+  It says the three commands mark `ahpd.restartNeeded` for every connection, that nothing is pushed to a client already subscribed, and that a refusal marks nothing.
+  It now names `plugin:list`, `plugin:enable`, `plugin:disable`, `plugin:options`, `connector:list`, `connector:put` and `connector:remove` in place of the `config` grants.
+  `CHANGELOG.md` has the grant change under `0.14.0 - unreleased` breaks, and the four row fields and the restart mark under plugins and connectors.
+  `pnpm -s docs:build` passes.
+- **Next action:** the plan's final verification checklist, which is Softov's to run.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** nothing.
+- **Departures:** the `plugin` and `connector` rows, and the two counts that now say thirteen, went into `USERS.md` in task 12.
+  `users.test.ts` refuses a subject with no row on that page, and task 12's gate runs it; this task checks them rather than adding them again.
+  `REMOTE.md` and `HOST.md` named the old grants for `plugin list` and the plugin verbs, so both are corrected here.
+  The who-may-run table splits `status` from `plugin list`, gives `plugin config`, `enable` and `disable` their grants, and leaves install, update and restart with the deployment token.
+  The grants table in `HOST.md` gains `plugin:list` and `connector:list`, and says where the plugin write verbs' grants are.
+- **Watch out for:** none.
