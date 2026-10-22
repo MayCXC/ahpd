@@ -1,6 +1,6 @@
 ---
 title: A steer starts its own turn
-status: todo
+status: implemented
 depends: []
 layer: "bot"
 refs:
@@ -53,8 +53,9 @@ A reload reads the same turns.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `steer` in `packages/bot/src/chat.ts` now ends the open turn and begins a turn of its own. The end is `finish(held, 'complete', [], false)`: a new `next` parameter leaves the queue waiting. The new turn takes `crypto.randomUUID()` as its id, and `beginTurn` hands that id to `onMessage`. `logAt` reads an old `steering: true` line as a finished turn of its own. Its id is derived (`<id>:steer`, with a counter for repeats), so it does not fold into the turn it steered. `wake.ts` needed no code change: `answering.set` already takes the turn id of the message, so a steer moves the entry. Only its comments changed. Tests: the bot chat steer case expects `chat/turnComplete` then `chat/turnStarted`. It also expects a new turn on the log, and `hello` then `stop that` after a reload. Two new cases cover a queued message behind a steered turn, and an old steering line as a turn. The subagent-call case expects one call on each turn, and the wake steer case expects the answer to follow the new turn. `CHANGELOG.md` has a `### Bots` line under 0.14.0.
+- **Next action:** none; the plan's final verification checklist is next.
+- **Files:** `packages/bot/src/chat.ts`, `packages/bot/src/wake.ts`, `packages/bot/test/bot-chat.test.ts`, `packages/bot/test/bot-wake.test.ts`, `CHANGELOG.md`, this task file, the plan and `plans/index.md`. The session cannot commit, so they are left in the worktree.
 - **Open questions:** none.
 - **Departures:** none.
 - **Watch out for:** the steer test near line 590 keeps a single `subagent` call in one turn; it now expects one call on each turn.
