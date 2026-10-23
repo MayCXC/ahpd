@@ -3,7 +3,7 @@ title: Resend, Telegram and Slack are the first pieces
 status: implemented
 depends:
   - task-03-an-action-runs-in-the-child.md
-layer: "connector-activepieces"
+layer: "activepieces"
 refs:
   - npm://@activepieces/piece-resend@0.6.1 - auth `SECRET_TEXT` "API Key", 58 actions
   - npm://@activepieces/piece-telegram-bot@0.9.1 - auth `SECRET_TEXT` "Bot Token", 41 actions
@@ -18,9 +18,9 @@ A daemon with the three named loads three adapters, and one action of each runs 
 
 ## Files
 
-- `UPDATE: packages/connector-activepieces/package.json` - the three pieces as dependencies, at the exact versions above.
-- `CREATE: packages/connector-activepieces/README.md` - the plugin, its options, and each piece with its license.
-- `CREATE: packages/connector-activepieces/test/pieces.test.ts` - the cases below.
+- `UPDATE: packages/activepieces/package.json` - the three pieces as dependencies, at the exact versions above.
+- `CREATE: packages/activepieces/README.md` - the plugin, its options, and each piece with its license.
+- `CREATE: packages/activepieces/test/pieces.test.ts` - the cases below.
 - `CREATE: .project/pending/plugin-50-first-pieces.md` - the checks by hand.
 
 ## Steps
@@ -48,7 +48,7 @@ A daemon with the three named loads three adapters, and one action of each runs 
   The one note the plugin reports is Slack's `uploadFile`, the only action of the three that needs a required file.
   All four cases pass, and `pnpm -s typecheck`, `pnpm -s build` and `pnpm -s boundary` pass.
 - **Next action:** task 05, which documents the plugin and sets the plan to implemented.
-- **Files:** `packages/connector-activepieces/package.json`, `packages/connector-activepieces/README.md`, `packages/connector-activepieces/test/pieces.test.ts`, `.project/pending/plugin-50-first-pieces.md`.
+- **Files:** `packages/activepieces/package.json`, `packages/activepieces/README.md`, `packages/activepieces/test/pieces.test.ts`, `.project/pending/plugin-50-first-pieces.md`.
 - **Open questions:** none.
   The license was read on 2026-10-23 at the repository root `LICENSE`: everything outside `packages/ee/` and `packages/server/api/src/app/ee` is MIT.
   The three pieces are in `packages/pieces/community/`, and the framework is in `packages/pieces/framework/`, so all four are MIT.

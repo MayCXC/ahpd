@@ -1,6 +1,6 @@
-# @ahpd/connector-activepieces
+# @ahpd/activepieces
 
-<!--@include: ../../packages/connector-activepieces/README.md{2,}-->
+<!--@include: ../../packages/activepieces/README.md{2,}-->
 
 ## How a session binds a connector
 

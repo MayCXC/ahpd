@@ -162,8 +162,8 @@ describe('a piece becomes an adapter', () => {
     const simple = adapterOf(piece({ auth: { type: 'SECRET_TEXT', displayName: 'API Key' }, actions: [action()] }));
     const slack = adapterOf(piece({ package: '@activepieces/piece-slack', displayName: 'Slack', auth: SLACK_AUTH, actions: [action()] }));
 
-    expect(() => checkAdapter(simple.adapter, 'connector-activepieces')).not.toThrow();
-    expect(() => checkAdapter(slack.adapter, 'connector-activepieces')).not.toThrow();
-    expect(checkAdapter(simple.adapter, 'connector-activepieces')).toBe('ap-demo');
+    expect(() => checkAdapter(simple.adapter, 'activepieces')).not.toThrow();
+    expect(() => checkAdapter(slack.adapter, 'activepieces')).not.toThrow();
+    expect(checkAdapter(simple.adapter, 'activepieces')).toBe('ap-demo');
   });
 });

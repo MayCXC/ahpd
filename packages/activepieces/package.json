@@ -1,5 +1,5 @@
 {
-  "name": "@ahpd/connector-activepieces",
+  "name": "@ahpd/activepieces",
   "version": "0.13.0",
   "type": "module",
   "description": "Activepieces pieces as connectors for the ahpd daemon: each piece is an adapter, each action a host tool",
@@ -18,11 +18,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/softov/ahpd/tree/main/packages/connector-activepieces#readme",
+  "homepage": "https://github.com/softov/ahpd/tree/main/packages/activepieces#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/softov/ahpd.git",
-    "directory": "packages/connector-activepieces"
+    "directory": "packages/activepieces"
   },
   "bugs": {
     "url": "https://github.com/softov/ahpd/issues"
@@ -49,7 +49,7 @@
   },
   "scripts": {
     "prepack": "tsc -p .",
-    "test": "cd ../.. && vitest run packages/connector-activepieces/test"
+    "test": "cd ../.. && vitest run packages/activepieces/test"
   },
   "peerDependencies": {
     "@ahpd/sdk": ">=0.13 <1"
