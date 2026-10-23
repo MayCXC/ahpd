@@ -4,7 +4,7 @@ import { INTERNAL_ERROR, INVALID_PARAMS, RpcError } from '../rpc.js';
 import { CLOSING, need } from './common.js';
 import { named } from './channels.js';
 import type { Bag } from '../types/common.js';
-import type { Claim, StartTerminals, TerminalStore } from '../types/terminals.js';
+import type { Claim, OutputTerminal, OutputTerminals, StartTerminals, Terminal, TerminalStore } from '../types/terminals.js';
 import type { Ran } from '../types/session.js';
 import type { OnWire } from '../types/wire.js';
 import type { TerminalInfo } from '@microsoft/agent-host-protocol';
@@ -24,6 +24,8 @@ export interface Terminals {
   terminalInfo(): OnWire<TerminalInfo>[];
   /** The terminal factory a backend is handed on `Start`. */
   heldTerminals(shells: TerminalStore, sessionUri: string, chatUri: string): StartTerminals;
+  /** The output terminals a backend may open, handed on `Start`. */
+  heldOutputs(sessionUri: string): OutputTerminals;
 }
 
 /**
@@ -55,8 +57,27 @@ export function claimOf(value: unknown): Claim | undefined {
   return undefined;
 }
 
+/**
+ * The scrollback cap an output terminal shares with a process one.
+ *
+ * The same number `machines/terminals.ts` keeps, and for the same reason: a
+ * backend polling a shell that ran for a day must not hold a day of text for a
+ * client that may never come back.
+ */
+const KEEP = 200_000;
+
 export function createTerminals(ctx: HostContext): Terminals {
   const { options, terminals, dispatch, log, fire, dirOfFile, refreshWatched } = ctx;
+
+  /**
+   * The output terminals: in the host's map, off the root list.
+   *
+   * A set of URIs rather than a flag on the terminal, because `Terminal` is
+   * the shape the store's own object has and this host should not ask every
+   * process-backed terminal to say `false` about something that only ever
+   * happens here.
+   */
+  const outputs = new Set<string>();
 
   /**
    * One command, in a terminal of its own, and what it did.
@@ -124,21 +145,26 @@ export function createTerminals(ctx: HostContext): Terminals {
 
   /** Every terminal, as the root channel lists them. */
   const terminalInfo = (): OnWire<TerminalInfo>[] =>
-    [...terminals.values()].map((held) => ({
-      resource: held.uri,
-      title: held.title(),
-      claim: held.claim(),
-      /*
-       * The exit code is in here, and only here.
-       *
-       * `TerminalInfo` declares these four keys and nothing else; the code
-       * belongs to `TerminalExitedLifecycleState`, which this returns once the
-       * process has gone. A flat one beside it is a key the protocol does not
-       * have, and it only appeared on the wire when a terminal happened to
-       * exit before the list was taken.
-       */
-      lifecycle: held.lifecycle(),
-    }));
+    [...terminals.values()]
+      // An output terminal runs no process. It is a channel a chat's row
+      // points at, not a shell on this machine, so it is not in the list of
+      // shells - the same reason VS Code keeps it off the root list.
+      .filter((held) => !outputs.has(held.uri))
+      .map((held) => ({
+        resource: held.uri,
+        title: held.title(),
+        claim: held.claim(),
+        /*
+         * The exit code is in here, and only here.
+         *
+         * `TerminalInfo` declares these four keys and nothing else; the code
+         * belongs to `TerminalExitedLifecycleState`, which this returns once the
+         * process has gone. A flat one beside it is a key the protocol does not
+         * have, and it only appeared on the wire when a terminal happened to
+         * exit before the list was taken.
+         */
+        lifecycle: held.lifecycle(),
+      }));
 
   /**
    * The terminal factory a backend is handed on `Start`.
@@ -228,7 +254,121 @@ export function createTerminals(ctx: HostContext): Terminals {
     },
   });
 
-  return { commanded, terminalInfo, heldTerminals };
+  /**
+   * The output terminals a backend may open.
+   *
+   * No process stands behind one: the backend has the text and the host owns
+   * the channel a client subscribes to, so the two halves of a terminal split
+   * cleanly. It is in the map all the same, because a snapshot is taken from
+   * there and a client opens `ahp-terminal:/<uuid>` the way it opens any
+   * other. It is not in `terminalInfo`, which is the list of shells.
+   */
+  const heldOutputs = (sessionUri: string): OutputTerminals => ({
+    create: (asked) => {
+      if (ctx.closed) throw new Error(CLOSING);
+      const uri = `ahp-terminal:/${crypto.randomUUID()}`;
+      let title = asked.title;
+      let claim: Claim = { kind: 'session', session: sessionUri, chat: asked.chat };
+      let content = '';
+      let exitCode: number | undefined;
+      let done = false;
+      let settle: ((exit: { exitCode?: number; signal?: string }) => void) | undefined;
+      const gone = new Promise<{ exitCode?: number; signal?: string }>((resolve) => { settle = resolve; });
+
+      const finish = (code?: number): void => {
+        if (done) return;
+        done = true;
+        exitCode = code;
+        dispatch(uri, { type: 'terminal/exited', ...(code === undefined ? {} : { exitCode: code }) });
+        settle?.({ ...(code === undefined ? {} : { exitCode: code }) });
+      };
+
+      const terminal: Terminal = {
+        uri,
+        title: () => title,
+        claim: () => claim,
+        exitCode: () => exitCode,
+        lifecycle: () => (done
+          ? { status: 'exited', ...(exitCode === undefined ? {} : { exitCode }) }
+          : { status: 'running' }),
+        state: () => ({
+          title,
+          cols: 80,
+          rows: 24,
+          // One part: there are no command boundaries to divide an output
+          // somebody else already ended.
+          content: content === '' ? [] : [{ type: 'unclassified', value: content }],
+          claim,
+          supportsCommandDetection: false,
+          isPty: false,
+          lifecycle: done
+            ? { status: 'exited' as const, ...(exitCode === undefined ? {} : { exitCode }) }
+            : { status: 'running' as const },
+          ...(exitCode === undefined ? {} : { exitCode }),
+        }),
+        // A client typing into an output is not a client typing into a
+        // process: there is nothing on the other end to receive it.
+        write: () => {},
+        resize: () => {},
+        clear: () => {
+          content = '';
+          dispatch(uri, { type: 'terminal/cleared' });
+        },
+        setTitle: (next) => {
+          if (title === next) return;
+          title = next;
+          dispatch(uri, { type: 'terminal/titleChanged', title });
+        },
+        setClaim: (next) => {
+          claim = next;
+          dispatch(uri, { type: 'terminal/claimed', claim });
+        },
+        close: () => {
+          finish();
+          outputs.delete(uri);
+        },
+        waitForExit: () => gone,
+      };
+
+      outputs.add(uri);
+      terminals.set(uri, terminal);
+      log(`opened the output terminal ${uri} for ${sessionUri}`);
+
+      return {
+        uri,
+        append: (text) => {
+          if (done) return;
+          content = (content + text).slice(-KEEP);
+          dispatch(uri, { type: 'terminal/data', data: text });
+        },
+        reset: () => {
+          if (done) return;
+          content = '';
+          dispatch(uri, { type: 'terminal/cleared' });
+        },
+        replace: (text) => {
+          if (done) return;
+          // Cleared then written, in that order, so a client's reducer ends
+          // with exactly what this keeps - and the same text a late subscriber
+          // reads, rather than the uncapped one a live client saw arrive.
+          content = text.slice(-KEEP);
+          dispatch(uri, { type: 'terminal/cleared' });
+          if (content !== '') dispatch(uri, { type: 'terminal/data', data: content });
+        },
+        finalize: (code) => { finish(code); },
+        dispose: () => {
+          if (!done) {
+            done = true;
+            settle?.({});
+          }
+          outputs.delete(uri);
+          terminals.delete(uri);
+        },
+      };
+    },
+  });
+
+  return { commanded, terminalInfo, heldTerminals, heldOutputs };
 }
 
 /**
