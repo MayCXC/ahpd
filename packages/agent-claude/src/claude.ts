@@ -656,6 +656,13 @@ export function claude(options: ClaudeOptions): Agent {
       // the chat. Without one, a subagent's frames stay in the turn that
       // spawned them.
       ...(start.subagent ? { subagent: start.subagent } : {}),
+      // The host's background-task seam, carried through unchanged: this
+      // backend reports each task the harness leaves running, and the host
+      // draws the row, its stop flag and the snapshot it reaches.
+      ...(start.backgroundTasks ? { backgroundTasks: start.backgroundTasks } : {}),
+      // And the host's output-terminal factory, which is where a background
+      // shell's output goes: the host owns the channel, this backend the text.
+      ...(start.outputTerminals ? { outputTerminals: start.outputTerminals } : {}),
       /*
        * A pushed token, as the variable the CLI reads.
        *
