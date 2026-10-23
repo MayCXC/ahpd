@@ -389,7 +389,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [52 - The computer and bot listings answer the caller's own](plugin/52-the-computer-and-bot-listings-answer-the-callers-own/plan.md) | medium | active 2026-10-21; tasks 01 and 02 implemented | host 112 | - |
 | [53 - A client sees the plugins and the connectors](plugin/53-a-client-sees-plugins-and-connectors/plan.md) | medium | active 2026-10-22; sixteen tasks, all implemented, awaiting review | plugin 44, plugin 48 | ahpw connectors and plugins pages, the UI component tree, connector actions as tools |
 | [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks, 01 to 07 implemented, awaiting review | plugin 48, plugin 53 | - |
-| [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | planned 2026-10-22; three tasks, all todo; built after 54 | plugin 53, plugin 54 | - |
+| [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | planned 2026-10-22; three tasks, all implemented, awaiting review | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
 
 Next free number in `plugin`: `57`.

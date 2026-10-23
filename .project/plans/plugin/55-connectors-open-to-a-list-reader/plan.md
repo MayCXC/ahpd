@@ -78,9 +78,9 @@ x-ahpd-adapters -> capability { type: receive, path: /plugins/webhook/{id} }
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The connectors channel opens to a list reader](task-01-the-channel-opens-to-a-list-reader.md) | todo | - |
-| [02 - A receive capability names its path](task-02-a-receive-capability-names-its-path.md) | todo | - |
-| [03 - The docs say the grant and the path](task-03-the-docs-say-the-grant-and-the-path.md) | todo | 01, 02 |
+| [01 - The connectors channel opens to a list reader](task-01-the-channel-opens-to-a-list-reader.md) | implemented | - |
+| [02 - A receive capability names its path](task-02-a-receive-capability-names-its-path.md) | implemented | - |
+| [03 - The docs say the grant and the path](task-03-the-docs-say-the-grant-and-the-path.md) | implemented | 01, 02 |
 
 ## Risks and tradeoffs
 
@@ -89,10 +89,10 @@ x-ahpd-adapters -> capability { type: receive, path: /plugins/webhook/{id} }
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** wait for plan 54 to merge, then [task-01-the-channel-opens-to-a-list-reader.md](task-01-the-channel-opens-to-a-list-reader.md).
+- **Done so far:** tasks 01, 02 and 03 are implemented. The connectors channel opens with `connector:list`, filters every reader's rows through `mayRead`, and admits a `connector:all` holder without `connector:list`; an empty store reads as an empty list. `Capability` has an optional `path`, refused at registration on any type but `receive` and where it does not start with `/`, and the webhook's receive capability names `/plugins/webhook/{id}`. The docs and the changelog say the grant and the field.
+- **Next action:** the Final verification checklist, by hand, before the plan is reviewed.
 - **Open questions:** none.
-- **Watch out for:** plan 54 rewrites `packages/webhook/src/adapter.ts`, so task 02 starts from its merged form.
+- **Watch out for:** `packages/sdk/test/fixtures/wire.jsonl` is rewritten by every test run and was restored with `git checkout`; the work is uncommitted, and the session cannot commit it.
 
 ## Final verification checklist
 

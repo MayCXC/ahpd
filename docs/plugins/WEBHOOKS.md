@@ -52,6 +52,8 @@ A connector of an adapter no loaded plugin registers stays on disk and shows as 
 
 An endpoint's URL is `/plugins/webhook/<id>` on the daemon's port, or on the routes listener when one is configured. A call is a `POST`; only a `meta` connector takes a `GET`, for its URL check.
 
+A client builds that URL from the adapter's receive capability, whose `path` is `/plugins/webhook/{id}`: put the daemon's HTTP root, or the routes listener's, before it and the connector's id in place of `{id}`.
+
 The route reads the body first, up to the plugin's `maxBodyBytes` (5 MiB by default), and then checks the proof over those bytes, so there is nothing a caller without proof can make this process hold. A body over the limit answers 413.
 
 ```bash

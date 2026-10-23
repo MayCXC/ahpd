@@ -1,6 +1,6 @@
 ---
 title: The docs say the grant and the path
-status: todo
+status: implemented
 depends: [task-01-the-channel-opens-to-a-list-reader.md, task-02-a-receive-capability-names-its-path.md]
 layer: "docs"
 refs:
@@ -37,8 +37,9 @@ The docs say which grant opens the connectors channel and how a client builds a 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** PLUGINS.md says `connector:list` opens the connectors channel and `connector:all` reads every row without it, and the adapter example and a bullet carry `path` beside the kinds of capability. HOST.md has a subscribe row for `connector:list`, and the `connector:all` row says it is admitted without it. WEBHOOKS.md says how a client builds an endpoint's URL from the capability's `path`. CHANGELOG.md has an Upgrading line on the new gate and a Plugins and connectors line on the field. `rg -n "connector:all" docs` finds only the two sentences on reading every row, and `pnpm -s docs:build` passes.
+- **Next action:** none; the plan's final verification checklist is next.
+- **Files:** `docs/plugins/PLUGINS.md`, `docs/sdk/HOST.md`, `docs/plugins/WEBHOOKS.md`, `CHANGELOG.md`, this task file, the plan and `plans/index.md`. The session cannot commit, so they are left in the worktree.
 - **Open questions:** none.
 - **Departures:** none.
-- **Watch out for:** the docs are not hard-wrapped; keep one paragraph on one line.
+- **Watch out for:** PLUGINS.md mixes a hard-wrapped older prose with one-line paragraphs; the lines written here are one paragraph on one line, as the task says.
