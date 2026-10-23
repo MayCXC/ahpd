@@ -124,6 +124,22 @@ importers:
         specifier: workspace:*
         version: link:../sdk
 
+  packages/connector-activepieces:
+    dependencies:
+      '@activepieces/piece-resend':
+        specifier: 0.6.1
+        version: 0.6.1
+      '@activepieces/piece-slack':
+        specifier: 0.23.1
+        version: 0.23.1
+      '@activepieces/piece-telegram-bot':
+        specifier: 0.9.1
+        version: 0.9.1
+    devDependencies:
+      '@ahpd/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+
   packages/push:
     devDependencies:
       '@ahpd/sdk':
@@ -190,6 +206,15 @@ importers:
         version: link:../sdk
 
 packages:
+
+  '@activepieces/piece-resend@0.6.1':
+    resolution: {integrity: sha512-bPbK/FluXp3tGowhmVTHlPKKdbfB6VcF0z6EwyGnmE4KotGFzg+gL8Q66LlARBHoO4F1c/4rQvktT/rYDhZnPg==}
+
+  '@activepieces/piece-slack@0.23.1':
+    resolution: {integrity: sha512-+SGPrv2XsVILogk1AoFg0ibK0MUU3i6QaYIF1+3j8hTOZ13ovjXS7Jxeu0aJqPDCi057hXovL8OnML8JMtxpTg==}
+
+  '@activepieces/piece-telegram-bot@0.9.1':
+    resolution: {integrity: sha512-LNq89Px0ZZyUMpRScM6WpXj/FdocLN5j/tlbM/NNB6neuoLVzERfwMJ2AXYJOOGThVrw8Dm1G2Dl15lGGOO4yQ==}
 
   '@agentclientprotocol/sdk@1.8.0':
     resolution: {integrity: sha512-fbP7qHZsFyTJVT0/RPrcWJ8An26qLXHEuGCHHEKDyxD1xpXV+Ejyh2LAE6vBAFePkpVjZeeohnbgvuEhZ7wLMg==}
@@ -2313,6 +2338,12 @@ packages:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
+
+  '@activepieces/piece-resend@0.6.1': {}
+
+  '@activepieces/piece-slack@0.23.1': {}
+
+  '@activepieces/piece-telegram-bot@0.9.1': {}
 
   '@agentclientprotocol/sdk@1.8.0(zod@4.5.4)':
     dependencies:
