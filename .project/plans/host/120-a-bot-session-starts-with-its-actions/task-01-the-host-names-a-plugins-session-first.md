@@ -49,7 +49,7 @@ The host calls it with the session's URI before it makes the tree or spawns.
 ## Resume
 
 - **Done so far:** `PluginStarts.start` and `PluginHost.startSession` take `named?`, a function the host calls with the session's URI. `plugins.ts` refuses a `named` that is not a function with `miss` words and passes it to `start`. `startForPlugin` and `beginPluginSession` take it through, and `beginSession` calls `named(uri)` right after `unheld(uri)`, before `isolated`. A throw from it is logged as a host line naming the URI and the start goes on. An automation's start passes no `named`, so it is unchanged. Tests: the door is called once with the URI the start answers and before the backend spawns, a throw does not stop the start and is logged, and a non-function is refused at the boundary.
-- **Next action:** none - built. Task 02 is next in the plan.
+- **Next action:** none - built.
 - **Files:** `packages/sdk/src/types/plugin.ts`, `packages/sdk/src/plugins/plugins.ts`, `packages/sdk/src/host/automations.ts`, `packages/sdk/test/plugin-start-session.test.ts`, `CHANGELOG.md`.
 - **Open questions:** none.
 - **Departures:** none.
