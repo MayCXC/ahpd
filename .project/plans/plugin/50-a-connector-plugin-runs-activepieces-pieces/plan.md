@@ -1,7 +1,7 @@
 ---
 title: A connector plugin runs Activepieces pieces as tools
 domain: plugin
-status: planned
+status: active
 priority: medium
 created: 2026-10-13
 revalidated: 2026-10-23
@@ -109,11 +109,11 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The plugin loads pieces in a child](task-01-the-plugin-loads-pieces-in-a-child.md) | todo | - |
-| [02 - A piece is an adapter](task-02-a-piece-is-an-adapter.md) | todo | 01 |
-| [03 - An action runs in the child](task-03-an-action-runs-in-the-child.md) | todo | 02 |
-| [04 - Resend, Telegram and Slack are the first pieces](task-04-resend-telegram-and-slack-are-the-first-pieces.md) | todo | 03 |
-| [05 - The docs say how a piece is used](task-05-the-docs-say-how-a-piece-is-used.md) | todo | 04 |
+| [01 - The plugin loads pieces in a child](task-01-the-plugin-loads-pieces-in-a-child.md) | implemented | - |
+| [02 - A piece is an adapter](task-02-a-piece-is-an-adapter.md) | implemented | 01 |
+| [03 - An action runs in the child](task-03-an-action-runs-in-the-child.md) | implemented | 02 |
+| [04 - Resend, Telegram and Slack are the first pieces](task-04-resend-telegram-and-slack-are-the-first-pieces.md) | implemented | 03 |
+| [05 - The docs say how a piece is used](task-05-the-docs-say-how-a-piece-is-used.md) | implemented | 04 |
 
 ## Risks and tradeoffs
 
@@ -124,16 +124,16 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 
 ## Resume state
 
-- **Done so far:** the plan, 2026-10-13. Rewritten on 2026-10-23 for the adapter model of plan 53 and host/118.
-- **Next action:** [task-01-the-plugin-loads-pieces-in-a-child.md](task-01-the-plugin-loads-pieces-in-a-child.md), after host/118.
-- **Open questions:** none.
+- **Done so far:** the plan, 2026-10-13. Rewritten on 2026-10-23 for the adapter model of plan 53 and host/118. Tasks 01 to 05 implemented 2026-10-23: the package, its child, the mapping, `run`, the three first pieces and the docs page. `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, `pnpm -s docs:build` and `packages/connector-activepieces`'s 21 cases pass.
+- **Next action:** none; every task is implemented and waiting for the commit by hand. The checks by hand are in [.project/pending/plugin-50-first-pieces.md](../../../pending/plugin-50-first-pieces.md), and the license rows rest on the idea of 2026-10-06 until that file's license check runs.
+- **Open questions:** the run request carries `connector` beside the fields of task 03's step 3, because the child keeps one store for each connector. `nameOf` also names an adapter from a piece named by a file URL, which is how a test names a fixture.
 - **Watch out for:** a piece bundles its own copy of the framework, so find it by its `_actions` member, not by `instanceof`.
 
 ## Final verification checklist
 
-- [ ] With `pieces` set to the three first pieces, the adapters `ap-resend`, `ap-telegram-bot` and `ap-slack` are listed.
-- [ ] A Resend connector bound as `work` gives a session `ap_resend_send_email`, and a call reaches the child.
-- [ ] The daemon process never has `NODE_TLS_REJECT_UNAUTHORIZED` set to `"0"`.
-- [ ] `pnpm vitest run packages/connector-activepieces` passes.
-- [ ] `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm -s schema` pass.
-- [ ] `plans/index.md` updated.
+- [x] With `pieces` set to the three first pieces, the adapters `ap-resend`, `ap-telegram-bot` and `ap-slack` are listed, as `pieces.test.ts` checks.
+- [ ] A Resend connector bound as `work` gives a session `ap_resend_send_email`, and a call reaches the child. The call through the adapter is in `run.test.ts`; the binding waits for the checks by hand.
+- [x] The daemon process never has `NODE_TLS_REJECT_UNAUTHORIZED` set to `"0"`, as `child.test.ts` checks of the process the pieces load in.
+- [x] `pnpm vitest run packages/connector-activepieces` passes, with 21 cases.
+- [x] `pnpm -s typecheck`, `pnpm -s boundary`, `pnpm -s schema` and `pnpm -s docs:build` pass.
+- [x] `plans/index.md` updated.

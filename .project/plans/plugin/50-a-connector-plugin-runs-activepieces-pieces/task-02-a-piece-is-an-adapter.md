@@ -1,6 +1,6 @@
 ---
 title: A piece is an adapter
-status: todo
+status: implemented
 depends:
   - task-01-the-plugin-loads-pieces-in-a-child.md
 layer: "connector-activepieces"
@@ -50,3 +50,17 @@ Its schema comes from the piece's `auth`, and each action is an `action` capabil
 - `pnpm -s typecheck` passes.
 
 ## Resume
+
+- **Done so far:** `src/mapping.ts` holds `nameOf`, `entryOf`, `propOf`, `inputOf`, `schemaOf` and `adapterOf`.
+  `adapterOf` turns one described piece into an adapter. It answers one note for each action it leaves out, and for a piece whose auth it does not offer.
+  `plugin.ts` registers one adapter for each described piece and reports each note through `host.problem`.
+  The adapter takes the piece's `displayName` as its title and its `description` as its description.
+  `mapping.test.ts` passes all eight cases, including `checkAdapter` over a simple adapter and a Slack-shaped one, and `pnpm -s typecheck`, `pnpm -s build` and `pnpm -s boundary` pass.
+- **Next action:** task 03, which gives the adapter its `run`.
+- **Files:** `packages/connector-activepieces/src/mapping.ts`, `packages/connector-activepieces/src/plugin.ts`, `packages/connector-activepieces/src/wire.ts`, `packages/connector-activepieces/src/child.ts`, `packages/connector-activepieces/test/mapping.test.ts`, `packages/connector-activepieces/test/child.test.ts`.
+- **Open questions:** the Steps say an array auth uses its first entry that is not `OAUTH2`. Step 5 skips a piece with no `SECRET_TEXT` or `CUSTOM_AUTH` entry.
+  For a list that holds a basic auth before a custom one, the two rules disagree. `entryOf` takes the first entry this plugin offers, so it never skips a piece that has one.
+  No first piece has that shape, and Slack's `[OAUTH2, CUSTOM_AUTH]` answers the same either way.
+- **Departures:** `PieceDescription` gained `displayName` and an optional `description`, and `child.ts` answers both. The adapter needs a title and a description, and the plan names neither.
+  This touched two files of task 01, and `child.test.ts` now expects the piece name in its answer.
+- **Watch out for:** `checkAdapter` is not in the SDK's public export, so `mapping.test.ts` imports it from `../../sdk/src/plugins/validate.js`, as `packages/webhook/test/webhook-kind.test.ts` imports from the SDK source.

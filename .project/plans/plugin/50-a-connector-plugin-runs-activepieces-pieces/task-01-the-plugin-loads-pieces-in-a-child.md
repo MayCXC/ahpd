@@ -1,6 +1,6 @@
 ---
 title: The plugin loads pieces in a child
-status: todo
+status: implemented
 depends: []
 layer: "connector-activepieces"
 refs:
@@ -51,3 +51,15 @@ refs:
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** `packages/connector-activepieces` exists, with the manifest, the tsconfig, the license, `plugin.ts`, `child.ts`, `wire.ts` and `index.ts`.
+  The child pins `NODE_TLS_REJECT_UNAUTHORIZED` with a `process.env` proxy before it imports any piece.
+  It finds a piece by its `_actions` member, describes its `auth` and its actions as plain JSON, and names each piece that fails to load.
+  `apply` forks the child with an IPC channel, sends `describe`, and reports each error through `host.problem`.
+  The child exits with code 0 when the channel closes.
+  `child.test.ts` passes all four cases, and `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
+- **Next action:** task 02, which turns each described piece into an adapter.
+- **Files:** `packages/connector-activepieces/package.json`, `packages/connector-activepieces/tsconfig.json`, `packages/connector-activepieces/LICENSE`, `packages/connector-activepieces/src/index.ts`, `packages/connector-activepieces/src/plugin.ts`, `packages/connector-activepieces/src/child.ts`, `packages/connector-activepieces/src/wire.ts`, `packages/connector-activepieces/test/child.test.ts`, `packages/connector-activepieces/test/fixtures/piece-simple.mjs`, `packages/connector-activepieces/test/fixtures/piece-tls.mjs`, `package.json`.
+- **Open questions:** none.
+- **Departures:** none.
+- **Watch out for:** the child is `src/child.ts` when the daemon runs from source, and `dist/child.js` when it runs a build. `childPath` picks by the suffix of this module's URL.
