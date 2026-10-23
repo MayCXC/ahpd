@@ -1,7 +1,7 @@
 ---
 title: A row counts the work while a turn runs
 domain: host
-status: planned
+status: active
 priority: medium
 created: 2026-10-23
 revalidated: 2026-10-23
@@ -74,8 +74,8 @@ tool call ends -> spawn.ts -> summaryKept -> branchSummary or sessionSummary -> 
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The counts move at each tool call](task-01-the-counts-move-at-each-tool-call.md) | todo | - |
-| [02 - A worktree counts from its cut commit](task-02-a-worktree-counts-from-its-cut-commit.md) | todo | - |
+| [01 - The counts move at each tool call](task-01-the-counts-move-at-each-tool-call.md) | implemented | - |
+| [02 - A worktree counts from its cut commit](task-02-a-worktree-counts-from-its-cut-commit.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -84,13 +84,13 @@ tool call ends -> spawn.ts -> summaryKept -> branchSummary or sessionSummary -> 
 
 ## Resume state
 
-- **Done so far:** nothing.
-- **Next action:** [task-01-the-counts-move-at-each-tool-call.md](task-01-the-counts-move-at-each-tool-call.md).
+- **Done so far:** both tasks are built. A finished tool call asks `summaryKept`. Its reads are coalesced per session to one running and one waiting. While a turn runs, the session kind counts from its baseline to the working tree. The worktree record keeps the commit its tree was cut from. Both `branchSummary` and the branch scope diff that commit. A pull request and `baseBranchName` keep the base's name. Tests cover both kinds moving mid-turn, the coalescing, the no-op row, and a tree cut from a local `main` ahead of `origin/main`.
+- **Next action:** none - the plan is built; close it when its rows are verified in a daemon.
 - **Open questions:** none.
-- **Watch out for:** the base's name is still the pull request's base, so do not replace it with the commit.
+- **Watch out for:** the base's name is still the pull request's base, so do not replace it with the commit. `changesetAt` carries the cut commit under its `base` field, which only the branch scope's `state` reads.
 
 ## Final verification checklist
 
-- [ ] A running build's row moves while the turn runs.
-- [ ] A worktree cut from a local commit that is not pushed does not count that commit.
-- [ ] `plans/index.md` updated.
+- [x] A running build's row moves while the turn runs.
+- [x] A worktree cut from a local commit that is not pushed does not count that commit.
+- [x] `plans/index.md` updated.

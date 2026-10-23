@@ -57,6 +57,10 @@ export interface RemoteOrigin {
  *
  * `base` is what the tree was cut from, and `branch` the branch made for the
  * session, absent where the session continued `base` rather than making one.
+ * `commit` is the commit the tree was cut from, which is where the session's
+ * work is counted from: a local base can be ahead of the remote, and a commit
+ * that was already on it is not the session's work. Absent on a record written
+ * before it was kept, which counts from the base's name as it did before.
  * Kept so a tree outlives the process that made it: a delete after a restart
  * still knows which tree to take, and an unarchive knows where to put it back.
  */
@@ -65,6 +69,7 @@ export interface StoredWorktree {
   path: string;
   base: string;
   branch?: string;
+  commit?: string;
 }
 
 /**

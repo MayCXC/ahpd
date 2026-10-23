@@ -66,6 +66,11 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - Claude's background shells show their output in a terminal of their own, read once a second, and stop with `vscode/stopBackgroundWork`, which needs `chat:cancel`.
 - An ACP terminal that still runs when its call ends is listed as a background shell, and its stop kills the process. A nested host lists its inner host's tasks.
 
+### Sessions and VS Code parity
+
+- A session row's counts move while a turn runs, at each finished tool call, rather than waiting for the turn to end. The reads are coalesced per session, so a burst of tool calls costs at most one read running and one waiting.
+- A worktree session counts from the commit its tree was cut from, kept with the tree's record. A commit that was already on the local base and never pushed is no longer counted as the session's work. A record written before this keeps its old answer, counting from the base's name.
+
 ## 0.13.0 - 2026-10-20
 
 ### Upgrading

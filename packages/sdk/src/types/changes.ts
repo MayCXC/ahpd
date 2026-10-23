@@ -363,8 +363,12 @@ export interface ChangesetSource {
    * finished, or the edit tracker where it has no checkpoints, which is a
    * folder that is not a repository and a turn that has not ended. A source
    * without it answers nothing, and a caller falls back to `summary`.
+   *
+   * `running` says a turn is in flight, so its work is not in a checkpoint
+   * yet: the working tree is the second side, and the counts are the baseline
+   * against what is on disk now. Without it the last finished turn answers.
    */
-  sessionSummary?(dir: string, session: string): Promise<ChangesSummary>;
+  sessionSummary?(dir: string, session: string, running?: boolean): Promise<ChangesSummary>;
   /**
    * And the roll-up of the branch a session's worktree is on.
    *

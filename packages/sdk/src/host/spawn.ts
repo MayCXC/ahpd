@@ -1213,9 +1213,14 @@ export function createSpawn(ctx: HostContext): Spawn {
         else dispatch(where, asSent(action));
         // A tool call that finished may have written to this session's tree, so
         // the changeset is re-read then rather than waiting for the turn's end.
+        // The row's counts move with it: the turn has no checkpoint yet, so
+        // the session kind is counted from its baseline to the working tree.
         if (action.type === 'chat/toolCallComplete') {
           const dir = dirOf(uri);
-          if (dir !== undefined) void refreshWatched(dir);
+          if (dir !== undefined) {
+            void refreshWatched(dir);
+            void summaryKept(uri, true);
+          }
         }
         /*
          * What this turn used, kept against it until it ends.

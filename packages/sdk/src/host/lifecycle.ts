@@ -1089,8 +1089,15 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     });
     // The branch is remembered rather than derived from the directory later:
     // a prefix a client asked for changes the name, and guessing it wrong at
-    // removal time either deletes nothing or names somebody else's.
-    const made = { repository, path, base, ...(branch !== undefined ? { branch } : {}) };
+    // removal time either deletes nothing or names somebody else's. The commit
+    // it was cut from is remembered for the same reason: the tree moves on, and
+    // what it started from is only knowable while it is still that.
+    const commit = await port.commitOf?.(path);
+    const made = {
+      repository, path, base,
+      ...(branch !== undefined ? { branch } : {}),
+      ...(commit !== undefined ? { commit } : {}),
+    };
     worktrees.set(uri, made);
     kept.setWorktree?.(idOf(uri), made);
     log(`made ${path} on ${branch ?? base} for ${uri}`);

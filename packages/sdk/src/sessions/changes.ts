@@ -1577,7 +1577,19 @@ export function gitChanges(): ChangesetSource {
      * The counts that belong to a row: a commit in the folder takes the
      * uncommitted ones to nothing, and two sessions in one folder share them.
      */
-    sessionSummary: async (dir, session) => summaryOf(await sessionFiles(dir, session)),
+    sessionSummary: async (dir, session, running) => {
+      /*
+       * A turn that is running is in no checkpoint yet, so the working tree is
+       * the second side and the baseline is the first. The same answer at the
+       * turn's end, when the checkpoint holds that tree.
+       */
+      if (running === true) {
+        const from = await baselineOf(dir, session);
+        const found = from === undefined ? undefined : await branchLook(dir, from);
+        if (found !== undefined) return found.summary;
+      }
+      return summaryOf(await sessionFiles(dir, session));
+    },
 
     /*
      * And what the branch a worktree is on has, which is what a row of that

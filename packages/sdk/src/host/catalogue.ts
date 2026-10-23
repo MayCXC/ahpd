@@ -56,10 +56,13 @@ export interface Catalogue {
    * Read what the session did, keep it, and say its row moved.
    *
    * Called where the session's tree is checkpointed - the start of a session
-   * and the end of each of its turns - which is the only moment the answer can
-   * have changed.
+   * and the end of each of its turns - and at each finished tool call. The
+   * calls are coalesced per session, so a burst runs at most two reads: one
+   * running and one waiting behind it. `running` says a turn is in flight, so
+   * the session kind counts the baseline against the working tree rather than
+   * against a checkpoint that does not exist yet.
    */
-  summaryKept(uri: string): Promise<void>;
+  summaryKept(uri: string, running?: boolean): Promise<void>;
   forgetSent(uri: string): void;
   activeSessionsMoved(): void;
   learnModels(uri: string): void;
@@ -633,37 +636,56 @@ export function createCatalogue(ctx: HostContext): Catalogue {
     ctx.broadcast(ROOT, 'root/sessionSummaryChanged', { channel: ROOT, session: uri, changes });
   };
   /**
-   * Read whatever the session did, keep it, and say the row moved.
+   * What `changesOf` reads, written where it can have changed.
    *
-   * What `changesOf` reads is written here, at the one moment it can have
-   * moved: the end of a turn, which is when the tree is checkpointed and the
-   * two ends of a session's work - the baseline it started from and the turn
-   * it just finished - are both on disk. Called where the checkpoint is taken
-   * rather than where a row is built, because reading it is a `git diff` and a
-   * catalogue of a hundred rows is asked a hundred times per listing.
-   *
-   * The session's own id, and not its URI: the checkpoints are commits under
-   * `refs/agents/<id>`, which is the name the session is checkpointed under.
+   * Called where the checkpoint is taken rather than where a row is built,
+   * because reading it is a `git diff` and a catalogue of a hundred rows is
+   * asked a hundred times per listing. The session's own id, and not its URI:
+   * the checkpoints are commits under `refs/agents/<id>`, which is the name the
+   * session is checkpointed under.
    *
    * A source that cannot answer for a session is left as it was rather than
    * written down as nothing, so a row nobody could read for keeps whatever it
    * had. That is every source with no `sessionSummary`, and every directory
    * that is not a repository.
+   *
+   * The calls are coalesced per session, as `refreshWatched` does: one read
+   * running and one waiting behind it. A turn of many tool calls asks on every
+   * one of them, and each is a `git diff`, so the later asks only record
+   * whether a turn is still running, and a burst of ten costs two reads.
    */
-  const summaryKept = async (uri: string): Promise<void> => {
+  const summarizing = new Set<string>();
+  const summaryWaiting = new Map<string, boolean>();
+  const summaryKept = async (uri: string, running = false): Promise<void> => {
     const dir = ctx.dirOf(uri);
     if (dir === undefined) return;
-    const source = options.changes;
-    let read: ChangesSummary | undefined;
-    try {
-      read = summaryKindOf(uri) === 'branch'
-        ? await source?.branchSummary?.(dir, ctx.worktreeOf(uri)?.base)
-        : await source?.sessionSummary?.(dir, idOf(uri));
+    if (summarizing.has(uri)) {
+      summaryWaiting.set(uri, running);
+      return;
     }
-    catch { /* a count that could not be read is the count that was there */ return; }
-    if (read === undefined) return;
-    kept.setChanges(idOf(uri), read);
-    summaryMoved(uri);
+    summarizing.add(uri);
+    let whileRunning = running;
+    try {
+      for (;;) {
+        summaryWaiting.delete(uri);
+        const source = options.changes;
+        let read: ChangesSummary | undefined;
+        try {
+          const tree = ctx.worktreeOf(uri);
+          read = summaryKindOf(uri) === 'branch'
+            ? await source?.branchSummary?.(dir, tree?.commit ?? tree?.base)
+            : await source?.sessionSummary?.(dir, idOf(uri), whileRunning);
+        }
+        catch { /* a count that could not be read is the count that was there */ }
+        if (read !== undefined) {
+          kept.setChanges(idOf(uri), read);
+          summaryMoved(uri);
+        }
+        if (!summaryWaiting.has(uri)) return;
+        whileRunning = summaryWaiting.get(uri) ?? false;
+      }
+    }
+    finally { summarizing.delete(uri); }
   };
   /**
    * Fill in the models, once there is a CLI to ask.

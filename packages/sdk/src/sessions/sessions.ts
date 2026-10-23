@@ -317,6 +317,8 @@ const nestedOf = (value: unknown): NestedRecord | undefined => {
  * the repository, the path and the base as non-empty strings, and a branch
  * that is one too where it is there at all. Anything else is ignored rather
  * than guessed at, since this record decides which tree a host takes away.
+ * A `commit` is read back only as a full commit: it says where the counts
+ * start, so a half-written one is dropped and the base's name answers instead.
  */
 const worktreeOf = (value: unknown): StoredWorktree | undefined => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
@@ -324,11 +326,13 @@ const worktreeOf = (value: unknown): StoredWorktree | undefined => {
   const text = (one: unknown): one is string => typeof one === 'string' && one !== '';
   if (!text(held.repository) || !text(held.path) || !text(held.base)) return undefined;
   if (held.branch !== undefined && !text(held.branch)) return undefined;
+  const commit = typeof held.commit === 'string' && /^[0-9a-f]{40}$/i.test(held.commit) ? held.commit : undefined;
   return {
     repository: held.repository,
     path: held.path,
     base: held.base,
     ...(held.branch === undefined ? {} : { branch: held.branch }),
+    ...(commit === undefined ? {} : { commit }),
   };
 };
 
