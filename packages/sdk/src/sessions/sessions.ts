@@ -386,9 +386,14 @@ const chatsOf = (value: unknown): StoredChat[] | undefined => {
     const held = one as Partial<Record<keyof StoredChat, unknown>>;
     if (!text(held.uri) || typeof held.backendId !== 'string') return [];
     const origin = held.origin;
+    const config = held.config;
     return [{
       uri: held.uri,
       backendId: held.backendId,
+      ...(text(held.provider) ? { provider: held.provider } : {}),
+      ...(typeof config === 'object' && config !== null && !Array.isArray(config)
+        ? { config: config as Record<string, unknown> }
+        : {}),
       ...(typeof held.title === 'string' ? { title: held.title } : {}),
       ...(typeof origin === 'object' && origin !== null && !Array.isArray(origin)
         ? { origin: origin as Record<string, unknown> }

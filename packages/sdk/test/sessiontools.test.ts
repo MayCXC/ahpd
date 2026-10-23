@@ -11,9 +11,10 @@ import {
   filterSessions, openLink, serializeContext, serializeSession, sessionMeant, sessionTools, statusWords,
 } from '../src/tools/session.js';
 import { directory, hello, root, signIn } from './users-gate-helpers.js';
-import { claude, machine, peer, resetSdk, sdk, sessionQueries, settle } from './support/host.js';
+import { claude, echo, machine, peer, resetSdk, sdk, sessionQueries, settle } from './support/host.js';
+import type { Agent, Start } from '../src/types/agent.js';
 import type { Summary } from '../src/types/catalog.js';
-import type { HostOptions } from '../src/types/host.js';
+import type { HostOptions, HostTool } from '../src/types/host.js';
 import type { Grant } from '../src/types/users.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -725,5 +726,143 @@ describe("VS Code's limits on spawning and messaging", () => {
     // And the sessions it was writing into are untouched by the refusal: what
     // ran out is the sender's budget, not theirs.
     expect(said(await telling(two.at, from.held, 'and back again'))).toMatch(/^Message (sent|queued) \(/);
+  });
+});
+
+/*
+ * A chat a tool opens on a backend of its own.
+ *
+ * `createChat` names the backend that serves the one chat where the session's
+ * own is not the one wanted - a bot's Back chat running a harness the Front
+ * does not - and the same road a plugin's `startChat` takes. The session goes
+ * on being served by its own provider; what changes is that this chat's
+ * conversation belongs to another.
+ */
+describe('a chat opened on a backend of its own', () => {
+  type Answer = { content: { text: string }[]; isError?: boolean };
+  type Tool = { name: string; handler: (input: unknown) => Promise<Answer> };
+  type Client = ReturnType<ReturnType<typeof createHost>['accept']>;
+  type State = { snapshot: { state: { provider?: string; chats: { resource: string }[] } } };
+
+  /**
+   * A second backend, recording every chat it is asked to start.
+   *
+   * Echo rather than the fake Claude: what is under test is which agent the
+   * chat is handed to, and a backend that answers with its own record says
+   * that without a turn having to run. `voice` is a key of its own, so a
+   * config checked against *this* schema can be told from one checked against
+   * the session's.
+   */
+  const other = (starts: Start[]): Agent => {
+    const base = echo({ path: root, pace: 0 });
+    return {
+      ...base,
+      provider: 'other',
+      schema: () => {
+        const schema = base.schema();
+        const properties = { ...(schema.properties as Record<string, Record<string, unknown>>) };
+        properties.voice = { type: 'string', title: 'Voice', scope: 'session' };
+        return { ...schema, properties };
+      },
+      create: (start: Start) => { starts.push(start); return base.create(start); },
+    };
+  };
+
+  /**
+   * A tool that opens a chat the way a plugin's own tool would.
+   *
+   * `create_chat` itself names no backend: a model adds another conversation
+   * of the session it is in, and the backend is the plugin's business. This is
+   * the seam a plugin's tool reaches, so it is the seam a case calls.
+   */
+  const MAKER: HostTool = {
+    definition: {
+      name: 'make_chat',
+      title: 'Make Chat',
+      description: 'Open a chat in this session, on the backend it names.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          provider: { type: 'string', description: 'The backend that serves the chat.' },
+          config: { type: 'object', description: 'That backend\'s settings for it.' },
+          prompt: { type: 'string', description: 'What to say in it first.' },
+        },
+        required: ['prompt'],
+      },
+    },
+    run: async (input, at) => {
+      const made = await at.createChat(at.session, {
+        prompt: String(input.prompt),
+        from: { origin: { kind: 'agent' } },
+        ...(typeof input.provider === 'string' ? { provider: input.provider } : {}),
+        ...(typeof input.config === 'object' && input.config !== null
+          ? { config: input.config as Record<string, unknown> }
+          : {}),
+      });
+      return `opened ${made.chat}`;
+    },
+  };
+
+  /** One session on the fake Claude, with `make_chat` among its tools. */
+  const opened = async (starts: Start[]): Promise<{ client: Client; call: (input: unknown) => Promise<Answer> }> => {
+    const host = createHost({
+      path: root,
+      agents: [claude({ paths: [root] }), other(starts)],
+      ...machine(),
+      tools: [...hostTools(), MAKER],
+      sleepAfterMinutes: 0,
+    });
+    const client = host.accept(peer());
+    await hello(client);
+    // A machine of the session's own, and a key its own backend declares: what
+    // reaches a chat of another backend and what must not is read off these.
+    await client.handle({
+      method: 'createSession',
+      params: { channel: 'ahp-session:/mine', provider: 'claude', config: { computer: '', permissionMode: 'plan' } },
+    });
+    await settle(8);
+    const servers = sessionQueries().at(-1)?.options.mcpServers as Record<string, { tools: Tool[] }> | undefined;
+    const tool = servers?.ahp?.tools.find((one) => one.name === 'make_chat') as Tool | undefined;
+    if (tool === undefined) throw new Error('no make_chat');
+    return { client, call: (input) => tool.handler(input) };
+  };
+
+  const state = async (client: Client): Promise<State['snapshot']['state']> =>
+    (await client.handle({ method: 'subscribe', params: { channel: 'claude:/mine' } }) as State).snapshot.state;
+
+  it('starts the chat on the backend it names, with that backend\'s config', async () => {
+    const starts: Start[] = [];
+    const { client, call } = await opened(starts);
+    const made = await call({ provider: 'other', config: { voice: 'loud' }, prompt: 'say hi' });
+    expect(made.isError).toBeFalsy();
+    const chatUri = /^opened (ahp-chat:\/[0-9a-f-]+)$/.exec(made.content[0]?.text ?? '')?.[1];
+    expect(chatUri).toBeDefined();
+
+    // Started on the other backend, and handed what it was asked for.
+    expect(starts).toHaveLength(1);
+    expect(starts[0]?.settings).toMatchObject({ voice: 'loud' });
+    // The session's machine reaches it, because no backend owns `computer`.
+    expect(starts[0]?.settings.computer).toBe('');
+    // The session backend's own settings do not: `permissionMode` is Claude's
+    // and means nothing to a harness asked for this chat.
+    expect(starts[0]?.settings).not.toHaveProperty('permissionMode');
+
+    // The session is still Claude's, and the chat is one of its own.
+    const after = await state(client);
+    expect(after.provider).toBe('claude');
+    expect(after.chats.map((one) => one.resource)).toContain(chatUri);
+  });
+
+  it('refuses a backend this host does not have, and makes no chat', async () => {
+    const starts: Start[] = [];
+    const { client, call } = await opened(starts);
+    const before = (await state(client)).chats.length;
+    const refused = await call({ provider: 'nobody', prompt: 'say hi' });
+    expect(refused.isError).toBe(true);
+    expect(refused.content[0]?.text).toBe('No provider called nobody');
+    expect(starts).toHaveLength(0);
+    // Nothing was announced and nothing was started: the session has the chats
+    // it had.
+    expect((await state(client)).chats).toHaveLength(before);
   });
 });

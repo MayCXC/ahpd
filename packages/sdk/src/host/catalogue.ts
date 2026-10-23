@@ -153,11 +153,16 @@ export function createCatalogue(ctx: HostContext): Catalogue {
    * under, because a move starts the backend again with `resume` set to that
    * id. And nothing may be running: a move closes a process and starts another,
    * and the one moment that costs nothing is between turns.
+   *
+   * A chat of another backend than the session's is not movable at all: a move
+   * starts it again on the destination's backend, which is a harness that has
+   * never seen its transcript.
    */
   const movable = (uri: string): boolean => {
     const held = sessions.get(sessionHolding(uri) ?? '');
     const chat = held === undefined ? undefined : held.chats.get(uri);
     if (held === undefined || chat === undefined) return false;
+    if (held.backends.has(uri)) return false;
     if (held.defaultChat === uri) return false;
     const own = chat.agentId();
     if (own === undefined || own === '') return false;

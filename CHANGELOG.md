@@ -43,6 +43,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ### Plugins and connectors
 
+- `PluginHost.startChat(session, { provider, model, config, title, prompt })` starts a chat inside a session on a backend the plugin names, and answers the chat's URI. `ToolCall.createChat` takes the same `provider` and `config` beside its other options. The session keeps its own provider and its other chats; the chat's backend and config are recorded with it, so a session restart, `restartChat`, a rewind and a daemon restart start it on that backend again. The session's `computer` and contributed session keys reach the chat; the session backend's own keys do not. The session owner's `chat:create` is asked first, and an unknown provider is refused. A client reads the chat's backend in `_meta['ahpd.provider']`, on the chat's state and nowhere on the session's own chats.
 - A plugin declares a manifest: a description, categories, links and contracts. A registration its contracts do not list fails that plugin, with a line naming the method and the name. A plugin with no contracts loads as before, and is listed as `undeclared`.
 - A plugin registers adapters, each with a JSON Schema a client draws the form from and the capabilities a connector of that adapter has.
 - `x-ahpd-plugins` lists the configured plugins, and `x-ahpd/plugins/enable`, `disable` and `options` change the file the daemon loads.

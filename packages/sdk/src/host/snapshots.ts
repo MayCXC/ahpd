@@ -333,6 +333,22 @@ export function createSnapshots(ctx: HostContext): Snapshots {
         // off when it cannot move, as the protocol's absence-means-false has it.
         ...(movable(channel) ? { movable: true } : {}),
       };
+      /*
+       * The backend that serves this chat, where it is not the session's own.
+       *
+       * A chat opened on another harness is still a chat of this session - its
+       * channel, its row and its place among the session's chats - so what it
+       * runs on is said in `_meta` and not in `provider`: `ChatState` declares
+       * no provider, and the session must go on answering the provider it was
+       * started on. Laid over whatever the backend put there itself, which is
+       * where a harness speaks its own keys, and left off for the session's own
+       * chats, whose backend is the one the session already names.
+       */
+      const foreign = owner?.backends.get(talking.chat.chatUri);
+      if (foreign !== undefined) {
+        const meta = (typeof state._meta === 'object' && state._meta !== null ? state._meta : {}) as Bag;
+        state._meta = { ...meta, 'ahpd.provider': foreign.agent.provider };
+      }
       if (Array.isArray(state.turns)) {
         const turns = linkedTurns(talking.uri, state.turns as Bag[], restored);
         state.turns = ctx.withSender(talking.uri, ctx.stampedCalls(talking.uri, turns));

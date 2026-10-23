@@ -2,6 +2,7 @@ import { isAbsolute, join } from 'node:path';
 import { idOf } from '../sessions/catalog.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { frozenCopy } from '../utils/frozen.js';
+import { accepts } from '../utils/configvalues.js';
 import { readJsonObject } from '../utils/jsonfile.js';
 import { partsOf, rulesOf } from '../plugins/pluginparts.js';
 import { bodyText } from '../resources/records.js';
@@ -19,7 +20,7 @@ import type { Bag } from '../types/common.js';
 import type { Grant, Principal } from '../types/users.js';
 import type { ClientPlugins, SyncedPlugin } from '../types/clientplugins.js';
 import type { HostTool, ToolCall, TitleStrategy } from '../types/host.js';
-import type { BoundTool, McpServer } from '../types/agent.js';
+import type { Agent, BoundTool, McpServer } from '../types/agent.js';
 import type { Session, TurnOptions } from '../types/session.js';
 import type { ChatSummary, ToolDefinition } from '@microsoft/agent-host-protocol';
 import type { ToolsEndpoint } from '../tools/server.js';
@@ -335,6 +336,33 @@ export interface Tooling {
    * sent here whose clients offer nothing to report back with.
    */
   turnInstructions(uri: string): TurnOptions;
+  /**
+   * A second chat in a running session, on the backend it is asked for.
+   *
+   * The one road `ToolCall.createChat` and a plugin's `startChat` both take.
+   * `provider` names the backend that serves the chat, or the session's own
+   * where absent; `config` is checked against that backend's schema, and the
+   * session's keys no backend owns are added from the session. `calling` is
+   * the turn a tool call is made from, where there is one: the chat is counted
+   * against that session's tree, as a tool's chat always has been.
+   */
+  openChat(session: string, asked: ChatStart, calling?: { uri: string; chatUri: string }): Promise<{ chat: string }>;
+}
+
+/**
+ * What one second chat is asked for, whichever seam asks for it.
+ *
+ * `ToolCall.createChat` and a plugin's `startChat` reach the same road, and
+ * what they differ in is only whether a turn is behind the call: a tool sends
+ * the calling turn's `from`, and a plugin has none.
+ */
+interface ChatStart {
+  title?: string;
+  model?: string;
+  provider?: string;
+  config?: Record<string, unknown>;
+  prompt?: string;
+  from?: Bag;
 }
 
 export function createTooling(ctx: HostContext): Tooling {
@@ -1387,6 +1415,116 @@ export function createTooling(ctx: HostContext): Tooling {
     if (sender !== undefined) sentBy.set(turnId, sender);
   };
 
+  /**
+   * The config one chat is started with.
+   *
+   * A chat of the session's own backend is handed what the session has, less
+   * the keys no backend owns, with what it asked for over it - the same thing
+   * every other chat of the session was spawned with. A chat of another backend
+   * is handed only the session's keys that backend does not own: its `computer`,
+   * which places the chat's machine, and the keys a plugin contributed, which
+   * every session draws. The session's other settings are its own backend's,
+   * and mean nothing to a harness that has never read them.
+   */
+  const chatConfigOf = (
+    agent: Agent, held: Held, asked: Record<string, unknown> | undefined,
+  ): Record<string, unknown> => {
+    const given = backendsOwn(asked ?? {});
+    if (agent === held.agent) return { ...backendsOwn(held.config), ...given };
+    const contributed = options.sessionConfig ?? {};
+    const shared = Object.fromEntries(Object.entries(held.config)
+      .filter(([key]) => key === 'computer' || Object.prototype.hasOwnProperty.call(contributed, key)));
+    return { ...shared, ...given };
+  };
+
+  /**
+   * A value one backend's schema refuses, refused before anything starts.
+   *
+   * A key the schema does not declare is handed through, because a backend
+   * takes some it does not declare - the same reading `storedConfig` gives a
+   * key a property no longer names.
+   */
+  const checkedConfig = (
+    agent: Agent, given: Record<string, unknown> | undefined,
+  ): Record<string, unknown> | undefined => {
+    if (given === undefined) return undefined;
+    const schema = ctx.sessionSchema(agent);
+    const properties = (typeof schema.properties === 'object' && schema.properties !== null
+      ? schema.properties
+      : {}) as Bag;
+    for (const [key, value] of Object.entries(given)) {
+      if (properties[key] !== undefined && !accepts(properties[key], value)) {
+        throw new Error(`${key} ${JSON.stringify(value)} is not a value ${agent.provider} takes`);
+      }
+    }
+    return given;
+  };
+
+  /**
+   * A second chat in a running session, on the backend it is asked for.
+   *
+   * The one road a tool call and a plugin's `startChat` take, so a chat a bot
+   * opens from a wake is the chat a model opens from a turn: spawned on the
+   * session's own backend or on the one named, announced on the session's
+   * channel, recorded so a restart starts it there again, and begun with the
+   * prompt where there is one.
+   *
+   * `calling` is the turn a tool call is made from and nothing for a plugin:
+   * a tool is counted where it runs, and a plugin has no turn to be charged.
+   */
+  const openChat = async (
+    session: string, asked: ChatStart, calling?: { uri: string; chatUri: string },
+  ): Promise<{ chat: string }> => {
+    const at = heldAs(session);
+    const held = sessions.get(at);
+    if (!held) throw new Error(`${session} is not a session this host is running`);
+    /*
+     * The tree the call is made from, which is the one it is counted against.
+     *
+     * A chat has no tree of its own, and the session named need not be the
+     * one this tool was called from. A tool is counted where it runs, so a
+     * chat added to another session still spends the calling session's
+     * budget - the same answer `send` gives, and for the same reason: the
+     * session an agent is running in is the one whose spending is bounded.
+     */
+    const tree = calling === undefined ? undefined : treeOf(idOf(calling.uri));
+    if (tree !== undefined) room(tree, 'chats');
+    /*
+     * Which backend serves it. A name this host does not hold is refused
+     * rather than quietly started on the session's own: the plugin asked for
+     * a harness, and one it did not get would be a chat it never asked for.
+     */
+    const agent = asked.provider === undefined ? held.agent : ctx.agents.get(asked.provider);
+    if (agent === undefined) throw new Error(`No provider called ${asked.provider}`);
+    const config = chatConfigOf(agent, held, checkedConfig(agent, asked.config));
+    const chatUri = `ahp-chat:/${crypto.randomUUID()}`;
+    // What the plugins give a chat a tool opens, ahead of the tool's prompt.
+    const preambles = options.chatPreambles ?? [];
+    const preamble = preambles.length === 0 ? undefined : await preambleOf(preambles, {
+      session: at,
+      chat: chatUri,
+      chats: [...held.chats].map(([one, chat]) => chatSummary(at, one, chat) as unknown as ChatSummary),
+    }, log);
+    if (sessions.get(at) !== held) throw new Error(`${session} is not a session this host is running`);
+    const chat = spawn(agent, at, chatUri, chatIdFor(at, chatUri), config, preamble === undefined ? undefined : { context: preamble }, held.workingDirectory, undefined, held.additional);
+    log(`opened ${chatUri} in ${at}`);
+    if (asked.title !== undefined) { chat.setTitle?.(asked.title); keepTitle(at, chatUri, asked.title); }
+    startsRead(ctx, at, chatUri);
+    dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });
+    // And the row: a client listing sessions reads a session's chats there.
+    summaryMoved(at);
+    if (asked.prompt !== undefined) {
+      const firstTurn = crypto.randomUUID();
+      remember(chatUri, firstTurn);
+      chat.begin(
+        firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
+        undefined, turnInstructions(at),
+      );
+    }
+    if (tree !== undefined) countUp(tree, 'chats');
+    return { chat: chatUri };
+  };
+
   const toolContext = (uri: string, chatUri: string, provider?: string): ToolCall => ({
     session: uri,
     chat: chatUri,
@@ -1530,46 +1668,7 @@ export function createTooling(ctx: HostContext): Tooling {
       countUp(tree, 'sessions');
       return { session: made, chat: chatUriFor(made) };
     },
-    createChat: async (session, asked) => {
-      const at = heldAs(session);
-      const held = sessions.get(at);
-      if (!held) throw new Error(`${session} is not a session this host is running`);
-      /*
-       * The tree the call is made from, which is the one it is counted against.
-       *
-       * A chat has no tree of its own, and the session named need not be the
-       * one this tool was called from. A tool is counted where it runs, so a
-       * chat added to another session still spends the calling session's
-       * budget - the same answer `send` gives, and for the same reason: the
-       * session an agent is running in is the one whose spending is bounded.
-       */
-      const tree = treeOf(idOf(uri));
-      room(tree, 'chats');
-      const chatUri = `ahp-chat:/${crypto.randomUUID()}`;
-      // What the plugins give a chat a tool opens, ahead of the tool's prompt.
-      const preambles = options.chatPreambles ?? [];
-      const preamble = preambles.length === 0 ? undefined : await preambleOf(preambles, {
-        session: at,
-        chat: chatUri,
-        chats: [...held.chats].map(([one, chat]) => chatSummary(at, one, chat) as unknown as ChatSummary),
-      }, log);
-      if (sessions.get(at) !== held) throw new Error(`${session} is not a session this host is running`);
-      const chat = spawn(held.agent, at, chatUri, chatIdFor(at, chatUri), backendsOwn(held.config), preamble === undefined ? undefined : { context: preamble }, held.workingDirectory, undefined, held.additional);
-      log(`opened ${chatUri} in ${at}`);
-      if (asked.title !== undefined) { chat.setTitle?.(asked.title); keepTitle(at, chatUri, asked.title); }
-      startsRead(ctx, at, chatUri);
-      dispatch(at, { type: 'session/chatAdded', summary: chatSummary(at, chatUri, chat) });
-      // And the row: a client listing sessions reads a session's chats there.
-      summaryMoved(at);
-      const firstTurn = crypto.randomUUID();
-      remember(chatUri, firstTurn);
-      chat.begin(
-        firstTurn, asked.prompt, asked.model === undefined ? undefined : { id: asked.model }, asked.from,
-        undefined, turnInstructions(at),
-      );
-      countUp(tree, 'chats');
-      return { chat: chatUri };
-    },
+    createChat: async (session, asked) => await openChat(session, asked, { uri, chatUri }),
     rename: (session, chat, title) => { renameChat(heldAs(session), chat, title); },
     /*
      * A session deleted from inside another one, by whoever is asking.
@@ -1888,7 +1987,7 @@ export function createTooling(ctx: HostContext): Tooling {
     clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold, keepDecision,
     retool, pluginsSettled, chatMeant, renameChat, toolContext,
     pluginsFor, pluginsMoved, mcpFor, deniedMcpServers,
-    toolsServersGone, boundTools, instructions, turnInstructions,
+    toolsServersGone, boundTools, instructions, turnInstructions, openChat,
     moving, served,
   };
 }

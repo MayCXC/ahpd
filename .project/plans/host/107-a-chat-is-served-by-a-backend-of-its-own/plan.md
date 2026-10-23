@@ -99,10 +99,10 @@ client -> ChatState._meta['ahpd.provider']; the session keeps its own provider
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - A chat keeps the backend that serves it](task-01-a-chat-keeps-the-backend-that-serves-it.md) | todo | - |
-| [02 - Every start uses the chat's own backend](task-02-every-start-uses-the-chats-own-backend.md) | todo | 01 |
-| [03 - A plugin starts a chat on a backend](task-03-a-plugin-starts-a-chat-on-a-backend.md) | todo | 01, 02 |
-| [04 - A client sees the chat's backend](task-04-a-client-sees-the-chats-backend.md) | todo | 03 |
+| [01 - A chat keeps the backend that serves it](task-01-a-chat-keeps-the-backend-that-serves-it.md) | implemented | - |
+| [02 - Every start uses the chat's own backend](task-02-every-start-uses-the-chats-own-backend.md) | implemented | 01 |
+| [03 - A plugin starts a chat on a backend](task-03-a-plugin-starts-a-chat-on-a-backend.md) | implemented | 01, 02 |
+| [04 - A client sees the chat's backend](task-04-a-client-sees-the-chats-backend.md) | implemented | 03 |
 
 ## Risks and tradeoffs
 

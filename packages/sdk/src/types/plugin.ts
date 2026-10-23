@@ -161,6 +161,44 @@ export interface SessionRequest {
 }
 
 /**
+ * What a plugin asks the host for when it starts a chat in a session.
+ *
+ * A chat is not a session: it is another conversation inside one, and the
+ * session stays what it is - its owner, its provider, its tree. What the plugin
+ * names is the backend that serves this one chat, where that is not the
+ * session's own, and the first thing to say in it.
+ */
+export interface ChatRequest {
+  /**
+   * The backend that serves the chat, or the session's own where absent.
+   *
+   * A chat of another backend runs on that one and keeps its own transcript,
+   * while the session goes on being served by its own provider. The name is
+   * the provider a plugin registered, which is what a session's own request
+   * names too.
+   */
+  provider?: string;
+  /** The model the first turn runs on, within that backend, or the backend's own. */
+  model?: string;
+  /**
+   * Config values for the chat, checked against the backend's schema.
+   *
+   * The keys the session owns and no backend does - its `computer` and what a
+   * plugin contributed - are added from the session whatever is named here.
+   */
+  config?: Record<string, unknown>;
+  /** What the chat is called, where the plugin already has a name for it. */
+  title?: string;
+  /**
+   * The first message; absent is a chat that opens with nobody speaking.
+   *
+   * Present and blank is a mistake rather than a quiet chat, the same way an
+   * empty session prompt is.
+   */
+  prompt?: string;
+}
+
+/**
  * One plugin's way of starting a session, and what reaches the host.
  *
  * Built by the plugin host and carried through the fold rather than copied, for
@@ -190,6 +228,15 @@ export interface PluginStarts {
    * that asks too early is told rather than dropped.
    */
   start?: (wanted: StartSession) => Promise<string>;
+  /**
+   * Where a chat inside a running session is asked for, set by the host once
+   * it exists.
+   *
+   * Beside `start`, and absent until then for the same reason: a bot starts a
+   * chat from a wake hook long after `apply` returned. The session is named by
+   * its URI, and what comes back is the new chat's.
+   */
+  startChat?: (session: string, wanted: ChatRequest) => Promise<string>;
   /**
    * Whether this host can open a session: running now, or in its catalogue.
    *
@@ -784,6 +831,26 @@ export interface PluginHost extends PluginContext {
    * plugin throws rather than being kept for later.
    */
   startSession(wanted: SessionRequest): Promise<string>;
+  /**
+   * Start a chat inside a running session, on the backend it names.
+   *
+   * A bot that wakes to answer somebody says what it has to say in a chat of
+   * the session it already has, rather than in a session of its own - and that
+   * chat may run a harness the session's other chats do not. What it takes is
+   * every step a client's `createChat` takes, plus the backend: the chat is
+   * spawned on that backend with `config` checked against its schema, is
+   * announced on the session's channel, and is recorded so a restart starts it
+   * there again.
+   *
+   * The session owner's own `chat:create` is asked first, and a refusal reads
+   * exactly as it does at the door - a plugin may not add a chat the person
+   * the session belongs to could not have added. A host with no users
+   * directory gates nothing, here as anywhere else.
+   *
+   * Answers the new chat's URI. Resolved when it is called rather than at
+   * load, for the same reason `startSession` is.
+   */
+  startChat(session: string, wanted: ChatRequest): Promise<string>;
   /**
    * This plugin's own connection to its host: one AHP client, in process.
    *

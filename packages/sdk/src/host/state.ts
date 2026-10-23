@@ -19,6 +19,16 @@ export interface Held {
   defaultChat: string;
   /** Config in force. Every chat in the session runs on it. */
   config: Record<string, unknown>;
+  /**
+   * The chats this session has that the session's own backend does not serve.
+   *
+   * A session names one backend, and a chat opened on another - by a plugin or
+   * a tool - keeps its own agent and config here. The session's `agent` and
+   * `config` stay its own: what a client reads as the session's provider, what
+   * a resume records and what the session's own chats run on. A chat that is
+   * not in this map is served by the session's backend.
+   */
+  backends: Map<string, { agent: Agent; config: Record<string, unknown> }>;
   /** Where they work, when the client named a directory. */
   workingDirectory: string | undefined;
   /**

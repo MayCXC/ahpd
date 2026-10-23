@@ -102,6 +102,28 @@ export interface StoredChat {
    * has not said one, which is a chat nothing can be resumed from.
    */
   backendId: string;
+  /**
+   * The backend that serves this chat, where it is not the session's own.
+   *
+   * A session names one backend and every chat in it runs on that one, unless
+   * a chat was opened on another - which a plugin or a tool names. The session
+   * keeps its own provider either way; this is what a restart, a rewind and a
+   * resize start the chat on, and what makes it a chat of another backend
+   * rather than one of the session's. Absent where the chat is the session's
+   * own, which is every chat this host opened before there was a choice.
+   */
+  provider?: string;
+  /**
+   * The config this chat runs on, where it is not the session's own.
+   *
+   * The settings a chat was opened with on a backend of its own, kept here
+   * because the session's config is the session's - a key of the session's
+   * backend is not a setting that chat's backend can read. It holds the keys
+   * no backend owns as well, `computer` among them, since a chat in a machine
+   * of its own has to be started back into it. Absent where the chat is the
+   * session's own, whose config is the session's.
+   */
+  config?: Record<string, unknown>;
   /** The title it was given, or nothing where it was never named. */
   title?: string;
   /** What it was made from, as `session/chatAdded` carried it. */
