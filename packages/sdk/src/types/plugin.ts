@@ -226,8 +226,12 @@ export interface PluginStarts {
    * own unit test with no host built over it. Unlike a fire, which is about
    * what is happening now, this is a call that owes an answer - so a plugin
    * that asks too early is told rather than dropped.
+   *
+   * `named` is called with the session's URI before the session is made, so a
+   * plugin that answers for that URI - a bot's connector reader - names it at
+   * the first tool list the backend is spawned with.
    */
-  start?: (wanted: StartSession) => Promise<string>;
+  start?: (wanted: StartSession, named?: (uri: string) => void) => Promise<string>;
   /**
    * Where a chat inside a running session is asked for, set by the host once
    * it exists.
@@ -847,8 +851,14 @@ export interface PluginHost extends PluginContext {
    * Resolved when it is called rather than at load: the host this reaches does
    * not exist while `apply` runs, so asking before one is built over this
    * plugin throws rather than being kept for later.
+   *
+   * `named` is called once, with the URI the session will have, before the tree
+   * is isolated or the backend spawns. A plugin that answers for that URI can
+   * therefore answer from the start - a bot's connectors are in the first tool
+   * list rather than only the one built after the start answers. A `named`
+   * that throws is logged against the host and the start goes on.
    */
-  startSession(wanted: SessionRequest): Promise<string>;
+  startSession(wanted: SessionRequest, named?: (uri: string) => void): Promise<string>;
   /**
    * Start a chat inside a running session, on the backend it names.
    *

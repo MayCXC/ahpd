@@ -1124,14 +1124,20 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
      * registration is - and then handed to the host's own road, which is the
      * same one a run takes. Asked while `apply` runs there is no host yet, and
      * a call that owes an answer is told rather than dropped.
+     *
+     * `named` is passed through rather than called here: the host calls it with
+     * the URI once it has named the session, which is before anything is made.
      */
-    startSession(wanted) {
+    startSession(wanted, named) {
       const asked = checkSessionRequest(wanted, by);
       const start = starts.start;
       if (start === undefined) {
         throw new Error(miss(by, 'startSession', 'the session', 'asked for once a host is built over this plugin'));
       }
-      return start(asked);
+      if (named !== undefined && typeof named !== 'function') {
+        throw new Error(miss(by, 'startSession', 'the door', 'a function to call with the session\'s URI, or nothing'));
+      }
+      return start(asked, named);
     },
     /*
      * A chat inside a session this plugin already has, checked here and

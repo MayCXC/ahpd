@@ -132,6 +132,60 @@ it('refuses an owner who may not create a session, in the client\'s own words', 
   expect(fromPlugin?.code).toBe(-32009);
 });
 
+/**
+ * A backend that says when it was spawned, so the door and the spawn can be
+ * ordered. Echo rather than the fake Claude, because the case is about when the
+ * backend was asked rather than what it did.
+ */
+const watched = (order: string[]): Agent => {
+  const base = echo({ path: DIR, pace: 0 });
+  return {
+    ...base,
+    provider: 'watched',
+    create: (start: Start) => { order.push('spawn'); return base.create(start); },
+  };
+};
+
+it('names the session once, with the URI it answers, before the backend spawns', async () => {
+  const order: string[] = [];
+  const { plugin } = await startingWith({ soft: ['session:create'] }, 'soft', { agents: [watched(order)] });
+  const seen: string[] = [];
+
+  const uri = await plugin.startSession({ owner: 'user:soft', provider: 'watched', prompt: 'Say hello' }, (one) => {
+    order.push('named');
+    seen.push(one);
+  });
+
+  // The URI the start answers is the one the plugin was told, and it was told
+  // before anything was made: the tool list the backend is spawned with is the
+  // one built during `isolated`, which is after this.
+  expect(seen).toEqual([uri]);
+  expect(order).toEqual(['named', 'spawn']);
+});
+
+it('starts the session when the plugin\'s door throws, and says so in the log', async () => {
+  const lines: string[] = [];
+  const { plugin } = await startingWith({ soft: ['session:create'] }, 'soft', {
+    onEvent: (line) => { lines.push(line); },
+  });
+
+  const uri = await plugin.startSession({ owner: 'user:soft', prompt: 'Say hello' }, () => {
+    throw new Error('nobody is listening');
+  });
+
+  // The plugin heard as much as it could, and what it does with that is not a
+  // reason to refuse the work the person asked for.
+  expect(uri).toMatch(/^claude:\//);
+  expect(lines.some((line) => line.includes(uri) && line.includes('nobody is listening'))).toBe(true);
+});
+
+it('refuses a door that is not a function, at the boundary', () => {
+  const { plugin } = starting({ soft: ['session:create'] });
+
+  expect(() => plugin.startSession({ owner: 'user:soft' }, 'nobody' as never))
+    .toThrow(/plugin bots: startSession needs the door to be a function to call with the session's URI, or nothing/);
+});
+
 it('asks for computer:write when the config names a source, as a run does', async () => {
   // Named the way an automation names one and a client names one: a source is a
   // machine made for this session, and making one is the grant.
