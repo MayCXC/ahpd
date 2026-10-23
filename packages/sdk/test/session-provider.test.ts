@@ -5,6 +5,7 @@ import { idOf } from '../src/sessions/catalog.js';
 import { memorySessions } from '../src/sessions/sessions.js';
 import type { Agent, Start } from '../src/types/agent.js';
 import type { Peer } from '../src/types/rpc.js';
+import type { Session } from '../src/types/session.js';
 import type { SessionStore } from '../src/types/sessions.js';
 
 /*
@@ -83,6 +84,22 @@ function late(provider = 'echo'): Agent {
 const uri = 'ahp-session:/made';
 const chatUri = 'ahp-chat:/made';
 
+/**
+ * The example backend, which keeps each chat under the id it was handed.
+ *
+ * A chat of a session is a conversation of its own, and this is the backend
+ * half of that: the id the host names a chat by is the one its transcript is
+ * kept under, so a session's chats are as many conversations as it has.
+ */
+function keeping(provider: string): Agent {
+  const base = echo({ path: DIR, pace: 0 });
+  return {
+    ...base,
+    provider,
+    create: (start: Start): Session =>
+      base.create(start.chatId === undefined ? start : { ...start, resume: start.chatId }),
+  };
+}
 /** A host on one store, with the backend behind it. */
 function serving(store: SessionStore, agents: Agent[], given: Peer = peer()) {
   const host = createHost({ path: DIR, agents, sessions: store });
@@ -272,6 +289,46 @@ it('names the harness each of two backends a session runs on', async () => {
   await settle();
   await client.handle({ method: 'createSession', params: { channel: uri, provider: 'two' } });
   expect(store.provider('made')).toBe('two');
+});
+
+/*
+ * A session is one harness; a chat of it can be another.
+ *
+ * Which harness a chat runs on is the chat's, and a session that has a chat on
+ * another backend is still the session it was: the provider its row carries,
+ * and what a resume records, are the session's own. What is written down for
+ * the chat is the chat's, and a start that does not know it leaves it there.
+ */
+it('leaves the session\'s provider as its own when a chat of it was recorded on another backend', async () => {
+  const store = memorySessions();
+  const one = keeping('one');
+  const two = keeping('two');
+  const first = serving(store, [one, two]);
+  await settle();
+  await first.client.handle({ method: 'createSession', params: { channel: uri, provider: 'one' } });
+  await first.client.handle({ method: 'createChat', params: { channel: uri, chat: 'ahp-chat:/peer' } });
+  await settle();
+  await talk(first.client, uri, 't1');
+  await talk(first.client, 'ahp-chat:/peer', 't2');
+  expect(store.provider('made')).toBe('one');
+
+  // The row of the chat, as one opened on another backend leaves it.
+  const opened = { provider: 'two', config: { voice: 'shouty' } };
+  store.setChats('made', store.chats('made').map((chat) =>
+    (chat.uri === 'ahp-chat:/peer' ? { ...chat, ...opened } : chat)));
+
+  /*
+   * A daemon that came back, and a turn on that chat, which is what starts it:
+   * the session is one backend's and the chat is another's, and recording the
+   * session under the chat's would send every later resume to the wrong one.
+   */
+  const second = serving(store, [one, two]);
+  await settle();
+  await second.client.handle({ method: 'listSessions', params: { channel: ROOT } });
+  await talk(second.client, 'ahp-chat:/peer', 't3');
+
+  expect(store.provider('made')).toBe('one');
+  expect(store.chats('made').find((chat) => chat.uri === 'ahp-chat:/peer')).toMatchObject(opened);
 });
 
 /*

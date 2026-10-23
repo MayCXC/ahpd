@@ -32,8 +32,20 @@ export interface ChatRecord {
   heldChats(id: string): StoredChat[];
   /** One open chat of a session, as the store records it. */
   recordedChat(id: string, chatUri: string): StoredChat | undefined;
-  /** Write down one chat of a session that is running, where it was opened. */
-  keepChat(uri: string, chatUri: string, backendId: string | undefined, isDefault: boolean): void;
+  /**
+   * Write down one chat of a session that is running, where it was opened.
+   *
+   * The provider and config are the chat's own where it runs on a backend of
+   * its own, and absent for a chat the session's backend serves. A call that
+   * knows neither leaves what the row already says: a title written later or a
+   * backend id answered at the end of a turn is the same chat, and dropping
+   * what it was recorded with would start it on the session's backend next
+   * time.
+   */
+  keepChat(
+    uri: string, chatUri: string, backendId: string | undefined, isDefault: boolean,
+    provider?: string, config?: Record<string, unknown>,
+  ): void;
   /** Write down a session's chats in a new order, which is the order a restart rebuilds them in. */
   orderChats(uri: string, order: string[]): void;
   /** A chat a session has dropped, kept in the record or gone from it. */
@@ -103,7 +115,10 @@ export function createChatRecord(ctx: HostContext): ChatRecord {
   const recordedChat = (id: string, chatUri: string): StoredChat | undefined =>
     recordedChats(id).find((one) => one.uri === chatUri);
 
-  const keepChat = (uri: string, chatUri: string, backendId: string | undefined, isDefault: boolean): void => {
+  const keepChat = (
+    uri: string, chatUri: string, backendId: string | undefined, isDefault: boolean,
+    provider?: string, config?: Record<string, unknown>,
+  ): void => {
     const id = idOf(uri);
     const list = stored(id);
     const at = list.findIndex((one) => one.uri === chatUri);
@@ -113,6 +128,11 @@ export function createChatRecord(ctx: HostContext): ChatRecord {
     // before its origin is written down, so the record takes it from the one
     // place both a live session and a browsed one are told it from.
     const origin = ctx.madeFrom.get(chatUri) ?? was?.origin;
+    // The backend of its own this chat runs on, if it is not the session's,
+    // and the config it runs on there. A call that names neither is one about
+    // a chat that has not changed backend, so the row keeps what it had.
+    const served = provider ?? was?.provider;
+    const settings = config ?? was?.config;
     // Built field by field, so a chat that is being started is open: the mark
     // a closed one carries is not among them.
     const next: StoredChat = {
@@ -120,6 +140,8 @@ export function createChatRecord(ctx: HostContext): ChatRecord {
       // The name the backend keeps this conversation under: the id it was
       // handed, and the session's own id for the chat that is the session.
       backendId: backendId ?? was?.backendId ?? chatIdFor(uri, chatUri) ?? id,
+      ...(served === undefined ? {} : { provider: served }),
+      ...(settings === undefined ? {} : { config: settings }),
       ...(title === undefined ? {} : { title }),
       ...(origin === undefined ? {} : { origin }),
       ...(isDefault || was?.default === true ? { default: true } : {}),
@@ -195,6 +217,8 @@ export function createChatRecord(ctx: HostContext): ChatRecord {
       rows[at] = {
         uri: held.uri,
         backendId: held.backendId,
+        ...(held.provider === undefined ? {} : { provider: held.provider }),
+        ...(held.config === undefined ? {} : { config: held.config }),
         ...(held.title === undefined ? {} : { title: held.title }),
         ...(held.origin === undefined ? {} : { origin: held.origin }),
         closed: true,

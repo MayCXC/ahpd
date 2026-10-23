@@ -611,6 +611,42 @@ it('answers a session\'s chats, in the order they were given, and none for a ses
   expect(store.chats('a')).toEqual([]);
 });
 
+it('keeps the backend a chat runs on, and its config, so a restart starts it there', async () => {
+  const dir = join(root, 'sessions');
+  const store = fileSessions({ dir });
+  // A chat of the session's own backend keeps neither: the session says which
+  // backend that is and what it runs on.
+  const lead = { uri: 'ahp-chat:/one', backendId: 'one', default: true };
+  const peer = {
+    uri: 'ahp-chat:/peer',
+    backendId: 'peer',
+    provider: 'b',
+    config: { model: 'b-large', computer: 'store:code' },
+  };
+  store.setChats('a', [lead, peer]);
+  await new Promise((tick) => { setTimeout(tick, 5); });
+  // Read back by a second store on the same folder, which is what a restart is.
+  expect(fileSessions({ dir }).chats('a')).toEqual([lead, peer]);
+
+  /*
+   * A row this version did not write reads as it always did - the session's
+   * backend, and the session's config - and a value of the wrong shape is the
+   * absence of one rather than a reason to refuse the row.
+   */
+  writeFileSync(join(dir, 'b.json'), JSON.stringify({
+    version: 1,
+    id: 'b',
+    chats: [
+      { uri: 'ahp-chat:/old', backendId: 'old' },
+      { uri: 'ahp-chat:/odd', backendId: 'odd', provider: 7, config: 'loud' },
+    ],
+  }));
+  const loaded = fileSessions({ dir }).chats('b');
+  expect(loaded.map((one) => one.uri)).toEqual(['ahp-chat:/old', 'ahp-chat:/odd']);
+  expect(loaded[0]).toEqual({ uri: 'ahp-chat:/old', backendId: 'old' });
+  expect(loaded[1]).toEqual({ uri: 'ahp-chat:/odd', backendId: 'odd' });
+});
+
 it('forgets a session entirely, whatever was set on it', () => {
   const store = memorySessions();
   store.setFlags('a', ARCHIVED);

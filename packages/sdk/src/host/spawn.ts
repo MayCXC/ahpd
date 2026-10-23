@@ -77,6 +77,12 @@ export interface Spawn {
    * added to `Start.instructions` after what the host's tools say. It is not
    * kept, so a session started again after a restart is not told it: what has
    * to hold for the whole life of a session belongs on a tool's instruction.
+   *
+   * `own` is the session's own backend and config, for the one start that
+   * creates the session with a chat another backend serves: a resume whose
+   * recorded default chat is one of those. The chat lands on `Held.backends`
+   * and the session stays the one `own` names. Every other road starts the
+   * session's own chat, which says whose the session is by itself.
    */
   spawn(
     agent: Agent,
@@ -90,6 +96,7 @@ export interface Spawn {
     additional?: string[],
     sender?: Connection,
     askedInstructions?: string[],
+    own?: { agent: Agent; config: Record<string, unknown> },
   ): Session;
 }
 
@@ -737,6 +744,7 @@ export function createSpawn(ctx: HostContext): Spawn {
     additional?: string[],
     sender?: Connection,
     askedInstructions?: string[],
+    own?: { agent: Agent; config: Record<string, unknown> },
   ): Session => {
     /*
      * The backend that actually runs this session.
@@ -1310,8 +1318,16 @@ export function createSpawn(ctx: HostContext): Spawn {
          */
         if (action.type === 'chat/turnComplete' || action.type === 'chat/turnCancelled') {
           const own = byChat.get(chatUri)?.chat.agentId();
-          if (own !== undefined && own !== '' && kept.provider(own) !== agent.provider) kept.setProvider(own, agent.provider);
-          if (own !== undefined && own !== '') keepFolder(own, sessions.get(uri)?.workingDirectory);
+          /*
+           * A chat of another backend's transcript is that backend's: the
+           * session's provider is not what a resume of that id reads, and the
+           * folder under it is the session's. The chat's own backend is on
+           * `Held.backends` and its row, which is where a start reads it.
+           */
+          if (!foreign && own !== undefined && own !== '') {
+            if (kept.provider(own) !== agent.provider) kept.setProvider(own, agent.provider);
+            keepFolder(own, sessions.get(uri)?.workingDirectory);
+          }
           if (own !== undefined && own !== '' && ctx.recordedChat(idOf(uri), chatUri)?.backendId !== own) {
             ctx.keepChat(uri, chatUri, own, false);
           }
@@ -1536,13 +1552,29 @@ export function createSpawn(ctx: HostContext): Spawn {
       }
       backendEmit(channel, action);
     };
+    /*
+     * Whether this chat is one the session's own backend does not serve.
+     *
+     * Read before the backend is created, because a backend may emit inside
+     * `create`, and the emit below reads it: a chat of another backend is one
+     * chat of the session and nothing else about the session is its.
+     *
+     * A first start takes its answer from `own` where the caller gave one: a
+     * resume whose recorded default chat is one of another backend starts that
+     * chat before the session exists, and the chat is not what the session is.
+     * Without it, this start is the session's own chat, as every other road
+     * here is.
+     */
+    const existing = sessions.get(uri);
+    const foreign = existing !== undefined ? agent !== existing.agent : own !== undefined && agent !== own.agent;
     const session = used.create(wired);
     titled = session;
-    const held = sessions.get(uri) ?? {
-      agent,
+    const held = existing ?? {
+      agent: own?.agent ?? agent,
       chats: new Map<string, Session>(),
       defaultChat: chatUri,
-      config,
+      config: own?.config ?? config,
+      backends: new Map<string, { agent: Agent; config: Record<string, unknown> }>(),
       workingDirectory,
       additional,
       // The catalogue's value for a session being resumed; now, for one being
@@ -1563,6 +1595,17 @@ export function createSpawn(ctx: HostContext): Spawn {
     held.chats.set(chatUri, session);
     sessions.set(uri, held);
     /*
+     * A chat on a backend of its own, which the session's own agent does not
+     * serve.
+     *
+     * The session keeps its own agent and config - what it is, what a resume
+     * records and what its own chats run on - and a chat opened on another
+     * backend keeps that one here, by its own URI. Every road that starts the
+     * chat again reads it from here; a chat that is not in this map is served
+     * by the session's backend.
+     */
+    if (foreign) held.backends.set(chatUri, { agent, config });
+    /*
      * What this session's backends were told is let go of, because the one
      * starting now has been told nothing: it is a backend that found its own
      * customizations and is running them. This is every road to a running
@@ -1579,7 +1622,10 @@ export function createSpawn(ctx: HostContext): Spawn {
      * and the session's own id for the chat that is the session - until the
      * backend answers with its own, which the chat's own emit records.
      */
-    ctx.keepChat(uri, chatUri, chatId ?? idOf(uri), held.defaultChat === chatUri);
+    ctx.keepChat(
+      uri, chatUri, chatId ?? idOf(uri), held.defaultChat === chatUri,
+      foreign ? agent.provider : undefined, foreign ? config : undefined,
+    );
     // And the folder it works in, which is where a backend is told to look for
     // it after a restart. Only on a change, so a chat started again in the
     // same folder writes nothing.
@@ -1637,7 +1683,13 @@ export function createSpawn(ctx: HostContext): Spawn {
       drafts.delete(chatUri);
       session.setDraft(typed);
     }
-    owners.set(uri, agent);
+    /*
+     * The session's own backend, which claims the session where it was built
+     * from a record rather than started: a chat of another backend is one chat
+     * of the session and does not change whose the session is, which is what
+     * the catalogue, a resume and a charge read.
+     */
+    if (!foreign) owners.set(uri, agent);
     /*
      * The machine this session is now running in, told to the plugin that owns
      * it.

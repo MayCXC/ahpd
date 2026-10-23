@@ -87,13 +87,21 @@ export interface Lifecycle {
    * uri. A listing counts them as running, so it never prunes their records.
    */
   respawning: Map<string, Held>;
-  /** Start a session again, in the directory its config now names. */
+  /**
+   * Start a session again, in the directory its config now names.
+   *
+   * `tokensFor` reads the asking connection's credentials by provider. The
+   * credentials argument is the session's own backend's, and a chat that runs
+   * on another backend has to be started with that backend's tokens: a token
+   * for one resource is not a token for another.
+   */
   restart(
     uri: string,
     credentials: Record<string, string>,
     keeping?: { additional?: string[]; directory?: string },
     sender?: Connection,
     before?: BeforeWorktree,
+    tokensFor?: (provider: string) => Record<string, string>,
   ): Promise<void>;
   /** The move `set_workspace` asked for, once the turn that asked is over. */
   moveSession(uri: string, move: Move): Promise<void>;
@@ -103,6 +111,15 @@ export interface Lifecycle {
   chatIdOf(uri: string, chatUri: string, own: string | undefined): string | undefined;
   /** The backend's own copy of one chat's conversation, gone. */
   deletedChat(backendId: string, agent: Agent, directory: string | undefined): Promise<unknown>;
+  /**
+   * The backend that serves one chat: the chat's own, or the session's.
+   *
+   * A chat opened on a backend the session does not run on is served by that
+   * one wherever it is started again, and every other chat by the session's.
+   */
+  chatAgent(held: Held, chatUri: string): Agent;
+  /** The config that chat runs on: the chat's own where it has one, the session's otherwise. */
+  chatConfig(held: Held, chatUri: string): Record<string, unknown>;
   /** What the backend is given: everything except what this host answered. */
   backendsOwn(config: Record<string, unknown>): Record<string, unknown>;
   /** Where a session actually runs, once isolation has been answered. */
@@ -615,7 +632,17 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      */
     for (const chat of chats) {
       if (chat.backendId === '' || chat.backendId === idOf(uri)) continue;
-      const gone = await deletedChat(chat.backendId, agent, directory);
+      /*
+       * The backend that holds this chat's conversation, which is the chat's
+       * own where it ran on one - a transcript belongs to the harness that
+       * wrote it, and a delete handed to another is a delete of nothing. A
+       * session this host is not holding answers it from the record, which is
+       * where it says which backend the chat belonged to.
+       */
+      const served = chat.provider !== undefined
+        ? ctx.agents.get(chat.provider) ?? agent
+        : held === undefined ? agent : chatAgent(held, chat.uri);
+      const gone = await deletedChat(chat.backendId, served, directory);
       if (failure === undefined) failure = gone;
     }
     if (held === undefined) {
@@ -651,9 +678,24 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     keeping?: { additional?: string[]; directory?: string },
     sender?: Connection,
     before?: BeforeWorktree,
+    tokensFor?: (provider: string) => Record<string, string>,
   ): Promise<void> => {
     const held = sessions.get(uri);
     if (!held) return;
+    /*
+     * What one chat's own backend is started with.
+     *
+     * The credentials the caller brought are the session's backend's, and a
+     * chat that runs on another one is started with that backend's: a token
+     * for one resource is not a token for another. The asking connection is
+     * where they are read from, and a restart nobody's connection asked for
+     * starts the chat with none.
+     */
+    const credentialsOf = (chat: string): Record<string, string> => {
+      const agent = chatAgent(held, chat);
+      if (agent === held.agent) return credentials;
+      return tokensFor?.(agent.provider) ?? {};
+    };
     const mine = decided.get(uri) ?? {};
     // The repository rather than the worktree: the choice is made against the
     // directory somebody asked for, and a worktree is only where a previous
@@ -750,14 +792,14 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
       // The last thing before the new backend: the old one's process is gone.
       await Promise.all(stopping);
       spawn(
-        held.agent,
+        chatAgent(held, held.defaultChat),
         uri,
         held.defaultChat,
         chatIdOf(uri, held.defaultChat, lead?.agentId()),
-        backendsOwn(held.config),
+        backendsOwn(chatConfig(held, held.defaultChat)),
         talking,
         to,
-        credentials,
+        credentialsOf(held.defaultChat),
         keeping?.additional ?? held.additional,
         sender,
       );
@@ -779,17 +821,17 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
         if (chatUri === held.defaultChat) continue;
         const own = chat.agentId();
         spawn(
-          held.agent,
+          chatAgent(held, chatUri),
           uri,
           chatUri,
           // The name the backend answered with, where it minted one: the record
           // is written again here, and a chat resumed by one name while
           // recorded under another is one the next start reads as missing.
           chatIdOf(uri, chatUri, own),
-          backendsOwn(held.config),
+          backendsOwn(chatConfig(held, chatUri)),
           own === undefined ? undefined : { resume: own, seed: chat.allTurns() },
           to,
-          credentials,
+          credentialsOf(chatUri),
           beside.get(chatUri) ?? keeping?.additional ?? held.additional,
           sender,
         );
@@ -935,11 +977,11 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     held.chats.delete(chatUri);
     byChat.drop(chatUri);
     spawn(
-      held.agent,
+      chatAgent(held, chatUri),
       uri,
       chatUri,
       chatIdOf(uri, chatUri, own),
-      backendsOwn(held.config),
+      backendsOwn(chatConfig(held, chatUri)),
       talking,
       held.workingDirectory,
       credentials,
@@ -952,6 +994,21 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
   /** What the backend is given: everything except what this host answered. */
   const backendsOwn = (config: Record<string, unknown>): Record<string, unknown> =>
     Object.fromEntries(Object.entries(config).filter(([key]) => !HOSTS_OWN.includes(key)));
+
+  /**
+   * The backend that serves one chat.
+   *
+   * A chat opened on another backend runs on that one - what a start hands it,
+   * whose credentials it is asked for, whose transcript a rewind resumes and
+   * what a delete removes - and every other chat of the session runs on the
+   * session's own. The session keeps its own either way: what a client reads
+   * as its provider and what a resume records are the session's, not a chat's.
+   */
+  const chatAgent = (held: Held, chatUri: string): Agent => held.backends.get(chatUri)?.agent ?? held.agent;
+
+  /** The config one chat runs on: its own where it has a backend of its own, the session's otherwise. */
+  const chatConfig = (held: Held, chatUri: string): Record<string, unknown> =>
+    held.backends.get(chatUri)?.config ?? held.config;
 
   /**
    * The name a backend is handed for a chat, on a start that is not the first.
@@ -1730,7 +1787,8 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
   };
 
   return {
-    removeSession, respawning, restart, moveSession, restartChat, chatIdOf, deletedChat, backendsOwn, isolated,
+    removeSession, respawning, restart, moveSession, restartChat, chatIdOf, deletedChat, backendsOwn,
+    chatAgent, chatConfig, isolated,
     shelve, restore, beginOrRun, beginTurn, modelIn, messageFrom, messageAttachments, openSession,
   };
 }
