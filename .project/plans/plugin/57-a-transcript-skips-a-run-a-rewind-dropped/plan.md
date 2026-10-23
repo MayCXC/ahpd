@@ -67,7 +67,7 @@ turnsOf -> runs.listEvents(removed run) -> StoreError not_found -> the whole rea
 
 | Task | Status | Depends on |
 | --- | --- | --- |
-| [01 - The transcript skips a run that is gone](task-01-the-transcript-skips-a-run-that-is-gone.md) | todo | - |
+| [01 - The transcript skips a run that is gone](task-01-the-transcript-skips-a-run-that-is-gone.md) | implemented | - |
 
 ## Risks and tradeoffs
 
@@ -76,10 +76,10 @@ turnsOf -> runs.listEvents(removed run) -> StoreError not_found -> the whole rea
 
 ## Resume state
 
-- **Done so far:** the plan.
-- **Next action:** task 01.
+- **Done so far:** task 01 is implemented. `turnsOf` reads a run's events before it records that run's usage, model, ending and duration. A `not_found` from the store skips the run, so a transcript read during a rewind answers the turns that remain. Every other store error still fails the read, which a `writer_busy` case pins. The changelog says so.
+- **Next action:** the Final verification checklist, by hand, before the plan is reviewed.
 - **Open questions:** none.
-- **Watch out for:** the `usage`, `ending` and `duration` writes happen before `listEvents` today, so move them after it.
+- **Watch out for:** the fork test passed five times here. The CI failure it came from is what the checklist has to confirm.
 
 ## Final verification checklist
 
