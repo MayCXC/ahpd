@@ -224,6 +224,26 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
   };
 
   /**
+   * The one key this host declares rather than offers.
+   *
+   * `connectors` is not a question a person answers on the session form: a
+   * binding is set by whoever starts the session, so there is no offer to
+   * repeat and the row below is the declaration. `additionalProperties` is the
+   * protocol's way of saying the map itself is the value - an alias to a
+   * `connectors://<adapter>/<id>` string - and `sessionMutable: false` closes
+   * it once the session has started, as every other host key.
+   */
+  const declared: Bag = {
+    connectors: {
+      type: 'object',
+      title: 'Connectors',
+      description: 'The connectors this session may use, by name.',
+      additionalProperties: { type: 'string' },
+      sessionMutable: false,
+    },
+  };
+
+  /**
    * This host's own half of the schema a session reports.
    *
    * The same properties `resolveSessionConfig` offered, not a stripped copy of
@@ -250,7 +270,7 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
           // A session created before this host could ask - an automation on a
           // directory that is not a repository - has no offer to repeat, and
           // says what it settled on instead.
-          properties[key] ?? { type: 'string', title: key, readOnly: true, sessionMutable: false },
+          properties[key] ?? declared[key] ?? { type: 'string', title: key, readOnly: true, sessionMutable: false },
         ]),
     );
   };
@@ -480,14 +500,20 @@ export function createSessionConfig(ctx: HostContext): SessionConfig {
     return held;
   };
 
+  /** Whether a value is the alias map `connectors` holds: an object of strings. */
+  const isAliasMap = (value: unknown): value is Record<string, string> =>
+    typeof value === 'object' && value !== null && !Array.isArray(value)
+    && Object.values(value).every((one) => typeof one === 'string');
+
   /** What this host answered, in the shape it answered it, for saying back on the session. */
   const mineOf = (config: Record<string, unknown>): Record<string, unknown> => Object.fromEntries(
     Object.entries(config)
-      // A string, or a list of strings for the two pattern keys, which a
-      // session says back in the shape it was given.
+      // A string, a list of strings for the two pattern keys, or the alias map
+      // `connectors` holds - each said back in the shape it was given.
       .filter(([key, value]) => HOSTS_OWN.includes(key)
         && (typeof value === 'string'
-          || (Array.isArray(value) && value.every((one) => typeof one === 'string'))))
+          || (Array.isArray(value) && value.every((one) => typeof one === 'string'))
+          || (key === 'connectors' && isAliasMap(value))))
       .map(([key, value]) => [key, value]),
   );
 

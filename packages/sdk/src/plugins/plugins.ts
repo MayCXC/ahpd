@@ -16,7 +16,7 @@ import type { SessionConfigAnswerer } from '../types/completions.js';
 import type { ServedAdapter } from '../types/connectors.js';
 import type { EventHandler, EventListener, EventName, HostEvent, HostEventOf, HostHandlers } from '../types/events.js';
 import type { HostOptions, HostTool } from '../types/host.js';
-import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
+import type { ChannelHandle, Contribution, LoaderContext, PluginConnects, PluginContext, PluginContracts, PluginHost, PluginStarts, SessionMetaKey, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta, PluginTriggers, PortContribution, PortKey, PortOf, Route, TriggerTypeDefinition } from '../types/plugin.js';
 import type { CollectionOptions, RecordCollection, RecordStore } from '../types/records.js';
 import type { SessionStore } from '../types/sessions.js';
 import type { Usage } from '../types/usage.js';
@@ -365,6 +365,15 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
     for (const one of served.keys) metaKeys.set(one.key, 'the daemon');
   }
   /*
+   * The bindings each plugin answers, one reader per plugin.
+   *
+   * Seeded from the base for the same reason the ports are. Two plugins may
+   * both answer, because a binding is about a session and two plugins may
+   * answer for different ones; an alias they both name is the session's to
+   * settle, and the session key wins it.
+   */
+  const bindings: ServedBindings[] = [...(base.bindings ?? [])];
+  /*
    * The served commands, by name, and who holds each. Seeded from the base, so
    * a plugin is told when the daemon already serves one.
    */
@@ -488,6 +497,11 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
         sessionMeta.push(contribution.sessionMeta);
       }
     }
+
+    // One reader per plugin, and every plugin's is kept: the plugin host
+    // refuses a second one from the same plugin, so there is nothing to
+    // arbitrate here.
+    if (contribution.bindings !== undefined) bindings.push(contribution.bindings);
   }
 
   if (added.length > 0) options.agents = [...options.agents, ...added];
@@ -586,6 +600,7 @@ export function foldHostOptions(base: HostOptions, contributions: Contribution[]
   if (Object.keys(methods).length > 0) options.methods = methods;
   if (plan !== undefined) options.plan = plan;
   if (sessionMeta.length > 0) options.sessionMeta = sessionMeta;
+  if (bindings.length > 0) options.bindings = bindings;
 
   /*
    * The routes, by plugin name.
@@ -1331,6 +1346,23 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
         throw new Error(miss(by, 'sessionMetaChanged', 'the change', 'announced once a host is built over this plugin'));
       }
       changed(uri);
+    },
+    /*
+     * One reader per plugin, and every plugin's is kept: a binding is about a
+     * session, so two plugins may answer for different ones. A second reader
+     * from one plugin is refused rather than merged, because one plugin's two
+     * maps would need a rule for a shared alias that nothing has.
+     */
+    registerBindings(read) {
+      open();
+      if (typeof read !== 'function') {
+        throw new Error(miss(by, 'registerBindings', 'the reader', 'a function answering a session\'s connectors, by alias'));
+      }
+      declared(by, options.contracts, 'bindings');
+      if (contribution.bindings !== undefined) {
+        throw new Error(miss(by, 'registerBindings', 'a reader', 'registered only once'));
+      }
+      contribution.bindings = { by, read };
     },
     registerTerminals: (store, when) => { setPort('terminals', 'registerTerminals', store, when); },
     registerChanges: (source, when) => { setPort('changes', 'registerChanges', source, when); },

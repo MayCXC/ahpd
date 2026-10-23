@@ -450,6 +450,24 @@ export interface ServedSessionMeta {
 }
 
 /**
+ * The connectors a session may use, by alias, as a plugin answers them.
+ *
+ * Read when the host builds a session's tool list and when it runs a call, and
+ * synchronous for that reason: `forSession` is synchronous and the sdk does
+ * not read a bot record. A reader with nothing to say answers `undefined`, and
+ * a map of aliases to `connectors://<adapter>/<id>` where it has something.
+ */
+export type BindingsReader = (uri: string) => Record<string, string> | undefined;
+
+/** One plugin's bindings for a session. */
+export interface ServedBindings {
+  /** The plugin that registered them. */
+  by: string;
+  /** The map for one session, read when asked. */
+  read: BindingsReader;
+}
+
+/**
  * A command a plugin or the daemon serves, under an `x-` name of its own.
  *
  * A client sends it as any other request, and what `handle` answers is the
@@ -958,6 +976,16 @@ export interface PluginHost extends PluginContext {
    */
   registerSessionMeta(key: string, read: SessionMetaReader): void;
   /**
+   * Answer the connectors a session may use, by alias.
+   *
+   * The reader is asked each time the host builds a session's tool list and
+   * each time a tool runs, so a binding a plugin changes reaches a session it
+   * already started. It is synchronous, for the same reason
+   * `registerSessionMeta`'s is: `forSession` is. A plugin registers one
+   * reader, and a second registration is refused.
+   */
+  registerBindings(read: BindingsReader): void;
+  /**
    * The plugin's value for a session moved.
    *
    * The host composes the session's `_meta` again, with every producer's part,
@@ -1368,6 +1396,14 @@ export interface Contribution {
    * object `pluginHost` built is the one the host fills in.
    */
   sessionMeta?: ServedSessionMeta;
+  /**
+   * The connectors this plugin says a session may use, when it says any.
+   *
+   * Carried through rather than copied, for the same reason `plan` is: the
+   * object `pluginHost` built is the one the fold keeps, and the host reads it
+   * on every tool list and every call.
+   */
+  bindings?: ServedBindings;
 }
 
 /** One plugin that was resolved and imported, before or after it was applied. */

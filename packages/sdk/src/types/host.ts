@@ -12,8 +12,9 @@ import type { Worktrees } from './worktrees.js';
 import type { PullRequests } from './github.js';
 import type { AutomationStore } from './automations.js';
 import type { EnablementStore } from '../plugins/enablement.js';
-import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
-import type { ServedAdapter } from './connectors.js';
+import type { ChatPreamble, PluginConnects, PluginStarts, PluginTriggers, ServedBindings, ServedChannel, ServedMethod, ServedPlan, ServedSessionMeta } from './plugin.js';
+import type { ConnectorRef, ServedAdapter } from './connectors.js';
+import type { ConnectorsChannel } from '../connectors/channel.js';
 import type { SessionStore } from './sessions.js';
 import type { ComputerPort } from './computers.js';
 import type { ContainerPort } from './containers.js';
@@ -151,6 +152,28 @@ export interface HostOptions {
    */
   adapters?: Record<string, ServedAdapter>;
   /**
+   * The connectors this host serves, as a session's bindings are checked.
+   *
+   * `refs` answers every stored connector's id, adapter and owner as of the
+   * last read of the store - the same listing an automation's save is checked
+   * against. A start whose `connectors` key names one that is not there, or
+   * one its owner may not read, is refused.
+   *
+   * `run` is what an action tool calls, under the live checks the channel
+   * makes: the connector is open, the action is one its adapter declares, and
+   * the session's owner may read it.
+   *
+   * Left out, this host serves no connector: a start is checked against none
+   * and no action tool is built, which is the answer for an embedder with no
+   * connectors store.
+   */
+  connectors?: {
+    /** Every stored connector, as a binding is checked against it. */
+    refs: () => readonly ConnectorRef[];
+    /** Run one action on one open connector for one reader. */
+    run: ConnectorsChannel['run'];
+  };
+  /**
    * The plugin that draws a session's Plan call, if one does.
    *
    * The fold fills this from `registerPlan`, and one plugin holds it: a turn
@@ -166,6 +189,15 @@ export interface HostOptions {
    * each entry's `changed` when it is created.
    */
   sessionMeta?: ServedSessionMeta[];
+  /**
+   * The bindings plugins answer for a session, one entry per plugin.
+   *
+   * The fold fills this from `registerBindings`, and the host asks each reader
+   * when it builds a session's tool list and when it runs a call. The session's
+   * own `connectors` key goes over them, so a key the session was started with
+   * wins a shared alias.
+   */
+  bindings?: ServedBindings[];
   /**
    * The `x-` commands the daemon and plugins serve, by name.
    *
@@ -798,14 +830,27 @@ export interface HostTool {
    */
   instruction?: string;
   /**
-   * The shape one session's title strategy asks for.
+   * The shape one session's title strategy asks for, and what that session
+   * brings to it.
    *
    * `undefined` leaves the tool as it is, `{ offered: false }` takes it out
    * of the list for that session, and `definition` is merged over the tool's
    * own. It is how a strategy that does not rename chats withholds the tool
-   * rather than offering one it would refuse.
+   * rather than offering one it would refuse, and how a tool offered only to
+   * a session that binds a connector withholds itself from the rest.
+   *
+   * `config` is the session's config as it was kept, and `bindings` is the
+   * aliases it may name a connector by - the plugin readers' maps with the
+   * session's own key over them. Both are read live, so a binding that moved
+   * reaches the next list the host builds.
    */
-  forSession?: (session: { titleStrategy: TitleStrategy }) => { offered: boolean; definition?: Partial<ToolDefinition> } | undefined;
+  forSession?: (session: {
+    titleStrategy: TitleStrategy;
+    /** The session's config, or nothing where it has none. */
+    config?: Record<string, unknown> | undefined;
+    /** The connectors this session may use, by alias. */
+    bindings?: Record<string, string> | undefined;
+  }) => { offered: boolean; definition?: Partial<ToolDefinition> } | undefined;
   /**
    * A host-side hint that the harness may hide this tool behind tool search.
    *

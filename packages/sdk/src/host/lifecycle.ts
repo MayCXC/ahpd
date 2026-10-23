@@ -11,6 +11,7 @@ import { keepChatAttachment, resolveChatAttachment } from './chatattachment.js';
 import { openLink } from '../tools/session.js';
 import { readCreatedBy, readOrigin } from '../sessions/remotesession.js';
 import { BANG, HOSTS_OWN } from './common.js';
+import { BINDINGS_KEY, checkBindings } from '../connectors/bindings.js';
 import { startsRead } from './chatactions.js';
 import { autoApproved, requireTrust } from './trust.js';
 import type { Bag } from '../types/common.js';
@@ -1687,6 +1688,16 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     const agent = ctx.agents.get(provider);
     if (!agent)
       throw new RpcError(-32002, `No provider called ${provider}`);
+    /*
+     * A binding names a connector, so a start that carries one is checked
+     * here, before anything is written down: the connector has to be one this
+     * host serves, of the adapter the URI names, and one the session's owner
+     * may read - the check an automation's save makes. Refused here rather
+     * than at the first call because the person who set the binding is the one
+     * who can fix it, and the model never learns an alias that resolves to
+     * somebody else's account.
+     */
+    checkBindings(config[BINDINGS_KEY], by?.owner, options.connectors?.refs());
     // Whose this is, written down beside the session rather than in its config:
     // a backend is handed `config` when it resumes and has no idea what an
     // owner is, and this outlives the process that decided it.
@@ -1730,7 +1741,17 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
      */
     if (asked !== undefined) kept.setUserSettings?.(idOf(uri), asked.userSettings);
     try {
-      const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), config, undefined, where, credentials, additional, by?.sender, asked?.instructions);
+      /*
+       * The backend is handed everything but this host's own keys, and the
+       * store is handed the lot.
+       *
+       * `connectors` is why: a binding is read back from the kept config on
+       * every tool list, and after a restart that store is the only place it
+       * survives. What a backend must not hear about is stripped here rather
+       * than by each caller, so a session a tool, an automation or a client
+       * starts keeps the keys the same way.
+       */
+      const lead = spawn(agent, uri, chatUriFor(uri), chatIdFor(uri, chatUriFor(uri)), backendsOwn(config), undefined, where, credentials, additional, by?.sender, asked?.instructions);
       // Named before it is announced, when the maker had a name for it: a
       // row that appears as "New session" and is renamed a moment later is
       // two rows to a client that lists once. Written down for the same

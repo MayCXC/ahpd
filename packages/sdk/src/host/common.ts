@@ -39,10 +39,12 @@ export const BANG = '!';
  * backend said and stripped back out before it is handed anything.
  *
  * `scope` is an eighth of the same kind, and is offered whenever there is a
- * person rather than only under a `worktrees` port.
+ * person rather than only under a `worktrees` port. `connectors` is a ninth:
+ * the aliases this session's connectors go by, which this host resolves and
+ * never hands to a backend.
  */
 export const HOSTS_OWN = [
   'isolation', 'branch', 'worktreeIncludeFiles', 'worktreeSymlinkFolders',
   'worktreeBranchPrefix', 'worktreeCreateNewBranch', 'worktreeBranchTrack',
-  'scope',
+  'scope', 'connectors',
 ];
