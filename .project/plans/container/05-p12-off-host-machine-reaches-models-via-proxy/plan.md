@@ -80,6 +80,7 @@ session disposed -> token dropped
 | The ssh runtime's option `proxyForward` picks how its `-R` forward reaches the proxy: `port` (the default), a random remote port retried on `ExitOnForwardFailure`, or `socket`, a remote unix socket that the inner host relays to a loopback URL | Softov, 2026-10-13, asked "the `-R` forward needs a port on the remote box: which?": "configurable"; then "which part do you want to set?": "The method, port by default" | 02 |
 | For now an `EnvNeed` gains `proxy: '<provider id>'` and `role: 'key' \| 'url'`, so Claude declares `ANTHROPIC_API_KEY` as the key and `ANTHROPIC_BASE_URL` as the URL of `anthropic`, and an ACP preset says the same for its own variables | Softov, 2026-10-03, asked "which variable carries the base URL for each agent?": "as proposed" | 02 |
 | For now the token is kept in memory beside the session, not as a principal in the users directory; a daemon restart mints a new one when the session resumes | Softov, 2026-10-03, asked "is the token a principal in the users directory, or a table in memory?": "as proposed" | 01 |
+| p12 stays one plan, with its own tasks, and is not split or merged into p8 | Softov, 2026-10-23, "keep p12 whole" | - |
 
 ## Proposed architecture
 

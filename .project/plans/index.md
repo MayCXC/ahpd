@@ -243,7 +243,7 @@ Reference: [00-host.md](host/00-host.md)
 | [112 - A listing answers the caller's own records](host/112-a-listing-answers-the-callers-own-records/plan.md) | medium | active 2026-10-21; tasks 01 to 04 implemented | - | plugin 52 |
 | [113 - A person's own token names them at the door](host/113-a-persons-token-names-them-at-the-door/plan.md) | high | active 2026-10-21; tasks 01, 02 and 03 implemented | - | - |
 | [114 - A subscribe with no view gets every turn](host/114-a-subscribe-with-no-view-gets-every-turn/plan.md) | medium | draft 2026-10-22 | - | - |
-| [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | draft 2026-10-22 | host 47 p2 | - |
+| [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | planned 2026-10-23; seven tasks, in build | host 47 p2 | - |
 | [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
 | [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
 

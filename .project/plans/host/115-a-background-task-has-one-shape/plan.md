@@ -1,10 +1,10 @@
 ---
 title: A background task has one shape
 domain: host
-status: draft
+status: planned
 priority: medium
 created: 2026-10-22
-revalidated: 2026-10-22
+revalidated: 2026-10-23
 requires:
   - plans/host/47-p2-a-chat-lists-its-background-work/plan.md
 changes: []
