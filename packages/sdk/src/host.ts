@@ -68,6 +68,7 @@ import { createSessionConfig } from './host/sessionconfig.js';
 import { accountKey, createRoot } from './host/root.js';
 import { createCatalogue } from './host/catalogue.js';
 import { createSpawn } from './host/spawn.js';
+import { createBackground } from './host/background.js';
 import { createLifecycle } from './host/lifecycle.js';
 import { createTooling } from './host/tooling.js';
 import { createTerminalMethods, createTerminals } from './host/terminals.js';
@@ -1059,6 +1060,9 @@ export function createHost(options: HostOptions): Host {
   Object.assign(ctx, createRoot(ctx));
   Object.assign(ctx, createCatalogue(ctx));
   Object.assign(ctx, createSpawn(ctx));
+  // Under its own name rather than spread flat, because `heldTasks`, `rows`
+  // and `forgetSession` are words other areas could reach for.
+  ctx.background = createBackground(ctx);
   Object.assign(ctx, createLifecycle(ctx));
   Object.assign(ctx, createTooling(ctx));
   Object.assign(ctx, createTerminals(ctx));
