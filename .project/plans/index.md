@@ -393,7 +393,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [54 - A webhook takes what real senders send](plugin/54-a-webhook-takes-what-real-senders-send/plan.md) | high | planned 2026-10-22; seven tasks, 01 to 07 implemented, awaiting review | plugin 48, plugin 53 | - |
 | [55 - The connectors channel opens to a list reader, and a receive capability names its path](plugin/55-connectors-open-to-a-list-reader/plan.md) | medium | planned 2026-10-22; three tasks, all implemented, awaiting review | plugin 53, plugin 54 | - |
 | [56 - A steered bot chat message is its own turn](plugin/56-a-steered-bot-message-is-its-own-turn/plan.md) | high | planned 2026-10-22; one task, implemented | - | - |
-| [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task | - | - |
+| [57 - A cofold transcript skips a run that a rewind dropped while it reads](plugin/57-a-transcript-skips-a-run-a-rewind-dropped/plan.md) | medium | planned 2026-10-23; one task, implemented | - | - |
 
 Next free number in `plugin`: `58`.
 

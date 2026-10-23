@@ -19,7 +19,7 @@
  */
 
 import { textOf } from '@cofold/agents';
-import type { Message, Store, ToolCallPart, ToolResultPart, Usage } from '@cofold/agents';
+import type { Message, RunEvent, Store, ToolCallPart, ToolResultPart, Usage } from '@cofold/agents';
 import type { Agent, Bag } from '@ahpd/sdk';
 import { bag, callTimes, str } from '@ahpd/sdk';
 import { compactionNotice } from './mapping.js';
@@ -190,6 +190,25 @@ interface Building {
 }
 
 /**
+ * One run's events, or nothing when the run is gone.
+ *
+ * A rewind truncates the conversation while a client may be reading it: the
+ * store rewrites the messages and then removes the run folders one by one, so
+ * a run listed a moment ago can be gone by the time its events are asked for.
+ * `not_found` is that run, and the read goes on without it. Every other store
+ * error is a store that would not answer, which is not a run that is gone, and
+ * it still ends the read.
+ */
+const eventsOf = async (store: Store, sessionId: string, runId: string): Promise<RunEvent[] | undefined> => {
+  try {
+    return await store.runs.listEvents({ sessionId, runId });
+  } catch (error) {
+    if ((error as { code?: unknown }).code === 'not_found') return undefined;
+    throw error;
+  }
+};
+
+/**
  * One conversation as turns, in the order cofold wrote it.
  *
  * The store is the only input, so a session read here is the same conversation
@@ -229,6 +248,15 @@ export async function turnsOf(store: Store, sessionId: string): Promise<Transcri
   const model = new Map<string, string>();
 
   for (const run of runs) {
+    /*
+     * The events are read before anything about the run is recorded, so a run
+     * that a rewind removed mid-read leaves nothing behind: no usage, no
+     * ending, no model, no duration, and none of the timing, subjects or
+     * compaction numbers its events carried.
+     */
+    const events = await eventsOf(store, sessionId, run.runId);
+    if (events === undefined) continue;
+
     if (run.inputMessageId !== undefined) {
       usage.set(run.inputMessageId, {
         ...usageOf(run.usage),
@@ -245,7 +273,6 @@ export async function turnsOf(store: Store, sessionId: string): Promise<Transcri
       if (Number.isFinite(spent) && spent >= 0) duration.set(run.inputMessageId, spent);
     }
 
-    const events = await store.runs.listEvents({ sessionId, runId: run.runId });
     /** The moment each call started, so its completion can carry a start too. */
     const started = new Map<string, string>();
     for (const event of events) {

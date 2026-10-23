@@ -56,6 +56,10 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 - A message sent in a bot chat while a turn runs shows as a turn of its own. The running turn ends `complete` with what it held, and the back session's answer after the steer lands under the new turn.
 
+### Agents
+
+- cofold: a transcript read while a rewind removes a run answers the turns that remain instead of failing. The removed run's turn carries no usage, ending or duration.
+
 ## 0.13.0 - 2026-10-20
 
 ### Upgrading

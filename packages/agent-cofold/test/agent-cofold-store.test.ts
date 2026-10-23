@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { expect, it, vi } from 'vitest';
-import { textOf } from '@cofold/agents';
+import { StoreError, textOf } from '@cofold/agents';
 import { createFakeModel, createMemoryStore } from '@cofold/agents/testing';
 import { createFileStore } from '@cofold/store-file';
 import type { Message, MessageSource, ModelAdapter, ModelReply, ModelStreamEvent, Policy, RunEvent, Store } from '@cofold/agents';
@@ -993,4 +993,92 @@ it('stops listing a session that the store no longer has', async () => {
   await createFileStore({ root }).sessions.delete({ sessionId: 'one' });
   expect(await agent.list?.()).toEqual([]);
   expect(await agent.transcript?.('one')).toBeUndefined();
+});
+
+/** The folder holding one run's record, found by the id the record carries. */
+const runFolderOf = (root: string, runId: string): string => {
+  const holder = readdirSync(root, { recursive: true })
+    .map(String)
+    .filter((name) => name.endsWith('run.json'))
+    .find((name) => (JSON.parse(readFileSync(join(root, name), 'utf8')) as { runId?: string }).runId === runId);
+  if (holder === undefined) throw new Error(`no run record holds ${runId}`);
+  return dirname(join(root, holder));
+};
+
+/**
+ * A store over which a rewind arrives at the worst moment.
+ *
+ * `truncate` rewrites the messages and then removes the run folders one by
+ * one, so this removes one run's folder right after the run list answers and
+ * before `turnsOf` asks that run for its events. The store underneath is the
+ * real one, so `listEvents` answers `not_found` the way it did on CI.
+ */
+const rewound = (inner: Store, root: string, runId: string): Store => ({
+  ...inner,
+  runs: {
+    ...inner.runs,
+    list: async (args) => {
+      const runs = await inner.runs.list(args);
+      rmSync(runFolderOf(root, runId), { recursive: true, force: true });
+      return runs;
+    },
+  },
+});
+
+it('skips a run a rewind removed between the run list and its events', async () => {
+  const { root, sweep } = place();
+  const first = backend(root, createFakeModel({ script: [{ text: 'answer one' }], stream: true }), allowAll());
+  const one = open(first, 'one', sweep);
+  one.session.begin('t1', 'the first thing');
+  await until(() => ended(one.view));
+  one.session.close();
+
+  // A second turn, so the read has a run to lose beside one that stays.
+  const second = backend(root, createFakeModel({ script: [{ text: 'answer two' }], stream: true }), allowAll());
+  const two = open(second, 'one', sweep, { resume: 'one' });
+  two.session.begin('t2', 'the second thing');
+  await until(() => ended(two.view));
+  two.session.close();
+
+  const store = createFileStore({ root });
+  const runs = await store.runs.list({ sessionId: 'one' });
+  expect(runs).toHaveLength(2);
+  // The run a rewind to `t1` drops is the one the newest question began.
+  const asked = (await store.sessions.listMessages({ sessionId: 'one' }))
+    .filter((message) => message.role === 'user' && message.source === 'input');
+  const dropped = runs.find((run) => run.inputMessageId === asked.at(-1)?.id);
+  expect(dropped).toBeDefined();
+
+  const turns = await turnsOf(rewound(store, root, String(dropped?.runId)), 'one');
+  // Both messages are still there - the rewind rewrote the messages before it
+  // removed the run - and the read answers them rather than failing.
+  expect(turns.map((turn) => (turn.message as Bag).text)).toEqual(['the first thing', 'the second thing']);
+  // The dropped run leaves no usage, no duration and no ending of its own on
+  // its turn, and the run that stayed is read as it was.
+  expect(turns[0]?.usage).toBeDefined();
+  expect(turns[0]?.duration).toBeDefined();
+  expect(turns[1]?.usage).toBeUndefined();
+  expect(turns[1]?.duration).toBeUndefined();
+  expect(turns[1]?.state).toBe('complete');
+});
+
+it('fails the read when a run\'s events are missing for a reason other than the run being gone', async () => {
+  const { root, sweep } = place();
+  const agent = backend(root, createFakeModel({ script: [{ text: 'answer' }], stream: true }), allowAll());
+  const one = open(agent, 'one', sweep);
+  one.session.begin('t1', 'still here');
+  await until(() => ended(one.view));
+  one.session.close();
+
+  // A store that will not answer is not a run that is gone, and the read says
+  // so rather than answering a conversation it could not build whole.
+  const store = createFileStore({ root });
+  const unreadable: Store = {
+    ...store,
+    runs: {
+      ...store.runs,
+      listEvents: async () => { throw new StoreError({ code: 'writer_busy', message: 'run r1' }); },
+    },
+  };
+  await expect(turnsOf(unreadable, 'one')).rejects.toThrow('run r1');
 });
