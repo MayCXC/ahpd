@@ -14,4 +14,5 @@ export type {
   RanAnswer,
   Request,
   RunRequest,
+  Store,
 } from './wire.js';

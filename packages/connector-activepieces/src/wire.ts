@@ -9,6 +9,21 @@
  * call is matched to its answer even when two are in flight.
  */
 
+/**
+ * The store an action keeps values in, in the shape a piece calls.
+ *
+ * The shape of `Store` in `@activepieces/pieces-framework` 0.32.0, written here
+ * so the package installs no framework: each piece bundles its own copy.
+ */
+export interface Store {
+  /** Keep one value under a key, and answer it. */
+  put<T>(key: string, value: T): Promise<T>;
+  /** The value kept under a key, or `null`. */
+  get<T>(key: string): Promise<T | null>;
+  /** Forget the value under a key. */
+  delete(key: string): Promise<void>;
+}
+
 /** One prop of a piece's auth, or of one of its actions, as the child describes it. */
 export interface PropDescription {
   /** The piece's own type, such as `SHORT_TEXT` or `STATIC_DROPDOWN`. */

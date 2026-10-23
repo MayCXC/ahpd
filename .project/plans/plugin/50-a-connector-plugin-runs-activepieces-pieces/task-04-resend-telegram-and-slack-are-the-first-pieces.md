@@ -42,7 +42,7 @@ A daemon with the three named loads three adapters, and one action of each runs 
 
 ## Resume
 
-- **Done so far:** `package.json` names the three pieces at their exact versions, and `@activepieces/pieces-framework` stays at `0.32.0`.
+- **Done so far:** `package.json` names the three pieces at their exact versions. The package installs no framework.
   `README.md` describes the plugin and its `pieces` option, and has one row for each piece with its package, version, auth and license.
   `pieces.test.ts` loads the three packages through `apply` and checks the three adapter names, the auth fields of each, Slack's 72 actions and Resend's `send_email` input.
   The one note the plugin reports is Slack's `uploadFile`, the only action of the three that needs a required file.

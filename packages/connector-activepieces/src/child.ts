@@ -1,5 +1,4 @@
-import type { Store } from '@activepieces/pieces-framework';
-import type { ActionDescription, Answer, AuthDescription, PieceDescription, PropDescription, Request, RunRequest } from './wire.js';
+import type { ActionDescription, Answer, AuthDescription, PieceDescription, PropDescription, Request, RunRequest, Store } from './wire.js';
 
 /**
  * The child process that loads Activepieces pieces.

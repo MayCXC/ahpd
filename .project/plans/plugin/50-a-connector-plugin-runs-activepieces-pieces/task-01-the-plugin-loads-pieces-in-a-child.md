@@ -17,7 +17,7 @@ refs:
 
 ## Files
 
-- `CREATE: packages/connector-activepieces/package.json` - the manifest, with `contracts.adapters: ["ap-*"]` and `@activepieces/pieces-framework` at exactly `0.32.0`.
+- `CREATE: packages/connector-activepieces/package.json` - the manifest, with `contracts.adapters: ["ap-*"]` and the three pieces at exact versions.
 - `CREATE: packages/connector-activepieces/tsconfig.json` - as `packages/webhook/tsconfig.json`.
 - `CREATE: packages/connector-activepieces/LICENSE` - MIT, as the other packages.
 - `CREATE: packages/connector-activepieces/src/index.ts` - the plugin export.

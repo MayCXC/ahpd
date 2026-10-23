@@ -74,9 +74,9 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 | The first pieces are Slack, Resend and Telegram | Softov, 2026-10-23, "I would make slack, resend and telegram. so we can test better common things without need to redoing to much latter. also telegram with a later fit for receiving messages is a good approach" | 04 |
 | Telegram receive is a later plan | Softov, 2026-10-23, "telegram with a later fit for receiving messages" | - |
 | A piece is installed by naming its package in the plugin's `pieces` option | (defaulted: no new command) | 01 |
-| The package depends on `@activepieces/pieces-framework` and the three first pieces, each at an exact version | Softov, 2026-10-23, chose "All four, exact versions" for "Is that OK?" on the four dependencies | 01, 04 |
-| `@activepieces/pieces-framework` is a devDependency, for its types only | Softov, 2026-10-23, chose "devDependency": it pulls about 30 packages, `expr-eval` with a critical advisory among them, and each piece bundles its own copy | 01 |
-| `@activepieces/pieces-framework` is pinned at `0.32.0` | Softov's directive, 2026-10-23: the context shape the child builds | 01 |
+| The package depends on the three first pieces, each at an exact version | Softov, 2026-10-23, chose "All four, exact versions" for "Is that OK?" on the four dependencies | 01, 04 |
+| The package installs no framework, and writes its own `Store` type | Softov, 2026-10-23, chose "Own Store type": the framework pulls about 30 packages, `expr-eval` with a critical advisory among them, and each piece bundles its own copy | 01, 03 |
+| The child builds the context of `@activepieces/pieces-framework` `0.32.0` | Softov's directive, 2026-10-23: the context shape the child builds | 01 |
 | The pieces run in one child process, and a piece cannot set `NODE_TLS_REJECT_UNAUTHORIZED` there | The idea: a piece turns off TLS checks for its process | 01 |
 | The child pins it with a `process.env` proxy that ignores a write or a delete of that key | (defaulted: the probe of 2026-10-23 set it to `"0"` under the proxy, and a self-signed host still failed) | 01 |
 | The child exits when the daemon exits, and a crash restarts it on the next call | (defaulted: no plugin stop hook exists) | 03 |
@@ -120,7 +120,7 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 
 - A piece is npm code that runs on this host - The person names each package, and a call gets only its own connector's auth.
 - A piece's license can differ from the repo's - Task 04 checks each first piece, and the README names it.
-- The framework changes its context shape - The package pins the framework version that the child builds the context for.
+- The framework changes its context shape - The child builds the context of framework `0.32.0`, and each piece is pinned at a version built against it.
 - A big piece gives many tools - Slack gives 73, and host/118 offers them only to a session with a Slack binding.
 
 ## Resume state

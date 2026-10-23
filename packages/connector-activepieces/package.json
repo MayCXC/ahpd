@@ -60,7 +60,6 @@
     "@activepieces/piece-telegram-bot": "0.9.1"
   },
   "devDependencies": {
-    "@activepieces/pieces-framework": "0.32.0",
     "@ahpd/sdk": "workspace:*"
   },
   "ahpd": {
