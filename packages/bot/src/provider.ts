@@ -86,8 +86,14 @@ import type {
 export interface BotSessions {
   /** Whose the session at this URI is, or nothing where this host has none. */
   owner(uri: string): Promise<Owner | undefined>;
-  /** Start a session for the owner the request names, and answer its URI. */
-  start(wanted: SessionRequest): Promise<string>;
+  /**
+   * Start a session for the owner the request names, and answer its URI.
+   *
+   * `named` is called with the URI before the session is made, which is what
+   * lets the wake answer for it - its connectors - from the first tool list the
+   * backend is spawned with.
+   */
+  start(wanted: SessionRequest, named?: (uri: string) => void): Promise<string>;
 }
 
 /** What the provider was configured with. */

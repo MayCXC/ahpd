@@ -459,7 +459,7 @@ export const apply: Plugin['apply'] = (host, options) => {
   /** This host's own sessions, where a chat and a back session are started, and read for the one a bot has. */
   const sessions: BotSessions = {
     owner: (uri) => host.sessionOwner(uri),
-    start: (wanted) => host.startSession(wanted),
+    start: (wanted, named) => host.startSession(wanted, named),
   };
   /**
    * One action sent on a chat of this host, as a client sends one.
