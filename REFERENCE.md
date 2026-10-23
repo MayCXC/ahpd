@@ -44,7 +44,7 @@ The client tree is set whole for that reason. It is **MIT-licensed**: read it
 for the design, and keep the prose here ours. Nothing has been copied and
 nothing should be.
 
-**Last read against:** VS Code `7baac39ec3c` (the `1.141.1` tag, 2026-10-12)
+**Last read against:** VS Code `e646868227c` (the `1.143.1` tag, 2026-10-22)
 and the protocol repository at `cb6ba618` (the wire is `6eec1b91`), on
 2026-10-14. What each pass found and
 what it asked of this repository is [UPSTREAM.md](UPSTREAM.md); the next pass

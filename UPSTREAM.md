@@ -4,6 +4,58 @@ What VS Code's agent host changed since this host was last read against it, and 
 
 How a pass is made is in [REFERENCE.md](REFERENCE.md). The short of it: `git -C /github/externals/vscode fetch --depth=200 origin main && git merge --ff-only origin/main`, then `git log <last>..HEAD -- src/vs/platform/agentHost`, reading `common/state/protocol/` first because that is the wire, then `node/claude/`, `node/protocolServerHandler.ts`, and the workbench client under `src/vs/workbench/contrib/chat/browser/agentSessions/agentHost`, which is what VS Code *sends* to a host. The `.md` files were reflowed to one-line paragraphs upstream, so read them with `--word-diff`.
 
+## Pass 7 - 2026-10-22, VS Code 1.143.1
+
+VS Code `7baac39ec3c` (the `1.141.1` tag) to the `1.143.1` tag `e646868227c` (2026-10-22; `1.142.0` is `d956e8a6ac5`, `1.143.0` is `2d0b7506a36`): 483 agentHost commits, 356 under `src/vs/sessions`, 146 in the workbench agentHost client, 777 in the union. The release branch leaves main at `341e0fa9346` and carries 35 commits after it. This pass covers 1.142 and 1.143. **The wire moved**: `.ahp-version` `6eec1b91` to `5d542f9e` (AHP PR #512), and upstream `PROTOCOL_VERSION` is `1.1.0`, which is not published; npm's `@microsoft/agent-host-protocol` is still `1.0.0`. A 1.143 window offers `1.0.0`, `0.10.0` and `0.9.0` (`common/agentHostProtocolCompatibility.ts`, `51ec2ee42fd`), so it agrees on `1.0.0` with ahpd. `REFERENCE.md` "Last read against" moves to `e646868227c`.
+
+### Protocol 1.1.0
+
+- [ ] **Per-chat config.** `ChatState.config`, the `chat/configChanged` action with its `replace` flag, and `chatMutable` on a session config property. Upstream marks `permissions`, `sandboxEnabled`, `autoApprove` and `mode` chat-mutable (`common/agentHostSchema.ts`). AHP `dbbd1217`, upstream `e941aa12741`. Waits for the published 1.1.0 package. `packages/sdk/src/host/actions.ts`, `packages/sdk/src/host/chatactions.ts`.
+- [ ] **Steering and queued messages share `queuedMessages`**, told apart by `PendingMessage.kind`; `steeringMessage` still mirrors the latest steering for older clients. Upstream `0b4e0632b1f` (`common/agentSessionMessage.ts` `getPendingSteeringMessages`). ahpd holds one steering slot and hands it to `session.steer` (`packages/sdk/src/host/chatactions.ts`). A 1.143 window reads both shapes.
+- [ ] **`SessionModelInfo.vendor`**, optional. `packages/sdk/src/host/catalogue.ts`.
+- Windowed delivery (`subscribe.flowControl`, `channel/frame`, `channel/credit`, `channel/snapshot`) and the TCP channel (`createTcpConnection`, `tcp/*`) are experimental, and the window uses neither.
+
+### Background shells
+
+The wire is the 1.0.0 one: `ChatState.backgroundWork`, `chat/backgroundWorkSet` and `chat/backgroundWorkRemoved`, with `BackgroundShellWork.terminal` naming a terminal channel. The window draws a shell row the same for every provider (`workbench/.../agentHost/agentHostBackgroundShells.ts`): its output comes from a subscription to `terminal`, and Stop shows only when the row carries `_meta['vscode.stopBackgroundWork']: true`.
+
+- [ ] **A shell row carries its terminal, and the terminal holds the output.** ahpd sends shell work as `shell:<task_id>` with no `terminal` (`packages/agent-claude/src/session/workers.ts` `reconcileWork`), so the window shows no output. Upstream reads a detached shell's output into an output-only terminal and marks it exited (`8cfec5873bc`, fixes `3f07e1aba32`, `4ea6157f821`, `13636b81c06`). Covers Pass 6's box for `57b4202903e`.
+- [ ] **`vscode/stopBackgroundWork {chat, id}` stops one row, answering `{stopped}`**, and a row it can stop carries the `_meta` flag. Upstream `6eb5f37d1c0`, `18ab3d9ce44` (`common/agentHostExtensionProtocol.ts`, `node/protocolServerHandler.ts` `_handleStopBackgroundWorkRequest`, `IAgent.stopBackgroundWork`). `packages/sdk/src/host/vscodemethods.ts`; the Claude backend stops a task with `Query.stopTask`, as `workers.ts` `stopWorker` does.
+
+### Large chats
+
+The 1.143 speed-up is the window's: history is restored in 25 ms slices (`remoteChatSessionRestorer.ts`, `08b811e3ab0`, `5bed87aa911`). The window sends no `view` and no `flowControl`. Upstream's host stops loading peer chat history before a prompt (`c02f008cd15`) and skips republishing an unchanged server tool catalogue (`5ea3f3805a9`).
+
+- [ ] **A chat subscription that names no `view` gets every retained turn.** `SubscribeView` says a host MUST return all retained turns when `view` is left out. ahpd cuts a chat snapshot to the newest `PAGE` (50) turns whatever the subscribe says (`packages/sdk/src/host/snapshots.ts`, `packages/agent-claude/src/session.ts` `tail(ctx.turns)`, `packages/sdk/src/sessions/paging.ts`). Not yet seen in a window.
+- [ ] **A `customizationsChanged` is sent only when the customizations changed**: each one cost the window 3 to 6 seconds to apply. `packages/sdk/src/host/tooling.ts`.
+
+### Copilot SDK
+
+Upstream runs Copilot in the agent host through `@github/copilot-sdk`, pinned exactly at `1.0.23-preview.5` with runtime `1.0.100-1` (`package.json`; six bumps in this range: `425e631ea34`, `cf0ccf5c6fd`, `8734ecea025`, `009603bfc85`, `be4f9ba6ec0`, `e630a740c19`). The SDK carries a native `copilot-runtime` per platform, about 165 MB on linux-x64. `node/copilot/` holds `CopilotAgent`, `CopilotAgentSession`, `CopilotSessionLauncher` and `mapSessionEvents.ts`: sessions are created, resumed, listed, deleted and forked through the SDK, approvals and input requests are its callbacks, and its events map onto turns, tools, subagents, background tasks and canvases.
+
+- [ ] **A Copilot SDK agent plugin beside the `copilot` ACP preset.** Softov, 2026-10-22: beside, not replacing it. Its shape is `agent-claude`'s: a vendor SDK in the daemon's process, its events mapped onto turns. `packages/agent-acp/src/presets.ts` keeps the preset.
+
+### Canvas
+
+The canvas channel is the 1.0.0 one: `ChatState.canvases` holds `CanvasReference`s, `chat/canvasesChanged` changes the list, and an `ahp-canvas:/<id>` channel holds one `CanvasState` (`instanceId`, `extensionId`, `canvasId`, `title`, `status`, and a live `url`), replaced whole by `canvas/stateChanged`. Upstream fills it from the Copilot SDK's `session.canvas.*` events only (`e0f899884a3`), opens and closes canvases over a local bridge rather than AHP (`cba2384e944`), and the window draws canvases only for the local `copilotcli` provider (`agentHostChatContribution.ts` `supportsCanvasPresentation`).
+
+- [ ] **ahpd serves the canvas channel**, for ahpw and ahpapp. Softov, 2026-10-22, which reopens Pass 6's "left out, as in `host/47`". `packages/sdk/src/host/relay.ts`, `packages/sdk/src/vscoderootconfig.ts` `canvasesEnabled`.
+
+### compareAgents
+
+Window-only (`sessions.chat.compareAgents.enabled`, `src/vs/sessions/SESSION_COMPARISONS.md`, `dd3b04daa8a` before this range). Each attempt is an ordinary session in its own worktree, the judge is an ordinary session with two client tools and `get_session_context`, and the scorecard reads `response.elapsedMs` and `chat/usage`. No new message, `_meta` or config key.
+
+- [ ] **Run a comparison against ahpd in a 1.143 window**, and check the scorecard's time and tokens. `packages/sdk/src/tools/session.ts`, `packages/sdk/src/host/tooling.ts`.
+
+### Other host changes
+
+- [ ] **New `vscode/*` methods**: `moveSession` (initialize `_meta['vscode.sessionMove']`, session `_meta['vscode.movable']`, `389f0a7be92`), `readSavedChat` and `completeSavedChatContinuation`, `measureWorktreeDiskUsage` and `cancelWorktreeDiskUsage` for the worktree cleanup, and `cancelAgentHostDebugLogs`. `packages/sdk/src/host/vscodemethods.ts`.
+- [ ] **Opaque chat URIs**, offered with initialize `_meta['vscode.ahpChatUris']` (`50559e744a1`). ahpd offers only `vscode.ahpSessionUris`. `packages/sdk/src/host/handshake.ts`.
+- [ ] **Named and prompted forks** (`80aa091c84c`). `packages/sdk/src/host/chatactions.ts`.
+- [ ] **Multi-root is on by default** (`1044782bfd8`), which makes Pass 5's multi-folder `create_session` boxes matter more.
+- [ ] **Root key `sessionCatalogEnabled` is removed** (`85e195f2594`). `packages/sdk/src/vscoderootconfig.ts`.
+- MCP sampling (`ec010535075`), title review settings (`58afa23a1cb`), on-device models, the sandbox CA trust `_meta` and the per-session sandbox toggle are Copilot's or the window's.
+
 ## Pass 6 - 2026-10-14, VS Code 1.141.1
 
 VS Code `7516b04bc94` (2026-10-02) to the `1.141.1` tag `7baac39ec3c` (2026-10-12; `1.141.0` is `2a59476c9bf`): 72 agentHost commits, 64 under `src/vs/sessions`, 22 in the workbench agentHost client, 118 in the union. The release branch leaves main at `ae1080a9ed1` and carries 44 commits after it. **The wire moved**: `.ahp-version` `9f940395` to `6eec1b91` (protocol `01292d03` and `6eec1b91`, both in the published `@microsoft/agent-host-protocol@1.0.0`; the protocol repository is at `cb6ba618`). Upstream `35787c9cb26` sets `PROTOCOL_VERSION` to `0.10.0` and registers `chat/isReadChanged` and the canvas actions as `0.10.0`, while the published 1.0.0 package registers `chat/isReadChanged` as `0.9.0` and offers only `1.0.0` and `0.9.0`. Most 1.141 release-note features landed inside Pass 5's range; this pass covers what reached the host after it and checks each feature against ahpd. `REFERENCE.md` "Last read against" moves to `7baac39ec3c`.
