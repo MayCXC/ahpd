@@ -98,6 +98,10 @@ export { recordsChannel, recordsDomain, recordsMethods, servedRecords } from './
 export type { RecordEntry, RecordsChannel, RecordsChannelOptions, RecordsDomain, RecordsSource, ServedRecords } from './resources/recordschannel.js';
 export { connectorsChannel } from './connectors/channel.js';
 export type { ConnectorsChannel, ConnectorsChannelOptions, ConnectorState } from './connectors/channel.js';
+export { BINDINGS_KEY, BINDINGS_SCHEME, bindingTarget, bindingsOf, checkBindings } from './connectors/bindings.js';
+export type { Binding } from './connectors/bindings.js';
+export { actionTools, actionToolName } from './connectors/actions.js';
+export type { ActionHost } from './connectors/actions.js';
 export { adaptersChannel } from './connectors/adapters.js';
 export type { AdaptersChannel, AdaptersChannelOptions } from './connectors/adapters.js';
 export { covers, mayRead, membership, namesOf, poolsFor, scopeFor } from './usage/scopes.js';

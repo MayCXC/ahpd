@@ -1245,7 +1245,9 @@ export function createHost(options: HostOptions): Host {
      */
     setTools: (tools) => {
       ctx.contributed = tools;
-      ctx.contributing = permitted(ctx.contributed);
+      // The adapters' action tools are not part of what a client sets, so they
+      // stay offered whatever the new set says.
+      ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
       for (const uri of sessions.keys())
         dispatch(uri, { type: 'session/serverToolsChanged', tools: toolDefinitions(uri) });
     },

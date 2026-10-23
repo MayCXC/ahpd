@@ -16,7 +16,7 @@ import type { Agent, BoundTool, McpServer, Start } from '../src/types/agent.js';
 import type { ClientCalls } from '../src/tools/clientcalls.js';
 import type { Bag } from '../src/types/common.js';
 import type { HostEvent } from '../src/types/events.js';
-import type { HostOptions, ToolCall } from '../src/types/host.js';
+import type { HostOptions, HostTool, ToolCall } from '../src/types/host.js';
 import type { LoaderContext } from '../src/types/plugin.js';
 import type { PlanUpdate, Session } from '../src/types/session.js';
 import type { SessionAction, SessionInputRequest, SessionState } from '@microsoft/agent-host-protocol';
@@ -2905,5 +2905,61 @@ describe('a harness list handed to the host', () => {
     expect(heard).toHaveLength(1);
     expect(heard[0]).toMatchObject({ type: 'plan_update', session: 'echo:/list' });
     expect(heard[0]).not.toHaveProperty('title');
+  });
+});
+
+describe('what a session brings to a tool', () => {
+  /** A host with one tool that records every question `forSession` was asked. */
+  const askedAt = async (over: Partial<HostOptions> = {}, config: Record<string, unknown> = {}) => {
+    const seen: {
+      titleStrategy: string;
+      config?: Record<string, unknown> | undefined;
+      bindings?: Record<string, string> | undefined;
+    }[] = [];
+    const tool: HostTool = {
+      definition: { name: 'peek_bindings', description: 'peek', inputSchema: { type: 'object', properties: {} } },
+      forSession: (session) => {
+        seen.push(session);
+        return undefined;
+      },
+      run: () => 'peeked',
+    };
+    const host = createHost({ path: HERE, agents: [claude({ paths: [HERE] })], ...machine(), tools: [tool], ...over });
+    const client = host.accept(peer());
+    await client.handle(hello(['0.9.0']));
+    const uri = 'ahp-session:/asked';
+    await client.handle({ method: 'createSession', params: { channel: uri, provider: 'claude', config } });
+    await client.handle({ method: 'subscribe', params: { channel: uri } });
+    await settle();
+    return { host, seen, client, uri, tool };
+  };
+
+  it('gives a session\'s tool the bindings its config names', async () => {
+    const { seen } = await askedAt({}, { connectors: { work: 'connectors://webhook/a' } });
+    expect(seen.at(-1)?.titleStrategy).toBe('deferred');
+    expect(seen.at(-1)?.config?.connectors).toEqual({ work: 'connectors://webhook/a' });
+    expect(seen.at(-1)?.bindings).toEqual({ work: 'connectors://webhook/a' });
+  });
+
+  it('takes a plugin\'s answer, and the session\'s own key over a shared alias', async () => {
+    const { seen } = await askedAt(
+      { bindings: [{ by: 'alpha', read: () => ({ work: 'connectors://webhook/a', personal: 'connectors://webhook/c' }) }] },
+      { connectors: { work: 'connectors://webhook/b' } },
+    );
+    expect(seen.at(-1)?.bindings).toEqual({
+      work: 'connectors://webhook/b',
+      personal: 'connectors://webhook/c',
+    });
+  });
+
+  it('reads a plugin again, so a new map reaches the next tool list', async () => {
+    let map: Record<string, string> = { work: 'connectors://webhook/a' };
+    const { host, seen, tool } = await askedAt({ bindings: [{ by: 'alpha', read: () => map }] });
+    expect(seen.at(-1)?.bindings).toEqual({ work: 'connectors://webhook/a' });
+
+    map = { work: 'connectors://webhook/b', mail: 'connectors://webhook/c' };
+    host.setTools([tool]);
+    await settle();
+    expect(seen.at(-1)?.bindings).toEqual({ work: 'connectors://webhook/b', mail: 'connectors://webhook/c' });
   });
 });

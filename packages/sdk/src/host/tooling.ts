@@ -6,6 +6,8 @@ import { accepts } from '../utils/configvalues.js';
 import { readJsonObject } from '../utils/jsonfile.js';
 import { partsOf, rulesOf } from '../plugins/pluginparts.js';
 import { bodyText } from '../resources/records.js';
+import { BINDINGS_KEY } from '../connectors/bindings.js';
+import { actionTools } from '../connectors/actions.js';
 import { SEND_REMOTE_MESSAGE } from '../sessions/remotesession.js';
 import { SESSION_TOOL_NAMES } from '../tools/session.js';
 import { bag, reason, str } from '../utils/values.js';
@@ -184,6 +186,8 @@ export interface Tooling {
   permitted(tools: readonly HostTool[]): HostTool[];
   /** The strategy a session's uri resolves to, which is deferred for every one. */
   strategyOf(uri: string): TitleStrategy;
+  /** The connectors a session may use, by alias, read live. */
+  sessionBindings(uri: string): Record<string, string>;
   /** One tool's definition for a session, after the strategy's shaping. */
   shapedDefinition(one: HostTool, uri: string): ToolDefinition | undefined;
   /** The definitions alone for one session, which is the half that goes on the wire. */
@@ -480,11 +484,72 @@ export function createTooling(ctx: HostContext): Tooling {
    */
   const strategyOf = (_uri: string): TitleStrategy => 'deferred';
   /**
+   * The connectors this session may use, by alias.
+   *
+   * Each plugin's reader first, in fold order, and the session's own
+   * `connectors` key over them: a key the session was started with is the most
+   * specific thing said about it, so it wins a shared alias. Read live rather
+   * than kept, which is what makes a bot's edit reach a session it already
+   * started.
+   */
+  const sessionBindings = (uri: string): Record<string, string> => {
+    const out: Record<string, string> = {};
+    for (const served of options.bindings ?? []) {
+      const read = served.read(uri);
+      if (read === undefined) continue;
+      for (const [alias, value] of Object.entries(read)) {
+        if (!(alias in out)) out[alias] = value;
+      }
+    }
+    /*
+     * The decided config is the fallback because a session that has not
+     * spawned yet is not in the store: `createSession` settles its config
+     * here first and the store is written only once the backend took it, so
+     * at the first tool list - the one the backend is started with - the
+     * bindings are only in the map. Same reading as `linkedOf` makes of the
+     * folders a session links.
+     */
+    const held = kept.config(idOf(uri))?.[BINDINGS_KEY] ?? ctx.decided.get(uri)?.[BINDINGS_KEY];
+    if (typeof held === 'object' && held !== null && !Array.isArray(held)) {
+      for (const [alias, value] of Object.entries(held)) {
+        if (typeof value === 'string') out[alias] = value;
+      }
+    }
+    return out;
+  };
+  /*
+   * The action tools: one for each `action` capability of an adapter that can
+   * run one, built once because the adapters do not change while the host
+   * runs. Beside `contributed` rather than inside it, so `setTools` keeps them
+   * whatever a client sets.
+   *
+   * A host with no `connectors` port has nothing to run an action on, so it
+   * offers none - and a session that binds one sees no tool for it.
+   */
+  ctx.actionTools = options.connectors === undefined
+    ? []
+    : actionTools(options.adapters ?? {}, options.connectors.run, {
+      bindings: sessionBindings,
+      principalOf: (uri) => {
+        const owner = kept.owner(idOf(uri));
+        const person = principalFor(owner);
+        // A person not met since the start has no grants to read, and a call
+        // that ran as the daemon would pass every connector's check.
+        return person === undefined && owner?.startsWith('user:') === true ? 'nobody' : person;
+      },
+      onProblem: (message) => log(message),
+    });
+  ctx.contributing = permitted([...ctx.contributed, ...ctx.actionTools]);
+  /**
    * One tool's definition for a session, after the strategy's shaping, or
    * nothing where the strategy withholds the tool.
    */
   const shapedDefinition = (one: HostTool, uri: string): ToolDefinition | undefined => {
-    const asked = one.forSession?.({ titleStrategy: strategyOf(uri) });
+    const asked = one.forSession?.({
+      titleStrategy: strategyOf(uri),
+      config: kept.config(idOf(uri)),
+      bindings: sessionBindings(uri),
+    });
     if (asked?.offered === false) return undefined;
     return asked?.definition === undefined ? one.definition : { ...one.definition, ...asked.definition };
   };
@@ -1646,7 +1711,7 @@ export function createTooling(ctx: HostContext): Tooling {
       // The owner of the session this one was made inside, which is what a
       // tool acting for somebody means: the work is theirs whichever session
       // it ends up running in.
-      openSession(made, provider, backendsOwn(config), where, undefined, undefined, undefined, asked.title,
+      openSession(made, provider, config, where, undefined, undefined, undefined, asked.title,
         forWhom(kept.owner(idOf(uri))));
       /*
        * The session this one was made inside, kept with its record.
@@ -1959,7 +2024,11 @@ export function createTooling(ctx: HostContext): Tooling {
     return [
       ...ctx.contributing.flatMap((one) => {
         if (one.optIn === true && !named.includes(one.definition.name)) return [];
-        if (one.forSession?.({ titleStrategy: strategyOf(uri) })?.offered === false) return [];
+        if (one.forSession?.({
+          titleStrategy: strategyOf(uri),
+          config: kept.config(idOf(uri)),
+          bindings: sessionBindings(uri),
+        })?.offered === false) return [];
         return one.instruction === undefined ? [] : [one.instruction];
       }),
       ...rulesTold(uri),
@@ -1983,7 +2052,7 @@ export function createTooling(ctx: HostContext): Tooling {
   });
 
   return {
-    permitted, strategyOf, shapedDefinition, toolDefinitions,
+    permitted, strategyOf, sessionBindings, shapedDefinition, toolDefinitions,
     clientTools, clientPluginsOf, toggleClientPlugin, customizationUnder, folderOf, withEntries, tellOff, forgetTold, keepDecision,
     retool, pluginsSettled, chatMeant, renameChat, toolContext,
     pluginsFor, pluginsMoved, mcpFor, deniedMcpServers,

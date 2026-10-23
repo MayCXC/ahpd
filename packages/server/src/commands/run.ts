@@ -1238,7 +1238,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     process.exit(1);
   }
 
-  const host = createHost(folded);
+  /*
+   * What the host knows about connectors: the listing a session's `connectors`
+   * key is checked against at its start - the same refs an automation's save is
+   * checked against, kept current by every read and by the channel's own puts
+   * and removes - and the call an action tool makes, which does the live checks
+   * in the channel.
+   */
+  const host = createHost({ ...folded, connectors: { refs: () => connectorLists.refs(), run: connectorLists.run } });
   // The plugin channel's marks reach the host that now serves it.
   markRestart = () => { host.markRestartNeeded(); };
   /*
