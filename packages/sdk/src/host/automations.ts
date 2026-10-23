@@ -195,8 +195,11 @@ export interface Automations {
    * plugin starts work *for* somebody, who could have started it themselves,
    * so the owner's own `session:create` is asked first. `who` is the plugin's
    * own entry, which is what says whether it may ask for a trusted folder.
+   *
+   * `named` is the plugin's own door, called with the URI once the host has
+   * named it - before the tree is made and before the backend spawns.
    */
-  startForPlugin(wanted: StartSession, who?: PluginStarts): Promise<string>;
+  startForPlugin(wanted: StartSession, who?: PluginStarts, named?: (uri: string) => void): Promise<string>;
   /**
    * A chat a plugin asked for, in a session this host is running.
    *
@@ -683,11 +686,27 @@ export function createAutomations(ctx: HostContext): Automations {
    * about, the machine the config names is made, and the first turn is sent -
    * and what each road adds is the question that is its own.
    */
-  const beginSession = async (wanted: StartSession): Promise<string> => {
+  const beginSession = async (wanted: StartSession, named?: (uri: string) => void): Promise<string> => {
     const provider = wanted.provider ?? first.provider;
     // Held under its provider's name, as a client's `createSession` is.
     const uri = `${provider}:/${crypto.randomUUID()}`;
     unheld(uri);
+    /*
+     * Told before anything is made, which is what puts a plugin's own answer
+     * in the first tool list: the backend is spawned with the list built
+     * while the tree is being isolated, so a reader that learns the URI after
+     * the start answers has already missed it.
+     *
+     * A door that throws has heard as much as it could and is not this
+     * session's failure: it is logged against the host and the start goes on,
+     * which is the same answer a plugin that asks too early gets.
+     */
+    if (named !== undefined) {
+      try { named(uri); }
+      catch (error) {
+        log(`${uri} is being started, but the plugin that asked was not told: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     const config = wanted.config ?? {};
     // The same two steps a client's `createSession` takes: the tree is made
     // before anything runs in it, and the host's own keys are not the
@@ -937,7 +956,7 @@ export function createAutomations(ctx: HostContext): Automations {
    * the refusal names `session:trust`, which is the one thing an operator has
    * to add.
    */
-  const beginPluginSession = async (wanted: StartSession, who?: PluginStarts): Promise<string> => {
+  const beginPluginSession = async (wanted: StartSession, who?: PluginStarts, named?: (uri: string) => void): Promise<string> => {
     if (wanted.trusted === true && who?.can?.('session:trust') !== true) {
       throw new RpcError(-32009, refusalReason(`plugin:${who?.by ?? 'unknown'}`, 'session:trust'), {});
     }
@@ -948,7 +967,7 @@ export function createAutomations(ctx: HostContext): Automations {
         throw new RpcError(-32009, refusalReason(person.id, 'session:create'), {});
       }
     }
-    return await beginSession(wanted);
+    return await beginSession(wanted, named);
   };
 
   /**
@@ -966,8 +985,8 @@ export function createAutomations(ctx: HostContext): Automations {
 
   const startForAutomation = (wanted: StartSession): Promise<string> => startHeld(() => beginAutomation(wanted));
 
-  const startForPlugin = (wanted: StartSession, who?: PluginStarts): Promise<string> =>
-    startHeld(() => beginPluginSession(wanted, who));
+  const startForPlugin = (wanted: StartSession, who?: PluginStarts, named?: (uri: string) => void): Promise<string> =>
+    startHeld(() => beginPluginSession(wanted, who, named));
 
   /**
    * A chat a plugin asked for, added to the session it named.
@@ -1411,7 +1430,7 @@ export function createAutomations(ctx: HostContext): Automations {
     // The entry itself is handed over rather than its name: what it grants is
     // set on this same object by the plugin host, and a request that asks for
     // a trusted folder is answered from it.
-    one.start = (wanted) => startForPlugin(wanted, one);
+    one.start = (wanted, named) => startForPlugin(wanted, one, named);
     one.startChat = (session, wanted) => startForPluginChat(session, wanted);
     one.opens = (uri) => opensSession(uri);
   }

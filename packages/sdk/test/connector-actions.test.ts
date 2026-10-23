@@ -3,10 +3,14 @@ import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { actionToolName, actionTools } from '../src/connectors/actions.js';
 import { connectorsChannel } from '../src/connectors/channel.js';
+import { foldHostOptions, pluginHost } from '../src/plugins/plugins.js';
 import { memoryRecords } from '../src/resources/records.js';
+import { sdkVersion } from '../src/version.js';
 import { claude, createHost, hello, machine, peer, resetSdk, sessionQueries, settle } from './support/host.js';
+import { directory, signIn } from './users-gate-helpers.js';
 import type { Connector, ServedAdapter } from '../src/types/connectors.js';
 import type { HostOptions, HostTool } from '../src/types/host.js';
+import type { Contribution, LoaderContext } from '../src/types/plugin.js';
 import type { Vault } from '../src/types/vault.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -14,6 +18,11 @@ vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/c
 beforeEach(resetSdk);
 
 const HERE = dirname(fileURLToPath(import.meta.url));
+
+/** The context every plugin in this repository is handed, without a daemon. */
+const context = (): LoaderContext => ({
+  path: HERE, paths: [HERE], version: sdkVersion(), hostName: 'test', configDir: HERE, log: () => {}, say: () => {},
+});
 
 /** One tool as the backend was handed it, which is how a model calls it. */
 interface Tool {
@@ -70,9 +79,11 @@ const adapterOf = (ran: Ran[]): ServedAdapter => ({
  * memory.
  *
  * The channel is the real one, so a call the tool makes is checked the way a
- * daemon checks it: open, declared, and the owner's to read.
+ * daemon checks it: open, declared, and the owner's to read. A `contribution`
+ * is folded in where the case is about a plugin's own road into a session - a
+ * bot's reader and its start.
  */
-async function world(over: Partial<HostOptions> = {}) {
+async function world(over: Partial<HostOptions> = {}, contribution?: Contribution) {
   const collection = await memoryRecords().collection('connectors', { format: 'json' });
   const ran: Ran[] = [];
   const adapter = adapterOf(ran);
@@ -84,14 +95,15 @@ async function world(over: Partial<HostOptions> = {}) {
     check: () => undefined,
     onProblem: () => undefined,
   });
-  const host = createHost({
+  const base: HostOptions = {
     path: HERE,
     agents: [claude({ paths: [HERE] })],
     ...machine(),
     adapters: { [adapter.name]: adapter },
     connectors: { refs: () => connectors.refs(), run: connectors.run },
     ...over,
-  });
+  };
+  const host = createHost(contribution === undefined ? base : foldHostOptions(base, [contribution]).options);
   const client = host.accept(peer());
   await client.handle(hello(['0.9.0']));
 
@@ -161,6 +173,27 @@ describe('an action offered as a tool', () => {
       input: { to: 'ana@example.com' },
       config: { apiKey: 'sk-very-secret' },
     }]);
+  });
+
+  it('offers the action in the first tool list of a session a plugin starts', async () => {
+    /*
+     * A bot's two halves: a reader that answers for the sessions its starts
+     * made, and the door its start tells. The host names the URI before the
+     * backend spawns, so the list the backend is started with already has the
+     * bot's action - which is the difference from learning the URI only after
+     * the start answers.
+     */
+    const { host: plugin, contribution } = pluginHost('bot', context());
+    const known = new Set<string>();
+    plugin.registerBindings((uri) => (known.has(uri) ? { work: 'connectors://ap-resend/account-123' } : undefined));
+    const { put, client } = await world({ users: directory({ soft: ['session:create'] }) }, contribution);
+    await signIn(client, 'soft');
+    await put('account-123');
+
+    const uri = await plugin.startSession({ owner: 'user:soft', prompt: 'Say hello' }, (one) => { known.add(one); });
+
+    expect(known.has(uri)).toBe(true);
+    expect(toolsOf()['ap_resend_send_email']).toBeDefined();
   });
 
   it('offers two bindings as one tool with a required choice', async () => {

@@ -337,9 +337,27 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
        * one nothing reads - which is the same reason the maker makes none.
        */
       if (bot.computer === undefined) prepareFolder(bot.workspace, await seams.agents(bot));
-      const session = await seams.sessions.start(sessionFor(bot, owner));
+      /** The URI the host named before starting this session, where it did. */
+      let named: string | undefined;
+      /*
+       * Named before the backend spawns, which is what puts the bot's
+       * connectors in the session's first tool list: the list is built while
+       * the tree is isolated, and a reader that learned the URI only after the
+       * start answered would miss it.
+       */
+      const session = await seams.sessions.start(sessionFor(bot, owner), (uri) => {
+        named = uri;
+        started.set(uri, bot.id);
+      }).catch((error: unknown) => {
+        // A session the host named and then failed to start does not exist,
+        // and nothing will ever ask this map about it: an entry left behind
+        // would answer connectors for a URI no bot runs.
+        if (named !== undefined) started.delete(named);
+        throw error;
+      });
       // Whose the session is, as soon as there is one: a tool list built
-      // while the row is being written still sees the bot's connectors.
+      // while the row is being written still sees the bot's connectors. Kept
+      // here for a host that answered without naming the session first.
       started.set(session, bot.id);
       // Written down before the message is sent, so a back session that is
       // working is one a later message finds rather than one started again.

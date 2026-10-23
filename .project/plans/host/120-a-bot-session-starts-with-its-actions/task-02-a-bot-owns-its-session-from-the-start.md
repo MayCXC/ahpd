@@ -1,6 +1,6 @@
 ---
 title: A bot owns its session from the start
-status: todo
+status: implemented
 depends: [task-01-the-host-names-a-plugins-session-first.md]
 layer: "bot"
 refs:
@@ -42,3 +42,10 @@ The bot keeps its session's URI under the bot before the session spawns, so the 
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary`, and the sdk and bot tests pass.
 
 ## Resume
+
+- **Done so far:** `BotSessions.start` takes `named?`, and the bot plugin's seam passes it to `host.startSession`. In `woken`, the wake passes a `named` that puts the URI in `started` under the bot's id before the host makes the tree, and the `started.set` after the start is kept for a host that does not call it. A start that rejects after `named` removes that URI's entry before the error reaches the caller. Tests in `bot-wake.test.ts`: the reader answers the bot's connectors while the start still runs, a failed start leaves no entry, and a host that does not name the session first still has it after the start. `connector-actions.test.ts` starts a session through a folded plugin whose reader knows the URI from `named`, and its first tool list has `ap_resend_send_email`.
+- **Next action:** none - built.
+- **Files:** `packages/bot/src/provider.ts`, `packages/bot/src/plugin.ts`, `packages/bot/src/wake.ts`, `packages/bot/test/bot-wake.test.ts`, `packages/sdk/test/connector-actions.test.ts`, `CHANGELOG.md`.
+- **Open questions:** none.
+- **Departures:** `BotSessions` lives in `packages/bot/src/provider.ts`, not `wake.ts`, so the seam's type is updated there.
+- **Watch out for:** the wake's `named` fires before `isolated`, so the bot answers for a URI whose session does not exist yet; the session's own `connectors` config is still not seeded in `sessionFor`, and the reader is the only source.

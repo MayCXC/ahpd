@@ -43,6 +43,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ### Plugins and connectors
 
+- `PluginHost.startSession(wanted, named)` takes a second argument: a function the host calls once, with the session's URI, before the tree is isolated and the backend spawns. A plugin that answers for that URI can answer from the start, so a bot's connector actions are in its session's first tool list. A `named` that throws is logged and the start goes on.
 - `PluginHost.startChat(session, { provider, model, config, title, prompt })` starts a chat inside a session on a backend the plugin names, and answers the chat's URI. `ToolCall.createChat` takes the same `provider` and `config` beside its other options. The session keeps its own provider and its other chats; the chat's backend and config are recorded with it, so a session restart, `restartChat`, a rewind and a daemon restart start it on that backend again. The session's `computer` and contributed session keys reach the chat; the session backend's own keys do not. The session owner's `chat:create` is asked first, and an unknown provider is refused. A client reads the chat's backend in `_meta['ahpd.provider']`, on the chat's state and nowhere on the session's own chats.
 - A plugin declares a manifest: a description, categories, links and contracts. A registration its contracts do not list fails that plugin, with a line naming the method and the name. A plugin with no contracts loads as before, and is listed as `undeclared`.
 - A plugin registers adapters, each with a JSON Schema a client draws the form from and the capabilities a connector of that adapter has.
@@ -57,6 +58,7 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 
 ### Bots
 
+- A session a bot starts has the bot's connector actions from its first tool list. The host names the session's URI before the tree is made and before the backend spawns, the bot keeps the URI from then on, and its reader answers for it. A start that fails after the URI is named leaves no entry, so nothing binds a session that does not exist.
 - A message sent in a bot chat while a turn runs shows as a turn of its own. The running turn ends `complete` with what it held, and the back session's answer after the steer lands under the new turn.
 - A bot record has a `connectors` field: the connectors its sessions may use, by alias, such as `{ "work": "connectors://ap-resend/account-123" }`. Each session the bot started reads it live, so an edit reaches a session that is already running, and a bad alias or value is refused `-32602` when the bot is written.
 

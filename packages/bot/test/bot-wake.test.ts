@@ -129,8 +129,17 @@ async function sitting(
   const starts: SessionRequest[] = [];
   const sent: { channel: string; action: Bag }[] = [];
   const problems: string[] = [];
+  /**
+   * What the reader answered for each session while its start was still
+   * running, which is the tool list the backend is spawned with.
+   */
+  const during: (Record<string, string> | undefined)[] = [];
   /** What a start is refused with, where the host refuses one. */
   let startRefusal: string | undefined;
+  /** What a start is refused with after it has named the session. */
+  let lateRefusal: string | undefined;
+  /** Whether the start names the session first, as a host built here does. */
+  let namesFirst = true;
   /** What a send is refused with, where the host refuses one. */
   let sendRefusal: string | undefined;
   let minted = 0;
@@ -146,11 +155,16 @@ async function sitting(
 
   const sessions: BotSessions = {
     owner: async (uri) => owners.get(uri),
-    start: async (wanted) => {
+    start: async (wanted, named) => {
       if (startRefusal !== undefined) throw new Error(startRefusal);
       starts.push(wanted);
       minted += 1;
       const uri = `ahp-session:/${minted}`;
+      if (namesFirst) named?.(uri);
+      // Asked the way the host asks it at the first tool list, with the start
+      // still running.
+      during.push(wake.bindings(uri));
+      if (lateRefusal !== undefined) throw new Error(lateRefusal);
       owners.set(uri, wanted.owner);
       at.set(uri, `ahp-chat:/${minted}`);
       return uri;
@@ -178,8 +192,10 @@ async function sitting(
   });
 
   return {
-    wake, backs, starts, sent, problems, working, store,
+    wake, backs, starts, sent, problems, working, store, during,
     refuseStart: (line: string) => { startRefusal = line; },
+    refuseStartLate: (line: string) => { lateRefusal = line; },
+    startWithoutNaming: () => { namesFirst = false; },
     refuseSend: (line: string) => { sendRefusal = line; },
   };
 }
@@ -370,6 +386,21 @@ it('ends the main turn with a notice when the host refuses the start', async () 
   expect(await one.backs.get('backer', 'ana', 'work')).toBeUndefined();
 });
 
+it('leaves no entry for a session whose start failed after it was named', async () => {
+  const one = await sitting(bot({ connectors: { work: 'connectors://ap-resend/account-123' } }));
+  one.refuseStartLate('plugin:bot was not given session:create');
+  const said = turn();
+
+  await one.wake.woken(message('t1', 'hello'), said.handle);
+
+  // The host named the session and the bot answered for it while the start
+  // ran, and then the start failed: the URI is nobody's, so nothing may bind
+  // it - the person is told why, as with any refused start.
+  expect(one.during).toEqual([{ work: 'connectors://ap-resend/account-123' }]);
+  expect(one.wake.bindings('ahp-session:/1')).toBeUndefined();
+  expect(said.notices).toEqual(['Backer was not woken: plugin:bot was not given session:create']);
+});
+
 it('ends the main turn with the host\'s own words when it refuses the message', async () => {
   const one = await sitting();
   one.refuseSend('plugin:bot may not send a turn to this chat');
@@ -394,6 +425,30 @@ it('ends a turn in a chat no bot opened, and says so', async () => {
   expect(said.notices).toEqual([]);
   expect(one.problems).toEqual(['bot-chat:/stray is a chat no bot on this host opened']);
   expect(one.sent).toEqual([]);
+});
+
+it('answers the bot\'s connectors for a session while its start is still running', async () => {
+  const one = await sitting(bot({ connectors: { work: 'connectors://ap-resend/account-123' } }));
+
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+
+  // The host asks the reader at the first tool list, which is built while the
+  // session is still being started: the bot is its owner from the moment the
+  // host names it, so the list has the bot's connectors rather than none.
+  expect(one.during).toEqual([{ work: 'connectors://ap-resend/account-123' }]);
+});
+
+it('keeps a session a host answered without naming it first', async () => {
+  const one = await sitting(bot({ connectors: { work: 'connectors://ap-resend/account-123' } }));
+  one.startWithoutNaming();
+
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+
+  // A host that does not call the door is answered as it always was: the URI
+  // is kept once the start answers, so a tool list built after it still sees
+  // the bot's connectors.
+  expect(one.during).toEqual([undefined]);
+  expect(one.wake.bindings('ahp-session:/1')).toEqual({ work: 'connectors://ap-resend/account-123' });
 });
 
 it('answers a bot\'s session with the bot\'s connectors, as the bot is now', async () => {

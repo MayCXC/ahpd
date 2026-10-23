@@ -248,7 +248,7 @@ Reference: [00-host.md](host/00-host.md)
 | [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
 | [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | active 2026-10-23; all five tasks implemented; open: a bot's first tool list has no action tools, planned in host 120 | plugin 53 | plugin 50 |
 | [119 - A row counts the work while a turn runs](host/119-a-row-counts-the-work-while-a-turn-runs/plan.md) | medium | active 2026-10-23; both tasks implemented | - | - |
-| [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | planned 2026-10-23; two tasks | host 118 | - |
+| [120 - A bot session starts with its actions](host/120-a-bot-session-starts-with-its-actions/plan.md) | medium | active 2026-10-23; both tasks implemented | host 118 | - |
 
 Next free number in `host`: `121`.
 
