@@ -645,9 +645,11 @@ describe('the record on disk', () => {
     const child = join(home, 'announce.mjs');
     writeFileSync(child, [
       "import { createServer } from 'node:net';",
-      "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\n`);",
+      // The pipe first, as a daemon does: `start` returns on the announcement, and a stop may follow at once.
+      "const say = () => { process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\n`); };",
       'const control = process.env.AHPD_CONTROL;',
-      "if (control !== undefined) createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(JSON.parse(control).pipe);",
+      "if (control !== undefined) createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(JSON.parse(control).pipe, say);",
+      'else say();',
       'setInterval(() => {}, 1000);',
       '',
     ].join('\n'));
@@ -708,8 +710,9 @@ describe('the record on disk', () => {
     writeFileSync(child, [
       "import { createServer } from 'node:net';",
       'const control = JSON.parse(process.env.AHPD_CONTROL);',
-      "process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\ncontrol ${control.pipe}\\n`);",
-      "createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(control.pipe);",
+      "createServer((socket) => { socket.on('data', () => { process.exit(0); }); }).listen(control.pipe, () => {",
+      "  process.stdout.write(`ahpd on ws://127.0.0.1:1 (node), sessions in /x\\npid ${process.pid}\\ncontrol ${control.pipe}\\n`);",
+      '});',
       'setInterval(() => {}, 1000);',
       '',
     ].join('\n'));
