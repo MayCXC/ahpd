@@ -48,6 +48,55 @@ importers:
         specifier: ^8.18.0
         version: 8.21.3
 
+  packages/activepieces:
+    dependencies:
+      '@activepieces/piece-airtable':
+        specifier: 0.9.2
+        version: 0.9.2
+      '@activepieces/piece-discord':
+        specifier: 0.8.0
+        version: 0.8.0
+      '@activepieces/piece-github':
+        specifier: 0.11.0
+        version: 0.11.0
+      '@activepieces/piece-hubspot':
+        specifier: 0.13.1
+        version: 0.13.1
+      '@activepieces/piece-jira-cloud':
+        specifier: 0.6.1
+        version: 0.6.1
+      '@activepieces/piece-linear':
+        specifier: 0.9.1
+        version: 0.9.1
+      '@activepieces/piece-notion':
+        specifier: 0.8.1
+        version: 0.8.1
+      '@activepieces/piece-resend':
+        specifier: 0.6.1
+        version: 0.6.1
+      '@activepieces/piece-sendgrid':
+        specifier: 0.6.3
+        version: 0.6.3
+      '@activepieces/piece-slack':
+        specifier: 0.23.1
+        version: 0.23.1
+      '@activepieces/piece-smtp':
+        specifier: 0.5.0
+        version: 0.5.0
+      '@activepieces/piece-stripe':
+        specifier: 0.9.0
+        version: 0.9.0
+      '@activepieces/piece-telegram-bot':
+        specifier: 0.9.1
+        version: 0.9.1
+      '@activepieces/piece-whatsapp':
+        specifier: 1.0.1
+        version: 1.0.1
+    devDependencies:
+      '@ahpd/sdk':
+        specifier: workspace:*
+        version: link:../sdk
+
   packages/agent-acp:
     dependencies:
       '@agentclientprotocol/sdk':
@@ -124,22 +173,6 @@ importers:
         specifier: workspace:*
         version: link:../sdk
 
-  packages/activepieces:
-    dependencies:
-      '@activepieces/piece-resend':
-        specifier: 0.6.1
-        version: 0.6.1
-      '@activepieces/piece-slack':
-        specifier: 0.23.1
-        version: 0.23.1
-      '@activepieces/piece-telegram-bot':
-        specifier: 0.9.1
-        version: 0.9.1
-    devDependencies:
-      '@ahpd/sdk':
-        specifier: workspace:*
-        version: link:../sdk
-
   packages/push:
     devDependencies:
       '@ahpd/sdk':
@@ -207,14 +240,47 @@ importers:
 
 packages:
 
+  '@activepieces/piece-airtable@0.9.2':
+    resolution: {integrity: sha512-21ajg+lRX7kfTRCHGmiJV7a0X1Av3j04U7zYS4vkTm6IlW/ze0KfeAdmJj/v9vSG9XQok27lyEnipcd8GdKbGg==}
+
+  '@activepieces/piece-discord@0.8.0':
+    resolution: {integrity: sha512-3Eg7idHC1fUN96auz+XYfbesROXRJugJN0M8N3hQHM+LkTTCUPGx8j/tvwL+IXBnE6PzFHftxM3uORTCnJUywA==}
+
+  '@activepieces/piece-github@0.11.0':
+    resolution: {integrity: sha512-fpp3p3BLjJtRkNMK3CDstIitGIrF1Na5hlqfRHo5EiL7e8XXxO6rPorkFTxCNw+zMu71WhZp8AagCYvuXUD3sw==}
+
+  '@activepieces/piece-hubspot@0.13.1':
+    resolution: {integrity: sha512-j7M/Ka0jHPhgIerUHmGwNtSUi20FoCSUjm7n/TzM5iHZdIhHPKY0YUszFIXw27ET/1ykgLX6WuJO+DdcTTZlHQ==}
+
+  '@activepieces/piece-jira-cloud@0.6.1':
+    resolution: {integrity: sha512-uYbBwPVNqcmq16Uv5BtJqvHPK7lXUscrypRdCPIxcC/BOmMay6YLeGsqdNziUnJvKeJfQchbPzzNUUeTqfPn2Q==}
+
+  '@activepieces/piece-linear@0.9.1':
+    resolution: {integrity: sha512-8HX8MbTRlkfRvpwW1fGxl2xr6VbNLSceCDfVKQAZgjF1Uz8xavdlDn5RF7tgWoyxZPqMgWUwcpxdWoH7Hq56Yg==}
+
+  '@activepieces/piece-notion@0.8.1':
+    resolution: {integrity: sha512-m1Zb/qI8XfcnDUGbaRTdz4Gk3qNyFu/QxCToT/cFLhhlXxli743LcHAjSvLX6NdDotOq6LvnQf82wyiq5gggDg==}
+
   '@activepieces/piece-resend@0.6.1':
     resolution: {integrity: sha512-bPbK/FluXp3tGowhmVTHlPKKdbfB6VcF0z6EwyGnmE4KotGFzg+gL8Q66LlARBHoO4F1c/4rQvktT/rYDhZnPg==}
+
+  '@activepieces/piece-sendgrid@0.6.3':
+    resolution: {integrity: sha512-4SrFhRAjeYfal4ZZbTQiAKWrKIFy+4sH4H6t65qVwDsjwkD62rCAEPKkBnz0Q9nqaCM/1gE0qRnQqi1XoGq6cw==}
 
   '@activepieces/piece-slack@0.23.1':
     resolution: {integrity: sha512-+SGPrv2XsVILogk1AoFg0ibK0MUU3i6QaYIF1+3j8hTOZ13ovjXS7Jxeu0aJqPDCi057hXovL8OnML8JMtxpTg==}
 
+  '@activepieces/piece-smtp@0.5.0':
+    resolution: {integrity: sha512-iy4lmXJ44Hw1mFLbuWCqi00Oho2+ujtUGICwz/gPDzJwYMUbeiAjsBp2YXQ+9hJ+L6aCSXRi1VX8NyDV8LqtvQ==}
+
+  '@activepieces/piece-stripe@0.9.0':
+    resolution: {integrity: sha512-3yFxkd7PJD/0PunlHteA+U4Rn9oXcCG1v+5qHEKdco3PGoI2rKFqtleJPqCPGoRRwjPOvbStNe8wN692jlZTGA==}
+
   '@activepieces/piece-telegram-bot@0.9.1':
     resolution: {integrity: sha512-LNq89Px0ZZyUMpRScM6WpXj/FdocLN5j/tlbM/NNB6neuoLVzERfwMJ2AXYJOOGThVrw8Dm1G2Dl15lGGOO4yQ==}
+
+  '@activepieces/piece-whatsapp@1.0.1':
+    resolution: {integrity: sha512-bNKVSkLXJ+7wNAgaFI4Fgtkk6a+kR0reZ9WCauWYEsOKrDVZhWQoaV8Pu/rQ15kU3POv2BkwtiLcAI8GYdhPGw==}
 
   '@agentclientprotocol/sdk@1.8.0':
     resolution: {integrity: sha512-fbP7qHZsFyTJVT0/RPrcWJ8An26qLXHEuGCHHEKDyxD1xpXV+Ejyh2LAE6vBAFePkpVjZeeohnbgvuEhZ7wLMg==}
@@ -2339,11 +2405,33 @@ packages:
 
 snapshots:
 
+  '@activepieces/piece-airtable@0.9.2': {}
+
+  '@activepieces/piece-discord@0.8.0': {}
+
+  '@activepieces/piece-github@0.11.0': {}
+
+  '@activepieces/piece-hubspot@0.13.1': {}
+
+  '@activepieces/piece-jira-cloud@0.6.1': {}
+
+  '@activepieces/piece-linear@0.9.1': {}
+
+  '@activepieces/piece-notion@0.8.1': {}
+
   '@activepieces/piece-resend@0.6.1': {}
+
+  '@activepieces/piece-sendgrid@0.6.3': {}
 
   '@activepieces/piece-slack@0.23.1': {}
 
+  '@activepieces/piece-smtp@0.5.0': {}
+
+  '@activepieces/piece-stripe@0.9.0': {}
+
   '@activepieces/piece-telegram-bot@0.9.1': {}
+
+  '@activepieces/piece-whatsapp@1.0.1': {}
 
   '@agentclientprotocol/sdk@1.8.0(zod@4.5.4)':
     dependencies:

@@ -21,13 +21,13 @@ ahpd plugin install @ahpd/activepieces
 ahpd restart
 ```
 
-The three first pieces are dependencies of this package, so they arrive with it. Another piece arrives the same way, as a dependency of the plugin, and its package is named in `pieces`. There is no separate command that installs one.
+The pieces in the table below are dependencies of this package, so they arrive with it. Another piece arrives the same way, as a dependency of the plugin, and its package is named in `pieces`. There is no separate command that installs one.
 
 Update, remove and one-run flags are in [Plugins](https://github.com/softov/ahpd/blob/main/docs/server/PLUGINS.md).
 
 ## Options
 
-In the configuration file, with the three first pieces named:
+In the configuration file, with three of the pieces named:
 
 ```json
 { "plugins": [{ "name": "@ahpd/activepieces", "options": { "pieces": ["@activepieces/piece-resend", "@activepieces/piece-telegram-bot", "@activepieces/piece-slack"] } }] }
@@ -46,8 +46,19 @@ An adapter is named `ap-` and the piece's own name: `ap-resend`, `ap-telegram-bo
 | Resend | `@activepieces/piece-resend` | 0.6.1 | `SECRET_TEXT`, one key | MIT |
 | Telegram Bot | `@activepieces/piece-telegram-bot` | 0.9.1 | `SECRET_TEXT`, one bot token | MIT |
 | Slack | `@activepieces/piece-slack` | 0.23.1 | `CUSTOM_AUTH`, a bot token and an optional user token | MIT |
+| GitHub | `@activepieces/piece-github` | 0.11.0 | `CUSTOM_AUTH`, a GitHub App: app id, installation id and private key | MIT |
+| Linear | `@activepieces/piece-linear` | 0.9.1 | `SECRET_TEXT`, one API key | MIT |
+| Jira Cloud | `@activepieces/piece-jira-cloud` | 0.6.1 | `CUSTOM_AUTH`, the site URL, an email and an API token | MIT |
+| Discord | `@activepieces/piece-discord` | 0.8.0 | `SECRET_TEXT`, one bot token | MIT |
+| WhatsApp Business | `@activepieces/piece-whatsapp` | 1.0.1 | `CUSTOM_AUTH`, an access token, the business account id and an optional app secret | MIT |
+| Notion | `@activepieces/piece-notion` | 0.8.1 | `CUSTOM_AUTH`, an internal integration token | MIT |
+| Airtable | `@activepieces/piece-airtable` | 0.9.2 | `SECRET_TEXT`, one personal access token | MIT |
+| SMTP | `@activepieces/piece-smtp` | 0.5.0 | `CUSTOM_AUTH`, the host, port, TLS, and an optional email and password | MIT |
+| SendGrid | `@activepieces/piece-sendgrid` | 0.6.3 | `SECRET_TEXT`, one API key | MIT |
+| Stripe | `@activepieces/piece-stripe` | 0.9.0 | `SECRET_TEXT`, one secret key | MIT |
+| HubSpot | `@activepieces/piece-hubspot` | 0.13.1 | `CUSTOM_AUTH`, a private app access token | MIT |
 
-The three versions are exact, and the versions `@activepieces/pieces-framework` at `0.32.0` describes. Each piece is in `packages/pieces/community/` of [github.com/activepieces/activepieces](https://github.com/activepieces/activepieces), which is MIT outside its `ee` folders. Slack declares an OAuth2 connection beside its bot token, and this plugin offers only the bot token.
+The versions are exact, and the versions `@activepieces/pieces-framework` at `0.32.0` describes. Each piece is in `packages/pieces/community/` or `packages/pieces/core/` of [github.com/activepieces/activepieces](https://github.com/activepieces/activepieces), which is MIT outside its `ee` folders. Slack, GitHub, Notion and HubSpot declare an OAuth2 connection beside the auth in the table, and this plugin offers only the auth in the table. Actions that need a file are left out: Airtable's file upload, HubSpot's file upload, Jira's two attachment uploads, Slack's file upload and WhatsApp's media upload.
 
 ## A connector
 
