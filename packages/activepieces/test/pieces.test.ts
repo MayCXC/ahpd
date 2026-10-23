@@ -3,7 +3,7 @@ import { apply } from '../src/plugin.js';
 import type { Adapter, PluginHost } from '@ahpd/sdk';
 
 /*
- * The three first pieces, loaded by their packages.
+ * The pieces the package ships, loaded by their packages.
  *
  * The plugin names a piece by its package, so this is the whole path a daemon
  * takes: `apply` forks the child, the child requires each package, and each
@@ -11,12 +11,48 @@ import type { Adapter, PluginHost } from '@ahpd/sdk';
  * needs a file, which the plugin does not offer.
  */
 
-/** The three packages the plugin ships. */
+/** The packages the plugin ships. */
 const PIECES = [
+  '@activepieces/piece-airtable',
+  '@activepieces/piece-discord',
+  '@activepieces/piece-github',
+  '@activepieces/piece-hubspot',
+  '@activepieces/piece-jira-cloud',
+  '@activepieces/piece-linear',
+  '@activepieces/piece-notion',
   '@activepieces/piece-resend',
+  '@activepieces/piece-sendgrid',
   '@activepieces/piece-slack',
+  '@activepieces/piece-smtp',
+  '@activepieces/piece-stripe',
   '@activepieces/piece-telegram-bot',
+  '@activepieces/piece-whatsapp',
 ];
+
+/** Each adapter's auth fields, in the order the piece declares them, and its required ones. */
+const AUTH: Record<string, [string[], string[]]> = {
+  'ap-airtable': [['secret_text'], ['secret_text']],
+  'ap-discord': [['secret_text'], ['secret_text']],
+  'ap-github': [['appId', 'installationId', 'privateKey'], ['appId', 'installationId', 'privateKey']],
+  'ap-hubspot': [['access_token'], ['access_token']],
+  'ap-jira-cloud': [['instanceUrl', 'email', 'apiToken'], ['instanceUrl', 'email', 'apiToken']],
+  'ap-linear': [['secret_text'], ['secret_text']],
+  'ap-notion': [['accessToken'], ['accessToken']],
+  'ap-resend': [['secret_text'], ['secret_text']],
+  'ap-sendgrid': [['secret_text'], ['secret_text']],
+  'ap-slack': [['botToken', 'userToken'], ['botToken']],
+  'ap-smtp': [['host', 'port', 'TLS', 'email', 'password'], ['host', 'port', 'TLS']],
+  'ap-stripe': [['secret_text'], ['secret_text']],
+  'ap-telegram-bot': [['secret_text'], ['secret_text']],
+  'ap-whatsapp': [['access_token', 'businessAccountId', 'app_secret'], ['access_token', 'businessAccountId']],
+};
+
+/** Each adapter's actions: the piece's own, less those that need a file. */
+const ACTIONS: Record<string, number> = {
+  'ap-airtable': 33, 'ap-discord': 61, 'ap-github': 93, 'ap-hubspot': 53, 'ap-jira-cloud': 75,
+  'ap-linear': 58, 'ap-notion': 37, 'ap-resend': 58, 'ap-sendgrid': 8, 'ap-slack': 72,
+  'ap-smtp': 1, 'ap-stripe': 98, 'ap-telegram-bot': 41, 'ap-whatsapp': 22,
+};
 
 /** What the host kept, for the whole file. */
 const adapters = new Map<string, Adapter>();
@@ -43,9 +79,20 @@ function adapter(name: string): Adapter {
   return found;
 }
 
-describe('the three first pieces are adapters', () => {
+describe('the pieces are adapters', () => {
   it('loads each piece as its adapter, with the auth fields of the piece', () => {
-    expect([...adapters.keys()].sort()).toEqual(['ap-resend', 'ap-slack', 'ap-telegram-bot']);
+    expect([...adapters.keys()].sort()).toEqual(Object.keys(AUTH).sort());
+
+    for (const [name, [fields, required]] of Object.entries(AUTH)) {
+      const schema = adapter(name).schema;
+      const properties = schema['properties'] as Record<string, Record<string, unknown>>;
+      expect(Object.keys(properties), name).toEqual(fields);
+      expect(schema['required'], name).toEqual(required);
+      expect(schema, name).not.toHaveProperty('authUrl');
+    }
+    for (const [name, count] of Object.entries(ACTIONS)) {
+      expect(adapter(name).capabilities, name).toHaveLength(count);
+    }
 
     for (const name of ['ap-resend', 'ap-telegram-bot']) {
       expect(adapter(name).schema).toEqual({
@@ -54,8 +101,6 @@ describe('the three first pieces are adapters', () => {
         required: ['secret_text'],
       });
     }
-    expect(adapter('ap-resend').capabilities).toHaveLength(58);
-    expect(adapter('ap-telegram-bot').capabilities).toHaveLength(41);
   });
 
   it('gives Slack the custom auth fields, and no OAuth field', () => {
@@ -70,12 +115,15 @@ describe('the three first pieces are adapters', () => {
     expect(schema).not.toHaveProperty('scope');
   });
 
-  it('leaves out Slack\'s action that needs a file, and reports it', () => {
-    // The piece declares 73 actions, and uploadFile is the one with a required file.
-    expect(adapter('ap-slack').capabilities).toHaveLength(72);
+  it('leaves out each action that needs a file, and reports it', () => {
     expect(adapter('ap-slack').capabilities.map((one) => one.name)).not.toContain('uploadFile');
-    expect(problems).toEqual([
+    expect([...problems].sort()).toEqual([
+      expect.stringContaining('ap-airtable: the action airtable_upload_file_to_column needs a file'),
+      expect.stringContaining('ap-hubspot: the action upload-file needs a file'),
+      expect.stringContaining('ap-jira-cloud: the action add_issue_attachment needs a file'),
+      expect.stringContaining('ap-jira-cloud: the action upload_attachment needs a file'),
       expect.stringContaining('ap-slack: the action uploadFile needs a file'),
+      expect.stringContaining('ap-whatsapp: the action upload_media needs a file'),
     ]);
   });
 
