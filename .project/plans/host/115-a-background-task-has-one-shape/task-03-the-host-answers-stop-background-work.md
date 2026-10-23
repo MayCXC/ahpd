@@ -1,6 +1,6 @@
 ---
 title: The host answers vscode/stopBackgroundWork
-status: todo
+status: implemented
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md]
 layer: sdk
 refs:
@@ -45,7 +45,8 @@ A client stops a background task with `vscode/stopBackgroundWork`, and the host 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1, after task 01.
+- **Done so far:** built. `vscode/stopBackgroundWork` checks `chat` and `id`, refuses an empty id and a chat that is not `ahp-chat:` with `INVALID_PARAMS`, and answers `{ stopped }` from `ctx.background.stop(chat, id)`. That finds the record through `chatOf` and calls the backend's stop. It answers false for an unknown chat, an unknown id, a task with no stop and a stop that rejects, and it logs the rejection. The gate row is `chat:cancel` and `SERVED` went from 50 to 51. The docs row in `docs/sdk/AHP.md` names the request in its section and in the departures table, and `wire.test.ts` names the same row. The request's `stop` is now the plan's `() => Promise<boolean>`; task 01 had typed it `boolean`, so its row flag and its test moved with it. Seven cases pass in `test/host-stop-background-work.test.ts`.
+- **Next action:** task 04, the nested host's inner tasks.
 - **Open questions:** none.
 - **Watch out for:** the row stays until the backend removes it; the request does not remove it.
+  `session:write` covers every `chat:*` write, so a role written with it holds `chat:cancel` too; the gate case uses a role with neither.

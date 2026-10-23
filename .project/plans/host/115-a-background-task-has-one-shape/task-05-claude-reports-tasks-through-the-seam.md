@@ -1,6 +1,6 @@
 ---
 title: Claude reports tasks through the seam
-status: todo
+status: implemented
 depends: [task-01-a-backend-reports-a-task-the-host-draws.md, task-03-the-host-answers-stop-background-work.md]
 layer: agent-claude
 refs:
@@ -43,7 +43,9 @@ A shell task carries a stop that calls `stopTask`.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1, after tasks 01 and 03.
+- **Done so far:** built. `shellWork` and `subagentWork` return a `BackgroundTask`. `reconcileWork` reports each change through `ctx.options.backgroundTasks`. It sends removals first, then a `set` only for a row that appeared or changed. A shell carries a stop that calls `ctx.handle.stopTask(id)` and answers true only while the task is live. That stop is kept per task id, so a level that changed nothing is not a row said again. `told` holds the rows each chat has been reported as running. `Workers.backgroundWork` and the session's `running` spread are gone. `Start.backgroundTasks` reaches the session's options through `claude()`, beside `subagent`. The host/47 cases now read a fake seam. Two stop cases were added: a live shell stops once and answers true, and an ended shell answers false and stops nothing. The row in `conformance.test.ts` now carries the `vscode.stopBackgroundWork` flag.
+- **Next action:** task 06, a Claude shell's output terminal.
 - **Open questions:** none.
-- **Watch out for:** the records compare by value in the host, so the stop function must not be rebuilt as a different field each time.
+- **Watch out for:** the records compare by value in the host, so the stop function must not be rebuilt as a different field each time. It is memoised by task id.
+  A session built by hand with no `backgroundTasks` reports nothing, because there is no host to draw the rows.
+  `claude.ts` and `conformance.test.ts` are edited too: the seam has to reach the session's options, and a shell row now says it can be stopped.

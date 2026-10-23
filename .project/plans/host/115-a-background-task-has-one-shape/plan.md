@@ -166,13 +166,13 @@ nested: inner chat/backgroundWork* -> outer set | remove, stop forwards the requ
 
 | Task | Package | Status | Depends on |
 | --- | --- | --- | --- |
-| [01 - A backend reports a task and the host draws it](task-01-a-backend-reports-a-task-the-host-draws.md) | sdk | todo | - |
-| [02 - A backend feeds an output terminal](task-02-a-backend-feeds-an-output-terminal.md) | sdk | todo | - |
-| [03 - The host answers vscode/stopBackgroundWork](task-03-the-host-answers-stop-background-work.md) | sdk | todo | 01 |
-| [04 - A nested host reports its inner tasks](task-04-a-nested-host-reports-its-inner-tasks.md) | sdk | todo | 01, 03 |
-| [05 - Claude reports tasks through the seam](task-05-claude-reports-tasks-through-the-seam.md) | agent-claude | todo | 01, 03 |
-| [06 - A Claude shell shows its output](task-06-a-claude-shell-shows-its-output.md) | agent-claude | todo | 02, 05 |
-| [07 - A running terminal is listed when its call ends](task-07-a-running-terminal-is-listed-at-call-end.md) | agent-acp | todo | 01, 03 |
+| [01 - A backend reports a task and the host draws it](task-01-a-backend-reports-a-task-the-host-draws.md) | sdk | implemented | - |
+| [02 - A backend feeds an output terminal](task-02-a-backend-feeds-an-output-terminal.md) | sdk | implemented | - |
+| [03 - The host answers vscode/stopBackgroundWork](task-03-the-host-answers-stop-background-work.md) | sdk | implemented | 01 |
+| [04 - A nested host reports its inner tasks](task-04-a-nested-host-reports-its-inner-tasks.md) | sdk | implemented | 01, 03 |
+| [05 - Claude reports tasks through the seam](task-05-claude-reports-tasks-through-the-seam.md) | agent-claude | implemented | 01, 03 |
+| [06 - A Claude shell shows its output](task-06-a-claude-shell-shows-its-output.md) | agent-claude | implemented | 02, 05 |
+| [07 - A running terminal is listed when its call ends](task-07-a-running-terminal-is-listed-at-call-end.md) | agent-acp | implemented | 01, 03 |
 
 ## Risks and tradeoffs
 
@@ -187,11 +187,14 @@ nested: inner chat/backgroundWork* -> outer set | remove, stop forwards the requ
 
 ## Resume state
 
-- **Done so far:** drafted 2026-10-22; merged the same day from three child plans into one.
-- **Next action:** [task-01-a-backend-reports-a-task-the-host-draws.md](task-01-a-backend-reports-a-task-the-host-draws.md).
+- **Done so far:** drafted 2026-10-22; merged the same day from three child plans into one. Task 01 is built: the seam, the host's records and rows, the snapshot, and the drop of a backend-emitted action, with its seven cases. Task 02 is built: an output terminal with no process behind it, off the root list, with its four cases. It is fed by `append`, `reset` and `replace`, and ended by `finalize`. Task 03 is built: `vscode/stopBackgroundWork` behind `chat:cancel`, one `false` for every task the host cannot stop, with its seven cases. The record's `stop` is now the plan's function, where task 01 had typed it `boolean`. Task 04 is built: a nested host reports its inner rows through the seam, on the outer chat, with no terminal. Its stop asks the host inside. It has three cases. Task 05 is built: Claude's shell and subagent tasks are reported through the seam. A shell carries a stop that calls `stopTask`, and the backend emits no `chat/backgroundWork*` action. host/47's nine cases and the two stop cases pass. Task 06 is built: each Claude shell has an output terminal, polled once a second and once more when the task ends. The growth comes from `total_bytes`. It has seven poll cases and the SDK guard. Task 07 is built: an ACP terminal that still runs when its call ends is listed as a shell row. Its label is the call's title, and its id and terminal are the host terminal's URI. One no call named is listed at turn end with its command line. The row goes on the process's exit or the agent's release, and its stop kills the process. It has five cases.
+- **Next action:** none; the plan is built and its final gates are the remaining work.
 - **Open questions:** none.
 - **Watch out for:** a row must carry `terminal` on its first set, or the second set looks like a change.
   An ACP machine terminal runs the descriptor's argv, and `command` is what the agent asked.
+  An ACP terminal a call names but never completes is listed at turn end with its command line. The mapping keeps no content for an open call.
+  An output terminal keeps `KEEP` characters. A `replace` of more than that shows a live client only the tail that is also kept for a late one.
+  `conformance.test.ts` is green: both backends now report through the seam.
 
 ## Final verification checklist
 

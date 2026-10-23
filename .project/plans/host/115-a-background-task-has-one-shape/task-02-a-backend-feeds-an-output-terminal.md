@@ -1,6 +1,6 @@
 ---
 title: A backend feeds an output terminal
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -48,7 +48,7 @@ A client subscribes to it like any terminal, and it is not on the root terminal 
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** built. `OutputTerminal` has `uri`, `append`, `reset`, `replace`, `finalize` and `dispose`; `OutputTerminals.create({title, chat})` is the factory. The terminal lives at `ahp-terminal:/<uuid>` in the host's map with a session claim, answers `isPty: false`, and ignores input and resize. `append` sends `terminal/data` and `replace` sends `terminal/cleared` then the new text; both keep at most 200 000 characters, the same `KEEP` a process terminal uses. `reset` sends `terminal/cleared` alone, since the content it leaves is empty. `finalize` sends `terminal/exited` with the code when there is one. A set of URIs in `terminals.ts` keeps output terminals off `terminalInfo`, and `Start.outputTerminals` is handed whether or not the host has a terminal store. Tests are in `test/host-output-terminals.test.ts` and all four cases pass.
+- **Next action:** task 03, the `vscode/stopBackgroundWork` method and its gate.
 - **Open questions:** none.
-- **Watch out for:** a closed session must not leave an output terminal in the map.
+- **Watch out for:** a closed session must not leave an output terminal in the map. The test checks this by disposing the session and then asserting that a subscribe to the terminal URI rejects. The two red tests are still red, as task 01 recorded. They turn green when tasks 04 and 05 move those backends to the seam.

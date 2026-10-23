@@ -1,6 +1,6 @@
 ---
 title: A backend reports a task and the host draws it
-status: todo
+status: implemented
 depends: []
 layer: sdk
 refs:
@@ -56,7 +56,10 @@ The host builds the protocol row, sends it on the chat, and puts it in the chat'
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `types/background.ts` (`BackgroundTask`, `BackgroundTaskKind`, `BackgroundTasks`), `Start.backgroundTasks`, and the export in `types/index.ts` (`src/index.ts` needed no edit: `export type *` already carries it). `host/background.ts` holds the records per chat, builds the row with the stop flag, and resolves a chat's spelling through `chatOf`. A worker chat goes through `sendSubagent`, so `absorb` folds it; everything else goes through `dispatch`. `rows(chat)` answers the snapshot and `forgetSession` drops a session's records. It is assigned as `ctx.background` in `host.ts` and added to `HostContext`. `host/spawn.ts` hands it on `Start`, `host/snapshots.ts` lays it on the lead chat's snapshot, and `lifecycle.ts`'s `teardown` calls it first. `test/host-background-tasks.test.ts` covers the seven validation cases.
+- **Next action:** task 02.
 - **Open questions:** none.
-- **Watch out for:** compare rows by value, not by object, or every poll looks like a change.
+- **Watch out for:** task 03 corrected the record's `stop` to `() => Promise<boolean>`, the plan's answer, where this task had written `stop?: boolean`. The flag is now laid on when a stop is present, and `host/background.ts` calls it.
+  `pnpm test` has two red tests until tasks 04 and 05 land, one case each in `conformance.test.ts` and `nested-proxy.test.ts`. Both drive the Claude or nested backend that still emits `chat/backgroundWork*` itself, which this task's drop now discards. Everything else, `pnpm exec tsc --noEmit` and `pnpm boundary` pass.
+  Rows are compared by value, not by object, or every poll looks like a change.
+  A backend may name a chat in the spelling it was handed; `chatOf` resolves it before the record is filed.

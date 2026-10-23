@@ -64,6 +64,16 @@
  *   about it, so the bridge never hears a `tool_call` for it at all;
  * - text containing `paint` opens a shell, really writes a file beside the
  *   session and ends a call with that shell and that file as its content;
+ * - text containing `linger` opens a shell, ends a call with it as the content
+ *   and leaves it running past both the call and the turn;
+ * - text containing `unspoken` opens a shell that no call ever names, so the
+ *   turn's end is what lists it;
+ * - text containing `brief` waits for its shell to exit before ending the call
+ *   that names it, so the call is over a process that already is;
+ * - text containing `fade` opens a shell that exits once the file `fade-away`
+ *   appears beside the session, which the test writes;
+ * - text containing `release` opens a shell, ends the call that names it and
+ *   releases the terminal while the process still runs;
  * - text containing `away` ends a call with a diff of a path outside the
  *   session's directories, which is written nowhere;
  * - text containing `plan` sends two `plan` updates, the second with the first's
@@ -1387,6 +1397,126 @@ const promptScript = async (id, params) => {
         { type: 'terminal', terminalId },
         { type: 'diff', path, oldText: 'a blank canvas\n', newText: 'a line of paint\n' },
       ],
+    });
+    await ask('terminal/release', { sessionId: session, terminalId });
+  }
+
+  if (text.includes('linger')) {
+    /*
+     * A shell still running when its call ends and when the turn does.
+     *
+     * Nothing waits for it and nothing releases it: the call's result names a
+     * terminal whose process has not exited, which is what the bridge reads as
+     * background work. The test stops it afterwards, or the sleep outlives the
+     * case.
+     */
+    const created = await ask('terminal/create', {
+      sessionId: session, command: 'sh', args: ['-c', 'sleep 30'], cwd,
+    });
+    const terminalId = String(created?.terminalId ?? '');
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-linger',
+      title: 'Watch for changes',
+      name: 'watch',
+      status: 'in_progress',
+      rawInput: { command: 'sleep 30' },
+    });
+    notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-linger',
+      status: 'completed',
+      content: [{ type: 'terminal', terminalId }],
+    });
+  }
+
+  if (text.includes('unspoken')) {
+    // A shell no call names: the turn's end is the only thing that can list it.
+    await ask('terminal/create', {
+      sessionId: session, command: 'sh', args: ['-c', 'sleep 30'], cwd,
+    });
+  }
+
+  if (text.includes('brief')) {
+    /*
+     * A shell that has exited by the time its call ends.
+     *
+     * Waiting for the exit before the completion is what makes that order the
+     * server's rather than the test's.
+     */
+    const created = await ask('terminal/create', {
+      sessionId: session, command: 'sh', args: ['-c', 'echo brief'], cwd,
+    });
+    const terminalId = String(created?.terminalId ?? '');
+    await ask('terminal/wait_for_exit', { sessionId: session, terminalId });
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-brief',
+      title: 'Say it briefly',
+      name: 'brief',
+      status: 'in_progress',
+    });
+    notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-brief',
+      status: 'completed',
+      content: [{ type: 'terminal', terminalId }],
+    });
+    await ask('terminal/release', { sessionId: session, terminalId });
+  }
+
+  if (text.includes('fade')) {
+    /*
+     * A shell that exits only when the test touches `fade-away`.
+     *
+     * That makes the exit the test's to time, so the row is listed while the
+     * process runs and is taken down by the exit rather than by a release.
+     */
+    const created = await ask('terminal/create', {
+      sessionId: session,
+      command: 'sh',
+      args: ['-c', 'while [ ! -f fade-away ]; do sleep 0.05; done'],
+      cwd,
+    });
+    const terminalId = String(created?.terminalId ?? '');
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-fade',
+      title: 'Wait for the mark',
+      name: 'fade',
+      status: 'in_progress',
+    });
+    notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-fade',
+      status: 'completed',
+      content: [{ type: 'terminal', terminalId }],
+    });
+  }
+
+  if (text.includes('release')) {
+    /*
+     * A shell still running when the call ends and released straight after.
+     *
+     * The release is the agent letting go, and the exit it causes behind it
+     * must not take the row down a second time.
+     */
+    const created = await ask('terminal/create', {
+      sessionId: session, command: 'sh', args: ['-c', 'sleep 30'], cwd,
+    });
+    const terminalId = String(created?.terminalId ?? '');
+    notify({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call-release',
+      title: 'Start it, then let go',
+      name: 'release',
+      status: 'in_progress',
+    });
+    notify({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call-release',
+      status: 'completed',
+      content: [{ type: 'terminal', terminalId }],
     });
     await ask('terminal/release', { sessionId: session, terminalId });
   }
