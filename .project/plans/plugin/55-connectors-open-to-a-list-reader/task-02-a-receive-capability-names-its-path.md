@@ -1,6 +1,6 @@
 ---
 title: A receive capability names its path
-status: todo
+status: implemented
 depends: []
 layer: "sdk, webhook"
 refs:
@@ -40,8 +40,9 @@ A client puts the daemon's HTTP root before it and the connector id in `{id}`.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `Capability` has an optional `path`, documented as relative to the daemon's HTTP root with `{id}` for the connector id. `checkAdapter` refuses a `path` on a capability whose type is not `receive`, and a `path` that is not a string starting with `/`. The adapters channel needed no code change to send it: `rowOf` already sends each capability whole, and its comment says so. The webhook's receive capability is now `path: '/plugins/webhook/{id}'` with the description "Receives the calls a sender makes to the connector's URL." Tests: a receive capability keeps its path in a row, a command carries none, and the host refuses a path on a command and a path without a leading `/`.
+- **Next action:** none for this task; task 03 is next in the plan.
+- **Files:** `packages/sdk/src/types/connectors.ts`, `packages/sdk/src/plugins/validate.ts`, `packages/sdk/src/connectors/adapters.ts`, `packages/webhook/src/adapter.ts`, `packages/sdk/test/adapters-channel.test.ts`, this task file and the plan. The session cannot commit, so they are left in the worktree.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** plan 54 rewrites `adapter.ts`, so start from its merged form.
+- **Departures:** `packages/sdk/src/connectors/adapters.ts` changed only its comment: the row already sent `capabilities` whole, so `path` reached the client without a mapping.
+- **Watch out for:** the webhook's `CAPABILITIES` passes `checkAdapter` when the plugin registers, so a later path change there is refused at load, not at the route.

@@ -18,10 +18,10 @@ import type { Vault } from '../src/types/vault.js';
  * The connectors channel over a store in memory and a vault that is a map.
  *
  * The host is in this process, over a real users file, so the grant a caller
- * holds is the one the daemon would see: `connector:list` reads the caller's
- * own connectors, their teams' and the host's, `connector:all` reads every one,
- * and `connector:put` and `connector:remove` make and remove a connector of
- * any owner beside that owner's own rule.
+ * holds is the one the daemon would see: `connector:list` opens the channel and
+ * reads the caller's own connectors, their teams' and the host's,
+ * `connector:all` reads every one, and `connector:put` and `connector:remove`
+ * make and remove a connector of any owner beside that owner's own rule.
  */
 
 const URI = 'x-ahpd-connectors://';
@@ -332,6 +332,19 @@ it('reads the caller\'s own, their team\'s and the host\'s connectors with conne
   await close();
 });
 
+it('reads an empty list with connector:list before any connector exists', async () => {
+  const { host, users, close } = await served();
+  const ana = await as(host, users, 'ana');
+  const iv = await as(host, users, 'iv');
+
+  // The gate admits a lister with no row to read, and the snapshot is empty.
+  expect(await ana.rows()).toEqual({});
+  // A role with connector:all and no connector:list is let in by authorize, and reads none either.
+  expect(await iv.rows()).toEqual({});
+  expect(await iv.rows(FILTERED)).toEqual({});
+  await close();
+});
+
 it('reads every connector with connector:all', async () => {
   const { host, users, close } = await served();
   const cy = await as(host, users, 'cy');
@@ -353,8 +366,12 @@ it('refuses a caller with no grant, to read and to change what is not theirs', a
   const ha = await as(host, users, 'ha');
   await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'a' } });
 
-  // A reader with no `connector:` grant is answered no row at all.
-  expect(await bo.call('subscribe', { channel: URI })).toMatchObject({ code: -32009 });
+  // A reader with no `connector:` grant is answered no row at all, and the
+  // refusal names the grant that opens the channel.
+  expect(await bo.call('subscribe', { channel: URI })).toMatchObject({
+    code: -32009,
+    message: expect.stringContaining('connector:list'),
+  });
   // A host connector takes connector:put and connector:host.
   expect(await bo.call('x-ahpd/connectors/put', {
     id: 'other', adapter: 'webhook', owner: 'host', config: { target: 'a' },
@@ -508,6 +525,22 @@ it('advertises plugin and connector in the handshake, beside the built-ins', asy
     description: expect.any(String),
     operations: ['list', 'all', 'put', 'remove', 'host'],
     groups: { read: ['list', 'all'], write: ['put', 'remove', 'host'] },
+  });
+  await close();
+});
+
+it('advertises the connectors channel with connector:list as its gate', async () => {
+  const { host, users, close } = await served();
+  const bo = await as(host, users, 'bo');
+  const channels = bo.ready['_meta']?.['ahpd.channels'] as Bag[];
+
+  // One catalog for every reader, and the grant a subscribe needs is the one
+  // a person making their own connector holds.
+  expect(channels).toContainEqual({
+    scheme: 'x-ahpd-connectors',
+    title: 'Connectors',
+    description: 'The connectors made from the adapters this host serves.',
+    grant: 'connector:list',
   });
   await close();
 });

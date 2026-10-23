@@ -184,7 +184,8 @@ export const CAPABILITIES: Capability[] = [{
   type: 'receive',
   name: 'calls',
   title: 'Receives calls',
-  description: 'Answers a POST to /plugins/webhook/<id> whose proof the endpoint\'s auth scheme accepts.',
+  description: 'Receives the calls a sender makes to the connector\'s URL.',
+  path: '/plugins/webhook/{id}',
 }];
 
 /**

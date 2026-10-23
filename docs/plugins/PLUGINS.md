@@ -522,6 +522,7 @@ host.registerAdapter({
     name: 'calls',
     title: 'Receives calls',
     description: 'Answers a POST to its URL.',
+    path: '/plugins/webhook/{id}',
   }],
   open(connector) {
     serve(connector.id, connector.config);
@@ -550,6 +551,7 @@ host.registerAdapter({
 - `capabilities` are listed for a client and not run. The types are `receive`,
   `command` and `action`, and `ui` is reserved for a later plan; a type this
   version does not know is shown by its title.
+- A `receive` capability may carry `path`: where its connectors receive, relative to the daemon's HTTP root, with `{id}` standing for the connector id, such as `/plugins/webhook/{id}`. A client puts the root before it to build a connector's URL. A `path` on any other type, or one that does not start with `/`, is refused when the adapter registers, and `x-ahpd-adapters` sends it with the capability.
 - `open(connector)` starts answering for one connector, which carries `id`,
   `adapter`, `owner`, an optional `title`, and `config` with each secret read
   back from the vault. The answer is the function that stops it, or nothing when
@@ -1052,10 +1054,7 @@ of, with `config` holding a reference where a secret was moved, and a `state`:
 | `invalid` | Its config no longer fits its adapter's schema, or the adapter refused to open it |
 | `unavailable` | No loaded plugin registers its adapter, so it cannot be opened |
 
-`connector:all` reads every connector. `connector:list` reads the caller's own
-connectors, their teams' and the host's, and no other person's. A caller with
-neither grant reads no connector, its own included. A subscribe also takes
-`?owner=me`, which narrows the listing to the caller's own connectors.
+`connector:list` opens the channel, and reads the caller's own connectors, their teams' and the host's, and no other person's. `connector:all` reads every row, and is admitted without `connector:list`. A caller with neither grant reads no connector, its own included, and is refused the subscription. A subscribe also takes `?owner=me`, which narrows the listing to the caller's own connectors.
 
 Two commands change a connector:
 

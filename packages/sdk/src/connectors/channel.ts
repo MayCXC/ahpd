@@ -265,7 +265,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   };
 
   /**
-   * Whether this reader sees this row without the channel's `connector:all`.
+   * Whether this reader sees this row, asked of every reader.
    *
    * `connector:all` reads every connector. `connector:list` reads the ones the
    * caller owns, the ones their teams own and the host's. A reader holding
@@ -283,12 +283,16 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
 
   const channel = recordsChannel(SCHEME, source, {
     /*
-     * `connector:all` is the channel's own gate, because it is the grant that
-     * reads every row. A holder of `connector:list` is let in by `authorize`
-     * and then sees the rows `mayRead` allows.
+     * `connector:list` is the channel's own gate, because a person who may
+     * make their own connector holds it. Every reader's rows go through
+     * `mayRead`, the gate holder included, so `connector:list` reads its own,
+     * its teams' and the host's and no one else's. `connector:all` reads every
+     * row and is let in by `authorize` without `connector:list`.
      */
-    grant: 'connector:all' as Grant,
+    grant: 'connector:list' as Grant,
     mayRead,
+    mayReadEveryReader: true,
+    alsoGrant: 'connector:all' as Grant,
     /*
      * A host connector belongs to everyone and to nobody, so the filter leaves
      * it out and `?owner=me` is the caller's own connectors.

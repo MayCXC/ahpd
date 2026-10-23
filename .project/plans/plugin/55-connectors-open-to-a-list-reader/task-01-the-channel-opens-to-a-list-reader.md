@@ -1,6 +1,6 @@
 ---
 title: The connectors channel opens to a list reader
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -46,8 +46,9 @@ A `connector:all` holder still reads every row.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** `recordsChannel` takes two new options. `mayReadEveryReader` sends every reader's rows through `mayRead`, the holder of `grant` included, and is off by default, so the people channel is unchanged. `alsoGrant` names a second grant that `authorize` admits without a readable row, and that keeps a filtered subscribe working on an empty store. The connectors channel now has `connector:list` as its gate, turns `mayReadEveryReader` on, and names `connector:all` as `alsoGrant`; the comment above the gate says the new rule. The handshake and the refusal pick the gate grant up, since both read `channel.grant`. Tests: a lister and an all-only role both read an empty list, the refusal names `connector:list`, and `ahpd.channels` carries it for `x-ahpd-connectors`. `mayRead` is unchanged and still answers `true` for `connector:all`.
+- **Next action:** none for this task; task 02 is next in the plan.
+- **Files:** `packages/sdk/src/resources/recordschannel.ts`, `packages/sdk/src/connectors/channel.ts`, `packages/sdk/test/connectors-channel.test.ts`, this task file and the plan. The session cannot commit, so they are left in the worktree.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** `connector:all` does not hold `connector:list` in `OPERATIONS`, so the gate alone refuses an all-only role.
+- **Departures:** `alsoGrant` is a second option beside the one the task names ("an option that makes `readable` ask `mayRead` for every reader"), because `authorize` cannot admit a `connector:all` holder on an empty store from `mayRead` alone.
+- **Watch out for:** `connector:all` does not hold `connector:list` in `OPERATIONS`, so the gate alone refuses an all-only role. That role is admitted by `authorize`, which is asked only when the gate grant is missing.
