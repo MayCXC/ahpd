@@ -113,6 +113,15 @@ export interface Worktrees {
   gitDir?(dir: string): Promise<GitDir | undefined>;
 
   /**
+   * The commit a tree is on, as a full commit.
+   *
+   * Asked once, when a tree is made: its work is counted from there. Undefined
+   * is no answer, and the base's name answers instead. Optional, as `gitDir`
+   * is.
+   */
+  commitOf?(dir: string): Promise<string | undefined>;
+
+  /**
    * The branches this repository has, most useful first.
    *
    * What a client draws the base-branch picker from, and the first is what a

@@ -126,6 +126,12 @@ export function gitWorktrees(): Worktrees {
       return { gitDir: resolve(common), worktreeDir: resolve(own), repository: resolve(top) };
     },
 
+    commitOf: async (dir) => {
+      const found = await git(dir, ['rev-parse', 'HEAD'], 5_000).catch(() => undefined);
+      const commit = found?.trim();
+      return commit === undefined || commit === '' ? undefined : commit;
+    },
+
     branches: async (repository) => {
       /*
        * The branch checked out, then local branches by most recent commit,
