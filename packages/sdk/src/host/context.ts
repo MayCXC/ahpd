@@ -220,6 +220,14 @@ export interface HostContext extends ChatRecord, Routing, Relay, Changesets, Fac
   pullRequestLookup: 'url' | 'branch';
   /** Every tool the host was given, before the permission was applied. */
   contributed: readonly HostTool[];
+  /**
+   * The tools built from the adapters' `action` capabilities.
+   *
+   * Not part of `contributed`, because `setTools` replaces that whole and
+   * these are the adapters' own: built once when the host starts, and kept
+   * beside whatever a client sets.
+   */
+  actionTools: HostTool[];
   /** The tools this host contributes, with the permission applied. */
   contributing: HostTool[];
   /** Who is in a session right now, by the id inside the session's uri. */

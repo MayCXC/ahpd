@@ -527,6 +527,13 @@ export const apply: Plugin['apply'] = (host, options) => {
     problem: (line) => { host.problem(`${name}: ${line}`); },
   }, absent);
   /*
+   * A back session's connectors, which are the bot's: the host asks this at
+   * each tool list and each call, so an edit to a bot reaches a session it has
+   * already started at once. A session no bot of this one started is answered
+   * nothing, which is every session that is not a back session.
+   */
+  host.registerBindings(wake.bindings);
+  /*
    * A back session's question, asked in the main turn that woke it.
    *
    * The request is read off the session's own state, which is what the event

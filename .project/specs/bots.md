@@ -50,6 +50,18 @@ WHEN the plugin starts a bot's session
 THEN the session has the bot's owner, the bot folder as its working directory, and the preset or harness as its provider
 AND it names the model only when there is no preset, and sets the `computer` config key when the bot names a computer.
 
+### A bot's connectors
+
+WHEN a bot's record names `connectors`
+THEN the plugin keeps the map a session's `connectors` config key holds.
+A body that names an alias that is not a lowercase slug, or a value that is not `connectors://<adapter>/<id>`, is refused with -32602.
+AND each session the bot started answers that map through the plugin's `registerBindings` reader.
+The request a bot starts a session with names no `connectors` key, so the reader is the one answer.
+An edit is what the next tool list and the next call read.
+WHEN the bot's record goes
+THEN the sessions it started are answered nothing.
+A session no bot started is answered nothing too.
+
 ### The first turn of each chat is the template
 
 WHEN a new chat opens in a bot's session

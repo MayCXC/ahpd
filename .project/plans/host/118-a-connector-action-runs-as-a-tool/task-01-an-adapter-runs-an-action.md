@@ -1,6 +1,6 @@
 ---
 title: An adapter runs an action
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -51,3 +51,10 @@ An adapter may answer `run(connector, action, input)`.
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** `Adapter.run?` is added in `packages/sdk/src/types/connectors.ts`, and the header says an `action` runs through it. `ConnectorsChannel.run(id, reader, action, input)` is added in `packages/sdk/src/connectors/channel.ts`. The `open` map now holds `{ connector, stop? }`, `openOne` keeps the built connector, and `close` reads `stop` from the entry. `run` refuses an id that is not open, an adapter with no `run`, an action the adapter does not declare as an `action` capability, and a reader that fails `mayRead` - a reader of nothing is the daemon itself, as a read elsewhere in the channel treats it. `checkAdapter` refuses a `run` that is not a function. Tests: four new cases in `connectors-channel.test.ts` cover a run with the resolved config, a remove and a connector that never opened, a reader without `connector:list` and another person's connector (with `connector:all` reading one), and an undeclared action or an adapter with no `run`. `plugin-fold.test.ts` has the `run` check.
+- **Next action:** task 02.
+- **Files:** `packages/sdk/src/types/connectors.ts`, `packages/sdk/src/connectors/channel.ts`, `packages/sdk/src/plugins/validate.ts`, `packages/sdk/test/connectors-channel.test.ts`, `packages/sdk/test/plugin-fold.test.ts`, this task file and the plan. The session cannot commit, so they are left in the worktree.
+- **Open questions:** none.
+- **Departures:** none.
+- **Watch out for:** `run` takes `Principal | undefined` because task 03 passes `principalFor(owner)`, which answers nothing for an owner this process has not met. Nothing is allowed for a reader that is present but lacks the grant.

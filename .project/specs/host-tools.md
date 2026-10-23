@@ -5,6 +5,8 @@ covers:
   - packages/sdk/src/tools/**
   - packages/sdk/src/utils/timing.ts
   - packages/sdk/src/host/tooling.ts
+  - packages/sdk/src/connectors/actions.ts
+  - packages/sdk/src/connectors/bindings.ts
 decisions:
   - decisions/each-backend-offers-its-options-unless-a-rule-asks.md
 refs:
@@ -60,6 +62,23 @@ WHEN a tool has `instruction`
 THEN that text goes into the agent's instructions while the tool is offered.
 WHEN a tool has `deferLoading`
 THEN a harness may put the tool behind tool search, and the published definition does not show it.
+
+### An action runs as a tool
+
+WHEN an adapter declares an `action` capability and has a `run`
+THEN the host offers one tool for it, at load, named `<adapter>_<action>` with each character outside `[A-Za-z0-9_]` written as `_`
+AND the tool's input schema is the capability's `input`.
+WHEN a session's bindings name a connector of that adapter, from the `connectors` key of its config or from a plugin's `registerBindings` reader
+THEN the session sees the tool, with no `connector` argument when it binds one.
+With two or more, `connector` is required, with an `enum` of the aliases.
+AND a session that binds none of the adapter does not see the tool.
+WHEN the model calls the tool
+THEN the host reads the bindings again and resolves the alias.
+It checks that the connector is open, is of the tool's adapter, and is one the session's owner may read.
+AND then it calls the adapter's `run` with the connector and the input, without the `connector` argument.
+An error names the alias the model used and the reason, and never the connector's id or a secret.
+A key the session was started with wins a shared alias over a reader's map.
+An action tool is not opt-in: a binding is what offers it.
 
 ### An artifact is added
 

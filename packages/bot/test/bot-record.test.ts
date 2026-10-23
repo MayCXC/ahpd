@@ -144,3 +144,24 @@ it('takes a template by name, refuses one that is not a slug, and keeps it on an
   expect(checkRecord('motion', { name: 'Calm' }, { ...WAS, template: 'short' }).template).toBe('short');
   expect(checkRecord('motion', { name: 'Calm' }, WAS).template).toBeUndefined();
 });
+
+it('takes a map of connector aliases, and refuses one the host would not read', () => {
+  const map = { work: 'connectors://ap-resend/account-123' };
+  expect(checkRecord('motion', { name: 'Motion', connectors: map }).connectors).toEqual(map);
+
+  // What an edit does not name is kept, and a map it names - empty included -
+  // is the bot's, because a bot with no connectors is a bot that binds none.
+  expect(checkRecord('motion', { name: 'Calm' }, { ...WAS, connectors: map }).connectors).toEqual(map);
+  expect(checkRecord('motion', { name: 'Calm', connectors: {} }, { ...WAS, connectors: map }).connectors).toEqual({});
+  expect(checkRecord('motion', { name: 'Calm' }, WAS).connectors).toBeUndefined();
+
+  // A bot is written once and read on every message, so what `bindingsOf`
+  // would skip is refused here: an alias the model cannot say, and a value
+  // that names no connector.
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: 'work' })).toThrow(/connectors/);
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: ['work'] })).toThrow(/connectors/);
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: { Work: 'connectors://ap-resend/account-123' } })).toThrow(/Work/);
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: { work: 'account-123' } })).toThrow(/account-123/);
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: { work: 'connectors://ap-resend/account-123/extra' } })).toThrow(/ap-resend/);
+  expect(() => checkRecord('motion', { name: 'Motion', connectors: { work: 7 } })).toThrow(/7/);
+});

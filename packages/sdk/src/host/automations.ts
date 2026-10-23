@@ -781,7 +781,7 @@ export function createAutomations(ctx: HostContext): Automations {
     openSession(
       uri,
       provider,
-      backendsOwn(config),
+      config,
       where,
       wanted.origin,
       undefined,

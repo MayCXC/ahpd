@@ -11,7 +11,7 @@ import { servedRecords } from '../src/resources/recordschannel.js';
 import { echo } from '../../../examples/echo/agent.js';
 import type { Connector, ServedAdapter } from '../src/types/connectors.js';
 import type { RecordCollection } from '../src/types/records.js';
-import type { Users } from '../src/types/users.js';
+import type { Principal, Users } from '../src/types/users.js';
 import type { Vault } from '../src/types/vault.js';
 
 /*
@@ -117,11 +117,20 @@ interface Opened {
   config: Record<string, unknown>;
 }
 
+/** One action an adapter ran, and what it was handed. */
+interface Ran {
+  id: string;
+  action: string;
+  input: Record<string, unknown>;
+  config: Record<string, unknown>;
+}
+
 /** A host serving the connectors channel over one adapter, the `webhook` one. */
 async function served(register = true) {
   const collection: RecordCollection = await memoryRecords().collection('connectors', { format: 'json' });
   const opened: Opened[] = [];
   const closed: string[] = [];
+  const ran: Ran[] = [];
   const problems: string[] = [];
   const vault = made();
   const adapters: Record<string, ServedAdapter> = register
@@ -132,10 +141,23 @@ async function served(register = true) {
           description: 'Receives calls at a URL.',
           by: 'webhook',
           schema: SCHEMA,
-          capabilities: [{ type: 'receive', name: 'call', title: 'Receives calls', description: 'Receives calls at a URL.' }],
+          capabilities: [
+            { type: 'receive', name: 'call', title: 'Receives calls', description: 'Receives calls at a URL.' },
+            {
+              type: 'action',
+              name: 'send',
+              title: 'Sends a message',
+              description: 'Sends a message to the target.',
+              input: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+            },
+          ],
           open: (connector: Connector) => {
             opened.push({ id: connector.id, adapter: connector.adapter, owner: connector.owner, config: connector.config });
             return () => { closed.push(connector.id); };
+          },
+          run: async (connector: Connector, action: string, input: Record<string, unknown>) => {
+            ran.push({ id: connector.id, action, input, config: connector.config });
+            return { ran: action, on: connector.id };
           },
         },
       }
@@ -157,7 +179,7 @@ async function served(register = true) {
     methods: wire.methods,
     users,
   });
-  return { host, users, collection, connectors, adapters, opened, closed, problems, vault, close: async () => { await host.close(); } };
+  return { host, users, collection, connectors, adapters, opened, closed, ran, problems, vault, close: async () => { await host.close(); } };
 }
 
 /** A client signed in as `id`, whose channel actions are kept. */
@@ -184,6 +206,13 @@ const as = async (host: Host, users: Users, id: string) => {
     return Object.fromEntries(records.map((one) => [one.id, one.record]));
   };
   return { call, rows, ready, close: () => { client.close(); } };
+};
+
+/** The person behind an id, as a call through the channel is handed one. */
+const readerOf = async (users: Users, id: string): Promise<Principal> => {
+  const held = await users.verify(await users.mint(id));
+  if (held === undefined) throw new Error(`${id} could not sign in`);
+  return held;
 };
 
 it('holds no adapter row, and a connector row names its adapter', async () => {
@@ -559,5 +588,84 @@ it('refuses a config the adapter\'s schema refuses, and an unregistered adapter'
   })).toMatchObject({ code: -32602 });
   expect(await collection.list()).toEqual([]);
   expect(opened).toEqual([]);
+  await close();
+});
+
+it('runs an action on an open connector, with the config the adapter was opened with', async () => {
+  const { host, users, ran, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', {
+    id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'bot://motion', secret: 'sk-live-1' },
+  });
+
+  expect(await connectors.run('ci', await readerOf(users, 'cy'), 'send', { text: 'hello' }))
+    .toEqual({ ran: 'send', on: 'ci' });
+  // The adapter gets the connector as it was opened, its secret read back.
+  expect(ran).toEqual([{
+    id: 'ci',
+    action: 'send',
+    input: { text: 'hello' },
+    config: { target: 'bot://motion', secret: 'sk-live-1' },
+  }]);
+  await close();
+});
+
+it('refuses an action on a connector that is not open, or never opened', async () => {
+  const { host, users, ran, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const reader = await readerOf(users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await cy.call('x-ahpd/connectors/remove', { id: 'ci' });
+
+  await expect(connectors.run('ci', reader, 'send', { text: 'x' })).rejects.toThrow('ci is not an open connector');
+  await expect(connectors.run('never', reader, 'send', { text: 'x' })).rejects.toThrow('never is not an open connector');
+  expect(ran).toEqual([]);
+  await close();
+});
+
+it('refuses an action to a reader with no connector grant, or to another person', async () => {
+  const { host, users, ran, connectors, close } = await served();
+  const cy = await as(host, users, 'cy');
+  const ha = await as(host, users, 'ha');
+  await cy.call('x-ahpd/connectors/put', { id: 'mine', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  await ha.call('x-ahpd/connectors/put', { id: 'shared', adapter: 'webhook', owner: 'host', config: { target: 'b' } });
+
+  // A person with no connector grant reads none, their own included.
+  await expect(connectors.run('mine', await readerOf(users, 'bo'), 'send', { text: 'x' }))
+    .rejects.toThrow("mine is not bo's to use");
+  // A lister reads the host's connector and not another person's.
+  await expect(connectors.run('mine', await readerOf(users, 'ana'), 'send', { text: 'x' }))
+    .rejects.toThrow("mine is not ana's to use");
+  expect(await connectors.run('shared', await readerOf(users, 'ana'), 'send', { text: 'x' }))
+    .toEqual({ ran: 'send', on: 'shared' });
+  // connector:all reads every connector, so it runs every one too.
+  expect(await connectors.run('mine', await readerOf(users, 'iv'), 'send', { text: 'x' }))
+    .toEqual({ ran: 'send', on: 'mine' });
+  expect(ran).toHaveLength(2);
+  await close();
+});
+
+it('refuses an action the adapter does not declare, and an adapter that runs none', async () => {
+  const { host, users, ran, connectors, adapters, close } = await served();
+  const cy = await as(host, users, 'cy');
+  await cy.call('x-ahpd/connectors/put', { id: 'ci', adapter: 'webhook', owner: 'user:cy', config: { target: 'a' } });
+  const reader = await readerOf(users, 'cy');
+
+  // A `receive` capability is not an action, and neither is a name no capability has.
+  await expect(connectors.run('ci', reader, 'call', { text: 'x' })).rejects.toThrow('webhook has no action named call');
+  await expect(connectors.run('ci', reader, 'nope', { text: 'x' })).rejects.toThrow('webhook has no action named nope');
+  // An adapter with no `run` is not asked to run one.
+  const webhook = adapters['webhook']!;
+  adapters['webhook'] = {
+    name: webhook.name,
+    title: webhook.title,
+    description: webhook.description,
+    by: webhook.by,
+    schema: webhook.schema,
+    capabilities: webhook.capabilities,
+    open: webhook.open,
+  };
+  await expect(connectors.run('ci', reader, 'send', { text: 'x' })).rejects.toThrow('webhook runs no action');
+  expect(ran).toEqual([]);
   await close();
 });

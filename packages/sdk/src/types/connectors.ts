@@ -7,8 +7,10 @@
  * as a JSON record, and the adapter's `open` is where the plugin starts
  * answering for it.
  *
- * A capability is declared and shown; nothing here runs one. Running an action
- * as a tool is a later plan.
+ * A capability is declared and shown. A `receive` capability is where a
+ * connector answers, and an `action` runs through the adapter's `run`, which
+ * the host calls with the connector - the identity, the configuration and the
+ * secrets - and the input of one call.
  */
 
 /**
@@ -117,6 +119,16 @@ export interface Adapter {
    * nothing to stop.
    */
   open(connector: Connector): void | (() => void | Promise<void>);
+  /**
+   * Run one of the adapter's `action` capabilities for one connector.
+   *
+   * The host hands it the connector as `open` was handed it, with each secret
+   * read back from the vault, and the input of the call. It answers the
+   * action's result, which the host passes on. An adapter with no `run` offers
+   * no action tool, and an adapter with `run` and no `action` capability runs
+   * nothing either.
+   */
+  run?(connector: Connector, action: string, input: Record<string, unknown>): Promise<unknown>;
 }
 
 /** One adapter as the fold keeps it, with the plugin that registered it. */

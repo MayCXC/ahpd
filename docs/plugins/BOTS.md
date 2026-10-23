@@ -22,13 +22,14 @@ A bot is not a backend of its own. It names whichever harness the host already h
 | `workspace` | The folder it works in, under `root`. Its own, and never moved |
 | `session` | The name of the back session a message wakes. `work` where absent, and a name with `{turn}` in it starts one session per message |
 | `computer` | The machine it runs in, where it names one |
+| `connectors` | The connectors a session of it may use, by alias: `{ "work": "connectors://ap-resend/account-123" }`. An alias is a lowercase slug, and a value names one connector. Each back session the bot started reads the map live, so an edit reaches a session that is already running, and a call after an alias is taken out fails - [An action offered as a tool](PLUGINS.md#an-action-offered-as-a-tool) |
 | `owner` | Whose it is: `user:<id>`, `team:<team>`, `project:<team>:<project>` or `root:<host>`. A make may name the maker, or a team or project the maker belongs to; a holder of `*:*` may name any owner, this host's own `root:<host>` among them. A body naming anybody else is refused `-32009`, and an edit may not move it. Any `root:` is this host, whatever name follows it: one a make names is written under the host's name today, and a renamed machine keeps its bots. The manifest gives this host's own owner as a `const` in `owner`, so a client sends it as given |
 | `chat` | The reader's own chat with this bot. Answered by a read and never obeyed: it is a different conversation for each reader, so what a body carries is not kept - [The chat and its back sessions](#the-chat-and-its-back-sessions) |
 | `createdAt`, `updatedAt` | The times. Read but never obeyed: what they hold is the host's |
 
 Three of the fields in that table are the `AGENTS.md`'s rather than `bot.md`'s: `name`, `description` and `instructions`. The file is their one copy, a read answers them from it, and a make or an edit writes them there - [The persona](#the-persona). Everything else that is the bot's is in the record file; `chat` belongs to the reader, and is not kept in the record.
 
-A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`.
+A body that names a key a bot does not have is refused `-32602`, and so is a `body` that is not a word or a `color` that is neither a name below nor `#rrggbb`. So is a `connectors` map that is not an object, an alias that is not a lowercase slug, or a value that is not `connectors://<adapter>/<id>`: those are the two checks the host makes when it reads a session's bindings, and a bot is written once and read on every message.
 
 ## The record file
 

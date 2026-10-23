@@ -1030,7 +1030,7 @@ export function createSessionMethods(ctx: HostContext, conn: ConnectionContext):
         // so a scope change before the first turn is resolved against who
         // owns the work rather than against whoever sent it.
         try {
-          openSession(uri, provider, backendsOwn(config), running, undefined, conn.tokensFor(provider), peers, undefined,
+          openSession(uri, provider, config, running, undefined, conn.tokensFor(provider), peers, undefined,
             { ...forWhom(ownerFor(connection), connection.principal), sender: connection });
         }
         catch (error) {

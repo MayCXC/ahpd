@@ -52,10 +52,12 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - `x-ahpd-adapters` lists the adapters a host serves, keyed by adapter name, and read-only. `x-ahpd-connectors` lists the connectors, and `x-ahpd/connectors/put` and `remove` make and take them away. A field an adapter's schema marks `writeOnly` goes to the vault under the owner's scope, and is in no record and no snapshot.
 - A `receive` capability may carry `path`, where its connectors receive on the daemon's HTTP root, with `{id}` for the connector id. `x-ahpd-adapters` sends it, and the `@ahpd/webhook` capability names `/plugins/webhook/{id}`.
 - `@ahpd/webhook` registers the first adapter, so a client makes a webhook endpoint from the connector form.
+- An adapter's `action` capability runs as a host tool: one `<adapter>_<action>` tool for every connector of an adapter that has `run`, offered only to a session that binds one of them. A session names its connectors by alias in the new `connectors` config key, set when it starts, or a bot names them in its record and the bot plugin answers them live through the new `registerBindings`. The host resolves the alias, checks the connector and its owner at every call, and never hands the model an id or a secret. See [docs/plugins/PLUGINS.md](docs/plugins/PLUGINS.md#an-action-offered-as-a-tool).
 
 ### Bots
 
 - A message sent in a bot chat while a turn runs shows as a turn of its own. The running turn ends `complete` with what it held, and the back session's answer after the steer lands under the new turn.
+- A bot record has a `connectors` field: the connectors its sessions may use, by alias, such as `{ "work": "connectors://ap-resend/account-123" }`. Each session the bot started reads it live, so an edit reaches a session that is already running, and a bad alias or value is refused `-32602` when the bot is written.
 
 ### Agents
 

@@ -1,6 +1,6 @@
 ---
 title: An action is a host tool
-status: todo
+status: implemented
 depends:
   - task-01-an-adapter-runs-an-action.md
   - task-02-a-session-names-its-connectors.md
@@ -58,3 +58,15 @@ A session sees the tool only with a compatible binding, and a call runs on the b
 - `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 
 ## Resume
+
+- **Done so far:** every step, 1 to 15, and their tests.
+  - `packages/sdk/src/connectors/actions.ts` holds `actionToolName`, `ActionHost` and `actionTools(adapters, run, host)`. A tool is named `<adapter>_<action>` with each character outside `[A-Za-z0-9_]` written as `_`; an adapter with no `run` and a capability that is not an `action` offer none; the first of two tools that meet on one name is kept and the second is reported.
+  - The schema is the capability's `input`. With no binding the `forSession` answer is `{ offered: false }`; with one there is no `connector` property; with two or more there is a required `connector` with an `enum` of the aliases. `run` reads the bindings live, fills in the one alias when the schema has no `connector`, refuses an alias the session does not bind, calls `connectors.run(id, principal, action, inputWithoutConnector)`, and says a throw as `<alias>: <reason>` with the connector id replaced by the alias.
+  - `HostOptions.connectors` is extended here with `run: ConnectorsChannel['run']` (Answers row 103); `types/host.ts` documents that a host without it offers no action tool. `run.ts` passes both `refs` and `run`.
+  - The tools are built once in `createTooling` from `options.adapters` and kept in a new `HostContext.actionTools`, beside `contributed`; both `createTooling` and `host.ts` `setTools` combine them with `contributed` under `permitted`, so a client's `setTools` keeps them.
+  - Tests: `connector-actions.test.ts` (10), covering the seven validation cases and three for the builder. Build, typecheck and boundary pass; the six related SDK suites pass (179 tests).
+- **Next action:** task 04.
+- **Files:** `packages/sdk/src/connectors/actions.ts` (new), `packages/sdk/src/types/host.ts`, `packages/sdk/src/host/context.ts`, `packages/sdk/src/host/tooling.ts`, `packages/sdk/src/host.ts`, `packages/sdk/src/index.ts`, `packages/server/src/commands/run.ts`. Tests: `packages/sdk/test/connector-actions.test.ts` (new).
+- **Open questions:** none.
+- **Departures:** `actionTools` takes a third argument, `ActionHost` (`bindings`, `principalOf`, `onProblem`), beyond the `(adapters, run)` the Files list names: the call needs the session's live bindings and its owner's principal, and a duplicate name needs somewhere to be reported. `HostContext.actionTools` in `context.ts` is a file the Files list does not name, because `setTools` lives in `host.ts` and has to see them to keep them. And `sessionBindings` in `tooling.ts` reads `ctx.decided.get(uri)` as a fallback when the kept config has no `connectors` key: a session's config reaches the store only after `spawn`, so at the first tool list - the one the backend is started with - the bindings are only in the decided map, and the action tool was offered on the wire but never handed to the backend until this was added. The same reading `linkedOf` makes of the folders a session links.
+- **Watch out for:** `forSession` is called by `toolDefinitions`, by `offeredTools` and by `instructions`, and each passes the bindings through `sessionBindings`; a new reader must do the same or the tool and its instruction disagree. A binding added after the session started reaches the next tool list only.

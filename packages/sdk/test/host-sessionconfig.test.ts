@@ -1,12 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Agent, McpServer, Start } from '../src/types/agent.js';
+import type { ConnectorRef } from '../src/types/connectors.js';
 import { fileSessions, memorySessions } from '../src/sessions/sessions.js';
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   resetSdk, claude, createHost, hello, machine, open, peer,
- sdk, sessionQueries, settle, running,
+ sdk, sessionQueries, serving, settle, running,
 } from './support/host.js';
 
 vi.mock('@anthropic-ai/claude-agent-sdk', async () => (await import('./support/claude-sdk.js')).fake);
@@ -328,6 +329,80 @@ describe('choosing a model', () => {
     });
     await settle();
     expect(sdk.modesSet).toEqual(['acceptEdits']);
+  });
+
+  it('declares the connectors a session may use, and keeps the map it was started with', async () => {
+    const client = open();
+    await client.handle(hello(['0.9.0']));
+    const uri = 'ahp-session:/bound';
+    await client.handle({
+      method: 'createSession',
+      params: {
+        channel: uri,
+        provider: 'claude',
+        config: { connectors: { work: 'connectors://resend/account-123' } },
+      },
+    });
+    const state = (await client.handle({ method: 'subscribe', params: { channel: uri } }) as {
+      snapshot: { state: { config: {
+        schema: { properties: Record<string, Record<string, unknown> | undefined> };
+        values: Record<string, unknown>;
+      } } };
+    }).snapshot.state;
+    // The row a client would draw, and the one this host declares rather than
+    // offers: there is no question a person answers here, and the map itself
+    // is the value.
+    expect(state.config.schema.properties.connectors).toEqual({
+      type: 'object',
+      title: 'Connectors',
+      description: 'The connectors this session may use, by name.',
+      additionalProperties: { type: 'string' },
+      sessionMutable: false,
+    });
+    expect(state.config.values.connectors).toEqual({ work: 'connectors://resend/account-123' });
+  });
+});
+
+describe('the connectors a session binds', () => {
+  /** A host that serves one connector, of the owner the test names. */
+  const bound = (refs: ConnectorRef[]) =>
+    serving('/home/softov', [], { connectors: { refs: () => refs, run: async () => ({}) } }).accept(peer());
+
+  const start = (uri: string) => ({
+    method: 'createSession',
+    params: {
+      channel: uri,
+      provider: 'claude',
+      config: { connectors: { work: 'connectors://resend/account-123' } },
+    },
+  });
+
+  it('refuses a start that names another person\'s connector', async () => {
+    const client = bound([{ id: 'account-123', adapter: 'resend', owner: 'user:someone' }]);
+    await client.handle(hello(['0.9.0']));
+    // Refused at the start, where the person who set the binding is, rather
+    // than left to fail at the first call the model makes.
+    await expect(client.handle(start('ahp-session:/borrowed'))).rejects.toThrow(
+      /work names account-123, which belongs to user:someone/u,
+    );
+  });
+
+  it('refuses a start that names a connector this host does not serve', async () => {
+    const client = bound([]);
+    await client.handle(hello(['0.9.0']));
+    await expect(client.handle(start('ahp-session:/gone'))).rejects.toThrow(
+      /work names account-123, and this host serves no resend connector with that id/u,
+    );
+  });
+
+  it('takes a binding to a connector the host serves for everyone', async () => {
+    const client = bound([{ id: 'account-123', adapter: 'resend', owner: 'host' }]);
+    await client.handle(hello(['0.9.0']));
+    await client.handle(start('ahp-session:/shared'));
+    const state = (await client.handle({ method: 'subscribe', params: { channel: 'ahp-session:/shared' } }) as {
+      snapshot: { state: { config: { values: Record<string, unknown> } } };
+    }).snapshot.state;
+    expect(state.config.values.connectors).toEqual({ work: 'connectors://resend/account-123' });
   });
 });
 

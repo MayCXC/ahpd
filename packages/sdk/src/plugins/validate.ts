@@ -573,8 +573,9 @@ export const checkTriggerType = (value: unknown, by: string): void => {
  * The name is a slug and the schema an object, because those are the two the
  * host acts on: the name is what every stored connector carries, and the
  * schema is what a client draws and what a connector's own config is checked
- * against. The capabilities are read for their shape and for their path - a
- * client lists them, and this version runs none.
+ * against. The capabilities are read for their shape and for their path: a
+ * client lists them, and an `action` runs through `run`, which an adapter may
+ * leave out when it has none.
  */
 export const checkAdapter = (value: unknown, by: string): string => {
   const object = asObject(value, by, 'registerAdapter', 'adapter');
@@ -611,6 +612,11 @@ export const checkAdapter = (value: unknown, by: string): string => {
   }
   if (typeof object.open !== 'function') {
     throw new Error(miss(by, 'registerAdapter', 'open', 'a function answering how to close the connector, or nothing'));
+  }
+  // An adapter that runs an action says how; one that cannot says nothing, and
+  // then no action of it is ever offered as a tool.
+  if (object.run !== undefined && typeof object.run !== 'function') {
+    throw new Error(miss(by, 'registerAdapter', 'run', 'a function running one action of a connector, or nothing'));
   }
   return name;
 };

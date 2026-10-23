@@ -447,6 +447,11 @@ describe('the adapters a fold carries', () => {
     expect(() => host.registerAdapter({ ...adapter('webhook'), schema: undefined } as unknown as Adapter)).toThrow('schema');
   });
 
+  it('refuses an adapter whose run is not a function', () => {
+    const { host } = pluginHost('alpha', ADAPTER_CONTEXT);
+    expect(() => host.registerAdapter({ ...adapter('webhook'), run: 'send' } as unknown as Adapter)).toThrow('run');
+  });
+
   it('refuses an adapter its contracts do not list, naming the adapter', () => {
     const listed = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: { adapters: ['webhook'] } }).host;
     expect(() => listed.registerAdapter(adapter('webhook'))).not.toThrow();
@@ -459,5 +464,38 @@ describe('the adapters a fold carries', () => {
     const old = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: { connectors: ['webhook'] } }).host;
 
     expect(() => old.registerAdapter(adapter('webhook'))).toThrow('adapters');
+  });
+});
+
+/*
+ * The bindings a plugin answers for a session.
+ *
+ * One reader per plugin, kept by the fold. Two plugins may answer, because a
+ * binding is about a session, and the alias they share is the session's own to
+ * settle rather than the fold's.
+ */
+describe('the bindings a fold carries', () => {
+  it('keeps one reader per plugin, and carries each', () => {
+    const alpha = pluginHost('alpha', ADAPTER_CONTEXT);
+    alpha.host.registerBindings(() => ({ work: 'connectors://webhook/a' }));
+    const beta = pluginHost('beta', ADAPTER_CONTEXT);
+    beta.host.registerBindings(() => undefined);
+
+    const { options, problems } = foldHostOptions(base(), [alpha.contribution, beta.contribution]);
+    expect(problems).toEqual([]);
+    expect(options.bindings?.map((one) => one.by)).toEqual(['alpha', 'beta']);
+    // The reader is asked when the host asks, not when it was registered.
+    expect(options.bindings?.[0]?.read('ahp-session:/x')).toEqual({ work: 'connectors://webhook/a' });
+  });
+
+  it('refuses a second reader from one plugin', () => {
+    const { host } = pluginHost('alpha', ADAPTER_CONTEXT);
+    host.registerBindings(() => undefined);
+    expect(() => host.registerBindings(() => undefined)).toThrow('once');
+  });
+
+  it('refuses a reader its contracts do not list', () => {
+    const { host } = pluginHost('alpha', ADAPTER_CONTEXT, { contracts: {} });
+    expect(() => host.registerBindings(() => undefined)).toThrow('bindings');
   });
 });
