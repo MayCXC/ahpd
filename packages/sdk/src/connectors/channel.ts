@@ -90,12 +90,30 @@ export interface ConnectorsChannelOptions {
   onProblem?(message: string): void;
 }
 
+/** One open connector: what `open` was handed, and what stops it. */
+interface Opened {
+  /** The connector as it was opened, secrets read back from the vault. */
+  connector: Connector;
+  /** What stops it, or nothing where the adapter answered nothing to stop. */
+  stop?: () => void | Promise<void>;
+}
+
 /** A connectors channel, the commands beside it, and the connectors it has open. */
 export interface ConnectorsChannel {
   /** What `servedRecords` takes. */
   channel: RecordsChannel;
   /** `x-ahpd/connectors/put` and `remove`, by name. */
   methods: Record<string, PluginMethod>;
+  /**
+   * Run one action on one open connector for one reader.
+   *
+   * The connector has to be open, its adapter has to declare an `action` of
+   * that name and have a `run`, and the reader has to pass `mayRead` - the
+   * same answer a listing gives, asked again at each call so a remove or a
+   * lost grant takes hold at once. A reader of nothing is the daemon itself,
+   * as it is for a read. The answer is the adapter's own, passed on unchanged.
+   */
+  run(id: string, reader: Principal | undefined, action: string, input: Record<string, unknown>): Promise<unknown>;
   /** Send every reader what the connectors are now. */
   refresh(): Promise<void>;
   /**
@@ -117,7 +135,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   /** The same connectors as a reference is checked against: id, adapter and owner. */
   const known = new Map<string, ConnectorRef>();
   /** What stops each open connector, by id; an id in the map was opened. */
-  const open = new Map<string, (() => void | Promise<void>) | undefined>();
+  const open = new Map<string, Opened>();
 
   const problem = (message: string): void => { options.onProblem?.(`${SCHEME}: ${message}`); };
 
@@ -323,8 +341,9 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
 
   /** Stop one open connector, if it is open. A close that fails is said and not thrown. */
   const close = async (id: string): Promise<void> => {
-    const stop = open.get(id);
+    const entry = open.get(id);
     open.delete(id);
+    const stop = entry?.stop;
     if (stop === undefined) return;
     try {
       await stop();
@@ -346,7 +365,36 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
     };
     await close(record.id);
     const stop = adapter.open(connector);
-    open.set(record.id, stop === undefined ? undefined : stop);
+    open.set(record.id, { connector, ...(stop === undefined ? {} : { stop }) });
+  };
+
+  /**
+   * Run one action on one open connector, after the live checks.
+   *
+   * The order is the one a revoke or a remove changes: the connector has to be
+   * open, the adapter has to declare the action and be able to run it, and the
+   * reader has to pass `mayRead`. A message names the reason and never a
+   * secret, because the adapter's answer and its config are the only things
+   * that hold one.
+   */
+  const run = async (
+    id: string,
+    reader: Principal | undefined,
+    action: string,
+    input: Record<string, unknown>,
+  ): Promise<unknown> => {
+    const entry = open.get(id);
+    if (entry === undefined) throw new Error(`${id} is not an open connector`);
+    const adapter = options.adapters()[entry.connector.adapter];
+    if (adapter === undefined) throw new Error(`${entry.connector.adapter} is not an adapter this host serves`);
+    if (typeof adapter.run !== 'function') throw new Error(`${adapter.name} runs no action`);
+    if (!adapter.capabilities.some((one) => one.type === 'action' && one.name === action)) {
+      throw new Error(`${adapter.name} has no action named ${action}`);
+    }
+    if (reader !== undefined && !mayRead(id, reader)) {
+      throw new Error(`${id} is not ${reader.id}'s to use`);
+    }
+    return adapter.run(entry.connector, action, input);
   };
 
   /**
@@ -547,6 +595,7 @@ export function connectorsChannel(options: ConnectorsChannelOptions): Connectors
   return {
     channel,
     methods,
+    run,
     refresh: () => channel.refresh(),
     refs: () => [...known.values()],
     /*
