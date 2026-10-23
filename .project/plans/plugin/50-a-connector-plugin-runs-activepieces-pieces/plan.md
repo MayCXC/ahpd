@@ -75,6 +75,7 @@ tool call (host/118) -> adapter.run(connector, action, input) -> child -> action
 | Telegram receive is a later plan | Softov, 2026-10-23, "telegram with a later fit for receiving messages" | - |
 | A piece is installed by naming its package in the plugin's `pieces` option | (defaulted: no new command) | 01 |
 | The package depends on `@activepieces/pieces-framework` and the three first pieces, each at an exact version | Softov, 2026-10-23, chose "All four, exact versions" for "Is that OK?" on the four dependencies | 01, 04 |
+| `@activepieces/pieces-framework` is a devDependency, for its types only | Softov, 2026-10-23, chose "devDependency": it pulls about 30 packages, `expr-eval` with a critical advisory among them, and each piece bundles its own copy | 01 |
 | `@activepieces/pieces-framework` is pinned at `0.32.0` | Softov's directive, 2026-10-23: the context shape the child builds | 01 |
 | The pieces run in one child process, and a piece cannot set `NODE_TLS_REJECT_UNAUTHORIZED` there | The idea: a piece turns off TLS checks for its process | 01 |
 | The child pins it with a `process.env` proxy that ignores a write or a delete of that key | (defaulted: the probe of 2026-10-23 set it to `"0"` under the proxy, and a self-signed host still failed) | 01 |

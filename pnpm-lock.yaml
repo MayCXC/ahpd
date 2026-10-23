@@ -135,10 +135,10 @@ importers:
       '@activepieces/piece-telegram-bot':
         specifier: 0.9.1
         version: 0.9.1
+    devDependencies:
       '@activepieces/pieces-framework':
         specifier: 0.32.0
         version: 0.32.0
-    devDependencies:
       '@ahpd/sdk':
         specifier: workspace:*
         version: link:../sdk
