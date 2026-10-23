@@ -233,9 +233,13 @@ export const apply: Plugin['apply'] = (host) => {
 };
 ```
 
-`type` and `title` are what the type is called, `events` needs at least one entry with an `id` and a `title`, and two events of one type may not share an id. `configSchema` is optional and is the JSON Schema a client draws the trigger's own settings from. The host reads the saved config only to match it against a fire's `data`, as the next paragraphs say. `session` and `watch` are the host's own names and are refused, as is a name you have already registered in this plugin, because a type is chosen by its name and two meanings for one is a choice nobody could make. Two plugins claiming one name is reported where the plugins are folded and the second loses that type alone, keeping everything else it contributed - and a name you lost is not a name you may fire, so `fireTrigger` throws for it exactly as it does for a type you never registered.
+`type` and `title` are what the type is called, `events` needs at least one entry with an `id` and a `title`, and two events of one type may not share an id. `configSchema` is optional and is the JSON Schema a client draws the trigger's own settings from. The host holds the saved config to it when the automation is saved, and matches it against a fire's `data`, as the next paragraphs say. `session` and `watch` are the host's own names and are refused, as is a name you have already registered in this plugin, because a type is chosen by its name and two meanings for one is a choice nobody could make. Two plugins claiming one name is reported where the plugins are folded and the second loses that type alone, keeping everything else it contributed - and a name you lost is not a name you may fire, so `fireTrigger` throws for it exactly as it does for a type you never registered.
 
-`host.fireTrigger(type, event, data)` says an event of that type happened. Every enabled automation saved with that type and that event id, and whose trigger `config` matches `data`, starts a run, under its own overlap setting, and each run's message names the event with the `title` your definition gave it. The call hands the event over and returns: it does not wait for the runs it started. A type you never registered, or an event id your type does not offer, throws rather than firing nothing.
+`host.fireTrigger(type, event, data, owner?)` says an event of that type happened. Every enabled automation saved with that type and that event id, and whose trigger `config` matches `data`, starts a run, under its own overlap setting, and each run's message names the event with the `title` your definition gave it. The call hands the event over and returns: it does not wait for the runs it started. A type you never registered, or an event id your type does not offer, throws rather than firing nothing.
+
+`owner` is the owner of the connector the event came from, where it came from one. A fire that names it wakes only an automation that may read that connector: one of the same owner, or one of the host's. A fire that leaves it out is the host's own event and wakes every watcher the host lets past its other gates.
+
+`host.runAutomation(id, data, owner?)` starts one automation by its id, or by its whole `ahp-automation:/` URI. A fire reaches every automation watching a type; this is for a plugin that knows which one it means, as a webhook connector naming its automation does. `data` rides on the run's origin as it does for a fire. An automation that is off, gone or not readable by `owner` is not run, and the host says so in its log rather than answering.
 
 `data` is what the run is told of the event beyond its name, and it rides on the run's origin, which is where the protocol keeps a host's own provenance for a run a trigger made. It is stored with the run and read back by whoever may read the automation, so it must carry nothing secret.
 
@@ -243,7 +247,7 @@ export const apply: Plugin['apply'] = (host) => {
 host.fireTrigger('deploy', 'failed', { environment: 'production', revision: '9f2c1ab' });
 ```
 
-A trigger's `config` matches `data` when every key that both hold has the same value in each, compared as JSON. A config key that `data` does not hold is a setting of the form and never blocks a run, and an empty config matches every fire. So the fire above runs a trigger saved with `environment: production`, and one saved with no `environment`, but not one saved with `environment: staging`. A field that must always decide the match, as `endpoint` does for `@ahpd/webhook`, is one your plugin puts in every fire's `data`.
+A trigger's `config` matches `data` when every key that both hold has the same value in each, compared as JSON. A config key that `data` does not hold is a setting of the form and never blocks a run, and a config with no keys matches every fire. So the fire above runs a trigger saved with `environment: production`, and one saved with no `environment`, but not one saved with `environment: staging`. A field that must always decide the match, as `connector` does for `@ahpd/webhook`, is one your plugin puts in every fire's `data`.
 
 Your type runs an automation exactly as the host's own do: under the same overlap mode and the same hourly cap, and acting as that automation's owner. An automation its owner may not read a session with is one this host will not run, which is the same answer a rule of that automation gets - and an automation nobody owns is run only where the daemon offers such automations every session, which is `--unowned-automations every`, its default. The run is still refused when its owner has never signed in. That is also why `{{session}}` and `{{sessionTitle}}` are filled with nothing in a message your event woke.
 
@@ -533,6 +537,16 @@ host.registerAdapter({
   `{ "$secret": "<name>" }` in the record, so no record, snapshot, answer or log
   holds it. A client sends an empty value for a field it is never shown, and the
   connector keeps the secret it has.
+- A field marked `x-ahpd-connector` with `{ "adapter": "<name>" }` names a
+  connector of that adapter. It is checked when the automation whose trigger
+  holds it is saved: the host refuses an id it serves no such connector for, and
+  one whose owner the automation may not read. A field marked
+  `x-ahpd-automation: true` names an automation, and is checked when the
+  connector is put: the host refuses an id it holds no such automation for, and
+  one whose owner the connector may not start. A client draws either as a list.
+- `schema` is checked as a whole, so a `oneOf` with an alternative for each kind
+  of connector refuses a field that belongs to another kind, rather than letting
+  `open` discover it.
 - `capabilities` are listed for a client and not run. The types are `receive`,
   `command` and `action`, and `ui` is reserved for a later plan; a type this
   version does not know is shown by its title.

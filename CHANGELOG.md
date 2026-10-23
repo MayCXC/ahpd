@@ -23,6 +23,22 @@ What changed in each release of the `@ahpd/*` packages. Every package carries th
 - `x-ahpd-plugins`, `x-ahpd-adapters` and `x-ahpd-connectors` take their own grants rather than `config`. A role that read the plugins with `config:read` now needs `plugin:list`, and one that read the connectors now needs `connector:list`. One that enabled, disabled or edited a plugin with `config:write` now needs `plugin:enable`, `plugin:disable` or `plugin:options`. One that made or removed a connector now needs `connector:put` or `connector:remove`. Over HTTP, `plugin config`, `enable` and `disable` take the same grants and are no longer the deployment token's alone; install, update and remove still are.
 - Every connector action takes a `connector:` grant, the caller's own connector included. A person needs `connector:put` to make their own connector and `connector:remove` to remove it. `connector:list` reads the caller's own connectors, their teams' and the host's, and no other person's; a role that reads every connector needs the new `connector:all`. A connector owned by `host` also needs the new `connector:host` to be made or removed. A team connector no longer takes `team:write`; it takes `connector:put` or `connector:remove` and a membership of the team.
 - A role that made or removed a host connector with `connector:put` or `connector:remove` alone now also needs `connector:host`.
+- A webhook connector's `automation` is now the id of the automation a call starts, not `true`. A connector that names neither `automation` nor `bot` fires the `webhook` trigger. A stored `automation: true` opens as `invalid`, and `x-ahpd/connectors/put` refuses it until the id is given.
+- A `webhook` trigger's `config` field is `connector`, not `endpoint`. An automation that still says `endpoint` is refused when it is saved, and a stored one does not fire.
+- A run reads `{{event.body.<field>}}`, `{{event.headers.<field>}}` and `{{event.query.<field>}}`. `{{event.<field>}}` is empty, so an automation written for the old event data needs its placeholders rewritten.
+- The default `reply` is `none`, not `callback`. A bot connector made with only `bot` and `secret` answers 202, a `reply` of `callback` needs a `callbackPrefix`, and `reply`, `callbackPrefix` and `syncTimeoutSeconds` are refused on a connector with no `bot`.
+
+### Webhooks
+
+- A webhook connector names one `auth` scheme: `bearer` (the default), `header`, `query`, `hmac`, `github`, `stripe`, `slack`, `standard`, `meta` or `graph`. A timestamped scheme refuses a call more than 300 seconds from the host's clock, and every value is compared in constant time. A token in the URL can land in a proxy log.
+- A call carries any body: JSON of any shape, a form, text or nothing, up to `maxBodyBytes` (5 MiB by default). A body over the limit answers 413.
+- A run reads `event.connector`, `event.method`, `event.body`, `event.headers` and `event.query`. The proof header, `authorization`, `cookie` and the URL `token` are kept out.
+- `match` on the connector selects the calls that reach its target, by a dotted path of the event data. A call it does not take answers 202 with `{ "skipped": true }`.
+- A connector names an `automation`, and a call starts that one automation. A connector with neither `bot` nor `automation` fires the `webhook` trigger, and every automation whose trigger config names the connector runs if the owner rule passes.
+- `meta` and `graph` answer their URL handshakes, and `slack` answers `url_verification`. Nothing fires on a handshake.
+- A connector links to an automation only when both have the same owner or the connector is the host's, checked on save and again at a fire.
+- `PluginHost.runAutomation(id, data, owner?)` starts one automation by its id, and `fireTrigger` takes the owner of the connector the event came from.
+- An adapter schema marks a connector field with `x-ahpd-connector` and an automation field with `x-ahpd-automation`; the host checks both on save.
 
 ### Plugins and connectors
 

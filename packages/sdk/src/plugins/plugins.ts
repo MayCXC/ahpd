@@ -1380,7 +1380,7 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
       }
       contribution.triggers.types[named] = definition;
     },
-    fireTrigger(type, event, data) {
+    fireTrigger(type, event, data, owner) {
       /*
        * Read from the contribution rather than from the object `pluginHost`
        * built, because the fold replaces it with the host's own entry: what a
@@ -1404,7 +1404,25 @@ export function pluginHost(by: string, given: LoaderContext, options: HostRecord
        * firing from its own test rather than a fire that went missing: nothing
        * keeps it for later, because an event is about what is happening now.
        */
-      held.deliver?.(named, String(event), data as Record<string, unknown>);
+      held.deliver?.(named, String(event), data as Record<string, unknown>, owner);
+    },
+    /*
+     * One automation by its id, rather than every watcher of a type.
+     *
+     * Checked at this boundary the same way a fire is - the id is a string and
+     * the data is an object - and dropped before a host is built, which is a
+     * plugin asking from its own test. What it means (a run that is off, one
+     * the owner may not read) is the host's to decide, so nothing here reads
+     * the automation.
+     */
+    runAutomation(id, data, owner) {
+      const held = contribution.triggers;
+      const named = typeof id === 'string' ? id.trim() : '';
+      if (named === '') throw new Error(miss(by, 'runAutomation', 'id', 'the id of an automation'));
+      if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+        throw new Error(miss(by, 'runAutomation', 'data', 'an object'));
+      }
+      held.run?.(named, data as Record<string, unknown>, owner);
     },
     registerAdapter(adapter) {
       open();

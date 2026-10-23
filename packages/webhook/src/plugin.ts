@@ -1,7 +1,8 @@
 import { reason } from '@ahpd/sdk';
-import { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
+import { WEBHOOK_TRIGGER } from './automation.js';
 import { botTarget, turnEnds } from './bot.js';
 import { webhookAdapter } from './adapter.js';
+import { DEFAULT_MAX_BODY_BYTES } from './call.js';
 import { NAME, webhookRoute } from './route.js';
 import type { Bag, Plugin, PluginHost, PluginPeer, TurnEndEvent } from '@ahpd/sdk';
 import type { BotChat, BotSeams } from './bot.js';
@@ -11,12 +12,15 @@ import type { Endpoint } from './record.js';
  * The package as a plugin.
  *
  * One route, `/plugins/webhook/<endpoint>`, and the `webhook` adapter whose
- * open connectors the route serves. Each endpoint holds its own secret,
- * and a call passes only with that secret as its bearer token.
+ * open connectors the route serves. Each endpoint holds its own secret, and a
+ * call passes only with the proof its `auth` scheme names: a bearer token by
+ * default, a header or query token, a generic hmac, or the scheme of GitHub,
+ * Stripe, Slack or Standard Webhooks.
  *
  * A bot endpoint talks to its bot through the plugin's own connection to the
- * host, which is opened once the daemon listens. An automation endpoint fires
- * the `webhook` trigger type, which the plugin offers.
+ * host, which is opened once the daemon listens. An endpoint naming an
+ * automation starts that one, and an endpoint naming neither fires the
+ * `webhook` trigger type, which the plugin offers.
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
@@ -28,6 +32,7 @@ export const title = 'Webhook';
 /** What an option falls back to. */
 export const defaults = {
   syncTimeoutSeconds: 60,
+  maxBodyBytes: DEFAULT_MAX_BODY_BYTES,
 } as const;
 
 /** The options `apply` receives, as a JSON Schema the daemon checks them against. */
@@ -38,6 +43,11 @@ export const optionsSchema = {
       type: 'number',
       exclusiveMinimum: 0,
       description: 'How long a sync call waits for its turn to end, in seconds.',
+    },
+    maxBodyBytes: {
+      type: 'number',
+      exclusiveMinimum: 0,
+      description: 'The most of a call body this plugin reads, in bytes. A larger body answers 413.',
     },
   },
 };
@@ -197,6 +207,10 @@ function botSeams(host: PluginHost, open: () => Promise<Opened>, timeout: number
 export const apply: Plugin['apply'] = (host, options) => {
   const asked = options.syncTimeoutSeconds;
   const timeout = typeof asked === 'number' && asked > 0 ? asked : defaults.syncTimeoutSeconds;
+  const askedBytes = options.maxBodyBytes;
+  const maxBodyBytes = typeof askedBytes === 'number' && askedBytes > 0
+    ? Math.floor(askedBytes)
+    : defaults.maxBodyBytes;
 
   /** The connection, once the daemon listens and the host has answered `initialize`. */
   let opened: Promise<Opened> | undefined;
@@ -222,6 +236,8 @@ export const apply: Plugin['apply'] = (host, options) => {
   host.registerRoute(webhookRoute({
     endpoint: (id) => endpoints.get(id),
     bot: botTarget(botSeams(host, open, timeout)),
-    automation: automationTarget({ fire: (data) => { host.fireTrigger(WEBHOOK_TRIGGER.type, 'call', data); } }),
+    run: (automation, data, owner) => { host.runAutomation(automation, data, owner); },
+    fire: (data, owner) => { host.fireTrigger(WEBHOOK_TRIGGER.type, 'call', data, owner); },
+    maxBodyBytes,
   }));
 };

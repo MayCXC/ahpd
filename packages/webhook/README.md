@@ -6,9 +6,9 @@
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
 ![Agent Host Protocol 0.9.0](https://img.shields.io/badge/AHP-0.9.0-0b7285)
 
-Webhooks for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. A program outside the host calls a URL, and the call talks to a bot or fires an automation.
+Webhooks for the [`@ahpd/server`](https://www.npmjs.com/package/@ahpd/server) daemon. A program outside the host calls a URL, and the call talks to a bot, starts the automation its connector names, or fires the `webhook` trigger.
 
-Each endpoint is a record in the `webhooks` collection, and names its own vault secret. A call passes only with that secret as its bearer token.
+Each endpoint is a `webhook` connector, and names its own vault secrets. A call passes only with the proof its endpoint's scheme names: a bearer token by default, one sender's own signature, a header or query token, or a generic HMAC.
 
 Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/webhook`](https://github.com/softov/ahpd/tree/main/packages/webhook).
 
@@ -26,27 +26,32 @@ Update, remove and one-run flags such as `--plugin` are in [Plugins](https://git
 In the configuration file, with every option set:
 
 ```json
-{ "plugins": [{ "name": "@ahpd/webhook", "options": { "syncTimeoutSeconds": 60 } }] }
+{ "plugins": [{ "name": "@ahpd/webhook", "options": { "syncTimeoutSeconds": 60, "maxBodyBytes": 5242880 } }] }
 ```
 
 | Option | Default | What it does |
 | --- | --- | --- |
 | `syncTimeoutSeconds` | `60` | How long a sync call waits for its turn to end, in seconds |
+| `maxBodyBytes` | `5242880` | The most of a call body the plugin reads, in bytes. A larger body answers 413 |
 
 ## An endpoint
 
-```md
----
-id: ci
-bot: bot://motion
-secret: host:ci-hook
-callbackPrefix: https://ci.example.com/hooks/
----
+```json
+{
+  "id": "github",
+  "adapter": "webhook",
+  "owner": "host",
+  "config": {
+    "automation": "ci-review",
+    "auth": "github",
+    "secret": "the webhook secret GitHub holds"
+  }
+}
 ```
 
-Kept as `<configDir>/webhooks/ci.md`, this endpoint answers `POST /plugins/webhook/ci` with `Authorization: Bearer <the value of host:ci-hook>`.
+Sent as the params of `x-ahpd/connectors/put`, that connector answers `POST /plugins/webhook/github` for a GitHub delivery signed with its secret, and a call starts the `ci-review` automation. The secret is written to the vault, and the record holds `{ "$secret": "<name>" }` in its place. A config that names no `automation` and no `bot` fires the `webhook` trigger instead.
 
-[WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/WEBHOOKS.md) describes the record, the call and the answers.
+[WEBHOOKS.md](https://github.com/softov/ahpd/blob/main/docs/plugins/WEBHOOKS.md) describes the schemes, one example for each real sender, the event data a run reads, `match`, and the answers.
 
 ## Documentation
 

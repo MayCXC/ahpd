@@ -1,5 +1,8 @@
-import { timingSafeEqual } from 'node:crypto';
 import { routePrefix } from '@ahpd/sdk';
+import { challenge, omitted, proves, shown, validation } from './auth.js';
+import { allows, answer, dataOf, readCall } from './call.js';
+import type { Call } from './call.js';
+import type { ConnectorOwner } from '@ahpd/sdk';
 import type { Endpoint } from './record.js';
 import type { Route } from '@ahpd/sdk';
 
@@ -9,8 +12,10 @@ export const NAME = 'webhook';
 /** The path every endpoint is under, as the listener passes it: `/plugins/webhook/`. */
 export const PREFIX = routePrefix(NAME);
 
-/** What one target does with a call that passed the bearer check. */
-export type Target = (endpoint: Endpoint, request: Request) => Promise<Response>;
+export { answer };
+
+/** What one target does with a call that passed its proof. */
+export type Target = (endpoint: Endpoint, call: Call) => Promise<Response>;
 
 /** What the route reads and calls, so a test gives each one. */
 export interface WebhookSeams {
@@ -18,44 +23,40 @@ export interface WebhookSeams {
   endpoint(id: string): Endpoint | undefined | Promise<Endpoint | undefined>;
   /** What a call to a bot endpoint does. */
   bot?: Target;
-  /** What a call to an automation endpoint does. */
-  automation?: Target;
+  /** Start the automation a connector names, with the call's event data and the connector's owner. */
+  run?: (automation: string, data: Record<string, unknown>, owner?: ConnectorOwner) => void;
+  /** Fire the `webhook` trigger, with the call's event data and the connector's owner. */
+  fire?: (data: Record<string, unknown>, owner?: ConnectorOwner) => void;
+  /** The most of a body this route reads, in bytes. */
+  maxBodyBytes?: number;
+  /** The host's clock, in milliseconds, for a timestamped scheme. Absent, `Date.now`. */
+  now?: () => number;
 }
-
-/** One JSON answer with a `message`, which is all a refusal says. */
-export const answer = (status: number, body: Record<string, unknown>): Response =>
-  new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
-
-/** The token of an `Authorization: Bearer <token>` header, or nothing. */
-const bearerOf = (request: Request): string | undefined => {
-  const header = request.headers.get('authorization');
-  if (header === null) return undefined;
-  const match = /^Bearer\s+(\S+)\s*$/iu.exec(header);
-  return match?.[1];
-};
-
-/** Whether two tokens are equal, in a time that does not depend on where they differ. */
-const same = (given: string, kept: string): boolean => {
-  const one = Buffer.from(given, 'utf8');
-  const other = Buffer.from(kept, 'utf8');
-  if (one.length !== other.length) return false;
-  return timingSafeEqual(one, other);
-};
 
 /**
  * The one route the plugin serves: `POST /plugins/webhook/<endpoint>`.
  *
- * The route finds the open endpoint, checks the bearer against the secret it
- * holds, and passes the call to the endpoint's target. A connector that was
- * never opened, or was closed, answers 404 like an id nobody made. The body is
- * not read before the bearer passes.
+ * The route finds the open endpoint, and takes a `GET` only on a `meta`
+ * connector, which needs one to confirm its URL. The call is read once - the
+ * body up to the limit, the headers, the query without `token` - and a
+ * sender's URL check is answered before anything else: Meta's `GET` with its
+ * `hub.verify_token`, Graph's `validationToken`. Then the proof the
+ * connector's `auth` scheme names is checked over those bytes; a call that
+ * does not prove itself answers 401. A Slack `url_verification` call is
+ * answered with its challenge once its signature passed. A proved call has the
+ * connector's `match` applied, then reaches its target: its bot, the
+ * automation it names, or the `webhook` trigger. A connector that was never
+ * opened, or was closed, answers 404 like an id nobody made.
+ *
+ * The body is read before the proof is checked, because a signature is over
+ * the bytes; the limit is what bounds a caller who has no proof, so a caller
+ * cannot make this process hold a body larger than the plugin's option.
  */
 export function webhookRoute(seams: WebhookSeams): Route {
   return async (request) => {
     const path = new URL(request.url).pathname;
     const rest = path.startsWith(PREFIX) ? path.slice(PREFIX.length) : '';
     if (rest === '' || rest.includes('/')) return answer(404, { message: 'No webhook endpoint is at this path.' });
-    if (request.method !== 'POST') return answer(405, { message: 'A webhook takes POST only.' });
 
     let id: string;
     try {
@@ -67,12 +68,45 @@ export function webhookRoute(seams: WebhookSeams): Route {
     const endpoint = await seams.endpoint(id);
     if (endpoint === undefined) return answer(404, { message: 'No webhook endpoint is at this path.' });
 
-    const token = bearerOf(request);
-    if (token === undefined) return answer(401, { message: 'The call needs a bearer token.' });
-    if (!same(token, endpoint.secret)) return answer(401, { message: 'The bearer token is not valid.' });
+    // Only Meta checks a URL with GET; every other connector takes POST alone.
+    const method = request.method;
+    if (method !== 'POST' && !(method === 'GET' && (endpoint.auth ?? 'bearer') === 'meta')) {
+      return answer(405, { message: (endpoint.auth ?? 'bearer') === 'meta' ? 'A Meta webhook takes POST, or GET to confirm its URL.' : 'A webhook takes POST only.' });
+    }
 
-    const target = endpoint.bot !== undefined ? seams.bot : seams.automation;
-    if (target === undefined) return answer(501, { message: 'This plugin cannot serve this endpoint yet.' });
-    return await target(endpoint, request);
+    const read = await readCall(request, seams.maxBodyBytes);
+    if ('refused' in read) return read.refused;
+
+    const asked = validation(endpoint, read.call);
+    if (asked !== undefined) return asked;
+
+    if (!proves(endpoint, read.call, seams.now?.())) {
+      return answer(401, { message: 'The call is not proved with the endpoint secret.' });
+    }
+
+    const confirmed = challenge(endpoint, read.call);
+    if (confirmed !== undefined) return confirmed;
+
+    const data = dataOf({ ...read.call, body: shown(endpoint, read.call.body) }, endpoint.id, omitted(endpoint));
+    if (endpoint.match !== undefined && !allows(endpoint.match, data)) {
+      // A sender retries a non-2xx answer, and a call this connector does not
+      // take is not a delivery that failed.
+      return answer(202, { skipped: true });
+    }
+
+    if (endpoint.bot !== undefined) {
+      if (seams.bot === undefined) return answer(501, { message: 'This plugin cannot serve this endpoint yet.' });
+      return await seams.bot(endpoint, read.call);
+    }
+
+    if (endpoint.automation !== undefined) {
+      if (seams.run === undefined) return answer(501, { message: 'This plugin cannot serve this endpoint yet.' });
+      seams.run(endpoint.automation, data, endpoint.owner);
+      return answer(202, { endpoint: endpoint.id, automation: endpoint.automation });
+    }
+
+    if (seams.fire === undefined) return answer(501, { message: 'This plugin cannot serve this endpoint yet.' });
+    seams.fire(data, endpoint.owner);
+    return answer(202, { endpoint: endpoint.id });
   };
 }

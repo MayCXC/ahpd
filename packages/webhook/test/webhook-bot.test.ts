@@ -8,6 +8,7 @@ import type { AddressInfo } from 'node:net';
 import type { ServerResponse } from 'node:http';
 import type { PluginPeer } from '../../sdk/src/types/plugin.js';
 import type { BotChat, BotSeams, TurnEnd } from '../src/bot.js';
+import type { Call } from '../src/call.js';
 import type { Endpoint } from '../src/record.js';
 
 /*
@@ -17,8 +18,6 @@ import type { Endpoint } from '../src/record.js';
  * the bot answers, a turn sent there, and that turn's end. What is checked is
  * the thread map the target keeps, and what each reply mode answers and posts.
  */
-
-const URL_OF = 'http://127.0.0.1:1/plugins/webhook/ci';
 
 /** One turn the target sent, in the order it sent them. */
 interface Sent { chat: string; turn: string; text: string }
@@ -69,12 +68,13 @@ const endpoint = (fields: Record<string, unknown> = {}): Endpoint => checkEndpoi
   id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'none', ...fields,
 });
 
-/** One call, with a JSON body, or a text body when `body` is a string. */
-const call = (body: unknown, query = ''): Request => new Request(`${URL_OF}${query}`, {
+/** One call as the route hands it over: its body parsed, and its query read. */
+const call = (body: unknown, query = ''): Call => ({
+  raw: new TextEncoder().encode(typeof body === 'string' ? body : JSON.stringify(body)),
+  body,
+  headers: {},
+  query: Object.fromEntries(new URLSearchParams(query)),
   method: 'POST',
-  ...(typeof body === 'string'
-    ? { body, headers: { 'content-type': 'text/plain' } }
-    : { body: JSON.stringify(body), headers: { 'content-type': 'application/json' } }),
 });
 
 /** Let what the target does after it answered run, such as a callback. */
@@ -220,7 +220,10 @@ describe('the reply modes', () => {
 
   it('answers 400 to a callback call on an endpoint with no prefix, or with no callback URL', async () => {
     const { target, sent } = await made();
-    expect((await target(endpoint({ reply: 'callback' }), call({ thread: 'pr-12', text: 'hello', callback: 'https://ci.example.com/x' }))).status).toBe(400);
+    // A record written by hand can hold the reply without a prefix, though a
+    // connector saved now cannot: the target still refuses every call.
+    const noPrefix: Endpoint = { id: 'ci', bot: 'bot://motion', secret: 'host:ci-hook', reply: 'callback' };
+    expect((await target(noPrefix, call({ thread: 'pr-12', text: 'hello', callback: 'https://ci.example.com/x' }))).status).toBe(400);
     expect((await target(endpoint({ reply: 'callback', callbackPrefix: 'https://ci.example.com/' }), call({ thread: 'pr-12', text: 'hello' }))).status).toBe(400);
     expect(sent).toEqual([]);
   });

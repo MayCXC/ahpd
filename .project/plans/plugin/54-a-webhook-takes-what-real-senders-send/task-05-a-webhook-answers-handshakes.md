@@ -1,6 +1,6 @@
 ---
 title: A webhook answers the senders' handshakes
-status: todo
+status: implemented
 depends: [task-04-a-webhook-checks-each-senders-proof.md]
 layer: "webhook"
 refs:
@@ -45,8 +45,8 @@ Meta and Microsoft Graph become named schemes, because their handshakes need the
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** all steps. `AUTH_SCHEMES` gains `meta` and `graph`. `auth.ts` exports `validation(endpoint, call)` - Meta's `GET` with `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge` (403 on a wrong token), and Graph's `validationToken` answered as `text/plain` - and `challenge(endpoint, call)`, Slack's `url_verification` answer, called only after the signature passes. A Meta `POST` is checked by `X-Hub-Signature-256` over the raw body; a Graph notification is accepted when every `value[].clientState` equals the secret. `Endpoint` carries `verifyToken`, the adapter schema marks it `writeOnly`, and `checkEndpoint` requires it for `meta`. The route takes `GET` only on a `meta` connector and answers 405 everywhere else. `handshake.test.ts` covers all six cases.
+- **Next action:** task-06-a-bot-connector-works-by-default.md.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** Graph sends `validationToken` with no proof, so the answer echoes it and does nothing else.
+- **Departures:** requiring `verifyToken` for `meta` is enforced in `checkEndpoint` rather than in the schema, for the same reason as task 04 (no `if/then` in the daemon's checker). The Meta handshake also requires `hub.mode=subscribe`, which the docs send; a `GET` with any other mode answers 403. A Graph notification with an empty or missing `value` list is refused. The route's 405 sentence still says "A webhook takes POST only", although Meta takes a GET; the status is what tests read. No commit was made.
+- **Watch out for:** Graph's `validationToken` is answered before `proves`, since Graph sends no proof on that call, and before `match`, since it is not a notification. Slack's answer is after `proves`. The Slack and Standard timestamp headers are still in the call's headers, because their checks read them.

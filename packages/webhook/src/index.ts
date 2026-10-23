@@ -1,10 +1,12 @@
 export { apply, defaults, name, optionsSchema, title } from './plugin.js';
-export { automationTarget, WEBHOOK_TRIGGER } from './automation.js';
-export type { AutomationSeams } from './automation.js';
+export { WEBHOOK_TRIGGER } from './automation.js';
+export { challenge, MAX_AGE_SECONDS, omitted, proves, validation } from './auth.js';
 export { botTarget, turnEnds } from './bot.js';
 export type { BotSeams, TurnEnd } from './bot.js';
-export { checkEndpoint, REPLIES } from './record.js';
-export type { Endpoint, Reply } from './record.js';
+export { allows, answer, dataOf, DEFAULT_MAX_BODY_BYTES, readCall } from './call.js';
+export type { Call, Read } from './call.js';
+export { ALGORITHMS, AUTH_SCHEMES, checkEndpoint, ENCODINGS, REPLIES } from './record.js';
+export type { AuthScheme, Endpoint, Reply } from './record.js';
 export { PREFIX, webhookRoute } from './route.js';
 export type { Target, WebhookSeams } from './route.js';
 export { findThread } from './thread.js';

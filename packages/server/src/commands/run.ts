@@ -13,7 +13,7 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { canonicalFromCli, check, createRegistry, optionTable, optionsOf, tokenize } from '@cofold/commands';
 import type { Command, JsonSchema, Registry } from '@cofold/commands';
-import type { AutomationStore, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
+import type { AutomationStore, AutomationsOptions, CommandSplitter, Contribution, DoorOptions, HostOptions, Loaded, RequestHandler, Route, ServedAdapter, SessionStore, Tap, Usage, Vault } from '@ahpd/sdk';
 import {
   adaptersChannel,
   clientPluginsIn,
@@ -37,7 +37,9 @@ import {
   memorySessions,
   migrateSessions,
   overStdio,
+  ownerOf,
   peopleChannels,
+  pluginTriggerTypes,
   raise,
   reason,
   servedRecords,
@@ -168,9 +170,12 @@ export function daemonSessions(told: (message: string) => void): SessionStore {
  * daemon's business because where its files live is, and the store this version
  * opens only knows the folder and the state file.
  */
-export function daemonAutomations(told: (message: string) => void): AutomationStore {
+export function daemonAutomations(told: (message: string) => void, store?: AutomationsOptions): AutomationStore {
   migrateAutomations({ file: automationsPath(), dir: automationsDir(), state: automationStatePath(), onProblem: told });
-  return scheduledAutomations({ dir: automationsDir(), state: automationStatePath(), onProblem: told });
+  return scheduledAutomations({
+    dir: automationsDir(), state: automationStatePath(), onProblem: told,
+    ...(store === undefined ? {} : { store }),
+  });
 }
 
 /**
@@ -683,6 +688,17 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
    * the first listing after it, as the plugin channel's manifest does.
    */
   let adapters: Record<string, ServedAdapter> = {};
+  /*
+   * The automation store, read by the connectors channel before it exists and
+   * by the store's own checks before the plugins are loaded.
+   *
+   * Both are getters for that reason: the channel is built first, the store is
+   * built over this `base`, and the plugin trigger types are known only after
+   * the load - so each reads the binding as it stands when a save or a put
+   * arrives rather than what was known when it was built.
+   */
+  let automationsStore: AutomationStore | undefined;
+  let pluginTypes: ReturnType<typeof pluginTriggerTypes> = [];
   const adapterLists = adaptersChannel({ adapters: () => adapters, onProblem: listProblem });
   const connectorLists = connectorsChannel({
     collection: connectorRecords,
@@ -693,6 +709,14 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // The checker the command line and the tools are held to, so an adapter's
     // schema means one thing everywhere it is asked.
     check: (value, schema, label) => { check(value, schema as JsonSchema, label); },
+    // The automation a field marked `x-ahpd-automation` names. A bare id is
+    // what a connector holds; the whole URI is accepted too, because that is
+    // what a person copying one out of the catalogue has.
+    automations: (id) => {
+      const entry = automationsStore?.get(id.startsWith('ahp-automation:/') ? id : `ahp-automation:/${id}`);
+      if (entry === undefined) return undefined;
+      return { owner: ownerOf(entry._meta?.['ahpd.owner']) };
+    },
     onProblem: listProblem,
   });
   const lists = servedRecords(
@@ -735,6 +759,22 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     stamp('start: parser');
     commandParser = await commandParserFrom(options.commandParser);
   }
+
+  /*
+   * The automation store, built before the host it is an option of.
+   *
+   * Its checks read the plugin types the fold knows and the connectors the
+   * channel has listed, both through getters: the store is built before the
+   * plugins are loaded and before the connectors are opened, and what a save
+   * is held to is what is known when the save arrives.
+   */
+  const automations = memory
+    ? memoryAutomations({ pluginTypes: () => pluginTypes, connectors: () => connectorLists.refs() })
+    : daemonAutomations((message) => process.stdout.write(`${message}\n`), {
+      pluginTypes: () => pluginTypes,
+      connectors: () => connectorLists.refs(),
+    });
+  automationsStore = automations;
 
   const base: HostOptions = {
     path: options.paths[0] as string,
@@ -951,9 +991,7 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
      * not told which it was given - a host embedded in something that already
      * schedules passes a third of its own.
      */
-    automations: memory
-      ? memoryAutomations()
-      : daemonAutomations((message) => process.stdout.write(`${message}\n`)),
+    automations: automations,
     /*
      * Whether a customization is on, for every session or for one folder.
      *
@@ -1126,6 +1164,9 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
   // And the two channels start answering adapters, which is what a stored
   // connector is checked against when it opens below.
   adapters = folded.adapters ?? {};
+  // The trigger types a save is now checked against: the host's own two are the
+  // store's, and these are what the plugins brought.
+  pluginTypes = pluginTriggerTypes(folded.pluginTriggers);
   for (const problem of problems) stamp(problem);
 
   /*

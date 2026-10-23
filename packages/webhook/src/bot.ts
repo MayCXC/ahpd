@@ -4,6 +4,7 @@ import { parsed } from './record.js';
 import { answer } from './route.js';
 import { findThread, threadId } from './thread.js';
 import type { RecordCollection } from '@ahpd/sdk';
+import type { Call } from './call.js';
 import type { Endpoint } from './record.js';
 import type { Target } from './route.js';
 import type { Thread } from './thread.js';
@@ -68,27 +69,19 @@ const text = (said: unknown): string | undefined => (typeof said === 'string' &&
 /**
  * The thread, text and callback of one call.
  *
- * A JSON object with a string `text` is `{ thread, text, callback }`. Any other
- * body is the text as it came. The query gives `thread` and `callback` where
- * the body does not.
+ * A body that is an object with a string `text` gives `{ thread, text,
+ * callback }` - a JSON object and a form alike, because both arrive as an
+ * object. Any other body is the text as it came. The query gives `thread` and
+ * `callback` where the body does not.
  */
-async function asked(request: Request): Promise<Asked> {
-  const query = new URL(request.url).searchParams;
-  const raw = await request.text();
-  let body: Record<string, unknown> | undefined;
-  try {
-    const value: unknown = JSON.parse(raw);
-    if (typeof value === 'object' && value !== null && !Array.isArray(value)
-      && typeof (value as Record<string, unknown>)['text'] === 'string') {
-      body = value as Record<string, unknown>;
-    }
-  }
-  catch {
-    body = undefined;
-  }
-  const thread = text(body?.['thread']) ?? text(query.get('thread'));
-  const callback = text(body?.['callback']) ?? text(query.get('callback'));
-  const said = body === undefined ? text(raw) : text(body['text']);
+function asked(call: Call): Asked {
+  const kept = typeof call.body === 'object' && call.body !== null && !Array.isArray(call.body)
+    ? call.body as Record<string, unknown>
+    : undefined;
+  const body = typeof kept?.['text'] === 'string' ? kept : undefined;
+  const thread = text(body?.['thread']) ?? text(call.query['thread']);
+  const callback = text(body?.['callback']) ?? text(call.query['callback']);
+  const said = body === undefined ? text(new TextDecoder().decode(call.raw)) : text(body['text']);
   return {
     ...(thread === undefined ? {} : { thread }),
     ...(said === undefined ? {} : { text: said }),
@@ -179,31 +172,31 @@ export function botTarget(seams: BotSeams): Target {
     return next;
   };
 
-  return async (endpoint, request) => {
-    const call = await asked(request);
-    if (call.thread === undefined) return answer(400, { message: 'The call needs a thread id.' });
-    if (call.text === undefined) return answer(400, { message: 'The call needs a text.' });
+  return async (endpoint, call) => {
+    const askedFor = asked(call);
+    if (askedFor.thread === undefined) return answer(400, { message: 'The call needs a thread id.' });
+    if (askedFor.text === undefined) return answer(400, { message: 'The call needs a text.' });
 
     let callback: string | undefined;
     if (endpoint.reply === 'callback') {
-      const checked = checkCallback(endpoint, call.callback);
+      const checked = checkCallback(endpoint, askedFor.callback);
       if ('refused' in checked) return answer(400, { message: checked.refused });
       callback = checked.url;
     }
 
     const bot = endpoint.bot ?? '';
-    const thread = await threadOf(endpoint, call.thread, bot);
+    const thread = await threadOf(endpoint, askedFor.thread, bot);
     if (thread === undefined) return answer(409, { message: 'The plugin has no chat with the bot.' });
     const turn = randomUUID();
     const end = seams.ended(thread.chat, turn);
     end.catch((error: unknown) => { seams.problem(`webhooks/${endpoint.id} lost the end of turn ${turn}: ${reason(error)}`); });
-    const refused = await seams.send(thread.chat, turn, call.text);
+    const refused = await seams.send(thread.chat, turn, askedFor.text);
     if (refused !== undefined) {
       seams.forget(thread.chat, turn);
       seams.problem(`webhooks/${endpoint.id} turn ${turn} was refused: ${refused}`);
       return answer(409, { message: refused });
     }
-    const said = { thread: call.thread, turn };
+    const said = { thread: askedFor.thread, turn };
 
     if (endpoint.reply === 'sync') {
       const seconds = endpoint.syncTimeoutSeconds ?? seams.syncTimeoutSeconds;

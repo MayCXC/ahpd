@@ -1,6 +1,6 @@
 ---
 title: A webhook checks each sender's proof
-status: todo
+status: implemented
 depends: [task-03-a-webhook-reads-any-body.md]
 layer: "webhook"
 refs:
@@ -55,9 +55,8 @@ A call without a valid proof answers 401, and nothing fires.
 
 ## Resume
 
-- **Done so far:** nothing.
-- **Next action:** step 1.
+- **Done so far:** all steps. `auth.ts` holds one check for each of `bearer`, `header`, `query`, `hmac`, `github`, `stripe`, `slack` and `standard`, plus `omitted(endpoint)` for the headers a run is not shown. `checkEndpoint` takes `auth` (default bearer), `header`, `algorithm`, `encoding` and `prefix` and refuses a `header`/`hmac` without its header and an `hmac` without its algorithm and encoding. The adapter schema carries the five fields with the enum values. The route now reads the call first, checks the proof over `call.raw`, and answers 401 otherwise; `dataOf` strips `authorization`, `cookie` and the proof's own headers. `auth.test.ts` covers every scheme's valid call, its wrong and missing proof, a changed body byte for each signing scheme, the GitHub, Stripe, Slack and Standard Webhooks examples, a 301-second-old timestamped call, GitLab by header, Shopify by base64 hmac, and a stored connector with no `auth`.
+- **Next action:** task-05-a-webhook-answers-handshakes.md.
 - **Open questions:** none.
-- **Departures:** none.
-- **Watch out for:** a signature is over the raw bytes, never over the parsed body.
-  Use `node:crypto` only; the plugin takes no new dependency.
+- **Departures:** the conditional `required` fields ("header for header and hmac, algorithm and encoding for hmac") are enforced in `checkEndpoint` rather than in the schema, because the daemon's checker has no `if/then` and a top-level `oneOf` here would bypass the base object's properties; task 06 restructures the config into `oneOf` branches. The Stripe docs example is signed with the docs' secret, timestamp and payload, and the expected value is what their method produces (`c137b1b6...`) because the value recalled for that example did not match its own inputs. `Call` carries the `token` query parameter separately so `query` can check it while `event.query` omits it, and proof-header stripping moved from `readCall` to `dataOf` so the bearer header survives to the check. Timestamp and id headers are not stripped: they are not secrets, and the Slack and Standard checks read them. No commit was made; `git add`/`git commit` are denied in this session.
+- **Watch out for:** task 05 adds `meta` and `graph` to `AUTH_SCHEMES`; the handshake is answered before the body is read, so it sits ahead of `proves`. Standard Webhooks' `whsec_` key is base64-decoded, and a secret without that prefix is used as its own bytes.

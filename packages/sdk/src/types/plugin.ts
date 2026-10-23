@@ -17,7 +17,7 @@ import type { AutomationTriggerDefinition, ChatOrigin, ChatSummary } from '@micr
 import type { Agent } from './agent.js';
 import type { StartSession } from './automations.js';
 import type { SessionConfigAnswerer } from './completions.js';
-import type { Adapter, ServedAdapter } from './connectors.js';
+import type { Adapter, ConnectorOwner, ServedAdapter } from './connectors.js';
 import type { EventHandler, EventName, HostHandlers } from './events.js';
 import type { Host, HostOptions, HostTool } from './host.js';
 import type { MachineNeed } from './machine.js';
@@ -60,7 +60,16 @@ export interface PluginTriggers {
    * plugin firing from its own unit test, or one firing while `apply` runs.
    * Nothing is kept for later, because a fire is about what is happening now.
    */
-  deliver?: (type: string, event: string, data: Record<string, unknown>) => void;
+  deliver?: (type: string, event: string, data: Record<string, unknown>, owner?: ConnectorOwner) => void;
+  /**
+   * Where a run of one named automation goes, set by the host once it exists.
+   *
+   * Beside `deliver`, and for the same reason: a plugin that wants one
+   * automation rather than every watcher of a type asks its host, and the host
+   * is the only thing that knows which definitions it holds. Absent until then,
+   * and a request made too early reaches nothing.
+   */
+  run?: (automation: string, data: Record<string, unknown>, owner?: ConnectorOwner) => void;
 }
 
 /**
@@ -1017,11 +1026,27 @@ export interface PluginHost extends PluginContext {
    * `data` is the plugin's own account of it: it is recorded on the run's origin
    * and read by nobody else here, so it must carry nothing secret.
    *
+   * `owner` is the owner of the connector the event came from, where it came
+   * from one. A fire that names it wakes only an automation that may read that
+   * connector; a fire that leaves it out is the host's own event and wakes
+   * every watcher the host lets past its other gates.
+   *
    * Nothing is awaited. A run starts asynchronously and the plugin is not told
    * whether one did, because an event has no answer - what a client watching an
    * automation reads is the run it started.
    */
-  fireTrigger(type: string, event: string, data: Record<string, unknown>): void;
+  fireTrigger(type: string, event: string, data: Record<string, unknown>, owner?: ConnectorOwner): void;
+  /**
+   * Start one automation, by its id, with the plugin's own data on its origin.
+   *
+   * The id is an automation's own id or its whole `ahp-automation:/` URI. A
+   * fire reaches every automation watching a type; this is for a plugin that
+   * knows which one it means - a webhook connector naming the automation it
+   * starts. `owner` is the connector's, and an automation that is off, gone or
+   * not readable by that owner is not run: the host says so in its log rather
+   * than answering, for the same reason a fire is not answered.
+   */
+  runAutomation(id: string, data: Record<string, unknown>, owner?: ConnectorOwner): void;
   /**
    * Offer one adapter a person can make connectors from.
    *
