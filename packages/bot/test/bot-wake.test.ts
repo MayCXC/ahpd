@@ -100,8 +100,14 @@ const turn = (): Recorded => {
  * exactly what a second message would start a second session over. The sessions
  * are a map that mints a URI per start, `look` reads a chat off the same map,
  * and `send` records what it was asked to carry rather than carrying it.
+ *
+ * `seeded` is what an earlier daemon left: rows that name a session this host
+ * still has, which is how a restarted daemon finds a back session again.
  */
-async function sitting(record: BotRecord = bot()) {
+async function sitting(
+  record: BotRecord = bot(),
+  seeded: { name: string; session: string; chat: string }[] = [],
+) {
   const records = memoryRecords();
   const store = botStore(
     await records.collection('bots', { body: 'instructions' }),
@@ -128,6 +134,15 @@ async function sitting(record: BotRecord = bot()) {
   /** What a send is refused with, where the host refuses one. */
   let sendRefusal: string | undefined;
   let minted = 0;
+
+  // The rows an earlier daemon wrote, and a host that still has each session:
+  // written before the wake is built, because the rows are what it reads once
+  // to know whose the sessions it did not start are.
+  for (const one of seeded) {
+    await backs.put(record.id, 'ana', one.name, one.session);
+    owners.set(one.session, PERSON);
+    at.set(one.session, one.chat);
+  }
 
   const sessions: BotSessions = {
     owner: async (uri) => owners.get(uri),
@@ -163,7 +178,7 @@ async function sitting(record: BotRecord = bot()) {
   });
 
   return {
-    wake, backs, starts, sent, problems, working,
+    wake, backs, starts, sent, problems, working, store,
     refuseStart: (line: string) => { startRefusal = line; },
     refuseSend: (line: string) => { sendRefusal = line; },
   };
@@ -379,4 +394,53 @@ it('ends a turn in a chat no bot opened, and says so', async () => {
   expect(said.notices).toEqual([]);
   expect(one.problems).toEqual(['bot-chat:/stray is a chat no bot on this host opened']);
   expect(one.sent).toEqual([]);
+});
+
+it('answers a bot\'s session with the bot\'s connectors, as the bot is now', async () => {
+  const one = await sitting(bot({ connectors: { work: 'connectors://ap-resend/account-123' } }));
+  // The host asks about every session it has, and this one is no bot's.
+  expect(one.wake.bindings('ahp-session:/nobody')).toBeUndefined();
+
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+  expect(one.wake.bindings('ahp-session:/1')).toEqual({ work: 'connectors://ap-resend/account-123' });
+
+  // The map is the bot's as it is now rather than as it was when the session
+  // started: an alias an edit takes out is a connector the list built next
+  // does not offer, in the session that is already running.
+  await one.store.put(bot({ connectors: { personal: 'connectors://ap-resend/account-456' } }));
+  expect(one.wake.bindings('ahp-session:/1')).toEqual({ personal: 'connectors://ap-resend/account-456' });
+
+  // A bot with no connectors answers nothing, which is the same answer a
+  // session no bot started gets.
+  await one.store.put(bot());
+  expect(one.wake.bindings('ahp-session:/1')).toBeUndefined();
+});
+
+it('answers nothing for a session whose bot is gone', async () => {
+  const one = await sitting(bot({ connectors: { work: 'connectors://ap-resend/account-123' } }));
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+  expect(one.wake.bindings('ahp-session:/1')).toBeDefined();
+
+  await one.store.remove('backer');
+  // Nothing may bind a session whose bot is not there, and the name the bot
+  // had is spent: a bot made again under it is another bot's.
+  expect(one.wake.bindings('ahp-session:/1')).toBeUndefined();
+});
+
+it('answers a session an earlier daemon started from the bot\'s rows', async () => {
+  const one = await sitting(
+    bot({ connectors: { work: 'connectors://ap-resend/account-123' } }),
+    [{ name: 'work', session: 'ahp-session:/before', chat: 'ahp-chat:/before' }],
+  );
+  /*
+   * The row is what says the session is this bot's, and the wake reads the
+   * rows once when it is built - so the session a daemon that restarted left
+   * behind is answered as a fresh one is, and the message continues it rather
+   * than starting a second. `woken` waits for that read, which is also what
+   * makes this case say the same thing twice.
+   */
+  await one.wake.woken(message('t1', 'hello'), turn().handle);
+
+  expect(one.starts).toEqual([]);
+  expect(one.wake.bindings('ahp-session:/before')).toEqual({ work: 'connectors://ap-resend/account-123' });
 });

@@ -150,6 +150,14 @@ export interface BackSessions {
   put(bot: string, user: string, name: string, session: string): Promise<void>;
   /** The names this person has with this bot, in order. */
   list(bot: string, user: string): Promise<string[]>;
+  /**
+   * The sessions this bot's rows name, whatever the person and the name.
+   *
+   * What the wake reads at load to know which of a bot's sessions are the
+   * bot's: a session this host still has was started by a bot before this
+   * daemon did, and its bindings are the bot's as much as a fresh one's.
+   */
+  sessions(bot: string): Promise<string[]>;
 }
 
 /**
@@ -177,5 +185,12 @@ export const backSessions = (rows: (bot: string) => RecordCollection): BackSessi
       .map((row) => row['name'])
       .filter((name): name is string => typeof name === 'string' && name !== '')
       .sort();
+  },
+
+  sessions: async (bot) => {
+    const found = await rows(bot).find({ bot });
+    return found
+      .map((row) => row['session'])
+      .filter((session): session is string => typeof session === 'string' && session !== '');
   },
 });

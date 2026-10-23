@@ -166,6 +166,16 @@ export interface Wake {
    * that posted already and one this wake never woke.
    */
   finished(backSession: string, text: string): void;
+  /**
+   * The connectors one back session may use, by alias, read live.
+   *
+   * The map of the bot that started it, as the store holds the bot now: a bot
+   * edited while its session runs is answered as the bot is after the edit,
+   * because the host asks this at each tool list and each call. Nothing for a
+   * session no bot of this wake started, and nothing for a bot whose record has
+   * gone - which is what a revoke of every connector looks like from here.
+   */
+  bindings(backSession: string): Record<string, string> | undefined;
 }
 
 /**
@@ -231,6 +241,38 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
   const answering = new Map<string, Answering>();
   /** The back sessions being started right now, by the name each is started for. */
   const starting = new Map<string, Promise<string>>();
+  /** The bot each back session belongs to, by that session's URI. */
+  const started = new Map<string, string>();
+
+  /**
+   * The sessions this host already had, each with the bot that started it.
+   *
+   * The rows are the record of that: a name is on a session because the bot's
+   * wake started it there, and the row says which bot it is. So the rows of
+   * every bot fill the map at load, and a session a daemon restart left behind
+   * is answered with its bot's connectors as a fresh one is.
+   *
+   * Read once, because a row is only written when a session is started and a
+   * start puts the session in the map as well. A read that fails is reported
+   * and the map is what a start since then has added: an operator's to fix,
+   * and not a reason to refuse waking a bot.
+   */
+  const filled = (async (): Promise<void> => {
+    // A wake built over no store - one made to ask a tool its shape - has no
+    // rows to read and nothing that will ever ask it for a binding.
+    const store = seams.store;
+    if (!store) return;
+    await store.ready();
+    for (const bot of store.all()) {
+      for (const session of await seams.backs.sessions(bot.id)) {
+        // A session one bot's rows name is that bot's: another bot naming the
+        // same one is a row somebody wrote by hand, and the first bot wins.
+        if (!started.has(session)) started.set(session, bot.id);
+      }
+    }
+  })().catch((error: unknown) => {
+    seams.problem(`the back sessions of the bots were not read: ${reason(error)}`);
+  });
 
   /** The name this message's back session has: the bot's, with the turn id in place of `{turn}`. */
   const nameFor = (bot: BotRecord, message: ChatMessage): string =>
@@ -296,6 +338,9 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
        */
       if (bot.computer === undefined) prepareFolder(bot.workspace, await seams.agents(bot));
       const session = await seams.sessions.start(sessionFor(bot, owner));
+      // Whose the session is, as soon as there is one: a tool list built
+      // while the row is being written still sees the bot's connectors.
+      started.set(session, bot.id);
       // Written down before the message is sent, so a back session that is
       // working is one a later message finds rather than one started again.
       await seams.backs.put(bot.id, user, name, session);
@@ -341,6 +386,34 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
   return {
     main: (backSession) => answering.get(backSession),
 
+    /*
+     * Read live, from the bot as the store holds it now: the store replaces a
+     * record on each write, which is what makes an edit reach a session that
+     * is already running. A record a person edited by hand can say anything,
+     * so only the aliases whose value is a string are answered - the ones that
+     * are not a connector at all are the host's own `bindingsOf` to skip.
+     */
+    bindings: (backSession) => {
+      const slug = started.get(backSession);
+      if (slug === undefined) return undefined;
+      const bot = seams.store.get(slug);
+      if (bot === undefined) {
+        /*
+         * The bot is gone, so the session is nobody's: answering nothing is a
+         * revoke of every connector, and a slug made again is another bot's.
+         * The store's one `onChange` ear belongs to the provider, so the map
+         * is emptied here, where it is read.
+         */
+        started.delete(backSession);
+        return undefined;
+      }
+      const held: unknown = bot.connectors;
+      if (typeof held !== 'object' || held === null || Array.isArray(held)) return undefined;
+      return Object.fromEntries(
+        Object.entries(held as Record<string, unknown>).filter(([, value]) => typeof value === 'string'),
+      ) as Record<string, string>;
+    },
+
     posted: (backSession, text) => {
       const held = answering.get(backSession);
       if (held === undefined) return false;
@@ -377,6 +450,10 @@ export function botWake(seams: WakeSeams, absent: MainTurnAbsence = 'post'): Wak
     },
 
     woken: async (message, handle) => {
+      // The sessions this host already had, before one is started here: a
+      // session that is theirs is answered with its bot's connectors, and a
+      // message is what may build its first tool list.
+      await filled;
       const chat = await chatOf(message.session);
       if (chat === undefined) {
         /*

@@ -69,7 +69,8 @@
       "agents": ["bot-chat"],
       "channels": ["x-ahpd-bots"],
       "resourceProviders": ["bot"],
-      "tools": ["post_message"]
+      "tools": ["post_message"],
+      "bindings": ["*"]
     },
     "options": {
       "root": { "required": false }

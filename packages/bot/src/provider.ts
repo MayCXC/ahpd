@@ -773,6 +773,7 @@ export function botProvider(options: BotOptions): BotProvider {
         session: draft.session,
         workspace: workspaceFor(slug, draft.workspace, existing),
         ...(draft.computer === undefined ? {} : { computer: draft.computer }),
+        ...(draft.connectors === undefined ? {} : { connectors: draft.connectors }),
         owner: whose,
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,

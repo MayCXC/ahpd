@@ -1,4 +1,4 @@
-import { RpcError } from '@ahpd/sdk';
+import { bindingTarget, isRecordSlug, RpcError } from '@ahpd/sdk';
 import type { Bag, Owner, StoredRecord } from '@ahpd/sdk';
 
 /**
@@ -115,6 +115,17 @@ export interface BotKept {
   workspace: string;
   /** The machine it runs in, where it names one. */
   computer?: string;
+  /**
+   * The connectors its sessions may use, by alias.
+   *
+   * The same map a session's `connectors` config key holds: an alias a model
+   * says, and the `connectors://<adapter>/<id>` it stands for. A session the
+   * bot starts reads this map live - so an edit here reaches a session that is
+   * already running, at its next tool list and its next call - and none of the
+   * connectors it names is the record's to check: whether the person of a main
+   * chat may use one is asked at each call.
+   */
+  connectors?: Record<string, string>;
   /** Whose it is. */
   owner: Owner;
   /** When it was made. */
@@ -183,12 +194,13 @@ export interface BotDraft {
   model?: string | undefined;
   preset?: string | undefined;
   computer?: string | undefined;
+  connectors?: Record<string, string> | undefined;
 }
 
 /** The keys a body may carry: a bot's own fields, and nothing else. */
 const FIELDS = [
   'id', 'name', 'labels', 'description', 'body', 'color', 'instructions', 'template',
-  'harness', 'model', 'preset', 'session', 'workspace', 'computer', 'owner',
+  'harness', 'model', 'preset', 'session', 'workspace', 'computer', 'connectors', 'owner',
   // The two times are here rather than refused, because a client that read a
   // bot and wrote the whole record back is writing what it was given. Neither
   // is read: what they hold is the host's.
@@ -285,6 +297,34 @@ const colour = (said: unknown, fallback: BotColor): BotColor => {
 const drawn = (): BotBody => BOT_BODIES[Math.floor(Math.random() * BOT_BODIES.length)] ?? BOT_BODIES[0];
 
 /**
+ * The bindings a body named, or the refusal it is owed.
+ *
+ * The same check `bindingsOf` makes when it reads a session's config: an alias
+ * that is not a lowercase slug, and a value that is not
+ * `connectors://<adapter>/<id>`, are what that reader skips. A bot is written
+ * once and read on every message, so a binding it would skip is refused here
+ * rather than dropped: the person who wrote it is told, while the session that
+ * would have been offered nothing says nothing. The keys are kept in the order
+ * the body wrote them, which is the order the model is offered them in.
+ */
+const aliased = (said: unknown): Record<string, string> => {
+  if (typeof said !== 'object' || said === null || Array.isArray(said)) {
+    throw new RpcError(INVALID_PARAMS, 'connectors is an object from an alias to connectors://<adapter>/<id>');
+  }
+  const out: Record<string, string> = {};
+  for (const [alias, value] of Object.entries(said as Bag)) {
+    if (!isRecordSlug(alias)) {
+      throw new RpcError(INVALID_PARAMS, `${alias} is not a connector alias: lowercase letters, digits and a dash, starting with a letter`);
+    }
+    if (bindingTarget(value) === undefined) {
+      throw new RpcError(INVALID_PARAMS, `${JSON.stringify(value)} is not a connector; write connectors://<adapter>/<id>`);
+    }
+    out[alias] = value as string;
+  }
+  return out;
+};
+
+/**
  * The draft one write's body makes, or the refusal it is owed.
  *
  * `existing` is the bot a write edits, where there is one, and it is what makes
@@ -349,5 +389,9 @@ export function checkRecord(slug: string, said: unknown, existing?: BotRecord): 
     model: line('model', body['model']) ?? existing?.model,
     preset: line('preset', body['preset']) ?? existing?.preset,
     computer: line('computer', body['computer']) ?? existing?.computer,
+    // Absent rather than empty where the body named none: a bot with no
+    // connectors and one whose map nobody has read are the same bot, and the
+    // reader answers nothing for both.
+    connectors: body['connectors'] === undefined ? existing?.connectors : aliased(body['connectors']),
   };
 }
