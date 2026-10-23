@@ -26,6 +26,7 @@ const repo = join(here, '../../..');
 
 /** Every plugin package in this repository, by the directory it is. */
 const SHIPPED = [
+  'activepieces',
   'agent-acp',
   'agent-claude',
   'agent-cofold',
@@ -46,6 +47,7 @@ const SHIPPED = [
  * rather than written under the temporary configuration directory.
  */
 const OPTIONS: Record<string, Record<string, unknown>> = {
+  activepieces: { pieces: ['@activepieces/piece-resend'] },
   'agent-acp': { presets: { 'acp-probe': { command: 'acp-probe' } } },
   'agent-cofold': { memory: true },
 };

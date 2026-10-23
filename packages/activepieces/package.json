@@ -80,7 +80,8 @@
     "categories": ["connector"],
     "links": [{ "title": "Repository", "url": "https://github.com/softov/ahpd" }],
     "contracts": {
-      "adapters": ["ap-*"]
+      "adapters": ["ap-*"],
+      "closers": ["the child process that runs the pieces"]
     },
     "options": {
       "pieces": { "required": true }
