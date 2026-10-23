@@ -692,6 +692,7 @@ it('sends nothing the protocol does not declare, and nothing short of what it re
     'vscode/deleteAgentHostDetachedWorktree': 'Worktrees the window manages',
     'vscode/reconcileAgentHostDetachedWorktrees': 'Worktrees the window manages',
     'vscode/removeSessionArtifact': 'Sessions and the catalogue',
+    'vscode/stopBackgroundWork': 'What the window asks a host about itself',
     'vscode/getAgentHostSessionStateFile': 'What the window asks a host about itself',
     'vscode/collectAgentHostDebugLogs': 'What the window asks a host about itself',
     'vscode/readAgentHostDebugLogsChunk': 'What the window asks a host about itself',

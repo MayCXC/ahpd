@@ -57,6 +57,7 @@ export interface VscodeMethods {
   'vscode/deleteAgentHostDetachedWorktree': (params: Record<string, unknown>) => Promise<unknown>;
   'vscode/reconcileAgentHostDetachedWorktrees': (params: Record<string, unknown>) => Promise<unknown>;
   'vscode/removeSessionArtifact': (params: Record<string, unknown>) => Promise<unknown>;
+  'vscode/stopBackgroundWork': (params: Record<string, unknown>) => Promise<unknown>;
   'vscode/getAgentHostSessionStateFile': (params: Record<string, unknown>) => Promise<unknown>;
   'vscode/collectAgentHostDebugLogs': (params: Record<string, unknown>) => Promise<unknown>;
   'vscode/readAgentHostDebugLogsChunk': (params: Record<string, unknown>) => Promise<unknown>;
@@ -378,6 +379,26 @@ export function createVscodeMethods(ctx: HostContext, conn: ConnectionContext): 
       const left = held.filter((one) => one.id !== artifactId);
       if (left.length !== held.length) setArtifacts(uri, left);
       return {};
+    },
+    /**
+     * Stop a chat's background task.
+     *
+     * The two strings are checked here rather than in `background`: a request
+     * that names no id, or something that is not a chat, is refusable on its
+     * own terms, and answering `{ stopped: false }` for it would say the task
+     * had already ended.
+     *
+     * Everything after that is one answer, `false`, because the client is not
+     * told which of an unknown chat, an unknown id and a task with nothing to
+     * stop it was - the reference host's own shape, and a client shows the
+     * same thing after each.
+     */
+    'vscode/stopBackgroundWork': async (params) => {
+      const chat = stringParam(params, 'chat', 'an AHP chat URI');
+      const id = stringParam(params, 'id', 'a task id');
+      if (id.trim() === '') throw new RpcError(INVALID_PARAMS, 'id must be a non-empty task id');
+      if (!chat.startsWith('ahp-chat:')) throw new RpcError(INVALID_PARAMS, `chat must be an AHP chat URI, and ${chat} is not one`);
+      return { stopped: await ctx.background.stop(chat, id) };
     },
     /**
      * Where the backend's own record of a session is.
