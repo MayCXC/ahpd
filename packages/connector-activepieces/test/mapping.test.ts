@@ -1,0 +1,169 @@
+import { describe, expect, it } from 'vitest';
+import { adapterOf, inputOf, nameOf, schemaOf } from '../src/mapping.js';
+import { checkAdapter } from '../../sdk/src/plugins/validate.js';
+import type { ActionDescription, AuthDescription, PieceDescription, PropDescription } from '../src/wire.js';
+
+/*
+ * What a piece becomes in the daemon.
+ *
+ * The mapping reads the description the child sends and nothing else, so a
+ * case builds one by hand: the auth the piece takes, and the props of its
+ * actions. No piece is loaded here, and no function survives into an adapter.
+ */
+
+/** A piece description, with the parts a case does not name left empty. */
+const piece = (fields: Partial<PieceDescription> = {}): PieceDescription => ({
+  package: '@activepieces/piece-demo',
+  displayName: 'Demo',
+  actions: [],
+  ...fields,
+});
+
+/** One action description, with a required text prop unless a case says otherwise. */
+const action = (fields: Partial<ActionDescription> = {}): ActionDescription => ({
+  name: 'say',
+  displayName: 'Say',
+  description: 'Says the text it is given.',
+  props: { text: { type: 'SHORT_TEXT', displayName: 'Text', required: true } },
+  ...fields,
+});
+
+/** Slack's auth, as the piece declares it: an OAuth2 entry, then a custom one. */
+const SLACK_AUTH: AuthDescription[] = [
+  { type: 'OAUTH2', displayName: 'Connection', description: 'Authenticate via a Slack OAuth flow.' },
+  {
+    type: 'CUSTOM_AUTH',
+    displayName: 'Bot Token',
+    description: 'Authenticate using a Slack bot token (and optional user token).',
+    props: {
+      botToken: { type: 'SECRET_TEXT', displayName: 'Bot Token', description: 'The bot token for your Slack app (starts with xoxb-)', required: true },
+      userToken: { type: 'SECRET_TEXT', displayName: 'User Token', description: 'Optional user token for actions that require user-level access.', required: false },
+    },
+  },
+];
+
+describe('a piece becomes an adapter', () => {
+  it('names the adapter after the package, with the ap- prefix', () => {
+    expect(nameOf('@activepieces/piece-resend')).toBe('ap-resend');
+    expect(nameOf('@activepieces/piece-telegram-bot')).toBe('ap-telegram-bot');
+    expect(nameOf('left-pad')).toBeUndefined();
+  });
+
+  it('gives a SECRET_TEXT auth one writeOnly string, secret_text', () => {
+    const auth: AuthDescription = { type: 'SECRET_TEXT', displayName: 'API Key', description: 'The key.' };
+    const schema = schemaOf(auth);
+
+    expect(schema).toEqual({
+      type: 'object',
+      properties: {
+        secret_text: { type: 'string', writeOnly: true, title: 'API Key', description: 'The key.' },
+      },
+      required: ['secret_text'],
+    });
+  });
+
+  it("uses Slack's custom auth entry, with both tokens writeOnly and the bot token required", () => {
+    const mapped = adapterOf(piece({ package: '@activepieces/piece-slack', displayName: 'Slack', auth: SLACK_AUTH }));
+    const schema = mapped.adapter?.schema as Record<string, unknown>;
+    const properties = schema['properties'] as Record<string, Record<string, unknown>>;
+
+    expect(Object.keys(properties)).toEqual(['botToken', 'userToken']);
+    expect(properties['botToken']).toMatchObject({ type: 'string', writeOnly: true, title: 'Bot Token' });
+    expect(properties['userToken']).toMatchObject({ type: 'string', writeOnly: true, title: 'User Token' });
+    expect(schema['required']).toEqual(['botToken']);
+  });
+
+  it('gives a piece with only an OAuth2 auth no adapter, and says so', () => {
+    const mapped = adapterOf(piece({
+      package: '@activepieces/piece-oauth',
+      auth: [{ type: 'OAUTH2', displayName: 'Connection' }],
+    }));
+
+    expect(mapped.adapter).toBeUndefined();
+    expect(mapped.notes).toHaveLength(1);
+    expect(mapped.notes[0]).toContain('ap-oauth');
+  });
+
+  it('maps each prop type, and leaves out a MARKDOWN prop and an optional file', () => {
+    const props: Record<string, PropDescription> = {
+      short: { type: 'SHORT_TEXT', displayName: 'Short', required: false },
+      long: { type: 'LONG_TEXT', displayName: 'Long', required: false },
+      count: { type: 'NUMBER', displayName: 'Count', required: false },
+      loud: { type: 'CHECKBOX', displayName: 'Loud', required: false },
+      list: { type: 'ARRAY', displayName: 'List', required: false },
+      body: { type: 'OBJECT', displayName: 'Body', required: false },
+      raw: { type: 'JSON', displayName: 'Raw', required: false },
+      chosen: { type: 'DYNAMIC', displayName: 'Chosen', required: false },
+      format: { type: 'STATIC_DROPDOWN', displayName: 'Format', required: false, options: ['plain', 'markdown'] },
+      channel: { type: 'DROPDOWN', displayName: 'Channel', description: 'The channel to post in.', required: false },
+      when: { type: 'DATE_TIME', displayName: 'When', required: false },
+      note: { type: 'MARKDOWN', displayName: 'Note', required: false },
+      file: { type: 'FILE', displayName: 'File', required: false },
+    };
+    const input = inputOf(props);
+    const properties = input?.['properties'] as Record<string, Record<string, unknown>>;
+
+    expect(properties['short']).toMatchObject({ type: 'string' });
+    expect(properties['long']).toMatchObject({ type: 'string' });
+    expect(properties['count']).toMatchObject({ type: 'number' });
+    expect(properties['loud']).toMatchObject({ type: 'boolean' });
+    expect(properties['list']).toMatchObject({ type: 'array' });
+    expect(properties['body']).toMatchObject({ type: 'object' });
+    expect(properties['raw']).toMatchObject({ type: 'object' });
+    expect(properties['chosen']).toMatchObject({ type: 'object' });
+    expect(properties['format']).toMatchObject({ type: 'string', enum: ['plain', 'markdown'] });
+    expect(properties['channel']).toMatchObject({ type: 'string', description: 'The channel to post in. Give the id.' });
+    expect(properties['when']).toMatchObject({ type: 'string', format: 'date-time' });
+    expect(properties).not.toHaveProperty('note');
+    expect(properties).not.toHaveProperty('file');
+  });
+
+  it('leaves out an action that needs a file, and reports it', () => {
+    const mapped = adapterOf(piece({
+      auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
+      actions: [
+        action(),
+        action({
+          name: 'upload-file',
+          displayName: 'Upload file',
+          props: { file: { type: 'FILE', displayName: 'File', required: true } },
+        }),
+      ],
+    }));
+
+    expect(mapped.adapter?.capabilities.map((one) => one.name)).toEqual(['say']);
+    expect(mapped.notes).toHaveLength(1);
+    expect(mapped.notes[0]).toContain('upload-file');
+  });
+
+  it('makes each action an action capability, titled and described by the piece', () => {
+    const mapped = adapterOf(piece({
+      displayName: 'Resend',
+      description: 'The email API for developers.',
+      auth: { type: 'SECRET_TEXT', displayName: 'API Key' },
+      actions: [
+        action({ name: 'send_email', displayName: 'Send email', description: 'Sends an email.', aiDescription: 'Sends one email.' }),
+        action({ name: 'list_audiences', displayName: 'List audiences', description: 'Lists the audiences.' }),
+      ],
+    }));
+
+    expect(mapped.adapter).toMatchObject({
+      name: 'ap-demo',
+      title: 'Resend',
+      description: 'The email API for developers.',
+    });
+    expect(mapped.adapter?.capabilities).toMatchObject([
+      { type: 'action', name: 'send_email', title: 'Send email', description: 'Sends one email.' },
+      { type: 'action', name: 'list_audiences', title: 'List audiences', description: 'Lists the audiences.' },
+    ]);
+  });
+
+  it('makes an adapter that checkAdapter accepts', () => {
+    const simple = adapterOf(piece({ auth: { type: 'SECRET_TEXT', displayName: 'API Key' }, actions: [action()] }));
+    const slack = adapterOf(piece({ package: '@activepieces/piece-slack', displayName: 'Slack', auth: SLACK_AUTH, actions: [action()] }));
+
+    expect(() => checkAdapter(simple.adapter, 'connector-activepieces')).not.toThrow();
+    expect(() => checkAdapter(slack.adapter, 'connector-activepieces')).not.toThrow();
+    expect(checkAdapter(simple.adapter, 'connector-activepieces')).toBe('ap-demo');
+  });
+});
