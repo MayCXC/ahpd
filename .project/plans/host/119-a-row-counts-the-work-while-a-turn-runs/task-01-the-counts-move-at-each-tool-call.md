@@ -1,6 +1,6 @@
 ---
 title: The counts move at each tool call
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -46,4 +46,11 @@ During a turn, the session kind counts from its baseline to the working tree.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm test` pass.
 
 ## Resume
+
+- **Done so far:** `summaryKept` takes `running?` and is coalesced per session. One read runs while later asks only record whether a turn is running, and the waiting read takes the last caller's flag, as `refreshWatched` does. `spawn.ts` asks it at each `chat/toolCallComplete`, beside `refreshWatched`. `sessionSummary` takes `running?`. With a turn in flight it answers `branchLook` against the session's baseline, and without it the checkpoint answer is unchanged. Tests cover a worktree row moving at a tool call from its branch cut, and a folder session moving from its baseline. They also cover ten tool calls costing at most two reads and a no-op tool call sending no row.
+- **Next action:** none - built, and task 02 built after it.
+- **Files:** `packages/sdk/src/host/catalogue.ts`, `packages/sdk/src/host/spawn.ts`, `packages/sdk/src/types/changes.ts`, `packages/sdk/src/sessions/changes.ts`, `packages/sdk/test/changes-refresh.test.ts`, `CHANGELOG.md`.
+- **Open questions:** none.
+- **Departures:** the `open` helper in `changes-refresh.test.ts` gained an optional fourth `where` argument: a session created without `workingDirectories` has no baseline, and the validation needs one. No other test call site changed. The branch kind does not take `running`, because `branchSummary` already diffs a commit against the live working tree.
+- **Watch out for:** the turn's end still calls `summaryKept(uri)` with no flag, so once a turn finishes the checkpoint answer replaces the working-tree one. A read that fails leaves the row's stored counts as they were rather than writing nothing.
 

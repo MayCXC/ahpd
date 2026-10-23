@@ -932,7 +932,10 @@ describe('a session with a working tree of its own', () => {
     });
     const { where, chat } = await spoken(first, uri);
     const branch = branchOf(where);
-    expect(store.worktree?.('restarted')).toEqual({ repository: project(root), path: where, base: 'main', branch });
+    // The commit it was cut from, which is where this session's work counts
+    // from: the record keeps it so the counts survive a restart too.
+    const commit = execFileSync('git', ['-C', where, 'rev-parse', 'HEAD']).toString().trim();
+    expect(store.worktree?.('restarted')).toEqual({ repository: project(root), path: where, base: 'main', branch, commit });
 
     // A second host over the same store knows the tree only from the record.
     const second = host().accept(peer());

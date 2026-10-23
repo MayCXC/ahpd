@@ -1,6 +1,6 @@
 ---
 title: A worktree counts from its cut commit
-status: todo
+status: implemented
 depends: []
 layer: "sdk"
 refs:
@@ -50,4 +50,11 @@ A commit that was on the local base and not pushed is not the session's work.
 - `pnpm -s build`, `pnpm -s typecheck`, `pnpm -s boundary` and `pnpm test` pass.
 
 ## Resume
+
+- **Done so far:** `StoredWorktree` has `commit?`, the commit the tree was cut from. `lifecycle.ts` reads `git rev-parse HEAD` in the new tree after `port.create` and writes it into the record; a git that cannot answer leaves it out. `sessions/sessions.ts` reads it back only as 40 hex characters. A malformed one is dropped rather than the whole record, because the record still decides which tree a delete takes. `catalogue.ts` gives `branchSummary` the record's `commit`, or the base's name where there is none. `changesets.ts` gained `cutOf` and gives it to the branch scope's `scopes` and to `changesetAt`, so its rows diff the same commit the counts do. `operationContext` and `facts.ts`'s `baseBranchName` still read `baseOf`, so a pull request names `main`. Tests cover a tree cut from a local `main` one commit ahead of `origin/main`. The base's name counts the unpushed commit and the cut commit does not, and the branch scope's rows agree with the cut commit.
+- **Next action:** none - built.
+- **Files:** `packages/sdk/src/types/sessions.ts`, `packages/sdk/src/host/lifecycle.ts`, `packages/sdk/src/sessions/sessions.ts`, `packages/sdk/src/host/catalogue.ts`, `packages/sdk/src/host/changesets.ts`, `packages/sdk/test/changes-branch.test.ts`, `packages/sdk/test/worktrees.test.ts`, `CHANGELOG.md`.
+- **Open questions:** none.
+- **Departures:** `worktrees.test.ts` asserts the stored record exactly, so its expectation now includes `commit`; that file is not in the task's list. `changesetAt` keeps its `base` field name although it may now hold a commit. Its only consumer is the branch scope's `state`. The pull request's base comes from `operationContext` directly.
+- **Watch out for:** the unarchive restore keeps the record as it is. A restored tree still counts from the commit it was cut from, not from where it was archived. A record read back with no commit is not an error, and counts from the base's name exactly as before. A tree made with no base is cut at `HEAD`. It now keeps that commit, so its row counts from the cut and the branch scope is offered where it had none.
 

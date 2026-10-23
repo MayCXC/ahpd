@@ -4,7 +4,9 @@ import { deleteNested } from '../sessions/nested.js';
 import { localPath, uriOf } from '../resources/fileuri.js';
 import { idOf, uriFor, Status } from '../sessions/catalog.js';
 import { stat } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
 import { join } from 'node:path';
+import { gitArgv } from '../repo/hardened.js';
 import { worktreeFor, worktreesOf } from '../repo/worktrees.js';
 import { ROOT, chatIdFor, chatUriFor, named } from './channels.js';
 import { keepChatAttachment, resolveChatAttachment } from './chatattachment.js';
@@ -1026,6 +1028,20 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     chatUri === chatUriFor(uri) ? undefined : own ?? chatIdFor(uri, chatUri);
 
   /**
+   * The commit a freshly cut tree is on, which is what its work is counted from.
+   *
+   * The base's name is not enough: a tree is cut from the local branch, and a
+   * commit that was on it and never pushed would be counted as the session's.
+   * An answer git could not give is no commit, and the base's name answers.
+   */
+  const headOf = (dir: string): Promise<string | undefined> =>
+    new Promise((answer) => {
+      execFile('git', gitArgv(dir, ['rev-parse', 'HEAD']),
+        { timeout: 5000, maxBuffer: 8 << 20, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0' }, windowsHide: true },
+        (error, out) => answer(error ? undefined : out.toString().trim()));
+    });
+
+  /**
    * Where a session actually runs, once isolation has been answered.
    *
    * Answered here rather than in the backend because the tree is the host's:
@@ -1089,8 +1105,15 @@ export function createLifecycle(ctx: HostContext): Lifecycle {
     });
     // The branch is remembered rather than derived from the directory later:
     // a prefix a client asked for changes the name, and guessing it wrong at
-    // removal time either deletes nothing or names somebody else's.
-    const made = { repository, path, base, ...(branch !== undefined ? { branch } : {}) };
+    // removal time either deletes nothing or names somebody else's. The commit
+    // it was cut from is remembered for the same reason: the tree moves on, and
+    // what it started from is only knowable while it is still that.
+    const commit = await headOf(path);
+    const made = {
+      repository, path, base,
+      ...(branch !== undefined ? { branch } : {}),
+      ...(commit !== undefined && commit !== '' ? { commit } : {}),
+    };
     worktrees.set(uri, made);
     kept.setWorktree?.(idOf(uri), made);
     log(`made ${path} on ${branch ?? base} for ${uri}`);

@@ -163,6 +163,39 @@ describe('what a branch has since it was cut', () => {
     expect(state?.files.map((one) => one.id)).toEqual([uriOf(join(dir, 'first.txt'))]);
   });
 
+  it('counts from the commit a tree was cut from, so the local base is not the session\'s work', async () => {
+    const dir = repository();
+    writeFileSync(join(dir, 'base.txt'), 'base\n');
+    commitAll(dir, 'base');
+    // What was pushed, and what the person's own `main` did after that.
+    runIn(dir, 'update-ref', 'refs/remotes/origin/main', gitIn(dir, 'rev-parse', 'HEAD').trim());
+    writeFileSync(join(dir, 'unpushed.txt'), 'unpushed\n');
+    commitAll(dir, 'unpushed');
+    // A tree cut now starts on the local commit that was never pushed, which
+    // is what the host records as its cut commit.
+    const place = mkdtempSync(join(tmpdir(), 'ahpd-cut-'));
+    made.push(place);
+    const tree = join(place, 'tree');
+    runIn(dir, 'worktree', 'add', '-q', '-b', 'agents/a1', tree);
+    const cut = gitIn(tree, 'rev-parse', 'HEAD').trim();
+    writeFileSync(join(tree, 'session.txt'), 'session\n');
+
+    const source = gitChanges();
+
+    /*
+     * The base's name would count the commit that was already on `main` as
+     * the session's work: only `origin/main` is older than it, and this is the
+     * row that was wrong before the tree's cut commit was kept.
+     */
+    expect(await source.branchSummary?.(tree, 'main')).toEqual({ files: 2, additions: 2, deletions: 0 });
+    // The cut commit counts what the session did after the tree was made.
+    expect(await source.branchSummary?.(tree, cut)).toEqual({ files: 1, additions: 1, deletions: 0 });
+    // And the branch scope's rows are read against that same commit, so what
+    // the row counts and what it lists agree.
+    const state = await source.state(tree, 's1', 'branch', cut);
+    expect(state?.files.map((one) => one.id)).toEqual([uriOf(join(tree, 'session.txt'))]);
+  });
+
   it('falls back to HEAD for a base this repository has never had', async () => {
     const dir = branched();
     const source = gitChanges();

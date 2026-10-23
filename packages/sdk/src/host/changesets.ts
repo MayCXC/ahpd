@@ -83,6 +83,15 @@ export function createChangesets(ctx: HostContext): Changesets {
   };
 
   /**
+   * The commit a session's work is counted from, which is what its branch
+   * scope diffs against: the commit its tree was cut from, where the record
+   * kept one. A tree is cut from the local branch, so a commit that was on it
+   * and never pushed is not the session's work. A record that kept none -
+   * written before this was recorded - falls back to the base's name.
+   */
+  const cutOf = (uri: string): string | undefined => worktreeOf(uri)?.commit ?? baseOf(uri);
+
+  /**
    * The changesets a session advertises, as catalogue entries.
    *
    * One builder, because there are two places that say them - a session's
@@ -91,7 +100,7 @@ export function createChangesets(ctx: HostContext): Changesets {
    * that vanished when anything changed.
    */
   const catalogueOf = (uri: string, dir: string): Bag[] =>
-    (options.changes?.scopes(dir, uri, baseOf(uri)) ?? []).map((scope) => ({
+    (options.changes?.scopes(dir, uri, cutOf(uri)) ?? []).map((scope) => ({
       label: scope.label,
       uriTemplate: `${uri}/changeset/${scope.id}`,
       changeKind: scope.changeKind,
@@ -107,9 +116,9 @@ export function createChangesets(ctx: HostContext): Changesets {
    * `<sessionUri>/changeset/<scope>` split back into its two halves, which is
    * wanted in four places now. Undefined for a URI that is not one.
    *
-   * The base branch comes with it, because it is the session's and not the
-   * directory's: a scope named in a URI is answered against it, and by the
-   * time the state is read the session may be gone.
+   * The commit the session's work is counted from comes with it, because it is
+   * the session's and not the directory's: a scope named in a URI is answered
+   * against it, and by the time the state is read the session may be gone.
    */
   const changesetAt = (channel: string): { owner: string; scope: string; dir: string; base?: string } | undefined => {
     const cut = channel.indexOf('/changeset/');
@@ -117,7 +126,7 @@ export function createChangesets(ctx: HostContext): Changesets {
     const owner = channel.slice(0, cut);
     const dir = dirOf(owner);
     if (dir === undefined) return undefined;
-    const base = baseOf(owner);
+    const base = cutOf(owner);
     return { owner, scope: channel.slice(cut + '/changeset/'.length), dir, ...(base === undefined ? {} : { base }) };
   };
 
