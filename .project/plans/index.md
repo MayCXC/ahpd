@@ -246,6 +246,7 @@ Reference: [00-host.md](host/00-host.md)
 | [115 - A background task has one shape](host/115-a-background-task-has-one-shape/plan.md) | medium | planned 2026-10-23; seven tasks, in build | host 47 p2 | - |
 | [116 - A plugin opens a canvas on a chat](host/116-a-plugin-opens-a-canvas-on-a-chat/plan.md) | medium | draft 2026-10-22 | - | - |
 | [117 - ahpd speaks AHP 1.1.0](host/117-ahpd-speaks-ahp-1-1-0/plan.md) | medium | draft 2026-10-22; not built until AHP 1.1.0 is released | AHP 1.1.0 | - |
+| [118 - A connector action runs as a tool](host/118-a-connector-action-runs-as-a-tool/plan.md) | medium | planned 2026-10-23; five tasks | plugin 53 | plugin 50 |
 
 Next free number in `host`: `118`.
 
@@ -369,7 +370,7 @@ Reference: [00-plugin.md](plugin/00-plugin.md)
 | [47 - A bot runs in a machine](plugin/47-a-bot-runs-in-a-machine/plan.md) | high | draft 2026-10-13; tasks not written | plugin 37 | container/05 p8 question |
 | [48 - A webhook talks to a bot or fires an automation](plugin/48-a-webhook-starts-a-bot-or-an-automation/plan.md) | medium | built 2026-10-15 | plugin 21, 37, 45 p1 | issue and chat initiators |
 | [49 - A bot's first turn is a template](plugin/49-a-bots-first-turn-is-a-template/plan.md) | medium | built 2026-10-15 ([implemented.md](plugin/49-a-bots-first-turn-is-a-template/implemented.md)) | plugin 45 p2 | - |
-| [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | draft 2026-10-13; tasks not written | plugin 37 | OAuth and Instagram connectors |
+| [50 - A connector plugin runs Activepieces pieces as tools](plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md) | medium | planned 2026-10-23; five tasks, Resend, Telegram and Slack first | host 118, plugin 53 | OAuth and Instagram connectors |
 | [51 - A plugin id is a slug](plugin/51-a-plugin-id-is-a-slug/plan.md) | high | built 2026-10-16 ([implemented.md](plugin/51-a-plugin-id-is-a-slug/implemented.md)) | daemon 19 | ahpw `/plugins/web/` |
 | [52 - A person talks with a bot in a chat of their own](plugin/52-a-bot-manages-and-delegates/plan.md) | medium | draft 2026-10-16; parent of p1 to p14 | plugin 49 | - |
 | [52 p1 - The host keeps one task list](plugin/52-p1-the-host-keeps-one-task-list/plan.md) | medium | built 2026-10-19; [implemented.md](plugin/52-p1-the-host-keeps-one-task-list/implemented.md) | 52 | 52 p12, 52 p13 |
