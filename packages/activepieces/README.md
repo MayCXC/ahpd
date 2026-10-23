@@ -1,6 +1,6 @@
-# @ahpd/connector-activepieces
+# @ahpd/activepieces
 
-[![npm](https://img.shields.io/npm/v/%40ahpd%2Fconnector-activepieces)](https://www.npmjs.com/package/@ahpd/connector-activepieces)
+[![npm](https://img.shields.io/npm/v/%40ahpd%2Factivepieces)](https://www.npmjs.com/package/@ahpd/activepieces)
 [![CI](https://github.com/softov/ahpd/actions/workflows/ci.yml/badge.svg)](https://github.com/softov/ahpd/actions/workflows/ci.yml)
 ![license MIT](https://img.shields.io/badge/license-MIT-blue)
 ![node >=22](https://img.shields.io/badge/node-%3E%3D22-5fa04e)
@@ -12,12 +12,12 @@ A connector of a piece is one account: a Resend connector is one Resend key, and
 
 The pieces run in a child process, with no Activepieces server and no Docker. A piece bundles an HTTP client that turns off TLS checks for the process it runs in. The daemon starts one child for the pieces and pins that setting there.
 
-Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/connector-activepieces`](https://github.com/softov/ahpd/tree/main/packages/connector-activepieces).
+Part of [ahpd](https://github.com/softov/ahpd). The source is in [`packages/activepieces`](https://github.com/softov/ahpd/tree/main/packages/activepieces).
 
 ## Install
 
 ```bash
-ahpd plugin install @ahpd/connector-activepieces
+ahpd plugin install @ahpd/activepieces
 ahpd restart
 ```
 
@@ -30,7 +30,7 @@ Update, remove and one-run flags are in [Plugins](https://github.com/softov/ahpd
 In the configuration file, with the three first pieces named:
 
 ```json
-{ "plugins": [{ "name": "@ahpd/connector-activepieces", "options": { "pieces": ["@activepieces/piece-resend", "@activepieces/piece-telegram-bot", "@activepieces/piece-slack"] } }] }
+{ "plugins": [{ "name": "@ahpd/activepieces", "options": { "pieces": ["@activepieces/piece-resend", "@activepieces/piece-telegram-bot", "@activepieces/piece-slack"] } }] }
 ```
 
 | Option | Default | What it does |

@@ -15,7 +15,7 @@ A docs page says how to name a piece, make a connector of it, and bind it to a s
 
 ## Files
 
-- `CREATE: docs/plugins/connector-activepieces.md` - the plugin page.
+- `CREATE: docs/plugins/activepieces.md` - the plugin page.
 - `UPDATE: docs/plugins/PLUGINS.md` - a link to the page from the adapter section.
 - `UPDATE: CHANGELOG.md` - the new plugin.
 
@@ -34,12 +34,12 @@ A docs page says how to name a piece, make a connector of it, and bind it to a s
 
 ## Resume
 
-- **Done so far:** `docs/plugins/connector-activepieces.md` follows `docs/plugins/webhook.md`, includes the package README from its second line, and adds the session binding `{ "connectors": { "work": "connectors://ap-resend/mail" } }`.
+- **Done so far:** `docs/plugins/activepieces.md` follows `docs/plugins/webhook.md`, includes the package README from its second line, and adds the session binding `{ "connectors": { "work": "connectors://ap-resend/mail" } }`.
   `docs/plugins/PLUGINS.md` links the page from the adapter section, and `CHANGELOG.md` has one line for the plugin under 0.14.0.
   Each example matches the code: the `pieces` option is the one `optionsSchema` declares, and the adapter names are the ones `nameOf` builds. `secret_text` and `botToken` are the fields `schemaOf` writes, and the tool names follow the host's `<adapter>_<action>` rule.
   `pnpm -s docs:build` passes.
 - **Next action:** none; every task is implemented and waiting for the commit by hand.
-- **Files:** `docs/plugins/connector-activepieces.md`, `docs/plugins/PLUGINS.md`, `CHANGELOG.md`, `docs/.vitepress/config.mts`, `.project/plans/plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md`, `.project/plans/index.md`.
+- **Files:** `docs/plugins/activepieces.md`, `docs/plugins/PLUGINS.md`, `CHANGELOG.md`, `docs/.vitepress/config.mts`, `.project/plans/plugin/50-a-connector-plugin-runs-activepieces-pieces/plan.md`, `.project/plans/index.md`.
 - **Open questions:** none.
 - **Departures:** `docs/.vitepress/config.mts` is not in the task's Files, and the docs build refuses a page the sidebar does not list. The sidebar gained the page.
 - **Watch out for:** the page includes the README, so a change to the README changes the published page. The page's own section after the include is the only part that is not in the package.

@@ -2,7 +2,7 @@
 title: The plugin loads pieces in a child
 status: implemented
 depends: []
-layer: "connector-activepieces"
+layer: "activepieces"
 refs:
   - "[code://packages/webhook/package.json#L61-L73](../../../../packages/webhook/package.json#L61-L73) - the `ahpd` manifest to copy"
   - "[code://packages/webhook/src/plugin.ts#L38-L39](../../../../packages/webhook/src/plugin.ts#L38-L39) - `optionsSchema`, the pattern for `pieces`"
@@ -12,20 +12,20 @@ refs:
 
 ## Objective
 
-`packages/connector-activepieces` is a plugin with a `pieces` option.
+`packages/activepieces` is a plugin with a `pieces` option.
 `apply` starts one child process, and the child loads each named piece and describes it as plain JSON.
 
 ## Files
 
-- `CREATE: packages/connector-activepieces/package.json` - the manifest, with `contracts.adapters: ["ap-*"]` and the three pieces at exact versions.
-- `CREATE: packages/connector-activepieces/tsconfig.json` - as `packages/webhook/tsconfig.json`.
-- `CREATE: packages/connector-activepieces/LICENSE` - MIT, as the other packages.
-- `CREATE: packages/connector-activepieces/src/index.ts` - the plugin export.
-- `CREATE: packages/connector-activepieces/src/plugin.ts` - `optionsSchema` and `apply`.
-- `CREATE: packages/connector-activepieces/src/child.ts` - the child entry: the TLS pin, `describe` and the message loop.
-- `CREATE: packages/connector-activepieces/src/wire.ts` - the message types between the plugin and the child.
-- `UPDATE: package.json:15` - add `tsc -p packages/connector-activepieces` before the server.
-- `CREATE: packages/connector-activepieces/test/child.test.ts` - the cases below.
+- `CREATE: packages/activepieces/package.json` - the manifest, with `contracts.adapters: ["ap-*"]` and the three pieces at exact versions.
+- `CREATE: packages/activepieces/tsconfig.json` - as `packages/webhook/tsconfig.json`.
+- `CREATE: packages/activepieces/LICENSE` - MIT, as the other packages.
+- `CREATE: packages/activepieces/src/index.ts` - the plugin export.
+- `CREATE: packages/activepieces/src/plugin.ts` - `optionsSchema` and `apply`.
+- `CREATE: packages/activepieces/src/child.ts` - the child entry: the TLS pin, `describe` and the message loop.
+- `CREATE: packages/activepieces/src/wire.ts` - the message types between the plugin and the child.
+- `UPDATE: package.json:15` - add `tsc -p packages/activepieces` before the server.
+- `CREATE: packages/activepieces/test/child.test.ts` - the cases below.
 
 ## Steps
 
@@ -52,14 +52,14 @@ refs:
 
 ## Resume
 
-- **Done so far:** `packages/connector-activepieces` exists, with the manifest, the tsconfig, the license, `plugin.ts`, `child.ts`, `wire.ts` and `index.ts`.
+- **Done so far:** `packages/activepieces` exists, with the manifest, the tsconfig, the license, `plugin.ts`, `child.ts`, `wire.ts` and `index.ts`.
   The child pins `NODE_TLS_REJECT_UNAUTHORIZED` with a `process.env` proxy before it imports any piece.
   It finds a piece by its `_actions` member, describes its `auth` and its actions as plain JSON, and names each piece that fails to load.
   `apply` forks the child with an IPC channel, sends `describe`, and reports each error through `host.problem`.
   The child exits with code 0 when the channel closes.
   `child.test.ts` passes all four cases, and `pnpm -s build`, `pnpm -s typecheck` and `pnpm -s boundary` pass.
 - **Next action:** task 02, which turns each described piece into an adapter.
-- **Files:** `packages/connector-activepieces/package.json`, `packages/connector-activepieces/tsconfig.json`, `packages/connector-activepieces/LICENSE`, `packages/connector-activepieces/src/index.ts`, `packages/connector-activepieces/src/plugin.ts`, `packages/connector-activepieces/src/child.ts`, `packages/connector-activepieces/src/wire.ts`, `packages/connector-activepieces/test/child.test.ts`, `packages/connector-activepieces/test/fixtures/piece-simple.mjs`, `packages/connector-activepieces/test/fixtures/piece-tls.mjs`, `package.json`.
+- **Files:** `packages/activepieces/package.json`, `packages/activepieces/tsconfig.json`, `packages/activepieces/LICENSE`, `packages/activepieces/src/index.ts`, `packages/activepieces/src/plugin.ts`, `packages/activepieces/src/child.ts`, `packages/activepieces/src/wire.ts`, `packages/activepieces/test/child.test.ts`, `packages/activepieces/test/fixtures/piece-simple.mjs`, `packages/activepieces/test/fixtures/piece-tls.mjs`, `package.json`.
 - **Open questions:** none.
 - **Departures:** none.
 - **Watch out for:** the child is `src/child.ts` when the daemon runs from source, and `dist/child.js` when it runs a build. `childPath` picks by the suffix of this module's URL.

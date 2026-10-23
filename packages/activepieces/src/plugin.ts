@@ -21,7 +21,7 @@ import type { Plugin, PluginHost } from '@ahpd/sdk';
  */
 
 /** The plugin's id, unique among the plugins a daemon loads. */
-export const name = 'connector-activepieces';
+export const name = 'activepieces';
 
 /** What a listing prints. */
 export const title = 'Activepieces connectors';

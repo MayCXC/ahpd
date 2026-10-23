@@ -66,7 +66,7 @@ const sidebar: DefaultTheme.SidebarItem[] = [
       page('@ahpd/agent-pi', '/plugins/agent-pi'),
       page('@ahpd/bot', '/plugins/bot'),
       page('Bots', '/plugins/BOTS'),
-      page('@ahpd/connector-activepieces', '/plugins/connector-activepieces'),
+      page('@ahpd/activepieces', '/plugins/activepieces'),
       page('@ahpd/computer', '/plugins/computer'),
       page('Computer', '/plugins/COMPUTERS'),
       page('Containers', '/plugins/CONTAINERS'),

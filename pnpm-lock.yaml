@@ -124,7 +124,7 @@ importers:
         specifier: workspace:*
         version: link:../sdk
 
-  packages/connector-activepieces:
+  packages/activepieces:
     dependencies:
       '@activepieces/piece-resend':
         specifier: 0.6.1

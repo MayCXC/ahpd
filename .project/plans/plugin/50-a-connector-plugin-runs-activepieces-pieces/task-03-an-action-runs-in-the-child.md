@@ -3,7 +3,7 @@ title: An action runs in the child
 status: implemented
 depends:
   - task-02-a-piece-is-an-adapter.md
-layer: "connector-activepieces"
+layer: "activepieces"
 refs:
   - "[code://packages/sdk/src/types/connectors.ts#L101-L120](../../../../packages/sdk/src/types/connectors.ts#L101-L120) - `Adapter.run`, which host/118 adds"
   - "[code://packages/sdk/src/connectors/channel.ts#L312-L323](../../../../packages/sdk/src/connectors/channel.ts#L312-L323) - `resolved`, so the connector's config holds the secret values"
@@ -17,11 +17,11 @@ The child calls the piece's `action.run(context)` with the connector's auth and 
 
 ## Files
 
-- `UPDATE: packages/connector-activepieces/src/mapping.ts` - `authOf(connector)`, the auth value a piece reads.
-- `UPDATE: packages/connector-activepieces/src/plugin.ts` - each adapter's `run`, the call ids and the timeout.
-- `UPDATE: packages/connector-activepieces/src/child.ts` - the `run` message and the context.
-- `UPDATE: packages/connector-activepieces/src/wire.ts` - the `run` request and its answer.
-- `CREATE: packages/connector-activepieces/test/run.test.ts` - the cases below.
+- `UPDATE: packages/activepieces/src/mapping.ts` - `authOf(connector)`, the auth value a piece reads.
+- `UPDATE: packages/activepieces/src/plugin.ts` - each adapter's `run`, the call ids and the timeout.
+- `UPDATE: packages/activepieces/src/child.ts` - the `run` message and the context.
+- `UPDATE: packages/activepieces/src/wire.ts` - the `run` request and its answer.
+- `CREATE: packages/activepieces/test/run.test.ts` - the cases below.
 
 ## Steps
 
@@ -54,7 +54,7 @@ The child calls the piece's `action.run(context)` with the connector's auth and 
   `child.ts` builds the context with `auth`, `propsValue`, `store`, `run`, `step`, `project` and `executionType`, and keeps one in-memory store for each connector id. `files`, `connections` and `server` throw.
   `run.test.ts` passes all five cases, and `pnpm -s typecheck`, `pnpm -s build` and `pnpm -s boundary` pass.
 - **Next action:** task 04, which names the three first pieces.
-- **Files:** `packages/connector-activepieces/src/mapping.ts`, `packages/connector-activepieces/src/plugin.ts`, `packages/connector-activepieces/src/child.ts`, `packages/connector-activepieces/src/wire.ts`, `packages/connector-activepieces/src/index.ts`, `packages/connector-activepieces/test/run.test.ts`, `packages/connector-activepieces/test/fixtures/piece-run.mjs`.
+- **Files:** `packages/activepieces/src/mapping.ts`, `packages/activepieces/src/plugin.ts`, `packages/activepieces/src/child.ts`, `packages/activepieces/src/wire.ts`, `packages/activepieces/src/index.ts`, `packages/activepieces/test/run.test.ts`, `packages/activepieces/test/fixtures/piece-run.mjs`.
 - **Open questions:** step 3 names `{ id, piece, action, auth, input }`, and step 7 keeps one store for each connector id, so the request also carries `connector`.
   The child keys the store by it, and no other field could.
   A second one: `nameOf` also reads a piece named by a file URL, `piece-<name>.mjs`, so `run.test.ts` can name its fixture through `apply`. The plugin's `pieces` pattern still admits only `@activepieces/piece-*` packages.

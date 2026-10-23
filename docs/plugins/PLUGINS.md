@@ -579,7 +579,7 @@ host.registerAdapter({
   as the tool's answer. An adapter with no `run` offers no action tool, and a
   `run` that throws is what the model is told, under the alias it named.
 
-The `@ahpd/connector-activepieces` plugin makes one adapter for each Activepieces piece its `pieces` option names, and runs the actions of each in a child process - [connector-activepieces.md](connector-activepieces.md).
+The `@ahpd/activepieces` plugin makes one adapter for each Activepieces piece its `pieces` option names, and runs the actions of each in a child process - [activepieces.md](activepieces.md).
 
 The schema can change between versions, and nothing migrates a stored
 connector: one whose config no longer fits shows as `invalid`, and one whose
