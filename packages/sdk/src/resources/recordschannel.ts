@@ -38,6 +38,23 @@ export interface RecordsChannelOptions {
   /** Whether a reader without `grant` may read this one record all the same. */
   mayRead?(id: string, reader: Principal): boolean;
   /**
+   * Whether every reader's records go through `mayRead`, the holder of `grant` included.
+   *
+   * Off, a reader holding `grant` reads every record and `mayRead` widens the
+   * list to a reader without it. On, `mayRead` is the whole answer for every
+   * reader, so a channel whose records are each one person's can narrow the
+   * holder of `grant` too.
+   */
+  mayReadEveryReader?: boolean;
+  /**
+   * A second grant that admits a subscribe without a readable record.
+   *
+   * Asked only by `authorize`, of a reader without `grant`. A holder of this
+   * one reads every record through `mayRead`, and is let in by the grant alone
+   * where the store holds no record to find.
+   */
+  alsoGrant?: Grant;
+  /**
    * Whose one record is, when this channel answers `<channel>?owner=me`.
    *
    * Given, a filtered subscription is answered with the caller's own records
@@ -109,10 +126,15 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
    * Whether this reader sees this record.
    *
    * No reader is a host with no users directory, or the root connection, and
-   * both see every record.
+   * both see every record. Otherwise `grant` reads every record, unless
+   * `mayReadEveryReader` sends the holder through `mayRead` too, and `mayRead`
+   * answers for a reader without it.
    */
-  const readable = (id: string, reader: Principal | undefined): boolean =>
-    reader === undefined || reader.can(options.grant) || options.mayRead?.(id, reader) === true;
+  const readable = (id: string, reader: Principal | undefined): boolean => {
+    if (reader === undefined) return true;
+    if (options.mayReadEveryReader !== true && reader.can(options.grant)) return true;
+    return options.mayRead?.(id, reader) === true;
+  };
 
   /**
    * Whether one reader sees one record on one channel URI.
@@ -249,9 +271,11 @@ export function recordsChannel(scheme: string, source: RecordsSource, options: R
       authorize: async (asked, reader) => {
         const query = queryOf(asked);
         if (asked !== uri && query === undefined) return false;
-        if (options.mayRead === undefined) return false;
         const owner = query === undefined ? undefined : ownerFilter(query, reader);
         if (owner === null) return false;
+        // A second grant reads every record, and is let in with none to find.
+        if (options.alsoGrant !== undefined && reader.can(options.alsoGrant)) return true;
+        if (options.mayRead === undefined) return false;
         for (const id of await source.ids()) {
           if (options.mayRead?.(id, reader) !== true) continue;
           if (owner === undefined) return true;
