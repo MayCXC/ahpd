@@ -23,7 +23,7 @@ export type ControlHandlers = Readonly<Record<ControlledSignal, () => void>>;
 
 /** A daemon's control pipe, listening. */
 export interface ControlServer {
-  /** Told once the pipe is there, which `listen` reaches asynchronously. */
+  /** Told once the pipe is there, which `listen` reaches asynchronously, or once it could not be. */
   listening: Promise<void>;
   /** Stop listening, and let the pipe go. */
   close(): Promise<void>;
@@ -131,8 +131,11 @@ export function controlServer(control: Control, handlers: ControlHandlers, log: 
   });
   // A pipe that cannot be listened on is said rather than thrown: the daemon
   // still serves, and this is the one line that says why a verb cannot reach it.
-  server.on('error', (error: Error) => { log(`control: ${oneLine(error.message)}`); });
-  const listening = new Promise<void>((done) => { server.listen(control.pipe, done); });
+  // Told on an error too, so a daemon waiting for the pipe is not held by one it will never have.
+  const listening = new Promise<void>((done) => {
+    server.on('error', (error: Error) => { log(`control: ${oneLine(error.message)}`); done(); });
+    server.listen(control.pipe, done);
+  });
 
   return {
     listening,

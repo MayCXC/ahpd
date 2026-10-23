@@ -1369,7 +1369,6 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
     // and last so the lines `daemon.ts` matches keep the places it expects.
     + said.map((line) => `${line}\n`).join('')
     + (checkingUpdates(options.updateCheck) ? updateLine(manifest()) ?? '' : '');
-  say.write(announcement);
   announced = true;
 
   /*
@@ -1549,6 +1548,13 @@ export async function runForeground(options: Options, typed: Readonly<Record<str
       controlListener = controlServer(control, { SIGTERM: way.shutdown, SIGHUP: answer(false, true), SIGUSR2: answer(true, true) }, stamp);
     }
   }
+  /*
+   * The announcement last, once the pipe listens. `ahpd start` returns when it
+   * reads this, and a stop may follow at once: on Windows the pipe is how that
+   * stop arrives, so a pipe not yet listening is a stop nobody answers.
+   */
+  await controlListener?.listening;
+  say.write(announcement);
 }
 
 /**
