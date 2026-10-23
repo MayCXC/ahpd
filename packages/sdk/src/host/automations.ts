@@ -704,7 +704,7 @@ export function createAutomations(ctx: HostContext): Automations {
     if (named !== undefined) {
       try { named(uri); }
       catch (error) {
-        log(`${uri} was started, but the plugin that asked was not told: ${error instanceof Error ? error.message : String(error)}`);
+        log(`${uri} is being started, but the plugin that asked was not told: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     const config = wanted.config ?? {};
